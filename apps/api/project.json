@@ -16,7 +16,7 @@
       "executor": "nx:run-commands",
       "options": {
         "cwd": "apps/api",
-        "command": "go run ."
+        "command": "go run ./cmd/server"
       }
     },
     "test": {

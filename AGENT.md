@@ -37,6 +37,98 @@ docs/           ← 项目文档（PRD、技术方案、原型）
 
 根配置文件：`pnpm-workspace.yaml`、`nx.json`、`tsconfig.base.json`、`project.json`、`package.json`
 
+## 文件夹架构与命名规范
+
+### 前端 apps/web/src/（React，Feature-based）
+
+```
+src/
+  components/          ← 通用 UI 组件（Button、Card 等，PascalCase.tsx）
+  features/            ← 按功能模块拆分
+    {feature}/         ← 如 assessment、consultation、report、profile
+      components/      ← 该功能的专属组件（PascalCase.tsx）
+      hooks/           ← 该功能的 hooks（useXxx.ts）
+      services/        ← 该功能的 API 调用（xxxService.ts）
+      index.ts         ← barrel file
+  pages/               ← 页面级组件（PascalCasePage.tsx）
+  hooks/               ← 全局共享 hooks（useXxx.ts）
+  services/            ← 全局共享 API 层（xxxService.ts）
+  stores/              ← Zustand 全局 stores（xxxStore.ts）
+  lib/                 ← 工具函数、常量、类型（camelCase.ts）
+  App.tsx
+  main.tsx
+```
+
+**文件命名**：组件 `PascalCase.tsx`，hooks `useXxx.ts`，stores `xxxStore.ts`，services `xxxService.ts`，types `xxx.types.ts`，constants `xxx.constants.ts`，页面 `XxxPage.tsx`，测试 `*.test.tsx`。
+
+### 后端 apps/api/（Go，Standard Layout）
+
+```
+cmd/
+  server/
+    main.go            ← 入口，只做初始化和依赖注入
+internal/
+  handler/             ← HTTP handler（snake_case.go）
+  service/             ← 业务逻辑层（snake_case.go）
+  repository/          ← 数据访问层，GORM 封装（snake_case.go）
+  model/               ← 数据模型，GORM struct（snake_case.go）
+  middleware/           ← 中间件（snake_case.go）
+  dto/                 ← 请求/响应结构体（snake_case.go）
+pkg/                   ← 可被外部导入的公共包（如有）
+migrations/            ← 数据库迁移文件
+```
+
+**文件命名**：全部 `snake_case.go`，测试 `*_test.go` 与被测文件同目录。这是 Go 社区标准。
+
+### AI 服务 apps/ai-service/（Python，分层结构）
+
+```
+src/
+  main.py              ← FastAPI 入口
+  config.py            ← 配置管理（Pydantic Settings）
+  api/
+    routes/            ← 路由处理（snake_case.py）
+    dependencies.py    ← FastAPI 依赖注入
+  services/            ← 业务逻辑（snake_case.py）
+  rag/                 ← RAG 管道（knowledge_base.py、embeddings.py、retriever.py）
+  prompts/             ← Prompt 模板（snake_case.py）
+  models/              ← Pydantic 数据模型（snake_case.py）
+tests/
+  conftest.py          ← pytest fixtures
+  unit/                ← 单元测试（test_*.py）
+  integration/         ← 集成测试（test_*.py）
+```
+
+**文件命名**：全部 `snake_case.py`，测试 `test_*.py` 放在 `tests/` 对应子目录。遵循 PEP 8。
+
+### 共享包 packages/（@bodysense/*）
+
+按需创建，当前预留：
+- `@bodysense/contracts`：前后端共享类型定义（API DTO、枚举）
+- `@bodysense/utils`：通用工具函数
+
+包命名跟目录名 1:1 映射（kebab-case），每个包根有 `index.ts` barrel file。
+
+### 文档 docs/
+
+```
+docs/
+  PRD-体态健康AI助手.md
+  technical-approach.md
+  ai-development-workflow.md
+  prototype.jsx
+  plan/
+    active/            ← 进行中的 task spec
+    archive/           ← 完成的 plan 归档
+```
+
+### Import 路径规范
+
+- **跨包引用**：`@bodysense/contracts`（pnpm workspace 解析）
+- **前端包内引用**：`@/` 路径别名指向 `apps/web/src/`
+- **相对路径**：同 feature 内的近距离引用
+- **Barrel file**：仅在 feature 根（`features/{feature}/index.ts`）和 package 根（`packages/{pkg}/src/index.ts`）设置，内部目录不用 barrel
+
 ## 工作方式
 
 - 先读代码和配置，再修改。
@@ -51,7 +143,7 @@ docs/           ← 项目文档（PRD、技术方案、原型）
 - Python 依赖使用 `uv` 管理（`uv add`、`uv sync`、`uv lock`），不使用 pip。
 - 需要 build、lint、test 时，优先运行离改动最近的 Nx target 或对应语言的测试命令。
 - 涉及 Docker、运行时、env 注入、部署链路的改动，默认先用 `docker compose -f docker/docker-compose.yml --profile dev` 做本地 prod-like 验证。
-- 复杂任务先写计划，再实施。计划统一放在 `docs/plan/` 目录下。
+- 复杂任务先写计划，再实施。计划统一放在 `docs/plan/active/` 目录下，完成后移至 `docs/plan/archive/`。
 
 ## Git 分支策略
 
