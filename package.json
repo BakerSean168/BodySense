@@ -1,0 +1,49 @@
+{
+  "name": "bodysense",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@11.0.0",
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=11.0.0"
+  },
+  "scripts": {
+    "preinstall": "npx only-allow pnpm",
+    "prepare": "husky",
+    "dev": "pnpm nx run-many -t serve --projects=web --parallel=1",
+    "build": "pnpm nx run-many -t build --all",
+    "lint": "pnpm nx run-many -t lint --all --parallel=3",
+    "typecheck": "pnpm nx run-many -t typecheck --all --parallel=3",
+    "test": "pnpm nx run-many -t test --all",
+    "affected:build": "pnpm nx affected -t build",
+    "affected:test": "pnpm nx affected -t test",
+    "affected:lint": "pnpm nx affected -t lint",
+    "affected:typecheck": "pnpm nx affected -t typecheck",
+    "graph": "pnpm nx graph",
+    "clean": "pnpm nx reset",
+    "docker:dev:up": "docker compose -f docker/docker-compose.yml --profile dev up -d",
+    "docker:dev:down": "docker compose -f docker/docker-compose.yml --profile dev down",
+    "docker:dev:logs": "docker compose -f docker/docker-compose.yml --profile dev logs -f"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@nx/eslint": "22.5.3",
+    "@nx/eslint-plugin": "22.5.3",
+    "@nx/js": "22.5.3",
+    "@nx/vite": "22.5.3",
+    "@nx/vitest": "22.5.3",
+    "@nx/web": "22.5.3",
+    "@nx/workspace": "22.5.3",
+    "eslint": "^9.0.0",
+    "husky": "^9.1.7",
+    "nx": "22.5.3",
+    "nx-mcp": "0.25.0",
+    "prettier": "^3.5.3",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.39.1",
+    "vite": "^8.0.10",
+    "vitest": "^3.2.1"
+  }
+}

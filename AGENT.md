@@ -24,15 +24,18 @@
 
 ```
 apps/
-  web/          ← React 前端（pnpm）
-  api/          ← Go 后端（go mod）
-  ai-service/   ← Python AI 服务（uv）
-docs/           ← 项目文档（PRD、技术方案、原型）
+  web/          ← React 前端（pnpm，Nx 项目名 @bodysense/web）
+  api/          ← Go 后端（go mod，Nx 项目名 api）
+  ai-service/   ← Python AI 服务（uv，Nx 项目名 ai-service）
+packages/       ← 共享 TS 包（@bodysense/*）
 docker/         ← Docker Compose 编排
 tools/
   agent-skills/ ← 项目专属 Agent Skills
 scripts/        ← 开发辅助脚本
+docs/           ← 项目文档（PRD、技术方案、原型）
 ```
+
+根配置文件：`pnpm-workspace.yaml`、`nx.json`、`tsconfig.base.json`、`project.json`、`package.json`
 
 ## 工作方式
 
@@ -47,7 +50,7 @@ scripts/        ← 开发辅助脚本
 - Go 模块使用 `go mod` 管理依赖。
 - Python 依赖使用 `uv` 管理（`uv add`、`uv sync`、`uv lock`），不使用 pip。
 - 需要 build、lint、test 时，优先运行离改动最近的 Nx target 或对应语言的测试命令。
-- 涉及 Docker、运行时、env 注入、部署链路的改动，默认先用 `docker-compose.local.yml` 做本地 prod-like 验证。
+- 涉及 Docker、运行时、env 注入、部署链路的改动，默认先用 `docker compose -f docker/docker-compose.yml --profile dev` 做本地 prod-like 验证。
 - 复杂任务先写计划，再实施。计划统一放在 `docs/plan/` 目录下。
 
 ## Git 分支策略
@@ -79,7 +82,7 @@ scripts/        ← 开发辅助脚本
 - `fix(ai): 修复 RAG 检索结果的排序逻辑`
 - `docs: 更新技术方案中的版本信息`
 
-通过 `commit-msg` hook 强制校验格式。
+通过 husky + @commitlint/cli 在 `commit-msg` hook 中强制校验。规则定义在 `commitlint.config.ts`。
 
 ## 变更策略
 

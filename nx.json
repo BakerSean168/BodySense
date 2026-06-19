@@ -1,0 +1,65 @@
+{
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "parallel": 2,
+  "namedInputs": {
+    "default": [
+      "{projectRoot}/**/*",
+      "sharedGlobals"
+    ],
+    "production": [
+      "default",
+      "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?(.snap)",
+      "!{projectRoot}/tsconfig.spec.json",
+      "!{projectRoot}/vitest.config.[jt]s",
+      "!{projectRoot}/src/test-setup.[jt]s",
+      "!{projectRoot}/eslint.config.{js,mjs,cjs,ts,mts,cts}"
+    ],
+    "sharedGlobals": [
+      "{workspaceRoot}/tsconfig.base.json",
+      "{workspaceRoot}/package.json",
+      "{workspaceRoot}/pnpm-workspace.yaml"
+    ]
+  },
+  "targetDefaults": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["production", "^production"],
+      "cache": true
+    },
+    "serve": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
+    "test": {
+      "inputs": ["default", "^production"],
+      "cache": true
+    },
+    "lint": {
+      "inputs": ["default", "{workspaceRoot}/eslint.config.ts"],
+      "cache": true
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "inputs": ["production", "^production"],
+      "cache": true
+    }
+  },
+  "plugins": [
+    {
+      "plugin": "@nx/eslint/plugin",
+      "options": {
+        "targetName": "lint"
+      }
+    },
+    {
+      "plugin": "@nx/vite/plugin",
+      "options": {
+        "buildTargetName": "build",
+        "testTargetName": "test",
+        "serveTargetName": "serve",
+        "previewTargetName": "preview",
+        "typecheckTargetName": "typecheck"
+      }
+    }
+  ]
+}

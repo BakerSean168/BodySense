@@ -1,0 +1,7 @@
+packages:
+  - packages/*
+  - apps/web
+allowBuilds:
+  esbuild: true
+  nx: true
+nodeLinker: hoisted

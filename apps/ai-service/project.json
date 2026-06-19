@@ -1,0 +1,30 @@
+{
+  "name": "ai-service",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/ai-service",
+  "projectType": "application",
+  "tags": ["scope:ai", "type:app"],
+  "targets": {
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/ai-service",
+        "command": "uv run uvicorn src.main:app --reload --port 8100"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/ai-service",
+        "command": "uv run pytest"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/ai-service",
+        "command": "uv run ruff check ."
+      }
+    }
+  }
+}
