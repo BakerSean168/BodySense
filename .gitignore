@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.venv/
+.uv-cache/
+
+# Build output
+dist/
+build/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go
+apps/api/tmp/
+apps/api/bin/
+
+# Python
+apps/ai-service/.pytest_cache/
+apps/ai-service/.ruff_cache/
+apps/ai-service/__pycache__/
+apps/ai-service/**/__pycache__/
+apps/ai-service/coverage/
+apps/ai-service/.coverage
+
+# Docker
+docker/data/
+
+# Logs
+*.log
+
+# Coverage
+coverage/
+.nyc_output/

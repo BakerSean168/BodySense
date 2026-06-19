@@ -1,0 +1,42 @@
+#!/bin/sh
+#
+# Conventional Commits commit-msg hook
+# 校验 commit message 格式是否符合 Conventional Commits 规范
+#
+# 安装方式：
+#   cp scripts/hooks/commit-msg .git/hooks/commit-msg
+#   chmod +x .git/hooks/commit-msg
+#
+# 或者使用自动安装脚本：
+#   bash scripts/setup-hooks.sh
+
+COMMIT_MSG_FILE=$1
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# 跳过 merge commits 和 revert commits
+if echo "$COMMIT_MSG" | grep -qE "^(Merge|Revert) "; then
+  exit 0
+fi
+
+# Conventional Commits 正则
+# <type>(<scope>): <description> 或 <type>: <description>
+PATTERN="^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\([a-z0-9_-]+\))?!?: .+"
+
+if ! echo "$COMMIT_MSG" | head -1 | grep -qE "$PATTERN"; then
+  echo ""
+  echo "  ERROR: Commit message 不符合 Conventional Commits 规范"
+  echo ""
+  echo "  格式: <type>(<scope>): <description>"
+  echo ""
+  echo "  type 类型: feat, fix, docs, style, refactor, test, chore, perf, ci, build, revert"
+  echo "  scope 范围: web, api, ai, docker, docs, deps (可选)"
+  echo ""
+  echo "  示例:"
+  echo "    feat(web): 实现信息收集分步表单"
+  echo "    fix(ai): 修复 RAG 检索排序逻辑"
+  echo "    docs: 更新技术方案版本信息"
+  echo ""
+  exit 1
+fi
+
+exit 0
