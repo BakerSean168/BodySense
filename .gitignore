@@ -26,6 +26,7 @@ Thumbs.db
 # Go
 apps/api/tmp/
 apps/api/bin/
+apps/api/server.exe
 
 # Python
 apps/ai-service/.pytest_cache/
