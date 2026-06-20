@@ -205,6 +205,20 @@ docs/
   - `validate-docs-code`：验证文档与代码的一致性
 - 安装示例与目录约定见 `tools/agent-skills/README.md`。
 
+## Agent Skills (mattpocock/skills)
+
+### Issue tracker
+
+GitHub Issues，不处理外部 PRs。使用 `gh` CLI 操作。See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+5 个标准角色：`needs-triage`、`needs-info`、`ready-for-agent`、`ready-for-human`、`wontfix`。See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context 布局，`CONTEXT.md` + `docs/adr/` 在仓库根目录。See `docs/agents/domain.md`.
+
 ## 最小验证
 
 - 文档和治理相关改动：检查文档格式和链接有效性
