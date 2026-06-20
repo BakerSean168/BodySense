@@ -1,0 +1,12 @@
+.git
+.github
+.claude
+.codex
+.cursor
+.vscode
+.idea
+node_modules
+.nx
+docs
+*.md
+!README.md
