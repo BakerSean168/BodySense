@@ -22,20 +22,29 @@ class Reranker:
 
     def __init__(
         self,
-        model: str = "gpt-4o-mini",
+        model: Optional[str] = None,
         api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
     ):
-        self.model = model
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        self.model = model or os.getenv("LLM_MODEL", "gpt-4o-mini")
+        self.api_key = (
+            api_key
+            or os.getenv("LLM_API_KEY")
+            or os.getenv("OPENAI_API_KEY")
+        )
+        self.base_url = base_url or os.getenv("LLM_BASE_URL")
         self._client: Optional[AsyncOpenAI] = None
 
     @property
     def client(self) -> AsyncOpenAI:
-        """Lazy initialization of OpenAI client."""
+        """Lazy initialization of OpenAI-compatible client."""
         if self._client is None:
             if not self.api_key:
-                raise ValueError("OPENAI_API_KEY is required for reranking")
-            self._client = AsyncOpenAI(api_key=self.api_key)
+                raise ValueError("LLM_API_KEY or OPENAI_API_KEY is required")
+            kwargs = {"api_key": self.api_key}
+            if self.base_url:
+                kwargs["base_url"] = self.base_url
+            self._client = AsyncOpenAI(**kwargs)
         return self._client
 
     async def rerank(

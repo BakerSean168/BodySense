@@ -7,26 +7,37 @@ from openai import AsyncOpenAI
 
 
 class EmbeddingGenerator:
-    """Generate text embeddings using OpenAI API or local models."""
+    """Generate text embeddings using OpenAI-compatible API (including mimo)."""
 
     def __init__(
         self,
-        model: str = "text-embedding-3-small",
+        model: Optional[str] = None,
         dimension: int = 1536,
         api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
     ):
-        self.model = model
+        self.model = model or os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
         self.dimension = dimension
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        self.api_key = (
+            api_key
+            or os.getenv("EMBEDDING_API_KEY")
+            or os.getenv("OPENAI_API_KEY")
+        )
+        self.base_url = base_url or os.getenv("EMBEDDING_BASE_URL")
         self._client: Optional[AsyncOpenAI] = None
 
     @property
     def client(self) -> AsyncOpenAI:
-        """Lazy initialization of OpenAI client."""
+        """Lazy initialization of OpenAI-compatible client."""
         if self._client is None:
             if not self.api_key:
-                raise ValueError("OPENAI_API_KEY is required for OpenAI embeddings")
-            self._client = AsyncOpenAI(api_key=self.api_key)
+                raise ValueError(
+                    "EMBEDDING_API_KEY or OPENAI_API_KEY is required"
+                )
+            kwargs = {"api_key": self.api_key}
+            if self.base_url:
+                kwargs["base_url"] = self.base_url
+            self._client = AsyncOpenAI(**kwargs)
         return self._client
 
     async def generate(self, text: str) -> list[float]:
