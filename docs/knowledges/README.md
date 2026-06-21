@@ -9,6 +9,7 @@ knowledges/
 ├── README.md                    ← 本文件
 ├── issue-1-dev-infra.md         ← Issue 1: 开发环境基础设施
 ├── issue-2-auth-jwt.md          ← Issue 2: 用户认证 + JWT
+├── issue-3-rag-infra.md         ← Issue 3: 知识库 RAG 基础设施
 └── glossary.md                  ← 术语表
 ```
 
@@ -32,6 +33,15 @@ knowledges/
 - 路由守卫 (ProtectedRoute)
 - CORS 跨域配置
 - 自动 Token 刷新
+
+### Issue 3: 知识库 RAG 基础设施
+- pgvector 向量存储和索引
+- Embedding 生成（OpenAI text-embedding-3-small）
+- 语义检索（余弦相似度搜索）
+- Reranker 重排序（LLM 相关性判断）
+- Python RAG 管道架构
+- Go 后端代理端点
+- 端到端测试流程
 
 ---
 
