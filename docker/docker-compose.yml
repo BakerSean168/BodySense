@@ -1,17 +1,20 @@
 services:
+  # ── Infrastructure ──────────────────────────────────────
   postgres-dev:
     profiles: [dev]
     image: pgvector/pgvector:pg16
     environment:
-      POSTGRES_USER: bodysense
-      POSTGRES_PASSWORD: bodysense123
-      POSTGRES_DB: bodysense
+      POSTGRES_USER: ${DB_USER:-bodysense}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-bodysense123}
+      POSTGRES_DB: ${DB_NAME:-bodysense}
     ports:
-      - '5432:5432'
+      - '${DB_PORT:-5432}:5432'
     volumes:
       - postgres-dev-data:/var/lib/postgresql/data
+    networks:
+      - bodysense-network
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U bodysense -d bodysense']
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-bodysense} -d ${DB_NAME:-bodysense}']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -20,8 +23,70 @@ services:
     profiles: [dev]
     image: redis:7-alpine
     ports:
-      - '6384:6379'
-    command: redis-server --appendonly yes --requirepass bodysense123
+      - '${REDIS_PORT:-6384}:6379'
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-bodysense123}
+    networks:
+      - bodysense-network
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD:-bodysense123}', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Application Services ────────────────────────────────
+  api:
+    profiles: [dev]
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile
+    ports:
+      - '${API_PORT:-8080}:8080'
+    env_file:
+      - ../.env
+    environment:
+      DB_HOST: postgres-dev
+      DB_PORT: 5432
+      REDIS_HOST: redis-dev
+      REDIS_PORT: 6379
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
+      redis-dev:
+        condition: service_healthy
+    networks:
+      - bodysense-network
+
+  ai-service:
+    profiles: [dev]
+    build:
+      context: ../apps/ai-service
+      dockerfile: Dockerfile
+    ports:
+      - '${AI_SERVICE_PORT:-8100}:8100'
+    env_file:
+      - ../.env
+    networks:
+      - bodysense-network
+
+  web:
+    profiles: [dev]
+    build:
+      context: ../
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - '5173:5173'
+    environment:
+      VITE_API_BASE_URL: http://localhost:${API_PORT:-8080}
+    volumes:
+      - ../:/app
+      - /app/node_modules
+      - /app/apps/web/node_modules
+    networks:
+      - bodysense-network
+
+networks:
+  bodysense-network:
+    driver: bridge
 
 volumes:
   postgres-dev-data:
