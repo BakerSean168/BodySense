@@ -65,6 +65,12 @@ services:
       - '${AI_SERVICE_PORT:-8100}:8100'
     env_file:
       - ../.env
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-bodysense}:${DB_PASSWORD:-bodysense123}@postgres-dev:5432/${DB_NAME:-bodysense}
+      AI_SERVICE_PORT: 8100
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
     networks:
       - bodysense-network
 

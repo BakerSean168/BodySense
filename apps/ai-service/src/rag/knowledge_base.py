@@ -39,15 +39,15 @@ class KnowledgeBase:
         self.reranker = reranker or get_reranker()
         self._connection: Optional[psycopg.Connection] = None
 
-    async def _get_connection(self) -> psycopg.Connection:
+    def _get_connection(self) -> psycopg.Connection:
         """Get or create database connection."""
         if self._connection is None or self._connection.closed:
             if not self.database_url:
                 raise ValueError("DATABASE_URL is required")
 
             url = self.database_url.replace("+asyncpg", "").replace("+psycopg", "")
-            self._connection = await psycopg.AsyncConnection.connect(url)
-            await register_vector(self._connection)
+            self._connection = psycopg.connect(url)
+            register_vector(self._connection)
 
         return self._connection
 
@@ -64,7 +64,7 @@ class KnowledgeBase:
         # Generate embedding
         embedding = await self.embedding_generator.generate(entry.content)
 
-        conn = await self._get_connection()
+        conn = self._get_connection()
 
         sql = """
             INSERT INTO knowledge_entries
@@ -75,7 +75,7 @@ class KnowledgeBase:
 
         cur = conn.cursor()
         try:
-            await cur.execute(
+            cur.execute(
                 sql,
                 (
                     entry.category,
@@ -86,14 +86,16 @@ class KnowledgeBase:
                     entry.source_timestamp,
                 ),
             )
-            result = await cur.fetchone()
-            await conn.commit()
+            result = cur.fetchone()
+            conn.commit()
         finally:
-            await cur.close()
+            cur.close()
 
         return result[0]
 
-    async def add_entries_batch(self, entries: list[KnowledgeEntryData]) -> list[int]:
+    async def add_entries_batch(
+        self, entries: list[KnowledgeEntryData]
+    ) -> list[int]:
         """
         Add multiple knowledge entries with auto-generated embeddings.
 
@@ -110,7 +112,7 @@ class KnowledgeBase:
         texts = [entry.content for entry in entries]
         embeddings = await self.embedding_generator.generate_batch(texts)
 
-        conn = await self._get_connection()
+        conn = self._get_connection()
 
         sql = """
             INSERT INTO knowledge_entries
@@ -123,7 +125,7 @@ class KnowledgeBase:
         cur = conn.cursor()
         try:
             for entry, embedding in zip(entries, embeddings):
-                await cur.execute(
+                cur.execute(
                     sql,
                     (
                         entry.category,
@@ -134,12 +136,12 @@ class KnowledgeBase:
                         entry.source_timestamp,
                     ),
                 )
-                result = await cur.fetchone()
+                result = cur.fetchone()
                 ids.append(result[0])
 
-            await conn.commit()
+            conn.commit()
         finally:
-            await cur.close()
+            cur.close()
 
         return ids
 
@@ -188,7 +190,7 @@ class KnowledgeBase:
         Returns:
             The entry if found, None otherwise.
         """
-        conn = await self._get_connection()
+        conn = self._get_connection()
 
         sql = """
             SELECT id, category, title, content, source_video, source_timestamp
@@ -198,10 +200,10 @@ class KnowledgeBase:
 
         cur = conn.cursor()
         try:
-            await cur.execute(sql, (entry_id,))
-            row = await cur.fetchone()
+            cur.execute(sql, (entry_id,))
+            row = cur.fetchone()
         finally:
-            await cur.close()
+            cur.close()
 
         if row is None:
             return None
@@ -226,36 +228,36 @@ class KnowledgeBase:
         Returns:
             True if deleted, False if not found.
         """
-        conn = await self._get_connection()
+        conn = self._get_connection()
 
         sql = "DELETE FROM knowledge_entries WHERE id = %s"
 
         cur = conn.cursor()
         try:
-            await cur.execute(sql, (entry_id,))
-            await conn.commit()
+            cur.execute(sql, (entry_id,))
+            conn.commit()
             return cur.rowcount > 0
         finally:
-            await cur.close()
+            cur.close()
 
     async def count(self) -> int:
         """Get total number of knowledge entries."""
-        conn = await self._get_connection()
+        conn = self._get_connection()
 
         sql = "SELECT COUNT(*) FROM knowledge_entries"
 
         cur = conn.cursor()
         try:
-            await cur.execute(sql)
-            result = await cur.fetchone()
+            cur.execute(sql)
+            result = cur.fetchone()
             return result[0]
         finally:
-            await cur.close()
+            cur.close()
 
     async def close(self):
         """Close database connection."""
         if self._connection and not self._connection.closed:
-            await self._connection.close()
+            self._connection.close()
 
 
 # Singleton instance

@@ -7,16 +7,19 @@ from openai import AsyncOpenAI
 
 
 class EmbeddingGenerator:
-    """Generate text embeddings using OpenAI-compatible API (including mimo)."""
+    """Generate text embeddings using OpenAI-compatible API or local models."""
 
     def __init__(
         self,
         model: Optional[str] = None,
-        dimension: int = 1536,
+        dimension: int = 384,
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
     ):
-        self.model = model or os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
+        self.provider = os.getenv("EMBEDDING_PROVIDER", "local")
+        self.model = model or os.getenv(
+            "EMBEDDING_MODEL", "all-MiniLM-L6-v2"
+        )
         self.dimension = dimension
         self.api_key = (
             api_key
@@ -25,6 +28,18 @@ class EmbeddingGenerator:
         )
         self.base_url = base_url or os.getenv("EMBEDDING_BASE_URL")
         self._client: Optional[AsyncOpenAI] = None
+        self._local_model = None
+
+    def _get_local_model(self):
+        """Get or create local sentence-transformers model."""
+        if self._local_model is None:
+            from sentence_transformers import SentenceTransformer
+
+            self._local_model = SentenceTransformer(self.model)
+            # Update dimension based on model output
+            test_embedding = self._local_model.encode(["test"])
+            self.dimension = len(test_embedding[0])
+        return self._local_model
 
     @property
     def client(self) -> AsyncOpenAI:
@@ -50,6 +65,12 @@ class EmbeddingGenerator:
         Returns:
             A list of floats representing the embedding vector.
         """
+        if self.provider == "local":
+            model = self._get_local_model()
+            embedding = model.encode([text])[0]
+            return embedding.tolist()
+
+        # Use OpenAI-compatible API
         embeddings = await self.generate_batch([text])
         return embeddings[0]
 
@@ -66,23 +87,23 @@ class EmbeddingGenerator:
         if not texts:
             return []
 
-        # OpenAI API supports batch requests
+        if self.provider == "local":
+            model = self._get_local_model()
+            embeddings = model.encode(texts)
+            return [emb.tolist() for emb in embeddings]
+
+        # Use OpenAI-compatible API
         response = await self.client.embeddings.create(
             model=self.model,
             input=texts,
-            dimensions=self.dimension,
         )
 
         # Extract embeddings from response
         embeddings = [item.embedding for item in response.data]
 
-        # Validate dimensions
-        for i, emb in enumerate(embeddings):
-            if len(emb) != self.dimension:
-                raise ValueError(
-                    f"Embedding dimension mismatch for text {i}: "
-                    f"expected {self.dimension}, got {len(emb)}"
-                )
+        # Update dimension based on first embedding
+        if embeddings and self.dimension != len(embeddings[0]):
+            self.dimension = len(embeddings[0])
 
         return embeddings
 
@@ -108,9 +129,9 @@ class EmbeddingGenerator:
             except Exception as e:
                 last_error = e
                 if attempt < max_retries - 1:
-                    # Exponential backoff
                     import asyncio
-                    await asyncio.sleep(2 ** attempt)
+
+                    await asyncio.sleep(2**attempt)
 
         raise last_error
 

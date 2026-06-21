@@ -1,6 +1,20 @@
 """BodySense AI Service - FastAPI application."""
 
+from pathlib import Path
+
+from dotenv import load_dotenv
 from fastapi import FastAPI
+
+# Load environment variables from .env file
+_env_paths = [
+    Path(__file__).parent.parent / ".env",  # apps/ai-service/.env
+    Path(__file__).parent.parent.parent / ".env",  # project root .env
+]
+
+for _env_path in _env_paths:
+    if _env_path.exists():
+        load_dotenv(_env_path, override=True)
+        break
 
 from .api.routes import knowledge
 

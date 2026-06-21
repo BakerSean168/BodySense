@@ -35,7 +35,7 @@ class SemanticRetriever:
         self.embedding_generator = embedding_generator or get_embedding_generator()
         self._connection: Optional[psycopg.Connection] = None
 
-    async def _get_connection(self) -> psycopg.Connection:
+    def _get_connection(self) -> psycopg.Connection:
         """Get or create database connection."""
         if self._connection is None or self._connection.closed:
             if not self.database_url:
@@ -44,8 +44,8 @@ class SemanticRetriever:
             # Convert async URL format if needed
             url = self.database_url.replace("+asyncpg", "").replace("+psycopg", "")
 
-            self._connection = await psycopg.AsyncConnection.connect(url)
-            await register_vector(self._connection)
+            self._connection = psycopg.connect(url)
+            register_vector(self._connection)
 
         return self._connection
 
@@ -69,12 +69,13 @@ class SemanticRetriever:
         # Generate query embedding
         query_embedding = await self.embedding_generator.generate(query)
 
-        conn = await self._get_connection()
+        conn = self._get_connection()
 
         # Build query
         if category:
             sql = """
-                SELECT id, category, title, content, source_video, source_timestamp,
+                SELECT id, category, title, content, source_video,
+                       source_timestamp,
                        1 - (embedding <=> %s::vector) as similarity
                 FROM knowledge_entries
                 WHERE embedding IS NOT NULL AND category = %s
@@ -84,7 +85,8 @@ class SemanticRetriever:
             params = (query_embedding, category, query_embedding, top_k)
         else:
             sql = """
-                SELECT id, category, title, content, source_video, source_timestamp,
+                SELECT id, category, title, content, source_video,
+                       source_timestamp,
                        1 - (embedding <=> %s::vector) as similarity
                 FROM knowledge_entries
                 WHERE embedding IS NOT NULL
@@ -95,10 +97,10 @@ class SemanticRetriever:
 
         cur = conn.cursor()
         try:
-            await cur.execute(sql, params)
-            rows = await cur.fetchall()
+            cur.execute(sql, params)
+            rows = cur.fetchall()
         finally:
-            await cur.close()
+            cur.close()
 
         results = []
         for row in rows:
@@ -119,7 +121,7 @@ class SemanticRetriever:
     async def close(self):
         """Close database connection."""
         if self._connection and not self._connection.closed:
-            await self._connection.close()
+            self._connection.close()
 
 
 # Singleton instance

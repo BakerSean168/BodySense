@@ -1,4 +1,4 @@
-FROM node:24-alpine
+FROM node:24-slim
 RUN corepack enable && corepack prepare pnpm@11 --activate
 WORKDIR /app
 
@@ -8,10 +8,10 @@ COPY apps/web/package.json apps/web/
 COPY packages/contracts/package.json packages/contracts/
 COPY packages/utils/package.json packages/utils/
 
-RUN pnpm install --frozen-lockfile
+RUN pnpm install
 
 # Copy source
 COPY . .
 
 EXPOSE 5173
-CMD ["pnpm", "--filter", "@bodysense/web", "vite", "--host", "0.0.0.0"]
+CMD ["sh", "-c", "cd apps/web && npx vite --host 0.0.0.0"]
