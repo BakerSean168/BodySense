@@ -119,12 +119,21 @@ class KnowledgeBase:
 ### 环境变量
 
 ```bash
-# OpenAI API (用于 embedding 和 reranking)
-OPENAI_API_KEY=sk-your-openai-api-key-here
+# OpenRouter API (统一 API 网关)
+OPENROUTER_API_KEY=sk-your-openrouter-api-key-here
 
-# Embedding 模型配置
-EMBEDDING_MODEL=text-embedding-3-small
+# LLM 配置 (用于 reranking)
+LLM_PROVIDER=openrouter
+LLM_API_KEY=${OPENROUTER_API_KEY}
+LLM_MODEL=openai/gpt-oss-120b:free
+LLM_BASE_URL=https://openrouter.ai/api/v1
+
+# Embedding 配置
+EMBEDDING_PROVIDER=openrouter
+EMBEDDING_API_KEY=${OPENROUTER_API_KEY}
+EMBEDDING_MODEL=openai/text-embedding-ada-002
 EMBEDDING_DIMENSIONS=1536
+EMBEDDING_BASE_URL=https://openrouter.ai/api/v1
 
 # AI 服务 URL (Go 后端代理用)
 AI_SERVICE_URL=http://localhost:8100
@@ -231,6 +240,33 @@ generator = EmbeddingGenerator(model="m3e-base", dimension=768)
 # 使用交叉编码器
 reranker = CrossEncoderReranker(model="cross-encoder/ms-marco-MiniLM-L-6-v2")
 ```
+
+### 使用 OpenRouter
+
+项目使用 OpenRouter 作为统一 API 网关，支持多种模型：
+
+```bash
+# .env 文件
+OPENROUTER_API_KEY=sk-your-openrouter-api-key-here
+
+# LLM (用于 reranking)
+LLM_PROVIDER=openrouter
+LLM_API_KEY=${OPENROUTER_API_KEY}
+LLM_MODEL=openai/gpt-oss-120b:free
+LLM_BASE_URL=https://openrouter.ai/api/v1
+
+# Embedding
+EMBEDDING_PROVIDER=openrouter
+EMBEDDING_API_KEY=${OPENROUTER_API_KEY}
+EMBEDDING_MODEL=openai/text-embedding-ada-002
+EMBEDDING_DIMENSIONS=1536
+EMBEDDING_BASE_URL=https://openrouter.ai/api/v1
+```
+
+**优势**：
+- 统一 API 网关，支持多种模型
+- 免费额度可用
+- 兼容 OpenAI 格式
 
 ## 注意事项
 
