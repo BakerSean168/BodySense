@@ -2,7 +2,8 @@ FROM python:3.13-slim
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev
+ENV UV_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
+RUN uv sync --no-dev
 COPY . .
 EXPOSE 8100
 HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=3 \
