@@ -27,6 +27,8 @@ Thumbs.db
 apps/api/tmp/
 apps/api/bin/
 *.exe
+coverage.out
+coverage.html
 
 # Python
 __pycache__/

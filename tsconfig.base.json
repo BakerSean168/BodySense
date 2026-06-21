@@ -18,9 +18,8 @@
     "verbatimModuleSyntax": true,
     "useDefineForClassFields": true,
     "allowJs": false,
-    "baseUrl": ".",
     "paths": {
-      "@bodysense/*": ["packages/*/src"]
+      "@bodysense/*": ["./packages/*/src"]
     }
   }
 }
