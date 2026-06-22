@@ -46,10 +46,13 @@ func main() {
 	// Initialize dependencies
 	userRepo := repository.NewUserRepository(database.DB)
 	profileRepo := repository.NewProfileRepository(database.DB)
+	uploadRepo := repository.NewUploadRepository(database.DB)
 	authService := service.NewAuthService(userRepo, jwtConfig)
 	profileService := service.NewProfileService(profileRepo)
+	uploadService := service.NewUploadService(uploadRepo)
 	authHandler := handler.NewAuthHandler(authService)
 	profileHandler := handler.NewProfileHandler(profileService)
+	uploadHandler := handler.NewUploadHandler(uploadService)
 	knowledgeHandler := handler.NewKnowledgeHandler()
 
 	// HTTP server
@@ -119,6 +122,12 @@ func main() {
 		protected.GET("/me", authHandler.Me)
 		protected.GET("/profile", profileHandler.GetProfile)
 		protected.PUT("/profile", profileHandler.CreateOrUpdateProfile)
+
+		// Upload routes
+		protected.POST("/uploads", uploadHandler.Upload)
+		protected.GET("/uploads", uploadHandler.GetUploads)
+		protected.GET("/uploads/:id", uploadHandler.GetUpload)
+		protected.DELETE("/uploads/:id", uploadHandler.DeleteUpload)
 	}
 
 	// Knowledge base routes (proxy to AI service)

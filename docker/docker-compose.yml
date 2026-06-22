@@ -49,6 +49,8 @@ services:
       REDIS_HOST: redis-dev
       REDIS_PORT: 6379
       AI_SERVICE_URL: http://ai-service:8100
+    volumes:
+      - api-uploads:/app/uploads
     depends_on:
       postgres-dev:
         condition: service_healthy
@@ -93,3 +95,4 @@ networks:
 
 volumes:
   postgres-dev-data:
+  api-uploads:
