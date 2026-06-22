@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { ChatPanel } from '../components/ChatPanel';
+import { AssistantChatPanel } from '../components/AssistantChatPanel';
 import { InfoPanel } from '../components/InfoPanel';
 import {
   consultationApi,
@@ -47,21 +47,6 @@ export function ConsultationPage() {
 
     loadSession();
   }, [id, navigate]);
-
-  const handleSessionUpdate = useCallback((updated: ConsultationSession) => {
-    setSession(updated);
-  }, []);
-
-  const handleExtractedInfoUpdate = useCallback(
-    (info: ExtractedInfo[] | ((prev: ExtractedInfo[]) => ExtractedInfo[])) => {
-      if (typeof info === 'function') {
-        setExtractedInfo(info);
-      } else {
-        setExtractedInfo(info);
-      }
-    },
-    [],
-  );
 
   const handleConfirmInfo = useCallback((info: ExtractedInfo) => {
     // Mark as confirmed (could update backend in the future)
@@ -158,11 +143,7 @@ export function ConsultationPage() {
             mobileTab !== 'chat' ? 'hidden md:flex' : ''
           }`}
         >
-          <ChatPanel
-            session={session}
-            onSessionUpdate={handleSessionUpdate}
-            onExtractedInfoUpdate={handleExtractedInfoUpdate}
-          />
+          <AssistantChatPanel sessionId={session.id} />
         </div>
 
         {/* Info panel - right side (hidden on mobile when chat tab is active) */}
