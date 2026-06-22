@@ -9,6 +9,7 @@ import { ConsultationPage } from './features/consultation/pages/ConsultationPage
 import { AssessmentListPage } from './features/assessment/pages/AssessmentListPage';
 import { AssessmentDetailPage } from './features/assessment/pages/AssessmentDetailPage';
 import { HistoryPage } from './features/history/pages/HistoryPage';
+import { TrainingPage } from './features/training/pages/TrainingPage';
 
 export function App() {
   return (
@@ -80,6 +81,14 @@ export function App() {
           element={
             <ProtectedRoute>
               <HistoryPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/training/:id"
+          element={
+            <ProtectedRoute>
+              <TrainingPage />
             </ProtectedRoute>
           }
         />

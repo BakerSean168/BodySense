@@ -59,6 +59,9 @@ func main() {
 	uploadHandler := handler.NewUploadHandler(uploadService)
 	consultationHandler := handler.NewConsultationHandler(consultationService, profileService)
 	diagnosisHandler := handler.NewDiagnosisHandler(consultationService, profileService)
+	trainingRepo := repository.NewTrainingRepository(database.DB)
+	trainingService := service.NewTrainingService(trainingRepo, profileService)
+	trainingHandler := handler.NewTrainingHandler(trainingService)
 	assessmentHandler := handler.NewAssessmentHandler(assessmentService)
 	knowledgeHandler := handler.NewKnowledgeHandler()
 
@@ -150,6 +153,15 @@ func main() {
 		protected.POST("/assessment/generate", assessmentHandler.GenerateAssessment)
 		protected.GET("/assessment", assessmentHandler.ListReports)
 		protected.GET("/assessment/:id", assessmentHandler.GetReport)
+
+		// Training routes
+		protected.POST("/training/generate", trainingHandler.GeneratePlan)
+		protected.GET("/training", trainingHandler.ListPlans)
+		protected.GET("/training/:id", trainingHandler.GetPlan)
+		protected.GET("/training/:id/today", trainingHandler.GetTodayTask)
+		protected.POST("/training/:id/checkin", trainingHandler.CheckIn)
+		protected.PUT("/training/:id/log", trainingHandler.UpdateLog)
+		protected.GET("/training/:id/progress", trainingHandler.GetProgress)
 	}
 
 	// Knowledge base routes (proxy to AI service)
