@@ -52,10 +52,13 @@ func main() {
 	profileService := service.NewProfileService(profileRepo)
 	uploadService := service.NewUploadService(uploadRepo)
 	consultationService := service.NewConsultationService(consultationRepo)
+	assessmentRepo := repository.NewAssessmentRepository(database.DB)
+	assessmentService := service.NewAssessmentService(assessmentRepo, profileService)
 	authHandler := handler.NewAuthHandler(authService)
 	profileHandler := handler.NewProfileHandler(profileService)
 	uploadHandler := handler.NewUploadHandler(uploadService)
 	consultationHandler := handler.NewConsultationHandler(consultationService, profileService)
+	assessmentHandler := handler.NewAssessmentHandler(assessmentService)
 	knowledgeHandler := handler.NewKnowledgeHandler()
 
 	// HTTP server
@@ -139,6 +142,11 @@ func main() {
 		protected.POST("/consultation/:id/message", consultationHandler.SendMessage)
 		protected.PUT("/consultation/:id/extracted-info", consultationHandler.UpdateExtractedInfo)
 		protected.PUT("/consultation/:id/confirm", consultationHandler.ConfirmDiagnosis)
+
+		// Assessment routes
+		protected.POST("/assessment/generate", assessmentHandler.GenerateAssessment)
+		protected.GET("/assessment", assessmentHandler.ListReports)
+		protected.GET("/assessment/:id", assessmentHandler.GetReport)
 	}
 
 	// Knowledge base routes (proxy to AI service)
