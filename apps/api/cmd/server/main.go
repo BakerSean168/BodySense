@@ -58,6 +58,7 @@ func main() {
 	profileHandler := handler.NewProfileHandler(profileService)
 	uploadHandler := handler.NewUploadHandler(uploadService)
 	consultationHandler := handler.NewConsultationHandler(consultationService, profileService)
+	diagnosisHandler := handler.NewDiagnosisHandler(consultationService, profileService)
 	assessmentHandler := handler.NewAssessmentHandler(assessmentService)
 	knowledgeHandler := handler.NewKnowledgeHandler()
 
@@ -142,6 +143,8 @@ func main() {
 		protected.POST("/consultation/:id/message", consultationHandler.SendMessage)
 		protected.PUT("/consultation/:id/extracted-info", consultationHandler.UpdateExtractedInfo)
 		protected.PUT("/consultation/:id/confirm", consultationHandler.ConfirmDiagnosis)
+		protected.POST("/consultation/:id/diagnosis", diagnosisHandler.AnalyzeDiagnosis)
+		protected.POST("/consultation/:id/treatment", diagnosisHandler.GenerateTreatment)
 
 		// Assessment routes
 		protected.POST("/assessment/generate", assessmentHandler.GenerateAssessment)
