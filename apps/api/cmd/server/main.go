@@ -47,12 +47,15 @@ func main() {
 	userRepo := repository.NewUserRepository(database.DB)
 	profileRepo := repository.NewProfileRepository(database.DB)
 	uploadRepo := repository.NewUploadRepository(database.DB)
+	consultationRepo := repository.NewConsultationRepository(database.DB)
 	authService := service.NewAuthService(userRepo, jwtConfig)
 	profileService := service.NewProfileService(profileRepo)
 	uploadService := service.NewUploadService(uploadRepo)
+	consultationService := service.NewConsultationService(consultationRepo)
 	authHandler := handler.NewAuthHandler(authService)
 	profileHandler := handler.NewProfileHandler(profileService)
 	uploadHandler := handler.NewUploadHandler(uploadService)
+	consultationHandler := handler.NewConsultationHandler(consultationService, profileService)
 	knowledgeHandler := handler.NewKnowledgeHandler()
 
 	// HTTP server
@@ -128,6 +131,14 @@ func main() {
 		protected.GET("/uploads", uploadHandler.GetUploads)
 		protected.GET("/uploads/:id", uploadHandler.GetUpload)
 		protected.DELETE("/uploads/:id", uploadHandler.DeleteUpload)
+
+		// Consultation routes
+		protected.POST("/consultation", consultationHandler.CreateSession)
+		protected.GET("/consultation", consultationHandler.ListSessions)
+		protected.GET("/consultation/:id", consultationHandler.GetSession)
+		protected.POST("/consultation/:id/message", consultationHandler.SendMessage)
+		protected.PUT("/consultation/:id/extracted-info", consultationHandler.UpdateExtractedInfo)
+		protected.PUT("/consultation/:id/confirm", consultationHandler.ConfirmDiagnosis)
 	}
 
 	// Knowledge base routes (proxy to AI service)
