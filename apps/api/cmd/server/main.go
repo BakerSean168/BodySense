@@ -47,6 +47,7 @@ func main() {
 	userRepo := repository.NewUserRepository(database.DB)
 	authService := service.NewAuthService(userRepo, jwtConfig)
 	authHandler := handler.NewAuthHandler(authService)
+	knowledgeHandler := handler.NewKnowledgeHandler()
 
 	// HTTP server
 	port := os.Getenv("API_PORT")
@@ -113,6 +114,16 @@ func main() {
 	protected.Use(middleware.AuthMiddleware(jwtConfig))
 	{
 		protected.GET("/me", authHandler.Me)
+	}
+
+	// Knowledge base routes (proxy to AI service)
+	knowledgeGroup := r.Group("/api/knowledge")
+	{
+		knowledgeGroup.POST("/entries", knowledgeHandler.AddEntry)
+		knowledgeGroup.POST("/search", knowledgeHandler.SearchKnowledge)
+		knowledgeGroup.GET("/entries/:id", knowledgeHandler.GetEntry)
+		knowledgeGroup.DELETE("/entries/:id", knowledgeHandler.DeleteEntry)
+		knowledgeGroup.GET("/stats", knowledgeHandler.GetStats)
 	}
 
 	log.Printf("BodySense API starting on :%s", port)

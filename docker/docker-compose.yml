@@ -48,6 +48,7 @@ services:
       DB_PORT: 5432
       REDIS_HOST: redis-dev
       REDIS_PORT: 6379
+      AI_SERVICE_URL: http://ai-service:8100
     depends_on:
       postgres-dev:
         condition: service_healthy
@@ -65,6 +66,12 @@ services:
       - '${AI_SERVICE_PORT:-8100}:8100'
     env_file:
       - ../.env
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-bodysense}:${DB_PASSWORD:-bodysense123}@postgres-dev:5432/${DB_NAME:-bodysense}
+      AI_SERVICE_PORT: 8100
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
     networks:
       - bodysense-network
 
@@ -77,10 +84,6 @@ services:
       - '5173:5173'
     environment:
       VITE_API_BASE_URL: http://localhost:${API_PORT:-8080}
-    volumes:
-      - ../:/app
-      - /app/node_modules
-      - /app/apps/web/node_modules
     networks:
       - bodysense-network
 
