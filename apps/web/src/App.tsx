@@ -8,6 +8,7 @@ import { ProfilePage } from './features/profile/pages/ProfilePage';
 import { ConsultationPage } from './features/consultation/pages/ConsultationPage';
 import { AssessmentListPage } from './features/assessment/pages/AssessmentListPage';
 import { AssessmentDetailPage } from './features/assessment/pages/AssessmentDetailPage';
+import { HistoryPage } from './features/history/pages/HistoryPage';
 
 export function App() {
   return (
@@ -71,6 +72,14 @@ export function App() {
           element={
             <ProtectedRoute>
               <AssessmentDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/history"
+          element={
+            <ProtectedRoute>
+              <HistoryPage />
             </ProtectedRoute>
           }
         />
