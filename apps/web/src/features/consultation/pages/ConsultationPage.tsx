@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { ChatPanel } from '../components/ChatPanel';
+import { InfoPanel } from '../components/InfoPanel';
 import {
   consultationApi,
   type ConsultationSession,
   type ExtractedInfo,
 } from '../services/consultationService';
+
+type MobileTab = 'chat' | 'info';
 
 export function ConsultationPage() {
   const { id } = useParams<{ id: string }>();
@@ -14,6 +17,7 @@ export function ConsultationPage() {
   const [extractedInfo, setExtractedInfo] = useState<ExtractedInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mobileTab, setMobileTab] = useState<MobileTab>('chat');
 
   useEffect(() => {
     const loadSession = async () => {
@@ -55,6 +59,22 @@ export function ConsultationPage() {
       } else {
         setExtractedInfo(info);
       }
+    },
+    [],
+  );
+
+  const handleConfirmInfo = useCallback((info: ExtractedInfo) => {
+    // Mark as confirmed (could update backend in the future)
+    console.log('Confirmed:', info);
+  }, []);
+
+  const handleModifyInfo = useCallback(
+    (index: number, info: ExtractedInfo) => {
+      setExtractedInfo((prev) => {
+        const updated = [...prev];
+        updated[index] = info;
+        return updated;
+      });
     },
     [],
   );
@@ -101,10 +121,43 @@ export function ConsultationPage() {
         </div>
       </div>
 
+      {/* Mobile tab switcher */}
+      <div className="flex border-b md:hidden">
+        <button
+          onClick={() => setMobileTab('chat')}
+          className={`flex-1 py-2 text-sm font-medium text-center transition-colors ${
+            mobileTab === 'chat'
+              ? 'text-blue-600 border-b-2 border-blue-600'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          对话
+        </button>
+        <button
+          onClick={() => setMobileTab('info')}
+          className={`flex-1 py-2 text-sm font-medium text-center transition-colors ${
+            mobileTab === 'info'
+              ? 'text-blue-600 border-b-2 border-blue-600'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          信息面板
+          {extractedInfo.length > 0 && (
+            <span className="ml-1 inline-flex items-center justify-center w-5 h-5 text-xs bg-blue-100 text-blue-600 rounded-full">
+              {extractedInfo.length}
+            </span>
+          )}
+        </button>
+      </div>
+
       {/* Main content area */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Chat area - left side */}
-        <div className="flex-1 flex flex-col border-r">
+        {/* Chat area - left side (hidden on mobile when info tab is active) */}
+        <div
+          className={`flex-1 flex flex-col border-r ${
+            mobileTab !== 'chat' ? 'hidden md:flex' : ''
+          }`}
+        >
           <ChatPanel
             session={session}
             onSessionUpdate={handleSessionUpdate}
@@ -112,57 +165,17 @@ export function ConsultationPage() {
           />
         </div>
 
-        {/* Info panel - right side */}
-        <div className="w-80 flex-shrink-0 overflow-y-auto p-4 bg-gray-50 hidden md:block">
-          <h2 className="text-sm font-semibold text-gray-700 mb-3">
-            提取的信息
-          </h2>
-
-          {extractedInfo.length === 0 ? (
-            <p className="text-sm text-gray-400">
-              对话中提到的症状信息会在这里显示
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {extractedInfo.map((info, i) => (
-                <div
-                  key={i}
-                  className="bg-white rounded-lg p-3 shadow-sm border"
-                >
-                  <div className="font-medium text-sm text-blue-700">
-                    {info.body_part}
-                  </div>
-                  {info.symptom_type && (
-                    <div className="text-xs text-gray-600 mt-1">
-                      症状：{info.symptom_type}
-                    </div>
-                  )}
-                  {info.duration && (
-                    <div className="text-xs text-gray-600">
-                      持续时间：{info.duration}
-                    </div>
-                  )}
-                  {info.trigger && (
-                    <div className="text-xs text-gray-600">
-                      触发场景：{info.trigger}
-                    </div>
-                  )}
-                  {info.severity && (
-                    <div className="text-xs text-gray-600">
-                      严重程度：{info.severity}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Medical disclaimer */}
-          <div className="mt-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-xs text-yellow-800">
-              本分析仅供参考，不构成医疗诊断。如存在持续疼痛或严重不适，建议前往专业医疗机构就诊。
-            </p>
-          </div>
+        {/* Info panel - right side (hidden on mobile when chat tab is active) */}
+        <div
+          className={`w-full md:w-80 flex-shrink-0 overflow-y-auto p-4 bg-gray-50 ${
+            mobileTab !== 'info' ? 'hidden md:block' : ''
+          }`}
+        >
+          <InfoPanel
+            extractedInfo={extractedInfo}
+            onConfirm={handleConfirmInfo}
+            onModify={handleModifyInfo}
+          />
         </div>
       </div>
     </div>
