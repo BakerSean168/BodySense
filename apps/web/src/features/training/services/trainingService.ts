@@ -96,4 +96,17 @@ export const trainingApi = {
     if (!response.ok) throw new Error('Failed to get progress');
     return response.json();
   },
+
+  submitReassessment: async (
+    planId: string,
+    feedback: { symptom_changes: string; training_feeling: string; difficulties: string },
+  ): Promise<any> => {
+    const response = await authFetch(`/api/v1/training/${planId}/reassess`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ feedback }),
+    });
+    if (!response.ok) throw new Error('Failed to submit reassessment');
+    return response.json();
+  },
 };

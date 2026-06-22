@@ -62,6 +62,7 @@ func main() {
 	trainingRepo := repository.NewTrainingRepository(database.DB)
 	trainingService := service.NewTrainingService(trainingRepo, profileService)
 	trainingHandler := handler.NewTrainingHandler(trainingService)
+	reassessmentHandler := handler.NewReassessmentHandler(trainingService)
 	assessmentHandler := handler.NewAssessmentHandler(assessmentService)
 	knowledgeHandler := handler.NewKnowledgeHandler()
 
@@ -162,6 +163,7 @@ func main() {
 		protected.POST("/training/:id/checkin", trainingHandler.CheckIn)
 		protected.PUT("/training/:id/log", trainingHandler.UpdateLog)
 		protected.GET("/training/:id/progress", trainingHandler.GetProgress)
+		protected.POST("/training/:id/reassess", reassessmentHandler.SubmitReassessment)
 	}
 
 	// Knowledge base routes (proxy to AI service)

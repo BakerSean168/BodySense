@@ -7,6 +7,20 @@ import {
   type TrainingProgress,
 } from '../services/trainingService';
 
+interface ReassessmentResult {
+  analysis: string;
+  adjustments: {
+    difficulty: string;
+    duration: string;
+    exercise_changes: { action: string; exercise: string; reason: string }[];
+  };
+  next_phase_plan: {
+    focus: string;
+    exercises: { name: string; description: string; sets: string; reps: string }[];
+  };
+  motivation: string;
+}
+
 export function TrainingPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -16,6 +30,14 @@ export function TrainingPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [notes, setNotes] = useState('');
   const [exerciseStates, setExerciseStates] = useState<Record<string, boolean>>({});
+  const [showReassessment, setShowReassessment] = useState(false);
+  const [reassessmentFeedback, setReassessmentFeedback] = useState({
+    symptom_changes: '',
+    training_feeling: '',
+    difficulties: '',
+  });
+  const [reassessmentResult, setReassessmentResult] = useState<ReassessmentResult | null>(null);
+  const [isReassessing, setIsReassessing] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -79,6 +101,19 @@ export function TrainingPage() {
       await trainingApi.updateLog(id, notes, exercises);
     } catch {
       // Handle error
+    }
+  };
+
+  const handleReassessment = async () => {
+    if (!id) return;
+    setIsReassessing(true);
+    try {
+      const result = await trainingApi.submitReassessment(id, reassessmentFeedback);
+      setReassessmentResult(result);
+    } catch {
+      // Handle error
+    } finally {
+      setIsReassessing(false);
     }
   };
 
@@ -264,6 +299,91 @@ export function TrainingPage() {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Reassessment */}
+            <div className="rounded-lg bg-white p-6 shadow">
+              <button
+                onClick={() => setShowReassessment(!showReassessment)}
+                className="w-full text-left text-sm font-semibold text-gray-700 flex items-center justify-between"
+              >
+                <span>阶段性复评</span>
+                <span>{showReassessment ? '▲' : '▼'}</span>
+              </button>
+
+              {showReassessment && (
+                <div className="mt-4 space-y-3">
+                  {reassessmentResult ? (
+                    <div className="space-y-3">
+                      <div className="bg-blue-50 rounded p-3">
+                        <h4 className="text-sm font-medium text-blue-800 mb-1">分析结果</h4>
+                        <p className="text-xs text-blue-700">{reassessmentResult.analysis}</p>
+                      </div>
+                      {reassessmentResult.motivation && (
+                        <div className="bg-green-50 rounded p-3">
+                          <p className="text-xs text-green-700">{reassessmentResult.motivation}</p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <label className="text-xs text-gray-600">症状变化</label>
+                        <textarea
+                          value={reassessmentFeedback.symptom_changes}
+                          onChange={(e) =>
+                            setReassessmentFeedback({
+                              ...reassessmentFeedback,
+                              symptom_changes: e.target.value,
+                            })
+                          }
+                          placeholder="描述症状是否有改善..."
+                          className="w-full rounded border p-2 text-xs mt-1"
+                          rows={2}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-600">训练感受</label>
+                        <textarea
+                          value={reassessmentFeedback.training_feeling}
+                          onChange={(e) =>
+                            setReassessmentFeedback({
+                              ...reassessmentFeedback,
+                              training_feeling: e.target.value,
+                            })
+                          }
+                          placeholder="训练过程中的感受..."
+                          className="w-full rounded border p-2 text-xs mt-1"
+                          rows={2}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-600">遇到困难</label>
+                        <textarea
+                          value={reassessmentFeedback.difficulties}
+                          onChange={(e) =>
+                            setReassessmentFeedback({
+                              ...reassessmentFeedback,
+                              difficulties: e.target.value,
+                            })
+                          }
+                          placeholder="训练中遇到的困难..."
+                          className="w-full rounded border p-2 text-xs mt-1"
+                          rows={2}
+                        />
+                      </div>
+                      <button
+                        onClick={handleReassessment}
+                        disabled={isReassessing}
+                        className="w-full rounded bg-purple-600 px-3 py-2 text-xs font-medium text-white
+                                   hover:bg-purple-700 disabled:bg-gray-300"
+                      >
+                        {isReassessing ? '分析中...' : '提交复评'}
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

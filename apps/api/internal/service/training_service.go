@@ -175,6 +175,11 @@ func (s *TrainingService) UpdateLog(ctx context.Context, planID, userID uuid.UUI
 	})
 }
 
+// GetLogsByPlanID retrieves all training logs for a plan.
+func (s *TrainingService) GetLogsByPlanID(ctx context.Context, planID uuid.UUID) ([]model.TrainingLog, error) {
+	return s.trainingRepo.GetLogsByPlanID(ctx, planID)
+}
+
 // GetProgress returns progress statistics for a plan.
 func (s *TrainingService) GetProgress(ctx context.Context, planID, userID uuid.UUID) (map[string]any, error) {
 	plan, err := s.trainingRepo.GetPlanByID(ctx, planID, userID)
