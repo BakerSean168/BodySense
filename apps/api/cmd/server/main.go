@@ -45,8 +45,11 @@ func main() {
 
 	// Initialize dependencies
 	userRepo := repository.NewUserRepository(database.DB)
+	profileRepo := repository.NewProfileRepository(database.DB)
 	authService := service.NewAuthService(userRepo, jwtConfig)
+	profileService := service.NewProfileService(profileRepo)
 	authHandler := handler.NewAuthHandler(authService)
+	profileHandler := handler.NewProfileHandler(profileService)
 	knowledgeHandler := handler.NewKnowledgeHandler()
 
 	// HTTP server
@@ -114,6 +117,8 @@ func main() {
 	protected.Use(middleware.AuthMiddleware(jwtConfig))
 	{
 		protected.GET("/me", authHandler.Me)
+		protected.GET("/profile", profileHandler.GetProfile)
+		protected.PUT("/profile", profileHandler.CreateOrUpdateProfile)
 	}
 
 	// Knowledge base routes (proxy to AI service)
