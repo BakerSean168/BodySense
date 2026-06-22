@@ -74,10 +74,14 @@ export function DashboardPage() {
               <h3 className="font-medium text-gray-900">填写档案</h3>
               <p className="mt-1 text-sm text-gray-500">新用户填写身体信息</p>
             </button>
-            <div className="rounded-lg border border-gray-200 p-4">
+            <button
+              type="button"
+              onClick={() => navigate('/consultation')}
+              className="rounded-lg border border-gray-200 p-4 text-left hover:border-blue-300 hover:bg-blue-50 transition-colors"
+            >
               <h3 className="font-medium text-gray-900">咨询问诊</h3>
               <p className="mt-1 text-sm text-gray-500">开始新的 AI 咨询</p>
-            </div>
+            </button>
             <div className="rounded-lg border border-gray-200 p-4">
               <h3 className="font-medium text-gray-900">历史记录</h3>
               <p className="mt-1 text-sm text-gray-500">查看过往会话</p>

@@ -5,6 +5,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { OnboardingPage } from './features/profile/pages/OnboardingPage';
 import { ProfilePage } from './features/profile/pages/ProfilePage';
+import { ConsultationPage } from './features/consultation/pages/ConsultationPage';
 
 export function App() {
   return (
@@ -36,6 +37,22 @@ export function App() {
           element={
             <ProtectedRoute>
               <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/consultation"
+          element={
+            <ProtectedRoute>
+              <ConsultationPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/consultation/:id"
+          element={
+            <ProtectedRoute>
+              <ConsultationPage />
             </ProtectedRoute>
           }
         />
