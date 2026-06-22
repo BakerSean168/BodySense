@@ -16,7 +16,7 @@ for _env_path in _env_paths:
         load_dotenv(_env_path, override=True)
         break
 
-from .api.routes import chat, knowledge, ocr
+from .api.routes import assessment, chat, knowledge, ocr
 
 app = FastAPI(
     title="BodySense AI Service",
@@ -27,6 +27,7 @@ app = FastAPI(
 app.include_router(knowledge.router)
 app.include_router(ocr.router)
 app.include_router(chat.router)
+app.include_router(assessment.router)
 
 
 @app.get("/health")

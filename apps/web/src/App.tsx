@@ -6,6 +6,8 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { OnboardingPage } from './features/profile/pages/OnboardingPage';
 import { ProfilePage } from './features/profile/pages/ProfilePage';
 import { ConsultationPage } from './features/consultation/pages/ConsultationPage';
+import { AssessmentListPage } from './features/assessment/pages/AssessmentListPage';
+import { AssessmentDetailPage } from './features/assessment/pages/AssessmentDetailPage';
 
 export function App() {
   return (
@@ -53,6 +55,22 @@ export function App() {
           element={
             <ProtectedRoute>
               <ConsultationPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/assessment"
+          element={
+            <ProtectedRoute>
+              <AssessmentListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/assessment/:id"
+          element={
+            <ProtectedRoute>
+              <AssessmentDetailPage />
             </ProtectedRoute>
           }
         />
