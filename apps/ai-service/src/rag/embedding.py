@@ -14,7 +14,7 @@ class EmbeddingGenerator:
     def __init__(
         self,
         model: Optional[str] = None,
-        dimension: int = 384,
+        dimension: int = 1536,
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
     ):

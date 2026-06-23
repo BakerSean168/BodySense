@@ -48,7 +48,7 @@ CREATE TABLE knowledge_units (
     tags TEXT[] NOT NULL DEFAULT '{}',
     transcript_excerpt TEXT NOT NULL DEFAULT '',
     review_status VARCHAR(50) NOT NULL DEFAULT 'generated',
-    embedding VECTOR(384),
+    embedding VECTOR(1536),
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

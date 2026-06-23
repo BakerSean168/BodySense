@@ -18,19 +18,22 @@ class TestEmbeddingGenerator:
         }):
             gen = EmbeddingGenerator(api_key="test-key")
             assert gen.model == "all-MiniLM-L6-v2"
-            assert gen.dimension == 384
+            assert gen.dimension == 1536
             assert gen.api_key == "test-key"
             assert gen.provider == "openai"
 
     def test_init_custom(self):
         """Test custom initialization."""
-        gen = EmbeddingGenerator(
-            model="custom-model",
-            dimension=768,
-            api_key="test-key",
-        )
-        assert gen.model == "custom-model"
-        assert gen.dimension == 768
+        with patch.dict("os.environ", {
+            "EMBEDDING_DIMENSIONS": "768",
+        }):
+            gen = EmbeddingGenerator(
+                model="custom-model",
+                dimension=768,
+                api_key="test-key",
+            )
+            assert gen.model == "custom-model"
+            assert gen.dimension == 768
 
     @pytest.mark.asyncio
     async def test_generate_single(self):
