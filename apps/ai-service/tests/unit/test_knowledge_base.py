@@ -1,33 +1,18 @@
 """Unit tests for knowledge_base module."""
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from src.rag.knowledge_base import KnowledgeBase, KnowledgeEntryData
 from src.rag.retriever import RetrievalResult
 
 
-class MockAsyncContextManager:
-    """Helper class for mocking async context managers."""
-
-    def __init__(self, return_value=None):
-        self.return_value = return_value
-
-    async def __aenter__(self):
-        return self.return_value
-
-    async def __aexit__(self, *args):
-        pass
-
-
 def create_mock_connection(mock_cursor):
     """Create a mock database connection that returns a mock cursor."""
-    mock_conn = AsyncMock()
+    mock_conn = MagicMock()
     mock_conn.closed = False
-
-    # Make conn.cursor() return the mock_cursor directly (not as a coroutine)
-    mock_conn.cursor = MagicMock(return_value=mock_cursor)
-
+    mock_conn.cursor.return_value = mock_cursor
     return mock_conn
 
 
@@ -75,9 +60,9 @@ class TestKnowledgeBase:
         mock_embedding = [0.1] * 1536
         kb.embedding_generator.generate = AsyncMock(return_value=mock_embedding)
 
-        # Mock database
-        mock_cursor = AsyncMock()
-        mock_cursor.fetchone = AsyncMock(return_value=(1,))
+        # Mock database — psycopg cursor is synchronous
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = (1,)
 
         mock_conn = create_mock_connection(mock_cursor)
         kb._connection = mock_conn
@@ -107,9 +92,9 @@ class TestKnowledgeBase:
         mock_embeddings = [[0.1] * 1536, [0.2] * 1536]
         kb.embedding_generator.generate_batch = AsyncMock(return_value=mock_embeddings)
 
-        # Mock database
-        mock_cursor = AsyncMock()
-        mock_cursor.fetchone = AsyncMock(side_effect=[(1,), (2,)])
+        # Mock database — psycopg cursor is synchronous
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.side_effect = [(1,), (2,)]
 
         mock_conn = create_mock_connection(mock_cursor)
         kb._connection = mock_conn
@@ -188,11 +173,11 @@ class TestKnowledgeBase:
             reranker=MagicMock(),
         )
 
-        # Mock database
-        mock_cursor = AsyncMock()
-        mock_cursor.fetchone = AsyncMock(return_value=(
+        # Mock database — psycopg cursor is synchronous
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = (
             1, "posture", "Title", "Content", None, None,
-        ))
+        )
 
         mock_conn = create_mock_connection(mock_cursor)
         kb._connection = mock_conn
@@ -213,9 +198,9 @@ class TestKnowledgeBase:
             reranker=MagicMock(),
         )
 
-        # Mock database
-        mock_cursor = AsyncMock()
-        mock_cursor.fetchone = AsyncMock(return_value=None)
+        # Mock database — psycopg cursor is synchronous
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = None
 
         mock_conn = create_mock_connection(mock_cursor)
         kb._connection = mock_conn
@@ -234,8 +219,8 @@ class TestKnowledgeBase:
             reranker=MagicMock(),
         )
 
-        # Mock database
-        mock_cursor = AsyncMock()
+        # Mock database — psycopg cursor is synchronous
+        mock_cursor = MagicMock()
         mock_cursor.rowcount = 1
 
         mock_conn = create_mock_connection(mock_cursor)
@@ -255,8 +240,8 @@ class TestKnowledgeBase:
             reranker=MagicMock(),
         )
 
-        # Mock database
-        mock_cursor = AsyncMock()
+        # Mock database — psycopg cursor is synchronous
+        mock_cursor = MagicMock()
         mock_cursor.rowcount = 0
 
         mock_conn = create_mock_connection(mock_cursor)
@@ -276,9 +261,9 @@ class TestKnowledgeBase:
             reranker=MagicMock(),
         )
 
-        # Mock database
-        mock_cursor = AsyncMock()
-        mock_cursor.fetchone = AsyncMock(return_value=(42,))
+        # Mock database — psycopg cursor is synchronous
+        mock_cursor = MagicMock()
+        mock_cursor.fetchone.return_value = (42,)
 
         mock_conn = create_mock_connection(mock_cursor)
         kb._connection = mock_conn

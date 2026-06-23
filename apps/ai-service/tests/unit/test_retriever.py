@@ -1,32 +1,17 @@
 """Unit tests for retriever module."""
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from src.rag.retriever import RetrievalResult, SemanticRetriever
 
 
-class MockAsyncContextManager:
-    """Helper class for mocking async context managers."""
-
-    def __init__(self, return_value=None):
-        self.return_value = return_value
-
-    async def __aenter__(self):
-        return self.return_value
-
-    async def __aexit__(self, *args):
-        pass
-
-
 def create_mock_connection(mock_cursor):
     """Create a mock database connection that returns a mock cursor."""
-    mock_conn = AsyncMock()
+    mock_conn = MagicMock()
     mock_conn.closed = False
-
-    # Make conn.cursor() return the mock_cursor directly (not as a coroutine)
-    mock_conn.cursor = MagicMock(return_value=mock_cursor)
-
+    mock_conn.cursor.return_value = mock_cursor
     return mock_conn
 
 
@@ -78,12 +63,12 @@ class TestSemanticRetriever:
         mock_embedding = [0.1] * 1536
         retriever.embedding_generator.generate = AsyncMock(return_value=mock_embedding)
 
-        # Mock database connection and cursor
-        mock_cursor = AsyncMock()
-        mock_cursor.fetchall = AsyncMock(return_value=[
+        # Mock database — psycopg cursor is synchronous
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = [
             (1, "posture", "Title 1", "Content 1", None, None, 0.95),
             (2, "exercise", "Title 2", "Content 2", None, None, 0.85),
-        ])
+        ]
 
         mock_conn = create_mock_connection(mock_cursor)
         retriever._connection = mock_conn
@@ -108,11 +93,11 @@ class TestSemanticRetriever:
         mock_embedding = [0.1] * 1536
         retriever.embedding_generator.generate = AsyncMock(return_value=mock_embedding)
 
-        # Mock database
-        mock_cursor = AsyncMock()
-        mock_cursor.fetchall = AsyncMock(return_value=[
+        # Mock database — psycopg cursor is synchronous
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = [
             (1, "posture", "Title 1", "Content 1", None, None, 0.95),
-        ])
+        ]
 
         mock_conn = create_mock_connection(mock_cursor)
         retriever._connection = mock_conn
@@ -134,9 +119,9 @@ class TestSemanticRetriever:
         mock_embedding = [0.1] * 1536
         retriever.embedding_generator.generate = AsyncMock(return_value=mock_embedding)
 
-        # Mock database
-        mock_cursor = AsyncMock()
-        mock_cursor.fetchall = AsyncMock(return_value=[])
+        # Mock database — psycopg cursor is synchronous
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = []
 
         mock_conn = create_mock_connection(mock_cursor)
         retriever._connection = mock_conn

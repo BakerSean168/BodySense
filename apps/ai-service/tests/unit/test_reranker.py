@@ -1,7 +1,8 @@
 """Unit tests for reranker module."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from src.rag.reranker import Reranker, RerankResult
 from src.rag.retriever import RetrievalResult

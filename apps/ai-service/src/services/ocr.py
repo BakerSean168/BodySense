@@ -2,7 +2,6 @@
 
 import io
 import logging
-from pathlib import Path
 
 import pytesseract
 from PIL import Image

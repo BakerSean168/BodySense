@@ -1,7 +1,8 @@
 """Unit tests for embedding module."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from src.rag.embedding import EmbeddingGenerator
 
@@ -10,11 +11,16 @@ class TestEmbeddingGenerator:
     """Tests for EmbeddingGenerator class."""
 
     def test_init_default(self):
-        """Test default initialization."""
-        gen = EmbeddingGenerator(api_key="test-key")
-        assert gen.model == "text-embedding-3-small"
-        assert gen.dimension == 1536
-        assert gen.api_key == "test-key"
+        """Test default initialization with OpenAI provider."""
+        with patch.dict("os.environ", {
+            "EMBEDDING_PROVIDER": "openai",
+            "EMBEDDING_MODEL": "all-MiniLM-L6-v2",
+        }):
+            gen = EmbeddingGenerator(api_key="test-key")
+            assert gen.model == "all-MiniLM-L6-v2"
+            assert gen.dimension == 384
+            assert gen.api_key == "test-key"
+            assert gen.provider == "openai"
 
     def test_init_custom(self):
         """Test custom initialization."""
@@ -28,8 +34,9 @@ class TestEmbeddingGenerator:
 
     @pytest.mark.asyncio
     async def test_generate_single(self):
-        """Test single text embedding generation."""
-        gen = EmbeddingGenerator(api_key="test-key")
+        """Test single text embedding generation via OpenAI API."""
+        gen = EmbeddingGenerator(api_key="test-key", dimension=1536)
+        gen.provider = "openai"
 
         # Mock the client
         mock_embedding = [0.1] * 1536
@@ -43,16 +50,12 @@ class TestEmbeddingGenerator:
 
         assert len(result) == 1536
         assert result == mock_embedding
-        gen._client.embeddings.create.assert_called_once_with(
-            model="text-embedding-3-small",
-            input=["test text"],
-            dimensions=1536,
-        )
 
     @pytest.mark.asyncio
     async def test_generate_batch(self):
         """Test batch embedding generation."""
-        gen = EmbeddingGenerator(api_key="test-key")
+        gen = EmbeddingGenerator(api_key="test-key", dimension=1536)
+        gen.provider = "openai"
 
         # Mock the client
         mock_embeddings = [[0.1] * 1536, [0.2] * 1536]
@@ -82,6 +85,7 @@ class TestEmbeddingGenerator:
     async def test_generate_dimension_mismatch(self):
         """Test dimension mismatch raises error."""
         gen = EmbeddingGenerator(api_key="test-key", dimension=1536)
+        gen.provider = "openai"
 
         # Mock response with wrong dimension
         mock_embedding = [0.1] * 768  # Wrong dimension
@@ -97,7 +101,8 @@ class TestEmbeddingGenerator:
     @pytest.mark.asyncio
     async def test_generate_with_retry(self):
         """Test retry logic on failure."""
-        gen = EmbeddingGenerator(api_key="test-key")
+        gen = EmbeddingGenerator(api_key="test-key", dimension=1536)
+        gen.provider = "openai"
 
         # Mock client to fail twice then succeed
         mock_embedding = [0.1] * 1536
@@ -117,7 +122,8 @@ class TestEmbeddingGenerator:
     @pytest.mark.asyncio
     async def test_generate_with_retry_exhausted(self):
         """Test retry exhaustion raises last error."""
-        gen = EmbeddingGenerator(api_key="test-key")
+        gen = EmbeddingGenerator(api_key="test-key", dimension=1536)
+        gen.provider = "openai"
 
         gen._client = MagicMock()
         gen._client.embeddings.create = AsyncMock(

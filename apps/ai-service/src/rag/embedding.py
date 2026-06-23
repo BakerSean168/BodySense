@@ -101,9 +101,12 @@ class EmbeddingGenerator:
         # Extract embeddings from response
         embeddings = [item.embedding for item in response.data]
 
-        # Update dimension based on first embedding
-        if embeddings and self.dimension != len(embeddings[0]):
-            self.dimension = len(embeddings[0])
+        # Validate dimension
+        if embeddings and len(embeddings[0]) != self.dimension:
+            raise ValueError(
+                f"Embedding dimension mismatch: expected {self.dimension}, "
+                f"got {len(embeddings[0])}"
+            )
 
         return embeddings
 

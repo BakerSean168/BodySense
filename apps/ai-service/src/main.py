@@ -16,7 +16,7 @@ for _env_path in _env_paths:
         load_dotenv(_env_path, override=True)
         break
 
-from .api.routes import assessment, chat, diagnosis, knowledge, ocr, reassessment
+from .api.routes import assessment, chat, diagnosis, knowledge, ocr, reassessment  # noqa: E402
 
 app = FastAPI(
     title="BodySense AI Service",

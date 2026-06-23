@@ -1,7 +1,7 @@
 """Shared pytest fixtures for BodySense AI Service tests."""
 
 import asyncio
-from typing import AsyncGenerator, Generator
+from typing import Generator
 
 import pytest
 from fastapi.testclient import TestClient

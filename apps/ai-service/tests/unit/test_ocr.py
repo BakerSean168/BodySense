@@ -1,8 +1,6 @@
 """Unit tests for OCR and indicator extraction."""
 
-import pytest
-
-from src.models.ocr import HealthIndicator, OCRResult, OCRResponse, TextExtractionResponse
+from src.models.ocr import HealthIndicator, OCRResponse, OCRResult, TextExtractionResponse
 from src.services.indicator_extractor import extract_indicators, get_overall_confidence
 
 
