@@ -169,10 +169,9 @@ func main() {
 	// Knowledge base routes (proxy to AI service)
 	knowledgeGroup := r.Group("/api/knowledge")
 	{
-		knowledgeGroup.POST("/entries", knowledgeHandler.AddEntry)
+		knowledgeGroup.POST("/ingestions/video", knowledgeHandler.IngestVideo)
 		knowledgeGroup.POST("/search", knowledgeHandler.SearchKnowledge)
-		knowledgeGroup.GET("/entries/:id", knowledgeHandler.GetEntry)
-		knowledgeGroup.DELETE("/entries/:id", knowledgeHandler.DeleteEntry)
+		knowledgeGroup.GET("/sources", knowledgeHandler.ListSources)
 		knowledgeGroup.GET("/stats", knowledgeHandler.GetStats)
 	}
 

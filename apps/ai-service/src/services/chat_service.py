@@ -1,5 +1,6 @@
 """Chat service for consultation conversations."""
 
+import re
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any
@@ -45,7 +46,27 @@ class ChatService:
         Yields:
             SSEEvent objects to send to the client.
         """
-        provider = get_llm_provider()
+        try:
+            provider = get_llm_provider()
+        except ValueError:
+            fallback_text = self._build_fallback_reply(user_message, rag_results)
+            accumulated_text = ""
+            for chunk in self._chunk_text(fallback_text):
+                accumulated_text += chunk
+                yield SSEEvent(
+                    event_type="message",
+                    data={"type": "text", "content": chunk},
+                )
+
+            yield SSEEvent(
+                event_type="done",
+                data={
+                    "session_id": context.session_id,
+                    "full_text": accumulated_text,
+                    "extracted_info": context.extracted_info.to_dict(),
+                },
+            )
+            return
 
         # Build messages list
         messages = self._build_messages(context, user_message, rag_results)
@@ -156,3 +177,67 @@ class ChatService:
             description=tool_dict["description"],
             parameters=tool_dict["parameters"],
         )
+
+    def _build_fallback_reply(
+        self,
+        user_message: str,
+        rag_results: list[dict[str, Any]] | None = None,
+    ) -> str:
+        """Build a deterministic reply when no online LLM is configured."""
+        if not rag_results:
+            return (
+                "我已经收到你的描述，但当前本地环境没有配置云端大模型，且知识库里暂时没有检索到足够匹配的条目。\n"
+                "你可以继续补充具体部位、动作场景、是否双侧对称，以及持续多久，我会继续按本地知识库帮你缩小范围。"
+            )
+
+        top_result = rag_results[0]
+        title = top_result.get("title", "相关体态问题")
+        summary = top_result.get("summary", "").strip()
+        content = (
+            top_result.get("body_markdown")
+            or top_result.get("content")
+            or summary
+            or ""
+        )
+        plain_content = self._markdown_to_text(content)
+        lines = [f"根据当前本地知识库，你提到的问题最接近“{title}”。"]
+
+        if summary:
+            lines.append(f"核心判断：{summary}")
+
+        if plain_content:
+            lines.append(f"知识要点：{plain_content[:280]}")
+
+        clips = top_result.get("clips") or []
+        if clips:
+            clip_titles = [
+                clip.get("title", "").strip()
+                for clip in clips[:2]
+                if clip.get("title")
+            ]
+            if clip_titles:
+                lines.append(f"可参考的动作演示：{'、'.join(clip_titles)}。")
+
+        if len(rag_results) > 1:
+            extra_titles = [
+                result.get("title", "").strip()
+                for result in rag_results[1:3]
+                if result.get("title")
+            ]
+            if extra_titles:
+                lines.append(f"我同时参考了：{'、'.join(extra_titles)}。")
+
+        lines.append("当前回答来自本地 curated 知识库整理，不构成医疗诊断；")
+        lines.append("如果你愿意，我可以继续根据你的具体症状帮你细化判断。")
+        return "\n".join(lines)
+
+    def _markdown_to_text(self, content: str) -> str:
+        """Flatten markdown into readable plain text for chat bubbles."""
+        text = re.sub(r"^#+\s*", "", content, flags=re.MULTILINE)
+        text = re.sub(r"^[*-]\s*", "", text, flags=re.MULTILINE)
+        text = re.sub(r"\n{2,}", "\n", text)
+        return text.strip()
+
+    def _chunk_text(self, text: str, chunk_size: int = 120) -> list[str]:
+        """Split a reply into stream-friendly chunks."""
+        return [text[i : i + chunk_size] for i in range(0, len(text), chunk_size)]

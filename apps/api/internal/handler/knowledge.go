@@ -24,58 +24,26 @@ func NewKnowledgeHandler() *KnowledgeHandler {
 	return &KnowledgeHandler{aiServiceURL: aiServiceURL}
 }
 
-// AddEntryRequest represents the request to add a knowledge entry.
-type AddEntryRequest struct {
-	Category        string  `json:"category" binding:"required"`
-	Title           string  `json:"title" binding:"required"`
-	Content         string  `json:"content" binding:"required"`
-	SourceVideo     *string `json:"source_video,omitempty"`
-	SourceTimestamp *string `json:"source_timestamp,omitempty"`
-}
-
 // SearchRequest represents the request to search knowledge base.
 type SearchRequest struct {
-	Query    string  `json:"query" binding:"required"`
-	TopK     int     `json:"top_k,omitempty"`
-	TopN     int     `json:"top_n,omitempty"`
-	Category *string `json:"category,omitempty"`
+	Query       string  `json:"query" binding:"required"`
+	TopK        int     `json:"top_k,omitempty"`
+	ProblemSlug *string `json:"problem_slug,omitempty"`
+	UnitType    *string `json:"unit_type,omitempty"`
 }
 
-// AddEntry handles POST /api/knowledge/entries
-func (h *KnowledgeHandler) AddEntry(c *gin.Context) {
-	var req AddEntryRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Forward to AI service
-	body, err := json.Marshal(req)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to marshal request"})
-		return
-	}
-
-	resp, err := http.Post(
-		h.aiServiceURL+"/api/knowledge/entries",
-		"application/json",
-		bytes.NewBuffer(body),
-	)
-	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to connect to AI service"})
-		return
-	}
-	defer resp.Body.Close()
-
-	// Read response
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read response"})
-		return
-	}
-
-	// Forward response
-	c.Data(resp.StatusCode, "application/json", respBody)
+// IngestVideoRequest represents the request to ingest a local video source.
+type IngestVideoRequest struct {
+	VideoPath          string `json:"video_path" binding:"required"`
+	ProblemSlug        string `json:"problem_slug" binding:"required"`
+	ProblemDisplayName string `json:"problem_display_name" binding:"required"`
+	Author             string `json:"author" binding:"required"`
+	SourceTitle        string `json:"source_title,omitempty"`
+	Language           string `json:"language,omitempty"`
+	WhisperModel       string `json:"whisper_model,omitempty"`
+	ForceTranscribe    bool   `json:"force_transcribe,omitempty"`
+	ExportClips        bool   `json:"export_clips,omitempty"`
+	OverwriteSource    bool   `json:"overwrite_source,omitempty"`
 }
 
 // SearchKnowledge handles POST /api/knowledge/search
@@ -88,10 +56,7 @@ func (h *KnowledgeHandler) SearchKnowledge(c *gin.Context) {
 
 	// Set defaults
 	if req.TopK == 0 {
-		req.TopK = 10
-	}
-	if req.TopN == 0 {
-		req.TopN = 3
+		req.TopK = 5
 	}
 
 	// Forward to AI service
@@ -123,11 +88,32 @@ func (h *KnowledgeHandler) SearchKnowledge(c *gin.Context) {
 	c.Data(resp.StatusCode, "application/json", respBody)
 }
 
-// GetEntry handles GET /api/knowledge/entries/:id
-func (h *KnowledgeHandler) GetEntry(c *gin.Context) {
-	id := c.Param("id")
+// IngestVideo handles POST /api/knowledge/ingestions/video
+func (h *KnowledgeHandler) IngestVideo(c *gin.Context) {
+	var req IngestVideoRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
-	resp, err := http.Get(h.aiServiceURL + "/api/knowledge/entries/" + id)
+	if req.Language == "" {
+		req.Language = "zh"
+	}
+	if req.WhisperModel == "" {
+		req.WhisperModel = "ggml-base.bin"
+	}
+
+	body, err := json.Marshal(req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to marshal request"})
+		return
+	}
+
+	resp, err := http.Post(
+		h.aiServiceURL+"/api/knowledge/ingestions/video",
+		"application/json",
+		bytes.NewBuffer(body),
+	)
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to connect to AI service"})
 		return
@@ -143,18 +129,9 @@ func (h *KnowledgeHandler) GetEntry(c *gin.Context) {
 	c.Data(resp.StatusCode, "application/json", respBody)
 }
 
-// DeleteEntry handles DELETE /api/knowledge/entries/:id
-func (h *KnowledgeHandler) DeleteEntry(c *gin.Context) {
-	id := c.Param("id")
-
-	req, err := http.NewRequest(http.MethodDelete, h.aiServiceURL+"/api/knowledge/entries/"+id, nil)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create request"})
-		return
-	}
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
+// ListSources handles GET /api/knowledge/sources
+func (h *KnowledgeHandler) ListSources(c *gin.Context) {
+	resp, err := http.Get(h.aiServiceURL + "/api/knowledge/sources")
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to connect to AI service"})
 		return

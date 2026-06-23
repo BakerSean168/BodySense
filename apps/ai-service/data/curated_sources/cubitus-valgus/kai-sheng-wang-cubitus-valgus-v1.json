@@ -1,0 +1,168 @@
+{
+  "source_key": "凯圣王-cubitus-valgus-肘外翻",
+  "source_title": "肘外翻",
+  "author": "凯圣王",
+  "problem_slug": "cubitus-valgus",
+  "problem_display_name": "肘外翻",
+  "units": [
+    {
+      "unit_key": "cv-definition",
+      "unit_type": "definition",
+      "category": "posture.cubitus-valgus",
+      "title": "什么是肘外翻",
+      "summary": "肘外翻是指上臂和前臂延长线形成的夹角过大，视频里给出的判断阈值是超过 15 度。",
+      "source_start_sec": 0.0,
+      "source_end_sec": 18.0,
+      "tags": ["肘外翻", "定义", "肘关节", "夹角"],
+      "body_markdown": "## 核心结论\n肘外翻不是单纯“手臂看起来有点歪”，而是肘关节的大臂和小臂延长线夹角明显偏大。\n\n## 这条视频里的定义\n- 讲者把它描述为肘关节体态问题。\n- 判断核心是大臂和小臂的延长线夹角过大。\n- 视频里给出的经验阈值是超过 15 度。\n\n## 给用户的通俗解释\n可以把它理解成：手臂自然伸直时，前臂更明显地向外偏，肘部看起来更“外张”，这就是肘外翻的典型外观。 "
+    },
+    {
+      "unit_key": "cv-impact-appearance-training",
+      "unit_type": "impact",
+      "category": "posture.cubitus-valgus",
+      "title": "肘外翻为什么会影响外观和训练",
+      "summary": "视频强调，肘外翻不只影响美观，也会让健身训练里手肘内外侧受力不均。",
+      "source_start_sec": 18.0,
+      "source_end_sec": 36.0,
+      "tags": ["肘外翻", "外观", "训练表现", "受力不均"],
+      "body_markdown": "## 视频里的两个直接影响\n- 外观看起来更明显，肘部线条不够中立。\n- 训练时手肘内外侧受力更不均匀。\n\n## 用户更容易理解的版本\n很多人不是先从“角度超过多少度”发现问题，而是先感觉到训练时一边更别扭、手肘受力不对称，或者觉得肘部形态更突出。\n\n## 产品侧可用结论\n问答时可以把肘外翻解释成“外观问题 + 力线问题”一起看，而不是只说成美观问题。 "
+    },
+    {
+      "unit_key": "cv-symptoms-and-risks",
+      "unit_type": "warning",
+      "category": "posture.cubitus-valgus",
+      "title": "肘外翻常见的不适和风险信号",
+      "summary": "视频提到四类高频问题：肘外侧挤压不适、肘内侧牵拉不适、无名指小拇指区域窜电感，以及手腕不舒服。",
+      "source_start_sec": 18.0,
+      "source_end_sec": 72.0,
+      "tags": ["肘外翻", "风险", "肘外侧不适", "肘内侧不适", "窜电感", "手腕不适"],
+      "body_markdown": "## 视频里点到的四类不适\n1. 手肘外侧不舒服。\n2. 手肘内侧不舒服。\n3. 小臂内侧到无名指、小拇指区域出现窜电般感觉。\n4. 手腕也可能跟着不舒服。\n\n## 讲者给出的解释路径\n- 外侧不适：更像桡骨头近端和肱骨外上髁之间挤压变多。\n- 内侧不适：更像肌腱韧带长期被牵拉。\n- 窜电感：更像肘内侧通路反复受牵拉后的神经样症状。\n- 手腕不适：和整条上肢力线变化有关。\n\n## 需要更谨慎的情况\n如果麻电感持续、加重，或者训练中一做屈伸肘就明显放大症状，不适合只靠自己练一练，应该尽快线下评估。 "
+    },
+    {
+      "unit_key": "cv-self-check",
+      "unit_type": "self_check",
+      "category": "posture.cubitus-valgus",
+      "title": "肘外翻怎么做初步自测",
+      "summary": "视频里的自测线索主要有两个：自然伸肘时前臂更明显向外偏，以及肘内侧看起来更突出一块。",
+      "source_start_sec": 0.0,
+      "source_end_sec": 90.0,
+      "tags": ["肘外翻", "自测", "外观观察", "肘内侧突出"],
+      "body_markdown": "## 可以先看什么\n- 手臂自然伸直时，前臂有没有明显向外偏。\n- 肘内侧有没有更突出的那一块。\n- 左右两边看起来是不是明显不对称。\n\n## 视频里的判断思路\n- 先从整体外观看这条“手臂线”是不是太外张。\n- 再结合肘内侧是否更明显突出。\n- 如果同时伴随训练里受力不均和局部不适，就更值得怀疑。\n\n## 使用提醒\n这不是专业量角器测量，更适合作为居家初筛。它的价值是帮助你决定：要不要进一步按肘外翻思路去处理。 "
+    },
+    {
+      "unit_key": "cv-mechanics-chain",
+      "unit_type": "muscle_imbalance",
+      "category": "posture.cubitus-valgus",
+      "title": "肘外翻常见的受力链问题",
+      "summary": "视频把肘外翻解释成一条受力链问题：外侧更容易挤压，内侧更容易被牵拉，手腕也可能被一起带偏。",
+      "source_start_sec": 18.0,
+      "source_end_sec": 90.0,
+      "tags": ["肘外翻", "受力链", "桡骨头", "肱骨外上髁", "手腕"],
+      "body_markdown": "## 外侧更常见的问题\n视频强调，桡骨头近端和肱骨外上髁之间更容易出现过度挤压。\n\n## 内侧更常见的问题\n当 carrying angle 过大时，肘内侧的肌腱和韧带更容易长期被牵拉，所以做屈伸肘时更容易不舒服。\n\n## 为什么手腕也会被带进去\n讲者认为，肘外翻会让整条上肢力线变化，结果不只是肘部，手腕也可能出现代偿和不适。\n\n## 给用户的解释方式\n这类问题更像一整条受力链被带偏，而不是某一个点单独出问题。 "
+    },
+    {
+      "unit_key": "cv-prevalence-and-appearance",
+      "unit_type": "cause",
+      "category": "posture.cubitus-valgus",
+      "title": "肘外翻更常见的外观特点",
+      "summary": "视频提到肘外翻在女性中更常见一些，外观上常见肘内侧更突出，并伴随肘腕力学变化。",
+      "source_start_sec": 72.0,
+      "source_end_sec": 90.0,
+      "tags": ["肘外翻", "外观特点", "女性更常见", "肘内侧突出"],
+      "body_markdown": "## 视频里的观察点\n- 讲者提到这类体态在女性中偏多一些。\n- 常见外观是肘内侧更突出一块。\n- 不只是肘部好不好看，也会带来肘和手腕的一系列力学影响。\n\n## 更适合怎么说\n这里更适合说“视频里的常见观察”，不要把它绝对化成每个人都一定如此。 "
+    },
+    {
+      "unit_key": "cv-correction-sequence",
+      "unit_type": "exercise",
+      "category": "exercise.cubitus-valgus",
+      "title": "肘外翻怎么处理：先松动，再减压，最后贴扎支持",
+      "summary": "这条视频给出的流程很清楚：先做肘内翻方向的关节松动，再做桡骨头减压，最后用肌贴给肘关节一个向内的支持力。",
+      "source_start_sec": 72.0,
+      "source_end_sec": 211.548,
+      "tags": ["肘外翻", "矫正流程", "关节松动", "桡骨头减压", "肌贴"],
+      "body_markdown": "## 推荐顺序\n1. 先做肘内翻方向的关节松动。\n2. 再做桡骨头近端的减压松动。\n3. 最后用肌贴给肘关节一个向内的支持。\n\n## 为什么这个顺序合理\n- 第一步先改角度趋势。\n- 第二步再减轻外侧挤压。\n- 第三步用外部支持帮助你把训练时的压力降下来。\n\n## 给用户的期待管理\n这更像“自我处理流程”，不是做一个动作就马上彻底恢复。持续不适时仍然需要线下评估。 "
+    },
+    {
+      "unit_key": "cv-varus-mobilization",
+      "unit_type": "exercise",
+      "category": "exercise.cubitus-valgus",
+      "title": "矫正步骤 1：屈肘位做肘内翻方向的关节松动",
+      "summary": "视频第一步是屈肘 90 度，用手推住肘尖向内推，让肘部朝肘内翻方向调整。",
+      "source_start_sec": 90.0,
+      "source_end_sec": 144.0,
+      "tags": ["肘外翻", "关节松动", "肘内翻", "肘尖", "第一步"],
+      "body_markdown": "## 动作设置\n- 找一面墙。\n- 大臂靠墙。\n- 屈肘大约 90 度。\n- 用手推住肘尖，朝内侧方向推。\n\n## 视频里的核心思路\n讲者想通过肘内翻方向的推力，去纠正过大的 carrying angle。\n\n## 次数建议\n- 每组大约 10 到 20 次。\n- 可以做 2 到 3 组。\n\n## 动作要点\n- 推力方向要明确，但不要暴力顶压。\n- 重点是让肘部出现更向内的偏转趋势。\n- 如果一做就明显刺痛或麻电加重，应立即停止。 "
+    },
+    {
+      "unit_key": "cv-radial-head-decompression",
+      "unit_type": "exercise",
+      "category": "exercise.cubitus-valgus",
+      "title": "矫正步骤 2：给桡骨头近端做减压松动",
+      "summary": "视频第二步是抓住肱桡肌附近往下拽，目的是把桡骨头近端和肱骨外上髁之间的间隙打开一些。",
+      "source_start_sec": 144.0,
+      "source_end_sec": 173.458,
+      "tags": ["肘外翻", "桡骨头", "减压", "肱桡肌", "第二步"],
+      "body_markdown": "## 动作做法\n- 以桡骨头近端和肱骨外上髁之间的区域为重点。\n- 抓住肱桡肌附近组织。\n- 做一个向下拽的关节松动。\n\n## 视频里的目标\n讲者希望把外侧这边被过度挤压的间隙稍微打开一些，从而减轻局部压力。\n\n## 次数建议\n- 每组大约 10 到 20 次。\n- 视频里强调这一步是在第一步之后做。\n\n## 给用户的提示\n如果你主要是外侧不舒服，这一步通常比一味硬扳肘更有针对性。 "
+    },
+    {
+      "unit_key": "cv-tape-support",
+      "unit_type": "exercise",
+      "category": "exercise.cubitus-valgus",
+      "title": "矫正步骤 3：用肌贴给肘关节一个向内的支持",
+      "summary": "视频最后一步是把肌贴贴在肘内侧并向上拉，给肘关节一个向内侧的支持力，再带着它做推拉训练。",
+      "source_start_sec": 175.548,
+      "source_end_sec": 211.548,
+      "tags": ["肘外翻", "肌贴", "贴扎", "训练支持", "第三步"],
+      "body_markdown": "## 动作做法\n- 准备一条边角打圆的肌贴。\n- 先把一端贴在肘内侧。\n- 固定后绕过来，伸直手臂。\n- 向上拉贴，让肌贴给肘关节一个向内侧的支持。\n\n## 视频里的目的\n讲者希望你带着这个支持力去做推拉训练，这样能让肘关节压力减少很多。\n\n## 使用场景\n这一步更像训练辅助，而不是替代前面的松动和减压步骤。\n\n## 注意\n如果贴完以后更勒、更麻、更不舒服，就不要硬带着练。 "
+    },
+    {
+      "unit_key": "cv-when-to-stop",
+      "unit_type": "warning",
+      "category": "posture.cubitus-valgus",
+      "title": "哪些肘外翻情况不适合只靠自己练",
+      "summary": "如果已经出现持续麻电感、明显加重的肘腕不适，或者按流程处理后症状反而越来越重，就不适合只靠线上动作处理。",
+      "source_start_sec": 36.0,
+      "source_end_sec": 222.633,
+      "tags": ["肘外翻", "红旗", "麻电感", "手腕不适", "不要自己硬练"],
+      "body_markdown": "## 更需要谨慎的情况\n- 无名指、小拇指区域麻电感持续存在。\n- 屈伸肘时肘内侧或外侧不适越来越重。\n- 手腕不适被明显带出来。\n- 按视频步骤做完后，整体症状反而放大。\n\n## 给用户的安全提示\nBodySense 可以先给方向，但如果已经有明显神经样症状或症状持续升级，就不建议只靠线上动作硬扛。\n\n## 更稳妥的做法\n暂停刺激性较大的训练和松动动作，尽快线下找专业康复或运动医学评估。 "
+    }
+  ],
+  "clips": [
+    {
+      "clip_key": "cv-overview-demo",
+      "source_unit_key": "cv-self-check",
+      "clip_type": "self_check",
+      "title": "肘外翻定义与外观示意",
+      "start_sec": 0.0,
+      "end_sec": 18.0,
+      "notes": "说明肘外翻的角度特征和基本外观"
+    },
+    {
+      "clip_key": "cv-varus-mobilization-demo",
+      "source_unit_key": "cv-varus-mobilization",
+      "clip_type": "exercise",
+      "title": "肘内翻方向关节松动示范",
+      "start_sec": 90.0,
+      "end_sec": 144.0,
+      "notes": "屈肘约 90 度，推住肘尖向内推"
+    },
+    {
+      "clip_key": "cv-radial-head-decompression-demo",
+      "source_unit_key": "cv-radial-head-decompression",
+      "clip_type": "exercise",
+      "title": "桡骨头近端减压示范",
+      "start_sec": 144.0,
+      "end_sec": 173.458,
+      "notes": "抓住肱桡肌附近往下拽，打开外侧间隙"
+    },
+    {
+      "clip_key": "cv-tape-support-demo",
+      "source_unit_key": "cv-tape-support",
+      "clip_type": "exercise",
+      "title": "肘外翻肌贴支持示范",
+      "start_sec": 175.548,
+      "end_sec": 211.548,
+      "notes": "肌贴贴在肘内侧并向上拉，给肘关节向内支持"
+    }
+  ]
+}
