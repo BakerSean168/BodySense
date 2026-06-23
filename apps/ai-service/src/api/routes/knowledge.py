@@ -1,184 +1,201 @@
-"""Knowledge base API routes."""
+"""Knowledge library API routes."""
 
+from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from ...rag import KnowledgeEntryData, get_knowledge_base
+from ...rag import (
+    VideoIngestionPipeline,
+    VideoIngestionRequest,
+    get_knowledge_library,
+)
 
 router = APIRouter(prefix="/api/knowledge", tags=["knowledge"])
 
 
-# Request/Response Models
+class IngestVideoRequestModel(BaseModel):
+    """Request to ingest a local video into the knowledge library."""
+
+    video_path: str = Field(
+        ...,
+        min_length=1,
+        description="Absolute local path to the source video",
+    )
+    problem_slug: str = Field(..., min_length=1, max_length=100)
+    problem_display_name: str = Field(..., min_length=1, max_length=255)
+    author: str = Field(..., min_length=1, max_length=255)
+    source_title: Optional[str] = Field(None, max_length=500)
+    language: str = Field("zh", min_length=2, max_length=20)
+    transcript_provider: str = Field("whisper.cpp", min_length=1, max_length=100)
+    transcript_model: Optional[str] = Field(None, max_length=200)
+    whisper_model: str = Field("ggml-base.bin", min_length=1, max_length=100)
+    force_transcribe: bool = False
+    export_clips: bool = True
+    overwrite_source: bool = False
 
 
-class AddEntryRequest(BaseModel):
-    """Request to add a knowledge entry."""
+class IngestVideoResponse(BaseModel):
+    """Response after ingesting a video source."""
 
-    category: str = Field(..., min_length=1, max_length=100, description="Category of the entry")
-    title: str = Field(..., min_length=1, max_length=500, description="Title of the entry")
-    content: str = Field(..., min_length=1, description="Content of the entry")
-    source_video: Optional[str] = Field(None, max_length=500, description="Source video URL")
-    source_timestamp: Optional[str] = Field(None, max_length=50, description="Timestamp in video")
-
-
-class AddEntryResponse(BaseModel):
-    """Response after adding a knowledge entry."""
-
-    id: int
-    message: str = "Entry added successfully"
+    source_id: Optional[int] = None
+    source_key: str
+    status: str
+    artifact_dir: str
+    transcript_segments: int
+    knowledge_units: int
+    clips: int
 
 
 class SearchRequest(BaseModel):
-    """Request to search knowledge base."""
+    """Request to search the normalized knowledge library."""
 
-    query: str = Field(..., min_length=1, description="Search query")
-    top_k: int = Field(10, ge=1, le=100, description="Number of candidates to retrieve")
-    top_n: int = Field(3, ge=1, le=20, description="Number of final results")
-    category: Optional[str] = Field(None, description="Filter by category")
+    query: str = Field(..., min_length=1)
+    top_k: int = Field(5, ge=1, le=20)
+    problem_slug: Optional[str] = None
+    unit_type: Optional[str] = None
+
+
+class ClipResultItem(BaseModel):
+    id: int
+    clip_key: str
+    clip_type: str
+    title: str
+    file_path: str
+    source_timestamp: str
 
 
 class SearchResultItem(BaseModel):
-    """A single search result."""
-
     id: int
+    problem_slug: str
     category: str
+    unit_type: str
     title: str
-    content: str
+    summary: str
+    body_markdown: str
     similarity: float
-    source_video: Optional[str] = None
-    source_timestamp: Optional[str] = None
+    source_title: str
+    source_author: str
+    source_timestamp: str
+    tags: list[str]
+    clips: list[ClipResultItem]
 
 
 class SearchResponse(BaseModel):
-    """Response from search."""
-
     results: list[SearchResultItem]
     total: int
 
 
-class EntryResponse(BaseModel):
-    """Response for a single entry."""
-
-    id: int
-    category: str
-    title: str
-    content: str
-    source_video: Optional[str] = None
-    source_timestamp: Optional[str] = None
-
-
-class DeleteResponse(BaseModel):
-    """Response after deleting an entry."""
-
-    message: str = "Entry deleted successfully"
-
-
 class StatsResponse(BaseModel):
-    """Knowledge base statistics."""
-
-    total_entries: int
-
-
-# Routes
+    knowledge_sources: int
+    knowledge_segments: int
+    knowledge_units: int
+    knowledge_clips: int
 
 
-@router.post("/entries", response_model=AddEntryResponse)
-async def add_entry(request: AddEntryRequest):
-    """Add a new knowledge entry with auto-generated embedding."""
+@router.post("/ingestions/video", response_model=IngestVideoResponse)
+async def ingest_video(request: IngestVideoRequestModel):
+    """Ingest one local video into the normalized knowledge library."""
     try:
-        kb = get_knowledge_base()
-        entry_data = KnowledgeEntryData(
-            category=request.category,
-            title=request.title,
-            content=request.content,
-            source_video=request.source_video,
-            source_timestamp=request.source_timestamp,
+        pipeline = VideoIngestionPipeline()
+        pack = pipeline.ingest(
+            VideoIngestionRequest(
+                video_path=request.video_path,
+                problem_slug=request.problem_slug,
+                problem_display_name=request.problem_display_name,
+                author=request.author,
+                source_title=request.source_title or Path(request.video_path).stem,
+                language=request.language,
+                transcript_provider=request.transcript_provider,
+                transcript_model=request.transcript_model,
+                whisper_model=request.whisper_model,
+                force_transcribe=request.force_transcribe,
+                export_clips=request.export_clips,
+            )
         )
-        entry_id = await kb.add_entry(entry_data)
-        return AddEntryResponse(id=entry_id)
+
+        library = get_knowledge_library()
+        result = await library.ingest_generated_pack(
+            pack,
+            overwrite_source=request.overwrite_source,
+        )
+        return IngestVideoResponse(
+            source_id=result.get("source_id"),
+            source_key=result["source_key"],
+            status=result["status"],
+            artifact_dir=pack.artifact_dir,
+            transcript_segments=len(pack.transcript_segments),
+            knowledge_units=len(pack.units),
+            clips=len(pack.clips),
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/search", response_model=SearchResponse)
 async def search_knowledge(request: SearchRequest):
-    """Search knowledge base using semantic search."""
+    """Search normalized knowledge units with semantic similarity."""
     try:
-        kb = get_knowledge_base()
-        results = await kb.search(
+        library = get_knowledge_library()
+        results = await library.search(
             query=request.query,
             top_k=request.top_k,
-            top_n=request.top_n,
-            category=request.category,
+            problem_slug=request.problem_slug,
+            unit_type=request.unit_type,
         )
 
-        items = [
-            SearchResultItem(
-                id=r.id,
-                category=r.category,
-                title=r.title,
-                content=r.content,
-                similarity=r.similarity,
-                source_video=r.source_video,
-                source_timestamp=r.source_timestamp,
-            )
-            for r in results
-        ]
-
-        return SearchResponse(results=items, total=len(items))
+        return SearchResponse(
+            results=[
+                SearchResultItem(
+                    id=result.id,
+                    problem_slug=result.problem_slug,
+                    category=result.category,
+                    unit_type=result.unit_type,
+                    title=result.title,
+                    summary=result.summary,
+                    body_markdown=result.body_markdown,
+                    similarity=result.similarity,
+                    source_title=result.source_title,
+                    source_author=result.source_author,
+                    source_timestamp=result.source_timestamp,
+                    tags=result.tags,
+                    clips=[
+                        ClipResultItem(
+                            id=clip.id,
+                            clip_key=clip.clip_key,
+                            clip_type=clip.clip_type,
+                            title=clip.title,
+                            file_path=clip.file_path,
+                            source_timestamp=clip.source_timestamp,
+                        )
+                        for clip in result.clips
+                    ],
+                )
+                for result in results
+            ],
+            total=len(results),
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/entries/{entry_id}", response_model=EntryResponse)
-async def get_entry(entry_id: int):
-    """Get a knowledge entry by ID."""
+@router.get("/sources")
+async def list_sources():
+    """List all ingested knowledge sources."""
     try:
-        kb = get_knowledge_base()
-        entry = await kb.get_entry(entry_id)
-
-        if entry is None:
-            raise HTTPException(status_code=404, detail="Entry not found")
-
-        return EntryResponse(
-            id=entry.id,
-            category=entry.category,
-            title=entry.title,
-            content=entry.content,
-            source_video=entry.source_video,
-            source_timestamp=entry.source_timestamp,
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.delete("/entries/{entry_id}", response_model=DeleteResponse)
-async def delete_entry(entry_id: int):
-    """Delete a knowledge entry."""
-    try:
-        kb = get_knowledge_base()
-        deleted = await kb.delete_entry(entry_id)
-
-        if not deleted:
-            raise HTTPException(status_code=404, detail="Entry not found")
-
-        return DeleteResponse()
-    except HTTPException:
-        raise
+        library = get_knowledge_library()
+        return await library.list_sources()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/stats", response_model=StatsResponse)
 async def get_stats():
-    """Get knowledge base statistics."""
+    """Get knowledge library statistics."""
     try:
-        kb = get_knowledge_base()
-        total = await kb.count()
-        return StatsResponse(total_entries=total)
+        library = get_knowledge_library()
+        stats = await library.stats()
+        return StatsResponse(**stats)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

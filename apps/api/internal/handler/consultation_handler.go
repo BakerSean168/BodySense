@@ -3,12 +3,15 @@ package handler
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/service"
@@ -21,6 +24,25 @@ type ConsultationHandler struct {
 	consultationService *service.ConsultationService
 	profileService      *service.ProfileService
 	aiServiceURL        string
+}
+
+type knowledgeSearchResult struct {
+	Title           string           `json:"title"`
+	Summary         string           `json:"summary"`
+	BodyMarkdown    string           `json:"body_markdown"`
+	Category        string           `json:"category"`
+	ProblemSlug     string           `json:"problem_slug"`
+	UnitType        string           `json:"unit_type"`
+	SourceTitle     string           `json:"source_title"`
+	SourceAuthor    string           `json:"source_author"`
+	SourceTimestamp string           `json:"source_timestamp"`
+	Tags            []string         `json:"tags"`
+	Clips           []map[string]any `json:"clips"`
+	Similarity      float64          `json:"similarity"`
+}
+
+type knowledgeSearchResponse struct {
+	Results []knowledgeSearchResult `json:"results"`
 }
 
 // NewConsultationHandler creates a new ConsultationHandler.
@@ -214,6 +236,11 @@ func (h *ConsultationHandler) SendMessage(c *gin.Context) {
 		"extracted_info": extractedInfoList,
 	}
 
+	ragResults, err := h.searchKnowledge(c.Request.Context(), req.Content)
+	if err == nil && len(ragResults) > 0 {
+		aiReq["rag_results"] = ragResults
+	}
+
 	aiReqBody, err := json.Marshal(aiReq)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to marshal request"})
@@ -380,4 +407,106 @@ func (h *ConsultationHandler) ConfirmDiagnosis(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "diagnosis confirmed"})
+}
+
+func (h *ConsultationHandler) searchKnowledge(ctx context.Context, query string) ([]map[string]any, error) {
+	body, err := json.Marshal(SearchRequest{
+		Query: query,
+		TopK:  5,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		h.aiServiceURL+"/api/knowledge/search",
+		bytes.NewBuffer(body),
+	)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("knowledge search failed: status=%d body=%s", resp.StatusCode, string(respBody))
+	}
+
+	var payload knowledgeSearchResponse
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return nil, err
+	}
+
+	sortKnowledgeResults(payload.Results, query)
+
+	results := make([]map[string]any, 0, len(payload.Results))
+	for _, result := range payload.Results {
+		results = append(results, map[string]any{
+			"title":            result.Title,
+			"summary":          result.Summary,
+			"content":          result.BodyMarkdown,
+			"body_markdown":    result.BodyMarkdown,
+			"category":         result.Category,
+			"problem_slug":     result.ProblemSlug,
+			"unit_type":        result.UnitType,
+			"source_title":     result.SourceTitle,
+			"source_author":    result.SourceAuthor,
+			"source_timestamp": result.SourceTimestamp,
+			"tags":             result.Tags,
+			"clips":            result.Clips,
+		})
+	}
+
+	return results, nil
+}
+
+func sortKnowledgeResults(results []knowledgeSearchResult, query string) {
+	if len(results) < 2 {
+		return
+	}
+
+	preferredUnitTypes := []string{}
+	switch {
+	case containsAny(query, []string{"自测", "测试", "判断", "检查"}):
+		preferredUnitTypes = []string{"self_check"}
+	case containsAny(query, []string{"是什么", "定义", "什么意思"}):
+		preferredUnitTypes = []string{"definition"}
+	case containsAny(query, []string{"怎么", "如何", "处理", "改善", "纠正", "矫正", "训练", "动作", "缓解"}):
+		preferredUnitTypes = []string{"exercise", "recommendation"}
+	}
+
+	sort.SliceStable(results, func(i, j int) bool {
+		leftScore := unitTypeIntentScore(results[i].UnitType, preferredUnitTypes)
+		rightScore := unitTypeIntentScore(results[j].UnitType, preferredUnitTypes)
+		if leftScore != rightScore {
+			return leftScore > rightScore
+		}
+		return results[i].Similarity > results[j].Similarity
+	})
+}
+
+func containsAny(query string, keywords []string) bool {
+	for _, keyword := range keywords {
+		if strings.Contains(query, keyword) {
+			return true
+		}
+	}
+	return false
+}
+
+func unitTypeIntentScore(unitType string, preferred []string) int {
+	for idx, value := range preferred {
+		if unitType == value {
+			return len(preferred) - idx
+		}
+	}
+	return 0
 }

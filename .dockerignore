@@ -10,3 +10,11 @@ node_modules
 docs
 *.md
 !README.md
+apps/ai-service/.venv
+apps/ai-service/.pytest_cache
+apps/ai-service/.ruff_cache
+apps/ai-service/data/.cache
+apps/ai-service/data/benchmarks
+apps/ai-service/data/knowledge_sources
+apps/ai-service/**/*.mp4
+apps/ai-service/**/*.wav

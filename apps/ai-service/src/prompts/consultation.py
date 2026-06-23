@@ -116,9 +116,30 @@ def build_rag_context(search_results: list[dict]) -> str:
     context_parts = ["## 相关知识库参考"]
     for i, result in enumerate(search_results[:3], 1):
         title = result.get("title", "")
-        content = result.get("content", "")
-        category = result.get("category", "")
+        summary = result.get("summary", "")
+        content = (
+            result.get("body_markdown")
+            or result.get("content")
+            or summary
+            or ""
+        )
+        category = result.get("category") or result.get("problem_slug", "")
+        source_title = result.get("source_title", "")
+        source_timestamp = result.get("source_timestamp", "")
         context_parts.append(f"\n### 参考{i}：{title}（分类：{category}）")
-        context_parts.append(content[:500])
+        if summary:
+            context_parts.append(f"摘要：{summary}")
+        if source_title or source_timestamp:
+            context_parts.append(f"来源：{source_title} {source_timestamp}".strip())
+        context_parts.append(content[:800])
+
+        clips = result.get("clips") or []
+        if clips:
+            clip_lines = []
+            for clip in clips[:2]:
+                clip_title = clip.get("title", "")
+                clip_timestamp = clip.get("source_timestamp", "")
+                clip_lines.append(f"- 动作演示：{clip_title}（{clip_timestamp}）")
+            context_parts.extend(clip_lines)
 
     return "\n".join(context_parts)

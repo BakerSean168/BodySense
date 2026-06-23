@@ -1,0 +1,208 @@
+{
+  "source_key": "凯圣王-humerus-anterior-glide-肱骨前移",
+  "source_title": "肱骨前移",
+  "author": "凯圣王",
+  "problem_slug": "humerus-anterior-glide",
+  "problem_display_name": "肱骨前移",
+  "units": [
+    {
+      "unit_key": "hag-definition",
+      "unit_type": "definition",
+      "category": "posture.humerus-anterior-glide",
+      "title": "什么是肱骨前移",
+      "summary": "肱骨前移是指肱骨头相对肩胛骨在肩关节里偏向前方，表现为肩前侧更容易顶出、肩前方更容易不舒服。",
+      "source_start_sec": 87.47,
+      "source_end_sec": 123.47,
+      "tags": ["肱骨前移", "定义", "肩关节", "肱骨头"],
+      "body_markdown": "## 核心结论\n肱骨前移不是单纯“肩膀往前圆一点”，而是肩关节里的肱骨头相对肩胛骨更偏向前方。\n\n## 这条视频里的解释\n- 关注点在肩关节本身，而不只是外观看起来有没有含胸。\n- 讲者把它描述为肱骨头在肩关节里更容易向前偏移。\n- 这样会让肩前方组织更容易被牵拉，尤其是在训练的末端位置。\n\n## 给用户的通俗解释\n可以把它理解成：肩关节本来应该在窝里更稳定地滚动和滑动，但你做动作时，肱骨头更爱往前顶，所以肩前方更容易出现卡、顶、拉扯或不舒服。 "
+    },
+    {
+      "unit_key": "hag-training-impact",
+      "unit_type": "impact",
+      "category": "posture.humerus-anterior-glide",
+      "title": "肱骨前移为什么会影响练背、推胸和推肩",
+      "summary": "视频强调，肱骨前移会明显干扰练背、推胸、推肩等动作，让肩前方更容易顶、拉、卡，进步也会被拖慢。",
+      "source_start_sec": 18.0,
+      "source_end_sec": 54.0,
+      "tags": ["肱骨前移", "训练表现", "练背", "推胸", "推肩"],
+      "body_markdown": "## 视频里的高频场景\n- 练背时发力感差。\n- 推胸或推肩时肩前方更容易不舒服。\n- 长期下来会影响训练质量和进步速度。\n\n## 用户真正能理解的版本\n很多人不是完全不能练，而是总觉得肩前方别扭、发力不顺、动作到底时不敢发力，这正是肱骨前移常见的训练表现。\n\n## 产品侧可用结论\n问答时不要只回答“会不会疼”，也要提醒用户它常常先表现为训练手感变差、动作末端不稳、肩前方反复不舒服。 "
+    },
+    {
+      "unit_key": "hag-habits-and-causes",
+      "unit_type": "cause",
+      "category": "posture.humerus-anterior-glide",
+      "title": "肱骨前移最常见的诱因",
+      "summary": "这条视频把久坐办公、训练方式不当，以及肩袖稳定不足，作为肱骨前移最典型的诱因组合。",
+      "source_start_sec": 36.0,
+      "source_end_sec": 123.47,
+      "tags": ["肱骨前移", "原因", "久坐", "训练动作", "肩袖肌群"],
+      "body_markdown": "## 视频里点到的常见诱因\n- 久坐办公，肩带长期停在不理想的位置。\n- 训练动作不当，尤其是反复在末端位置把肩前方顶出去。\n- 肩袖肌群不能稳定住肱骨头。\n\n## 形成逻辑\n这不是一两个动作突然造成的，更常见的是日常姿势和训练模式长期叠加，最后让肩关节学会了错误的稳定方式。\n\n## 给用户的提醒\n如果每天继续重复同样的姿势和动作代偿，只做几个放松动作通常不够，改善会比较慢。 "
+    },
+    {
+      "unit_key": "hag-round-shoulder-vs-humerus-glide",
+      "unit_type": "self_check",
+      "category": "posture.humerus-anterior-glide",
+      "title": "先分清圆肩还是肱骨前移",
+      "summary": "视频里反复提醒，圆肩和肱骨前移很容易一起出现，但两者不是一回事，处理思路也不完全相同。",
+      "source_start_sec": 54.0,
+      "source_end_sec": 105.47,
+      "tags": ["肱骨前移", "圆肩", "鉴别", "筛查"],
+      "body_markdown": "## 圆肩更偏什么\n视频把圆肩描述为肩胛骨向前倾、向前移，外观看起来更像含胸，常见问题是肩胛内收和下降受限。\n\n## 肱骨前移更偏什么\n肱骨前移更偏肩关节内部的肱骨头位置问题，重点不是肩胛骨有没有往前跑，而是肱骨头是不是更容易往前顶。\n\n## 为什么一定要分开\n- 圆肩更偏肩胛位置和肩带控制。\n- 肱骨前移更偏肩关节稳定和肱骨头控制。\n- 两者可能并发，但主问题不同，处理重点就不同。\n\n## 对用户的说法\n如果你既含胸又肩前方不舒服，不代表只做圆肩练习就够了，仍然要单独检查有没有肱骨前移。 "
+    },
+    {
+      "unit_key": "hag-muscle-and-mechanics",
+      "unit_type": "muscle_imbalance",
+      "category": "posture.humerus-anterior-glide",
+      "title": "肱骨前移常见的肌肉与受力问题",
+      "summary": "视频把核心放在肩袖稳定不足、肱二头肌长头肌腱被反复牵拉，以及胸大肌、肩后侧组织需要配合处理。",
+      "source_start_sec": 87.47,
+      "source_end_sec": 164.95,
+      "tags": ["肱骨前移", "肩袖肌群", "肱二头肌长头肌腱", "胸大肌", "后侧关节囊"],
+      "body_markdown": "## 核心稳定问题\n- 讲者强调肩袖肌群没有把肱骨头稳定好。\n- 结果是肩关节在运动时，肱骨头滚动和滑动不够理想。\n\n## 最容易不舒服的部位\n- 肩前方的肱二头肌长头肌腱更容易被牵拉。\n- 这也是为什么很多人主诉是肩前方不适，而不是单纯后侧酸。\n\n## 视频里的处理线索\n- 前侧会去松解胸大肌。\n- 后侧会处理三角肌后束和肩后侧关节囊。\n- 最后再回到肩袖稳定训练。\n\n## 使用边界\n这里更适合说“常见肌肉与受力问题”，不要把它说成每个人都完全一样的病理解剖结论。 "
+    },
+    {
+      "unit_key": "hag-front-shoulder-discomfort",
+      "unit_type": "impact",
+      "category": "posture.humerus-anterior-glide",
+      "title": "为什么肱骨前移常表现为肩前方不舒服",
+      "summary": "视频认为，很多人肩前方的不舒服并不是单纯肩前束问题，而更像肱二头肌长头肌腱在被反复牵拉。",
+      "source_start_sec": 105.47,
+      "source_end_sec": 164.95,
+      "tags": ["肱骨前移", "肩前方不适", "肱二头肌长头肌腱", "动态前移"],
+      "body_markdown": "## 视频里的机制描述\n- 在高位下拉到底、划船末端，或推类动作离心到底时，肱骨头更容易往前顶。\n- 这时肩前方的肱二头肌长头肌腱会被牵拉。\n- 不舒服往往出现在这些动作的末端位置。\n\n## 对用户的翻译\n如果你总是在肩前方同一个区域反复有拉扯感、顶住感，尤其是在动作到底时更明显，要怀疑是不是肱骨前移的动态问题，而不只是“今天练多了”。\n\n## 提醒\n如果疼痛越来越强、夜间痛、明显无力或活动范围越来越差，就不适合只靠线上动作硬扛。 "
+    },
+    {
+      "unit_key": "hag-wrong-fix",
+      "unit_type": "warning",
+      "category": "posture.humerus-anterior-glide",
+      "title": "为什么不能直接套用圆肩的改善方法",
+      "summary": "视频明确提醒，肱骨前移如果一味照着圆肩思路去过度夹背，反而可能让肩关节更不稳。",
+      "source_start_sec": 146.95,
+      "source_end_sec": 183.705,
+      "tags": ["肱骨前移", "错误处理", "圆肩", "夹背", "肩关节不稳"],
+      "body_markdown": "## 视频里的明确提醒\n讲者认为，很多人把肩前方不舒服都当成圆肩处理，结果一直过度夹背，但这不一定能改善肱骨前移。\n\n## 为什么会出问题\n如果主问题其实是肱骨头控制差，你一味把肩胛往后硬夹，可能没有真正解决肱骨头前顶的问题，反而让肩关节更别扭、更不稳。\n\n## 给用户的安全提示\n- 有圆肩，不等于只有圆肩。\n- 有肩前方不舒服，不建议只靠“夹肩胛、挺胸”一路做到底。\n- 更稳妥的做法是先筛查主问题，再决定训练重点。 "
+    },
+    {
+      "unit_key": "hag-self-check-static",
+      "unit_type": "self_check",
+      "category": "posture.humerus-anterior-glide",
+      "title": "肱骨前移怎么做静态自测",
+      "summary": "视频给出的静态自测重点，是摸到肩峰前后角和肱骨前方凸点，观察前后比例是不是接近 1:2；如果更接近 1:1，就要怀疑肱骨前移。",
+      "source_start_sec": 184.059,
+      "source_end_sec": 237.678,
+      "tags": ["肱骨前移", "自测", "静态筛查", "肩峰", "1比2"],
+      "body_markdown": "## 自测思路\n1. 先找到肩峰后角和肩峰前角。\n2. 再找到肱骨前方较凸的点。\n3. 观察这个凸点到前后两侧的大致比例。\n\n## 判断标准\n- 更接近正常：前后比例更接近 1:2。\n- 更值得怀疑：前后比例更接近 1:1，说明肱骨头更偏向前方。\n\n## 使用提醒\n这不是高精度医学测量，更适合作为居家筛查方法。重点是帮助你发现“肩前方是不是明显更顶、更靠前”。 "
+    },
+    {
+      "unit_key": "hag-self-check-dynamic",
+      "unit_type": "self_check",
+      "category": "posture.humerus-anterior-glide",
+      "title": "肱骨前移怎么做动态自测",
+      "summary": "视频还补了一个动态筛查：做大臂水平外展到末端时，看肩前方的肱骨头会不会明显往前顶出来。",
+      "source_start_sec": 237.678,
+      "source_end_sec": 262.741,
+      "tags": ["肱骨前移", "动态筛查", "水平外展", "肩前方顶出"],
+      "body_markdown": "## 动态筛查步骤\n1. 把大臂做水平外展。\n2. 到动作末端时观察肩前方。\n3. 看肱骨头会不会明显往前顶出来。\n\n## 怎么理解结果\n如果静态看不算特别明显，但一到动作末端肩前方就更突出、同时不舒服更明显，这更像动态肱骨前移。\n\n## 为什么这个筛查有价值\n很多人平时站着还好，一到训练动作末端才暴露问题，所以动态筛查往往更贴近真实训练场景。 "
+    },
+    {
+      "unit_key": "hag-release-sequence",
+      "unit_type": "exercise",
+      "category": "exercise.humerus-anterior-glide",
+      "title": "矫正步骤 1：先松解胸大肌，再处理肩后侧",
+      "summary": "视频的第一步是先用泡沫轴松解胸大肌，再处理三角肌后束和肩后侧关节囊，为后面的关节松动和稳定训练做准备。",
+      "source_start_sec": 265.338,
+      "source_end_sec": 318.543,
+      "tags": ["肱骨前移", "胸大肌", "三角肌后束", "后侧关节囊", "放松"],
+      "body_markdown": "## 第一步做什么\n- 先用泡沫轴松解胸大肌。\n- 再做轻微身体旋转和大臂摆动。\n- 然后做胸大肌定点拉伸。\n- 第二个重点区域是三角肌后束和肩后侧关节囊。\n\n## 视频里的时间和次数\n- 胸大肌滚压约 3 到 5 分钟。\n- 旋转和摆动大约 10 到 20 次。\n- 肩后侧滚压约 3 分钟。\n- 后侧关节囊松解约 3 到 5 分钟。\n\n## 动作要点\n- 放松是为了给肩关节腾空间，不是越痛越好。\n- 胸前太紧、肩后太卡，后面做复位和稳定训练通常会更别扭。\n- 全程以可呼吸、可放松、能控制为准。 "
+    },
+    {
+      "unit_key": "hag-band-mobilization",
+      "unit_type": "exercise",
+      "category": "exercise.humerus-anterior-glide",
+      "title": "矫正步骤 2：弹力带帮助肱骨头向后滑动",
+      "summary": "视频第二步是把粗弹力带放在肱骨前方，利用向后的拉力配合大臂水平内收，帮助肱骨头回到更靠后的位置。",
+      "source_start_sec": 319.011,
+      "source_end_sec": 371.375,
+      "tags": ["肱骨前移", "弹力带", "关节松动", "复位", "水平内收"],
+      "body_markdown": "## 动作设置\n1. 准备一条较粗的弹力带。\n2. 固定在与肩同高的位置。\n3. 带子压在肱骨前方，不要压在锁骨上。\n4. 身体往前走，让弹力带给肱骨一个向后的拉力。\n5. 在这个基础上做大臂水平内收。\n\n## 视频里的核心思路\n讲者借用“滚动配合滑动”的思路，希望在动作里帮助肱骨头向后滑回去，而不是继续往前顶。\n\n## 次数建议\n大约 10 到 20 次即可。\n\n## 常见错误\n- 带子放太高，压到锁骨或肩颈。\n- 只顾把动作做大，不管肩前方是不是更顶了。\n- 做完更卡、更顶还硬做。 "
+    },
+    {
+      "unit_key": "hag-cuff-stability",
+      "unit_type": "exercise",
+      "category": "exercise.humerus-anterior-glide",
+      "title": "矫正步骤 3：低刺激肩袖稳定训练",
+      "summary": "视频推荐用仰卧持重、大臂画圈的方式练肩袖，因为肩关节活动幅度不大，相对更安全，也更不容易出现弹响或卡压。",
+      "source_start_sec": 371.375,
+      "source_end_sec": 420.135,
+      "tags": ["肱骨前移", "肩袖肌群", "稳定训练", "画圈", "仰卧"],
+      "body_markdown": "## 动作做法\n- 仰卧在地面上。\n- 手里拿一个重物，不一定非要哑铃。\n- 把肩胛往前送一点，肩沉下来。\n- 手肘全程保持打直。\n- 用整条大臂做小幅度画圈。\n\n## 为什么视频推荐它\n- 活动幅度不大。\n- 更偏稳定控制，不是大范围甩肩。\n- 对那些一做传统内外旋就弹响或卡压的人更友好。\n\n## 时长建议\n3 到 5 分钟 1 组，顺时针或逆时针都可以。\n\n## 动作感觉\n你应该感觉是在练肩关节的稳定，而不是练到肩前方越来越顶。 "
+    },
+    {
+      "unit_key": "hag-advanced-support",
+      "unit_type": "exercise",
+      "category": "exercise.humerus-anterior-glide",
+      "title": "进阶动作：在不稳定支撑上练肩关节稳定",
+      "summary": "视频最后给了一个进阶版：用瑜伽球或波速球做支撑，让肩关节在不稳定环境下练稳定性。",
+      "source_start_sec": 421.081,
+      "source_end_sec": 444.314,
+      "tags": ["肱骨前移", "进阶动作", "瑜伽球", "波速球", "稳定性"],
+      "body_markdown": "## 适合什么时候做\n当你前面的放松、复位和基础稳定训练已经比较熟，肩前方不再那么容易顶或卡，再进入这个阶段更合适。\n\n## 视频里的做法\n- 准备瑜伽球或波速球。\n- 在上面做支撑动作。\n- 利用不稳定表面给肩关节更多稳定挑战。\n\n## 训练目标\n重点不是追求动作花哨，而是让肩关节在不稳定环境下仍然能把肱骨头控制住。\n\n## 安全提示\n如果一上不稳定面就明显肩前方顶出、塌肩、耸肩，说明现在还太早，应先回到基础稳定训练。 "
+    }
+  ],
+  "clips": [
+    {
+      "clip_key": "hag-static-self-check-demo",
+      "source_unit_key": "hag-self-check-static",
+      "clip_type": "self_check",
+      "title": "肱骨前移静态自测示范",
+      "start_sec": 219.678,
+      "end_sec": 237.678,
+      "notes": "找到肩峰前后角与前方凸点，观察前后比例是否接近 1:2"
+    },
+    {
+      "clip_key": "hag-dynamic-self-check-demo",
+      "source_unit_key": "hag-self-check-dynamic",
+      "clip_type": "self_check",
+      "title": "肱骨前移动态自测示范",
+      "start_sec": 237.678,
+      "end_sec": 262.741,
+      "notes": "大臂水平外展到末端，观察肩前方是否明显顶出"
+    },
+    {
+      "clip_key": "hag-pec-and-posterior-release-demo",
+      "source_unit_key": "hag-release-sequence",
+      "clip_type": "exercise",
+      "title": "胸大肌与肩后侧放松示范",
+      "start_sec": 265.338,
+      "end_sec": 318.543,
+      "notes": "泡沫轴放松胸大肌，再处理三角肌后束和肩后侧关节囊"
+    },
+    {
+      "clip_key": "hag-band-mobilization-demo",
+      "source_unit_key": "hag-band-mobilization",
+      "clip_type": "exercise",
+      "title": "弹力带帮助肱骨头后滑",
+      "start_sec": 319.011,
+      "end_sec": 371.375,
+      "notes": "弹力带压在肱骨前方，配合大臂水平内收"
+    },
+    {
+      "clip_key": "hag-cuff-circle-demo",
+      "source_unit_key": "hag-cuff-stability",
+      "clip_type": "exercise",
+      "title": "仰卧持重画圈练肩袖稳定",
+      "start_sec": 371.375,
+      "end_sec": 420.135,
+      "notes": "仰卧、手肘打直、低刺激肩袖稳定训练"
+    },
+    {
+      "clip_key": "hag-advanced-support-demo",
+      "source_unit_key": "hag-advanced-support",
+      "clip_type": "exercise",
+      "title": "瑜伽球或波速球支撑进阶",
+      "start_sec": 421.081,
+      "end_sec": 444.314,
+      "notes": "在不稳定支撑面上强化肩关节稳定性"
+    }
+  ]
+}

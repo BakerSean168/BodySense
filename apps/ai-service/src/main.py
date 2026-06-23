@@ -2,8 +2,12 @@
 
 from pathlib import Path
 
-from dotenv import load_dotenv
 from fastapi import FastAPI
+
+try:
+    from dotenv import load_dotenv
+except ModuleNotFoundError:  # pragma: no cover - optional local convenience dependency
+    load_dotenv = None
 
 # Load environment variables from .env file
 _env_paths = [
@@ -12,7 +16,7 @@ _env_paths = [
 ]
 
 for _env_path in _env_paths:
-    if _env_path.exists():
+    if load_dotenv and _env_path.exists():
         load_dotenv(_env_path, override=True)
         break
 

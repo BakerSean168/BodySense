@@ -45,6 +45,11 @@ __pycache__/
 docker/data/
 docker-compose.override.yml
 
+# ai-service data (model caches, benchmark results, knowledge source media)
+apps/ai-service/data/.cache/
+apps/ai-service/data/benchmarks/
+apps/ai-service/data/knowledge_sources/
+
 # AI tool caches
 .claude/
 .codex/

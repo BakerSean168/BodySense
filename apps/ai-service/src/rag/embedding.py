@@ -1,5 +1,7 @@
 """Embedding generation module for RAG pipeline."""
 
+import hashlib
+import math
 import os
 from typing import Optional
 
@@ -16,11 +18,11 @@ class EmbeddingGenerator:
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
     ):
-        self.provider = os.getenv("EMBEDDING_PROVIDER", "local")
+        self.provider = os.getenv("EMBEDDING_PROVIDER", "hashing")
         self.model = model or os.getenv(
-            "EMBEDDING_MODEL", "all-MiniLM-L6-v2"
+            "EMBEDDING_MODEL", "paraphrase-multilingual-MiniLM-L12-v2"
         )
-        self.dimension = dimension
+        self.dimension = int(os.getenv("EMBEDDING_DIMENSIONS", str(dimension)))
         self.api_key = (
             api_key
             or os.getenv("EMBEDDING_API_KEY")
@@ -40,6 +42,40 @@ class EmbeddingGenerator:
             test_embedding = self._local_model.encode(["test"])
             self.dimension = len(test_embedding[0])
         return self._local_model
+
+    def _normalize_text(self, text: str) -> str:
+        return " ".join(text.lower().split())
+
+    def _hash_embedding(self, text: str) -> list[float]:
+        """Generate a deterministic local embedding from char and word n-grams."""
+        normalized = self._normalize_text(text)
+        collapsed = normalized.replace(" ", "")
+        features: list[tuple[str, float]] = []
+
+        for token in normalized.split():
+            if token:
+                features.append((token, 1.0))
+
+        for source_text, weight in ((collapsed, 1.0), (normalized, 0.6)):
+            if not source_text:
+                continue
+            for n in (1, 2, 3):
+                for index in range(max(0, len(source_text) - n + 1)):
+                    gram = source_text[index:index + n]
+                    if gram.strip():
+                        features.append((gram, weight / n))
+
+        vector = [0.0] * self.dimension
+        for feature, weight in features:
+            digest = hashlib.sha256(feature.encode("utf-8")).digest()
+            bucket = int.from_bytes(digest[:8], "big") % self.dimension
+            sign = 1.0 if digest[8] % 2 == 0 else -1.0
+            vector[bucket] += sign * weight
+
+        norm = math.sqrt(sum(value * value for value in vector))
+        if norm == 0:
+            return vector
+        return [value / norm for value in vector]
 
     @property
     def client(self) -> AsyncOpenAI:
@@ -65,7 +101,10 @@ class EmbeddingGenerator:
         Returns:
             A list of floats representing the embedding vector.
         """
-        if self.provider == "local":
+        if self.provider == "hashing":
+            return self._hash_embedding(text)
+
+        if self.provider == "local_transformer":
             model = self._get_local_model()
             embedding = model.encode([text])[0]
             return embedding.tolist()
@@ -87,7 +126,10 @@ class EmbeddingGenerator:
         if not texts:
             return []
 
-        if self.provider == "local":
+        if self.provider == "hashing":
+            return [self._hash_embedding(text) for text in texts]
+
+        if self.provider == "local_transformer":
             model = self._get_local_model()
             embeddings = model.encode(texts)
             return [emb.tolist() for emb in embeddings]
