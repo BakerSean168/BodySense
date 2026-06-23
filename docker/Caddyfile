@@ -1,0 +1,30 @@
+# =============================================================================
+# BodySense Caddy 反向代理配置
+# =============================================================================
+# Caddy 自动申请和续期 Let's Encrypt HTTPS 证书。
+# 域名 body.bakersean.top 已解析到服务器 115.29.222.2。
+# =============================================================================
+
+{
+    # 全局配置
+    email {$ACME_EMAIL:admin@bakersean.top}
+}
+
+# 主站域名 — Caddy 自动管理 HTTPS 证书
+{$APP_DOMAIN:body.bakersean.top} {
+    reverse_proxy web:80
+
+    # 安全头
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    log {
+        output stdout
+        format console
+    }
+}

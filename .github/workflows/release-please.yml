@@ -1,0 +1,23 @@
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+name: release-please
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          # release-please 需要 PAT 才能正确触发后续 workflow (docker-deploy)
+          # 在 GitHub repo Settings → Secrets 中创建 BODYSENSE_WORKFLOW secret
+          # 如果暂时没有 PAT，可以用 GITHUB_TOKEN，但不会触发 tag-push 工作流
+          token: ${{ secrets.BODYSENSE_WORKFLOW || secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

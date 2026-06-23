@@ -1,0 +1,52 @@
+# ── Builder: Node 24 + pnpm 11, build Vite app ─────────
+FROM node:24-slim AS builder
+
+# Enable pnpm via corepack
+RUN corepack enable && corepack prepare pnpm@11 --activate
+
+WORKDIR /app
+
+# Use npm mirror for faster downloads in China
+RUN npm config set registry https://registry.npmmirror.com
+
+# Copy workspace root files for pnpm workspace resolution
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
+COPY apps/web/package.json apps/web/
+COPY packages/contracts/package.json packages/contracts/
+COPY packages/utils/package.json packages/utils/
+
+# Install dependencies (no frozen lockfile — platform-specific bindings differ)
+RUN pnpm install --no-frozen-lockfile
+
+# Install Linux native bindings that may be missing from Windows-generated lock file
+RUN pnpm add -w @rolldown/binding-linux-x64-gnu @esbuild/linux-x64 lightningcss-linux-x64-gnu --no-save || true
+
+# Copy full source
+COPY . .
+
+# Build the web app (outputs to apps/web/dist/)
+# VITE_API_BASE_URL=/api is baked into the built frontend — nginx proxies /api to the Go backend
+ENV VITE_API_BASE_URL=/api
+RUN cd apps/web && npx vite build
+
+# ── Runtime: nginx serves static files ─────────────────
+FROM nginx:1.27-alpine
+
+LABEL org.opencontainers.image.title="bodysense-web"
+LABEL org.opencontainers.image.description="BodySense production web frontend"
+
+# Remove default nginx config
+RUN rm -f /etc/nginx/conf.d/default.conf
+
+# Copy custom nginx config
+COPY docker/nginx.conf /etc/nginx/nginx.conf
+
+# Copy built static files from builder
+COPY --from=builder /app/apps/web/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+  CMD wget --quiet --tries=1 --spider http://127.0.0.1/ || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]

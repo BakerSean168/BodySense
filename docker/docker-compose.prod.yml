@@ -1,0 +1,215 @@
+# =============================================================================
+# BodySense 生产环境 Docker Compose
+# =============================================================================
+# 启动全部服务：
+#   docker compose -f docker/docker-compose.prod.yml --env-file .env.production --env-file .env.production.local up -d
+#
+# Caddy 反向代理 (当前 HTTP 模式，有域名后切换 HTTPS)。
+# Watchtower 自动监测 prod-latest 镜像更新并滚动重启业务容器。
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # 基础设施
+  # ---------------------------------------------------------------------------
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-bodysense}
+      POSTGRES_USER: ${DB_USER:-bodysense}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env.production.local}
+      POSTGRES_INITDB_ARGS: --encoding=UTF8 --locale=C
+      TZ: ${TZ:-Asia/Shanghai}
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - postgres-prod-data:/var/lib/postgresql/data
+    networks:
+      - bodysense-network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-bodysense} -d ${DB_NAME:-bodysense}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - yes
+      - --appendfsync
+      - everysec
+      - --requirepass
+      - ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env.production.local}
+    ports:
+      - '127.0.0.1:6379:6379'
+    volumes:
+      - redis-prod-data:/data
+    networks:
+      - bodysense-network
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'redis-cli',
+          '-a',
+          '${REDIS_PASSWORD:?set REDIS_PASSWORD}',
+          '--no-auth-warning',
+          'ping',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  # ---------------------------------------------------------------------------
+  # 业务服务（Watchtower 自动更新 prod-latest 镜像）
+  # ---------------------------------------------------------------------------
+
+  ai-service:
+    image: ${REGISTRY:?set REGISTRY}/${ACR_NAMESPACE:-bodysense}/bodysense-ai-service:${AI_TAG:-prod-latest}
+    restart: unless-stopped
+    init: true
+    labels:
+      com.centurylinklabs.watchtower.enable: 'true'
+    environment:
+      AI_SERVICE_PORT: ${AI_SERVICE_PORT:-8100}
+      DATABASE_URL: postgresql://${DB_USER:-bodysense}:${DB_PASSWORD:?set DB_PASSWORD}@postgres:5432/${DB_NAME:-bodysense}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-hashing}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-384}
+      LLM_PROVIDER: ${LLM_PROVIDER:-openrouter}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-openai/gpt-oss-120b:free}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://openrouter.ai/api/v1}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-https://openrouter.ai/api/v1}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      WHISPER_MODEL: ${WHISPER_MODEL:-ggml-base.bin}
+      TZ: ${TZ:-Asia/Shanghai}
+    networks:
+      - bodysense-network
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'python',
+          '-c',
+          "import urllib.request; urllib.request.urlopen('http://localhost:8100/health')",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  api:
+    image: ${REGISTRY:?set REGISTRY}/${ACR_NAMESPACE:-bodysense}/bodysense-api:${API_TAG:-prod-latest}
+    restart: unless-stopped
+    init: true
+    labels:
+      com.centurylinklabs.watchtower.enable: 'true'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
+    environment:
+      API_PORT: 8080
+      API_HOST: 0.0.0.0
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-bodysense}
+      DB_USER: ${DB_USER:-bodysense}
+      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?set JWT_SECRET_KEY}
+      JWT_ACCESS_TTL_HOURS: ${JWT_ACCESS_TTL_HOURS:-168}
+      JWT_REFRESH_TTL_HOURS: ${JWT_REFRESH_TTL_HOURS:-720}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://115.29.222.2}
+      AI_SERVICE_URL: http://ai-service:${AI_SERVICE_PORT:-8100}
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      - api-uploads:/app/uploads
+    networks:
+      - bodysense-network
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8080/api/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  web:
+    image: ${REGISTRY:?set REGISTRY}/${ACR_NAMESPACE:-bodysense}/bodysense-web:${WEB_TAG:-prod-latest}
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: 'true'
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - bodysense-network
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://127.0.0.1/']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # 入口与自动化
+  # ---------------------------------------------------------------------------
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:-115.29.222.2}
+      ACME_EMAIL: ${ACME_EMAIL:-admin@example.com}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - bodysense-network
+
+  watchtower:
+    image: containrrr/watchtower
+    restart: unless-stopped
+    environment:
+      WATCHTOWER_CLEANUP: 'true'
+      WATCHTOWER_POLL_INTERVAL: ${WATCHTOWER_POLL_INTERVAL:-300}
+      WATCHTOWER_LABEL_ENABLE: 'true'
+      WATCHTOWER_ROLLING_RESTART: 'true'
+      WATCHTOWER_INCLUDE_RESTARTING: 'true'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /root/.docker/config.json:/config.json:ro
+    networks:
+      - bodysense-network
+
+networks:
+  bodysense-network:
+    driver: bridge
+
+volumes:
+  postgres-prod-data:
+  redis-prod-data:
+  api-uploads:
+  caddy-data:
+  caddy-config:

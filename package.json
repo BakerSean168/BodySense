@@ -24,7 +24,13 @@
     "clean": "pnpm nx reset",
     "docker:dev:up": "docker compose -f docker/docker-compose.yml --profile dev up -d",
     "docker:dev:down": "docker compose -f docker/docker-compose.yml --profile dev down",
-    "docker:dev:logs": "docker compose -f docker/docker-compose.yml --profile dev logs -f"
+    "docker:dev:logs": "docker compose -f docker/docker-compose.yml --profile dev logs -f",
+    "docker:prod:up": "docker compose -f docker/docker-compose.prod.yml --env-file .env.production --env-file .env.production.local up -d",
+    "docker:prod:down": "docker compose -f docker/docker-compose.prod.yml --env-file .env.production --env-file .env.production.local down",
+    "docker:prod:logs": "docker compose -f docker/docker-compose.prod.yml --env-file .env.production --env-file .env.production.local logs -f",
+    "docker:prod:ps": "docker compose -f docker/docker-compose.prod.yml --env-file .env.production --env-file .env.production.local ps",
+    "docker:prod:pull": "docker compose -f docker/docker-compose.prod.yml --env-file .env.production --env-file .env.production.local pull",
+    "docker:prod:restart": "docker compose -f docker/docker-compose.prod.yml --env-file .env.production --env-file .env.production.local restart"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
