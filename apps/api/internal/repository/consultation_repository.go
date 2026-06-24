@@ -107,3 +107,21 @@ func (r *ConsultationRepository) UpdateTreatmentPlan(ctx context.Context, id uui
 		Where("id = ?", id).
 		Update("treatment_plan", treatmentPlan).Error
 }
+
+// GetLastInProgressEmptySession retrieves the most recent active session for a user that has no messages.
+func (r *ConsultationRepository) GetLastInProgressEmptySession(ctx context.Context, userID uuid.UUID) (*model.ConsultationSession, error) {
+	var session model.ConsultationSession
+	err := r.db.WithContext(ctx).
+		Where("user_id = ? AND status = ? AND (messages = '[]'::jsonb OR messages IS NULL)", userID, "in_progress").
+		Order("created_at DESC").
+		First(&session).Error
+
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &session, nil
+}
+
