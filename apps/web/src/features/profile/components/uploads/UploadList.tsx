@@ -5,7 +5,7 @@ import { FILE_TYPE_LABELS, OCR_STATUS_LABELS } from '../../types/upload.types';
 import { OCRResultView } from './OCRResultView';
 
 export function UploadList() {
-  const { uploads, isLoading, deleteUpload } = useUploadStore();
+  const { uploads, deleteUpload } = useUploadStore();
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   if (uploads.length === 0) {

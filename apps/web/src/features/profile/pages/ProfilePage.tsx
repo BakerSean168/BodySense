@@ -6,6 +6,9 @@ import { useUploadStore } from '@/stores/uploadStore';
 import { ProfileView } from '../components/profile/ProfileView';
 import { ProfileEdit } from '../components/profile/ProfileEdit';
 import { FileUploader, UploadList } from '../components/uploads';
+import { MainLayout } from '@/components/layout/MainLayout';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 
 export function ProfilePage() {
   const navigate = useNavigate();
@@ -30,35 +33,39 @@ export function ProfilePage() {
 
   if (isLoading && !profile) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-500">加载中...</p>
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+            <p className="mt-4 text-slate-500 font-medium">加载中...</p>
+          </div>
         </div>
-      </div>
+      </MainLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-2xl mx-auto">
-        <div className="mb-8">
-          <button
-            type="button"
-            onClick={() => navigate('/dashboard')}
-            className="text-sm text-blue-600 hover:text-blue-500"
-          >
-            ← 返回仪表盘
-          </button>
+    <MainLayout>
+      <div className="w-full">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">身体档案</h1>
+            <p className="text-slate-500 mt-1">管理您的生理指标、运动状态及健康文档。</p>
+          </div>
+          {profile && !isEditing && activeTab === 'profile' && (
+            <Button onClick={() => setIsEditing(true)}>
+              编辑档案
+            </Button>
+          )}
         </div>
 
         {error && (
-          <div className="mb-6 rounded-md bg-red-50 p-4">
-            <p className="text-sm text-red-800">{error}</p>
+          <div className="mb-6 rounded-xl bg-red-50 p-4 border border-red-100 flex justify-between items-center">
+            <p className="text-sm font-medium text-red-800">{error}</p>
             <button
               type="button"
               onClick={clearError}
-              className="mt-2 text-sm text-red-600 underline hover:text-red-500"
+              className="text-sm text-red-600 hover:text-red-500 font-medium"
             >
               关闭
             </button>
@@ -66,31 +73,33 @@ export function ProfilePage() {
         )}
 
         {/* Tabs */}
-        <div className="mb-6 border-b border-gray-200">
+        <div className="mb-8 border-b border-slate-200">
           <nav className="-mb-px flex space-x-8">
             <button
               type="button"
               onClick={() => setActiveTab('profile')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'profile'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
               }`}
             >
-              身体档案
+              个人信息
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('uploads')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors flex items-center ${
                 activeTab === 'uploads'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
               }`}
             >
               文件管理
               {uploads.length > 0 && (
-                <span className="ml-2 bg-gray-100 text-gray-600 py-0.5 px-2 rounded-full text-xs">
+                <span className={`ml-2 py-0.5 px-2.5 rounded-full text-xs font-semibold ${
+                  activeTab === 'uploads' ? 'bg-primary-100 text-primary-700' : 'bg-slate-100 text-slate-600'
+                }`}>
                   {uploads.length}
                 </span>
               )}
@@ -98,59 +107,72 @@ export function ProfilePage() {
           </nav>
         </div>
 
-        {/* Profile Tab */}
-        {activeTab === 'profile' && (
-          <div className="bg-white shadow sm:rounded-lg">
-            <div className="px-6 py-8">
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {/* Profile Tab */}
+          {activeTab === 'profile' && (
+            <Card className="p-8">
               {!profile && !isEditing ? (
-                <div className="text-center">
-                  <h2 className="text-lg font-medium text-gray-900 mb-2">
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 rounded-full bg-primary-50 text-primary-500 flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <h2 className="text-xl font-bold text-slate-900 mb-2">
                     还未填写身体档案
                   </h2>
-                  <p className="text-sm text-gray-500 mb-6">
+                  <p className="text-slate-500 mb-6 max-w-sm mx-auto">
                     完善信息，获得更精准的健康建议
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => navigate('/onboarding')}
-                    className="px-6 py-3 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                  >
+                  <Button onClick={() => navigate('/onboarding')} size="lg">
                     开始填写
-                  </button>
+                  </Button>
                 </div>
               ) : isEditing && profile ? (
-                <ProfileEdit
-                  profile={profile}
-                  onSave={handleSave}
-                  onCancel={() => setIsEditing(false)}
-                  isLoading={isLoading}
-                />
+                <div className="max-w-2xl mx-auto">
+                  <h2 className="text-xl font-bold text-slate-900 mb-6 border-b border-slate-100 pb-4">编辑档案</h2>
+                  <ProfileEdit
+                    profile={profile}
+                    onSave={handleSave}
+                    onCancel={() => setIsEditing(false)}
+                    isLoading={isLoading}
+                  />
+                </div>
               ) : profile ? (
                 <ProfileView profile={profile} onEdit={() => setIsEditing(true)} />
               ) : null}
-            </div>
-          </div>
-        )}
+            </Card>
+          )}
 
-        {/* Uploads Tab */}
-        {activeTab === 'uploads' && (
-          <div className="space-y-6">
-            <div className="bg-white shadow sm:rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                上传文件
-              </h3>
-              <FileUploader onUploadComplete={() => fetchUploads()} />
-            </div>
+          {/* Uploads Tab */}
+          {activeTab === 'uploads' && (
+            <div className="space-y-6">
+              <Card className="p-6">
+                <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  </svg>
+                  上传文件
+                </h3>
+                <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl p-4 transition-colors hover:border-primary-300 hover:bg-primary-50">
+                  <FileUploader onUploadComplete={() => fetchUploads()} />
+                </div>
+              </Card>
 
-            <div className="bg-white shadow sm:rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                已上传文件
-              </h3>
-              <UploadList />
+              <Card className="p-6">
+                <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                  </svg>
+                  已上传文件
+                </h3>
+                <UploadList />
+              </Card>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+    </MainLayout>
   );
 }
+

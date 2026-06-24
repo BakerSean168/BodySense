@@ -80,6 +80,7 @@ export function useChatSSE(
 
           const decoder = new TextDecoder();
           let buffer = '';
+          let currentEvent = 'message';
 
           while (true) {
             const { done, value } = await reader.read();
@@ -90,37 +91,52 @@ export function useChatSSE(
             buffer = lines.pop() || '';
 
             for (const line of lines) {
-              if (line.startsWith('data: ')) {
+              const trimmed = line.trim();
+              if (trimmed.startsWith('event:')) {
+                currentEvent = trimmed.slice(6).trim();
+              } else if (trimmed.startsWith('data:')) {
+                const dataStr = trimmed.slice(5).trim();
                 try {
-                  const data = JSON.parse(line.slice(6));
+                  const data = JSON.parse(dataStr);
+                  if (currentEvent === 'done') {
+                    onDone(data);
+                  } else {
+                    if (data.type === 'text' && data.content) {
+                      onText(data.content);
+                    } else if (data.type === 'extracted_info' && data.info) {
+                      onExtractedInfo(data.info);
+                    }
+                  }
+                } catch {
+                  // Skip malformed JSON
+                }
+                currentEvent = 'message';
+              } else if (trimmed === '') {
+                currentEvent = 'message';
+              }
+            }
+          }
 
+          // Process final remaining buffer
+          if (buffer.trim()) {
+            const trimmed = buffer.trim();
+            if (trimmed.startsWith('event:')) {
+              currentEvent = trimmed.slice(6).trim();
+            } else if (trimmed.startsWith('data:')) {
+              const dataStr = trimmed.slice(5).trim();
+              try {
+                const data = JSON.parse(dataStr);
+                if (currentEvent === 'done') {
+                  onDone(data);
+                } else {
                   if (data.type === 'text' && data.content) {
                     onText(data.content);
                   } else if (data.type === 'extracted_info' && data.info) {
                     onExtractedInfo(data.info);
                   }
-                } catch {
-                  // Skip malformed JSON
                 }
-              } else if (line.startsWith('event: done')) {
-                // Next data line is the done event
-              }
-            }
-
-            // Check for done event in remaining buffer
-            if (buffer.includes('event: done')) {
-              const doneIdx = buffer.indexOf('event: done');
-              const afterDone = buffer.slice(doneIdx);
-              const dataLine = afterDone
-                .split('\n')
-                .find((l) => l.startsWith('data: '));
-              if (dataLine) {
-                try {
-                  const doneData = JSON.parse(dataLine.slice(6));
-                  onDone(doneData);
-                } catch {
-                  // Skip malformed done event
-                }
+              } catch {
+                // Ignore malformed final JSON; the stream may end mid-frame.
               }
             }
           }

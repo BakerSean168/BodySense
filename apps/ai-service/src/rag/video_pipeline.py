@@ -364,7 +364,6 @@ class VideoIngestionPipeline:
     def _normalize_chunks(self, chunks: list[tuple[float, float]]) -> list[tuple[float, float]]:
         normalized: list[tuple[float, float]] = []
         max_duration = 18.0
-        min_duration = 1.2
 
         for start_sec, end_sec in chunks:
             start_sec = max(0.0, start_sec)
@@ -374,11 +373,7 @@ class VideoIngestionPipeline:
                 continue
 
             if duration <= max_duration:
-                if normalized and duration < min_duration:
-                    prev_start, prev_end = normalized[-1]
-                    normalized[-1] = (prev_start, end_sec)
-                else:
-                    normalized.append((start_sec, end_sec))
+                normalized.append((start_sec, end_sec))
                 continue
 
             cursor = start_sec

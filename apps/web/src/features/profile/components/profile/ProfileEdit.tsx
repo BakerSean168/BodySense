@@ -107,14 +107,14 @@ export function ProfileEdit({ profile, onSave, onCancel, isLoading }: ProfileEdi
             type="button"
             onClick={onCancel}
             disabled={isLoading}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+            className="px-5 py-2 rounded-full text-sm font-semibold text-[#4A554E] bg-[#F7F5F0] border border-[#E5E3DF] hover:bg-primary-50 transition-colors duration-300 disabled:opacity-50"
           >
             取消
           </button>
           <button
             type="submit"
             disabled={isLoading}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+            className="px-5 py-2 rounded-full text-sm font-semibold text-white bg-primary-700 hover:bg-primary-800 transition-colors duration-300 disabled:opacity-50"
           >
             {isLoading ? '保存中...' : '保存'}
           </button>
@@ -131,9 +131,9 @@ export function ProfileEdit({ profile, onSave, onCancel, isLoading }: ProfileEdi
                 key={option.value}
                 type="button"
                 onClick={() => handleChange('gender', option.value)}
-                className={`p-3 rounded-lg border-2 text-center text-sm font-medium transition-colors ${
+                className={`p-3 rounded-lg border-2 text-center text-sm font-semibold transition-colors ${
                   formData.gender === option.value
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    ? 'border-primary-700 bg-primary-50/50 text-primary-800'
                     : 'border-gray-200 hover:border-gray-300 text-gray-700'
                 }`}
               >
@@ -156,7 +156,7 @@ export function ProfileEdit({ profile, onSave, onCancel, isLoading }: ProfileEdi
             min={1}
             max={150}
             placeholder="请输入年龄"
-            className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-primary-600 focus:outline-none focus:ring-1 focus:ring-primary-600"
           />
           {errors.age && <p className="mt-1 text-sm text-red-600">{errors.age}</p>}
         </div>
@@ -176,7 +176,7 @@ export function ProfileEdit({ profile, onSave, onCancel, isLoading }: ProfileEdi
               max={250}
               step={0.1}
               placeholder="170"
-              className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-primary-600 focus:outline-none focus:ring-1 focus:ring-primary-600"
             />
             {errors.height_cm && <p className="mt-1 text-sm text-red-600">{errors.height_cm}</p>}
           </div>
@@ -193,7 +193,7 @@ export function ProfileEdit({ profile, onSave, onCancel, isLoading }: ProfileEdi
               max={300}
               step={0.1}
               placeholder="65"
-              className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-primary-600 focus:outline-none focus:ring-1 focus:ring-primary-600"
             />
             {errors.weight_kg && <p className="mt-1 text-sm text-red-600">{errors.weight_kg}</p>}
           </div>
@@ -210,7 +210,7 @@ export function ProfileEdit({ profile, onSave, onCancel, isLoading }: ProfileEdi
             value={formData.occupation}
             onChange={(e) => handleChange('occupation', e.target.value)}
             placeholder="例如：程序员、教师、销售..."
-            className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-primary-600 focus:outline-none focus:ring-1 focus:ring-primary-600"
           />
         </div>
 
@@ -223,9 +223,9 @@ export function ProfileEdit({ profile, onSave, onCancel, isLoading }: ProfileEdi
                 key={option.value}
                 type="button"
                 onClick={() => handleChange('exercise_frequency', option.value)}
-                className={`p-3 rounded-lg border-2 text-center text-sm font-medium transition-colors ${
+                className={`p-3 rounded-lg border-2 text-center text-sm font-semibold transition-colors ${
                   formData.exercise_frequency === option.value
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    ? 'border-primary-700 bg-primary-50/50 text-primary-800'
                     : 'border-gray-200 hover:border-gray-300 text-gray-700'
                 }`}
               >
@@ -246,7 +246,7 @@ export function ProfileEdit({ profile, onSave, onCancel, isLoading }: ProfileEdi
               type="time"
               value={formData.sleep_time}
               onChange={(e) => handleChange('sleep_time', e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-primary-600 focus:outline-none focus:ring-1 focus:ring-primary-600"
             />
           </div>
           <div>
@@ -258,7 +258,7 @@ export function ProfileEdit({ profile, onSave, onCancel, isLoading }: ProfileEdi
               type="time"
               value={formData.wake_time}
               onChange={(e) => handleChange('wake_time', e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-primary-600 focus:outline-none focus:ring-1 focus:ring-primary-600"
             />
           </div>
         </div>
@@ -274,7 +274,7 @@ export function ProfileEdit({ profile, onSave, onCancel, isLoading }: ProfileEdi
             value={formData.exercise_type}
             onChange={(e) => handleChange('exercise_type', e.target.value)}
             placeholder="例如：跑步、游泳、健身、瑜伽..."
-            className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-primary-600 focus:outline-none focus:ring-1 focus:ring-primary-600"
           />
         </div>
 
@@ -289,7 +289,7 @@ export function ProfileEdit({ profile, onSave, onCancel, isLoading }: ProfileEdi
             onChange={(e) => handleChange('injury_history', e.target.value)}
             rows={3}
             placeholder="例如：膝盖半月板损伤、腰椎间盘突出..."
-            className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-primary-600 focus:outline-none focus:ring-1 focus:ring-primary-600"
           />
         </div>
 
@@ -304,7 +304,7 @@ export function ProfileEdit({ profile, onSave, onCancel, isLoading }: ProfileEdi
             onChange={(e) => handleChange('self_description', e.target.value)}
             rows={3}
             placeholder="简单描述您的身体状况、健身目标等..."
-            className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-primary-600 focus:outline-none focus:ring-1 focus:ring-primary-600"
           />
         </div>
       </div>

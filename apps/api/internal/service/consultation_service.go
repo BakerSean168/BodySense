@@ -21,6 +21,12 @@ func NewConsultationService(consultationRepo *repository.ConsultationRepository)
 
 // CreateSession creates a new consultation session for a user.
 func (s *ConsultationService) CreateSession(ctx context.Context, userID uuid.UUID) (*model.ConsultationSession, error) {
+	// Check if there is an existing in-progress empty session
+	existingSession, err := s.consultationRepo.GetLastInProgressEmptySession(ctx, userID)
+	if err == nil && existingSession != nil {
+		return existingSession, nil
+	}
+
 	session := &model.ConsultationSession{
 		ID:            uuid.New(),
 		UserID:        userID,
