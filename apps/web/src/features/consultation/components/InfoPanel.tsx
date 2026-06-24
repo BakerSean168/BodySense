@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { ExtractedInfo } from '../services/consultationService';
 import { BodyVisualization } from './BodyVisualization';
 
@@ -9,14 +9,15 @@ interface InfoPanelProps {
 }
 
 const SEVERITY_COLORS: Record<string, string> = {
-  '轻度': 'bg-green-100 text-green-800',
-  '中度': 'bg-yellow-100 text-yellow-800',
-  '重度': 'bg-red-100 text-red-800',
+  '轻度': 'bg-[#F1F5F2] text-[#4d7a64] border border-[#c5d7cc]/30',
+  '中度': 'bg-[#F7F5F0] text-[#CD7B67] border border-[#E5E3DF]',
+  '重度': 'bg-[#B65E49]/10 text-[#B65E49] border border-[#B65E49]/20',
 };
 
 export function InfoPanel({ extractedInfo, onConfirm, onModify }: InfoPanelProps) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<ExtractedInfo | null>(null);
+  const cardsContainerRef = useRef<HTMLDivElement>(null);
 
   // Get unique body parts for visualization
   const highlightedParts = [...new Set(extractedInfo.map((info) => info.body_part))];
@@ -50,17 +51,26 @@ export function InfoPanel({ extractedInfo, onConfirm, onModify }: InfoPanelProps
             // Find and scroll to the info card for this part
             const index = extractedInfo.findIndex((info) => info.body_part === part);
             if (index >= 0) {
-              document.getElementById(`info-card-${index}`)?.scrollIntoView({
-                behavior: 'smooth',
-                block: 'nearest',
-              });
+              const container = cardsContainerRef.current;
+              if (container) {
+                const element = container.querySelector(`#info-card-${index}`) as HTMLElement;
+                if (element) {
+                  const containerTop = container.getBoundingClientRect().top;
+                  const elementTop = element.getBoundingClientRect().top;
+                  const scrollOffset = elementTop - containerTop + container.scrollTop;
+                  container.scrollTo({
+                    top: scrollOffset,
+                    behavior: 'smooth',
+                  });
+                }
+              }
             }
           }}
         />
       </div>
 
       {/* Extracted Info Cards */}
-      <div className="flex-1 overflow-y-auto">
+      <div ref={cardsContainerRef} className="flex-1 overflow-y-auto">
         <h3 className="text-xs font-semibold text-gray-500 mb-2">提取的症状信息</h3>
 
         {extractedInfo.length === 0 ? (
@@ -129,13 +139,13 @@ export function InfoPanel({ extractedInfo, onConfirm, onModify }: InfoPanelProps
                     <div className="flex gap-2">
                       <button
                         onClick={handleSave}
-                        className="flex-1 text-xs bg-blue-600 text-white rounded py-1 hover:bg-blue-700"
+                        className="flex-1 text-xs bg-[#CD7B67] hover:bg-[#B65E49] text-white rounded-full py-1.5 font-semibold transition-all duration-300 shadow-sm shadow-[#CD7B67]/10 cursor-pointer"
                       >
                         保存
                       </button>
                       <button
                         onClick={handleCancel}
-                        className="flex-1 text-xs bg-gray-100 text-gray-600 rounded py-1 hover:bg-gray-200"
+                        className="flex-1 text-xs bg-[#F7F5F0] border border-[#E5E3DF] text-[#4A554E] rounded-full py-1.5 font-semibold hover:bg-primary-50 transition-all duration-300 cursor-pointer"
                       >
                         取消
                       </button>
@@ -144,50 +154,50 @@ export function InfoPanel({ extractedInfo, onConfirm, onModify }: InfoPanelProps
                 ) : (
                   /* View mode */
                   <>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-medium text-sm text-blue-700">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-semibold text-sm text-primary-800">
                         {info.body_part}
                       </span>
                       {info.severity && (
                         <span
-                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${SEVERITY_COLORS[info.severity] || 'bg-gray-100 text-gray-800'}`}
+                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${SEVERITY_COLORS[info.severity] || 'bg-gray-100 text-gray-800'}`}
                         >
                           {info.severity}
                         </span>
                       )}
                     </div>
                     {info.symptom_type && (
-                      <div className="text-xs text-gray-600">
+                      <div className="text-xs text-[#4A554E] font-medium mb-1">
                         症状：{info.symptom_type}
                       </div>
                     )}
                     {info.duration && (
-                      <div className="text-xs text-gray-600">
+                      <div className="text-xs text-[#4A554E] font-medium mb-1">
                         持续时间：{info.duration}
                       </div>
                     )}
                     {info.trigger && (
-                      <div className="text-xs text-gray-600">
+                      <div className="text-xs text-[#4A554E] font-medium mb-1">
                         触发场景：{info.trigger}
                       </div>
                     )}
                     {info.relief && (
-                      <div className="text-xs text-gray-600">
+                      <div className="text-xs text-[#4A554E] font-medium">
                         缓解方式：{info.relief}
                       </div>
                     )}
 
                     {/* Action buttons */}
-                    <div className="flex gap-2 mt-2">
+                    <div className="flex gap-2 mt-3.5">
                       <button
                         onClick={() => onConfirm?.(info)}
-                        className="flex-1 text-xs bg-green-50 text-green-700 rounded py-1 hover:bg-green-100 transition-colors"
+                        className="flex-1 text-xs bg-primary-100 text-primary-900 border border-primary-200/50 rounded-full py-1.5 font-semibold hover:bg-primary-200 transition-all duration-300 cursor-pointer"
                       >
                         确认
                       </button>
                       <button
                         onClick={() => handleEdit(i)}
-                        className="flex-1 text-xs bg-gray-50 text-gray-600 rounded py-1 hover:bg-gray-100 transition-colors"
+                        className="flex-1 text-xs bg-[#F7F5F0] border border-[#E5E3DF] text-[#4A554E] rounded-full py-1.5 font-semibold hover:bg-primary-50 transition-all duration-300 cursor-pointer"
                       >
                         修改
                       </button>

@@ -24,11 +24,17 @@ export function ChatPanel({
   const [localExtractedInfo, setLocalExtractedInfo] = useState<ExtractedInfo[]>(
     session.extracted_info || [],
   );
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
   }, [messages, streamingText]);
 
   const handleText = useCallback((text: string) => {
@@ -94,7 +100,7 @@ export function ChatPanel({
   return (
     <div className="flex flex-col h-full">
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-1">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-1">
         {messages.length === 0 && !streamingText && (
           <div className="flex items-center justify-center h-full text-gray-400">
             <div className="text-center">
@@ -123,8 +129,6 @@ export function ChatPanel({
             {error}
           </div>
         )}
-
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Input area */}
