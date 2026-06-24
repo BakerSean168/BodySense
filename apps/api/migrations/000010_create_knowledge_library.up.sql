@@ -1,4 +1,4 @@
-CREATE TABLE knowledge_sources (
+CREATE TABLE IF NOT EXISTS knowledge_sources (
     id BIGSERIAL PRIMARY KEY,
     source_key VARCHAR(200) NOT NULL UNIQUE,
     source_type VARCHAR(50) NOT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE knowledge_sources (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE knowledge_segments (
+CREATE TABLE IF NOT EXISTS knowledge_segments (
     id BIGSERIAL PRIMARY KEY,
     source_id BIGINT NOT NULL REFERENCES knowledge_sources(id) ON DELETE CASCADE,
     segment_index INTEGER NOT NULL,
@@ -32,7 +32,7 @@ CREATE TABLE knowledge_segments (
     UNIQUE(source_id, segment_index)
 );
 
-CREATE TABLE knowledge_units (
+CREATE TABLE IF NOT EXISTS knowledge_units (
     id BIGSERIAL PRIMARY KEY,
     source_id BIGINT NOT NULL REFERENCES knowledge_sources(id) ON DELETE CASCADE,
     unit_key VARCHAR(200) NOT NULL UNIQUE,
@@ -54,7 +54,7 @@ CREATE TABLE knowledge_units (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE knowledge_clips (
+CREATE TABLE IF NOT EXISTS knowledge_clips (
     id BIGSERIAL PRIMARY KEY,
     source_id BIGINT NOT NULL REFERENCES knowledge_sources(id) ON DELETE CASCADE,
     source_unit_id BIGINT REFERENCES knowledge_units(id) ON DELETE SET NULL,
@@ -71,25 +71,65 @@ CREATE TABLE knowledge_clips (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_knowledge_sources_problem_slug ON knowledge_sources(problem_slug);
-CREATE INDEX idx_knowledge_segments_source_id ON knowledge_segments(source_id, segment_index);
-CREATE INDEX idx_knowledge_units_problem_slug ON knowledge_units(problem_slug);
-CREATE INDEX idx_knowledge_units_unit_type ON knowledge_units(unit_type);
-CREATE INDEX idx_knowledge_units_source_id ON knowledge_units(source_id);
-CREATE INDEX idx_knowledge_clips_source_id ON knowledge_clips(source_id);
-CREATE INDEX idx_knowledge_clips_source_unit_id ON knowledge_clips(source_unit_id);
+CREATE INDEX IF NOT EXISTS idx_knowledge_sources_problem_slug ON knowledge_sources(problem_slug);
+CREATE INDEX IF NOT EXISTS idx_knowledge_segments_source_id ON knowledge_segments(source_id, segment_index);
+CREATE INDEX IF NOT EXISTS idx_knowledge_units_problem_slug ON knowledge_units(problem_slug);
+CREATE INDEX IF NOT EXISTS idx_knowledge_units_unit_type ON knowledge_units(unit_type);
+CREATE INDEX IF NOT EXISTS idx_knowledge_units_source_id ON knowledge_units(source_id);
+CREATE INDEX IF NOT EXISTS idx_knowledge_clips_source_id ON knowledge_clips(source_id);
+CREATE INDEX IF NOT EXISTS idx_knowledge_clips_source_unit_id ON knowledge_clips(source_unit_id);
 
-CREATE TRIGGER update_knowledge_sources_updated_at
-    BEFORE UPDATE ON knowledge_sources
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM pg_attribute a
+        JOIN pg_class c ON c.oid = a.attrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public'
+          AND c.relname = 'knowledge_units'
+          AND a.attname = 'embedding'
+          AND NOT a.attisdropped
+          AND format_type(a.atttypid, a.atttypmod) <> 'vector(1536)'
+    ) THEN
+        ALTER TABLE knowledge_units
+            ALTER COLUMN embedding TYPE VECTOR(1536)
+            USING NULL::VECTOR(1536);
+    END IF;
+END $$;
 
-CREATE TRIGGER update_knowledge_units_updated_at
-    BEFORE UPDATE ON knowledge_units
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'update_knowledge_sources_updated_at'
+    ) THEN
+        CREATE TRIGGER update_knowledge_sources_updated_at
+            BEFORE UPDATE ON knowledge_sources
+            FOR EACH ROW
+            EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
-CREATE TRIGGER update_knowledge_clips_updated_at
-    BEFORE UPDATE ON knowledge_clips
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'update_knowledge_units_updated_at'
+    ) THEN
+        CREATE TRIGGER update_knowledge_units_updated_at
+            BEFORE UPDATE ON knowledge_units
+            FOR EACH ROW
+            EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'update_knowledge_clips_updated_at'
+    ) THEN
+        CREATE TRIGGER update_knowledge_clips_updated_at
+            BEFORE UPDATE ON knowledge_clips
+            FOR EACH ROW
+            EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
