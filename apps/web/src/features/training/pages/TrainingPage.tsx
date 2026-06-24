@@ -5,24 +5,11 @@ import {
   type TrainingPlan,
   type TrainingLog,
   type TrainingProgress,
+  type TrainingReassessmentResult,
 } from '../services/trainingService';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-
-interface ReassessmentResult {
-  analysis: string;
-  adjustments: {
-    difficulty: string;
-    duration: string;
-    exercise_changes: { action: string; exercise: string; reason: string }[];
-  };
-  next_phase_plan: {
-    focus: string;
-    exercises: { name: string; description: string; sets: string; reps: string }[];
-  };
-  motivation: string;
-}
 
 export function TrainingPage() {
   const { id } = useParams<{ id: string }>();
@@ -39,7 +26,7 @@ export function TrainingPage() {
     training_feeling: '',
     difficulties: '',
   });
-  const [reassessmentResult, setReassessmentResult] = useState<ReassessmentResult | null>(null);
+  const [reassessmentResult, setReassessmentResult] = useState<TrainingReassessmentResult | null>(null);
   const [isReassessing, setIsReassessing] = useState(false);
 
   useEffect(() => {
@@ -62,7 +49,7 @@ export function TrainingPage() {
         // Initialize exercise states from task
         const states: Record<string, boolean> = {};
         const exercises = taskData.exercises || [];
-        exercises.forEach((ex: any) => {
+        exercises.forEach((ex) => {
           states[ex.name] = ex.completed || false;
         });
         setExerciseStates(states);

@@ -205,7 +205,10 @@ def run_parent_candidate(
 
     if result_path.exists() and not force:
         payload = json.loads(result_path.read_text(encoding="utf-8"))
-        transcript_text = Path(payload["transcript_path"]).read_text(encoding="utf-8", errors="replace")
+        transcript_text = Path(payload["transcript_path"]).read_text(
+            encoding="utf-8",
+            errors="replace",
+        )
         return CandidateResult(
             candidate_id=candidate_id,
             candidate_label=candidate["label"],

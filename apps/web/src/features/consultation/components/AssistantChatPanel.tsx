@@ -73,20 +73,18 @@ function ChatContent({
     setStreamingText((prev) => prev + text);
   }, []);
 
-  const [localExtractedInfo, setLocalExtractedInfo] = useState<ExtractedInfo[]>(initialExtractedInfo);
+  const localExtractedInfoRef = useRef<ExtractedInfo[]>(initialExtractedInfo);
 
   // When sessionId or initialExtractedInfo changes, reset localExtractedInfo
   useEffect(() => {
-    setLocalExtractedInfo(initialExtractedInfo);
+    localExtractedInfoRef.current = initialExtractedInfo;
   }, [sessionId, initialExtractedInfo]);
 
   const handleExtractedInfo = useCallback(
     (info: ExtractedInfo) => {
-      setLocalExtractedInfo((prev) => {
-        const updated = [...prev, info];
-        onExtractedInfoUpdate?.(updated);
-        return updated;
-      });
+      const updated = [...localExtractedInfoRef.current, info];
+      localExtractedInfoRef.current = updated;
+      onExtractedInfoUpdate?.(updated);
     },
     [onExtractedInfoUpdate],
   );

@@ -21,9 +21,7 @@ export function ChatPanel({
 }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessageType[]>(session.messages || []);
   const [streamingText, setStreamingText] = useState('');
-  const [localExtractedInfo, setLocalExtractedInfo] = useState<ExtractedInfo[]>(
-    session.extracted_info || [],
-  );
+  const localExtractedInfoRef = useRef<ExtractedInfo[]>(session.extracted_info || []);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   // Scroll to bottom when messages change
@@ -43,11 +41,9 @@ export function ChatPanel({
 
   const handleExtractedInfo = useCallback(
     (info: ExtractedInfo) => {
-      setLocalExtractedInfo((prev) => {
-        const updated = [...prev, info];
-        onExtractedInfoUpdate?.(updated);
-        return updated;
-      });
+      const updated = [...localExtractedInfoRef.current, info];
+      localExtractedInfoRef.current = updated;
+      onExtractedInfoUpdate?.(updated);
     },
     [onExtractedInfoUpdate],
   );
@@ -65,7 +61,7 @@ export function ChatPanel({
 
       // Update extracted info with the final state
       if (event.extracted_info) {
-        setLocalExtractedInfo(event.extracted_info);
+        localExtractedInfoRef.current = event.extracted_info;
         onExtractedInfoUpdate?.(event.extracted_info);
       }
 

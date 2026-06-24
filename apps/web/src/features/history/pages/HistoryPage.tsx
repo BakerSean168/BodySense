@@ -110,7 +110,7 @@ export function HistoryPage() {
         ) : (
           <div className="space-y-4 relative">
             <div className="absolute top-8 bottom-8 left-8 w-0.5 bg-slate-200 z-0 hidden sm:block"></div>
-            {sessions.map((session, index) => (
+            {sessions.map((session) => (
               <Card
                 key={session.id}
                 onClick={() => navigate(`/consultation/${session.id}`)}

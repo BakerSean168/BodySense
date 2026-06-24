@@ -135,7 +135,9 @@ export function useChatSSE(
                     onExtractedInfo(data.info);
                   }
                 }
-              } catch {}
+              } catch {
+                // Ignore malformed final JSON; the stream may end mid-frame.
+              }
             }
           }
 

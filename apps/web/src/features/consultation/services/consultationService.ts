@@ -5,8 +5,8 @@ export interface ConsultationSession {
   user_id: string;
   messages: ChatMessage[];
   extracted_info: ExtractedInfo[];
-  diagnosis: any;
-  treatment_plan: any;
+  diagnosis: Diagnosis | null;
+  treatment_plan: TreatmentPlan | null;
   status: 'in_progress' | 'completed';
   created_at: string;
   ended_at: string | null;
@@ -27,6 +27,10 @@ export interface ExtractedInfo {
   severity?: string;
   additional_notes?: string;
 }
+
+export type Diagnosis = Record<string, unknown>;
+
+export type TreatmentPlan = Record<string, unknown>;
 
 export interface SessionListResponse {
   sessions: ConsultationSession[];
@@ -94,7 +98,10 @@ export const consultationApi = {
   },
 
   // Confirm diagnosis
-  confirmDiagnosis: async (sessionId: string, diagnosis: any): Promise<void> => {
+  confirmDiagnosis: async (
+    sessionId: string,
+    diagnosis: Diagnosis,
+  ): Promise<void> => {
     const response = await authFetch(
       `/api/v1/consultation/${sessionId}/confirm`,
       {
