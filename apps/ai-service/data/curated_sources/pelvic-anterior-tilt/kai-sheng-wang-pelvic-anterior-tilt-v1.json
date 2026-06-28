@@ -1,0 +1,171 @@
+{
+  "source_key": "凯圣王-pelvic-anterior-tilt-骨盆前倾",
+  "source_title": "骨盆前倾完整矫正指南",
+  "author": "凯圣王",
+  "problem_slug": "pelvic-anterior-tilt",
+  "problem_display_name": "骨盆前倾",
+  "units": [
+    {
+      "unit_key": "pat-definition",
+      "unit_type": "definition",
+      "category": "posture.pelvic-anterior-tilt",
+      "title": "什么是骨盆前倾及对脊柱的影响",
+      "summary": "骨盆前倾是指盆骨相对于中立位向前倾斜，导致腰椎过度伸展代偿、下背部受压变大，并可能引起驼背含胸等连带体态问题。",
+      "source_start_sec": 0.0,
+      "source_end_sec": 36.0,
+      "tags": ["骨盆前倾", "定义", "腰椎代偿", "力线变化"],
+      "body_markdown": "## 核心结论\n骨盆作为脊柱的“底座”，如果出现前倾（往前倾斜），会导致整条脊柱的受力发生改变。\n\n## 骨盆前倾的表现与代偿\n- **腰椎伸展代偿**：骨盆前倾迫使腰椎过度向前弯曲（过度伸展），导致腰椎小关节和椎间盘受到过度挤压。\n- **力学失衡**：导致下背部肌肉长期处于紧绷收缩状态，引起酸痛。\n- **连带效应**：为了维持身体重心平衡，胸椎往往会向后凸起代偿，形成驼背、含胸、头前移等连带不良体态。 "
+    },
+    {
+      "unit_key": "pat-symptoms-pain",
+      "unit_type": "warning",
+      "category": "posture.pelvic-anterior-tilt",
+      "title": "骨盆前倾引起的不适与腰痛风险",
+      "summary": "骨盆前倾会导致久坐久站后腰酸背痛，并在做硬拉、深蹲或俯身划船时使腰部承受过度压力，引发慢性腰痛甚至腰椎损伤。",
+      "source_start_sec": 36.0,
+      "source_end_sec": 108.0,
+      "tags": ["腰痛", "动作损伤", "代偿", "训练不适", "下背部压力"],
+      "body_markdown": "## 典型不适症状\n- 久坐或久站后，下背部（腰部）出现明显的腰酸背痛。\n- 核心无法收紧，腹部向前顶，无法发挥保护作用。\n\n## 运动训练中的风险\n- 在做**深蹲**、**硬拉**、**俯身划船**等动作时，由于腰椎处于过度伸展位（无法保持中立），腰部会承受过大压力。\n- 一旦负重训练，通过腰椎过度伸展代偿极易导致腰椎小关节撞击及椎间盘损伤，增加急性或慢性运动受伤的风险。 "
+    },
+    {
+      "unit_key": "pat-causes",
+      "unit_type": "cause",
+      "category": "posture.pelvic-anterior-tilt",
+      "title": "骨盆前倾的日常成因与肌肉失衡",
+      "summary": "现代人长期久坐导致屈髋肌群（如髂腰肌）适应性短缩、延展性下降，限制了髋关节的伸展活动度，进而在运动中引发腰椎代偿性前倾。",
+      "source_start_sec": 108.0,
+      "source_end_sec": 144.0,
+      "tags": ["久坐", "屈髋肌群", "髂腰肌", "髋伸受限", "代偿机制"],
+      "body_markdown": "## 核心成因\n- **久坐习惯**：现代工作生活导致身体长期处于屈髋状态，髂腰肌等屈髋肌群发生适应性缩短紧张，延展性下降。\n- **髋伸度受限**：伸展活动度不足会直接影响走路蹬地、深蹲底部起身等需要髋伸（大腿向后送）的动作。\n- **代偿链**：当需要髋伸而髋关节活动度不足时，身体会强行通过腰椎伸展（塌腰）来达到动作幅度，长期如此便固定为骨盆前倾体态。 "
+    },
+    {
+      "unit_key": "pat-self-check-thomas",
+      "unit_type": "self_check",
+      "category": "posture.pelvic-anterior-tilt",
+      "title": "如何进行骨盆前倾与髋伸测试（托马斯自测）",
+      "summary": "通过将尾骨/骶骨抵在床边平躺、抱住一侧膝盖并放下另一侧大腿的托马斯测试，来观察大腿能否降至与床面平行，并筛查髋伸受限及代偿。",
+      "source_start_sec": 144.0,
+      "source_end_sec": 198.0,
+      "tags": ["自测", "托马斯测试", "髋伸活动度", "代偿动作"],
+      "body_markdown": "## 托马斯自测步骤\n1. 准备一张边缘清晰的床或高垫。\n2. 臀部骶骨（尾骨位置）抵在床边，顺势向后躺平。\n3. 双手抱住一侧腿膝盖贴向胸口，释放另一侧大腿自然下垂。\n\n## 达标标准\n- 下放的大腿前侧能够与床面保持水平平行，且膝关节自然下垂弯曲，说明髋伸活动度合格。\n\n## 注意排查的代偿动作\n- **骨盆前旋**：大腿下放时，手摸同侧髋前骨头（髂前上棘）发现有向前旋转的代偿趋势。\n- **腰椎顶起**：下放腿时下背部明显顶起离开床面（腰椎过度伸展代偿）。出现以上两点说明测试不合格，存在髋伸受限。 "
+    },
+    {
+      "unit_key": "pat-hip-flexor-stretch",
+      "unit_type": "exercise",
+      "category": "exercise.pelvic-anterior-tilt",
+      "title": "矫正步骤 1-1：跪姿髂腰肌针对性主动拉伸",
+      "summary": "采取前后腿 90 度的弓箭步，先做骨盆后倾锁死髂腰肌一端，再进行顶臀前伸和脊柱伸展以精准拉伸屈髋肌群。",
+      "source_start_sec": 198.0,
+      "source_end_sec": 234.0,
+      "tags": ["髂腰肌", "主动拉伸", "弓箭步", "骨盆后倾", "纠正动作"],
+      "body_markdown": "## 动作步骤\n1. 呈单膝跪地弓箭步，前腿和后腿的大腿、小腿均呈 90 度夹角。\n2. **关键动作**：先主动做一个**骨盆后倾**（将骨盆想象成水盆往后倾倒，臀部收紧下卷），锁死髂腰肌的一端。\n3. 核心绷紧，在保持骨盆后倾的姿势下，身体重心垂直往前推（顶臀前送），感受后侧腿大腿根前侧的强烈拉伸感。\n4. 可配合上肢向对侧斜上方伸展，进一步拉长髂腰肌。\n\n## 次数建议\n- 每侧保持拉伸 30 到 60 秒，重复 2 到 3 组。 "
+    },
+    {
+      "unit_key": "pat-iliacus-release",
+      "unit_type": "exercise",
+      "category": "exercise.pelvic-anterior-tilt",
+      "title": "矫正步骤 1-2：坐姿髂肌手动手法松解",
+      "summary": "针对拉伸感不明显的患者，可以通过坐姿下两手按压髂前上棘内侧缝隙，找到酸胀点后利用单侧脚跟踩地滑行进行手法松解。",
+      "source_start_sec": 234.0,
+      "source_end_sec": 270.0,
+      "tags": ["手动松解", "髂肌", "手法", "踩地滑行", "痛点按压"],
+      "body_markdown": "## 动作步骤\n1. 采取坐姿，用手指摸到髋关节前侧凸起的骨头（髂前上棘）。\n2. 双手手指重叠，沿着这块骨头的内侧缝隙缓慢往里深探，触碰到偏酸胀的髂肌。\n3. 上下按揉进行手动松解（约 2 分钟）。\n4. **动静态结合**：用手指稳定按压在最酸胀的痛点处，同侧脚跟踩地，进行缓慢的前后滑行踩踏动作（踩 10 到 20 次），能使深层的髂腰肌得到更透彻的松解。 "
+    },
+    {
+      "unit_key": "pat-deadbug-isometric",
+      "unit_type": "exercise",
+      "category": "exercise.pelvic-anterior-tilt",
+      "title": "矫正步骤 2：静态仰卧死虫式强化核心稳定",
+      "summary": "仰卧屈髋膝 90 度，腰部下方垫毛巾并用下背部死死压住以防塌腰代偿，静态悬空维持以强化腰腹部深层核心。",
+      "source_start_sec": 270.0,
+      "source_end_sec": 343.0,
+      "tags": ["核心强化", "死虫式", "静态支撑", "平背", "腹肌"],
+      "body_markdown": "## 动作步骤\n1. 仰卧平躺，双腿屈髋屈膝 90 度抬起（大腿垂直于地面，小腿平行于地面）。\n2. **动作秘诀**：在腰椎正下方垫一块折叠的毛巾或衣服。\n3. 主动紧缩腹肌，让**下背部/腰椎将垫子死死压在地面上**，全程绝对不能让腰椎浮起。\n4. 骨盆保持微微后倾，腹部绷紧，双臂可朝天花板伸直。\n5. **静态维持**：保持此对位状态不动 30 到 60 秒为一组，进行 2-3 组。\n\n## 为什么采用静态\n- 很多骨盆前倾者由于髋关节活性较差，做动态死虫式时双腿一动就会瞬间塌腰（代偿）。静态维持能确保胸腔 and 骨盆绝对对位，安全训练核心深层稳定性。 "
+    },
+    {
+      "unit_key": "pat-bridge-posterior-tilt",
+      "unit_type": "exercise",
+      "category": "exercise.pelvic-anterior-tilt",
+      "title": "矫正步骤 3：骨盆后倾动态臀桥强化臀大肌",
+      "summary": "仰卧双脚踩地微外旋，脚跟踩实，起桥时先卷动骨盆做后倾，推至顶部时避免腰椎伸展以精准孤立训练臀部大肌群。",
+      "source_start_sec": 343.0,
+      "source_end_sec": 379.0,
+      "tags": ["臀桥", "臀大肌", "骨盆卷动", "髋伸练习", "力量强化"],
+      "body_markdown": "## 动作步骤\n1. 双脚平踩在地面上靠近臀部，脚尖微微外展（外旋），脚后跟踩实。\n2. **关键动作**：核心收紧，起桥前先做一个**骨盆向后卷动（骨盆后倾）**，感受臀大肌预收缩。\n3. 用足跟蹬地将臀部推起，直至大腿与躯干呈一条直线。**注意腰椎保持中立，决不能超伸（不要挺腰拱背）**。\n4. 在顶部夹紧臀部 1-2 秒，然后缓慢下放臀部，臀部微微触碰地面（不完全卸力）后立即做下一次骨盆后倾卷起。\n\n## 次数建议\n- 每组重复 10 到 15 次，进行 3 到 4 组。后期可进阶为单腿臀桥或负重杠铃臀推。 "
+    }
+  ],
+  "clips": [
+    {
+      "clip_key": "pat-definition-demo",
+      "source_unit_key": "pat-definition",
+      "clip_type": "explanation",
+      "title": "骨盆前倾对腰椎及体态的负面影响",
+      "start_sec": 0.0,
+      "end_sec": 36.0,
+      "notes": "说明骨盆前倾导致腰椎过度伸展代偿"
+    },
+    {
+      "clip_key": "pat-symptoms-pain-demo",
+      "source_unit_key": "pat-symptoms-pain",
+      "clip_type": "warning",
+      "title": "运动训练中骨盆前倾代偿导致的腰椎损伤风险",
+      "start_sec": 36.0,
+      "end_sec": 108.0,
+      "notes": "深蹲硬拉等负重动作中核心松弛导致腰椎超伸"
+    },
+    {
+      "clip_key": "pat-causes-demo",
+      "source_unit_key": "pat-causes",
+      "clip_type": "explanation",
+      "title": "久坐对髂腰肌造成的短缩及髋伸活动度限制",
+      "start_sec": 108.0,
+      "end_sec": 144.0,
+      "notes": "解释现代人因久坐短缩导致髋关节活动度限制"
+    },
+    {
+      "clip_key": "pat-self-check-thomas-demo",
+      "source_unit_key": "pat-self-check-thomas",
+      "clip_type": "self_check",
+      "title": "Thomas Test (托马斯测试) 髋伸活动度筛查与代偿辨识",
+      "start_sec": 144.0,
+      "end_sec": 198.0,
+      "notes": "仰卧平躺抱膝 Thomas 试验，筛查髂腰肌短缩"
+    },
+    {
+      "clip_key": "pat-hip-flexor-stretch-demo",
+      "source_unit_key": "pat-hip-flexor-stretch",
+      "clip_type": "exercise",
+      "title": "弓箭步髂腰肌精准拉伸动作演示（配合骨盆后倾）",
+      "start_sec": 198.0,
+      "end_sec": 234.0,
+      "notes": "前后脚 90 度弓步拉伸髂腰肌，加骨盆后倾"
+    },
+    {
+      "clip_key": "pat-iliacus-release-demo",
+      "source_unit_key": "pat-iliacus-release",
+      "clip_type": "exercise",
+      "title": "髂肌手动按摩手法与踩地滑行联合解压动作",
+      "start_sec": 234.0,
+      "end_sec": 270.0,
+      "notes": "双手手指叠压卡前上棘内侧深部，配合脚跟滑行松解"
+    },
+    {
+      "clip_key": "pat-deadbug-isometric-demo",
+      "source_unit_key": "pat-deadbug-isometric",
+      "clip_type": "exercise",
+      "title": "静态死虫式核心抗伸展稳定性动作示范",
+      "start_sec": 270.0,
+      "end_sec": 343.0,
+      "notes": "死虫静态维持，用腰部压住毛巾和衣服垫"
+    },
+    {
+      "clip_key": "pat-bridge-posterior-tilt-demo",
+      "source_unit_key": "pat-bridge-posterior-tilt",
+      "clip_type": "exercise",
+      "title": "后倾卷动式臀桥臀部肌群强化与防塌腰代偿演示",
+      "start_sec": 343.0,
+      "end_sec": 379.0,
+      "notes": "臀桥顶起时核心收紧并保持中立位"
+    }
+  ]
+}
