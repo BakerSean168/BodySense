@@ -1,118 +1,212 @@
 import { authFetch } from '@/features/auth/services/authService';
+import type {
+  Conversation,
+  ConversationListResponse,
+  Message,
+  ConsultationSession,
+  ExtractedInfo,
+  Diagnosis,
+  DiagnosisAnalysis,
+  TreatmentPlan,
+  ConversationShare,
+  SharedConversation,
+} from '../types/consultation';
 
-export interface ConsultationSession {
-  id: string;
-  user_id: string;
-  messages: ChatMessage[];
-  extracted_info: ExtractedInfo[];
-  diagnosis: Diagnosis | null;
-  treatment_plan: TreatmentPlan | null;
-  status: 'in_progress' | 'completed';
-  created_at: string;
-  ended_at: string | null;
-}
+const API_BASE = '/api/v1';
 
-export interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp?: string;
-}
-
-export interface ExtractedInfo {
-  body_part: string;
-  symptom_type?: string;
-  duration?: string;
-  trigger?: string;
-  relief?: string;
-  severity?: string;
-  additional_notes?: string;
-}
-
-export type Diagnosis = Record<string, unknown>;
-
-export type TreatmentPlan = Record<string, unknown>;
-
-export interface SessionListResponse {
-  sessions: ConsultationSession[];
-  total: number;
-  limit: number;
-  offset: number;
+/**
+ * Parse a Response as JSON, throwing on non-ok status.
+ * Skips the ok check when the caller needs the raw Response (e.g. SSE).
+ */
+async function parseJson<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`API ${res.status}: ${body || res.statusText}`);
+  }
+  return res.json();
 }
 
 export const consultationApi = {
-  // Create a new consultation session
-  createSession: async (): Promise<ConsultationSession> => {
-    const response = await authFetch('/api/v1/consultation', {
+  // ===== General Conversation API =====
+
+  /**
+   * Send a message (returns raw Response so the caller can handle SSE streaming).
+   */
+  async sendMessage(params: {
+    conversationId: string | null;
+    clientDraftId?: string;
+    clientMessageId: string;
+    requestId: string;
+    message: { role: string; parts: { type: string; text: string }[] };
+    context?: { entry?: string; profileId?: string };
+  }): Promise<Response> {
+    return authFetch(`${API_BASE}/chat/send`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
     });
-
-    if (!response.ok) {
-      throw new Error('Failed to create session');
-    }
-
-    return response.json();
   },
 
-  // Get a specific session
-  getSession: async (id: string): Promise<ConsultationSession> => {
-    const response = await authFetch(`/api/v1/consultation/${id}`);
-
-    if (!response.ok) {
-      throw new Error('Failed to get session');
-    }
-
-    return response.json();
-  },
-
-  // List all sessions
-  listSessions: async (limit = 20, offset = 0): Promise<SessionListResponse> => {
-    const response = await authFetch(
-      `/api/v1/consultation?limit=${limit}&offset=${offset}`
+  /**
+   * List conversations with cursor-based pagination.
+   */
+  async listConversations(params?: {
+    cursor?: string;
+    limit?: number;
+  }): Promise<ConversationListResponse> {
+    const searchParams = new URLSearchParams();
+    if (params?.cursor) searchParams.set('cursor', params.cursor);
+    if (params?.limit) searchParams.set('limit', String(params.limit));
+    const query = searchParams.toString();
+    return authFetch(`${API_BASE}/conversations${query ? '?' + query : ''}`).then(
+      (res) => parseJson<ConversationListResponse>(res),
     );
-
-    if (!response.ok) {
-      throw new Error('Failed to list sessions');
-    }
-
-    return response.json();
   },
 
-  // Update extracted info
-  updateExtractedInfo: async (
-    sessionId: string,
-    extractedInfo: ExtractedInfo[]
-  ): Promise<void> => {
-    const response = await authFetch(
-      `/api/v1/consultation/${sessionId}/extracted-info`,
-      {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ extracted_info: extractedInfo }),
-      }
+  /**
+   * Get a single conversation with its messages.
+   */
+  async getConversation(
+    id: string,
+  ): Promise<{ conversation: Conversation; messages: Message[] }> {
+    return authFetch(`${API_BASE}/conversations/${id}`).then((res) =>
+      parseJson<{ conversation: Conversation; messages: Message[] }>(res),
     );
-
-    if (!response.ok) {
-      throw new Error('Failed to update extracted info');
-    }
   },
 
-  // Confirm diagnosis
-  confirmDiagnosis: async (
-    sessionId: string,
-    diagnosis: Diagnosis,
-  ): Promise<void> => {
-    const response = await authFetch(
-      `/api/v1/consultation/${sessionId}/confirm`,
-      {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ diagnosis }),
-      }
-    );
+  /**
+   * Delete a conversation.
+   */
+  async deleteConversation(id: string): Promise<void> {
+    await authFetch(`${API_BASE}/conversations/${id}`, {
+      method: 'DELETE',
+    }).then((res) => parseJson<void>(res));
+  },
 
-    if (!response.ok) {
-      throw new Error('Failed to confirm diagnosis');
-    }
+  /**
+   * Toggle pinned state of a conversation.
+   */
+  async pinConversation(id: string, pinned: boolean): Promise<void> {
+    await authFetch(`${API_BASE}/conversations/${id}/pin`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pinned }),
+    }).then((res) => parseJson<void>(res));
+  },
+
+  /**
+   * Trigger AI-generated title for a conversation.
+   */
+  async generateTitle(id: string): Promise<void> {
+    await authFetch(`${API_BASE}/conversations/${id}/title`, {
+      method: 'POST',
+    }).then((res) => parseJson<void>(res));
+  },
+
+  /**
+   * Rename a conversation title (user-initiated).
+   */
+  async renameTitle(id: string, title: string): Promise<void> {
+    await authFetch(`${API_BASE}/conversations/${id}/title`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title }),
+    }).then((res) => parseJson<void>(res));
+  },
+
+  /**
+   * Generate a share link for a conversation.
+   */
+  async shareConversation(id: string): Promise<ConversationShare> {
+    return authFetch(`${API_BASE}/conversations/${id}/share`, {
+      method: 'POST',
+    }).then((res) => parseJson<ConversationShare>(res));
+  },
+
+  /**
+   * Revoke a share link.
+   */
+  async unshareConversation(id: string): Promise<void> {
+    await authFetch(`${API_BASE}/conversations/${id}/share`, {
+      method: 'DELETE',
+    }).then((res) => parseJson<void>(res));
+  },
+
+  /**
+   * Fetch shared conversation content (public, no auth required).
+   */
+  async getSharedConversation(token: string): Promise<SharedConversation> {
+    const res = await fetch(`${API_BASE}/conversations/share/${token}`);
+    return parseJson<SharedConversation>(res);
+  },
+
+  // ===== Consultation Domain API =====
+
+  /**
+   * Get consultation details for a conversation.
+   */
+  async getConsultation(id: string): Promise<ConsultationSession> {
+    return authFetch(`${API_BASE}/consultations/${id}`).then((res) =>
+      parseJson<ConsultationSession>(res),
+    );
+  },
+
+  /**
+   * Update extracted symptom info for a consultation.
+   */
+  async updateExtractedInfo(id: string, info: ExtractedInfo[]): Promise<void> {
+    await authFetch(`${API_BASE}/consultations/${id}/extracted-info`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ extracted_info: info }),
+    }).then((res) => parseJson<void>(res));
+  },
+
+  /**
+   * Confirm a diagnosis.
+   */
+  async confirmDiagnosis(id: string, diagnosis: Diagnosis): Promise<void> {
+    await authFetch(`${API_BASE}/consultations/${id}/confirm`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ diagnosis }),
+    }).then((res) => parseJson<void>(res));
+  },
+
+  /**
+   * Trigger AI diagnosis analysis.
+   */
+  async analyzeDiagnosis(id: string): Promise<DiagnosisAnalysis> {
+    return authFetch(`${API_BASE}/consultations/${id}/diagnosis`, {
+      method: 'POST',
+    }).then((res) => parseJson<DiagnosisAnalysis>(res));
+  },
+
+  /**
+   * Generate a treatment plan.
+   */
+  async generateTreatment(id: string, confirmedDiagnosis: Diagnosis): Promise<TreatmentPlan> {
+    return authFetch(`${API_BASE}/consultations/${id}/treatment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirmedDiagnosis }),
+    }).then((res) => parseJson<TreatmentPlan>(res));
   },
 };
+
+// Re-export domain types for backward compatibility with existing consumers.
+// Prefer importing from '../types/consultation' in new code.
+export type {
+  ConsultationSession,
+  ConsultationPhase,
+  ExtractedInfo,
+  Diagnosis,
+  DiagnosisAnalysis,
+  TreatmentPlan,
+  Citation,
+  Conversation,
+  ConversationListResponse,
+  Message,
+  ConversationShare,
+  SharedConversation,
+} from '../types/consultation';

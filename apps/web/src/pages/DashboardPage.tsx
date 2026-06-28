@@ -4,7 +4,7 @@ import { useProfileStore } from '@/stores/profileStore';
 import { useNavigate } from 'react-router';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 
 export function DashboardPage() {
   const { user } = useAuthStore();

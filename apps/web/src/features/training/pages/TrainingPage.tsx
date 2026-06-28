@@ -9,7 +9,7 @@ import {
 } from '../services/trainingService';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 
 export function TrainingPage() {
   const { id } = useParams<{ id: string }>();

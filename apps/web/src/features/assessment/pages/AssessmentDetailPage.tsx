@@ -8,7 +8,7 @@ import {
 } from '../services/assessmentService';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 
 const GRADE_COLORS: Record<string, string> = {
   A: 'from-emerald-400 to-green-500 text-white shadow-emerald-500/30',

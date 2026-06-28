@@ -1,21 +1,22 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { consultationApi, type ConsultationSession } from '@/features/consultation';
+import { consultationApi } from '@/features/consultation';
+import type { Conversation } from '@/features/consultation/types/consultation';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 
 export function HistoryPage() {
   const navigate = useNavigate();
-  const [sessions, setSessions] = useState<ConsultationSession[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadSessions = async () => {
+    const loadConversations = async () => {
       try {
-        const data = await consultationApi.listSessions(50, 0);
-        setSessions(data.sessions);
+        const data = await consultationApi.listConversations({ limit: 50 });
+        setConversations(data.conversations);
       } catch {
         setError('Failed to load history');
       } finally {
@@ -23,14 +24,14 @@ export function HistoryPage() {
       }
     };
 
-    loadSessions();
+    loadConversations();
   }, []);
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'in_progress':
+      case 'active':
         return '进行中';
-      case 'completed':
+      case 'archived':
         return '已完成';
       default:
         return status;
@@ -39,19 +40,13 @@ export function HistoryPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'in_progress':
+      case 'active':
         return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-      case 'completed':
+      case 'archived':
         return 'bg-slate-100 text-slate-700 border-slate-200';
       default:
         return 'bg-slate-100 text-slate-800 border-slate-200';
     }
-  };
-
-  const getSummary = (session: ConsultationSession) => {
-    const parts = session.extracted_info?.map((info) => info.body_part) || [];
-    if (parts.length === 0) return '暂无提取信息';
-    return `涉及部位：${[...new Set(parts)].join('、')}`;
   };
 
   if (isLoading) {
@@ -73,7 +68,7 @@ export function HistoryPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl shadow-sm border border-slate-100 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-100 rounded-full mix-blend-multiply filter blur-3xl opacity-50 translate-x-1/2 -translate-y-1/2"></div>
-          
+
           <div className="relative z-10 flex items-center gap-4">
             <div>
               <h1 className="text-2xl font-bold text-slate-900 tracking-tight">历史记录</h1>
@@ -92,7 +87,7 @@ export function HistoryPage() {
         )}
 
         {/* Content */}
-        {sessions.length === 0 ? (
+        {conversations.length === 0 ? (
           <Card className="p-12 text-center border-dashed border-2 border-slate-200 bg-slate-50/50">
             <div className="w-20 h-20 bg-white rounded-full shadow-sm flex items-center justify-center mx-auto mb-6">
               <svg className="w-10 h-10 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -110,17 +105,17 @@ export function HistoryPage() {
         ) : (
           <div className="space-y-4 relative">
             <div className="absolute top-8 bottom-8 left-8 w-0.5 bg-slate-200 z-0 hidden sm:block"></div>
-            {sessions.map((session) => (
+            {conversations.map((conv) => (
               <Card
-                key={session.id}
-                onClick={() => navigate(`/consultation/${session.id}`)}
+                key={conv.id}
+                onClick={() => navigate(`/consultation/${conv.id}`)}
                 className={`group cursor-pointer hover:shadow-lg transition-all duration-300 relative z-10 sm:ml-16 overflow-hidden ${
-                  session.status === 'in_progress' ? 'border-primary-200 bg-primary-50/10' : ''
+                  conv.status === 'active' ? 'border-primary-200 bg-primary-50/10' : ''
                 }`}
               >
                 {/* Timeline dot */}
                 <div className={`absolute top-1/2 -translate-y-1/2 -left-12 w-8 h-8 rounded-full border-4 border-white shadow-sm flex items-center justify-center hidden sm:flex ${
-                  session.status === 'in_progress' ? 'bg-primary-500' : 'bg-slate-300'
+                  conv.status === 'active' ? 'bg-primary-500' : 'bg-slate-300'
                 }`}>
                   <div className="w-2 h-2 rounded-full bg-white"></div>
                 </div>
@@ -129,15 +124,15 @@ export function HistoryPage() {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
                     <div className="flex items-center gap-3">
                       <span
-                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold border ${getStatusColor(session.status)}`}
+                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold border ${getStatusColor(conv.status)}`}
                       >
-                        {getStatusLabel(session.status)}
+                        {getStatusLabel(conv.status)}
                       </span>
                       <span className="text-sm font-medium text-slate-500 flex items-center gap-1.5">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        {new Date(session.created_at).toLocaleString('zh-CN', {
+                        {new Date(conv.created_at).toLocaleString('zh-CN', {
                           year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                         })}
                       </span>
@@ -148,23 +143,15 @@ export function HistoryPage() {
                       </svg>
                     </div>
                   </div>
-                  
+
                   <div className="bg-slate-50/80 rounded-xl p-4 mt-4 group-hover:bg-white transition-colors border border-slate-100">
-                    <p className="text-slate-700 font-medium">{getSummary(session)}</p>
-                    {session.diagnosis && (
-                      <div className="mt-3 flex items-center gap-2">
-                        <span className="flex h-2 w-2 relative">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                        </span>
-                        <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wide">
-                          已生成诊断方案
-                        </p>
-                      </div>
-                    )}
+                    <p className="text-slate-700 font-medium">{conv.title || '体态健康咨询'}</p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {conv.message_count} 条消息
+                    </p>
                   </div>
                 </div>
-                {session.status === 'in_progress' && (
+                {conv.status === 'active' && (
                   <div className="absolute top-0 left-0 w-1 h-full bg-primary-500"></div>
                 )}
               </Card>

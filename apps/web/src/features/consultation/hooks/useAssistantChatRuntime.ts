@@ -1,91 +1,153 @@
-import { useLocalRuntime, type ChatModelAdapter } from "@assistant-ui/react";
-import { useAuthStore } from "@/stores/authStore";
+import { useRef, useState } from 'react';
+import { useLocalRuntime, type ChatModelAdapter, type ChatModelRunResult } from '@assistant-ui/react';
+import { consultationApi } from '../services/consultationService';
+import { consumeSSEStream } from './useSSEProcessor';
+import type { ExtractedInfo, Citation, SSERedFlag, SSEMessageCompleted } from '../types/consultation';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+export interface ConsultationAdapterOptions {
+  onConversationCreated?: (conversationId: string, replacesDraftId?: string) => void;
+  onMessagePersisted?: (clientMessageId: string, messageId: string) => void;
+  onExtractedInfoUpdate?: (info: ExtractedInfo) => void;
+  onPhaseChange?: (from: string, to: string) => void;
+  onRedFlag?: (flag: SSERedFlag['flag']) => void;
+  onCitation?: (citation: Citation) => void;
+  onTitleGenerated?: (title: string) => void;
+  onMessageCompleted?: (data: SSEMessageCompleted) => void;
+  isDraft?: boolean;
+  clientDraftId?: string;
+}
 
-/**
- * Custom ChatModelAdapter that connects to our SSE backend.
- * This bridges our existing consultation chat API with assistant-ui's runtime.
- */
-function createConsultationChatAdapter(sessionId: string) {
+export function useAssistantChatRuntime(
+  conversationId: string | null,
+  options: ConsultationAdapterOptions = {}
+) {
+  const [isStreaming, setIsStreaming] = useState(false);
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
+
   const adapter: ChatModelAdapter = {
-    async run(options) {
-      const { messages, abortSignal } = options;
-      const { accessToken } = useAuthStore.getState();
-
-      // Get the last user message content
+    async *run({ messages }): AsyncGenerator<ChatModelRunResult> {
       const lastMessage = messages[messages.length - 1];
-      let userContent = '';
-      if (lastMessage?.role === 'user' && 'content' in lastMessage) {
-        const content = lastMessage.content as Array<{ type: string; text?: string }>;
-        userContent = content
-          .filter((p) => p.type === 'text')
-          .map((p) => p.text || '')
-          .join('');
+      const content = lastMessage.content
+        .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+        .map(p => p.text)
+        .join('');
+
+      const clientMessageId = `tmp_${crypto.randomUUID()}`;
+      const requestId = crypto.randomUUID();
+
+      setIsStreaming(true);
+
+      // Queue for passing results from SSE callbacks to the generator
+      const queue: ChatModelRunResult[] = [];
+      let resolveNext: (() => void) | null = null;
+      let streamDone = false;
+      let streamError: Error | null = null;
+
+      function pushResult(result: ChatModelRunResult) {
+        queue.push(result);
+        resolveNext?.();
       }
 
-      // Call our SSE endpoint
-      const response = await fetch(`${API_BASE_URL}/api/v1/consultation/${sessionId}/message`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        },
-        body: JSON.stringify({ content: userContent }),
-        signal: abortSignal,
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+      function waitForNext(): Promise<boolean> {
+        if (queue.length > 0) return Promise.resolve(true);
+        if (streamDone || streamError) return Promise.resolve(false);
+        return new Promise<boolean>((resolve) => {
+          resolveNext = () => resolve(queue.length > 0);
+        });
       }
 
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('No response body');
+      try {
+        const response = await consultationApi.sendMessage({
+          conversationId: conversationId,
+          clientDraftId: optionsRef.current.isDraft ? optionsRef.current.clientDraftId : undefined,
+          clientMessageId,
+          requestId,
+          message: {
+            role: 'user',
+            parts: [{ type: 'text', text: content }],
+          },
+          context: {
+            entry: 'consultation',
+          },
+        });
 
-      const decoder = new TextDecoder();
-      let buffer = '';
-      let accumulatedText = '';
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+        // Start consuming the SSE stream in the background.
+        // Results are pushed to the queue and yielded below.
+        const streamPromise = consumeSSEStream(response, {
+          onConversationCreated: (data) => {
+            optionsRef.current.onConversationCreated?.(data.conversationId, data.replacesDraftId);
+          },
+          onMessagePersisted: (data) => {
+            optionsRef.current.onMessagePersisted?.(data.clientMessageId, data.messageId);
+          },
+          onTextDelta: (data) => {
+            fullText += data.delta;
+            pushResult({
+              content: [{ type: 'text', text: fullText }],
+            });
+          },
+          onExtractedInfo: (data) => {
+            optionsRef.current.onExtractedInfoUpdate?.(data.info);
+          },
+          onPhaseChange: (data) => {
+            optionsRef.current.onPhaseChange?.(data.from, data.to);
+          },
+          onRedFlag: (data) => {
+            optionsRef.current.onRedFlag?.(data.flag);
+          },
+          onCitation: (data) => {
+            optionsRef.current.onCitation?.(data.citation);
+          },
+          onTitleGenerated: (data) => {
+            optionsRef.current.onTitleGenerated?.(data.title);
+          },
+          onMessageCompleted: (data) => {
+            optionsRef.current.onMessageCompleted?.(data);
+          },
+          onDone: () => {
+            streamDone = true;
+            resolveNext?.();
+          },
+          onError: (err) => {
+            streamError = err;
+            resolveNext?.();
+          },
+        });
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
+        let fullText = '';
 
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              if (data.type === 'text' && data.content) {
-                accumulatedText += data.content;
-              }
-            } catch {
-              // Skip malformed JSON
-            }
+        // Yield results as they arrive from the SSE stream
+        while (await waitForNext()) {
+          while (queue.length > 0) {
+            yield queue.shift()!;
           }
         }
-      }
 
-      // Return final result with proper status type
-      return {
-        content: [{
-          type: 'text' as const,
-          text: accumulatedText,
-        }],
-        status: { type: 'complete' as const, reason: 'stop' as const },
-      };
+        // Wait for the stream to fully finish
+        await streamPromise;
+
+        if (streamError) {
+          throw streamError;
+        }
+
+        // Final yield with complete text
+        if (fullText) {
+          yield {
+            content: [{ type: 'text', text: fullText }],
+          };
+        }
+      } finally {
+        setIsStreaming(false);
+      }
     },
   };
 
-  return adapter;
-}
+  const runtime = useLocalRuntime(adapter);
 
-/**
- * Hook to create an assistant-ui runtime for consultation chat.
- */
-export function useAssistantChatRuntime(sessionId: string) {
-  const adapter = createConsultationChatAdapter(sessionId);
-  return useLocalRuntime(adapter);
+  return { runtime, isStreaming };
 }

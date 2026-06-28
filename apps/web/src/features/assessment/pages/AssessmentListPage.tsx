@@ -6,7 +6,7 @@ import {
 } from '../services/assessmentService';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 
 const GRADE_COLORS: Record<string, string> = {
   A: 'from-primary-700 to-primary-500 text-[#FBFBFA] shadow-primary-700/20',

@@ -6,14 +6,17 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { OnboardingPage } from './features/profile/pages/OnboardingPage';
 import { ProfilePage } from './features/profile/pages/ProfilePage';
 import { ConsultationPage } from './features/consultation/pages/ConsultationPage';
+import { SharePage } from './features/consultation/components/SharePage';
 import { AssessmentListPage } from './features/assessment/pages/AssessmentListPage';
 import { AssessmentDetailPage } from './features/assessment/pages/AssessmentDetailPage';
 import { HistoryPage } from './features/history/pages/HistoryPage';
 import { TrainingPage } from './features/training/pages/TrainingPage';
+import { Toaster } from './components/ui/sonner';
 
 export function App() {
   return (
     <BrowserRouter>
+      <Toaster />
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
@@ -59,6 +62,10 @@ export function App() {
               <ConsultationPage />
             </ProtectedRoute>
           }
+        />
+        <Route
+          path="/consultation/share/:token"
+          element={<SharePage />}
         />
         <Route
           path="/assessment"
