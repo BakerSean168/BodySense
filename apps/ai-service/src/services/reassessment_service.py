@@ -3,7 +3,8 @@
 import json
 from typing import Any
 
-from .llm_provider import ChatMessage, get_llm_provider
+from ..ai import AiRequest, AIService
+from ..ai.types import ChatMessage
 
 REASSESSMENT_PROMPT = """你是一位专业的体态健康训练顾问。根据用户的训练反馈和复评结果，
 分析训练效果并给出下一阶段的调整建议。
@@ -42,6 +43,9 @@ REASSESSMENT_PROMPT = """你是一位专业的体态健康训练顾问。根据�
 class ReassessmentService:
     """Service for generating reassessment analysis."""
 
+    def __init__(self) -> None:
+        self._ai = AIService()
+
     async def analyze_feedback(
         self,
         feedback: dict[str, Any],
@@ -59,8 +63,6 @@ class ReassessmentService:
         Returns:
             Adjustment suggestions.
         """
-        provider = get_llm_provider()
-
         # Build context
         context_parts = ["## 用户复评反馈"]
         if feedback.get("symptom_changes"):
@@ -90,40 +92,16 @@ class ReassessmentService:
             ChatMessage(role="user", content=context),
         ]
 
-        response = await provider.chat(
+        # Call LLM via AIService (json_mode guarantees valid JSON)
+        response = await self._ai.generate(AiRequest(
+            use_case="llm.json",
             messages=messages,
+            response_format="json_object",
             temperature=0.3,
             max_tokens=2048,
-        )
+        ))
 
-        return self._parse_json(response.content or "")
-
-    def _parse_json(self, content: str) -> dict[str, Any]:
-        """Parse JSON from LLM response."""
-        try:
-            return json.loads(content)
-        except json.JSONDecodeError:
-            pass
-
-        if "```" in content:
-            parts = content.split("```")
-            for part in parts[1:]:
-                if part.startswith("json"):
-                    part = part[4:]
-                try:
-                    return json.loads(part.strip())
-                except json.JSONDecodeError:
-                    continue
-
-        start = content.find("{")
-        end = content.rfind("}") + 1
-        if start >= 0 and end > start:
-            try:
-                return json.loads(content[start:end])
-            except json.JSONDecodeError:
-                pass
-
-        raise ValueError("Could not parse JSON from LLM response")
+        return json.loads(response.text)
 
 
 _reassessment_service: ReassessmentService | None = None

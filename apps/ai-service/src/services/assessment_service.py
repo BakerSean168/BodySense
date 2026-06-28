@@ -1,14 +1,17 @@
 """Assessment service for generating health assessment reports."""
 
-import json
 from typing import Any
 
+from ..ai import AiRequest, AIService
+from ..ai.types import ChatMessage
 from ..prompts.assessment import ASSESSMENT_SYSTEM_PROMPT, get_assessment_prompt
-from .llm_provider import ChatMessage, get_llm_provider
 
 
 class AssessmentService:
     """Service for generating health assessment reports."""
+
+    def __init__(self) -> None:
+        self._ai = AIService()
 
     async def generate_assessment(
         self,
@@ -26,8 +29,6 @@ class AssessmentService:
             Assessment result as a dict with health_grade, dimension_scores,
             identified_issues, and improvement_summary.
         """
-        provider = get_llm_provider()
-
         # Build messages
         user_prompt = get_assessment_prompt(profile, rag_context)
         messages = [
@@ -35,55 +36,23 @@ class AssessmentService:
             ChatMessage(role="user", content=user_prompt),
         ]
 
-        # Call LLM
-        response = await provider.chat(
+        # Call LLM via AIService (json_mode guarantees valid JSON)
+        response = await self._ai.generate(AiRequest(
+            use_case="llm.json",
             messages=messages,
-            temperature=0.3,  # Lower temperature for more consistent output
+            response_format="json_object",
+            temperature=0.3,
             max_tokens=2048,
-        )
+        ))
 
-        # Parse JSON response
-        content = response.content or ""
+        import json
 
-        # Try to extract JSON from the response
-        result = self._parse_json_response(content)
+        result = json.loads(response.text)
 
         # Validate required fields
         self._validate_result(result)
 
         return result
-
-    def _parse_json_response(self, content: str) -> dict[str, Any]:
-        """Parse JSON from LLM response, handling markdown code blocks."""
-        # Try direct JSON parse first
-        try:
-            return json.loads(content)
-        except json.JSONDecodeError:
-            pass
-
-        # Try extracting from markdown code block
-        if "```" in content:
-            parts = content.split("```")
-            for part in parts[1:]:
-                # Remove language identifier
-                if part.startswith("json"):
-                    part = part[4:]
-                part = part.strip()
-                try:
-                    return json.loads(part)
-                except json.JSONDecodeError:
-                    continue
-
-        # Try finding JSON object in the text
-        start = content.find("{")
-        end = content.rfind("}") + 1
-        if start >= 0 and end > start:
-            try:
-                return json.loads(content[start:end])
-            except json.JSONDecodeError:
-                pass
-
-        raise ValueError("Could not parse assessment JSON from LLM response")
 
     def _validate_result(self, result: dict[str, Any]) -> None:
         """Validate the assessment result has required fields."""

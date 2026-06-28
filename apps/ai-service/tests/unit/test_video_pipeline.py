@@ -1,7 +1,11 @@
 """Unit tests for the automatic video knowledge pipeline."""
 
+import pytest
+
+from src.rag.asr.funasr import _normalize_chunks
+from src.rag.asr.whisper_cpp import _parse_transcript_jsonl
 from src.rag.knowledge_pack import TranscriptSegment, format_timestamp_range, slugify
-from src.rag.video_pipeline import VideoIngestionPipeline
+from src.rag.splitter import HeuristicSplitter, build_knowledge_units
 
 
 def test_slugify():
@@ -26,17 +30,16 @@ def test_parse_transcript_jsonl(tmp_path):
         ),
         encoding="utf-8",
     )
-    pipeline = VideoIngestionPipeline(data_root=tmp_path)
 
-    segments = pipeline._parse_transcript_jsonl(transcript_path)
+    segments = _parse_transcript_jsonl(transcript_path)
 
     assert len(segments) == 2
     assert segments[1].text == "今天看头前移怎么自测"
     assert segments[1].timestamp == "00:02-00:04"
 
 
-def test_build_units_groups_and_classifies(tmp_path):
-    pipeline = VideoIngestionPipeline(data_root=tmp_path)
+@pytest.mark.asyncio
+async def test_build_units_groups_and_classifies():
     transcript_segments = [
         TranscriptSegment(
             segment_index=0,
@@ -58,7 +61,7 @@ def test_build_units_groups_and_classifies(tmp_path):
         ),
     ]
 
-    units = pipeline._build_units(
+    units = await build_knowledge_units(
         transcript_segments=transcript_segments,
         problem_slug="forward-head-posture",
         problem_display_name="头前移",
@@ -69,17 +72,26 @@ def test_build_units_groups_and_classifies(tmp_path):
     assert any(unit.unit_type == "exercise" for unit in units)
 
 
-def test_normalize_chunks_preserves_short_ranges(tmp_path):
-    pipeline = VideoIngestionPipeline(data_root=tmp_path)
+@pytest.mark.asyncio
+async def test_heuristic_splitter_direct():
+    """Test HeuristicSplitter class directly."""
+    splitter = HeuristicSplitter()
+    segments = [
+        TranscriptSegment(segment_index=0, start_sec=0.0, end_sec=5.0, text="自测头前移方法"),
+        TranscriptSegment(segment_index=1, start_sec=5.0, end_sec=10.0, text="第一步拉伸胸锁"),
+    ]
 
-    chunks = pipeline._normalize_chunks([(0.0, 0.7), (0.7, 1.8)])
+    units = await splitter.split(segments, "test", "测试")
 
+    assert len(units) >= 1
+    assert all(u.problem_slug == "test" for u in units)
+
+
+def test_normalize_chunks_preserves_short_ranges():
+    chunks = _normalize_chunks([(0.0, 0.7), (0.7, 1.8)])
     assert chunks == [(0.0, 0.7), (0.7, 1.8)]
 
 
-def test_normalize_chunks_caps_long_segments(tmp_path):
-    pipeline = VideoIngestionPipeline(data_root=tmp_path)
-
-    chunks = pipeline._normalize_chunks([(0.0, 42.0)])
-
+def test_normalize_chunks_caps_long_segments():
+    chunks = _normalize_chunks([(0.0, 42.0)])
     assert chunks == [(0.0, 18.0), (18.0, 36.0), (36.0, 42.0)]

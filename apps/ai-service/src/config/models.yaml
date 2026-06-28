@@ -1,0 +1,48 @@
+providers:
+  mimo:
+    type: openai-compatible
+    base_url: ${MIMO_BASE_URL}
+    api_key: ${MIMO_API_KEY}
+    models:
+      - id: mimo-v2.5-pro
+        capabilities: [stream, tools, json_mode, long_context, reasoning]
+
+  openrouter:
+    type: openai-compatible
+    base_url: https://openrouter.ai/api/v1
+    api_key: ${OPENROUTER_API_KEY}
+    models:
+      - id: deepseek/deepseek-chat
+        capabilities: [stream, tools, json_mode]
+
+routes:
+  consultation.reply:
+    defaults:
+      temperature: 0.7
+      max_tokens: 2048
+    candidates:
+      - provider: mimo
+        model: mimo-v2.5-pro
+      - provider: openrouter
+        model: deepseek/deepseek-chat
+
+  llm.json:
+    defaults:
+      temperature: 0.3
+      max_tokens: 2048
+      response_format: json_object
+    candidates:
+      - provider: mimo
+        model: mimo-v2.5-pro
+      - provider: openrouter
+        model: deepseek/deepseek-chat
+
+  llm.text:
+    defaults:
+      temperature: 0.3
+      max_tokens: 2048
+    candidates:
+      - provider: mimo
+        model: mimo-v2.5-pro
+      - provider: openrouter
+        model: deepseek/deepseek-chat

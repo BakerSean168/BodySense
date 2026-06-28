@@ -1,6 +1,7 @@
 """Chat API routes for consultation sessions."""
 
 import json
+import logging
 from typing import Any
 
 from fastapi import APIRouter
@@ -10,10 +11,12 @@ from pydantic import BaseModel, Field
 from ...models.consultation import ChatContext, ExtractedInfo
 from ...services.chat_service import ChatService
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
-# In-memory session cache (in production, use Redis)
-_sessions: dict[str, ChatContext] = {}
+# Module-level singleton — ChatService is stateless
+_chat_service = ChatService()
 
 
 class ChatRequest(BaseModel):
@@ -22,26 +25,21 @@ class ChatRequest(BaseModel):
     session_id: str
     user_id: str
     content: str
+    use_case: str = "consultation.reply"
     profile: dict[str, Any] = Field(default_factory=dict)
     messages: list[dict[str, Any]] = Field(default_factory=list)
     extracted_info: list[dict[str, Any]] = Field(default_factory=list)
     rag_results: list[dict[str, Any]] = Field(default_factory=list)
-
-
-class SessionInfo(BaseModel):
-    """Session information response."""
-
-    session_id: str
-    extracted_info: list[dict[str, Any]]
+    phase: str = "collecting"
 
 
 @router.post("/stream")
 async def chat_stream(request: ChatRequest):
     """
-    Stream a chat response via SSE.
+    Stream a chat response as NDJSON (one JSON object per line).
 
     The request includes the full session context (messages, profile, extracted info)
-    and the new user message. The response is streamed as SSE events.
+    and the new user message. Each line of the response is a self-contained JSON object.
     """
     # Build context from request
     context = ChatContext(
@@ -50,25 +48,30 @@ async def chat_stream(request: ChatRequest):
         profile=request.profile,
         extracted_info=ExtractedInfo.from_dict(request.extracted_info),
         messages=request.messages,
+        phase=request.phase,
     )
 
-    chat_service = ChatService()
-
-    async def event_generator():
-        async for event in chat_service.stream_chat(
-            context=context,
-            user_message=request.content,
-            rag_results=request.rag_results,
-        ):
-            event_data = json.dumps(event.data, ensure_ascii=False)
-            yield f"event: {event.event_type}\ndata: {event_data}\n\n"
+    async def ndjson_generator():
+        try:
+            async for event in _chat_service.stream_chat(
+                context=context,
+                user_message=request.content,
+                rag_results=request.rag_results,
+            ):
+                payload = {"type": event.event_type, **event.data}
+                yield json.dumps(payload, ensure_ascii=False) + "\n"
+        except Exception:
+            logger.exception("Error in chat stream")
+            yield json.dumps(
+                {"type": "error", "message": "Internal error. Please try again."},
+                ensure_ascii=False,
+            ) + "\n"
 
     return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
+        ndjson_generator(),
+        media_type="application/x-ndjson",
         headers={
             "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
         },
     )

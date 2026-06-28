@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass, field
 from typing import Any, Optional
@@ -12,6 +13,8 @@ from psycopg.types.json import Jsonb
 
 from .embedding import EmbeddingGenerator, get_embedding_generator
 from .knowledge_pack import GeneratedKnowledgePack, format_timestamp_range
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -99,7 +102,13 @@ class KnowledgeLibrary:
         port = os.getenv("DB_PORT", "5432")
         name = os.getenv("DB_NAME", "bodysense")
         user = os.getenv("DB_USER", "bodysense")
-        password = os.getenv("DB_PASSWORD", "bodysense123")
+        password = os.getenv("DB_PASSWORD")
+        if password is None:
+            password = "bodysense123"
+            logger.warning(
+                "DB_PASSWORD not set, using default password. "
+                "Set DB_PASSWORD in your .env file."
+            )
         return f"postgresql://{user}:{password}@{host}:{port}/{name}"
 
     def _get_connection(self) -> psycopg.Connection:
@@ -391,18 +400,19 @@ class KnowledgeLibrary:
             for row in rows
         ]
 
+    _ALLOWED_TABLES = frozenset({
+        "knowledge_sources",
+        "knowledge_segments",
+        "knowledge_units",
+        "knowledge_clips",
+    })
+
     async def stats(self) -> dict[str, int]:
         """Return normalized knowledge table counts."""
         conn = self._get_connection()
         counts: dict[str, int] = {}
-        table_names = [
-            "knowledge_sources",
-            "knowledge_segments",
-            "knowledge_units",
-            "knowledge_clips",
-        ]
         with conn.cursor() as cur:
-            for table_name in table_names:
+            for table_name in self._ALLOWED_TABLES:
                 cur.execute(f"SELECT COUNT(*) FROM {table_name}")
                 counts[table_name] = cur.fetchone()[0]
         return counts

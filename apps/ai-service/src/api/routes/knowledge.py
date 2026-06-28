@@ -1,5 +1,6 @@
 """Knowledge library API routes."""
 
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -11,6 +12,10 @@ from ...rag import (
     VideoIngestionRequest,
     get_knowledge_library,
 )
+
+# Allowed data root for video ingestion (path traversal defense)
+_DEFAULT_DATA_ROOT = Path(__file__).resolve().parents[3] / "data"
+_DATA_ROOT = Path(os.getenv("KNOWLEDGE_DATA_ROOT", str(_DEFAULT_DATA_ROOT))).resolve()
 
 router = APIRouter(prefix="/api/knowledge", tags=["knowledge"])
 
@@ -97,9 +102,22 @@ class StatsResponse(BaseModel):
 @router.post("/ingestions/video", response_model=IngestVideoResponse)
 async def ingest_video(request: IngestVideoRequestModel):
     """Ingest one local video into the normalized knowledge library."""
+    # Path traversal defense: reject absolute paths, '..' components, and paths outside data root
+    video_path = Path(request.video_path)
+    if video_path.is_absolute() or ".." in video_path.parts:
+        raise HTTPException(
+            status_code=400,
+            detail="video_path must be a relative path without '..' components",
+        )
+    resolved = (_DATA_ROOT / video_path).resolve()
+    if not str(resolved).startswith(str(_DATA_ROOT)):
+        raise HTTPException(
+            status_code=400,
+            detail="video_path is outside the allowed data directory",
+        )
     try:
         pipeline = VideoIngestionPipeline()
-        pack = pipeline.ingest(
+        pack = await pipeline.ingest(
             VideoIngestionRequest(
                 video_path=request.video_path,
                 problem_slug=request.problem_slug,

@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/ocr", tags=["ocr"])
 
+_MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+
 
 @router.post("/extract", response_model=OCRResponse)
 async def extract_ocr(file: UploadFile = File(...)):
@@ -36,6 +38,15 @@ async def extract_ocr(file: UploadFile = File(...)):
 
         if not file_bytes:
             raise HTTPException(status_code=400, detail="Empty file")
+
+        if len(file_bytes) > _MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail=(
+                    f"File too large ({len(file_bytes)} bytes). "
+                    f"Maximum is {_MAX_FILE_SIZE} bytes."
+                ),
+            )
 
         # Extract text using OCR
         raw_text, confidence = extract_text(file_bytes, file.content_type)
@@ -101,6 +112,15 @@ async def extract_text_only(file: UploadFile = File(...)):
 
         if not file_bytes:
             raise HTTPException(status_code=400, detail="Empty file")
+
+        if len(file_bytes) > _MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail=(
+                    f"File too large ({len(file_bytes)} bytes). "
+                    f"Maximum is {_MAX_FILE_SIZE} bytes."
+                ),
+            )
 
         raw_text, _ = extract_text(file_bytes, file.content_type)
 

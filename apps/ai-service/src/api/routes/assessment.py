@@ -1,11 +1,14 @@
 """Assessment API routes."""
 
+import logging
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from ...services.assessment_service import get_assessment_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/assessment", tags=["assessment"])
 
@@ -38,5 +41,9 @@ async def generate_assessment(request: AssessmentRequest):
         return AssessmentResponse(**result)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Assessment generation failed: {e!s}")
+    except Exception:
+        logger.exception("Assessment generation failed")
+        raise HTTPException(
+            status_code=500,
+            detail="Assessment generation failed. Please try again.",
+        )
