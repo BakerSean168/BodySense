@@ -42,6 +42,22 @@
       "dependsOn": ["^build"],
       "inputs": ["production", "^production"],
       "cache": true
+    },
+    "test:watch": {
+      "cache": false
+    },
+    "test:coverage": {
+      "inputs": ["default", "^production"],
+      "cache": true
+    },
+    "test:integration": {
+      "inputs": ["default", "^production"],
+      "cache": false,
+      "parallelism": false
+    },
+    "e2e": {
+      "inputs": ["default", "^production"],
+      "cache": false
     }
   },
   "plugins": [

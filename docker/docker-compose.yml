@@ -2,7 +2,7 @@ services:
   # ── Infrastructure ──────────────────────────────────────
   postgres-dev:
     profiles: [dev]
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:pg18
     environment:
       POSTGRES_USER: ${DB_USER:-bodysense}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-bodysense123}
@@ -10,7 +10,7 @@ services:
     ports:
       - '${DB_PORT:-5432}:5432'
     volumes:
-      - postgres-dev-data:/var/lib/postgresql/data
+      - postgres-dev-data:/var/lib/postgresql
     networks:
       - bodysense-network
     healthcheck:

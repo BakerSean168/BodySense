@@ -2,5 +2,24 @@
   "name": "bodysense",
   "$schema": "node_modules/nx/schemas/project-schema.json",
   "tags": ["scope:meta", "type:meta"],
-  "targets": {}
+  "targets": {
+    "verify": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "{workspaceRoot}/apps/**/*",
+        "{workspaceRoot}/packages/**/*"
+      ],
+      "options": {
+        "command": "pnpm nx run-many -t lint,typecheck --all --parallel=3"
+      }
+    },
+    "verify:full": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "pnpm nx run-many -t lint,typecheck,test --all --parallel=3"
+      }
+    }
+  }
 }

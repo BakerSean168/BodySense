@@ -90,7 +90,7 @@ src/
     routes/            ← 路由处理（snake_case.py）
     dependencies.py    ← FastAPI 依赖注入
   services/            ← 业务逻辑（snake_case.py）
-  rag/                 ← RAG 管道（knowledge_base.py、embeddings.py、retriever.py）
+  rag/                 ← RAG 管道（knowledge_library.py、embedding.py、knowledge_pack.py）
   prompts/             ← Prompt 模板（snake_case.py）
   models/              ← Pydantic 数据模型（snake_case.py）
 tests/

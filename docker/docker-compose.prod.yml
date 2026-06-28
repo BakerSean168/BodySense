@@ -14,7 +14,7 @@ services:
   # ---------------------------------------------------------------------------
 
   postgres:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:pg18
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME:-bodysense}
@@ -25,7 +25,7 @@ services:
     ports:
       - '127.0.0.1:5432:5432'
     volumes:
-      - postgres-prod-data:/var/lib/postgresql/data
+      - postgres-prod-data:/var/lib/postgresql
     networks:
       - bodysense-network
     healthcheck:
