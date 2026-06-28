@@ -39,8 +39,14 @@
 BodySense/
 ├── PRD-体态健康AI助手.md
 ├── docs/
-│   ├── technical-approach.md          ← 本文档
-│   └── prototype.jsx                  ← 可交互原型
+│   ├── PRD-体态健康AI助手.md
+│   ├── architecture/
+│   │   ├── README.md                  ← 架构中心索引
+│   │   ├── technical-approach.md      ← 本文档
+│   │   └── deployment-architecture.md
+│   └── plan/
+│       ├── active/
+│       └── archive/                   ← 历史设计文档
 ├── apps/
 │   ├── web/                           ← React 前端
 │   │   ├── src/
@@ -665,7 +671,7 @@ AI 综合所有已收集信息，结合 RAG 检索的知识库内容，生成可
 services:
   postgres-dev:
     profiles: [dev]
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:pg18
     environment:
       POSTGRES_USER: bodysense
       POSTGRES_PASSWORD: bodysense123
@@ -673,7 +679,7 @@ services:
     ports:
       - '5432:5432'
     volumes:
-      - postgres-dev-data:/var/lib/postgresql/data
+      - postgres-dev-data:/var/lib/postgresql
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U bodysense -d bodysense']
       interval: 10s
@@ -700,14 +706,14 @@ volumes:
 
 services:
   postgres:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:pg18
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
-      - postgres-prod-data:/var/lib/postgresql/data
+      - postgres-prod-data:/var/lib/postgresql
     networks:
       - bodysense-network
 
@@ -926,7 +932,7 @@ EXPOSE 80
 
 - **B 站 UP 主视频内容**：知识库质量直接依赖视频内容的专业性和覆盖范围。需要与 UP 主建立合作关系，获得内容使用授权。
 - **LLM API 稳定性**：选择有 SLA 保障的 LLM 服务商，并准备 fallback 模型方案。
-- **pgvector 扩展**：确认部署环境的 PostgreSQL 支持 pgvector 扩展（使用 `pgvector/pgvector:pg16` 镜像）。
+- **pgvector 扩展**：确认部署环境的 PostgreSQL 支持 pgvector 扩展（使用 `pgvector/pgvector:pg18` 镜像）。
 
 ---
 

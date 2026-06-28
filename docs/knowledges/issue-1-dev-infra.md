@@ -36,7 +36,7 @@ ports:
 #### 数据卷 (Volumes)
 ```yaml
 volumes:
-  - postgres-dev-data:/var/lib/postgresql/data
+  - postgres-dev-data:/var/lib/postgresql
 ```
 
 **作用：** 数据持久化。容器删除后数据不丢失。

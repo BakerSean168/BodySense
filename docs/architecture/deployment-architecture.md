@@ -69,7 +69,7 @@ BodySense 采用 GitHub Actions + 阿里云 ACR + Docker Compose + Caddy + Watch
                        │        │
               ┌────────┴──┐ ┌──┴──────────────┐
               │ PostgreSQL │ │ AI Service (8100)│
-              │   pg16     │ │ bodysense-ai    │  ← FastAPI + RAG
+              │   pg18     │ │ bodysense-ai    │  ← FastAPI + RAG
               │ + pgvector │ │ -service         │  ← /health 健康检查
               └────────────┘ └──┬───────────────┘
                               │
@@ -92,7 +92,7 @@ BodySense 采用 GitHub Actions + 阿里云 ACR + Docker Compose + Caddy + Watch
 | Web | `bodysense-web` | 80 (内部) | `wget http://127.0.0.1/` | ~20MB |
 | API | `bodysense-api` | 8080 (内部) | `curl http://localhost:8080/api/health` | ~50MB |
 | AI Service | `bodysense-ai-service` | 8100 (内部) | `python urllib http://localhost:8100/health` | ~200MB |
-| PostgreSQL | `pgvector/pgvector:pg16` | 5432 (内部) | `pg_isready` | ~100MB |
+| PostgreSQL | `pgvector/pgvector:pg18` | 5432 (内部) | `pg_isready` | ~100MB |
 | Redis | `redis:7-alpine` | 6379 (内部) | `redis-cli ping` | ~10MB |
 | Watchtower | `containrrr/watchtower` | - | - | ~20MB |
 
