@@ -151,7 +151,7 @@ func (s *TrainingService) CheckIn(ctx context.Context, planID, userID uuid.UUID)
 	}
 
 	today := time.Now().Truncate(24 * time.Hour)
-	return s.trainingRepo.CheckIn(ctx, planID, today)
+	return s.trainingRepo.CheckIn(ctx, planID, userID, today)
 }
 
 // UpdateLog updates a training log.

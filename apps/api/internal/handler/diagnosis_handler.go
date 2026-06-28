@@ -1,11 +1,9 @@
 package handler
 
 import (
-	"bytes"
 	"encoding/json"
-	"io"
+	"log"
 	"net/http"
-	"os"
 
 	"github.com/bodysense/api/internal/service"
 	"github.com/gin-gonic/gin"
@@ -16,6 +14,7 @@ import (
 type DiagnosisHandler struct {
 	consultationService *service.ConsultationService
 	profileService      *service.ProfileService
+	aiClient            *service.AIClient
 	aiServiceURL        string
 }
 
@@ -23,162 +22,192 @@ type DiagnosisHandler struct {
 func NewDiagnosisHandler(
 	consultationService *service.ConsultationService,
 	profileService *service.ProfileService,
+	aiClient *service.AIClient,
 ) *DiagnosisHandler {
-	aiServiceURL := os.Getenv("AI_SERVICE_URL")
-	if aiServiceURL == "" {
-		aiServiceURL = "http://localhost:8000"
-	}
 	return &DiagnosisHandler{
 		consultationService: consultationService,
 		profileService:      profileService,
-		aiServiceURL:        aiServiceURL,
+		aiClient:            aiClient,
+		aiServiceURL:        aiClient.BaseURL(),
 	}
 }
 
-// AnalyzeDiagnosis handles POST /api/v1/consultation/:id/diagnosis
+// AnalyzeDiagnosis handles POST /api/v1/consultations/:id/diagnosis
 func (h *DiagnosisHandler) AnalyzeDiagnosis(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+	uid, ok := getUserUUID(c)
+	if !ok {
 		return
 	}
 
-	uid, err := uuid.Parse(userID.(string))
+	conversationID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
-		return
-	}
-
-	sessionID, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid session id"})
+		respondError(c, http.StatusBadRequest, "INVALID_ID", "invalid consultation id")
 		return
 	}
 
 	// Verify session exists and belongs to user
-	session, err := h.consultationService.GetSession(c.Request.Context(), sessionID, uid)
-	if err != nil || session == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "session not found"})
+	session, err := h.consultationService.GetConsultation(c.Request.Context(), conversationID, uid)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get consultation")
+		return
+	}
+	if session == nil {
+		respondError(c, http.StatusNotFound, "NOT_FOUND", "consultation not found")
 		return
 	}
 
 	// Get user profile
 	profile, err := h.profileService.GetProfile(c.Request.Context(), uid)
-	profileMap := map[string]any{}
+	profileJSON := json.RawMessage("{}")
 	if err == nil && profile != nil {
-		profileJSON, _ := json.Marshal(profile)
-		_ = json.Unmarshal(profileJSON, &profileMap)
+		if pj, marshalErr := json.Marshal(profile); marshalErr == nil {
+			profileJSON = pj
+		}
 	}
 
 	// Parse extracted info from session
-	var extractedInfo []any
+	extractedInfoJSON := json.RawMessage("[]")
 	if len(session.ExtractedInfo) > 0 {
-		_ = json.Unmarshal(session.ExtractedInfo, &extractedInfo)
+		extractedInfoJSON = json.RawMessage(session.ExtractedInfo)
 	}
 
-	// Build request to AI service
-	aiReq := map[string]any{
-		"extracted_info":       extractedInfo,
-		"profile":              profileMap,
-		"conversation_summary": "",
+	// Build RAG context from knowledge search
+	diagReq := service.DiagnosisRequest{
+		ExtractedInfo: extractedInfoJSON,
+		Profile:       profileJSON,
+		UseCase:       "diagnosis",
 	}
 
-	aiReqBody, _ := json.Marshal(aiReq)
+	// Knowledge search for RAG context
+	var extractedInfoList []any
+	_ = json.Unmarshal(extractedInfoJSON, &extractedInfoList)
+	if query := buildDiagnosisKnowledgeQuery(extractedInfoList); query != "" {
+		ragResults, searchErr := searchKnowledge(c.Request.Context(), h.aiServiceURL, query)
+		if searchErr == nil && len(ragResults) > 0 {
+			diagReq.RAGContext = buildKnowledgeContext(ragResults)
+			ragResultsJSON, _ := json.Marshal(ragResults)
+			diagReq.RAGResults = ragResultsJSON
+		}
+	}
 
-	resp, err := http.Post(
-		h.aiServiceURL+"/api/diagnosis/analyze",
-		"application/json",
-		bytes.NewBuffer(aiReqBody),
-	)
+	// Call AI service
+	result, err := h.aiClient.AnalyzeDiagnosis(c.Request.Context(), diagReq)
 	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to connect to AI service"})
+		log.Printf("AI diagnosis analysis failed for consultation %s: %v", conversationID, err)
+		respondError(c, http.StatusBadGateway, "AI_SERVICE_ERROR", "failed to analyze diagnosis")
 		return
 	}
-	defer resp.Body.Close()
 
-	respBody, _ := io.ReadAll(resp.Body)
-	c.Data(resp.StatusCode, "application/json", respBody)
+	// Parse and persist the result
+	var diagnosisResult map[string]any
+	if json.Unmarshal(result, &diagnosisResult) == nil {
+		if err := h.consultationService.UpdateDiagnosis(c.Request.Context(), conversationID, uid, diagnosisResult); err != nil {
+			log.Printf("failed to save diagnosis for consultation %s: %v", conversationID, err)
+		}
+		if err := h.consultationService.UpdatePhase(c.Request.Context(), conversationID, uid, "analysis_ready"); err != nil {
+			log.Printf("failed to update phase for consultation %s: %v", conversationID, err)
+		}
+	}
+
+	c.Data(http.StatusOK, "application/json", result)
 }
 
-// GenerateTreatment handles POST /api/v1/consultation/:id/treatment
+// GenerateTreatment handles POST /api/v1/consultations/:id/treatment
 func (h *DiagnosisHandler) GenerateTreatment(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+	uid, ok := getUserUUID(c)
+	if !ok {
 		return
 	}
 
-	uid, err := uuid.Parse(userID.(string))
+	conversationID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
-		return
-	}
-
-	sessionID, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid session id"})
+		respondError(c, http.StatusBadRequest, "INVALID_ID", "invalid consultation id")
 		return
 	}
 
 	// Verify session exists and belongs to user
-	session, err := h.consultationService.GetSession(c.Request.Context(), sessionID, uid)
-	if err != nil || session == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "session not found"})
+	session, err := h.consultationService.GetConsultation(c.Request.Context(), conversationID, uid)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get consultation")
+		return
+	}
+	if session == nil {
+		respondError(c, http.StatusNotFound, "NOT_FOUND", "consultation not found")
+		return
+	}
+
+	// Validate that the current phase allows treatment generation
+	if session.Phase != "diagnosis_confirmed" {
+		respondError(c, http.StatusConflict, "INVALID_PHASE", "diagnosis must be confirmed before generating treatment plan")
 		return
 	}
 
 	// Parse request body (confirmed diagnosis)
 	var reqBody struct {
-		ConfirmedDiagnosis map[string]any `json:"confirmed_diagnosis" binding:"required"`
+		ConfirmedDiagnosis map[string]any `json:"confirmedDiagnosis" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&reqBody); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		respondError(c, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
 	}
 
 	// Get user profile
 	profile, err := h.profileService.GetProfile(c.Request.Context(), uid)
-	profileMap := map[string]any{}
+	profileJSON := json.RawMessage("{}")
 	if err == nil && profile != nil {
-		profileJSON, _ := json.Marshal(profile)
-		_ = json.Unmarshal(profileJSON, &profileMap)
-	}
-
-	// Parse extracted info from session
-	var extractedInfo []any
-	if len(session.ExtractedInfo) > 0 {
-		_ = json.Unmarshal(session.ExtractedInfo, &extractedInfo)
-	}
-
-	// Build request to AI service
-	aiReq := map[string]any{
-		"confirmed_diagnosis": reqBody.ConfirmedDiagnosis,
-		"extracted_info":      extractedInfo,
-		"profile":             profileMap,
-	}
-
-	aiReqBody, _ := json.Marshal(aiReq)
-
-	resp, err := http.Post(
-		h.aiServiceURL+"/api/diagnosis/treatment",
-		"application/json",
-		bytes.NewBuffer(aiReqBody),
-	)
-	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to connect to AI service"})
-		return
-	}
-	defer resp.Body.Close()
-
-	respBody, _ := io.ReadAll(resp.Body)
-
-	// If successful, save treatment plan to session
-	if resp.StatusCode == http.StatusOK {
-		var treatmentResult map[string]any
-		if json.Unmarshal(respBody, &treatmentResult) == nil {
-			_ = h.consultationService.UpdateTreatmentPlan(c.Request.Context(), sessionID, treatmentResult)
+		if pj, marshalErr := json.Marshal(profile); marshalErr == nil {
+			profileJSON = pj
 		}
 	}
 
-	c.Data(resp.StatusCode, "application/json", respBody)
+	// Parse extracted info from session
+	extractedInfoJSON := json.RawMessage("[]")
+	if len(session.ExtractedInfo) > 0 {
+		extractedInfoJSON = json.RawMessage(session.ExtractedInfo)
+	}
+
+	treatmentReq := service.DiagnosisRequest{
+		ExtractedInfo: extractedInfoJSON,
+		Profile:       profileJSON,
+		UseCase:       "treatment",
+	}
+
+	// Knowledge search for RAG context
+	var extractedInfoList []any
+	_ = json.Unmarshal(extractedInfoJSON, &extractedInfoList)
+	if query := buildTreatmentKnowledgeQuery(reqBody.ConfirmedDiagnosis, extractedInfoList); query != "" {
+		ragResults, searchErr := searchKnowledge(c.Request.Context(), h.aiServiceURL, query)
+		if searchErr == nil && len(ragResults) > 0 {
+			treatmentReq.RAGContext = buildKnowledgeContext(ragResults)
+			ragResultsJSON, _ := json.Marshal(ragResults)
+			treatmentReq.RAGResults = ragResultsJSON
+		}
+	}
+
+	// Call AI service
+	result, err := h.aiClient.GenerateTreatment(c.Request.Context(), treatmentReq)
+	if err != nil {
+		log.Printf("AI treatment generation failed for consultation %s: %v", conversationID, err)
+		respondError(c, http.StatusBadGateway, "AI_SERVICE_ERROR", "failed to generate treatment")
+		return
+	}
+
+	// Parse and persist the result
+	var treatmentResult map[string]any
+	if json.Unmarshal(result, &treatmentResult) == nil {
+		var treatmentPlanToSave any
+		if planObj, ok := treatmentResult["treatment_plan"].(map[string]any); ok {
+			treatmentPlanToSave = planObj
+		} else {
+			treatmentPlanToSave = treatmentResult
+		}
+		if err := h.consultationService.UpdateTreatmentPlan(c.Request.Context(), conversationID, uid, treatmentPlanToSave); err != nil {
+			log.Printf("failed to save treatment plan for consultation %s: %v", conversationID, err)
+		}
+		if err := h.consultationService.UpdatePhase(c.Request.Context(), conversationID, uid, "plan_ready"); err != nil {
+			log.Printf("failed to update phase for consultation %s: %v", conversationID, err)
+		}
+	}
+
+	c.Data(http.StatusOK, "application/json", result)
 }

@@ -1,23 +1,23 @@
 package model
 
 import (
-	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 )
 
-// ConsultationSession represents a consultation chat session.
+// ConsultationSession represents a medical consultation tied 1:1 to a Conversation.
 type ConsultationSession struct {
-	ID            uuid.UUID       `gorm:"type:uuid;primaryKey;default:uuid_generate_v4()" json:"id"`
-	UserID        uuid.UUID       `gorm:"type:uuid;index;not null" json:"user_id"`
-	Messages      json.RawMessage `gorm:"type:jsonb;not null;default:'[]'" json:"messages"`
-	ExtractedInfo json.RawMessage `gorm:"type:jsonb;not null;default:'[]'" json:"extracted_info"`
-	Diagnosis     json.RawMessage `gorm:"type:jsonb" json:"diagnosis,omitempty"`
-	TreatmentPlan json.RawMessage `gorm:"type:jsonb" json:"treatment_plan,omitempty"`
-	Status        string          `gorm:"type:varchar(20);not null;default:'in_progress'" json:"status"`
-	CreatedAt     time.Time       `gorm:"not null;default:now()" json:"created_at"`
-	EndedAt       *time.Time      `json:"ended_at,omitempty"`
+	ConversationID uuid.UUID      `gorm:"type:uuid;primaryKey" json:"conversation_id"`
+	Phase          string         `gorm:"type:varchar(30);not null;default:'collecting'" json:"phase"`
+	ExtractedInfo  datatypes.JSON `gorm:"type:jsonb;not null;default:'[]'" json:"extracted_info"`
+	Diagnosis      datatypes.JSON `gorm:"type:jsonb" json:"diagnosis,omitempty"`
+	TreatmentPlan  datatypes.JSON `gorm:"type:jsonb" json:"treatment_plan,omitempty"`
+	CreatedAt      time.Time      `gorm:"not null;default:now()" json:"created_at"`
+	UpdatedAt      time.Time      `gorm:"not null;default:now()" json:"updated_at"`
+	EndedAt        *time.Time     `json:"ended_at,omitempty"`
+	Conversation   Conversation   `gorm:"foreignKey:ConversationID" json:"conversation,omitempty"`
 }
 
 // TableName specifies the table name for GORM.

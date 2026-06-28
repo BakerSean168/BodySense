@@ -25,20 +25,26 @@ type Config struct {
 
 // ConfigFromEnv reads database config from environment variables.
 func ConfigFromEnv() Config {
+	password := os.Getenv("DB_PASSWORD")
+	if password == "" {
+		log.Fatal("DB_PASSWORD environment variable is required")
+	}
+
 	return Config{
 		Host:     getEnv("DB_HOST", "localhost"),
 		Port:     getEnv("DB_PORT", "5432"),
 		Name:     getEnv("DB_NAME", "bodysense"),
 		User:     getEnv("DB_USER", "bodysense"),
-		Password: getEnv("DB_PASSWORD", "bodysense123"),
+		Password: password,
 	}
 }
 
 // Connect initializes the database connection.
 func Connect(cfg Config) (*gorm.DB, error) {
+	sslMode := getEnv("DB_SSLMODE", "require")
 	dsn := fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable TimeZone=Asia/Shanghai",
-		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.Name,
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s TimeZone=Asia/Shanghai",
+		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.Name, sslMode,
 	)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{

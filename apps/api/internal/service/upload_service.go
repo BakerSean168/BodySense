@@ -69,7 +69,7 @@ func (s *UploadService) UploadFile(ctx context.Context, userID uuid.UUID, file *
 		return nil, errors.New("file size exceeds 10MB limit")
 	}
 
-	// Validate MIME type
+	// Validate MIME type from header
 	mimeType := file.Header.Get("Content-Type")
 	if !allowedMimeTypes[mimeType] {
 		return nil, errors.New("invalid file type: only JPEG, PNG, WebP, and PDF are allowed")
@@ -86,12 +86,39 @@ func (s *UploadService) UploadFile(ctx context.Context, userID uuid.UUID, file *
 	fileName := uuid.New().String() + ext
 	filePath := filepath.Join(userDir, fileName)
 
-	// Save file to disk
+	// Save file to disk and verify content type
 	src, err := file.Open()
 	if err != nil {
 		return nil, fmt.Errorf("failed to open uploaded file: %w", err)
 	}
 	defer src.Close()
+
+	// Read first 512 bytes to detect actual content type
+	buf := make([]byte, 512)
+	n, err := src.Read(buf)
+	if err != nil && err != io.EOF {
+		return nil, fmt.Errorf("failed to read file header: %w", err)
+	}
+	detectedType := http.DetectContentType(buf[:n])
+	// Normalize: http.DetectContentType may return "image/jpeg; charset=utf-8" etc.
+	if idx := len(detectedType); idx > 0 {
+		for i, c := range detectedType {
+			if c == ';' {
+				detectedType = detectedType[:i]
+				break
+			}
+		}
+	}
+	if !allowedMimeTypes[detectedType] {
+		return nil, errors.New("file content does not match an allowed type")
+	}
+
+	// Seek back to beginning for the copy
+	if seeker, ok := src.(io.Seeker); ok {
+		if _, err := seeker.Seek(0, io.SeekStart); err != nil {
+			return nil, fmt.Errorf("failed to seek file: %w", err)
+		}
+	}
 
 	dst, err := os.Create(filePath)
 	if err != nil {
@@ -125,7 +152,7 @@ func (s *UploadService) UploadFile(ctx context.Context, userID uuid.UUID, file *
 
 	// Trigger OCR asynchronously for reports
 	if fileType == "report" {
-		go s.processOCR(upload.ID, filePath, mimeType)
+		go s.processOCR(upload.ID, userID, filePath, mimeType)
 	}
 
 	return upload, nil
@@ -170,15 +197,15 @@ func (s *UploadService) DeleteUpload(ctx context.Context, userID uuid.UUID, uplo
 	}
 
 	// Delete database record
-	return s.uploadRepo.Delete(ctx, uploadID)
+	return s.uploadRepo.Delete(ctx, uploadID, userID)
 }
 
 // processOCR sends the file to the AI service for OCR processing.
-func (s *UploadService) processOCR(uploadID uuid.UUID, filePath string, mimeType string) {
+func (s *UploadService) processOCR(uploadID, userID uuid.UUID, filePath string, mimeType string) {
 	ctx := context.Background()
 
 	// Update status to processing
-	_ = s.uploadRepo.UpdateOCRStatus(ctx, uploadID, "processing")
+	_ = s.uploadRepo.UpdateOCRStatus(ctx, uploadID, userID, "processing")
 
 	// Prepare multipart request
 	body := &bytes.Buffer{}
@@ -187,7 +214,7 @@ func (s *UploadService) processOCR(uploadID uuid.UUID, filePath string, mimeType
 	// Open the file
 	file, err := os.Open(filePath)
 	if err != nil {
-		_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, "failed",
+		_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, userID, "failed",
 			json.RawMessage(`{"error": "failed to open file for OCR"}`))
 		return
 	}
@@ -199,13 +226,13 @@ func (s *UploadService) processOCR(uploadID uuid.UUID, filePath string, mimeType
 		"Content-Type":        {mimeType},
 	})
 	if err != nil {
-		_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, "failed",
+		_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, userID, "failed",
 			json.RawMessage(`{"error": "failed to create form file"}`))
 		return
 	}
 
 	if _, err = io.Copy(part, file); err != nil {
-		_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, "failed",
+		_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, userID, "failed",
 			json.RawMessage(`{"error": "failed to copy file content"}`))
 		return
 	}
@@ -219,7 +246,7 @@ func (s *UploadService) processOCR(uploadID uuid.UUID, filePath string, mimeType
 		body,
 	)
 	if err != nil {
-		_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, "failed",
+		_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, userID, "failed",
 			json.RawMessage(fmt.Sprintf(`{"error": "failed to connect to AI service: %s"}`, err.Error())))
 		return
 	}
@@ -227,17 +254,17 @@ func (s *UploadService) processOCR(uploadID uuid.UUID, filePath string, mimeType
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, "failed",
+		_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, userID, "failed",
 			json.RawMessage(`{"error": "failed to read OCR response"}`))
 		return
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, "failed",
+		_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, userID, "failed",
 			json.RawMessage(fmt.Sprintf(`{"error": "OCR service returned status %d"}`, resp.StatusCode)))
 		return
 	}
 
 	// Update with OCR result
-	_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, "completed", respBody)
+	_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, userID, "completed", respBody)
 }

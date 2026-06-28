@@ -31,9 +31,15 @@ func NewReassessmentHandler(trainingService *service.TrainingService) *Reassessm
 
 // SubmitReassessment handles POST /api/v1/training/:id/reassess
 func (h *ReassessmentHandler) SubmitReassessment(c *gin.Context) {
-	userID, _ := c.Get("user_id")
-	uid, _ := uuid.Parse(userID.(string))
-	planID, _ := uuid.Parse(c.Param("id"))
+	uid, ok := getUserUUID(c)
+	if !ok {
+		return
+	}
+	planID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid plan id"})
+		return
+	}
 
 	// Verify plan belongs to user
 	plan, err := h.trainingService.GetPlan(c.Request.Context(), planID, uid)

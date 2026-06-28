@@ -19,8 +19,10 @@ func NewTrainingHandler(trainingService *service.TrainingService) *TrainingHandl
 
 // GeneratePlan handles POST /api/v1/training/generate
 func (h *TrainingHandler) GeneratePlan(c *gin.Context) {
-	userID, _ := c.Get("user_id")
-	uid, _ := uuid.Parse(userID.(string))
+	uid, ok := getUserUUID(c)
+	if !ok {
+		return
+	}
 
 	var req struct {
 		ConsultationID *uuid.UUID      `json:"consultation_id"`
@@ -43,9 +45,15 @@ func (h *TrainingHandler) GeneratePlan(c *gin.Context) {
 
 // GetPlan handles GET /api/v1/training/:id
 func (h *TrainingHandler) GetPlan(c *gin.Context) {
-	userID, _ := c.Get("user_id")
-	uid, _ := uuid.Parse(userID.(string))
-	planID, _ := uuid.Parse(c.Param("id"))
+	uid, ok := getUserUUID(c)
+	if !ok {
+		return
+	}
+	planID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid plan id"})
+		return
+	}
 
 	plan, err := h.trainingService.GetPlan(c.Request.Context(), planID, uid)
 	if err != nil || plan == nil {
@@ -58,8 +66,10 @@ func (h *TrainingHandler) GetPlan(c *gin.Context) {
 
 // ListPlans handles GET /api/v1/training
 func (h *TrainingHandler) ListPlans(c *gin.Context) {
-	userID, _ := c.Get("user_id")
-	uid, _ := uuid.Parse(userID.(string))
+	uid, ok := getUserUUID(c)
+	if !ok {
+		return
+	}
 
 	plans, err := h.trainingService.ListPlans(c.Request.Context(), uid)
 	if err != nil {
@@ -72,9 +82,15 @@ func (h *TrainingHandler) ListPlans(c *gin.Context) {
 
 // GetTodayTask handles GET /api/v1/training/:id/today
 func (h *TrainingHandler) GetTodayTask(c *gin.Context) {
-	userID, _ := c.Get("user_id")
-	uid, _ := uuid.Parse(userID.(string))
-	planID, _ := uuid.Parse(c.Param("id"))
+	uid, ok := getUserUUID(c)
+	if !ok {
+		return
+	}
+	planID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid plan id"})
+		return
+	}
 
 	task, err := h.trainingService.GetTodayTask(c.Request.Context(), planID, uid)
 	if err != nil {
@@ -87,9 +103,15 @@ func (h *TrainingHandler) GetTodayTask(c *gin.Context) {
 
 // CheckIn handles POST /api/v1/training/:id/checkin
 func (h *TrainingHandler) CheckIn(c *gin.Context) {
-	userID, _ := c.Get("user_id")
-	uid, _ := uuid.Parse(userID.(string))
-	planID, _ := uuid.Parse(c.Param("id"))
+	uid, ok := getUserUUID(c)
+	if !ok {
+		return
+	}
+	planID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid plan id"})
+		return
+	}
 
 	if err := h.trainingService.CheckIn(c.Request.Context(), planID, uid); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -101,9 +123,15 @@ func (h *TrainingHandler) CheckIn(c *gin.Context) {
 
 // UpdateLog handles PUT /api/v1/training/:id/log
 func (h *TrainingHandler) UpdateLog(c *gin.Context) {
-	userID, _ := c.Get("user_id")
-	uid, _ := uuid.Parse(userID.(string))
-	planID, _ := uuid.Parse(c.Param("id"))
+	uid, ok := getUserUUID(c)
+	if !ok {
+		return
+	}
+	planID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid plan id"})
+		return
+	}
 
 	var req struct {
 		Notes     string `json:"notes"`
@@ -124,9 +152,15 @@ func (h *TrainingHandler) UpdateLog(c *gin.Context) {
 
 // GetProgress handles GET /api/v1/training/:id/progress
 func (h *TrainingHandler) GetProgress(c *gin.Context) {
-	userID, _ := c.Get("user_id")
-	uid, _ := uuid.Parse(userID.(string))
-	planID, _ := uuid.Parse(c.Param("id"))
+	uid, ok := getUserUUID(c)
+	if !ok {
+		return
+	}
+	planID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid plan id"})
+		return
+	}
 
 	progress, err := h.trainingService.GetProgress(c.Request.Context(), planID, uid)
 	if err != nil {

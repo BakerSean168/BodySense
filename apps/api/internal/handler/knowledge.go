@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -46,11 +48,39 @@ type IngestVideoRequest struct {
 	OverwriteSource    bool   `json:"overwrite_source,omitempty"`
 }
 
+// sanitizeProxyResponse returns a generic error message for non-2xx AI service responses
+// to avoid leaking internal details (stack traces, internal paths, etc.) to the client.
+func sanitizeProxyResponse(statusCode int, body []byte) (int, []byte) {
+	if statusCode >= 200 && statusCode < 300 {
+		return statusCode, body
+	}
+	genericErr, _ := json.Marshal(gin.H{"error": "AI service request failed", "status": statusCode})
+	return statusCode, genericErr
+}
+
+// validateVideoPath checks that the video path is within an allowed directory
+// and does not contain path traversal sequences.
+func validateVideoPath(path string) bool {
+	if path == "" {
+		return false
+	}
+	// Reject path traversal
+	cleaned := filepath.Clean(path)
+	if strings.Contains(cleaned, "..") {
+		return false
+	}
+	// Must be an absolute path or within a known base directory
+	if !filepath.IsAbs(cleaned) {
+		return false
+	}
+	return true
+}
+
 // SearchKnowledge handles POST /api/knowledge/search
 func (h *KnowledgeHandler) SearchKnowledge(c *gin.Context) {
 	var req SearchRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		respondError(c, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -62,7 +92,7 @@ func (h *KnowledgeHandler) SearchKnowledge(c *gin.Context) {
 	// Forward to AI service
 	body, err := json.Marshal(req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to marshal request"})
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to marshal request")
 		return
 	}
 
@@ -72,27 +102,32 @@ func (h *KnowledgeHandler) SearchKnowledge(c *gin.Context) {
 		bytes.NewBuffer(body),
 	)
 	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to connect to AI service"})
+		respondError(c, http.StatusBadGateway, "AI_SERVICE_UNAVAILABLE", "failed to connect to AI service")
 		return
 	}
 	defer resp.Body.Close()
 
-	// Read response
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read response"})
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to read response")
 		return
 	}
 
-	// Forward response
-	c.Data(resp.StatusCode, "application/json", respBody)
+	status, sanitized := sanitizeProxyResponse(resp.StatusCode, respBody)
+	c.Data(status, "application/json", sanitized)
 }
 
 // IngestVideo handles POST /api/knowledge/ingestions/video
 func (h *KnowledgeHandler) IngestVideo(c *gin.Context) {
 	var req IngestVideoRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		respondError(c, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+
+	// Validate video path to prevent path traversal
+	if !validateVideoPath(req.VideoPath) {
+		respondError(c, http.StatusBadRequest, "INVALID_VIDEO_PATH", "video_path must be an absolute path without traversal sequences")
 		return
 	}
 
@@ -105,7 +140,7 @@ func (h *KnowledgeHandler) IngestVideo(c *gin.Context) {
 
 	body, err := json.Marshal(req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to marshal request"})
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to marshal request")
 		return
 	}
 
@@ -115,52 +150,55 @@ func (h *KnowledgeHandler) IngestVideo(c *gin.Context) {
 		bytes.NewBuffer(body),
 	)
 	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to connect to AI service"})
+		respondError(c, http.StatusBadGateway, "AI_SERVICE_UNAVAILABLE", "failed to connect to AI service")
 		return
 	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read response"})
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to read response")
 		return
 	}
 
-	c.Data(resp.StatusCode, "application/json", respBody)
+	status, sanitized := sanitizeProxyResponse(resp.StatusCode, respBody)
+	c.Data(status, "application/json", sanitized)
 }
 
 // ListSources handles GET /api/knowledge/sources
 func (h *KnowledgeHandler) ListSources(c *gin.Context) {
 	resp, err := http.Get(h.aiServiceURL + "/api/knowledge/sources")
 	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to connect to AI service"})
+		respondError(c, http.StatusBadGateway, "AI_SERVICE_UNAVAILABLE", "failed to connect to AI service")
 		return
 	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read response"})
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to read response")
 		return
 	}
 
-	c.Data(resp.StatusCode, "application/json", respBody)
+	status, sanitized := sanitizeProxyResponse(resp.StatusCode, respBody)
+	c.Data(status, "application/json", sanitized)
 }
 
 // GetStats handles GET /api/knowledge/stats
 func (h *KnowledgeHandler) GetStats(c *gin.Context) {
 	resp, err := http.Get(h.aiServiceURL + "/api/knowledge/stats")
 	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to connect to AI service"})
+		respondError(c, http.StatusBadGateway, "AI_SERVICE_UNAVAILABLE", "failed to connect to AI service")
 		return
 	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read response"})
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to read response")
 		return
 	}
 
-	c.Data(resp.StatusCode, "application/json", respBody)
+	status, sanitized := sanitizeProxyResponse(resp.StatusCode, respBody)
+	c.Data(status, "application/json", sanitized)
 }

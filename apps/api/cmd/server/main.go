@@ -48,17 +48,28 @@ func main() {
 	profileRepo := repository.NewProfileRepository(database.DB)
 	uploadRepo := repository.NewUploadRepository(database.DB)
 	consultationRepo := repository.NewConsultationRepository(database.DB)
+	conversationRepo := repository.NewConversationRepository(database.DB)
+	messageRepo := repository.NewMessageRepository(database.DB)
+	runRepo := repository.NewRunRepository(database.DB)
+	shareRepo := repository.NewConversationShareRepository(database.DB)
 	authService := service.NewAuthService(userRepo, jwtConfig)
 	profileService := service.NewProfileService(profileRepo)
 	uploadService := service.NewUploadService(uploadRepo)
-	consultationService := service.NewConsultationService(consultationRepo)
+	aiClient := service.NewAIClient()
+	messageService := service.NewMessageService(messageRepo)
+	runService := service.NewRunService(runRepo)
+	conversationService := service.NewConversationService(conversationRepo, messageRepo, runRepo, shareRepo, aiClient)
+	shareService := service.NewShareService(conversationRepo, messageRepo, shareRepo)
+	consultationService := service.NewConsultationService(consultationRepo, conversationRepo)
 	assessmentRepo := repository.NewAssessmentRepository(database.DB)
 	assessmentService := service.NewAssessmentService(assessmentRepo, profileService)
 	authHandler := handler.NewAuthHandler(authService)
 	profileHandler := handler.NewProfileHandler(profileService)
 	uploadHandler := handler.NewUploadHandler(uploadService)
-	consultationHandler := handler.NewConsultationHandler(consultationService, profileService)
-	diagnosisHandler := handler.NewDiagnosisHandler(consultationService, profileService)
+	chatHandler := handler.NewChatHandler(conversationService, messageService, runService, consultationService, aiClient, profileService)
+	convHandler := handler.NewConversationHandler(conversationService, shareService)
+	consultationHandler := handler.NewConsultationHandler(consultationService)
+	diagnosisHandler := handler.NewDiagnosisHandler(consultationService, profileService, aiClient)
 	trainingRepo := repository.NewTrainingRepository(database.DB)
 	trainingService := service.NewTrainingService(trainingRepo, profileService)
 	trainingHandler := handler.NewTrainingHandler(trainingService)
@@ -75,8 +86,12 @@ func main() {
 	r := gin.Default()
 
 	// CORS middleware
+	corsOrigin := os.Getenv("CORS_ORIGIN")
+	if corsOrigin == "" {
+		corsOrigin = "*"
+	}
 	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Origin", corsOrigin)
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
@@ -140,15 +155,30 @@ func main() {
 		protected.GET("/uploads/:id", uploadHandler.GetUpload)
 		protected.DELETE("/uploads/:id", uploadHandler.DeleteUpload)
 
-		// Consultation routes
-		protected.POST("/consultation", consultationHandler.CreateSession)
-		protected.GET("/consultation", consultationHandler.ListSessions)
-		protected.GET("/consultation/:id", consultationHandler.GetSession)
-		protected.POST("/consultation/:id/message", consultationHandler.SendMessage)
-		protected.PUT("/consultation/:id/extracted-info", consultationHandler.UpdateExtractedInfo)
-		protected.PUT("/consultation/:id/confirm", consultationHandler.ConfirmDiagnosis)
-		protected.POST("/consultation/:id/diagnosis", diagnosisHandler.AnalyzeDiagnosis)
-		protected.POST("/consultation/:id/treatment", diagnosisHandler.GenerateTreatment)
+		// Chat API (SSE streaming)
+		chat := protected.Group("/chat")
+		chat.POST("/send", chatHandler.SendMessage)
+
+		// Conversation API
+		conversations := protected.Group("/conversations")
+		conversations.GET("", convHandler.ListConversations)
+		conversations.GET("/:id", convHandler.GetConversation)
+		conversations.PATCH("/:id", convHandler.UpdateConversation)
+		conversations.DELETE("/:id", convHandler.DeleteConversation)
+		conversations.PATCH("/:id/pin", convHandler.PinConversation)
+		conversations.GET("/:id/runs", convHandler.ListRuns)
+		conversations.POST("/:id/title", convHandler.GenerateTitle)
+		conversations.PUT("/:id/title", convHandler.RenameTitle)
+		conversations.POST("/:id/share", convHandler.ShareConversation)
+		conversations.DELETE("/:id/share", convHandler.UnshareConversation)
+
+		// Consultation domain
+		consultations := protected.Group("/consultations")
+		consultations.GET("/:id", consultationHandler.GetConsultation)
+		consultations.PUT("/:id/extracted-info", consultationHandler.UpdateExtractedInfo)
+		consultations.PUT("/:id/confirm", consultationHandler.ConfirmDiagnosis)
+		consultations.POST("/:id/diagnosis", diagnosisHandler.AnalyzeDiagnosis)
+		consultations.POST("/:id/treatment", diagnosisHandler.GenerateTreatment)
 
 		// Assessment routes
 		protected.POST("/assessment/generate", assessmentHandler.GenerateAssessment)
@@ -166,8 +196,12 @@ func main() {
 		protected.POST("/training/:id/reassess", reassessmentHandler.SubmitReassessment)
 	}
 
-	// Knowledge base routes (proxy to AI service)
-	knowledgeGroup := r.Group("/api/knowledge")
+	// Public share routes (no auth)
+	public := r.Group("/api/v1")
+	public.GET("/conversations/share/:token", convHandler.GetSharedConversation)
+
+	// Knowledge base routes (proxy to AI service, require auth)
+	knowledgeGroup := protected.Group("/knowledge")
 	{
 		knowledgeGroup.POST("/ingestions/video", knowledgeHandler.IngestVideo)
 		knowledgeGroup.POST("/search", knowledgeHandler.SearchKnowledge)

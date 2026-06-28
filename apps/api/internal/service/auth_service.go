@@ -38,7 +38,7 @@ func (s *AuthService) Register(ctx context.Context, req dto.RegisterRequest) (*d
 		return nil, fmt.Errorf("failed to check email existence: %w", err)
 	}
 	if exists {
-		return nil, errors.New("email already registered")
+		return nil, errors.New("registration failed")
 	}
 
 	// Hash password with bcrypt (cost >= 12)
@@ -127,7 +127,10 @@ func (s *AuthService) generateTokens(ctx context.Context, user *model.User) (*dt
 	}
 
 	// Generate refresh token
-	refreshToken := auth.GenerateRefreshToken()
+	refreshToken, err := auth.GenerateRefreshToken()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate refresh token: %w", err)
+	}
 
 	// Store refresh token in Redis
 	redisClient := database.RedisClient

@@ -7,6 +7,7 @@ import (
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // TrainingRepository handles database operations for training plans and logs.
@@ -47,24 +48,27 @@ func (r *TrainingRepository) ListPlansByUserID(ctx context.Context, userID uuid.
 // Log operations
 
 func (r *TrainingRepository) CreateOrUpdateLog(ctx context.Context, log *model.TrainingLog) error {
-	// Try to find existing log for this plan+date
-	var existing model.TrainingLog
-	err := r.db.WithContext(ctx).
-		Where("plan_id = ? AND date = ?", log.PlanID, log.Date).
-		First(&existing).Error
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Try to find existing log for this plan+date with row-level lock
+		var existing model.TrainingLog
+		err := tx.
+			Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("plan_id = ? AND date = ?", log.PlanID, log.Date).
+			First(&existing).Error
 
-	if err == gorm.ErrRecordNotFound {
-		return r.db.WithContext(ctx).Create(log).Error
-	}
-	if err != nil {
-		return err
-	}
+		if err == gorm.ErrRecordNotFound {
+			return tx.Create(log).Error
+		}
+		if err != nil {
+			return err
+		}
 
-	// Update existing log
-	existing.Exercises = log.Exercises
-	existing.Notes = log.Notes
-	existing.IsCheckedIn = log.IsCheckedIn
-	return r.db.WithContext(ctx).Save(&existing).Error
+		// Update existing log
+		existing.Exercises = log.Exercises
+		existing.Notes = log.Notes
+		existing.IsCheckedIn = log.IsCheckedIn
+		return tx.Save(&existing).Error
+	})
 }
 
 func (r *TrainingRepository) GetLogByDate(ctx context.Context, planID uuid.UUID, date time.Time) (*model.TrainingLog, error) {
@@ -87,7 +91,7 @@ func (r *TrainingRepository) GetLogsByPlanID(ctx context.Context, planID uuid.UU
 	return logs, err
 }
 
-func (r *TrainingRepository) CheckIn(ctx context.Context, planID uuid.UUID, date time.Time) error {
+func (r *TrainingRepository) CheckIn(ctx context.Context, planID, userID uuid.UUID, date time.Time) error {
 	var log model.TrainingLog
 	err := r.db.WithContext(ctx).
 		Where("plan_id = ? AND date = ?", planID, date).
@@ -97,6 +101,7 @@ func (r *TrainingRepository) CheckIn(ctx context.Context, planID uuid.UUID, date
 		// Create new log with check-in
 		log = model.TrainingLog{
 			ID:          uuid.New(),
+			UserID:      userID,
 			PlanID:      planID,
 			Date:        date,
 			Exercises:   []byte("[]"),
@@ -129,9 +134,13 @@ func (r *TrainingRepository) GetConsecutiveCheckInDays(ctx context.Context, plan
 
 	count := 0
 	expected := time.Now().Truncate(24 * time.Hour)
-	for _, log := range logs {
+	for i, log := range logs {
 		logDate := log.Date.Truncate(24 * time.Hour)
-		if logDate.Equal(expected) || logDate.Equal(expected.Add(-24*time.Hour)) {
+		if i == 0 && logDate.Equal(expected.Add(-24*time.Hour)) {
+			// Allow first entry to be yesterday (timezone edge case)
+			count++
+			expected = logDate.Add(-24 * time.Hour)
+		} else if logDate.Equal(expected) {
 			count++
 			expected = logDate.Add(-24 * time.Hour)
 		} else {

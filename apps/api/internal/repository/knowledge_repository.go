@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/pgvector/pgvector-go"
@@ -61,7 +62,7 @@ func (r *KnowledgeRepository) SearchByEmbedding(ctx context.Context, embedding p
 		Table("knowledge_entries").
 		Select("*, 1 - (embedding <=> ?) as similarity", embedding).
 		Where("embedding IS NOT NULL").
-		Order("embedding <=> " + embedding.String()).
+		Order(fmt.Sprintf("embedding <=> '%s'", embedding.String())).
 		Limit(topK).
 		Find(&results).Error
 
@@ -71,9 +72,9 @@ func (r *KnowledgeRepository) SearchByEmbedding(ctx context.Context, embedding p
 
 	entries := make([]*model.KnowledgeEntry, len(results))
 	similarities := make([]float64, len(results))
-	for i, r := range results {
-		entries[i] = &r.KnowledgeEntry
-		similarities[i] = r.Similarity
+	for i, res := range results {
+		entries[i] = &res.KnowledgeEntry
+		similarities[i] = res.Similarity
 	}
 
 	return entries, similarities, nil
