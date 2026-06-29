@@ -18,6 +18,7 @@ class AssessmentRequest(BaseModel):
 
     profile: dict[str, Any] = Field(..., description="User profile data")
     rag_context: str = Field(default="", description="RAG context from knowledge base")
+    images: list[str] | None = Field(default=None, description="Base64 encoded posture images")
 
 
 class AssessmentResponse(BaseModel):
@@ -37,6 +38,7 @@ async def generate_assessment(request: AssessmentRequest):
         result = await service.generate_assessment(
             profile=request.profile,
             rag_context=request.rag_context,
+            images=request.images,
         )
         return AssessmentResponse(**result)
     except ValueError as e:

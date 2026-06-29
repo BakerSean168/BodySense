@@ -445,6 +445,7 @@ async def generate_response(
     # Multi-round tool loop
     messages = build_messages(state)
     seen_queries: set[str] = set()
+    seen_body_parts: set[str] = set()  # for deduplicating extract_symptom_info
 
     # Text buffering to avoid per-token NDJSON events (each CJK token is 1-3 chars)
     _text_buf = ""
@@ -507,8 +508,12 @@ async def generate_response(
             })
 
             if tc_name == "extract_symptom_info":
-                new_symptoms.append(tc_args)
-                writer({"type": "extracted_info", "info": tc_args})
+                body_part = tc_args.get("body_part", "")
+                # Deduplicate: same body_part in this response only emits once
+                if body_part and body_part not in seen_body_parts:
+                    seen_body_parts.add(body_part)
+                    new_symptoms.append(tc_args)
+                    writer({"type": "extracted_info", "info": tc_args})
                 writer({
                     "type": "tool_result",
                     "id": tc_id,
@@ -571,10 +576,16 @@ async def generate_response(
             messages.append(assistant_msg)
             messages.extend(tool_messages)
 
-        # Only continue the loop if search was done (to let LLM use results).
-        # extract_symptom_info alone does not need another round.
-        if not has_search:
-            break
+        # Continue the loop if:
+        # - search_knowledge was called (LLM needs to use the RAG results), OR
+        # - no text was generated yet (LLM needs another round to produce a reply)
+        if has_search:
+            continue
+        if not accumulated_text:
+            # LLM only called tools (e.g. extract_symptom_info) without generating
+            # any text. Give it another round to produce a user-facing reply.
+            continue
+        break
 
     return {
         "accumulated_text": accumulated_text,

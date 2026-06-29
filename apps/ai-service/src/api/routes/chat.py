@@ -58,12 +58,19 @@ async def chat_stream(request: ChatRequest):
                 user_message=request.content,
                 rag_results=request.rag_results,
             ):
-                payload = {"type": event.event_type, **event.data}
+                payload = event.model_dump(exclude_none=True)
                 yield json.dumps(payload, ensure_ascii=False) + "\n"
         except Exception:
             logger.exception("Error in chat stream")
             yield json.dumps(
-                {"type": "error", "message": "Internal error. Please try again."},
+                {
+                    "version": 1,
+                    "seq": 1,
+                    "channel": "stream",
+                    "type": "stream.error",
+                    "ids": {},
+                    "payload": {"message": "Internal error. Please try again."},
+                },
                 ensure_ascii=False,
             ) + "\n"
 

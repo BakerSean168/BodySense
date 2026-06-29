@@ -29,7 +29,7 @@ class ChatMessage:
     """A chat message."""
 
     role: str  # "system", "user", "assistant", "tool"
-    content: str | None = None
+    content: str | list[dict[str, Any]] | None = None
     tool_calls: list[ToolCall] | None = None
     tool_call_id: str | None = None
 
