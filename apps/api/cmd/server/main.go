@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/bodysense/api/internal/auth"
+	"github.com/bodysense/api/internal/cache"
 	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/handler"
 	"github.com/bodysense/api/internal/middleware"
@@ -52,7 +53,11 @@ func main() {
 	messageRepo := repository.NewMessageRepository(database.DB)
 	runRepo := repository.NewRunRepository(database.DB)
 	shareRepo := repository.NewConversationShareRepository(database.DB)
-	authService := service.NewAuthService(userRepo, jwtConfig)
+
+	// User session cache (Redis-backed, TTL = 2x access token TTL)
+	sessionCache := cache.NewUserSessionCache(database.RedisClient, jwtConfig.AccessTokenTTL*2)
+
+	authService := service.NewAuthService(userRepo, jwtConfig, sessionCache)
 	profileService := service.NewProfileService(profileRepo)
 	uploadService := service.NewUploadService(uploadRepo)
 	aiClient := service.NewAIClient()
@@ -62,7 +67,7 @@ func main() {
 	shareService := service.NewShareService(conversationRepo, messageRepo, shareRepo)
 	consultationService := service.NewConsultationService(consultationRepo, conversationRepo)
 	assessmentRepo := repository.NewAssessmentRepository(database.DB)
-	assessmentService := service.NewAssessmentService(assessmentRepo, profileService)
+	assessmentService := service.NewAssessmentService(assessmentRepo, profileService, uploadRepo)
 	authHandler := handler.NewAuthHandler(authService)
 	profileHandler := handler.NewProfileHandler(profileService)
 	uploadHandler := handler.NewUploadHandler(uploadService)
@@ -143,7 +148,7 @@ func main() {
 
 	// Protected routes
 	protected := r.Group("/api/v1")
-	protected.Use(middleware.AuthMiddleware(jwtConfig))
+	protected.Use(middleware.AuthMiddleware(jwtConfig, userRepo, sessionCache))
 	{
 		protected.GET("/me", authHandler.Me)
 		protected.GET("/profile", profileHandler.GetProfile)
@@ -192,6 +197,7 @@ func main() {
 		protected.GET("/training/:id/today", trainingHandler.GetTodayTask)
 		protected.POST("/training/:id/checkin", trainingHandler.CheckIn)
 		protected.PUT("/training/:id/log", trainingHandler.UpdateLog)
+		protected.PUT("/training/:id/phases", trainingHandler.UpdatePlanPhases)
 		protected.GET("/training/:id/progress", trainingHandler.GetProgress)
 		protected.POST("/training/:id/reassess", reassessmentHandler.SubmitReassessment)
 	}

@@ -75,7 +75,7 @@ func (h *DiagnosisHandler) AnalyzeDiagnosis(c *gin.Context) {
 	diagReq := service.DiagnosisRequest{
 		ExtractedInfo: extractedInfoJSON,
 		Profile:       profileJSON,
-		UseCase:       "diagnosis",
+		UseCase:       "llm.json",
 	}
 
 	// Knowledge search for RAG context
@@ -166,10 +166,17 @@ func (h *DiagnosisHandler) GenerateTreatment(c *gin.Context) {
 		extractedInfoJSON = json.RawMessage(session.ExtractedInfo)
 	}
 
-	treatmentReq := service.DiagnosisRequest{
-		ExtractedInfo: extractedInfoJSON,
-		Profile:       profileJSON,
-		UseCase:       "treatment",
+	confirmedDiagnosisJSON, err := json.Marshal(reqBody.ConfirmedDiagnosis)
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "INVALID_REQUEST", "invalid confirmed diagnosis")
+		return
+	}
+
+	treatmentReq := service.TreatmentRequest{
+		ConfirmedDiagnosis: confirmedDiagnosisJSON,
+		ExtractedInfo:      extractedInfoJSON,
+		Profile:            profileJSON,
+		UseCase:            "llm.json",
 	}
 
 	// Knowledge search for RAG context

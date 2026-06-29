@@ -21,7 +21,7 @@ type KnowledgeHandler struct {
 func NewKnowledgeHandler() *KnowledgeHandler {
 	aiServiceURL := os.Getenv("AI_SERVICE_URL")
 	if aiServiceURL == "" {
-		aiServiceURL = "http://localhost:8000"
+		aiServiceURL = "http://localhost:8100"
 	}
 	return &KnowledgeHandler{aiServiceURL: aiServiceURL}
 }

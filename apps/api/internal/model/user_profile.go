@@ -22,6 +22,7 @@ type UserProfile struct {
 	ExerciseFrequency *string   `gorm:"type:varchar(50)" json:"exercise_frequency,omitempty"`
 	InjuryHistory    *string    `gorm:"type:text" json:"injury_history,omitempty"`
 	SelfDescription  *string    `gorm:"type:text" json:"self_description,omitempty"`
+	ScheduleMode     *string    `gorm:"type:varchar(20);default:'fixed_calendar'" json:"schedule_mode,omitempty"`
 	CreatedAt        time.Time  `gorm:"not null;default:now()" json:"created_at"`
 	UpdatedAt        time.Time  `gorm:"not null;default:now()" json:"updated_at"`
 }

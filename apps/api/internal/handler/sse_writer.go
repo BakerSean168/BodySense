@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/bodysense/api/internal/dto"
 )
 
 // SSEWriter wraps an http.ResponseWriter to emit Server-Sent Events
@@ -40,121 +42,13 @@ func (s *SSEWriter) sendEvent(event string, data any) error {
 	return nil
 }
 
-// ConversationCreated emits when a new conversation is created server-side.
-func (s *SSEWriter) ConversationCreated(conversationID, replacesDraftID string) error {
-	return s.sendEvent("conversation.created", map[string]string{
-		"conversationId":  conversationID,
-		"replacesDraftId": replacesDraftID,
-	})
-}
-
-// MessagePersisted acknowledges that the client message has been stored.
-func (s *SSEWriter) MessagePersisted(clientMessageID, messageID, role string) error {
-	return s.sendEvent("message.persisted", map[string]string{
-		"clientMessageId": clientMessageID,
-		"messageId":       messageID,
-		"role":            role,
-	})
-}
-
-// MessageCreated signals the start of a new assistant message stream.
-func (s *SSEWriter) MessageCreated(messageID, role, turnID string) error {
-	return s.sendEvent("message.created", map[string]string{
-		"messageId": messageID,
-		"role":      role,
-		"status":    "streaming",
-		"turnId":    turnID,
-	})
-}
-
-// TextDelta streams a text chunk for an in-progress message.
-func (s *SSEWriter) TextDelta(messageID, delta string) error {
-	return s.sendEvent("text.delta", map[string]string{
-		"messageId": messageID,
-		"delta":     delta,
-	})
-}
-
-// ToolCall notifies the client that the assistant is invoking a tool.
-func (s *SSEWriter) ToolCall(messageID, tool string, args any) error {
-	return s.sendEvent("tool.call", map[string]any{
-		"messageId": messageID,
-		"tool":      tool,
-		"args":      args,
-	})
-}
-
-// ToolResult sends the result of a completed tool invocation.
-func (s *SSEWriter) ToolResult(messageID, tool string, result any) error {
-	return s.sendEvent("tool.result", map[string]any{
-		"messageId": messageID,
-		"tool":      tool,
-		"result":    result,
-	})
-}
-
-// ExtractedInfo delivers structured information extracted during the turn.
-func (s *SSEWriter) ExtractedInfo(messageID string, info any) error {
-	return s.sendEvent("extracted_info", map[string]any{
-		"messageId": messageID,
-		"info":      info,
-	})
-}
-
-// PhaseChange notifies a consultation-phase transition.
-func (s *SSEWriter) PhaseChange(messageID, from, to, reason string) error {
-	return s.sendEvent("phase_change", map[string]string{
-		"messageId": messageID,
-		"from":      from,
-		"to":        to,
-		"reason":    reason,
-	})
-}
-
-// Citation attaches a knowledge citation to the message stream.
-func (s *SSEWriter) Citation(messageID string, citation any) error {
-	return s.sendEvent("citation", map[string]any{
-		"messageId": messageID,
-		"citation":  citation,
-	})
-}
-
-// RedFlag signals a clinical red-flag detection event.
-func (s *SSEWriter) RedFlag(messageID string, flag any) error {
-	return s.sendEvent("red_flag", map[string]any{
-		"messageId": messageID,
-		"flag":      flag,
-	})
-}
-
-// MessageCompleted marks a message stream as finished.
-func (s *SSEWriter) MessageCompleted(messageID string, usage any) error {
-	return s.sendEvent("message.completed", map[string]any{
-		"messageId":    messageID,
-		"status":       "completed",
-		"finishReason": "stop",
-		"usage":        usage,
-	})
-}
-
-// MessageFailed reports an error that terminated the message stream.
-func (s *SSEWriter) MessageFailed(messageID string, errData any) error {
-	return s.sendEvent("message.failed", map[string]any{
-		"messageId": messageID,
-		"status":    "failed",
-		"error":     errData,
-	})
-}
-
-// TitleGenerated delivers an auto-generated conversation title.
-func (s *SSEWriter) TitleGenerated(conversationID, title string) error {
-	return s.sendEvent("title.generated", map[string]string{
-		"conversationId": conversationID,
-		"title":          title,
-	})
-}
-
-// Done signals the end of the SSE stream.
-func (s *SSEWriter) Done() error {
-	return s.sendEvent("done", map[string]string{})
+// WriteEvent writes a structured stream event as one SSE frame.
+func (s *SSEWriter) WriteEvent(event dto.StreamEvent) error {
+	if event.Version == 0 {
+		event.Version = 1
+	}
+	if len(event.Payload) == 0 {
+		event.Payload = json.RawMessage(`{}`)
+	}
+	return s.sendEvent(event.Type, event)
 }

@@ -149,3 +149,11 @@ func (r *TrainingRepository) GetConsecutiveCheckInDays(ctx context.Context, plan
 	}
 	return count, nil
 }
+
+// UpdatePlanPhases updates the phases of a plan.
+func (r *TrainingRepository) UpdatePlanPhases(ctx context.Context, planID, userID uuid.UUID, phases []byte) error {
+	return r.db.WithContext(ctx).
+		Model(&model.TrainingPlan{}).
+		Where("id = ? AND user_id = ?", planID, userID).
+		Update("phases", phases).Error
+}
