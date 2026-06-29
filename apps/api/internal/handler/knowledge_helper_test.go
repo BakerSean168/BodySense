@@ -166,8 +166,8 @@ func TestBuildTreatmentKnowledgeQueryIncludesDiagnosisName(t *testing.T) {
 	t.Parallel()
 
 	diagnosis := map[string]any{
-		"name":   "头前伸倾向",
-		"basis":  "颈肩酸胀",
+		"name":  "头前伸倾向",
+		"basis": "颈肩酸胀",
 	}
 	extractedInfo := []any{
 		map[string]any{"body_part": "颈椎"},

@@ -23,7 +23,7 @@ type JWTConfig struct {
 // JWTConfigFromEnv reads JWT config from environment variables.
 // Panics if JWT_SECRET_KEY is not set, to prevent running with a publicly known key.
 func JWTConfigFromEnv() JWTConfig {
-	accessTTL := getEnvAsDuration("JWT_ACCESS_TTL_HOURS", 2) // 2 hours default for health app
+	accessTTL := getEnvAsDuration("JWT_ACCESS_TTL_HOURS", 2)       // 2 hours default for health app
 	refreshTTL := getEnvAsDuration("JWT_REFRESH_TTL_HOURS", 30*24) // 30 days
 
 	secret := os.Getenv("JWT_SECRET_KEY")

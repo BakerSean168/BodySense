@@ -233,11 +233,31 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 		useCase = req.Context.Entry + ".reply"
 	}
 
+	// Load conversation history messages (excluding current message)
+	var chatHistory []service.ChatMessage
+	if !isDraft {
+		historyMsgs, err := h.messageService.GetMessages(c.Request.Context(), conversationID)
+		if err == nil {
+			for _, m := range historyMsgs {
+				// Only include completed messages from previous turns to prevent duplicate/streaming/failed messages polluting context
+				if m.TurnID != turnID && m.Status == "completed" {
+					text := getMessageTextContent(m)
+					if text != "" {
+						chatHistory = append(chatHistory, service.ChatMessage{
+							Role:    m.Role,
+							Content: text,
+						})
+					}
+				}
+			}
+		}
+	}
+
 	chatReq := service.ChatStreamRequest{
 		SessionID:     conversationID.String(),
 		UserID:        uid.String(),
 		Content:       contentText,
-		Messages:      []service.ChatMessage{{Role: "user", Content: contentText}},
+		Messages:      chatHistory,
 		Profile:       profileJSON,
 		ExtractedInfo: extractedInfoJSON,
 		Phase:         phase,
@@ -514,4 +534,22 @@ func (h *ChatHandler) maybeGenerateTitle(ctx context.Context, conversationID, us
 			log.Printf("failed to trigger title generation for conversation %s: %v", conversationID, err)
 		}
 	}
+}
+
+func getMessageTextContent(msg model.Message) string {
+	if msg.ContentText != "" {
+		return msg.ContentText
+	}
+	var parts []struct {
+		Type string `json:"type"`
+		Text string `json:"text"`
+	}
+	if err := json.Unmarshal(msg.Parts, &parts); err == nil {
+		for _, p := range parts {
+			if p.Type == "text" && p.Text != "" {
+				return p.Text
+			}
+		}
+	}
+	return ""
 }

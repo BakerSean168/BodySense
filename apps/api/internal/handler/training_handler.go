@@ -25,9 +25,9 @@ func (h *TrainingHandler) GeneratePlan(c *gin.Context) {
 	}
 
 	var req struct {
-		ConsultationID *uuid.UUID      `json:"consultation_id"`
-		Diagnosis      map[string]any  `json:"diagnosis"`
-		Preferences    map[string]any  `json:"preferences"`
+		ConsultationID *uuid.UUID     `json:"consultation_id"`
+		Diagnosis      map[string]any `json:"diagnosis"`
+		Preferences    map[string]any `json:"preferences"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
