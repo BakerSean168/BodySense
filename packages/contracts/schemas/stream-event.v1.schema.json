@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bodysense.local/schemas/stream-event.v1.schema.json",
+  "title": "BodySense StreamEvent v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "seq", "channel", "type", "ids", "payload"],
+  "properties": {
+    "version": { "const": 1 },
+    "seq": { "type": "integer", "minimum": 1 },
+    "channel": {
+      "type": "string",
+      "enum": ["conversation", "message", "tool", "state", "source", "safety", "usage", "stream"]
+    },
+    "type": { "type": "string", "minLength": 1 },
+    "ids": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "conversation_id": { "type": ["string", "null"] },
+        "run_id": { "type": ["string", "null"] },
+        "turn_id": { "type": ["string", "null"] },
+        "message_id": { "type": ["string", "null"] },
+        "tool_call_id": { "type": ["string", "null"] }
+      }
+    },
+    "payload": { "type": "object" }
+  }
+}

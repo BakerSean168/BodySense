@@ -9,7 +9,7 @@ export interface ConsultationAdapterOptions {
   onMessagePersisted?: (clientMessageId: string, messageId: string) => void;
   onExtractedInfoUpdate?: (info: ExtractedInfo) => void;
   onPhaseChange?: (from: string, to: string) => void;
-  onRedFlag?: (flag: SSERedFlag['flag']) => void;
+  onRedFlag?: (flag: SSERedFlag['payload']) => void;
   onCitation?: (citation: Citation) => void;
   onTitleGenerated?: (title: string) => void;
   onMessageCompleted?: (data: SSEMessageCompleted) => void;
@@ -80,37 +80,47 @@ export function useAssistantChatRuntime(
         // Results are pushed to the queue and yielded below.
         const streamPromise = consumeSSEStream(response, {
           onConversationCreated: (data) => {
-            optionsRef.current.onConversationCreated?.(data.conversationId, data.replacesDraftId);
+            optionsRef.current.onConversationCreated?.(
+              data.ids.conversation_id || '',
+              data.payload.replaces_draft_id
+            );
           },
           onMessagePersisted: (data) => {
-            optionsRef.current.onMessagePersisted?.(data.clientMessageId, data.messageId);
+            optionsRef.current.onMessagePersisted?.(
+              data.payload.client_message_id,
+              data.ids.message_id || ''
+            );
           },
           onTextDelta: (data) => {
-            fullText += data.delta;
+            fullText += data.payload.delta;
             pushResult({
               content: [{ type: 'text', text: fullText }],
             });
           },
           onExtractedInfo: (data) => {
-            optionsRef.current.onExtractedInfoUpdate?.(data.info);
+            optionsRef.current.onExtractedInfoUpdate?.(data.payload.info as ExtractedInfo);
           },
           onPhaseChange: (data) => {
-            optionsRef.current.onPhaseChange?.(data.from, data.to);
+            optionsRef.current.onPhaseChange?.(data.payload.from || '', data.payload.to);
           },
           onRedFlag: (data) => {
-            optionsRef.current.onRedFlag?.(data.flag);
+            optionsRef.current.onRedFlag?.(data.payload);
           },
           onCitation: (data) => {
-            optionsRef.current.onCitation?.(data.citation);
+            optionsRef.current.onCitation?.(data.payload.citation as Citation);
           },
           onTitleGenerated: (data) => {
-            optionsRef.current.onTitleGenerated?.(data.title);
+            optionsRef.current.onTitleGenerated?.(data.payload.title);
           },
           onMessageCompleted: (data) => {
             optionsRef.current.onMessageCompleted?.(data);
           },
           onDone: () => {
             streamDone = true;
+            resolveNext?.();
+          },
+          onStreamError: (data) => {
+            streamError = new Error(data.payload.message);
             resolveNext?.();
           },
           onError: (err) => {

@@ -54,7 +54,16 @@ export function AssistantChatPanel({
 
   const adapterOptions = useMemo(() => ({
     onExtractedInfoUpdate: (info: ExtractedInfo) => {
-      extractedInfoRef.current = [...extractedInfoRef.current, info];
+      const existing = extractedInfoRef.current;
+      const idx = existing.findIndex((e) => e.body_part === info.body_part);
+      if (idx >= 0) {
+        // Merge into existing entry for the same body_part
+        const updated = [...existing];
+        updated[idx] = { ...updated[idx], ...info };
+        extractedInfoRef.current = updated;
+      } else {
+        extractedInfoRef.current = [...existing, info];
+      }
       onExtractedInfoUpdate?.(extractedInfoRef.current);
     },
     onPhaseChange: (_from: string, to: string) => {

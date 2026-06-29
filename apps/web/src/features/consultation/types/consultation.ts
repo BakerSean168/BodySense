@@ -1,3 +1,22 @@
+import type {
+  ConversationCreatedEvent,
+  MessagePersistedEvent,
+  MessageCreatedEvent,
+  MessageTextDeltaEvent,
+  ToolCallEvent,
+  ToolResultEvent,
+  ExtractedInfoUpsertEvent,
+  PhaseChangedEvent,
+  CitationAddedEvent,
+  RedFlagDetectedEvent,
+  MessageCompletedEvent,
+  MessageFailedEvent,
+  StreamDoneEvent,
+  StreamErrorEvent,
+} from '@bodysense/contracts';
+
+export type { StreamEvent } from '@bodysense/contracts';
+
 // 通用会话类型
 // Field names use snake_case to match the backend Go model JSON tags.
 export interface Conversation {
@@ -95,6 +114,8 @@ export interface ExtractedInfo {
   relief?: string;
   severity?: string;
   additional_notes?: string;
+  /** Whether the user has confirmed this extracted info card. */
+  confirmed?: boolean;
 }
 
 export interface Diagnosis {
@@ -154,84 +175,28 @@ export interface SharedConversation {
   metadata: Record<string, unknown> | null;
 }
 
-// SSE 事件类型
-export interface SSEConversationCreated {
-  conversationId: string;
-  replacesDraftId: string;
-}
-
-export interface SSEMessagePersisted {
-  clientMessageId: string;
-  messageId: string;
-  role: string;
-}
-
-export interface SSEMessageCreated {
-  messageId: string;
-  role: string;
-  status: string;
-  turnId: string;
-}
-
-export interface SSETextDelta {
-  messageId: string;
-  delta: string;
-}
-
-export interface SSEToolCall {
-  messageId: string;
-  tool: string;
-  args: unknown;
-}
-
-export interface SSEToolResult {
-  messageId: string;
-  tool: string;
-  result: unknown;
-}
-
-export interface SSEExtractedInfo {
-  messageId: string;
-  info: ExtractedInfo;
-}
-
-export interface SSEPhaseChange {
-  messageId: string;
-  from: string;
-  to: string;
-  reason: string;
-}
-
-export interface SSECitation {
-  messageId: string;
-  citation: Citation;
-}
-
-export interface SSERedFlag {
-  messageId: string;
-  flag: {
-    type: string;
-    message: string;
-    severity: string;
-  };
-}
-
-export interface SSEMessageCompleted {
-  messageId: string;
-  status: string;
-  finishReason: string;
-  usage: TokenUsage;
-}
-
-export interface SSEMessageFailed {
-  messageId: string;
-  status: string;
-  error: ErrorInfo;
-}
-
+// Structured stream event aliases.
+export type SSEConversationCreated = ConversationCreatedEvent;
+export type SSEMessagePersisted = MessagePersistedEvent;
+export type SSEMessageCreated = MessageCreatedEvent;
+export type SSETextDelta = MessageTextDeltaEvent;
+export type SSEToolCall = ToolCallEvent;
+export type SSEToolResult = ToolResultEvent;
+export type SSEExtractedInfo = ExtractedInfoUpsertEvent;
+export type SSEPhaseChange = PhaseChangedEvent;
+export type SSECitation = CitationAddedEvent;
+export type SSERedFlag = RedFlagDetectedEvent;
+export type SSEMessageCompleted = MessageCompletedEvent;
+export type SSEMessageFailed = MessageFailedEvent;
+export type SSEStreamDone = StreamDoneEvent;
+export type SSEStreamError = StreamErrorEvent;
 export interface SSETitleGenerated {
-  conversationId: string;
-  title: string;
+  version: 1;
+  seq: number;
+  type: 'title.generated';
+  channel: 'conversation';
+  ids: { conversation_id?: string | null };
+  payload: { title: string };
 }
 
 // 列表响应

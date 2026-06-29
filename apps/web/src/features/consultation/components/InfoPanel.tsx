@@ -6,6 +6,7 @@ interface InfoPanelProps {
   extractedInfo: ExtractedInfo[];
   onConfirm?: (info: ExtractedInfo) => void;
   onModify?: (index: number, info: ExtractedInfo) => void;
+  onDelete?: (index: number) => void;
 }
 
 const SEVERITY_COLORS: Record<string, string> = {
@@ -14,7 +15,7 @@ const SEVERITY_COLORS: Record<string, string> = {
   '重度': 'bg-[#B65E49]/10 text-[#B65E49] border border-[#B65E49]/20',
 };
 
-export function InfoPanel({ extractedInfo, onConfirm, onModify }: InfoPanelProps) {
+export function InfoPanel({ extractedInfo, onConfirm, onModify, onDelete }: InfoPanelProps) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<ExtractedInfo | null>(null);
   const cardsContainerRef = useRef<HTMLDivElement>(null);
@@ -189,17 +190,31 @@ export function InfoPanel({ extractedInfo, onConfirm, onModify }: InfoPanelProps
 
                     {/* Action buttons */}
                     <div className="flex gap-2 mt-3.5">
+                      {info.confirmed ? (
+                        <span className="flex-1 text-xs text-center text-primary-700 font-semibold py-1.5">
+                          ✓ 已确认
+                        </span>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => onConfirm?.(info)}
+                            className="flex-1 text-xs bg-primary-100 text-primary-900 border border-primary-200/50 rounded-full py-1.5 font-semibold hover:bg-primary-200 transition-all duration-300 cursor-pointer"
+                          >
+                            确认
+                          </button>
+                          <button
+                            onClick={() => handleEdit(i)}
+                            className="flex-1 text-xs bg-[#F7F5F0] border border-[#E5E3DF] text-[#4A554E] rounded-full py-1.5 font-semibold hover:bg-primary-50 transition-all duration-300 cursor-pointer"
+                          >
+                            修改
+                          </button>
+                        </>
+                      )}
                       <button
-                        onClick={() => onConfirm?.(info)}
-                        className="flex-1 text-xs bg-primary-100 text-primary-900 border border-primary-200/50 rounded-full py-1.5 font-semibold hover:bg-primary-200 transition-all duration-300 cursor-pointer"
+                        onClick={() => onDelete?.(i)}
+                        className="px-3 text-xs bg-rose-50 border border-rose-200 text-rose-700 rounded-full py-1.5 font-semibold hover:bg-rose-100 transition-all duration-300 cursor-pointer"
                       >
-                        确认
-                      </button>
-                      <button
-                        onClick={() => handleEdit(i)}
-                        className="flex-1 text-xs bg-[#F7F5F0] border border-[#E5E3DF] text-[#4A554E] rounded-full py-1.5 font-semibold hover:bg-primary-50 transition-all duration-300 cursor-pointer"
-                      >
-                        修改
+                        删除
                       </button>
                     </div>
                   </>

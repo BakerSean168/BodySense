@@ -16,6 +16,9 @@ import type {
   SSEMessageCompleted,
   SSEMessageFailed,
   SSETitleGenerated,
+  SSEStreamDone,
+  SSEStreamError,
+  StreamEvent,
 } from '../types/consultation';
 
 export interface SSEHandlers {
@@ -32,7 +35,8 @@ export interface SSEHandlers {
   onMessageCompleted?: (data: SSEMessageCompleted) => void;
   onMessageFailed?: (data: SSEMessageFailed) => void;
   onTitleGenerated?: (data: SSETitleGenerated) => void;
-  onDone?: () => void;
+  onDone?: (data: SSEStreamDone) => void;
+  onStreamError?: (data: SSEStreamError) => void;
   onError?: (error: Error) => void;
 }
 
@@ -40,20 +44,21 @@ const EVENT_MAP: Record<string, keyof SSEHandlers> = {
   'conversation.created': 'onConversationCreated',
   'message.persisted': 'onMessagePersisted',
   'message.created': 'onMessageCreated',
-  'text.delta': 'onTextDelta',
+  'message.text.delta': 'onTextDelta',
   'tool.call': 'onToolCall',
   'tool.result': 'onToolResult',
-  'extracted_info': 'onExtractedInfo',
-  'phase_change': 'onPhaseChange',
-  'citation': 'onCitation',
-  'red_flag': 'onRedFlag',
+  'state.extracted_info.upsert': 'onExtractedInfo',
+  'state.phase.changed': 'onPhaseChange',
+  'source.citation.added': 'onCitation',
+  'safety.red_flag.detected': 'onRedFlag',
   'message.completed': 'onMessageCompleted',
   'message.failed': 'onMessageFailed',
   'title.generated': 'onTitleGenerated',
-  'done': 'onDone',
+  'stream.done': 'onDone',
+  'stream.error': 'onStreamError',
 };
 
-type HandlerFn = (data: unknown) => void;
+type HandlerFn = (data: StreamEvent) => void;
 
 export function processSSELine(
   line: string,
@@ -71,11 +76,13 @@ export function processSSELine(
     const dataStr = trimmed.slice(6);
     try {
       const data = JSON.parse(dataStr);
-      const handlerKey = EVENT_MAP[state.currentEvent];
+      const event = data as StreamEvent;
+      const eventType = event.type || state.currentEvent;
+      const handlerKey = EVENT_MAP[eventType];
       if (handlerKey) {
         const handler = handlers[handlerKey];
         if (handler) {
-          (handler as HandlerFn)(handlerKey === 'onDone' ? undefined : data);
+          (handler as HandlerFn)(event);
         }
       }
     } catch {

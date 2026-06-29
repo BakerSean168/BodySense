@@ -27,6 +27,53 @@ interface AuthState {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
+// Lock to prevent concurrent refresh token requests.
+// Without this, two concurrent 401s would both call /refresh,
+// and the second one would fail (token already consumed), logging the user out.
+let refreshPromise: Promise<boolean> | null = null;
+
+// Extracted refresh logic — called only through the dedup lock above.
+async function doRefresh(
+  get: () => AuthState,
+  set: (partial: Partial<AuthState>) => void,
+): Promise<boolean> {
+  const { refreshToken } = get();
+
+  if (!refreshToken) {
+    return false;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+
+    if (!response.ok) {
+      // Refresh token invalid — clean up auth state
+      set({
+        user: null,
+        accessToken: null,
+        refreshToken: null,
+        isAuthenticated: false,
+      });
+      return false;
+    }
+
+    const data = await response.json();
+
+    set({
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+    });
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -141,40 +188,16 @@ export const useAuthStore = create<AuthState>()(
       },
 
       refreshAccessToken: async () => {
-        const { refreshToken } = get();
+        // Deduplicate concurrent refresh calls — only one in-flight at a time.
+        // Without this, two concurrent 401s would both call /refresh,
+        // and the second one would fail (token already consumed), logging the user out.
+        if (refreshPromise) return refreshPromise;
 
-        if (!refreshToken) {
-          return false;
-        }
-
+        refreshPromise = doRefresh(get, set);
         try {
-          const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refresh_token: refreshToken }),
-          });
-
-          if (!response.ok) {
-            // Refresh token invalid, logout
-            set({
-              user: null,
-              accessToken: null,
-              refreshToken: null,
-              isAuthenticated: false,
-            });
-            return false;
-          }
-
-          const data = await response.json();
-
-          set({
-            accessToken: data.access_token,
-            refreshToken: data.refresh_token,
-          });
-
-          return true;
-        } catch {
-          return false;
+          return await refreshPromise;
+        } finally {
+          refreshPromise = null;
         }
       },
 

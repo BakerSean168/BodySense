@@ -102,13 +102,26 @@ export const trainingApi = {
     planId: string,
     notes: string,
     exercises: TrainingLog['exercises'],
-  ): Promise<void> => {
+  ): Promise<{ message: string; has_proposal: boolean; proposal?: TrainingReassessmentResult }> => {
     const response = await authFetch(`/api/v1/training/${planId}/log`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ notes, exercises }),
     });
     if (!response.ok) throw new Error('Failed to update log');
+    return response.json();
+  },
+
+  updatePlanPhases: async (
+    planId: string,
+    phases: TrainingPhase[],
+  ): Promise<void> => {
+    const response = await authFetch(`/api/v1/training/${planId}/phases`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phases }),
+    });
+    if (!response.ok) throw new Error('Failed to update plan phases');
   },
 
   getProgress: async (planId: string): Promise<TrainingProgress> => {
