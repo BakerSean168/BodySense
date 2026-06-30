@@ -17,8 +17,10 @@ type KnowledgePublication struct {
 	PublishedAt      time.Time      `gorm:"not null;default:now()" json:"published_at"`
 	PublishedBy      string         `gorm:"type:text" json:"published_by,omitempty"`
 	CreatedBy        string         `gorm:"type:text" json:"created_by,omitempty"`
-	Status           string         `gorm:"type:varchar(30);not null;default:'published';index" json:"status"`
+	Status           string         `gorm:"type:varchar(30);not null;default:'draft';index" json:"status"`
 	Metadata         datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"metadata"`
+	CreatedAt        time.Time      `gorm:"not null;default:now()" json:"created_at"`
+	UpdatedAt        time.Time      `gorm:"not null;default:now()" json:"updated_at"`
 }
 
 // TableName specifies the table name for GORM.
