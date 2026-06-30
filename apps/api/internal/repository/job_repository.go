@@ -37,6 +37,32 @@ func (r *JobRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.Job, 
 	return &job, nil
 }
 
+// GetByIDForUser retrieves a job by ID, scoped to a user for authorization.
+func (r *JobRepository) GetByIDForUser(ctx context.Context, id, userID uuid.UUID) (*model.Job, error) {
+	var job model.Job
+	err := r.db.WithContext(ctx).Where("id = ? AND user_id = ?", id, userID).First(&job).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &job, nil
+}
+
+// GetByIdempotencyKey retrieves a job by its idempotency key.
+func (r *JobRepository) GetByIdempotencyKey(ctx context.Context, key string) (*model.Job, error) {
+	var job model.Job
+	err := r.db.WithContext(ctx).Where("idempotency_key = ?", key).First(&job).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &job, nil
+}
+
 // UpdateStatus updates the status of a job with optional result/error.
 func (r *JobRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status string, result, errData any) error {
 	now := time.Now()

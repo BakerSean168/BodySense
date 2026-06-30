@@ -19,9 +19,13 @@ type Job struct {
 	Progress       datatypes.JSON `gorm:"type:jsonb" json:"progress,omitempty"`
 	Result         datatypes.JSON `gorm:"type:jsonb" json:"result,omitempty"`
 	Error          datatypes.JSON `gorm:"type:jsonb" json:"error,omitempty"`
+	IdempotencyKey *string        `gorm:"type:text;uniqueIndex" json:"idempotency_key,omitempty"`
+	Attempts       int            `gorm:"not null;default:0" json:"attempts"`
+	MaxAttempts    int            `gorm:"not null;default:1" json:"max_attempts"`
 	CreatedAt      time.Time      `gorm:"not null;default:now()" json:"created_at"`
 	StartedAt      *time.Time     `json:"started_at,omitempty"`
 	FinishedAt     *time.Time     `json:"finished_at,omitempty"`
+	UpdatedAt      time.Time      `gorm:"not null;default:now()" json:"updated_at"`
 	Metadata       datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"metadata"`
 }
 

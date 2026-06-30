@@ -14,11 +14,13 @@ import (
 
 // Legal job status transitions.
 var jobTransitions = map[string][]string{
-	"pending":   {"running", "cancelled"},
-	"running":   {"succeeded", "failed", "cancelled"},
-	"succeeded": {},
-	"failed":    {},
-	"cancelled": {},
+	"pending":      {"running", "cancelled"},
+	"running":      {"succeeded", "failed", "cancelled", "waiting_user"},
+	"waiting_user": {"running", "cancelled"},
+	"succeeded":    {},
+	"failed":       {},
+	"cancelled":    {},
+	"timed_out":    {},
 }
 
 // JobRuntime manages durable job lifecycle.
@@ -96,6 +98,47 @@ func (r *JobRuntime) TransitionTo(
 // GetJob retrieves a job by ID.
 func (r *JobRuntime) GetJob(ctx context.Context, jobID uuid.UUID) (*model.Job, error) {
 	return r.repo.GetByID(ctx, jobID)
+}
+
+// GetJobForUser retrieves a job by ID, scoped to a user for authorization.
+func (r *JobRuntime) GetJobForUser(ctx context.Context, jobID, userID uuid.UUID) (*model.Job, error) {
+	return r.repo.GetByIDForUser(ctx, jobID, userID)
+}
+
+// CreateJobWithIdempotency creates a job with an idempotency key.
+// If a job with the same key already exists, returns the existing job (idempotent hit).
+func (r *JobRuntime) CreateJobWithIdempotency(
+	ctx context.Context,
+	userID uuid.UUID,
+	jobType string,
+	input datatypes.JSON,
+	idempotencyKey string,
+	runID, conversationID *uuid.UUID,
+) (*model.Job, bool, error) {
+	// Check for existing job with same idempotency key
+	existing, err := r.repo.GetByIdempotencyKey(ctx, idempotencyKey)
+	if err != nil {
+		return nil, false, fmt.Errorf("check idempotency: %w", err)
+	}
+	if existing != nil {
+		return existing, true, nil // idempotent hit
+	}
+
+	job := &model.Job{
+		RunID:          runID,
+		ConversationID: conversationID,
+		UserID:         userID,
+		JobType:        jobType,
+		Status:         "pending",
+		Input:          input,
+		IdempotencyKey: &idempotencyKey,
+	}
+	if err := r.repo.Create(ctx, job); err != nil {
+		return nil, false, fmt.Errorf("create job: %w", err)
+	}
+
+	r.appendEvent(ctx, job.ID, "job.created", map[string]any{"job_type": jobType})
+	return job, false, nil
 }
 
 func (r *JobRuntime) appendEvent(ctx context.Context, jobID uuid.UUID, eventType string, payload any) {

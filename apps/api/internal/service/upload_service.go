@@ -254,22 +254,21 @@ func (s *UploadService) executeOCRCall(filePath, mimeType string) ([]byte, error
 func (s *UploadService) processOCRWithJob(uploadID, userID uuid.UUID, filePath string, mimeType string) {
 	ctx := context.Background()
 
-	// Idempotency: check if OCR is already in progress or completed for this upload
-	upload, err := s.uploadRepo.GetByID(ctx, uploadID)
-	if err == nil && upload != nil && (upload.OCRStatus == "processing" || upload.OCRStatus == "completed") {
-		log.Printf("OCR already %s for upload %s, skipping", upload.OCRStatus, uploadID)
-		return
-	}
-
-	// Create a durable OCR job
+	// Idempotency: use DB-level dedup via idempotency key
+	idempotencyKey := fmt.Sprintf("upload_ocr:%s", uploadID.String())
 	inputJSON, _ := json.Marshal(map[string]any{
 		"upload_id": uploadID.String(),
 		"file_path": filePath,
 		"mime_type": mimeType,
 	})
-	job, err := s.jobRuntime.CreateJob(ctx, userID, "ocr", inputJSON, nil, nil)
+
+	job, existed, err := s.jobRuntime.CreateJobWithIdempotency(ctx, userID, "upload.ocr_extract", inputJSON, idempotencyKey, nil, nil)
 	if err != nil {
 		log.Printf("failed to create OCR job for upload %s: %v", uploadID, err)
+		return
+	}
+	if existed {
+		log.Printf("OCR job already exists for upload %s (job %s, status %s), skipping", uploadID, job.ID, job.Status)
 		return
 	}
 

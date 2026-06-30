@@ -54,3 +54,28 @@ func TestJobTransitions_PendingHasRunningAndCancelled(t *testing.T) {
 		t.Error("pending should allow transition to cancelled")
 	}
 }
+
+func TestJobTransitions_WaitingUserCanResume(t *testing.T) {
+	allowed := jobTransitions["waiting_user"]
+	has := map[string]bool{}
+	for _, s := range allowed {
+		has[s] = true
+	}
+	if !has["running"] {
+		t.Error("waiting_user should allow transition to running")
+	}
+	if !has["cancelled"] {
+		t.Error("waiting_user should allow transition to cancelled")
+	}
+}
+
+func TestJobTransitions_RunningCanWaitUser(t *testing.T) {
+	allowed := jobTransitions["running"]
+	has := map[string]bool{}
+	for _, s := range allowed {
+		has[s] = true
+	}
+	if !has["waiting_user"] {
+		t.Error("running should allow transition to waiting_user")
+	}
+}
