@@ -5,18 +5,24 @@ import (
 	"log"
 
 	"github.com/bodysense/api/internal/model"
-	"github.com/bodysense/api/internal/repository"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 )
 
+// AgentToolCallRepo defines the repository interface for tool call persistence.
+type AgentToolCallRepo interface {
+	UpsertStarted(ctx context.Context, tc *model.AgentToolCall) error
+	MarkSucceeded(ctx context.Context, runID uuid.UUID, toolCallID string, result any) error
+	MarkFailed(ctx context.Context, runID uuid.UUID, toolCallID string, errData any) error
+}
+
 // AgentToolService handles tool call audit persistence.
 type AgentToolService struct {
-	repo *repository.AgentToolCallRepository
+	repo AgentToolCallRepo
 }
 
 // NewAgentToolService creates a new AgentToolService.
-func NewAgentToolService(repo *repository.AgentToolCallRepository) *AgentToolService {
+func NewAgentToolService(repo AgentToolCallRepo) *AgentToolService {
 	return &AgentToolService{repo: repo}
 }
 

@@ -5,18 +5,22 @@ import (
 	"log"
 
 	"github.com/bodysense/api/internal/model"
-	"github.com/bodysense/api/internal/repository"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 )
 
+// OutputReviewRepo defines the repository interface for review persistence.
+type OutputReviewRepo interface {
+	Create(ctx context.Context, review *model.AIOutputReview) error
+}
+
 // OutputReviewService handles AI output governance persistence.
 type OutputReviewService struct {
-	repo *repository.AIOutputReviewRepository
+	repo OutputReviewRepo
 }
 
 // NewOutputReviewService creates a new OutputReviewService.
-func NewOutputReviewService(repo *repository.AIOutputReviewRepository) *OutputReviewService {
+func NewOutputReviewService(repo OutputReviewRepo) *OutputReviewService {
 	return &OutputReviewService{repo: repo}
 }
 

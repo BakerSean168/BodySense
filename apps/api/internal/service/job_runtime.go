@@ -15,7 +15,7 @@ import (
 // Legal job status transitions.
 var jobTransitions = map[string][]string{
 	"pending":      {"running", "cancelled"},
-	"running":      {"succeeded", "failed", "cancelled", "waiting_user"},
+	"running":      {"succeeded", "failed", "cancelled", "waiting_user", "timed_out"},
 	"waiting_user": {"running", "cancelled"},
 	"succeeded":    {},
 	"failed":       {},

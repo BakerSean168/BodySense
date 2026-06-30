@@ -128,6 +128,7 @@ function ChatContent({ pendingInteraction, onInteractionSubmit }: ChatContentPro
   const [citations, setCitations] = useState<Citation[]>([]);
   const [knowledgeGaps, setKnowledgeGaps] = useState<string[]>([]);
   const [isSubmittingInteraction, setIsSubmittingInteraction] = useState(false);
+  const [interactionError, setInteractionError] = useState<string | null>(null);
 
   // Extract citations, red flags, and knowledge gaps from thread messages.
   // Uses functional setState with shallow comparison to avoid unnecessary
@@ -229,6 +230,7 @@ function ChatContent({ pendingInteraction, onInteractionSubmit }: ChatContentPro
   const handleInteractionAnswer = useCallback(async (answer: unknown) => {
     if (!onInteractionSubmit) return;
     setIsSubmittingInteraction(true);
+    setInteractionError(null);
     try {
       const answerText = await onInteractionSubmit(answer);
       // After resume, send the answer as a new chat message to continue the AI flow
@@ -236,6 +238,8 @@ function ChatContent({ pendingInteraction, onInteractionSubmit }: ChatContentPro
         composerRuntime.setText(answerText);
         composerRuntime.send();
       }
+    } catch (err) {
+      setInteractionError(err instanceof Error ? err.message : '提交失败，请重试');
     } finally {
       setIsSubmittingInteraction(false);
     }
@@ -312,6 +316,8 @@ function ChatContent({ pendingInteraction, onInteractionSubmit }: ChatContentPro
             question={pendingInteraction.question}
             onSubmit={handleInteractionAnswer}
             isSubmitting={isSubmittingInteraction}
+            error={interactionError}
+            onRetry={() => setInteractionError(null)}
           />
         )}
       </ThreadPrimitive.Viewport>

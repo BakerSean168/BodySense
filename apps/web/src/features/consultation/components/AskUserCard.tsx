@@ -5,13 +5,15 @@ interface AskUserCardProps {
   question: AskUserQuestion;
   onSubmit: (answer: unknown) => void;
   isSubmitting?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
 }
 
 /**
  * Renders a pending ask_user interaction card.
  * Supports text, single_choice, multi_choice, number, and date answer types.
  */
-export function AskUserCard({ question, onSubmit, isSubmitting = false }: AskUserCardProps) {
+export function AskUserCard({ question, onSubmit, isSubmitting = false, error, onRetry }: AskUserCardProps) {
   const [textAnswer, setTextAnswer] = useState('');
   const [selectedSingle, setSelectedSingle] = useState<string>('');
   const [selectedMulti, setSelectedMulti] = useState<string[]>([]);
@@ -19,19 +21,19 @@ export function AskUserCard({ question, onSubmit, isSubmitting = false }: AskUse
   const handleSubmit = () => {
     switch (question.answer_type) {
       case 'text':
-        if (textAnswer.trim()) onSubmit(textAnswer.trim());
+        if (textAnswer.trim()) onSubmit({ text: textAnswer.trim() });
         break;
       case 'single_choice':
-        if (selectedSingle) onSubmit(selectedSingle);
+        if (selectedSingle) onSubmit({ text: selectedSingle, selected: [selectedSingle] });
         break;
       case 'multi_choice':
-        if (selectedMulti.length > 0) onSubmit(selectedMulti);
+        if (selectedMulti.length > 0) onSubmit({ text: selectedMulti.join(', '), selected: selectedMulti });
         break;
       case 'number':
-        if (textAnswer.trim()) onSubmit(Number(textAnswer.trim()));
+        if (textAnswer.trim()) onSubmit({ text: textAnswer.trim(), value: Number(textAnswer.trim()) });
         break;
       case 'date':
-        if (textAnswer.trim()) onSubmit(textAnswer.trim());
+        if (textAnswer.trim()) onSubmit({ text: textAnswer.trim() });
         break;
     }
   };
@@ -42,6 +44,21 @@ export function AskUserCard({ question, onSubmit, isSubmitting = false }: AskUse
 
       {question.context && (
         <p className="text-xs text-blue-700 mb-3">{question.context}</p>
+      )}
+
+      {/* Error state */}
+      {error && (
+        <div className="rounded bg-red-50 border border-red-200 p-3 mb-3">
+          <p className="text-sm text-red-700">提交失败：{error}</p>
+          {onRetry && (
+            <button
+              className="mt-2 text-sm text-red-600 underline hover:text-red-800"
+              onClick={onRetry}
+            >
+              重试
+            </button>
+          )}
+        </div>
       )}
 
       {/* Input by answer type */}
