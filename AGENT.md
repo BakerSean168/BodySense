@@ -16,7 +16,7 @@
 - **前端**：React 19 + TypeScript 6 + Vite 8 + shadcn/ui + Tailwind CSS 4
 - **后端**：Go 1.26 + Gin 1.12 + GORM
 - **AI 服务**：Python 3.13 + FastAPI + LangChain v1 + uv
-- **数据库**：PostgreSQL 16 (pgvector) + Redis 7
+- **数据库**：PostgreSQL 18 (pgvector) + Redis 7
 - **部署**：Docker Compose + Caddy + Watchtower
 - **Monorepo**：Nx workspace + pnpm 11
 

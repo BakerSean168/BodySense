@@ -15,7 +15,7 @@
 - **Frontend**: React 19 + TypeScript 6 + Vite 8 + shadcn/ui + Tailwind CSS 4
 - **Backend**: Go 1.26 + Gin 1.12 + GORM
 - **AI Service**: Python 3.13 + FastAPI + LangChain v1
-- **Database**: PostgreSQL 16 (pgvector) + Redis 7
+- **Database**: PostgreSQL 18 (pgvector) + Redis 7
 - **Monorepo**: Nx + pnpm 11
 - **Deployment**: Docker Compose + Caddy + Watchtower
 
