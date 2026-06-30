@@ -21,7 +21,8 @@
         "run_id": { "type": ["string", "null"] },
         "turn_id": { "type": ["string", "null"] },
         "message_id": { "type": ["string", "null"] },
-        "tool_call_id": { "type": ["string", "null"] }
+        "tool_call_id": { "type": ["string", "null"] },
+        "interaction_id": { "type": ["string", "null"] }
       }
     },
     "payload": { "type": "object" }
