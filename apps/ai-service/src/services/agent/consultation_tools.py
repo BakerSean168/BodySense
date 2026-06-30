@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from .tool_executor import ToolExecutor
 from .tool_registry import ToolRegistry
+from .tools.ask_user import make_ask_user_tool
 from .tools.extract_symptom_info import make_extract_symptom_info_tool
 from .tools.search_knowledge import make_search_knowledge_tool
 
@@ -18,6 +19,7 @@ def get_consultation_registry() -> ToolRegistry:
         _default_registry = ToolRegistry()
         _default_registry.register(make_search_knowledge_tool())
         _default_registry.register(make_extract_symptom_info_tool())
+        _default_registry.register(make_ask_user_tool())
     return _default_registry
 
 

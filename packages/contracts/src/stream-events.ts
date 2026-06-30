@@ -14,6 +14,7 @@ export interface StreamEventIds {
   turn_id?: string | null;
   message_id?: string | null;
   tool_call_id?: string | null;
+  interaction_id?: string | null;
 }
 
 export interface StreamEventBase<

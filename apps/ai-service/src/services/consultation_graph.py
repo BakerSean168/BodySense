@@ -97,6 +97,9 @@ class ConsultationState(TypedDict, total=False):
     diagnosis_result: dict[str, Any] | None
     treatment_result: dict[str, Any] | None
 
+    # --- Interruption state ---
+    interrupted: bool
+
 
 # ---------------------------------------------------------------------------
 # Helper functions (extracted from ChatService for reuse by graph nodes)
@@ -490,6 +493,34 @@ async def generate_response(
                     tool_call_id=tc_id,
                 ))
 
+            elif tc_name == "ask_user":
+                # HITL interrupt: execute tool, emit interaction event, stop graph
+                tool_result = await executor.execute(tc_id, tc_name, tc_args)
+                _flush_text_buf()
+
+                if tool_result.status.value == "interrupted":
+                    question_data = tool_result.content or {}
+                    writer({
+                        "type": "state.interaction.required",
+                        "interaction_id": tc_id,
+                        "question": question_data,
+                    })
+                    # Return immediately — graph stops here
+                    return {
+                        "accumulated_text": accumulated_text,
+                        "extracted_symptoms": new_symptoms,
+                        "llm_available": True,
+                        "interrupted": True,
+                    }
+                else:
+                    # ask_user validation failed — treat as normal tool error
+                    writer({
+                        "type": "tool_result",
+                        "id": tc_id,
+                        "tool": tc_name,
+                        "result": {"status": "error", "error": tool_result.error},
+                    })
+
         # If we had tool calls, append assistant message with tool calls
         # and tool results to messages for the next round
         if tool_messages:
@@ -523,6 +554,9 @@ async def generate_response(
 
 async def decide_phase(state: ConsultationState, *, writer: StreamWriter) -> dict[str, Any]:
     """Determine the current phase and emit phase_change event."""
+    if state.get("interrupted"):
+        return {}
+
     extracted_symptoms = state.get("extracted_symptoms", [])
     new_phase = _determine_phase(extracted_symptoms)
     current_phase = state.get("phase", "collecting")
@@ -540,6 +574,10 @@ async def decide_phase(state: ConsultationState, *, writer: StreamWriter) -> dic
 
 async def emit_done(state: ConsultationState, *, writer: StreamWriter) -> dict[str, Any]:
     """Terminal node: emit the __done__ event with final state snapshot."""
+    if state.get("interrupted"):
+        # Don't emit __done__ for interrupted runs — the stream ends here
+        return {}
+
     writer({
         "type": "__done__",
         "session_id": state.get("session_id", ""),

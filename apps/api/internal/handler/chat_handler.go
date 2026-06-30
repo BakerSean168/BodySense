@@ -359,6 +359,9 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 					log.Printf("failed to mark run %s as waiting_user: %v", run.ID, err)
 				}
 
+				// Mark assistant message as aborted (will be completed on resume)
+				_ = h.messageService.UpdateMessageStatus(c.Request.Context(), assistantMsg.ID, conversationID, "aborted")
+
 				// End the stream — the run is paused until user answers
 				_ = sw.SendNew(c.Request.Context(), "stream", "stream.done", baseIDs, gin.H{}, "")
 				h.clearActiveRun(c.Request.Context(), conversationID, uid)

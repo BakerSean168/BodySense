@@ -178,6 +178,18 @@ def _map_graph_event(
                 "flags": event_data.get("flags", []),
             },
         )
+    if event_type == "state.interaction.required":
+        return factory.next(
+            channel="state",
+            event_type="state.interaction.required",
+            payload={
+                "interaction_id": event_data.get("interaction_id", ""),
+                "question": event_data.get("question", {}),
+            },
+            ids=StreamEventIds(
+                interaction_id=event_data.get("interaction_id") or None,
+            ),
+        )
     if event_type == "usage":
         return factory.next(
             channel="usage",
