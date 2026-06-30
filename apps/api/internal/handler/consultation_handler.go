@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/service"
@@ -169,10 +171,30 @@ func (h *ConsultationHandler) ResumeInteraction(c *gin.Context) {
 		return
 	}
 
-	// Resume the run (waiting_user -> running)
-	if resumeErr := h.runService.ResumeRunning(c.Request.Context(), interaction.RunID); resumeErr != nil {
-		log.Printf("failed to resume run %s: %v", interaction.RunID, resumeErr)
+	// Do NOT transition run to "running" here — the frontend will send a new
+	// chat message which creates a fresh run. This avoids a broken "running" run
+	// with no AI work behind it.
+
+	// Extract answer text for the frontend to include in the follow-up message
+	var answerText string
+	var rawAnswer map[string]any
+	if jsonErr := json.Unmarshal(req.Answer, &rawAnswer); jsonErr == nil {
+		if t, ok := rawAnswer["text"].(string); ok {
+			answerText = t
+		} else if selected, ok := rawAnswer["selected"].([]any); ok {
+			parts := make([]string, 0, len(selected))
+			for _, s := range selected {
+				if str, ok := s.(string); ok {
+					parts = append(parts, str)
+				}
+			}
+			answerText = strings.Join(parts, ", ")
+		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "interaction resumed"})
+	c.JSON(http.StatusOK, gin.H{
+		"action":      "send_message",
+		"answer_text": answerText,
+		"message":     "interaction answered — send a new chat message to continue",
+	})
 }

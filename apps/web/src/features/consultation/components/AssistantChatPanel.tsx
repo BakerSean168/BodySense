@@ -88,13 +88,15 @@ export function AssistantChatPanel({
 
   const { runtime } = useAssistantChatRuntime(conversationId, initialMessages, adapterOptions);
 
-  const handleInteractionSubmit = useCallback(async (answer: unknown) => {
-    if (!pendingInteraction || !conversationId) return;
+  const handleInteractionSubmit = useCallback(async (answer: unknown): Promise<string | undefined> => {
+    if (!pendingInteraction || !conversationId) return undefined;
     try {
-      await consultationApi.resumeInteraction(conversationId, pendingInteraction.id, answer);
+      const result = await consultationApi.resumeInteraction(conversationId, pendingInteraction.id, answer);
       setPendingInteraction(null);
+      return result.answer_text;
     } catch (err) {
       console.error('Failed to resume interaction:', err);
+      return undefined;
     }
   }, [pendingInteraction, conversationId]);
 
@@ -110,7 +112,7 @@ export function AssistantChatPanel({
 
 interface ChatContentProps {
   pendingInteraction?: PendingInteraction | null;
-  onInteractionSubmit?: (answer: unknown) => void;
+  onInteractionSubmit?: (answer: unknown) => Promise<string | undefined>;
 }
 
 /**
@@ -228,11 +230,16 @@ function ChatContent({ pendingInteraction, onInteractionSubmit }: ChatContentPro
     if (!onInteractionSubmit) return;
     setIsSubmittingInteraction(true);
     try {
-      await onInteractionSubmit(answer);
+      const answerText = await onInteractionSubmit(answer);
+      // After resume, send the answer as a new chat message to continue the AI flow
+      if (answerText) {
+        composerRuntime.setText(answerText);
+        composerRuntime.send();
+      }
     } finally {
       setIsSubmittingInteraction(false);
     }
-  }, [onInteractionSubmit]);
+  }, [onInteractionSubmit, composerRuntime]);
 
   return (
     <ThreadPrimitive.Root className="flex flex-col h-full">
@@ -354,7 +361,7 @@ function CustomAssistantMessage() {
   const message = useMessage();
   const isMessageEmpty = message.content.length === 0 || 
     (message.content.length === 1 && message.content[0].type === 'text' && !message.content[0].text);
-  const isMessageRunning = message.status.type === 'running';
+  const isMessageRunning = message.status?.type === 'running';
 
   return (
     <MessagePrimitive.Root className="flex justify-start">
