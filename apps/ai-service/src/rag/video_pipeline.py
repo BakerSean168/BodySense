@@ -70,7 +70,7 @@ class VideoIngestionRequest:
     force_transcribe: bool = False
     export_clips: bool = True
     splitter_provider: str = "heuristic"  # "heuristic" | "llm"
-    ai_refine: bool = False               # 是否启用 AI 精修
+    ai_refine: bool = False  # 是否启用 AI 精修
 
 
 class VideoIngestionPipeline:
@@ -196,7 +196,11 @@ class VideoIngestionPipeline:
             _extract_audio(video_path, audio_path)
 
             # Create ASR provider and transcribe
-            provider_name = request.transcript_provider.strip().lower() if request.transcript_provider else None
+            provider_name = (
+                request.transcript_provider.strip().lower()
+                if request.transcript_provider
+                else None
+            )
             provider = get_asr_provider(provider=provider_name, data_root=self.data_root)
 
             # For local providers, pass model name if specified

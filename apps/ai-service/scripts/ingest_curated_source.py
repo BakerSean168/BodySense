@@ -18,7 +18,11 @@ except ModuleNotFoundError:
     load_dotenv = None
 
 if load_dotenv:
-    for _env in [PROJECT_ROOT / ".env", PROJECT_ROOT.parent / ".env", PROJECT_ROOT.parent.parent / ".env"]:
+    for _env in [
+        PROJECT_ROOT / ".env",
+        PROJECT_ROOT.parent / ".env",
+        PROJECT_ROOT.parent.parent / ".env",
+    ]:
         if _env.exists():
             load_dotenv(_env, override=False)
             break

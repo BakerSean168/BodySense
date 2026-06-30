@@ -7,7 +7,6 @@ Long audio is split into chunks using ffmpeg for processing.
 
 from __future__ import annotations
 
-import asyncio
 import base64
 import json
 import logging
@@ -79,7 +78,11 @@ class MiMoOmniASRProvider(ASRProvider):
             offset_sec = i * _CHUNK_DURATION_SEC
             try:
                 chunk_bytes = chunk_path.read_bytes()
-                segments = await self._transcribe_chunk(chunk_bytes, language, offset_sec=offset_sec)
+                segments = await self._transcribe_chunk(
+                    chunk_bytes,
+                    language,
+                    offset_sec=offset_sec,
+                )
                 for seg in segments:
                     all_segments.append(
                         TranscriptSegment(
@@ -112,7 +115,6 @@ class MiMoOmniASRProvider(ASRProvider):
     ) -> list[TranscriptSegment]:
         """Transcribe a single audio chunk via chat completions."""
         audio_b64 = base64.b64encode(chunk_bytes).decode()
-        lang_name = "中文" if language == "zh" else "English"
 
         # MiMo gateway auto-injects ASR prompt when it detects audio-only input.
         # DO NOT include text parts — the gateway rejects them with:
