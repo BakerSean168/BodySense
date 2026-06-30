@@ -36,10 +36,10 @@
 ## P0 Blocker List
 
 1. ~~01b StreamRuntime~~ — **FALSE POSITIVE** (see repair report below; module exists and tests pass)
-2. 07a Knowledge Lifecycle Schema — `lifecycle_status` column missing, FK cardinality inverted
-3. 03b/03c ask_user E2E — path broken, Python not registered, no resume route
-4. 05a/05b AI Output Governance — FaithfulnessPolicy missing, service unwired
-5. 04a/04b Job Runtime — idempotency TOCTOU race, missing fields
+2. ~~07a Knowledge Lifecycle Schema~~ — **FIXED** (commit `63043b0`): added `lifecycle_status`, corrected FK direction, fixed status default, added timestamps
+3. ~~03b/03c ask_user E2E~~ — **FIXED** (commits `4624443` + `804808e`): registered ask_user (gated by ASK_USER_ENABLED), graph handles interrupt, resume returns `action:send_message`, frontend sends follow-up message, TS interaction_id, assistant msg status on interrupt
+4. ~~05a/05b AI Output Governance~~ — **FIXED** (commit `afdf961`): added FaithfulnessPolicy, GovernanceContext, validate_treatment, wired OutputReviewService observe-only, added user_id migration
+5. ~~04a/04b Job Runtime~~ — **FIXED** (commit `9dfc0a3`): added idempotency_key/attempts/max_attempts/updated_at, DB-level OCR dedup, waiting_user/timed_out statuses, GetByIDForUser
 6. Test gaps across multiple phases
 
 ## Out of Scope (this round)

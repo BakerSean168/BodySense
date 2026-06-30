@@ -7,6 +7,26 @@
 
 ---
 
+## Implementation Status
+
+**当前状态**：部分实现（~40%）
+
+| 模块 | 状态 | 说明 |
+|---|---|---|
+| ToolRegistry / ToolExecutor 骨架 | 部分实现 | `services/agent/` 包已创建，registry 和 executor 基础结构存在。Phase 02a 部分完成。 |
+| search_knowledge 迁移到 ToolRuntime | ✅ 已完成 | 保留 RAG 行为、citation 事件、knowledge_gap 事件、query dedupe。Phase 02b 完成。 |
+| extract_symptom_info 迁移到 ToolRuntime | ✅ 已完成 | 保留 dedupe-by-body-part、extracted_info 事件、阶段转换逻辑。Phase 02c 完成。 |
+| agent_tool_calls 审计持久化 | 未实现 | Go 侧 migration、model、repository、service。Phase 02d 未完成。 |
+| ask_user 工具契约 | ✅ 已完成 | Python ask_user 定义、feature flag、policy text。Phase 03a 完成。 |
+| agent_interactions + Resume API | ✅ 已完成 | Go 侧持久化和 resume 端点。Phase 03b 完成。 |
+| AskUserCard UI | 未实现 | 前端组件。Phase 03c 未完成。 |
+| AgentOrchestrator 完整编排 | 骨架存在 | `services/agent/orchestrator.py` 已创建，需扩展。 |
+| confirm_action / finish_consultation 工具 | 未实现 | 后续 Phase。 |
+
+**相关 Phase**：02a, 02b, 02c, 02d, 03a, 03b, 03c → 归档于 `docs/plan/archive/implementation/`
+
+---
+
 ## 1. 背景
 
 BodySense 的咨询工作台已经具备以下基础：

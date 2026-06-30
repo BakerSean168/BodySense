@@ -7,6 +7,23 @@
 
 ---
 
+## Implementation Status
+
+**当前状态**：部分实现（~50%）
+
+| 模块 | 状态 | 说明 |
+|---|---|---|
+| jobs / job_events 数据库 schema | ✅ 已完成 | 迁移已应用，包含 idempotency_key、attempts、max_attempts。Phase 04a 完成。 |
+| Go JobRuntime 模块 | ✅ 已完成 | 状态机（pending/running/waiting_user/completed/failed/cancelled/timed_out）、合法转换测试。Phase 04a 完成。 |
+| OCR 迁移到 JobRuntime | ✅ 已完成 | UploadService.processOCR 改用 JobRuntime-backed OCR job，upload_ocr:<upload_id> 幂等键。Phase 04b 完成。 |
+| Assessment / Training / Title 生成迁移 | 未实现 | 当前仍为同步调用 Python AI。 |
+| Python JobWorker 集成 | 未实现 | Python 侧尚未接入 JobRuntime。 |
+| Job SSE 进度事件 | 未实现 | 任务进度推送到前端。 |
+
+**相关 Phase**：04a, 04b → 归档于 `docs/plan/archive/implementation/`
+
+---
+
 ## 1. 背景
 
 BodySense 已经有多类耗时任务：

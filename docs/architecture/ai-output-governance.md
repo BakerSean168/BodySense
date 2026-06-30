@@ -7,6 +7,26 @@
 
 ---
 
+## Implementation Status
+
+**当前状态**：部分实现（~35%）
+
+| 模块 | 状态 | 说明 |
+|---|---|---|
+| AIOutputGuard 骨架 | ✅ 已完成 | Python AIOutputGuard 模块、GovernanceResult 模型（accepted/repaired/degraded/rejected）。Phase 05a 完成。 |
+| FaithfulnessPolicy | ✅ 已完成 | 子字符串匹配实现，已知存在误报风险。 |
+| GovernanceContext 数据类 | ✅ 已完成 | validate_treatment() 方法。 |
+| OutputReviewService Go DI 接入 | ✅ 已完成 | 以 observe-only 模式接入 chat handler。Phase 05b 完成。 |
+| ai_output_reviews 审计表 | ✅ 已完成 | 持久化治理结果，关联 run_id/job_id/conversation_id。Phase 05b 完成。 |
+| Schema / BusinessRule 策略 | 未实现 | 仅有 Safety 和 Faithfulness 策略。 |
+| 非 chat 输出的治理 | 未实现 | 当前仅对 consultation_reply 生效，不覆盖诊断/训练/评估。 |
+| 前端降级展示 | 未实现 | GovernanceResult rejected/degraded 的 UI 反馈。 |
+| RecordReview 去重 | 未实现 | 当前无去重机制。 |
+
+**相关 Phase**：05a, 05b → 归档于 `docs/plan/archive/implementation/`
+
+---
+
 ## 1. 背景
 
 BodySense 的核心价值来自 AI 输出：

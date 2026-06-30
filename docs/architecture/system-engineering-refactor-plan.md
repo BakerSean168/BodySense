@@ -7,6 +7,26 @@
 
 ---
 
+## Implementation Status
+
+**当前状态**：总控计划 — 各子模块部分实现
+
+本文件是七个子架构文档的汇总重构方案。各子模块实现进度如下：
+
+| 子模块 | 架构文档 | 实现进度 | 关键已实现 |
+|---|---|---|---|
+| Context Engineering | [context-engineering-architecture.md](./context-engineering-architecture.md) | ~50% | ask_user 契约、agent_interactions |
+| Agent Tool Calling | [agent-tool-calling-runtime.md](./agent-tool-calling-runtime.md) | ~40% | ToolRegistry 骨架、2 个工具已迁移 |
+| AI Run / Job Runtime | [ai-run-job-runtime.md](./ai-run-job-runtime.md) | ~50% | jobs schema、Go JobRuntime、OCR 迁移 |
+| Stream Event Contract | [stream-event-contract-runtime.md](./stream-event-contract-runtime.md) | ~30% | Go StreamRuntime、StreamEvent v1 |
+| AI Output Governance | [ai-output-governance.md](./ai-output-governance.md) | ~35% | AIOutputGuard 骨架、OutputReviewService |
+| Knowledge Lifecycle | [knowledge-lifecycle-architecture.md](./knowledge-lifecycle-architecture.md) | ~25% | lifecycle schema、publication repo |
+| Health Journey | [health-journey-workflow.md](./health-journey-workflow.md) | 0% | 未开始 |
+
+**未完成事项**汇总在各子文档的 Implementation Status 段中。原始实施计划归档于 `docs/plan/archive/implementation/`。
+
+---
+
 ## 1. 背景
 
 BodySense 当前已经不是单纯的聊天应用，而是由多条 AI 驱动业务链路组成的健康 Agent 系统：

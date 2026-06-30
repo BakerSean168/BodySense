@@ -7,6 +7,22 @@
 
 ---
 
+## Implementation Status
+
+**当前状态**：部分实现（~50%）
+
+| 模块 | 状态 | 说明 |
+|---|---|---|
+| ContextBuilder（Go 侧上下文组装） | 部分实现 | 上下文组装逻辑仍在 ChatHandler 内联，未提取为独立模块。Phase 01a 未完成。 |
+| ask_user 工具契约 | ✅ 已完成 | Python ask_user 工具定义、ToolResult(interrupted)、interaction_id 流转。Phase 03a 完成。 |
+| agent_interactions 持久化 + Resume API | ✅ 已完成 | Go 侧 agent_interactions 表、resume 端点、pending/answered 状态机。Phase 03b 完成。 |
+| AskUserCard UI | 未实现 | 前端 AskUserCard 组件、StreamEventReducer pendingInteractions 扩展。Phase 03c 未完成。 |
+| Go-to-Python Resume 直连 | 未实现 | 当前需前端发新消息触发 resume。 |
+
+**相关 Phase**：01a, 03a, 03b, 03c → 归档于 `docs/plan/archive/implementation/`
+
+---
+
 ## 1. 背景
 
 BodySense 的咨询工作台不是普通聊天应用，而是一个有业务状态的问诊 Agent。系统需要在多轮对话中持续维护：

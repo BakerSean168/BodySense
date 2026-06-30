@@ -7,6 +7,26 @@
 
 ---
 
+## Implementation Status
+
+**当前状态**：部分实现（~30%）
+
+| 模块 | 状态 | 说明 |
+|---|---|---|
+| Go StreamRuntime 模块 | ✅ 已完成 | StreamEvent 验证、ID enrichment、sequence 分配、SSE 写入。Phase 01b 完成（审查误报，模块已存在）。 |
+| SSEWriter | ✅ 已完成 | 独立 SSE 写入器。 |
+| StreamEvent v1 契约 | ✅ 已完成 | packages/contracts 定义，JSON schema 存在。 |
+| interaction_id 扩展 | ✅ 已完成 | StreamEvent ID 中添加 interaction_id。 |
+| StreamEventReducer | 部分实现 | 前端 reducer 基础结构存在，pendingInteractions 扩展未完成。Phase 01c 部分完成。 |
+| 事件命名规范化 | 部分实现 | 部分事件已按规范命名，部分仍为旧格式。 |
+| 事件持久化 / 回放 | 未实现 | replayable event persistence。 |
+| 完整 channel 分类 | 未实现 | message/state/tool/job/debug 等 channel 尚未完全分离。 |
+| 前端事件处理策略 | 未实现 | strict vs. optional vs. idempotent 状态事件策略。 |
+
+**相关 Phase**：01b, 01c → 归档于 `docs/plan/archive/implementation/`
+
+---
+
 ## 1. 背景
 
 BodySense 已经通过 SSE 支撑咨询工作台的流式体验，并且已有共享包：

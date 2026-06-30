@@ -7,6 +7,26 @@
 
 ---
 
+## Implementation Status
+
+**当前状态**：部分实现（~25%）
+
+| 模块 | 状态 | 说明 |
+|---|---|---|
+| lifecycle_status 列 | ✅ 已完成 | knowledge_units 表添加 lifecycle_status 字段。Phase 07a 完成。 |
+| quality_score / content_hash 列 | ✅ 已完成 | knowledge_units 表扩展。Phase 07a 完成。 |
+| license_status 列 | ✅ 已完成 | knowledge_sources 表扩展。Phase 07a 完成。 |
+| knowledge_publications 表 | ✅ 已完成 | 发布批次管理表。Phase 07a 完成。 |
+| KnowledgePublication Repository | ✅ 已完成 | Go 侧 repository 实现。 |
+| KnowledgeSourceRegistry | 未实现 | 知识源注册和管理。 |
+| 发布批次工作流 | 未实现 | 从 reviewed → embedded → published 的自动化流程。 |
+| 质量阈值门控 | 未实现 | 基于 quality_score 的自动发布/拒绝。 |
+| 检索质量评估 | 未实现 | published 知识的检索效果评估。 |
+
+**相关 Phase**：07a → 归档于 `docs/plan/archive/implementation/`
+
+---
+
 ## 1. 背景
 
 BodySense 的 RAG 知识来源主要来自体态、康复、训练相关视频。现有 Python 侧已经有较完整的入库能力：

@@ -7,6 +7,22 @@
 
 ---
 
+## Implementation Status
+
+**当前状态**：未实现（0%）
+
+| 模块 | 状态 | 说明 |
+|---|---|---|
+| HealthJourneyWorkflow 只读聚合 | 未实现 | 从现有表推导用户健康旅程阶段。Phase 06a 未完成。 |
+| health_journeys / health_journey_events 表 | 未实现 | 旅程状态和事件持久化。 |
+| JourneyEvent / JourneyAction 系统 | 未实现 | 旅程事件驱动。 |
+| ContextBuilder 旅程状态注入 | 未实现 | 将旅程阶段注入 prompt。 |
+| ToolRuntime 阶段限制 | 未实现 | 按旅程阶段限制可用工具。 |
+
+**相关 Phase**：06a → 归档于 `docs/plan/archive/implementation/`
+
+---
+
 ## 1. 背景
 
 BodySense 不是一个单点 AI 聊天产品，而是一条健康管理旅程：
