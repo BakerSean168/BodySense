@@ -192,6 +192,24 @@ export const consultationApi = {
       body: JSON.stringify({ confirmedDiagnosis }),
     }).then((res) => parseJson<TreatmentPlan>(res));
   },
+
+  /**
+   * Resume a pending interaction (ask_user).
+   */
+  async resumeInteraction(
+    conversationId: string,
+    interactionId: string,
+    answer: unknown,
+  ): Promise<void> {
+    await authFetch(
+      `${API_BASE}/consultations/${conversationId}/interactions/${interactionId}/resume`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answer }),
+      },
+    ).then((res) => parseJson<void>(res));
+  },
 };
 
 // Re-export domain types for backward compatibility with existing consumers.

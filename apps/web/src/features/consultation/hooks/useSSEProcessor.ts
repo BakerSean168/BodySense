@@ -35,6 +35,8 @@ export interface SSEHandlers {
   onMessageCompleted?: (data: SSEMessageCompleted) => void;
   onMessageFailed?: (data: SSEMessageFailed) => void;
   onTitleGenerated?: (data: SSETitleGenerated) => void;
+  onInteractionRequired?: (data: StreamEvent) => void;
+  onInteractionAnswered?: (data: StreamEvent) => void;
   onDone?: (data: SSEStreamDone) => void;
   onStreamError?: (data: SSEStreamError) => void;
   onError?: (error: Error) => void;
@@ -54,6 +56,8 @@ const EVENT_MAP: Record<string, keyof SSEHandlers> = {
   'message.completed': 'onMessageCompleted',
   'message.failed': 'onMessageFailed',
   'title.generated': 'onTitleGenerated',
+  'state.interaction.required': 'onInteractionRequired',
+  'state.interaction.answered': 'onInteractionAnswered',
   'stream.done': 'onDone',
   'stream.error': 'onStreamError',
 };

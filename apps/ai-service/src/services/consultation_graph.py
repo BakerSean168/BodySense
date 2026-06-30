@@ -18,13 +18,10 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import StreamWriter
 
 from ..ai import AiRequest, AIService
-from ..ai.types import ChatMessage, ToolCall, ToolDefinition
+from ..ai.types import ChatMessage, ToolCall
 from ..models.consultation import ChatContext, ExtractedInfo
-from ..prompts.consultation import (
-    SYMPTOM_EXTRACTION_TOOL,
-    format_profile_context,
-    get_system_prompt,
-)
+from ..prompts.consultation import format_profile_context, get_system_prompt
+from .agent.consultation_tools import get_consultation_executor, get_consultation_registry
 from .agent_workflow import get_agent_workflow
 from .red_flag_detector import get_red_flag_detector
 
@@ -43,31 +40,6 @@ def _get_ai_service() -> AIService:
         _ai_service_instance = AIService()
     return _ai_service_instance
 MAX_TOOL_ROUNDS = 3
-
-# Tool definition for knowledge search (RAG)
-KNOWLEDGE_SEARCH_TOOL = {
-    "name": "search_knowledge",
-    "description": (
-        "从体态健康知识库中搜索相关信息。当需要查找症状定义、自我检测方法、"
-        "改善动作、风险提示、肌肉失衡原因等专业知识时调用此工具。"
-        "搜索结果包含标题、摘要、详细内容和相关动作演示。"
-    ),
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "query": {
-                "type": "string",
-                "description": "搜索查询文本，如：'圆肩 自测' 或 '腰痛 改善动作'",
-            },
-            "top_k": {
-                "type": "integer",
-                "description": "返回结果数量，默认3",
-                "default": 3,
-            },
-        },
-        "required": ["query"],
-    },
-}
 
 
 def _merge_symptoms(
@@ -223,62 +195,6 @@ def _chunk_text(text: str, chunk_size: int = 120) -> list[str]:
     return [text[i : i + chunk_size] for i in range(0, len(text), chunk_size)]
 
 
-def _to_tool_def(tool_dict: dict[str, Any]) -> ToolDefinition:
-    """Convert tool dict to ToolDefinition."""
-    return ToolDefinition(
-        name=tool_dict["name"],
-        description=tool_dict["description"],
-        parameters=tool_dict["parameters"],
-    )
-
-
-async def execute_search_knowledge(arguments: dict[str, Any]) -> tuple[str, bool, list[Any]]:
-    """Execute a knowledge search and return formatted results for the LLM.
-
-    Returns:
-        Tuple of (formatted result text, has_results, raw_search_results).
-        has_results is False when the knowledge base returned no matches.
-        raw_search_results contains the SearchResult objects for citation emission.
-    """
-    from ..rag.knowledge_library import get_knowledge_library
-
-    library = get_knowledge_library()
-    results = await library.search(
-        query=arguments.get("query", ""),
-        top_k=arguments.get("top_k", 3),
-    )
-
-    if not results:
-        return (
-            "【知识库无匹配】未找到与该查询相关的知识库条目。"
-            "请基于你的专业判断回答，并明确标注信息来源为个人建议而非知识库专项指导。"
-            "如用户问题较专业，建议引导用户咨询专业医疗机构。",
-            False,
-            [],
-        )
-
-    parts = []
-    for i, r in enumerate(results[:3], 1):
-        title = r.title or "未知标题"
-        summary = r.summary or ""
-        content = (r.body_markdown or "")[:600]
-        source = r.source_title or ""
-        category = r.category or ""
-
-        part = f"[{i}] {title}"
-        if category:
-            part += f"（分类：{category}）"
-        if summary:
-            part += f"\n摘要：{summary}"
-        if source:
-            part += f"\n来源：{source}"
-        if content:
-            part += f"\n内容：{content}"
-        parts.append(part)
-
-    return "\n\n".join(parts), True, results
-
-
 def _search_results_to_dicts(search_results: list[Any]) -> list[dict[str, Any]]:
     """Convert SearchResult objects to serializable dicts for RAG context."""
     return [
@@ -432,15 +348,10 @@ async def generate_response(
             "extracted_symptoms": [],
         }
 
-    # Build tools
-    tools = [
-        {
-            "name": "extract_symptom_info",
-            "description": SYMPTOM_EXTRACTION_TOOL["description"],
-            "parameters": SYMPTOM_EXTRACTION_TOOL["parameters"],
-        },
-        KNOWLEDGE_SEARCH_TOOL,
-    ]
+    # Build tools from registry
+    registry = get_consultation_registry()
+    executor = get_consultation_executor()
+    provider_tools = registry.to_provider_tools()
 
     # Multi-round tool loop
     messages = build_messages(state)
@@ -464,7 +375,7 @@ async def generate_response(
         async for event in ai.generate_stream(AiRequest(
             use_case="consultation.reply",
             messages=messages,
-            tools=[_to_tool_def(t) for t in tools],
+            tools=provider_tools,
             temperature=0.7,
             max_tokens=2048,
         )):
@@ -512,8 +423,15 @@ async def generate_response(
                 # Deduplicate: same body_part in this response only emits once
                 if body_part and body_part not in seen_body_parts:
                     seen_body_parts.add(body_part)
-                    new_symptoms.append(tc_args)
-                    writer({"type": "extracted_info", "info": tc_args})
+                    # Execute via handler for validation/normalization
+                    tool_result = await executor.execute(tc_id, tc_name, tc_args)
+                    if tool_result.status.value == "success":
+                        normalized = tool_result.content or tc_args
+                        new_symptoms.append(normalized)
+                        writer({"type": "extracted_info", "info": normalized})
+                    else:
+                        new_symptoms.append(tc_args)
+                        writer({"type": "extracted_info", "info": tc_args})
                 writer({
                     "type": "tool_result",
                     "id": tc_id,
@@ -538,19 +456,27 @@ async def generate_response(
                     continue
                 seen_queries.add(query)
 
-                result_text, has_results, raw_results = await execute_search_knowledge(tc_args)
+                # Execute via handler
+                tool_result = await executor.execute(tc_id, tc_name, tc_args)
                 has_search = True
 
-                if has_results:
-                    # Emit citation events for the client using already-fetched results
-                    _emit_citation_events(raw_results, writer)
+                if tool_result.status.value == "success":
+                    content = tool_result.content or {}
+                    result_text = content.get("result_text", "")
+                    has_results = content.get("has_results", False)
+                    raw_results = content.get("raw_results", [])
+
+                    if has_results:
+                        _emit_citation_events(raw_results, writer)
+                    else:
+                        writer({
+                            "type": "knowledge_gap",
+                            "query": query,
+                            "message": "知识库中暂未找到相关专项资料，以下为通用建议。",
+                        })
                 else:
-                    # Emit knowledge gap event so the UI can show uncertainty
-                    writer({
-                        "type": "knowledge_gap",
-                        "query": query,
-                        "message": "知识库中暂未找到相关专项资料，以下为通用建议。",
-                    })
+                    result_text = tool_result.error or "搜索失败"
+                    has_results = False
 
                 writer({
                     "type": "tool_result",

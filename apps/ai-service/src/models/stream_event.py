@@ -26,6 +26,7 @@ class StreamEventIds(BaseModel):
     turn_id: str | None = None
     message_id: str | None = None
     tool_call_id: str | None = None
+    interaction_id: str | None = None
 
 
 class StreamEvent(BaseModel):

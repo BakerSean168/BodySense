@@ -2,7 +2,8 @@ import { useRef, useState } from 'react';
 import { useLocalRuntime, type ChatModelAdapter, type ChatModelRunResult } from '@assistant-ui/react';
 import { consultationApi } from '../services/consultationService';
 import { consumeSSEStream } from './useSSEProcessor';
-import type { ExtractedInfo, Citation, SSERedFlag, SSEMessageCompleted } from '../types/consultation';
+import { reduceStreamEvent, INITIAL_STATE, type ConsultationStreamState, type ReducerEffect } from '../runtime/streamEventReducer';
+import type { ExtractedInfo, Citation, SSERedFlag, SSEMessageCompleted, StreamEvent, PendingInteraction } from '../types/consultation';
 
 export interface ConsultationAdapterOptions {
   onConversationCreated?: (conversationId: string, replacesDraftId?: string) => void;
@@ -13,12 +14,19 @@ export interface ConsultationAdapterOptions {
   onCitation?: (citation: Citation) => void;
   onTitleGenerated?: (title: string) => void;
   onMessageCompleted?: (data: SSEMessageCompleted) => void;
+  onInteractionRequired?: (interaction: PendingInteraction) => void;
   isDraft?: boolean;
   clientDraftId?: string;
 }
 
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export function useAssistantChatRuntime(
   conversationId: string | null,
+  initialMessages: ChatMessage[] = [],
   options: ConsultationAdapterOptions = {}
 ) {
   const [isStreaming, setIsStreaming] = useState(false);
@@ -44,6 +52,9 @@ export function useAssistantChatRuntime(
       let streamDone = false;
       let streamError: Error | null = null;
 
+      // Reducer state — replaces ad hoc fullText mutation
+      let reducerState: ConsultationStreamState = INITIAL_STATE;
+
       function pushResult(result: ChatModelRunResult) {
         queue.push(result);
         resolveNext?.();
@@ -55,6 +66,62 @@ export function useAssistantChatRuntime(
         return new Promise<boolean>((resolve) => {
           resolveNext = () => resolve(queue.length > 0);
         });
+      }
+
+      /** Execute side effects emitted by the reducer. */
+      function applyEffects(effects: ReducerEffect[]) {
+        for (const effect of effects) {
+          switch (effect.type) {
+            case 'assistant_text_changed':
+              pushResult({
+                content: [{ type: 'text', text: effect.text }],
+              });
+              break;
+            case 'conversation_created':
+              optionsRef.current.onConversationCreated?.(
+                effect.conversationId,
+                effect.replacesDraftId,
+              );
+              break;
+            case 'message_persisted':
+              optionsRef.current.onMessagePersisted?.(
+                effect.clientMessageId,
+                effect.messageId,
+              );
+              break;
+            case 'extracted_info_updated':
+              optionsRef.current.onExtractedInfoUpdate?.(effect.info);
+              break;
+            case 'phase_changed':
+              optionsRef.current.onPhaseChange?.(effect.from, effect.to);
+              break;
+            case 'red_flag':
+              optionsRef.current.onRedFlag?.(effect.flags as SSERedFlag['payload']);
+              break;
+            case 'citation_added':
+              optionsRef.current.onCitation?.(effect.citation);
+              break;
+            case 'interaction_required':
+              optionsRef.current.onInteractionRequired?.(effect.interaction);
+              break;
+            case 'interaction_answered':
+              // Interaction answered — no-op in hook, handled by resume flow
+              break;
+            case 'message_completed':
+              optionsRef.current.onMessageCompleted?.(effect.data as SSEMessageCompleted);
+              break;
+            case 'stream_error':
+              // Handled via streamError below
+              break;
+          }
+        }
+      }
+
+      /** Dispatch a StreamEvent through the reducer and apply effects. */
+      function dispatch(event: StreamEvent) {
+        const result = reduceStreamEvent(reducerState, event);
+        reducerState = result.state;
+        applyEffects(result.effects);
       }
 
       try {
@@ -77,44 +144,22 @@ export function useAssistantChatRuntime(
         }
 
         // Start consuming the SSE stream in the background.
-        // Results are pushed to the queue and yielded below.
+        // Events are dispatched through the reducer; effects push to the queue.
         const streamPromise = consumeSSEStream(response, {
-          onConversationCreated: (data) => {
-            optionsRef.current.onConversationCreated?.(
-              data.ids.conversation_id || '',
-              data.payload.replaces_draft_id
-            );
-          },
-          onMessagePersisted: (data) => {
-            optionsRef.current.onMessagePersisted?.(
-              data.payload.client_message_id,
-              data.ids.message_id || ''
-            );
-          },
-          onTextDelta: (data) => {
-            fullText += data.payload.delta;
-            pushResult({
-              content: [{ type: 'text', text: fullText }],
-            });
-          },
-          onExtractedInfo: (data) => {
-            optionsRef.current.onExtractedInfoUpdate?.(data.payload.info as ExtractedInfo);
-          },
-          onPhaseChange: (data) => {
-            optionsRef.current.onPhaseChange?.(data.payload.from || '', data.payload.to);
-          },
-          onRedFlag: (data) => {
-            optionsRef.current.onRedFlag?.(data.payload);
-          },
-          onCitation: (data) => {
-            optionsRef.current.onCitation?.(data.payload.citation as Citation);
-          },
+          onConversationCreated: (data) => dispatch(data as unknown as StreamEvent),
+          onMessagePersisted: (data) => dispatch(data as unknown as StreamEvent),
+          onTextDelta: (data) => dispatch(data as unknown as StreamEvent),
+          onExtractedInfo: (data) => dispatch(data as unknown as StreamEvent),
+          onPhaseChange: (data) => dispatch(data as unknown as StreamEvent),
+          onRedFlag: (data) => dispatch(data as unknown as StreamEvent),
+          onCitation: (data) => dispatch(data as unknown as StreamEvent),
           onTitleGenerated: (data) => {
+            // title.generated is outside the StreamEvent union; handle directly
             optionsRef.current.onTitleGenerated?.(data.payload.title);
           },
-          onMessageCompleted: (data) => {
-            optionsRef.current.onMessageCompleted?.(data);
-          },
+          onInteractionRequired: (data) => dispatch(data as unknown as StreamEvent),
+          onInteractionAnswered: (data) => dispatch(data as unknown as StreamEvent),
+          onMessageCompleted: (data) => dispatch(data as unknown as StreamEvent),
           onDone: () => {
             streamDone = true;
             resolveNext?.();
@@ -128,8 +173,6 @@ export function useAssistantChatRuntime(
             resolveNext?.();
           },
         });
-
-        let fullText = '';
 
         // Yield results as they arrive from the SSE stream
         while (await waitForNext()) {
@@ -145,10 +188,10 @@ export function useAssistantChatRuntime(
           throw streamError;
         }
 
-        // Final yield with complete text
-        if (fullText) {
+        // Final yield with complete text from reducer state
+        if (reducerState.assistantText) {
           yield {
-            content: [{ type: 'text', text: fullText }],
+            content: [{ type: 'text', text: reducerState.assistantText }],
           };
         }
       } finally {
@@ -157,7 +200,12 @@ export function useAssistantChatRuntime(
     },
   };
 
-  const runtime = useLocalRuntime(adapter);
+  const runtime = useLocalRuntime(adapter, {
+    initialMessages: initialMessages.map((m) => ({
+      role: m.role,
+      content: [{ type: 'text', text: m.content }],
+    })),
+  });
 
   return { runtime, isStreaming };
 }

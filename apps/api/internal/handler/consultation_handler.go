@@ -8,19 +8,26 @@ import (
 	"github.com/bodysense/api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 )
 
 // ConsultationHandler handles consultation HTTP requests.
 type ConsultationHandler struct {
-	consultationService *service.ConsultationService
+	consultationService   *service.ConsultationService
+	interactionService    *service.AgentInteractionService
+	runService            *service.RunService
 }
 
 // NewConsultationHandler creates a new ConsultationHandler.
 func NewConsultationHandler(
 	consultationService *service.ConsultationService,
+	interactionService *service.AgentInteractionService,
+	runService *service.RunService,
 ) *ConsultationHandler {
 	return &ConsultationHandler{
-		consultationService: consultationService,
+		consultationService:   consultationService,
+		interactionService:    interactionService,
+		runService:            runService,
 	}
 }
 
@@ -110,4 +117,62 @@ func (h *ConsultationHandler) ConfirmDiagnosis(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "diagnosis confirmed"})
+}
+
+// ResumeInteraction handles POST /api/v1/consultation/:conversationId/interactions/:interactionId/resume
+func (h *ConsultationHandler) ResumeInteraction(c *gin.Context) {
+	uid, ok := getUserUUID(c)
+	if !ok {
+		return
+	}
+
+	interactionID, err := uuid.Parse(c.Param("interactionId"))
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "INVALID_ID", "invalid interaction id")
+		return
+	}
+
+	conversationID, err := uuid.Parse(c.Param("conversationId"))
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "INVALID_ID", "invalid conversation id")
+		return
+	}
+
+	// Verify conversation ownership
+	session, err := h.consultationService.GetConsultation(c.Request.Context(), conversationID, uid)
+	if err != nil || session == nil {
+		respondError(c, http.StatusNotFound, "NOT_FOUND", "consultation not found")
+		return
+	}
+
+	var req struct {
+		Answer datatypes.JSON `json:"answer" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+
+	// Get the interaction first to find the run ID (before marking as answered)
+	interaction, getErr := h.interactionService.GetInteractionByID(c.Request.Context(), interactionID)
+	if getErr != nil || interaction == nil {
+		respondError(c, http.StatusNotFound, "NOT_FOUND", "interaction not found")
+		return
+	}
+
+	if err := h.interactionService.ResumeInteraction(c.Request.Context(), interactionID, req.Answer); err != nil {
+		if err.Error() == "interaction not found: "+interactionID.String() {
+			respondError(c, http.StatusNotFound, "NOT_FOUND", "interaction not found")
+			return
+		}
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+
+	// Resume the run (waiting_user -> running)
+	if resumeErr := h.runService.ResumeRunning(c.Request.Context(), interaction.RunID); resumeErr != nil {
+		log.Printf("failed to resume run %s: %v", interaction.RunID, resumeErr)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "interaction resumed"})
 }

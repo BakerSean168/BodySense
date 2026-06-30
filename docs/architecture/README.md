@@ -14,6 +14,9 @@
 - 🐳 **[部署与运维架构 (Deployment Architecture)](file:///d:/home/projects/BodySense/docs/architecture/deployment-architecture.md)**
   *描述了基于 Docker Compose 的容器编排设计（Caddy 反向代理、Go API、FastAPI AI-Service、Redis 7、PostgreSQL 18），本地/生产端口定义以及 GitHub Actions CI/CD 滚动部署流水线。*
 
+- 🧠 **[上下文工程架构 (Context Engineering Architecture)](./context-engineering-architecture.md)**
+  *定义了咨询 Agent 的上下文分层、Go ContextBuilder、Python LangGraph 职责边界、结构化问诊状态、SSE 事件扩展和 LangGraph checkpoint 使用边界。*
+
 ---
 
 ## 2. 历史方案与设计文档索引 (Archived Plans)

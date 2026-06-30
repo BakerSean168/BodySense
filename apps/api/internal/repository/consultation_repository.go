@@ -89,3 +89,14 @@ func (r *ConsultationRepository) Delete(ctx context.Context, conversationID uuid
 		Where("conversation_id = ?", conversationID).
 		Delete(&model.ConsultationSession{}).Error
 }
+
+// ListByUserID retrieves consultation sessions for a user via the conversations join.
+func (r *ConsultationRepository) ListByUserID(ctx context.Context, userID uuid.UUID) ([]model.ConsultationSession, error) {
+	var sessions []model.ConsultationSession
+	err := r.db.WithContext(ctx).
+		Joins("JOIN conversations ON conversations.id = consultation_sessions.conversation_id").
+		Where("conversations.user_id = ? AND conversations.status = ?", userID, "active").
+		Order("consultation_sessions.created_at DESC").
+		Find(&sessions).Error
+	return sessions, err
+}

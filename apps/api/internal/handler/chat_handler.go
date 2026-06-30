@@ -7,9 +7,11 @@ import (
 	"net/http"
 	"time"
 
+	ctxbuilder "github.com/bodysense/api/internal/context"
 	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/service"
+	"github.com/bodysense/api/internal/stream"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
@@ -25,12 +27,16 @@ const (
 
 // ChatHandler handles the core chat SSE endpoint.
 type ChatHandler struct {
-	conversationService *service.ConversationService
-	messageService      *service.MessageService
-	runService          *service.RunService
-	consultationService *service.ConsultationService
-	aiClient            *service.AIClient
-	profileService      *service.ProfileService
+	conversationService  *service.ConversationService
+	messageService       *service.MessageService
+	runService           *service.RunService
+	consultationService  *service.ConsultationService
+	aiClient             *service.AIClient
+	profileService       *service.ProfileService
+	agentToolService     *service.AgentToolService
+	interactionService   *service.AgentInteractionService
+	contextBuilder       ctxbuilder.Builder
+	streamRuntime        *stream.Runtime
 }
 
 // NewChatHandler creates a new ChatHandler.
@@ -41,14 +47,21 @@ func NewChatHandler(
 	consultationService *service.ConsultationService,
 	aiClient *service.AIClient,
 	profileService *service.ProfileService,
+	agentToolService *service.AgentToolService,
+	interactionService *service.AgentInteractionService,
 ) *ChatHandler {
+	cb := ctxbuilder.NewContextBuilder(profileService, consultationService, messageService)
 	return &ChatHandler{
-		conversationService: conversationService,
-		messageService:      messageService,
-		runService:          runService,
-		consultationService: consultationService,
-		aiClient:            aiClient,
-		profileService:      profileService,
+		conversationService:  conversationService,
+		messageService:       messageService,
+		runService:           runService,
+		consultationService:  consultationService,
+		aiClient:             aiClient,
+		profileService:       profileService,
+		agentToolService:     agentToolService,
+		interactionService:   interactionService,
+		contextBuilder:       cb,
+		streamRuntime:        stream.NewRuntime(),
 	}
 }
 
@@ -153,18 +166,13 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 		log.Printf("failed to set active_run_id for conversation %s: %v", conversationID, updateErr)
 	}
 
-	// 9. Set SSE headers
-	sse := NewSSEWriter(c.Writer)
-	outSeq := 0
-	nextSeq := func() int {
-		outSeq++
-		return outSeq
-	}
+	// 9. Create stream writer with base IDs
 	baseIDs := dto.StreamEventIDs{
 		ConversationID: conversationID.String(),
 		RunID:          run.ID.String(),
 		TurnID:         turnID.String(),
 	}
+	sw := h.streamRuntime.NewWriter(c.Writer, baseIDs)
 
 	// 10. If new conversation, send conversation.created
 	if isDraft {
@@ -172,115 +180,61 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 		if req.ClientDraftID != "" {
 			draftID = req.ClientDraftID
 		}
-		if err := h.writeStreamEvent(sse, nextSeq(), "conversation", "conversation.created", baseIDs, gin.H{"replaces_draft_id": draftID}); err != nil {
+		if err := sw.SendNew(c.Request.Context(), "conversation", "conversation.created", baseIDs, gin.H{"replaces_draft_id": draftID}, ""); err != nil {
 			log.Printf("SSE write error (conversation.created): %v", err)
 		}
 	}
 
 	// 11. Send message.persisted
-	if err := h.writeStreamEvent(sse, nextSeq(), "message", "message.persisted", dto.StreamEventIDs{
+	if err := sw.SendNew(c.Request.Context(), "message", "message.persisted", dto.StreamEventIDs{
 		ConversationID: conversationID.String(),
 		RunID:          run.ID.String(),
 		TurnID:         turnID.String(),
 		MessageID:      userMsg.ID.String(),
-	}, gin.H{"client_message_id": req.ClientMessageID, "role": "user"}); err != nil {
+	}, gin.H{"client_message_id": req.ClientMessageID, "role": "user"}, userMsg.ID.String()); err != nil {
 		log.Printf("SSE write error (message.persisted): %v", err)
 	}
 
 	// 12. Send message.created
-	if err := h.writeStreamEvent(sse, nextSeq(), "message", "message.created", dto.StreamEventIDs{
+	if err := sw.SendNew(c.Request.Context(), "message", "message.created", dto.StreamEventIDs{
 		ConversationID: conversationID.String(),
 		RunID:          run.ID.String(),
 		TurnID:         turnID.String(),
 		MessageID:      assistantMsg.ID.String(),
-	}, gin.H{"role": "assistant", "status": "streaming"}); err != nil {
+	}, gin.H{"role": "assistant", "status": "streaming"}, assistantMsg.ID.String()); err != nil {
 		log.Printf("SSE write error (message.created): %v", err)
 	}
 
-	// 13. Load context and call AI
-	profile, err := h.profileService.GetProfile(c.Request.Context(), uid)
-	profileJSON := json.RawMessage("{}")
-	if err == nil && profile != nil {
-		if pj, marshalErr := json.Marshal(profile); marshalErr == nil {
-			profileJSON = pj
-		}
+	// 13. Build context and call AI
+	chatReq, _, err := h.contextBuilder.BuildChatContext(c.Request.Context(), ctxbuilder.BuildChatContextInput{
+		ConversationID: conversationID,
+		TurnID:         turnID,
+		UserID:         uid,
+		ContextDTO:     req.Context,
+		MessageParts:   req.Message.Parts,
+		IsDraft:        isDraft,
+	})
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to build chat context")
+		return
 	}
 
-	// Load consultation context (extracted_info, phase) if available
-	var extractedInfoJSON json.RawMessage
-	phase := ""
-	consultSession, err := h.consultationService.GetConsultation(c.Request.Context(), conversationID, uid)
-	if err == nil && consultSession != nil {
-		extractedInfoJSON = json.RawMessage(consultSession.ExtractedInfo)
-		phase = consultSession.Phase
-	}
-	if extractedInfoJSON == nil {
-		extractedInfoJSON = json.RawMessage("[]")
-	}
-
-	// Extract text content from message parts
-	var contentText string
-	for _, part := range req.Message.Parts {
-		if part.Type == "text" && part.Text != "" {
-			contentText = part.Text
-			break
-		}
-	}
-
-	// Determine use_case from context entry
-	useCase := ""
-	if req.Context != nil && req.Context.Entry != "" {
-		useCase = req.Context.Entry + ".reply"
-	}
-
-	// Load conversation history messages (excluding current message)
-	var chatHistory []service.ChatMessage
-	if !isDraft {
-		historyMsgs, err := h.messageService.GetMessages(c.Request.Context(), conversationID)
-		if err == nil {
-			for _, m := range historyMsgs {
-				// Only include completed messages from previous turns to prevent duplicate/streaming/failed messages polluting context
-				if m.TurnID != turnID && m.Status == "completed" {
-					text := getMessageTextContent(m)
-					if text != "" {
-						chatHistory = append(chatHistory, service.ChatMessage{
-							Role:    m.Role,
-							Content: text,
-						})
-					}
-				}
-			}
-		}
-	}
-
-	chatReq := service.ChatStreamRequest{
-		SessionID:     conversationID.String(),
-		UserID:        uid.String(),
-		Content:       contentText,
-		Messages:      chatHistory,
-		Profile:       profileJSON,
-		ExtractedInfo: extractedInfoJSON,
-		Phase:         phase,
-		UseCase:       useCase,
-	}
+	// Extract phase for state.phase.changed event handling below
+	phase := chatReq.Phase
 
 	// Apply timeout to the AI service call
 	ctx, cancel := context.WithTimeout(c.Request.Context(), sseTimeout)
 	defer cancel()
 
-	events, err := h.aiClient.ChatStream(ctx, chatReq)
+	events, err := h.aiClient.ChatStream(ctx, *chatReq)
 	if err != nil {
-		_ = h.writeStreamEvent(sse, nextSeq(), "message", "message.failed", dto.StreamEventIDs{
+		_ = sw.SendNew(c.Request.Context(), "message", "message.failed", dto.StreamEventIDs{
 			ConversationID: conversationID.String(),
 			RunID:          run.ID.String(),
 			TurnID:         turnID.String(),
 			MessageID:      assistantMsg.ID.String(),
-		}, gin.H{"status": "failed", "error": gin.H{"message": "AI service unavailable"}})
-		_ = h.writeStreamEvent(sse, nextSeq(), "stream", "stream.done", dto.StreamEventIDs{
-			ConversationID: conversationID.String(),
-			RunID:          run.ID.String(),
-			TurnID:         turnID.String(),
-		}, gin.H{})
+		}, gin.H{"status": "failed", "error": gin.H{"message": "AI service unavailable"}}, assistantMsg.ID.String())
+		_ = sw.SendNew(c.Request.Context(), "stream", "stream.done", baseIDs, gin.H{}, "")
 		_ = h.runService.FailRun(c.Request.Context(), run.ID, uid, gin.H{"message": "AI service connection failed"})
 		return
 	}
@@ -311,13 +265,13 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 			eventCount++
 			if eventCount > maxSSEEvents {
 				log.Printf("event count exceeded limit for conversation %s", conversationID)
-				_ = h.writeStreamEvent(sse, nextSeq(), "message", "message.failed", dto.StreamEventIDs{
+				_ = sw.SendNew(c.Request.Context(), "message", "message.failed", dto.StreamEventIDs{
 					ConversationID: conversationID.String(),
 					RunID:          run.ID.String(),
 					TurnID:         turnID.String(),
 					MessageID:      assistantMsg.ID.String(),
-				}, gin.H{"status": "failed", "error": gin.H{"message": "stream exceeded maximum event count"}})
-				_ = h.writeStreamEvent(sse, nextSeq(), "stream", "stream.done", baseIDs, gin.H{})
+				}, gin.H{"status": "failed", "error": gin.H{"message": "stream exceeded maximum event count"}}, assistantMsg.ID.String())
+				_ = sw.SendNew(c.Request.Context(), "stream", "stream.done", baseIDs, gin.H{}, "")
 				_ = h.runService.FailRun(c.Request.Context(), run.ID, uid, gin.H{"message": "event count limit exceeded"})
 				h.clearActiveRun(c.Request.Context(), conversationID, uid)
 				return
@@ -329,8 +283,7 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 					Delta string `json:"delta"`
 				}
 				_ = event.PayloadAs(&payload)
-				event = h.prepareOutboundEvent(event, nextSeq(), baseIDs, assistantMsg.ID.String())
-				if err := sse.WriteEvent(event); err != nil {
+				if err := sw.Send(c.Request.Context(), event, assistantMsg.ID.String()); err != nil {
 					log.Printf("SSE write error (text.delta): %v", err)
 				}
 				assistantParts = append(assistantParts, map[string]any{"type": "text", "text": payload.Delta})
@@ -341,11 +294,16 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 					Args json.RawMessage `json:"args"`
 				}
 				_ = event.PayloadAs(&payload)
-				event = h.prepareOutboundEvent(event, nextSeq(), baseIDs, assistantMsg.ID.String())
-				if err := sse.WriteEvent(event); err != nil {
+				if err := sw.Send(c.Request.Context(), event, assistantMsg.ID.String()); err != nil {
 					log.Printf("SSE write error (tool.call): %v", err)
 				}
 				assistantParts = append(assistantParts, map[string]any{"type": "tool_call", "tool": payload.Tool, "args": payload.Args})
+				// Audit: persist tool call as running
+				msgID := assistantMsg.ID
+				h.agentToolService.RecordToolCall(
+					c.Request.Context(), run.ID, conversationID, &msgID,
+					event.IDs.ToolCallID, payload.Tool, datatypes.JSON(payload.Args),
+				)
 
 			case "tool.result":
 				var payload struct {
@@ -353,17 +311,58 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 					Result json.RawMessage `json:"result"`
 				}
 				_ = event.PayloadAs(&payload)
-				event = h.prepareOutboundEvent(event, nextSeq(), baseIDs, assistantMsg.ID.String())
-				if err := sse.WriteEvent(event); err != nil {
+				if err := sw.Send(c.Request.Context(), event, assistantMsg.ID.String()); err != nil {
 					log.Printf("SSE write error (tool.result): %v", err)
 				}
 				assistantParts = append(assistantParts, map[string]any{"type": "tool_result", "tool": payload.Tool, "result": payload.Result})
+				// Audit: persist tool result
+				h.agentToolService.RecordToolResult(
+					c.Request.Context(), run.ID, event.IDs.ToolCallID,
+					datatypes.JSON(payload.Result), false,
+				)
 
 			case "state.extracted_info.upsert", "state.diagnosis.ready", "state.treatment.ready", "source.citation.added", "safety.red_flag.detected":
-				event = h.prepareOutboundEvent(event, nextSeq(), baseIDs, assistantMsg.ID.String())
-				if err := sse.WriteEvent(event); err != nil {
+				if err := sw.Send(c.Request.Context(), event, assistantMsg.ID.String()); err != nil {
 					log.Printf("SSE write error (extracted_info): %v", err)
 				}
+
+			case "state.interaction.required":
+				// Persist the interaction and mark run as waiting_user
+				var iPayload struct {
+					InteractionID string          `json:"interaction_id"`
+					Question      json.RawMessage `json:"question"`
+				}
+				_ = event.PayloadAs(&iPayload)
+
+				// Generate interaction_id if Python didn't provide one
+				interactionID := iPayload.InteractionID
+				if interactionID == "" {
+					interactionID = uuid.New().String()
+				}
+
+				// Persist interaction
+				if createErr := h.interactionService.CreatePendingInteraction(
+					c.Request.Context(), run.ID, conversationID,
+					event.IDs.ToolCallID, datatypes.JSON(iPayload.Question),
+				); createErr != nil {
+					log.Printf("failed to create pending interaction for conversation %s: %v", conversationID, createErr)
+				}
+
+				// Forward event to frontend with interaction_id in IDs
+				event.IDs.InteractionID = interactionID
+				if err := sw.Send(c.Request.Context(), event, assistantMsg.ID.String()); err != nil {
+					log.Printf("SSE write error (interaction.required): %v", err)
+				}
+
+				// Mark run as waiting_user
+				if err := h.runService.MarkWaitingUser(c.Request.Context(), run.ID); err != nil {
+					log.Printf("failed to mark run %s as waiting_user: %v", run.ID, err)
+				}
+
+				// End the stream — the run is paused until user answers
+				_ = sw.SendNew(c.Request.Context(), "stream", "stream.done", baseIDs, gin.H{}, "")
+				h.clearActiveRun(c.Request.Context(), conversationID, uid)
+				return
 
 			case "state.phase.changed":
 				var payload struct {
@@ -375,11 +374,10 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 				if payload.From == "" {
 					payload.From = phase
 				}
-				event = h.prepareOutboundEvent(event, nextSeq(), baseIDs, assistantMsg.ID.String())
 				if patched, marshalErr := json.Marshal(payload); marshalErr == nil {
 					event.Payload = patched
 				}
-				if err := sse.WriteEvent(event); err != nil {
+				if err := sw.Send(c.Request.Context(), event, assistantMsg.ID.String()); err != nil {
 					log.Printf("SSE write error (phase_change): %v", err)
 				}
 				phase = payload.To
@@ -393,8 +391,7 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 				}
 				_ = event.PayloadAs(&payload)
 				usage = payload.Usage
-				event = h.prepareOutboundEvent(event, nextSeq(), baseIDs, assistantMsg.ID.String())
-				if err := sse.WriteEvent(event); err != nil {
+				if err := sw.Send(c.Request.Context(), event, assistantMsg.ID.String()); err != nil {
 					log.Printf("SSE write error (usage.reported): %v", err)
 				}
 
@@ -411,8 +408,7 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 					usage = payload.Usage
 				}
 			case "stream.error":
-				event = h.prepareOutboundEvent(event, nextSeq(), baseIDs, assistantMsg.ID.String())
-				if err := sse.WriteEvent(event); err != nil {
+				if err := sw.Send(c.Request.Context(), event, assistantMsg.ID.String()); err != nil {
 					log.Printf("SSE write error (stream.error): %v", err)
 				}
 			}
@@ -445,13 +441,13 @@ streamDone:
 	h.clearActiveRun(c.Request.Context(), conversationID, uid)
 
 	// Send message.completed and done
-	_ = h.writeStreamEvent(sse, nextSeq(), "message", "message.completed", dto.StreamEventIDs{
+	_ = sw.SendNew(c.Request.Context(), "message", "message.completed", dto.StreamEventIDs{
 		ConversationID: conversationID.String(),
 		RunID:          run.ID.String(),
 		TurnID:         turnID.String(),
 		MessageID:      assistantMsg.ID.String(),
-	}, gin.H{"status": "completed", "finish_reason": "stop", "usage": usage})
-	_ = h.writeStreamEvent(sse, nextSeq(), "stream", "stream.done", baseIDs, gin.H{})
+	}, gin.H{"status": "completed", "finish_reason": "stop", "usage": usage}, assistantMsg.ID.String())
+	_ = sw.SendNew(c.Request.Context(), "stream", "stream.done", baseIDs, gin.H{}, "")
 
 	// 16. Auto-trigger title generation for first message
 	h.maybeGenerateTitle(c.Request.Context(), conversationID, uid)
@@ -460,60 +456,15 @@ streamDone:
 // replayCompletedRun replays a completed run's message as an SSE stream
 // when an idempotent request is detected (requestId already exists and completed).
 func (h *ChatHandler) replayCompletedRun(c *gin.Context, run *model.Run) {
-	sse := NewSSEWriter(c.Writer)
-
-	// Send SSE events so the client can reconcile with existing data
-	_ = h.writeStreamEvent(sse, 1, "stream", "stream.error", dto.StreamEventIDs{
+	baseIDs := dto.StreamEventIDs{
 		ConversationID: run.ConversationID.String(),
 		RunID:          run.ID.String(),
 		TurnID:         run.TurnID.String(),
-	}, gin.H{"message": "this request has already been processed", "status": run.Status})
-	_ = h.writeStreamEvent(sse, 2, "stream", "stream.done", dto.StreamEventIDs{
-		ConversationID: run.ConversationID.String(),
-		RunID:          run.ID.String(),
-		TurnID:         run.TurnID.String(),
-	}, gin.H{})
-}
+	}
+	sw := h.streamRuntime.NewWriter(c.Writer, baseIDs)
 
-func (h *ChatHandler) writeStreamEvent(
-	sse *SSEWriter,
-	seq int,
-	channel string,
-	eventType string,
-	ids dto.StreamEventIDs,
-	payload any,
-) error {
-	event, err := dto.NewStreamEvent(seq, channel, eventType, ids, payload)
-	if err != nil {
-		return err
-	}
-	return sse.WriteEvent(event)
-}
-
-func (h *ChatHandler) prepareOutboundEvent(
-	event dto.StreamEvent,
-	seq int,
-	baseIDs dto.StreamEventIDs,
-	messageID string,
-) dto.StreamEvent {
-	event.Version = 1
-	event.Seq = seq
-	if event.IDs.ConversationID == "" {
-		event.IDs.ConversationID = baseIDs.ConversationID
-	}
-	if event.IDs.RunID == "" {
-		event.IDs.RunID = baseIDs.RunID
-	}
-	if event.IDs.TurnID == "" {
-		event.IDs.TurnID = baseIDs.TurnID
-	}
-	if event.IDs.MessageID == "" {
-		event.IDs.MessageID = messageID
-	}
-	if len(event.Payload) == 0 {
-		event.Payload = json.RawMessage(`{}`)
-	}
-	return event
+	_ = sw.SendNew(c.Request.Context(), "stream", "stream.error", baseIDs, gin.H{"message": "this request has already been processed", "status": run.Status}, "")
+	_ = sw.SendNew(c.Request.Context(), "stream", "stream.done", baseIDs, gin.H{}, "")
 }
 
 // clearActiveRun clears the active_run_id and active_stream_id on a conversation.
@@ -534,22 +485,4 @@ func (h *ChatHandler) maybeGenerateTitle(ctx context.Context, conversationID, us
 			log.Printf("failed to trigger title generation for conversation %s: %v", conversationID, err)
 		}
 	}
-}
-
-func getMessageTextContent(msg model.Message) string {
-	if msg.ContentText != "" {
-		return msg.ContentText
-	}
-	var parts []struct {
-		Type string `json:"type"`
-		Text string `json:"text"`
-	}
-	if err := json.Unmarshal(msg.Parts, &parts); err == nil {
-		for _, p := range parts {
-			if p.Type == "text" && p.Text != "" {
-				return p.Text
-			}
-		}
-	}
-	return ""
 }

@@ -7,6 +7,8 @@ import (
 )
 
 // KnowledgeEntry represents a knowledge base entry with vector embedding.
+// This is the legacy flat table used by the Go backend for RAG search.
+// Lifecycle management lives on knowledge_units (normalized schema).
 type KnowledgeEntry struct {
 	ID              int64           `gorm:"primaryKey;autoIncrement" json:"id"`
 	Category        string          `gorm:"type:varchar(100);not null;index" json:"category"`

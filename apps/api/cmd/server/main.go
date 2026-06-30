@@ -13,6 +13,7 @@ import (
 	"github.com/bodysense/api/internal/middleware"
 	"github.com/bodysense/api/internal/repository"
 	"github.com/bodysense/api/internal/service"
+	"github.com/bodysense/api/internal/workflow"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -59,7 +60,9 @@ func main() {
 
 	authService := service.NewAuthService(userRepo, jwtConfig, sessionCache)
 	profileService := service.NewProfileService(profileRepo)
-	uploadService := service.NewUploadService(uploadRepo)
+	jobRepo := repository.NewJobRepository(database.DB)
+	jobRuntime := service.NewJobRuntime(jobRepo)
+	uploadService := service.NewUploadService(uploadRepo, jobRuntime)
 	aiClient := service.NewAIClient()
 	messageService := service.NewMessageService(messageRepo)
 	runService := service.NewRunService(runRepo)
@@ -71,9 +74,13 @@ func main() {
 	authHandler := handler.NewAuthHandler(authService)
 	profileHandler := handler.NewProfileHandler(profileService)
 	uploadHandler := handler.NewUploadHandler(uploadService)
-	chatHandler := handler.NewChatHandler(conversationService, messageService, runService, consultationService, aiClient, profileService)
+	agentToolRepo := repository.NewAgentToolCallRepository(database.DB)
+	agentToolService := service.NewAgentToolService(agentToolRepo)
+	interactionRepo := repository.NewAgentInteractionRepository(database.DB)
+	interactionService := service.NewAgentInteractionService(interactionRepo, runRepo)
+	chatHandler := handler.NewChatHandler(conversationService, messageService, runService, consultationService, aiClient, profileService, agentToolService, interactionService)
 	convHandler := handler.NewConversationHandler(conversationService, shareService)
-	consultationHandler := handler.NewConsultationHandler(consultationService)
+	consultationHandler := handler.NewConsultationHandler(consultationService, interactionService, runService)
 	diagnosisHandler := handler.NewDiagnosisHandler(consultationService, profileService, aiClient)
 	trainingRepo := repository.NewTrainingRepository(database.DB)
 	trainingService := service.NewTrainingService(trainingRepo, profileService)
@@ -81,6 +88,10 @@ func main() {
 	reassessmentHandler := handler.NewReassessmentHandler(trainingService)
 	assessmentHandler := handler.NewAssessmentHandler(assessmentService)
 	knowledgeHandler := handler.NewKnowledgeHandler()
+
+	// Health journey (read-only workflow)
+	journeyWorkflow := workflow.NewHealthJourneyWorkflow(profileRepo, uploadRepo, consultationRepo, assessmentRepo, trainingRepo)
+	journeyHandler := handler.NewHealthJourneyHandler(journeyWorkflow)
 
 	// HTTP server
 	port := os.Getenv("API_PORT")
@@ -184,6 +195,10 @@ func main() {
 		consultations.PUT("/:id/confirm", consultationHandler.ConfirmDiagnosis)
 		consultations.POST("/:id/diagnosis", diagnosisHandler.AnalyzeDiagnosis)
 		consultations.POST("/:id/treatment", diagnosisHandler.GenerateTreatment)
+		consultations.POST("/:id/interactions/:interactionId/resume", consultationHandler.ResumeInteraction)
+
+		// Health journey (read-only)
+		protected.GET("/journey", journeyHandler.GetJourneyState)
 
 		// Assessment routes
 		protected.POST("/assessment/generate", assessmentHandler.GenerateAssessment)

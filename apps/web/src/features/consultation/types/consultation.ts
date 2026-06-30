@@ -199,6 +199,51 @@ export interface SSETitleGenerated {
   payload: { title: string };
 }
 
+// Interaction types for ask_user
+export interface PendingInteraction {
+  id: string;
+  run_id: string;
+  conversation_id: string;
+  tool_call_id: string;
+  tool_name: string;
+  question: AskUserQuestion;
+  status: 'pending' | 'answered' | 'cancelled';
+  created_at: string;
+}
+
+export interface AskUserQuestion {
+  question: string;
+  reason?: string;
+  answer_type: 'text' | 'single_choice' | 'multi_choice' | 'number' | 'date';
+  options?: string[];
+  required?: boolean;
+  context?: string;
+}
+
+export interface InteractionRequiredEvent {
+  version: 1;
+  seq: number;
+  type: 'state.interaction.required';
+  channel: 'state';
+  ids: { conversation_id?: string; run_id?: string; interaction_id?: string };
+  payload: {
+    interaction_id: string;
+    question: AskUserQuestion;
+  };
+}
+
+export interface InteractionAnsweredEvent {
+  version: 1;
+  seq: number;
+  type: 'state.interaction.answered';
+  channel: 'state';
+  ids: { conversation_id?: string; run_id?: string; interaction_id?: string };
+  payload: {
+    interaction_id: string;
+    answer: unknown;
+  };
+}
+
 // 列表响应
 export interface ConversationListResponse {
   conversations: Conversation[];

@@ -10,6 +10,7 @@ type StreamEventIDs struct {
 	TurnID         string `json:"turn_id,omitempty"`
 	MessageID      string `json:"message_id,omitempty"`
 	ToolCallID     string `json:"tool_call_id,omitempty"`
+	InteractionID  string `json:"interaction_id,omitempty"`
 }
 
 type StreamEvent struct {

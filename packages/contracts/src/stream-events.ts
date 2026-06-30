@@ -137,6 +137,18 @@ export type StreamErrorEvent = StreamEventBase<
   { message: string }
 >;
 
+export type InteractionRequiredEvent = StreamEventBase<
+  'state',
+  'state.interaction.required',
+  { interaction_id: string; question: { question: string; answer_type: string; options?: string[]; context?: string } }
+>;
+
+export type InteractionAnsweredEvent = StreamEventBase<
+  'state',
+  'state.interaction.answered',
+  { interaction_id: string; answer: unknown }
+>;
+
 export type StreamEvent =
   | ConversationCreatedEvent
   | MessagePersistedEvent
@@ -155,4 +167,6 @@ export type StreamEvent =
   | RedFlagDetectedEvent
   | UsageReportedEvent
   | StreamDoneEvent
-  | StreamErrorEvent;
+  | StreamErrorEvent
+  | InteractionRequiredEvent
+  | InteractionAnsweredEvent;

@@ -1,8 +1,12 @@
-import { AssistantRuntimeProvider, useThread, useComposerRuntime } from "@assistant-ui/react";
+import { AssistantRuntimeProvider, useThread, useComposerRuntime, ThreadPrimitive, MessagePrimitive, useMessage } from "@assistant-ui/react";
+import { MarkdownTextPrimitive } from "@assistant-ui/react-markdown";
+import remarkGfm from "remark-gfm";
 import { useAssistantChatRuntime } from "../hooks/useAssistantChatRuntime";
 import { useRef, useEffect, useState, useCallback, useMemo } from "react";
-import type { Citation, ConsultationPhase, ExtractedInfo, RedFlagEvent } from "../types/consultation";
+import type { Citation, ConsultationPhase, ExtractedInfo, RedFlagEvent, PendingInteraction } from "../types/consultation";
 import { RedFlagBanner } from "./RedFlagBanner";
+import { AskUserCard } from "./AskUserCard";
+import { consultationApi } from "../services/consultationService";
 
 interface AssistantChatPanelProps {
   conversationId: string | null;
@@ -52,6 +56,8 @@ export function AssistantChatPanel({
     extractedInfoRef.current = _initialExtractedInfo;
   }, [_initialExtractedInfo]);
 
+  const [pendingInteraction, setPendingInteraction] = useState<PendingInteraction | null>(null);
+
   const adapterOptions = useMemo(() => ({
     onExtractedInfoUpdate: (info: ExtractedInfo) => {
       const existing = extractedInfoRef.current;
@@ -73,30 +79,45 @@ export function AssistantChatPanel({
     onConversationCreated,
     onTitleGenerated,
     onMessagePersisted,
+    onInteractionRequired: (interaction: PendingInteraction) => {
+      setPendingInteraction(interaction);
+    },
     isDraft,
     clientDraftId: clientDraftId ?? undefined,
   }), [onExtractedInfoUpdate, onPhaseChange, onCitation, onConversationCreated, onTitleGenerated, onMessagePersisted, isDraft, clientDraftId]);
 
-  const { runtime } = useAssistantChatRuntime(conversationId, adapterOptions);
+  const { runtime } = useAssistantChatRuntime(conversationId, initialMessages, adapterOptions);
+
+  const handleInteractionSubmit = useCallback(async (answer: unknown) => {
+    if (!pendingInteraction || !conversationId) return;
+    try {
+      await consultationApi.resumeInteraction(conversationId, pendingInteraction.id, answer);
+      setPendingInteraction(null);
+    } catch (err) {
+      console.error('Failed to resume interaction:', err);
+    }
+  }, [pendingInteraction, conversationId]);
 
   return (
     <AssistantRuntimeProvider runtime={runtime}>
       <ChatContent
-        initialMessages={initialMessages}
+        pendingInteraction={pendingInteraction}
+        onInteractionSubmit={handleInteractionSubmit}
       />
     </AssistantRuntimeProvider>
   );
+}
+
+interface ChatContentProps {
+  pendingInteraction?: PendingInteraction | null;
+  onInteractionSubmit?: (answer: unknown) => void;
 }
 
 /**
  * Inner chat content that reads thread state from the assistant-ui runtime.
  * Uses useThread() to access messages managed by the runtime.
  */
-function ChatContent({
-  initialMessages = [],
-}: {
-  initialMessages?: ChatMessage[];
-}) {
+function ChatContent({ pendingInteraction, onInteractionSubmit }: ChatContentProps = {}) {
   const thread = useThread();
   const composerRuntime = useComposerRuntime();
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -104,41 +125,7 @@ function ChatContent({
   const [redFlags, setRedFlags] = useState<RedFlagEvent | null>(null);
   const [citations, setCitations] = useState<Citation[]>([]);
   const [knowledgeGaps, setKnowledgeGaps] = useState<string[]>([]);
-
-  // Convert initial messages to display format (pure computation, no side effects)
-  const displayMessages = useMemo(() => {
-    const initial: DisplayMessage[] = initialMessages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
-
-    // Add messages from the runtime thread
-    const threadMessages: DisplayMessage[] = [];
-    for (const msg of thread.messages) {
-      if (msg.role !== 'assistant' && msg.role !== 'user') continue;
-
-      const textParts = msg.content
-        .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
-        .map((p) => p.text)
-        .join('');
-
-      if (textParts) {
-        threadMessages.push({ role: msg.role, content: textParts });
-      }
-    }
-
-    // Merge initial + thread messages, deduplicating by content
-    const seen = new Set<string>();
-    const merged: DisplayMessage[] = [];
-    for (const m of [...initial, ...threadMessages]) {
-      const key = `${m.role}:${m.content}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        merged.push(m);
-      }
-    }
-    return merged;
-  }, [initialMessages, thread.messages]);
+  const [isSubmittingInteraction, setIsSubmittingInteraction] = useState(false);
 
   // Extract citations, red flags, and knowledge gaps from thread messages.
   // Uses functional setState with shallow comparison to avoid unnecessary
@@ -212,19 +199,6 @@ function ChatContent({
         behavior: 'smooth',
       });
     }
-  }, [displayMessages]);
-
-  // Get the currently streaming text from the last assistant message
-  const streamingText = useMemo(() => {
-    const lastMsg = thread.messages[thread.messages.length - 1];
-    if (lastMsg?.role !== 'assistant') return '';
-    if (lastMsg.status?.type === 'running') {
-      return lastMsg.content
-        .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
-        .map((p) => p.text)
-        .join('');
-    }
-    return '';
   }, [thread.messages]);
 
   const isRunning = useMemo(() => {
@@ -250,11 +224,21 @@ function ChatContent({
     }
   };
 
+  const handleInteractionAnswer = useCallback(async (answer: unknown) => {
+    if (!onInteractionSubmit) return;
+    setIsSubmittingInteraction(true);
+    try {
+      await onInteractionSubmit(answer);
+    } finally {
+      setIsSubmittingInteraction(false);
+    }
+  }, [onInteractionSubmit]);
+
   return (
-    <div className="flex flex-col h-full">
+    <ThreadPrimitive.Root className="flex flex-col h-full">
       {/* Messages area */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
-        {displayMessages.length === 0 && !streamingText && (
+      <ThreadPrimitive.Viewport ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+        <ThreadPrimitive.Empty>
           <div className="flex items-center justify-center h-full text-gray-400">
             <div className="text-center">
               <p className="text-lg font-medium">开始咨询</p>
@@ -263,53 +247,14 @@ function ChatContent({
               </p>
             </div>
           </div>
-        )}
+        </ThreadPrimitive.Empty>
 
-        {displayMessages.map((msg, i) => (
-          <div
-            key={i}
-            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`max-w-[80%] rounded-[20px] px-4 py-3 ${
-                msg.role === 'user'
-                  ? 'bg-primary-700 text-[#FBFBFA] rounded-br-[4px] shadow-sm shadow-[#2a4b3a]/10'
-                  : 'bg-[#F7F5F0] text-[#1A221E] rounded-bl-[4px] border border-[#E5E3DF]'
-              }`}
-            >
-              <div className="whitespace-pre-wrap text-sm leading-relaxed font-medium">
-                {msg.content}
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {/* Typing indicator: AI is running but no text tokens yet */}
-        {isRunning && !streamingText && (
-          <div className="flex justify-start">
-            <div className="max-w-[80%] rounded-[20px] px-5 py-3.5 bg-[#F7F5F0] text-[#1A221E] rounded-bl-[4px] border border-[#E5E3DF]">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#709a83] animate-bounce [animation-delay:-0.3s]" />
-                <span className="w-2 h-2 rounded-full bg-[#709a83] animate-bounce [animation-delay:-0.15s]" />
-                <span className="w-2 h-2 rounded-full bg-[#709a83] animate-bounce" />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Streaming indicator for messages not yet in displayMessages */}
-        {streamingText && !displayMessages.some(
-          (m) => m.role === 'assistant' && m.content === streamingText,
-        ) && (
-          <div className="flex justify-start">
-            <div className="max-w-[80%] rounded-[20px] px-4 py-3 bg-[#F7F5F0] text-[#1A221E] rounded-bl-[4px] border border-[#E5E3DF]">
-              <div className="whitespace-pre-wrap text-sm leading-relaxed font-medium">
-                {streamingText}
-              </div>
-              <span className="inline-block w-1.5 h-3.5 ml-1 bg-[#709a83] animate-pulse" />
-            </div>
-          </div>
-        )}
+        <ThreadPrimitive.Messages
+          components={{
+            UserMessage: CustomUserMessage,
+            AssistantMessage: CustomAssistantMessage,
+          }}
+        />
 
         {citations.length > 0 && (
           <div className="flex justify-start">
@@ -354,7 +299,15 @@ function ChatContent({
             onAcknowledge={() => setRedFlags(null)}
           />
         )}
-      </div>
+
+        {pendingInteraction && pendingInteraction.status === 'pending' && (
+          <AskUserCard
+            question={pendingInteraction.question}
+            onSubmit={handleInteractionAnswer}
+            isSubmitting={isSubmittingInteraction}
+          />
+        )}
+      </ThreadPrimitive.Viewport>
 
       {/* Input area */}
       <div className="flex items-end gap-2 p-4 border-t border-[#E5E3DF] bg-[#FBFBFA]">
@@ -381,11 +334,47 @@ function ChatContent({
           发送
         </button>
       </div>
-    </div>
+    </ThreadPrimitive.Root>
   );
 }
 
-interface DisplayMessage {
-  role: 'user' | 'assistant';
-  content: string;
+function CustomUserMessage() {
+  return (
+    <MessagePrimitive.Root className="flex justify-end">
+      <div className="max-w-[80%] rounded-[20px] px-4 py-3 bg-primary-700 text-[#FBFBFA] rounded-br-[4px] shadow-sm shadow-[#2a4b3a]/10">
+        <div className="whitespace-pre-wrap text-sm leading-relaxed font-medium">
+          <MessagePrimitive.Content />
+        </div>
+      </div>
+    </MessagePrimitive.Root>
+  );
+}
+
+function CustomAssistantMessage() {
+  const message = useMessage();
+  const isMessageEmpty = message.content.length === 0 || 
+    (message.content.length === 1 && message.content[0].type === 'text' && !message.content[0].text);
+  const isMessageRunning = message.status.type === 'running';
+
+  return (
+    <MessagePrimitive.Root className="flex justify-start">
+      <div className="max-w-[80%] rounded-[20px] px-4 py-3 bg-[#F7F5F0] text-[#1A221E] rounded-bl-[4px] border border-[#E5E3DF]">
+        {isMessageRunning && isMessageEmpty ? (
+          <div className="flex items-center gap-1.5 py-1 px-1">
+            <span className="w-2 h-2 rounded-full bg-[#709a83] animate-bounce [animation-delay:-0.3s]" />
+            <span className="w-2 h-2 rounded-full bg-[#709a83] animate-bounce [animation-delay:-0.15s]" />
+            <span className="w-2 h-2 rounded-full bg-[#709a83] animate-bounce" />
+          </div>
+        ) : (
+          <div className="text-sm leading-relaxed font-medium prose-markdown">
+            <MessagePrimitive.Content
+              components={{
+                Text: () => <MarkdownTextPrimitive remarkPlugins={[remarkGfm]} />,
+              }}
+            />
+          </div>
+        )}
+      </div>
+    </MessagePrimitive.Root>
+  );
 }
