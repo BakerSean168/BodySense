@@ -33,7 +33,7 @@ class AssessmentService:
         """
         # Build messages
         user_prompt = get_assessment_prompt(profile, rag_context)
-        
+
         if images:
             content_list: list[dict[str, Any]] = [
                 {"type": "text", "text": user_prompt}

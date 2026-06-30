@@ -8,20 +8,25 @@ Converts the linear ChatService flow into an explicit state graph with:
 - generate_diagnosis / generate_treatment: optional downstream actions
 """
 
-import asyncio
 import logging
-import re
 from collections.abc import AsyncIterator
 from typing import Annotated, Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import StreamWriter
 
-from ..ai import AiRequest, AIService
-from ..ai.types import ChatMessage, ToolCall
+from ..ai import AIService
+from ..ai.types import ChatMessage
 from ..models.consultation import ChatContext, ExtractedInfo
 from ..prompts.consultation import format_profile_context, get_system_prompt
 from .agent.consultation_tools import get_consultation_executor, get_consultation_registry
+from .agent.orchestrator import (
+    AgentOrchestrator,
+    emit_citation_events,
+)
+from .agent.orchestrator import (
+    build_fallback_reply as build_fallback_reply,
+)
 from .agent_workflow import get_agent_workflow
 from .red_flag_detector import get_red_flag_detector
 
@@ -39,7 +44,6 @@ def _get_ai_service() -> AIService:
     if _ai_service_instance is None:
         _ai_service_instance = AIService()
     return _ai_service_instance
-MAX_TOOL_ROUNDS = 3
 
 
 def _merge_symptoms(
@@ -146,58 +150,6 @@ def build_messages(state: ConsultationState) -> list[ChatMessage]:
     return messages
 
 
-def build_fallback_reply(
-    user_message: str,
-    rag_results: list[dict[str, Any]] | None = None,
-) -> str:
-    """Build a deterministic reply when no online LLM is configured."""
-    if not rag_results:
-        return (
-            "我已经收到你的描述，但当前本地环境没有配置云端大模型，且知识库里暂时没有检索到足够匹配的条目。\n"
-            "你可以继续补充具体部位、动作场景、是否双侧对称，以及持续多久，我会继续按本地知识库帮你缩小范围。"
-        )
-
-    top = rag_results[0]
-    title = top.get("title", "相关体态问题")
-    summary = top.get("summary", "").strip()
-    content = top.get("body_markdown") or top.get("content") or summary or ""
-    plain = _markdown_to_text(content)
-    lines = [f'根据当前本地知识库，你提到的问题最接近"{title}"。']
-
-    if summary:
-        lines.append(f"核心判断：{summary}")
-    if plain:
-        lines.append(f"知识要点：{plain[:280]}")
-
-    clips = top.get("clips") or []
-    if clips:
-        clip_titles = [c.get("title", "").strip() for c in clips[:2] if c.get("title")]
-        if clip_titles:
-            lines.append(f"可参考的动作演示：{'、'.join(clip_titles)}。")
-
-    if len(rag_results) > 1:
-        extra = [r.get("title", "").strip() for r in rag_results[1:3] if r.get("title")]
-        if extra:
-            lines.append(f"我同时参考了：{'、'.join(extra)}。")
-
-    lines.append("当前回答来自本地 curated 知识库整理，不构成医疗诊断；")
-    lines.append("如果你愿意，我可以继续根据你的具体症状帮你细化判断。")
-    return "\n".join(lines)
-
-
-def _markdown_to_text(content: str) -> str:
-    """Flatten markdown into readable plain text."""
-    text = re.sub(r"^#+\s*", "", content, flags=re.MULTILINE)
-    text = re.sub(r"^[*-]\s*", "", text, flags=re.MULTILINE)
-    text = re.sub(r"\n{2,}", "\n", text)
-    return text.strip()
-
-
-def _chunk_text(text: str, chunk_size: int = 120) -> list[str]:
-    """Split a reply into stream-friendly chunks."""
-    return [text[i : i + chunk_size] for i in range(0, len(text), chunk_size)]
-
-
 def _search_results_to_dicts(search_results: list[Any]) -> list[dict[str, Any]]:
     """Convert SearchResult objects to serializable dicts for RAG context."""
     return [
@@ -223,28 +175,7 @@ def _search_results_to_dicts(search_results: list[Any]) -> list[dict[str, Any]]:
     ]
 
 
-def _emit_citation_events(
-    search_results: list[Any],
-    writer: StreamWriter,
-) -> None:
-    """Emit NDJSON citation events for knowledge search results."""
-    for result in search_results:
-        body = getattr(result, "body_markdown", "") or ""
-        writer({
-            "type": "citation",
-            "citation": {
-                "title": getattr(result, "title", ""),
-                "summary": getattr(result, "summary", ""),
-                "body_markdown": body[:500] if len(body) > 500 else body,
-                "source_title": getattr(result, "source_title", ""),
-                "source_author": getattr(result, "source_author", ""),
-                "category": getattr(result, "category", ""),
-                "problem_slug": getattr(result, "problem_slug", ""),
-                "unit_type": getattr(result, "unit_type", ""),
-                "tags": getattr(result, "tags", []) or [],
-                "clips": getattr(result, "clips", []) or [],
-            },
-        })
+_emit_citation_events = emit_citation_events
 
 
 def _get_conversation_text(history: list[dict[str, Any]], user_message: str) -> str:
@@ -328,227 +259,20 @@ async def classify_intent(state: ConsultationState) -> dict[str, Any]:
 async def generate_response(
     state: ConsultationState, *, writer: StreamWriter
 ) -> dict[str, Any]:
-    """Stream LLM response with tool calling, or fallback to local knowledge.
-
-    Supports a multi-round tool loop: the LLM can call search_knowledge to
-    retrieve information from the knowledge base, then continue generating
-    with the results. Up to MAX_TOOL_ROUNDS iterations are allowed.
-    """
-    accumulated_text = ""
-    new_symptoms: list[dict[str, Any]] = []
-
-    try:
-        ai = _get_ai_service()
-    except Exception:
-        # Fallback path: no LLM configured — search locally and build reply
-        fallback_text = build_fallback_reply(state["user_message"], state.get("rag_results"))
-        for chunk in _chunk_text(fallback_text):
-            accumulated_text += chunk
-            writer({"type": "text_delta", "delta": chunk})
-        return {
-            "accumulated_text": accumulated_text,
-            "llm_available": False,
-            "extracted_symptoms": [],
-        }
-
-    # Build tools from registry
-    registry = get_consultation_registry()
-    executor = get_consultation_executor()
-    provider_tools = registry.to_provider_tools()
-
-    # Multi-round tool loop
-    messages = build_messages(state)
-    seen_queries: set[str] = set()
-    seen_body_parts: set[str] = set()  # for deduplicating extract_symptom_info
-
-    # Text buffering to avoid per-token NDJSON events (each CJK token is 1-3 chars)
-    _text_buf = ""
-    _text_buf_size = 20  # flush ~20 chars at a time
-
-    def _flush_text_buf() -> None:
-        nonlocal _text_buf
-        if _text_buf:
-            writer({"type": "text_delta", "delta": _text_buf})
-            _text_buf = ""
-
-    for _round in range(MAX_TOOL_ROUNDS):
-        # Collect completed tool calls from AiStreamEvent "tool_call_done" events
-        completed_tool_calls: list[dict[str, Any]] = []
-
-        async for event in ai.generate_stream(AiRequest(
-            use_case="consultation.reply",
-            messages=messages,
-            tools=provider_tools,
-            temperature=0.7,
-            max_tokens=2048,
-        )):
-            if event.type == "text_delta" and event.text:
-                accumulated_text += event.text
-                _text_buf += event.text
-                if len(_text_buf) >= _text_buf_size:
-                    _flush_text_buf()
-                await asyncio.sleep(0)
-
-            elif event.type == "tool_call_done" and event.tool_name:
-                _flush_text_buf()
-                completed_tool_calls.append({
-                    "id": event.tool_call_id or "",
-                    "name": event.tool_name,
-                    "arguments": event.tool_arguments or {},
-                })
-
-        # Flush remaining text at end of each round
-        _flush_text_buf()
-
-        # If no tool calls, we're done
-        if not completed_tool_calls:
-            break
-
-        # Process tool calls and build tool results for next round
-        tool_messages: list[ChatMessage] = []
-        has_search = False
-
-        for tc in completed_tool_calls:
-            tc_id = tc["id"]
-            tc_name = tc["name"]
-            tc_args = tc["arguments"]
-
-            # Emit generic tool_call event for protocol compliance
-            writer({
-                "type": "tool_call",
-                "id": tc_id,
-                "tool": tc_name,
-                "args": tc_args,
-            })
-
-            if tc_name == "extract_symptom_info":
-                body_part = tc_args.get("body_part", "")
-                # Deduplicate: same body_part in this response only emits once
-                if body_part and body_part not in seen_body_parts:
-                    seen_body_parts.add(body_part)
-                    # Execute via handler for validation/normalization
-                    tool_result = await executor.execute(tc_id, tc_name, tc_args)
-                    if tool_result.status.value == "success":
-                        normalized = tool_result.content or tc_args
-                        new_symptoms.append(normalized)
-                        writer({"type": "extracted_info", "info": normalized})
-                    else:
-                        new_symptoms.append(tc_args)
-                        writer({"type": "extracted_info", "info": tc_args})
-                writer({
-                    "type": "tool_result",
-                    "id": tc_id,
-                    "tool": tc_name,
-                    "result": {"status": "ok"},
-                })
-                tool_messages.append(ChatMessage(
-                    role="tool",
-                    content="症状信息已提取。",
-                    tool_call_id=tc_id,
-                ))
-
-            elif tc_name == "search_knowledge":
-                query = tc_args.get("query", "")
-                # Deduplicate identical queries
-                if query in seen_queries:
-                    tool_messages.append(ChatMessage(
-                        role="tool",
-                        content="之前已搜索过相同内容，请直接使用已有结果回答。",
-                        tool_call_id=tc_id,
-                    ))
-                    continue
-                seen_queries.add(query)
-
-                # Execute via handler
-                tool_result = await executor.execute(tc_id, tc_name, tc_args)
-                has_search = True
-
-                if tool_result.status.value == "success":
-                    content = tool_result.content or {}
-                    result_text = content.get("result_text", "")
-                    has_results = content.get("has_results", False)
-                    raw_results = content.get("raw_results", [])
-
-                    if has_results:
-                        _emit_citation_events(raw_results, writer)
-                    else:
-                        writer({
-                            "type": "knowledge_gap",
-                            "query": query,
-                            "message": "知识库中暂未找到相关专项资料，以下为通用建议。",
-                        })
-                else:
-                    result_text = tool_result.error or "搜索失败"
-                    has_results = False
-
-                writer({
-                    "type": "tool_result",
-                    "id": tc_id,
-                    "tool": tc_name,
-                    "result": {"has_results": has_results},
-                })
-                tool_messages.append(ChatMessage(
-                    role="tool",
-                    content=result_text,
-                    tool_call_id=tc_id,
-                ))
-
-            elif tc_name == "ask_user":
-                # HITL interrupt: execute tool, emit interaction event, stop graph
-                tool_result = await executor.execute(tc_id, tc_name, tc_args)
-                _flush_text_buf()
-
-                if tool_result.status.value == "interrupted":
-                    question_data = tool_result.content or {}
-                    writer({
-                        "type": "state.interaction.required",
-                        "interaction_id": tc_id,
-                        "question": question_data,
-                    })
-                    # Return immediately — graph stops here
-                    return {
-                        "accumulated_text": accumulated_text,
-                        "extracted_symptoms": new_symptoms,
-                        "llm_available": True,
-                        "interrupted": True,
-                    }
-                else:
-                    # ask_user validation failed — treat as normal tool error
-                    writer({
-                        "type": "tool_result",
-                        "id": tc_id,
-                        "tool": tc_name,
-                        "result": {"status": "error", "error": tool_result.error},
-                    })
-
-        # If we had tool calls, append assistant message with tool calls
-        # and tool results to messages for the next round
-        if tool_messages:
-            assistant_tool_calls = [
-                ToolCall(id=tc["id"], name=tc["name"], arguments=tc["arguments"])
-                for tc in completed_tool_calls
-            ]
-            assistant_msg = ChatMessage(role="assistant", content="")
-            assistant_msg.tool_calls = assistant_tool_calls
-            messages.append(assistant_msg)
-            messages.extend(tool_messages)
-
-        # Continue the loop if:
-        # - search_knowledge was called (LLM needs to use the RAG results), OR
-        # - no text was generated yet (LLM needs another round to produce a reply)
-        if has_search:
-            continue
-        if not accumulated_text:
-            # LLM only called tools (e.g. extract_symptom_info) without generating
-            # any text. Give it another round to produce a user-facing reply.
-            continue
-        break
-
-    return {
-        "accumulated_text": accumulated_text,
-        "extracted_symptoms": new_symptoms,
-        "llm_available": True,
-    }
+    """Stream LLM response through the agent orchestration Module."""
+    orchestrator = AgentOrchestrator(
+        ai_provider=_get_ai_service,
+        registry=get_consultation_registry(),
+        executor=get_consultation_executor(),
+    )
+    return await orchestrator.stream_turn(
+        {
+            "user_message": state["user_message"],
+            "rag_results": state.get("rag_results", []),
+            "messages": build_messages(state),
+        },
+        writer=writer,
+    )
 
 
 

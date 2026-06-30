@@ -36,7 +36,10 @@ def test_validate_structured_output_accepted(guard):
 
 def test_validate_structured_output_rejected_missing_field(guard):
     output = {"diagnoses": []}
-    result = guard.validate_structured_output(output, required_fields=["diagnoses", "treatment_plan"])
+    result = guard.validate_structured_output(
+        output,
+        required_fields=["diagnoses", "treatment_plan"],
+    )
     assert result.status == GovernanceStatus.REJECTED
     assert any("Missing required field" in i.message for i in result.issues)
 
@@ -128,14 +131,22 @@ def test_validate_text_output_red_flag_detected(guard):
     text = "这是一段包含严重疼痛和麻木无力的描述，需要足够长以通过空文本检查。"
     result = guard.validate_text_output(text, context={"extracted_info": []})
     # May or may not trigger depending on red flag patterns — just verify no crash
-    assert result.status in (GovernanceStatus.ACCEPTED, GovernanceStatus.DEGRADED, GovernanceStatus.REJECTED)
+    assert result.status in (
+        GovernanceStatus.ACCEPTED,
+        GovernanceStatus.DEGRADED,
+        GovernanceStatus.REJECTED,
+    )
 
 
 def test_validate_structured_output_red_flag(guard):
     """Structured output with red flag content in serialized text produces safety issues."""
     output = {"summary": "患者出现严重症状，需要紧急处理，文本足够长以通过检查。"}
     result = guard.validate_structured_output(output, context={"extracted_info": []})
-    assert result.status in (GovernanceStatus.ACCEPTED, GovernanceStatus.DEGRADED, GovernanceStatus.REJECTED)
+    assert result.status in (
+        GovernanceStatus.ACCEPTED,
+        GovernanceStatus.DEGRADED,
+        GovernanceStatus.REJECTED,
+    )
 
 
 def test_governance_context_fields():
