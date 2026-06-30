@@ -3,11 +3,13 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import streamEventFixtures from '../../../../../../packages/contracts/fixtures/stream-events.v1.json';
 import {
   reduceStreamEvent,
   INITIAL_STATE,
 } from './streamEventReducer';
 import type { StreamEvent } from '../types/consultation';
+import type { ConsultationStreamState } from './streamEventReducer';
 
 // ---------------------------------------------------------------------------
 // Fixtures — minimal StreamEvent shapes matching the contract
@@ -40,6 +42,22 @@ function makeEvent(
 // ---------------------------------------------------------------------------
 
 describe('StreamEventReducer', () => {
+  describe('contract fixture parity', () => {
+    it('consumes shared StreamEvent v1 fixtures', () => {
+      const [textEvent, jobEvent, interactionEvent] = streamEventFixtures as StreamEvent[];
+
+      const textResult = reduceStreamEvent(INITIAL_STATE, textEvent);
+      expect(textResult.state.assistantText).toBe('hello');
+
+      const jobResult = reduceStreamEvent(textResult.state, jobEvent);
+      expect(jobResult.state).toEqual(textResult.state);
+
+      const interactionResult = reduceStreamEvent(jobResult.state, interactionEvent);
+      expect(interactionResult.state.pendingInteraction?.id).toBe('interaction-1');
+      expect(interactionResult.state.pendingInteraction?.tool_call_id).toBe('tool-1');
+    });
+  });
+
   describe('message.text.delta', () => {
     it('appends delta text to assistantText', () => {
       const event = makeEvent('message.text.delta', { delta: 'Hello' });
@@ -332,7 +350,7 @@ describe('StreamEventReducer', () => {
 
   describe('state.interaction.answered', () => {
     it('marks pending interaction as answered', () => {
-      const prev = {
+      const prev: ConsultationStreamState = {
         ...INITIAL_STATE,
         pendingInteraction: {
           id: 'int-123',
@@ -357,7 +375,10 @@ describe('StreamEventReducer', () => {
 
       expect(effects).toHaveLength(1);
       expect(effects[0].type).toBe('interaction_answered');
-      expect((effects[0] as any).interactionId).toBe('int-123');
+      if (effects[0].type !== 'interaction_answered') {
+        throw new Error(`expected interaction_answered effect, got ${effects[0].type}`);
+      }
+      expect(effects[0].interactionId).toBe('int-123');
     });
 
     it('handles answered event when no pending interaction', () => {

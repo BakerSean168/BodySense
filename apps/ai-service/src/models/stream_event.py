@@ -14,6 +14,7 @@ StreamChannel = Literal[
     "source",
     "safety",
     "usage",
+    "job",
     "stream",
 ]
 
@@ -27,6 +28,7 @@ class StreamEventIds(BaseModel):
     message_id: str | None = None
     tool_call_id: str | None = None
     interaction_id: str | None = None
+    job_id: str | None = None
 
 
 class StreamEvent(BaseModel):

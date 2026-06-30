@@ -11,6 +11,7 @@ type StreamEventIDs struct {
 	MessageID      string `json:"message_id,omitempty"`
 	ToolCallID     string `json:"tool_call_id,omitempty"`
 	InteractionID  string `json:"interaction_id,omitempty"`
+	JobID          string `json:"job_id,omitempty"`
 }
 
 type StreamEvent struct {
