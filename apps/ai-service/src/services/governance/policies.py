@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..faithfulness_checker import get_faithfulness_checker
 from ..red_flag_detector import get_red_flag_detector
-from .types import GovernanceIssue, IssueSeverity
+from .types import GovernanceContext, GovernanceIssue, IssueSeverity
 
 
 def check_red_flags(output_text: str, context: dict[str, Any]) -> list[GovernanceIssue]:
@@ -51,3 +52,44 @@ def check_empty_output(output_text: str) -> list[GovernanceIssue]:
             message="Output is empty or too short",
         )]
     return []
+
+
+def check_faithfulness(
+    treatment_plan: dict[str, Any],
+    context: GovernanceContext,
+) -> list[GovernanceIssue]:
+    """Check treatment plan faithfulness against RAG results.
+
+    Wraps FaithfulnessChecker as a governance policy. Ungrounded exercises
+    produce warning issues; all exercises ungrounded produces an error.
+    """
+    issues: list[GovernanceIssue] = []
+    rag_results = context.rag_results
+
+    if not rag_results:
+        # No RAG results to check against — skip faithfulness check
+        return issues
+
+    checker = get_faithfulness_checker()
+    result = checker.check_treatment_faithfulness(treatment_plan, rag_results)
+
+    if not result.faithful:
+        for exercise_name in result.ungrounded_exercises:
+            issues.append(GovernanceIssue(
+                policy="faithfulness",
+                severity=IssueSeverity.WARNING,
+                message=f"Exercise not grounded in knowledge base: {exercise_name}",
+                details={"exercise": exercise_name},
+            ))
+
+        # If ALL exercises are ungrounded, escalate to error
+        exercises = treatment_plan.get("correction_exercises", [])
+        if exercises and len(result.ungrounded_exercises) == len(exercises):
+            issues.append(GovernanceIssue(
+                policy="faithfulness",
+                severity=IssueSeverity.ERROR,
+                message="All exercises are ungrounded — treatment plan may be hallucinated",
+                details={"ungrounded_count": len(result.ungrounded_exercises)},
+            ))
+
+    return issues

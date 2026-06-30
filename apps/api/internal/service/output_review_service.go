@@ -25,10 +25,11 @@ func NewOutputReviewService(repo *repository.AIOutputReviewRepository) *OutputRe
 func (s *OutputReviewService) RecordReview(
 	ctx context.Context,
 	outputType, status string,
-	runID, jobID, conversationID *uuid.UUID,
+	userID, runID, jobID, conversationID *uuid.UUID,
 	issues, validatedOutput, rawOutput datatypes.JSON,
 ) {
 	review := &model.AIOutputReview{
+		UserID:          userID,
 		RunID:           runID,
 		JobID:           jobID,
 		ConversationID:  conversationID,

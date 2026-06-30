@@ -26,6 +26,17 @@ class IssueSeverity(str, Enum):
 
 
 @dataclass
+class GovernanceContext:
+    """Context provided to governance policies for validation."""
+
+    output_type: str = ""
+    extracted_info: list[dict[str, Any]] = field(default_factory=list)
+    rag_results: list[dict[str, Any]] = field(default_factory=list)
+    profile: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
 class GovernanceIssue:
     """A single governance issue found during validation."""
 

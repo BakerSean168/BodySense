@@ -27,16 +27,17 @@ const (
 
 // ChatHandler handles the core chat SSE endpoint.
 type ChatHandler struct {
-	conversationService  *service.ConversationService
-	messageService       *service.MessageService
-	runService           *service.RunService
-	consultationService  *service.ConsultationService
-	aiClient             *service.AIClient
-	profileService       *service.ProfileService
-	agentToolService     *service.AgentToolService
-	interactionService   *service.AgentInteractionService
-	contextBuilder       ctxbuilder.Builder
-	streamRuntime        *stream.Runtime
+	conversationService   *service.ConversationService
+	messageService        *service.MessageService
+	runService            *service.RunService
+	consultationService   *service.ConsultationService
+	aiClient              *service.AIClient
+	profileService        *service.ProfileService
+	agentToolService      *service.AgentToolService
+	interactionService    *service.AgentInteractionService
+	outputReviewService   *service.OutputReviewService
+	contextBuilder        ctxbuilder.Builder
+	streamRuntime         *stream.Runtime
 }
 
 // NewChatHandler creates a new ChatHandler.
@@ -49,19 +50,21 @@ func NewChatHandler(
 	profileService *service.ProfileService,
 	agentToolService *service.AgentToolService,
 	interactionService *service.AgentInteractionService,
+	outputReviewService *service.OutputReviewService,
 ) *ChatHandler {
 	cb := ctxbuilder.NewContextBuilder(profileService, consultationService, messageService)
 	return &ChatHandler{
-		conversationService:  conversationService,
-		messageService:       messageService,
-		runService:           runService,
-		consultationService:  consultationService,
-		aiClient:             aiClient,
-		profileService:       profileService,
-		agentToolService:     agentToolService,
-		interactionService:   interactionService,
-		contextBuilder:       cb,
-		streamRuntime:        stream.NewRuntime(),
+		conversationService:   conversationService,
+		messageService:        messageService,
+		runService:            runService,
+		consultationService:   consultationService,
+		aiClient:              aiClient,
+		profileService:        profileService,
+		agentToolService:      agentToolService,
+		interactionService:    interactionService,
+		outputReviewService:   outputReviewService,
+		contextBuilder:        cb,
+		streamRuntime:         stream.NewRuntime(),
 	}
 }
 
@@ -243,6 +246,7 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 	var assistantParts []map[string]any
 	var usage any
 	var providerResponseID string
+	var governanceResult datatypes.JSON
 	eventCount := 0
 	clientGone := c.Request.Context().Done()
 
@@ -402,6 +406,7 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 				var payload struct {
 					ResponseID string          `json:"response_id"`
 					Usage      json.RawMessage `json:"usage"`
+					Governance json.RawMessage `json:"governance"`
 				}
 				_ = event.PayloadAs(&payload)
 				if payload.ResponseID != "" {
@@ -409,6 +414,9 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 				}
 				if len(payload.Usage) > 0 {
 					usage = payload.Usage
+				}
+				if len(payload.Governance) > 0 {
+					governanceResult = datatypes.JSON(payload.Governance)
 				}
 			case "stream.error":
 				if err := sw.Send(c.Request.Context(), event, assistantMsg.ID.String()); err != nil {
@@ -438,6 +446,30 @@ streamDone:
 	// Complete run
 	if err := h.runService.CompleteRun(c.Request.Context(), run.ID, uid, usage, providerResponseID); err != nil {
 		log.Printf("failed to complete run %s: %v", run.ID, err)
+	}
+
+	// Observe-only governance persistence (non-blocking)
+	if len(governanceResult) > 0 {
+		var govStatus string
+		var govIssues datatypes.JSON
+		// Extract status from governance result for the review record
+		var govPayload struct {
+			Status string          `json:"status"`
+			Issues json.RawMessage `json:"issues"`
+		}
+		if jsonErr := json.Unmarshal(governanceResult, &govPayload); jsonErr == nil {
+			govStatus = govPayload.Status
+			govIssues = datatypes.JSON(govPayload.Issues)
+		} else {
+			govStatus = "unknown"
+			govIssues = datatypes.JSON("[]")
+		}
+		h.outputReviewService.RecordReview(
+			c.Request.Context(),
+			"consultation_reply", govStatus,
+			&uid, &run.ID, nil, &conversationID,
+			govIssues, nil, governanceResult,
+		)
 	}
 
 	// Clear active_run_id

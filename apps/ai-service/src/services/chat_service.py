@@ -1,11 +1,14 @@
 """Chat service for consultation conversations."""
 
+import logging
 import uuid
 from collections.abc import AsyncIterator
 from typing import Any
 
 from ..models.consultation import ChatContext
 from ..models.stream_event import StreamEvent, StreamEventFactory, StreamEventIds
+
+logger = logging.getLogger(__name__)
 
 
 class _StreamAccumulator:
@@ -79,6 +82,18 @@ class ChatService:
                     "extracted_info": event_data.get("extracted_info", []),
                     "phase": event_data.get("phase", "collecting"),
                 }
+
+                # Run governance check (observe-only, non-blocking)
+                try:
+                    from .governance import AIOutputGuard
+                    guard = AIOutputGuard()
+                    gov_result = guard.validate_text_output(
+                        acc.full_text or event_data.get("full_text", ""),
+                        context={"extracted_info": event_data.get("extracted_info", [])},
+                    )
+                    done_payload["governance"] = gov_result.to_dict()
+                except Exception:
+                    logger.debug("Governance check failed (non-blocking)", exc_info=True)
                 yield factory.next(
                     channel="stream",
                     event_type="stream.done",
