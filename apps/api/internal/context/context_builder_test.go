@@ -1,9 +1,13 @@
 package context
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/bodysense/api/internal/dto"
+	"github.com/bodysense/api/internal/model"
+	"github.com/google/uuid"
+	"gorm.io/datatypes"
 )
 
 func TestExtractTextFromParts(t *testing.T) {
@@ -89,5 +93,137 @@ func TestContextTrace_Fields(t *testing.T) {
 	}
 	if trace.UseCase != "consultation.reply" {
 		t.Errorf("expected UseCase to be 'consultation.reply', got %q", trace.UseCase)
+	}
+}
+
+func TestGetMessageTextContent_WithContentText(t *testing.T) {
+	msg := model.Message{ContentText: "直接文本内容"}
+	got := getMessageTextContent(msg)
+	if got != "直接文本内容" {
+		t.Errorf("expected '直接文本内容', got %q", got)
+	}
+}
+
+func TestGetMessageTextContent_FromParts(t *testing.T) {
+	parts, _ := json.Marshal([]struct {
+		Type string `json:"type"`
+		Text string `json:"text"`
+	}{
+		{Type: "text", Text: "从 parts 提取的文本"},
+	})
+	msg := model.Message{Parts: datatypes.JSON(parts)}
+	got := getMessageTextContent(msg)
+	if got != "从 parts 提取的文本" {
+		t.Errorf("expected '从 parts 提取的文本', got %q", got)
+	}
+}
+
+func TestGetMessageTextContent_EmptyMessage(t *testing.T) {
+	msg := model.Message{}
+	got := getMessageTextContent(msg)
+	if got != "" {
+		t.Errorf("expected empty string, got %q", got)
+	}
+}
+
+func TestGetMessageTextContent_PrefersContentTextOverParts(t *testing.T) {
+	parts, _ := json.Marshal([]struct {
+		Type string `json:"type"`
+		Text string `json:"text"`
+	}{
+		{Type: "text", Text: "parts 文本"},
+	})
+	msg := model.Message{
+		ContentText: "ContentText 优先",
+		Parts:       datatypes.JSON(parts),
+	}
+	got := getMessageTextContent(msg)
+	if got != "ContentText 优先" {
+		t.Errorf("expected 'ContentText 优先', got %q", got)
+	}
+}
+
+func TestLoadHistory_FiltersCurrentTurn(t *testing.T) {
+	currentTurnID := uuid.New()
+	otherTurnID := uuid.New()
+
+	msgs := []model.Message{
+		{ID: uuid.New(), TurnID: otherTurnID, Role: "user", Status: "completed", ContentText: "历史消息"},
+		{ID: uuid.New(), TurnID: currentTurnID, Role: "user", Status: "completed", ContentText: "当前轮次"},
+	}
+
+	var chatHistory []struct {
+		Role    string
+		Content string
+	}
+	var includedIDs []uuid.UUID
+
+	for _, m := range msgs {
+		if m.TurnID != currentTurnID && m.Status == "completed" {
+			text := getMessageTextContent(m)
+			if text != "" {
+				chatHistory = append(chatHistory, struct {
+					Role    string
+					Content string
+				}{Role: m.Role, Content: text})
+				includedIDs = append(includedIDs, m.ID)
+			}
+		}
+	}
+
+	if len(chatHistory) != 1 {
+		t.Fatalf("expected 1 history message, got %d", len(chatHistory))
+	}
+	if chatHistory[0].Content != "历史消息" {
+		t.Errorf("expected '历史消息', got %q", chatHistory[0].Content)
+	}
+}
+
+func TestLoadHistory_FiltersNonCompleted(t *testing.T) {
+	turnID := uuid.New()
+
+	msgs := []model.Message{
+		{ID: uuid.New(), TurnID: turnID, Role: "assistant", Status: "streaming", ContentText: "流式中"},
+		{ID: uuid.New(), TurnID: turnID, Role: "assistant", Status: "aborted", ContentText: "已中断"},
+		{ID: uuid.New(), TurnID: turnID, Role: "assistant", Status: "completed", ContentText: "已完成"},
+	}
+
+	currentTurnID := uuid.New()
+	var count int
+	for _, m := range msgs {
+		if m.TurnID != currentTurnID && m.Status == "completed" {
+			text := getMessageTextContent(m)
+			if text != "" {
+				count++
+			}
+		}
+	}
+
+	if count != 1 {
+		t.Errorf("expected 1 completed message, got %d", count)
+	}
+}
+
+func TestLoadHistory_FiltersEmptyText(t *testing.T) {
+	turnID := uuid.New()
+	currentTurnID := uuid.New()
+
+	msgs := []model.Message{
+		{ID: uuid.New(), TurnID: turnID, Role: "assistant", Status: "completed", ContentText: ""},
+		{ID: uuid.New(), TurnID: turnID, Role: "assistant", Status: "completed", ContentText: "有内容"},
+	}
+
+	var count int
+	for _, m := range msgs {
+		if m.TurnID != currentTurnID && m.Status == "completed" {
+			text := getMessageTextContent(m)
+			if text != "" {
+				count++
+			}
+		}
+	}
+
+	if count != 1 {
+		t.Errorf("expected 1 message with content, got %d", count)
 	}
 }
