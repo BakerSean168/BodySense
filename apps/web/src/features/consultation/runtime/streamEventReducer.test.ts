@@ -285,4 +285,88 @@ describe('StreamEventReducer', () => {
       expect(INITIAL_STATE.status).toBe('idle');
     });
   });
+
+  // --- Interaction events ------------------------------------------------
+
+  describe('state.interaction.required', () => {
+    it('sets pendingInteraction from event payload', () => {
+      const event = makeEvent('state.interaction.required', {
+        interaction_id: 'int-123',
+        question: {
+          question: '你的年龄是多少？',
+          answer_type: 'number',
+          required: true,
+        },
+      }, {
+        run_id: 'run-1',
+        conversation_id: 'conv-1',
+        tool_call_id: 'tc-1',
+      }, 'state');
+
+      const { state, effects } = reduceStreamEvent(INITIAL_STATE, event);
+
+      expect(state.pendingInteraction).not.toBeNull();
+      expect(state.pendingInteraction!.id).toBe('int-123');
+      expect(state.pendingInteraction!.status).toBe('pending');
+      expect(state.pendingInteraction!.question.question).toBe('你的年龄是多少？');
+      expect(state.pendingInteraction!.run_id).toBe('run-1');
+      expect(state.pendingInteraction!.tool_call_id).toBe('tc-1');
+      expect(state.status).toBe('streaming');
+
+      expect(effects).toHaveLength(1);
+      expect(effects[0].type).toBe('interaction_required');
+    });
+
+    it('preserves existing assistant text', () => {
+      const prev = { ...INITIAL_STATE, assistantText: '之前的文本' };
+      const event = makeEvent('state.interaction.required', {
+        interaction_id: 'int-1',
+        question: { question: '问题', answer_type: 'text', required: true },
+      }, {}, 'state');
+
+      const { state } = reduceStreamEvent(prev, event);
+      expect(state.assistantText).toBe('之前的文本');
+      expect(state.pendingInteraction).not.toBeNull();
+    });
+  });
+
+  describe('state.interaction.answered', () => {
+    it('marks pending interaction as answered', () => {
+      const prev = {
+        ...INITIAL_STATE,
+        pendingInteraction: {
+          id: 'int-123',
+          run_id: 'run-1',
+          conversation_id: 'conv-1',
+          tool_call_id: 'tc-1',
+          tool_name: 'ask_user',
+          question: { question: 'test', answer_type: 'text', required: true },
+          status: 'pending' as const,
+          created_at: new Date().toISOString(),
+        },
+      };
+
+      const event = makeEvent('state.interaction.answered', {
+        interaction_id: 'int-123',
+      }, {}, 'state');
+
+      const { state, effects } = reduceStreamEvent(prev, event);
+
+      expect(state.pendingInteraction).not.toBeNull();
+      expect(state.pendingInteraction!.status).toBe('answered');
+
+      expect(effects).toHaveLength(1);
+      expect(effects[0].type).toBe('interaction_answered');
+      expect((effects[0] as any).interactionId).toBe('int-123');
+    });
+
+    it('handles answered event when no pending interaction', () => {
+      const event = makeEvent('state.interaction.answered', {
+        interaction_id: 'int-999',
+      }, {}, 'state');
+
+      const { state } = reduceStreamEvent(INITIAL_STATE, event);
+      expect(state.pendingInteraction).toBeNull();
+    });
+  });
 });
