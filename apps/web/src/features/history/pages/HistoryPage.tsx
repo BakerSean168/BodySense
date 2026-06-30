@@ -4,7 +4,7 @@ import { consultationApi } from '@/features/consultation';
 import type { Conversation } from '@/features/consultation/types/consultation';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 
 export function HistoryPage() {
   const navigate = useNavigate();

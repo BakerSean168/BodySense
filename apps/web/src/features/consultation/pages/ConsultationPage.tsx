@@ -15,7 +15,7 @@ import type {
   DiagnosisAnalysis,
   TreatmentPlan,
 } from '../types/consultation';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { MainLayout } from '@/components/layout/MainLayout';
 
