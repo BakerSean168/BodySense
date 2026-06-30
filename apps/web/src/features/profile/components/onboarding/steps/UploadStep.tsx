@@ -4,7 +4,7 @@ import type { FileType } from '../../../types/upload.types';
 import { FILE_TYPE_LABELS } from '../../../types/upload.types';
 
 export function UploadStep() {
-  const { uploads, isLoading, fetchUploads, uploadFile, deleteUpload } = useUploadStore();
+  const { uploads, fetchUploads, uploadFile, deleteUpload } = useUploadStore();
   const [uploadingTypes, setUploadingTypes] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
 
@@ -189,7 +189,7 @@ export function UploadStep() {
                   <p className="text-[10px] text-slate-500 mt-0.5">
                     大小: {(report.file_size / (1024 * 1024)).toFixed(2)} MB • {
                       report.ocr_status === 'completed' && report.ocr_result
-                        ? `AI 成功识别 ${(report.ocr_result as any).result?.indicators?.length || 0} 项健康指标`
+                        ? `AI 成功识别 ${report.ocr_result.indicators?.length || 0} 项健康指标`
                         : report.ocr_status === 'processing'
                         ? 'AI 正在智能读取中...'
                         : report.ocr_status === 'failed'

@@ -158,7 +158,7 @@ export function TrainingPage() {
 
       toast.success('计划调整方案已成功应用！');
       setActiveProposal(null);
-    } catch (err) {
+    } catch {
       toast.error('应用调整方案失败，请重试');
     }
   };
