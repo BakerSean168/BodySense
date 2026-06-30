@@ -64,8 +64,11 @@ class GovernanceResult:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        d: dict[str, Any] = {
             "status": self.status.value,
             "issues": [i.to_dict() for i in self.issues],
             "metadata": self.metadata,
         }
+        if self.validated_output is not None:
+            d["validated_output"] = self.validated_output
+        return d

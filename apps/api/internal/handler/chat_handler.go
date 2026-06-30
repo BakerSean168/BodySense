@@ -319,10 +319,11 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 					log.Printf("SSE write error (tool.result): %v", err)
 				}
 				assistantParts = append(assistantParts, map[string]any{"type": "tool_result", "tool": payload.Tool, "result": payload.Result})
-				// Audit: persist tool result
+				// Audit: persist tool result — detect error from payload
+				isError := toolResultIsError(payload.Result)
 				h.agentToolService.RecordToolResult(
 					c.Request.Context(), run.ID, event.IDs.ToolCallID,
-					datatypes.JSON(payload.Result), false,
+					datatypes.JSON(payload.Result), isError,
 				)
 
 			case "state.extracted_info.upsert", "state.diagnosis.ready", "state.treatment.ready", "source.citation.added", "safety.red_flag.detected":
@@ -356,11 +357,6 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 				event.IDs.InteractionID = interactionID
 				if err := sw.Send(c.Request.Context(), event, assistantMsg.ID.String()); err != nil {
 					log.Printf("SSE write error (interaction.required): %v", err)
-				}
-
-				// Mark run as waiting_user
-				if err := h.runService.MarkWaitingUser(c.Request.Context(), run.ID); err != nil {
-					log.Printf("failed to mark run %s as waiting_user: %v", run.ID, err)
 				}
 
 				// Mark assistant message as aborted (will be completed on resume)
@@ -452,14 +448,19 @@ streamDone:
 	if len(governanceResult) > 0 {
 		var govStatus string
 		var govIssues datatypes.JSON
-		// Extract status from governance result for the review record
+		var govValidatedOutput datatypes.JSON
+		// Extract fields from governance result for the review record
 		var govPayload struct {
-			Status string          `json:"status"`
-			Issues json.RawMessage `json:"issues"`
+			Status          string          `json:"status"`
+			Issues          json.RawMessage `json:"issues"`
+			ValidatedOutput json.RawMessage `json:"validated_output"`
 		}
 		if jsonErr := json.Unmarshal(governanceResult, &govPayload); jsonErr == nil {
 			govStatus = govPayload.Status
 			govIssues = datatypes.JSON(govPayload.Issues)
+			if len(govPayload.ValidatedOutput) > 0 {
+				govValidatedOutput = datatypes.JSON(govPayload.ValidatedOutput)
+			}
 		} else {
 			govStatus = "unknown"
 			govIssues = datatypes.JSON("[]")
@@ -468,7 +469,7 @@ streamDone:
 			c.Request.Context(),
 			"consultation_reply", govStatus,
 			&uid, &run.ID, nil, &conversationID,
-			govIssues, nil, governanceResult,
+			govIssues, govValidatedOutput, governanceResult,
 		)
 	}
 
@@ -507,6 +508,18 @@ func (h *ChatHandler) clearActiveRun(ctx context.Context, conversationID, userID
 	if err := h.conversationService.UpdateActiveRunID(ctx, conversationID, userID, nil, ""); err != nil {
 		log.Printf("failed to clear active_run_id for conversation %s: %v", conversationID, err)
 	}
+}
+
+// toolResultIsError inspects a tool result payload to determine if it represents an error.
+func toolResultIsError(result json.RawMessage) bool {
+	var parsed struct {
+		Status string `json:"status"`
+		Error  string `json:"error"`
+	}
+	if err := json.Unmarshal(result, &parsed); err != nil {
+		return false
+	}
+	return parsed.Status == "error" || parsed.Error != ""
 }
 
 // maybeGenerateTitle triggers async title generation if this is the first message.

@@ -163,10 +163,6 @@ func (h *ConsultationHandler) ResumeInteraction(c *gin.Context) {
 	}
 
 	if err := h.interactionService.ResumeInteraction(c.Request.Context(), interactionID, req.Answer); err != nil {
-		if err.Error() == "interaction not found: "+interactionID.String() {
-			respondError(c, http.StatusNotFound, "NOT_FOUND", "interaction not found")
-			return
-		}
 		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return
 	}
