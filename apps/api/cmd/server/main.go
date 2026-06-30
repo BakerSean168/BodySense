@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/bodysense/api/internal/auth"
 	"github.com/bodysense/api/internal/cache"
@@ -63,6 +66,7 @@ func main() {
 	jobRepo := repository.NewJobRepository(database.DB)
 	jobRuntime := service.NewJobRuntime(jobRepo)
 	uploadService := service.NewUploadService(uploadRepo, jobRuntime)
+	uploadService.StartOCRWorker(context.Background(), 10*time.Second, 10*time.Minute)
 	aiClient := service.NewAIClient()
 	messageService := service.NewMessageService(messageRepo)
 	runService := service.NewRunService(runRepo)
@@ -104,12 +108,9 @@ func main() {
 	r := gin.Default()
 
 	// CORS middleware
-	corsOrigin := os.Getenv("CORS_ORIGIN")
-	if corsOrigin == "" {
-		corsOrigin = "*"
-	}
+	corsOrigins := parseCORSOrigins()
 	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", corsOrigin)
+		c.Writer.Header().Set("Access-Control-Allow-Origin", resolveCORSOrigin(c.Request.Header.Get("Origin"), corsOrigins))
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
@@ -236,4 +237,39 @@ func main() {
 	if err := r.Run(fmt.Sprintf(":%s", port)); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func parseCORSOrigins() []string {
+	raw := os.Getenv("CORS_ORIGINS")
+	if raw == "" {
+		raw = os.Getenv("CORS_ORIGIN")
+	}
+	if raw == "" {
+		return []string{"*"}
+	}
+
+	parts := strings.Split(raw, ",")
+	origins := make([]string, 0, len(parts))
+	for _, part := range parts {
+		origin := strings.TrimSpace(part)
+		if origin != "" {
+			origins = append(origins, origin)
+		}
+	}
+	if len(origins) == 0 {
+		return []string{"*"}
+	}
+	return origins
+}
+
+func resolveCORSOrigin(requestOrigin string, allowed []string) string {
+	for _, origin := range allowed {
+		if origin == "*" {
+			return "*"
+		}
+		if requestOrigin != "" && origin == requestOrigin {
+			return requestOrigin
+		}
+	}
+	return allowed[0]
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/repository"
@@ -113,6 +114,18 @@ func (r *JobRuntime) GetJob(ctx context.Context, jobID uuid.UUID) (*model.Job, e
 // GetJobForUser retrieves a job by ID, scoped to a user for authorization.
 func (r *JobRuntime) GetJobForUser(ctx context.Context, jobID, userID uuid.UUID) (*model.Job, error) {
 	return r.repo.GetByIDForUser(ctx, jobID, userID)
+}
+
+// ListRecoverable returns pending jobs and stale running jobs for a job type.
+func (r *JobRuntime) ListRecoverable(ctx context.Context, jobType string, staleRunningAfter time.Duration, limit int) ([]model.Job, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+	jobs, err := r.repo.ListRecoverable(ctx, jobType, time.Now().Add(-staleRunningAfter), limit)
+	if err != nil {
+		return nil, fmt.Errorf("list recoverable jobs: %w", err)
+	}
+	return jobs, nil
 }
 
 // CreateJobWithIdempotency creates a job with an idempotency key.

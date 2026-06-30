@@ -22,6 +22,7 @@ import (
 const (
 	MaxFileSize = 10 << 20 // 10MB
 	UploadDir   = "uploads"
+	ocrJobType  = "upload.ocr_extract"
 )
 
 // Allowed file types
@@ -155,7 +156,9 @@ func (s *UploadService) UploadFile(ctx context.Context, userID uuid.UUID, file *
 
 	// Trigger OCR via JobRuntime for reports
 	if fileType == "report" {
-		go s.processOCRWithJob(upload.ID, userID, filePath, mimeType)
+		if _, _, err := s.enqueueOCRJob(ctx, upload.ID, userID, filePath, mimeType); err != nil {
+			log.Printf("failed to enqueue OCR job for upload %s: %v", upload.ID, err)
+		}
 	}
 
 	return upload, nil
@@ -250,48 +253,129 @@ func (s *UploadService) executeOCRCall(filePath, mimeType string) ([]byte, error
 	return respBody, nil
 }
 
-// processOCRWithJob executes OCR through JobRuntime, creating a durable job with idempotency.
-func (s *UploadService) processOCRWithJob(uploadID, userID uuid.UUID, filePath string, mimeType string) {
-	ctx := context.Background()
+type ocrJobInput struct {
+	UploadID string `json:"upload_id"`
+	FilePath string `json:"file_path"`
+	MimeType string `json:"mime_type"`
+}
 
-	// Idempotency: use DB-level dedup via idempotency key
+// StartOCRWorker starts a background worker that recovers and processes OCR jobs.
+func (s *UploadService) StartOCRWorker(ctx context.Context, pollInterval, staleRunningAfter time.Duration) {
+	go func() {
+		ticker := time.NewTicker(pollInterval)
+		defer ticker.Stop()
+
+		for {
+			if _, err := s.RecoverOCRJobs(ctx, 10, staleRunningAfter); err != nil {
+				log.Printf("OCR job recovery failed: %v", err)
+			}
+
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+			}
+		}
+	}()
+}
+
+// RecoverOCRJobs processes pending OCR jobs and times out stale running jobs.
+func (s *UploadService) RecoverOCRJobs(ctx context.Context, limit int, staleRunningAfter time.Duration) (int, error) {
+	if s.jobRuntime == nil {
+		return 0, nil
+	}
+	jobs, err := s.jobRuntime.ListRecoverable(ctx, ocrJobType, staleRunningAfter, limit)
+	if err != nil {
+		return 0, err
+	}
+
+	processed := 0
+	for _, job := range jobs {
+		switch job.Status {
+		case "pending":
+			if err := s.processOCRJob(ctx, job); err != nil {
+				log.Printf("failed to process OCR job %s: %v", job.ID, err)
+			}
+			processed++
+		case "running":
+			if err := s.timeoutOCRJob(ctx, job); err != nil {
+				log.Printf("failed to timeout stale OCR job %s: %v", job.ID, err)
+			}
+			processed++
+		}
+	}
+	return processed, nil
+}
+
+func (s *UploadService) enqueueOCRJob(ctx context.Context, uploadID, userID uuid.UUID, filePath string, mimeType string) (*model.Job, bool, error) {
 	idempotencyKey := fmt.Sprintf("upload_ocr:%s", uploadID.String())
-	inputJSON, _ := json.Marshal(map[string]any{
-		"upload_id": uploadID.String(),
-		"file_path": filePath,
-		"mime_type": mimeType,
+	inputJSON, _ := json.Marshal(ocrJobInput{
+		UploadID: uploadID.String(),
+		FilePath: filePath,
+		MimeType: mimeType,
 	})
 
-	job, existed, err := s.jobRuntime.CreateJobWithIdempotency(ctx, userID, "upload.ocr_extract", inputJSON, idempotencyKey, nil, nil)
+	job, existed, err := s.jobRuntime.CreateJobWithIdempotency(ctx, userID, ocrJobType, inputJSON, idempotencyKey, nil, nil)
 	if err != nil {
-		log.Printf("failed to create OCR job for upload %s: %v", uploadID, err)
-		return
+		return nil, false, err
 	}
-	if existed {
-		log.Printf("OCR job already exists for upload %s (job %s, status %s), skipping", uploadID, job.ID, job.Status)
-		return
+	return job, existed, nil
+}
+
+func (s *UploadService) processOCRJob(ctx context.Context, job model.Job) error {
+	input, err := parseOCRJobInput(job)
+	if err != nil {
+		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": err.Error()})
+		return err
 	}
 
-	// Transition to running
+	uploadID, err := uuid.Parse(input.UploadID)
+	if err != nil {
+		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": "invalid upload_id"})
+		return fmt.Errorf("invalid upload_id: %w", err)
+	}
+
 	if err := s.jobRuntime.TransitionTo(ctx, job.ID, "running", nil, nil); err != nil {
-		log.Printf("failed to start OCR job %s: %v", job.ID, err)
-		return
+		return fmt.Errorf("start OCR job: %w", err)
 	}
-
-	// Update upload status
 	_ = s.jobRuntime.UpdateProgress(ctx, job.ID, map[string]any{"stage": "ocr_processing", "percent": 10})
-	_ = s.uploadRepo.UpdateOCRStatus(ctx, uploadID, userID, "processing")
+	_ = s.uploadRepo.UpdateOCRStatus(ctx, uploadID, job.UserID, "processing")
 
-	// Execute OCR using shared implementation
-	respBody, err := s.executeOCRCall(filePath, mimeType)
+	respBody, err := s.executeOCRCall(input.FilePath, input.MimeType)
 	if err != nil {
-		s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": err.Error()})
-		_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, userID, "failed",
+		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": err.Error()})
+		_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, job.UserID, "failed",
 			json.RawMessage(fmt.Sprintf(`{"error": "%s"}`, err.Error())))
-		return
+		return err
 	}
 
-	// Success: update both job and upload
-	s.jobRuntime.TransitionTo(ctx, job.ID, "completed", json.RawMessage(respBody), nil)
-	_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, userID, "completed", respBody)
+	_ = s.jobRuntime.UpdateProgress(ctx, job.ID, map[string]any{"stage": "ocr_completed", "percent": 100})
+	_ = s.jobRuntime.TransitionTo(ctx, job.ID, "completed", json.RawMessage(respBody), nil)
+	_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, job.UserID, "completed", respBody)
+	return nil
+}
+
+func (s *UploadService) timeoutOCRJob(ctx context.Context, job model.Job) error {
+	input, err := parseOCRJobInput(job)
+	if err != nil {
+		return s.jobRuntime.TransitionTo(ctx, job.ID, "timed_out", nil, map[string]string{"error": err.Error()})
+	}
+	if err := s.jobRuntime.TransitionTo(ctx, job.ID, "timed_out", nil, map[string]string{"error": "stale OCR job timed out"}); err != nil {
+		return err
+	}
+	if uploadID, parseErr := uuid.Parse(input.UploadID); parseErr == nil {
+		_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, job.UserID, "failed", json.RawMessage(`{"error":"stale OCR job timed out"}`))
+	}
+	return nil
+}
+
+func parseOCRJobInput(job model.Job) (ocrJobInput, error) {
+	var input ocrJobInput
+	if err := json.Unmarshal(job.Input, &input); err != nil {
+		return input, fmt.Errorf("parse OCR job input: %w", err)
+	}
+	if input.UploadID == "" || input.FilePath == "" || input.MimeType == "" {
+		return input, fmt.Errorf("OCR job input missing required fields")
+	}
+	return input, nil
 }

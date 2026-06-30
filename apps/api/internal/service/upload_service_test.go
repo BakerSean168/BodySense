@@ -8,6 +8,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/bodysense/api/internal/model"
+	"gorm.io/datatypes"
 )
 
 func TestAllowedMimeTypes(t *testing.T) {
@@ -145,5 +148,26 @@ func TestIdempotencyKey_Format(t *testing.T) {
 	key := fmt.Sprintf("upload_ocr:%s", uploadID)
 	if key != "upload_ocr:test-123" {
 		t.Errorf("key = %q, want %q", key, "upload_ocr:test-123")
+	}
+}
+
+func TestParseOCRJobInput(t *testing.T) {
+	job := model.Job{
+		Input: datatypes.JSON(`{"upload_id":"upload-1","file_path":"uploads/u/report.pdf","mime_type":"application/pdf"}`),
+	}
+
+	input, err := parseOCRJobInput(job)
+	if err != nil {
+		t.Fatalf("parseOCRJobInput: %v", err)
+	}
+	if input.UploadID != "upload-1" || input.FilePath == "" || input.MimeType != "application/pdf" {
+		t.Fatalf("unexpected input: %+v", input)
+	}
+}
+
+func TestParseOCRJobInputMissingFields(t *testing.T) {
+	job := model.Job{Input: datatypes.JSON(`{"upload_id":"upload-1"}`)}
+	if _, err := parseOCRJobInput(job); err == nil {
+		t.Fatal("expected missing field error")
 	}
 }

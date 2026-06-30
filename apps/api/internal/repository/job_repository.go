@@ -101,6 +101,23 @@ func (r *JobRepository) GetByIdempotencyKey(ctx context.Context, key string) (*m
 	return &job, nil
 }
 
+// ListRecoverable returns pending jobs and stale running jobs for a job type.
+func (r *JobRepository) ListRecoverable(ctx context.Context, jobType string, staleRunningBefore time.Time, limit int) ([]model.Job, error) {
+	var jobs []model.Job
+	err := r.db.WithContext(ctx).
+		Where(
+			"job_type = ? AND (status = ? OR (status = ? AND updated_at < ?))",
+			jobType,
+			"pending",
+			"running",
+			staleRunningBefore,
+		).
+		Order("created_at ASC").
+		Limit(limit).
+		Find(&jobs).Error
+	return jobs, err
+}
+
 // UpdateStatus updates the status of a job with optional result/error.
 func (r *JobRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status string, result, errData any) error {
 	now := time.Now()

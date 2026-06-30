@@ -72,7 +72,7 @@ func TestKnowledgePublicationRepositoryGetByID(t *testing.T) {
 	if pub == nil {
 		t.Fatal("expected publication, got nil")
 	}
-	if pub.KnowledgeUnitID != 42 || pub.PublicationKey != "unit-42-v1" {
+	if pub.KnowledgeUnitID == nil || *pub.KnowledgeUnitID != 42 || pub.PublicationKey != "unit-42-v1" {
 		t.Errorf("unexpected publication: %+v", pub)
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
