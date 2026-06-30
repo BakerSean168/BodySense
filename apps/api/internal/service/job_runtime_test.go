@@ -12,12 +12,12 @@ func TestValidateTransition(t *testing.T) {
 	}{
 		{"pending", "running", true},
 		{"pending", "cancelled", true},
-		{"pending", "succeeded", false},
-		{"running", "succeeded", true},
+		{"pending", "completed", false},
+		{"running", "completed", true},
 		{"running", "failed", true},
 		{"running", "cancelled", true},
 		{"running", "pending", false},
-		{"succeeded", "running", false},
+		{"completed", "running", false},
 		{"failed", "running", false},
 		{"cancelled", "running", false},
 		{"unknown", "running", false},
@@ -32,7 +32,7 @@ func TestValidateTransition(t *testing.T) {
 }
 
 func TestJobTransitions_AllTerminalStatesEmpty(t *testing.T) {
-	terminal := []string{"succeeded", "failed", "cancelled"}
+	terminal := []string{"completed", "succeeded", "failed", "cancelled", "timed_out"}
 	for _, status := range terminal {
 		allowed := jobTransitions[status]
 		if len(allowed) != 0 {
@@ -77,5 +77,22 @@ func TestJobTransitions_RunningCanWaitUser(t *testing.T) {
 	}
 	if !has["waiting_user"] {
 		t.Error("running should allow transition to waiting_user")
+	}
+}
+
+func TestJobEventTypeForStatus(t *testing.T) {
+	tests := []struct {
+		status string
+		want   string
+	}{
+		{"completed", "job.completed"},
+		{"succeeded", "job.completed"},
+		{"failed", "job.failed"},
+		{"running", "job.running"},
+	}
+	for _, tt := range tests {
+		if got := jobEventTypeForStatus(tt.status); got != tt.want {
+			t.Errorf("jobEventTypeForStatus(%q) = %q, want %q", tt.status, got, tt.want)
+		}
 	}
 }

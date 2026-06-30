@@ -90,8 +90,10 @@ func (w *HealthJourneyWorkflow) GetJourneyState(
 	}
 
 	// 4. Check assessments
+	assessmentsCount := 0
 	assessments, _, err := w.assessmentRepo.ListByUserID(ctx, userID, 1, 0)
 	if err == nil && len(assessments) > 0 {
+		assessmentsCount = len(assessments)
 		artifacts.LatestAssessmentID = &assessments[0].ID
 		artifacts.DerivedFrom = append(artifacts.DerivedFrom, "assessment_reports")
 	}
@@ -99,13 +101,21 @@ func (w *HealthJourneyWorkflow) GetJourneyState(
 	// 5. Check training plans
 	plans, err := w.trainingRepo.ListPlansByUserID(ctx, userID)
 	if err == nil && len(plans) > 0 {
+		plan := plans[0]
 		artifacts.HasTraining = true
-		artifacts.ActiveTrainingPlanID = &plans[0].ID
+		artifacts.ActiveTrainingPlanID = &plan.ID
 		artifacts.DerivedFrom = append(artifacts.DerivedFrom, "training_plans")
+		if assessmentsCount > 0 && assessments[0].CreatedAt.After(plan.CreatedAt) {
+			artifacts.HasReassessment = true
+		}
+		if !artifacts.HasReassessment && plan.DurationWeeks > 0 && plan.CurrentWeek >= plan.DurationWeeks {
+			artifacts.NeedsReassessment = true
+		}
 	}
 
 	// Determine stage based on artifacts
-	stage, reason, actions := determineStage(artifacts)
+	stage, reason, actions, missing := determineStage(artifacts)
+	artifacts.MissingRequirements = missing
 
 	return &dto.HealthJourneyState{
 		Stage:            stage,
@@ -116,30 +126,42 @@ func (w *HealthJourneyWorkflow) GetJourneyState(
 }
 
 // determineStage derives the journey stage from completed artifacts.
-func determineStage(a dto.JourneyArtifacts) (string, string, []string) {
+func determineStage(a dto.JourneyArtifacts) (string, string, []string, []string) {
 	if !a.HasProfile {
-		return "onboarding", "用户尚未填写身体档案", []string{"complete_profile"}
+		return dto.JourneyStageProfileIncomplete, "用户尚未填写身体档案", []string{dto.JourneyActionCompleteProfile}, []string{"profile"}
 	}
 
 	if !a.HasUpload {
-		return "data_collection", "已填写档案，尚未上传资料", []string{"upload_report", "upload_photo"}
+		return dto.JourneyStageProfileReady, "已填写档案，尚未上传资料", []string{dto.JourneyActionUploadReport, dto.JourneyActionUploadPhoto}, []string{"upload"}
+	}
+
+	if a.LatestAssessmentID == nil {
+		return dto.JourneyStageAssetsUploaded, "资料已上传，尚未完成初始评估", []string{dto.JourneyActionStartAssessment}, []string{"assessment"}
 	}
 
 	if !a.HasConsultation {
-		return "ready_for_consultation", "资料已上传，可以开始咨询", []string{"start_consultation"}
+		return dto.JourneyStageAssessmentReady, "初始评估已完成，可以开始咨询", []string{dto.JourneyActionStartConsultation}, []string{"consultation"}
 	}
 
 	if !a.HasDiagnosis {
-		return "consultation_in_progress", "咨询进行中，尚未生成诊断", []string{"continue_consultation", "request_analysis"}
+		return dto.JourneyStageConsulting, "咨询进行中，尚未生成诊断", []string{dto.JourneyActionContinueConsult, dto.JourneyActionRequestAnalysis}, []string{"diagnosis"}
 	}
 
 	if !a.HasTreatment {
-		return "diagnosis_ready", "诊断已生成，可以确认并生成方案", []string{"confirm_diagnosis", "generate_treatment"}
+		return dto.JourneyStageDiagnosisReady, "诊断已生成，可以确认并生成方案", []string{dto.JourneyActionConfirmDiagnosis, dto.JourneyActionGenerateTreatment}, []string{"treatment_plan"}
 	}
 
 	if !a.HasTraining {
-		return "plan_ready", "方案已生成，可以开始训练", []string{"view_treatment", "start_training"}
+		return dto.JourneyStagePlanReady, "方案已生成，可以开始训练", []string{dto.JourneyActionViewTreatment, dto.JourneyActionStartTraining}, []string{"training_plan"}
 	}
 
-	return "training_active", "训练进行中", []string{"view_progress", "log_training", "reassess"}
+	if a.NeedsReassessment {
+		return dto.JourneyStageReassessmentDue, "训练周期已完成，需要复评", []string{dto.JourneyActionViewProgress, dto.JourneyActionReassess}, []string{"reassessment"}
+	}
+
+	if a.HasReassessment {
+		return dto.JourneyStageCompleted, "训练周期和复评已完成", []string{dto.JourneyActionReviewSummary}, nil
+	}
+
+	return dto.JourneyStageTrainingActive, "训练进行中", []string{dto.JourneyActionViewProgress, dto.JourneyActionLogTraining, dto.JourneyActionReassess}, nil
 }

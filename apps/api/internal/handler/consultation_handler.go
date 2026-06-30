@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strings"
@@ -15,9 +16,9 @@ import (
 
 // ConsultationHandler handles consultation HTTP requests.
 type ConsultationHandler struct {
-	consultationService   *service.ConsultationService
-	interactionService    *service.AgentInteractionService
-	runService            *service.RunService
+	consultationService *service.ConsultationService
+	interactionService  *service.AgentInteractionService
+	runService          *service.RunService
 }
 
 // NewConsultationHandler creates a new ConsultationHandler.
@@ -27,9 +28,9 @@ func NewConsultationHandler(
 	runService *service.RunService,
 ) *ConsultationHandler {
 	return &ConsultationHandler{
-		consultationService:   consultationService,
-		interactionService:    interactionService,
-		runService:            runService,
+		consultationService: consultationService,
+		interactionService:  interactionService,
+		runService:          runService,
 	}
 }
 
@@ -163,7 +164,16 @@ func (h *ConsultationHandler) ResumeInteraction(c *gin.Context) {
 	}
 
 	if err := h.interactionService.ResumeInteraction(c.Request.Context(), interactionID, req.Answer); err != nil {
-		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		switch {
+		case errors.Is(err, service.ErrInteractionNotFound):
+			respondError(c, http.StatusNotFound, "NOT_FOUND", "interaction not found")
+		case errors.Is(err, service.ErrInteractionConflict):
+			respondError(c, http.StatusConflict, "INTERACTION_CONFLICT", "interaction was already answered differently")
+		case errors.Is(err, service.ErrInteractionClosed):
+			respondError(c, http.StatusConflict, "INTERACTION_CLOSED", err.Error())
+		default:
+			respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		}
 		return
 	}
 

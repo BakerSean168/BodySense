@@ -10,7 +10,7 @@
     "seq": { "type": "integer", "minimum": 1 },
     "channel": {
       "type": "string",
-      "enum": ["conversation", "message", "tool", "state", "source", "safety", "usage", "stream"]
+      "enum": ["conversation", "message", "tool", "state", "source", "safety", "usage", "job", "stream"]
     },
     "type": { "type": "string", "minLength": 1 },
     "ids": {
@@ -22,7 +22,8 @@
         "turn_id": { "type": ["string", "null"] },
         "message_id": { "type": ["string", "null"] },
         "tool_call_id": { "type": ["string", "null"] },
-        "interaction_id": { "type": ["string", "null"] }
+        "interaction_id": { "type": ["string", "null"] },
+        "job_id": { "type": ["string", "null"] }
       }
     },
     "payload": { "type": "object" }

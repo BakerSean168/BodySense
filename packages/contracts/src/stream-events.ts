@@ -6,6 +6,7 @@ export type StreamChannel =
   | 'source'
   | 'safety'
   | 'usage'
+  | 'job'
   | 'stream';
 
 export interface StreamEventIds {
@@ -15,6 +16,7 @@ export interface StreamEventIds {
   message_id?: string | null;
   tool_call_id?: string | null;
   interaction_id?: string | null;
+  job_id?: string | null;
 }
 
 export interface StreamEventBase<
@@ -150,6 +152,30 @@ export type InteractionAnsweredEvent = StreamEventBase<
   { interaction_id: string; answer: unknown }
 >;
 
+export type JobCreatedEvent = StreamEventBase<
+  'job',
+  'job.created',
+  { job_type: string; status?: string }
+>;
+
+export type JobProgressEvent = StreamEventBase<
+  'job',
+  'job.progress',
+  { progress?: unknown; stage?: string; percent?: number }
+>;
+
+export type JobCompletedEvent = StreamEventBase<
+  'job',
+  'job.completed',
+  { result?: unknown }
+>;
+
+export type JobFailedEvent = StreamEventBase<
+  'job',
+  'job.failed',
+  { error: unknown }
+>;
+
 export type StreamEvent =
   | ConversationCreatedEvent
   | MessagePersistedEvent
@@ -170,4 +196,8 @@ export type StreamEvent =
   | StreamDoneEvent
   | StreamErrorEvent
   | InteractionRequiredEvent
-  | InteractionAnsweredEvent;
+  | InteractionAnsweredEvent
+  | JobCreatedEvent
+  | JobProgressEvent
+  | JobCompletedEvent
+  | JobFailedEvent;

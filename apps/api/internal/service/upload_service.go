@@ -279,6 +279,7 @@ func (s *UploadService) processOCRWithJob(uploadID, userID uuid.UUID, filePath s
 	}
 
 	// Update upload status
+	_ = s.jobRuntime.UpdateProgress(ctx, job.ID, map[string]any{"stage": "ocr_processing", "percent": 10})
 	_ = s.uploadRepo.UpdateOCRStatus(ctx, uploadID, userID, "processing")
 
 	// Execute OCR using shared implementation
@@ -291,6 +292,6 @@ func (s *UploadService) processOCRWithJob(uploadID, userID uuid.UUID, filePath s
 	}
 
 	// Success: update both job and upload
-	s.jobRuntime.TransitionTo(ctx, job.ID, "succeeded", json.RawMessage(respBody), nil)
+	s.jobRuntime.TransitionTo(ctx, job.ID, "completed", json.RawMessage(respBody), nil)
 	_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, userID, "completed", respBody)
 }

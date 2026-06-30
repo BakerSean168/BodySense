@@ -15,8 +15,9 @@ import (
 // Legal job status transitions.
 var jobTransitions = map[string][]string{
 	"pending":      {"running", "cancelled"},
-	"running":      {"succeeded", "failed", "cancelled", "waiting_user", "timed_out"},
+	"running":      {"completed", "failed", "cancelled", "waiting_user", "timed_out"},
 	"waiting_user": {"running", "cancelled"},
+	"completed":    {},
 	"succeeded":    {},
 	"failed":       {},
 	"cancelled":    {},
@@ -88,10 +89,19 @@ func (r *JobRuntime) TransitionTo(
 		return fmt.Errorf("update status: %w", err)
 	}
 
-	r.appendEvent(ctx, jobID, "job."+newStatus, map[string]any{
+	r.appendEvent(ctx, jobID, jobEventTypeForStatus(newStatus), map[string]any{
 		"from": job.Status,
 		"to":   newStatus,
 	})
+	return nil
+}
+
+// UpdateProgress stores job progress and appends a stream-compatible progress event.
+func (r *JobRuntime) UpdateProgress(ctx context.Context, jobID uuid.UUID, progress any) error {
+	if err := r.repo.UpdateProgress(ctx, jobID, progress); err != nil {
+		return fmt.Errorf("update progress: %w", err)
+	}
+	r.appendEvent(ctx, jobID, "job.progress", progress)
 	return nil
 }
 
@@ -115,15 +125,6 @@ func (r *JobRuntime) CreateJobWithIdempotency(
 	idempotencyKey string,
 	runID, conversationID *uuid.UUID,
 ) (*model.Job, bool, error) {
-	// Check for existing job with same idempotency key
-	existing, err := r.repo.GetByIdempotencyKey(ctx, idempotencyKey)
-	if err != nil {
-		return nil, false, fmt.Errorf("check idempotency: %w", err)
-	}
-	if existing != nil {
-		return existing, true, nil // idempotent hit
-	}
-
 	job := &model.Job{
 		RunID:          runID,
 		ConversationID: conversationID,
@@ -133,8 +134,12 @@ func (r *JobRuntime) CreateJobWithIdempotency(
 		Input:          input,
 		IdempotencyKey: &idempotencyKey,
 	}
-	if err := r.repo.Create(ctx, job); err != nil {
+	job, existed, err := r.repo.CreateWithIdempotency(ctx, job)
+	if err != nil {
 		return nil, false, fmt.Errorf("create job: %w", err)
+	}
+	if existed {
+		return job, true, nil
 	}
 
 	r.appendEvent(ctx, job.ID, "job.created", map[string]any{"job_type": jobType})
@@ -165,4 +170,19 @@ func ValidateTransition(from, to string) bool {
 		}
 	}
 	return false
+}
+
+func jobEventTypeForStatus(status string) string {
+	switch status {
+	case "completed", "succeeded":
+		return "job.completed"
+	case "failed":
+		return "job.failed"
+	case "cancelled":
+		return "job.cancelled"
+	case "timed_out":
+		return "job.timed_out"
+	default:
+		return "job." + status
+	}
 }

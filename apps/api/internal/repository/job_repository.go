@@ -7,6 +7,7 @@ import (
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // JobRepository handles database operations for jobs.
@@ -22,6 +23,43 @@ func NewJobRepository(db *gorm.DB) *JobRepository {
 // Create creates a new job.
 func (r *JobRepository) Create(ctx context.Context, job *model.Job) error {
 	return r.db.WithContext(ctx).Create(job).Error
+}
+
+// CreateWithIdempotency inserts a job atomically using the database unique
+// idempotency key. If the key already exists, it returns the existing job.
+func (r *JobRepository) CreateWithIdempotency(ctx context.Context, job *model.Job) (*model.Job, bool, error) {
+	if job.IdempotencyKey == nil || *job.IdempotencyKey == "" {
+		return job, false, r.Create(ctx, job)
+	}
+
+	var existed bool
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		result := tx.Clauses(clause.OnConflict{
+			Columns: []clause.Column{{Name: "idempotency_key"}},
+			TargetWhere: clause.Where{Exprs: []clause.Expression{
+				clause.Expr{SQL: "idempotency_key IS NOT NULL"},
+			}},
+			DoNothing: true,
+		}).Create(job)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected > 0 {
+			return nil
+		}
+
+		existed = true
+		var existing model.Job
+		if err := tx.Where("idempotency_key = ?", *job.IdempotencyKey).First(&existing).Error; err != nil {
+			return err
+		}
+		*job = existing
+		return nil
+	})
+	if err != nil {
+		return nil, false, err
+	}
+	return job, existed, nil
 }
 
 // GetByID retrieves a job by ID.
@@ -72,7 +110,7 @@ func (r *JobRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status s
 	switch status {
 	case "running":
 		updates["started_at"] = now
-	case "succeeded", "failed", "cancelled":
+	case "completed", "succeeded", "failed", "cancelled", "timed_out":
 		updates["finished_at"] = now
 		if result != nil {
 			updates["result"] = result
@@ -85,6 +123,17 @@ func (r *JobRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status s
 		Model(&model.Job{}).
 		Where("id = ?", id).
 		Updates(updates).Error
+}
+
+// UpdateProgress stores job progress without changing its lifecycle status.
+func (r *JobRepository) UpdateProgress(ctx context.Context, id uuid.UUID, progress any) error {
+	return r.db.WithContext(ctx).
+		Model(&model.Job{}).
+		Where("id = ?", id).
+		Updates(map[string]any{
+			"progress":   progress,
+			"updated_at": gorm.Expr("NOW()"),
+		}).Error
 }
 
 // AppendEvent appends an event to the job_events table.

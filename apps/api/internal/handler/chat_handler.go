@@ -27,17 +27,17 @@ const (
 
 // ChatHandler handles the core chat SSE endpoint.
 type ChatHandler struct {
-	conversationService   *service.ConversationService
-	messageService        *service.MessageService
-	runService            *service.RunService
-	consultationService   *service.ConsultationService
-	aiClient              *service.AIClient
-	profileService        *service.ProfileService
-	agentToolService      *service.AgentToolService
-	interactionService    *service.AgentInteractionService
-	outputReviewService   *service.OutputReviewService
-	contextBuilder        ctxbuilder.Builder
-	streamRuntime         *stream.Runtime
+	conversationService *service.ConversationService
+	messageService      *service.MessageService
+	runService          *service.RunService
+	consultationService *service.ConsultationService
+	aiClient            *service.AIClient
+	profileService      *service.ProfileService
+	agentToolService    *service.AgentToolService
+	interactionService  *service.AgentInteractionService
+	outputReviewService *service.OutputReviewService
+	contextBuilder      ctxbuilder.Builder
+	streamRuntime       *stream.Runtime
 }
 
 // NewChatHandler creates a new ChatHandler.
@@ -54,17 +54,17 @@ func NewChatHandler(
 ) *ChatHandler {
 	cb := ctxbuilder.NewContextBuilder(profileService, consultationService, messageService)
 	return &ChatHandler{
-		conversationService:   conversationService,
-		messageService:        messageService,
-		runService:            runService,
-		consultationService:   consultationService,
-		aiClient:              aiClient,
-		profileService:        profileService,
-		agentToolService:      agentToolService,
-		interactionService:    interactionService,
-		outputReviewService:   outputReviewService,
-		contextBuilder:        cb,
-		streamRuntime:         stream.NewRuntime(),
+		conversationService: conversationService,
+		messageService:      messageService,
+		runService:          runService,
+		consultationService: consultationService,
+		aiClient:            aiClient,
+		profileService:      profileService,
+		agentToolService:    agentToolService,
+		interactionService:  interactionService,
+		outputReviewService: outputReviewService,
+		contextBuilder:      cb,
+		streamRuntime:       stream.NewRuntime(),
 	}
 }
 
@@ -339,22 +339,24 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 				}
 				_ = event.PayloadAs(&iPayload)
 
-				// Generate interaction_id if Python didn't provide one
-				interactionID := iPayload.InteractionID
-				if interactionID == "" {
-					interactionID = uuid.New().String()
-				}
-
-				// Persist interaction
-				if createErr := h.interactionService.CreatePendingInteraction(
+				interaction, createErr := h.interactionService.CreatePendingInteraction(
 					c.Request.Context(), run.ID, conversationID,
 					event.IDs.ToolCallID, datatypes.JSON(iPayload.Question),
-				); createErr != nil {
+				)
+				if createErr != nil {
 					log.Printf("failed to create pending interaction for conversation %s: %v", conversationID, createErr)
+					_ = sw.SendNew(c.Request.Context(), "stream", "stream.error", baseIDs, gin.H{"message": "failed to persist user interaction"}, "")
+					h.clearActiveRun(c.Request.Context(), conversationID, uid)
+					return
 				}
 
-				// Forward event to frontend with interaction_id in IDs
+				interactionID := interaction.ID.String()
 				event.IDs.InteractionID = interactionID
+				iPayload.InteractionID = interactionID
+				if patched, marshalErr := json.Marshal(iPayload); marshalErr == nil {
+					event.Payload = patched
+				}
+
 				if err := sw.Send(c.Request.Context(), event, assistantMsg.ID.String()); err != nil {
 					log.Printf("SSE write error (interaction.required): %v", err)
 				}
