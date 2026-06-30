@@ -8,7 +8,7 @@ import { ProfileEdit } from '../components/profile/ProfileEdit';
 import { FileUploader, UploadList } from '../components/uploads';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 
 export function ProfilePage() {
   const navigate = useNavigate();

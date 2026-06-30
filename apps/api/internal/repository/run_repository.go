@@ -79,8 +79,8 @@ func (r *RunRepository) CompleteRun(ctx context.Context, id, userID uuid.UUID, u
 		Model(&model.Run{}).
 		Where("id = ? AND user_id = ?", id, userID).
 		Updates(map[string]any{
-			"status":                "completed",
-			"usage":                 usage,
+			"status":               "completed",
+			"usage":                usage,
 			"provider_response_id": providerResponseID,
 			"completed_at":         now,
 		}).Error
@@ -93,8 +93,8 @@ func (r *RunRepository) FailRun(ctx context.Context, id, userID uuid.UUID, errJS
 		Model(&model.Run{}).
 		Where("id = ? AND user_id = ?", id, userID).
 		Updates(map[string]any{
-			"status":        "failed",
-			"error":         errJSON,
+			"status":       "failed",
+			"error":        errJSON,
 			"completed_at": now,
 		}).Error
 }

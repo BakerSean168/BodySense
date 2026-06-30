@@ -43,6 +43,10 @@ def _done_event():
     return AiStreamEvent(type="done", finish_reason="stop")
 
 
+def _events_of_type(events, event_type: str):
+    return [event for event in events if event.type == event_type]
+
+
 @pytest.mark.asyncio
 async def test_stream_chat_falls_back_when_llm_missing(monkeypatch):
     """ChatService falls back to local knowledge when no LLM is configured."""
@@ -72,17 +76,17 @@ async def test_stream_chat_falls_back_when_llm_missing(monkeypatch):
     ):
         events.append(event)
 
-    message_events = [e for e in events if e.event_type == "message"]
+    message_events = [e for e in events if e.channel == "message"]
     assert message_events
 
-    text_events = [e for e in message_events if e.data.get("type") == "text_delta"]
-    assert any("肘外翻怎么处理" in event.data["delta"] for event in text_events)
-    assert any("动作演示" in event.data["delta"] for event in text_events)
+    text_events = _events_of_type(message_events, "message.text.delta")
+    assert any("肘外翻怎么处理" in event.payload["delta"] for event in text_events)
+    assert any("动作演示" in event.payload["delta"] for event in text_events)
 
     done_event = events[-1]
-    assert done_event.event_type == "done"
-    assert "本地 curated 知识库" in done_event.data["full_text"]
-    assert done_event.data["phase"] == "collecting"
+    assert done_event.type == "stream.done"
+    assert "本地 curated 知识库" in done_event.payload["full_text"]
+    assert done_event.payload["phase"] == "collecting"
 
 
 @pytest.mark.asyncio
@@ -107,15 +111,15 @@ async def test_stream_chat_happy_path_with_text(monkeypatch):
     async for event in service.stream_chat(context, "你好"):
         result_events.append(event)
 
-    text_events = [e for e in result_events if e.data.get("type") == "text_delta"]
+    text_events = _events_of_type(result_events, "message.text.delta")
     # Text deltas are buffered (~20 char chunks) so short inputs coalesce into one event
-    combined_text = "".join(e.data["delta"] for e in text_events)
+    combined_text = "".join(e.payload["delta"] for e in text_events)
     assert combined_text == "你好，请问有什么可以帮助你的？"
 
     done_event = result_events[-1]
-    assert done_event.event_type == "done"
-    assert done_event.data["full_text"] == "你好，请问有什么可以帮助你的？"
-    assert done_event.data["session_id"] == "s1"
+    assert done_event.type == "stream.done"
+    assert done_event.payload["full_text"] == "你好，请问有什么可以帮助你的？"
+    assert done_event.payload["session_id"] == "s1"
 
 
 @pytest.mark.asyncio
@@ -142,10 +146,10 @@ async def test_stream_chat_with_tool_call(monkeypatch):
     async for event in service.stream_chat(context, "肩膀酸"):
         result_events.append(event)
 
-    info_events = [e for e in result_events if e.data.get("type") == "extracted_info"]
+    info_events = _events_of_type(result_events, "state.extracted_info.upsert")
     assert len(info_events) == 1
-    assert info_events[0].data["info"]["body_part"] == "肩部"
-    assert info_events[0].data["info"]["symptom_type"] == "酸胀"
+    assert info_events[0].payload["info"]["body_part"] == "肩部"
+    assert info_events[0].payload["info"]["symptom_type"] == "酸胀"
 
 
 @pytest.mark.asyncio
@@ -170,9 +174,9 @@ async def test_stream_chat_emits_phase_changed(monkeypatch):
     async for event in service.stream_chat(context, "继续"):
         result_events.append(event)
 
-    phase_events = [e for e in result_events if e.data.get("type") == "phase_change"]
+    phase_events = _events_of_type(result_events, "state.phase.changed")
     assert len(phase_events) == 1
-    assert phase_events[0].data["phase"] == "ready_for_analysis"
+    assert phase_events[0].payload["to"] == "ready_for_analysis"
 
 
 @pytest.mark.asyncio
@@ -196,12 +200,11 @@ async def test_stream_chat_emits_red_flag_before_text(monkeypatch):
         result_events.append(event)
 
     # red_flag should be the FIRST message event
-    message_events = [e for e in result_events if e.event_type == "message"]
-    assert message_events[0].data["type"] == "red_flag"
-    assert message_events[0].data["has_red_flags"] is True
+    assert result_events[0].type == "safety.red_flag.detected"
+    assert result_events[0].payload["has_red_flags"] is True
 
     # text events should follow
-    text_events = [e for e in result_events if e.data.get("type") == "text_delta"]
+    text_events = _events_of_type(result_events, "message.text.delta")
     assert len(text_events) > 0
 
 
@@ -223,5 +226,5 @@ async def test_stream_chat_fallback_no_rag(monkeypatch):
         result_events.append(event)
 
     done_event = result_events[-1]
-    assert "没有配置云端大模型" in done_event.data["full_text"]
-    assert "知识库里暂时没有检索到" in done_event.data["full_text"]
+    assert "没有配置云端大模型" in done_event.payload["full_text"]
+    assert "知识库里暂时没有检索到" in done_event.payload["full_text"]

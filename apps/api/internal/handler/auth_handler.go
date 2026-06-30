@@ -76,7 +76,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-// Logout handles user logout (invalidates refresh token).
+// Logout handles user logout (invalidates refresh token + session cache).
 func (h *AuthHandler) Logout(c *gin.Context) {
 	var req dto.RefreshRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -84,8 +84,8 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 		return
 	}
 
-	if err := h.authService.InvalidateRefreshToken(c.Request.Context(), req.RefreshToken); err != nil {
-		respondError(c, http.StatusInternalServerError, "LOGOUT_FAILED", "failed to invalidate refresh token")
+	if err := h.authService.Logout(c.Request.Context(), req.RefreshToken); err != nil {
+		respondError(c, http.StatusInternalServerError, "LOGOUT_FAILED", "failed to logout")
 		return
 	}
 
@@ -100,10 +100,17 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		return
 	}
 
+	uid, ok := userID.(string)
+	if !ok {
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "invalid user id type")
+		return
+	}
+
 	email, _ := c.Get("email")
+	emailStr, _ := email.(string)
 
 	c.JSON(http.StatusOK, dto.UserResponse{
-		ID:    userID.(string),
-		Email: email.(string),
+		ID:    uid,
+		Email: emailStr,
 	})
 }

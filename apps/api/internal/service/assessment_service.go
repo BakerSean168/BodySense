@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -18,6 +19,7 @@ import (
 type AssessmentService struct {
 	assessmentRepo *repository.AssessmentRepository
 	profileService *ProfileService
+	uploadRepo     *repository.UploadRepository
 	aiServiceURL   string
 }
 
@@ -25,14 +27,16 @@ type AssessmentService struct {
 func NewAssessmentService(
 	assessmentRepo *repository.AssessmentRepository,
 	profileService *ProfileService,
+	uploadRepo *repository.UploadRepository,
 ) *AssessmentService {
 	aiServiceURL := os.Getenv("AI_SERVICE_URL")
 	if aiServiceURL == "" {
-		aiServiceURL = "http://localhost:8000"
+		aiServiceURL = "http://localhost:8100"
 	}
 	return &AssessmentService{
 		assessmentRepo: assessmentRepo,
 		profileService: profileService,
+		uploadRepo:     uploadRepo,
 		aiServiceURL:   aiServiceURL,
 	}
 }
@@ -59,10 +63,44 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 		return nil, fmt.Errorf("failed to unmarshal profile: %w", err)
 	}
 
-	// Call AI service
+	// Get uploads for user to extract images and OCR report data
+	uploads, err := s.uploadRepo.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user uploads: %w", err)
+	}
+
+	var images []string
+	var reportIndicators []any
+
+	for _, upload := range uploads {
+		if upload.FileType == "photo_front" || upload.FileType == "photo_side" || upload.FileType == "photo_back" {
+			// Read image file from disk
+			imgBytes, err := os.ReadFile(upload.FilePath)
+			if err == nil {
+				base64Str := base64.StdEncoding.EncodeToString(imgBytes)
+				dataURI := fmt.Sprintf("data:%s;base64,%s", upload.MimeType, base64Str)
+				images = append(images, dataURI)
+			}
+		} else if upload.FileType == "report" && upload.OCRStatus == "completed" {
+			var ocrResp map[string]any
+			if err := json.Unmarshal(upload.OCRResult, &ocrResp); err == nil {
+				if result, ok := ocrResp["result"].(map[string]any); ok {
+					if indicators, ok := result["indicators"].([]any); ok {
+						reportIndicators = append(reportIndicators, indicators...)
+					}
+				}
+			}
+		}
+	}
+
+	// Add report indicators to profileMap
+	profileMap["health_report_indicators"] = reportIndicators
+
+	// Call AI service with profile and base64 images
 	aiReq := map[string]any{
 		"profile":     profileMap,
 		"rag_context": "",
+		"images":      images,
 	}
 
 	aiReqBody, err := json.Marshal(aiReq)

@@ -278,6 +278,8 @@ class KnowledgeLibrary:
         top_k: int = 5,
         problem_slug: str | None = None,
         unit_type: str | None = None,
+        include_unpublished: bool = False,
+        min_quality_score: float = 0.0,
     ) -> list[SearchResult]:
         """Search the normalized knowledge units by semantic similarity."""
         embedding = await self.embedding_generator.generate(query)
@@ -303,6 +305,10 @@ class KnowledgeLibrary:
             WHERE ku.embedding IS NOT NULL
         """
         params: list[Any] = [embedding]
+
+        if not include_unpublished:
+            sql += self._published_visibility_filter()
+            params.append(min_quality_score)
 
         if problem_slug:
             sql += " AND ku.problem_slug = %s"
@@ -374,6 +380,17 @@ class KnowledgeLibrary:
             reverse=True,
         )
         return reranked[:top_k]
+
+    @staticmethod
+    def _published_visibility_filter() -> str:
+        """SQL predicate for knowledge that is safe to surface in user-facing search."""
+        return """
+            AND (
+                ku.lifecycle_status IN ('published', 'reviewed')
+                OR ku.review_status IN ('reviewed', 'approved', 'curated')
+            )
+            AND COALESCE(ku.quality_score, 0.0) >= %s
+        """
 
     async def list_sources(self) -> list[dict[str, Any]]:
         """List ingested sources."""

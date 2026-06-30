@@ -41,7 +41,7 @@ func (r *ProfileRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (
 func (r *ProfileRepository) CreateOrUpdate(ctx context.Context, profile *model.UserProfile) error {
 	return r.db.WithContext(ctx).
 		Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "user_id"}},
+			Columns: []clause.Column{{Name: "user_id"}},
 			DoUpdates: clause.AssignmentColumns([]string{
 				"gender",
 				"age",

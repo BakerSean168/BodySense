@@ -1,3 +1,22 @@
+import type {
+  ConversationCreatedEvent,
+  MessagePersistedEvent,
+  MessageCreatedEvent,
+  MessageTextDeltaEvent,
+  ToolCallEvent,
+  ToolResultEvent,
+  ExtractedInfoUpsertEvent,
+  PhaseChangedEvent,
+  CitationAddedEvent,
+  RedFlagDetectedEvent,
+  MessageCompletedEvent,
+  MessageFailedEvent,
+  StreamDoneEvent,
+  StreamErrorEvent,
+} from '@bodysense/contracts';
+
+export type { StreamEvent } from '@bodysense/contracts';
+
 // 通用会话类型
 // Field names use snake_case to match the backend Go model JSON tags.
 export interface Conversation {
@@ -95,6 +114,8 @@ export interface ExtractedInfo {
   relief?: string;
   severity?: string;
   additional_notes?: string;
+  /** Whether the user has confirmed this extracted info card. */
+  confirmed?: boolean;
 }
 
 export interface Diagnosis {
@@ -154,84 +175,73 @@ export interface SharedConversation {
   metadata: Record<string, unknown> | null;
 }
 
-// SSE 事件类型
-export interface SSEConversationCreated {
-  conversationId: string;
-  replacesDraftId: string;
+// Structured stream event aliases.
+export type SSEConversationCreated = ConversationCreatedEvent;
+export type SSEMessagePersisted = MessagePersistedEvent;
+export type SSEMessageCreated = MessageCreatedEvent;
+export type SSETextDelta = MessageTextDeltaEvent;
+export type SSEToolCall = ToolCallEvent;
+export type SSEToolResult = ToolResultEvent;
+export type SSEExtractedInfo = ExtractedInfoUpsertEvent;
+export type SSEPhaseChange = PhaseChangedEvent;
+export type SSECitation = CitationAddedEvent;
+export type SSERedFlag = RedFlagDetectedEvent;
+export type SSEMessageCompleted = MessageCompletedEvent;
+export type SSEMessageFailed = MessageFailedEvent;
+export type SSEStreamDone = StreamDoneEvent;
+export type SSEStreamError = StreamErrorEvent;
+export interface SSETitleGenerated {
+  version: 1;
+  seq: number;
+  type: 'title.generated';
+  channel: 'conversation';
+  ids: { conversation_id?: string | null };
+  payload: { title: string };
 }
 
-export interface SSEMessagePersisted {
-  clientMessageId: string;
-  messageId: string;
-  role: string;
+// Interaction types for ask_user
+export interface PendingInteraction {
+  id: string;
+  run_id: string;
+  conversation_id: string;
+  tool_call_id: string;
+  tool_name: string;
+  question: AskUserQuestion;
+  status: 'pending' | 'answered' | 'cancelled';
+  created_at: string;
 }
 
-export interface SSEMessageCreated {
-  messageId: string;
-  role: string;
-  status: string;
-  turnId: string;
+export interface AskUserQuestion {
+  question: string;
+  reason?: string;
+  answer_type: 'text' | 'single_choice' | 'multi_choice' | 'number' | 'date';
+  options?: string[];
+  required?: boolean;
+  context?: string;
 }
 
-export interface SSETextDelta {
-  messageId: string;
-  delta: string;
-}
-
-export interface SSEToolCall {
-  messageId: string;
-  tool: string;
-  args: unknown;
-}
-
-export interface SSEToolResult {
-  messageId: string;
-  tool: string;
-  result: unknown;
-}
-
-export interface SSEExtractedInfo {
-  messageId: string;
-  info: ExtractedInfo;
-}
-
-export interface SSEPhaseChange {
-  messageId: string;
-  from: string;
-  to: string;
-  reason: string;
-}
-
-export interface SSECitation {
-  messageId: string;
-  citation: Citation;
-}
-
-export interface SSERedFlag {
-  messageId: string;
-  flag: {
-    type: string;
-    message: string;
-    severity: string;
+export interface InteractionRequiredEvent {
+  version: 1;
+  seq: number;
+  type: 'state.interaction.required';
+  channel: 'state';
+  ids: { conversation_id?: string; run_id?: string; interaction_id?: string };
+  payload: {
+    interaction_id: string;
+    question: AskUserQuestion;
   };
 }
 
-export interface SSEMessageCompleted {
-  messageId: string;
-  status: string;
-  finishReason: string;
-  usage: TokenUsage;
-}
-
-export interface SSEMessageFailed {
-  messageId: string;
-  status: string;
-  error: ErrorInfo;
-}
-
-export interface SSETitleGenerated {
-  conversationId: string;
-  title: string;
+export interface InteractionAnsweredEvent {
+  version: 1;
+  seq: number;
+  type: 'state.interaction.answered';
+  channel: 'state';
+  ids: { conversation_id?: string; run_id?: string; interaction_id?: string };
+  payload: {
+    interaction_id: string;
+    answer: unknown;
+  };
 }
 
 // 列表响应

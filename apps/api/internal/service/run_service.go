@@ -70,3 +70,19 @@ func (s *RunService) FailRun(ctx context.Context, id, userID uuid.UUID, errJSON 
 	}
 	return nil
 }
+
+// MarkWaitingUser transitions a run from running to waiting_user.
+func (s *RunService) MarkWaitingUser(ctx context.Context, id uuid.UUID) error {
+	if err := s.runRepo.UpdateStatus(ctx, id, "waiting_user"); err != nil {
+		return fmt.Errorf("mark waiting_user: %w", err)
+	}
+	return nil
+}
+
+// ResumeRunning transitions a run from waiting_user back to running.
+func (s *RunService) ResumeRunning(ctx context.Context, id uuid.UUID) error {
+	if err := s.runRepo.UpdateStatus(ctx, id, "running"); err != nil {
+		return fmt.Errorf("resume running: %w", err)
+	}
+	return nil
+}

@@ -25,9 +25,9 @@ func (h *TrainingHandler) GeneratePlan(c *gin.Context) {
 	}
 
 	var req struct {
-		ConsultationID *uuid.UUID      `json:"consultation_id"`
-		Diagnosis      map[string]any  `json:"diagnosis"`
-		Preferences    map[string]any  `json:"preferences"`
+		ConsultationID *uuid.UUID     `json:"consultation_id"`
+		Diagnosis      map[string]any `json:"diagnosis"`
+		Preferences    map[string]any `json:"preferences"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -142,12 +142,53 @@ func (h *TrainingHandler) UpdateLog(c *gin.Context) {
 		return
 	}
 
-	if err := h.trainingService.UpdateLog(c.Request.Context(), planID, uid, req.Notes, req.Exercises); err != nil {
+	proposal, err := h.trainingService.UpdateLog(c.Request.Context(), planID, uid, req.Notes, req.Exercises)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "log updated"})
+	if proposal != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"message":      "log updated",
+			"has_proposal": true,
+			"proposal":     proposal,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":      "log updated",
+		"has_proposal": false,
+	})
+}
+
+// UpdatePlanPhases handles PUT /api/v1/training/:id/phases
+func (h *TrainingHandler) UpdatePlanPhases(c *gin.Context) {
+	uid, ok := getUserUUID(c)
+	if !ok {
+		return
+	}
+	planID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid plan id"})
+		return
+	}
+
+	var req struct {
+		Phases any `json:"phases"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.trainingService.UpdatePlanPhases(c.Request.Context(), planID, uid, req.Phases); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "plan phases updated successfully"})
 }
 
 // GetProgress handles GET /api/v1/training/:id/progress

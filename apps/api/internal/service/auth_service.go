@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
+	"log"
 
 	"github.com/bodysense/api/internal/auth"
+	"github.com/bodysense/api/internal/cache"
 	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/model"
@@ -18,15 +19,17 @@ import (
 
 // AuthService handles authentication business logic.
 type AuthService struct {
-	userRepo  *repository.UserRepository
-	jwtConfig auth.JWTConfig
+	userRepo     *repository.UserRepository
+	jwtConfig    auth.JWTConfig
+	sessionCache *cache.UserSessionCache
 }
 
 // NewAuthService creates a new AuthService.
-func NewAuthService(userRepo *repository.UserRepository, jwtConfig auth.JWTConfig) *AuthService {
+func NewAuthService(userRepo *repository.UserRepository, jwtConfig auth.JWTConfig, sessionCache *cache.UserSessionCache) *AuthService {
 	return &AuthService{
-		userRepo:  userRepo,
-		jwtConfig: jwtConfig,
+		userRepo:     userRepo,
+		jwtConfig:    jwtConfig,
+		sessionCache: sessionCache,
 	}
 }
 
@@ -58,7 +61,7 @@ func (s *AuthService) Register(ctx context.Context, req dto.RegisterRequest) (*d
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
-	// Generate tokens
+	// Generate tokens (also writes session cache)
 	return s.generateTokens(ctx, user)
 }
 
@@ -81,10 +84,10 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest) (*dto.Aut
 	// Update last login time
 	if err := s.userRepo.UpdateLastLoginAt(ctx, user.ID); err != nil {
 		// Log error but don't fail login
-		fmt.Printf("Warning: failed to update last login time: %v\n", err)
+		log.Printf("Warning: failed to update last login time: %v", err)
 	}
 
-	// Generate tokens
+	// Generate tokens (also writes session cache)
 	return s.generateTokens(ctx, user)
 }
 
@@ -108,17 +111,65 @@ func (s *AuthService) RefreshToken(ctx context.Context, req dto.RefreshRequest) 
 		return nil, errors.New("invalid refresh token")
 	}
 
-	// Find user
+	// Find user — if user no longer exists, clean up and reject
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// User was deleted — clear stale session cache
+			_ = s.sessionCache.Delete(ctx, userID)
+			return nil, errors.New("user no longer exists")
+		}
 		return nil, fmt.Errorf("failed to find user: %w", err)
 	}
 
-	// Generate new tokens
+	// Generate new tokens (also writes session cache)
 	return s.generateTokens(ctx, user)
 }
 
-// generateTokens generates access and refresh tokens for a user.
+// Logout invalidates a refresh token and clears the user's session cache.
+// Looks up the user ID from the refresh token in Redis before cleaning up.
+func (s *AuthService) Logout(ctx context.Context, refreshToken string) error {
+	redisClient := database.RedisClient
+	refreshKey := fmt.Sprintf("refresh_token:%s", refreshToken)
+
+	// Look up user ID from refresh token (before deleting it)
+	userIDStr, err := redisClient.Get(ctx, refreshKey).Result()
+	if err != nil {
+		// Refresh token not found or expired — nothing to clean up
+		return nil
+	}
+
+	// Delete refresh token from Redis
+	redisClient.Del(ctx, refreshKey)
+
+	// Delete session cache if we have a valid user ID
+	if userID, parseErr := uuid.Parse(userIDStr); parseErr == nil {
+		if err := s.sessionCache.Delete(ctx, userID); err != nil {
+			log.Printf("[AuthService] Failed to delete session cache on logout: %v", err)
+		}
+	}
+
+	return nil
+}
+
+// DeleteUser deletes a user from the DB and invalidates all their sessions.
+// Any future request with the user's JWT will be rejected by the middleware.
+func (s *AuthService) DeleteUser(ctx context.Context, userID uuid.UUID) error {
+	// Delete from DB first
+	if err := s.userRepo.DeleteByID(ctx, userID); err != nil {
+		return fmt.Errorf("failed to delete user: %w", err)
+	}
+
+	// Clear session cache — middleware will now reject this user's tokens
+	if err := s.sessionCache.Delete(ctx, userID); err != nil {
+		log.Printf("[AuthService] Failed to delete session cache for deleted user %s: %v", userID, err)
+	}
+
+	return nil
+}
+
+// generateTokens generates access and refresh tokens for a user,
+// and writes the user session cache entry.
 func (s *AuthService) generateTokens(ctx context.Context, user *model.User) (*dto.AuthResponse, error) {
 	// Generate access token
 	accessToken, err := auth.GenerateAccessToken(s.jwtConfig, user.ID, user.Email)
@@ -139,27 +190,14 @@ func (s *AuthService) generateTokens(ctx context.Context, user *model.User) (*dt
 		return nil, fmt.Errorf("failed to store refresh token: %w", err)
 	}
 
+	// Write user session cache (best-effort, don't fail token generation)
+	if err := s.sessionCache.Set(ctx, user.ID); err != nil {
+		log.Printf("[AuthService] Failed to cache user session for %s: %v", user.ID, err)
+	}
+
 	return &dto.AuthResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		ExpiresIn:    int64(s.jwtConfig.AccessTokenTTL.Seconds()),
 	}, nil
-}
-
-// InvalidateRefreshToken invalidates a refresh token.
-func (s *AuthService) InvalidateRefreshToken(ctx context.Context, refreshToken string) error {
-	redisClient := database.RedisClient
-	key := fmt.Sprintf("refresh_token:%s", refreshToken)
-	return redisClient.Del(ctx, key).Err()
-}
-
-// CleanupExpiredTokens removes expired refresh tokens (can be called periodically).
-func (s *AuthService) CleanupExpiredTokens(ctx context.Context) error {
-	// Redis automatically removes expired keys, but this can be used for manual cleanup
-	return nil
-}
-
-// getRefreshTokenTTL returns the TTL for refresh tokens.
-func (s *AuthService) getRefreshTokenTTL() time.Duration {
-	return s.jwtConfig.RefreshTokenTTL
 }

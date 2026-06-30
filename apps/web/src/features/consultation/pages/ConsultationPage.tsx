@@ -15,7 +15,7 @@ import type {
   DiagnosisAnalysis,
   TreatmentPlan,
 } from '../types/consultation';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { MainLayout } from '@/components/layout/MainLayout';
 
@@ -495,10 +495,14 @@ export function ConsultationPage() {
                   <InfoPanel
                     key={currentConversation?.id ?? 'draft'}
                     extractedInfo={extractedInfo}
-                    onConfirm={async (_info) => {
+                    onConfirm={async (info) => {
                       if (!currentConversation) return;
                       try {
-                        await consultationApi.updateExtractedInfo(currentConversation.id, extractedInfo);
+                        const updated = extractedInfo.map((e) =>
+                          e.body_part === info.body_part ? { ...e, confirmed: true } : e,
+                        );
+                        setExtractedInfo(updated);
+                        await consultationApi.updateExtractedInfo(currentConversation.id, updated);
                       } catch {
                         setAnalysisError('保存确认信息失败，请稍后重试');
                       }
@@ -514,6 +518,15 @@ export function ConsultationPage() {
                         updated[index] = info;
                         consultationApi.updateExtractedInfo(currentConversation.id, updated).catch(() => {
                           setAnalysisError('保存修改失败，请稍后重试');
+                        });
+                      }
+                    }}
+                    onDelete={(index) => {
+                      const updated = extractedInfo.filter((_, idx) => idx !== index);
+                      setExtractedInfo(updated);
+                      if (currentConversation) {
+                        consultationApi.updateExtractedInfo(currentConversation.id, updated).catch(() => {
+                          setAnalysisError('删除失败，请稍后重试');
                         });
                       }
                     }}

@@ -1,0 +1,151 @@
+{
+  "source_key": "凯圣王-shoulder-joint-肩关节",
+  "source_title": "肩关节完整矫正指南",
+  "author": "凯圣王",
+  "problem_slug": "shoulder-joint",
+  "problem_display_name": "肩关节",
+  "units": [
+    {
+      "unit_key": "sj-anatomy-joints",
+      "unit_type": "definition",
+      "category": "posture.shoulder-joint",
+      "title": "肩关节复合体四大关节构成",
+      "summary": "肩关节不是单一关节，而是由胸锁关节 (SC)、肩锁关节 (AC)、盂肱关节 (GH) 和肩胛胸壁关节 (ST) 四大关节协同构成的复杂运动链。",
+      "source_start_sec": 60.0,
+      "source_end_sec": 120.0,
+      "tags": ["肩关节", "解剖结构", "关节律", "胸锁关节", "肩锁关节", "盂肱关节", "肩胛胸壁关节"],
+      "body_markdown": "## 核心结论\n日常所说的“肩关节”其实是一个复合体（Shoulder Complex），抬肩动作需要以下四个关节密切配合才能顺利完成：\n\n## 四大关节解剖构成\n1. **胸锁关节 (SC Joint - Sternoclavicular)**：锁骨近端与胸骨柄构成的关节，是整个上肢与躯干唯一的骨性连接，属于上肢运动的起点。\n2. **肩锁关节 (AC Joint - Acromioclavicular)**：锁骨远端与肩峰构成的微动关节。\n3. **盂肱关节 (GH Joint - Glenohumeral)**：肱骨头与肩胛骨关节盂构成的球窝关节，是活动度最大的主要关节。\n4. **肩胛胸壁关节 (ST Joint - Scapulothoracic)**：肩胛骨与胸廓后壁构成的假性功能关节。 "
+    },
+    {
+      "unit_key": "sj-symptoms-clicking",
+      "unit_type": "warning",
+      "category": "posture.shoulder-joint",
+      "title": "肩关节弹响与撞击卡压的不适表现",
+      "summary": "在侧平举、前平举或推胸/推肩等负重动作中，肩关节常出现骨性弹响、卡压和痛性卡卡的感觉，这是关节运动律异常的信号。",
+      "source_start_sec": 0.0,
+      "source_end_sec": 90.0,
+      "tags": ["弹响", "肩撞击", "训练不适", "侧平举", "推肩"],
+      "body_markdown": "## 典型不适症状\n- 做**侧平举**、**前平举**或**推类/推肩**动作时，肩前侧或深层出现弹响，甚至伴随卡顿、隐痛。\n- 长期忽视这些卡压信号，会增加肩袖损伤、滑囊炎和肩峰下撞击综合征的风险。\n- 应从骨骼力线和肌肉失衡入手进行系统筛查，而非盲目过度训练。 "
+    },
+    {
+      "unit_key": "sj-sc-joint-check-release",
+      "unit_type": "self_check",
+      "category": "posture.shoulder-joint",
+      "title": "胸锁关节 (SC) 筛查、松解与功能耸肩重建",
+      "summary": "通过掌根下压锁骨近端排除法自测，利用锁骨下肌手动手法松解，辅以掌根固定下的负压耸肩，恢复锁骨近端下滑与远端肩峰抬起功能。",
+      "source_start_sec": 120.0,
+      "source_end_sec": 180.0,
+      "tags": ["胸锁关节", "自测", "锁骨下肌", "关节松动", "纠正训练"],
+      "body_markdown": "## 胸锁关节原理\n- 抬臂时，锁骨近端需向下做相对滑动，远端肩峰才能上提以避开肱骨头，防止肩峰卡压。\n\n## 筛查方法\n- **掌根加压自测**：在大臂抬起出现卡压时，用对侧大鱼际（掌根）用力下压锁骨近端（靠近胸骨的一端）。在此状态下继续抬臂，如果卡压或弹响明显减轻，则问题根源来自胸锁关节异常。\n\n## 矫正与处理步骤\n1. **锁骨下肌松解**：大指沿着锁骨下方一圈，朝第一肋方向按压探查（锁骨下肌负责下拉锁骨），手动深层松解 3 到 5 分钟。\n2. **胸锁关节松动术**：用大鱼际牢牢向内下压住锁骨近端，在此负重对位下主动耸肩（十次到十五次），促进近端恢复向下滑动的能力。 "
+    },
+    {
+      "unit_key": "sj-gh-joint-convex-concave",
+      "unit_type": "explanation",
+      "category": "posture.shoulder-joint",
+      "title": "盂肱关节 (GH) 凹凸定律与肱骨头下滑障碍",
+      "summary": "依据凹凸定律，大臂抬起时肱骨头必须下滑，若肩袖无力或后下方关节囊过紧导致其无法下滑，就会造成骨性撞击和肩部酸痛。",
+      "source_start_sec": 180.0,
+      "source_end_sec": 240.0,
+      "tags": ["盂肱关节", "凹凸定律", "肱骨头下滑", "肩袖肌群", "运动机制"],
+      "body_markdown": "## 凹凸定律在肩部的体现\n- 盂肱关节是一个凸面（肱骨头）在凹面（关节盂）上运动。\n- 规律：**滚动方向与下滑方向相反**。大臂外展向上滚动时，肱骨头必须向下发生滑动，才能使肱骨头稳定留在球窝中。\n\n## 撞击与受限机制\n- 如果由于肩袖肌群无力，或者关节囊后下方紧张，导致肱骨头无法有效向下滑动，肱骨头就会直接上移撞击肩峰，导致脱位趋势、卡压或刺痛。 "
+    },
+    {
+      "unit_key": "sj-gh-joint-check-decompression",
+      "unit_type": "exercise",
+      "category": "exercise.shoulder-joint",
+      "title": "盂肱关节 (GH) 下滑筛查与弹力带牵引减压法",
+      "summary": "由伙伴加压肱骨近端外展自测，利用 120 磅重弹力带牵引肱骨头向下拉伸，做负重推举以重新激活深层肩袖并重建关节间隙。",
+      "source_start_sec": 210.0,
+      "source_end_sec": 270.0,
+      "tags": ["盂肱关节", "自测", "弹力带减压", "推举", "纠正训练"],
+      "body_markdown": "## 筛查方法\n- **大臂下压测试**：大臂抬起受限时，由伙伴用双手叠加压在三角肌下方的肱骨近端，给予一个向下的压力。此时主动抬臂，若弹响或疼痛明显减轻，说明肱骨头向下滑动功能受限。\n\n## 纠正动作（弹力带牵引减压推举）\n1. 准备一根粗阻力弹力带（约 120 磅）。\n2. 将弹力带一端套在受试侧肩关节下方（三角肌侧面，注意避开肩峰，不能压在骨头上），另一端用脚踩死提供强大向下的拉力。\n3. 在向下的弹性拉力牵引（帮助肱骨头下滑）状态下，做主动的过顶推举动作（十次到十五次），以重新激活深层肩袖肌群。 "
+    },
+    {
+      "unit_key": "sj-scapular-upward-rotation",
+      "unit_type": "exercise",
+      "category": "exercise.shoulder-joint",
+      "title": "肩胛胸壁关节 (ST) 上回旋筛查与前锯肌激活",
+      "summary": "通过手动外推肩胛骨下角辅助筛查，对限制上回旋的大圆肌和胸小肌进行手法/泡沫轴滚压松解，重新激活前锯肌等向上旋转肌群。",
+      "source_start_sec": 270.0,
+      "source_end_sec": 390.0,
+      "tags": ["肩胛骨", "上回旋", "前锯肌", "大圆肌", "自测", "泡沫轴"],
+      "body_markdown": "## 上回旋机制\n- 大臂抬起外展时，肩胛骨必须做上回旋（向上旋转）以托住肱骨头。这一动作主要由**前锯肌**、**上斜方肌**和**下斜方肌**共同完成。\n\n## 筛查方法\n- **肩胛下角推动测试**：在大臂外展时，伙伴用大拇指推住肩胛骨下角，顺着上回旋轨迹协助向外上方推动。若抬臂流畅度提升、卡压减轻，证明肩胛骨上回旋功能受限。\n\n## 纠正松解方法\n1. **大圆肌松解**：大圆肌紧绷会限制肩胛骨上回旋。侧躺将腋下（大圆肌）压在泡沫轴上，躯干微后倾，进行上下的滚动松解 3 到 5 分钟。可在酸痛点做身体前旋/后旋，进一步加深刺激。 "
+    },
+    {
+      "unit_key": "sj-scapular-posterior-tilt",
+      "unit_type": "exercise",
+      "category": "exercise.shoulder-joint",
+      "title": "肩胛骨后倾、胸椎伸展联动与胸小肌拉伸",
+      "summary": "前屈抬臂需肩胛骨后倾 and 胸椎伸展，胸小肌紧缩是导致肩胛前倾（圆肩）的元凶。需拉伸放松胸小肌以恢复肩胛后倾功能。",
+      "source_start_sec": 300.0,
+      "source_end_sec": 420.0,
+      "tags": ["肩胛骨后倾", "胸椎伸展", "胸小肌", "圆肩", "关节受限"],
+      "body_markdown": "## 联动机制\n- 抬手向前时，肩胛骨不仅做上回旋，还必须伴随胸椎做伸展并发生**后倾**（类似抬头）。\n- 如果胸椎僵硬（驼背）或胸小肌过度紧张，肩胛骨就无法后倾，导致前屈撞击受限。\n\n## 胸小肌的危害与矫正\n- **圆肩元凶**：胸小肌连接肩胛喙突与三到五肋，一旦短缩会将肩胛骨强行向前拉（肩胛骨前倾，即圆肩）。\n- **对抗机制**：前锯肌和中下斜方肌具有拮抗作用（促使后倾）。除了强化后倾肌肉外，必须重点拉伸和手法松解胸前侧的胸小肌以恢复运动链中立。 "
+    }
+  ],
+  "clips": [
+    {
+      "clip_key": "sj-anatomy-joints-demo",
+      "source_unit_key": "sj-anatomy-joints",
+      "clip_type": "explanation",
+      "title": "肩关节解剖学四大关节律与胸锁关节力学作用",
+      "start_sec": 60.0,
+      "end_sec": 120.0,
+      "notes": "解说四大关节结构及其运动配合机制"
+    },
+    {
+      "clip_key": "sj-symptoms-clicking-demo",
+      "source_unit_key": "sj-symptoms-clicking",
+      "clip_type": "warning",
+      "title": "肩关节抬臂弹响与撞击的临床危害",
+      "start_sec": 0.0,
+      "end_sec": 60.0,
+      "notes": "前举侧平举时的关节卡压弹响和受伤警告"
+    },
+    {
+      "clip_key": "sj-sc-joint-check-release-demo",
+      "source_unit_key": "sj-sc-joint-check-release",
+      "clip_type": "self_check",
+      "title": "胸锁关节 SC 自测方法与耸肩滑行松动技术",
+      "start_sec": 120.0,
+      "end_sec": 180.0,
+      "notes": "掌根压锁骨近端耸肩及锁骨下肌手动按压手法"
+    },
+    {
+      "clip_key": "sj-gh-joint-convex-concave-demo",
+      "source_unit_key": "sj-gh-joint-convex-concave",
+      "clip_type": "explanation",
+      "title": "凹凸定律下盂肱关节 GH 肱骨头下滑撞击机制",
+      "start_sec": 180.0,
+      "end_sec": 210.0,
+      "notes": "解释凹凸定律下肱骨头下滑不足造成的肩撞击"
+    },
+    {
+      "clip_key": "sj-gh-joint-check-decompression-demo",
+      "source_unit_key": "sj-gh-joint-check-decompression",
+      "clip_type": "exercise",
+      "title": "盂肱关节 GH 三角肌处下压检测与弹力带减压推举动作",
+      "start_sec": 210.0,
+      "end_sec": 270.0,
+      "notes": "大腿踩住 120 磅弹力带牵拉下滑推肩"
+    },
+    {
+      "clip_key": "sj-scapular-upward-rotation-demo",
+      "source_unit_key": "sj-scapular-upward-rotation",
+      "clip_type": "exercise",
+      "title": "肩胛胸壁关节上回旋前锯肌受限检测与腋下大圆肌泡沫轴释放",
+      "start_sec": 270.0,
+      "end_sec": 390.0,
+      "notes": "侧卧压腋下泡沫轴大圆肌滚动，配合前后旋转"
+    },
+    {
+      "clip_key": "sj-scapular-posterior-tilt-demo",
+      "source_unit_key": "sj-scapular-posterior-tilt",
+      "clip_type": "exercise",
+      "title": "圆肩状态下胸小肌拉伸对抬肩前屈影响演示",
+      "start_sec": 390.0,
+      "end_sec": 420.0,
+      "notes": "分析胸小肌紧张对肩胛骨后倾的限制及解压拉伸"
+    }
+  ]
+}

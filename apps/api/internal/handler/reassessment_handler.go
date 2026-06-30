@@ -21,7 +21,7 @@ type ReassessmentHandler struct {
 func NewReassessmentHandler(trainingService *service.TrainingService) *ReassessmentHandler {
 	aiServiceURL := os.Getenv("AI_SERVICE_URL")
 	if aiServiceURL == "" {
-		aiServiceURL = "http://localhost:8000"
+		aiServiceURL = "http://localhost:8100"
 	}
 	return &ReassessmentHandler{
 		trainingService: trainingService,
@@ -68,9 +68,9 @@ func (h *ReassessmentHandler) SubmitReassessment(c *gin.Context) {
 
 	// Call AI service
 	aiReq := map[string]any{
-		"feedback":       reqBody.Feedback,
-		"training_logs":  json.RawMessage(logsJSON),
-		"current_plan":   planMap,
+		"feedback":      reqBody.Feedback,
+		"training_logs": json.RawMessage(logsJSON),
+		"current_plan":  planMap,
 	}
 	aiReqBody, _ := json.Marshal(aiReq)
 

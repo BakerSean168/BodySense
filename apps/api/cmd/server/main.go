@@ -1,17 +1,22 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/bodysense/api/internal/auth"
+	"github.com/bodysense/api/internal/cache"
 	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/handler"
 	"github.com/bodysense/api/internal/middleware"
 	"github.com/bodysense/api/internal/repository"
 	"github.com/bodysense/api/internal/service"
+	"github.com/bodysense/api/internal/workflow"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -52,9 +57,16 @@ func main() {
 	messageRepo := repository.NewMessageRepository(database.DB)
 	runRepo := repository.NewRunRepository(database.DB)
 	shareRepo := repository.NewConversationShareRepository(database.DB)
-	authService := service.NewAuthService(userRepo, jwtConfig)
+
+	// User session cache (Redis-backed, TTL = 2x access token TTL)
+	sessionCache := cache.NewUserSessionCache(database.RedisClient, jwtConfig.AccessTokenTTL*2)
+
+	authService := service.NewAuthService(userRepo, jwtConfig, sessionCache)
 	profileService := service.NewProfileService(profileRepo)
-	uploadService := service.NewUploadService(uploadRepo)
+	jobRepo := repository.NewJobRepository(database.DB)
+	jobRuntime := service.NewJobRuntime(jobRepo)
+	uploadService := service.NewUploadService(uploadRepo, jobRuntime)
+	uploadService.StartOCRWorker(context.Background(), 10*time.Second, 10*time.Minute)
 	aiClient := service.NewAIClient()
 	messageService := service.NewMessageService(messageRepo)
 	runService := service.NewRunService(runRepo)
@@ -62,13 +74,19 @@ func main() {
 	shareService := service.NewShareService(conversationRepo, messageRepo, shareRepo)
 	consultationService := service.NewConsultationService(consultationRepo, conversationRepo)
 	assessmentRepo := repository.NewAssessmentRepository(database.DB)
-	assessmentService := service.NewAssessmentService(assessmentRepo, profileService)
+	assessmentService := service.NewAssessmentService(assessmentRepo, profileService, uploadRepo)
 	authHandler := handler.NewAuthHandler(authService)
 	profileHandler := handler.NewProfileHandler(profileService)
 	uploadHandler := handler.NewUploadHandler(uploadService)
-	chatHandler := handler.NewChatHandler(conversationService, messageService, runService, consultationService, aiClient, profileService)
+	agentToolRepo := repository.NewAgentToolCallRepository(database.DB)
+	agentToolService := service.NewAgentToolService(agentToolRepo)
+	interactionRepo := repository.NewAgentInteractionRepository(database.DB)
+	interactionService := service.NewAgentInteractionService(interactionRepo, runRepo)
+	outputReviewRepo := repository.NewAIOutputReviewRepository(database.DB)
+	outputReviewService := service.NewOutputReviewService(outputReviewRepo)
+	chatHandler := handler.NewChatHandler(conversationService, messageService, runService, consultationService, aiClient, profileService, agentToolService, interactionService, outputReviewService)
 	convHandler := handler.NewConversationHandler(conversationService, shareService)
-	consultationHandler := handler.NewConsultationHandler(consultationService)
+	consultationHandler := handler.NewConsultationHandler(consultationService, interactionService, runService)
 	diagnosisHandler := handler.NewDiagnosisHandler(consultationService, profileService, aiClient)
 	trainingRepo := repository.NewTrainingRepository(database.DB)
 	trainingService := service.NewTrainingService(trainingRepo, profileService)
@@ -76,6 +94,10 @@ func main() {
 	reassessmentHandler := handler.NewReassessmentHandler(trainingService)
 	assessmentHandler := handler.NewAssessmentHandler(assessmentService)
 	knowledgeHandler := handler.NewKnowledgeHandler()
+
+	// Health journey (read-only workflow)
+	journeyWorkflow := workflow.NewHealthJourneyWorkflow(profileRepo, uploadRepo, consultationRepo, assessmentRepo, trainingRepo)
+	journeyHandler := handler.NewHealthJourneyHandler(journeyWorkflow)
 
 	// HTTP server
 	port := os.Getenv("API_PORT")
@@ -86,12 +108,9 @@ func main() {
 	r := gin.Default()
 
 	// CORS middleware
-	corsOrigin := os.Getenv("CORS_ORIGIN")
-	if corsOrigin == "" {
-		corsOrigin = "*"
-	}
+	corsOrigins := parseCORSOrigins()
 	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", corsOrigin)
+		c.Writer.Header().Set("Access-Control-Allow-Origin", resolveCORSOrigin(c.Request.Header.Get("Origin"), corsOrigins))
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
@@ -143,7 +162,7 @@ func main() {
 
 	// Protected routes
 	protected := r.Group("/api/v1")
-	protected.Use(middleware.AuthMiddleware(jwtConfig))
+	protected.Use(middleware.AuthMiddleware(jwtConfig, userRepo, sessionCache))
 	{
 		protected.GET("/me", authHandler.Me)
 		protected.GET("/profile", profileHandler.GetProfile)
@@ -179,6 +198,10 @@ func main() {
 		consultations.PUT("/:id/confirm", consultationHandler.ConfirmDiagnosis)
 		consultations.POST("/:id/diagnosis", diagnosisHandler.AnalyzeDiagnosis)
 		consultations.POST("/:id/treatment", diagnosisHandler.GenerateTreatment)
+		consultations.POST("/:id/interactions/:interactionId/resume", consultationHandler.ResumeInteraction)
+
+		// Health journey (read-only)
+		protected.GET("/journey", journeyHandler.GetJourneyState)
 
 		// Assessment routes
 		protected.POST("/assessment/generate", assessmentHandler.GenerateAssessment)
@@ -192,6 +215,7 @@ func main() {
 		protected.GET("/training/:id/today", trainingHandler.GetTodayTask)
 		protected.POST("/training/:id/checkin", trainingHandler.CheckIn)
 		protected.PUT("/training/:id/log", trainingHandler.UpdateLog)
+		protected.PUT("/training/:id/phases", trainingHandler.UpdatePlanPhases)
 		protected.GET("/training/:id/progress", trainingHandler.GetProgress)
 		protected.POST("/training/:id/reassess", reassessmentHandler.SubmitReassessment)
 	}
@@ -213,4 +237,39 @@ func main() {
 	if err := r.Run(fmt.Sprintf(":%s", port)); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func parseCORSOrigins() []string {
+	raw := os.Getenv("CORS_ORIGINS")
+	if raw == "" {
+		raw = os.Getenv("CORS_ORIGIN")
+	}
+	if raw == "" {
+		return []string{"*"}
+	}
+
+	parts := strings.Split(raw, ",")
+	origins := make([]string, 0, len(parts))
+	for _, part := range parts {
+		origin := strings.TrimSpace(part)
+		if origin != "" {
+			origins = append(origins, origin)
+		}
+	}
+	if len(origins) == 0 {
+		return []string{"*"}
+	}
+	return origins
+}
+
+func resolveCORSOrigin(requestOrigin string, allowed []string) string {
+	for _, origin := range allowed {
+		if origin == "*" {
+			return "*"
+		}
+		if requestOrigin != "" && origin == requestOrigin {
+			return requestOrigin
+		}
+	}
+	return allowed[0]
 }

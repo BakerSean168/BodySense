@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 
 interface OnboardingLayoutProps {
   children: ReactNode;

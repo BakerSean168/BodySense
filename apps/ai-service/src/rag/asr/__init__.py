@@ -17,7 +17,8 @@ def get_asr_provider(
     Priority: explicit ``provider`` argument > ``ASR_PROVIDER`` env var > ``whisper.cpp``.
 
     Args:
-        provider: Provider name. One of ``whisper.cpp``, ``funasr_sensevoice``, ``asr_api``, ``mimo_omni``.
+        provider: Provider name. One of ``whisper.cpp``, ``funasr_sensevoice``,
+            ``asr_api``, ``mimo_omni``.
         data_root: Root directory for cached models and artifacts.
 
     Returns:

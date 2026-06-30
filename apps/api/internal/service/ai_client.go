@@ -10,44 +10,25 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/bodysense/api/internal/dto"
 )
 
-type AIEvent struct {
-	Type       string          `json:"type"`
-	Delta      string          `json:"delta,omitempty"`
-	Info       json.RawMessage `json:"info,omitempty"`
-	Phase      string          `json:"phase,omitempty"`
-	Reason     string          `json:"reason,omitempty"`
-	Flag       json.RawMessage `json:"flag,omitempty"`
-	Citation   json.RawMessage `json:"citation,omitempty"`
-	ID         string          `json:"id,omitempty"`
-	Tool       string          `json:"tool,omitempty"`
-	Args       json.RawMessage `json:"args,omitempty"`
-	Result     json.RawMessage `json:"result,omitempty"`
-	ResponseID string          `json:"response_id,omitempty"`
-	Usage      json.RawMessage `json:"usage,omitempty"`
-}
-
 type ChatStreamRequest struct {
-	Messages []ChatMessage    `json:"messages"`
-	Context  ChatContext      `json:"context"`
-	UseCase  string           `json:"use_case"`
-	Tools    []ToolDefinition `json:"tools,omitempty"`
-	Stream   bool             `json:"stream"`
+	SessionID     string          `json:"session_id"`
+	UserID        string          `json:"user_id"`
+	Content       string          `json:"content"`
+	UseCase       string          `json:"use_case,omitempty"`
+	Profile       json.RawMessage `json:"profile,omitempty"`
+	Messages      []ChatMessage   `json:"messages,omitempty"`
+	ExtractedInfo json.RawMessage `json:"extracted_info,omitempty"`
+	RAGResults    json.RawMessage `json:"rag_results,omitempty"`
+	Phase         string          `json:"phase,omitempty"`
 }
 
 type ChatMessage struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
-}
-
-type ChatContext struct {
-	UserID             string          `json:"user_id"`
-	SessionID          string          `json:"session_id"`
-	Profile            json.RawMessage `json:"profile,omitempty"`
-	ExtractedInfo      json.RawMessage `json:"extracted_info,omitempty"`
-	Phase              string          `json:"phase"`
-	PreviousResponseID string          `json:"previous_response_id,omitempty"`
 }
 
 type ToolDefinition struct {
@@ -60,11 +41,21 @@ type ToolDefinition struct {
 }
 
 type DiagnosisRequest struct {
-	ExtractedInfo json.RawMessage `json:"extracted_info"`
-	Profile       json.RawMessage `json:"profile,omitempty"`
-	RAGContext    string          `json:"rag_context,omitempty"`
-	RAGResults    json.RawMessage `json:"rag_results,omitempty"`
-	UseCase       string          `json:"use_case"`
+	ExtractedInfo       json.RawMessage `json:"extracted_info"`
+	Profile             json.RawMessage `json:"profile,omitempty"`
+	ConversationSummary string          `json:"conversation_summary,omitempty"`
+	RAGContext          string          `json:"rag_context,omitempty"`
+	RAGResults          json.RawMessage `json:"rag_results,omitempty"`
+	UseCase             string          `json:"use_case,omitempty"`
+}
+
+type TreatmentRequest struct {
+	ConfirmedDiagnosis json.RawMessage `json:"confirmed_diagnosis"`
+	ExtractedInfo      json.RawMessage `json:"extracted_info"`
+	Profile            json.RawMessage `json:"profile,omitempty"`
+	RAGContext         string          `json:"rag_context,omitempty"`
+	RAGResults         json.RawMessage `json:"rag_results,omitempty"`
+	UseCase            string          `json:"use_case,omitempty"`
 }
 
 type AIClient struct {
@@ -89,7 +80,7 @@ func (c *AIClient) BaseURL() string {
 }
 
 // ChatStream calls Python /api/chat/stream and returns an NDJSON event channel.
-func (c *AIClient) ChatStream(ctx context.Context, req ChatStreamRequest) (<-chan AIEvent, error) {
+func (c *AIClient) ChatStream(ctx context.Context, req ChatStreamRequest) (<-chan dto.StreamEvent, error) {
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, fmt.Errorf("marshal request: %w", err)
@@ -111,7 +102,7 @@ func (c *AIClient) ChatStream(ctx context.Context, req ChatStreamRequest) (<-cha
 		return nil, fmt.Errorf("AI service returned status %d", resp.StatusCode)
 	}
 
-	events := make(chan AIEvent, 32)
+	events := make(chan dto.StreamEvent, 32)
 	go func() {
 		defer resp.Body.Close()
 		defer close(events)
@@ -125,7 +116,7 @@ func (c *AIClient) ChatStream(ctx context.Context, req ChatStreamRequest) (<-cha
 				continue
 			}
 
-			var event AIEvent
+			var event dto.StreamEvent
 			if err := json.Unmarshal(line, &event); err != nil {
 				continue // skip malformed lines
 			}
@@ -147,7 +138,7 @@ func (c *AIClient) AnalyzeDiagnosis(ctx context.Context, req DiagnosisRequest) (
 }
 
 // GenerateTreatment calls /api/diagnosis/treatment.
-func (c *AIClient) GenerateTreatment(ctx context.Context, req DiagnosisRequest) (json.RawMessage, error) {
+func (c *AIClient) GenerateTreatment(ctx context.Context, req TreatmentRequest) (json.RawMessage, error) {
 	return c.callJSON(ctx, "/api/diagnosis/treatment", req)
 }
 

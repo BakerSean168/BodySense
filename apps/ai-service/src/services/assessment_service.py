@@ -17,6 +17,7 @@ class AssessmentService:
         self,
         profile: dict[str, Any],
         rag_context: str = "",
+        images: list[str] | None = None,
     ) -> dict[str, Any]:
         """
         Generate a health assessment report based on user profile.
@@ -24,6 +25,7 @@ class AssessmentService:
         Args:
             profile: User profile data.
             rag_context: Optional RAG context from knowledge base.
+            images: Optional list of Base64 encoded posture images.
 
         Returns:
             Assessment result as a dict with health_grade, dimension_scores,
@@ -31,9 +33,28 @@ class AssessmentService:
         """
         # Build messages
         user_prompt = get_assessment_prompt(profile, rag_context)
+
+        if images:
+            content_list: list[dict[str, Any]] = [
+                {"type": "text", "text": user_prompt}
+            ]
+            for img in images:
+                if not img.startswith("data:"):
+                    # Default to jpeg base64
+                    img = f"data:image/jpeg;base64,{img}"
+                content_list.append({
+                    "type": "image_url",
+                    "image_url": {
+                        "url": img
+                    }
+                })
+            user_msg = ChatMessage(role="user", content=content_list)
+        else:
+            user_msg = ChatMessage(role="user", content=user_prompt)
+
         messages = [
             ChatMessage(role="system", content=ASSESSMENT_SYSTEM_PROMPT),
-            ChatMessage(role="user", content=user_prompt),
+            user_msg,
         ]
 
         # Call LLM via AIService (json_mode guarantees valid JSON)
