@@ -38,7 +38,10 @@ ASK_USER_SCHEMA: dict[str, Any] = {
             "options": {
                 "type": "array",
                 "items": {"type": "string"},
-                "description": "当 answer_type 为 single_choice 或 multi_choice 时的选项列表，优先提供 2-4 个简短选项",
+                "description": (
+                    "当 answer_type 为 single_choice 或 multi_choice 时的选项列表，"
+                    "优先提供 2-4 个简短选项"
+                ),
             },
             "allow_custom_input": {
                 "type": "boolean",

@@ -1,6 +1,7 @@
 """BodySense AI Service - FastAPI application."""
 
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -29,12 +30,21 @@ from .api.routes import (  # noqa: E402
     knowledge,
     ocr,
     reassessment,
+    runtime,
     title,
 )
+from .runtime.checkpointing import runtime_checkpointer_lifespan  # noqa: E402
+
+
+@asynccontextmanager
+async def app_lifespan(_: FastAPI):
+    async with runtime_checkpointer_lifespan():
+        yield
 
 app = FastAPI(
     title="BodySense AI Service",
     version="0.1.0",
+    lifespan=app_lifespan,
 )
 
 # CORS middleware
@@ -51,6 +61,7 @@ app.add_middleware(
 app.include_router(knowledge.router)
 app.include_router(ocr.router)
 app.include_router(chat.router)
+app.include_router(runtime.router)
 app.include_router(assessment.router)
 app.include_router(diagnosis.router)
 app.include_router(reassessment.router)
