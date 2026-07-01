@@ -15,6 +15,7 @@ const singleChoiceQuestion: AskUserQuestion = {
   question: '你的主要不适部位？',
   answer_type: 'single_choice',
   options: ['肩颈', '腰背', '膝踝'],
+  allow_custom_input: true,
   required: true,
 };
 
@@ -22,6 +23,7 @@ const multiChoiceQuestion: AskUserQuestion = {
   question: '你有哪些症状？',
   answer_type: 'multi_choice',
   options: ['疼痛', '僵硬', '麻木', '无力'],
+  allow_custom_input: true,
   required: true,
 };
 
@@ -101,7 +103,40 @@ describe('AskUserCard', () => {
     await user.click(screen.getByLabelText('麻木'));
     await user.click(screen.getByText('提交'));
 
-    expect(onSubmit).toHaveBeenCalledWith({ text: '疼痛, 麻木', selected: ['疼痛', '麻木'] });
+    expect(onSubmit).toHaveBeenCalledWith({ text: '疼痛，麻木', selected: ['疼痛', '麻木'] });
+  });
+
+  it('supports custom input for single choice questions', async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    render(<AskUserCard question={singleChoiceQuestion} onSubmit={onSubmit} />);
+
+    await user.click(screen.getByLabelText('自定义输入'));
+    await user.type(screen.getByPlaceholderText('请输入你的补充回答...'), '偶尔胸闷');
+    await user.click(screen.getByText('提交'));
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      text: '偶尔胸闷',
+      selected: ['偶尔胸闷'],
+      is_custom: true,
+    });
+  });
+
+  it('supports mixed preset and custom answers for multi choice questions', async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    render(<AskUserCard question={multiChoiceQuestion} onSubmit={onSubmit} />);
+
+    await user.click(screen.getByLabelText('疼痛'));
+    await user.click(screen.getByLabelText('自定义输入'));
+    await user.type(screen.getByPlaceholderText('请输入你的补充回答...'), '头晕');
+    await user.click(screen.getByText('提交'));
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      text: '疼痛，头晕',
+      selected: ['疼痛', '头晕'],
+      is_custom: true,
+    });
   });
 
   it('disables submit button when isSubmitting', () => {

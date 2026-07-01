@@ -12,6 +12,7 @@ import type {
   SSEExtractedInfo,
   SSEPhaseChange,
   SSECitation,
+  SSEKnowledgeGap,
   SSERedFlag,
   SSEMessageCompleted,
   SSEMessageFailed,
@@ -31,6 +32,7 @@ export interface SSEHandlers {
   onExtractedInfo?: (data: SSEExtractedInfo) => void;
   onPhaseChange?: (data: SSEPhaseChange) => void;
   onCitation?: (data: SSECitation) => void;
+  onKnowledgeGap?: (data: SSEKnowledgeGap) => void;
   onRedFlag?: (data: SSERedFlag) => void;
   onMessageCompleted?: (data: SSEMessageCompleted) => void;
   onMessageFailed?: (data: SSEMessageFailed) => void;
@@ -52,6 +54,7 @@ const EVENT_MAP: Record<string, keyof SSEHandlers> = {
   'state.extracted_info.upsert': 'onExtractedInfo',
   'state.phase.changed': 'onPhaseChange',
   'source.citation.added': 'onCitation',
+  'source.knowledge_gap': 'onKnowledgeGap',
   'safety.red_flag.detected': 'onRedFlag',
   'message.completed': 'onMessageCompleted',
   'message.failed': 'onMessageFailed',
