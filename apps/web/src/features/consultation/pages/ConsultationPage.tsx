@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 import { AssistantChatPanel } from '../components/AssistantChatPanel';
@@ -14,7 +14,9 @@ import type {
   Diagnosis,
   DiagnosisAnalysis,
   TreatmentPlan,
+  PendingInteraction,
 } from '../types/consultation';
+import { buildInterruptedTurnSeed, toInitialThreadMessages } from '../runtime/threadMessageMapping';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -38,8 +40,10 @@ export function ConsultationPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [pendingInteractions, setPendingInteractions] = useState<PendingInteraction[]>([]);
   const [isDraft, setIsDraft] = useState(true);
   const [clientDraftId, setClientDraftId] = useState<string | null>(null);
+  const [chatSessionKey, setChatSessionKey] = useState<string>(() => crypto.randomUUID());
 
   // Consultation domain state
   const [extractedInfo, setExtractedInfo] = useState<ExtractedInfo[]>([]);
@@ -55,6 +59,13 @@ export function ConsultationPage() {
   const [isAnalyzingDiagnosis, setIsAnalyzingDiagnosis] = useState(false);
   const [isGeneratingTreatment, setIsGeneratingTreatment] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const currentConversationIdRef = useRef<string | null>(null);
+  const isDraftRef = useRef(isDraft);
+
+  useEffect(() => {
+    currentConversationIdRef.current = currentConversation?.id ?? null;
+    isDraftRef.current = isDraft;
+  }, [currentConversation, isDraft]);
 
   // Load conversations list
   const loadConversations = useCallback(async () => {
@@ -82,12 +93,14 @@ export function ConsultationPage() {
         setPhase(consultation.phase || 'collecting');
         setDiagnoses(extractDiagnoses(consultation.diagnosis));
         setTreatmentPlan(extractTreatmentPlan(consultation.treatment_plan));
+        setPendingInteractions(consultation.pending_interactions || []);
       } catch {
         // Consultation record may not exist yet
         setExtractedInfo([]);
         setPhase('collecting');
         setDiagnoses([]);
         setTreatmentPlan(null);
+        setPendingInteractions([]);
       }
     } catch {
       setError('Failed to load conversation');
@@ -97,25 +110,46 @@ export function ConsultationPage() {
   // Initialize: load conversations and handle route
   useEffect(() => {
     const init = async () => {
-      setIsLoading(true);
+      const preserveLiveSession = Boolean(
+        id &&
+        id !== 'new' &&
+        currentConversationIdRef.current === id &&
+        !isDraftRef.current
+      );
+
+      if (!preserveLiveSession) {
+        setIsLoading(true);
+      }
       setError(null);
       await loadConversations();
 
       if (id && id !== 'new') {
-        await loadConversation(id);
+        if (!preserveLiveSession) {
+          setChatSessionKey(`conversation:${id}`);
+        }
+        if (preserveLiveSession) {
+          void loadConversation(id);
+        } else {
+          await loadConversation(id);
+        }
       } else {
         // New draft conversation
+        const nextDraftId = crypto.randomUUID();
         setCurrentConversation(null);
         setMessages([]);
+        setPendingInteractions([]);
         setExtractedInfo([]);
         setPhase('collecting');
         setDiagnoses([]);
         setTreatmentPlan(null);
         setIsDraft(true);
-        setClientDraftId(crypto.randomUUID());
+        setClientDraftId(nextDraftId);
+        setChatSessionKey(`draft:${nextDraftId}`);
       }
 
-      setIsLoading(false);
+      if (!preserveLiveSession) {
+        setIsLoading(false);
+      }
     };
 
     init();
@@ -124,20 +158,24 @@ export function ConsultationPage() {
   // --- Handlers ---
 
   const handleNewConsultation = useCallback(() => {
+    const nextDraftId = crypto.randomUUID();
     setCurrentConversation(null);
     setMessages([]);
+    setPendingInteractions([]);
     setExtractedInfo([]);
     setPhase('collecting');
     setDiagnoses([]);
     setTreatmentPlan(null);
     setIsDraft(true);
-    setClientDraftId(crypto.randomUUID());
+    setClientDraftId(nextDraftId);
+    setChatSessionKey(`draft:${nextDraftId}`);
     navigate('/consultation/new', { replace: true });
   }, [navigate]);
 
   const handleSelectConversation = useCallback(
     async (conversationId: string) => {
       setIsMobileHistoryOpen(false);
+      setChatSessionKey(`conversation:${conversationId}`);
       await loadConversation(conversationId);
       navigate(`/consultation/${conversationId}`, { replace: true });
     },
@@ -238,8 +276,28 @@ export function ConsultationPage() {
 
   const handleConversationCreated = useCallback(
     (conversationId: string) => {
+      const now = new Date().toISOString();
       setIsDraft(false);
       setClientDraftId(null);
+      setPendingInteractions([]);
+      setCurrentConversation((prev) =>
+        prev?.id === conversationId
+          ? prev
+          : {
+              id: conversationId,
+              title: prev?.title ?? null,
+              title_status: prev?.title_status ?? 'pending',
+              status: 'active',
+              pinned: prev?.pinned ?? false,
+              pinned_at: prev?.pinned_at ?? null,
+              default_model: prev?.default_model ?? null,
+              last_message_at: now,
+              message_count: prev?.message_count ?? 0,
+              metadata: prev?.metadata ?? {},
+              created_at: prev?.created_at ?? now,
+              updated_at: now,
+            },
+      );
       navigate(`/consultation/${conversationId}`, { replace: true });
       loadConversations();
     },
@@ -355,6 +413,11 @@ export function ConsultationPage() {
 
   // --- Render ---
 
+  const interruptedTurnSeed = buildInterruptedTurnSeed(messages, pendingInteractions);
+  const historicalMessages = interruptedTurnSeed?.consumedMessageId
+    ? messages.filter((message) => message.id !== interruptedTurnSeed.consumedMessageId)
+    : messages;
+
   return (
     <MainLayout fullHeight={true}>
       <div className="h-full w-full flex flex-col bg-[#FBFBFA] relative overflow-hidden">
@@ -450,12 +513,10 @@ export function ConsultationPage() {
           >
             <Card className="flex-1 flex flex-col overflow-hidden bg-white/95 backdrop-blur-md border border-[#E5E3DF]">
               <AssistantChatPanel
-                key={currentConversation?.id ?? 'draft'}
+                key={chatSessionKey}
                 conversationId={currentConversation?.id ?? null}
-                initialMessages={messages.map((m) => ({
-                  role: m.role as 'user' | 'assistant',
-                  content: m.content_text || m.parts.filter((p) => p.type === 'text').map((p) => (p as { type: 'text'; text: string }).text).join(''),
-                }))}
+                initialMessages={toInitialThreadMessages(historicalMessages)}
+                initialActiveTurn={interruptedTurnSeed?.activeTurn ?? null}
                 initialExtractedInfo={extractedInfo}
                 isDraft={isDraft}
                 clientDraftId={clientDraftId}
