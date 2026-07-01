@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 import { AssistantChatPanel } from '../components/AssistantChatPanel';
@@ -41,8 +41,6 @@ export function ConsultationPage() {
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [pendingInteractions, setPendingInteractions] = useState<PendingInteraction[]>([]);
-  const [isDraft, setIsDraft] = useState(true);
-  const [clientDraftId, setClientDraftId] = useState<string | null>(null);
   const [chatSessionKey, setChatSessionKey] = useState<string>(() => crypto.randomUUID());
 
   // Consultation domain state
@@ -59,13 +57,6 @@ export function ConsultationPage() {
   const [isAnalyzingDiagnosis, setIsAnalyzingDiagnosis] = useState(false);
   const [isGeneratingTreatment, setIsGeneratingTreatment] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
-  const currentConversationIdRef = useRef<string | null>(null);
-  const isDraftRef = useRef(isDraft);
-
-  useEffect(() => {
-    currentConversationIdRef.current = currentConversation?.id ?? null;
-    isDraftRef.current = isDraft;
-  }, [currentConversation, isDraft]);
 
   // Load conversations list
   const loadConversations = useCallback(async () => {
@@ -83,8 +74,6 @@ export function ConsultationPage() {
       const res = await consultationApi.getConversation(conversationId);
       setCurrentConversation(res.conversation);
       setMessages(res.messages);
-      setIsDraft(false);
-      setClientDraftId(null);
 
       // Load consultation domain data
       try {
@@ -110,31 +99,16 @@ export function ConsultationPage() {
   // Initialize: load conversations and handle route
   useEffect(() => {
     const init = async () => {
-      const preserveLiveSession = Boolean(
-        id &&
-        id !== 'new' &&
-        currentConversationIdRef.current === id &&
-        !isDraftRef.current
-      );
-
-      if (!preserveLiveSession) {
-        setIsLoading(true);
+      // If we are already displaying this conversation, don't trigger full reload or loading spinner!
+      if (id && currentConversation && id === currentConversation.id) {
+        return;
       }
+
+      setIsLoading(true);
       setError(null);
       await loadConversations();
 
-      if (id && id !== 'new') {
-        if (!preserveLiveSession) {
-          setChatSessionKey(`conversation:${id}`);
-        }
-        if (preserveLiveSession) {
-          void loadConversation(id);
-        } else {
-          await loadConversation(id);
-        }
-      } else {
-        // New draft conversation
-        const nextDraftId = crypto.randomUUID();
+      if (!id || id === 'new') {
         setCurrentConversation(null);
         setMessages([]);
         setPendingInteractions([]);
@@ -142,23 +116,28 @@ export function ConsultationPage() {
         setPhase('collecting');
         setDiagnoses([]);
         setTreatmentPlan(null);
-        setIsDraft(true);
-        setClientDraftId(nextDraftId);
-        setChatSessionKey(`draft:${nextDraftId}`);
+        setChatSessionKey('new');
+        setIsLoading(false);
+        return;
       }
 
-      if (!preserveLiveSession) {
+      setChatSessionKey(`conversation:${id}`);
+      await loadConversation(id);
+      if (id) {
         setIsLoading(false);
       }
     };
 
-    init();
-  }, [id, loadConversations, loadConversation]);
+    void init();
+  }, [id, currentConversation, loadConversations, loadConversation, navigate]);
 
   // --- Handlers ---
 
   const handleNewConsultation = useCallback(() => {
-    const nextDraftId = crypto.randomUUID();
+    if (id === 'new') {
+      return;
+    }
+    setIsLoading(true);
     setCurrentConversation(null);
     setMessages([]);
     setPendingInteractions([]);
@@ -166,11 +145,8 @@ export function ConsultationPage() {
     setPhase('collecting');
     setDiagnoses([]);
     setTreatmentPlan(null);
-    setIsDraft(true);
-    setClientDraftId(nextDraftId);
-    setChatSessionKey(`draft:${nextDraftId}`);
     navigate('/consultation/new', { replace: true });
-  }, [navigate]);
+  }, [id, navigate]);
 
   const handleSelectConversation = useCallback(
     async (conversationId: string) => {
@@ -273,36 +249,6 @@ export function ConsultationPage() {
   );
 
   // --- SSE Callbacks ---
-
-  const handleConversationCreated = useCallback(
-    (conversationId: string) => {
-      const now = new Date().toISOString();
-      setIsDraft(false);
-      setClientDraftId(null);
-      setPendingInteractions([]);
-      setCurrentConversation((prev) =>
-        prev?.id === conversationId
-          ? prev
-          : {
-              id: conversationId,
-              title: prev?.title ?? null,
-              title_status: prev?.title_status ?? 'pending',
-              status: 'active',
-              pinned: prev?.pinned ?? false,
-              pinned_at: prev?.pinned_at ?? null,
-              default_model: prev?.default_model ?? null,
-              last_message_at: now,
-              message_count: prev?.message_count ?? 0,
-              metadata: prev?.metadata ?? {},
-              created_at: prev?.created_at ?? now,
-              updated_at: now,
-            },
-      );
-      navigate(`/consultation/${conversationId}`, { replace: true });
-      loadConversations();
-    },
-    [navigate, loadConversations],
-  );
 
   const handleTitleGenerated = useCallback(
     (title: string) => {
@@ -440,7 +386,7 @@ export function ConsultationPage() {
             <div>
               <h1 className="text-xl font-display font-semibold text-[#1A221E] flex items-center gap-2">
                 智能问诊工作台
-                {!isDraft && currentConversation && (
+                {currentConversation && (
                   <span className="relative flex h-3 w-3">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
@@ -448,7 +394,7 @@ export function ConsultationPage() {
                 )}
               </h1>
               <p className="text-xs font-semibold text-[#709a83] uppercase tracking-wider">
-                {isDraft ? '新咨询草稿' : '会话已激活'}
+                {currentConversation ? '会话已激活' : '准备咨询'}
                 {' · '}
                 {PHASE_LABELS[phase]}
               </p>
@@ -514,19 +460,36 @@ export function ConsultationPage() {
             <Card className="flex-1 flex flex-col overflow-hidden bg-white/95 backdrop-blur-md border border-[#E5E3DF]">
               <AssistantChatPanel
                 key={chatSessionKey}
-                conversationId={currentConversation?.id ?? null}
+                conversationId={id || 'new'}
+                onConversationCreated={async (newId) => {
+                  try {
+                    // Fetch details of the newly created conversation
+                    const res = await consultationApi.getConversation(newId);
+                    setCurrentConversation(res.conversation);
+                    setMessages(res.messages);
+
+                    // Refresh conversations list in the sidebar
+                    await loadConversations();
+
+                    // Replace the URL with the new ID.
+                    // Because currentConversation has been set to this new conversation,
+                    // the useEffect will hit the bypass condition `id === currentConversation.id`
+                    // and will NOT trigger a full loading state or reset the chatSessionKey,
+                    // thereby keeping the active stream alive!
+                    navigate(`/consultation/${newId}`, { replace: true });
+                  } catch (err) {
+                    console.error('Failed to handle lazy conversation creation:', err);
+                  }
+                }}
                 initialMessages={toInitialThreadMessages(historicalMessages)}
                 initialActiveTurn={interruptedTurnSeed?.activeTurn ?? null}
                 initialExtractedInfo={extractedInfo}
-                isDraft={isDraft}
-                clientDraftId={clientDraftId}
                 onExtractedInfoUpdate={(info) => {
                   setExtractedInfo(info);
                 }}
                 onPhaseChange={(newPhase) => {
                   setPhase(newPhase);
                 }}
-                onConversationCreated={handleConversationCreated}
                 onTitleGenerated={handleTitleGenerated}
                 onMessagePersisted={handleMessagePersisted}
               />

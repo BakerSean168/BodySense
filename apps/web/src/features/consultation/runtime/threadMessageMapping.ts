@@ -212,6 +212,9 @@ function toAssistantStatus(message: Message): ThreadMessageLike['status'] {
 }
 
 export function toInitialThreadMessage(message: Message): ThreadMessageLike {
+  const sourceMetadata =
+    isRecord(message.metadata) ? message.metadata : {};
+
   if (message.role === 'assistant') {
     return {
       id: message.id,
@@ -223,6 +226,7 @@ export function toInitialThreadMessage(message: Message): ThreadMessageLike {
         custom: {
           message_id: message.id,
           consultation_status: message.status,
+          ...sourceMetadata,
         },
       },
     };
@@ -242,6 +246,7 @@ export function toInitialThreadMessage(message: Message): ThreadMessageLike {
       custom: {
         message_id: message.id,
         consultation_status: message.status,
+        ...sourceMetadata,
       },
     },
   };

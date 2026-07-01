@@ -25,14 +25,11 @@ function Hydrator({ state, children }: { state: ActiveTurnState; children: React
 
 function renderWithState(
   state: ActiveTurnState,
-  props: { conversationId?: string | null } = {},
 ) {
   return render(
     <ActiveTurnProvider>
       <Hydrator state={state}>
-        <StreamingAssistantTurn
-          conversationId={props.conversationId ?? 'conv-1'}
-        />
+        <StreamingAssistantTurn />
       </Hydrator>
     </ActiveTurnProvider>,
   );

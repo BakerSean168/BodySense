@@ -5,8 +5,7 @@
  * the ad-hoc streaming text display, tool call rendering, and structured event
  * extraction that was previously scattered across AssistantChatPanel.
  *
- * Interaction resume (ask_user) is handled internally: the component calls
- * consultationApi.resumeInteraction and notifies the parent on completion.
+ * Interaction resume (ask_user) is rendered by AssistantChatPanel's input area.
  */
 
 import ReactMarkdown from 'react-markdown';
@@ -17,21 +16,10 @@ import { StreamingTurnToolCalls } from './StreamingTurnToolCalls';
 import { RedFlagBanner } from './RedFlagBanner';
 
 
-interface StreamingAssistantTurnProps {
-  conversationId: string | null;
-  /** Called when the user submits an interaction answer. The parent handles the API call. */
-  onResume?: (interactionId: string, answer: unknown) => Promise<{ answer_text?: string }>;
-}
-
-export function StreamingAssistantTurn({
-  conversationId,
-  onResume,
-}: StreamingAssistantTurnProps) {
+export function StreamingAssistantTurn() {
   const state = useActiveTurnState();
   const vm = selectActiveTurnViewModel(state);
   const { dismissRedFlag } = useActiveTurnActions();
-
-
 
   // Don't render if there's nothing to show
   if (!vm.hasVisibleContent && !vm.isRunning && !vm.isInterrupted) {

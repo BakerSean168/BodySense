@@ -27,24 +27,32 @@ async function parseJson<T>(res: Response): Promise<T> {
 }
 
 export const consultationApi = {
+  /**
+   * Create a new consultation thread and its backing conversation.
+   */
+  async createConsultation(): Promise<ConsultationSession> {
+    return authFetch(`${API_BASE}/consultations`, {
+      method: 'POST',
+    }).then((res) => parseJson<ConsultationSession>(res));
+  },
+
   // ===== General Conversation API =====
 
   /**
-   * Send a message (returns raw Response so the caller can handle SSE streaming).
+   * Send a consultation message turn (returns raw Response for SSE streaming).
    */
-  async sendMessage(params: {
-    conversationId: string | null;
-    clientDraftId?: string;
-    clientMessageId: string;
-    requestId: string;
-    message: {
-      role: string;
-      parts: { type: string; text: string }[];
-      metadata?: Record<string, any>;
-    };
-    context?: { entry?: string; profileId?: string };
-  }): Promise<Response> {
-    return authFetch(`${API_BASE}/chat/send`, {
+  async sendConsultationMessage(
+    conversationId: string,
+    params: {
+      clientMessageId: string;
+      requestId: string;
+      message: {
+        role: string;
+        parts: { type: string; text: string }[];
+      };
+    },
+  ): Promise<Response> {
+    return authFetch(`${API_BASE}/consultations/${conversationId}/messages`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params),
@@ -198,22 +206,24 @@ export const consultationApi = {
   },
 
   /**
-   * Resume a pending interaction (ask_user).
-   * Returns action info — caller should send a new chat message to continue.
+   * Resume a pending interaction and continue the interrupted thread stream.
    */
-  async resumeInteraction(
+  async resumeInteractionStream(
     conversationId: string,
     interactionId: string,
-    answer: unknown,
-  ): Promise<{ action: string; answer_text: string }> {
+    params: {
+      requestId: string;
+      answer: unknown;
+    },
+  ): Promise<Response> {
     return authFetch(
-      `${API_BASE}/consultations/${conversationId}/interactions/${interactionId}/resume`,
+      `${API_BASE}/consultations/${conversationId}/interrupts/${interactionId}/answers`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answer }),
+        body: JSON.stringify(params),
       },
-    ).then((res) => parseJson<{ action: string; answer_text: string }>(res));
+    );
   },
 };
 
