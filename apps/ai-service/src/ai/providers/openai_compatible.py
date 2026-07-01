@@ -114,6 +114,8 @@ class OpenAICompatibleProvider:
 
         # Accumulate tool call state
         tool_call_accumulators: dict[int, dict] = {}
+        emitted_tool_call_ids: set[str] = set()
+        finish_reason_emitted = False
 
         try:
             async for chunk in stream:
@@ -153,10 +155,16 @@ class OpenAICompatibleProvider:
                             if tc_delta.function.arguments:
                                 acc["arguments"] += tc_delta.function.arguments
 
-                if choice.finish_reason:
-                    # Emit completed tool calls
+                if choice.finish_reason and not finish_reason_emitted:
+                    finish_reason_emitted = True
+                    # Emit completed tool calls, skipping IDs already emitted
                     for idx in sorted(tool_call_accumulators.keys()):
                         acc = tool_call_accumulators[idx]
+                        tc_id = acc["id"]
+                        if tc_id and tc_id in emitted_tool_call_ids:
+                            continue
+                        if tc_id:
+                            emitted_tool_call_ids.add(tc_id)
                         args = {}
                         try:
                             args = json.loads(acc["arguments"]) if acc["arguments"] else {}
@@ -168,7 +176,7 @@ class OpenAICompatibleProvider:
                             )
                         yield AiStreamEvent(
                             type="tool_call_done",
-                            tool_call_id=acc["id"],
+                            tool_call_id=tc_id,
                             tool_name=acc["name"],
                             tool_arguments=args,
                         )
