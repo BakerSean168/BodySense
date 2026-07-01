@@ -1,9 +1,27 @@
 import { useRef, useState } from 'react';
-import { useLocalRuntime, type ChatModelAdapter, type ChatModelRunResult } from '@assistant-ui/react';
+import {
+  useLocalRuntime,
+  type ChatModelAdapter,
+  type ChatModelRunResult,
+  type ThreadMessageLike,
+} from '@assistant-ui/react';
 import { consultationApi } from '../services/consultationService';
 import { consumeSSEStream } from './useSSEProcessor';
-import { reduceStreamEvent, INITIAL_STATE, type ConsultationStreamState, type ReducerEffect } from '../runtime/streamEventReducer';
-import type { ExtractedInfo, Citation, SSERedFlag, SSEMessageCompleted, StreamEvent, PendingInteraction } from '../types/consultation';
+import {
+  reduceActiveTurnEvent,
+  INITIAL_ACTIVE_TURN_STATE,
+  resetActiveTurnState,
+  type ActiveTurnState,
+  type ActiveTurnEffect,
+} from '../runtime/activeTurnReducer';
+import type {
+  ExtractedInfo,
+  Citation,
+  SSERedFlag,
+  SSEMessageCompleted,
+  StreamEvent,
+  PendingInteraction,
+} from '../types/consultation';
 
 export interface ConsultationAdapterOptions {
   onConversationCreated?: (conversationId: string, replacesDraftId?: string) => void;
@@ -15,18 +33,16 @@ export interface ConsultationAdapterOptions {
   onTitleGenerated?: (title: string) => void;
   onMessageCompleted?: (data: SSEMessageCompleted) => void;
   onInteractionRequired?: (interaction: PendingInteraction) => void;
+  /** Called on each dispatch with the full active turn state. */
+  onActiveTurnUpdate?: (state: ActiveTurnState) => void;
   isDraft?: boolean;
   clientDraftId?: string;
-}
-
-export interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
+  isResumingRef?: React.MutableRefObject<boolean>;
 }
 
 export function useAssistantChatRuntime(
   conversationId: string | null,
-  initialMessages: ChatMessage[] = [],
+  initialMessages: ThreadMessageLike[] = [],
   options: ConsultationAdapterOptions = {}
 ) {
   const [isStreaming, setIsStreaming] = useState(false);
@@ -46,37 +62,50 @@ export function useAssistantChatRuntime(
 
       setIsStreaming(true);
 
-      // Queue for passing results from SSE callbacks to the generator
-      const queue: ChatModelRunResult[] = [];
-      let resolveNext: (() => void) | null = null;
-      let streamDone = false;
       let streamError: Error | null = null;
+      let streamFinished = false;
+      let wakeQueueConsumer: (() => void) | null = null;
+      let lastYieldSignature: string | null = null;
+      const pendingResults: ChatModelRunResult[] = [];
 
-      // Reducer state — replaces ad hoc fullText mutation
-      let reducerState: ConsultationStreamState = INITIAL_STATE;
+      // Active turn reducer state
+      let reducerState: ActiveTurnState = INITIAL_ACTIVE_TURN_STATE;
 
-      function pushResult(result: ChatModelRunResult) {
-        queue.push(result);
-        resolveNext?.();
+      function notifyQueueConsumer() {
+        const wake = wakeQueueConsumer;
+        wakeQueueConsumer = null;
+        wake?.();
       }
 
-      function waitForNext(): Promise<boolean> {
-        if (queue.length > 0) return Promise.resolve(true);
-        if (streamDone || streamError) return Promise.resolve(false);
-        return new Promise<boolean>((resolve) => {
-          resolveNext = () => resolve(queue.length > 0);
+      function enqueueResult(result: ChatModelRunResult | null) {
+        if (!result) {
+          return;
+        }
+
+        const signature = JSON.stringify(result.content);
+        if (signature === lastYieldSignature) {
+          return;
+        }
+
+        lastYieldSignature = signature;
+        pendingResults.push(result);
+        notifyQueueConsumer();
+      }
+
+      function waitForQueuedResult() {
+        if (pendingResults.length > 0 || streamFinished) {
+          return Promise.resolve();
+        }
+
+        return new Promise<void>((resolve) => {
+          wakeQueueConsumer = resolve;
         });
       }
 
-      /** Execute side effects emitted by the reducer. */
-      function applyEffects(effects: ReducerEffect[]) {
+      /** Execute parent-level effects emitted by the reducer. */
+      function applyEffects(effects: ActiveTurnEffect[]) {
         for (const effect of effects) {
           switch (effect.type) {
-            case 'assistant_text_changed':
-              pushResult({
-                content: [{ type: 'text', text: effect.text }],
-              });
-              break;
             case 'conversation_created':
               optionsRef.current.onConversationCreated?.(
                 effect.conversationId,
@@ -105,7 +134,7 @@ export function useAssistantChatRuntime(
               optionsRef.current.onInteractionRequired?.(effect.interaction);
               break;
             case 'interaction_answered':
-              // Interaction answered — no-op in hook, handled by resume flow
+              // Interaction answered - no-op in hook, handled by resume flow
               break;
             case 'message_completed':
               optionsRef.current.onMessageCompleted?.(effect.data as SSEMessageCompleted);
@@ -117,11 +146,33 @@ export function useAssistantChatRuntime(
         }
       }
 
-      /** Dispatch a StreamEvent through the reducer and apply effects. */
+      /** Dispatch a StreamEvent through the active turn reducer and apply effects. */
       function dispatch(event: StreamEvent) {
-        const result = reduceStreamEvent(reducerState, event);
+        const result = reduceActiveTurnEvent(reducerState, event);
         reducerState = result.state;
         applyEffects(result.effects);
+        // Notify the component of the full active turn state
+        optionsRef.current.onActiveTurnUpdate?.(reducerState);
+
+        switch (event.type) {
+          case 'message.text.delta':
+            enqueueResult(buildStreamingSnapshot(reducerState));
+            break;
+          case 'state.interaction.required':
+            enqueueResult(buildStreamingSnapshot(reducerState));
+            break;
+          case 'message.completed':
+          case 'stream.done':
+            enqueueResult(buildCompletedSnapshot(reducerState));
+            break;
+          default:
+            break;
+        }
+      }
+
+      const isResuming = optionsRef.current.isResumingRef?.current || false;
+      if (optionsRef.current.isResumingRef) {
+        optionsRef.current.isResumingRef.current = false;
       }
 
       try {
@@ -133,6 +184,7 @@ export function useAssistantChatRuntime(
           message: {
             role: 'user',
             parts: [{ type: 'text', text: content }],
+            metadata: isResuming ? { is_interaction_answer: true } : undefined,
           },
           context: {
             entry: 'consultation',
@@ -144,68 +196,96 @@ export function useAssistantChatRuntime(
         }
 
         // Start consuming the SSE stream in the background.
-        // Events are dispatched through the reducer; effects push to the queue.
         const streamPromise = consumeSSEStream(response, {
           onConversationCreated: (data) => dispatch(data as unknown as StreamEvent),
           onMessagePersisted: (data) => dispatch(data as unknown as StreamEvent),
+          onMessageCreated: (data) => dispatch(data as unknown as StreamEvent),
           onTextDelta: (data) => dispatch(data as unknown as StreamEvent),
+          onToolCall: (data) => dispatch(data as unknown as StreamEvent),
+          onToolResult: (data) => dispatch(data as unknown as StreamEvent),
           onExtractedInfo: (data) => dispatch(data as unknown as StreamEvent),
           onPhaseChange: (data) => dispatch(data as unknown as StreamEvent),
           onRedFlag: (data) => dispatch(data as unknown as StreamEvent),
           onCitation: (data) => dispatch(data as unknown as StreamEvent),
+          onKnowledgeGap: (data) => dispatch(data as unknown as StreamEvent),
           onTitleGenerated: (data) => {
-            // title.generated is outside the StreamEvent union; handle directly
             optionsRef.current.onTitleGenerated?.(data.payload.title);
           },
           onInteractionRequired: (data) => dispatch(data as unknown as StreamEvent),
           onInteractionAnswered: (data) => dispatch(data as unknown as StreamEvent),
           onMessageCompleted: (data) => dispatch(data as unknown as StreamEvent),
+          onMessageFailed: (data) => dispatch(data as unknown as StreamEvent),
           onDone: () => {
-            streamDone = true;
-            resolveNext?.();
           },
           onStreamError: (data) => {
             streamError = new Error(data.payload.message);
-            resolveNext?.();
           },
           onError: (err) => {
             streamError = err;
-            resolveNext?.();
           },
+        }).finally(() => {
+          streamFinished = true;
+          notifyQueueConsumer();
         });
 
-        // Yield results as they arrive from the SSE stream
-        while (await waitForNext()) {
-          while (queue.length > 0) {
-            yield queue.shift()!;
+        while (!streamFinished || pendingResults.length > 0) {
+          if (pendingResults.length === 0) {
+            await waitForQueuedResult();
+            continue;
+          }
+
+          const nextResult = pendingResults.shift();
+          if (nextResult) {
+            yield nextResult;
           }
         }
 
-        // Wait for the stream to fully finish
         await streamPromise;
 
         if (streamError) {
           throw streamError;
         }
-
-        // Final yield with complete text from reducer state
-        if (reducerState.assistantText) {
-          yield {
-            content: [{ type: 'text', text: reducerState.assistantText }],
-          };
-        }
       } finally {
         setIsStreaming(false);
+        // Keep interrupted turns mounted so ask_user can resume the same session.
+        if (
+          reducerState.status === 'completed' ||
+          reducerState.status === 'failed' ||
+          reducerState.status === 'idle'
+        ) {
+          optionsRef.current.onActiveTurnUpdate?.(resetActiveTurnState());
+        }
       }
     },
   };
 
   const runtime = useLocalRuntime(adapter, {
-    initialMessages: initialMessages.map((m) => ({
-      role: m.role,
-      content: [{ type: 'text', text: m.content }],
-    })),
+    initialMessages,
   });
 
   return { runtime, isStreaming };
+}
+
+function buildStreamingSnapshot(state: ActiveTurnState): ChatModelRunResult | null {
+  if (!state.text) {
+    return null;
+  }
+
+  return {
+    content: [{ type: 'text', text: state.text }],
+  };
+}
+
+function buildCompletedSnapshot(state: ActiveTurnState): ChatModelRunResult | null {
+  if (state.status !== 'completed') {
+    return null;
+  }
+
+  if (state.finalParts.length > 0) {
+    return {
+      content: [...state.finalParts],
+    };
+  }
+
+  return buildStreamingSnapshot(state);
 }
