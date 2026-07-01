@@ -95,6 +95,7 @@ func (c *fakeConversationOwnershipChecker) addConversation(id, userID uuid.UUID)
 	c.conversations[id] = &model.Conversation{
 		ID:     id,
 		UserID: userID,
+		Status: "active",
 	}
 }
 
@@ -117,6 +118,18 @@ func (c *fakeConversationOwnershipChecker) Create(ctx context.Context, conversat
 func (c *fakeConversationOwnershipChecker) SoftDelete(ctx context.Context, id, userID uuid.UUID) error {
 	delete(c.conversations, id)
 	return nil
+}
+
+func (c *fakeConversationOwnershipChecker) GetLastEmptyConversation(ctx context.Context, userID uuid.UUID) (*model.Conversation, error) {
+	var latest *model.Conversation
+	for _, conv := range c.conversations {
+		if conv.UserID == userID && conv.Status == "active" && conv.LastMessageAt == nil {
+			if latest == nil || conv.CreatedAt.After(latest.CreatedAt) {
+				latest = conv
+			}
+		}
+	}
+	return latest, nil
 }
 
 func TestUpdatePhasePersistsWorkflowPhase(t *testing.T) {
@@ -374,3 +387,32 @@ func TestGetConsultationFailsOwnershipCheck(t *testing.T) {
 		t.Fatal("expected nil session for ownership check failure")
 	}
 }
+
+func TestCreateSessionReusesEmptySession(t *testing.T) {
+	userID := uuid.New()
+	repo := &fakeConsultationRepository{session: nil}
+	ownership := newFakeConversationOwnershipChecker()
+	svc := NewConsultationService(repo, ownership)
+
+	// 1. Create a session, this should create a new conversation and session
+	session1, err := svc.CreateSession(context.Background(), userID)
+	if err != nil {
+		t.Fatalf("CreateSession failed: %v", err)
+	}
+	if session1 == nil {
+		t.Fatal("expected session1 to be created")
+	}
+
+	// 2. Call CreateSession again. Since last_message_at is nil (it's empty), it should reuse session1.
+	session2, err := svc.CreateSession(context.Background(), userID)
+	if err != nil {
+		t.Fatalf("CreateSession failed: %v", err)
+	}
+	if session2 == nil {
+		t.Fatal("expected session2 to be created/reused")
+	}
+	if session2.ConversationID != session1.ConversationID {
+		t.Fatalf("expected session to be reused (same ID), got %s and %s", session1.ConversationID, session2.ConversationID)
+	}
+}
+

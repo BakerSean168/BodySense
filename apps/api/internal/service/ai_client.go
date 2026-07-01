@@ -14,32 +14,6 @@ import (
 	"github.com/bodysense/api/internal/dto"
 )
 
-type ChatStreamRequest struct {
-	SessionID     string          `json:"session_id"`
-	UserID        string          `json:"user_id"`
-	Content       string          `json:"content"`
-	UseCase       string          `json:"use_case,omitempty"`
-	Profile       json.RawMessage `json:"profile,omitempty"`
-	Messages      []ChatMessage   `json:"messages,omitempty"`
-	ExtractedInfo json.RawMessage `json:"extracted_info,omitempty"`
-	RAGResults    json.RawMessage `json:"rag_results,omitempty"`
-	Phase         string          `json:"phase,omitempty"`
-}
-
-type ChatMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-}
-
-type ToolDefinition struct {
-	Type     string `json:"type"`
-	Function struct {
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		Parameters  any    `json:"parameters"`
-	} `json:"function"`
-}
-
 type DiagnosisRequest struct {
 	ExtractedInfo       json.RawMessage `json:"extracted_info"`
 	Profile             json.RawMessage `json:"profile,omitempty"`
@@ -63,6 +37,38 @@ type AIClient struct {
 	baseURL    string
 }
 
+type ConsultationUserInput struct {
+	Type string `json:"type"`
+	Text string `json:"text"`
+}
+
+type ConsultationSnapshot struct {
+	Phase         string          `json:"phase"`
+	ExtractedInfo json.RawMessage `json:"extracted_info"`
+}
+
+type ConsultationBusinessContext struct {
+	Profile              json.RawMessage      `json:"profile"`
+	ConsultationSnapshot ConsultationSnapshot `json:"consultation_snapshot"`
+}
+
+type StartConsultationTurnRequest struct {
+	RunID           string                      `json:"run_id"`
+	ConversationID  string                      `json:"conversation_id"`
+	UserID          string                      `json:"user_id"`
+	Input           ConsultationUserInput       `json:"input"`
+	BusinessContext ConsultationBusinessContext `json:"business_context"`
+}
+
+type ResumeConsultationInterruptRequest struct {
+	RunID           string                      `json:"run_id"`
+	ConversationID  string                      `json:"conversation_id"`
+	UserID          string                      `json:"user_id"`
+	InterruptID     string                      `json:"interrupt_id"`
+	Answer          json.RawMessage             `json:"answer"`
+	BusinessContext ConsultationBusinessContext `json:"business_context"`
+}
+
 func NewAIClient() *AIClient {
 	baseURL := os.Getenv("AI_SERVICE_URL")
 	if baseURL == "" {
@@ -79,14 +85,38 @@ func (c *AIClient) BaseURL() string {
 	return c.baseURL
 }
 
-// ChatStream calls Python /api/chat/stream and returns an NDJSON event channel.
-func (c *AIClient) ChatStream(ctx context.Context, req ChatStreamRequest) (<-chan dto.StreamEvent, error) {
+func (c *AIClient) StartConsultationTurn(
+	ctx context.Context,
+	threadID string,
+	req StartConsultationTurnRequest,
+) (<-chan dto.StreamEvent, error) {
+	return c.streamNDJSON(ctx, "/runtime/threads/"+threadID+"/turns", req)
+}
+
+func (c *AIClient) ResumeConsultationInterrupt(
+	ctx context.Context,
+	threadID string,
+	interruptID string,
+	req ResumeConsultationInterruptRequest,
+) (<-chan dto.StreamEvent, error) {
+	return c.streamNDJSON(
+		ctx,
+		"/runtime/threads/"+threadID+"/interrupts/"+interruptID+"/resume",
+		req,
+	)
+}
+
+func (c *AIClient) streamNDJSON(
+	ctx context.Context,
+	path string,
+	req any,
+) (<-chan dto.StreamEvent, error) {
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, fmt.Errorf("marshal request: %w", err)
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.baseURL+"/api/chat/stream", bytes.NewReader(body))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.baseURL+path, bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}

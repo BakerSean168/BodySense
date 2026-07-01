@@ -26,6 +26,7 @@ type conversationOwnershipChecker interface {
 	Create(ctx context.Context, conversation *model.Conversation) error
 	GetByID(ctx context.Context, id, userID uuid.UUID) (*model.Conversation, error)
 	SoftDelete(ctx context.Context, id, userID uuid.UUID) error
+	GetLastEmptyConversation(ctx context.Context, userID uuid.UUID) (*model.Conversation, error)
 }
 
 // ConsultationService handles consultation business logic.
@@ -59,6 +60,28 @@ func (s *ConsultationService) verifyOwnership(ctx context.Context, conversationI
 
 // CreateSession creates a new conversation and its associated consultation session.
 func (s *ConsultationService) CreateSession(ctx context.Context, userID uuid.UUID) (*model.ConsultationSession, error) {
+	existingConv, err := s.conversationRepo.GetLastEmptyConversation(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("check empty conversation: %w", err)
+	}
+
+	if existingConv != nil {
+		session, err := s.consultationRepo.GetByConversationID(ctx, existingConv.ID)
+		if err == nil && session != nil {
+			return session, nil
+		}
+		// If session is missing for some reason, recreate it
+		session = &model.ConsultationSession{
+			ConversationID: existingConv.ID,
+			ExtractedInfo:  datatypes.JSON("[]"),
+			Phase:          "collecting",
+		}
+		if err := s.consultationRepo.Create(ctx, session); err != nil {
+			return nil, fmt.Errorf("recreate consultation: %w", err)
+		}
+		return session, nil
+	}
+
 	conversation := &model.Conversation{
 		ID:          uuid.New(),
 		UserID:      userID,

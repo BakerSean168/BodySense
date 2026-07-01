@@ -11,6 +11,7 @@ import (
 
 	"github.com/bodysense/api/internal/auth"
 	"github.com/bodysense/api/internal/cache"
+	consultationruntime "github.com/bodysense/api/internal/consultation"
 	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/handler"
 	"github.com/bodysense/api/internal/middleware"
@@ -84,9 +85,23 @@ func main() {
 	interactionService := service.NewAgentInteractionService(interactionRepo, runRepo)
 	outputReviewRepo := repository.NewAIOutputReviewRepository(database.DB)
 	outputReviewService := service.NewOutputReviewService(outputReviewRepo)
-	chatHandler := handler.NewChatHandler(conversationService, messageService, runService, consultationService, aiClient, profileService, agentToolService, interactionService, outputReviewService)
+	consultationRuntime := consultationruntime.NewRuntime(
+		conversationService,
+		consultationService,
+		profileService,
+		messageService,
+		runService,
+		aiClient,
+		agentToolService,
+		interactionService,
+		outputReviewService,
+	)
 	convHandler := handler.NewConversationHandler(conversationService, shareService)
-	consultationHandler := handler.NewConsultationHandler(consultationService, interactionService, runService)
+	consultationHandler := handler.NewConsultationHandler(
+		consultationService,
+		interactionService,
+		consultationRuntime,
+	)
 	diagnosisHandler := handler.NewDiagnosisHandler(consultationService, profileService, aiClient)
 	trainingRepo := repository.NewTrainingRepository(database.DB)
 	trainingService := service.NewTrainingService(trainingRepo, profileService)
@@ -174,10 +189,6 @@ func main() {
 		protected.GET("/uploads/:id", uploadHandler.GetUpload)
 		protected.DELETE("/uploads/:id", uploadHandler.DeleteUpload)
 
-		// Chat API (SSE streaming)
-		chat := protected.Group("/chat")
-		chat.POST("/send", chatHandler.SendMessage)
-
 		// Conversation API
 		conversations := protected.Group("/conversations")
 		conversations.GET("", convHandler.ListConversations)
@@ -193,12 +204,14 @@ func main() {
 
 		// Consultation domain
 		consultations := protected.Group("/consultations")
+		consultations.POST("", consultationHandler.CreateConsultation)
 		consultations.GET("/:id", consultationHandler.GetConsultation)
+		consultations.POST("/:id/messages", consultationHandler.SendMessage)
 		consultations.PUT("/:id/extracted-info", consultationHandler.UpdateExtractedInfo)
 		consultations.PUT("/:id/confirm", consultationHandler.ConfirmDiagnosis)
 		consultations.POST("/:id/diagnosis", diagnosisHandler.AnalyzeDiagnosis)
 		consultations.POST("/:id/treatment", diagnosisHandler.GenerateTreatment)
-		consultations.POST("/:id/interactions/:interactionId/resume", consultationHandler.ResumeInteraction)
+		consultations.POST("/:id/interrupts/:interactionId/answers", consultationHandler.ResumeInteraction)
 
 		// Health journey (read-only)
 		protected.GET("/journey", journeyHandler.GetJourneyState)

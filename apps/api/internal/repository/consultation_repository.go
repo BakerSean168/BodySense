@@ -95,7 +95,7 @@ func (r *ConsultationRepository) ListByUserID(ctx context.Context, userID uuid.U
 	var sessions []model.ConsultationSession
 	err := r.db.WithContext(ctx).
 		Joins("JOIN conversations ON conversations.id = consultation_sessions.conversation_id").
-		Where("conversations.user_id = ? AND conversations.status = ?", userID, "active").
+		Where("conversations.user_id = ? AND conversations.status = ? AND conversations.last_message_at IS NOT NULL", userID, "active").
 		Order("consultation_sessions.created_at DESC").
 		Find(&sessions).Error
 	return sessions, err
