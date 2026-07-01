@@ -8,6 +8,7 @@ import type {
   ExtractedInfoUpsertEvent,
   PhaseChangedEvent,
   CitationAddedEvent,
+  KnowledgeGapEvent,
   RedFlagDetectedEvent,
   MessageCompletedEvent,
   MessageFailedEvent,
@@ -56,9 +57,38 @@ export interface Message {
 
 export type MessagePart =
   | { type: 'text'; text: string }
-  | { type: 'source'; title: string; snippet?: string; url?: string }
-  | { type: 'tool-call'; tool: string; args: unknown }
-  | { type: 'tool-result'; tool: string; result: unknown };
+  | {
+      type: 'source';
+      title?: string;
+      snippet?: string;
+      url?: string;
+      id?: string;
+      sourceType?: 'url' | 'document';
+      providerMetadata?: Record<string, unknown>;
+    }
+  | {
+      type: 'data';
+      name: string;
+      data: unknown;
+    }
+  | {
+      type: 'tool-call' | 'tool_call';
+      tool?: string;
+      toolName?: string;
+      args: unknown;
+      argsText?: string;
+      toolCallId?: string;
+      tool_call_id?: string;
+      result?: unknown;
+    }
+  | {
+      type: 'tool-result' | 'tool_result';
+      tool?: string;
+      toolName?: string;
+      result: unknown;
+      toolCallId?: string;
+      tool_call_id?: string;
+    };
 
 export interface ErrorInfo {
   code: string;
@@ -92,6 +122,7 @@ export interface ConsultationSession {
   extracted_info: ExtractedInfo[];
   diagnosis: DiagnosisAnalysis | null;
   treatment_plan: TreatmentPlan | null;
+  pending_interactions?: PendingInteraction[];
   created_at: string;
   updated_at: string;
   ended_at: string | null;
@@ -185,6 +216,7 @@ export type SSEToolResult = ToolResultEvent;
 export type SSEExtractedInfo = ExtractedInfoUpsertEvent;
 export type SSEPhaseChange = PhaseChangedEvent;
 export type SSECitation = CitationAddedEvent;
+export type SSEKnowledgeGap = KnowledgeGapEvent;
 export type SSERedFlag = RedFlagDetectedEvent;
 export type SSEMessageCompleted = MessageCompletedEvent;
 export type SSEMessageFailed = MessageFailedEvent;
@@ -216,8 +248,18 @@ export interface AskUserQuestion {
   reason?: string;
   answer_type: 'text' | 'single_choice' | 'multi_choice' | 'number' | 'date';
   options?: string[];
+  allow_custom_input?: boolean;
   required?: boolean;
   context?: string;
+}
+
+/** Represents a tool call in progress or completed. */
+export interface ToolCallInfo {
+  id: string;
+  tool: string;
+  args: unknown;
+  result?: unknown;
+  status: 'running' | 'completed';
 }
 
 export interface InteractionRequiredEvent {

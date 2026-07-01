@@ -37,7 +37,11 @@ export const consultationApi = {
     clientDraftId?: string;
     clientMessageId: string;
     requestId: string;
-    message: { role: string; parts: { type: string; text: string }[] };
+    message: {
+      role: string;
+      parts: { type: string; text: string }[];
+      metadata?: Record<string, any>;
+    };
     context?: { entry?: string; profileId?: string };
   }): Promise<Response> {
     return authFetch(`${API_BASE}/chat/send`, {
