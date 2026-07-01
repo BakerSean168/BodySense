@@ -1,5 +1,7 @@
 # 会话管理系统统一重设计方案
 
+> **ADR 0002 交叉引用**：本方案引入的 `conversations/messages/runs` schema 和 SSE 协议仍然是当前系统的底座。但本方案中的 `POST /api/v1/chat/send` → `ChatHandler` → Go 上下文组装路径已被 ADR 0002 取代：Go 不再重建 LLM 协议历史，Python 通过 LangGraph checkpoint 拥有 Agent Thread 真值。当前 API 为 `POST /api/v1/consultations/:id/messages`。详见 [`docs/adr/0002-agent-runtime-ownership.md`](../../adr/0002-agent-runtime-ownership.md)。
+
 > 状态：已完成 (根据实际开发做出部分设计微调) | 创建时间：2026-06-27 | 更新时间：2026-06-28
 > 整合自：会话管理重设计 + 历史记录区重设计 + 多供应商 AI Router
 

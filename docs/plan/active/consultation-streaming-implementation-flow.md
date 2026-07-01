@@ -360,11 +360,11 @@ cd apps/ai-service && uv run ruff check .
 
 在 Phase 3 完成后，Phase 4 可与其并行执行。以下在所有 Phase 代码合入后统一执行。
 
-### 删除旧代码
+### 删除旧代码 ✅ 全部已完成
 
-- 删除 `StreamingTextContext.tsx`
-- 删除 `streamEventReducer.ts`（已被 `activeTurnReducer.ts` 替代）
-- 删除 `AssistantChatPanel.tsx` 中的 `StreamingTextBridge`、`streamingTextRef`、旧的 `useEffect` 派生逻辑
+- ✅ 删除 `StreamingTextContext.tsx`
+- ✅ 删除 `streamEventReducer.ts`（已被 `activeTurnReducer.ts` 替代）
+- ✅ 删除 `AssistantChatPanel.tsx` 中的 `StreamingTextBridge`、`streamingTextRef`、旧的 `useEffect` 派生逻辑
 
 ### 文档同步
 

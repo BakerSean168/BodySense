@@ -1,8 +1,13 @@
 # BodySense — AI 体态健康助手 技术方案文档
 
+> **⚠️ HISTORICAL — 初始设计文档。** 本文档为 2026-06-19 的初稿，描述项目启动时的架构选型和 API 设计。后续架构演进详见：
+> - [ADR 0001: 深化运行时模块](../adr/0001-deepen-runtime-modules.md)
+> - [ADR 0002: Agent Runtime 所有权模型](../adr/0002-agent-runtime-ownership.md)（当前真值）
+> - [Final Agent Runtime Architecture](../plan/active/final-agent-runtime-architecture.md)
+
 **文档版本**：v1.0
 **更新日期**：2026-06-19
-**状态**：初稿
+**状态**：已归档（初稿，已被后续 ADR 和架构文档取代）
 **关联文档**：[PRD-体态健康AI助手.md](../PRD-体态健康AI助手.md)、[prototype.jsx](./prototype.jsx)
 
 ---

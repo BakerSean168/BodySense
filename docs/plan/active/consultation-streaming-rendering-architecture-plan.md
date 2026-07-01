@@ -1,5 +1,7 @@
 # Consultation Streaming Rendering Architecture Plan
 
+> **✅ 完成（2026-07-01）** — 本方案的全部 4 个 Phase 已实施完成。详见 [consultation-streaming-implementation-flow.md](./consultation-streaming-implementation-flow.md) 的完成状态表。以下正文为设计记录，所有 checklist 项已完成。
+
 ## 背景
 
 当前咨询聊天页的流式渲染已经通过绕过 `assistant-ui` 的 `useSmooth` 闪烁问题获得了可用修复，但这次修复仍然存在架构层面的不稳定点：

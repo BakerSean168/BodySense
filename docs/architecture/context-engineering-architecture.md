@@ -1,8 +1,16 @@
 # BodySense 上下文工程架构
 
-**文档版本**：v1.0  
-**更新日期**：2026-06-29  
-**状态**：架构决策稿  
+> **⚠️ HISTORICAL — 本方案已被 ADR 0002 完全取代。**
+>
+> 本文档描述的 Go 侧 `ContextBuilder` + `ChatHandler` 上下文组装方案已被删除。当前实现中 Python 通过 LangGraph checkpoint 拥有 Agent Thread 运行时真值，Go 仅负责 Runtime Event Log 和 projection 持久化。详见：
+> - [`docs/adr/0002-agent-runtime-ownership.md`](../adr/0002-agent-runtime-ownership.md)
+> - [`docs/plan/active/final-agent-runtime-architecture.md`](../plan/active/final-agent-runtime-architecture.md)
+>
+> 以下正文保留作为设计演进历史参考。
+
+**文档版本**：v1.0
+**更新日期**：2026-06-29
+**状态**：已归档（superseded by ADR 0002）  
 **关联文档**：[技术方案](./technical-approach.md)、[会话管理统一重设计](../plan/archive/unified-session-redesign.md)、[Go-Python 契约](../plan/archive/04-python-contract.md)、[SSE 协议](../plan/archive/03-sse-protocol.md)
 
 ---
