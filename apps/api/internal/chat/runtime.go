@@ -107,12 +107,19 @@ func (r *Runtime) SendMessage(ctx context.Context, w http.ResponseWriter, uid uu
 		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to marshal message parts")
 	}
 
-	userMsg, err := r.messageService.CreateMessage(ctx, conversationID, turnID, "user", datatypes.JSON(partsJSON), userSeq, "completed")
+	var userMetadata datatypes.JSON
+	if len(req.Message.Metadata) > 0 {
+		userMetadata = datatypes.JSON(req.Message.Metadata)
+	} else {
+		userMetadata = datatypes.JSON("{}")
+	}
+
+	userMsg, err := r.messageService.CreateMessage(ctx, conversationID, turnID, "user", datatypes.JSON(partsJSON), userSeq, "completed", userMetadata)
 	if err != nil {
 		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to create user message")
 	}
 
-	assistantMsg, err := r.messageService.CreateMessage(ctx, conversationID, turnID, "assistant", datatypes.JSON("[]"), assistantSeq, "streaming")
+	assistantMsg, err := r.messageService.CreateMessage(ctx, conversationID, turnID, "assistant", datatypes.JSON("[]"), assistantSeq, "streaming", datatypes.JSON("{}"))
 	if err != nil {
 		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to create assistant message")
 	}
@@ -339,7 +346,7 @@ func (r *Runtime) handleAIEvent(ctx context.Context, sw *stream.StreamWriter, ev
 		r.sendEvent(ctx, sw, event, state.AssistantMsgID, event.Type)
 
 	case "state.interaction.required":
-		return r.handleInteractionRequired(ctx, sw, event, state)
+		return r.handleInteractionRequired(ctx, sw, event, state, result)
 
 	case "state.phase.changed":
 		var payload struct {
@@ -391,7 +398,7 @@ func (r *Runtime) handleAIEvent(ctx context.Context, sw *stream.StreamWriter, ev
 	return false
 }
 
-func (r *Runtime) handleInteractionRequired(ctx context.Context, sw *stream.StreamWriter, event dto.StreamEvent, state streamState) bool {
+func (r *Runtime) handleInteractionRequired(ctx context.Context, sw *stream.StreamWriter, event dto.StreamEvent, state streamState, result *streamResult) bool {
 	var payload struct {
 		InteractionID string          `json:"interaction_id"`
 		Question      json.RawMessage `json:"question"`
@@ -414,7 +421,12 @@ func (r *Runtime) handleInteractionRequired(ctx context.Context, sw *stream.Stre
 	}
 	r.sendEvent(ctx, sw, event, state.AssistantMsgID, "interaction.required")
 
-	_ = r.messageService.UpdateMessageStatus(ctx, state.AssistantMsg.ID, state.ConversationID, "aborted")
+	// Save accumulated parts and keep status as completed
+	finalPartsJSON, _ := json.Marshal(result.AssistantParts)
+	if err := r.messageService.UpdateMessageCompleted(ctx, state.AssistantMsg.ID, state.ConversationID, datatypes.JSON(finalPartsJSON), nil, nil); err != nil {
+		log.Printf("failed to update assistant message %s: %v", state.AssistantMsg.ID, err)
+	}
+
 	_ = sw.SendNew(ctx, "stream", "stream.done", state.BaseIDs, map[string]any{}, "")
 	r.clearActiveRun(ctx, state.ConversationID, state.UID)
 	return true

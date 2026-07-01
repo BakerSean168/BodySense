@@ -57,6 +57,13 @@ func (h *ConsultationHandler) GetConsultation(c *gin.Context) {
 		return
 	}
 
+	pendingInteractions, err := h.interactionService.GetPendingInteractions(c.Request.Context(), conversationID)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get pending interactions")
+		return
+	}
+	session.PendingInteractions = pendingInteractions
+
 	c.JSON(http.StatusOK, session)
 }
 
@@ -122,7 +129,7 @@ func (h *ConsultationHandler) ConfirmDiagnosis(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "diagnosis confirmed"})
 }
 
-// ResumeInteraction handles POST /api/v1/consultation/:conversationId/interactions/:interactionId/resume
+// ResumeInteraction handles POST /api/v1/consultations/:id/interactions/:interactionId/resume
 func (h *ConsultationHandler) ResumeInteraction(c *gin.Context) {
 	uid, ok := getUserUUID(c)
 	if !ok {
@@ -135,7 +142,7 @@ func (h *ConsultationHandler) ResumeInteraction(c *gin.Context) {
 		return
 	}
 
-	conversationID, err := uuid.Parse(c.Param("conversationId"))
+	conversationID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		respondError(c, http.StatusBadRequest, "INVALID_ID", "invalid conversation id")
 		return

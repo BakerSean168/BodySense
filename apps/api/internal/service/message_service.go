@@ -28,6 +28,7 @@ func (s *MessageService) CreateMessage(
 	parts datatypes.JSON,
 	seq int,
 	status string,
+	metadata datatypes.JSON,
 ) (*model.Message, error) {
 	message := &model.Message{
 		ID:             uuid.New(),
@@ -37,6 +38,7 @@ func (s *MessageService) CreateMessage(
 		Status:         status,
 		Seq:            seq,
 		Parts:          parts,
+		Metadata:       metadata,
 	}
 	if err := s.messageRepo.Create(ctx, message); err != nil {
 		return nil, fmt.Errorf("create message: %w", err)
