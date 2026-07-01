@@ -24,6 +24,32 @@ async def test_handle_ask_user_with_options():
     assert result.status == ToolStatus.INTERRUPTED
     assert result.content["answer_type"] == "single_choice"
     assert result.content["options"] == ["疼痛", "酸胀", "麻木"]
+    assert result.content["allow_custom_input"] is True
+
+
+@pytest.mark.asyncio
+async def test_handle_ask_user_converts_yes_no_question_to_single_choice():
+    result = await handle_ask_user({"question": "你是否经常感到颈部僵硬或疼痛？"})
+    assert result.status == ToolStatus.INTERRUPTED
+    assert result.content["question"] == "你是否经常感到颈部僵硬或疼痛？"
+    assert result.content["answer_type"] == "single_choice"
+    assert result.content["options"] == ["是", "否"]
+
+
+@pytest.mark.asyncio
+async def test_handle_ask_user_keeps_only_first_numbered_question():
+    result = await handle_ask_user({
+        "question": (
+            "为了更准确地分析你的头前移情况，请告诉我以下细节："
+            "1. 你是否经常感到颈部或肩部僵硬或疼痛？ "
+            "2. 是否有伴随头痛？ "
+            "3. 是否长时间使用电脑？"
+        )
+    })
+    assert result.status == ToolStatus.INTERRUPTED
+    assert result.content["question"] == "你是否经常感到颈部或肩部僵硬或疼痛？"
+    assert result.content["answer_type"] == "single_choice"
+    assert result.content["options"] == ["是", "否"]
 
 
 @pytest.mark.asyncio

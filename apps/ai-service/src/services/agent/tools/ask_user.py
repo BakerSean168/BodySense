@@ -7,6 +7,7 @@ the runtime explicitly opts in.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from ..tool_types import RuntimeToolDefinition, ToolCategory, ToolResult, ToolStatus
@@ -37,7 +38,12 @@ ASK_USER_SCHEMA: dict[str, Any] = {
             "options": {
                 "type": "array",
                 "items": {"type": "string"},
-                "description": "当 answer_type 为 single_choice 或 multi_choice 时的选项列表",
+                "description": "当 answer_type 为 single_choice 或 multi_choice 时的选项列表，优先提供 2-4 个简短选项",
+            },
+            "allow_custom_input": {
+                "type": "boolean",
+                "description": "是否允许用户在现成选项之外自行输入补充回答",
+                "default": True,
             },
             "required": {
                 "type": "boolean",
@@ -53,6 +59,36 @@ ASK_USER_SCHEMA: dict[str, Any] = {
     },
 }
 
+YES_NO_QUESTION_RE = re.compile(r"(是否|有无|有没有|是不是|会不会|能否)")
+NUMBERED_QUESTION_RE = re.compile(r"\d+[\.、]\s*([^?？]+[?？]?)")
+
+
+def _normalize_question(question: str) -> str:
+    compact = re.sub(r"\s+", " ", question).strip()
+    numbered = NUMBERED_QUESTION_RE.findall(compact)
+    if numbered:
+        return numbered[0].strip()
+
+    if compact.count("？") + compact.count("?") > 1:
+        match = re.search(r"(.+?[？?])", compact)
+        if match:
+            return match.group(1).strip()
+
+    return compact
+
+
+def _normalize_choice_options(options: Any) -> list[str]:
+    if not isinstance(options, list):
+        return []
+    normalized: list[str] = []
+    for option in options:
+        if not isinstance(option, str):
+            continue
+        value = option.strip()
+        if value and value not in normalized:
+            normalized.append(value)
+    return normalized[:4]
+
 
 async def handle_ask_user(arguments: dict[str, Any]) -> ToolResult:
     """Handle an ask_user tool call.
@@ -61,7 +97,7 @@ async def handle_ask_user(arguments: dict[str, Any]) -> ToolResult:
     persist the interaction and pause the run. This handler never blocks
     waiting for a user response.
     """
-    question = arguments.get("question", "").strip()
+    question = _normalize_question(str(arguments.get("question", "")).strip())
     if not question:
         return ToolResult(
             tool_call_id="",
@@ -80,6 +116,15 @@ async def handle_ask_user(arguments: dict[str, Any]) -> ToolResult:
             error=f"invalid answer_type: {answer_type}",
         )
 
+    options = _normalize_choice_options(arguments.get("options", []))
+    if answer_type == "text" and not options and YES_NO_QUESTION_RE.search(question):
+        answer_type = "single_choice"
+        options = ["是", "否"]
+
+    allow_custom_input = arguments.get("allow_custom_input")
+    if not isinstance(allow_custom_input, bool):
+        allow_custom_input = bool(options)
+
     # Return interrupted — the run should pause here
     return ToolResult(
         tool_call_id="",
@@ -89,7 +134,8 @@ async def handle_ask_user(arguments: dict[str, Any]) -> ToolResult:
             "question": question,
             "reason": arguments.get("reason", ""),
             "answer_type": answer_type,
-            "options": arguments.get("options", []),
+            "options": options,
+            "allow_custom_input": allow_custom_input,
             "required": arguments.get("required", True),
             "context": arguments.get("context", ""),
         },
