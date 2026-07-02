@@ -134,7 +134,7 @@ export function ConsultationPage() {
   // --- Handlers ---
 
   const handleNewConsultation = useCallback(() => {
-    if (id === 'new') {
+    if (!id || id === 'new') {
       return;
     }
     setIsLoading(true);
@@ -145,7 +145,7 @@ export function ConsultationPage() {
     setPhase('collecting');
     setDiagnoses([]);
     setTreatmentPlan(null);
-    navigate('/consultation/new', { replace: true });
+    navigate('/consultation', { replace: true });
   }, [id, navigate]);
 
   const handleSelectConversation = useCallback(
