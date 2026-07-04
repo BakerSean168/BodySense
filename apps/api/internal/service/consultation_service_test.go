@@ -7,6 +7,7 @@ import (
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 )
 
 type fakeConsultationRepository struct {
@@ -79,6 +80,31 @@ func (r *fakeConsultationRepository) Delete(ctx context.Context, conversationID 
 		r.session = nil
 	}
 	return nil
+}
+
+func (r *fakeConsultationRepository) CreateRunEnvelope(
+	ctx context.Context,
+	userID uuid.UUID,
+	conversationID *uuid.UUID,
+	requestID string,
+	userParts datatypes.JSON,
+	userMetadata datatypes.JSON,
+	modelName string,
+) (*model.ConsultationSession, *model.Run, *model.Message, *model.Message, uuid.UUID, bool, error) {
+	resolvedConversationID := uuid.New()
+	if conversationID != nil {
+		resolvedConversationID = *conversationID
+	}
+	session := r.session
+	if session == nil || session.ConversationID != resolvedConversationID {
+		session = &model.ConsultationSession{ConversationID: resolvedConversationID, ExtractedInfo: datatypes.JSON("[]"), Phase: "collecting"}
+		r.session = session
+	}
+	turnID := uuid.New()
+	run := &model.Run{ID: uuid.New(), ConversationID: resolvedConversationID, TurnID: turnID, RequestID: requestID, UserID: userID, Status: "running", Model: modelName}
+	userMsg := &model.Message{ID: uuid.New(), ConversationID: resolvedConversationID, TurnID: turnID, Role: "user", Status: "completed", Seq: 1, Parts: userParts, Metadata: userMetadata}
+	assistantMsg := &model.Message{ID: uuid.New(), ConversationID: resolvedConversationID, TurnID: turnID, RunID: &run.ID, Role: "assistant", Status: "streaming", Seq: 2, Parts: datatypes.JSON("[]"), Metadata: datatypes.JSON("{}")}
+	return session, run, userMsg, assistantMsg, turnID, false, nil
 }
 
 type fakeConversationOwnershipChecker struct {
@@ -415,4 +441,43 @@ func TestCreateSessionReusesEmptySession(t *testing.T) {
 		t.Fatalf("expected session to be reused (same ID), got %s and %s", session1.ConversationID, session2.ConversationID)
 	}
 }
+func TestCreateRunEnvelopeReturnsDurableShell(t *testing.T) {
+	conversationID := uuid.New()
+	userID := uuid.New()
+	repo := &fakeConsultationRepository{
+		session: &model.ConsultationSession{
+			ConversationID: conversationID,
+			ExtractedInfo:  datatypes.JSON("[]"),
+			Phase:          "collecting",
+		},
+	}
+	svc := NewConsultationService(repo, newFakeConversationOwnershipChecker())
 
+	envelope, err := svc.CreateRunEnvelope(
+		context.Background(),
+		userID,
+		&conversationID,
+		"req-1",
+		datatypes.JSON(`[{"type":"text","text":"hello"}]`),
+		datatypes.JSON("{}"),
+		"consultation-thread",
+	)
+	if err != nil {
+		t.Fatalf("CreateRunEnvelope returned error: %v", err)
+	}
+	if envelope.Session.ConversationID != conversationID {
+		t.Fatalf("expected session conversation %s, got %s", conversationID, envelope.Session.ConversationID)
+	}
+	if envelope.Run.ConversationID != conversationID || envelope.Run.RequestID != "req-1" {
+		t.Fatalf("unexpected run envelope: %+v", envelope.Run)
+	}
+	if envelope.UserMessage.Role != "user" || envelope.UserMessage.Status != "completed" {
+		t.Fatalf("unexpected user message: %+v", envelope.UserMessage)
+	}
+	if envelope.AssistantMessage.Role != "assistant" || envelope.AssistantMessage.Status != "streaming" {
+		t.Fatalf("unexpected assistant message: %+v", envelope.AssistantMessage)
+	}
+	if envelope.AssistantMessage.RunID == nil || *envelope.AssistantMessage.RunID != envelope.Run.ID {
+		t.Fatalf("assistant message must reference run id")
+	}
+}

@@ -31,20 +31,23 @@ func NewConsultationHandler(
 	}
 }
 
-// CreateConsultation handles POST /api/v1/consultations
-func (h *ConsultationHandler) CreateConsultation(c *gin.Context) {
+// StartRun handles POST /api/v1/consultation-runs
+func (h *ConsultationHandler) StartRun(c *gin.Context) {
 	uid, ok := getUserUUID(c)
 	if !ok {
 		return
 	}
 
-	session, err := h.consultationService.CreateSession(c.Request.Context(), uid)
-	if err != nil {
-		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to create consultation")
+	var req dto.StartConsultationRunRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
 	}
 
-	c.JSON(http.StatusCreated, session)
+	if err := h.runtime.StartRun(c.Request.Context(), c.Writer, uid, req); err != nil {
+		respondError(c, err.Status, err.Code, err.Message)
+		return
+	}
 }
 
 // GetConsultation handles GET /api/v1/consultations/:id
@@ -78,31 +81,6 @@ func (h *ConsultationHandler) GetConsultation(c *gin.Context) {
 	session.PendingInteractions = pendingInteractions
 
 	c.JSON(http.StatusOK, session)
-}
-
-// SendMessage handles POST /api/v1/consultations/:id/messages
-func (h *ConsultationHandler) SendMessage(c *gin.Context) {
-	uid, ok := getUserUUID(c)
-	if !ok {
-		return
-	}
-
-	conversationID, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		respondError(c, http.StatusBadRequest, "INVALID_ID", "invalid consultation id")
-		return
-	}
-
-	var req dto.SendConsultationMessageRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		respondError(c, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-		return
-	}
-
-	if err := h.runtime.SendUserMessage(c.Request.Context(), c.Writer, uid, conversationID, req); err != nil {
-		respondError(c, err.Status, err.Code, err.Message)
-		return
-	}
 }
 
 // UpdateExtractedInfo handles PUT /api/v1/consultations/:id/extracted-info

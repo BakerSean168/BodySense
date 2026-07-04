@@ -12,6 +12,7 @@ type Message struct {
 	ID                 uuid.UUID      `gorm:"type:uuid;primaryKey;default:uuidv7()" json:"id"`
 	ConversationID     uuid.UUID      `gorm:"type:uuid;not null;uniqueIndex:idx_messages_conversation_seq" json:"conversation_id"`
 	TurnID             uuid.UUID      `gorm:"type:uuid;not null" json:"turn_id"`
+	RunID              *uuid.UUID     `gorm:"type:uuid;index" json:"run_id,omitempty"`
 	ParentMessageID    *uuid.UUID     `gorm:"type:uuid" json:"parent_message_id,omitempty"`
 	Role               string         `gorm:"type:varchar(20);not null" json:"role"`
 	Status             string         `gorm:"type:varchar(20);not null;default:'completed'" json:"status"`

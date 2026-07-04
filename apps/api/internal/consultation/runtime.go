@@ -33,16 +33,18 @@ func (e *HTTPError) Error() string {
 }
 
 type Runtime struct {
-	conversationService *service.ConversationService
-	consultationService *service.ConsultationService
-	profileService      *service.ProfileService
-	messageService      *service.MessageService
-	runService          *service.RunService
-	aiClient            *service.AIClient
-	agentToolService    *service.AgentToolService
-	interactionService  *service.AgentInteractionService
-	outputReviewService *service.OutputReviewService
-	streamRuntime       *stream.Runtime
+	conversationService     *service.ConversationService
+	consultationService     *service.ConsultationService
+	profileService          *service.ProfileService
+	messageService          *service.MessageService
+	runService              *service.RunService
+	aiClient                *service.AIClient
+	agentToolService        *service.AgentToolService
+	interactionService      *service.AgentInteractionService
+	outputReviewService     *service.OutputReviewService
+	threadProjectionService *service.ThreadProjectionService
+	runtimeEventService     *service.RuntimeEventService
+	streamRuntime           *stream.Runtime
 }
 
 func NewRuntime(
@@ -55,56 +57,59 @@ func NewRuntime(
 	agentToolService *service.AgentToolService,
 	interactionService *service.AgentInteractionService,
 	outputReviewService *service.OutputReviewService,
+	threadProjectionService *service.ThreadProjectionService,
+	runtimeEventService *service.RuntimeEventService,
 ) *Runtime {
 	return &Runtime{
-		conversationService: conversationService,
-		consultationService: consultationService,
-		profileService:      profileService,
-		messageService:      messageService,
-		runService:          runService,
-		aiClient:            aiClient,
-		agentToolService:    agentToolService,
-		interactionService:  interactionService,
-		outputReviewService: outputReviewService,
-		streamRuntime:       stream.NewRuntime(),
+		conversationService:     conversationService,
+		consultationService:     consultationService,
+		profileService:          profileService,
+		messageService:          messageService,
+		runService:              runService,
+		aiClient:                aiClient,
+		agentToolService:        agentToolService,
+		interactionService:      interactionService,
+		outputReviewService:     outputReviewService,
+		threadProjectionService: threadProjectionService,
+		runtimeEventService:     runtimeEventService,
+		streamRuntime:           stream.NewRuntime(),
 	}
 }
 
-func (r *Runtime) SendUserMessage(
+// StartRun handles a unified consultation run request.
+// If req.ConversationID is nil, a new conversation is created atomically before streaming begins.
+// This eliminates the two-step create-then-send flow and ensures last_message_at is set before the SSE stream starts.
+func (r *Runtime) StartRun(
 	ctx context.Context,
 	w http.ResponseWriter,
 	uid uuid.UUID,
-	conversationID uuid.UUID,
-	req dto.SendConsultationMessageRequest,
+	req dto.StartConsultationRunRequest,
 ) *HTTPError {
+	// --- 1. Idempotency check (before any side effects) ---
 	existing, found, err := r.runService.CheckIdempotency(ctx, uid, req.RequestID)
 	if err != nil {
-		return httpErr(
-			http.StatusInternalServerError,
-			"INTERNAL_ERROR",
-			"failed to check idempotency",
-		)
+		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to check idempotency")
 	}
 	if found {
 		if existing.Status == "running" || existing.Status == "waiting_user" {
-			return httpErr(
-				http.StatusConflict,
-				"RUN_IN_PROGRESS",
-				"a run with this request ID is already in progress",
-			)
+			return httpErr(http.StatusConflict, "RUN_IN_PROGRESS", "a run with this request ID is already in progress")
 		}
 		r.replayCompletedRun(ctx, w, existing)
 		return nil
 	}
 
-	session, err := r.consultationService.GetConsultation(ctx, conversationID, uid)
-	if err != nil {
-		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load consultation")
-	}
-	if session == nil {
-		return httpErr(http.StatusNotFound, "NOT_FOUND", "consultation not found")
+	// --- 2. Resolve requested conversation identity ---
+	var requestedConversationID *uuid.UUID
+	isNewConversation := req.ConversationID == nil || *req.ConversationID == ""
+	if !isNewConversation {
+		parsed, err := uuid.Parse(*req.ConversationID)
+		if err != nil {
+			return httpErr(http.StatusBadRequest, "INVALID_ID", "invalid conversation id")
+		}
+		requestedConversationID = &parsed
 	}
 
+	// --- 3. Validate message ---
 	userText := messagePartsToText(req.Message.Parts)
 	if strings.TrimSpace(userText) == "" {
 		return httpErr(http.StatusBadRequest, "INVALID_REQUEST", "message text is required")
@@ -115,27 +120,124 @@ func (r *Runtime) SendUserMessage(
 		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to marshal message parts")
 	}
 
-	turn, run, userMsg, assistantMsg, baseIDs, setupErr := r.createTurnEnvelope(
-		ctx,
-		uid,
-		conversationID,
-		req.RequestID,
-		datatypes.JSON(userPartsJSON),
-		datatypes.JSON("{}"),
+	// --- 4. Create turn envelope (conversation/session + run + messages) ---
+	session, turn, run, userMsg, assistantMsg, baseIDs, setupErr := r.createTurnEnvelope(
+		ctx, uid, requestedConversationID, req.RequestID,
+		datatypes.JSON(userPartsJSON), datatypes.JSON("{}"),
 	)
 	if setupErr != nil {
 		return setupErr
 	}
+	conversationID := session.ConversationID
 
 	sw := r.streamRuntime.NewWriter(w, baseIDs)
-	r.emitUserTurnStarted(ctx, sw, req.ClientMessageID, userMsg, assistantMsg)
+	r.sendNewEvent(
+		ctx,
+		sw,
+		"run",
+		"run.started",
+		baseIDs,
+		map[string]any{"status": "running", "source": "start_turn"},
+		"",
+		"run.started",
+	)
 
+	// --- 6. Emit conversation.created for new conversations ---
+	if isNewConversation {
+		r.sendNewEvent(
+			ctx,
+			sw,
+			"conversation",
+			"conversation.created",
+			dto.StreamEventIDs{
+				ConversationID: conversationID.String(),
+				RunID:          run.ID.String(),
+				TurnID:         turn.String(),
+			},
+			map[string]any{
+				"title":           "",
+				"title_status":    "pending",
+				"status":          "active",
+				"last_message_at": userMsg.CreatedAt.UTC().Format(time.RFC3339),
+				"created_at":      userMsg.CreatedAt.UTC().Format(time.RFC3339),
+			},
+			"",
+			"conversation.created",
+		)
+	}
+
+	// --- 7. Emit message.persisted + message.created ---
+	r.emitUserTurnStarted(ctx, sw, req.ClientMessageID, userMsg, assistantMsg)
+	r.refreshThreadProjection(ctx, conversationID, uid)
+
+	// --- 8. Stream AI response ---
+	result, stopped := r.executeRunFlow(ctx, sw, uid, conversationID, turn, run, assistantMsg, baseIDs, userText, session)
+	if stopped {
+		return nil
+	}
+
+	// --- 9. Persist completed turn ---
+	r.finishTurn(ctx, sw, uid, conversationID, run, assistantMsg, turn, result, baseIDs)
+
+	// --- 10. Generate title for new conversations (non-blocking) ---
+	if isNewConversation {
+		r.generateTitleAndNotify(ctx, conversationID, uid, sw, baseIDs)
+	}
+
+	// --- 11. Emit stream.done ---
+	r.sendNewEvent(ctx, sw, "stream", "stream.done", baseIDs, map[string]any{}, "", "stream.done")
+	return nil
+}
+
+// generateTitleAndNotify generates a title synchronously and emits a title.generated SSE event.
+func (r *Runtime) generateTitleAndNotify(
+	ctx context.Context,
+	conversationID uuid.UUID,
+	userID uuid.UUID,
+	sw *stream.StreamWriter,
+	baseIDs dto.StreamEventIDs,
+) {
+	title, err := r.conversationService.GenerateTitleSync(ctx, conversationID, userID)
+	if err != nil {
+		log.Printf("title generation failed for conversation %s: %v", conversationID, err)
+		return
+	}
+
+	r.sendNewEvent(
+		ctx,
+		sw,
+		"title",
+		"title.generated",
+		baseIDs,
+		map[string]any{"title": title},
+		"",
+		"title.generated",
+	)
+	r.refreshThreadProjection(ctx, conversationID, userID)
+}
+
+// executeRunFlow is the shared turn execution path used by StartRun and ResumeInteraction.
+// It loads the profile, starts the AI stream, and processes events. The caller is responsible for
+// setup (idempotency, turn envelope, initial SSE events) and teardown (persist, stream.done, title).
+func (r *Runtime) executeRunFlow(
+	ctx context.Context,
+	sw *stream.StreamWriter,
+	uid uuid.UUID,
+	conversationID uuid.UUID,
+	turn uuid.UUID,
+	run *model.Run,
+	assistantMsg *model.Message,
+	baseIDs dto.StreamEventIDs,
+	userText string,
+	session *model.ConsultationSession,
+) (streamResult, bool) {
 	streamCtx, cancel := context.WithTimeout(ctx, sseTimeout)
 	defer cancel()
 
 	profileJSON, profileErr := r.loadProfileJSON(ctx, uid)
 	if profileErr != nil {
-		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load profile")
+		r.failBeforeStreaming(ctx, sw, run, assistantMsg, uid, conversationID, "failed to load profile")
+		return streamResult{}, true
 	}
 
 	events, err := r.aiClient.StartConsultationTurn(
@@ -160,10 +262,10 @@ func (r *Runtime) SendUserMessage(
 	)
 	if err != nil {
 		r.failBeforeStreaming(ctx, sw, run, assistantMsg, uid, conversationID, "AI service unavailable")
-		return nil
+		return streamResult{}, true
 	}
 
-	result, stopped := r.streamAIEvents(ctx, sw, events, streamState{
+	return r.streamAIEvents(ctx, sw, events, streamState{
 		UID:             uid,
 		ConversationID:  conversationID,
 		TurnID:          turn,
@@ -175,13 +277,39 @@ func (r *Runtime) SendUserMessage(
 		AssistantMsgID:  assistantMsg.ID.String(),
 		ConversationStr: conversationID.String(),
 	})
-	if stopped {
-		return nil
-	}
+}
 
+// finishTurn persists the completed turn and emits the message.completed SSE event.
+func (r *Runtime) finishTurn(
+	ctx context.Context,
+	sw *stream.StreamWriter,
+	uid uuid.UUID,
+	conversationID uuid.UUID,
+	run *model.Run,
+	assistantMsg *model.Message,
+	turn uuid.UUID,
+	result streamResult,
+	baseIDs dto.StreamEventIDs,
+) {
 	r.persistCompletedTurn(ctx, uid, conversationID, run, assistantMsg, result)
-	_ = sw.SendNew(
+	r.refreshThreadProjection(ctx, conversationID, uid)
+	r.sendNewEvent(
 		ctx,
+		sw,
+		"run",
+		"run.completed",
+		dto.StreamEventIDs{
+			ConversationID: conversationID.String(),
+			RunID:          run.ID.String(),
+			TurnID:         turn.String(),
+		},
+		map[string]any{"status": "completed", "usage": result.Usage},
+		"",
+		"run.completed",
+	)
+	r.sendNewEvent(
+		ctx,
+		sw,
 		"message",
 		"message.completed",
 		dto.StreamEventIDs{
@@ -192,11 +320,8 @@ func (r *Runtime) SendUserMessage(
 		},
 		map[string]any{"status": "completed", "finish_reason": "stop", "usage": result.Usage},
 		assistantMsg.ID.String(),
+		"message.completed",
 	)
-	_ = sw.SendNew(ctx, "stream", "stream.done", baseIDs, map[string]any{}, "")
-
-	r.maybeGenerateTitle(ctx, conversationID, uid)
-	return nil
 }
 
 func (r *Runtime) ResumeInteraction(
@@ -261,10 +386,10 @@ func (r *Runtime) ResumeInteraction(
 	}
 
 	answerPartsJSON, answerMetadata := interactionAnswerParts(req.Answer, interactionID.String())
-	turn, run, _, assistantMsg, baseIDs, setupErr := r.createTurnEnvelope(
+	_, turn, run, _, assistantMsg, baseIDs, setupErr := r.createTurnEnvelope(
 		ctx,
 		uid,
-		conversationID,
+		&conversationID,
 		req.RequestID,
 		answerPartsJSON,
 		answerMetadata,
@@ -274,8 +399,9 @@ func (r *Runtime) ResumeInteraction(
 	}
 
 	sw := r.streamRuntime.NewWriter(w, baseIDs)
-	_ = sw.SendNew(
+	r.sendNewEvent(
 		ctx,
+		sw,
 		"state",
 		"state.interaction.answered",
 		dto.StreamEventIDs{
@@ -289,9 +415,26 @@ func (r *Runtime) ResumeInteraction(
 			"answer":         json.RawMessage(req.Answer),
 		},
 		"",
+		"state.interaction.answered",
 	)
-	_ = sw.SendNew(
+	r.sendNewEvent(
 		ctx,
+		sw,
+		"run",
+		"run.resumed",
+		dto.StreamEventIDs{
+			ConversationID: conversationID.String(),
+			RunID:          run.ID.String(),
+			TurnID:         turn.String(),
+			InteractionID:  interactionID.String(),
+		},
+		map[string]any{"status": "running", "interaction_id": interactionID.String()},
+		"",
+		"run.resumed",
+	)
+	r.sendNewEvent(
+		ctx,
+		sw,
 		"message",
 		"message.created",
 		dto.StreamEventIDs{
@@ -301,7 +444,9 @@ func (r *Runtime) ResumeInteraction(
 		},
 		map[string]any{"role": "assistant", "status": "streaming"},
 		assistantMsg.ID.String(),
+		"message.created",
 	)
+	r.refreshThreadProjection(ctx, conversationID, uid)
 
 	streamCtx, cancel := context.WithTimeout(ctx, sseTimeout)
 	defer cancel()
@@ -351,22 +496,8 @@ func (r *Runtime) ResumeInteraction(
 		return nil
 	}
 
-	r.persistCompletedTurn(ctx, uid, conversationID, run, assistantMsg, result)
-	_ = sw.SendNew(
-		ctx,
-		"message",
-		"message.completed",
-		dto.StreamEventIDs{
-			ConversationID: conversationID.String(),
-			RunID:          run.ID.String(),
-			TurnID:         turn.String(),
-			MessageID:      assistantMsg.ID.String(),
-		},
-		map[string]any{"status": "completed", "finish_reason": "stop", "usage": result.Usage},
-		assistantMsg.ID.String(),
-	)
-	_ = sw.SendNew(ctx, "stream", "stream.done", baseIDs, map[string]any{}, "")
-
+	r.finishTurn(ctx, sw, uid, conversationID, run, assistantMsg, turn, result, baseIDs)
+	r.sendNewEvent(ctx, sw, "stream", "stream.done", baseIDs, map[string]any{}, "", "stream.done")
 	r.maybeGenerateTitle(ctx, conversationID, uid)
 	return nil
 }
@@ -374,11 +505,12 @@ func (r *Runtime) ResumeInteraction(
 func (r *Runtime) createTurnEnvelope(
 	ctx context.Context,
 	uid uuid.UUID,
-	conversationID uuid.UUID,
+	conversationID *uuid.UUID,
 	requestID string,
 	userParts datatypes.JSON,
 	userMetadata datatypes.JSON,
 ) (
+	*model.ConsultationSession,
 	uuid.UUID,
 	*model.Run,
 	*model.Message,
@@ -386,74 +518,36 @@ func (r *Runtime) createTurnEnvelope(
 	dto.StreamEventIDs,
 	*HTTPError,
 ) {
-	userSeq, err := r.messageService.GetNextSeq(ctx, conversationID)
-	if err != nil {
-		return uuid.Nil, nil, nil, nil, dto.StreamEventIDs{}, httpErr(
-			http.StatusInternalServerError,
-			"INTERNAL_ERROR",
-			"failed to get message sequence",
-		)
-	}
-	assistantSeq := userSeq + 1
-	turnID := uuid.New()
-
-	userMsg, err := r.messageService.CreateMessage(
+	envelope, err := r.consultationService.CreateRunEnvelope(
 		ctx,
+		uid,
 		conversationID,
-		turnID,
-		"user",
+		requestID,
 		userParts,
-		userSeq,
-		"completed",
 		userMetadata,
+		"consultation-thread",
 	)
 	if err != nil {
-		return uuid.Nil, nil, nil, nil, dto.StreamEventIDs{}, httpErr(
+		return nil, uuid.Nil, nil, nil, nil, dto.StreamEventIDs{}, httpErr(
 			http.StatusInternalServerError,
 			"INTERNAL_ERROR",
-			"failed to create user message",
+			"failed to create run envelope",
+		)
+	}
+	if envelope.Existed {
+		return nil, uuid.Nil, nil, nil, nil, dto.StreamEventIDs{}, httpErr(
+			http.StatusConflict,
+			"RUN_IN_PROGRESS",
+			"a run with this request ID already exists",
 		)
 	}
 
-	assistantMsg, err := r.messageService.CreateMessage(
-		ctx,
-		conversationID,
-		turnID,
-		"assistant",
-		datatypes.JSON("[]"),
-		assistantSeq,
-		"streaming",
-		datatypes.JSON("{}"),
-	)
-	if err != nil {
-		return uuid.Nil, nil, nil, nil, dto.StreamEventIDs{}, httpErr(
-			http.StatusInternalServerError,
-			"INTERNAL_ERROR",
-			"failed to create assistant message",
-		)
-	}
-
-	run, err := r.runService.CreateRun(ctx, conversationID, turnID, requestID, uid, "consultation-thread")
-	if err != nil {
-		return uuid.Nil, nil, nil, nil, dto.StreamEventIDs{}, httpErr(
-			http.StatusInternalServerError,
-			"INTERNAL_ERROR",
-			"failed to create run",
-		)
-	}
-
-	runIDStr := run.ID.String()
-	if updateErr := r.conversationService.UpdateActiveRunID(ctx, conversationID, uid, &run.ID, runIDStr); updateErr != nil {
-		log.Printf("failed to set active_run_id for conversation %s: %v", conversationID, updateErr)
-	}
-
-	return turnID, run, userMsg, assistantMsg, dto.StreamEventIDs{
-		ConversationID: conversationID.String(),
-		RunID:          run.ID.String(),
-		TurnID:         turnID.String(),
+	return envelope.Session, envelope.TurnID, envelope.Run, envelope.UserMessage, envelope.AssistantMessage, dto.StreamEventIDs{
+		ConversationID: envelope.Session.ConversationID.String(),
+		RunID:          envelope.Run.ID.String(),
+		TurnID:         envelope.TurnID.String(),
 	}, nil
 }
-
 func (r *Runtime) emitUserTurnStarted(
 	ctx context.Context,
 	sw *stream.StreamWriter,
@@ -461,8 +555,9 @@ func (r *Runtime) emitUserTurnStarted(
 	userMsg *model.Message,
 	assistantMsg *model.Message,
 ) {
-	if err := sw.SendNew(
+	r.sendNewEvent(
 		ctx,
+		sw,
 		"message",
 		"message.persisted",
 		dto.StreamEventIDs{
@@ -472,12 +567,12 @@ func (r *Runtime) emitUserTurnStarted(
 		},
 		map[string]any{"client_message_id": clientMessageID, "role": "user"},
 		userMsg.ID.String(),
-	); err != nil {
-		log.Printf("SSE write error (message.persisted): %v", err)
-	}
+		"message.persisted",
+	)
 
-	if err := sw.SendNew(
+	r.sendNewEvent(
 		ctx,
+		sw,
 		"message",
 		"message.created",
 		dto.StreamEventIDs{
@@ -487,9 +582,8 @@ func (r *Runtime) emitUserTurnStarted(
 		},
 		map[string]any{"role": "assistant", "status": "streaming"},
 		assistantMsg.ID.String(),
-	); err != nil {
-		log.Printf("SSE write error (message.created): %v", err)
-	}
+		"message.created",
+	)
 }
 
 func (r *Runtime) loadProfileJSON(ctx context.Context, uid uuid.UUID) (json.RawMessage, error) {
@@ -542,19 +636,21 @@ func (r *Runtime) streamAIEvents(
 		select {
 		case <-state.RequestDone:
 			log.Printf("client disconnected during stream for conversation %s", state.ConversationID)
+			bg := context.Background()
 			_ = r.runService.FailRun(
-				context.Background(),
+				bg,
 				state.Run.ID,
 				state.UID,
 				map[string]any{"message": "client disconnected"},
 			)
 			_ = r.messageService.UpdateMessageStatus(
-				context.Background(),
+				bg,
 				state.AssistantMsg.ID,
 				state.ConversationID,
 				"aborted",
 			)
-			r.clearActiveRun(context.Background(), state.ConversationID, state.UID)
+			r.clearActiveRun(bg, state.ConversationID, state.UID)
+			r.refreshThreadProjection(bg, state.ConversationID, state.UID)
 			return result, true
 
 		case event, ok := <-events:
@@ -565,30 +661,7 @@ func (r *Runtime) streamAIEvents(
 			eventCount++
 			if eventCount > maxSSEEvents {
 				log.Printf("event count exceeded limit for conversation %s", state.ConversationID)
-				_ = sw.SendNew(
-					ctx,
-					"message",
-					"message.failed",
-					dto.StreamEventIDs{
-						ConversationID: state.ConversationID.String(),
-						RunID:          state.Run.ID.String(),
-						TurnID:         state.TurnID.String(),
-						MessageID:      state.AssistantMsg.ID.String(),
-					},
-					map[string]any{
-						"status": "failed",
-						"error":  map[string]any{"message": "stream exceeded maximum event count"},
-					},
-					state.AssistantMsgID,
-				)
-				_ = sw.SendNew(ctx, "stream", "stream.done", state.BaseIDs, map[string]any{}, "")
-				_ = r.runService.FailRun(
-					ctx,
-					state.Run.ID,
-					state.UID,
-					map[string]any{"message": "event count limit exceeded"},
-				)
-				r.clearActiveRun(ctx, state.ConversationID, state.UID)
+				r.failActiveStream(ctx, sw, state, "stream exceeded maximum event count")
 				return result, true
 			}
 
@@ -733,7 +806,13 @@ func (r *Runtime) handleAIEvent(
 		}
 
 	case "stream.error":
+		var payload struct {
+			Message string `json:"message"`
+		}
+		_ = event.PayloadAs(&payload)
 		r.sendEvent(ctx, sw, event, state.AssistantMsgID, "stream.error")
+		r.failActiveStream(ctx, sw, state, payload.Message)
+		return true
 	}
 
 	return false
@@ -761,13 +840,15 @@ func (r *Runtime) handleInteractionRequired(
 	)
 	if err != nil {
 		log.Printf("failed to create pending interaction for conversation %s: %v", state.ConversationID, err)
-		_ = sw.SendNew(
+		r.sendNewEvent(
 			ctx,
+			sw,
 			"stream",
 			"stream.error",
 			state.BaseIDs,
 			map[string]any{"message": "failed to persist user interaction"},
 			"",
+			"stream.error",
 		)
 		r.clearActiveRun(ctx, state.ConversationID, state.UID)
 		return true
@@ -780,29 +861,39 @@ func (r *Runtime) handleInteractionRequired(
 		event.Payload = patched
 	}
 	r.sendEvent(ctx, sw, event, state.AssistantMsgID, "interaction.required")
+	r.sendNewEvent(
+		ctx,
+		sw,
+		"run",
+		"run.interrupted",
+		dto.StreamEventIDs{
+			ConversationID: state.ConversationID.String(),
+			RunID:          state.Run.ID.String(),
+			TurnID:         state.TurnID.String(),
+			InteractionID:  interactionID,
+		},
+		map[string]any{"status": "waiting_user", "interaction_id": interactionID},
+		"",
+		"run.interrupted",
+	)
 
+	// Atomically set both parts and aborted status in a single query.
+	// The previous two-step approach (UpdateMessageCompleted then UpdateMessageStatus)
+	// could leave the message in an inconsistent state on crash between the two calls.
 	finalPartsJSON, _ := json.Marshal(result.AssistantParts)
-	if err := r.messageService.UpdateMessageCompleted(
+	if err := r.messageService.UpdateMessageCompletedWithStatus(
 		ctx,
 		state.AssistantMsg.ID,
 		state.ConversationID,
 		datatypes.JSON(finalPartsJSON),
-		nil,
-		nil,
-	); err != nil {
-		log.Printf("failed to update assistant message %s: %v", state.AssistantMsg.ID, err)
-	}
-	if err := r.messageService.UpdateMessageStatus(
-		ctx,
-		state.AssistantMsg.ID,
-		state.ConversationID,
 		"aborted",
 	); err != nil {
-		log.Printf("failed to mark assistant message %s interrupted: %v", state.AssistantMsg.ID, err)
+		log.Printf("failed to finalize interrupted assistant message %s: %v", state.AssistantMsg.ID, err)
 	}
 
-	_ = sw.SendNew(ctx, "stream", "stream.done", state.BaseIDs, map[string]any{}, "")
+	r.sendNewEvent(ctx, sw, "stream", "stream.done", state.BaseIDs, map[string]any{}, "", "stream.done")
 	r.clearActiveRun(ctx, state.ConversationID, state.UID)
+	r.refreshThreadProjection(ctx, state.ConversationID, state.UID)
 	return true
 }
 
@@ -886,18 +977,82 @@ func (r *Runtime) replayCompletedRun(ctx context.Context, w http.ResponseWriter,
 		TurnID:         run.TurnID.String(),
 	}
 	sw := r.streamRuntime.NewWriter(w, baseIDs)
-	_ = sw.SendNew(
-		ctx,
-		"stream",
-		"stream.error",
-		baseIDs,
-		map[string]any{
-			"message": "this request has already been processed",
-			"status":  run.Status,
-		},
-		"",
-	)
-	_ = sw.SendNew(ctx, "stream", "stream.done", baseIDs, map[string]any{}, "")
+
+	if r.runtimeEventService == nil {
+		r.sendNewEvent(
+			ctx,
+			sw,
+			"stream",
+			"stream.error",
+			baseIDs,
+			map[string]any{"message": "runtime event log unavailable", "status": run.Status},
+			"",
+			"stream.error",
+		)
+		r.sendNewEvent(ctx, sw, "stream", "stream.done", baseIDs, map[string]any{}, "", "stream.done")
+		return
+	}
+
+	events, err := r.runtimeEventService.ListAllRunEvents(ctx, run.ConversationID, run.ID)
+	if err != nil || len(events) == 0 {
+		if err != nil {
+			log.Printf("failed to replay runtime events for run %s: %v", run.ID, err)
+		}
+		r.sendNewEvent(
+			ctx,
+			sw,
+			"stream",
+			"stream.error",
+			baseIDs,
+			map[string]any{"message": "runtime event log unavailable", "status": run.Status},
+			"",
+			"stream.error",
+		)
+		r.sendNewEvent(ctx, sw, "stream", "stream.done", baseIDs, map[string]any{}, "", "stream.done")
+		return
+	}
+
+	maxSeq := 0
+	for _, stored := range events {
+		var ids dto.StreamEventIDs
+		if len(stored.IDs) > 0 {
+			if err := json.Unmarshal(stored.IDs, &ids); err != nil {
+				log.Printf("failed to decode runtime event ids for run %s seq %d: %v", run.ID, stored.Seq, err)
+				continue
+			}
+		}
+
+		payload := json.RawMessage(stored.Payload)
+		if len(payload) == 0 {
+			payload = json.RawMessage(`{}`)
+		}
+		if stored.Seq > maxSeq {
+			maxSeq = stored.Seq
+		}
+
+		if err := sw.WriteEvent(ctx, dto.StreamEvent{
+			Version: 1,
+			Seq:     stored.Seq,
+			Channel: stored.Channel,
+			Type:    stored.Type,
+			IDs:     ids,
+			Payload: payload,
+		}); err != nil {
+			log.Printf("failed to write replayed event for run %s seq %d: %v", run.ID, stored.Seq, err)
+			return
+		}
+	}
+
+	if err := sw.WriteEvent(ctx, dto.StreamEvent{
+		Version: 1,
+		Seq:     maxSeq + 1,
+		Channel: "stream",
+		Type:    "stream.done",
+		IDs:     baseIDs,
+		Payload: json.RawMessage(`{}`),
+	}); err != nil {
+		log.Printf("failed to write replay done for run %s: %v", run.ID, err)
+	}
 }
 
 func (r *Runtime) maybeGenerateTitle(ctx context.Context, conversationID, userID uuid.UUID) {
@@ -918,6 +1073,16 @@ func (r *Runtime) clearActiveRun(ctx context.Context, conversationID, userID uui
 	}
 }
 
+func (r *Runtime) refreshThreadProjection(ctx context.Context, conversationID, userID uuid.UUID) {
+	if r.threadProjectionService == nil {
+		return
+	}
+
+	if _, _, _, _, _, err := r.threadProjectionService.RefreshAndGetThread(ctx, conversationID, userID); err != nil {
+		log.Printf("failed to refresh thread projection for conversation %s: %v", conversationID, err)
+	}
+}
+
 func (r *Runtime) failBeforeStreaming(
 	ctx context.Context,
 	sw *stream.StreamWriter,
@@ -927,8 +1092,23 @@ func (r *Runtime) failBeforeStreaming(
 	conversationID uuid.UUID,
 	message string,
 ) {
-	_ = sw.SendNew(
+	r.sendNewEvent(
 		ctx,
+		sw,
+		"run",
+		"run.failed",
+		dto.StreamEventIDs{
+			ConversationID: conversationID.String(),
+			RunID:          run.ID.String(),
+			TurnID:         run.TurnID.String(),
+		},
+		map[string]any{"status": "failed", "error": map[string]any{"message": message}},
+		"",
+		"run.failed",
+	)
+	r.sendNewEvent(
+		ctx,
+		sw,
 		"message",
 		"message.failed",
 		dto.StreamEventIDs{
@@ -939,9 +1119,11 @@ func (r *Runtime) failBeforeStreaming(
 		},
 		map[string]any{"status": "failed", "error": map[string]any{"message": message}},
 		assistantMsg.ID.String(),
+		"message.failed",
 	)
-	_ = sw.SendNew(
+	r.sendNewEvent(
 		ctx,
+		sw,
 		"stream",
 		"stream.done",
 		dto.StreamEventIDs{
@@ -951,9 +1133,78 @@ func (r *Runtime) failBeforeStreaming(
 		},
 		map[string]any{},
 		"",
+		"stream.done",
 	)
 	_ = r.runService.FailRun(ctx, run.ID, uid, map[string]any{"message": message})
 	r.clearActiveRun(ctx, conversationID, uid)
+	r.refreshThreadProjection(ctx, conversationID, uid)
+}
+
+func (r *Runtime) failActiveStream(
+	ctx context.Context,
+	sw *stream.StreamWriter,
+	state streamState,
+	message string,
+) {
+	if strings.TrimSpace(message) == "" {
+		message = "stream failed"
+	}
+
+	r.sendNewEvent(
+		ctx,
+		sw,
+		"run",
+		"run.failed",
+		dto.StreamEventIDs{
+			ConversationID: state.ConversationID.String(),
+			RunID:          state.Run.ID.String(),
+			TurnID:         state.TurnID.String(),
+		},
+		map[string]any{"status": "failed", "error": map[string]any{"message": message}},
+		"",
+		"run.failed",
+	)
+	r.sendNewEvent(
+		ctx,
+		sw,
+		"message",
+		"message.failed",
+		dto.StreamEventIDs{
+			ConversationID: state.ConversationID.String(),
+			RunID:          state.Run.ID.String(),
+			TurnID:         state.TurnID.String(),
+			MessageID:      state.AssistantMsg.ID.String(),
+		},
+		map[string]any{"status": "failed", "error": map[string]any{"message": message}},
+		state.AssistantMsgID,
+		"message.failed",
+	)
+	r.sendNewEvent(ctx, sw, "stream", "stream.done", state.BaseIDs, map[string]any{}, "", "stream.done")
+	_ = r.runService.FailRun(ctx, state.Run.ID, state.UID, map[string]any{"message": message})
+	_ = r.messageService.UpdateMessageStatus(ctx, state.AssistantMsg.ID, state.ConversationID, "failed")
+	r.clearActiveRun(ctx, state.ConversationID, state.UID)
+	r.refreshThreadProjection(ctx, state.ConversationID, state.UID)
+}
+func (r *Runtime) sendNewEvent(
+	ctx context.Context,
+	sw *stream.StreamWriter,
+	channel string,
+	eventType string,
+	ids dto.StreamEventIDs,
+	payload any,
+	messageID string,
+	label string,
+) {
+	event, err := sw.NewEvent(channel, eventType, ids, payload, messageID)
+	if err != nil {
+		log.Printf("SSE build error (%s): %v", label, err)
+		return
+	}
+	if err := sw.WriteEvent(ctx, event); err != nil {
+		log.Printf("SSE write error (%s): %v", label, err)
+		return
+	}
+	r.recordPublicEvent(ctx, event)
 }
 
 func (r *Runtime) sendEvent(
@@ -963,8 +1214,38 @@ func (r *Runtime) sendEvent(
 	messageID string,
 	label string,
 ) {
-	if err := sw.Send(ctx, event, messageID); err != nil {
+	enriched := sw.EnrichEvent(event, messageID)
+	if err := sw.WriteEvent(ctx, enriched); err != nil {
 		log.Printf("SSE write error (%s): %v", label, err)
+		return
+	}
+	r.recordPublicEvent(ctx, enriched)
+}
+
+func (r *Runtime) recordPublicEvent(ctx context.Context, event dto.StreamEvent) {
+	if r.runtimeEventService == nil {
+		return
+	}
+
+	conversationID, err := uuid.Parse(event.IDs.ConversationID)
+	if err != nil {
+		return
+	}
+
+	runID, err := uuid.Parse(event.IDs.RunID)
+	if err != nil {
+		return
+	}
+
+	var turnID *uuid.UUID
+	if event.IDs.TurnID != "" {
+		if parsedTurnID, parseErr := uuid.Parse(event.IDs.TurnID); parseErr == nil {
+			turnID = &parsedTurnID
+		}
+	}
+
+	if err := r.runtimeEventService.RecordPublicEvent(ctx, conversationID, runID, turnID, event); err != nil {
+		log.Printf("failed to persist runtime event %s for run %s: %v", event.Type, runID, err)
 	}
 }
 
@@ -991,7 +1272,7 @@ func interactionAnswerParts(answer json.RawMessage, interactionID string) (datat
 func extractAnswerText(answer json.RawMessage) string {
 	var rawAnswer map[string]any
 	if err := json.Unmarshal(answer, &rawAnswer); err != nil {
-		return ""
+		return string(answer)
 	}
 	if text, ok := rawAnswer["text"].(string); ok {
 		return text
@@ -999,11 +1280,16 @@ func extractAnswerText(answer json.RawMessage) string {
 	if selected, ok := rawAnswer["selected"].([]any); ok {
 		parts := make([]string, 0, len(selected))
 		for _, item := range selected {
-			if value, ok := item.(string); ok {
-				parts = append(parts, value)
-			}
+			parts = append(parts, fmt.Sprintf("%v", item))
 		}
 		return strings.Join(parts, ", ")
+	}
+	if value, ok := rawAnswer["value"]; ok {
+		return fmt.Sprintf("%v", value)
+	}
+	// Fallback: serialize the entire answer as text
+	if b, err := json.Marshal(rawAnswer); err == nil {
+		return string(b)
 	}
 	return ""
 }

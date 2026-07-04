@@ -57,6 +57,8 @@ func main() {
 	conversationRepo := repository.NewConversationRepository(database.DB)
 	messageRepo := repository.NewMessageRepository(database.DB)
 	runRepo := repository.NewRunRepository(database.DB)
+	runtimeEventRepo := repository.NewRuntimeEventRepository(database.DB)
+	threadProjectionRepo := repository.NewThreadProjectionRepository(database.DB)
 	shareRepo := repository.NewConversationShareRepository(database.DB)
 
 	// User session cache (Redis-backed, TTL = 2x access token TTL)
@@ -71,6 +73,7 @@ func main() {
 	aiClient := service.NewAIClient()
 	messageService := service.NewMessageService(messageRepo)
 	runService := service.NewRunService(runRepo)
+	runtimeEventService := service.NewRuntimeEventService(runtimeEventRepo)
 	conversationService := service.NewConversationService(conversationRepo, messageRepo, runRepo, shareRepo, aiClient)
 	shareService := service.NewShareService(conversationRepo, messageRepo, shareRepo)
 	consultationService := service.NewConsultationService(consultationRepo, conversationRepo)
@@ -83,6 +86,7 @@ func main() {
 	agentToolService := service.NewAgentToolService(agentToolRepo)
 	interactionRepo := repository.NewAgentInteractionRepository(database.DB)
 	interactionService := service.NewAgentInteractionService(interactionRepo, runRepo)
+	threadProjectionService := service.NewThreadProjectionService(conversationRepo, consultationRepo, messageRepo, interactionRepo, runtimeEventService, threadProjectionRepo)
 	outputReviewRepo := repository.NewAIOutputReviewRepository(database.DB)
 	outputReviewService := service.NewOutputReviewService(outputReviewRepo)
 	consultationRuntime := consultationruntime.NewRuntime(
@@ -95,8 +99,12 @@ func main() {
 		agentToolService,
 		interactionService,
 		outputReviewService,
+		threadProjectionService,
+		runtimeEventService,
 	)
 	convHandler := handler.NewConversationHandler(conversationService, shareService)
+	runtimeEventHandler := handler.NewRuntimeEventHandler(runtimeEventService, conversationService)
+	threadProjectionHandler := handler.NewThreadProjectionHandler(threadProjectionService)
 	consultationHandler := handler.NewConsultationHandler(
 		consultationService,
 		interactionService,
@@ -197,16 +205,18 @@ func main() {
 		conversations.DELETE("/:id", convHandler.DeleteConversation)
 		conversations.PATCH("/:id/pin", convHandler.PinConversation)
 		conversations.GET("/:id/runs", convHandler.ListRuns)
+		conversations.GET("/:id/runs/:runId/events", runtimeEventHandler.ListRunEvents)
 		conversations.POST("/:id/title", convHandler.GenerateTitle)
 		conversations.PUT("/:id/title", convHandler.RenameTitle)
 		conversations.POST("/:id/share", convHandler.ShareConversation)
 		conversations.DELETE("/:id/share", convHandler.UnshareConversation)
 
 		// Consultation domain
+		protected.POST("/consultation-runs", consultationHandler.StartRun)
 		consultations := protected.Group("/consultations")
-		consultations.POST("", consultationHandler.CreateConsultation)
 		consultations.GET("/:id", consultationHandler.GetConsultation)
-		consultations.POST("/:id/messages", consultationHandler.SendMessage)
+		consultations.GET("/:id/thread", threadProjectionHandler.GetConsultationThread)
+
 		consultations.PUT("/:id/extracted-info", consultationHandler.UpdateExtractedInfo)
 		consultations.PUT("/:id/confirm", consultationHandler.ConfirmDiagnosis)
 		consultations.POST("/:id/diagnosis", diagnosisHandler.AnalyzeDiagnosis)

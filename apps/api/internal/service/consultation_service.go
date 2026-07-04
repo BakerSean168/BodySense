@@ -19,6 +19,7 @@ type consultationRepository interface {
 	UpdatePhase(ctx context.Context, conversationID uuid.UUID, phase string) error
 	UpdateDiagnosis(ctx context.Context, conversationID uuid.UUID, diagnosis any) error
 	UpdateTreatmentPlan(ctx context.Context, conversationID uuid.UUID, treatmentPlan any) error
+	CreateRunEnvelope(ctx context.Context, userID uuid.UUID, conversationID *uuid.UUID, requestID string, userParts datatypes.JSON, userMetadata datatypes.JSON, modelName string) (*model.ConsultationSession, *model.Run, *model.Message, *model.Message, uuid.UUID, bool, error)
 }
 
 // conversationOwnershipChecker verifies that a conversation belongs to a user.
@@ -27,6 +28,16 @@ type conversationOwnershipChecker interface {
 	GetByID(ctx context.Context, id, userID uuid.UUID) (*model.Conversation, error)
 	SoftDelete(ctx context.Context, id, userID uuid.UUID) error
 	GetLastEmptyConversation(ctx context.Context, userID uuid.UUID) (*model.Conversation, error)
+}
+
+// RunEnvelope is the transactionally-created durable shell for one AI run.
+type RunEnvelope struct {
+	Session          *model.ConsultationSession
+	TurnID           uuid.UUID
+	Run              *model.Run
+	UserMessage      *model.Message
+	AssistantMessage *model.Message
+	Existed          bool
 }
 
 // ConsultationService handles consultation business logic.
@@ -248,4 +259,36 @@ func (s *ConsultationService) UpdateTreatmentPlan(ctx context.Context, conversat
 		return fmt.Errorf("marshal treatment plan: %w", err)
 	}
 	return s.consultationRepo.UpdateTreatmentPlan(ctx, conversationID, data)
+}
+
+// CreateRunEnvelope atomically creates the durable shell for a consultation run.
+func (s *ConsultationService) CreateRunEnvelope(
+	ctx context.Context,
+	userID uuid.UUID,
+	conversationID *uuid.UUID,
+	requestID string,
+	userParts datatypes.JSON,
+	userMetadata datatypes.JSON,
+	modelName string,
+) (*RunEnvelope, error) {
+	session, run, userMsg, assistantMsg, turnID, existed, err := s.consultationRepo.CreateRunEnvelope(
+		ctx,
+		userID,
+		conversationID,
+		requestID,
+		userParts,
+		userMetadata,
+		modelName,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("create run envelope: %w", err)
+	}
+	return &RunEnvelope{
+		Session:          session,
+		TurnID:           turnID,
+		Run:              run,
+		UserMessage:      userMsg,
+		AssistantMessage: assistantMsg,
+		Existed:          existed,
+	}, nil
 }
