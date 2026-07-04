@@ -11,12 +11,15 @@ from typing import Any
 
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from psycopg.rows import dict_row
+from psycopg_pool import AsyncConnectionPool
 
 logger = logging.getLogger(__name__)
 
 _init_lock = asyncio.Lock()
 _checkpointer: Any | None = None
 _checkpointer_context: AsyncIterator[Any] | None = None
+_checkpointer_pool: AsyncConnectionPool | None = None
 
 
 def _build_database_url() -> str:
@@ -33,7 +36,7 @@ def _build_database_url() -> str:
 
 
 async def initialize_runtime_checkpointer() -> Any:
-    global _checkpointer, _checkpointer_context
+    global _checkpointer, _checkpointer_context, _checkpointer_pool
     if _checkpointer is not None:
         return _checkpointer
 
@@ -43,10 +46,15 @@ async def initialize_runtime_checkpointer() -> Any:
 
         database_url = _build_database_url()
         try:
-            context = AsyncPostgresSaver.from_conn_string(database_url)
-            checkpointer = await context.__aenter__()
+            pool = AsyncConnectionPool(
+                database_url,
+                kwargs={"autocommit": True, "prepare_threshold": 0, "row_factory": dict_row},
+            )
+            await pool.open()
+            checkpointer = AsyncPostgresSaver(pool)
             await checkpointer.setup()
-            _checkpointer_context = context
+            _checkpointer_context = None
+            _checkpointer_pool = pool
             _checkpointer = checkpointer
             logger.info("Initialized LangGraph Postgres checkpointer")
         except Exception:
@@ -54,6 +62,9 @@ async def initialize_runtime_checkpointer() -> Any:
                 "Failed to initialize Postgres checkpointer; falling back to in-memory saver"
             )
             _checkpointer_context = None
+            if _checkpointer_pool is not None:
+                await _checkpointer_pool.close()
+            _checkpointer_pool = None
             _checkpointer = InMemorySaver()
 
     return _checkpointer
@@ -64,13 +75,17 @@ async def get_runtime_checkpointer() -> Any:
 
 
 async def shutdown_runtime_checkpointer() -> None:
-    global _checkpointer, _checkpointer_context
-    if _checkpointer_context is None:
+    global _checkpointer, _checkpointer_context, _checkpointer_pool
+    if _checkpointer_context is None and _checkpointer_pool is None:
         _checkpointer = None
         return
 
-    await _checkpointer_context.__aexit__(None, None, None)
+    if _checkpointer_context is not None:
+        await _checkpointer_context.__aexit__(None, None, None)
+    if _checkpointer_pool is not None:
+        await _checkpointer_pool.close()
     _checkpointer_context = None
+    _checkpointer_pool = None
     _checkpointer = None
 
 

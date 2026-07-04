@@ -25,7 +25,6 @@ for _env_path in _env_paths:
 
 from .api.routes import (  # noqa: E402
     assessment,
-    chat,
     diagnosis,
     knowledge,
     ocr,
@@ -60,7 +59,6 @@ app.add_middleware(
 # Include routers
 app.include_router(knowledge.router)
 app.include_router(ocr.router)
-app.include_router(chat.router)
 app.include_router(runtime.router)
 app.include_router(assessment.router)
 app.include_router(diagnosis.router)
