@@ -62,10 +62,10 @@ func (r *ConversationRepository) ListByUserID(ctx context.Context, userID uuid.U
 	var conversations []model.Conversation
 
 	query := r.db.WithContext(ctx).
-		Where("user_id = ? AND deleted_at IS NULL", userID)
+		Where("user_id = ? AND deleted_at IS NULL AND last_message_at IS NOT NULL", userID)
 
 	if cursor != nil {
-		query = query.Where("(last_message_at < ? OR last_message_at IS NULL)", *cursor)
+		query = query.Where("last_message_at < ?", *cursor)
 	}
 
 	err := query.
@@ -158,4 +158,20 @@ func (r *ConversationRepository) UpdateStatus(ctx context.Context, id, userID uu
 		Model(&model.Conversation{}).
 		Where("id = ? AND user_id = ? AND deleted_at IS NULL", id, userID).
 		Update("status", status).Error
+}
+
+// GetLastEmptyConversation retrieves the most recent empty conversation for a user.
+func (r *ConversationRepository) GetLastEmptyConversation(ctx context.Context, userID uuid.UUID) (*model.Conversation, error) {
+	var conversation model.Conversation
+	err := r.db.WithContext(ctx).
+		Where("user_id = ? AND status = ? AND last_message_at IS NULL AND deleted_at IS NULL", userID, "active").
+		Order("created_at DESC").
+		First(&conversation).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &conversation, nil
 }

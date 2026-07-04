@@ -28,15 +28,19 @@ func (s *MessageService) CreateMessage(
 	parts datatypes.JSON,
 	seq int,
 	status string,
+	metadata datatypes.JSON,
+	runID *uuid.UUID,
 ) (*model.Message, error) {
 	message := &model.Message{
 		ID:             uuid.New(),
 		ConversationID: conversationID,
 		TurnID:         turnID,
+		RunID:          runID,
 		Role:           role,
 		Status:         status,
 		Seq:            seq,
 		Parts:          parts,
+		Metadata:       metadata,
 	}
 	if err := s.messageRepo.Create(ctx, message); err != nil {
 		return nil, fmt.Errorf("create message: %w", err)
@@ -72,6 +76,21 @@ func (s *MessageService) UpdateMessageCompleted(
 ) error {
 	if err := s.messageRepo.UpdateCompleted(ctx, id, conversationID, parts, usage, providerInfo); err != nil {
 		return fmt.Errorf("update message completed: %w", err)
+	}
+	return nil
+}
+
+// UpdateMessageCompletedWithStatus atomically updates a message's parts and status.
+// Used for interaction-required finalization where parts and status must change together.
+func (s *MessageService) UpdateMessageCompletedWithStatus(
+	ctx context.Context,
+	id,
+	conversationID uuid.UUID,
+	parts datatypes.JSON,
+	status string,
+) error {
+	if err := s.messageRepo.UpdateCompletedWithStatus(ctx, id, conversationID, parts, status); err != nil {
+		return fmt.Errorf("update message completed with status: %w", err)
 	}
 	return nil
 }

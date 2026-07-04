@@ -31,24 +31,31 @@ describe('consultationApi', () => {
 
   // ===== General Conversation API =====
 
-  describe('sendMessage', () => {
-    it('POSTs to /api/v1/chat/send and returns raw Response', async () => {
+
+  describe('resumeInteractionStream', () => {
+    it('POSTs to the consultation interrupt answer endpoint and returns raw Response', async () => {
       const raw = new Response('stream');
       mockAuthFetch.mockResolvedValue(raw);
 
       const params = {
-        conversationId: 'conv-1',
-        clientMessageId: 'msg-1',
-        requestId: 'req-1',
-        message: { role: 'user', parts: [{ type: 'text', text: 'hello' }] },
+        requestId: 'req-2',
+        answer: { text: '是' },
       };
-      const result = await consultationApi.sendMessage(params);
 
-      expect(mockAuthFetch).toHaveBeenCalledWith('/api/v1/chat/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      });
+      const result = await consultationApi.resumeInteractionStream(
+        'conv-1',
+        'interrupt-1',
+        params,
+      );
+
+      expect(mockAuthFetch).toHaveBeenCalledWith(
+        '/api/v1/consultations/conv-1/interrupts/interrupt-1/answers',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(params),
+        },
+      );
       expect(result).toBe(raw);
     });
   });

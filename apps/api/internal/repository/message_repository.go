@@ -76,6 +76,18 @@ func (r *MessageRepository) GetNextSeq(ctx context.Context, conversationID uuid.
 	return seq, err
 }
 
+// UpdateCompletedWithStatus atomically updates a message's parts and status in a single query.
+// Used for interaction-required finalization where parts and status must change together.
+func (r *MessageRepository) UpdateCompletedWithStatus(ctx context.Context, id, conversationID uuid.UUID, parts any, status string) error {
+	return r.db.WithContext(ctx).
+		Model(&model.Message{}).
+		Where("id = ? AND conversation_id = ?", id, conversationID).
+		Updates(map[string]any{
+			"parts":  parts,
+			"status": status,
+		}).Error
+}
+
 // UpdateCompleted updates a message with completion data: parts, usage tokens, and provider info.
 func (r *MessageRepository) UpdateCompleted(ctx context.Context, id, conversationID uuid.UUID, parts any, usage map[string]any, providerInfo map[string]any) error {
 	updates := map[string]any{

@@ -13,7 +13,7 @@ func TestChatStreamSendsFlatPythonRequestAndParsesStreamEvent(t *testing.T) {
 	var captured map[string]any
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/chat/stream" {
+		if r.URL.Path != "/runtime/threads/thread-1/turns" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		if err := json.NewDecoder(r.Body).Decode(&captured); err != nil {
@@ -29,18 +29,28 @@ func TestChatStreamSendsFlatPythonRequestAndParsesStreamEvent(t *testing.T) {
 		baseURL:    server.URL,
 	}
 
-	events, err := client.ChatStream(context.Background(), ChatStreamRequest{
-		SessionID:     "s1",
-		UserID:        "u1",
-		Content:       "hello",
-		UseCase:       "consultation.reply",
-		Profile:       json.RawMessage(`{"age":30}`),
-		Messages:      []ChatMessage{{Role: "user", Content: "hello"}},
-		ExtractedInfo: json.RawMessage(`[]`),
-		Phase:         "collecting",
-	})
+	events, err := client.StartConsultationTurn(
+		context.Background(),
+		"thread-1",
+		StartConsultationTurnRequest{
+			RunID:          "run-1",
+			ConversationID: "conv-1",
+			UserID:         "u1",
+			Input: ConsultationUserInput{
+				Type: "user_message",
+				Text: "hello",
+			},
+			BusinessContext: ConsultationBusinessContext{
+				Profile: json.RawMessage(`{"age":30}`),
+				ConsultationSnapshot: ConsultationSnapshot{
+					Phase:         "collecting",
+					ExtractedInfo: json.RawMessage(`[]`),
+				},
+			},
+		},
+	)
 	if err != nil {
-		t.Fatalf("ChatStream returned error: %v", err)
+		t.Fatalf("StartConsultationTurn returned error: %v", err)
 	}
 
 	select {
@@ -55,10 +65,7 @@ func TestChatStreamSendsFlatPythonRequestAndParsesStreamEvent(t *testing.T) {
 		t.Fatal("timed out waiting for stream event")
 	}
 
-	if _, ok := captured["context"]; ok {
-		t.Fatal("chat request must not contain nested context")
-	}
-	for _, key := range []string{"session_id", "user_id", "content", "messages", "profile", "extracted_info", "phase", "use_case"} {
+	for _, key := range []string{"run_id", "conversation_id", "user_id", "input", "business_context"} {
 		if _, ok := captured[key]; !ok {
 			t.Fatalf("missing top-level key %q in request: %#v", key, captured)
 		}

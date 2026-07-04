@@ -10,6 +10,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const defaultTitle = "新对话"
+
 type conversationRepo interface {
 	Create(ctx context.Context, conversation *model.Conversation) error
 	GetByID(ctx context.Context, id, userID uuid.UUID) (*model.Conversation, error)
@@ -31,11 +33,13 @@ type messageRepo interface {
 	UpdateStatus(ctx context.Context, id, conversationID uuid.UUID, status string) error
 	UpdateParts(ctx context.Context, id, conversationID uuid.UUID, parts any) error
 	UpdateCompleted(ctx context.Context, id, conversationID uuid.UUID, parts any, usage map[string]any, providerInfo map[string]any) error
+	UpdateCompletedWithStatus(ctx context.Context, id, conversationID uuid.UUID, parts any, status string) error
 	GetNextSeq(ctx context.Context, conversationID uuid.UUID) (int, error)
 }
 
 type runRepo interface {
 	Create(ctx context.Context, run *model.Run) error
+	CreateWithIdempotency(ctx context.Context, run *model.Run) (*model.Run, bool, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*model.Run, error)
 	GetByRequestID(ctx context.Context, userID uuid.UUID, requestID string) (*model.Run, error)
 	ListByConversationID(ctx context.Context, conversationID uuid.UUID) ([]model.Run, error)
@@ -207,6 +211,63 @@ func (s *ConversationService) GenerateTitle(ctx context.Context, id, userID uuid
 	return nil
 }
 
+// GenerateTitleSync generates a title synchronously and returns it.
+// Used when the caller needs the title to emit an SSE event before the stream closes.
+// Returns ("", nil) if the title has already been generated or is not needed.
+func (s *ConversationService) GenerateTitleSync(ctx context.Context, id, userID uuid.UUID) (string, error) {
+	conversation, err := s.conversationRepo.GetByID(ctx, id, userID)
+	if err != nil {
+		return "", fmt.Errorf("get conversation for title generation: %w", err)
+	}
+	if conversation == nil {
+		return "", fmt.Errorf("conversation not found: %s", id)
+	}
+
+	// Skip if title is already generated or in progress
+	if conversation.TitleStatus != "pending" || conversation.Title != "" {
+		return "", nil
+	}
+
+	if err := s.conversationRepo.UpdateTitleStatus(ctx, id, userID, "generating"); err != nil {
+		return "", fmt.Errorf("update title status: %w", err)
+	}
+
+	messages, err := s.messageRepo.ListByConversationID(ctx, id)
+	if err != nil {
+		_ = s.conversationRepo.UpdateTitleStatus(ctx, id, userID, "failed")
+		return "", fmt.Errorf("list messages for title: %w", err)
+	}
+
+	msgPayload := make([]map[string]any, 0, len(messages))
+	for _, msg := range messages {
+		m := map[string]any{"role": msg.Role}
+		if msg.Parts != nil {
+			m["parts"] = msg.Parts
+		}
+		msgPayload = append(msgPayload, m)
+	}
+
+	title, err := s.aiClient.GenerateTitle(ctx, msgPayload)
+	if err != nil {
+		_ = s.conversationRepo.UpdateTitleStatus(ctx, id, userID, "failed")
+		return "", fmt.Errorf("generate title: %w", err)
+	}
+
+	if title == "" {
+		title = defaultTitle
+	}
+
+	if err := s.conversationRepo.UpdateTitle(ctx, id, userID, title); err != nil {
+		_ = s.conversationRepo.UpdateTitleStatus(ctx, id, userID, "failed")
+		return "", fmt.Errorf("update title: %w", err)
+	}
+	if err := s.conversationRepo.UpdateTitleStatus(ctx, id, userID, "generated"); err != nil {
+		return title, fmt.Errorf("update title status: %w", err)
+	}
+
+	return title, nil
+}
+
 // UpdateLastMessageAt updates the last_message_at timestamp for a conversation.
 func (s *ConversationService) UpdateLastMessageAt(ctx context.Context, id, userID uuid.UUID) error {
 	if err := s.conversationRepo.UpdateLastMessageAt(ctx, id, userID); err != nil {
@@ -297,7 +358,7 @@ func (s *ConversationService) generateTitleAsync(id, userID uuid.UUID) {
 	}
 
 	if title == "" {
-		title = "新对话"
+		title = defaultTitle
 	}
 
 	if err := s.conversationRepo.UpdateTitle(ctx, id, userID, title); err != nil {

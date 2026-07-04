@@ -1,5 +1,9 @@
 # Phase 01b: StreamRuntime Module
 
+> **⚠️ SUPERSEDED — 本方案的实施路径已被 ADR 0002 取代。**
+>
+> 本 Phase 设计的从 `ChatHandler` 抽取 `StreamRuntime` 的路径不再适用（`ChatHandler` 已删除）。StreamEvent 契约设计仍然有效，但事件产出点已迁移到 consultation thread runtime。详见 [`docs/adr/0002-agent-runtime-ownership.md`](../../../adr/0002-agent-runtime-ownership.md)。
+
 ## Goal
 
 Create a Go `StreamRuntime` Module that owns StreamEvent validation, ID enrichment, sequence assignment, and SSE writing while preserving the current event contract.

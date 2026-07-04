@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -12,9 +13,11 @@ import { AssessmentDetailPage } from './features/assessment/pages/AssessmentDeta
 import { HistoryPage } from './features/history/pages/HistoryPage';
 import { TrainingPage } from './features/training/pages/TrainingPage';
 import { Toaster } from './components/ui/sonner';
+import { queryClient } from './lib/queryClient';
 
 export function App() {
   return (
+    <QueryClientProvider client={queryClient}>
     <BrowserRouter>
       <Toaster />
       <Routes>
@@ -104,5 +107,6 @@ export function App() {
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
+    </QueryClientProvider>
   );
 }

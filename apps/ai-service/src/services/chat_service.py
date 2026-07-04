@@ -203,6 +203,7 @@ def _map_graph_event(
             },
             ids=StreamEventIds(
                 interaction_id=event_data.get("interaction_id") or None,
+                tool_call_id=event_data.get("tool_call_id") or None,
             ),
         )
     if event_type == "usage":

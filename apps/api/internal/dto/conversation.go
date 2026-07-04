@@ -1,5 +1,7 @@
 package dto
 
+import "encoding/json"
+
 type SendMessageRequest struct {
 	ConversationID  *string     `json:"conversationId"`
 	ClientDraftID   string      `json:"clientDraftId,omitempty" binding:"max=128"`
@@ -10,8 +12,9 @@ type SendMessageRequest struct {
 }
 
 type MessageDTO struct {
-	Role  string    `json:"role"`
-	Parts []PartDTO `json:"parts" binding:"required,min=1,dive"`
+	Role     string          `json:"role"`
+	Parts    []PartDTO       `json:"parts" binding:"required,min=1,dive"`
+	Metadata json.RawMessage `json:"metadata,omitempty"`
 }
 
 type PartDTO struct {

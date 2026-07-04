@@ -17,6 +17,23 @@ export function AskUserCard({ question, onSubmit, isSubmitting = false, error, o
   const [textAnswer, setTextAnswer] = useState('');
   const [selectedSingle, setSelectedSingle] = useState<string>('');
   const [selectedMulti, setSelectedMulti] = useState<string[]>([]);
+  const [customSingleEnabled, setCustomSingleEnabled] = useState(false);
+  const [customMultiEnabled, setCustomMultiEnabled] = useState(false);
+  const [customAnswer, setCustomAnswer] = useState('');
+
+  const allowCustomInput = question.allow_custom_input ?? Boolean(question.options?.length);
+
+  const buildCustomAnswerPayload = (values: string[]) => {
+    const normalized = values.filter((value) => value.trim().length > 0);
+    if (normalized.length === 0) {
+      return null;
+    }
+    return {
+      text: normalized.join('，'),
+      selected: normalized,
+      is_custom: true,
+    };
+  };
 
   const handleSubmit = () => {
     switch (question.answer_type) {
@@ -24,10 +41,22 @@ export function AskUserCard({ question, onSubmit, isSubmitting = false, error, o
         if (textAnswer.trim()) onSubmit({ text: textAnswer.trim() });
         break;
       case 'single_choice':
+        if (customSingleEnabled) {
+          const payload = buildCustomAnswerPayload([customAnswer]);
+          if (payload) onSubmit(payload);
+          break;
+        }
         if (selectedSingle) onSubmit({ text: selectedSingle, selected: [selectedSingle] });
         break;
       case 'multi_choice':
-        if (selectedMulti.length > 0) onSubmit({ text: selectedMulti.join(', '), selected: selectedMulti });
+        {
+          if (!customMultiEnabled && selectedMulti.length > 0) {
+            onSubmit({ text: selectedMulti.join('，'), selected: selectedMulti });
+            break;
+          }
+          const payload = buildCustomAnswerPayload([...selectedMulti, customAnswer.trim()]);
+          if (payload) onSubmit(payload);
+        }
         break;
       case 'number':
         if (textAnswer.trim()) onSubmit({ text: textAnswer.trim(), value: Number(textAnswer.trim()) });
@@ -82,12 +111,40 @@ export function AskUserCard({ question, onSubmit, isSubmitting = false, error, o
                 name="ask_user_single"
                 value={opt}
                 checked={selectedSingle === opt}
-                onChange={() => setSelectedSingle(opt)}
+                onChange={() => {
+                  setSelectedSingle(opt);
+                  setCustomSingleEnabled(false);
+                }}
                 disabled={isSubmitting}
               />
               {opt}
             </label>
           ))}
+          {allowCustomInput && (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="radio"
+                name="ask_user_single"
+                checked={customSingleEnabled}
+                onChange={() => {
+                  setSelectedSingle('');
+                  setCustomSingleEnabled(true);
+                }}
+                disabled={isSubmitting}
+              />
+              自定义输入
+            </label>
+          )}
+          {allowCustomInput && customSingleEnabled && (
+            <input
+              type="text"
+              className="w-full rounded border px-3 py-2 text-sm"
+              placeholder="请输入你的补充回答..."
+              value={customAnswer}
+              onChange={(e) => setCustomAnswer(e.target.value)}
+              disabled={isSubmitting}
+            />
+          )}
         </div>
       )}
 
@@ -110,6 +167,27 @@ export function AskUserCard({ question, onSubmit, isSubmitting = false, error, o
               {opt}
             </label>
           ))}
+          {allowCustomInput && (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={customMultiEnabled}
+                onChange={(e) => setCustomMultiEnabled(e.target.checked)}
+                disabled={isSubmitting}
+              />
+              自定义输入
+            </label>
+          )}
+          {allowCustomInput && customMultiEnabled && (
+            <input
+              type="text"
+              className="w-full rounded border px-3 py-2 text-sm"
+              placeholder="请输入你的补充回答..."
+              value={customAnswer}
+              onChange={(e) => setCustomAnswer(e.target.value)}
+              disabled={isSubmitting}
+            />
+          )}
         </div>
       )}
 

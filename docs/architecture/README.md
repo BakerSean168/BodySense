@@ -14,8 +14,8 @@
 - 🐳 **[部署与运维架构 (Deployment Architecture)](./deployment-architecture.md)**
   *Docker Compose 容器编排（Caddy、Go API、FastAPI、Redis 7、PostgreSQL 18）、CI/CD 流水线、阿里云部署拓扑。*
 
-- 🧠 **[上下文工程架构 (Context Engineering Architecture)](./context-engineering-architecture.md)**
-  *咨询 Agent 的上下文分层、Go ContextBuilder、Python LangGraph 职责边界、结构化问诊状态。*
+- 🧠 **[上下文工程架构 (Context Engineering Architecture)](./context-engineering-architecture.md)** ⚠️ *已归档*
+  *原设计的 Go ContextBuilder 方案已被 ADR 0002 取代。当前由 Python LangGraph checkpoint 拥有 Agent Thread 真值。*
 
 ---
 
@@ -26,8 +26,8 @@
 | 文档 | 子模块 | 实现进度 | 关键已实现 |
 |---|---|---|---|
 | [System Engineering Refactor Plan](./system-engineering-refactor-plan.md) | 总控计划 | — | 汇总七个子模块的系统级重构方案 |
-| [Context Engineering Architecture](./context-engineering-architecture.md) | 上下文工程 | ~50% | ask_user 契约、agent_interactions |
-| [Agent Tool Calling Runtime](./agent-tool-calling-runtime.md) | 工具调用运行时 | ~40% | ToolRegistry 骨架、2 个工具已迁移 |
+| [Context Engineering Architecture](./context-engineering-architecture.md) | 上下文工程 | ⚠️ 归档 | ADR 0002 取代了 Go ContextBuilder 方案 |
+| [Agent Tool Calling Runtime](./agent-tool-calling-runtime.md) | 工具调用运行时 | ⚠️ 部分归档 | 设计概念仍有效，执行路径已被 ADR 0002 取代 |
 | [AI Run / Job Runtime](./ai-run-job-runtime.md) | 任务运行时 | ~50% | jobs schema、Go JobRuntime、OCR 迁移 |
 | [Stream Event Contract Runtime](./stream-event-contract-runtime.md) | 流事件契约 | ~30% | Go StreamRuntime、StreamEvent v1 |
 | [AI Output Governance](./ai-output-governance.md) | AI 输出治理 | ~35% | AIOutputGuard 骨架、OutputReviewService |
@@ -39,7 +39,10 @@
 ## 3. 架构决策记录 (ADR)
 
 - **[ADR 0001: 围绕流式 AI 工作流深化运行时模块](../adr/0001-deepen-runtime-modules.md)**
-  *决定保留三服务架构（React/Go/Python），深化 ContextBuilder、StreamRuntime、ToolRuntime、JobRuntime，而非引入新 Agent 框架。Go 为业务真相源，Python 为 AI 推理源。*
+  *决定保留三服务架构（React/Go/Python），深化 StreamRuntime、ToolRuntime、JobRuntime，而非引入新 Agent 框架。*
+
+- **[ADR 0002: Python 拥有 Agent Runtime 真值，Go 拥有 Durable Ledger 真值](../adr/0002-agent-runtime-ownership.md)** ⭐
+  *修正 ADR 0001 中 Go 为业务真相源的表述：Python 通过 LangGraph checkpoint 拥有 Agent Thread 运行时真值，Go 拥有 Runtime Event Log 和 projection 持久化，Web 为纯 projection consumer。删除了 ContextBuilder、chat_handler、synthetic resume 等旧路径。*
 
 ---
 

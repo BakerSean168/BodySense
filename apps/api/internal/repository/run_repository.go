@@ -7,6 +7,7 @@ import (
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // RunRepository handles database operations for runs.
@@ -22,6 +23,41 @@ func NewRunRepository(db *gorm.DB) *RunRepository {
 // Create creates a new run.
 func (r *RunRepository) Create(ctx context.Context, run *model.Run) error {
 	return r.db.WithContext(ctx).Create(run).Error
+}
+
+// CreateWithIdempotency inserts a run atomically using the database unique
+// constraint on (user_id, request_id). If a run with the same request_id
+// already exists, it returns the existing run.
+func (r *RunRepository) CreateWithIdempotency(ctx context.Context, run *model.Run) (*model.Run, bool, error) {
+	if run.RequestID == "" {
+		return run, false, r.Create(ctx, run)
+	}
+
+	var existed bool
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		result := tx.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "user_id"}, {Name: "request_id"}},
+			DoNothing: true,
+		}).Create(run)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected > 0 {
+			return nil
+		}
+
+		existed = true
+		var existing model.Run
+		if err := tx.Where("user_id = ? AND request_id = ?", run.UserID, run.RequestID).First(&existing).Error; err != nil {
+			return err
+		}
+		*run = existing
+		return nil
+	})
+	if err != nil {
+		return nil, false, err
+	}
+	return run, existed, nil
 }
 
 // GetByID retrieves a run by ID.

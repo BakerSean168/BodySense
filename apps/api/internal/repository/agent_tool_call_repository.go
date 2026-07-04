@@ -59,6 +59,16 @@ func (r *AgentToolCallRepository) MarkFailed(ctx context.Context, runID uuid.UUI
 		}).Error
 }
 
+// ListByConversationID retrieves all tool calls for a conversation in timeline order.
+func (r *AgentToolCallRepository) ListByConversationID(ctx context.Context, conversationID uuid.UUID) ([]model.AgentToolCall, error) {
+	var calls []model.AgentToolCall
+	err := r.db.WithContext(ctx).
+		Where("conversation_id = ?", conversationID).
+		Order("created_at ASC").
+		Find(&calls).Error
+	return calls, err
+}
+
 // ListByRunID retrieves all tool calls for a run.
 func (r *AgentToolCallRepository) ListByRunID(ctx context.Context, runID uuid.UUID) ([]model.AgentToolCall, error) {
 	var calls []model.AgentToolCall

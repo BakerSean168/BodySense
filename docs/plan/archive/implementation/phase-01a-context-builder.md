@@ -1,5 +1,9 @@
 # Phase 01a: ContextBuilder Module
 
+> **⚠️ SUPERSEDED — 本方案从未实施，已被 ADR 0002 完全取代。**
+>
+> 本 Phase 设计的 Go `ContextBuilder` 模块（`apps/api/internal/context/`）未被创建。当前架构中 Python 通过 LangGraph checkpoint 拥有 Agent Thread 真值，Go 不再负责上下文组装。详见 [`docs/adr/0002-agent-runtime-ownership.md`](../../../adr/0002-agent-runtime-ownership.md)。
+
 ## Goal
 
 Create a Go `ContextBuilder` Module that owns chat context assembly for the Python AI service, without changing current chat behavior.

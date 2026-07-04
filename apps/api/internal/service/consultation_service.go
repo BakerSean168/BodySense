@@ -19,6 +19,7 @@ type consultationRepository interface {
 	UpdatePhase(ctx context.Context, conversationID uuid.UUID, phase string) error
 	UpdateDiagnosis(ctx context.Context, conversationID uuid.UUID, diagnosis any) error
 	UpdateTreatmentPlan(ctx context.Context, conversationID uuid.UUID, treatmentPlan any) error
+	CreateRunEnvelope(ctx context.Context, userID uuid.UUID, conversationID *uuid.UUID, requestID string, userParts datatypes.JSON, userMetadata datatypes.JSON, modelName string) (*model.ConsultationSession, *model.Run, *model.Message, *model.Message, uuid.UUID, bool, error)
 }
 
 // conversationOwnershipChecker verifies that a conversation belongs to a user.
@@ -26,6 +27,17 @@ type conversationOwnershipChecker interface {
 	Create(ctx context.Context, conversation *model.Conversation) error
 	GetByID(ctx context.Context, id, userID uuid.UUID) (*model.Conversation, error)
 	SoftDelete(ctx context.Context, id, userID uuid.UUID) error
+	GetLastEmptyConversation(ctx context.Context, userID uuid.UUID) (*model.Conversation, error)
+}
+
+// RunEnvelope is the transactionally-created durable shell for one AI run.
+type RunEnvelope struct {
+	Session          *model.ConsultationSession
+	TurnID           uuid.UUID
+	Run              *model.Run
+	UserMessage      *model.Message
+	AssistantMessage *model.Message
+	Existed          bool
 }
 
 // ConsultationService handles consultation business logic.
@@ -59,6 +71,28 @@ func (s *ConsultationService) verifyOwnership(ctx context.Context, conversationI
 
 // CreateSession creates a new conversation and its associated consultation session.
 func (s *ConsultationService) CreateSession(ctx context.Context, userID uuid.UUID) (*model.ConsultationSession, error) {
+	existingConv, err := s.conversationRepo.GetLastEmptyConversation(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("check empty conversation: %w", err)
+	}
+
+	if existingConv != nil {
+		session, err := s.consultationRepo.GetByConversationID(ctx, existingConv.ID)
+		if err == nil && session != nil {
+			return session, nil
+		}
+		// If session is missing for some reason, recreate it
+		session = &model.ConsultationSession{
+			ConversationID: existingConv.ID,
+			ExtractedInfo:  datatypes.JSON("[]"),
+			Phase:          "collecting",
+		}
+		if err := s.consultationRepo.Create(ctx, session); err != nil {
+			return nil, fmt.Errorf("recreate consultation: %w", err)
+		}
+		return session, nil
+	}
+
 	conversation := &model.Conversation{
 		ID:          uuid.New(),
 		UserID:      userID,
@@ -225,4 +259,36 @@ func (s *ConsultationService) UpdateTreatmentPlan(ctx context.Context, conversat
 		return fmt.Errorf("marshal treatment plan: %w", err)
 	}
 	return s.consultationRepo.UpdateTreatmentPlan(ctx, conversationID, data)
+}
+
+// CreateRunEnvelope atomically creates the durable shell for a consultation run.
+func (s *ConsultationService) CreateRunEnvelope(
+	ctx context.Context,
+	userID uuid.UUID,
+	conversationID *uuid.UUID,
+	requestID string,
+	userParts datatypes.JSON,
+	userMetadata datatypes.JSON,
+	modelName string,
+) (*RunEnvelope, error) {
+	session, run, userMsg, assistantMsg, turnID, existed, err := s.consultationRepo.CreateRunEnvelope(
+		ctx,
+		userID,
+		conversationID,
+		requestID,
+		userParts,
+		userMetadata,
+		modelName,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("create run envelope: %w", err)
+	}
+	return &RunEnvelope{
+		Session:          session,
+		TurnID:           turnID,
+		Run:              run,
+		UserMessage:      userMsg,
+		AssistantMessage: assistantMsg,
+		Existed:          existed,
+	}, nil
 }

@@ -42,6 +42,33 @@ func (s *RunService) CreateRun(
 	return run, nil
 }
 
+// CreateRunWithIdempotency creates a new run, or returns the existing one if a run
+// with the same (user_id, request_id) already exists. Uses database-level unique
+// constraint for atomicity — safe under concurrent requests with the same requestID.
+func (s *RunService) CreateRunWithIdempotency(
+	ctx context.Context,
+	conversationID uuid.UUID,
+	turnID uuid.UUID,
+	requestID string,
+	userID uuid.UUID,
+	modelStr string,
+) (*model.Run, bool, error) {
+	run := &model.Run{
+		ID:             uuid.New(),
+		ConversationID: conversationID,
+		TurnID:         turnID,
+		RequestID:      requestID,
+		UserID:         userID,
+		Status:         "running",
+		Model:          modelStr,
+	}
+	result, existed, err := s.runRepo.CreateWithIdempotency(ctx, run)
+	if err != nil {
+		return nil, false, fmt.Errorf("create run: %w", err)
+	}
+	return result, existed, nil
+}
+
 // CheckIdempotency checks if a run with the given requestID already exists for the user.
 // Returns the existing run (if any) and whether this is a duplicate request.
 func (s *RunService) CheckIdempotency(ctx context.Context, userID uuid.UUID, requestID string) (*model.Run, bool, error) {

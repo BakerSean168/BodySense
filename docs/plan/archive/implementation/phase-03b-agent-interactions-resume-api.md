@@ -1,5 +1,9 @@
 # Phase 03b: agent_interactions and Resume API
 
+> **⚠️ SUPERSEDED — 本方案从未实施，已被 ADR 0002 完全取代。**
+>
+> 本 Phase 设计的 Go 侧 `agent_interactions` 表和 resume API 未被创建。当前架构中 interrupt/resume 由 Python LangGraph 原生 `interrupt()` / `Command(resume=...)` 处理，Go 仅代理到 Python runtime API。详见 [`docs/adr/0002-agent-runtime-ownership.md`](../../../adr/0002-agent-runtime-ownership.md) 和 [`docs/plan/active/final-agent-runtime-architecture.md`](../../active/final-agent-runtime-architecture.md)。
+
 ## Goal
 
 Add Go-side `agent_interactions` persistence and a resume endpoint for `ask_user` interruptions, without implementing the frontend card.

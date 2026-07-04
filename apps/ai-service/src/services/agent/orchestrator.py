@@ -105,13 +105,16 @@ class AgentOrchestrator:
                     await asyncio.sleep(0)
                 elif event.type == "tool_call_done" and event.tool_name:
                     text_buffer.flush()
-                    completed_tool_calls.append(
-                        {
-                            "id": event.tool_call_id or "",
-                            "name": event.tool_name,
-                            "arguments": event.tool_arguments or {},
-                        }
-                    )
+                    tc_id = event.tool_call_id or ""
+                    # Dedup: skip if this tool call ID already exists in the current round
+                    if not any(tc["id"] == tc_id for tc in completed_tool_calls):
+                        completed_tool_calls.append(
+                            {
+                                "id": tc_id,
+                                "name": event.tool_name,
+                                "arguments": event.tool_arguments or {},
+                            }
+                        )
 
             text_buffer.flush()
             if not completed_tool_calls:
@@ -165,11 +168,18 @@ class AgentOrchestrator:
     ) -> tuple[list[ChatMessage], bool, bool]:
         tool_messages: list[ChatMessage] = []
         has_search = False
+        seen_tc_ids: set[str] = set()
 
         for tc in completed_tool_calls:
             tc_id = tc["id"]
             tc_name = tc["name"]
             tc_args = tc["arguments"]
+
+            # Dedup: skip tool calls already processed in this round
+            if tc_id and tc_id in seen_tc_ids:
+                continue
+            if tc_id:
+                seen_tc_ids.add(tc_id)
 
             writer({"type": "tool_call", "id": tc_id, "tool": tc_name, "args": tc_args})
 
@@ -253,6 +263,14 @@ class AgentOrchestrator:
     ) -> ChatMessage:
         query = arguments.get("query", "")
         if query in seen_queries:
+            writer(
+                {
+                    "type": "tool_result",
+                    "id": tool_call_id,
+                    "tool": tool_name,
+                    "result": {"has_results": False, "deduplicated": True},
+                }
+            )
             return ChatMessage(
                 role="tool",
                 content="之前已搜索过相同内容，请直接使用已有结果回答。",
@@ -308,6 +326,7 @@ class AgentOrchestrator:
                 {
                     "type": "state.interaction.required",
                     "interaction_id": tool_call_id,
+                    "tool_call_id": tool_call_id,
                     "question": question_data,
                 }
             )

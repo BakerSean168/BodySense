@@ -1,8 +1,10 @@
 # Stream Event Contract Runtime 架构设计
 
-**文档版本**：v1.0  
-**更新日期**：2026-06-29  
-**状态**：设计稿  
+> **ADR 0002 交叉引用**：StreamEvent 契约设计、channel 分类和 replay 概念仍然有效。ADR 0002 确认 "Public SSE/Web stream events are derived from runtime events and remain the only frontend contract"。但事件的产生点已从 `ChatHandler` 转移到 consultation thread runtime（Go `consultation/runtime.go` → Python Agent Runtime → Go Runtime Event Log → Stream Contract）。文档中对 `ChatHandler` 的引用为历史参考。
+
+**文档版本**：v1.0
+**更新日期**：2026-06-29
+**状态**：设计稿（事件契约仍有效，产出点已迁移）
 **适用范围**：咨询 SSE、工具事件、上下文事件、Job 进度、前端消息渲染
 
 ---
@@ -433,7 +435,7 @@ packages/contracts/fixtures/stream-events/
 ```txt
 apps/api/internal/stream/validator_test.go
 apps/api/internal/stream/writer_test.go
-apps/api/internal/handler/chat_handler_test.go
+apps/api/internal/consultation/runtime_test.go  // 替代旧 chat_handler_test.go
 ```
 
 覆盖：
@@ -479,7 +481,7 @@ apps/web/src/features/consultation/hooks/useSSEProcessor.test.ts
 
 ### Phase 2：Go Stream Runtime
 
-- 从 ChatHandler 中抽出 writer / validator / mapper。
+- 从 consultation runtime 中抽出 writer / validator / mapper（原 ChatHandler 已删除）。
 - Go 统一补 `seq` 和 ids。
 
 ### Phase 3：Python Event Runtime 对齐

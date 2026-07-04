@@ -1,5 +1,7 @@
 # System Engineering Refactor Plan
 
+> 说明：咨询工作台的 runtime 重构已经落到新的 final-state 路径，详见 [`docs/adr/0002-agent-runtime-ownership.md`](../adr/0002-agent-runtime-ownership.md) 和 [`docs/plan/active/final-agent-runtime-architecture.md`](../plan/active/final-agent-runtime-architecture.md)。本汇总文档中的旧 `chat/send` / `ContextBuilder` 路线应视为历史方案。
+
 **文档版本**：v1.0  
 **更新日期**：2026-06-29  
 **状态**：下一阶段工程化重构设计稿  

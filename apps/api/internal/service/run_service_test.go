@@ -28,6 +28,16 @@ func (m *mockRunRepo) Create(ctx context.Context, run *model.Run) error {
 	return nil
 }
 
+func (m *mockRunRepo) CreateWithIdempotency(ctx context.Context, run *model.Run) (*model.Run, bool, error) {
+	if existing, ok := m.byReqID[run.RequestID]; ok && existing.UserID == run.UserID {
+		return existing, true, nil
+	}
+	if err := m.Create(ctx, run); err != nil {
+		return nil, false, err
+	}
+	return run, false, nil
+}
+
 func (m *mockRunRepo) GetByID(ctx context.Context, id uuid.UUID) (*model.Run, error) {
 	return m.runs[id], nil
 }

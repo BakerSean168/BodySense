@@ -1,8 +1,20 @@
 # Agent Tool Calling Runtime 架构设计
 
-**文档版本**：v1.0  
-**更新日期**：2026-06-29  
-**状态**：设计稿  
+> **⚠️ HISTORICAL — 本方案的执行路径已被 ADR 0002 取代。**
+>
+> 本设计稿中涉及 `POST /api/v1/chat/send`、`ChatHandler`、`/api/chat/resume` 的 Go 侧执行路径已删除。工具调用运行时的核心设计概念（ToolRegistry、ToolExecutor、AgentOrchestrator、interrupt/resume 语义）仍然有效，但所有权模型已变：Python 通过 LangGraph checkpoint 拥有 Agent Thread 真值，Go 不再重建 LLM 协议历史。当前 API：
+> - `POST /api/v1/consultations/:id/messages`
+> - `POST /api/v1/consultations/:id/interrupts/:interactionId/answers`
+>
+> 详见：
+> - [`docs/adr/0002-agent-runtime-ownership.md`](../adr/0002-agent-runtime-ownership.md)
+> - [`docs/plan/active/final-agent-runtime-architecture.md`](../plan/active/final-agent-runtime-architecture.md)
+>
+> 以下正文中的 mermaid 时序图和 Go 侧流程为历史参考。
+
+**文档版本**：v1.0
+**更新日期**：2026-06-29
+**状态**：部分归档（执行路径 superseded by ADR 0002，设计概念仍有效）  
 **适用范围**：咨询工作台、Go API Gateway、Python AI Service、React Assistant UI
 
 ---

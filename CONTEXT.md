@@ -9,6 +9,9 @@ BodySense is a posture-health AI assistant. It helps users turn body-awareness i
 - **Conversation**: A durable chat thread owned by a user. It contains ordered messages and may have one active AI run.
 - **Consultation Session**: The posture consultation state attached to a conversation. It tracks phase, extracted symptom information, diagnosis candidates, and treatment plan.
 - **AI Run**: One model turn for a conversation. It owns idempotency, streaming state, tool audit records, governance review, and completion/failure state.
+- **Agent Thread**: The durable Agent runtime thread owned by the Python Agent Runtime. It carries checkpointed message state, pending interrupts, and resume identity across turns.
+- **Runtime Event Log**: The append-only record in Go that stores the durable public history of runs, tool activity, interrupts, and resumes for audit and replay.
+- **Projection**: A read model derived from the Runtime Event Log for a specific consumer such as the Web thread view, pending interaction list, or analytics.
 - **Stream Event**: A versioned event envelope shared by Go, Python, and Web. It is the contract for user-visible streaming behavior.
 - **Tool Call**: A model-requested action executed by the agent runtime, such as symptom extraction, knowledge search, or asking the user for more information.
 - **User Interaction**: A pending human-in-the-loop question raised by the `ask_user` tool and later resumed by the user.

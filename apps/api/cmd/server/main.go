@@ -11,6 +11,7 @@ import (
 
 	"github.com/bodysense/api/internal/auth"
 	"github.com/bodysense/api/internal/cache"
+	consultationruntime "github.com/bodysense/api/internal/consultation"
 	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/handler"
 	"github.com/bodysense/api/internal/middleware"
@@ -56,6 +57,8 @@ func main() {
 	conversationRepo := repository.NewConversationRepository(database.DB)
 	messageRepo := repository.NewMessageRepository(database.DB)
 	runRepo := repository.NewRunRepository(database.DB)
+	runtimeEventRepo := repository.NewRuntimeEventRepository(database.DB)
+	threadProjectionRepo := repository.NewThreadProjectionRepository(database.DB)
 	shareRepo := repository.NewConversationShareRepository(database.DB)
 
 	// User session cache (Redis-backed, TTL = 2x access token TTL)
@@ -70,6 +73,7 @@ func main() {
 	aiClient := service.NewAIClient()
 	messageService := service.NewMessageService(messageRepo)
 	runService := service.NewRunService(runRepo)
+	runtimeEventService := service.NewRuntimeEventService(runtimeEventRepo)
 	conversationService := service.NewConversationService(conversationRepo, messageRepo, runRepo, shareRepo, aiClient)
 	shareService := service.NewShareService(conversationRepo, messageRepo, shareRepo)
 	consultationService := service.NewConsultationService(consultationRepo, conversationRepo)
@@ -82,11 +86,30 @@ func main() {
 	agentToolService := service.NewAgentToolService(agentToolRepo)
 	interactionRepo := repository.NewAgentInteractionRepository(database.DB)
 	interactionService := service.NewAgentInteractionService(interactionRepo, runRepo)
+	threadProjectionService := service.NewThreadProjectionService(conversationRepo, consultationRepo, messageRepo, interactionRepo, runtimeEventService, threadProjectionRepo)
 	outputReviewRepo := repository.NewAIOutputReviewRepository(database.DB)
 	outputReviewService := service.NewOutputReviewService(outputReviewRepo)
-	chatHandler := handler.NewChatHandler(conversationService, messageService, runService, consultationService, aiClient, profileService, agentToolService, interactionService, outputReviewService)
+	consultationRuntime := consultationruntime.NewRuntime(
+		conversationService,
+		consultationService,
+		profileService,
+		messageService,
+		runService,
+		aiClient,
+		agentToolService,
+		interactionService,
+		outputReviewService,
+		threadProjectionService,
+		runtimeEventService,
+	)
 	convHandler := handler.NewConversationHandler(conversationService, shareService)
-	consultationHandler := handler.NewConsultationHandler(consultationService, interactionService, runService)
+	runtimeEventHandler := handler.NewRuntimeEventHandler(runtimeEventService, conversationService)
+	threadProjectionHandler := handler.NewThreadProjectionHandler(threadProjectionService)
+	consultationHandler := handler.NewConsultationHandler(
+		consultationService,
+		interactionService,
+		consultationRuntime,
+	)
 	diagnosisHandler := handler.NewDiagnosisHandler(consultationService, profileService, aiClient)
 	trainingRepo := repository.NewTrainingRepository(database.DB)
 	trainingService := service.NewTrainingService(trainingRepo, profileService)
@@ -174,10 +197,6 @@ func main() {
 		protected.GET("/uploads/:id", uploadHandler.GetUpload)
 		protected.DELETE("/uploads/:id", uploadHandler.DeleteUpload)
 
-		// Chat API (SSE streaming)
-		chat := protected.Group("/chat")
-		chat.POST("/send", chatHandler.SendMessage)
-
 		// Conversation API
 		conversations := protected.Group("/conversations")
 		conversations.GET("", convHandler.ListConversations)
@@ -186,19 +205,23 @@ func main() {
 		conversations.DELETE("/:id", convHandler.DeleteConversation)
 		conversations.PATCH("/:id/pin", convHandler.PinConversation)
 		conversations.GET("/:id/runs", convHandler.ListRuns)
+		conversations.GET("/:id/runs/:runId/events", runtimeEventHandler.ListRunEvents)
 		conversations.POST("/:id/title", convHandler.GenerateTitle)
 		conversations.PUT("/:id/title", convHandler.RenameTitle)
 		conversations.POST("/:id/share", convHandler.ShareConversation)
 		conversations.DELETE("/:id/share", convHandler.UnshareConversation)
 
 		// Consultation domain
+		protected.POST("/consultation-runs", consultationHandler.StartRun)
 		consultations := protected.Group("/consultations")
 		consultations.GET("/:id", consultationHandler.GetConsultation)
+		consultations.GET("/:id/thread", threadProjectionHandler.GetConsultationThread)
+
 		consultations.PUT("/:id/extracted-info", consultationHandler.UpdateExtractedInfo)
 		consultations.PUT("/:id/confirm", consultationHandler.ConfirmDiagnosis)
 		consultations.POST("/:id/diagnosis", diagnosisHandler.AnalyzeDiagnosis)
 		consultations.POST("/:id/treatment", diagnosisHandler.GenerateTreatment)
-		consultations.POST("/:id/interactions/:interactionId/resume", consultationHandler.ResumeInteraction)
+		consultations.POST("/:id/interrupts/:interactionId/answers", consultationHandler.ResumeInteraction)
 
 		// Health journey (read-only)
 		protected.GET("/journey", journeyHandler.GetJourneyState)

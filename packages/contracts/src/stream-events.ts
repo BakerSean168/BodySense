@@ -1,5 +1,6 @@
 export type StreamChannel =
   | 'conversation'
+  | 'run'
   | 'message'
   | 'tool'
   | 'state'
@@ -7,7 +8,8 @@ export type StreamChannel =
   | 'safety'
   | 'usage'
   | 'job'
-  | 'stream';
+  | 'stream'
+  | 'title';
 
 export interface StreamEventIds {
   conversation_id?: string | null;
@@ -35,7 +37,44 @@ export interface StreamEventBase<
 export type ConversationCreatedEvent = StreamEventBase<
   'conversation',
   'conversation.created',
-  { replaces_draft_id?: string }
+  {
+    title: string;
+    title_status: 'pending' | 'generated' | 'manual';
+    status: 'active';
+    last_message_at: string;
+    created_at: string;
+    replaces_draft_id?: string;
+  }
+>;
+
+export type RunStartedEvent = StreamEventBase<
+  'run',
+  'run.started',
+  { status: 'running'; source: 'start_turn' }
+>;
+
+export type RunResumedEvent = StreamEventBase<
+  'run',
+  'run.resumed',
+  { status: 'running'; interaction_id: string }
+>;
+
+export type RunInterruptedEvent = StreamEventBase<
+  'run',
+  'run.interrupted',
+  { status: 'waiting_user'; interaction_id: string }
+>;
+
+export type RunCompletedEvent = StreamEventBase<
+  'run',
+  'run.completed',
+  { status: 'completed'; usage?: unknown }
+>;
+
+export type RunFailedEvent = StreamEventBase<
+  'run',
+  'run.failed',
+  { status: 'failed'; error: { message: string } }
 >;
 
 export type MessagePersistedEvent = StreamEventBase<
@@ -65,7 +104,7 @@ export type MessageCompletedEvent = StreamEventBase<
 export type MessageFailedEvent = StreamEventBase<
   'message',
   'message.failed',
-  { status: 'failed'; error: unknown }
+  { status: 'failed'; error: { message: string } }
 >;
 
 export type ToolCallEvent = StreamEventBase<
@@ -128,6 +167,12 @@ export type UsageReportedEvent = StreamEventBase<
   { usage: unknown }
 >;
 
+export type TitleGeneratedEvent = StreamEventBase<
+  'title',
+  'title.generated',
+  { title: string }
+>;
+
 export type StreamDoneEvent = StreamEventBase<
   'stream',
   'stream.done',
@@ -178,6 +223,11 @@ export type JobFailedEvent = StreamEventBase<
 
 export type StreamEvent =
   | ConversationCreatedEvent
+  | RunStartedEvent
+  | RunResumedEvent
+  | RunInterruptedEvent
+  | RunCompletedEvent
+  | RunFailedEvent
   | MessagePersistedEvent
   | MessageCreatedEvent
   | MessageTextDeltaEvent
@@ -193,6 +243,7 @@ export type StreamEvent =
   | KnowledgeGapEvent
   | RedFlagDetectedEvent
   | UsageReportedEvent
+  | TitleGeneratedEvent
   | StreamDoneEvent
   | StreamErrorEvent
   | InteractionRequiredEvent

@@ -1,69 +1,76 @@
-import { AssistantRuntimeProvider, useThread, useComposerRuntime, ThreadPrimitive, MessagePrimitive, useMessage } from "@assistant-ui/react";
+import { AssistantRuntimeProvider, useThread, useComposerRuntime, useThreadRuntime, ThreadPrimitive, MessagePrimitive, useMessage, type ThreadAssistantMessagePart, type ThreadMessageLike } from "@assistant-ui/react";
 import { MarkdownTextPrimitive } from "@assistant-ui/react-markdown";
 import remarkGfm from "remark-gfm";
 import { useAssistantChatRuntime } from "../hooks/useAssistantChatRuntime";
-import { useRef, useEffect, useState, useCallback, useMemo } from "react";
-import type { Citation, ConsultationPhase, ExtractedInfo, RedFlagEvent, PendingInteraction } from "../types/consultation";
-import { RedFlagBanner } from "./RedFlagBanner";
+import { ActiveTurnProvider, useActiveTurnActions, useActiveTurnState } from "../context/ActiveTurnContext";
+import React, { useRef, useEffect, useState, useCallback, useMemo } from "react";
+import type { Citation, ConsultationPhase, ExtractedInfo } from "../types/consultation";
+import type { ActiveTurnState } from "../runtime/activeTurnReducer";
+import { buildAssistantMessagePartsViewModel } from "../runtime/assistantMessagePartsViewModel";
+import { selectIsComposerLocked } from "../runtime/activeTurnSelectors";
+import { StreamingAssistantTurn } from "./StreamingAssistantTurn";
 import { AskUserCard } from "./AskUserCard";
-import { consultationApi } from "../services/consultationService";
+import { StreamingTurnToolCalls } from "./StreamingTurnToolCalls";
+import { RedFlagBanner } from "./RedFlagBanner";
+import { useConsultationStore } from "@/stores/consultationStore";
 
 interface AssistantChatPanelProps {
-  conversationId: string | null;
-  initialMessages?: ChatMessage[];
+  conversationId: string;
+  onConversationCreated?: (id: string) => void;
+  initialMessages?: ThreadMessageLike[];
+  initialActiveTurn?: ActiveTurnState | null;
   initialExtractedInfo?: ExtractedInfo[];
-  isDraft?: boolean;
-  clientDraftId?: string | null;
   onExtractedInfoUpdate?: (info: ExtractedInfo[]) => void;
   onPhaseChange?: (phase: ConsultationPhase) => void;
   onCitation?: (citation: Citation) => void;
-  onConversationCreated?: (conversationId: string) => void;
   onTitleGenerated?: (title: string) => void;
   onMessagePersisted?: (clientMessageId: string, messageId: string) => void;
-}
-
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
+  onStreamFinished?: () => void;
 }
 
 /**
- * Chat panel powered by assistant-ui runtime.
+ * Bridge that syncs the adapter's active turn state into ActiveTurnContext.
+ */
+function ActiveTurnBridge({ bridgeRef }: { bridgeRef: React.MutableRefObject<((state: ActiveTurnState) => void) | null> }) {
+  const { hydrateTurn } = useActiveTurnActions();
+  bridgeRef.current = hydrateTurn;
+  return null;
+}
+
+/**
+ * Chat panel powered by assistant-ui runtime with ActiveTurnState.
  *
  * The runtime drives all SSE streaming via ConsultationChatAdapter.
- * Messages are managed by assistant-ui's thread state. Custom UI renders
- * messages from the thread while the adapter handles callbacks to the
- * parent ConsultationPage for sidebar panels (InfoPanel, DiagnosisPanel).
+ * Streaming content is rendered by StreamingAssistantTurn from ActiveTurnState.
+ * Historical messages are rendered via assistant-ui's thread state.
  */
 export function AssistantChatPanel({
   conversationId,
   initialMessages = [],
+  initialActiveTurn = null,
   initialExtractedInfo: _initialExtractedInfo = [],
-  isDraft,
-  clientDraftId,
   onExtractedInfoUpdate,
   onPhaseChange,
   onCitation,
-  onConversationCreated,
   onTitleGenerated,
   onMessagePersisted,
+  onConversationCreated,
+  onStreamFinished,
 }: AssistantChatPanelProps) {
-  // Accumulate extracted info across multiple SSE events
   const extractedInfoRef = useRef<ExtractedInfo[]>(_initialExtractedInfo);
 
-  // Sync ref when initialExtractedInfo changes (e.g., switching conversations)
   useEffect(() => {
     extractedInfoRef.current = _initialExtractedInfo;
   }, [_initialExtractedInfo]);
 
-  const [pendingInteraction, setPendingInteraction] = useState<PendingInteraction | null>(null);
+  const activeTurnRef = useRef<((state: ActiveTurnState) => void) | null>(null);
 
   const adapterOptions = useMemo(() => ({
+    onConversationCreated,
     onExtractedInfoUpdate: (info: ExtractedInfo) => {
       const existing = extractedInfoRef.current;
       const idx = existing.findIndex((e) => e.body_part === info.body_part);
       if (idx >= 0) {
-        // Merge into existing entry for the same body_part
         const updated = [...existing];
         updated[idx] = { ...updated[idx], ...info };
         extractedInfoRef.current = updated;
@@ -76,122 +83,145 @@ export function AssistantChatPanel({
       onPhaseChange?.(to as ConsultationPhase);
     },
     onCitation,
-    onConversationCreated,
     onTitleGenerated,
     onMessagePersisted,
-    onInteractionRequired: (interaction: PendingInteraction) => {
-      setPendingInteraction(interaction);
+    onStreamFinished,
+    onActiveTurnUpdate: (state: ActiveTurnState) => {
+      activeTurnRef.current?.(state);
     },
-    isDraft,
-    clientDraftId: clientDraftId ?? undefined,
-  }), [onExtractedInfoUpdate, onPhaseChange, onCitation, onConversationCreated, onTitleGenerated, onMessagePersisted, isDraft, clientDraftId]);
+  }), [onConversationCreated, onExtractedInfoUpdate, onPhaseChange, onCitation, onTitleGenerated, onMessagePersisted, onStreamFinished]);
 
-  const { runtime } = useAssistantChatRuntime(conversationId, initialMessages, adapterOptions);
-
-  const handleInteractionSubmit = useCallback(async (answer: unknown): Promise<string | undefined> => {
-    if (!pendingInteraction || !conversationId) return undefined;
-    try {
-      const result = await consultationApi.resumeInteraction(conversationId, pendingInteraction.id, answer);
-      setPendingInteraction(null);
-      return result.answer_text;
-    } catch (err) {
-      console.error('Failed to resume interaction:', err);
-      return undefined;
-    }
-  }, [pendingInteraction, conversationId]);
+  const { runtime, resumeInteraction } = useAssistantChatRuntime(
+    conversationId,
+    initialMessages,
+    adapterOptions,
+  );
 
   return (
-    <AssistantRuntimeProvider runtime={runtime}>
-      <ChatContent
-        pendingInteraction={pendingInteraction}
-        onInteractionSubmit={handleInteractionSubmit}
+    <ActiveTurnProvider>
+      <ActiveTurnBridge bridgeRef={activeTurnRef} />
+      <AssistantRuntimeProvider runtime={runtime}>
+        <InitialActiveTurnHydrator initialActiveTurn={initialActiveTurn} />
+        <ChatContent conversationId={conversationId} onResumeInteraction={resumeInteraction} />
+      </AssistantRuntimeProvider>
+    </ActiveTurnProvider>
+  );
+}
+
+function InitialActiveTurnHydrator({
+  initialActiveTurn,
+}: {
+  initialActiveTurn: ActiveTurnState | null;
+}) {
+  const { hydrateTurn, resetTurn } = useActiveTurnActions();
+
+  useEffect(() => {
+    if (initialActiveTurn) {
+      hydrateTurn(initialActiveTurn);
+      return;
+    }
+    resetTurn();
+  }, [initialActiveTurn, hydrateTurn, resetTurn]);
+
+  return null;
+}
+
+interface ChatInputAreaProps {
+  inputText: string;
+  setInputText: (text: string) => void;
+  isComposerLocked: boolean;
+  handleKeyDown: (e: React.KeyboardEvent) => void;
+  handleSend: () => void;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  isCentered?: boolean;
+}
+
+function ChatInputArea({
+  inputText,
+  setInputText,
+  isComposerLocked,
+  handleKeyDown,
+  handleSend,
+  textareaRef,
+  isCentered = false,
+}: ChatInputAreaProps) {
+  return (
+    <div className="flex items-end gap-2 w-full">
+      <textarea
+        ref={textareaRef}
+        value={inputText}
+        onChange={(e) => setInputText(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="描述您的症状、体态问题或身体感受..."
+        disabled={isComposerLocked}
+        rows={1}
+        className={`flex-1 resize-none rounded-2xl border border-[#D6D3CD] px-4 py-3.5 text-sm bg-white
+                   focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent
+                   disabled:bg-[#F7F5F0] disabled:text-gray-400
+                   placeholder:text-gray-400 ${isCentered ? "shadow-md" : "shadow-sm"}`}
+        style={{ maxHeight: '150px' }}
       />
-    </AssistantRuntimeProvider>
+      <button
+        onClick={handleSend}
+        disabled={isComposerLocked || !inputText.trim()}
+        className="flex-shrink-0 rounded-full bg-[#CD7B67] px-6 py-3.5 text-sm font-semibold text-white
+                   hover:bg-[#B65E49] focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2
+                   disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-300 shadow-sm shadow-[#CD7B67]/15"
+      >
+        发送
+      </button>
+    </div>
   );
 }
 
 interface ChatContentProps {
-  pendingInteraction?: PendingInteraction | null;
-  onInteractionSubmit?: (answer: unknown) => Promise<string | undefined>;
+  conversationId: string;
+  onResumeInteraction: ReturnType<typeof useAssistantChatRuntime>['resumeInteraction'];
 }
 
 /**
- * Inner chat content that reads thread state from the assistant-ui runtime.
- * Uses useThread() to access messages managed by the runtime.
+ * Inner chat content — reads thread state from assistant-ui and active turn
+ * from ActiveTurnContext. StreamingAssistantTurn renders the live turn;
+ * ThreadPrimitive.Messages renders historical messages.
  */
-function ChatContent({ pendingInteraction, onInteractionSubmit }: ChatContentProps = {}) {
+function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) {
   const thread = useThread();
+  const threadRuntime = useThreadRuntime();
   const composerRuntime = useComposerRuntime();
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const [inputText, setInputText] = useState('');
-  const [redFlags, setRedFlags] = useState<RedFlagEvent | null>(null);
-  const [citations, setCitations] = useState<Citation[]>([]);
-  const [knowledgeGaps, setKnowledgeGaps] = useState<string[]>([]);
-  const [isSubmittingInteraction, setIsSubmittingInteraction] = useState(false);
-  const [interactionError, setInteractionError] = useState<string | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Extract citations, red flags, and knowledge gaps from thread messages.
-  // Uses functional setState with shallow comparison to avoid unnecessary
-  // re-renders when thread.messages changes due to streaming text updates.
-  // Must be in useEffect (not useMemo) because it calls setState.
+  const draftMessage = useConsultationStore((state) => state.draftMessage);
+  const setDraftMessage = useConsultationStore((state) => state.setDraftMessage);
+  const clearDraftMessage = useConsultationStore((state) => state.clearDraftMessage);
+
+  const [inputText, setInputText] = useState(() => {
+    return conversationId === 'new' ? draftMessage : '';
+  });
+
+  // Sync store draft when user types, only for new conversations
   useEffect(() => {
-    const newCitations: Citation[] = [];
-    let newRedFlag: RedFlagEvent | null = null;
-    const newGaps: string[] = [];
-
-    for (const msg of thread.messages) {
-      if (msg.role !== 'assistant') continue;
-
-      // Extract citations from source parts
-      const sourceParts = msg.content.filter((p) => p.type === 'source');
-      for (const sp of sourceParts) {
-        const source = sp as { type: 'source'; title?: string };
-        if (source.title && !newCitations.some((c) => c.title === source.title)) {
-          newCitations.push({ title: source.title });
-        }
-      }
-
-      // Extract red flags from data parts
-      const redFlagParts = msg.content.filter(
-        (p) => p.type === 'data' && (p as { name: string }).name === 'red_flag',
-      );
-      for (const rp of redFlagParts) {
-        const data = (rp as { data: RedFlagEvent }).data;
-        if (data?.has_red_flags) {
-          newRedFlag = data;
-        }
-      }
-
-      // Extract knowledge gaps from data parts
-      const gapParts = msg.content.filter(
-        (p) => p.type === 'data' && (p as { name: string }).name === 'knowledge_gap',
-      );
-      for (const gp of gapParts) {
-        const data = (gp as { data: { query: string; message: string } }).data;
-        if (data?.query && !newGaps.includes(data.query)) {
-          newGaps.push(data.query);
-        }
-      }
+    if (conversationId === 'new') {
+      setDraftMessage(inputText);
     }
+  }, [inputText, conversationId, setDraftMessage]);
 
-    setCitations((prev) => {
-      const prevKeys = prev.map((c) => c.title).sort().join(',');
-      const newKeys = newCitations.map((c) => c.title).sort().join(',');
-      return prevKeys === newKeys ? prev : newCitations;
-    });
+  // When conversationId changes, if it becomes 'new', load draft. Otherwise clear.
+  useEffect(() => {
+    if (conversationId === 'new') {
+      setInputText(draftMessage);
+    } else {
+      setInputText('');
+    }
+  }, [conversationId, draftMessage]);
 
-    setRedFlags((prev) => {
-      if (!newRedFlag && !prev) return prev;
-      if (!newRedFlag || !prev) return newRedFlag;
-      return JSON.stringify(prev) === JSON.stringify(newRedFlag) ? prev : newRedFlag;
-    });
+  const { markInteractionAnswered } = useActiveTurnActions();
+  const activeTurn = useActiveTurnState();
+  const isComposerLocked = selectIsComposerLocked(activeTurn);
 
-    setKnowledgeGaps((prev) => {
-      const prevKey = [...prev].sort().join(',');
-      const newKey = [...newGaps].sort().join(',');
-      return prevKey === newKey ? prev : newGaps;
-    });
-  }, [thread.messages]);
+  // AskUserCard States
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [interactionError, setInteractionError] = useState<string | null>(null);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -202,23 +232,17 @@ function ChatContent({ pendingInteraction, onInteractionSubmit }: ChatContentPro
         behavior: 'smooth',
       });
     }
-  }, [thread.messages]);
-
-  const isRunning = useMemo(() => {
-    const lastMsg = thread.messages[thread.messages.length - 1];
-    return lastMsg?.role === 'assistant' && lastMsg.status?.type === 'running';
-  }, [thread.messages]);
+  }, [thread.messages, activeTurn]);
 
   const handleSend = useCallback(() => {
-    if (!inputText.trim() || isRunning) return;
-    // Set text in the composer runtime and send
+    if (!inputText.trim() || isComposerLocked) return;
     composerRuntime.setText(inputText.trim());
     composerRuntime.send();
+    if (conversationId === 'new') {
+      clearDraftMessage();
+    }
     setInputText('');
-    setRedFlags(null);
-    setCitations([]);
-    setKnowledgeGaps([]);
-  }, [inputText, isRunning, composerRuntime]);
+  }, [inputText, isComposerLocked, composerRuntime, conversationId, clearDraftMessage]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -227,37 +251,86 @@ function ChatContent({ pendingInteraction, onInteractionSubmit }: ChatContentPro
     }
   };
 
-  const handleInteractionAnswer = useCallback(async (answer: unknown) => {
-    if (!onInteractionSubmit) return;
-    setIsSubmittingInteraction(true);
-    setInteractionError(null);
-    try {
-      const answerText = await onInteractionSubmit(answer);
-      // After resume, send the answer as a new chat message to continue the AI flow
-      if (answerText) {
-        composerRuntime.setText(answerText);
-        composerRuntime.send();
-      }
-    } catch (err) {
-      setInteractionError(err instanceof Error ? err.message : '提交失败，请重试');
-    } finally {
-      setIsSubmittingInteraction(false);
-    }
-  }, [onInteractionSubmit, composerRuntime]);
+  const handleResume = useCallback(async (interactionId: string, answer: unknown) => {
+    markInteractionAnswered(interactionId);
+    onResumeInteraction(threadRuntime, interactionId, answer);
+  }, [markInteractionAnswered, onResumeInteraction, threadRuntime]);
 
+  const handleInteractionAnswer = useCallback(
+    async (answer: unknown) => {
+      const interaction = activeTurn.pendingInteraction;
+      if (!interaction) return;
+
+      setIsSubmitting(true);
+      setInteractionError(null);
+      try {
+        await handleResume(interaction.id, answer);
+      } catch (err) {
+        setInteractionError(err instanceof Error ? err.message : '提交失败，请重试');
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [activeTurn.pendingInteraction, handleResume],
+  );
+
+  const hasPendingInteraction =
+    activeTurn.pendingInteraction && activeTurn.pendingInteraction.status === 'pending';
+
+  // Determine if the conversation has no user or assistant messages
+  const isEmptyConversation =
+    thread.messages.filter((m) => m.role === 'user' || m.role === 'assistant').length === 0;
+
+  // Render centered Layout for new/empty conversations
+  if (isEmptyConversation && !hasPendingInteraction) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-6 bg-white h-full relative overflow-y-auto">
+        <div className="w-full max-w-3xl text-center space-y-6 -translate-y-12">
+          {/* Posture/Health logo/decoration */}
+          <div className="flex justify-center">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary-100 to-primary-50 flex items-center justify-center text-primary-700 shadow-md shadow-primary-700/5 border border-primary-200/50">
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {/* Title */}
+            <h2 className="text-2xl md:text-3xl font-display font-bold text-[#1A221E] tracking-tight">
+              开始一次新的健康咨询
+            </h2>
+            
+            {/* Subtitle */}
+            <p className="text-sm md:text-base text-[#4A554E] max-w-lg mx-auto leading-relaxed font-medium">
+              描述你的问题，我会帮你逐步分析并给出建议。
+            </p>
+          </div>
+
+          {/* Input Box Centered */}
+          <div className="w-full text-left max-w-3xl mx-auto">
+            <ChatInputArea
+              inputText={inputText}
+              setInputText={setInputText}
+              isComposerLocked={isComposerLocked}
+              handleKeyDown={handleKeyDown}
+              handleSend={handleSend}
+              textareaRef={textareaRef}
+              isCentered={true}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Render normal Chatting Layout with messages list and bottom input box
   return (
-    <ThreadPrimitive.Root className="flex flex-col h-full">
+    <ThreadPrimitive.Root className="flex flex-col h-full bg-white">
       {/* Messages area */}
       <ThreadPrimitive.Viewport ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
         <ThreadPrimitive.Empty>
-          <div className="flex items-center justify-center h-full text-gray-400">
-            <div className="text-center">
-              <p className="text-lg font-medium">开始咨询</p>
-              <p className="text-sm mt-1">
-                描述你的体态问题，AI 助手会帮助你分析
-              </p>
-            </div>
-          </div>
+          <div className="hidden" />
         </ThreadPrimitive.Empty>
 
         <ThreadPrimitive.Messages
@@ -267,91 +340,49 @@ function ChatContent({ pendingInteraction, onInteractionSubmit }: ChatContentPro
           }}
         />
 
-        {citations.length > 0 && (
-          <div className="flex justify-start">
-            <div className="max-w-[80%] rounded-xl px-3 py-2 bg-[#EEF2EE] border border-[#D4DDD4]">
-              <p className="text-xs font-semibold text-[#5A7A64] mb-1">参考知识</p>
-              <div className="flex flex-wrap gap-1.5">
-                {citations.map((c, i) => (
-                  <span
-                    key={i}
-                    className="inline-block rounded-full bg-white px-2.5 py-0.5 text-xs text-[#3D5A47] border border-[#C8D8CC]"
-                    title={c.summary || c.content || ''}
-                  >
-                    {c.title}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {knowledgeGaps.length > 0 && (
-          <div className="flex justify-start">
-            <div className="max-w-[80%] rounded-xl px-3 py-2 bg-[#FFF8F0] border border-[#F0D4B0]">
-              <div className="flex items-start gap-2">
-                <svg className="w-4 h-4 text-[#D4864A] mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div>
-                  <p className="text-xs font-semibold text-[#A06030]">知识库提示</p>
-                  <p className="text-xs text-[#8B6A4A] mt-0.5">
-                    知识库中暂未收录「{knowledgeGaps.join('」「')}」的专项资料，以下建议仅供参考。
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {redFlags && redFlags.has_red_flags && (
-          <RedFlagBanner
-            redFlags={redFlags.flags}
-            onAcknowledge={() => setRedFlags(null)}
-          />
-        )}
-
-        {pendingInteraction && pendingInteraction.status === 'pending' && (
-          <AskUserCard
-            question={pendingInteraction.question}
-            onSubmit={handleInteractionAnswer}
-            isSubmitting={isSubmittingInteraction}
-            error={interactionError}
-            onRetry={() => setInteractionError(null)}
-          />
-        )}
+        {/* Streaming assistant turn from ActiveTurnState */}
+        <StreamingAssistantTurn />
       </ThreadPrimitive.Viewport>
 
       {/* Input area */}
-      <div className="flex items-end gap-2 p-4 border-t border-[#E5E3DF] bg-[#FBFBFA]">
-        <textarea
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="描述您的症状、体态问题或身体感受..."
-          disabled={isRunning}
-          rows={1}
-          className="flex-1 resize-none rounded-2xl border border-[#D6D3CD] px-4 py-3 text-sm bg-white
-                     focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent
-                     disabled:bg-[#F7F5F0] disabled:text-gray-400
-                     placeholder:text-gray-400"
-          style={{ maxHeight: '120px' }}
-        />
-        <button
-          onClick={handleSend}
-          disabled={isRunning || !inputText.trim()}
-          className="flex-shrink-0 rounded-full bg-[#CD7B67] px-6 py-3 text-sm font-semibold text-white
-                     hover:bg-[#B65E49] focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2
-                     disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-300 shadow-sm shadow-[#CD7B67]/15"
-        >
-          发送
-        </button>
-      </div>
+      {hasPendingInteraction ? (
+        <div className="p-4 border-t border-[#E5E3DF] bg-[#FBFBFA]">
+          <AskUserCard
+            question={activeTurn.pendingInteraction!.question}
+            onSubmit={handleInteractionAnswer}
+            isSubmitting={isSubmitting}
+            error={interactionError}
+            onRetry={() => setInteractionError(null)}
+          />
+        </div>
+      ) : (
+        <div className="p-4 border-t border-[#E5E3DF] bg-[#FBFBFA]">
+          <ChatInputArea
+            inputText={inputText}
+            setInputText={setInputText}
+            isComposerLocked={isComposerLocked}
+            handleKeyDown={handleKeyDown}
+            handleSend={handleSend}
+            textareaRef={textareaRef}
+            isCentered={false}
+          />
+        </div>
+      )}
     </ThreadPrimitive.Root>
   );
 }
 
 function CustomUserMessage() {
+  const metadata = useMessage((state) => state.metadata) as
+    | { custom?: { is_interaction_answer?: boolean } }
+    | undefined;
+
+  // If this message has metadata indicating it's an interaction answer, hide it!
+  const isInteractionAnswer = metadata?.custom?.is_interaction_answer === true;
+  if (isInteractionAnswer) {
+    return null;
+  }
+
   return (
     <MessagePrimitive.Root className="flex justify-end">
       <div className="max-w-[80%] rounded-[20px] px-4 py-3 bg-primary-700 text-[#FBFBFA] rounded-br-[4px] shadow-sm shadow-[#2a4b3a]/10">
@@ -363,30 +394,92 @@ function CustomUserMessage() {
   );
 }
 
+/**
+ * Renders a completed assistant message using assistant-ui's built-in markdown renderer.
+ * Streaming display is handled by StreamingAssistantTurn separately.
+ */
 function CustomAssistantMessage() {
-  const message = useMessage();
-  const isMessageEmpty = message.content.length === 0 || 
-    (message.content.length === 1 && message.content[0].type === 'text' && !message.content[0].text);
-  const isMessageRunning = message.status?.type === 'running';
+  const content = useMessage((state) => state.content) as readonly ThreadAssistantMessagePart[];
+  const isLast = useMessage((state) => state.isLast);
+  const activeTurn = useActiveTurnState();
+
+  const viewModel = useMemo(
+    () => buildAssistantMessagePartsViewModel(content),
+    [content],
+  );
+  const [isRedFlagDismissed, setIsRedFlagDismissed] = useState(false);
+
+  useEffect(() => {
+    setIsRedFlagDismissed(false);
+  }, [content]);
+
+  const isMessageActive =
+    isLast && (activeTurn.status === 'streaming' || activeTurn.status === 'interrupted');
+
+  if (isMessageActive) {
+    return null;
+  }
 
   return (
     <MessagePrimitive.Root className="flex justify-start">
       <div className="max-w-[80%] rounded-[20px] px-4 py-3 bg-[#F7F5F0] text-[#1A221E] rounded-bl-[4px] border border-[#E5E3DF]">
-        {isMessageRunning && isMessageEmpty ? (
-          <div className="flex items-center gap-1.5 py-1 px-1">
-            <span className="w-2 h-2 rounded-full bg-[#709a83] animate-bounce [animation-delay:-0.3s]" />
-            <span className="w-2 h-2 rounded-full bg-[#709a83] animate-bounce [animation-delay:-0.15s]" />
-            <span className="w-2 h-2 rounded-full bg-[#709a83] animate-bounce" />
-          </div>
-        ) : (
+        <div className="flex flex-col gap-3">
+          <StreamingTurnToolCalls toolCalls={viewModel.toolCalls} />
+
           <div className="text-sm leading-relaxed font-medium prose-markdown">
             <MessagePrimitive.Content
               components={{
-                Text: () => <MarkdownTextPrimitive remarkPlugins={[remarkGfm]} />,
+                Text: () => <MarkdownTextPrimitive smooth={false} remarkPlugins={[remarkGfm]} />,
+                Source: () => null,
+                File: () => null,
+                Image: () => null,
+                Reasoning: () => null,
+                data: { Fallback: () => null },
+                tools: { Fallback: () => null },
               }}
             />
           </div>
-        )}
+
+          {viewModel.citations.length > 0 && (
+            <div className="rounded-xl px-3 py-2 bg-[#EEF2EE] border border-[#D4DDD4]">
+              <p className="text-xs font-semibold text-[#5A7A64] mb-1">参考知识</p>
+              <div className="flex flex-wrap gap-1.5">
+                {viewModel.citations.map((c) => (
+                  <span
+                    key={c.title}
+                    className="inline-block rounded-full bg-white px-2.5 py-0.5 text-xs text-[#3D5A47] border border-[#C8D8CC]"
+                    title={c.summary || c.snippet || c.content || ''}
+                  >
+                    {c.title}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {viewModel.knowledgeGaps.length > 0 && (
+            <div className="rounded-xl px-3 py-2 bg-[#FFF8F0] border border-[#F0D4B0]">
+              <div className="flex items-start gap-2">
+                <svg className="w-4 h-4 text-[#D4864A] mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <p className="text-xs font-semibold text-[#A06030]">知识库提示</p>
+                  <p className="text-xs text-[#8B6A4A] mt-0.5">
+                    知识库中暂未收录「{viewModel.knowledgeGaps.map((gap) => gap.query).join('」「')}」的专项资料，以下建议仅供参考。
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {viewModel.redFlag?.has_red_flags && !isRedFlagDismissed && (
+            <RedFlagBanner
+              redFlags={viewModel.redFlag.flags}
+              onAcknowledge={() => setIsRedFlagDismissed(true)}
+            />
+          )}
+        </div>
       </div>
     </MessagePrimitive.Root>
   );

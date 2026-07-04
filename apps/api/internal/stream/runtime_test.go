@@ -73,7 +73,7 @@ func TestEnrichEvent_PreservesExistingIDs(t *testing.T) {
 	}
 }
 
-func TestEnrichEvent_DefaultSeq(t *testing.T) {
+func TestEnrichEvent_ReassignsSeq(t *testing.T) {
 	seqCounter := 0
 	w := &StreamWriter{
 		nextSeq: func() int { seqCounter++; return seqCounter },
@@ -86,14 +86,14 @@ func TestEnrichEvent_DefaultSeq(t *testing.T) {
 
 	event := dto.StreamEvent{
 		Version: 1,
-		Seq:     0, // zero means "assign automatically"
+		Seq:     99, // upstream events are re-sequenced for the public stream
 		Type:    "test",
 		Payload: json.RawMessage(`{}`),
 	}
 
 	enriched := w.enrichEvent(event, "")
 	if enriched.Seq != 1 {
-		t.Errorf("expected Seq 1, got %d", enriched.Seq)
+		t.Errorf("expected reassigned Seq 1, got %d", enriched.Seq)
 	}
 }
 
