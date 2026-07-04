@@ -65,6 +65,11 @@ knowledges/
 - 从一条 `knowledge_units` 反查原始转录证据的方法
 - 全部 CLI 参数速查
 
+### AI Agent 实施难点（`ai-agent-impl/`）
+
+- `unified-consultation-run-sse-pipeline.md` — 统一 `POST /consultation-runs` 端到端流程：幂等性、原子会话创建、SSE 流式转发、静默 URL 跳转、缓存更新、Interaction 中断恢复
+- `old-lazy-session-creation-and-silent-navigation.md` — v1 两步式流程（`createConsultation` + `sendConsultationMessage`）的历史实现
+
 ## 阅读建议
 
 **了解当前视频到知识库的实现**：先读 `issue-13-video-knowledge-pipeline.md`，它覆盖了完整的系统架构、模块分工、数据模型、三种工作模式和生产策略。
@@ -72,6 +77,8 @@ knowledges/
 **实际操作入库**：读 `issue-13-manual-video-ingestion-runbook.md`，照着命令一步步来，包含全部 CLI 参数速查和故障排除。
 
 **了解第一代 RAG 基础设施**：`issue-3-rag-infra.md` 记录了早期扁平结构的 RAG 实现，已被 Issue #13 的归一化结构替代，仅供参考。
+
+**了解咨询工作台 AI Agent 实现**：`ai-agent-impl/unified-consultation-run-sse-pipeline.md` 详细拆解了统一端点 `POST /consultation-runs` 的完整流程，包括幂等性、原子会话创建、SSE 流式转发、静默 URL 跳转、缓存更新策略。旧版两步式流程见 `old-lazy-session-creation-and-silent-navigation.md`。
 
 ### ASR 选型参考
 
