@@ -1,6 +1,10 @@
 import type { ThreadAssistantMessagePart, ThreadMessageLike } from '@assistant-ui/react';
-import type { Message, MessagePart } from '../types/consultation';
-import { INITIAL_ACTIVE_TURN_STATE, type ActiveTurnState } from './activeTurnReducer';
+import type { Message, MessagePart, PendingInteraction, StreamEvent } from '../types/consultation';
+import {
+  INITIAL_ACTIVE_TURN_STATE,
+  reduceActiveTurnEvent,
+  type ActiveTurnState,
+} from './activeTurnReducer';
 
 type ToolCallPartLike = Extract<MessagePart, { type: 'tool-call' | 'tool_call' }>;
 type ToolResultPartLike = Extract<MessagePart, { type: 'tool-result' | 'tool_result' }>;
@@ -256,125 +260,75 @@ export function toInitialThreadMessages(messages: readonly Message[]): ThreadMes
   return messages.map(toInitialThreadMessage);
 }
 
-export interface InterruptedTurnSeed {
+export interface ActiveTurnSeed {
   activeTurn: ActiveTurnState;
   consumedMessageId: string | null;
 }
 
-export function buildInterruptedTurnSeed(
-  messages: readonly Message[],
-  pendingInteractions: ReadonlyArray<{
-    id: string;
-    run_id: string;
-    conversation_id: string;
-    tool_call_id: string;
-    tool_name: string;
-    question: {
-      question: string;
-      reason?: string;
-      answer_type: 'text' | 'single_choice' | 'multi_choice' | 'number' | 'date';
-      options?: string[];
-      required?: boolean;
-      context?: string;
-    };
-    status: 'pending' | 'answered' | 'cancelled';
-    created_at: string;
-  }> | undefined,
-): InterruptedTurnSeed | null {
-  const pending = [...(pendingInteractions ?? [])]
-    .filter((interaction) => interaction.status === 'pending')
-    .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0];
-
-  if (!pending) {
+export function buildActiveTurnSeedFromRuntimeEvents(
+  events: readonly StreamEvent[] | undefined,
+  pendingInteractions?: readonly PendingInteraction[],
+): ActiveTurnSeed | null {
+  if (!events || events.length === 0) {
     return null;
   }
 
-  const sourceMessage =
-    [...messages]
-      .reverse()
-      .find((message) => message.role === 'assistant' && message.status === 'aborted') ??
-    null;
-
-  const activeTurn: ActiveTurnState = {
-    ...INITIAL_ACTIVE_TURN_STATE,
-    toolCallsById: {},
-    citationsByKey: {},
-    knowledgeGapsByKey: {},
-    extractedInfoByBodyPart: {},
-    finalParts: [],
-    runId: pending.run_id,
-    conversationId: pending.conversation_id,
-    assistantMessageId: sourceMessage?.id ?? null,
-    status: 'interrupted',
-    pendingInteraction: pending,
-  };
-
-  if (!sourceMessage) {
-    return {
-      activeTurn,
-      consumedMessageId: null,
-    };
+  let activeTurn = { ...INITIAL_ACTIVE_TURN_STATE };
+  const sortedEvents = [...events].sort((a, b) => a.seq - b.seq);
+  for (const event of sortedEvents) {
+    activeTurn = reduceActiveTurnEvent(activeTurn, event).state;
   }
 
-  const normalizedParts = normalizeAssistantParts(sourceMessage);
-  for (const part of normalizedParts) {
-    switch (part.type) {
-      case 'text':
-        activeTurn.text += part.text;
-        break;
+  if (activeTurn.status !== 'streaming' && activeTurn.status !== 'interrupted') {
+    return null;
+  }
 
-      case 'tool-call':
-        if (part.toolName === 'ask_user') {
-          break;
-        }
-        activeTurn.toolCallsById[part.toolCallId] = {
-          id: part.toolCallId,
-          tool: part.toolName,
-          args: part.args,
-          result: part.result,
-          status: part.result === undefined ? 'running' : 'completed',
-        };
-        break;
-
-      case 'source': {
-        const metadata = isRecord(part.providerMetadata) ? part.providerMetadata : {};
-        const bodysense = isRecord(metadata.bodysense) ? metadata.bodysense : {};
-        const title = part.title ?? (part.sourceType === 'url' ? part.url : '') ?? 'Untitled source';
-        activeTurn.citationsByKey[title] = {
-          title,
-          summary:
-            typeof bodysense.summary === 'string' ? bodysense.summary : undefined,
-          snippet:
-            typeof bodysense.snippet === 'string' ? bodysense.snippet : undefined,
-          source_title:
-            typeof bodysense.source_title === 'string'
-              ? bodysense.source_title
-              : undefined,
-          source_author:
-            typeof bodysense.source_author === 'string'
-              ? bodysense.source_author
-              : undefined,
-        };
-        break;
-      }
-
-      case 'data':
-        if (part.name === 'knowledge_gap' && isRecord(part.data)) {
-          const query = part.data.query;
-          const message = part.data.message;
-          if (typeof query === 'string' && typeof message === 'string') {
-            activeTurn.knowledgeGapsByKey[query] = { query, message };
-          }
-        }
-        if (part.name === 'red_flag' && isRecord(part.data)) {
-          activeTurn.redFlag = part.data as unknown as ActiveTurnState['redFlag'];
-        }
-        break;
-    }
+  const projectedPending = selectProjectedPendingInteraction(
+    pendingInteractions,
+    activeTurn.pendingInteraction?.id ?? null,
+    activeTurn.runId,
+  );
+  if (projectedPending) {
+    activeTurn = {
+      ...activeTurn,
+      pendingInteraction: projectedPending,
+      status: projectedPending.status === 'pending' ? 'interrupted' : activeTurn.status,
+    };
   }
 
   return {
     activeTurn,
-    consumedMessageId: sourceMessage.id,
+    consumedMessageId: activeTurn.assistantMessageId,
   };
+}
+
+function selectProjectedPendingInteraction(
+  pendingInteractions: readonly PendingInteraction[] | undefined,
+  interactionId: string | null,
+  runId: string | null,
+): PendingInteraction | null {
+  const pending = pendingInteractions ?? [];
+  if (pending.length === 0) {
+    return null;
+  }
+
+  if (interactionId) {
+    const exact = pending.find((interaction) => interaction.id === interactionId);
+    if (exact) {
+      return exact;
+    }
+  }
+
+  if (runId) {
+    const byRun = pending
+      .filter((interaction) => interaction.run_id === runId)
+      .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0];
+    if (byRun) {
+      return byRun;
+    }
+  }
+
+  return pending
+    .filter((interaction) => interaction.status === 'pending')
+    .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0] ?? null;
 }

@@ -441,6 +441,38 @@ describe('ActiveTurnReducer', () => {
     });
   });
 
+  describe('interrupt/resume lifecycle', () => {
+    it('keeps the turn interrupted until answer and clears it on run.resumed', () => {
+      const { state: required } = reduceActiveTurnEvent(
+        INITIAL_ACTIVE_TURN_STATE,
+        makeEvent('state.interaction.required', {
+          interaction_id: 'int-1',
+          question: { question: 'Age?', answer_type: 'number', required: true },
+        }, { interaction_id: 'int-1', tool_call_id: 'tc-ask' }, 'state'),
+      );
+
+      const { state: interrupted } = reduceActiveTurnEvent(
+        required,
+        makeEvent('run.interrupted', { status: 'waiting_user', interaction_id: 'int-1' }, { interaction_id: 'int-1' }, 'run'),
+      );
+
+      const { state: answered, effects } = reduceActiveTurnEvent(
+        interrupted,
+        makeEvent('state.interaction.answered', { interaction_id: 'int-1', answer: { text: '35' } }, { interaction_id: 'int-1' }, 'state'),
+      );
+
+      const { state: resumed } = reduceActiveTurnEvent(
+        answered,
+        makeEvent('run.resumed', { status: 'running', interaction_id: 'int-1' }, { interaction_id: 'int-1' }, 'run'),
+      );
+
+      expect(interrupted.status).toBe('interrupted');
+      expect(answered.pendingInteraction?.status).toBe('answered');
+      expect(effects[0].type).toBe('interaction_answered');
+      expect(resumed.status).toBe('streaming');
+      expect(resumed.pendingInteraction).toBeNull();
+    });
+  });
   describe('state.interaction.answered', () => {
     it('updates pendingInteraction status to answered', () => {
       const stateWithInteraction: ActiveTurnState = {

@@ -24,6 +24,11 @@ import type {
 
 export interface SSEHandlers {
   onConversationCreated?: (data: SSEConversationCreated) => void;
+  onRunStarted?: (data: StreamEvent) => void;
+  onRunResumed?: (data: StreamEvent) => void;
+  onRunInterrupted?: (data: StreamEvent) => void;
+  onRunCompleted?: (data: StreamEvent) => void;
+  onRunFailed?: (data: StreamEvent) => void;
   onMessagePersisted?: (data: SSEMessagePersisted) => void;
   onMessageCreated?: (data: SSEMessageCreated) => void;
   onTextDelta?: (data: SSETextDelta) => void;
@@ -46,6 +51,11 @@ export interface SSEHandlers {
 
 const EVENT_MAP: Record<string, keyof SSEHandlers> = {
   'conversation.created': 'onConversationCreated',
+  'run.started': 'onRunStarted',
+  'run.resumed': 'onRunResumed',
+  'run.interrupted': 'onRunInterrupted',
+  'run.completed': 'onRunCompleted',
+  'run.failed': 'onRunFailed',
   'message.persisted': 'onMessagePersisted',
   'message.created': 'onMessageCreated',
   'message.text.delta': 'onTextDelta',
@@ -92,8 +102,8 @@ export function processSSELine(
           (handler as HandlerFn)(event);
         }
       }
-    } catch {
-      // skip malformed JSON
+    } catch (err) {
+      console.warn('[SSE] malformed JSON payload:', dataStr, err);
     }
   }
 }

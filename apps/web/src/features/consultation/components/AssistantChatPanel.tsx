@@ -25,6 +25,7 @@ interface AssistantChatPanelProps {
   onCitation?: (citation: Citation) => void;
   onTitleGenerated?: (title: string) => void;
   onMessagePersisted?: (clientMessageId: string, messageId: string) => void;
+  onStreamFinished?: () => void;
 }
 
 /**
@@ -54,6 +55,7 @@ export function AssistantChatPanel({
   onTitleGenerated,
   onMessagePersisted,
   onConversationCreated,
+  onStreamFinished,
 }: AssistantChatPanelProps) {
   const extractedInfoRef = useRef<ExtractedInfo[]>(_initialExtractedInfo);
 
@@ -83,10 +85,11 @@ export function AssistantChatPanel({
     onCitation,
     onTitleGenerated,
     onMessagePersisted,
+    onStreamFinished,
     onActiveTurnUpdate: (state: ActiveTurnState) => {
       activeTurnRef.current?.(state);
     },
-  }), [onConversationCreated, onExtractedInfoUpdate, onPhaseChange, onCitation, onTitleGenerated, onMessagePersisted]);
+  }), [onConversationCreated, onExtractedInfoUpdate, onPhaseChange, onCitation, onTitleGenerated, onMessagePersisted, onStreamFinished]);
 
   const { runtime, resumeInteraction } = useAssistantChatRuntime(
     conversationId,

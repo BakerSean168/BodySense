@@ -31,40 +31,6 @@ describe('consultationApi', () => {
 
   // ===== General Conversation API =====
 
-  describe('createConsultation', () => {
-    it('POSTs to /api/v1/consultations and parses the session', async () => {
-      const session = { conversation_id: 'conv-1', phase: 'collecting' };
-      mockAuthFetch.mockResolvedValue(mockResponse(session));
-
-      const result = await consultationApi.createConsultation();
-
-      expect(mockAuthFetch).toHaveBeenCalledWith('/api/v1/consultations', {
-        method: 'POST',
-      });
-      expect(result).toEqual(session);
-    });
-  });
-
-  describe('sendConsultationMessage', () => {
-    it('POSTs to /api/v1/consultations/:id/messages and returns raw Response', async () => {
-      const raw = new Response('stream');
-      mockAuthFetch.mockResolvedValue(raw);
-
-      const params = {
-        clientMessageId: 'msg-1',
-        requestId: 'req-1',
-        message: { role: 'user', parts: [{ type: 'text', text: 'hello' }] },
-      };
-      const result = await consultationApi.sendConsultationMessage('conv-1', params);
-
-      expect(mockAuthFetch).toHaveBeenCalledWith('/api/v1/consultations/conv-1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      });
-      expect(result).toBe(raw);
-    });
-  });
 
   describe('resumeInteractionStream', () => {
     it('POSTs to the consultation interrupt answer endpoint and returns raw Response', async () => {

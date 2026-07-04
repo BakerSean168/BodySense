@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   useLocalRuntime,
   type ChatModelAdapter,
@@ -36,6 +36,8 @@ export interface ConsultationAdapterOptions {
   onInteractionRequired?: (interaction: PendingInteraction) => void;
   /** Called on each dispatch with the full active turn state. */
   onActiveTurnUpdate?: (state: ActiveTurnState) => void;
+  /** Called when the stream has fully completed or errored/aborted. */
+  onStreamFinished?: () => void;
 }
 
 export function useAssistantChatRuntime(
@@ -46,6 +48,10 @@ export function useAssistantChatRuntime(
   const [isStreaming, setIsStreaming] = useState(false);
   const optionsRef = useRef(options);
   optionsRef.current = options;
+
+  // Ref to stabilize resumeInteraction — avoids re-creating on every render
+  type StreamRunFn = (startRequest: () => Promise<Response>) => AsyncGenerator<ChatModelRunResult>;
+  const streamConsultationRunRef = useRef<StreamRunFn | null>(null);
 
   async function* streamConsultationRun(
     startRequest: () => Promise<Response>,
@@ -91,6 +97,9 @@ export function useAssistantChatRuntime(
     function applyEffects(effects: ActiveTurnEffect[]) {
       for (const effect of effects) {
         switch (effect.type) {
+          case 'conversation_created':
+            optionsRef.current.onConversationCreated?.(effect.conversationId);
+            break;
           case 'message_persisted':
             optionsRef.current.onMessagePersisted?.(
               effect.clientMessageId,
@@ -116,6 +125,9 @@ export function useAssistantChatRuntime(
             break;
           case 'message_completed':
             optionsRef.current.onMessageCompleted?.(effect.data as SSEMessageCompleted);
+            break;
+          case 'title_generated':
+            optionsRef.current.onTitleGenerated?.(effect.title);
             break;
           case 'stream_error':
             break;
@@ -152,29 +164,37 @@ export function useAssistantChatRuntime(
       }
 
       const streamPromise = consumeSSEStream(response, {
-        onMessagePersisted: (data) => dispatch(data as unknown as StreamEvent),
-        onMessageCreated: (data) => dispatch(data as unknown as StreamEvent),
-        onTextDelta: (data) => dispatch(data as unknown as StreamEvent),
-        onToolCall: (data) => dispatch(data as unknown as StreamEvent),
-        onToolResult: (data) => dispatch(data as unknown as StreamEvent),
-        onExtractedInfo: (data) => dispatch(data as unknown as StreamEvent),
-        onPhaseChange: (data) => dispatch(data as unknown as StreamEvent),
-        onRedFlag: (data) => dispatch(data as unknown as StreamEvent),
-        onCitation: (data) => dispatch(data as unknown as StreamEvent),
-        onKnowledgeGap: (data) => dispatch(data as unknown as StreamEvent),
-        onTitleGenerated: (data) => {
-          optionsRef.current.onTitleGenerated?.(data.payload.title);
-        },
-        onInteractionRequired: (data) => dispatch(data as unknown as StreamEvent),
-        onInteractionAnswered: (data) => dispatch(data as unknown as StreamEvent),
-        onMessageCompleted: (data) => dispatch(data as unknown as StreamEvent),
-        onMessageFailed: (data) => dispatch(data as unknown as StreamEvent),
-        onDone: () => {},
+        onMessagePersisted: (data) => dispatch(data as StreamEvent),
+        onRunStarted: (data) => dispatch(data as StreamEvent),
+        onRunResumed: (data) => dispatch(data as StreamEvent),
+        onRunInterrupted: (data) => dispatch(data as StreamEvent),
+        onRunCompleted: (data) => dispatch(data as StreamEvent),
+        onRunFailed: (data) => dispatch(data as StreamEvent),
+        onMessageCreated: (data) => dispatch(data as StreamEvent),
+        onTextDelta: (data) => dispatch(data as StreamEvent),
+        onToolCall: (data) => dispatch(data as StreamEvent),
+        onToolResult: (data) => dispatch(data as StreamEvent),
+        onExtractedInfo: (data) => dispatch(data as StreamEvent),
+        onPhaseChange: (data) => dispatch(data as StreamEvent),
+        onRedFlag: (data) => dispatch(data as StreamEvent),
+        onCitation: (data) => dispatch(data as StreamEvent),
+        onKnowledgeGap: (data) => dispatch(data as StreamEvent),
+        onTitleGenerated: (data) => dispatch(data as StreamEvent),
+        onInteractionRequired: (data) => dispatch(data as StreamEvent),
+        onInteractionAnswered: (data) => dispatch(data as StreamEvent),
+        onMessageCompleted: (data) => dispatch(data as StreamEvent),
+        onMessageFailed: (data) => dispatch(data as StreamEvent),
+        onDone: (data) => dispatch(data as StreamEvent),
         onStreamError: (data) => {
           streamError = new Error(data.payload.message);
+          dispatch(data as StreamEvent);
+          streamFinished = true;
+          notifyQueueConsumer();
         },
         onError: (err) => {
           streamError = err;
+          streamFinished = true;
+          notifyQueueConsumer();
         },
       }).finally(() => {
         streamFinished = true;
@@ -200,6 +220,7 @@ export function useAssistantChatRuntime(
       }
     } finally {
       setIsStreaming(false);
+      optionsRef.current.onStreamFinished?.();
       if (
         reducerState.status === 'completed' ||
         reducerState.status === 'failed' ||
@@ -210,6 +231,9 @@ export function useAssistantChatRuntime(
     }
   }
 
+  // Keep ref current so resumeInteraction always calls the latest streamConsultationRun
+  streamConsultationRunRef.current = streamConsultationRun;
+
   const adapter: ChatModelAdapter = {
     async *run({ messages }): AsyncGenerator<ChatModelRunResult> {
       const lastMessage = messages[messages.length - 1];
@@ -218,26 +242,13 @@ export function useAssistantChatRuntime(
         .map((p) => p.text)
         .join('');
 
-      const clientMessageId = `tmp_${crypto.randomUUID()}`;
-      const requestId = crypto.randomUUID();
       setIsStreaming(true);
 
-      let activeId = conversationId;
-      if (conversationId === 'new') {
-        try {
-          const session = await consultationApi.createConsultation();
-          activeId = session.conversation_id;
-          optionsRef.current.onConversationCreated?.(activeId);
-        } catch (err) {
-          setIsStreaming(false);
-          throw err;
-        }
-      }
-
       yield* streamConsultationRun(() =>
-        consultationApi.sendConsultationMessage(activeId, {
-          clientMessageId,
-          requestId,
+        consultationApi.startConsultationRun({
+          conversationId: conversationId === 'new' ? null : conversationId,
+          clientMessageId: `tmp_${crypto.randomUUID()}`,
+          requestId: crypto.randomUUID(),
           message: {
             role: 'user',
             parts: [{ type: 'text', text: content }],
@@ -251,24 +262,28 @@ export function useAssistantChatRuntime(
     initialMessages,
   });
 
-  const resumeInteraction = (
-    threadRuntime: ThreadRuntime,
-    interactionId: string,
-    answer: unknown,
-  ) => {
-    setIsStreaming(true);
-    threadRuntime.resumeRun({
-      parentId: threadRuntime.getState().messages.at(-1)?.id ?? null,
-      stream: async function* () {
-        yield* streamConsultationRun(() =>
-          consultationApi.resumeInteractionStream(conversationId, interactionId, {
-            requestId: crypto.randomUUID(),
-            answer,
-          }),
-        );
-      },
-    });
-  };
+  const resumeInteraction = useCallback(
+    (threadRuntime: ThreadRuntime, interactionId: string, answer: unknown) => {
+      setIsStreaming(true);
+      threadRuntime.resumeRun({
+        parentId: threadRuntime.getState().messages.at(-1)?.id ?? null,
+        stream: async function* () {
+          const runFn = streamConsultationRunRef.current;
+          if (!runFn) {
+            throw new Error('streamConsultationRun not initialized — resumeInteraction called before first render');
+          }
+          yield* runFn(
+            () =>
+              consultationApi.resumeInteractionStream(conversationId, interactionId, {
+                requestId: crypto.randomUUID(),
+                answer,
+              }),
+          );
+        },
+      });
+    },
+    [conversationId],
+  );
 
   return { runtime, isStreaming, resumeInteraction };
 }

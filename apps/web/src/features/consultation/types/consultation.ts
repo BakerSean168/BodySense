@@ -12,14 +12,15 @@ import type {
   RedFlagDetectedEvent,
   MessageCompletedEvent,
   MessageFailedEvent,
+  TitleGeneratedEvent,
   StreamDoneEvent,
   StreamErrorEvent,
+  StreamEvent,
 } from '@bodysense/contracts';
 
-export type { StreamEvent } from '@bodysense/contracts';
+export type { StreamEvent };
 
-// 通用会话类型
-// Field names use snake_case to match the backend Go model JSON tags.
+
 export interface Conversation {
   id: string;
   title: string | null;
@@ -39,6 +40,8 @@ export interface Message {
   id: string;
   conversation_id: string;
   turn_id: string;
+  run_id?: string | null;
+  parent_message_id?: string | null;
   role: 'user' | 'assistant' | 'system' | 'tool';
   status: 'submitted' | 'streaming' | 'completed' | 'failed' | 'aborted';
   seq: number;
@@ -46,6 +49,8 @@ export interface Message {
   content_text: string;
   model: string | null;
   provider: string | null;
+  provider_message_id?: string | null;
+  provider_response_id?: string | null;
   input_tokens: number | null;
   output_tokens: number | null;
   total_tokens: number | null;
@@ -115,7 +120,6 @@ export interface TokenUsage {
   total_tokens: number;
 }
 
-// 咨询领域扩展
 export interface ConsultationSession {
   conversation_id: string;
   phase: ConsultationPhase;
@@ -127,6 +131,14 @@ export interface ConsultationSession {
   updated_at: string;
   ended_at: string | null;
   conversation?: Conversation;
+}
+
+export interface ConsultationThread extends ConsultationSession {
+  conversation: Conversation;
+  active_turn_run_id?: string | null;
+  active_turn_events?: StreamEvent[];
+  messages: Message[];
+  tool_calls: ProjectedToolCall[];
 }
 
 export type ConsultationPhase =
@@ -145,7 +157,6 @@ export interface ExtractedInfo {
   relief?: string;
   severity?: string;
   additional_notes?: string;
-  /** Whether the user has confirmed this extracted info card. */
   confirmed?: boolean;
 }
 
@@ -194,7 +205,6 @@ export interface Citation {
   problem_slug?: string;
 }
 
-// 分享
 export interface ConversationShare {
   shareToken: string;
   shareUrl: string;
@@ -206,7 +216,6 @@ export interface SharedConversation {
   metadata: Record<string, unknown> | null;
 }
 
-// Structured stream event aliases.
 export type SSEConversationCreated = ConversationCreatedEvent;
 export type SSEMessagePersisted = MessagePersistedEvent;
 export type SSEMessageCreated = MessageCreatedEvent;
@@ -222,16 +231,8 @@ export type SSEMessageCompleted = MessageCompletedEvent;
 export type SSEMessageFailed = MessageFailedEvent;
 export type SSEStreamDone = StreamDoneEvent;
 export type SSEStreamError = StreamErrorEvent;
-export interface SSETitleGenerated {
-  version: 1;
-  seq: number;
-  type: 'title.generated';
-  channel: 'conversation';
-  ids: { conversation_id?: string | null };
-  payload: { title: string };
-}
+export type SSETitleGenerated = TitleGeneratedEvent;
 
-// Interaction types for ask_user
 export interface PendingInteraction {
   id: string;
   run_id: string;
@@ -241,6 +242,22 @@ export interface PendingInteraction {
   question: AskUserQuestion;
   status: 'pending' | 'answered' | 'cancelled';
   created_at: string;
+}
+
+export interface ProjectedToolCall {
+  tool_call_id: string;
+  conversation_id: string;
+  run_id: string;
+  message_id: string | null;
+  tool_name: string;
+  arguments: unknown;
+  status: 'running' | 'succeeded' | 'failed';
+  result: unknown | null;
+  error: unknown | null;
+  created_at: string;
+  started_at: string;
+  finished_at: string | null;
+  metadata: Record<string, unknown>;
 }
 
 export interface AskUserQuestion {
@@ -253,7 +270,6 @@ export interface AskUserQuestion {
   context?: string;
 }
 
-/** Represents a tool call in progress or completed. */
 export interface ToolCallInfo {
   id: string;
   tool: string;
@@ -286,14 +302,12 @@ export interface InteractionAnsweredEvent {
   };
 }
 
-// 列表响应
 export interface ConversationListResponse {
   conversations: Conversation[];
   next_cursor: string | null;
   has_more: boolean;
 }
 
-// Red flag types (previously in useChatSSE.ts)
 export interface RedFlag {
   category: string;
   message: string;

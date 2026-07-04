@@ -87,6 +87,7 @@ export type ActiveTurnEffect =
   | { type: 'interaction_required'; interaction: PendingInteraction }
   | { type: 'interaction_answered'; interactionId: string }
   | { type: 'message_completed'; data: unknown }
+  | { type: 'title_generated'; title: string }
   | { type: 'stream_error'; message: string };
 
 export interface ReduceResult {
@@ -125,12 +126,50 @@ export function reduceActiveTurnEvent(
         conversationId,
         runId: event.ids.run_id || null,
         status: 'streaming',
+        error: undefined,
       };
       effects.push({
         type: 'conversation_created',
         conversationId,
         replacesDraftId: payload.replaces_draft_id,
       });
+      break;
+    }
+
+    case 'run.started':
+    case 'run.resumed': {
+      processed = true;
+      next = {
+        ...current,
+        conversationId: event.ids.conversation_id || current.conversationId,
+        runId: event.ids.run_id || current.runId,
+        status: 'streaming',
+        pendingInteraction: event.type === 'run.resumed' ? null : current.pendingInteraction,
+        error: undefined,
+      };
+      break;
+    }
+
+    case 'run.interrupted': {
+      processed = true;
+      next = { ...current, status: 'interrupted' };
+      break;
+    }
+
+    case 'run.completed': {
+      processed = true;
+      next = { ...current, runId: event.ids.run_id || current.runId };
+      break;
+    }
+
+    case 'run.failed': {
+      processed = true;
+      const payload = event.payload as { error?: { message?: string } };
+      next = {
+        ...current,
+        status: 'failed',
+        error: payload.error?.message || current.error || 'run failed',
+      };
       break;
     }
 
@@ -246,7 +285,7 @@ export function reduceActiveTurnEvent(
 
     case 'message.failed': {
       processed = true;
-      const payload = event.payload as { error?: { message?: string } };
+      const payload = event.payload as { status: 'failed'; error: { message: string } };
       next = {
         ...current,
         status: 'failed',
@@ -268,6 +307,13 @@ export function reduceActiveTurnEvent(
           finalParts: buildFinalMessageParts(current),
         };
       }
+      break;
+    }
+
+    case 'title.generated': {
+      processed = true;
+      const payload = event.payload as { title: string };
+      effects.push({ type: 'title_generated', title: payload.title });
       break;
     }
 

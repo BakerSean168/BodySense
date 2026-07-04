@@ -4,6 +4,7 @@ import type {
   ConversationListResponse,
   Message,
   ConsultationSession,
+  ConsultationThread,
   ExtractedInfo,
   Diagnosis,
   DiagnosisAnalysis,
@@ -28,36 +29,27 @@ async function parseJson<T>(res: Response): Promise<T> {
 
 export const consultationApi = {
   /**
-   * Create a new consultation thread and its backing conversation.
+   * Start a unified consultation run (creates conversation if needed + sends message in one request).
+   * Returns raw Response for SSE streaming.
    */
-  async createConsultation(): Promise<ConsultationSession> {
-    return authFetch(`${API_BASE}/consultations`, {
-      method: 'POST',
-    }).then((res) => parseJson<ConsultationSession>(res));
-  },
-
-  // ===== General Conversation API =====
-
-  /**
-   * Send a consultation message turn (returns raw Response for SSE streaming).
-   */
-  async sendConsultationMessage(
-    conversationId: string,
-    params: {
-      clientMessageId: string;
-      requestId: string;
-      message: {
-        role: string;
-        parts: { type: string; text: string }[];
-      };
-    },
-  ): Promise<Response> {
-    return authFetch(`${API_BASE}/consultations/${conversationId}/messages`, {
+  async startConsultationRun(params: {
+    conversationId: string | null;
+    clientMessageId: string;
+    requestId: string;
+    message: {
+      role: string;
+      parts: { type: string; text: string }[];
+    };
+  }): Promise<Response> {
+    return authFetch(`${API_BASE}/consultation-runs`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params),
     });
   },
+
+  // ===== General Conversation API =====
+
 
   /**
    * List conversations with cursor-based pagination.
@@ -155,6 +147,15 @@ export const consultationApi = {
   // ===== Consultation Domain API =====
 
   /**
+   * Get the projection-backed consultation thread for a conversation.
+   */
+  async getConsultationThread(id: string): Promise<ConsultationThread> {
+    return authFetch(`${API_BASE}/consultations/${id}/thread`).then((res) =>
+      parseJson<ConsultationThread>(res),
+    );
+  },
+
+  /**
    * Get consultation details for a conversation.
    */
   async getConsultation(id: string): Promise<ConsultationSession> {
@@ -231,6 +232,7 @@ export const consultationApi = {
 // Prefer importing from '../types/consultation' in new code.
 export type {
   ConsultationSession,
+  ConsultationThread,
   ConsultationPhase,
   ExtractedInfo,
   Diagnosis,
