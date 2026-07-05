@@ -1,0 +1,195 @@
+# =============================================================================
+# BodySense 部署流水线 (DigitalOcean)
+# =============================================================================
+# 触发：push 到 main 分支，或手动触发
+# 流程：构建镜像 → 推送 DO Registry → SSH 部署到 Droplet
+#
+# 需要的 GitHub Secrets：
+#   DO_API_TOKEN          - DigitalOcean API Token
+#   DROPLET_SSH_KEY       - Droplet 的 SSH 私钥
+#   DROPLET_HOST          - Droplet IP 或域名 (bodydo.bakersean.top)
+#   DROPLET_USER          - SSH 用户名 (root)
+#   ENV_PRODUCTION        - .env.production 内容
+#   ENV_PRODUCTION_LOCAL  - .env.production.local 内容
+# =============================================================================
+
+name: Deploy to DigitalOcean
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Deploy specific service (all/web/api/ai-service)'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - web
+          - api
+          - ai-service
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: registry.digitalocean.com/body-sense-docker-repo
+  NODE_VERSION: '24'
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        run: corepack enable && pnpm --version
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store/v3
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --reporter=append-only
+        env:
+          CI: 'true'
+
+      - name: Build web application
+        run: pnpm nx run web:build
+        env:
+          CI: 'true'
+          VITE_API_BASE_URL: /api
+          VITE_WS_URL: wss://bodydo.bakersean.top/ws
+
+      - name: Resolve image tag
+        id: tag
+        run: |
+          SHA=$(git rev-parse --short=12 HEAD)
+          STAMP=$(date -u +%Y%m%d-%H%M%S)
+          TAG="${STAMP}-${SHA}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "### 🏷️ Image Tag: \`${TAG}\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DO Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: registry.digitalocean.com
+          username: ${{ secrets.DO_API_TOKEN }}
+          password: ${{ secrets.DO_API_TOKEN }}
+
+      # ── Build & Push Images ──────────────────────────────────────
+
+      - name: Build and push Web image
+        if: ${{ inputs.service == 'all' || inputs.service == 'web' || github.event_name == 'push' }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.web
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/bodysense-web:${{ steps.tag.outputs.tag }}
+            ${{ env.REGISTRY }}/bodysense-web:prod-latest
+          build-args: |
+            VITE_API_BASE_URL=/api
+            VITE_WS_URL=wss://bodydo.bakersean.top/ws
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+
+      - name: Build and push API image
+        if: ${{ inputs.service == 'all' || inputs.service == 'api' || github.event_name == 'push' }}
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/api
+          file: apps/api/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/bodysense-api:${{ steps.tag.outputs.tag }}
+            ${{ env.REGISTRY }}/bodysense-api:prod-latest
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      - name: Build and push AI Service image
+        if: ${{ inputs.service == 'all' || inputs.service == 'ai-service' || github.event_name == 'push' }}
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/ai-service
+          file: apps/ai-service/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/bodysense-ai-service:${{ steps.tag.outputs.tag }}
+            ${{ env.REGISTRY }}/bodysense-ai-service:prod-latest
+          cache-from: type=gha,scope=ai-service
+          cache-to: type=gha,mode=max,scope=ai-service
+
+      # ── Deploy to Droplet ────────────────────────────────────────
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script: |
+            set -e
+
+            # Login to DO Registry
+            doctl registry login --expiry-seconds 300
+
+            # Pull new images
+            cd /opt/bodysense
+            docker compose -f docker/docker-compose.prod.yml \
+              --env-file .env.production \
+              --env-file .env.production.local \
+              pull
+
+            # Rolling restart with health checks
+            docker compose -f docker/docker-compose.prod.yml \
+              --env-file .env.production \
+              --env-file .env.production.local \
+              up -d --remove-orphans
+
+            # Wait for health checks
+            echo "Waiting for services to be healthy..."
+            sleep 15
+
+            # Verify
+            curl -sf https://bodydo.bakersean.top/api/health || {
+              echo "❌ Health check failed!"
+              docker compose -f docker/docker-compose.prod.yml logs --tail 20
+              exit 1
+            }
+
+            echo "✅ Deployment successful"
+
+      - name: Deployment summary
+        if: success()
+        run: |
+          echo "### ✅ Deployment Successful" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Tag:** \`${{ steps.tag.outputs.tag }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **URL:** https://bodydo.bakersean.top" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Registry:** DO Container Registry" >> "$GITHUB_STEP_SUMMARY"
