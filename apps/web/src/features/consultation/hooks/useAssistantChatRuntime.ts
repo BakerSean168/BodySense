@@ -98,6 +98,10 @@ export function useAssistantChatRuntime(
       for (const effect of effects) {
         switch (effect.type) {
           case 'conversation_created':
+            console.debug('[SSE] ④ applyEffects → 触发 onConversationCreated 回调', {
+              conversationId: effect.conversationId,
+              hasCallback: !!optionsRef.current.onConversationCreated,
+            });
             optionsRef.current.onConversationCreated?.(effect.conversationId);
             break;
           case 'message_persisted':
@@ -127,6 +131,10 @@ export function useAssistantChatRuntime(
             optionsRef.current.onMessageCompleted?.(effect.data as SSEMessageCompleted);
             break;
           case 'title_generated':
+            console.debug('[SSE] ④ applyEffects → 触发 onTitleGenerated 回调', {
+              title: effect.title,
+              hasCallback: !!optionsRef.current.onTitleGenerated,
+            });
             optionsRef.current.onTitleGenerated?.(effect.title);
             break;
           case 'stream_error':
@@ -140,6 +148,14 @@ export function useAssistantChatRuntime(
     function dispatch(event: StreamEvent) {
       const result = reduceActiveTurnEvent(reducerState, event);
       reducerState = result.state;
+      // 🔍 追踪关键事件的 effect 产生情况
+      if (event.type === 'conversation.created' || event.type === 'title.generated') {
+        console.debug(`[SSE] ④ dispatch(${event.type}) → effects 数量: ${result.effects.length}`, {
+          effects: result.effects.map(e => e.type),
+          hasConversationCreatedCb: !!optionsRef.current.onConversationCreated,
+          hasTitleGeneratedCb: !!optionsRef.current.onTitleGenerated,
+        });
+      }
       applyEffects(result.effects);
       optionsRef.current.onActiveTurnUpdate?.(reducerState);
 
@@ -164,6 +180,19 @@ export function useAssistantChatRuntime(
       }
 
       const streamPromise = consumeSSEStream(response, {
+        onConversationCreated: (data) => {
+          console.debug('[SSE] ②-SSE handler 收到 conversation.created → 准备 dispatch', {
+            conversation_id: (data as StreamEvent).ids?.conversation_id,
+            run_id: (data as StreamEvent).ids?.run_id,
+          });
+          dispatch(data as StreamEvent);
+        },
+        onTitleGenerated: (data) => {
+          console.debug('[SSE] ②-SSE handler 收到 title.generated → 准备 dispatch', {
+            title: (data as StreamEvent).payload,
+          });
+          dispatch(data as StreamEvent);
+        },
         onMessagePersisted: (data) => dispatch(data as StreamEvent),
         onRunStarted: (data) => dispatch(data as StreamEvent),
         onRunResumed: (data) => dispatch(data as StreamEvent),
@@ -179,7 +208,6 @@ export function useAssistantChatRuntime(
         onRedFlag: (data) => dispatch(data as StreamEvent),
         onCitation: (data) => dispatch(data as StreamEvent),
         onKnowledgeGap: (data) => dispatch(data as StreamEvent),
-        onTitleGenerated: (data) => dispatch(data as StreamEvent),
         onInteractionRequired: (data) => dispatch(data as StreamEvent),
         onInteractionAnswered: (data) => dispatch(data as StreamEvent),
         onMessageCompleted: (data) => dispatch(data as StreamEvent),

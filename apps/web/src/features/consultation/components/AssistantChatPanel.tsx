@@ -66,7 +66,12 @@ export function AssistantChatPanel({
   const activeTurnRef = useRef<((state: ActiveTurnState) => void) | null>(null);
 
   const adapterOptions = useMemo(() => ({
-    onConversationCreated,
+    onConversationCreated: onConversationCreated
+      ? (id: string) => {
+          console.debug('[SSE] ⓪ AssistantChatPanel → 桥接 onConversationCreated', { id });
+          onConversationCreated(id);
+        }
+      : undefined,
     onExtractedInfoUpdate: (info: ExtractedInfo) => {
       const existing = extractedInfoRef.current;
       const idx = existing.findIndex((e) => e.body_part === info.body_part);
@@ -83,7 +88,12 @@ export function AssistantChatPanel({
       onPhaseChange?.(to as ConsultationPhase);
     },
     onCitation,
-    onTitleGenerated,
+    onTitleGenerated: onTitleGenerated
+      ? (title: string) => {
+          console.debug('[SSE] ⓪ AssistantChatPanel → 桥接 onTitleGenerated', { title });
+          onTitleGenerated(title);
+        }
+      : undefined,
     onMessagePersisted,
     onStreamFinished,
     onActiveTurnUpdate: (state: ActiveTurnState) => {

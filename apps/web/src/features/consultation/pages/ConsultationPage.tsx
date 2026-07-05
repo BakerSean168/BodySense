@@ -269,7 +269,16 @@ export function ConsultationPage() {
   const handleTitleGenerated = useCallback(
     (title: string) => {
       const convId = activeConversationIdRef.current ?? routeConversationId;
-      if (!convId) return;
+      console.debug('[SSE] ⑤ ConsultationPage.handleTitleGenerated 开始执行', {
+        title,
+        convId,
+        activeRef: activeConversationIdRef.current,
+        routeConversationId,
+      });
+      if (!convId) {
+        console.warn('[SSE] ⚠️ handleTitleGenerated: convId 为空，跳过更新');
+        return;
+      }
 
       // Update conversation detail cache
       queryClient.setQueryData<ConsultationThread>(
@@ -279,6 +288,7 @@ export function ConsultationPage() {
             ? { ...old, conversation: { ...old.conversation, title, title_status: 'generated' } }
             : old,
       );
+      console.debug('[SSE] ⑤ handleTitleGenerated → 已更新 thread 详情缓存', { convId, title });
 
       // Update conversations list cache
       queryClient.setQueryData<ConversationListResponse>(
@@ -293,6 +303,7 @@ export function ConsultationPage() {
               }
             : old,
       );
+      console.debug('[SSE] ⑤ handleTitleGenerated → 已更新会话列表缓存 ✅ 完成');
     },
     [routeConversationId, queryClient],
   );
@@ -596,6 +607,11 @@ export function ConsultationPage() {
                 key={chatSessionKey}
                 conversationId={id || 'new'}
                 onConversationCreated={(newId) => {
+                  console.debug('[SSE] ⑤ ConsultationPage.onConversationCreated 开始执行', {
+                    newId,
+                    currentRouteId: id,
+                    currentActiveRef: activeConversationIdRef.current,
+                  });
                   // Set refs synchronously before navigate() — SSE callbacks in the same
                   // event batch need this ID before React re-renders with the new route.
                   justCreatedRef.current = newId;
@@ -630,8 +646,13 @@ export function ConsultationPage() {
                     },
                   );
 
+                  console.debug('[SSE] ⑤ ConsultationPage.onConversationCreated → 已乐观插入缓存，准备导航', {
+                    newId,
+                    targetUrl: `/consultation/${newId}`,
+                  });
                   // Navigate to the new conversation URL (silent, no history entry)
                   navigate(`/consultation/${newId}`, { replace: true });
+                  console.debug('[SSE] ⑤ ConsultationPage.onConversationCreated ✅ 完成');
                 }}
                 initialMessages={toInitialThreadMessages(historicalMessages)}
                 initialActiveTurn={initialTurnSeed?.activeTurn ?? null}

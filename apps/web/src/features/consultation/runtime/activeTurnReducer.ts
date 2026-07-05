@@ -121,6 +121,13 @@ export function reduceActiveTurnEvent(
       processed = true;
       const payload = event.payload as { replaces_draft_id?: string };
       const conversationId = event.ids.conversation_id || '';
+      console.debug('[SSE] ③ Reducer 处理 conversation.created → 产生 effect', {
+        conversationId,
+        runId: event.ids.run_id,
+        replacesDraftId: payload.replaces_draft_id,
+        prevStatus: current.status,
+        nextStatus: 'streaming',
+      });
       next = {
         ...current,
         conversationId,
@@ -313,6 +320,10 @@ export function reduceActiveTurnEvent(
     case 'title.generated': {
       processed = true;
       const payload = event.payload as { title: string };
+      console.debug('[SSE] ③ Reducer 处理 title.generated → 产生 effect', {
+        title: payload.title,
+        currentConversationId: current.conversationId,
+      });
       effects.push({ type: 'title_generated', title: payload.title });
       break;
     }
