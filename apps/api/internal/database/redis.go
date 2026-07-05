@@ -2,8 +2,10 @@ package database
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -31,11 +33,20 @@ func RedisConfigFromEnv() RedisConfig {
 
 // ConnectRedis initializes the Redis connection.
 func ConnectRedis(cfg RedisConfig) (*redis.Client, error) {
-	client := redis.NewClient(&redis.Options{
+	opts := &redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", cfg.Host, cfg.Port),
 		Password: cfg.Password,
 		DB:       cfg.DB,
-	})
+	}
+
+	// Enable TLS for managed Redis/Valkey (e.g. DigitalOcean)
+	if os.Getenv("REDIS_TLS") == "true" {
+		opts.TLSConfig = &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		}
+	}
+
+	client := redis.NewClient(opts)
 
 	// Test connection
 	ctx := context.Background()

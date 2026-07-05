@@ -11,9 +11,13 @@ import (
 
 // RunMigrations executes pending database migrations.
 func RunMigrations(cfg Config) error {
+	sslMode := cfg.SSLMode
+	if sslMode == "" {
+		sslMode = "disable"
+	}
 	dsn := fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Name,
+		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
+		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Name, sslMode,
 	)
 
 	m, err := migrate.New("file://migrations", dsn)

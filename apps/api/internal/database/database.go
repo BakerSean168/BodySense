@@ -21,6 +21,7 @@ type Config struct {
 	Name     string
 	User     string
 	Password string
+	SSLMode  string
 }
 
 // ConfigFromEnv reads database config from environment variables.
@@ -36,6 +37,7 @@ func ConfigFromEnv() Config {
 		Name:     getEnv("DB_NAME", "bodysense"),
 		User:     getEnv("DB_USER", "bodysense"),
 		Password: password,
+		SSLMode:  getEnv("DB_SSLMODE", "require"),
 	}
 }
 
