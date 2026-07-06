@@ -167,7 +167,7 @@ def test_decide_action_supplement_symptom():
     wf = ConsultationAgentWorkflow()
     ctx = _make_context()
     decision = wf.decide_next_action(
-        ConsultationIntent.SUPPLEMENT_SYMPTOM, ctx
+        ConsultationIntent.SUPPLEMENT_SYMPTOM, ctx, "我肩膀酸胀，久坐后更明显"
     )
     assert decision.action == AgentAction.ASK_FOLLOW_UP
     assert decision.confidence > 0.5
@@ -179,7 +179,7 @@ def test_decide_action_analysis_ready():
         symptoms=[{"body_part": "肩部", "symptom_type": "酸胀"}]
     )
     decision = wf.decide_next_action(
-        ConsultationIntent.REQUEST_ANALYSIS, ctx
+        ConsultationIntent.REQUEST_ANALYSIS, ctx, "帮我分析一下是什么问题"
     )
     assert decision.action == AgentAction.GENERATE_DIAGNOSIS
 
@@ -188,16 +188,16 @@ def test_decide_action_analysis_not_ready():
     wf = ConsultationAgentWorkflow()
     ctx = _make_context()
     decision = wf.decide_next_action(
-        ConsultationIntent.REQUEST_ANALYSIS, ctx
+        ConsultationIntent.REQUEST_ANALYSIS, ctx, "帮我看看是不是头前移"
     )
-    assert decision.action == AgentAction.ASK_FOLLOW_UP
+    assert decision.action == AgentAction.PROVIDE_INFO
 
 
 def test_decide_action_confirm_diagnosis():
     wf = ConsultationAgentWorkflow()
     ctx = _make_context()
     decision = wf.decide_next_action(
-        ConsultationIntent.CONFIRM_DIAGNOSIS, ctx
+        ConsultationIntent.CONFIRM_DIAGNOSIS, ctx, "确认，就是这个"
     )
     assert decision.action == AgentAction.GENERATE_TREATMENT
 
@@ -206,7 +206,7 @@ def test_decide_action_treatment_with_diagnosis():
     wf = ConsultationAgentWorkflow()
     ctx = _make_context(phase="diagnosis_confirmed")
     decision = wf.decide_next_action(
-        ConsultationIntent.REQUEST_TREATMENT, ctx
+        ConsultationIntent.REQUEST_TREATMENT, ctx, "怎么改善呢"
     )
     assert decision.action == AgentAction.GENERATE_TREATMENT
 
@@ -215,7 +215,7 @@ def test_decide_action_treatment_without_diagnosis():
     wf = ConsultationAgentWorkflow()
     ctx = _make_context(phase="collecting")
     decision = wf.decide_next_action(
-        ConsultationIntent.REQUEST_TREATMENT, ctx
+        ConsultationIntent.REQUEST_TREATMENT, ctx, "怎么改善呢"
     )
     assert decision.action == AgentAction.ASK_FOLLOW_UP
 
@@ -224,9 +224,33 @@ def test_decide_action_clarification():
     wf = ConsultationAgentWorkflow()
     ctx = _make_context()
     decision = wf.decide_next_action(
-        ConsultationIntent.CLARIFICATION, ctx
+        ConsultationIntent.CLARIFICATION, ctx, "什么意思，能详细说说吗"
     )
     assert decision.action == AgentAction.PROVIDE_INFO
+
+
+def test_decide_action_posture_observation_prefers_provide_info():
+    wf = ConsultationAgentWorkflow()
+    ctx = _make_context()
+    decision = wf.decide_next_action(
+        ConsultationIntent.GENERAL_QUESTION,
+        ctx,
+        "我感觉自己有点头前移",
+    )
+    assert decision.action == AgentAction.PROVIDE_INFO
+    assert "posture observation" in decision.reasoning
+
+
+def test_should_interrupt_for_follow_up_on_critical_signal():
+    wf = ConsultationAgentWorkflow()
+    ctx = _make_context()
+    assert wf.should_interrupt_for_follow_up("手臂麻木无力，还往下放射", ctx) is True
+
+
+def test_should_not_interrupt_for_initial_posture_observation():
+    wf = ConsultationAgentWorkflow()
+    ctx = _make_context()
+    assert wf.should_interrupt_for_follow_up("我感觉自己有点头前移", ctx) is False
 
 
 # --- Singleton test ---

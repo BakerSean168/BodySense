@@ -4,14 +4,14 @@ import remarkGfm from "remark-gfm";
 import { useAssistantChatRuntime } from "../hooks/useAssistantChatRuntime";
 import { ActiveTurnProvider, useActiveTurnActions, useActiveTurnState } from "../context/ActiveTurnContext";
 import React, { useRef, useEffect, useState, useCallback, useMemo } from "react";
-import type { Citation, ConsultationPhase, ExtractedInfo } from "../types/consultation";
+import type { Citation, ConsultationPhase, ExtractedInfo, HealthFeatures } from "../types/consultation";
 import type { ActiveTurnState } from "../runtime/activeTurnReducer";
 import { buildAssistantMessagePartsViewModel } from "../runtime/assistantMessagePartsViewModel";
 import { selectIsComposerLocked } from "../runtime/activeTurnSelectors";
 import { StreamingAssistantTurn } from "./StreamingAssistantTurn";
-import { AskUserCard } from "./AskUserCard";
 import { StreamingTurnToolCalls } from "./StreamingTurnToolCalls";
 import { RedFlagBanner } from "./RedFlagBanner";
+import { AskUserStatusCard } from "./AskUserStatusCard";
 import { useConsultationStore } from "@/stores/consultationStore";
 
 interface AssistantChatPanelProps {
@@ -20,6 +20,7 @@ interface AssistantChatPanelProps {
   initialMessages?: ThreadMessageLike[];
   initialActiveTurn?: ActiveTurnState | null;
   initialExtractedInfo?: ExtractedInfo[];
+  onHealthFeaturesUpdate?: (healthFeatures: HealthFeatures) => void;
   onExtractedInfoUpdate?: (info: ExtractedInfo[]) => void;
   onPhaseChange?: (phase: ConsultationPhase) => void;
   onCitation?: (citation: Citation) => void;
@@ -49,6 +50,7 @@ export function AssistantChatPanel({
   initialMessages = [],
   initialActiveTurn = null,
   initialExtractedInfo: _initialExtractedInfo = [],
+  onHealthFeaturesUpdate,
   onExtractedInfoUpdate,
   onPhaseChange,
   onCitation,
@@ -84,6 +86,7 @@ export function AssistantChatPanel({
       }
       onExtractedInfoUpdate?.(extractedInfoRef.current);
     },
+    onHealthFeaturesUpdate,
     onPhaseChange: (_from: string, to: string) => {
       onPhaseChange?.(to as ConsultationPhase);
     },
@@ -99,7 +102,7 @@ export function AssistantChatPanel({
     onActiveTurnUpdate: (state: ActiveTurnState) => {
       activeTurnRef.current?.(state);
     },
-  }), [onConversationCreated, onExtractedInfoUpdate, onPhaseChange, onCitation, onTitleGenerated, onMessagePersisted, onStreamFinished]);
+  }), [onConversationCreated, onExtractedInfoUpdate, onHealthFeaturesUpdate, onPhaseChange, onCitation, onTitleGenerated, onMessagePersisted, onStreamFinished]);
 
   const { runtime, resumeInteraction } = useAssistantChatRuntime(
     conversationId,
@@ -351,33 +354,31 @@ function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) 
         />
 
         {/* Streaming assistant turn from ActiveTurnState */}
-        <StreamingAssistantTurn />
+        <StreamingAssistantTurn
+          onInteractionSubmit={hasPendingInteraction ? handleInteractionAnswer : undefined}
+          isInteractionSubmitting={isSubmitting}
+          interactionError={interactionError}
+          onInteractionRetry={() => setInteractionError(null)}
+        />
       </ThreadPrimitive.Viewport>
 
       {/* Input area */}
-      {hasPendingInteraction ? (
-        <div className="p-4 border-t border-[#E5E3DF] bg-[#FBFBFA]">
-          <AskUserCard
-            question={activeTurn.pendingInteraction!.question}
-            onSubmit={handleInteractionAnswer}
-            isSubmitting={isSubmitting}
-            error={interactionError}
-            onRetry={() => setInteractionError(null)}
-          />
-        </div>
-      ) : (
-        <div className="p-4 border-t border-[#E5E3DF] bg-[#FBFBFA]">
-          <ChatInputArea
-            inputText={inputText}
-            setInputText={setInputText}
-            isComposerLocked={isComposerLocked}
-            handleKeyDown={handleKeyDown}
-            handleSend={handleSend}
-            textareaRef={textareaRef}
-            isCentered={false}
-          />
-        </div>
-      )}
+      <div className="p-4 border-t border-[#E5E3DF] bg-[#FBFBFA]">
+        {hasPendingInteraction && (
+          <p className="mb-3 text-xs font-medium text-[#5F6F86]">
+            正在等待你完成上方追问，当前输入框暂时锁定。
+          </p>
+        )}
+        <ChatInputArea
+          inputText={inputText}
+          setInputText={setInputText}
+          isComposerLocked={isComposerLocked}
+          handleKeyDown={handleKeyDown}
+          handleSend={handleSend}
+          textareaRef={textareaRef}
+          isCentered={false}
+        />
+      </div>
     </ThreadPrimitive.Root>
   );
 }
@@ -411,6 +412,9 @@ function CustomUserMessage() {
 function CustomAssistantMessage() {
   const content = useMessage((state) => state.content) as readonly ThreadAssistantMessagePart[];
   const isLast = useMessage((state) => state.isLast);
+  const metadata = useMessage((state) => state.metadata) as
+    | { custom?: { interaction_history?: boolean; interaction?: import('../types/consultation').InteractionHistoryItem } }
+    | undefined;
   const activeTurn = useActiveTurnState();
 
   const viewModel = useMemo(
@@ -427,6 +431,15 @@ function CustomAssistantMessage() {
     isLast && (activeTurn.status === 'streaming' || activeTurn.status === 'interrupted');
 
   if (isMessageActive) {
+    return null;
+  }
+
+  const historicalInteraction = metadata?.custom?.interaction;
+  if (metadata?.custom?.interaction_history && historicalInteraction) {
+    return <AskUserStatusCard interaction={historicalInteraction} />;
+  }
+
+  if (!viewModel.hasRenderableContent) {
     return null;
   }
 

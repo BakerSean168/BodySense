@@ -23,6 +23,7 @@ import type {
   SSEToolCall,              // tool.call 事件的数据类型（AI 调用工具）
   SSEToolResult,            // tool.result 事件的数据类型（工具返回结果）
   SSEExtractedInfo,         // state.extracted_info.upsert 事件的数据类型（提取的用户信息）
+  SSEHealthFeatures,        // state.health_features.upsert 事件的数据类型（结构化健康特征）
   SSEPhaseChange,           // state.phase.changed 事件的数据类型（对话阶段变化）
   SSECitation,              // source.citation.added 事件的数据类型（引用来源）
   SSEKnowledgeGap,          // source.knowledge_gap 事件的数据类型（知识缺口提示）
@@ -57,6 +58,7 @@ export interface SSEHandlers {
   onToolCall?: (data: SSEToolCall) => void;                        // AI 决定调用工具时触发
   onToolResult?: (data: SSEToolResult) => void;                    // 工具返回结果时触发
   onExtractedInfo?: (data: SSEExtractedInfo) => void;              // 从对话中提取出用户信息时触发
+  onHealthFeatures?: (data: SSEHealthFeatures) => void;            // 结构化健康特征更新时触发
   onPhaseChange?: (data: SSEPhaseChange) => void;                  // 对话阶段切换时触发（如：问诊 → 建议）
   onCitation?: (data: SSECitation) => void;                        // AI 引用了知识来源时触发
   onKnowledgeGap?: (data: SSEKnowledgeGap) => void;                // 发现知识缺口时触发
@@ -94,6 +96,7 @@ const EVENT_MAP: Record<string, keyof SSEHandlers> = {
   'tool.call': 'onToolCall',                               // 工具调用
   'tool.result': 'onToolResult',                           // 工具结果
   'state.extracted_info.upsert': 'onExtractedInfo',        // 提取信息
+  'state.health_features.upsert': 'onHealthFeatures',      // 健康特征
   'state.phase.changed': 'onPhaseChange',                  // 阶段变化
   'source.citation.added': 'onCitation',                   // 引用来源
   'source.knowledge_gap': 'onKnowledgeGap',                // 知识缺口

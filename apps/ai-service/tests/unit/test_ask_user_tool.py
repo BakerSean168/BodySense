@@ -12,6 +12,7 @@ async def test_handle_ask_user_returns_interrupted():
     assert result.status == ToolStatus.INTERRUPTED
     assert result.content["question"] == "你的年龄是？"
     assert result.content["answer_type"] == "text"
+    assert result.content["context"]
 
 
 @pytest.mark.asyncio
@@ -25,6 +26,7 @@ async def test_handle_ask_user_with_options():
     assert result.content["answer_type"] == "single_choice"
     assert result.content["options"] == ["疼痛", "酸胀", "麻木"]
     assert result.content["allow_custom_input"] is True
+    assert result.content["context"]
 
 
 @pytest.mark.asyncio
@@ -34,6 +36,17 @@ async def test_handle_ask_user_converts_yes_no_question_to_single_choice():
     assert result.content["question"] == "你是否经常感到颈部僵硬或疼痛？"
     assert result.content["answer_type"] == "single_choice"
     assert result.content["options"] == ["是", "否"]
+    assert "帮助" in result.content["context"] or "确认" in result.content["context"]
+
+
+@pytest.mark.asyncio
+async def test_handle_ask_user_preserves_explicit_context():
+    result = await handle_ask_user({
+        "question": "你是否感觉到颈部或肩部不适？",
+        "context": "这能帮助我区分姿态观察和已经伴随不适的情况。",
+    })
+    assert result.status == ToolStatus.INTERRUPTED
+    assert result.content["context"] == "这能帮助我区分姿态观察和已经伴随不适的情况。"
 
 
 @pytest.mark.asyncio

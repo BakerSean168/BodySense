@@ -124,7 +124,7 @@ async def test_stream_chat_happy_path_with_text(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_stream_chat_with_tool_call(monkeypatch):
-    """stream_chat with tool call: extracted_info event is emitted."""
+    """stream_chat with tool call: extracted_info and health_features events are emitted."""
     events = [
         _text_event("我来帮你分析一下"),
         _tool_done_event(
@@ -150,6 +150,11 @@ async def test_stream_chat_with_tool_call(monkeypatch):
     assert len(info_events) == 1
     assert info_events[0].payload["info"]["body_part"] == "肩部"
     assert info_events[0].payload["info"]["symptom_type"] == "酸胀"
+
+    health_feature_events = _events_of_type(result_events, "state.health_features.upsert")
+    assert len(health_feature_events) == 1
+    assert health_feature_events[0].payload["health_features"]["discomforts"][0]["body_part"] == "肩部"
+    assert health_feature_events[0].payload["health_features"]["discomforts"][0]["label"] == "酸胀"
 
 
 @pytest.mark.asyncio

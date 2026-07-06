@@ -6,6 +6,7 @@ import type {
   ToolCallEvent,
   ToolResultEvent,
   ExtractedInfoUpsertEvent,
+  HealthFeaturesUpsertEvent,
   PhaseChangedEvent,
   CitationAddedEvent,
   KnowledgeGapEvent,
@@ -124,9 +125,11 @@ export interface ConsultationSession {
   conversation_id: string;
   phase: ConsultationPhase;
   extracted_info: ExtractedInfo[];
+  health_features: HealthFeatures;
   diagnosis: DiagnosisAnalysis | null;
   treatment_plan: TreatmentPlan | null;
   pending_interactions?: PendingInteraction[];
+  interaction_history?: InteractionHistoryItem[];
   created_at: string;
   updated_at: string;
   ended_at: string | null;
@@ -158,6 +161,25 @@ export interface ExtractedInfo {
   severity?: string;
   additional_notes?: string;
   confirmed?: boolean;
+}
+
+export interface HealthFeatureItem {
+  label: string;
+  body_part?: string;
+  value?: string;
+  details?: string;
+  source?: string;
+  confirmed?: boolean;
+  metadata?: Record<string, unknown>;
+}
+
+export interface HealthFeatures {
+  posture_findings: HealthFeatureItem[];
+  discomforts: HealthFeatureItem[];
+  negative_findings: HealthFeatureItem[];
+  movement_limitations: HealthFeatureItem[];
+  red_flags: HealthFeatureItem[];
+  user_answers: HealthFeatureItem[];
 }
 
 export interface Diagnosis {
@@ -223,6 +245,7 @@ export type SSETextDelta = MessageTextDeltaEvent;
 export type SSEToolCall = ToolCallEvent;
 export type SSEToolResult = ToolResultEvent;
 export type SSEExtractedInfo = ExtractedInfoUpsertEvent;
+export type SSEHealthFeatures = HealthFeaturesUpsertEvent;
 export type SSEPhaseChange = PhaseChangedEvent;
 export type SSECitation = CitationAddedEvent;
 export type SSEKnowledgeGap = KnowledgeGapEvent;
@@ -241,8 +264,13 @@ export interface PendingInteraction {
   tool_name: string;
   question: AskUserQuestion;
   status: 'pending' | 'answered' | 'cancelled';
+  answer?: unknown;
   created_at: string;
+  answered_at?: string | null;
+  metadata?: Record<string, unknown>;
 }
+
+export interface InteractionHistoryItem extends PendingInteraction {}
 
 export interface ProjectedToolCall {
   tool_call_id: string;

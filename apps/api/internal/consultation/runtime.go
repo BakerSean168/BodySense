@@ -417,6 +417,23 @@ func (r *Runtime) ResumeInteraction(
 		"",
 		"state.interaction.answered",
 	)
+	if healthFeatures := healthFeaturesFromInteraction(interaction.Question, datatypes.JSON(req.Answer)); healthFeatures != nil {
+		r.sendNewEvent(
+			ctx,
+			sw,
+			"state",
+			"state.health_features.upsert",
+			dto.StreamEventIDs{
+				ConversationID: conversationID.String(),
+				RunID:          run.ID.String(),
+				TurnID:         turn.String(),
+				InteractionID:  interactionID.String(),
+			},
+			map[string]any{"health_features": healthFeatures},
+			"",
+			"state.health_features.upsert",
+		)
+	}
 	r.sendNewEvent(
 		ctx,
 		sw,
@@ -745,6 +762,26 @@ func (r *Runtime) handleAIEvent(
 
 	case "state.extracted_info.upsert":
 		r.sendEvent(ctx, sw, event, state.AssistantMsgID, event.Type)
+		var payload struct {
+			Info json.RawMessage `json:"info"`
+		}
+		_ = event.PayloadAs(&payload)
+		if healthFeatures := healthFeaturesFromExtractedInfo(payload.Info); healthFeatures != nil {
+			r.sendNewEvent(
+				ctx,
+				sw,
+				"state",
+				"state.health_features.upsert",
+				dto.StreamEventIDs{
+					ConversationID: state.ConversationID.String(),
+					RunID:          state.Run.ID.String(),
+					TurnID:         state.TurnID.String(),
+				},
+				map[string]any{"health_features": healthFeatures},
+				state.AssistantMsgID,
+				"state.health_features.upsert",
+			)
+		}
 
 	case "source.citation.added":
 		r.sendEvent(ctx, sw, event, state.AssistantMsgID, event.Type)
@@ -1292,6 +1329,119 @@ func extractAnswerText(answer json.RawMessage) string {
 		return string(b)
 	}
 	return ""
+}
+
+func healthFeaturesFromExtractedInfo(info json.RawMessage) map[string]any {
+	if len(info) == 0 {
+		return nil
+	}
+	var parsed map[string]any
+	if err := json.Unmarshal(info, &parsed); err != nil {
+		return nil
+	}
+	bodyPart, _ := parsed["body_part"].(string)
+	label, _ := parsed["symptom_type"].(string)
+	if label == "" {
+		label = bodyPart
+	}
+	if label == "" {
+		return nil
+	}
+
+	item := map[string]any{
+		"label":  label,
+		"source": "extracted_info",
+	}
+	if bodyPart != "" {
+		item["body_part"] = bodyPart
+	}
+	if severity, ok := parsed["severity"].(string); ok && strings.TrimSpace(severity) != "" {
+		item["value"] = severity
+	}
+
+	details := make([]string, 0, 3)
+	for _, key := range []string{"duration", "trigger", "relief"} {
+		if value, ok := parsed[key].(string); ok && strings.TrimSpace(value) != "" {
+			details = append(details, value)
+		}
+	}
+	if len(details) > 0 {
+		item["details"] = strings.Join(details, "，")
+	}
+
+	return emptyHealthFeaturesMapWith("discomforts", item)
+}
+
+func healthFeaturesFromInteraction(question datatypes.JSON, answer datatypes.JSON) map[string]any {
+	questionText, questionContext := parseInteractionQuestion(question)
+	answerText := extractAnswerText(json.RawMessage(answer))
+	if strings.TrimSpace(questionText) == "" || strings.TrimSpace(answerText) == "" {
+		return nil
+	}
+
+	userAnswer := map[string]any{
+		"label":   questionText,
+		"value":   answerText,
+		"details": questionContext,
+		"source":  "ask_user",
+	}
+
+	result := emptyHealthFeaturesMapWith("user_answers", userAnswer)
+	if isNegativeAnswer(answerText) && containsAny(questionText+questionContext, "不适", "疼痛", "酸痛", "麻木") {
+		result["negative_findings"] = []any{
+			map[string]any{
+				"label":   "未报告相关不适",
+				"value":   answerText,
+				"details": questionText,
+				"source":  "ask_user",
+			},
+		}
+	}
+	return result
+}
+
+func parseInteractionQuestion(question datatypes.JSON) (string, string) {
+	if len(question) == 0 {
+		return "", ""
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(question, &payload); err != nil {
+		return "", ""
+	}
+	text, _ := payload["question"].(string)
+	context, _ := payload["context"].(string)
+	return text, context
+}
+
+func isNegativeAnswer(answer string) bool {
+	switch strings.TrimSpace(strings.ToLower(answer)) {
+	case "无", "没有", "否", "no", "none":
+		return true
+	default:
+		return false
+	}
+}
+
+func containsAny(text string, keywords ...string) bool {
+	for _, keyword := range keywords {
+		if strings.Contains(text, keyword) {
+			return true
+		}
+	}
+	return false
+}
+
+func emptyHealthFeaturesMapWith(category string, item map[string]any) map[string]any {
+	result := map[string]any{
+		"posture_findings":     []any{},
+		"discomforts":          []any{},
+		"negative_findings":    []any{},
+		"movement_limitations": []any{},
+		"red_flags":            []any{},
+		"user_answers":         []any{},
+	}
+	result[category] = []any{item}
+	return result
 }
 
 func citationPart(payload json.RawMessage) map[string]any {

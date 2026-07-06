@@ -97,4 +97,54 @@ describe('StreamingAssistantTurn', () => {
     const dots = container.querySelector('.animate-bounce');
     expect(dots).not.toBeNull();
   });
+
+  it('renders ask_user status card while interrupted', () => {
+    renderWithState(
+      stateWith({
+        status: 'interrupted',
+        pendingInteraction: {
+          id: 'ia-1',
+          run_id: 'run-1',
+          conversation_id: 'conv-1',
+          tool_call_id: 'tc-1',
+          tool_name: 'ask_user',
+          question: {
+            question: '是否感觉到颈部或肩部不适？',
+            context: '为了判断更偏向姿态问题还是已经伴随代偿，需要先确认这一点。',
+            answer_type: 'single_choice',
+            options: ['有', '无', '不确定'],
+          },
+          status: 'pending',
+          created_at: '2026-07-06T00:00:00Z',
+        },
+      }),
+    );
+    expect(screen.getByText('待补充信息')).toBeDefined();
+    expect(screen.getByText('是否感觉到颈部或肩部不适？')).toBeDefined();
+  });
+
+  it('renders answered ask_user summary while resume is running', () => {
+    renderWithState(
+      stateWith({
+        status: 'streaming',
+        pendingInteraction: {
+          id: 'ia-1',
+          run_id: 'run-1',
+          conversation_id: 'conv-1',
+          tool_call_id: 'tc-1',
+          tool_name: 'ask_user',
+          question: {
+            question: '是否感觉到颈部或肩部不适？',
+            answer_type: 'single_choice',
+            options: ['有', '无', '不确定'],
+          },
+          status: 'answered',
+          answer: { text: '无', selected: ['无'] },
+          created_at: '2026-07-06T00:00:00Z',
+        },
+      }),
+    );
+    expect(screen.getByText('问诊追问')).toBeDefined();
+    expect(screen.getByText('你的回答：无')).toBeDefined();
+  });
 });

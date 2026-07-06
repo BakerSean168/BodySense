@@ -148,6 +148,12 @@ def _map_graph_event(
             event_type="state.extracted_info.upsert",
             payload={"info": event_data.get("info", {})},
         )
+    if event_type == "health_features":
+        return factory.next(
+            channel="state",
+            event_type="state.health_features.upsert",
+            payload={"health_features": event_data.get("health_features", {})},
+        )
     if event_type == "phase_change":
         return factory.next(
             channel="state",

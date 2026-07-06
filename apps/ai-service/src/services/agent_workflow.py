@@ -61,9 +61,61 @@ SYMPTOM_INDICATORS = [
     "久坐", "运动", "晨起", "夜间",
 ]
 
+POSTURE_OBSERVATION_KEYWORDS = [
+    "头前移", "头前伸", "头颈前伸", "圆肩", "驼背",
+    "骨盆前倾", "骨盆后倾", "高低肩", "脊柱侧弯",
+    "姿态", "体态", "站姿", "坐姿",
+]
+
+CRITICAL_FOLLOW_UP_KEYWORDS = [
+    "麻木", "无力", "放射", "外伤", "摔", "撞",
+    "发热", "夜间痛", "越来越重", "加重", "剧烈",
+]
+
 
 class ConsultationAgentWorkflow:
     """Explicit agent workflow for consultation sessions."""
+
+    def is_posture_observation(self, user_message: str) -> bool:
+        """Return True when the message is primarily a posture observation."""
+        message = user_message.strip()
+        return any(keyword in message for keyword in POSTURE_OBSERVATION_KEYWORDS)
+
+    def has_critical_follow_up_signal(self, user_message: str) -> bool:
+        """Return True when the message contains high-priority missing-info signals."""
+        message = user_message.strip()
+        return any(keyword in message for keyword in CRITICAL_FOLLOW_UP_KEYWORDS)
+
+    def should_interrupt_for_follow_up(
+        self,
+        user_message: str,
+        context: ChatContext,
+    ) -> bool:
+        """
+        Decide whether the model should prefer a blocking ask_user follow-up.
+
+        ask_user should be reserved for information without which the agent
+        cannot continue reliably. Initial posture observations should normally
+        get a preliminary answer first.
+        """
+        message = user_message.strip()
+        if not message:
+            return False
+
+        if self.has_critical_follow_up_signal(message):
+            return True
+
+        if self.is_posture_observation(message) and not any(
+            indicator in message for indicator in SYMPTOM_INDICATORS
+        ):
+            return False
+
+        if getattr(context, "phase", "collecting") == "collecting" and any(
+            indicator in message for indicator in SYMPTOM_INDICATORS
+        ):
+            return True
+
+        return False
 
     def classify_intent(
         self,
@@ -201,6 +253,7 @@ class ConsultationAgentWorkflow:
         self,
         intent: ConsultationIntent,
         context: ChatContext,
+        user_message: str = "",
     ) -> WorkflowDecision:
         """
         Decide the next action based on intent and context.
@@ -216,7 +269,24 @@ class ConsultationAgentWorkflow:
         if hasattr(context, "phase"):
             phase = context.phase
 
+        if self.is_posture_observation(user_message) and not self.should_interrupt_for_follow_up(
+            user_message, context
+        ):
+            return WorkflowDecision(
+                intent=intent,
+                action=AgentAction.PROVIDE_INFO,
+                confidence=0.8,
+                reasoning="Initial posture observation can be answered first without blocking follow-up.",
+            )
+
         if intent == ConsultationIntent.SUPPLEMENT_SYMPTOM:
+            if not self.should_interrupt_for_follow_up(user_message, context):
+                return WorkflowDecision(
+                    intent=intent,
+                    action=AgentAction.PROVIDE_INFO,
+                    confidence=0.7,
+                    reasoning="Supplemental posture context is non-critical; provide initial guidance first.",
+                )
             return WorkflowDecision(
                 intent=intent,
                 action=AgentAction.ASK_FOLLOW_UP,
@@ -232,11 +302,18 @@ class ConsultationAgentWorkflow:
                     confidence=0.8,
                     reasoning="Enough symptom info collected, ready for diagnosis.",
                 )
+            if self.should_interrupt_for_follow_up(user_message, context):
+                return WorkflowDecision(
+                    intent=intent,
+                    action=AgentAction.ASK_FOLLOW_UP,
+                    confidence=0.7,
+                    reasoning="Not enough symptom info yet, need more details before analysis.",
+                )
             return WorkflowDecision(
                 intent=intent,
-                action=AgentAction.ASK_FOLLOW_UP,
-                confidence=0.7,
-                reasoning="Not enough symptom info yet, need more details.",
+                action=AgentAction.PROVIDE_INFO,
+                confidence=0.65,
+                reasoning="Can give a preliminary explanation first and collect more detail later.",
             )
 
         if intent == ConsultationIntent.CONFIRM_DIAGNOSIS:
@@ -272,9 +349,9 @@ class ConsultationAgentWorkflow:
 
         return WorkflowDecision(
             intent=intent,
-            action=AgentAction.ASK_FOLLOW_UP,
-            confidence=0.5,
-            reasoning="General question, continue conversation.",
+            action=AgentAction.PROVIDE_INFO,
+            confidence=0.6,
+            reasoning="General question can be answered directly without blocking follow-up.",
         )
 
 

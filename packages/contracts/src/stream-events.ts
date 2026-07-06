@@ -125,6 +125,12 @@ export type ExtractedInfoUpsertEvent = StreamEventBase<
   { info: unknown }
 >;
 
+export type HealthFeaturesUpsertEvent = StreamEventBase<
+  'state',
+  'state.health_features.upsert',
+  { health_features: unknown }
+>;
+
 export type PhaseChangedEvent = StreamEventBase<
   'state',
   'state.phase.changed',
@@ -236,6 +242,7 @@ export type StreamEvent =
   | ToolCallEvent
   | ToolResultEvent
   | ExtractedInfoUpsertEvent
+  | HealthFeaturesUpsertEvent
   | PhaseChangedEvent
   | DiagnosisReadyEvent
   | TreatmentReadyEvent

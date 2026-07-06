@@ -13,11 +13,14 @@ import { useConsultationThreadQuery } from '../hooks/useConsultationThreadQuery'
 import type {
   ConversationListResponse,
   ExtractedInfo,
+  HealthFeatures,
+  HealthFeatureItem,
+  InteractionHistoryItem,
   ConsultationPhase,
   Diagnosis,
   ConsultationThread,
 } from '../types/consultation';
-import { buildActiveTurnSeedFromRuntimeEvents, toInitialThreadMessages } from '../runtime/threadMessageMapping';
+import { buildActiveTurnSeedFromRuntimeEvents, toInitialThreadTimeline } from '../runtime/threadMessageMapping';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -77,10 +80,19 @@ export function ConsultationPage() {
   const currentConversation = threadData?.conversation ?? null;
   const messages = threadData?.messages ?? [];
   const extractedInfo = threadData?.extracted_info ?? [];
+  const healthFeatures = threadData?.health_features ?? {
+    posture_findings: [],
+    discomforts: [],
+    negative_findings: [],
+    movement_limitations: [],
+    red_flags: [],
+    user_answers: [],
+  };
   const phase = threadData?.phase ?? 'collecting';
   const diagnoses = threadData?.diagnosis?.diagnoses ?? [];
   const treatmentPlan = threadData?.treatment_plan ?? null;
   const pendingInteractions = threadData?.pending_interactions ?? [];
+  const interactionHistory = threadData?.interaction_history ?? [];
 
   // Reset isPageLoading when query completes
   useEffect(() => {
@@ -345,6 +357,42 @@ export function ConsultationPage() {
     [routeConversationId, queryClient],
   );
 
+  const handleHealthFeaturesUpdate = useCallback(
+    async (nextHealthFeatures: HealthFeatures) => {
+      const convId = activeConversationIdRef.current ?? routeConversationId;
+      if (!convId) return;
+      await queryClient.cancelQueries({
+        queryKey: consultationKeys.thread(convId),
+      });
+      queryClient.setQueryData<ConsultationThread>(
+        consultationKeys.thread(convId),
+        (old) => (old ? { ...old, health_features: nextHealthFeatures } : old),
+      );
+    },
+    [routeConversationId, queryClient],
+  );
+
+  const handleHealthFeaturesUpsert = useCallback(
+    async (incomingHealthFeatures: HealthFeatures) => {
+      const convId = activeConversationIdRef.current ?? routeConversationId;
+      if (!convId) return;
+      await queryClient.cancelQueries({
+        queryKey: consultationKeys.thread(convId),
+      });
+      queryClient.setQueryData<ConsultationThread>(
+        consultationKeys.thread(convId),
+        (old) =>
+          old
+            ? {
+                ...old,
+                health_features: mergeHealthFeatures(old.health_features, incomingHealthFeatures),
+              }
+            : old,
+      );
+    },
+    [routeConversationId, queryClient],
+  );
+
   const handlePhaseChange = useCallback(
     async (newPhase: ConsultationPhase) => {
       const convId = activeConversationIdRef.current ?? routeConversationId;
@@ -567,12 +615,12 @@ export function ConsultationPage() {
                 : 'text-[#4A554E] hover:text-[#1A221E] hover:bg-primary-50/20'
             }`}
           >
-            症状信息
-            {extractedInfo.length > 0 && (
+            健康特征
+            {countHealthFeatures(healthFeatures) > 0 && (
               <span className={`inline-flex items-center justify-center px-2 py-0.5 text-xs rounded-full ${
                 mobileTab === 'info' ? 'bg-primary-700 text-[#FBFBFA]' : 'bg-[#e2ebe5] text-primary-900'
               }`}>
-                {extractedInfo.length}
+                {countHealthFeatures(healthFeatures)}
               </span>
             )}
           </button>
@@ -654,10 +702,14 @@ export function ConsultationPage() {
                   navigate(`/consultation/${newId}`, { replace: true });
                   console.debug('[SSE] ⑤ ConsultationPage.onConversationCreated ✅ 完成');
                 }}
-                initialMessages={toInitialThreadMessages(historicalMessages)}
+                initialMessages={toInitialThreadTimeline(
+                  historicalMessages,
+                  interactionHistory as InteractionHistoryItem[],
+                )}
                 initialActiveTurn={initialTurnSeed?.activeTurn ?? null}
                 initialExtractedInfo={extractedInfo}
                 onExtractedInfoUpdate={handleExtractedInfoUpdate}
+                onHealthFeaturesUpdate={handleHealthFeaturesUpsert}
                 onPhaseChange={handlePhaseChange}
                 onTitleGenerated={handleTitleGenerated}
                 onMessagePersisted={handleMessagePersisted}
@@ -681,25 +733,20 @@ export function ConsultationPage() {
                   提取健康特征
                 </h3>
                 <span className="text-xs font-semibold px-2.5 py-1 bg-primary-100 text-primary-900 rounded-full border border-primary-200/50">
-                  已提取 {extractedInfo.length} 项
+                  已提取 {countHealthFeatures(healthFeatures)} 项
                 </span>
               </div>
               <div className="flex-1 overflow-y-auto p-4 bg-slate-50/10 custom-scrollbar">
                 <div>
                   <InfoPanel
                     key={routeConversationId ?? 'draft'}
-                    extractedInfo={extractedInfo}
-                    onConfirm={async (info) => {
+                    healthFeatures={healthFeatures}
+                    onConfirm={async (category, index) => {
                       if (!routeConversationId) return;
                       try {
-                        const updated = extractedInfo.map((e) =>
-                          e.body_part === info.body_part ? { ...e, confirmed: true } : e,
-                        );
-                        queryClient.setQueryData<ConsultationThread>(
-                          consultationKeys.thread(routeConversationId),
-                          (old) => (old ? { ...old, extracted_info: updated } : old),
-                        );
-                        await consultationApi.updateExtractedInfo(routeConversationId, updated);
+                        const updated = markHealthFeatureConfirmed(healthFeatures, category, index);
+                        await handleHealthFeaturesUpdate(updated);
+                        await consultationApi.updateHealthFeatures(routeConversationId, updated);
                       } catch {
                         setAnalysisError('保存确认信息失败，请稍后重试');
                         queryClient.invalidateQueries({
@@ -707,33 +754,27 @@ export function ConsultationPage() {
                         });
                       }
                     }}
-                    onModify={(index, info) => {
+                    onModify={(category, index, item) => {
                       if (!routeConversationId) return;
-                      const updated = [...extractedInfo];
-                      updated[index] = info;
+                      const updated = updateHealthFeature(healthFeatures, category, index, {
+                        ...item,
+                        confirmed: !item.confirmed,
+                      });
+                      handleHealthFeaturesUpdate(updated);
 
-                      queryClient.setQueryData<ConsultationThread>(
-                          consultationKeys.thread(routeConversationId),
-                        (old) => (old ? { ...old, extracted_info: updated } : old),
-                      );
-
-                      consultationApi.updateExtractedInfo(routeConversationId, updated).catch(() => {
+                      consultationApi.updateHealthFeatures(routeConversationId, updated).catch(() => {
                         setAnalysisError('保存修改失败，请稍后重试');
                         queryClient.invalidateQueries({
                           queryKey: consultationKeys.thread(routeConversationId),
                         });
                       });
                     }}
-                    onDelete={(index) => {
+                    onDelete={(category, index) => {
                       if (!routeConversationId) return;
-                      const updated = extractedInfo.filter((_, idx) => idx !== index);
+                      const updated = deleteHealthFeature(healthFeatures, category, index);
+                      handleHealthFeaturesUpdate(updated);
 
-                      queryClient.setQueryData<ConsultationThread>(
-                          consultationKeys.thread(routeConversationId),
-                        (old) => (old ? { ...old, extracted_info: updated } : old),
-                      );
-
-                      consultationApi.updateExtractedInfo(routeConversationId, updated).catch(() => {
+                      consultationApi.updateHealthFeatures(routeConversationId, updated).catch(() => {
                         setAnalysisError('删除失败，请稍后重试');
                         queryClient.invalidateQueries({
                           queryKey: consultationKeys.thread(routeConversationId),
@@ -836,4 +877,73 @@ export function ConsultationPage() {
       )}
     </MainLayout>
   );
+}
+
+function countHealthFeatures(healthFeatures: HealthFeatures) {
+  return Object.values(healthFeatures).reduce((total, items) => total + items.length, 0);
+}
+
+function markHealthFeatureConfirmed(
+  healthFeatures: HealthFeatures,
+  category: keyof HealthFeatures,
+  index: number,
+) {
+  const item = healthFeatures[category][index];
+  return updateHealthFeature(healthFeatures, category, index, {
+    ...item,
+    confirmed: true,
+  });
+}
+
+function updateHealthFeature(
+  healthFeatures: HealthFeatures,
+  category: keyof HealthFeatures,
+  index: number,
+  item: HealthFeatureItem,
+): HealthFeatures {
+  return {
+    ...healthFeatures,
+    [category]: healthFeatures[category].map((entry, entryIndex) =>
+      entryIndex === index ? item : entry,
+    ),
+  };
+}
+
+function deleteHealthFeature(
+  healthFeatures: HealthFeatures,
+  category: keyof HealthFeatures,
+  index: number,
+): HealthFeatures {
+  return {
+    ...healthFeatures,
+    [category]: healthFeatures[category].filter((_, entryIndex) => entryIndex !== index),
+  };
+}
+
+function mergeHealthFeatures(current: HealthFeatures, incoming: HealthFeatures): HealthFeatures {
+  return {
+    posture_findings: mergeHealthFeatureItems(current.posture_findings, incoming.posture_findings),
+    discomforts: mergeHealthFeatureItems(current.discomforts, incoming.discomforts),
+    negative_findings: mergeHealthFeatureItems(current.negative_findings, incoming.negative_findings),
+    movement_limitations: mergeHealthFeatureItems(current.movement_limitations, incoming.movement_limitations),
+    red_flags: mergeHealthFeatureItems(current.red_flags, incoming.red_flags),
+    user_answers: mergeHealthFeatureItems(current.user_answers, incoming.user_answers),
+  };
+}
+
+function mergeHealthFeatureItems(
+  current: HealthFeatureItem[],
+  incoming: HealthFeatureItem[],
+): HealthFeatureItem[] {
+  const merged = [...current];
+  const seen = new Set(current.map((item) => `${item.label}|${item.body_part ?? ''}|${item.value ?? ''}|${item.details ?? ''}|${item.source ?? ''}`));
+  for (const item of incoming) {
+    const key = `${item.label}|${item.body_part ?? ''}|${item.value ?? ''}|${item.details ?? ''}|${item.source ?? ''}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    merged.push(item);
+  }
+  return merged;
 }

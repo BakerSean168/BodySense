@@ -14,7 +14,7 @@ type fakeConsultationRepository struct {
 	session              *model.ConsultationSession
 	createdSession       *model.ConsultationSession
 	updatedPhase         string
-	updatedExtractedInfo json.RawMessage
+	updatedHealthFeatures json.RawMessage
 	updatedDiagnosis     json.RawMessage
 	updatedTreatmentPlan json.RawMessage
 	sessions             []model.ConsultationSession
@@ -37,14 +37,14 @@ func (r *fakeConsultationRepository) ListByConversationIDs(ctx context.Context, 
 	return r.sessions, nil
 }
 
-func (r *fakeConsultationRepository) UpdateExtractedInfo(ctx context.Context, conversationID uuid.UUID, extractedInfo any) error {
-	data, _ := extractedInfo.(json.RawMessage)
+func (r *fakeConsultationRepository) UpdateHealthFeatures(ctx context.Context, conversationID uuid.UUID, healthFeatures any) error {
+	data, _ := healthFeatures.(json.RawMessage)
 	if data == nil {
-		if bytes, ok := extractedInfo.([]byte); ok {
+		if bytes, ok := healthFeatures.([]byte); ok {
 			data = json.RawMessage(bytes)
 		}
 	}
-	r.updatedExtractedInfo = data
+	r.updatedHealthFeatures = data
 	return nil
 }
 
@@ -97,7 +97,7 @@ func (r *fakeConsultationRepository) CreateRunEnvelope(
 	}
 	session := r.session
 	if session == nil || session.ConversationID != resolvedConversationID {
-		session = &model.ConsultationSession{ConversationID: resolvedConversationID, ExtractedInfo: datatypes.JSON("[]"), Phase: "collecting"}
+		session = &model.ConsultationSession{ConversationID: resolvedConversationID, ExtractedInfo: datatypes.JSON("[]"), HealthFeatures: datatypes.JSON(`{}`), Phase: "collecting"}
 		r.session = session
 	}
 	turnID := uuid.New()
@@ -280,7 +280,7 @@ func TestCreateConsultationFailsOwnershipCheck(t *testing.T) {
 	}
 }
 
-func TestUpdateExtractedInfoPersistsData(t *testing.T) {
+func TestUpdateHealthFeaturesPersistsData(t *testing.T) {
 	conversationID := uuid.New()
 	userID := uuid.New()
 	repo := &fakeConsultationRepository{
@@ -293,22 +293,27 @@ func TestUpdateExtractedInfoPersistsData(t *testing.T) {
 	ownership.addConversation(conversationID, userID)
 	svc := NewConsultationService(repo, ownership)
 
-	info := []map[string]any{
-		{"body_part": "肩部", "symptom_type": "酸胀"},
+	healthFeatures := map[string]any{
+		"posture_findings":     []map[string]any{},
+		"discomforts":         []map[string]any{{"label": "酸胀", "body_part": "肩部"}},
+		"negative_findings":   []map[string]any{},
+		"movement_limitations": []map[string]any{},
+		"red_flags":           []map[string]any{},
+		"user_answers":        []map[string]any{},
 	}
-	if err := svc.UpdateExtractedInfo(context.Background(), conversationID, userID, info); err != nil {
-		t.Fatalf("UpdateExtractedInfo returned error: %v", err)
+	if err := svc.UpdateHealthFeatures(context.Background(), conversationID, userID, healthFeatures); err != nil {
+		t.Fatalf("UpdateHealthFeatures returned error: %v", err)
 	}
 
-	if repo.updatedExtractedInfo == nil {
-		t.Fatal("expected extracted info to be persisted")
+	if repo.updatedHealthFeatures == nil {
+		t.Fatal("expected health features to be persisted")
 	}
 
-	var parsed []map[string]any
-	if err := json.Unmarshal(repo.updatedExtractedInfo, &parsed); err != nil {
+	var parsed map[string][]map[string]any
+	if err := json.Unmarshal(repo.updatedHealthFeatures, &parsed); err != nil {
 		t.Fatalf("persisted data is invalid JSON: %v", err)
 	}
-	if len(parsed) != 1 || parsed[0]["body_part"] != "肩部" {
+	if len(parsed["discomforts"]) != 1 || parsed["discomforts"][0]["body_part"] != "肩部" {
 		t.Fatalf("unexpected persisted data: %v", parsed)
 	}
 }

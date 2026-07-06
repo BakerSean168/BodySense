@@ -217,7 +217,7 @@ func main() {
 		consultations.GET("/:id", consultationHandler.GetConsultation)
 		consultations.GET("/:id/thread", threadProjectionHandler.GetConsultationThread)
 
-		consultations.PUT("/:id/extracted-info", consultationHandler.UpdateExtractedInfo)
+		consultations.PUT("/:id/health-features", consultationHandler.UpdateHealthFeatures)
 		consultations.PUT("/:id/confirm", consultationHandler.ConfirmDiagnosis)
 		consultations.POST("/:id/diagnosis", diagnosisHandler.AnalyzeDiagnosis)
 		consultations.POST("/:id/treatment", diagnosisHandler.GenerateTreatment)

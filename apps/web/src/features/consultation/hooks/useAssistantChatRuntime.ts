@@ -17,6 +17,7 @@ import {
 } from '../runtime/activeTurnReducer';
 import type {
   ExtractedInfo,
+  HealthFeatures,
   Citation,
   SSERedFlag,
   SSEMessageCompleted,
@@ -28,6 +29,7 @@ export interface ConsultationAdapterOptions {
   onConversationCreated?: (conversationId: string) => void;
   onMessagePersisted?: (clientMessageId: string, messageId: string) => void;
   onExtractedInfoUpdate?: (info: ExtractedInfo) => void;
+  onHealthFeaturesUpdate?: (healthFeatures: HealthFeatures) => void;
   onPhaseChange?: (from: string, to: string) => void;
   onRedFlag?: (flag: SSERedFlag['payload']) => void;
   onCitation?: (citation: Citation) => void;
@@ -112,6 +114,9 @@ export function useAssistantChatRuntime(
             break;
           case 'extracted_info_updated':
             optionsRef.current.onExtractedInfoUpdate?.(effect.info);
+            break;
+          case 'health_features_updated':
+            optionsRef.current.onHealthFeaturesUpdate?.(effect.healthFeatures);
             break;
           case 'phase_changed':
             optionsRef.current.onPhaseChange?.(effect.from, effect.to);
@@ -204,6 +209,7 @@ export function useAssistantChatRuntime(
         onToolCall: (data) => dispatch(data as StreamEvent),
         onToolResult: (data) => dispatch(data as StreamEvent),
         onExtractedInfo: (data) => dispatch(data as StreamEvent),
+        onHealthFeatures: (data) => dispatch(data as StreamEvent),
         onPhaseChange: (data) => dispatch(data as StreamEvent),
         onRedFlag: (data) => dispatch(data as StreamEvent),
         onCitation: (data) => dispatch(data as StreamEvent),
