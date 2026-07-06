@@ -11,6 +11,7 @@
 import type {
   StreamEvent,
   ExtractedInfo,
+  HealthFeatures,
   Citation,
   RedFlagEvent,
   PendingInteraction,
@@ -81,6 +82,7 @@ export type ActiveTurnEffect =
   | { type: 'conversation_created'; conversationId: string; replacesDraftId?: string }
   | { type: 'message_persisted'; clientMessageId: string; messageId: string }
   | { type: 'extracted_info_updated'; info: ExtractedInfo }
+  | { type: 'health_features_updated'; healthFeatures: HealthFeatures }
   | { type: 'phase_changed'; from: string; to: string }
   | { type: 'red_flag'; flags: RedFlagEvent }
   | { type: 'citation_added'; citation: Citation }
@@ -225,6 +227,17 @@ export function reduceActiveTurnEvent(
       break;
     }
 
+    case 'state.health_features.upsert': {
+      processed = true;
+      const payload = event.payload as { health_features: HealthFeatures };
+      next = { ...current };
+      effects.push({
+        type: 'health_features_updated',
+        healthFeatures: payload.health_features,
+      });
+      break;
+    }
+
     case 'state.phase.changed': {
       processed = true;
       const payload = event.payload as { from?: string; to: string };
@@ -360,11 +373,15 @@ export function reduceActiveTurnEvent(
 
     case 'state.interaction.answered': {
       processed = true;
-      const payload = event.payload as { interaction_id: string };
+      const payload = event.payload as { interaction_id: string; answer?: unknown };
       next = {
         ...current,
         pendingInteraction: current.pendingInteraction
-          ? { ...current.pendingInteraction, status: 'answered' }
+          ? {
+              ...current.pendingInteraction,
+              status: 'answered',
+              answer: payload.answer,
+            }
           : null,
       };
       effects.push({ type: 'interaction_answered', interactionId: payload.interaction_id });

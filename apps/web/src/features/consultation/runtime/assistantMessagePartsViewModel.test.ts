@@ -53,5 +53,31 @@ describe('assistantMessagePartsViewModel', () => {
       { query: '斜方肌紧张', message: '暂无专项资料' },
     ]);
     expect(vm.redFlag?.has_red_flags).toBe(true);
+    expect(vm.hasRenderableContent).toBe(true);
+  });
+
+  it('treats ask_user-only assistant parts as non-renderable', () => {
+    const parts: ThreadAssistantMessagePart[] = [
+      {
+        type: 'tool-call',
+        toolCallId: 'tc-ask',
+        toolName: 'ask_user',
+        args: { question: '是否有颈肩不适？' },
+        argsText: '{"question":"是否有颈肩不适？"}',
+      },
+      {
+        type: 'tool-call',
+        toolCallId: 'tc-ask',
+        toolName: 'ask_user',
+        args: { question: '是否有颈肩不适？' },
+        argsText: '{"question":"是否有颈肩不适？"}',
+        result: { answer: { text: '无' } },
+      },
+    ];
+
+    const vm = buildAssistantMessagePartsViewModel(parts);
+
+    expect(vm.toolCalls).toHaveLength(0);
+    expect(vm.hasRenderableContent).toBe(false);
   });
 });

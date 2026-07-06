@@ -1,5 +1,11 @@
 import type { ThreadAssistantMessagePart, ThreadMessageLike } from '@assistant-ui/react';
-import type { Message, MessagePart, PendingInteraction, StreamEvent } from '../types/consultation';
+import type {
+  InteractionHistoryItem,
+  Message,
+  MessagePart,
+  PendingInteraction,
+  StreamEvent,
+} from '../types/consultation';
 import {
   INITIAL_ACTIVE_TURN_STATE,
   reduceActiveTurnEvent,
@@ -258,6 +264,42 @@ export function toInitialThreadMessage(message: Message): ThreadMessageLike {
 
 export function toInitialThreadMessages(messages: readonly Message[]): ThreadMessageLike[] {
   return messages.map(toInitialThreadMessage);
+}
+
+function toInteractionHistoryMessage(interaction: InteractionHistoryItem): ThreadMessageLike {
+  return {
+    id: `interaction-${interaction.id}`,
+    role: 'assistant',
+    content: [],
+    status: { type: 'complete', reason: 'stop' },
+    createdAt: new Date(interaction.answered_at || interaction.created_at),
+    metadata: {
+      custom: {
+        interaction_history: true,
+        interaction,
+      },
+    },
+  };
+}
+
+export function toInitialThreadTimeline(
+  messages: readonly Message[],
+  interactionHistory: readonly InteractionHistoryItem[] = [],
+): ThreadMessageLike[] {
+  const timeline = [
+    ...messages.map(toInitialThreadMessage),
+    ...interactionHistory
+      .filter((interaction) => interaction.status !== 'pending')
+      .map(toInteractionHistoryMessage),
+  ];
+
+  timeline.sort((a, b) => {
+    const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : 0;
+    const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : 0;
+    return aTime - bTime;
+  });
+
+  return timeline;
 }
 
 export interface ActiveTurnSeed {

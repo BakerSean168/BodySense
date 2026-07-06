@@ -10,6 +10,7 @@ import {
   selectIsInterrupted,
   selectIsComposerLocked,
   selectHasVisibleContent,
+  selectHasRenderableContent,
 } from './activeTurnSelectors';
 import { INITIAL_ACTIVE_TURN_STATE, type ActiveTurnState } from './activeTurnReducer';
 
@@ -109,6 +110,57 @@ describe('activeTurnSelectors', () => {
           }),
         ),
       ).toBe(true);
+    });
+
+    it('returns true for a pending interaction even without bubble content', () => {
+      expect(
+        selectHasVisibleContent(
+          stateWith({
+            pendingInteraction: {
+              id: 'ia-1',
+              run_id: 'run-1',
+              conversation_id: 'conv-1',
+              tool_call_id: 'tc-1',
+              tool_name: 'ask_user',
+              question: {
+                question: '是否有颈肩不适？',
+                answer_type: 'single_choice',
+                options: ['有', '无'],
+              },
+              status: 'pending',
+              created_at: '2026-07-06T00:00:00Z',
+            },
+          }),
+        ),
+      ).toBe(true);
+    });
+  });
+
+  describe('selectHasRenderableContent', () => {
+    it('returns false for ask_user-only active turns', () => {
+      expect(
+        selectHasRenderableContent(
+          stateWith({
+            pendingInteraction: {
+              id: 'ia-1',
+              run_id: 'run-1',
+              conversation_id: 'conv-1',
+              tool_call_id: 'tc-1',
+              tool_name: 'ask_user',
+              question: {
+                question: '是否有颈肩不适？',
+                answer_type: 'single_choice',
+                options: ['有', '无'],
+              },
+              status: 'pending',
+              created_at: '2026-07-06T00:00:00Z',
+            },
+            toolCallsById: {
+              'tc-1': { id: 'tc-1', tool: 'ask_user', args: { question: '是否有颈肩不适？' }, status: 'running' },
+            },
+          }),
+        ),
+      ).toBe(false);
     });
   });
 

@@ -147,3 +147,47 @@ func TestBuildThreadProjectionToolCallsFromEvents(t *testing.T) {
 		t.Fatalf("expected finished_at %s, got %+v", finish, projected[0].FinishedAt)
 	}
 }
+
+func TestBuildInteractionHistoryExcludesPendingInteractions(t *testing.T) {
+	answeredAt := time.Date(2026, 7, 6, 10, 30, 0, 0, time.UTC)
+	interactions := []model.AgentInteraction{
+		{
+			ID:         uuid.New(),
+			Status:     "pending",
+			CreatedAt:  time.Date(2026, 7, 6, 10, 0, 0, 0, time.UTC),
+			Question:   datatypes.JSON(`{"question":"年龄?"}`),
+			ToolCallID: "tc-pending",
+		},
+		{
+			ID:         uuid.New(),
+			Status:     "answered",
+			CreatedAt:  time.Date(2026, 7, 6, 10, 5, 0, 0, time.UTC),
+			AnsweredAt: &answeredAt,
+			Question:   datatypes.JSON(`{"question":"是否肩颈不适?"}`),
+			Answer:     datatypes.JSON(`{"text":"无"}`),
+			ToolCallID: "tc-answered",
+		},
+		{
+			ID:         uuid.New(),
+			Status:     "cancelled",
+			CreatedAt:  time.Date(2026, 7, 6, 10, 10, 0, 0, time.UTC),
+			Question:   datatypes.JSON(`{"question":"是否头痛?"}`),
+			ToolCallID: "tc-cancelled",
+		},
+	}
+
+	history := buildInteractionHistory(interactions)
+
+	if len(history) != 2 {
+		t.Fatalf("expected 2 history interactions, got %d", len(history))
+	}
+	if history[0].Status != "answered" {
+		t.Fatalf("expected first interaction to be answered, got %s", history[0].Status)
+	}
+	if history[1].Status != "cancelled" {
+		t.Fatalf("expected second interaction to be cancelled, got %s", history[1].Status)
+	}
+	if history[0].ToolCallID != "tc-answered" {
+		t.Fatalf("expected answered tool call tc-answered, got %s", history[0].ToolCallID)
+	}
+}

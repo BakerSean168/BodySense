@@ -89,6 +89,16 @@ func (r *AgentInteractionRepository) ListPendingByConversation(ctx context.Conte
 	return interactions, err
 }
 
+// ListByConversation retrieves all interactions for a conversation.
+func (r *AgentInteractionRepository) ListByConversation(ctx context.Context, conversationID uuid.UUID) ([]model.AgentInteraction, error) {
+	var interactions []model.AgentInteraction
+	err := r.db.WithContext(ctx).
+		Where("conversation_id = ?", conversationID).
+		Order("created_at ASC").
+		Find(&interactions).Error
+	return interactions, err
+}
+
 // ListByRunID retrieves all interactions for a run.
 func (r *AgentInteractionRepository) ListByRunID(ctx context.Context, runID uuid.UUID) ([]model.AgentInteraction, error) {
 	var interactions []model.AgentInteraction

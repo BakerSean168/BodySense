@@ -22,6 +22,7 @@ export interface ActiveTurnViewModel {
   isRunning: boolean;
   isInterrupted: boolean;
   hasVisibleContent: boolean;
+  hasRenderableContent: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -39,6 +40,7 @@ export function selectActiveTurnViewModel(state: ActiveTurnState): ActiveTurnVie
     isRunning: state.status === 'streaming',
     isInterrupted: state.status === 'interrupted',
     hasVisibleContent: selectHasVisibleContent(state),
+    hasRenderableContent: selectHasRenderableContent(state),
   };
 }
 
@@ -88,12 +90,16 @@ export function selectIsComposerLocked(state: ActiveTurnState): boolean {
 
 /** Whether the active turn has any visible content to render. */
 export function selectHasVisibleContent(state: ActiveTurnState): boolean {
+  return selectHasRenderableContent(state) || state.pendingInteraction !== null;
+}
+
+/** Whether the active turn has content that should actually render in the message timeline. */
+export function selectHasRenderableContent(state: ActiveTurnState): boolean {
   return (
     state.text.length > 0 ||
-    Object.keys(state.toolCallsById).length > 0 ||
+    selectVisibleToolCalls(state).length > 0 ||
     Object.keys(state.citationsByKey).length > 0 ||
     Object.keys(state.knowledgeGapsByKey).length > 0 ||
-    state.redFlag !== null ||
-    state.pendingInteraction !== null
+    state.redFlag !== null
   );
 }

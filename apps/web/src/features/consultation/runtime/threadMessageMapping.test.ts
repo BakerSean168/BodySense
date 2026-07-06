@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildActiveTurnSeedFromRuntimeEvents,
+  toInitialThreadTimeline,
   toInitialThreadMessage,
 } from './threadMessageMapping';
-import type { Message, PendingInteraction, StreamEvent } from '../types/consultation';
+import type { InteractionHistoryItem, Message, PendingInteraction, StreamEvent } from '../types/consultation';
 
 function makeMessage(overrides: Partial<Message> = {}): Message {
   return {
@@ -176,6 +177,42 @@ describe('threadMessageMapping', () => {
     expect(seed?.activeTurn.toolCallsById['tc-1']).toMatchObject({
       tool: 'search_knowledge',
       status: 'completed',
+    });
+  });
+
+  it('includes answered interaction history in the initial timeline', () => {
+    const history: InteractionHistoryItem[] = [
+      {
+        id: 'int-answered',
+        run_id: 'run-1',
+        conversation_id: 'conv-1',
+        tool_call_id: 'tc-ask',
+        tool_name: 'ask_user',
+        question: {
+          question: '是否感觉到颈部或肩部不适？',
+          answer_type: 'single_choice',
+          options: ['有', '无'],
+        },
+        status: 'answered',
+        answer: { text: '无', selected: ['无'] },
+        created_at: '2026-07-01T00:01:00.000Z',
+        answered_at: '2026-07-01T00:02:00.000Z',
+      },
+    ];
+
+    const timeline = toInitialThreadTimeline([makeMessage()], history);
+    const interactionMessage = timeline.find((message) => message.id === 'interaction-int-answered');
+
+    expect(interactionMessage).toBeDefined();
+    expect(interactionMessage?.role).toBe('assistant');
+    expect(interactionMessage?.metadata).toMatchObject({
+      custom: {
+        interaction_history: true,
+        interaction: {
+          id: 'int-answered',
+          status: 'answered',
+        },
+      },
     });
   });
 });

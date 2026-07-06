@@ -4,8 +4,6 @@
  * All data is read from ActiveTurnState via selectors. This component replaces
  * the ad-hoc streaming text display, tool call rendering, and structured event
  * extraction that was previously scattered across AssistantChatPanel.
- *
- * Interaction resume (ask_user) is rendered by AssistantChatPanel's input area.
  */
 
 import ReactMarkdown from 'react-markdown';
@@ -14,9 +12,22 @@ import { useActiveTurnState, useActiveTurnActions } from '../context/ActiveTurnC
 import { selectActiveTurnViewModel } from '../runtime/activeTurnSelectors';
 import { StreamingTurnToolCalls } from './StreamingTurnToolCalls';
 import { RedFlagBanner } from './RedFlagBanner';
+import { AskUserStatusCard } from './AskUserStatusCard';
+import { AskUserCard } from './AskUserCard';
 
+interface StreamingAssistantTurnProps {
+  onInteractionSubmit?: (answer: unknown) => void;
+  isInteractionSubmitting?: boolean;
+  interactionError?: string | null;
+  onInteractionRetry?: () => void;
+}
 
-export function StreamingAssistantTurn() {
+export function StreamingAssistantTurn({
+  onInteractionSubmit,
+  isInteractionSubmitting = false,
+  interactionError = null,
+  onInteractionRetry,
+}: StreamingAssistantTurnProps = {}) {
   const state = useActiveTurnState();
   const vm = selectActiveTurnViewModel(state);
   const { dismissRedFlag } = useActiveTurnActions();
@@ -26,8 +37,35 @@ export function StreamingAssistantTurn() {
     return null;
   }
 
+  const shouldRenderTimelineShell =
+    vm.hasRenderableContent ||
+    (vm.pendingInteraction !== null && vm.pendingInteraction.status === 'answered') ||
+    (vm.isInterrupted && vm.pendingInteraction !== null) ||
+    (vm.isRunning && !vm.streamingMarkdown && vm.toolCalls.length === 0);
+
+  if (!shouldRenderTimelineShell) {
+    return null;
+  }
+
   return (
     <div className="flex flex-col gap-3">
+      {vm.pendingInteraction && <AskUserStatusCard interaction={vm.pendingInteraction} />}
+
+      {vm.pendingInteraction?.status === 'pending' && onInteractionSubmit && (
+        <div className="flex justify-start">
+          <div className="max-w-[80%] w-full">
+            <AskUserCard
+              title="请补充这个信息"
+              question={vm.pendingInteraction.question}
+              onSubmit={onInteractionSubmit}
+              isSubmitting={isInteractionSubmitting}
+              error={interactionError}
+              onRetry={onInteractionRetry}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Tool calls */}
       <StreamingTurnToolCalls toolCalls={vm.toolCalls} />
 
@@ -104,7 +142,6 @@ export function StreamingAssistantTurn() {
         />
       )}
 
-      {/* Ask user card is now rendered in AssistantChatPanel's input area */}
     </div>
   );
 }

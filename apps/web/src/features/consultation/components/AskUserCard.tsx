@@ -7,13 +7,21 @@ interface AskUserCardProps {
   isSubmitting?: boolean;
   error?: string | null;
   onRetry?: () => void;
+  title?: string;
 }
 
 /**
  * Renders a pending ask_user interaction card.
  * Supports text, single_choice, multi_choice, number, and date answer types.
  */
-export function AskUserCard({ question, onSubmit, isSubmitting = false, error, onRetry }: AskUserCardProps) {
+export function AskUserCard({
+  question,
+  onSubmit,
+  isSubmitting = false,
+  error,
+  onRetry,
+  title = '问诊追问',
+}: AskUserCardProps) {
   const [textAnswer, setTextAnswer] = useState('');
   const [selectedSingle, setSelectedSingle] = useState<string>('');
   const [selectedMulti, setSelectedMulti] = useState<string[]>([]);
@@ -68,11 +76,12 @@ export function AskUserCard({ question, onSubmit, isSubmitting = false, error, o
   };
 
   return (
-    <div className="rounded-lg border bg-blue-50 p-4 my-2">
+    <div className="rounded-xl border border-[#D7E4FF] bg-[#EEF4FF] p-4 my-2 text-[#1F3558]">
+      <p className="mb-1 text-[11px] font-semibold tracking-wide text-[#4D6FA3]">{title}</p>
       <p className="text-sm font-medium text-blue-900 mb-3">{question.question}</p>
 
       {question.context && (
-        <p className="text-xs text-blue-700 mb-3">{question.context}</p>
+        <p className="text-xs text-[#58749C] mb-3 leading-relaxed">{question.context}</p>
       )}
 
       {/* Error state */}
@@ -94,7 +103,7 @@ export function AskUserCard({ question, onSubmit, isSubmitting = false, error, o
       {(question.answer_type === 'text' || question.answer_type === 'number' || question.answer_type === 'date') && (
         <input
           type={question.answer_type === 'number' ? 'number' : question.answer_type === 'date' ? 'date' : 'text'}
-          className="w-full rounded border px-3 py-2 text-sm mb-3"
+          className="mb-3 w-full rounded-lg border border-[#C8D8F2] bg-white px-3 py-2 text-sm"
           placeholder={question.answer_type === 'text' ? '输入你的回答...' : question.answer_type === 'number' ? '输入数字...' : '选择日期...'}
           value={textAnswer}
           onChange={(e) => setTextAnswer(e.target.value)}
@@ -138,7 +147,7 @@ export function AskUserCard({ question, onSubmit, isSubmitting = false, error, o
           {allowCustomInput && customSingleEnabled && (
             <input
               type="text"
-              className="w-full rounded border px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[#C8D8F2] bg-white px-3 py-2 text-sm"
               placeholder="请输入你的补充回答..."
               value={customAnswer}
               onChange={(e) => setCustomAnswer(e.target.value)}
@@ -181,7 +190,7 @@ export function AskUserCard({ question, onSubmit, isSubmitting = false, error, o
           {allowCustomInput && customMultiEnabled && (
             <input
               type="text"
-              className="w-full rounded border px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-[#C8D8F2] bg-white px-3 py-2 text-sm"
               placeholder="请输入你的补充回答..."
               value={customAnswer}
               onChange={(e) => setCustomAnswer(e.target.value)}
@@ -192,7 +201,7 @@ export function AskUserCard({ question, onSubmit, isSubmitting = false, error, o
       )}
 
       <button
-        className="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+        className="rounded-full bg-[#4D6FA3] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3E5E8E] disabled:opacity-50"
         onClick={handleSubmit}
         disabled={isSubmitting}
       >

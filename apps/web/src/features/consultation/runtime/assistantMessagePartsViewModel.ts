@@ -7,6 +7,7 @@ export interface AssistantMessagePartsViewModel {
   citations: Citation[];
   knowledgeGaps: Array<{ query: string; message: string }>;
   redFlag: RedFlagEvent | null;
+  hasRenderableContent: boolean;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -78,11 +79,19 @@ export function buildAssistantMessagePartsViewModel(
     }
   }
 
+  const hasRenderableContent =
+    markdownParts.join('').length > 0 ||
+    toolCalls.length > 0 ||
+    citations.length > 0 ||
+    knowledgeGaps.length > 0 ||
+    redFlag !== null;
+
   return {
     markdown: markdownParts.join(''),
     toolCalls,
     citations,
     knowledgeGaps,
     redFlag,
+    hasRenderableContent,
   };
 }
