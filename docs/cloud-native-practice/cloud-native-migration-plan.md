@@ -16,7 +16,7 @@ BodySense 当前在阿里云 ECS 上运行着一套稳定的单服务器 Docker 
 | 定位 | 正式生产环境 | 学习、实验、技术验证 |
 | 生命周期 | 长期运行 | 按需开关，用完可释放 |
 | 用户流量 | 承载真实用户 | 仅开发/测试访问 |
-| 域名 | `body.bakersean.top` | 独立子域名 `bodydo.bakersean.top` |
+| 域名 | `body.bakersean.top` | 独立子域名 `bodydoo.bakersean.top` |
 | 改动范围 | **不做任何改动** | 新增文件，不修改已有部署配置 |
 
 ---
