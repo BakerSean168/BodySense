@@ -276,7 +276,10 @@ class ConsultationAgentWorkflow:
                 intent=intent,
                 action=AgentAction.PROVIDE_INFO,
                 confidence=0.8,
-                reasoning="Initial posture observation can be answered first without blocking follow-up.",
+                reasoning=(
+                    "Initial posture observation can be answered first "
+                    "without blocking follow-up."
+                ),
             )
 
         if intent == ConsultationIntent.SUPPLEMENT_SYMPTOM:
@@ -285,7 +288,10 @@ class ConsultationAgentWorkflow:
                     intent=intent,
                     action=AgentAction.PROVIDE_INFO,
                     confidence=0.7,
-                    reasoning="Supplemental posture context is non-critical; provide initial guidance first.",
+                    reasoning=(
+                        "Supplemental posture context is non-critical; "
+                        "provide initial guidance first."
+                    ),
                 )
             return WorkflowDecision(
                 intent=intent,

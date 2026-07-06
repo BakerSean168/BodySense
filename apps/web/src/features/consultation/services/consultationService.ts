@@ -5,7 +5,6 @@ import type {
   Message,
   ConsultationSession,
   ConsultationThread,
-  ExtractedInfo,
   HealthFeatures,
   Diagnosis,
   DiagnosisAnalysis,

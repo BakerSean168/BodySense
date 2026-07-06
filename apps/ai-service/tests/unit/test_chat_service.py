@@ -153,7 +153,10 @@ async def test_stream_chat_with_tool_call(monkeypatch):
 
     health_feature_events = _events_of_type(result_events, "state.health_features.upsert")
     assert len(health_feature_events) == 1
-    assert health_feature_events[0].payload["health_features"]["discomforts"][0]["body_part"] == "肩部"
+    assert (
+        health_feature_events[0].payload["health_features"]["discomforts"][0]["body_part"]
+        == "肩部"
+    )
     assert health_feature_events[0].payload["health_features"]["discomforts"][0]["label"] == "酸胀"
 
 
