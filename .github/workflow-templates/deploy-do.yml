@@ -7,7 +7,7 @@
 # 需要的 GitHub Secrets：
 #   DO_API_TOKEN          - DigitalOcean API Token
 #   DROPLET_SSH_KEY       - Droplet 的 SSH 私钥
-#   DROPLET_HOST          - Droplet IP 或域名 (bodydo.bakersean.top)
+#   DROPLET_HOST          - Droplet IP 或域名 (bodydoo.bakersean.top)
 #   DROPLET_USER          - SSH 用户名 (root)
 #   ENV_PRODUCTION        - .env.production 内容
 #   ENV_PRODUCTION_LOCAL  - .env.production.local 内容
@@ -77,7 +77,7 @@ jobs:
         env:
           CI: 'true'
           VITE_API_BASE_URL: /api
-          VITE_WS_URL: wss://bodydo.bakersean.top/ws
+          VITE_WS_URL: wss://bodydoo.bakersean.top/ws
 
       - name: Resolve image tag
         id: tag
@@ -113,7 +113,7 @@ jobs:
             ${{ env.REGISTRY }}/bodysense-web:prod-latest
           build-args: |
             VITE_API_BASE_URL=/api
-            VITE_WS_URL=wss://bodydo.bakersean.top/ws
+            VITE_WS_URL=wss://bodydoo.bakersean.top/ws
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
 
@@ -177,7 +177,7 @@ jobs:
             sleep 15
 
             # Verify
-            curl -sf https://bodydo.bakersean.top/api/health || {
+            curl -sf https://bodydoo.bakersean.top/api/health || {
               echo "❌ Health check failed!"
               docker compose -f docker/docker-compose.prod.yml logs --tail 20
               exit 1
@@ -191,5 +191,5 @@ jobs:
           echo "### ✅ Deployment Successful" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Tag:** \`${{ steps.tag.outputs.tag }}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **URL:** https://bodydo.bakersean.top" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **URL:** https://bodydoo.bakersean.top" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Registry:** DO Container Registry" >> "$GITHUB_STEP_SUMMARY"
