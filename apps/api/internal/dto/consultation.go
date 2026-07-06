@@ -16,9 +16,9 @@ type ResumeConsultationInteractionRequest struct {
 	Answer    json.RawMessage `json:"answer" binding:"required"`
 }
 
-// UpdateExtractedInfoRequest is the request to update extracted info for a session.
-type UpdateExtractedInfoRequest struct {
-	ExtractedInfo json.RawMessage `json:"extracted_info" binding:"required"`
+// UpdateHealthFeaturesRequest is the request to update health features for a session.
+type UpdateHealthFeaturesRequest struct {
+	HealthFeatures json.RawMessage `json:"health_features" binding:"required"`
 }
 
 // ConfirmDiagnosisRequest is the request to confirm a diagnosis.

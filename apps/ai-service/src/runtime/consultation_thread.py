@@ -52,6 +52,47 @@ def _merge_symptoms(
     return list(by_part.values())
 
 
+def _health_features_from_symptom(info: dict[str, Any]) -> dict[str, Any]:
+    body_part = str(info.get("body_part", "") or "").strip()
+    label = str(info.get("symptom_type", "") or "").strip() or body_part
+    if not label:
+        return {
+            "posture_findings": [],
+            "discomforts": [],
+            "negative_findings": [],
+            "movement_limitations": [],
+            "red_flags": [],
+            "user_answers": [],
+        }
+
+    item: dict[str, Any] = {
+        "label": label,
+        "source": "extracted_info",
+    }
+    if body_part:
+        item["body_part"] = body_part
+    severity = str(info.get("severity", "") or "").strip()
+    if severity:
+        item["value"] = severity
+
+    details = [
+        str(info.get(key, "") or "").strip()
+        for key in ("duration", "trigger", "relief")
+        if str(info.get(key, "") or "").strip()
+    ]
+    if details:
+        item["details"] = "，".join(details)
+
+    return {
+        "posture_findings": [],
+        "discomforts": [item],
+        "negative_findings": [],
+        "movement_limitations": [],
+        "red_flags": [],
+        "user_answers": [],
+    }
+
+
 class ConsultationThreadState(TypedDict, total=False):
     session_id: str
     user_id: str
@@ -202,7 +243,7 @@ async def classify_intent(state: ConsultationThreadState) -> dict[str, Any]:
             break
 
     intent = workflow.classify_intent(user_message, context)
-    decision = workflow.decide_next_action(intent, context)
+    decision = workflow.decide_next_action(intent, context, user_message)
     return {
         "intent": intent.value,
         "workflow_action": decision.action.value,
@@ -314,6 +355,12 @@ async def execute_tool(state: ConsultationThreadState, *, writer: StreamWriter) 
         result = await executor.execute(tool_call_id, tool_name, arguments)
         normalized = result.content if result.status == ToolStatus.SUCCESS else arguments
         writer({"type": "extracted_info", "info": normalized})
+        writer(
+            {
+                "type": "health_features",
+                "health_features": _health_features_from_symptom(normalized),
+            }
+        )
         writer(
             {
                 "type": "tool_result",

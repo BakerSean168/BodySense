@@ -54,12 +54,12 @@ func (r *ConsultationRepository) ListByConversationIDs(ctx context.Context, conv
 	return sessions, err
 }
 
-// UpdateExtractedInfo updates the extracted_info JSONB field of a session.
-func (r *ConsultationRepository) UpdateExtractedInfo(ctx context.Context, conversationID uuid.UUID, extractedInfo any) error {
+// UpdateHealthFeatures updates the health_features JSONB field of a session.
+func (r *ConsultationRepository) UpdateHealthFeatures(ctx context.Context, conversationID uuid.UUID, healthFeatures any) error {
 	return r.db.WithContext(ctx).
 		Model(&model.ConsultationSession{}).
 		Where("conversation_id = ?", conversationID).
-		Update("extracted_info", extractedInfo).Error
+		Update("health_features", healthFeatures).Error
 }
 
 // UpdatePhase updates the workflow phase of a consultation session.
@@ -252,6 +252,7 @@ func (r *ConsultationRepository) resolveRunConversation(
 		session = model.ConsultationSession{
 			ConversationID: conversation.ID,
 			ExtractedInfo:  datatypes.JSON("[]"),
+			HealthFeatures: datatypes.JSON(`{}`),
 			Phase:          "collecting",
 		}
 		if err := tx.WithContext(ctx).Create(&session).Error; err != nil {

@@ -83,8 +83,8 @@ func (h *ConsultationHandler) GetConsultation(c *gin.Context) {
 	c.JSON(http.StatusOK, session)
 }
 
-// UpdateExtractedInfo handles PUT /api/v1/consultations/:id/extracted-info
-func (h *ConsultationHandler) UpdateExtractedInfo(c *gin.Context) {
+// UpdateHealthFeatures handles PUT /api/v1/consultations/:id/health-features
+func (h *ConsultationHandler) UpdateHealthFeatures(c *gin.Context) {
 	uid, ok := getUserUUID(c)
 	if !ok {
 		return
@@ -96,19 +96,19 @@ func (h *ConsultationHandler) UpdateExtractedInfo(c *gin.Context) {
 		return
 	}
 
-	var req dto.UpdateExtractedInfoRequest
+	var req dto.UpdateHealthFeaturesRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		respondError(c, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
 	}
 
-	if err := h.consultationService.UpdateExtractedInfo(c.Request.Context(), conversationID, uid, req.ExtractedInfo); err != nil {
-		log.Printf("failed to update extracted info for consultation %s: %v", conversationID, err)
-		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to update extracted info")
+	if err := h.consultationService.UpdateHealthFeatures(c.Request.Context(), conversationID, uid, req.HealthFeatures); err != nil {
+		log.Printf("failed to update health features for consultation %s: %v", conversationID, err)
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to update health features")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "extracted info updated"})
+	c.JSON(http.StatusOK, gin.H{"message": "health features updated"})
 }
 
 // ConfirmDiagnosis handles PUT /api/v1/consultations/:id/confirm

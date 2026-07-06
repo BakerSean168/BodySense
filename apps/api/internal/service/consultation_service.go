@@ -15,7 +15,7 @@ type consultationRepository interface {
 	GetByConversationID(ctx context.Context, conversationID uuid.UUID) (*model.ConsultationSession, error)
 	ListByConversationIDs(ctx context.Context, conversationIDs []uuid.UUID) ([]model.ConsultationSession, error)
 	Delete(ctx context.Context, conversationID uuid.UUID) error
-	UpdateExtractedInfo(ctx context.Context, conversationID uuid.UUID, extractedInfo any) error
+	UpdateHealthFeatures(ctx context.Context, conversationID uuid.UUID, healthFeatures any) error
 	UpdatePhase(ctx context.Context, conversationID uuid.UUID, phase string) error
 	UpdateDiagnosis(ctx context.Context, conversationID uuid.UUID, diagnosis any) error
 	UpdateTreatmentPlan(ctx context.Context, conversationID uuid.UUID, treatmentPlan any) error
@@ -85,6 +85,7 @@ func (s *ConsultationService) CreateSession(ctx context.Context, userID uuid.UUI
 		session = &model.ConsultationSession{
 			ConversationID: existingConv.ID,
 			ExtractedInfo:  datatypes.JSON("[]"),
+			HealthFeatures: datatypes.JSON(`{}`),
 			Phase:          "collecting",
 		}
 		if err := s.consultationRepo.Create(ctx, session); err != nil {
@@ -106,6 +107,7 @@ func (s *ConsultationService) CreateSession(ctx context.Context, userID uuid.UUI
 	session := &model.ConsultationSession{
 		ConversationID: conversation.ID,
 		ExtractedInfo:  datatypes.JSON("[]"),
+		HealthFeatures: datatypes.JSON(`{}`),
 		Phase:          "collecting",
 	}
 	if err := s.consultationRepo.Create(ctx, session); err != nil {
@@ -129,6 +131,7 @@ func (s *ConsultationService) CreateSessionWithID(ctx context.Context, conversat
 	session := &model.ConsultationSession{
 		ConversationID: conversationID,
 		ExtractedInfo:  datatypes.JSON("[]"),
+		HealthFeatures: datatypes.JSON(`{}`),
 		Phase:          "collecting",
 	}
 	if err := s.consultationRepo.Create(ctx, session); err != nil {
@@ -177,6 +180,7 @@ func (s *ConsultationService) CreateConsultation(ctx context.Context, conversati
 	session := &model.ConsultationSession{
 		ConversationID: conversationID,
 		ExtractedInfo:  datatypes.JSON("[]"),
+		HealthFeatures: datatypes.JSON(`{}`),
 		Phase:          "collecting",
 	}
 	if err := s.consultationRepo.Create(ctx, session); err != nil {
@@ -222,17 +226,17 @@ func (s *ConsultationService) UpdatePhase(ctx context.Context, conversationID, u
 	return s.consultationRepo.UpdatePhase(ctx, conversationID, phase)
 }
 
-// UpdateExtractedInfo updates the extracted info for a session.
-func (s *ConsultationService) UpdateExtractedInfo(ctx context.Context, conversationID, userID uuid.UUID, extractedInfo any) error {
+// UpdateHealthFeatures updates the health features for a session.
+func (s *ConsultationService) UpdateHealthFeatures(ctx context.Context, conversationID, userID uuid.UUID, healthFeatures any) error {
 	if err := s.verifyOwnership(ctx, conversationID, userID); err != nil {
 		return err
 	}
 
-	data, err := json.Marshal(extractedInfo)
+	data, err := json.Marshal(healthFeatures)
 	if err != nil {
-		return fmt.Errorf("marshal extracted info: %w", err)
+		return fmt.Errorf("marshal health features: %w", err)
 	}
-	return s.consultationRepo.UpdateExtractedInfo(ctx, conversationID, data)
+	return s.consultationRepo.UpdateHealthFeatures(ctx, conversationID, data)
 }
 
 // UpdateDiagnosis updates the diagnosis for a session.
