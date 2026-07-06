@@ -15,44 +15,56 @@
    ```bash
    cd apps/ai-service
    uv run python -c "
-   from src.rag.knowledge_base import KnowledgeBase
-   kb = KnowledgeBase()
-   stats = kb.get_stats()
-   print(f'总条目数: {stats[\"total_entries\"]}')
-   print(f'有 Embedding 的条目: {stats[\"with_embedding\"]}')
-   print(f'缺失 Embedding: {stats[\"missing_embedding\"]}')
+   from src.rag.knowledge_library import get_knowledge_library
+   lib = get_knowledge_library()
+   print('KnowledgeLibrary loaded successfully')
+   print(f'SearchResult fields: title, summary, body_markdown, source_title, tags, clips')
    "
    ```
 
-2. **运行召回率测试**
+2. **运行 RAG 相关单元测试**
    ```bash
-   uv run pytest tests/rag/test_retrieval.py -v
+   cd apps/ai-service
+   uv run pytest tests/unit/test_embedding.py tests/unit/test_golden_cases.py -v
    ```
 
-3. **运行答案质量测试**（需要 LLM API key）
+3. **验证搜索功能**
    ```bash
-   uv run pytest tests/rag/test_answer_quality.py -v
+   cd apps/ai-service
+   uv run python -c "
+   import asyncio
+   from src.rag.knowledge_library import get_knowledge_library
+
+   async def test_search():
+       lib = get_knowledge_library()
+       results = await lib.search('肩颈酸胀', top_k=3)
+       for r in results:
+           print(f'  [{r.problem_slug}] {r.title} (score: {r.similarity:.3f})')
+       print(f'Total results: {len(results)}')
+
+   asyncio.run(test_search())
+   "
    ```
 
 4. **检查 Embedding 模型一致性**
    ```bash
+   cd apps/ai-service
    uv run python -c "
-   from src.rag.embeddings import get_embedding_model
-   model = get_embedding_model()
-   print(f'模型: {model.name}')
-   print(f'维度: {model.dimensions}')
+   from src.rag.embedding import get_embedding_generator
+   gen = get_embedding_generator()
+   print(f'EmbeddingGenerator loaded')
    "
    ```
 
 ## 成功标准
 
-- 所有知识库条目都有对应的 Embedding 向量
-- 召回率测试通过率 ≥ 80%
-- 答案质量测试（如有配置 LLM）通过率 ≥ 70%
+- `KnowledgeLibrary` 可正常加载
+- 搜索返回结构化结果（含 title、summary、body_markdown、source 等字段）
 - Embedding 模型版本与配置一致
+- 相关单元测试全部通过
 
 ## 失败处理
 
-- 如果有缺失 Embedding 的条目，运行 `uv run python scripts/rebuild_embeddings.py`
-- 如果召回率低于阈值，检查知识库条目质量和分块策略
+- 如果搜索无结果，检查知识库数据和 pgvector 扩展是否正常
 - 如果 Embedding 模型不一致，需要全量重建 Embedding
+- 如果单元测试失败，检查 `knowledge_library.py` 的 schema 变更

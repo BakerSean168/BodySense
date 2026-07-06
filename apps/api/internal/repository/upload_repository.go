@@ -54,18 +54,18 @@ func (r *UploadRepository) GetByUserID(ctx context.Context, userID uuid.UUID) ([
 	return uploads, nil
 }
 
-// Delete removes an upload record by ID.
-func (r *UploadRepository) Delete(ctx context.Context, id uuid.UUID) error {
+// Delete removes an upload record by ID with ownership check.
+func (r *UploadRepository) Delete(ctx context.Context, id, userID uuid.UUID) error {
 	return r.db.WithContext(ctx).
-		Where("id = ?", id).
+		Where("id = ? AND user_id = ?", id, userID).
 		Delete(&model.UserUpload{}).Error
 }
 
-// UpdateOCRResult updates the OCR result and status for an upload.
-func (r *UploadRepository) UpdateOCRResult(ctx context.Context, id uuid.UUID, status string, result json.RawMessage) error {
+// UpdateOCRResult updates the OCR result and status for an upload with ownership check.
+func (r *UploadRepository) UpdateOCRResult(ctx context.Context, id, userID uuid.UUID, status string, result json.RawMessage) error {
 	return r.db.WithContext(ctx).
 		Model(&model.UserUpload{}).
-		Where("id = ?", id).
+		Where("id = ? AND user_id = ?", id, userID).
 		Updates(map[string]interface{}{
 			"ocr_status": status,
 			"ocr_result": result,
@@ -73,11 +73,11 @@ func (r *UploadRepository) UpdateOCRResult(ctx context.Context, id uuid.UUID, st
 		}).Error
 }
 
-// UpdateOCRStatus updates only the OCR status for an upload.
-func (r *UploadRepository) UpdateOCRStatus(ctx context.Context, id uuid.UUID, status string) error {
+// UpdateOCRStatus updates only the OCR status for an upload with ownership check.
+func (r *UploadRepository) UpdateOCRStatus(ctx context.Context, id, userID uuid.UUID, status string) error {
 	return r.db.WithContext(ctx).
 		Model(&model.UserUpload{}).
-		Where("id = ?", id).
+		Where("id = ? AND user_id = ?", id, userID).
 		Updates(map[string]interface{}{
 			"ocr_status": status,
 			"updated_at": gorm.Expr("NOW()"),

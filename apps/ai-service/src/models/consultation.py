@@ -40,7 +40,15 @@ class ExtractedInfo:
         self.symptoms.append(SymptomInfo(**filtered))
 
     def to_dict(self) -> list[dict[str, Any]]:
-        """Convert to list of dicts for JSON serialization."""
+        """Convert symptoms to a list of dicts for JSON serialization.
+
+        Note: Despite the name, this returns a list (not a dict) for
+        backward compatibility. Use to_list() in new code.
+        """
+        return self.to_list()
+
+    def to_list(self) -> list[dict[str, Any]]:
+        """Convert symptoms to a list of dicts for JSON serialization."""
         return [
             {k: v for k, v in vars(s).items() if v is not None}
             for s in self.symptoms
@@ -48,7 +56,16 @@ class ExtractedInfo:
 
     @classmethod
     def from_dict(cls, data: list[dict[str, Any]]) -> "ExtractedInfo":
-        """Create from list of dicts."""
+        """Create from a list of dicts.
+
+        Note: Despite the name, this accepts a list (not a dict) for
+        backward compatibility. Use from_list() in new code.
+        """
+        return cls.from_list(data)
+
+    @classmethod
+    def from_list(cls, data: list[dict[str, Any]]) -> "ExtractedInfo":
+        """Create from a list of symptom dicts."""
         info = cls()
         fields = SymptomInfo.__dataclass_fields__
         for item in data:
@@ -66,3 +83,4 @@ class ChatContext:
     profile: dict[str, Any] = field(default_factory=dict)
     extracted_info: ExtractedInfo = field(default_factory=ExtractedInfo)
     messages: list[dict[str, Any]] = field(default_factory=list)
+    phase: str = "collecting"

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { authFetch } from '@/features/auth/services/authService';
 import { useAuthStore } from './authStore';
 
 export interface UserProfile {
@@ -31,8 +32,6 @@ interface ProfileState {
   clearError: () => void;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-
 export const useProfileStore = create<ProfileState>()((set) => ({
   profile: null,
   isLoading: false,
@@ -42,18 +41,22 @@ export const useProfileStore = create<ProfileState>()((set) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const { accessToken } = useAuthStore.getState();
+      const { isAuthenticated } = useAuthStore.getState();
 
-      if (!accessToken) {
+      if (!isAuthenticated) {
         set({ profile: null, isLoading: false });
         return;
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/profile`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
+      // Use authFetch for automatic 401 handling (token refresh + logout on failure)
+      const response = await authFetch('/api/v1/profile');
+
+      if (response.status === 401) {
+        // Token invalid or user doesn't exist — authFetch already tried refresh,
+        // if we still get 401, the user is gone. authFetch handles logout.
+        set({ profile: null, isLoading: false });
+        return;
+      }
 
       if (!response.ok) {
         throw new Error('Failed to fetch profile');
@@ -76,20 +79,25 @@ export const useProfileStore = create<ProfileState>()((set) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const { accessToken } = useAuthStore.getState();
+      const { isAuthenticated } = useAuthStore.getState();
 
-      if (!accessToken) {
+      if (!isAuthenticated) {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/profile`, {
+      // Use authFetch for automatic 401 handling
+      const response = await authFetch('/api/v1/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify(data),
       });
+
+      if (response.status === 401) {
+        set({ isLoading: false });
+        throw new Error('Session expired, please login again');
+      }
 
       if (!response.ok) {
         const errorData = await response.json();

@@ -1,11 +1,14 @@
 """Reassessment API routes."""
 
+import logging
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from ...services.reassessment_service import get_reassessment_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/reassessment", tags=["reassessment"])
 
@@ -31,5 +34,9 @@ async def analyze_reassessment(request: ReassessmentRequest):
         return result
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Reassessment failed: {e!s}")
+    except Exception:
+        logger.exception("Reassessment failed")
+        raise HTTPException(
+            status_code=500,
+            detail="Reassessment failed. Please try again.",
+        )

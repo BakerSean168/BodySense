@@ -364,7 +364,7 @@ commit 3: feat(web): 报告页面添加 PDF 导出按钮
 ## 7. 参考资源
 
 - 项目约束和规则：[`AGENT.md`](../AGENT.md)
-- 技术方案（版本选型）：[`technical-approach.md`](./technical-approach.md)
+- 技术方案（版本选型）：[`technical-approach.md`](./architecture/technical-approach.md)
 - PRD：[`PRD-体态健康AI助手.md`](./PRD-体态健康AI助手.md)
 - Agent Skills 目录：`tools/agent-skills/`
 - MCP 配置：`.mcp.json`

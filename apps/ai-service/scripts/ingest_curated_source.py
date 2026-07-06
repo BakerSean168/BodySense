@@ -11,6 +11,22 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+# Load .env before anything else reads os.getenv()
+try:
+    from dotenv import load_dotenv
+except ModuleNotFoundError:
+    load_dotenv = None
+
+if load_dotenv:
+    for _env in [
+        PROJECT_ROOT / ".env",
+        PROJECT_ROOT.parent / ".env",
+        PROJECT_ROOT.parent.parent / ".env",
+    ]:
+        if _env.exists():
+            load_dotenv(_env, override=False)
+            break
+
 from src.rag import build_curated_pack, get_knowledge_library, load_generated_pack  # noqa: E402
 
 

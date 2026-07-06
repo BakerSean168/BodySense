@@ -17,9 +17,9 @@ import (
 
 // TrainingService handles training business logic.
 type TrainingService struct {
-	trainingRepo    *repository.TrainingRepository
-	profileService  *ProfileService
-	aiServiceURL    string
+	trainingRepo   *repository.TrainingRepository
+	profileService *ProfileService
+	aiServiceURL   string
 }
 
 func NewTrainingService(
@@ -28,7 +28,7 @@ func NewTrainingService(
 ) *TrainingService {
 	aiServiceURL := os.Getenv("AI_SERVICE_URL")
 	if aiServiceURL == "" {
-		aiServiceURL = "http://localhost:8000"
+		aiServiceURL = "http://localhost:8100"
 	}
 	return &TrainingService{
 		trainingRepo:   trainingRepo,
@@ -77,8 +77,8 @@ func (s *TrainingService) GeneratePlan(
 	}
 
 	var result struct {
-		Goal          string         `json:"goal"`
-		DurationWeeks int            `json:"duration_weeks"`
+		Goal          string           `json:"goal"`
+		DurationWeeks int              `json:"duration_weeks"`
 		Phases        []map[string]any `json:"phases"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
@@ -88,13 +88,13 @@ func (s *TrainingService) GeneratePlan(
 	phasesJSON, _ := json.Marshal(result.Phases)
 
 	plan := &model.TrainingPlan{
-		ID:            uuid.New(),
-		UserID:        userID,
+		ID:             uuid.New(),
+		UserID:         userID,
 		ConsultationID: consultationID,
-		Goal:          result.Goal,
-		DurationWeeks: result.DurationWeeks,
-		CurrentWeek:   1,
-		Phases:        phasesJSON,
+		Goal:           result.Goal,
+		DurationWeeks:  result.DurationWeeks,
+		CurrentWeek:    1,
+		Phases:         phasesJSON,
 	}
 
 	if err := s.trainingRepo.CreatePlan(ctx, plan); err != nil {
@@ -151,21 +151,21 @@ func (s *TrainingService) CheckIn(ctx context.Context, planID, userID uuid.UUID)
 	}
 
 	today := time.Now().Truncate(24 * time.Hour)
-	return s.trainingRepo.CheckIn(ctx, planID, today)
+	return s.trainingRepo.CheckIn(ctx, planID, userID, today)
 }
 
-// UpdateLog updates a training log.
-func (s *TrainingService) UpdateLog(ctx context.Context, planID, userID uuid.UUID, notes string, exercises any) error {
+// UpdateLog updates a training log and triggers AI reassessment if notes are provided.
+func (s *TrainingService) UpdateLog(ctx context.Context, planID, userID uuid.UUID, notes string, exercises any) (map[string]any, error) {
 	// Verify plan belongs to user
 	plan, err := s.trainingRepo.GetPlanByID(ctx, planID, userID)
 	if err != nil || plan == nil {
-		return fmt.Errorf("plan not found")
+		return nil, fmt.Errorf("plan not found")
 	}
 
 	today := time.Now().Truncate(24 * time.Hour)
 	exercisesJSON, _ := json.Marshal(exercises)
 
-	return s.trainingRepo.CreateOrUpdateLog(ctx, &model.TrainingLog{
+	err = s.trainingRepo.CreateOrUpdateLog(ctx, &model.TrainingLog{
 		ID:        uuid.New(),
 		UserID:    userID,
 		PlanID:    planID,
@@ -173,6 +173,19 @@ func (s *TrainingService) UpdateLog(ctx context.Context, planID, userID uuid.UUI
 		Exercises: exercisesJSON,
 		Notes:     &notes,
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Analyze notes for discomfort
+	if notes != "" {
+		proposal, err := s.AnalyzeFeedback(ctx, planID, userID, notes)
+		if err == nil && proposal != nil {
+			return proposal, nil
+		}
+	}
+
+	return nil, nil
 }
 
 // GetLogsByPlanID retrieves all training logs for a plan.
@@ -207,4 +220,75 @@ func (s *TrainingService) GetProgress(ctx context.Context, planID, userID uuid.U
 		"current_week":     plan.CurrentWeek,
 		"total_weeks":      plan.DurationWeeks,
 	}, nil
+}
+
+// UpdatePlanPhases updates the phases of a plan.
+func (s *TrainingService) UpdatePlanPhases(ctx context.Context, planID, userID uuid.UUID, phases any) error {
+	phasesJSON, err := json.Marshal(phases)
+	if err != nil {
+		return err
+	}
+	return s.trainingRepo.UpdatePlanPhases(ctx, planID, userID, phasesJSON)
+}
+
+// AnalyzeFeedback calls the AI service to analyze log notes for discomfort and generate suggestions.
+func (s *TrainingService) AnalyzeFeedback(ctx context.Context, planID, userID uuid.UUID, notes string) (map[string]any, error) {
+	plan, err := s.trainingRepo.GetPlanByID(ctx, planID, userID)
+	if err != nil || plan == nil {
+		return nil, fmt.Errorf("plan not found")
+	}
+
+	// Get recent logs (for context)
+	logs, err := s.trainingRepo.GetLogsByPlanID(ctx, planID)
+	if err != nil {
+		return nil, err
+	}
+
+	var logsList []map[string]any
+	for _, l := range logs {
+		lj, _ := json.Marshal(l)
+		var lm map[string]any
+		_ = json.Unmarshal(lj, &lm)
+		logsList = append(logsList, lm)
+	}
+
+	var planMap map[string]any
+	pj, _ := json.Marshal(plan)
+	_ = json.Unmarshal(pj, &planMap)
+
+	aiReq := map[string]any{
+		"feedback": map[string]any{
+			"symptom_changes":  "",
+			"training_feeling": notes,
+			"difficulties":     "",
+		},
+		"training_logs": logsList,
+		"current_plan":  planMap,
+	}
+
+	aiReqBody, err := json.Marshal(aiReq)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := http.Post(
+		s.aiServiceURL+"/api/reassessment/analyze",
+		"application/json",
+		bytes.NewBuffer(aiReqBody),
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("AI service returned status %d", resp.StatusCode)
+	}
+
+	var result map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }

@@ -16,7 +16,7 @@ interface UploadState {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
-export const useUploadStore = create<UploadState>()((set, get) => ({
+export const useUploadStore = create<UploadState>()((set) => ({
   uploads: [],
   isLoading: false,
   error: null,

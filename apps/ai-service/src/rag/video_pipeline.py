@@ -1,50 +1,62 @@
-"""Automatic video-to-knowledge ingestion pipeline."""
+"""
+自动视频知识入库管道 (Automatic Video-to-Knowledge Ingestion Pipeline)
+
+本文件是 Issue #13 "从视频到知识库" 自动链路的编排层。
+
+整体流程：
+    输入一个本地视频 (.mp4)
+    → ffmpeg 抽取音频 (.wav)
+    → ASR 语音转文字 (whisper.cpp / FunASR SenseVoice / ASR API)
+    → 知识切分 (heuristic 关键词规则 / LLM 语义切分)
+    → [可选] AI 精修 (逐单元润色+质量评分)
+    → ffmpeg 导出动作演示片段 (clip_exporter.py)
+    → 序列化为 generated_pack.json
+    → 由 KnowledgeLibrary 写入数据库
+
+设计原则：
+    - 本文件只做编排和 IO，具体业务逻辑委托给子模块
+    - 产出的是"自动底稿"，适合批量跑，但需要人工精修才能上线
+    - 每个阶段的中间产物都落盘，便于复核和重跑
+"""
 
 from __future__ import annotations
 
-import json
-import os
-import re
+import logging
 import subprocess
-import urllib.request
-import zipfile
-from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
+from .asr import get_asr_provider
+from .clip_exporter import export_clips
 from .knowledge_pack import (
     GeneratedKnowledgePack,
-    KnowledgeClipCandidate,
-    KnowledgeUnitCandidate,
     SourceVideoMetadata,
     TranscriptSegment,
     slugify,
 )
+from .splitter import get_splitter
 
-WHISPER_MODEL_URLS = {
-    "ggml-tiny.bin": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin",
-    "ggml-base.bin": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin",
-    "ggml-small.bin": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin",
-}
-FUNASR_RUNTIME_VERSION = "runtime-llamacpp-v0.1.1"
-FUNASR_RUNTIME_URL = (
-    "https://github.com/modelscope/FunASR/releases/download/"
-    f"{FUNASR_RUNTIME_VERSION}/funasr-llamacpp-windows-x64.zip"
-)
-FUNASR_MODEL_CONFIGS = {
-    "sensevoice-small-q8.gguf": {
-        "binary_name": "llama-funasr-sensevoice.exe",
-        "repo_id": "FunAudioLLM/SenseVoiceSmall-GGUF",
-        "file_name": "sensevoice-small-q8.gguf",
-    }
-}
-TRANSCRIPT_PROVIDERS = {"whisper.cpp", "funasr_sensevoice"}
-CLIP_WORTHY_TYPES = {"self_check", "exercise", "warning"}
+logger = logging.getLogger(__name__)
+
+# Default data root: apps/ai-service/data/
+_DEFAULT_DATA_ROOT = Path(__file__).resolve().parents[2] / "data"
 
 
 @dataclass(frozen=True)
 class VideoIngestionRequest:
-    """Input parameters for an automatic video ingestion run."""
+    """Input parameters for a single automatic video ingestion.
+
+    Typical usage (from ingest_video_source.py):
+        request = VideoIngestionRequest(
+            video_path="C:/Users/baker/Videos/凯圣王/头前移.mp4",
+            problem_slug="forward-head-posture",
+            problem_display_name="头前移",
+            author="凯圣王",
+            source_title="头前移完整矫正指南",
+        )
+        pipeline = VideoIngestionPipeline()
+        pack = await pipeline.ingest(request)
+    """
 
     video_path: str
     problem_slug: str
@@ -52,54 +64,82 @@ class VideoIngestionRequest:
     author: str
     source_title: str
     language: str = "zh"
-    transcript_provider: str = "whisper.cpp"
+    transcript_provider: str | None = None
     transcript_model: str | None = None
     whisper_model: str = "ggml-base.bin"
     force_transcribe: bool = False
     export_clips: bool = True
+    splitter_provider: str = "heuristic"  # "heuristic" | "llm"
+    ai_refine: bool = False  # 是否启用 AI 精修
 
 
 class VideoIngestionPipeline:
-    """Transcribe a video, derive knowledge units, and export helpful clips."""
+    """Automatic video-to-knowledge ingestion pipeline (orchestrator).
+
+    Responsibilities:
+        1. Accept a local video + metadata
+        2. Extract audio → ASR transcribe → knowledge split → [AI refine] → export clips → pack
+        3. Output generated_pack.json for downstream ingestion
+
+    Directory layout:
+        data/
+          knowledge_sources/
+            {source_key}/
+              audio.wav
+              transcript.raw.jsonl
+              transcript.txt
+              generated_pack.json
+              clips/
+          .cache/
+            whisper/
+            funasr_runtime/
+            funasr_models/
+    """
 
     def __init__(self, data_root: str | Path | None = None):
-        self.data_root = Path(data_root or Path(__file__).resolve().parents[2] / "data").resolve()
+        self.data_root = Path(data_root or _DEFAULT_DATA_ROOT).resolve()
         self.sources_root = self.data_root / "knowledge_sources"
-        self.whisper_root = self.data_root / ".cache" / "whisper"
-        self.funasr_runtime_root = self.data_root / ".cache" / "funasr_runtime"
-        self.funasr_model_root = self.data_root / ".cache" / "funasr_models"
 
-    def ingest(self, request: VideoIngestionRequest) -> GeneratedKnowledgePack:
-        """Run the end-to-end local ingestion pipeline for one video."""
+    async def ingest(self, request: VideoIngestionRequest) -> GeneratedKnowledgePack:
+        """Execute the end-to-end ingestion pipeline.
+
+        Returns:
+            GeneratedKnowledgePack, also written to disk as generated_pack.json.
+        """
+        # --- Step 1: Validate video exists ---
         video_path = Path(request.video_path).resolve()
         if not video_path.exists():
             raise FileNotFoundError(f"Video not found: {video_path}")
 
+        # --- Step 2: Generate unique source_key ---
         source_key = slugify(f"{request.author}-{request.problem_slug}-{video_path.stem}")
         artifact_dir = self.sources_root / source_key
         artifact_dir.mkdir(parents=True, exist_ok=True)
 
-        transcript_segments, transcript_path = self._transcribe_video(
+        # --- Step 3: ASR transcription ---
+        transcript_segments = await self._transcribe(
             video_path=video_path,
             artifact_dir=artifact_dir,
-            transcript_provider=request.transcript_provider,
-            transcript_model=request.transcript_model or request.whisper_model,
-            whisper_model=request.whisper_model,
-            language=request.language,
-            force=request.force_transcribe,
+            request=request,
         )
-        units = self._build_units(
+
+        # --- Step 4: Knowledge splitting ---
+        splitter = get_splitter(request.splitter_provider)
+        units = await splitter.split(
             transcript_segments=transcript_segments,
             problem_slug=request.problem_slug,
             problem_display_name=request.problem_display_name,
         )
-        clips = self._export_clips(
+
+        # --- Step 5: Export video clips ---
+        clips = export_clips(
             video_path=video_path,
             artifact_dir=artifact_dir,
             units=units,
             export_clips=request.export_clips,
         )
 
+        # --- Step 6: Assemble knowledge pack ---
         pack = GeneratedKnowledgePack(
             source=SourceVideoMetadata(
                 source_key=source_key,
@@ -110,13 +150,14 @@ class VideoIngestionPipeline:
                 problem_display_name=request.problem_display_name,
                 original_file_path=str(video_path),
                 language=request.language,
-                duration_sec=self._probe_duration(video_path),
+                duration_sec=_probe_duration(video_path),
                 transcript_provider=request.transcript_provider,
                 transcript_model=request.transcript_model or request.whisper_model,
-                transcript_file_path=str(transcript_path),
+                transcript_file_path=str(artifact_dir / "transcript.txt"),
                 metadata={
                     "video_stem": video_path.stem,
                     "artifact_dir": str(artifact_dir),
+                    "splitter_provider": request.splitter_provider,
                 },
             ),
             artifact_dir=str(artifact_dir),
@@ -124,608 +165,103 @@ class VideoIngestionPipeline:
             units=units,
             clips=clips,
         )
+
+        # --- Step 7: Optional AI refinement ---
+        if request.ai_refine:
+            from .ai_curator import AICurator
+
+            curator = AICurator()
+            pack = await curator.refine_pack(pack)
+
+        # --- Step 8: Write to disk ---
         pack.write_json(artifact_dir / "generated_pack.json")
         return pack
 
-    def _probe_duration(self, video_path: Path) -> float | None:
-        command = [
-            "ffprobe",
-            "-v",
-            "error",
-            "-show_entries",
-            "format=duration",
-            "-of",
-            "default=noprint_wrappers=1:nokey=1",
-            str(video_path),
-        ]
-        result = subprocess.run(command, check=True, capture_output=True, text=True)
-        value = result.stdout.strip()
-        return float(value) if value else None
-
-    def _transcribe_video(
+    async def _transcribe(
         self,
         video_path: Path,
         artifact_dir: Path,
-        transcript_provider: str,
-        transcript_model: str | None,
-        whisper_model: str,
-        language: str,
-        force: bool,
-    ) -> tuple[list[TranscriptSegment], Path]:
+        request: VideoIngestionRequest,
+    ) -> list[TranscriptSegment]:
+        """Extract audio and run ASR transcription.
+
+        Idempotent: if transcript already exists and force=False, reads from disk.
+        """
         transcript_jsonl = artifact_dir / "transcript.raw.jsonl"
         transcript_text = artifact_dir / "transcript.txt"
 
-        if force or not transcript_jsonl.exists():
+        if request.force_transcribe or not transcript_jsonl.exists():
+            # Extract audio (mono, 16kHz WAV — standard for ASR models)
             audio_path = artifact_dir / "audio.wav"
-            self._extract_audio(video_path, audio_path)
-            provider = transcript_provider.strip().lower()
-            if provider not in TRANSCRIPT_PROVIDERS:
-                supported = ", ".join(sorted(TRANSCRIPT_PROVIDERS))
-                raise ValueError(
-                    "Unsupported transcript provider "
-                    f"'{transcript_provider}'. Supported: {supported}"
-                )
+            _extract_audio(video_path, audio_path)
 
-            if provider == "whisper.cpp":
-                model_name = transcript_model or whisper_model
-                model_path = self._ensure_whisper_model(model_name)
-                self._run_whisper(
-                    audio_path=audio_path,
-                    output_path=transcript_jsonl,
-                    model_path=model_path,
-                    language=language,
-                )
-            else:
-                model_name = transcript_model or "sensevoice-small-q8.gguf"
-                self._run_funasr_sensevoice(
-                    audio_path=audio_path,
-                    output_path=transcript_jsonl,
-                    model_name=model_name,
-                )
-
-        segments = self._parse_transcript_jsonl(transcript_jsonl)
-        transcript_text.write_text(self._render_transcript_text(segments), encoding="utf-8")
-        return segments, transcript_text
-
-    def _ensure_whisper_model(self, model_name: str) -> Path:
-        if model_name not in WHISPER_MODEL_URLS:
-            supported = ", ".join(sorted(WHISPER_MODEL_URLS))
-            raise ValueError(f"Unsupported whisper model '{model_name}'. Supported: {supported}")
-
-        self.whisper_root.mkdir(parents=True, exist_ok=True)
-        model_path = self.whisper_root / model_name
-        if not model_path.exists():
-            urllib.request.urlretrieve(WHISPER_MODEL_URLS[model_name], model_path)
-        return model_path
-
-    def _extract_audio(self, video_path: Path, audio_path: Path) -> None:
-        command = [
-            "ffmpeg",
-            "-hide_banner",
-            "-loglevel",
-            "error",
-            "-y",
-            "-i",
-            str(video_path),
-            "-vn",
-            "-ac",
-            "1",
-            "-ar",
-            "16000",
-            str(audio_path),
-        ]
-        subprocess.run(command, check=True)
-
-    def _run_whisper(
-        self,
-        audio_path: Path,
-        output_path: Path,
-        model_path: Path,
-        language: str,
-    ) -> None:
-        workdir = output_path.parent
-        model_rel = Path(self._relative_posix_path(model_path, workdir))
-        audio_rel = Path(self._relative_posix_path(audio_path, workdir))
-        output_rel = output_path.name
-        filter_arg = (
-            f"whisper=model={model_rel.as_posix()}:"
-            f"language={language}:"
-            f"format=json:"
-            f"destination={output_rel}:"
-            "use_gpu=false"
-        )
-        command = [
-            "ffmpeg",
-            "-hide_banner",
-            "-loglevel",
-            "error",
-            "-y",
-            "-i",
-            audio_rel.as_posix(),
-            "-af",
-            filter_arg,
-            "-f",
-            "null",
-            "-",
-        ]
-        subprocess.run(command, cwd=workdir, check=True)
-
-    def _run_funasr_sensevoice(
-        self,
-        audio_path: Path,
-        output_path: Path,
-        model_name: str,
-    ) -> None:
-        runtime_dir = self._ensure_funasr_runtime()
-        model_path = self._ensure_funasr_model(model_name)
-        chunks = self._detect_audio_chunks(audio_path)
-        chunk_dir = output_path.parent / ".sensevoice_chunks"
-        chunk_dir.mkdir(parents=True, exist_ok=True)
-
-        lines: list[str] = []
-        for index, (start_sec, end_sec) in enumerate(chunks):
-            chunk_audio = chunk_dir / f"chunk-{index:03d}.wav"
-            self._extract_audio_chunk(audio_path, chunk_audio, start_sec, end_sec)
-            text = self._run_funasr_binary(
-                binary_path=runtime_dir / "llama-funasr-sensevoice.exe",
-                model_path=model_path,
-                audio_path=chunk_audio,
+            # Create ASR provider and transcribe
+            provider_name = (
+                request.transcript_provider.strip().lower()
+                if request.transcript_provider
+                else None
             )
-            cleaned = self._clean_text(text)
-            if not cleaned:
-                continue
-            lines.append(
-                json.dumps(
-                    {
-                        "start": int(round(start_sec * 1000)),
-                        "end": int(round(end_sec * 1000)),
-                        "text": cleaned,
-                    },
-                    ensure_ascii=False,
-                )
-            )
+            provider = get_asr_provider(provider=provider_name, data_root=self.data_root)
 
-        if not lines:
-            raise RuntimeError("SenseVoice transcription produced no transcript segments")
-        output_path.write_text("\n".join(lines), encoding="utf-8")
+            # For local providers, pass model name if specified
+            if hasattr(provider, "model_name") and request.transcript_model:
+                provider.model_name = request.transcript_model
 
-    def _ensure_funasr_runtime(self) -> Path:
-        runtime_dir = self.funasr_runtime_root / "windows-x64"
-        if runtime_dir.exists():
-            return runtime_dir
+            segments = await provider.transcribe(audio_path, language=request.language)
+        else:
+            # Read cached transcript
+            from .asr.whisper_cpp import _parse_transcript_jsonl
 
-        self.funasr_runtime_root.mkdir(parents=True, exist_ok=True)
-        archive_path = self.funasr_runtime_root / "funasr-llamacpp-windows-x64.zip"
-        if not archive_path.exists():
-            urllib.request.urlretrieve(FUNASR_RUNTIME_URL, archive_path)
-        with zipfile.ZipFile(archive_path, "r") as archive:
-            archive.extractall(runtime_dir)
-        return runtime_dir
+            segments = _parse_transcript_jsonl(transcript_jsonl)
 
-    def _ensure_funasr_model(self, model_name: str) -> Path:
-        config = FUNASR_MODEL_CONFIGS.get(model_name)
-        if config is None:
-            supported = ", ".join(sorted(FUNASR_MODEL_CONFIGS))
-            raise ValueError(f"Unsupported FunASR model '{model_name}'. Supported: {supported}")
+        # Generate human-readable transcript
+        _render_transcript_text(segments, transcript_text)
 
-        self.funasr_model_root.mkdir(parents=True, exist_ok=True)
-        model_path = self.funasr_model_root / model_name
-        if not model_path.exists():
-            url = (
-                f"https://huggingface.co/{config['repo_id']}/resolve/main/{config['file_name']}"
-            )
-            urllib.request.urlretrieve(url, model_path)
-        return model_path
-
-    def _detect_audio_chunks(self, audio_path: Path) -> list[tuple[float, float]]:
-        duration_sec = self._probe_duration(audio_path)
-        if duration_sec is None:
-            raise RuntimeError(f"Unable to detect duration for audio: {audio_path}")
-
-        command = [
-            "ffmpeg",
-            "-hide_banner",
-            "-i",
-            str(audio_path),
-            "-af",
-            "silencedetect=n=-35dB:d=0.35",
-            "-f",
-            "null",
-            "-",
-        ]
-        result = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            check=False,
-        )
-        stderr = result.stderr or ""
-
-        silence_starts = [float(match) for match in re.findall(r"silence_start: ([0-9.]+)", stderr)]
-        silence_ends = [float(match) for match in re.findall(r"silence_end: ([0-9.]+)", stderr)]
-        intervals = list(zip(silence_starts, silence_ends, strict=False))
-
-        speech_chunks: list[tuple[float, float]] = []
-        cursor = 0.0
-        for silence_start, silence_end in intervals:
-            if silence_start > cursor:
-                speech_chunks.append((cursor, silence_start))
-            cursor = max(cursor, silence_end)
-        if cursor < duration_sec:
-            speech_chunks.append((cursor, duration_sec))
-
-        if not speech_chunks:
-            speech_chunks = [(0.0, duration_sec)]
-
-        return self._normalize_chunks(speech_chunks)
-
-    def _normalize_chunks(self, chunks: list[tuple[float, float]]) -> list[tuple[float, float]]:
-        normalized: list[tuple[float, float]] = []
-        max_duration = 18.0
-        min_duration = 1.2
-
-        for start_sec, end_sec in chunks:
-            start_sec = max(0.0, start_sec)
-            end_sec = max(start_sec, end_sec)
-            duration = end_sec - start_sec
-            if duration <= 0.15:
-                continue
-
-            if duration <= max_duration:
-                if normalized and duration < min_duration:
-                    prev_start, prev_end = normalized[-1]
-                    normalized[-1] = (prev_start, end_sec)
-                else:
-                    normalized.append((start_sec, end_sec))
-                continue
-
-            cursor = start_sec
-            while cursor < end_sec:
-                piece_end = min(end_sec, cursor + max_duration)
-                normalized.append((cursor, piece_end))
-                cursor = piece_end
-
-        if not normalized:
-            return chunks
-        return normalized
-
-    def _extract_audio_chunk(
-        self,
-        audio_path: Path,
-        output_path: Path,
-        start_sec: float,
-        end_sec: float,
-    ) -> None:
-        command = [
-            "ffmpeg",
-            "-hide_banner",
-            "-loglevel",
-            "error",
-            "-y",
-            "-ss",
-            str(max(0.0, start_sec)),
-            "-to",
-            str(max(start_sec, end_sec)),
-            "-i",
-            str(audio_path),
-            "-ac",
-            "1",
-            "-ar",
-            "16000",
-            str(output_path),
-        ]
-        subprocess.run(command, check=True)
-
-    def _run_funasr_binary(
-        self,
-        binary_path: Path,
-        model_path: Path,
-        audio_path: Path,
-    ) -> str:
-        command = [
-            str(binary_path),
-            "-m",
-            str(model_path),
-            "-a",
-            str(audio_path),
-        ]
-        completed = subprocess.run(
-            command,
-            check=True,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-        )
-        return completed.stdout.strip()
-
-    def _relative_posix_path(self, target: Path, cwd: Path) -> str:
-        return Path(os.path.relpath(target, cwd)).as_posix()
-
-    def _parse_transcript_jsonl(self, transcript_jsonl: Path) -> list[TranscriptSegment]:
-        segments: list[TranscriptSegment] = []
-        for index, raw_line in enumerate(transcript_jsonl.read_text(encoding="utf-8").splitlines()):
-            line = raw_line.strip()
-            if not line:
-                continue
-            payload = json.loads(line)
-            text = self._clean_text(payload.get("text", ""))
-            if not text:
-                continue
-            segments.append(
-                TranscriptSegment(
-                    segment_index=index,
-                    start_sec=float(payload["start"]) / 1000.0,
-                    end_sec=float(payload["end"]) / 1000.0,
-                    text=text,
-                )
-            )
         return segments
 
-    def _clean_text(self, text: str) -> str:
-        normalized = re.sub(r"\s+", " ", text).strip()
-        normalized = normalized.replace(" ,", "，").replace(",", "，")
-        return normalized
 
-    def _render_transcript_text(self, segments: list[TranscriptSegment]) -> str:
-        lines = [
-            f"[{segment.timestamp}] {segment.text}"
-            for segment in segments
-        ]
-        return "\n".join(lines)
+# ---------------------------------------------------------------------------
+# Module-level utilities
+# ---------------------------------------------------------------------------
 
-    def _build_units(
-        self,
-        transcript_segments: list[TranscriptSegment],
-        problem_slug: str,
-        problem_display_name: str,
-    ) -> list[KnowledgeUnitCandidate]:
-        if not transcript_segments:
-            return []
 
-        grouped_segments: list[list[TranscriptSegment]] = []
-        current_group: list[TranscriptSegment] = []
-        current_types: list[str] = []
+_SUBPROCESS_TIMEOUT = 300  # 5 minutes
 
-        for segment in transcript_segments:
-            segment_type = self._classify_text(segment.text)
-            if current_group and self._should_split_group(
-                current_group,
-                current_types,
-                segment,
-                segment_type,
-            ):
-                grouped_segments.append(current_group)
-                current_group = []
-                current_types = []
 
-            current_group.append(segment)
-            current_types.append(segment_type)
+def _probe_duration(video_path: Path) -> float | None:
+    """Probe video duration using ffprobe."""
+    command = [
+        "ffprobe",
+        "-v", "error",
+        "-show_entries", "format=duration",
+        "-of", "default=noprint_wrappers=1:nokey=1",
+        str(video_path),
+    ]
+    result = subprocess.run(
+        command, check=True, capture_output=True, text=True,
+        timeout=_SUBPROCESS_TIMEOUT,
+    )
+    value = result.stdout.strip()
+    return float(value) if value else None
 
-        if current_group:
-            grouped_segments.append(current_group)
 
-        units: list[KnowledgeUnitCandidate] = []
-        type_counters: Counter[str] = Counter()
-        for index, group in enumerate(grouped_segments, start=1):
-            texts = [segment.text for segment in group]
-            combined_text = " ".join(texts)
-            dominant_type = self._dominant_type(texts)
-            type_counters[dominant_type] += 1
-            summary = self._make_summary(combined_text)
-            title = self._make_title(
-                problem_display_name=problem_display_name,
-                unit_type=dominant_type,
-                sequence=type_counters[dominant_type],
-                combined_text=combined_text,
-            )
-            category = (
-                f"exercise.{problem_slug}"
-                if dominant_type == "exercise"
-                else f"posture.{problem_slug}"
-            )
-            body_lines = [
-                "## 自动转录摘录",
-                *[
-                    f"- [{segment.timestamp}] {segment.text}"
-                    for segment in group
-                ],
-            ]
-            if dominant_type == "warning":
-                body_lines.append("\n## 备注\n- 该片段包含风险或错误动作提醒，回答时应保守引用。")
+def _extract_audio(video_path: Path, audio_path: Path) -> None:
+    """Extract audio from video using ffmpeg (mono, 16kHz WAV)."""
+    command = [
+        "ffmpeg",
+        "-hide_banner",
+        "-loglevel", "error",
+        "-y",
+        "-i", str(video_path),
+        "-vn",
+        "-ac", "1",
+        "-ar", "16000",
+        str(audio_path),
+    ]
+    subprocess.run(command, check=True, timeout=_SUBPROCESS_TIMEOUT)
 
-            units.append(
-                KnowledgeUnitCandidate(
-                    unit_key=f"{slugify(problem_slug)}-{dominant_type}-{index:02d}",
-                    problem_slug=problem_slug,
-                    problem_display_name=problem_display_name,
-                    category=category,
-                    unit_type=dominant_type,
-                    title=title,
-                    summary=summary,
-                    body_markdown="\n".join(body_lines),
-                    source_start_sec=group[0].start_sec,
-                    source_end_sec=group[-1].end_sec,
-                    evidence_segment_indices=[segment.segment_index for segment in group],
-                    tags=self._make_tags(problem_slug, dominant_type, combined_text),
-                    transcript_excerpt=combined_text[:240],
-                )
-            )
 
-        return units
-
-    def _should_split_group(
-        self,
-        current_group: list[TranscriptSegment],
-        current_types: list[str],
-        next_segment: TranscriptSegment,
-        next_type: str,
-    ) -> bool:
-        current_duration = current_group[-1].end_sec - current_group[0].start_sec
-        current_chars = sum(len(segment.text) for segment in current_group)
-        dominant = Counter(current_types).most_common(1)[0][0]
-        transition_match = re.match(r"^(首先|然后|接下来|最后|再来|那么|所以)", next_segment.text)
-
-        if current_duration >= 42 or current_chars >= 180:
-            return True
-        if transition_match and current_duration >= 8:
-            return True
-        if (
-            next_type in {"self_check", "exercise"}
-            and next_type != dominant
-            and current_duration >= 5
-        ):
-            return True
-        if next_type != dominant and current_duration >= 8 and current_chars >= 35:
-            return True
-        return False
-
-    def _classify_text(self, text: str) -> str:
-        rules = [
-            (
-                "self_check",
-                [
-                    "自测",
-                    "测试",
-                    "筛查",
-                    "摔查",
-                    "判断",
-                    "从侧面看",
-                    "侧面看",
-                    "自然放松",
-                    "站姿",
-                    "耳垂",
-                    "肩峰",
-                    "前方",
-                    "观察",
-                ],
-            ),
-            (
-                "exercise",
-                [
-                    "动作",
-                    "训练",
-                    "练习",
-                    "拉伸",
-                    "放松",
-                    "激活",
-                    "回收",
-                    "后缩",
-                    "伸展",
-                    "处理方法",
-                    "第一步",
-                    "第二步",
-                    "第三步",
-                    "准备一个",
-                    "保留30秒",
-                    "两组",
-                    "网球",
-                    "毛巾",
-                    "旋转",
-                    "强化",
-                    "关节松动",
-                ],
-            ),
-            ("warning", ["不要", "避免", "隐患", "疼", "酸痛", "不适", "错误", "代偿", "严重"]),
-            ("cause", ["因为", "导致", "造成", "影响", "问题", "长期", "习惯"]),
-        ]
-        for unit_type, keywords in rules:
-            if any(keyword in text for keyword in keywords):
-                return unit_type
-        return "explanation"
-
-    def _dominant_type(self, texts: list[str]) -> str:
-        votes = Counter(self._classify_text(text) for text in texts)
-        return votes.most_common(1)[0][0]
-
-    def _make_summary(self, combined_text: str) -> str:
-        compact = re.sub(r"[。！？!?.]+", "。", combined_text)
-        summary = compact[:90].strip()
-        return summary if len(compact) <= 90 else f"{summary}..."
-
-    def _make_title(
-        self,
-        problem_display_name: str,
-        unit_type: str,
-        sequence: int,
-        combined_text: str,
-    ) -> str:
-        templates = {
-            "explanation": "原理说明",
-            "self_check": "自测与判断",
-            "exercise": "改善动作",
-            "cause": "影响与成因",
-            "warning": "风险提醒",
-        }
-        focus = re.sub(r"[，。！？!?\s]+", "", combined_text)[:14]
-        suffix = templates.get(unit_type, "内容整理")
-        return f"{problem_display_name}{suffix} {sequence}: {focus}"
-
-    def _make_tags(self, problem_slug: str, unit_type: str, combined_text: str) -> list[str]:
-        tags = [problem_slug, unit_type]
-        if "头前" in combined_text or "头前移" in combined_text:
-            tags.append("头前移")
-        if "训练" in combined_text or "动作" in combined_text:
-            tags.append("动作演示")
-        if "自然放松" in combined_text or "判断" in combined_text:
-            tags.append("自测")
-        return sorted(set(tags))
-
-    def _export_clips(
-        self,
-        video_path: Path,
-        artifact_dir: Path,
-        units: list[KnowledgeUnitCandidate],
-        export_clips: bool,
-    ) -> list[KnowledgeClipCandidate]:
-        clips_dir = artifact_dir / "clips"
-        clips_dir.mkdir(parents=True, exist_ok=True)
-
-        clips: list[KnowledgeClipCandidate] = []
-        for unit in units:
-            if unit.unit_type not in CLIP_WORTHY_TYPES:
-                continue
-
-            start_sec = max(0.0, unit.source_start_sec - 1.5)
-            end_sec = unit.source_end_sec + 1.5
-            clip_key = f"{unit.unit_key}-clip"
-            clip_path = clips_dir / f"{clip_key}.mp4"
-
-            if export_clips:
-                command = [
-                    "ffmpeg",
-                    "-hide_banner",
-                    "-loglevel",
-                    "error",
-                    "-y",
-                    "-ss",
-                    str(start_sec),
-                    "-to",
-                    str(end_sec),
-                    "-i",
-                    str(video_path),
-                    "-c:v",
-                    "libx264",
-                    "-c:a",
-                    "aac",
-                    "-movflags",
-                    "+faststart",
-                    str(clip_path),
-                ]
-                subprocess.run(command, check=True)
-
-            clips.append(
-                KnowledgeClipCandidate(
-                    clip_key=clip_key,
-                    source_unit_key=unit.unit_key,
-                    clip_type=unit.unit_type,
-                    title=unit.title,
-                    start_sec=start_sec,
-                    end_sec=end_sec,
-                    file_path=str(clip_path),
-                    transcript_excerpt=unit.transcript_excerpt,
-                )
-            )
-        return clips
+def _render_transcript_text(segments: list[TranscriptSegment], output_path: Path) -> None:
+    """Generate human-readable transcript text file."""
+    lines = [f"[{segment.timestamp}] {segment.text}" for segment in segments]
+    output_path.write_text("\n".join(lines), encoding="utf-8")

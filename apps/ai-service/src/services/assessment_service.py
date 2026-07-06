@@ -1,19 +1,23 @@
 """Assessment service for generating health assessment reports."""
 
-import json
 from typing import Any
 
+from ..ai import AiRequest, AIService
+from ..ai.types import ChatMessage
 from ..prompts.assessment import ASSESSMENT_SYSTEM_PROMPT, get_assessment_prompt
-from .llm_provider import ChatMessage, get_llm_provider
 
 
 class AssessmentService:
     """Service for generating health assessment reports."""
 
+    def __init__(self) -> None:
+        self._ai = AIService()
+
     async def generate_assessment(
         self,
         profile: dict[str, Any],
         rag_context: str = "",
+        images: list[str] | None = None,
     ) -> dict[str, Any]:
         """
         Generate a health assessment report based on user profile.
@@ -21,69 +25,55 @@ class AssessmentService:
         Args:
             profile: User profile data.
             rag_context: Optional RAG context from knowledge base.
+            images: Optional list of Base64 encoded posture images.
 
         Returns:
             Assessment result as a dict with health_grade, dimension_scores,
             identified_issues, and improvement_summary.
         """
-        provider = get_llm_provider()
-
         # Build messages
         user_prompt = get_assessment_prompt(profile, rag_context)
+
+        if images:
+            content_list: list[dict[str, Any]] = [
+                {"type": "text", "text": user_prompt}
+            ]
+            for img in images:
+                if not img.startswith("data:"):
+                    # Default to jpeg base64
+                    img = f"data:image/jpeg;base64,{img}"
+                content_list.append({
+                    "type": "image_url",
+                    "image_url": {
+                        "url": img
+                    }
+                })
+            user_msg = ChatMessage(role="user", content=content_list)
+        else:
+            user_msg = ChatMessage(role="user", content=user_prompt)
+
         messages = [
             ChatMessage(role="system", content=ASSESSMENT_SYSTEM_PROMPT),
-            ChatMessage(role="user", content=user_prompt),
+            user_msg,
         ]
 
-        # Call LLM
-        response = await provider.chat(
+        # Call LLM via AIService (json_mode guarantees valid JSON)
+        response = await self._ai.generate(AiRequest(
+            use_case="llm.json",
             messages=messages,
-            temperature=0.3,  # Lower temperature for more consistent output
+            response_format="json_object",
+            temperature=0.3,
             max_tokens=2048,
-        )
+        ))
 
-        # Parse JSON response
-        content = response.content or ""
+        import json
 
-        # Try to extract JSON from the response
-        result = self._parse_json_response(content)
+        result = json.loads(response.text)
 
         # Validate required fields
         self._validate_result(result)
 
         return result
-
-    def _parse_json_response(self, content: str) -> dict[str, Any]:
-        """Parse JSON from LLM response, handling markdown code blocks."""
-        # Try direct JSON parse first
-        try:
-            return json.loads(content)
-        except json.JSONDecodeError:
-            pass
-
-        # Try extracting from markdown code block
-        if "```" in content:
-            parts = content.split("```")
-            for part in parts[1:]:
-                # Remove language identifier
-                if part.startswith("json"):
-                    part = part[4:]
-                part = part.strip()
-                try:
-                    return json.loads(part)
-                except json.JSONDecodeError:
-                    continue
-
-        # Try finding JSON object in the text
-        start = content.find("{")
-        end = content.rfind("}") + 1
-        if start >= 0 and end > start:
-            try:
-                return json.loads(content[start:end])
-            except json.JSONDecodeError:
-                pass
-
-        raise ValueError("Could not parse assessment JSON from LLM response")
 
     def _validate_result(self, result: dict[str, Any]) -> None:
         """Validate the assessment result has required fields."""

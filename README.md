@@ -1,13 +1,21 @@
-# BodySense
+# 体悟 (BodySense)
 
-BodySense 是一款体态健康 AI 助手应用，通过 AI 视觉分析帮助用户评估和改善体态问题。
+**体悟 (BodySense)** 是一款体态健康 AI 助手应用，通过 AI 视觉分析帮助用户评估和改善体态问题。
+
+## 命名决策 (Naming Decision)
+
+- **中文名称**：体悟 (Tiwu)
+- **英文名称**：BodySense
+- **寓意**：双关语。既是常用词“体悟”（亲身体验与领悟），又拆解为**“对身体（体）的觉察与醒悟（悟）”**。体态的改善，始于对身体姿态的重新“觉悟”。
+- **品牌气场**：禅意、深邃、高级。
+
 
 ## Tech Stack
 
 - **Frontend**: React 19 + TypeScript 6 + Vite 8 + shadcn/ui + Tailwind CSS 4
 - **Backend**: Go 1.26 + Gin 1.12 + GORM
 - **AI Service**: Python 3.13 + FastAPI + LangChain v1
-- **Database**: PostgreSQL 16 (pgvector) + Redis 7
+- **Database**: PostgreSQL 18 (pgvector) + Redis 7
 - **Monorepo**: Nx + pnpm 11
 - **Deployment**: Docker Compose + Caddy + Watchtower
 

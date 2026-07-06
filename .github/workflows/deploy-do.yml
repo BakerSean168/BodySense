@@ -1,0 +1,263 @@
+name: Deploy to DigitalOcean
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - 'apps/web/**'
+      - 'apps/api/**'
+      - 'apps/ai-service/**'
+      - 'packages/**'
+      - 'docker/**'
+      - '.env.production.do'
+      - 'pnpm-lock.yaml'
+  workflow_dispatch:
+    inputs:
+      service:
+        description: Deploy service
+        required: false
+        default: all
+        type: choice
+        options:
+          - all
+          - web
+          - api
+          - ai-service
+
+concurrency:
+  group: deploy-do-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '24'
+  REGISTRY: registry.digitalocean.com/body-sense-docker-repo
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Detect which services changed (only relevant for push events)
+  # ---------------------------------------------------------------------------
+  detect-changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+      api: ${{ steps.filter.outputs.api }}
+      ai-service: ${{ steps.filter.outputs.ai-service }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            web:
+              - 'apps/web/**'
+              - 'packages/**'
+              - 'docker/Dockerfile.web'
+              - 'docker/nginx.conf'
+              - 'pnpm-lock.yaml'
+            api:
+              - 'apps/api/**'
+            ai-service:
+              - 'apps/ai-service/**'
+
+  # ---------------------------------------------------------------------------
+  # Build and deploy
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Build and deploy DO practice environment
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        run: corepack enable && pnpm --version
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store/v3
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --reporter=append-only
+        env:
+          CI: 'true'
+
+      - name: Build web application
+        run: pnpm nx run web:build
+        env:
+          CI: 'true'
+          VITE_API_BASE_URL: /api
+
+      - name: Resolve image tag and build metadata
+        id: meta
+        shell: bash
+        run: |
+          sha="$(git rev-parse --short=12 HEAD)"
+          stamp="$(date -u +%Y%m%d-%H%M%S)"
+          tag="do-${stamp}-${sha}"
+          build_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "build_date=${build_date}" >> "$GITHUB_OUTPUT"
+          echo "vcs_ref=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "Image tag: ${tag}"
+
+      # Determine which services to build:
+      # - manual dispatch: use inputs.service (default 'all')
+      # - push event: use change detection outputs
+      - name: Resolve build targets
+        id: targets
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            svc="${{ inputs.service }}"
+            echo "web=${{ svc == 'all' || svc == 'web' }}" >> "$GITHUB_OUTPUT"
+            echo "api=${{ svc == 'all' || svc == 'api' }}" >> "$GITHUB_OUTPUT"
+            echo "ai=${{ svc == 'all' || svc == 'ai-service' }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "web=${{ needs.detect-changes.outputs.web }}" >> "$GITHUB_OUTPUT"
+            echo "api=${{ needs.detect-changes.outputs.api }}" >> "$GITHUB_OUTPUT"
+            echo "ai=${{ needs.detect-changes.outputs.ai-service }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DO Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: registry.digitalocean.com
+          username: ${{ secrets.DO_API_TOKEN }}
+          password: ${{ secrets.DO_API_TOKEN }}
+
+      - name: Build and push web image
+        if: ${{ steps.targets.outputs.web == 'true' }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.web
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/bodysense-web:${{ steps.meta.outputs.tag }}
+            ${{ env.REGISTRY }}/bodysense-web:prod-latest
+          build-args: |
+            VITE_API_BASE_URL=/api
+            NPM_REGISTRY=https://registry.npmjs.org
+            BUILD_DATE=${{ steps.meta.outputs.build_date }}
+            VCS_REF=${{ steps.meta.outputs.vcs_ref }}
+          cache-from: type=gha,scope=do-web
+          cache-to: type=gha,mode=max,scope=do-web
+
+      - name: Build and push API image
+        if: ${{ steps.targets.outputs.api == 'true' }}
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/api
+          file: apps/api/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/bodysense-api:${{ steps.meta.outputs.tag }}
+            ${{ env.REGISTRY }}/bodysense-api:prod-latest
+          build-args: |
+            GOPROXY=https://proxy.golang.org,direct
+            BUILD_DATE=${{ steps.meta.outputs.build_date }}
+            VCS_REF=${{ steps.meta.outputs.vcs_ref }}
+          cache-from: type=gha,scope=do-api
+          cache-to: type=gha,mode=max,scope=do-api
+
+      - name: Build and push AI service image
+        if: ${{ steps.targets.outputs.ai == 'true' }}
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/ai-service
+          file: apps/ai-service/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/bodysense-ai-service:${{ steps.meta.outputs.tag }}
+            ${{ env.REGISTRY }}/bodysense-ai-service:prod-latest
+          build-args: |
+            UV_INDEX_URL=https://pypi.org/simple/
+            BUILD_DATE=${{ steps.meta.outputs.build_date }}
+            VCS_REF=${{ steps.meta.outputs.vcs_ref }}
+          cache-from: type=gha,scope=do-ai-service
+          cache-to: type=gha,mode=max,scope=do-ai-service
+
+      - name: Copy runtime files
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          source: '.env.production.do,docker/docker-compose.prod.do.yml,docker/Caddyfile'
+          target: /opt/bodysense
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        env:
+          DO_API_TOKEN: ${{ secrets.DO_API_TOKEN }}
+          ENV_PRODUCTION_DO_LOCAL: ${{ secrets.ENV_PRODUCTION_DO_LOCAL }}
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          envs: DO_API_TOKEN,ENV_PRODUCTION_DO_LOCAL
+          script: |
+            set -eu
+            cd /opt/bodysense
+            umask 077
+            printf '%s' "$ENV_PRODUCTION_DO_LOCAL" > .env.production.do.local
+            printf '%s' "$DO_API_TOKEN" | docker login registry.digitalocean.com --username "$DO_API_TOKEN" --password-stdin
+            docker compose -f docker/docker-compose.prod.do.yml \
+              --env-file .env.production.do \
+              --env-file .env.production.do.local pull
+            docker compose -f docker/docker-compose.prod.do.yml \
+              --env-file .env.production.do \
+              --env-file .env.production.do.local up -d --remove-orphans
+            docker compose -f docker/docker-compose.prod.do.yml \
+              --env-file .env.production.do \
+              --env-file .env.production.do.local ps
+
+            # Health check with retry
+            echo "Waiting for services to be healthy..."
+            for i in 1 2 3 4 5; do
+              if curl -fsS https://bodydoo.bakersean.top/api/health; then
+                echo ""
+                echo "Health check passed."
+                break
+              fi
+              [ "$i" -eq 5 ] && { echo "Health check failed after 5 attempts"; exit 1; }
+              sleep 5
+            done
+
+            # Clean up dangling images (keep disk usage low on 2C4G)
+            docker image prune -f
+
+      - name: Summary
+        run: |
+          echo "### DigitalOcean deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Tag | \`${{ steps.meta.outputs.tag }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| URL | https://bodydoo.bakersean.top |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Trigger | ${{ github.event_name }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Commit | [\`${{ steps.meta.outputs.tag }}\`](https://github.com/${{ github.repository }}/commit/${{ steps.meta.outputs.vcs_ref }}) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Services | web: ${{ steps.targets.outputs.web }}, api: ${{ steps.targets.outputs.api }}, ai: ${{ steps.targets.outputs.ai }} |" >> "$GITHUB_STEP_SUMMARY"

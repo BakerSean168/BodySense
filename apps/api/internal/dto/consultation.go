@@ -1,21 +1,27 @@
 package dto
 
-// CreateSessionRequest is the request to create a new consultation session.
-type CreateSessionRequest struct {
-	// Empty for now - session is created with defaults
+import "encoding/json"
+
+// StartConsultationRunRequest is the request to start a new consultation run.
+// If ConversationID is nil, a new conversation is created.
+type StartConsultationRunRequest struct {
+	ConversationID  *string    `json:"conversationId"`
+	ClientMessageID string     `json:"clientMessageId" binding:"required,max=128"`
+	RequestID       string     `json:"requestId" binding:"required,max=128"`
+	Message         MessageDTO `json:"message" binding:"required"`
 }
 
-// SendMessageRequest is the request to send a message in a consultation session.
-type SendMessageRequest struct {
-	Content string `json:"content" binding:"required"`
+type ResumeConsultationInteractionRequest struct {
+	RequestID string          `json:"requestId" binding:"required,max=128"`
+	Answer    json.RawMessage `json:"answer" binding:"required"`
 }
 
-// UpdateExtractedInfoRequest is the request to update extracted info for a session.
-type UpdateExtractedInfoRequest struct {
-	ExtractedInfo any `json:"extracted_info" binding:"required"`
+// UpdateHealthFeaturesRequest is the request to update health features for a session.
+type UpdateHealthFeaturesRequest struct {
+	HealthFeatures json.RawMessage `json:"health_features" binding:"required"`
 }
 
 // ConfirmDiagnosisRequest is the request to confirm a diagnosis.
 type ConfirmDiagnosisRequest struct {
-	Diagnosis any `json:"diagnosis" binding:"required"`
+	Diagnosis json.RawMessage `json:"diagnosis" binding:"required"`
 }

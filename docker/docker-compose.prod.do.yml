@@ -1,0 +1,194 @@
+# =============================================================================
+# BodySense 生产环境 Docker Compose (DigitalOcean 版)
+# =============================================================================
+# 目标机器: 2C/4G Droplet (DO-bodysense-deploy)
+# 使用 Managed PostgreSQL + Managed Valkey + DO Container Registry
+#
+# 部署方式：CI/CD 驱动（GitHub Actions → DO Registry → SSH deploy）
+# 不使用 Watchtower：原项目已停止维护，Docker 29.x 存在兼容性风险。
+#
+# 启动：
+#   docker compose -f docker-compose.prod.do.yml \
+#     --env-file .env.production.do \
+#     --env-file .env.production.do.local up -d
+# =============================================================================
+
+# 共享日志配置：限制日志大小，防止磁盘撑满
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '3'
+
+services:
+  # ---------------------------------------------------------------------------
+  # 业务服务
+  # ---------------------------------------------------------------------------
+
+  ai-service:
+    image: ${REGISTRY}/bodysense-ai-service:${AI_TAG:-prod-latest}
+    restart: unless-stopped
+    init: true
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1.2G
+        reservations:
+          memory: 512M
+    logging: *default-logging
+    environment:
+      AI_SERVICE_PORT: ${AI_SERVICE_PORT:-8100}
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE:-require}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-openrouter}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-1536}
+      LLM_PROVIDER: ${LLM_PROVIDER:-openrouter}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-openai/gpt-oss-120b:free}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://openrouter.ai/api/v1}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-https://openrouter.ai/api/v1}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      ASR_PROVIDER: ${ASR_PROVIDER:-asr_api}
+      ASR_API_KEY: ${ASR_API_KEY:-}
+      ASR_API_BASE_URL: ${ASR_API_BASE_URL:-}
+      ASR_API_MODEL: ${ASR_API_MODEL:-}
+      MIMO_BASE_URL: ${MIMO_BASE_URL:-}
+      MIMO_API_KEY: ${MIMO_API_KEY:-}
+      ASK_USER_ENABLED: ${ASK_USER_ENABLED:-true}
+      SPACES_ENDPOINT: ${SPACES_ENDPOINT:-}
+      SPACES_REGION: ${SPACES_REGION:-}
+      SPACES_BUCKET: ${SPACES_BUCKET:-}
+      SPACES_ACCESS_KEY_ID: ${SPACES_ACCESS_KEY_ID:-}
+      SPACES_SECRET_ACCESS_KEY: ${SPACES_SECRET_ACCESS_KEY:-}
+      TZ: ${TZ:-Asia/Shanghai}
+    networks:
+      - bodysense-network
+    healthcheck:
+      test: ['CMD', 'python', '-c', "import urllib.request; urllib.request.urlopen('http://localhost:8100/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  api:
+    image: ${REGISTRY}/bodysense-api:${API_TAG:-prod-latest}
+    restart: unless-stopped
+    init: true
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 512M
+        reservations:
+          memory: 128M
+    logging: *default-logging
+    depends_on:
+      ai-service:
+        condition: service_healthy
+    environment:
+      APP_ENV: production
+      API_PORT: 8080
+      API_HOST: 0.0.0.0
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_SSLMODE: ${DB_SSLMODE:-require}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_TLS: ${REDIS_TLS:-false}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ACCESS_TTL_HOURS: ${JWT_ACCESS_TTL_HOURS:-168}
+      JWT_REFRESH_TTL_HOURS: ${JWT_REFRESH_TTL_HOURS:-720}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://bodydoo.bakersean.top}
+      AI_SERVICE_URL: http://ai-service:${AI_SERVICE_PORT:-8100}
+      SPACES_ENDPOINT: ${SPACES_ENDPOINT:-}
+      SPACES_REGION: ${SPACES_REGION:-}
+      SPACES_BUCKET: ${SPACES_BUCKET:-}
+      SPACES_ACCESS_KEY_ID: ${SPACES_ACCESS_KEY_ID:-}
+      SPACES_SECRET_ACCESS_KEY: ${SPACES_SECRET_ACCESS_KEY:-}
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      - api-uploads:/app/uploads
+    networks:
+      - bodysense-network
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8080/api/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  web:
+    image: ${REGISTRY}/bodysense-web:${WEB_TAG:-prod-latest}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+        reservations:
+          memory: 32M
+    logging: *default-logging
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - bodysense-network
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://127.0.0.1/']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # 入口
+  # ---------------------------------------------------------------------------
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+        reservations:
+          memory: 32M
+    logging: *default-logging
+    depends_on:
+      web:
+        condition: service_healthy
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:-bodydoo.bakersean.top}
+      ACME_EMAIL: ${ACME_EMAIL:-admin@bakersean.top}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - bodysense-network
+
+  # ---------------------------------------------------------------------------
+  # Watchtower 暂不启用：
+  # - containrrr/watchtower 原项目已停止维护
+  # - Docker 29.x 下存在 API 兼容性风险
+  # - 生产环境改用 CI/CD 显式部署（GitHub Actions → DO Registry → SSH）
+  # ---------------------------------------------------------------------------
+
+networks:
+  bodysense-network:
+    driver: bridge
+
+volumes:
+  api-uploads:
+  caddy-data:
+  caddy-config:

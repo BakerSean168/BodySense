@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass, field
 from typing import Any, Optional
@@ -12,6 +13,8 @@ from psycopg.types.json import Jsonb
 
 from .embedding import EmbeddingGenerator, get_embedding_generator
 from .knowledge_pack import GeneratedKnowledgePack, format_timestamp_range
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -99,7 +102,13 @@ class KnowledgeLibrary:
         port = os.getenv("DB_PORT", "5432")
         name = os.getenv("DB_NAME", "bodysense")
         user = os.getenv("DB_USER", "bodysense")
-        password = os.getenv("DB_PASSWORD", "bodysense123")
+        password = os.getenv("DB_PASSWORD")
+        if password is None:
+            password = "bodysense123"
+            logger.warning(
+                "DB_PASSWORD not set, using default password. "
+                "Set DB_PASSWORD in your .env file."
+            )
         return f"postgresql://{user}:{password}@{host}:{port}/{name}"
 
     def _get_connection(self) -> psycopg.Connection:
@@ -269,6 +278,8 @@ class KnowledgeLibrary:
         top_k: int = 5,
         problem_slug: str | None = None,
         unit_type: str | None = None,
+        include_unpublished: bool = False,
+        min_quality_score: float = 0.0,
     ) -> list[SearchResult]:
         """Search the normalized knowledge units by semantic similarity."""
         embedding = await self.embedding_generator.generate(query)
@@ -294,6 +305,10 @@ class KnowledgeLibrary:
             WHERE ku.embedding IS NOT NULL
         """
         params: list[Any] = [embedding]
+
+        if not include_unpublished:
+            sql += self._published_visibility_filter()
+            params.append(min_quality_score)
 
         if problem_slug:
             sql += " AND ku.problem_slug = %s"
@@ -366,6 +381,17 @@ class KnowledgeLibrary:
         )
         return reranked[:top_k]
 
+    @staticmethod
+    def _published_visibility_filter() -> str:
+        """SQL predicate for knowledge that is safe to surface in user-facing search."""
+        return """
+            AND (
+                ku.lifecycle_status IN ('published', 'reviewed')
+                OR ku.review_status IN ('reviewed', 'approved', 'curated')
+            )
+            AND COALESCE(ku.quality_score, 0.0) >= %s
+        """
+
     async def list_sources(self) -> list[dict[str, Any]]:
         """List ingested sources."""
         conn = self._get_connection()
@@ -391,18 +417,19 @@ class KnowledgeLibrary:
             for row in rows
         ]
 
+    _ALLOWED_TABLES = frozenset({
+        "knowledge_sources",
+        "knowledge_segments",
+        "knowledge_units",
+        "knowledge_clips",
+    })
+
     async def stats(self) -> dict[str, int]:
         """Return normalized knowledge table counts."""
         conn = self._get_connection()
         counts: dict[str, int] = {}
-        table_names = [
-            "knowledge_sources",
-            "knowledge_segments",
-            "knowledge_units",
-            "knowledge_clips",
-        ]
         with conn.cursor() as cur:
-            for table_name in table_names:
+            for table_name in self._ALLOWED_TABLES:
                 cur.execute(f"SELECT COUNT(*) FROM {table_name}")
                 counts[table_name] = cur.fetchone()[0]
         return counts

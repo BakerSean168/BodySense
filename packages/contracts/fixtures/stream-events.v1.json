@@ -1,0 +1,62 @@
+[
+  {
+    "version": 1,
+    "seq": 1,
+    "channel": "message",
+    "type": "message.text.delta",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": "msg-1",
+      "tool_call_id": null,
+      "interaction_id": null,
+      "job_id": null
+    },
+    "payload": {
+      "delta": "hello"
+    }
+  },
+  {
+    "version": 1,
+    "seq": 2,
+    "channel": "job",
+    "type": "job.progress",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": null,
+      "turn_id": null,
+      "message_id": null,
+      "tool_call_id": null,
+      "interaction_id": null,
+      "job_id": "job-1"
+    },
+    "payload": {
+      "stage": "ocr_processing",
+      "percent": 50
+    }
+  },
+  {
+    "version": 1,
+    "seq": 3,
+    "channel": "state",
+    "type": "state.interaction.required",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": null,
+      "tool_call_id": "tool-1",
+      "interaction_id": "interaction-1",
+      "job_id": null
+    },
+    "payload": {
+      "interaction_id": "interaction-1",
+      "question": {
+        "question": "哪里最不舒服？",
+        "answer_type": "text",
+        "required": true
+      }
+    }
+  }
+]

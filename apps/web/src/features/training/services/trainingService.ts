@@ -41,12 +41,28 @@ export interface TrainingProgress {
   total_weeks: number;
 }
 
+export interface TrainingReassessmentResult {
+  analysis: string;
+  adjustments: {
+    difficulty: string;
+    duration: string;
+    exercise_changes: { action: string; exercise: string; reason: string }[];
+  };
+  next_phase_plan: {
+    focus: string;
+    exercises: TrainingExercise[];
+  };
+  motivation: string;
+}
+
+export interface TrainingGenerationParams {
+  consultation_id?: string;
+  diagnosis?: Record<string, unknown>;
+  preferences?: Record<string, unknown>;
+}
+
 export const trainingApi = {
-  generate: async (params: {
-    consultation_id?: string;
-    diagnosis?: any;
-    preferences?: any;
-  }): Promise<TrainingPlan> => {
+  generate: async (params: TrainingGenerationParams): Promise<TrainingPlan> => {
     const response = await authFetch('/api/v1/training/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -82,13 +98,30 @@ export const trainingApi = {
     if (!response.ok) throw new Error('Failed to check in');
   },
 
-  updateLog: async (planId: string, notes: string, exercises: any[]): Promise<void> => {
+  updateLog: async (
+    planId: string,
+    notes: string,
+    exercises: TrainingLog['exercises'],
+  ): Promise<{ message: string; has_proposal: boolean; proposal?: TrainingReassessmentResult }> => {
     const response = await authFetch(`/api/v1/training/${planId}/log`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ notes, exercises }),
     });
     if (!response.ok) throw new Error('Failed to update log');
+    return response.json();
+  },
+
+  updatePlanPhases: async (
+    planId: string,
+    phases: TrainingPhase[],
+  ): Promise<void> => {
+    const response = await authFetch(`/api/v1/training/${planId}/phases`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phases }),
+    });
+    if (!response.ok) throw new Error('Failed to update plan phases');
   },
 
   getProgress: async (planId: string): Promise<TrainingProgress> => {
@@ -100,7 +133,7 @@ export const trainingApi = {
   submitReassessment: async (
     planId: string,
     feedback: { symptom_changes: string; training_feeling: string; difficulties: string },
-  ): Promise<any> => {
+  ): Promise<TrainingReassessmentResult> => {
     const response = await authFetch(`/api/v1/training/${planId}/reassess`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

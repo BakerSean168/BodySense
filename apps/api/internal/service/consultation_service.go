@@ -3,112 +3,296 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/bodysense/api/internal/model"
-	"github.com/bodysense/api/internal/repository"
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 )
+
+type consultationRepository interface {
+	Create(ctx context.Context, session *model.ConsultationSession) error
+	GetByConversationID(ctx context.Context, conversationID uuid.UUID) (*model.ConsultationSession, error)
+	ListByConversationIDs(ctx context.Context, conversationIDs []uuid.UUID) ([]model.ConsultationSession, error)
+	Delete(ctx context.Context, conversationID uuid.UUID) error
+	UpdateHealthFeatures(ctx context.Context, conversationID uuid.UUID, healthFeatures any) error
+	UpdatePhase(ctx context.Context, conversationID uuid.UUID, phase string) error
+	UpdateDiagnosis(ctx context.Context, conversationID uuid.UUID, diagnosis any) error
+	UpdateTreatmentPlan(ctx context.Context, conversationID uuid.UUID, treatmentPlan any) error
+	CreateRunEnvelope(ctx context.Context, userID uuid.UUID, conversationID *uuid.UUID, requestID string, userParts datatypes.JSON, userMetadata datatypes.JSON, modelName string) (*model.ConsultationSession, *model.Run, *model.Message, *model.Message, uuid.UUID, bool, error)
+}
+
+// conversationOwnershipChecker verifies that a conversation belongs to a user.
+type conversationOwnershipChecker interface {
+	Create(ctx context.Context, conversation *model.Conversation) error
+	GetByID(ctx context.Context, id, userID uuid.UUID) (*model.Conversation, error)
+	SoftDelete(ctx context.Context, id, userID uuid.UUID) error
+	GetLastEmptyConversation(ctx context.Context, userID uuid.UUID) (*model.Conversation, error)
+}
+
+// RunEnvelope is the transactionally-created durable shell for one AI run.
+type RunEnvelope struct {
+	Session          *model.ConsultationSession
+	TurnID           uuid.UUID
+	Run              *model.Run
+	UserMessage      *model.Message
+	AssistantMessage *model.Message
+	Existed          bool
+}
 
 // ConsultationService handles consultation business logic.
 type ConsultationService struct {
-	consultationRepo *repository.ConsultationRepository
+	consultationRepo consultationRepository
+	conversationRepo conversationOwnershipChecker
 }
 
 // NewConsultationService creates a new ConsultationService.
-func NewConsultationService(consultationRepo *repository.ConsultationRepository) *ConsultationService {
-	return &ConsultationService{consultationRepo: consultationRepo}
+func NewConsultationService(
+	consultationRepo consultationRepository,
+	conversationRepo conversationOwnershipChecker,
+) *ConsultationService {
+	return &ConsultationService{
+		consultationRepo: consultationRepo,
+		conversationRepo: conversationRepo,
+	}
 }
 
-// CreateSession creates a new consultation session for a user.
+// verifyOwnership checks that the conversation belongs to the user.
+func (s *ConsultationService) verifyOwnership(ctx context.Context, conversationID, userID uuid.UUID) error {
+	conversation, err := s.conversationRepo.GetByID(ctx, conversationID, userID)
+	if err != nil {
+		return fmt.Errorf("verify ownership: %w", err)
+	}
+	if conversation == nil {
+		return fmt.Errorf("conversation not found or access denied: %s", conversationID)
+	}
+	return nil
+}
+
+// CreateSession creates a new conversation and its associated consultation session.
 func (s *ConsultationService) CreateSession(ctx context.Context, userID uuid.UUID) (*model.ConsultationSession, error) {
+	existingConv, err := s.conversationRepo.GetLastEmptyConversation(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("check empty conversation: %w", err)
+	}
+
+	if existingConv != nil {
+		session, err := s.consultationRepo.GetByConversationID(ctx, existingConv.ID)
+		if err == nil && session != nil {
+			return session, nil
+		}
+		// If session is missing for some reason, recreate it
+		session = &model.ConsultationSession{
+			ConversationID: existingConv.ID,
+			ExtractedInfo:  datatypes.JSON("[]"),
+			HealthFeatures: datatypes.JSON(`{}`),
+			Phase:          "collecting",
+		}
+		if err := s.consultationRepo.Create(ctx, session); err != nil {
+			return nil, fmt.Errorf("recreate consultation: %w", err)
+		}
+		return session, nil
+	}
+
+	conversation := &model.Conversation{
+		ID:          uuid.New(),
+		UserID:      userID,
+		Status:      "active",
+		TitleStatus: "pending",
+	}
+	if err := s.conversationRepo.Create(ctx, conversation); err != nil {
+		return nil, fmt.Errorf("create conversation: %w", err)
+	}
+
 	session := &model.ConsultationSession{
-		ID:            uuid.New(),
-		UserID:        userID,
-		Messages:      json.RawMessage("[]"),
-		ExtractedInfo: json.RawMessage("[]"),
-		Status:        "in_progress",
+		ConversationID: conversation.ID,
+		ExtractedInfo:  datatypes.JSON("[]"),
+		HealthFeatures: datatypes.JSON(`{}`),
+		Phase:          "collecting",
 	}
 	if err := s.consultationRepo.Create(ctx, session); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create consultation: %w", err)
 	}
 	return session, nil
 }
 
-// GetSession retrieves a consultation session by ID.
-func (s *ConsultationService) GetSession(ctx context.Context, id, userID uuid.UUID) (*model.ConsultationSession, error) {
-	return s.consultationRepo.GetByID(ctx, id, userID)
-}
-
-// ListSessions retrieves consultation sessions for a user with pagination.
-func (s *ConsultationService) ListSessions(ctx context.Context, userID uuid.UUID, limit, offset int) ([]model.ConsultationSession, int64, error) {
-	if limit <= 0 {
-		limit = 20
+// CreateSessionWithID creates a conversation with a specific ID and its associated consultation session.
+func (s *ConsultationService) CreateSessionWithID(ctx context.Context, conversationID, userID uuid.UUID) (*model.ConsultationSession, error) {
+	conversation := &model.Conversation{
+		ID:          conversationID,
+		UserID:      userID,
+		Status:      "active",
+		TitleStatus: "pending",
 	}
-	return s.consultationRepo.ListByUserID(ctx, userID, limit, offset)
+	if err := s.conversationRepo.Create(ctx, conversation); err != nil {
+		return nil, fmt.Errorf("create conversation: %w", err)
+	}
+
+	session := &model.ConsultationSession{
+		ConversationID: conversationID,
+		ExtractedInfo:  datatypes.JSON("[]"),
+		HealthFeatures: datatypes.JSON(`{}`),
+		Phase:          "collecting",
+	}
+	if err := s.consultationRepo.Create(ctx, session); err != nil {
+		return nil, fmt.Errorf("create consultation: %w", err)
+	}
+	return session, nil
 }
 
-// AppendMessage appends a message to the session's messages array.
-func (s *ConsultationService) AppendMessage(ctx context.Context, sessionID uuid.UUID, message map[string]any) error {
-	// Fetch current session to get existing messages
-	session, err := s.consultationRepo.GetByID(ctx, sessionID, uuid.Nil)
+// GetSession retrieves a consultation session by conversation ID with ownership check.
+func (s *ConsultationService) GetSession(ctx context.Context, conversationID, userID uuid.UUID) (*model.ConsultationSession, error) {
+	if err := s.verifyOwnership(ctx, conversationID, userID); err != nil {
+		return nil, err
+	}
+
+	session, err := s.consultationRepo.GetByConversationID(ctx, conversationID)
 	if err != nil {
+		return nil, fmt.Errorf("get session: %w", err)
+	}
+	return session, nil
+}
+
+// DeleteSession deletes a consultation session and its parent conversation.
+func (s *ConsultationService) DeleteSession(ctx context.Context, conversationID, userID uuid.UUID) error {
+	if err := s.verifyOwnership(ctx, conversationID, userID); err != nil {
 		return err
 	}
+
+	// Delete consultation session first (FK dependency)
+	if err := s.consultationRepo.Delete(ctx, conversationID); err != nil {
+		return fmt.Errorf("delete consultation: %w", err)
+	}
+
+	// Soft-delete the conversation
+	if err := s.conversationRepo.SoftDelete(ctx, conversationID, userID); err != nil {
+		return fmt.Errorf("delete conversation: %w", err)
+	}
+	return nil
+}
+
+// CreateConsultation creates a new consultation session for a conversation.
+func (s *ConsultationService) CreateConsultation(ctx context.Context, conversationID, userID uuid.UUID) error {
+	if err := s.verifyOwnership(ctx, conversationID, userID); err != nil {
+		return err
+	}
+
+	session := &model.ConsultationSession{
+		ConversationID: conversationID,
+		ExtractedInfo:  datatypes.JSON("[]"),
+		HealthFeatures: datatypes.JSON(`{}`),
+		Phase:          "collecting",
+	}
+	if err := s.consultationRepo.Create(ctx, session); err != nil {
+		return fmt.Errorf("create consultation: %w", err)
+	}
+	return nil
+}
+
+// GetConsultation retrieves a consultation session by conversation ID with ownership check.
+func (s *ConsultationService) GetConsultation(ctx context.Context, conversationID, userID uuid.UUID) (*model.ConsultationSession, error) {
+	if err := s.verifyOwnership(ctx, conversationID, userID); err != nil {
+		return nil, err
+	}
+
+	session, err := s.consultationRepo.GetByConversationID(ctx, conversationID)
+	if err != nil {
+		return nil, fmt.Errorf("get consultation: %w", err)
+	}
+	return session, nil
+}
+
+// UpdatePhase updates the workflow phase for a session, enforcing forward-only
+// phase transitions. If the requested phase would regress the session, the
+// update is silently skipped (idempotent).
+func (s *ConsultationService) UpdatePhase(ctx context.Context, conversationID, userID uuid.UUID, phase string) error {
+	if err := s.verifyOwnership(ctx, conversationID, userID); err != nil {
+		return err
+	}
+
+	session, err := s.consultationRepo.GetByConversationID(ctx, conversationID)
+	if err != nil {
+		return fmt.Errorf("get session for phase update: %w", err)
+	}
 	if session == nil {
+		return fmt.Errorf("session not found: %s", conversationID)
+	}
+
+	currentPhase := session.Phase
+	if !ShouldAdvancePhase(currentPhase, phase) {
 		return nil
 	}
 
-	// Parse existing messages
-	var messages []any
-	if len(session.Messages) > 0 {
-		if err := json.Unmarshal(session.Messages, &messages); err != nil {
-			messages = []any{}
-		}
-	}
-	if messages == nil {
-		messages = []any{}
-	}
+	return s.consultationRepo.UpdatePhase(ctx, conversationID, phase)
+}
 
-	// Append new message
-	messages = append(messages, message)
-
-	// Marshal back to JSON
-	data, err := json.Marshal(messages)
-	if err != nil {
+// UpdateHealthFeatures updates the health features for a session.
+func (s *ConsultationService) UpdateHealthFeatures(ctx context.Context, conversationID, userID uuid.UUID, healthFeatures any) error {
+	if err := s.verifyOwnership(ctx, conversationID, userID); err != nil {
 		return err
 	}
 
-	return s.consultationRepo.UpdateMessages(ctx, sessionID, data)
-}
-
-// UpdateExtractedInfo updates the extracted info for a session.
-func (s *ConsultationService) UpdateExtractedInfo(ctx context.Context, sessionID uuid.UUID, extractedInfo any) error {
-	data, err := json.Marshal(extractedInfo)
+	data, err := json.Marshal(healthFeatures)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal health features: %w", err)
 	}
-	return s.consultationRepo.UpdateExtractedInfo(ctx, sessionID, data)
-}
-
-// CompleteSession marks a session as completed.
-func (s *ConsultationService) CompleteSession(ctx context.Context, sessionID uuid.UUID) error {
-	return s.consultationRepo.UpdateStatus(ctx, sessionID, "completed")
+	return s.consultationRepo.UpdateHealthFeatures(ctx, conversationID, data)
 }
 
 // UpdateDiagnosis updates the diagnosis for a session.
-func (s *ConsultationService) UpdateDiagnosis(ctx context.Context, sessionID uuid.UUID, diagnosis any) error {
-	data, err := json.Marshal(diagnosis)
-	if err != nil {
+func (s *ConsultationService) UpdateDiagnosis(ctx context.Context, conversationID, userID uuid.UUID, diagnosis any) error {
+	if err := s.verifyOwnership(ctx, conversationID, userID); err != nil {
 		return err
 	}
-	return s.consultationRepo.UpdateDiagnosis(ctx, sessionID, data)
+
+	data, err := json.Marshal(diagnosis)
+	if err != nil {
+		return fmt.Errorf("marshal diagnosis: %w", err)
+	}
+	return s.consultationRepo.UpdateDiagnosis(ctx, conversationID, data)
 }
 
 // UpdateTreatmentPlan updates the treatment plan for a session.
-func (s *ConsultationService) UpdateTreatmentPlan(ctx context.Context, sessionID uuid.UUID, treatmentPlan any) error {
-	data, err := json.Marshal(treatmentPlan)
-	if err != nil {
+func (s *ConsultationService) UpdateTreatmentPlan(ctx context.Context, conversationID, userID uuid.UUID, treatmentPlan any) error {
+	if err := s.verifyOwnership(ctx, conversationID, userID); err != nil {
 		return err
 	}
-	return s.consultationRepo.UpdateTreatmentPlan(ctx, sessionID, data)
+
+	data, err := json.Marshal(treatmentPlan)
+	if err != nil {
+		return fmt.Errorf("marshal treatment plan: %w", err)
+	}
+	return s.consultationRepo.UpdateTreatmentPlan(ctx, conversationID, data)
+}
+
+// CreateRunEnvelope atomically creates the durable shell for a consultation run.
+func (s *ConsultationService) CreateRunEnvelope(
+	ctx context.Context,
+	userID uuid.UUID,
+	conversationID *uuid.UUID,
+	requestID string,
+	userParts datatypes.JSON,
+	userMetadata datatypes.JSON,
+	modelName string,
+) (*RunEnvelope, error) {
+	session, run, userMsg, assistantMsg, turnID, existed, err := s.consultationRepo.CreateRunEnvelope(
+		ctx,
+		userID,
+		conversationID,
+		requestID,
+		userParts,
+		userMetadata,
+		modelName,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("create run envelope: %w", err)
+	}
+	return &RunEnvelope{
+		Session:          session,
+		TurnID:           turnID,
+		Run:              run,
+		UserMessage:      userMsg,
+		AssistantMessage: assistantMsg,
+		Existed:          existed,
+	}, nil
 }

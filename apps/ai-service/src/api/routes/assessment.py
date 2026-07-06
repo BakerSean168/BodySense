@@ -1,11 +1,14 @@
 """Assessment API routes."""
 
+import logging
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from ...services.assessment_service import get_assessment_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/assessment", tags=["assessment"])
 
@@ -15,6 +18,7 @@ class AssessmentRequest(BaseModel):
 
     profile: dict[str, Any] = Field(..., description="User profile data")
     rag_context: str = Field(default="", description="RAG context from knowledge base")
+    images: list[str] | None = Field(default=None, description="Base64 encoded posture images")
 
 
 class AssessmentResponse(BaseModel):
@@ -34,9 +38,14 @@ async def generate_assessment(request: AssessmentRequest):
         result = await service.generate_assessment(
             profile=request.profile,
             rag_context=request.rag_context,
+            images=request.images,
         )
         return AssessmentResponse(**result)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Assessment generation failed: {e!s}")
+    except Exception:
+        logger.exception("Assessment generation failed")
+        raise HTTPException(
+            status_code=500,
+            detail="Assessment generation failed. Please try again.",
+        )

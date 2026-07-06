@@ -16,7 +16,7 @@
 - **前端**：React 19 + TypeScript 6 + Vite 8 + shadcn/ui + Tailwind CSS 4
 - **后端**：Go 1.26 + Gin 1.12 + GORM
 - **AI 服务**：Python 3.13 + FastAPI + LangChain v1 + uv
-- **数据库**：PostgreSQL 16 (pgvector) + Redis 7
+- **数据库**：PostgreSQL 18 (pgvector) + Redis 7
 - **部署**：Docker Compose + Caddy + Watchtower
 - **Monorepo**：Nx workspace + pnpm 11
 
@@ -90,7 +90,7 @@ src/
     routes/            ← 路由处理（snake_case.py）
     dependencies.py    ← FastAPI 依赖注入
   services/            ← 业务逻辑（snake_case.py）
-  rag/                 ← RAG 管道（knowledge_base.py、embeddings.py、retriever.py）
+  rag/                 ← RAG 管道（knowledge_library.py、embedding.py、knowledge_pack.py）
   prompts/             ← Prompt 模板（snake_case.py）
   models/              ← Pydantic 数据模型（snake_case.py）
 tests/

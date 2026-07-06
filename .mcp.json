@@ -13,7 +13,10 @@
     "playwright": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@playwright/mcp@0.0.76"]
+      "args": ["-y", "@playwright/mcp@0.0.76"],
+      "env": {
+        "PLAYWRIGHT_MCP_BROWSER": "chromium"
+      }
     },
     "github": {
       "type": "stdio",

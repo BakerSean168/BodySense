@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -36,8 +37,7 @@ func TestSearchKnowledgeMapsBodyMarkdownIntoContent(t *testing.T) {
 	}))
 	defer server.Close()
 
-	handler := &ConsultationHandler{aiServiceURL: server.URL}
-	results, err := handler.searchKnowledge(t.Context(), "肘外翻是什么")
+	results, err := searchKnowledge(context.Background(), server.URL, "肘外翻是什么")
 	if err != nil {
 		t.Fatalf("searchKnowledge returned error: %v", err)
 	}

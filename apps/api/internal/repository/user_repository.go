@@ -56,3 +56,9 @@ func (r *UserRepository) EmailExists(ctx context.Context, email string) (bool, e
 	err := r.db.WithContext(ctx).Model(&model.User{}).Where("email = ?", email).Count(&count).Error
 	return count > 0, err
 }
+
+// DeleteByID deletes a user by ID.
+// WARNING: Callers must also invalidate the user's session cache.
+func (r *UserRepository) DeleteByID(ctx context.Context, id uuid.UUID) error {
+	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&model.User{}).Error
+}

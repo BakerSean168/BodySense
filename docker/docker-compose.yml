@@ -2,7 +2,7 @@ services:
   # ── Infrastructure ──────────────────────────────────────
   postgres-dev:
     profiles: [dev]
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:pg18
     environment:
       POSTGRES_USER: ${DB_USER:-bodysense}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-bodysense123}
@@ -10,7 +10,7 @@ services:
     ports:
       - '${DB_PORT:-5432}:5432'
     volumes:
-      - postgres-dev-data:/var/lib/postgresql/data
+      - postgres-dev-data:/var/lib/postgresql
     networks:
       - bodysense-network
     healthcheck:
@@ -41,13 +41,24 @@ services:
       dockerfile: Dockerfile
     ports:
       - '${API_PORT:-8080}:8080'
-    env_file:
-      - ../.env
+    # ── Go API 只拿它需要的变量 ──
     environment:
+      APP_ENV: development
+      API_PORT: 8080
+      API_HOST: 0.0.0.0
       DB_HOST: postgres-dev
       DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-bodysense}
+      DB_USER: ${DB_USER:-bodysense}
+      DB_PASSWORD: ${DB_PASSWORD:-bodysense123}
+      DB_SSLMODE: disable
       REDIS_HOST: redis-dev
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-bodysense123}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-secret-key}
+      JWT_ACCESS_TTL_HOURS: ${JWT_ACCESS_TTL_HOURS:-168}
+      JWT_REFRESH_TTL_HOURS: ${JWT_REFRESH_TTL_HOURS:-720}
+      CORS_ORIGINS: http://localhost:5173
       AI_SERVICE_URL: http://ai-service:8100
     volumes:
       - api-uploads:/app/uploads
@@ -66,11 +77,32 @@ services:
       dockerfile: Dockerfile
     ports:
       - '${AI_SERVICE_PORT:-8100}:8100'
-    env_file:
-      - ../.env
+    # ── Python AI 只拿它需要的变量 ──
     environment:
-      DATABASE_URL: postgresql://${DB_USER:-bodysense}:${DB_PASSWORD:-bodysense123}@postgres-dev:5432/${DB_NAME:-bodysense}
       AI_SERVICE_PORT: 8100
+      DATABASE_URL: postgresql://${DB_USER:-bodysense}:${DB_PASSWORD:-bodysense123}@postgres-dev:5432/${DB_NAME:-bodysense}
+      LLM_PROVIDER: ${LLM_PROVIDER:-openrouter}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-openai/gpt-oss-120b:free}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://openrouter.ai/api/v1}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-hashing}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-1536}
+      ASR_PROVIDER: ${ASR_PROVIDER:-whisper.cpp}
+      ASR_API_KEY: ${ASR_API_KEY:-}
+      ASR_API_BASE_URL: ${ASR_API_BASE_URL:-}
+      ASR_API_MODEL: ${ASR_API_MODEL:-}
+      MIMO_BASE_URL: ${MIMO_BASE_URL:-}
+      MIMO_API_KEY: ${MIMO_API_KEY:-}
+      ASK_USER_ENABLED: ${ASK_USER_ENABLED:-false}
+      SPACES_ENDPOINT: ${SPACES_ENDPOINT:-}
+      SPACES_REGION: ${SPACES_REGION:-}
+      SPACES_BUCKET: ${SPACES_BUCKET:-}
+      SPACES_ACCESS_KEY_ID: ${SPACES_ACCESS_KEY_ID:-}
+      SPACES_SECRET_ACCESS_KEY: ${SPACES_SECRET_ACCESS_KEY:-}
     depends_on:
       postgres-dev:
         condition: service_healthy
@@ -84,6 +116,7 @@ services:
       dockerfile: apps/web/Dockerfile
     ports:
       - '5173:5173'
+    # ── 前端只拿公开配置 ──
     environment:
       VITE_API_BASE_URL: http://localhost:${API_PORT:-8080}
     networks:

@@ -97,6 +97,9 @@ func (h *AssessmentHandler) ListReports(c *gin.Context) {
 			limit = parsed
 		}
 	}
+	if limit > 100 {
+		limit = 100
+	}
 	if o := c.Query("offset"); o != "" {
 		if parsed, err := strconv.Atoi(o); err == nil && parsed >= 0 {
 			offset = parsed

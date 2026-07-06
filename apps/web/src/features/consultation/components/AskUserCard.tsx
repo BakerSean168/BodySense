@@ -1,0 +1,212 @@
+import { useState } from 'react';
+import type { AskUserQuestion } from '../types/consultation';
+
+interface AskUserCardProps {
+  question: AskUserQuestion;
+  onSubmit: (answer: unknown) => void;
+  isSubmitting?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
+  title?: string;
+}
+
+/**
+ * Renders a pending ask_user interaction card.
+ * Supports text, single_choice, multi_choice, number, and date answer types.
+ */
+export function AskUserCard({
+  question,
+  onSubmit,
+  isSubmitting = false,
+  error,
+  onRetry,
+  title = '问诊追问',
+}: AskUserCardProps) {
+  const [textAnswer, setTextAnswer] = useState('');
+  const [selectedSingle, setSelectedSingle] = useState<string>('');
+  const [selectedMulti, setSelectedMulti] = useState<string[]>([]);
+  const [customSingleEnabled, setCustomSingleEnabled] = useState(false);
+  const [customMultiEnabled, setCustomMultiEnabled] = useState(false);
+  const [customAnswer, setCustomAnswer] = useState('');
+
+  const allowCustomInput = question.allow_custom_input ?? Boolean(question.options?.length);
+
+  const buildCustomAnswerPayload = (values: string[]) => {
+    const normalized = values.filter((value) => value.trim().length > 0);
+    if (normalized.length === 0) {
+      return null;
+    }
+    return {
+      text: normalized.join('，'),
+      selected: normalized,
+      is_custom: true,
+    };
+  };
+
+  const handleSubmit = () => {
+    switch (question.answer_type) {
+      case 'text':
+        if (textAnswer.trim()) onSubmit({ text: textAnswer.trim() });
+        break;
+      case 'single_choice':
+        if (customSingleEnabled) {
+          const payload = buildCustomAnswerPayload([customAnswer]);
+          if (payload) onSubmit(payload);
+          break;
+        }
+        if (selectedSingle) onSubmit({ text: selectedSingle, selected: [selectedSingle] });
+        break;
+      case 'multi_choice':
+        {
+          if (!customMultiEnabled && selectedMulti.length > 0) {
+            onSubmit({ text: selectedMulti.join('，'), selected: selectedMulti });
+            break;
+          }
+          const payload = buildCustomAnswerPayload([...selectedMulti, customAnswer.trim()]);
+          if (payload) onSubmit(payload);
+        }
+        break;
+      case 'number':
+        if (textAnswer.trim()) onSubmit({ text: textAnswer.trim(), value: Number(textAnswer.trim()) });
+        break;
+      case 'date':
+        if (textAnswer.trim()) onSubmit({ text: textAnswer.trim() });
+        break;
+    }
+  };
+
+  return (
+    <div className="rounded-xl border border-[#D7E4FF] bg-[#EEF4FF] p-4 my-2 text-[#1F3558]">
+      <p className="mb-1 text-[11px] font-semibold tracking-wide text-[#4D6FA3]">{title}</p>
+      <p className="text-sm font-medium text-blue-900 mb-3">{question.question}</p>
+
+      {question.context && (
+        <p className="text-xs text-[#58749C] mb-3 leading-relaxed">{question.context}</p>
+      )}
+
+      {/* Error state */}
+      {error && (
+        <div className="rounded bg-red-50 border border-red-200 p-3 mb-3">
+          <p className="text-sm text-red-700">提交失败：{error}</p>
+          {onRetry && (
+            <button
+              className="mt-2 text-sm text-red-600 underline hover:text-red-800"
+              onClick={onRetry}
+            >
+              重试
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Input by answer type */}
+      {(question.answer_type === 'text' || question.answer_type === 'number' || question.answer_type === 'date') && (
+        <input
+          type={question.answer_type === 'number' ? 'number' : question.answer_type === 'date' ? 'date' : 'text'}
+          className="mb-3 w-full rounded-lg border border-[#C8D8F2] bg-white px-3 py-2 text-sm"
+          placeholder={question.answer_type === 'text' ? '输入你的回答...' : question.answer_type === 'number' ? '输入数字...' : '选择日期...'}
+          value={textAnswer}
+          onChange={(e) => setTextAnswer(e.target.value)}
+          disabled={isSubmitting}
+        />
+      )}
+
+      {question.answer_type === 'single_choice' && question.options && (
+        <div className="space-y-2 mb-3">
+          {question.options.map((opt) => (
+            <label key={opt} className="flex items-center gap-2 text-sm">
+              <input
+                type="radio"
+                name="ask_user_single"
+                value={opt}
+                checked={selectedSingle === opt}
+                onChange={() => {
+                  setSelectedSingle(opt);
+                  setCustomSingleEnabled(false);
+                }}
+                disabled={isSubmitting}
+              />
+              {opt}
+            </label>
+          ))}
+          {allowCustomInput && (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="radio"
+                name="ask_user_single"
+                checked={customSingleEnabled}
+                onChange={() => {
+                  setSelectedSingle('');
+                  setCustomSingleEnabled(true);
+                }}
+                disabled={isSubmitting}
+              />
+              自定义输入
+            </label>
+          )}
+          {allowCustomInput && customSingleEnabled && (
+            <input
+              type="text"
+              className="w-full rounded-lg border border-[#C8D8F2] bg-white px-3 py-2 text-sm"
+              placeholder="请输入你的补充回答..."
+              value={customAnswer}
+              onChange={(e) => setCustomAnswer(e.target.value)}
+              disabled={isSubmitting}
+            />
+          )}
+        </div>
+      )}
+
+      {question.answer_type === 'multi_choice' && question.options && (
+        <div className="space-y-2 mb-3">
+          {question.options.map((opt) => (
+            <label key={opt} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={selectedMulti.includes(opt)}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedMulti([...selectedMulti, opt]);
+                  } else {
+                    setSelectedMulti(selectedMulti.filter((o) => o !== opt));
+                  }
+                }}
+                disabled={isSubmitting}
+              />
+              {opt}
+            </label>
+          ))}
+          {allowCustomInput && (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={customMultiEnabled}
+                onChange={(e) => setCustomMultiEnabled(e.target.checked)}
+                disabled={isSubmitting}
+              />
+              自定义输入
+            </label>
+          )}
+          {allowCustomInput && customMultiEnabled && (
+            <input
+              type="text"
+              className="w-full rounded-lg border border-[#C8D8F2] bg-white px-3 py-2 text-sm"
+              placeholder="请输入你的补充回答..."
+              value={customAnswer}
+              onChange={(e) => setCustomAnswer(e.target.value)}
+              disabled={isSubmitting}
+            />
+          )}
+        </div>
+      )}
+
+      <button
+        className="rounded-full bg-[#4D6FA3] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3E5E8E] disabled:opacity-50"
+        onClick={handleSubmit}
+        disabled={isSubmitting}
+      >
+        {isSubmitting ? '提交中...' : '提交'}
+      </button>
+    </div>
+  );
+}

@@ -1,91 +1,347 @@
-import { useLocalRuntime, type ChatModelAdapter } from "@assistant-ui/react";
-import { useAuthStore } from "@/stores/authStore";
+import { useCallback, useRef, useState } from 'react';
+import {
+  useLocalRuntime,
+  type ChatModelAdapter,
+  type ChatModelRunResult,
+  type ThreadRuntime,
+  type ThreadMessageLike,
+} from '@assistant-ui/react';
+import { consultationApi } from '../services/consultationService';
+import { consumeSSEStream } from './useSSEProcessor';
+import {
+  reduceActiveTurnEvent,
+  INITIAL_ACTIVE_TURN_STATE,
+  resetActiveTurnState,
+  type ActiveTurnState,
+  type ActiveTurnEffect,
+} from '../runtime/activeTurnReducer';
+import type {
+  ExtractedInfo,
+  HealthFeatures,
+  Citation,
+  SSERedFlag,
+  SSEMessageCompleted,
+  StreamEvent,
+  PendingInteraction,
+} from '../types/consultation';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+export interface ConsultationAdapterOptions {
+  onConversationCreated?: (conversationId: string) => void;
+  onMessagePersisted?: (clientMessageId: string, messageId: string) => void;
+  onExtractedInfoUpdate?: (info: ExtractedInfo) => void;
+  onHealthFeaturesUpdate?: (healthFeatures: HealthFeatures) => void;
+  onPhaseChange?: (from: string, to: string) => void;
+  onRedFlag?: (flag: SSERedFlag['payload']) => void;
+  onCitation?: (citation: Citation) => void;
+  onTitleGenerated?: (title: string) => void;
+  onMessageCompleted?: (data: SSEMessageCompleted) => void;
+  onInteractionRequired?: (interaction: PendingInteraction) => void;
+  /** Called on each dispatch with the full active turn state. */
+  onActiveTurnUpdate?: (state: ActiveTurnState) => void;
+  /** Called when the stream has fully completed or errored/aborted. */
+  onStreamFinished?: () => void;
+}
 
-/**
- * Custom ChatModelAdapter that connects to our SSE backend.
- * This bridges our existing consultation chat API with assistant-ui's runtime.
- */
-function createConsultationChatAdapter(sessionId: string) {
-  const adapter: ChatModelAdapter = {
-    async run(options) {
-      const { messages, abortSignal } = options;
-      const { accessToken } = useAuthStore.getState();
+export function useAssistantChatRuntime(
+  conversationId: string,
+  initialMessages: ThreadMessageLike[] = [],
+  options: ConsultationAdapterOptions = {}
+) {
+  const [isStreaming, setIsStreaming] = useState(false);
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
 
-      // Get the last user message content
-      const lastMessage = messages[messages.length - 1];
-      let userContent = '';
-      if (lastMessage?.role === 'user' && 'content' in lastMessage) {
-        const content = lastMessage.content as Array<{ type: string; text?: string }>;
-        userContent = content
-          .filter((p) => p.type === 'text')
-          .map((p) => p.text || '')
-          .join('');
+  // Ref to stabilize resumeInteraction — avoids re-creating on every render
+  type StreamRunFn = (startRequest: () => Promise<Response>) => AsyncGenerator<ChatModelRunResult>;
+  const streamConsultationRunRef = useRef<StreamRunFn | null>(null);
+
+  async function* streamConsultationRun(
+    startRequest: () => Promise<Response>,
+  ): AsyncGenerator<ChatModelRunResult> {
+    let streamError: Error | null = null;
+    let streamFinished = false;
+    let wakeQueueConsumer: (() => void) | null = null;
+    let lastYieldSignature: string | null = null;
+    const pendingResults: ChatModelRunResult[] = [];
+    let reducerState: ActiveTurnState = INITIAL_ACTIVE_TURN_STATE;
+
+    function notifyQueueConsumer() {
+      const wake = wakeQueueConsumer;
+      wakeQueueConsumer = null;
+      wake?.();
+    }
+
+    function enqueueResult(result: ChatModelRunResult | null) {
+      if (!result) {
+        return;
       }
 
-      // Call our SSE endpoint
-      const response = await fetch(`${API_BASE_URL}/api/v1/consultation/${sessionId}/message`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        },
-        body: JSON.stringify({ content: userContent }),
-        signal: abortSignal,
-      });
+      const signature = JSON.stringify(result.content);
+      if (signature === lastYieldSignature) {
+        return;
+      }
 
+      lastYieldSignature = signature;
+      pendingResults.push(result);
+      notifyQueueConsumer();
+    }
+
+    function waitForQueuedResult() {
+      if (pendingResults.length > 0 || streamFinished) {
+        return Promise.resolve();
+      }
+
+      return new Promise<void>((resolve) => {
+        wakeQueueConsumer = resolve;
+      });
+    }
+
+    function applyEffects(effects: ActiveTurnEffect[]) {
+      for (const effect of effects) {
+        switch (effect.type) {
+          case 'conversation_created':
+            console.debug('[SSE] ④ applyEffects → 触发 onConversationCreated 回调', {
+              conversationId: effect.conversationId,
+              hasCallback: !!optionsRef.current.onConversationCreated,
+            });
+            optionsRef.current.onConversationCreated?.(effect.conversationId);
+            break;
+          case 'message_persisted':
+            optionsRef.current.onMessagePersisted?.(
+              effect.clientMessageId,
+              effect.messageId,
+            );
+            break;
+          case 'extracted_info_updated':
+            optionsRef.current.onExtractedInfoUpdate?.(effect.info);
+            break;
+          case 'health_features_updated':
+            optionsRef.current.onHealthFeaturesUpdate?.(effect.healthFeatures);
+            break;
+          case 'phase_changed':
+            optionsRef.current.onPhaseChange?.(effect.from, effect.to);
+            break;
+          case 'red_flag':
+            optionsRef.current.onRedFlag?.(effect.flags as SSERedFlag['payload']);
+            break;
+          case 'citation_added':
+            optionsRef.current.onCitation?.(effect.citation);
+            break;
+          case 'interaction_required':
+            optionsRef.current.onInteractionRequired?.(effect.interaction);
+            break;
+          case 'interaction_answered':
+            break;
+          case 'message_completed':
+            optionsRef.current.onMessageCompleted?.(effect.data as SSEMessageCompleted);
+            break;
+          case 'title_generated':
+            console.debug('[SSE] ④ applyEffects → 触发 onTitleGenerated 回调', {
+              title: effect.title,
+              hasCallback: !!optionsRef.current.onTitleGenerated,
+            });
+            optionsRef.current.onTitleGenerated?.(effect.title);
+            break;
+          case 'stream_error':
+            break;
+          default:
+            break;
+        }
+      }
+    }
+
+    function dispatch(event: StreamEvent) {
+      const result = reduceActiveTurnEvent(reducerState, event);
+      reducerState = result.state;
+      // 🔍 追踪关键事件的 effect 产生情况
+      if (event.type === 'conversation.created' || event.type === 'title.generated') {
+        console.debug(`[SSE] ④ dispatch(${event.type}) → effects 数量: ${result.effects.length}`, {
+          effects: result.effects.map(e => e.type),
+          hasConversationCreatedCb: !!optionsRef.current.onConversationCreated,
+          hasTitleGeneratedCb: !!optionsRef.current.onTitleGenerated,
+        });
+      }
+      applyEffects(result.effects);
+      optionsRef.current.onActiveTurnUpdate?.(reducerState);
+
+      switch (event.type) {
+        case 'message.text.delta':
+        case 'state.interaction.required':
+          enqueueResult(buildStreamingSnapshot(reducerState));
+          break;
+        case 'message.completed':
+        case 'stream.done':
+          enqueueResult(buildCompletedSnapshot(reducerState));
+          break;
+        default:
+          break;
+      }
+    }
+
+    try {
+      const response = await startRequest();
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
 
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('No response body');
+      const streamPromise = consumeSSEStream(response, {
+        onConversationCreated: (data) => {
+          console.debug('[SSE] ②-SSE handler 收到 conversation.created → 准备 dispatch', {
+            conversation_id: (data as StreamEvent).ids?.conversation_id,
+            run_id: (data as StreamEvent).ids?.run_id,
+          });
+          dispatch(data as StreamEvent);
+        },
+        onTitleGenerated: (data) => {
+          console.debug('[SSE] ②-SSE handler 收到 title.generated → 准备 dispatch', {
+            title: (data as StreamEvent).payload,
+          });
+          dispatch(data as StreamEvent);
+        },
+        onMessagePersisted: (data) => dispatch(data as StreamEvent),
+        onRunStarted: (data) => dispatch(data as StreamEvent),
+        onRunResumed: (data) => dispatch(data as StreamEvent),
+        onRunInterrupted: (data) => dispatch(data as StreamEvent),
+        onRunCompleted: (data) => dispatch(data as StreamEvent),
+        onRunFailed: (data) => dispatch(data as StreamEvent),
+        onMessageCreated: (data) => dispatch(data as StreamEvent),
+        onTextDelta: (data) => dispatch(data as StreamEvent),
+        onToolCall: (data) => dispatch(data as StreamEvent),
+        onToolResult: (data) => dispatch(data as StreamEvent),
+        onExtractedInfo: (data) => dispatch(data as StreamEvent),
+        onHealthFeatures: (data) => dispatch(data as StreamEvent),
+        onPhaseChange: (data) => dispatch(data as StreamEvent),
+        onRedFlag: (data) => dispatch(data as StreamEvent),
+        onCitation: (data) => dispatch(data as StreamEvent),
+        onKnowledgeGap: (data) => dispatch(data as StreamEvent),
+        onInteractionRequired: (data) => dispatch(data as StreamEvent),
+        onInteractionAnswered: (data) => dispatch(data as StreamEvent),
+        onMessageCompleted: (data) => dispatch(data as StreamEvent),
+        onMessageFailed: (data) => dispatch(data as StreamEvent),
+        onDone: (data) => dispatch(data as StreamEvent),
+        onStreamError: (data) => {
+          streamError = new Error(data.payload.message);
+          dispatch(data as StreamEvent);
+          streamFinished = true;
+          notifyQueueConsumer();
+        },
+        onError: (err) => {
+          streamError = err;
+          streamFinished = true;
+          notifyQueueConsumer();
+        },
+      }).finally(() => {
+        streamFinished = true;
+        notifyQueueConsumer();
+      });
 
-      const decoder = new TextDecoder();
-      let buffer = '';
-      let accumulatedText = '';
+      while (!streamFinished || pendingResults.length > 0) {
+        if (pendingResults.length === 0) {
+          await waitForQueuedResult();
+          continue;
+        }
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              if (data.type === 'text' && data.content) {
-                accumulatedText += data.content;
-              }
-            } catch {
-              // Skip malformed JSON
-            }
-          }
+        const nextResult = pendingResults.shift();
+        if (nextResult) {
+          yield nextResult;
         }
       }
 
-      // Return final result with proper status type
-      return {
-        content: [{
-          type: 'text' as const,
-          text: accumulatedText,
-        }],
-        status: { type: 'complete' as const, reason: 'stop' as const },
-      };
+      await streamPromise;
+
+      if (streamError) {
+        throw streamError;
+      }
+    } finally {
+      setIsStreaming(false);
+      optionsRef.current.onStreamFinished?.();
+      if (
+        reducerState.status === 'completed' ||
+        reducerState.status === 'failed' ||
+        reducerState.status === 'idle'
+      ) {
+        optionsRef.current.onActiveTurnUpdate?.(resetActiveTurnState());
+      }
+    }
+  }
+
+  // Keep ref current so resumeInteraction always calls the latest streamConsultationRun
+  streamConsultationRunRef.current = streamConsultationRun;
+
+  const adapter: ChatModelAdapter = {
+    async *run({ messages }): AsyncGenerator<ChatModelRunResult> {
+      const lastMessage = messages[messages.length - 1];
+      const content = lastMessage.content
+        .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+        .map((p) => p.text)
+        .join('');
+
+      setIsStreaming(true);
+
+      yield* streamConsultationRun(() =>
+        consultationApi.startConsultationRun({
+          conversationId: conversationId === 'new' ? null : conversationId,
+          clientMessageId: `tmp_${crypto.randomUUID()}`,
+          requestId: crypto.randomUUID(),
+          message: {
+            role: 'user',
+            parts: [{ type: 'text', text: content }],
+          },
+        }),
+      );
     },
   };
 
-  return adapter;
+  const runtime = useLocalRuntime(adapter, {
+    initialMessages,
+  });
+
+  const resumeInteraction = useCallback(
+    (threadRuntime: ThreadRuntime, interactionId: string, answer: unknown) => {
+      setIsStreaming(true);
+      threadRuntime.resumeRun({
+        parentId: threadRuntime.getState().messages.at(-1)?.id ?? null,
+        stream: async function* () {
+          const runFn = streamConsultationRunRef.current;
+          if (!runFn) {
+            throw new Error('streamConsultationRun not initialized — resumeInteraction called before first render');
+          }
+          yield* runFn(
+            () =>
+              consultationApi.resumeInteractionStream(conversationId, interactionId, {
+                requestId: crypto.randomUUID(),
+                answer,
+              }),
+          );
+        },
+      });
+    },
+    [conversationId],
+  );
+
+  return { runtime, isStreaming, resumeInteraction };
 }
 
-/**
- * Hook to create an assistant-ui runtime for consultation chat.
- */
-export function useAssistantChatRuntime(sessionId: string) {
-  const adapter = createConsultationChatAdapter(sessionId);
-  return useLocalRuntime(adapter);
+function buildStreamingSnapshot(state: ActiveTurnState): ChatModelRunResult | null {
+  if (!state.text) {
+    return null;
+  }
+
+  return {
+    content: [{ type: 'text', text: state.text }],
+  };
+}
+
+function buildCompletedSnapshot(state: ActiveTurnState): ChatModelRunResult | null {
+  if (state.status !== 'completed') {
+    return null;
+  }
+
+  if (state.finalParts.length > 0) {
+    return {
+      content: [...state.finalParts],
+    };
+  }
+
+  return buildStreamingSnapshot(state);
 }

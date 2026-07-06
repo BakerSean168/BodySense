@@ -22,26 +22,20 @@ func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req dto.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
 		return
 	}
 
 	resp, err := h.authService.Register(c.Request.Context(), req)
 	if err != nil {
 		status := http.StatusInternalServerError
-		message := err.Error()
+		code := "REGISTRATION_FAILED"
 
-		if message == "email already registered" {
+		if err.Error() == "registration failed" {
 			status = http.StatusConflict
 		}
 
-		c.JSON(status, dto.ErrorResponse{
-			Error:   "registration_failed",
-			Message: message,
-		})
+		respondError(c, status, code, "registration failed")
 		return
 	}
 
@@ -52,19 +46,13 @@ func (h *AuthHandler) Register(c *gin.Context) {
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req dto.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
 		return
 	}
 
 	resp, err := h.authService.Login(c.Request.Context(), req)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
-			Error:   "authentication_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusUnauthorized, "AUTHENTICATION_FAILED", "invalid email or password")
 		return
 	}
 
@@ -75,41 +63,29 @@ func (h *AuthHandler) Login(c *gin.Context) {
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	var req dto.RefreshRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
 		return
 	}
 
 	resp, err := h.authService.RefreshToken(c.Request.Context(), req)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
-			Error:   "refresh_failed",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusUnauthorized, "REFRESH_FAILED", "invalid or expired refresh token")
 		return
 	}
 
 	c.JSON(http.StatusOK, resp)
 }
 
-// Logout handles user logout (invalidates refresh token).
+// Logout handles user logout (invalidates refresh token + session cache).
 func (h *AuthHandler) Logout(c *gin.Context) {
 	var req dto.RefreshRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: err.Error(),
-		})
+		respondError(c, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
 		return
 	}
 
-	if err := h.authService.InvalidateRefreshToken(c.Request.Context(), req.RefreshToken); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "logout_failed",
-			Message: "Failed to invalidate refresh token",
-		})
+	if err := h.authService.Logout(c.Request.Context(), req.RefreshToken); err != nil {
+		respondError(c, http.StatusInternalServerError, "LOGOUT_FAILED", "failed to logout")
 		return
 	}
 
@@ -120,16 +96,21 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 func (h *AuthHandler) Me(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
-			Error: "unauthorized",
-		})
+		respondError(c, http.StatusUnauthorized, "UNAUTHORIZED", "authentication required")
+		return
+	}
+
+	uid, ok := userID.(string)
+	if !ok {
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "invalid user id type")
 		return
 	}
 
 	email, _ := c.Get("email")
+	emailStr, _ := email.(string)
 
 	c.JSON(http.StatusOK, dto.UserResponse{
-		ID:    userID.(string),
-		Email: email.(string),
+		ID:    uid,
+		Email: emailStr,
 	})
 }

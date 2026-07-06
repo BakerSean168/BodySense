@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useProfileStore } from '@/stores/profileStore';
 import { OnboardingLayout } from './OnboardingLayout';
@@ -9,8 +9,12 @@ import { OccupationStep } from './steps/OccupationStep';
 import { SleepStep } from './steps/SleepStep';
 import { ExerciseStep } from './steps/ExerciseStep';
 import { InjuryStep } from './steps/InjuryStep';
+import { UploadStep } from './steps/UploadStep';
+import { assessmentApi } from '@/features/assessment/services/assessmentService';
 
-const TOTAL_STEPS = 7;
+import { toast } from 'sonner';
+
+const TOTAL_STEPS = 8;
 
 interface FormData {
   gender: string;
@@ -42,12 +46,29 @@ const INITIAL_DATA: FormData = {
 
 export function OnboardingWizard() {
   const navigate = useNavigate();
-  const { updateProfile, isLoading } = useProfileStore();
+  const { updateProfile, isLoading: isUpdatingProfile } = useProfileStore();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<FormData>(INITIAL_DATA);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [loadingPhraseIndex, setLoadingPhraseIndex] = useState(0);
 
-  const updateField = (field: keyof FormData, value: any) => {
+  const loadingPhrases = [
+    '“体悟” AI 正在分析您的生理指标...',
+    '正在进行体相结构多模态检测...',
+    '正在提取体检报告中的关键健康数据...',
+    '结合知识库，正在为您生成个性化体态分析报告...',
+  ];
+
+  useEffect(() => {
+    if (!isGeneratingReport) return;
+    const interval = setInterval(() => {
+      setLoadingPhraseIndex((prev) => (prev + 1) % loadingPhrases.length);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [isGeneratingReport]);
+
+  const updateField = <K extends keyof FormData>(field: K, value: FormData[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -67,6 +88,8 @@ export function OnboardingWizard() {
         return true; // Optional
       case 6: // Injury
         return true; // Optional
+      case 7: // Upload
+        return true; // Optional
       default:
         return false;
     }
@@ -85,7 +108,9 @@ export function OnboardingWizard() {
   };
 
   const handleSubmit = async () => {
+    setIsGeneratingReport(true);
     try {
+      // 1. 保存身体档案信息
       await updateProfile({
         gender: formData.gender || undefined,
         age: formData.age,
@@ -99,9 +124,17 @@ export function OnboardingWizard() {
         injury_history: formData.injury_history || undefined,
         self_description: formData.self_description || undefined,
       });
-      navigate('/dashboard');
-    } catch {
-      // Error is handled by the store
+
+      // 2. 生成健康评估报告
+      const report = await assessmentApi.generate();
+      
+      toast.success('评估报告生成成功！');
+      // 3. 跳转到报告详情页
+      navigate(`/assessment/${report.id}`);
+    } catch (err) {
+      console.error('Onboarding submission failed:', err);
+      setIsGeneratingReport(false);
+      toast.error(err instanceof Error ? err.message : '生成评估报告失败，请稍后重试');
     }
   };
 
@@ -166,10 +199,37 @@ export function OnboardingWizard() {
             onSelfDescriptionChange={(v) => updateField('self_description', v)}
           />
         );
+      case 7:
+        return <UploadStep />;
       default:
         return null;
     }
   };
+
+  if (isGeneratingReport) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+        <div className="max-w-md w-full text-center space-y-6 animate-in fade-in zoom-in-95 duration-500">
+          <div className="relative w-24 h-24 mx-auto">
+            <div className="absolute inset-0 rounded-full border-4 border-[#CD7B67]/20" />
+            <div className="absolute inset-0 rounded-full border-4 border-t-[#CD7B67] animate-spin" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <svg className="w-8 h-8 text-[#CD7B67]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold text-slate-800">正在生成您的健康评估</h2>
+            <p className="text-sm text-slate-500 font-medium h-6 transition-all duration-300">
+              {loadingPhrases[loadingPhraseIndex]}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <OnboardingLayout
@@ -178,7 +238,7 @@ export function OnboardingWizard() {
       onNext={handleNext}
       onBack={handleBack}
       onSubmit={handleSubmit}
-      isLoading={isLoading}
+      isLoading={isUpdatingProfile}
       isLastStep={currentStep === TOTAL_STEPS - 1}
       canProceed={canProceed()}
     >

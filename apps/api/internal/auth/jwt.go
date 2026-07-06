@@ -1,7 +1,10 @@
 package auth
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"time"
@@ -18,12 +21,18 @@ type JWTConfig struct {
 }
 
 // JWTConfigFromEnv reads JWT config from environment variables.
+// Panics if JWT_SECRET_KEY is not set, to prevent running with a publicly known key.
 func JWTConfigFromEnv() JWTConfig {
-	accessTTL := getEnvAsDuration("JWT_ACCESS_TTL_HOURS", 7*24) // 7 days
+	accessTTL := getEnvAsDuration("JWT_ACCESS_TTL_HOURS", 2)       // 2 hours default for health app
 	refreshTTL := getEnvAsDuration("JWT_REFRESH_TTL_HOURS", 30*24) // 30 days
 
+	secret := os.Getenv("JWT_SECRET_KEY")
+	if secret == "" {
+		log.Fatal("JWT_SECRET_KEY environment variable is required")
+	}
+
 	return JWTConfig{
-		SecretKey:       getEnv("JWT_SECRET_KEY", "your-secret-key-change-in-production"),
+		SecretKey:       secret,
 		AccessTokenTTL:  accessTTL,
 		RefreshTokenTTL: refreshTTL,
 	}
@@ -57,9 +66,13 @@ func GenerateAccessToken(cfg JWTConfig, userID uuid.UUID, email string) (string,
 	return tokenString, nil
 }
 
-// GenerateRefreshToken creates a new refresh token.
-func GenerateRefreshToken() string {
-	return uuid.New().String()
+// GenerateRefreshToken creates a cryptographically secure refresh token.
+func GenerateRefreshToken() (string, error) {
+	bytes := make([]byte, 32)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", fmt.Errorf("generate refresh token: %w", err)
+	}
+	return hex.EncodeToString(bytes), nil
 }
 
 // ValidateAccessToken validates and parses an access token.

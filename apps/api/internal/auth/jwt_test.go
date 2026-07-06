@@ -107,8 +107,14 @@ func TestValidateAccessToken_WrongSecret(t *testing.T) {
 }
 
 func TestGenerateRefreshToken(t *testing.T) {
-	token1 := GenerateRefreshToken()
-	token2 := GenerateRefreshToken()
+	token1, err := GenerateRefreshToken()
+	if err != nil {
+		t.Fatalf("GenerateRefreshToken failed: %v", err)
+	}
+	token2, err := GenerateRefreshToken()
+	if err != nil {
+		t.Fatalf("GenerateRefreshToken failed: %v", err)
+	}
 
 	if token1 == "" {
 		t.Fatal("Generated refresh token is empty")

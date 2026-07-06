@@ -11,6 +11,22 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+# Load .env before anything else reads os.getenv()
+try:
+    from dotenv import load_dotenv
+except ModuleNotFoundError:
+    load_dotenv = None
+
+if load_dotenv:
+    for _env in [
+        PROJECT_ROOT / ".env",
+        PROJECT_ROOT.parent / ".env",
+        PROJECT_ROOT.parent.parent / ".env",
+    ]:
+        if _env.exists():
+            load_dotenv(_env, override=False)
+            break
+
 from src.rag import (  # noqa: E402
     VideoIngestionPipeline,
     VideoIngestionRequest,
@@ -35,8 +51,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--language", default="zh", help="Transcription language")
     parser.add_argument(
         "--transcript-provider",
-        default="whisper.cpp",
-        help="Transcript backend: whisper.cpp or funasr_sensevoice",
+        default=None,
+        help=(
+            "Transcript backend: whisper.cpp, funasr_sensevoice, or asr_api "
+            "(default: ASR_PROVIDER env var, or whisper.cpp)"
+        ),
     )
     parser.add_argument(
         "--transcript-model",
@@ -54,6 +73,16 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--no-export-clips", action="store_true", help="Skip clip rendering")
     parser.add_argument(
+        "--splitter-provider",
+        default="heuristic",
+        help="Splitter backend: heuristic (default) or llm",
+    )
+    parser.add_argument(
+        "--ai-refine",
+        action="store_true",
+        help="Enable AI-assisted unit refinement (requires LLM provider)",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Generate artifacts but do not write to DB",
@@ -70,7 +99,7 @@ async def main() -> int:
     args = parse_args()
     video_path = Path(args.video_path).resolve()
     pipeline = VideoIngestionPipeline()
-    pack = pipeline.ingest(
+    pack = await pipeline.ingest(
         VideoIngestionRequest(
             video_path=str(video_path),
             problem_slug=args.problem_slug,
@@ -83,6 +112,8 @@ async def main() -> int:
             whisper_model=args.whisper_model,
             force_transcribe=args.force_transcribe,
             export_clips=not args.no_export_clips,
+            splitter_provider=args.splitter_provider,
+            ai_refine=args.ai_refine,
         )
     )
 
