@@ -41,4 +41,28 @@ describe('processSSELine', () => {
       }),
     );
   });
+
+  it('dispatches state.health_features.upsert events', () => {
+    const onHealthFeatures = vi.fn();
+    const handlers: SSEHandlers = { onHealthFeatures };
+    const state = { currentEvent: '' };
+
+    processSSELine('event: state.health_features.upsert', state, handlers);
+    processSSELine(
+      'data: {"version":1,"seq":3,"channel":"state","type":"state.health_features.upsert","ids":{"conversation_id":"c1"},"payload":{"health_features":{"posture_findings":[{"label":"头前移"}],"discomforts":[],"negative_findings":[],"movement_limitations":[],"red_flags":[],"user_answers":[]}}}',
+      state,
+      handlers,
+    );
+
+    expect(onHealthFeatures).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'state.health_features.upsert',
+        payload: expect.objectContaining({
+          health_features: expect.objectContaining({
+            posture_findings: [{ label: '头前移' }],
+          }),
+        }),
+      }),
+    );
+  });
 });

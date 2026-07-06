@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type {
-  ExtractedInfo,
+  HealthFeatures,
   DiagnosisAnalysis,
 } from '../consultationService';
 
@@ -200,19 +200,26 @@ describe('consultationApi', () => {
     });
   });
 
-  describe('updateExtractedInfo', () => {
-    it('PUTs extracted info to the consultation endpoint', async () => {
-      const info: ExtractedInfo[] = [{ body_part: 'shoulder', symptom_type: 'ache' }];
+  describe('updateHealthFeatures', () => {
+    it('PUTs health features to the consultation endpoint', async () => {
+      const healthFeatures: HealthFeatures = {
+        posture_findings: [],
+        discomforts: [{ label: 'ache', body_part: 'shoulder' }],
+        negative_findings: [],
+        movement_limitations: [],
+        red_flags: [],
+        user_answers: [],
+      };
       mockAuthFetch.mockResolvedValue(mockResponse(null));
 
-      await consultationApi.updateExtractedInfo('conv-1', info);
+      await consultationApi.updateHealthFeatures('conv-1', healthFeatures);
 
       expect(mockAuthFetch).toHaveBeenCalledWith(
-        '/api/v1/consultations/conv-1/extracted-info',
+        '/api/v1/consultations/conv-1/health-features',
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ extracted_info: info }),
+          body: JSON.stringify({ health_features: healthFeatures }),
         },
       );
     });
@@ -220,7 +227,14 @@ describe('consultationApi', () => {
     it('throws on non-ok response', async () => {
       mockAuthFetch.mockResolvedValue(mockResponse({}, false, 500));
       await expect(
-        consultationApi.updateExtractedInfo('conv-1', []),
+        consultationApi.updateHealthFeatures('conv-1', {
+          posture_findings: [],
+          discomforts: [],
+          negative_findings: [],
+          movement_limitations: [],
+          red_flags: [],
+          user_answers: [],
+        }),
       ).rejects.toThrow('API 500');
     });
   });

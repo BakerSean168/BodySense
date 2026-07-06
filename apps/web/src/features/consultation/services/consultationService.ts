@@ -6,6 +6,7 @@ import type {
   ConsultationSession,
   ConsultationThread,
   ExtractedInfo,
+  HealthFeatures,
   Diagnosis,
   DiagnosisAnalysis,
   TreatmentPlan,
@@ -165,13 +166,13 @@ export const consultationApi = {
   },
 
   /**
-   * Update extracted symptom info for a consultation.
+   * Update structured health features for a consultation.
    */
-  async updateExtractedInfo(id: string, info: ExtractedInfo[]): Promise<void> {
-    await authFetch(`${API_BASE}/consultations/${id}/extracted-info`, {
+  async updateHealthFeatures(id: string, healthFeatures: HealthFeatures): Promise<void> {
+    await authFetch(`${API_BASE}/consultations/${id}/health-features`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ extracted_info: info }),
+      body: JSON.stringify({ health_features: healthFeatures }),
     }).then((res) => parseJson<void>(res));
   },
 
@@ -235,6 +236,7 @@ export type {
   ConsultationThread,
   ConsultationPhase,
   ExtractedInfo,
+  HealthFeatures,
   Diagnosis,
   DiagnosisAnalysis,
   TreatmentPlan,

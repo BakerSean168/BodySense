@@ -1,232 +1,140 @@
-import { useState, useRef } from 'react';
-import type { ExtractedInfo } from '../services/consultationService';
+import type { HealthFeatureItem, HealthFeatures } from '../types/consultation';
 import { BodyVisualization } from './BodyVisualization';
 
 interface InfoPanelProps {
-  extractedInfo: ExtractedInfo[];
-  onConfirm?: (info: ExtractedInfo) => void;
-  onModify?: (index: number, info: ExtractedInfo) => void;
-  onDelete?: (index: number) => void;
+  healthFeatures: HealthFeatures;
+  onConfirm?: (category: keyof HealthFeatures, index: number) => void;
+  onModify?: (category: keyof HealthFeatures, index: number, item: HealthFeatureItem) => void;
+  onDelete?: (category: keyof HealthFeatures, index: number) => void;
 }
 
-const SEVERITY_COLORS: Record<string, string> = {
-  '轻度': 'bg-[#F1F5F2] text-[#4d7a64] border border-[#c5d7cc]/30',
-  '中度': 'bg-[#F7F5F0] text-[#CD7B67] border border-[#E5E3DF]',
-  '重度': 'bg-[#B65E49]/10 text-[#B65E49] border border-[#B65E49]/20',
+const CATEGORY_LABELS: Record<keyof HealthFeatures, string> = {
+  posture_findings: '姿态观察',
+  discomforts: '不适与症状',
+  negative_findings: '阴性信息',
+  movement_limitations: '活动受限',
+  red_flags: '风险提示',
+  user_answers: '补充回答',
 };
 
-export function InfoPanel({ extractedInfo, onConfirm, onModify, onDelete }: InfoPanelProps) {
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState<ExtractedInfo | null>(null);
-  const cardsContainerRef = useRef<HTMLDivElement>(null);
+const CATEGORY_ORDER: Array<keyof HealthFeatures> = [
+  'posture_findings',
+  'discomforts',
+  'negative_findings',
+  'movement_limitations',
+  'red_flags',
+  'user_answers',
+];
 
-  // Get unique body parts for visualization
-  const highlightedParts = [...new Set(extractedInfo.map((info) => info.body_part))];
+function getTotalCount(healthFeatures: HealthFeatures) {
+  return CATEGORY_ORDER.reduce((total, category) => total + healthFeatures[category].length, 0);
+}
 
-  const handleEdit = (index: number) => {
-    setEditingIndex(index);
-    setEditForm({ ...extractedInfo[index] });
-  };
-
-  const handleSave = () => {
-    if (editingIndex !== null && editForm) {
-      onModify?.(editingIndex, editForm);
-      setEditingIndex(null);
-      setEditForm(null);
+function getHighlightedParts(healthFeatures: HealthFeatures) {
+  const parts = new Set<string>();
+  for (const category of CATEGORY_ORDER) {
+    for (const item of healthFeatures[category]) {
+      if (item.body_part) {
+        parts.add(item.body_part);
+      }
     }
-  };
+  }
+  return [...parts];
+}
 
-  const handleCancel = () => {
-    setEditingIndex(null);
-    setEditForm(null);
-  };
+export function InfoPanel({ healthFeatures, onConfirm, onModify, onDelete }: InfoPanelProps) {
+  const highlightedParts = getHighlightedParts(healthFeatures);
+  const totalCount = getTotalCount(healthFeatures);
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Body Visualization */}
-      <div className="mb-4 p-3 bg-white rounded-lg border">
-        <h3 className="text-xs font-semibold text-gray-500 mb-2">身体可视化</h3>
-        <BodyVisualization
-          highlightedParts={highlightedParts}
-          onPartClick={(part) => {
-            // Find and scroll to the info card for this part
-            const index = extractedInfo.findIndex((info) => info.body_part === part);
-            if (index >= 0) {
-              const container = cardsContainerRef.current;
-              if (container) {
-                const element = container.querySelector(`#info-card-${index}`) as HTMLElement;
-                if (element) {
-                  const containerTop = container.getBoundingClientRect().top;
-                  const elementTop = element.getBoundingClientRect().top;
-                  const scrollOffset = elementTop - containerTop + container.scrollTop;
-                  container.scrollTo({
-                    top: scrollOffset,
-                    behavior: 'smooth',
-                  });
-                }
-              }
-            }
-          }}
-        />
+    <div className="flex h-full flex-col">
+      <div className="mb-4 rounded-lg border bg-white p-3">
+        <h3 className="mb-2 text-xs font-semibold text-gray-500">身体可视化</h3>
+        <BodyVisualization highlightedParts={highlightedParts} />
       </div>
 
-      {/* Extracted Info Cards */}
-      <div ref={cardsContainerRef} className="flex-1 overflow-y-auto">
-        <h3 className="text-xs font-semibold text-gray-500 mb-2">提取的症状信息</h3>
+      <div className="flex-1 overflow-y-auto">
+        <h3 className="mb-2 text-xs font-semibold text-gray-500">结构化健康特征</h3>
 
-        {extractedInfo.length === 0 ? (
-          <p className="text-xs text-gray-400">
-            对话中提到的症状信息会在这里显示
-          </p>
+        {totalCount === 0 ? (
+          <p className="text-xs text-gray-400">对话中的体态观察、补充回答和不适信息会在这里沉淀</p>
         ) : (
-          <div className="space-y-2">
-            {extractedInfo.map((info, i) => (
-              <div
-                key={i}
-                id={`info-card-${i}`}
-                className="bg-white rounded-lg p-3 shadow-sm border"
-              >
-                {editingIndex === i && editForm ? (
-                  /* Edit mode */
-                  <div className="space-y-2">
-                    <div>
-                      <label className="text-xs text-gray-500">部位</label>
-                      <input
-                        type="text"
-                        value={editForm.body_part}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, body_part: e.target.value })
-                        }
-                        className="w-full text-sm border rounded px-2 py-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500">症状类型</label>
-                      <input
-                        type="text"
-                        value={editForm.symptom_type || ''}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, symptom_type: e.target.value })
-                        }
-                        className="w-full text-sm border rounded px-2 py-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500">持续时间</label>
-                      <input
-                        type="text"
-                        value={editForm.duration || ''}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, duration: e.target.value })
-                        }
-                        className="w-full text-sm border rounded px-2 py-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500">严重程度</label>
-                      <select
-                        value={editForm.severity || ''}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, severity: e.target.value })
-                        }
-                        className="w-full text-sm border rounded px-2 py-1"
-                      >
-                        <option value="">请选择</option>
-                        <option value="轻度">轻度</option>
-                        <option value="中度">中度</option>
-                        <option value="重度">重度</option>
-                      </select>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={handleSave}
-                        className="flex-1 text-xs bg-[#CD7B67] hover:bg-[#B65E49] text-white rounded-full py-1.5 font-semibold transition-all duration-300 shadow-sm shadow-[#CD7B67]/10 cursor-pointer"
-                      >
-                        保存
-                      </button>
-                      <button
-                        onClick={handleCancel}
-                        className="flex-1 text-xs bg-[#F7F5F0] border border-[#E5E3DF] text-[#4A554E] rounded-full py-1.5 font-semibold hover:bg-primary-50 transition-all duration-300 cursor-pointer"
-                      >
-                        取消
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  /* View mode */
-                  <>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="font-semibold text-sm text-primary-800">
-                        {info.body_part}
-                      </span>
-                      {info.severity && (
-                        <span
-                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${SEVERITY_COLORS[info.severity] || 'bg-gray-100 text-gray-800'}`}
-                        >
-                          {info.severity}
-                        </span>
-                      )}
-                    </div>
-                    {info.symptom_type && (
-                      <div className="text-xs text-[#4A554E] font-medium mb-1">
-                        症状：{info.symptom_type}
-                      </div>
-                    )}
-                    {info.duration && (
-                      <div className="text-xs text-[#4A554E] font-medium mb-1">
-                        持续时间：{info.duration}
-                      </div>
-                    )}
-                    {info.trigger && (
-                      <div className="text-xs text-[#4A554E] font-medium mb-1">
-                        触发场景：{info.trigger}
-                      </div>
-                    )}
-                    {info.relief && (
-                      <div className="text-xs text-[#4A554E] font-medium">
-                        缓解方式：{info.relief}
-                      </div>
-                    )}
+          <div className="space-y-4">
+            {CATEGORY_ORDER.map((category) => {
+              const items = healthFeatures[category];
+              if (items.length === 0) {
+                return null;
+              }
 
-                    {/* Action buttons */}
-                    <div className="flex gap-2 mt-3.5">
-                      {info.confirmed ? (
-                        <span className="flex-1 text-xs text-center text-primary-700 font-semibold py-1.5">
-                          ✓ 已确认
-                        </span>
-                      ) : (
-                        <>
+              return (
+                <section key={category} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-semibold text-[#4A554E]">{CATEGORY_LABELS[category]}</h4>
+                    <span className="rounded-full bg-[#F7F5F0] px-2 py-0.5 text-[10px] font-semibold text-[#709a83]">
+                      {items.length}
+                    </span>
+                  </div>
+
+                  {items.map((item, index) => (
+                    <div key={`${category}-${index}`} className="rounded-lg border bg-white p-3 shadow-sm">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="text-sm font-semibold text-primary-800">{item.label}</div>
+                          {item.body_part ? (
+                            <div className="mt-1 text-xs font-medium text-[#709a83]">{item.body_part}</div>
+                          ) : null}
+                        </div>
+                        {item.confirmed ? (
+                          <span className="text-xs font-semibold text-primary-700">已确认</span>
+                        ) : null}
+                      </div>
+
+                      {item.value ? (
+                        <div className="mt-2 text-xs font-medium text-[#4A554E]">结论：{item.value}</div>
+                      ) : null}
+                      {item.details ? (
+                        <div className="mt-1 text-xs text-[#4A554E]">{item.details}</div>
+                      ) : null}
+                      {item.source ? (
+                        <div className="mt-2 text-[11px] text-gray-400">来源：{item.source}</div>
+                      ) : null}
+
+                      <div className="mt-3 flex gap-2">
+                        {!item.confirmed && onConfirm ? (
                           <button
-                            onClick={() => onConfirm?.(info)}
-                            className="flex-1 text-xs bg-primary-100 text-primary-900 border border-primary-200/50 rounded-full py-1.5 font-semibold hover:bg-primary-200 transition-all duration-300 cursor-pointer"
+                            onClick={() => onConfirm(category, index)}
+                            className="flex-1 rounded-full border border-primary-200/50 bg-primary-100 py-1.5 text-xs font-semibold text-primary-900 transition-all duration-300 hover:bg-primary-200"
                           >
                             确认
                           </button>
+                        ) : null}
+                        {onModify ? (
                           <button
-                            onClick={() => handleEdit(i)}
-                            className="flex-1 text-xs bg-[#F7F5F0] border border-[#E5E3DF] text-[#4A554E] rounded-full py-1.5 font-semibold hover:bg-primary-50 transition-all duration-300 cursor-pointer"
+                            onClick={() => onModify(category, index, item)}
+                            className="flex-1 rounded-full border border-[#E5E3DF] bg-[#F7F5F0] py-1.5 text-xs font-semibold text-[#4A554E] transition-all duration-300 hover:bg-primary-50"
                           >
-                            修改
+                            标记
                           </button>
-                        </>
-                      )}
-                      <button
-                        onClick={() => onDelete?.(i)}
-                        className="px-3 text-xs bg-rose-50 border border-rose-200 text-rose-700 rounded-full py-1.5 font-semibold hover:bg-rose-100 transition-all duration-300 cursor-pointer"
-                      >
-                        删除
-                      </button>
+                        ) : null}
+                        {onDelete ? (
+                          <button
+                            onClick={() => onDelete(category, index)}
+                            className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition-all duration-300 hover:bg-rose-100"
+                          >
+                            删除
+                          </button>
+                        ) : null}
+                      </div>
                     </div>
-                  </>
-                )}
-              </div>
-            ))}
+                  ))}
+                </section>
+              );
+            })}
           </div>
         )}
       </div>
 
-      {/* Medical disclaimer */}
-      <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+      <div className="mt-4 rounded-lg border border-yellow-200 bg-yellow-50 p-3">
         <p className="text-xs text-yellow-800">
           本分析仅供参考，不构成医疗诊断。如存在持续疼痛或严重不适，建议前往专业医疗机构就诊。
         </p>
