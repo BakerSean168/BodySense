@@ -92,6 +92,17 @@ class TestGoldenCases:
         )
         assert wf.should_analyze(ctx.extracted_info) is True
 
+    def test_forward_head_posture_observation_prefers_initial_explanation(self):
+        """头前移观察场景：应先给初步解释，而不是默认阻塞追问。"""
+        wf = ConsultationAgentWorkflow()
+        ctx = _make_context()
+        decision = wf.decide_next_action(
+            ConsultationIntent.GENERAL_QUESTION,
+            ctx,
+            "我感觉自己好像有点头前移",
+        )
+        assert decision.action.value == "provide_info"
+
     def test_cubitus_valgus_symptom_merge(self):
         """肘外翻场景：同一部位信息可合并更新。"""
         wf = ConsultationAgentWorkflow()

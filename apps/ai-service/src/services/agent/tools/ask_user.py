@@ -93,6 +93,14 @@ def _normalize_choice_options(options: Any) -> list[str]:
     return normalized[:4]
 
 
+def _build_default_context(question: str, reason: str) -> str:
+    if isinstance(reason, str) and reason.strip():
+        return reason.strip()
+    if YES_NO_QUESTION_RE.search(question):
+        return "这能帮助我确认当前情况是否已经伴随明显不适，从而决定下一步判断重点。"
+    return "为了给出更准确的下一步判断，我需要先确认这一点。"
+
+
 async def handle_ask_user(arguments: dict[str, Any]) -> ToolResult:
     """Handle an ask_user tool call.
 
@@ -128,6 +136,11 @@ async def handle_ask_user(arguments: dict[str, Any]) -> ToolResult:
     if not isinstance(allow_custom_input, bool):
         allow_custom_input = bool(options)
 
+    reason = str(arguments.get("reason", "")).strip()
+    context = str(arguments.get("context", "")).strip() or _build_default_context(
+        question, reason
+    )
+
     # Return interrupted — the run should pause here
     return ToolResult(
         tool_call_id="",
@@ -135,12 +148,12 @@ async def handle_ask_user(arguments: dict[str, Any]) -> ToolResult:
         status=ToolStatus.INTERRUPTED,
         content={
             "question": question,
-            "reason": arguments.get("reason", ""),
+            "reason": reason,
             "answer_type": answer_type,
             "options": options,
             "allow_custom_input": allow_custom_input,
             "required": arguments.get("required", True),
-            "context": arguments.get("context", ""),
+            "context": context,
         },
     )
 

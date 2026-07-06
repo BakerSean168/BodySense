@@ -248,7 +248,7 @@ async def classify_intent(state: ConsultationState) -> dict[str, Any]:
     )
 
     intent = workflow.classify_intent(state["user_message"], context)
-    decision = workflow.decide_next_action(intent, context)
+    decision = workflow.decide_next_action(intent, context, state["user_message"])
 
     return {
         "intent": intent.value,
