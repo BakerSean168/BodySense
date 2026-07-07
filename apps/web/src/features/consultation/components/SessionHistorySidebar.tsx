@@ -14,6 +14,7 @@ import type { Conversation } from '../types/consultation';
 interface SessionHistorySidebarProps {
   conversations: Conversation[];
   activeId: string | null;
+  onPrefetch?: (id: string) => void;
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
@@ -27,6 +28,7 @@ interface SessionHistorySidebarProps {
 export function SessionHistorySidebar({
   conversations,
   activeId,
+  onPrefetch,
   onSelect,
   onNew,
   onDelete,
@@ -68,6 +70,7 @@ export function SessionHistorySidebar({
                 key={conv.id}
                 conversation={conv}
                 isActive={conv.id === activeId}
+                onPrefetch={() => onPrefetch?.(conv.id)}
                 onSelect={() => onSelect(conv.id)}
                 onDelete={() => onDelete(conv.id)}
                 onPin={(pinned) => onPin(conv.id, pinned)}
@@ -91,6 +94,7 @@ export function SessionHistorySidebar({
               key={conv.id}
               conversation={conv}
               isActive={conv.id === activeId}
+              onPrefetch={() => onPrefetch?.(conv.id)}
               onSelect={() => onSelect(conv.id)}
               onDelete={() => onDelete(conv.id)}
               onPin={(pinned) => onPin(conv.id, pinned)}
