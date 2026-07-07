@@ -9,5 +9,6 @@ export function useConsultationThreadQuery(conversationId: string | null) {
       : consultationKeys.threadEmpty(),
     queryFn: () => consultationApi.getConsultationThread(conversationId!),
     enabled: !!conversationId,
+    placeholderData: (previousData) => previousData,
   });
 }

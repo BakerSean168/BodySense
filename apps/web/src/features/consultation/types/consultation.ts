@@ -270,7 +270,7 @@ export interface PendingInteraction {
   metadata?: Record<string, unknown>;
 }
 
-export interface InteractionHistoryItem extends PendingInteraction {}
+export type InteractionHistoryItem = PendingInteraction;
 
 export interface ProjectedToolCall {
   tool_call_id: string;
