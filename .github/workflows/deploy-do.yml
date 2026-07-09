@@ -126,9 +126,35 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             svc="${{ inputs.service }}"
-            echo "web=${{ svc == 'all' || svc == 'web' }}" >> "$GITHUB_OUTPUT"
-            echo "api=${{ svc == 'all' || svc == 'api' }}" >> "$GITHUB_OUTPUT"
-            echo "ai=${{ svc == 'all' || svc == 'ai-service' }}" >> "$GITHUB_OUTPUT"
+            [ -n "$svc" ] || svc="all"
+            web=false
+            api=false
+            ai=false
+
+            case "$svc" in
+              all)
+                web=true
+                api=true
+                ai=true
+                ;;
+              web)
+                web=true
+                ;;
+              api)
+                api=true
+                ;;
+              ai-service)
+                ai=true
+                ;;
+              *)
+                echo "Unsupported service: $svc" >&2
+                exit 1
+                ;;
+            esac
+
+            echo "web=${web}" >> "$GITHUB_OUTPUT"
+            echo "api=${api}" >> "$GITHUB_OUTPUT"
+            echo "ai=${ai}" >> "$GITHUB_OUTPUT"
           else
             echo "web=${{ needs.detect-changes.outputs.web }}" >> "$GITHUB_OUTPUT"
             echo "api=${{ needs.detect-changes.outputs.api }}" >> "$GITHUB_OUTPUT"

@@ -28,8 +28,8 @@
     },
     "nx-mcp": {
       "type": "stdio",
-      "command": "pnpm",
-      "args": ["exec", "nx-mcp@0.25.0", "."]
+      "command": "npx",
+      "args": ["-y", "nx-mcp@0.25.0", "."]
     }
   }
 }
