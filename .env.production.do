@@ -35,5 +35,7 @@ ASR_PROVIDER=asr_api
 ASK_USER_ENABLED=true
 AI_SERVICE_URL=http://ai-service:8100
 
-VITE_API_BASE_URL=/api
+# VITE_API_BASE_URL intentionally unset — frontend uses empty base + full /api/v1/ paths.
+# See apps/web/src/lib/api-url.ts for the convention.
 VITE_WS_URL=wss://bodydoo.bakersean.top/ws
+CONNECT_TO_PRODUCTION_VPS=ssh DO-bodysense-deploy
