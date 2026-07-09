@@ -183,7 +183,6 @@ jobs:
             ${{ env.REGISTRY }}/bodysense-web:${{ steps.meta.outputs.tag }}
             ${{ env.REGISTRY }}/bodysense-web:prod-latest
           build-args: |
-            VITE_API_BASE_URL=/api
             NPM_REGISTRY=https://registry.npmjs.org
             BUILD_DATE=${{ steps.meta.outputs.build_date }}
             VCS_REF=${{ steps.meta.outputs.vcs_ref }}
