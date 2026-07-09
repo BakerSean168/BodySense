@@ -1,5 +1,81 @@
 # Changelog
 
+## [0.3.0](https://github.com/T1moooo/BodySense/compare/v0.2.0...v0.3.0) (2026-07-09)
+
+
+### Features
+
+* **ai,api:** add FaithfulnessPolicy, wire governance observe-only persistence ([afdf961](https://github.com/T1moooo/BodySense/commit/afdf961c850a946e4891b0eeec0ec259c862d4f6))
+* **ai,api:** wire ask_user HITL end-to-end path ([4624443](https://github.com/T1moooo/BodySense/commit/4624443f0d5653289cce62abc4be9bb0a98e0ff4))
+* **ai:** add agent orchestrator skeleton and update knowledge library policies ([5b6f460](https://github.com/T1moooo/BodySense/commit/5b6f460607dd4a372675a0992d3291f21c41fd47))
+* **ai:** add agent runtime module and update consultation tools ([6402795](https://github.com/T1moooo/BodySense/commit/6402795c3daaf197687bb29cb84581166851740d))
+* **ai:** add curated specifications and ingest pelvic, shoulder, and thoracic mobility data ([c4e32e4](https://github.com/T1moooo/BodySense/commit/c4e32e492a336b6f677cfea39c4d494c9cd2fbc7))
+* **ai:** add ingest_generated_source script to ingest raw generated packs ([8497306](https://github.com/T1moooo/BodySense/commit/849730682b5520ed9400fa406ca4b44b6204484d))
+* **ai:** enhance ask_user tool with question normalization and smart options ([212955c](https://github.com/T1moooo/BodySense/commit/212955ccde5f4d5c2f4f462a5a1c11f1ed99bb29))
+* **ai:** implement multi-provider router, circuit breaker, and unified AIService ([c2f02c8](https://github.com/T1moooo/BodySense/commit/c2f02c8e55c80a121cdf46a7c8bf72a8b9b3c4d9))
+* **ai:** support multimodal assessment and chat stream events ([e7c44f8](https://github.com/T1moooo/BodySense/commit/e7c44f8835c831517594e30a4d4f7ad1fd416d65))
+* **ai:** tighten ask_user interruption rules ([188e7fa](https://github.com/T1moooo/BodySense/commit/188e7fa85d4400e73cdf1b785b3be5c2fa97042c))
+* **api,web,ai:** add service tests, AskUserCard error state, timed_out transition ([4fd2e32](https://github.com/T1moooo/BodySense/commit/4fd2e32078336457c43cdb534335f653774183b1))
+* **api:** add assistant parts builder for structured message construction ([3cec4e4](https://github.com/T1moooo/BodySense/commit/3cec4e49e4bb7b5923ed03b780382b17cc7c6698))
+* **api:** add consultation runtime module and refactor ai_client ([94f801f](https://github.com/T1moooo/BodySense/commit/94f801fa481213b6dee62bb4d3ffa31b19e614b5))
+* **api:** add database migrations for user uploads and knowledge library ([0253042](https://github.com/T1moooo/BodySense/commit/025304237e747d809c845d55c82813dfd339dff0))
+* **api:** add knowledge publication batches, chat runtime, and job runtime enhancements ([caffc99](https://github.com/T1moooo/BodySense/commit/caffc995fe04f07c5e234a56345a35e93d0bd3bf))
+* **api:** add KnowledgePublication repository ([b41a438](https://github.com/T1moooo/BodySense/commit/b41a4388ca8a8dada7f9dc978340a15361d7409c))
+* **api:** add message metadata and improve interaction handling ([b3c418c](https://github.com/T1moooo/BodySense/commit/b3c418cc7f9668b5d41e2517b7bab6aecd0fd184))
+* **api:** converge consultation run runtime ([1b8069b](https://github.com/T1moooo/BodySense/commit/1b8069b41517f9a42f05cc1fbe0afbffb062dbfb))
+* **api:** implement database migrations, repositories, and Gin handlers for session redesign ([154dd28](https://github.com/T1moooo/BodySense/commit/154dd289e605d2ae1015fb5d1a94c079ece42071))
+* **api:** implement multimodal assessment, log adjustments, and chat SSE flow ([9ac61b6](https://github.com/T1moooo/BodySense/commit/9ac61b6e48b0d56727c2f9638adccb13e9cf9244))
+* **api:** persist structured health features ([6f0e7cf](https://github.com/T1moooo/BodySense/commit/6f0e7cf1f5fe4d4a177554c24084b862025ffcab))
+* complete ask_user runtime flow and structured health features ([af42132](https://github.com/T1moooo/BodySense/commit/af42132d335762e2f6e4877e269729d77ceaf384))
+* converge consultation run architecture ([e0aacb0](https://github.com/T1moooo/BodySense/commit/e0aacb0495e786805689a810515b2fcd28c4c825))
+* **docker:** add DigitalOcean production compose ([b286828](https://github.com/T1moooo/BodySense/commit/b286828f0294854e9417b6fc1bf486520743468b))
+* **docker:** add resource limits and logging for DO compose ([5f016e1](https://github.com/T1moooo/BodySense/commit/5f016e16f7a177467b1514757de586eb9a172859))
+* **web:** add streaming assistant turn and tool call components ([8910c0f](https://github.com/T1moooo/BodySense/commit/8910c0f1d7a4467317ffd9cf409b634fcc56d7a0))
+* **web:** consume consultation run streams ([a87b56c](https://github.com/T1moooo/BodySense/commit/a87b56cbfbab35116bdd79e56f1a9a326d6fe772))
+* **web:** enhance ConsultationPage with pending interactions and session management ([f877450](https://github.com/T1moooo/BodySense/commit/f877450869a37e7132d531cf6589c1c3ab1ddaf3))
+* **web:** extend consultation types and service for new architecture ([32bdd06](https://github.com/T1moooo/BodySense/commit/32bdd06e500326f64a9f22a11a7e596105734d47))
+* **web:** integrate @assistant-ui/react runtime, add shadcn/ui components, and redesign sidebar ([39717c7](https://github.com/T1moooo/BodySense/commit/39717c7c820c88d6edbe827d338f79d0dd039da2))
+* **web:** integrate onboarding upload, diagnostic dual-sync, and immersive timer player ([6645f19](https://github.com/T1moooo/BodySense/commit/6645f195404af6c4150b9c3f2d33e87de861990a))
+* **web:** replay ask_user interactions in thread timeline ([747845a](https://github.com/T1moooo/BodySense/commit/747845add68f89eeac0cb42dc8472c56af3ce48e))
+* **web:** surface health features in consultation panel ([251ecbf](https://github.com/T1moooo/BodySense/commit/251ecbf09e1baa6dd04ba328933935aa38582821))
+* **web:** update onboarding layouts and profile view/edit components ([47b541f](https://github.com/T1moooo/BodySense/commit/47b541f032484d86cb92ea167c1b3e7ae48a82bd))
+
+
+### Bug Fixes
+
+* **ai:** add tool call deduplication and improve interaction handling ([f937773](https://github.com/T1moooo/BodySense/commit/f937773516fa9e218c909fde341ecc9aa950fc88))
+* **ai:** pool consultation checkpointer connections ([76ae4e1](https://github.com/T1moooo/BodySense/commit/76ae4e142e8dae8d5657987ac9dd6cb8bdcc8178))
+* **ai:** prevent duplicate tool call emissions and add tool_call_id to events ([bd05fd1](https://github.com/T1moooo/BodySense/commit/bd05fd18cac29b32bcd4294babd096406ff09b17))
+* **ai:** update knowledge ingestion scripts and ASR pipeline ([5795568](https://github.com/T1moooo/BodySense/commit/57955680a7c4091465aba3470688489b628a4ac8))
+* **ai:** 修复 ruff E501 过长行报错 ([362352f](https://github.com/T1moooo/BodySense/commit/362352f5feae1b8a2b22068ec8a8c44fc00775f2))
+* **api,ai,web:** unify stream event model across Go, Python, and TypeScript ([d84103e](https://github.com/T1moooo/BodySense/commit/d84103e32e42985545ebffd64a6a63a38c65259e))
+* **api,ai:** quality fixes for tool error detection, governance output, and resume handler ([774e434](https://github.com/T1moooo/BodySense/commit/774e434e820e873ed9b8b6e22b80cddba8e59bc9))
+* **api,web:** update chat handler and remove stale package-lock.json ([ce74641](https://github.com/T1moooo/BodySense/commit/ce7464196cf46bb7fa43305c3580f977a3cff591))
+* **api,web:** wire resume to send_message flow, add ASK_USER_ENABLED feature flag ([804808e](https://github.com/T1moooo/BodySense/commit/804808e1151e12ca7862c01955a376d10e48824f))
+* **api:** add job idempotency fields, fix OCR TOCTOU race, add waiting_user status ([9dfc0a3](https://github.com/T1moooo/BodySense/commit/9dfc0a3c7c32ad42de595501aee78528fdf20ad3))
+* **api:** check and reuse existing empty consultation session ([3debc8f](https://github.com/T1moooo/BodySense/commit/3debc8f19caa7673e6d75625ea8a1416efb4841b))
+* **api:** complete implementation audit gaps ([8aa6bf1](https://github.com/T1moooo/BodySense/commit/8aa6bf10cbca134c2d85fcc19618b8d6bf07362d))
+* **api:** correct knowledge lifecycle schema gaps from 07a plan ([63043b0](https://github.com/T1moooo/BodySense/commit/63043b01eb746a788c73197b8a367064b1c7fc51))
+* **api:** support managed database TLS connections ([0f9c697](https://github.com/T1moooo/BodySense/commit/0f9c697f5a13545df0d16de9e84a2833b9eafd97))
+* **deps:** add interaction_id to stream event JSON schema ([c14a780](https://github.com/T1moooo/BodySense/commit/c14a780a97030b4b175dd58184d8750c7947ae6f))
+* make workflow checks pass ([c7b3032](https://github.com/T1moooo/BodySense/commit/c7b30327beed391a393b0891476142c6262c781c))
+* **web:** prevent duplicate session creation, fix SSE parsing and sync symptom list ([14ddd5b](https://github.com/T1moooo/BodySense/commit/14ddd5bce6769f9374453963bb521bf1c771cd0b))
+* **web:** rename Button.tsx to button.tsx to match import casing ([a82a6f4](https://github.com/T1moooo/BodySense/commit/a82a6f4f07c56c89b0e1a87a98e77ca7fe26c18a))
+* **web:** resolve CI lint failures ([80eb884](https://github.com/T1moooo/BodySense/commit/80eb88406eb1db73eb82405c81e6b62f9fdf1a2a))
+* **web:** update upload step and training page components ([b4a2566](https://github.com/T1moooo/BodySense/commit/b4a2566d1ba4342d3bf807ae70e6cf73de076d7c))
+* **web:** use PascalCase Button import to match component filename ([eabfd44](https://github.com/T1moooo/BodySense/commit/eabfd44607006dbc5649ecc08f3b4f4a0068eec5))
+* **web:** 修复 ESLint 报错 ([a39ab2e](https://github.com/T1moooo/BodySense/commit/a39ab2ee313d7f316f2453ea66828d9f0c8556e5))
+
+
+### Performance Improvements
+
+* **web:** 优化认证 store 性能 ([cee8cdc](https://github.com/T1moooo/BodySense/commit/cee8cdc2df2be05da2485723a5fd8504a00d0c3d))
+* **web:** 优化问诊工作台渲染性能 ([7932826](https://github.com/T1moooo/BodySense/commit/79328263a3884325499551702b2e96160a032df1))
+* **web:** 优化问诊线程查询 hook 性能 ([ffeeac9](https://github.com/T1moooo/BodySense/commit/ffeeac94d69baed29242406f705275059ffc0f9d))
+* **web:** 优化问诊页面渲染性能 ([26373b3](https://github.com/T1moooo/BodySense/commit/26373b39c1ac05ee6d9bb55a1cc7608826c10c35))
+* **web:** 添加懒加载和骨架屏优化架构 ([2cad847](https://github.com/T1moooo/BodySense/commit/2cad847fde340e737bf68c58d66feaebd83d8690))
+* 设置默认的新绘画语义为 `/` ， 同时保留`/new` 。 ([4841713](https://github.com/T1moooo/BodySense/commit/48417135ed07bf9e6f6bce1a36a627fa722f79ec))
+
 ## [0.2.0](https://github.com/T1moooo/BodySense/compare/v0.1.0...v0.2.0) (2026-06-23)
 
 
