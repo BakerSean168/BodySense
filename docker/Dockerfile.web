@@ -27,10 +27,7 @@ RUN pnpm add -w @rolldown/binding-linux-x64-gnu @esbuild/linux-x64 lightningcss-
 COPY . .
 
 # Build the web app (outputs to apps/web/dist/)
-# VITE_API_BASE_URL defaults to empty — frontend uses full /api/v1/ paths,
-# proxied by nginx in dev and Caddy in production.
-ARG VITE_API_BASE_URL=""
-ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+# Frontend uses apiUrl('/api/v1/...') with empty base — nginx proxies /api to Go backend.
 RUN cd apps/web && npx vite build
 
 # ── Runtime: nginx serves static files ─────────────────

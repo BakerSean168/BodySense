@@ -102,7 +102,6 @@ jobs:
         run: pnpm nx run web:build
         env:
           CI: 'true'
-          VITE_API_BASE_URL: /api
 
       - name: Resolve image tag and build metadata
         id: meta
