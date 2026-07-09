@@ -20,6 +20,7 @@ import type { Conversation } from '../types/consultation';
 interface SessionCardProps {
   conversation: Conversation;
   isActive: boolean;
+  onPrefetch?: () => void;
   onSelect: () => void;
   onDelete: () => void;
   onPin: (pinned: boolean) => void;
@@ -31,6 +32,7 @@ interface SessionCardProps {
 export function SessionCard({
   conversation,
   isActive,
+  onPrefetch,
   onSelect,
   onDelete,
   onPin,
@@ -70,11 +72,16 @@ export function SessionCard({
 
   return (
     <div
+      data-testid={`session-card-${conversation.id}`}
       className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
         isActive
           ? 'bg-primary-50 text-primary-900'
           : 'bg-gray-50 hover:bg-gray-100'
       }`}
+      onPointerEnter={() => onPrefetch?.()}
+      onPointerDown={() => onPrefetch?.()}
+      onFocus={() => onPrefetch?.()}
+      onTouchStart={() => onPrefetch?.()}
       onClick={onSelect}
     >
       <div className="flex-1 min-w-0">

@@ -277,8 +277,8 @@ class ConsultationAgentWorkflow:
                 action=AgentAction.PROVIDE_INFO,
                 confidence=0.8,
                 reasoning=(
-                    "Initial posture observation can be answered first "
-                    "without blocking follow-up."
+                    "Initial posture observation can be answered first"
+                    " without blocking follow-up."
                 ),
             )
 
@@ -289,8 +289,8 @@ class ConsultationAgentWorkflow:
                     action=AgentAction.PROVIDE_INFO,
                     confidence=0.7,
                     reasoning=(
-                        "Supplemental posture context is non-critical; "
-                        "provide initial guidance first."
+                        "Supplemental posture context is non-critical;"
+                        " provide initial guidance first."
                     ),
                 )
             return WorkflowDecision(

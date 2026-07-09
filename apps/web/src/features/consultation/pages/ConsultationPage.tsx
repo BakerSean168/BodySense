@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { Suspense, lazy, useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { AssistantChatPanel } from '../components/AssistantChatPanel';
 import { SessionHistorySidebar } from '../components/SessionHistorySidebar';
-import { InfoPanel } from '../components/InfoPanel';
-import { DiagnosisPanel } from '../components/DiagnosisPanel';
+import { SessionHistorySidebarSkeleton } from '../components/SessionHistorySidebarSkeleton';
+import { InfoPanelSkeleton } from '../components/InfoPanelSkeleton';
+import { ChatPanelSkeleton } from '../components/ChatPanelSkeleton';
 import { consultationApi } from '../services/consultationService';
 import { consultationKeys } from '../services/consultationQueryKeys';
 import { useConversationsQuery } from '../hooks/useConversationsQuery';
@@ -27,6 +27,22 @@ import { MainLayout } from '@/components/layout/MainLayout';
 
 type MobileTab = 'chat' | 'info';
 
+const AssistantChatPanel = lazy(() =>
+  import('../components/AssistantChatPanel').then((module) => ({
+    default: module.AssistantChatPanel,
+  })),
+);
+const InfoPanel = lazy(() =>
+  import('../components/InfoPanel').then((module) => ({
+    default: module.InfoPanel,
+  })),
+);
+const DiagnosisPanel = lazy(() =>
+  import('../components/DiagnosisPanel').then((module) => ({
+    default: module.DiagnosisPanel,
+  })),
+);
+
 const PHASE_LABELS: Record<ConsultationPhase, string> = {
   collecting: '问诊收集中',
   ready_for_analysis: '可生成分析',
@@ -45,42 +61,33 @@ export function ConsultationPage() {
   const routeConversationId = id && id !== 'new' ? id : null;
 
   const [chatSessionKey, setChatSessionKey] = useState<string>('new');
-  const [isPageLoading, setIsPageLoading] = useState(false);
   const justCreatedRef = useRef<string | null>(null);
   // Tracks the active conversation ID synchronously, updated before navigate().
   // Needed because SSE callbacks in the same event batch fire before React re-renders
   // with the new routeConversationId.
   const activeConversationIdRef = useRef<string | null>(null);
 
-  // Sync chatSessionKey and isPageLoading with URL id, skipping if it was just created lazily
-  useEffect(() => {
-    if (!id || id === 'new') {
-      setChatSessionKey('new');
-      setIsPageLoading(false);
-      activeConversationIdRef.current = null;
-      return;
-    }
-
-    if (justCreatedRef.current === id) {
-      // Clear the ref and skip updating key/loading to keep the active stream alive
-      justCreatedRef.current = null;
-      return;
-    }
-
-    // Navigated to a different conversation — clear the active ref
-    activeConversationIdRef.current = null;
-    setChatSessionKey(`conversation:${id}`);
-    setIsPageLoading(true);
-  }, [id]);
-
   // --- Server state via TanStack Query ---
-  const { data: conversations = [] } = useConversationsQuery();
+  const conversationsQuery = useConversationsQuery();
+  const conversations = conversationsQuery.data ?? [];
   const threadQuery = useConsultationThreadQuery(routeConversationId);
   const threadData = threadQuery.data;
-  const currentConversation = threadData?.conversation ?? null;
-  const messages = threadData?.messages ?? [];
-  const extractedInfo = threadData?.extracted_info ?? [];
-  const healthFeatures = threadData?.health_features ?? {
+  const selectedConversationSummary =
+    conversations.find((conversation) => conversation.id === routeConversationId) ?? null;
+  const displayedConversationId = routeConversationId
+    ? threadData?.conversation.id ?? null
+    : null;
+  const isThreadOutOfSync =
+    Boolean(routeConversationId) &&
+    Boolean(displayedConversationId) &&
+    displayedConversationId !== routeConversationId;
+  const isThreadSwitching = isThreadOutOfSync && threadQuery.isFetching;
+  const hasThreadSwitchError = isThreadOutOfSync && threadQuery.isError;
+  const displayedThread = routeConversationId ? threadData ?? null : null;
+  const currentConversation = displayedThread?.conversation ?? null;
+  const messages = displayedThread?.messages ?? [];
+  const extractedInfo = displayedThread?.extracted_info ?? [];
+  const healthFeatures = displayedThread?.health_features ?? {
     posture_findings: [],
     discomforts: [],
     negative_findings: [],
@@ -88,18 +95,30 @@ export function ConsultationPage() {
     red_flags: [],
     user_answers: [],
   };
-  const phase = threadData?.phase ?? 'collecting';
-  const diagnoses = threadData?.diagnosis?.diagnoses ?? [];
-  const treatmentPlan = threadData?.treatment_plan ?? null;
-  const pendingInteractions = threadData?.pending_interactions ?? [];
-  const interactionHistory = threadData?.interaction_history ?? [];
+  const phase = isThreadSwitching ? null : displayedThread?.phase ?? 'collecting';
+  const diagnoses = displayedThread?.diagnosis?.diagnoses ?? [];
+  const treatmentPlan = displayedThread?.treatment_plan ?? null;
+  const pendingInteractions = displayedThread?.pending_interactions ?? [];
+  const interactionHistory = displayedThread?.interaction_history ?? [];
 
-  // Reset isPageLoading when query completes
+  // Keep rendering the previously resolved conversation until the target thread is ready.
   useEffect(() => {
-    if (routeConversationId && !threadQuery.isPending) {
-      setIsPageLoading(false);
+    if (!displayedConversationId) {
+      setChatSessionKey('new');
+      if (!routeConversationId) {
+        activeConversationIdRef.current = null;
+      }
+      return;
     }
-  }, [threadQuery.isPending, routeConversationId]);
+
+    if (justCreatedRef.current === displayedConversationId) {
+      justCreatedRef.current = null;
+      return;
+    }
+
+    activeConversationIdRef.current = null;
+    setChatSessionKey(`conversation:${displayedConversationId}`);
+  }, [displayedConversationId, routeConversationId]);
 
   // UI state
   const [mobileTab, setMobileTab] = useState<MobileTab>('chat');
@@ -121,6 +140,32 @@ export function ConsultationPage() {
       navigate(`/consultation/${conversationId}`, { replace: true });
     },
     [navigate],
+  );
+
+  const handlePrefetchConversation = useCallback(
+    (conversationId: string) => {
+      if (!conversationId || conversationId === routeConversationId) {
+        return;
+      }
+
+      const threadQueryKey = consultationKeys.thread(conversationId);
+      const existingState = queryClient.getQueryState(threadQueryKey);
+
+      if (existingState?.fetchStatus === 'fetching') {
+        return;
+      }
+
+      if (queryClient.getQueryData(threadQueryKey)) {
+        return;
+      }
+
+      void queryClient.prefetchQuery({
+        queryKey: threadQueryKey,
+        queryFn: () => consultationApi.getConsultationThread(conversationId),
+        staleTime: 30_000,
+      });
+    },
+    [routeConversationId, queryClient],
   );
 
   const handleDeleteConversation = useCallback(
@@ -509,47 +554,20 @@ export function ConsultationPage() {
   const isGeneratingTreatment = confirmAndGenerateTreatmentMutation.isPending;
 
   // --- Loading / Error States ---
-
-  const error = threadQuery.isError ? '加载会话失败' : null;
-
-  if (isPageLoading) {
-    return (
-      <MainLayout>
-        <div className="flex items-center justify-center min-h-[400px] py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-700 mx-auto"></div>
-            <p className="mt-4 text-[#709a83] font-semibold">正在建立 AI 问诊连接...</p>
-          </div>
-        </div>
-      </MainLayout>
-    );
-  }
-
-  if (error) {
-    return (
-      <MainLayout>
-        <div className="flex items-center justify-center min-h-[400px] py-12">
-          <Card className="max-w-md w-full p-8 text-center bg-white border border-[#E5E3DF]">
-            <div className="w-16 h-16 rounded-full bg-red-50 text-[#B65E49] flex items-center justify-center mx-auto mb-4 border border-red-100">
-              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <p className="text-lg font-display font-semibold text-[#1A221E] mb-2">{error}</p>
-            <p className="text-[#4A554E] text-sm font-medium mb-6">加载您的健康咨询会话时遇到问题。</p>
-            <Button onClick={() => navigate('/dashboard')} className="w-full">
-              返回首页
-            </Button>
-          </Card>
-        </div>
-      </MainLayout>
-    );
-  }
+  const isConversationListLoading =
+    conversationsQuery.isPending && conversations.length === 0;
+  const isThreadLoading =
+    Boolean(routeConversationId) && threadQuery.isPending && !threadData;
+  const hasThreadError =
+    Boolean(routeConversationId) && threadQuery.isError && !isThreadOutOfSync;
+  const isThreadReadyForRoute = !routeConversationId || displayedConversationId === routeConversationId;
+  const displayedPhaseLabel = phase ? PHASE_LABELS[phase] : '正在切换会话';
+  const chatConversationId = displayedConversationId ?? 'new';
 
   // --- Render ---
 
   const replayedTurnSeed = buildActiveTurnSeedFromRuntimeEvents(
-    threadData?.active_turn_events ?? [],
+    displayedThread?.active_turn_events ?? [],
     pendingInteractions,
   );
   const initialTurnSeed = replayedTurnSeed;
@@ -579,7 +597,7 @@ export function ConsultationPage() {
             <div>
               <h1 className="text-xl font-display font-semibold text-[#1A221E] flex items-center gap-2">
                 智能问诊工作台
-                {currentConversation && (
+                {(currentConversation || selectedConversationSummary) && (
                   <span className="relative flex h-3 w-3">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
@@ -587,9 +605,9 @@ export function ConsultationPage() {
                 )}
               </h1>
               <p className="text-xs font-semibold text-[#709a83] uppercase tracking-wider">
-                {currentConversation ? '会话已激活' : '准备咨询'}
+                {routeConversationId || currentConversation ? '会话已激活' : '准备咨询'}
                 {' · '}
-                {PHASE_LABELS[phase]}
+                {displayedPhaseLabel}
               </p>
             </div>
           </div>
@@ -616,7 +634,7 @@ export function ConsultationPage() {
             }`}
           >
             健康特征
-            {countHealthFeatures(healthFeatures) > 0 && (
+            {countHealthFeatures(healthFeatures) > 0 && isThreadReadyForRoute && (
               <span className={`inline-flex items-center justify-center px-2 py-0.5 text-xs rounded-full ${
                 mobileTab === 'info' ? 'bg-primary-700 text-[#FBFBFA]' : 'bg-[#e2ebe5] text-primary-900'
               }`}>
@@ -630,18 +648,23 @@ export function ConsultationPage() {
         <div className="flex-1 flex min-h-0 overflow-hidden relative z-10 w-full px-3 md:px-6">
           {/* Desktop left sidebar */}
           <div className="w-64 border-r border-[#E5E3DF] flex-col min-h-0 bg-[#FBFBFA]/50 shrink-0 hidden lg:flex pr-4 py-4 md:py-6">
-            <SessionHistorySidebar
-              conversations={conversations}
-              activeId={routeConversationId}
-              onSelect={handleSelectConversation}
-              onNew={handleNewConsultation}
-              onDelete={handleDeleteConversation}
-              onDeleteAll={handleDeleteAll}
-              onPin={handlePinConversation}
-              onRename={handleRenameConversation}
-              onShare={handleShareConversation}
-              onUnshare={handleUnshareConversation}
-            />
+            {isConversationListLoading ? (
+              <SessionHistorySidebarSkeleton />
+            ) : (
+              <SessionHistorySidebar
+                conversations={conversations}
+                activeId={routeConversationId}
+                onPrefetch={handlePrefetchConversation}
+                onSelect={handleSelectConversation}
+                onNew={handleNewConsultation}
+                onDelete={handleDeleteConversation}
+                onDeleteAll={handleDeleteAll}
+                onPin={handlePinConversation}
+                onRename={handleRenameConversation}
+                onShare={handleShareConversation}
+                onUnshare={handleUnshareConversation}
+              />
+            )}
           </div>
 
           {/* Chat area */}
@@ -651,70 +674,97 @@ export function ConsultationPage() {
             }`}
           >
             <Card className="flex-1 flex flex-col overflow-hidden bg-white/95 backdrop-blur-md border border-[#E5E3DF]">
-              <AssistantChatPanel
-                key={chatSessionKey}
-                conversationId={id || 'new'}
-                onConversationCreated={(newId) => {
-                  console.debug('[SSE] ⑤ ConsultationPage.onConversationCreated 开始执行', {
-                    newId,
-                    currentRouteId: id,
-                    currentActiveRef: activeConversationIdRef.current,
-                  });
-                  // Set refs synchronously before navigate() — SSE callbacks in the same
-                  // event batch need this ID before React re-renders with the new route.
-                  justCreatedRef.current = newId;
-                  activeConversationIdRef.current = newId;
+              {hasThreadError || hasThreadSwitchError ? (
+                <div className="flex h-full items-center justify-center p-6">
+                  <Card className="max-w-md border border-[#E5E3DF] bg-white p-8 text-center shadow-none">
+                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-red-100 bg-red-50 text-[#B65E49]">
+                      <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    </div>
+                    <p className="mb-2 text-lg font-display font-semibold text-[#1A221E]">加载会话失败</p>
+                    <p className="mb-6 text-sm font-medium text-[#4A554E]">
+                      当前会话内容暂时无法加载，请稍后重试。
+                    </p>
+                    <Button
+                      onClick={() => {
+                        if (!routeConversationId) return;
+                        queryClient.invalidateQueries({
+                          queryKey: consultationKeys.thread(routeConversationId),
+                        });
+                      }}
+                      className="w-full"
+                    >
+                      重新加载
+                    </Button>
+                  </Card>
+                </div>
+              ) : isThreadLoading ? (
+                <ChatPanelSkeleton />
+              ) : (
+                <div className="relative flex h-full flex-col">
+                  <Suspense fallback={<ChatPanelSkeleton />}>
+                    <AssistantChatPanel
+                      key={chatSessionKey}
+                      conversationId={chatConversationId}
+                      onConversationCreated={(newId) => {
+                        console.debug('[SSE] ⑤ ConsultationPage.onConversationCreated 开始执行', {
+                          newId,
+                          currentRouteId: id,
+                          currentActiveRef: activeConversationIdRef.current,
+                        });
+                        justCreatedRef.current = newId;
+                        activeConversationIdRef.current = newId;
 
-                  // Optimistic insert: show the new conversation in the sidebar immediately
-                  queryClient.setQueryData<ConversationListResponse>(
-                    consultationKeys.conversations(),
-                    (old) => {
-                      if (!old) return old;
-                      const now = new Date().toISOString();
-                      return {
-                        ...old,
-                        conversations: [
-                          {
-                            id: newId,
-                            title: '',
-                            title_status: 'pending' as const,
-                            status: 'active' as const,
-                            pinned: false,
-                            pinned_at: null,
-                            default_model: null,
-                            last_message_at: now,
-                            message_count: 0,
-                            metadata: {},
-                            created_at: now,
-                            updated_at: now,
+                        queryClient.setQueryData<ConversationListResponse>(
+                          consultationKeys.conversations(),
+                          (old) => {
+                            if (!old) return old;
+                            const now = new Date().toISOString();
+                            return {
+                              ...old,
+                              conversations: [
+                                {
+                                  id: newId,
+                                  title: '',
+                                  title_status: 'pending' as const,
+                                  status: 'active' as const,
+                                  pinned: false,
+                                  pinned_at: null,
+                                  default_model: null,
+                                  last_message_at: now,
+                                  message_count: 0,
+                                  metadata: {},
+                                  created_at: now,
+                                  updated_at: now,
+                                },
+                                ...old.conversations.filter((c) => c.id !== newId),
+                              ],
+                            };
                           },
-                          ...old.conversations.filter((c) => c.id !== newId),
-                        ],
-                      };
-                    },
-                  );
+                        );
 
-                  console.debug('[SSE] ⑤ ConsultationPage.onConversationCreated → 已乐观插入缓存，准备导航', {
-                    newId,
-                    targetUrl: `/consultation/${newId}`,
-                  });
-                  // Navigate to the new conversation URL (silent, no history entry)
-                  navigate(`/consultation/${newId}`, { replace: true });
-                  console.debug('[SSE] ⑤ ConsultationPage.onConversationCreated ✅ 完成');
-                }}
-                initialMessages={toInitialThreadTimeline(
-                  historicalMessages,
-                  interactionHistory as InteractionHistoryItem[],
-                )}
-                initialActiveTurn={initialTurnSeed?.activeTurn ?? null}
-                initialExtractedInfo={extractedInfo}
-                onExtractedInfoUpdate={handleExtractedInfoUpdate}
-                onHealthFeaturesUpdate={handleHealthFeaturesUpsert}
-                onPhaseChange={handlePhaseChange}
-                onTitleGenerated={handleTitleGenerated}
-                onMessagePersisted={handleMessagePersisted}
-                onStreamFinished={handleStreamFinished}
-              />
+                        navigate(`/consultation/${newId}`, { replace: true });
+                      }}
+                      initialMessages={toInitialThreadTimeline(
+                        historicalMessages,
+                        interactionHistory as InteractionHistoryItem[],
+                      )}
+                      initialActiveTurn={initialTurnSeed?.activeTurn ?? null}
+                      initialExtractedInfo={extractedInfo}
+                      onExtractedInfoUpdate={handleExtractedInfoUpdate}
+                      onHealthFeaturesUpdate={handleHealthFeaturesUpsert}
+                      onPhaseChange={handlePhaseChange}
+                      onTitleGenerated={handleTitleGenerated}
+                      onMessagePersisted={handleMessagePersisted}
+                      onStreamFinished={handleStreamFinished}
+                    />
+                  </Suspense>
+                  {isThreadSwitching ? (
+                    <PanelTransitionOverlay label={selectedConversationSummary?.title || '正在切换会话'} />
+                  ) : null}
+                </div>
+              )}
             </Card>
           </div>
 
@@ -725,108 +775,127 @@ export function ConsultationPage() {
             }`}
           >
             <Card className="flex-1 overflow-hidden flex flex-col bg-white/95 backdrop-blur-md border border-[#E5E3DF]">
-              <div className="p-4 border-b border-[#E5E3DF] bg-[#F7F5F0]/50 flex items-center justify-between">
-                <h3 className="font-display font-semibold text-[#1A221E] flex items-center gap-2">
-                  <svg className="w-5 h-5 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  提取健康特征
-                </h3>
-                <span className="text-xs font-semibold px-2.5 py-1 bg-primary-100 text-primary-900 rounded-full border border-primary-200/50">
-                  已提取 {countHealthFeatures(healthFeatures)} 项
-                </span>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4 bg-slate-50/10 custom-scrollbar">
-                <div>
-                  <InfoPanel
-                    key={routeConversationId ?? 'draft'}
-                    healthFeatures={healthFeatures}
-                    onConfirm={async (category, index) => {
-                      if (!routeConversationId) return;
-                      try {
-                        const updated = markHealthFeatureConfirmed(healthFeatures, category, index);
-                        await handleHealthFeaturesUpdate(updated);
-                        await consultationApi.updateHealthFeatures(routeConversationId, updated);
-                      } catch {
-                        setAnalysisError('保存确认信息失败，请稍后重试');
-                        queryClient.invalidateQueries({
-                          queryKey: consultationKeys.thread(routeConversationId),
-                        });
-                      }
-                    }}
-                    onModify={(category, index, item) => {
-                      if (!routeConversationId) return;
-                      const updated = updateHealthFeature(healthFeatures, category, index, {
-                        ...item,
-                        confirmed: !item.confirmed,
-                      });
-                      handleHealthFeaturesUpdate(updated);
-
-                      consultationApi.updateHealthFeatures(routeConversationId, updated).catch(() => {
-                        setAnalysisError('保存修改失败，请稍后重试');
-                        queryClient.invalidateQueries({
-                          queryKey: consultationKeys.thread(routeConversationId),
-                        });
-                      });
-                    }}
-                    onDelete={(category, index) => {
-                      if (!routeConversationId) return;
-                      const updated = deleteHealthFeature(healthFeatures, category, index);
-                      handleHealthFeaturesUpdate(updated);
-
-                      consultationApi.updateHealthFeatures(routeConversationId, updated).catch(() => {
-                        setAnalysisError('删除失败，请稍后重试');
-                        queryClient.invalidateQueries({
-                          queryKey: consultationKeys.thread(routeConversationId),
-                        });
-                      });
-                    }}
-                  />
-                  <div className="mt-4 rounded-lg border border-[#E5E3DF] bg-white p-4">
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                      <div>
-                        <h3 className="text-sm font-semibold text-[#1A221E]">可能性分析与方案</h3>
-                        <p className="text-xs font-medium text-[#709a83]">
-                          {PHASE_LABELS[phase]} · 基于已提取信息生成诊断候选和改善方案
-                        </p>
-                      </div>
-                      {!treatmentPlan && diagnoses.length === 0 ? (
-                        <Button
-                          onClick={handleAnalyzeDiagnosis}
-                          disabled={extractedInfo.length === 0 || isAnalyzingDiagnosis}
-                          className="shrink-0 rounded-full px-4 py-2 text-xs"
-                        >
-                          {isAnalyzingDiagnosis ? '分析中...' : '生成分析'}
-                        </Button>
-                      ) : null}
-                    </div>
-                    {analysisError ? (
-                      <p className="mb-3 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
-                        {analysisError}
-                      </p>
-                    ) : null}
-                    {diagnoses.length === 0 && !treatmentPlan ? (
-                      <p className="text-xs text-gray-400">
-                        提取至少一项症状信息后，可以生成可能性分析。
-                      </p>
-                    ) : (
-                      <DiagnosisPanel
-                        diagnoses={diagnoses}
-                        citations={
-                          diagnoses.length > 0
-                            ? diagnoses[0]?.name
-                              ? undefined
-                              : undefined
-                            : undefined
-                        }
-                        treatmentPlan={treatmentPlan}
-                        onConfirmAndGenerateTreatment={handleConfirmAndGenerateTreatment}
-                        isGeneratingTreatment={isGeneratingTreatment}
-                      />
-                    )}
-                  </div>
+              {hasThreadError || hasThreadSwitchError ? (
+                <div className="flex h-full items-center justify-center p-6">
+                  <p className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                    会话详情加载失败，暂时无法展示健康特征。
+                  </p>
                 </div>
-              </div>
+              ) : isThreadLoading ? (
+                <InfoPanelSkeleton />
+              ) : (
+                <div className="relative flex h-full flex-col">
+                  <div className="p-4 border-b border-[#E5E3DF] bg-[#F7F5F0]/50 flex items-center justify-between">
+                    <h3 className="font-display font-semibold text-[#1A221E] flex items-center gap-2">
+                      <svg className="w-5 h-5 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      提取健康特征
+                    </h3>
+                    <span className="text-xs font-semibold px-2.5 py-1 bg-primary-100 text-primary-900 rounded-full border border-primary-200/50">
+                      已提取 {countHealthFeatures(healthFeatures)} 项
+                    </span>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-4 bg-slate-50/10 custom-scrollbar">
+                    <div>
+                      <Suspense fallback={<InfoPanelSkeleton />}>
+                        <InfoPanel
+                          key={routeConversationId ?? 'draft'}
+                          healthFeatures={healthFeatures}
+                          onConfirm={async (category, index) => {
+                            if (!routeConversationId) return;
+                            try {
+                              const updated = markHealthFeatureConfirmed(healthFeatures, category, index);
+                              await handleHealthFeaturesUpdate(updated);
+                              await consultationApi.updateHealthFeatures(routeConversationId, updated);
+                            } catch {
+                              setAnalysisError('保存确认信息失败，请稍后重试');
+                              queryClient.invalidateQueries({
+                                queryKey: consultationKeys.thread(routeConversationId),
+                              });
+                            }
+                          }}
+                          onModify={(category, index, item) => {
+                            if (!routeConversationId) return;
+                            const updated = updateHealthFeature(healthFeatures, category, index, {
+                              ...item,
+                              confirmed: !item.confirmed,
+                            });
+                            handleHealthFeaturesUpdate(updated);
+
+                            consultationApi.updateHealthFeatures(routeConversationId, updated).catch(() => {
+                              setAnalysisError('保存修改失败，请稍后重试');
+                              queryClient.invalidateQueries({
+                                queryKey: consultationKeys.thread(routeConversationId),
+                              });
+                            });
+                          }}
+                          onDelete={(category, index) => {
+                            if (!routeConversationId) return;
+                            const updated = deleteHealthFeature(healthFeatures, category, index);
+                            handleHealthFeaturesUpdate(updated);
+
+                            consultationApi.updateHealthFeatures(routeConversationId, updated).catch(() => {
+                              setAnalysisError('删除失败，请稍后重试');
+                              queryClient.invalidateQueries({
+                                queryKey: consultationKeys.thread(routeConversationId),
+                              });
+                            });
+                          }}
+                        />
+                      </Suspense>
+                      <div className="mt-4 rounded-lg border border-[#E5E3DF] bg-white p-4">
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                          <div>
+                            <h3 className="text-sm font-semibold text-[#1A221E]">可能性分析与方案</h3>
+                            <p className="text-xs font-medium text-[#709a83]">
+                              {displayedPhaseLabel} · 基于已提取信息生成诊断候选和改善方案
+                            </p>
+                          </div>
+                          {!treatmentPlan && diagnoses.length === 0 ? (
+                            <Button
+                              onClick={handleAnalyzeDiagnosis}
+                              disabled={extractedInfo.length === 0 || isAnalyzingDiagnosis}
+                              className="shrink-0 rounded-full px-4 py-2 text-xs"
+                            >
+                              {isAnalyzingDiagnosis ? '分析中...' : '生成分析'}
+                            </Button>
+                          ) : null}
+                        </div>
+                        {analysisError ? (
+                          <p className="mb-3 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
+                            {analysisError}
+                          </p>
+                        ) : null}
+                        <Suspense fallback={<InfoPanelSkeleton />}>
+                          {diagnoses.length === 0 && !treatmentPlan ? (
+                            <p className="text-xs text-gray-400">
+                              提取至少一项症状信息后，可以生成可能性分析。
+                            </p>
+                          ) : (
+                            <DiagnosisPanel
+                              diagnoses={diagnoses}
+                              citations={
+                                diagnoses.length > 0
+                                  ? diagnoses[0]?.name
+                                    ? undefined
+                                    : undefined
+                                  : undefined
+                              }
+                              treatmentPlan={treatmentPlan}
+                              onConfirmAndGenerateTreatment={handleConfirmAndGenerateTreatment}
+                              isGeneratingTreatment={isGeneratingTreatment}
+                            />
+                          )}
+                        </Suspense>
+                      </div>
+                    </div>
+                  </div>
+                  {isThreadSwitching ? (
+                    <PanelTransitionOverlay label={selectedConversationSummary?.title || '正在切换会话'} />
+                  ) : null}
+                </div>
+              )}
             </Card>
           </div>
         </div>
@@ -859,18 +928,23 @@ export function ConsultationPage() {
               </button>
             </div>
             <div className="flex-1 overflow-hidden">
-              <SessionHistorySidebar
-                conversations={conversations}
-                activeId={routeConversationId}
-                onSelect={handleSelectConversation}
-                onNew={handleNewConsultation}
-                onDelete={handleDeleteConversation}
-                onDeleteAll={handleDeleteAll}
-                onPin={handlePinConversation}
-                onRename={handleRenameConversation}
-                onShare={handleShareConversation}
-                onUnshare={handleUnshareConversation}
-              />
+              {isConversationListLoading ? (
+                <SessionHistorySidebarSkeleton />
+              ) : (
+                <SessionHistorySidebar
+                  conversations={conversations}
+                  activeId={routeConversationId}
+                  onPrefetch={handlePrefetchConversation}
+                  onSelect={handleSelectConversation}
+                  onNew={handleNewConsultation}
+                  onDelete={handleDeleteConversation}
+                  onDeleteAll={handleDeleteAll}
+                  onPin={handlePinConversation}
+                  onRename={handleRenameConversation}
+                  onShare={handleShareConversation}
+                  onUnshare={handleUnshareConversation}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -881,6 +955,20 @@ export function ConsultationPage() {
 
 function countHealthFeatures(healthFeatures: HealthFeatures) {
   return Object.values(healthFeatures).reduce((total, items) => total + items.length, 0);
+}
+
+function PanelTransitionOverlay({ label }: { label: string }) {
+  return (
+    <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/72 backdrop-blur-[2px]">
+      <div className="rounded-2xl border border-[#E5E3DF] bg-white/95 px-5 py-4 text-center shadow-sm">
+        <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-[#D7D4CE] border-t-primary-700" />
+        <p className="mt-3 text-sm font-semibold text-[#1A221E]">正在切换会话</p>
+        <p className="mt-1 max-w-[220px] text-xs font-medium text-[#709a83]">
+          {label}
+        </p>
+      </div>
+    </div>
+  );
 }
 
 function markHealthFeatureConfirmed(

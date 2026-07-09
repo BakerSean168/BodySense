@@ -234,7 +234,6 @@ export type {
   ConsultationSession,
   ConsultationThread,
   ConsultationPhase,
-  ExtractedInfo,
   HealthFeatures,
   Diagnosis,
   DiagnosisAnalysis,
