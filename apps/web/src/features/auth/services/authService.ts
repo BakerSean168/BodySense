@@ -1,6 +1,5 @@
 import { useAuthStore } from '@/stores/authStore';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+import { apiUrl, safeJson, extractErrorMessage } from '@/lib/api-url';
 
 interface FetchOptions extends RequestInit {
   skipAuth?: boolean;
@@ -20,7 +19,7 @@ export async function authFetch(url: string, options: FetchOptions = {}): Promis
   }
 
   // Make the request
-  let response = await fetch(`${API_BASE_URL}${url}`, fetchOptions);
+  let response = await fetch(apiUrl(url), fetchOptions);
 
   // If 401 and not skipped, try to refresh token
   if (response.status === 401 && !skipAuth) {
@@ -33,7 +32,7 @@ export async function authFetch(url: string, options: FetchOptions = {}): Promis
         ...fetchOptions.headers,
         Authorization: `Bearer ${newAccessToken}`,
       };
-      response = await fetch(`${API_BASE_URL}${url}`, fetchOptions);
+      response = await fetch(apiUrl(url), fetchOptions);
     }
   }
 
@@ -51,11 +50,10 @@ export const authApi = {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Registration failed');
+      throw new Error(await extractErrorMessage(response));
     }
 
-    return response.json();
+    return safeJson(response);
   },
 
   login: async (email: string, password: string) => {
@@ -67,11 +65,10 @@ export const authApi = {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Login failed');
+      throw new Error(await extractErrorMessage(response));
     }
 
-    return response.json();
+    return safeJson(response);
   },
 
   logout: async (refreshToken: string) => {
@@ -81,16 +78,16 @@ export const authApi = {
       body: JSON.stringify({ refresh_token: refreshToken }),
     });
 
-    return response.json();
+    return safeJson(response);
   },
 
   getMe: async () => {
     const response = await authFetch('/api/v1/me');
 
     if (!response.ok) {
-      throw new Error('Failed to fetch user');
+      throw new Error(await extractErrorMessage(response));
     }
 
-    return response.json();
+    return safeJson(response);
   },
 };

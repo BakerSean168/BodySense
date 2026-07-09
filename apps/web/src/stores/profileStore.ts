@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { authFetch } from '@/features/auth/services/authService';
 import { useAuthStore } from './authStore';
+import { safeJson, extractErrorMessage } from '@/lib/api-url';
 
 export interface UserProfile {
   id: string;
@@ -63,7 +64,7 @@ export const useProfileStore = create<ProfileState>()((set) => ({
       }
 
       // Response may be null for new users (no profile yet)
-      const profile = await response.json();
+      const profile = await safeJson<UserProfile | null>(response);
       set({ profile: profile || null, isLoading: false });
     } catch (error) {
       console.error('Failed to fetch profile:', error);
@@ -100,11 +101,10 @@ export const useProfileStore = create<ProfileState>()((set) => ({
       }
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update profile');
+        throw new Error(await extractErrorMessage(response));
       }
 
-      const profile = await response.json();
+      const profile = await safeJson<UserProfile>(response);
       set({ profile, isLoading: false });
     } catch (error) {
       set({

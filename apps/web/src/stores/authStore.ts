@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { apiUrl, safeJson } from '@/lib/api-url';
 
 interface User {
   id: string;
@@ -30,8 +31,6 @@ interface AuthState {
   clearError: () => void;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-
 // Lock to prevent concurrent refresh token requests.
 // Without this, two concurrent 401s would both call /refresh,
 // and the second one would fail (token already consumed), logging the user out.
@@ -61,7 +60,7 @@ async function doRefresh(
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+    const response = await fetch(apiUrl('/api/v1/auth/refresh'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token: refreshToken }),
@@ -73,7 +72,7 @@ async function doRefresh(
       return false;
     }
 
-    const data = await response.json();
+    const data = await safeJson<{ access_token: string; refresh_token: string }>(response);
 
     set({
       accessToken: data.access_token,
@@ -123,16 +122,22 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+          const response = await fetch(apiUrl('/api/v1/auth/login'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password }),
           });
 
-          const data = await response.json();
+          const data = await safeJson<{
+            message?: string;
+            access_token?: string;
+            refresh_token?: string;
+          }>(response);
 
           if (!response.ok) {
-            throw new Error(data.message || 'Login failed');
+            throw new Error(
+              (typeof data === 'object' && data?.message) || 'Login failed',
+            );
           }
 
           set({
@@ -160,16 +165,22 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
+          const response = await fetch(apiUrl('/api/v1/auth/register'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password }),
           });
 
-          const data = await response.json();
+          const data = await safeJson<{
+            message?: string;
+            access_token?: string;
+            refresh_token?: string;
+          }>(response);
 
           if (!response.ok) {
-            throw new Error(data.message || 'Registration failed');
+            throw new Error(
+              (typeof data === 'object' && data?.message) || 'Registration failed',
+            );
           }
 
           set({
@@ -198,7 +209,7 @@ export const useAuthStore = create<AuthState>()(
 
         // Call logout endpoint to invalidate refresh token
         if (refreshToken) {
-          fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
+          fetch(apiUrl('/api/v1/auth/logout'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ refresh_token: refreshToken }),
@@ -225,7 +236,7 @@ export const useAuthStore = create<AuthState>()(
           set({ isVerifyingSession: true, error: null });
 
           const requestMe = async (token: string) =>
-            fetch(`${API_BASE_URL}/api/v1/me`, {
+            fetch(apiUrl('/api/v1/me'), {
               headers: {
                 Authorization: `Bearer ${token}`,
               },
@@ -251,7 +262,7 @@ export const useAuthStore = create<AuthState>()(
               return false;
             }
 
-            const user = (await response.json()) as User;
+            const user = (await safeJson<User>(response));
             set({
               user,
               isAuthenticated: true,
@@ -292,14 +303,14 @@ export const useAuthStore = create<AuthState>()(
         if (!accessToken) return;
 
         try {
-          const response = await fetch(`${API_BASE_URL}/api/v1/me`, {
+          const response = await fetch(apiUrl('/api/v1/me'), {
             headers: {
               Authorization: `Bearer ${accessToken}`,
             },
           });
 
           if (response.ok) {
-            const user = await response.json();
+            const user = await safeJson<User>(response);
             set({ user, isAuthResolved: true });
           }
         } catch (error) {

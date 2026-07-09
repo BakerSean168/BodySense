@@ -1,4 +1,5 @@
 import { authFetch } from '@/features/auth/services/authService';
+import { safeJson } from '@/lib/api-url';
 
 export interface TrainingPlan {
   id: string;
@@ -69,26 +70,26 @@ export const trainingApi = {
       body: JSON.stringify(params),
     });
     if (!response.ok) throw new Error('Failed to generate plan');
-    return response.json();
+    return safeJson(response);
   },
 
   getPlan: async (id: string): Promise<TrainingPlan> => {
     const response = await authFetch(`/api/v1/training/${id}`);
     if (!response.ok) throw new Error('Failed to get plan');
-    return response.json();
+    return safeJson(response);
   },
 
   listPlans: async (): Promise<TrainingPlan[]> => {
     const response = await authFetch('/api/v1/training');
     if (!response.ok) throw new Error('Failed to list plans');
-    const data = await response.json();
+    const data = await safeJson<{ plans: TrainingPlan[] }>(response);
     return data.plans;
   },
 
   getTodayTask: async (planId: string): Promise<TrainingLog> => {
     const response = await authFetch(`/api/v1/training/${planId}/today`);
     if (!response.ok) throw new Error('Failed to get today task');
-    return response.json();
+    return safeJson(response);
   },
 
   checkIn: async (planId: string): Promise<void> => {
@@ -109,7 +110,7 @@ export const trainingApi = {
       body: JSON.stringify({ notes, exercises }),
     });
     if (!response.ok) throw new Error('Failed to update log');
-    return response.json();
+    return safeJson(response);
   },
 
   updatePlanPhases: async (
@@ -127,7 +128,7 @@ export const trainingApi = {
   getProgress: async (planId: string): Promise<TrainingProgress> => {
     const response = await authFetch(`/api/v1/training/${planId}/progress`);
     if (!response.ok) throw new Error('Failed to get progress');
-    return response.json();
+    return safeJson(response);
   },
 
   submitReassessment: async (
@@ -140,6 +141,6 @@ export const trainingApi = {
       body: JSON.stringify({ feedback }),
     });
     if (!response.ok) throw new Error('Failed to submit reassessment');
-    return response.json();
+    return safeJson(response);
   },
 };
