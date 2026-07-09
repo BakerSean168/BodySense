@@ -25,21 +25,21 @@ export function RegisterForm() {
     } = {};
 
     if (!email) {
-      errors.email = 'Email is required';
+      errors.email = '请输入邮箱地址';
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-      errors.email = 'Invalid email format';
+      errors.email = '邮箱格式不正确';
     }
 
     if (!password) {
-      errors.password = 'Password is required';
+      errors.password = '请输入密码';
     } else if (password.length < 8) {
-      errors.password = 'Password must be at least 8 characters';
+      errors.password = '密码长度不能少于 8 位';
     }
 
     if (!confirmPassword) {
-      errors.confirmPassword = 'Please confirm your password';
+      errors.confirmPassword = '请确认密码';
     } else if (password !== confirmPassword) {
-      errors.confirmPassword = 'Passwords do not match';
+      errors.confirmPassword = '两次密码输入不一致';
     }
 
     setValidationErrors(errors);
@@ -65,7 +65,7 @@ export function RegisterForm() {
       <Input
         id="email"
         type="email"
-        label="Email address"
+        label="邮箱地址"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         placeholder="your@email.com"
@@ -76,21 +76,21 @@ export function RegisterForm() {
         <Input
           id="password"
           type="password"
-          label="Password"
+          label="密码"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"
           error={validationErrors.password}
         />
         {!validationErrors.password && (
-          <p className="ml-1 text-xs text-slate-500">Must be at least 8 characters</p>
+          <p className="ml-1 text-xs text-slate-500">至少 8 个字符</p>
         )}
       </div>
 
       <Input
         id="confirmPassword"
         type="password"
-        label="Confirm Password"
+        label="确认密码"
         value={confirmPassword}
         onChange={(e) => setConfirmPassword(e.target.value)}
         placeholder="••••••••"
@@ -109,7 +109,7 @@ export function RegisterForm() {
         className="w-full mt-2"
         size="lg"
       >
-        Create account
+        创建账号
       </Button>
     </form>
   );

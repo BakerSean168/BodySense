@@ -136,7 +136,7 @@ export const useAuthStore = create<AuthState>()(
 
           if (!response.ok) {
             throw new Error(
-              (typeof data === 'object' && data?.message) || 'Login failed',
+              (typeof data === 'object' && data?.message) || '登录失败',
             );
           }
 
@@ -155,7 +155,7 @@ export const useAuthStore = create<AuthState>()(
         } catch (error) {
           set({
             isLoading: false,
-            error: error instanceof Error ? error.message : 'Login failed',
+            error: error instanceof Error ? error.message : '登录失败',
           });
           throw error;
         }
@@ -179,7 +179,7 @@ export const useAuthStore = create<AuthState>()(
 
           if (!response.ok) {
             throw new Error(
-              (typeof data === 'object' && data?.message) || 'Registration failed',
+              (typeof data === 'object' && data?.message) || '注册失败',
             );
           }
 
@@ -198,7 +198,7 @@ export const useAuthStore = create<AuthState>()(
         } catch (error) {
           set({
             isLoading: false,
-            error: error instanceof Error ? error.message : 'Registration failed',
+            error: error instanceof Error ? error.message : '注册失败',
           });
           throw error;
         }
