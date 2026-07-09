@@ -59,7 +59,7 @@ class AIService:
                 self._router.trip_breaker(candidate.provider, candidate.model)
                 last_error = e
                 continue
-            except ProviderError as e:
+            except (ProviderError, NoAvailableProviderError) as e:
                 # Only trip breaker for rate limit; config errors (400/401) are not retryable
                 last_error = e
                 continue
@@ -91,7 +91,7 @@ class AIService:
                 self._router.trip_breaker(candidate.provider, candidate.model)
                 last_error = e
                 continue
-            except ProviderError as e:
+            except (ProviderError, NoAvailableProviderError) as e:
                 # Only trip breaker for rate limit; config errors (400/401) are not retryable
                 last_error = e
                 continue
