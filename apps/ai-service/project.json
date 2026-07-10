@@ -30,6 +30,14 @@
         "command": "uv run pytest --cov=src --cov-report=term-missing"
       }
     },
+    "eval": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "cwd": "apps/ai-service",
+        "command": "uv run python scripts/run_consultation_eval.py"
+      }
+    },
     "lint": {
       "executor": "nx:run-commands",
       "cache": true,
