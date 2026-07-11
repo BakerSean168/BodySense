@@ -20,9 +20,10 @@ import (
 )
 
 const (
-	MaxFileSize = 10 << 20 // 10MB
-	UploadDir   = "uploads"
-	ocrJobType  = "upload.ocr_extract"
+	MaxFileSize    = 10 << 20 // 10MB
+	UploadDir      = "uploads"
+	ocrJobType     = "upload.ocr_extract"
+	postureJobType = "upload.posture_analyze"
 )
 
 // Allowed file types
@@ -134,18 +135,27 @@ func (s *UploadService) UploadFile(ctx context.Context, userID uuid.UUID, file *
 		return nil, fmt.Errorf("failed to save file: %w", err)
 	}
 
-	// Create database record
+	// Create database record. Photo uploads start their posture analysis in a
+	// 'pending' state (an async job will pick it up); reports/other types keep
+	// the default 'none'.
+	analysisStatus := "none"
+	switch fileType {
+	case "photo_front", "photo_side", "photo_back":
+		analysisStatus = "pending"
+	}
+
 	upload := &model.UserUpload{
-		ID:           uuid.New(),
-		UserID:       userID,
-		FileType:     fileType,
-		OriginalName: file.Filename,
-		FilePath:     filePath,
-		FileSize:     file.Size,
-		MimeType:     mimeType,
-		OCRStatus:    "pending",
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+		ID:             uuid.New(),
+		UserID:         userID,
+		FileType:       fileType,
+		OriginalName:   file.Filename,
+		FilePath:       filePath,
+		FileSize:       file.Size,
+		MimeType:       mimeType,
+		OCRStatus:      "pending",
+		AnalysisStatus: analysisStatus,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
 	}
 
 	if err := s.uploadRepo.Create(ctx, upload); err != nil {
@@ -154,10 +164,17 @@ func (s *UploadService) UploadFile(ctx context.Context, userID uuid.UUID, file *
 		return nil, fmt.Errorf("failed to save upload record: %w", err)
 	}
 
-	// Trigger OCR via JobRuntime for reports
-	if fileType == "report" {
+	// Trigger async AI processing based on file type. Reports go through OCR;
+	// posture photos go through the vision analysis pipeline. Both reuse the
+	// recoverable, idempotent JobRuntime pattern.
+	switch fileType {
+	case "report":
 		if _, _, err := s.enqueueOCRJob(ctx, upload.ID, userID, filePath, mimeType); err != nil {
 			log.Printf("failed to enqueue OCR job for upload %s: %v", upload.ID, err)
+		}
+	case "photo_front", "photo_side", "photo_back":
+		if _, _, err := s.enqueuePostureJob(ctx, upload.ID, userID, filePath, mimeType, fileType); err != nil {
+			log.Printf("failed to enqueue posture job for upload %s: %v", upload.ID, err)
 		}
 	}
 
@@ -259,15 +276,17 @@ type ocrJobInput struct {
 	MimeType string `json:"mime_type"`
 }
 
-// StartOCRWorker starts a background worker that recovers and processes OCR jobs.
-func (s *UploadService) StartOCRWorker(ctx context.Context, pollInterval, staleRunningAfter time.Duration) {
+// StartUploadWorker starts a background worker that recovers and processes
+// both OCR and posture-analysis jobs. It replaces the OCR-only worker so a
+// single loop drives every upload-derived AI job type.
+func (s *UploadService) StartUploadWorker(ctx context.Context, pollInterval, staleRunningAfter time.Duration) {
 	go func() {
 		ticker := time.NewTicker(pollInterval)
 		defer ticker.Stop()
 
 		for {
-			if _, err := s.RecoverOCRJobs(ctx, 10, staleRunningAfter); err != nil {
-				log.Printf("OCR job recovery failed: %v", err)
+			if _, err := s.RecoverUploadJobs(ctx, 10, staleRunningAfter); err != nil {
+				log.Printf("upload job recovery failed: %v", err)
 			}
 
 			select {
@@ -279,29 +298,48 @@ func (s *UploadService) StartOCRWorker(ctx context.Context, pollInterval, staleR
 	}()
 }
 
-// RecoverOCRJobs processes pending OCR jobs and times out stale running jobs.
-func (s *UploadService) RecoverOCRJobs(ctx context.Context, limit int, staleRunningAfter time.Duration) (int, error) {
+// uploadJobType describes how a recoverable upload job is processed and timed
+// out. Adding a new upload-derived AI job type is a matter of registering one
+// entry here.
+type uploadJobType struct {
+	name    string
+	process func(ctx context.Context, job model.Job) error
+	timeout func(ctx context.Context, job model.Job) error
+}
+
+func (s *UploadService) uploadJobTypes() []uploadJobType {
+	return []uploadJobType{
+		{name: ocrJobType, process: s.processOCRJob, timeout: s.timeoutOCRJob},
+		{name: postureJobType, process: s.processPostureJob, timeout: s.timeoutPostureJob},
+	}
+}
+
+// RecoverUploadJobs processes pending jobs and times out stale running jobs
+// across every registered upload job type.
+func (s *UploadService) RecoverUploadJobs(ctx context.Context, limit int, staleRunningAfter time.Duration) (int, error) {
 	if s.jobRuntime == nil {
 		return 0, nil
 	}
-	jobs, err := s.jobRuntime.ListRecoverable(ctx, ocrJobType, staleRunningAfter, limit)
-	if err != nil {
-		return 0, err
-	}
 
 	processed := 0
-	for _, job := range jobs {
-		switch job.Status {
-		case "pending":
-			if err := s.processOCRJob(ctx, job); err != nil {
-				log.Printf("failed to process OCR job %s: %v", job.ID, err)
+	for _, jt := range s.uploadJobTypes() {
+		jobs, err := s.jobRuntime.ListRecoverable(ctx, jt.name, staleRunningAfter, limit)
+		if err != nil {
+			return processed, err
+		}
+		for _, job := range jobs {
+			switch job.Status {
+			case "pending":
+				if err := jt.process(ctx, job); err != nil {
+					log.Printf("failed to process %s job %s: %v", jt.name, job.ID, err)
+				}
+				processed++
+			case "running":
+				if err := jt.timeout(ctx, job); err != nil {
+					log.Printf("failed to timeout stale %s job %s: %v", jt.name, job.ID, err)
+				}
+				processed++
 			}
-			processed++
-		case "running":
-			if err := s.timeoutOCRJob(ctx, job); err != nil {
-				log.Printf("failed to timeout stale OCR job %s: %v", job.ID, err)
-			}
-			processed++
 		}
 	}
 	return processed, nil
@@ -378,4 +416,159 @@ func parseOCRJobInput(job model.Job) (ocrJobInput, error) {
 		return input, fmt.Errorf("OCR job input missing required fields")
 	}
 	return input, nil
+}
+
+// ---------------------------------------------------------------------------
+// Posture analysis pipeline (mirrors the OCR pipeline above)
+// ---------------------------------------------------------------------------
+
+type postureJobInput struct {
+	UploadID string `json:"upload_id"`
+	FilePath string `json:"file_path"`
+	MimeType string `json:"mime_type"`
+	View     string `json:"view"` // "front" | "side" | "back"
+}
+
+// photoTypeToView maps the upload file_type to the analysis view sent to the
+// AI service.
+var photoTypeToView = map[string]string{
+	"photo_front": "front",
+	"photo_side":  "side",
+	"photo_back":  "back",
+}
+
+// executePostureCall sends a photo to the AI service posture endpoint together
+// with its view and returns the raw response body.
+func (s *UploadService) executePostureCall(filePath, mimeType, view string) ([]byte, error) {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	if err := writer.WriteField("view", view); err != nil {
+		return nil, fmt.Errorf("failed to write view field: %w", err)
+	}
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file: %w", err)
+	}
+	defer file.Close()
+
+	part, err := writer.CreatePart(map[string][]string{
+		"Content-Disposition": {fmt.Sprintf(`form-data; name="file"; filename="%s"`, filepath.Base(filePath))},
+		"Content-Type":        {mimeType},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create form part: %w", err)
+	}
+
+	if _, err = io.Copy(part, file); err != nil {
+		return nil, fmt.Errorf("failed to copy file content: %w", err)
+	}
+	writer.Close()
+
+	resp, err := http.Post(
+		s.aiServiceURL+"/api/posture/analyze",
+		writer.FormDataContentType(),
+		body,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to AI service: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read posture response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("posture service returned status %d", resp.StatusCode)
+	}
+
+	return respBody, nil
+}
+
+func (s *UploadService) enqueuePostureJob(ctx context.Context, uploadID, userID uuid.UUID, filePath, mimeType, fileType string) (*model.Job, bool, error) {
+	view, ok := photoTypeToView[fileType]
+	if !ok {
+		return nil, false, fmt.Errorf("unsupported photo file_type: %s", fileType)
+	}
+
+	idempotencyKey := fmt.Sprintf("posture_analyze:%s", uploadID.String())
+	inputJSON, _ := json.Marshal(postureJobInput{
+		UploadID: uploadID.String(),
+		FilePath: filePath,
+		MimeType: mimeType,
+		View:     view,
+	})
+
+	job, existed, err := s.jobRuntime.CreateJobWithIdempotency(ctx, userID, postureJobType, inputJSON, idempotencyKey, nil, nil)
+	if err != nil {
+		return nil, false, err
+	}
+	return job, existed, nil
+}
+
+func (s *UploadService) processPostureJob(ctx context.Context, job model.Job) error {
+	input, err := parsePostureJobInput(job)
+	if err != nil {
+		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": err.Error()})
+		return err
+	}
+
+	uploadID, err := uuid.Parse(input.UploadID)
+	if err != nil {
+		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": "invalid upload_id"})
+		return fmt.Errorf("invalid upload_id: %w", err)
+	}
+
+	if err := s.jobRuntime.TransitionTo(ctx, job.ID, "running", nil, nil); err != nil {
+		return fmt.Errorf("start posture job: %w", err)
+	}
+	_ = s.jobRuntime.UpdateProgress(ctx, job.ID, map[string]any{"stage": "posture_analyzing", "percent": 10})
+	_ = s.uploadRepo.UpdateAnalysisStatus(ctx, uploadID, job.UserID, "processing")
+
+	respBody, err := s.executePostureCall(input.FilePath, input.MimeType, input.View)
+	if err != nil {
+		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": err.Error()})
+		errPayload, _ := json.Marshal(map[string]string{"error": err.Error()})
+		_ = s.uploadRepo.UpdateAnalysisResult(ctx, uploadID, job.UserID, "failed", errPayload)
+		return err
+	}
+
+	_ = s.jobRuntime.UpdateProgress(ctx, job.ID, map[string]any{"stage": "posture_completed", "percent": 100})
+	_ = s.jobRuntime.TransitionTo(ctx, job.ID, "completed", json.RawMessage(respBody), nil)
+	_ = s.uploadRepo.UpdateAnalysisResult(ctx, uploadID, job.UserID, "completed", respBody)
+	return nil
+}
+
+func (s *UploadService) timeoutPostureJob(ctx context.Context, job model.Job) error {
+	input, err := parsePostureJobInput(job)
+	if err != nil {
+		return s.jobRuntime.TransitionTo(ctx, job.ID, "timed_out", nil, map[string]string{"error": err.Error()})
+	}
+	if err := s.jobRuntime.TransitionTo(ctx, job.ID, "timed_out", nil, map[string]string{"error": "stale posture job timed out"}); err != nil {
+		return err
+	}
+	if uploadID, parseErr := uuid.Parse(input.UploadID); parseErr == nil {
+		_ = s.uploadRepo.UpdateAnalysisResult(ctx, uploadID, job.UserID, "failed", json.RawMessage(`{"error":"stale posture job timed out"}`))
+	}
+	return nil
+}
+
+func parsePostureJobInput(job model.Job) (postureJobInput, error) {
+	var input postureJobInput
+	if err := json.Unmarshal(job.Input, &input); err != nil {
+		return input, fmt.Errorf("parse posture job input: %w", err)
+	}
+	if input.UploadID == "" || input.FilePath == "" || input.MimeType == "" || input.View == "" {
+		return input, fmt.Errorf("posture job input missing required fields")
+	}
+	return input, nil
+}
+
+// GetPostureAnalyses returns the user's completed three-view posture analyses.
+// Used by the profile summary and (Phase 3-B1) the consultation Agent tool.
+func (s *UploadService) GetPostureAnalyses(ctx context.Context, userID uuid.UUID) ([]model.UserUpload, error) {
+	return s.uploadRepo.GetLatestPostureAnalyses(ctx, userID)
 }

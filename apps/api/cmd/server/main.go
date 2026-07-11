@@ -69,7 +69,7 @@ func main() {
 	jobRepo := repository.NewJobRepository(database.DB)
 	jobRuntime := service.NewJobRuntime(jobRepo)
 	uploadService := service.NewUploadService(uploadRepo, jobRuntime)
-	uploadService.StartOCRWorker(context.Background(), 10*time.Second, 10*time.Minute)
+	uploadService.StartUploadWorker(context.Background(), 10*time.Second, 10*time.Minute)
 	aiClient := service.NewAIClient()
 	messageService := service.NewMessageService(messageRepo)
 	runService := service.NewRunService(runRepo)
