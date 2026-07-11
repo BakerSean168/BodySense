@@ -18,8 +18,13 @@ type UserUpload struct {
 	MimeType     string          `gorm:"type:varchar(100);not null" json:"mime_type"`
 	OCRResult    json.RawMessage `gorm:"type:jsonb" json:"ocr_result,omitempty"`
 	OCRStatus    string          `gorm:"type:varchar(20);not null;default:'pending'" json:"ocr_status"`
-	CreatedAt    time.Time       `gorm:"not null;default:now()" json:"created_at"`
-	UpdatedAt    time.Time       `gorm:"not null;default:now()" json:"updated_at"`
+	// AnalysisResult holds the structured posture-analysis payload for photo
+	// uploads (see docs/plan/active/posture-photo-analysis-plan.md §3). It is
+	// deliberately separate from OCRResult, which is report-specific.
+	AnalysisResult json.RawMessage `gorm:"type:jsonb" json:"analysis_result,omitempty"`
+	AnalysisStatus string          `gorm:"type:varchar(20);not null;default:'none'" json:"analysis_status"`
+	CreatedAt      time.Time       `gorm:"not null;default:now()" json:"created_at"`
+	UpdatedAt      time.Time       `gorm:"not null;default:now()" json:"updated_at"`
 }
 
 // TableName specifies the table name for GORM.

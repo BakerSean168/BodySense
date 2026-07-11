@@ -28,6 +28,7 @@ from .api.routes import (  # noqa: E402
     diagnosis,
     knowledge,
     ocr,
+    posture,
     reassessment,
     runtime,
     title,
@@ -59,6 +60,7 @@ app.add_middleware(
 # Include routers
 app.include_router(knowledge.router)
 app.include_router(ocr.router)
+app.include_router(posture.router)
 app.include_router(runtime.router)
 app.include_router(assessment.router)
 app.include_router(diagnosis.router)

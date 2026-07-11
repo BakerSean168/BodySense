@@ -1,7 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { useUploadStore } from '@/stores/uploadStore';
-import type { FileType } from '../../../types/upload.types';
-import { FILE_TYPE_LABELS } from '../../../types/upload.types';
+import type { AnalysisStatus, FileType, PostureAnalysis } from '../../../types/upload.types';
+import { FILE_TYPE_LABELS, SEVERITY_LABELS } from '../../../types/upload.types';
+import { PostureAnalysisView } from '../../uploads/PostureAnalysisView';
+
+const ANALYSIS_BADGE: Record<AnalysisStatus, { text: string; className: string }> = {
+  none: { text: '未分析', className: 'bg-slate-100 text-slate-600' },
+  pending: { text: '等待分析', className: 'bg-slate-100 text-slate-600' },
+  processing: { text: 'AI 分析中', className: 'bg-amber-50 text-amber-700 border border-amber-150 animate-pulse' },
+  completed: { text: '分析完成', className: 'bg-emerald-50 text-emerald-700 border border-emerald-150' },
+  failed: { text: '分析失败', className: 'bg-rose-50 text-rose-700 border border-rose-150' },
+};
 
 export function UploadStep() {
   const { uploads, fetchUploads, uploadFile, deleteUpload } = useUploadStore();
@@ -18,6 +27,22 @@ export function UploadStep() {
   useEffect(() => {
     fetchUploads();
   }, [fetchUploads]);
+
+  // Posture analysis runs as an async job; poll while any photo is still
+  // pending/processing, and stop once everything settles.
+  const hasInFlightAnalysis = uploads.some(
+    (u) =>
+      u.file_type.startsWith('photo_') &&
+      (u.analysis_status === 'pending' || u.analysis_status === 'processing'),
+  );
+
+  useEffect(() => {
+    if (!hasInFlightAnalysis) return;
+    const timer = setInterval(() => {
+      fetchUploads();
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [hasInFlightAnalysis, fetchUploads]);
 
   // Find files by type
   const getPhotoByType = (type: FileType) => {
@@ -79,8 +104,8 @@ export function UploadStep() {
         </div>
 
         {photo ? (
-          <div className="mt-4 flex-1 flex flex-col justify-end">
-            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg p-2.5 flex items-center justify-between text-xs font-medium">
+          <div className="mt-4 flex-1 flex flex-col justify-end space-y-2">
+            <div className="bg-white border border-slate-200 text-slate-700 rounded-lg p-2.5 flex items-center justify-between text-xs font-medium">
               <div className="flex items-center space-x-2 truncate">
                 <svg className="w-4.5 h-4.5 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -97,6 +122,33 @@ export function UploadStep() {
                 </svg>
               </button>
             </div>
+
+            {(() => {
+              const status = (photo.analysis_status ?? 'none') as AnalysisStatus;
+              const badge = ANALYSIS_BADGE[status];
+              const findings = photo.analysis_result?.findings ?? [];
+              return (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-semibold tracking-wider uppercase ${badge.className}`}
+                  >
+                    {badge.text}
+                  </span>
+                  {status === 'completed' &&
+                    findings.slice(0, 2).map((f) => (
+                      <span
+                        key={f.key}
+                        className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-medium"
+                      >
+                        {f.label}·{SEVERITY_LABELS[f.severity] ?? f.severity}
+                      </span>
+                    ))}
+                  {status === 'completed' && findings.length === 0 && (
+                    <span className="text-[10px] text-slate-400">未见明显偏差</span>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         ) : (
           <div className="mt-4 flex-1 flex flex-col justify-end">
@@ -129,12 +181,24 @@ export function UploadStep() {
   const reports = getReports();
   const isUploadingReport = uploadingTypes['report'];
 
+  // Completed per-view posture analyses, ordered front → side → back.
+  const postureAnalyses: PostureAnalysis[] = (['photo_front', 'photo_side', 'photo_back'] as const)
+    .map((t) => getPhotoByType(t))
+    .filter(
+      (u): u is NonNullable<typeof u> =>
+        !!u && u.analysis_status === 'completed' && !!u.analysis_result,
+    )
+    .map((u) => u.analysis_result as PostureAnalysis);
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-bold text-slate-900">材料上传 (可选)</h2>
         <p className="text-sm text-slate-500 mt-1 leading-relaxed">
-          上传您的体态照片，AI 会通过多模态视觉进行精准骨骼重心分析；上传体检报告，我们将自动识别微量元素等影响体态康复的指标。
+          上传您的体态照片，AI 会通过多模态视觉进行体态分析（如头前移、高低肩等倾向）；上传体检报告，我们将自动识别微量元素等影响体态康复的指标。
+        </p>
+        <p className="text-[11px] text-slate-400 mt-1">
+          注：AI 分析基于照片视觉判断，仅供参考，不构成医疗诊断。
         </p>
       </div>
 
@@ -155,6 +219,12 @@ export function UploadStep() {
           {renderPhotoSlot('photo_side', FILE_TYPE_LABELS.photo_side, '请双手自然下垂拍摄侧面全身照，展示头部和耳垂重心。')}
           {renderPhotoSlot('photo_back', FILE_TYPE_LABELS.photo_back, '请放松站立拍摄背面全身照，观察两肩和肩胛骨对称度。')}
         </div>
+
+        {postureAnalyses.length > 0 && (
+          <div className="mt-4">
+            <PostureAnalysisView analyses={postureAnalyses} />
+          </div>
+        )}
       </div>
 
       {/* Health Reports Section */}
