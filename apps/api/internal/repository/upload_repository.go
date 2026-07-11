@@ -83,3 +83,44 @@ func (r *UploadRepository) UpdateOCRStatus(ctx context.Context, id, userID uuid.
 			"updated_at": gorm.Expr("NOW()"),
 		}).Error
 }
+
+// UpdateAnalysisStatus updates only the posture-analysis status for an upload
+// with ownership check.
+func (r *UploadRepository) UpdateAnalysisStatus(ctx context.Context, id, userID uuid.UUID, status string) error {
+	return r.db.WithContext(ctx).
+		Model(&model.UserUpload{}).
+		Where("id = ? AND user_id = ?", id, userID).
+		Updates(map[string]interface{}{
+			"analysis_status": status,
+			"updated_at":      gorm.Expr("NOW()"),
+		}).Error
+}
+
+// UpdateAnalysisResult updates the posture-analysis result and status for an
+// upload with ownership check.
+func (r *UploadRepository) UpdateAnalysisResult(ctx context.Context, id, userID uuid.UUID, status string, result json.RawMessage) error {
+	return r.db.WithContext(ctx).
+		Model(&model.UserUpload{}).
+		Where("id = ? AND user_id = ?", id, userID).
+		Updates(map[string]interface{}{
+			"analysis_status": status,
+			"analysis_result": result,
+			"updated_at":      gorm.Expr("NOW()"),
+		}).Error
+}
+
+// GetLatestPostureAnalyses returns the user's completed three-view posture
+// analyses (front/side/back), newest first. Used by the consultation Agent
+// tool and profile summary. Returns only the caller's own rows.
+func (r *UploadRepository) GetLatestPostureAnalyses(ctx context.Context, userID uuid.UUID) ([]model.UserUpload, error) {
+	var uploads []model.UserUpload
+	err := r.db.WithContext(ctx).
+		Where("user_id = ? AND file_type IN ? AND analysis_status = ?",
+			userID, []string{"photo_front", "photo_side", "photo_back"}, "completed").
+		Order("created_at DESC").
+		Find(&uploads).Error
+	if err != nil {
+		return nil, err
+	}
+	return uploads, nil
+}
