@@ -1,7 +1,8 @@
 # 体态照片 AI 分析 — 实施流程与任务拆分
 
-> 待实施（2026-07-10）。基于 [posture-photo-analysis-plan.md](./posture-photo-analysis-plan.md) 生成，聚焦可直接执行的逐文件实施路径。
+> 部分实施（更新于 2026-07-13）。基于 [posture-photo-analysis-plan.md](./posture-photo-analysis-plan.md) 生成，聚焦可直接执行的逐文件实施路径。
 > 真值来源：当前代码。文中所有 `file:line` 为撰写时锚点，实施前请以最新代码为准。
+> **进度**：Phase 1（纯 VLM MVP）已由 PR #39 实施上线；Phase 2 / 3-B1 / 3-B2 尚未实施，故本方案保留在 active。
 
 ## 总体路线
 
@@ -18,7 +19,7 @@ Phase 1 VLM MVP（打通端到端，兑现文案承诺）
 
 | Phase | 状态 | 说明 |
 |-------|------|------|
-| Phase 1 VLM MVP | ⏳ 待实施 | 复用 OCR 异步管道 + 已就绪的多模态透传 |
+| Phase 1 VLM MVP | ✅ 已实施 | PR #39：`posture.py` 路由 + `posture_analyzer.py` + migration 000030 + 前端结果展示 |
 | Phase 2 姿态估计混合 | ⏳ 待实施 | 需新增 mediapipe/opencv 可选依赖 |
 | Phase 3-B1 Agent 工具 | ⏳ 待实施 | 复用 tool-calling 架构，无新范式 |
 | Phase 3-B2 多模态输入 | ⏳ 待实施 | 需改动契约层，同步三方契约测试 |
