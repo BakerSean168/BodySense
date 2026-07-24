@@ -22,3 +22,4 @@ ln -s "$(pwd)/tools/agent-skills/validate-local-deploy" ~/.claude/skills/bodysen
 | `validate-local-deploy` | 验证 Docker Compose 本地环境能否正常启动 |
 | `validate-rag-pipeline` | 检查 RAG 知识库质量、召回率、答案准确率 |
 | `validate-docs-code` | 验证 PRD/技术方案与实际代码的一致性 |
+| `coding-coach` | 教练式编码辅导:概念讲解、分层提示、代码评审、刻意练习,并用 `.practice-map/` 持久化学习计划(来自 cc-switch) |
