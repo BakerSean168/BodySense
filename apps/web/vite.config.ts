@@ -18,11 +18,14 @@ function stripUseClient(): import('vite').Plugin {
   };
 }
 
+const webRoot = path.resolve(__dirname);
+
 export default defineConfig({
+  root: webRoot,
   plugins: [stripUseClient(), react(), tailwindcss()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src'),
+      '@': path.resolve(webRoot, 'src'),
     },
     dedupe: ['react', 'react-dom'],
   },
@@ -42,9 +45,12 @@ export default defineConfig({
     },
   },
   test: {
+    root: webRoot,
     environment: 'happy-dom',
     include: ['src/**/*.test.{ts,tsx}'],
     setupFiles: ['src/test-setup.ts'],
     globals: true,
+    // Vitest 4: unit suite stays on happy-dom; browser mode is opt-in later.
+    restoreMocks: true,
   },
 });

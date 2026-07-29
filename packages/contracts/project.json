@@ -3,7 +3,10 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/contracts/src",
   "projectType": "library",
-  "tags": ["scope:shared", "type:lib"],
+  "tags": [
+    "scope:shared",
+    "type:lib"
+  ],
   "targets": {
     "test": {
       "executor": "nx:run-commands",
@@ -20,7 +23,7 @@
       "executor": "nx:run-commands",
       "cache": true,
       "options": {
-        "command": "pnpm exec tsc -p packages/contracts/tsconfig.json --noEmit"
+        "command": "node ./node_modules/typescript7/bin/tsc --noEmit -p packages/contracts/tsconfig.json"
       }
     }
   }

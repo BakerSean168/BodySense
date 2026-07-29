@@ -9,7 +9,7 @@ export default tseslint.config(
       '**/node_modules/**',
       '**/.nx/**',
       '**/coverage/**',
-      '**/*.config.{js,mjs,cjs}',
+      '**/*.config.{js,mjs,cjs,ts,mts,cts}',
     ],
   },
   js.configs.recommended,
@@ -52,5 +52,5 @@ export default tseslint.config(
         window: 'readonly',
       },
     },
-  }
+  },
 );

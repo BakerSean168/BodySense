@@ -35,11 +35,13 @@
     "docker:prod:logs": "docker compose -f docker/docker-compose.prod.yml --env-file .env.production --env-file .env.production.local logs -f",
     "docker:prod:ps": "docker compose -f docker/docker-compose.prod.yml --env-file .env.production --env-file .env.production.local ps",
     "docker:prod:pull": "docker compose -f docker/docker-compose.prod.yml --env-file .env.production --env-file .env.production.local pull",
-    "docker:prod:restart": "docker compose -f docker/docker-compose.prod.yml --env-file .env.production --env-file .env.production.local restart"
+    "docker:prod:restart": "docker compose -f docker/docker-compose.prod.yml --env-file .env.production --env-file .env.production.local restart",
+    "tsc7": "node ./node_modules/typescript7/bin/tsc"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.1",
     "@commitlint/config-conventional": "^21.2.0",
+    "@eslint/js": "^10.0.1",
     "@nx/eslint": "23.1.0",
     "@nx/eslint-plugin": "23.1.0",
     "@nx/js": "23.1.0",
@@ -47,15 +49,17 @@
     "@nx/vitest": "23.1.0",
     "@nx/web": "23.1.0",
     "@nx/workspace": "23.1.0",
-    "eslint": "^9.39.5",
+    "eslint": "^10.8.0",
     "husky": "^9.1.7",
+    "jiti": "^2.6.1",
     "jsdom": "^30.0.0",
     "nx": "23.1.0",
     "nx-mcp": "0.25.0",
     "prettier": "^3.9.6",
-    "typescript": "~6.0.3",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
     "typescript-eslint": "^8.65.0",
+    "typescript7": "npm:typescript@7.0.2",
     "vite": "^8.1.5",
-    "vitest": "^3.2.7"
+    "vitest": "^4.1.10"
   }
 }
