@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
+	"time"
 
 	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/model"
@@ -11,20 +13,35 @@ import (
 	"gorm.io/datatypes"
 )
 
+// Default number of buffered text.delta events before an automatic flush.
+const defaultDeltaFlushSize = 32
+
 type runtimeEventRepo interface {
 	Create(ctx context.Context, event *model.RuntimeEvent) error
+	CreateBatch(ctx context.Context, events []*model.RuntimeEvent) error
 	ListByRunID(ctx context.Context, conversationID, runID uuid.UUID, afterSeq, limit int) ([]model.RuntimeEvent, bool, error)
 	ListByConversationID(ctx context.Context, conversationID uuid.UUID) ([]model.RuntimeEvent, error)
 }
 
 // RuntimeEventService persists and queries replayable public runtime events.
+//
+// High-frequency message.text.delta events are buffered and written in batches
+// to reduce write amplification. Milestone events always flush the buffer first
+// so durable order stays equivalent to the live stream (same seqs, same rows).
 type RuntimeEventService struct {
-	repo runtimeEventRepo
+	repo           runtimeEventRepo
+	deltaFlushSize int
+
+	mu          sync.Mutex
+	deltaBuffer []*model.RuntimeEvent
 }
 
 // NewRuntimeEventService creates a new RuntimeEventService.
 func NewRuntimeEventService(repo runtimeEventRepo) *RuntimeEventService {
-	return &RuntimeEventService{repo: repo}
+	return &RuntimeEventService{
+		repo:           repo,
+		deltaFlushSize: defaultDeltaFlushSize,
+	}
 }
 
 // ShouldPersistEvent reports whether the public event should be stored durably.
@@ -47,8 +64,11 @@ func ShouldPersistEvent(eventType string) bool {
 		"source.citation.added",
 		"source.knowledge_gap",
 		"safety.red_flag.detected",
+		"safety.output_reviewed",
+		"safety.output_rejected",
 		"state.interaction.required",
 		"state.interaction.answered",
+		"state.interaction.expired",
 		"message.completed",
 		"message.failed",
 		"title.generated",
@@ -57,6 +77,10 @@ func ShouldPersistEvent(eventType string) bool {
 	default:
 		return false
 	}
+}
+
+func isBufferedDelta(eventType string) bool {
+	return eventType == "message.text.delta"
 }
 
 // RecordPublicEvent maps a public StreamEvent into a durable runtime event.
@@ -71,9 +95,68 @@ func (s *RuntimeEventService) RecordPublicEvent(
 		return nil
 	}
 
+	record, err := buildRuntimeEventRecord(conversationID, runID, turnID, event)
+	if err != nil {
+		return err
+	}
+
+	if isBufferedDelta(event.Type) {
+		return s.enqueueDelta(ctx, record)
+	}
+
+	// Milestone events: flush pending deltas first so seq order in the durable
+	// log matches the live stream, then write synchronously.
+	if err := s.Flush(ctx); err != nil {
+		return err
+	}
+	if err := s.repo.Create(ctx, record); err != nil {
+		return fmt.Errorf("create runtime event: %w", err)
+	}
+	return nil
+}
+
+// Flush writes any buffered text.delta events. Safe to call repeatedly.
+func (s *RuntimeEventService) Flush(ctx context.Context) error {
+	s.mu.Lock()
+	if len(s.deltaBuffer) == 0 {
+		s.mu.Unlock()
+		return nil
+	}
+	batch := s.deltaBuffer
+	s.deltaBuffer = nil
+	s.mu.Unlock()
+
+	if err := s.repo.CreateBatch(ctx, batch); err != nil {
+		// Put failed batch back so a retry can re-flush (best-effort).
+		s.mu.Lock()
+		s.deltaBuffer = append(batch, s.deltaBuffer...)
+		s.mu.Unlock()
+		return fmt.Errorf("flush runtime event deltas: %w", err)
+	}
+	return nil
+}
+
+func (s *RuntimeEventService) enqueueDelta(ctx context.Context, record *model.RuntimeEvent) error {
+	s.mu.Lock()
+	s.deltaBuffer = append(s.deltaBuffer, record)
+	shouldFlush := len(s.deltaBuffer) >= s.deltaFlushSize
+	s.mu.Unlock()
+
+	if shouldFlush {
+		return s.Flush(ctx)
+	}
+	return nil
+}
+
+func buildRuntimeEventRecord(
+	conversationID uuid.UUID,
+	runID uuid.UUID,
+	turnID *uuid.UUID,
+	event dto.StreamEvent,
+) (*model.RuntimeEvent, error) {
 	idsJSON, err := json.Marshal(event.IDs)
 	if err != nil {
-		return fmt.Errorf("marshal event ids: %w", err)
+		return nil, fmt.Errorf("marshal event ids: %w", err)
 	}
 
 	payload := event.Payload
@@ -81,7 +164,7 @@ func (s *RuntimeEventService) RecordPublicEvent(
 		payload = json.RawMessage(`{}`)
 	}
 
-	record := &model.RuntimeEvent{
+	return &model.RuntimeEvent{
 		ConversationID: conversationID,
 		RunID:          runID,
 		TurnID:         turnID,
@@ -92,11 +175,7 @@ func (s *RuntimeEventService) RecordPublicEvent(
 		Payload:        datatypes.JSON(payload),
 		Source:         "go",
 		Replayable:     true,
-	}
-	if err := s.repo.Create(ctx, record); err != nil {
-		return fmt.Errorf("create runtime event: %w", err)
-	}
-	return nil
+	}, nil
 }
 
 // ListRunEvents returns durable events for a run.
@@ -149,4 +228,39 @@ func (s *RuntimeEventService) ListAllRunEvents(
 			return all, nil
 		}
 	}
+}
+
+// RecordInteractionExpired persists a state.interaction.expired public event.
+// Used by the interaction expiry sweeper (no live SSE writer available).
+func (s *RuntimeEventService) RecordInteractionExpired(
+	ctx context.Context,
+	interaction *model.AgentInteraction,
+) error {
+	if interaction == nil {
+		return nil
+	}
+	// Synthetic seq: expiry is out-of-band relative to the live run counter.
+	// Use a high offset from unix micros to stay unique without contending the
+	// in-run seq allocator. Replay clients key primarily on type + ids.
+	seq := int(time.Now().UTC().UnixNano()%1_000_000_000) + 1_000_000
+	event, err := dto.NewStreamEvent(
+		seq,
+		"state",
+		"state.interaction.expired",
+		dto.StreamEventIDs{
+			ConversationID: interaction.ConversationID.String(),
+			RunID:          interaction.RunID.String(),
+			InteractionID:  interaction.ID.String(),
+			ToolCallID:     interaction.ToolCallID,
+		},
+		map[string]any{
+			"interaction_id": interaction.ID.String(),
+			"expired_at":     time.Now().UTC().Format(time.RFC3339),
+			"reason":         "ttl_elapsed",
+		},
+	)
+	if err != nil {
+		return err
+	}
+	return s.RecordPublicEvent(ctx, interaction.ConversationID, interaction.RunID, nil, event)
 }

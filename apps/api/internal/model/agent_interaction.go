@@ -19,6 +19,7 @@ type AgentInteraction struct {
 	Status         string         `gorm:"type:varchar(30);not null;default:'pending';index" json:"status"`
 	CreatedAt      time.Time      `gorm:"not null;default:now()" json:"created_at"`
 	AnsweredAt     *time.Time     `json:"answered_at,omitempty"`
+	ExpiresAt      *time.Time     `gorm:"index" json:"expires_at,omitempty"`
 	Metadata       datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"metadata"`
 }
 

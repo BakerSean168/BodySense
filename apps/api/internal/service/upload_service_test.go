@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/bodysense/api/internal/model"
+	"github.com/google/uuid"
 	"gorm.io/datatypes"
 )
 
@@ -170,4 +171,61 @@ func TestParseOCRJobInputMissingFields(t *testing.T) {
 	if _, err := parseOCRJobInput(job); err == nil {
 		t.Fatal("expected missing field error")
 	}
+}
+
+func TestBuildPostureAnalysisSummaryPrefersNewestPerView(t *testing.T) {
+	userID := mustParseUUID("11111111-1111-1111-1111-111111111111")
+	sideOld := model.UserUpload{
+		ID:             mustParseUUID("22222222-2222-2222-2222-222222222221"),
+		UserID:         userID,
+		FileType:       "photo_side",
+		AnalysisStatus: "completed",
+		AnalysisResult: json.RawMessage(`{"view":"side","findings":[{"key":"old","label":"旧发现"}],"summary_markdown":"旧摘要"}`),
+	}
+	sideNew := model.UserUpload{
+		ID:             mustParseUUID("22222222-2222-2222-2222-222222222222"),
+		UserID:         userID,
+		FileType:       "photo_side",
+		AnalysisStatus: "completed",
+		AnalysisResult: json.RawMessage(`{"view":"side","findings":[{"key":"forward_head","label":"头前移倾向","severity":"mild","evidence":"耳垂前移"}],"summary_markdown":"新摘要"}`),
+	}
+	// Newest first, matching GetLatestPostureAnalyses order.
+	summary := BuildPostureAnalysisSummary([]model.UserUpload{sideNew, sideOld})
+	if !summary.HasAnalysis {
+		t.Fatal("expected has_analysis")
+	}
+	if len(summary.Views) != 1 {
+		t.Fatalf("expected 1 view after dedupe, got %d", len(summary.Views))
+	}
+	if summary.Views[0].View != "side" {
+		t.Fatalf("expected side view, got %q", summary.Views[0].View)
+	}
+	if len(summary.Findings) != 1 {
+		t.Fatalf("expected 1 finding from newest only, got %d", len(summary.Findings))
+	}
+	finding, _ := summary.Findings[0].(map[string]any)
+	if finding["key"] != "forward_head" {
+		t.Fatalf("expected newest finding, got %#v", finding)
+	}
+	if len(summary.Summaries) != 1 || summary.Summaries[0] != "新摘要" {
+		t.Fatalf("unexpected summaries: %#v", summary.Summaries)
+	}
+}
+
+func TestBuildPostureAnalysisSummaryEmpty(t *testing.T) {
+	summary := BuildPostureAnalysisSummary(nil)
+	if summary.HasAnalysis {
+		t.Fatal("expected no analysis")
+	}
+	if summary.Views == nil || summary.Findings == nil {
+		t.Fatal("expected non-nil empty slices for JSON")
+	}
+}
+
+func mustParseUUID(s string) uuid.UUID {
+	id, err := uuid.Parse(s)
+	if err != nil {
+		panic(err)
+	}
+	return id
 }

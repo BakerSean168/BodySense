@@ -71,10 +71,16 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 
 	var images []string
 	var reportIndicators []any
+	var completedPosture []model.UserUpload
 
 	for _, upload := range uploads {
 		if upload.FileType == "photo_front" || upload.FileType == "photo_side" || upload.FileType == "photo_back" {
-			// Read image file from disk
+			// Prefer completed analysis_result over re-sending raw images so we
+			// do not recompute multimodal posture analysis on every assessment.
+			if upload.AnalysisStatus == "completed" && len(upload.AnalysisResult) > 0 {
+				completedPosture = append(completedPosture, upload)
+				continue
+			}
 			imgBytes, err := os.ReadFile(upload.FilePath)
 			if err == nil {
 				base64Str := base64.StdEncoding.EncodeToString(imgBytes)
@@ -96,11 +102,17 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 	// Add report indicators to profileMap
 	profileMap["health_report_indicators"] = reportIndicators
 
-	// Call AI service with profile and base64 images
+	// Call AI service with profile; attach stored posture analysis when present.
 	aiReq := map[string]any{
 		"profile":     profileMap,
 		"rag_context": "",
 		"images":      images,
+	}
+	if len(completedPosture) > 0 {
+		summary := BuildPostureAnalysisSummary(completedPosture)
+		aiReq["posture_analysis"] = summary
+		// Do not also send raw images for views that already have analysis —
+		// images slice only holds views without a completed result.
 	}
 
 	aiReqBody, err := json.Marshal(aiReq)

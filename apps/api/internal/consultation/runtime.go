@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -44,6 +45,7 @@ type Runtime struct {
 	outputReviewService     *service.OutputReviewService
 	threadProjectionService *service.ThreadProjectionService
 	runtimeEventService     *service.RuntimeEventService
+	uploadService           *service.UploadService
 	streamRuntime           *stream.Runtime
 }
 
@@ -59,6 +61,7 @@ func NewRuntime(
 	outputReviewService *service.OutputReviewService,
 	threadProjectionService *service.ThreadProjectionService,
 	runtimeEventService *service.RuntimeEventService,
+	uploadService *service.UploadService,
 ) *Runtime {
 	return &Runtime{
 		conversationService:     conversationService,
@@ -72,6 +75,7 @@ func NewRuntime(
 		outputReviewService:     outputReviewService,
 		threadProjectionService: threadProjectionService,
 		runtimeEventService:     runtimeEventService,
+		uploadService:           uploadService,
 		streamRuntime:           stream.NewRuntime(),
 	}
 }
@@ -111,8 +115,12 @@ func (r *Runtime) StartRun(
 
 	// --- 3. Validate message ---
 	userText := messagePartsToText(req.Message.Parts)
+	imageIDs := messagePartsToImageUploadIDs(req.Message.Parts)
+	if strings.TrimSpace(userText) == "" && len(imageIDs) == 0 {
+		return httpErr(http.StatusBadRequest, "INVALID_REQUEST", "message text or image is required")
+	}
 	if strings.TrimSpace(userText) == "" {
-		return httpErr(http.StatusBadRequest, "INVALID_REQUEST", "message text is required")
+		userText = "请结合我附上的照片，分析与体态/不适相关的可见信息，并给出谨慎建议。"
 	}
 
 	userPartsJSON, err := json.Marshal(req.Message.Parts)
@@ -171,7 +179,7 @@ func (r *Runtime) StartRun(
 	r.refreshThreadProjection(ctx, conversationID, uid)
 
 	// --- 8. Stream AI response ---
-	result, stopped := r.executeRunFlow(ctx, sw, uid, conversationID, turn, run, assistantMsg, baseIDs, userText, session)
+	result, stopped := r.executeRunFlow(ctx, sw, uid, conversationID, turn, run, assistantMsg, baseIDs, userText, req.Message.Parts, session)
 	if stopped {
 		return nil
 	}
@@ -229,6 +237,7 @@ func (r *Runtime) executeRunFlow(
 	assistantMsg *model.Message,
 	baseIDs dto.StreamEventIDs,
 	userText string,
+	parts []dto.PartDTO,
 	session *model.ConsultationSession,
 ) (streamResult, bool) {
 	streamCtx, cancel := context.WithTimeout(ctx, sseTimeout)
@@ -240,6 +249,8 @@ func (r *Runtime) executeRunFlow(
 		return streamResult{}, true
 	}
 
+	images := r.resolveConsultationImages(ctx, uid, parts)
+
 	events, err := r.aiClient.StartConsultationTurn(
 		streamCtx,
 		conversationID.String(),
@@ -248,16 +259,11 @@ func (r *Runtime) executeRunFlow(
 			ConversationID: conversationID.String(),
 			UserID:         uid.String(),
 			Input: service.ConsultationUserInput{
-				Type: "user_message",
-				Text: userText,
+				Type:   "user_message",
+				Text:   userText,
+				Images: images,
 			},
-			BusinessContext: service.ConsultationBusinessContext{
-				Profile: profileJSON,
-				ConsultationSnapshot: service.ConsultationSnapshot{
-					Phase:         session.Phase,
-					ExtractedInfo: json.RawMessage(session.ExtractedInfo),
-				},
-			},
+			BusinessContext: r.buildBusinessContext(ctx, uid, profileJSON, session),
 		},
 	)
 	if err != nil {
@@ -380,6 +386,8 @@ func (r *Runtime) ResumeInteraction(
 			)
 		case err == service.ErrInteractionClosed:
 			return httpErr(http.StatusConflict, "INTERACTION_CLOSED", err.Error())
+		case err == service.ErrInteractionExpired:
+			return httpErr(http.StatusConflict, "INTERACTION_EXPIRED", "interaction has expired; start a new question")
 		default:
 			return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		}
@@ -478,18 +486,12 @@ func (r *Runtime) ResumeInteraction(
 		conversationID.String(),
 		interactionID.String(),
 		service.ResumeConsultationInterruptRequest{
-			RunID:          run.ID.String(),
-			ConversationID: conversationID.String(),
-			UserID:         uid.String(),
-			InterruptID:    interactionID.String(),
-			Answer:         json.RawMessage(req.Answer),
-			BusinessContext: service.ConsultationBusinessContext{
-				Profile: profileJSON,
-				ConsultationSnapshot: service.ConsultationSnapshot{
-					Phase:         session.Phase,
-					ExtractedInfo: json.RawMessage(session.ExtractedInfo),
-				},
-			},
+			RunID:           run.ID.String(),
+			ConversationID:  conversationID.String(),
+			UserID:          uid.String(),
+			InterruptID:     interactionID.String(),
+			Answer:          json.RawMessage(req.Answer),
+			BusinessContext: r.buildBusinessContext(ctx, uid, profileJSON, session),
 		},
 	)
 	if err != nil {
@@ -617,6 +619,36 @@ func (r *Runtime) loadProfileJSON(ctx context.Context, uid uuid.UUID) (json.RawM
 		return nil, err
 	}
 	return data, nil
+}
+
+// buildBusinessContext assembles the payload Python's consultation runtime
+// receives for a turn. Prefetches completed posture analysis so the Agent
+// tool can read analysis_result without a reverse HTTP call.
+func (r *Runtime) buildBusinessContext(
+	ctx context.Context,
+	uid uuid.UUID,
+	profileJSON json.RawMessage,
+	session *model.ConsultationSession,
+) service.ConsultationBusinessContext {
+	bc := service.ConsultationBusinessContext{
+		Profile: profileJSON,
+		ConsultationSnapshot: service.ConsultationSnapshot{
+			Phase:         session.Phase,
+			ExtractedInfo: json.RawMessage(session.ExtractedInfo),
+		},
+	}
+	if r.uploadService == nil {
+		return bc
+	}
+	summary, err := r.uploadService.GetPostureAnalysisSummary(ctx, uid)
+	if err != nil {
+		log.Printf("posture analysis prefetch failed for user %s: %v", uid, err)
+		return bc
+	}
+	if raw, err := json.Marshal(summary); err == nil {
+		bc.PostureAnalysis = raw
+	}
+	return bc
 }
 
 type streamState struct {
@@ -795,6 +827,9 @@ func (r *Runtime) handleAIEvent(
 		r.sendEvent(ctx, sw, event, state.AssistantMsgID, event.Type)
 		result.AssistantParts = append(result.AssistantParts, dataPart("red_flag", event.Payload))
 
+	case "safety.output_reviewed", "safety.output_rejected":
+		r.handleSafetyOutputEvent(ctx, sw, event, state, result)
+
 	case "state.interaction.required":
 		return r.handleInteractionRequired(ctx, sw, event, state, result)
 
@@ -963,6 +998,73 @@ func (r *Runtime) persistCompletedTurn(
 	r.clearActiveRun(ctx, conversationID, uid)
 }
 
+func (r *Runtime) handleSafetyOutputEvent(
+	ctx context.Context,
+	sw *stream.StreamWriter,
+	event dto.StreamEvent,
+	state streamState,
+	result *streamResult,
+) {
+	r.sendEvent(ctx, sw, event, state.AssistantMsgID, event.Type)
+
+	var payload struct {
+		Kind           string          `json:"kind"`
+		Verdict        string          `json:"verdict"`
+		Reasons        []string        `json:"reasons"`
+		Issues         json.RawMessage `json:"issues"`
+		SafetyFallback string          `json:"safety_fallback"`
+	}
+	_ = event.PayloadAs(&payload)
+
+	partName := "output_reviewed"
+	if event.Type == "safety.output_rejected" {
+		partName = "output_rejected"
+	}
+	result.AssistantParts = append(result.AssistantParts, dataPart(partName, event.Payload))
+
+	if r.outputReviewService == nil {
+		return
+	}
+
+	outputType := payload.Kind
+	if outputType == "" {
+		outputType = "structured_output"
+	}
+	verdict := payload.Verdict
+	if verdict == "" {
+		if event.Type == "safety.output_rejected" {
+			verdict = "rejected"
+		} else {
+			verdict = "unknown"
+		}
+	}
+
+	issues := datatypes.JSON("[]")
+	if len(payload.Issues) > 0 {
+		issues = datatypes.JSON(payload.Issues)
+	} else if len(payload.Reasons) > 0 {
+		if b, err := json.Marshal(payload.Reasons); err == nil {
+			issues = datatypes.JSON(b)
+		}
+	}
+
+	runID := state.Run.ID
+	convID := state.ConversationID
+	uid := state.UID
+	r.outputReviewService.RecordReview(
+		ctx,
+		outputType,
+		verdict,
+		&uid,
+		&runID,
+		nil,
+		&convID,
+		issues,
+		nil,
+		datatypes.JSON(event.Payload),
+	)
+}
+
 func (r *Runtime) recordGovernance(
 	ctx context.Context,
 	uid uuid.UUID,
@@ -978,12 +1080,17 @@ func (r *Runtime) recordGovernance(
 	var govIssues datatypes.JSON
 	var govValidatedOutput datatypes.JSON
 	var govPayload struct {
+		// Prefer P2 "verdict"; keep "status" for older stream.done payloads.
+		Verdict         string          `json:"verdict"`
 		Status          string          `json:"status"`
 		Issues          json.RawMessage `json:"issues"`
 		ValidatedOutput json.RawMessage `json:"validated_output"`
 	}
 	if err := json.Unmarshal(governanceResult, &govPayload); err == nil {
-		govStatus = govPayload.Status
+		govStatus = govPayload.Verdict
+		if govStatus == "" {
+			govStatus = govPayload.Status
+		}
 		govIssues = datatypes.JSON(govPayload.Issues)
 		if len(govPayload.ValidatedOutput) > 0 {
 			govValidatedOutput = datatypes.JSON(govPayload.ValidatedOutput)
@@ -991,6 +1098,9 @@ func (r *Runtime) recordGovernance(
 	} else {
 		govStatus = "unknown"
 		govIssues = datatypes.JSON("[]")
+	}
+	if govStatus == "" {
+		govStatus = "unknown"
 	}
 
 	r.outputReviewService.RecordReview(
@@ -1286,6 +1396,62 @@ func (r *Runtime) recordPublicEvent(ctx context.Context, event dto.StreamEvent) 
 	}
 }
 
+func messagePartsToImageUploadIDs(parts []dto.PartDTO) []string {
+	ids := make([]string, 0)
+	seen := map[string]bool{}
+	for _, part := range parts {
+		if part.Type != "image" {
+			continue
+		}
+		id := strings.TrimSpace(part.UploadID)
+		if id == "" || seen[id] {
+			continue
+		}
+		seen[id] = true
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+// resolveConsultationImages turns image parts into data-URLs owned by uid.
+// Failures are logged and skipped so a bad attachment does not kill the turn.
+func (r *Runtime) resolveConsultationImages(
+	ctx context.Context,
+	uid uuid.UUID,
+	parts []dto.PartDTO,
+) []service.ConsultationImageRef {
+	if r.uploadService == nil {
+		return nil
+	}
+	ids := messagePartsToImageUploadIDs(parts)
+	if len(ids) == 0 {
+		return nil
+	}
+	const maxImages = 3
+	if len(ids) > maxImages {
+		ids = ids[:maxImages]
+	}
+	out := make([]service.ConsultationImageRef, 0, len(ids))
+	for _, rawID := range ids {
+		uploadID, err := uuid.Parse(rawID)
+		if err != nil {
+			log.Printf("consultation image upload_id invalid %q: %v", rawID, err)
+			continue
+		}
+		dataURL, mime, err := r.uploadService.ReadImageDataURL(ctx, uid, uploadID)
+		if err != nil {
+			log.Printf("consultation image resolve %s: %v", uploadID, err)
+			continue
+		}
+		out = append(out, service.ConsultationImageRef{
+			UploadID: uploadID.String(),
+			MimeType: mime,
+			DataURL:  dataURL,
+		})
+	}
+	return out
+}
+
 func messagePartsToText(parts []dto.PartDTO) string {
 	texts := make([]string, 0, len(parts))
 	for _, part := range parts {
@@ -1299,10 +1465,21 @@ func messagePartsToText(parts []dto.PartDTO) string {
 func interactionAnswerParts(answer json.RawMessage, interactionID string) (datatypes.JSON, datatypes.JSON) {
 	text := extractAnswerText(answer)
 	partsJSON, _ := json.Marshal([]map[string]any{{"type": "text", "text": text}})
-	metadataJSON, _ := json.Marshal(map[string]any{
+	metadata := map[string]any{
 		"is_interaction_answer": true,
 		"interaction_id":        interactionID,
-	})
+	}
+	// Preserve structured multi-field answers for health_features / analytics.
+	var raw map[string]any
+	if err := json.Unmarshal(answer, &raw); err == nil {
+		if fields, ok := raw["fields"].(map[string]any); ok && len(fields) > 0 {
+			metadata["fields"] = fields
+		}
+		if selected, ok := raw["selected"]; ok {
+			metadata["selected"] = selected
+		}
+	}
+	metadataJSON, _ := json.Marshal(metadata)
 	return datatypes.JSON(partsJSON), datatypes.JSON(metadataJSON)
 }
 
@@ -1313,6 +1490,16 @@ func extractAnswerText(answer json.RawMessage) string {
 	}
 	if text, ok := rawAnswer["text"].(string); ok {
 		return text
+	}
+	// Multi-field form answers: { fields: { key: value, ... } }
+	if fields, ok := rawAnswer["fields"].(map[string]any); ok && len(fields) > 0 {
+		parts := make([]string, 0, len(fields))
+		for key, value := range fields {
+			parts = append(parts, fmt.Sprintf("%s: %v", key, value))
+		}
+		// Stable order is not critical for LLM context readability.
+		sort.Strings(parts)
+		return strings.Join(parts, "；")
 	}
 	if selected, ok := rawAnswer["selected"].([]any); ok {
 		parts := make([]string, 0, len(selected))

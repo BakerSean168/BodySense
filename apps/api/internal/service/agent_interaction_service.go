@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"time"
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
@@ -15,7 +17,11 @@ var (
 	ErrInteractionNotFound = errors.New("interaction not found")
 	ErrInteractionConflict = errors.New("interaction answer conflicts with existing answer")
 	ErrInteractionClosed   = errors.New("interaction is not pending")
+	ErrInteractionExpired  = errors.New("interaction has expired")
 )
+
+// DefaultInteractionTTL is how long a pending ask_user waits before auto-expiry.
+const DefaultInteractionTTL = 24 * time.Hour
 
 // AgentInteractionService handles user interaction persistence and resume.
 type AgentInteractionService struct {
@@ -29,7 +35,9 @@ type agentInteractionRepo interface {
 	GetByRunAndToolCall(ctx context.Context, runID uuid.UUID, toolCallID string) (*model.AgentInteraction, error)
 	MarkAnswered(ctx context.Context, id uuid.UUID, answer any) (bool, error)
 	CancelPending(ctx context.Context, id uuid.UUID) (bool, error)
+	ExpirePending(ctx context.Context, id uuid.UUID) (bool, error)
 	ListPendingByConversation(ctx context.Context, conversationID uuid.UUID) ([]model.AgentInteraction, error)
+	ListExpiredPending(ctx context.Context, now time.Time, limit int) ([]model.AgentInteraction, error)
 }
 
 type runStatusRepo interface {
@@ -54,6 +62,7 @@ func (s *AgentInteractionService) CreatePendingInteraction(
 	toolCallID string,
 	question datatypes.JSON,
 ) (*model.AgentInteraction, error) {
+	expires := time.Now().UTC().Add(DefaultInteractionTTL)
 	interaction := &model.AgentInteraction{
 		RunID:          runID,
 		ConversationID: conversationID,
@@ -61,6 +70,7 @@ func (s *AgentInteractionService) CreatePendingInteraction(
 		ToolName:       "ask_user",
 		Question:       question,
 		Status:         "pending",
+		ExpiresAt:      &expires,
 	}
 	if err := s.repo.CreatePending(ctx, interaction); err != nil {
 		return nil, fmt.Errorf("create pending interaction: %w", err)
@@ -100,8 +110,18 @@ func (s *AgentInteractionService) ResumeInteraction(
 		}
 		return ErrInteractionConflict
 	}
+	if interaction.Status == "expired" {
+		return ErrInteractionExpired
+	}
 	if interaction.Status != "pending" {
 		return fmt.Errorf("%w: %s", ErrInteractionClosed, interaction.Status)
+	}
+	// Soft-expire if the TTL elapsed but the sweeper has not yet run.
+	if interaction.ExpiresAt != nil && !interaction.ExpiresAt.After(time.Now().UTC()) {
+		if _, expErr := s.repo.ExpirePending(ctx, interactionID); expErr != nil {
+			log.Printf("failed to expire interaction %s: %v", interactionID, expErr)
+		}
+		return ErrInteractionExpired
 	}
 
 	updated, err := s.repo.MarkAnswered(ctx, interactionID, answer)
@@ -173,4 +193,121 @@ func jsonEqual(a, b datatypes.JSON) bool {
 		b = []byte("null")
 	}
 	return bytes.Equal(a, b)
+}
+
+// ExpireExpiredInteractions marks due pending interactions as expired.
+// Returns the interactions that transitioned to expired (for event emission).
+func (s *AgentInteractionService) ExpireExpiredInteractions(
+	ctx context.Context,
+	limit int,
+) ([]model.AgentInteraction, error) {
+	due, err := s.repo.ListExpiredPending(ctx, time.Now().UTC(), limit)
+	if err != nil {
+		return nil, fmt.Errorf("list expired interactions: %w", err)
+	}
+	expired := make([]model.AgentInteraction, 0, len(due))
+	for _, item := range due {
+		updated, expErr := s.repo.ExpirePending(ctx, item.ID)
+		if expErr != nil {
+			log.Printf("expire interaction %s: %v", item.ID, expErr)
+			continue
+		}
+		if updated {
+			item.Status = "expired"
+			expired = append(expired, item)
+		}
+	}
+	return expired, nil
+}
+
+// InteractionExpiredHandler is called after an interaction is marked expired.
+// Typically records state.interaction.expired into the durable event log.
+type InteractionExpiredHandler func(ctx context.Context, interaction model.AgentInteraction)
+
+// StartInteractionExpiryWorker periodically sweeps expired pending interactions.
+// onExpired is optional; when set it receives each newly expired interaction.
+func (s *AgentInteractionService) StartInteractionExpiryWorker(
+	ctx context.Context,
+	interval time.Duration,
+	onExpired InteractionExpiredHandler,
+) {
+	if interval <= 0 {
+		interval = time.Minute
+	}
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				expired, err := s.ExpireExpiredInteractions(ctx, 100)
+				if err != nil {
+					log.Printf("interaction expiry sweep failed: %v", err)
+					continue
+				}
+				if len(expired) == 0 {
+					continue
+				}
+				log.Printf("interaction expiry sweep: expired %d pending interaction(s)", len(expired))
+				if onExpired == nil {
+					continue
+				}
+				for _, item := range expired {
+					onExpired(ctx, item)
+				}
+			}
+		}
+	}()
+}
+
+// InteractionMetrics is a lightweight projection over agent_interactions
+// (T0-1 Phase C). Computed on read from the source table — no separate metrics table.
+type InteractionMetrics struct {
+	Total          int     `json:"total"`
+	Answered       int     `json:"answered"`
+	Expired        int     `json:"expired"`
+	Pending        int     `json:"pending"`
+	AnswerRate     float64 `json:"answer_rate"`
+	ExpireRate     float64 `json:"expire_rate"`
+	AvgWaitSeconds float64 `json:"avg_wait_seconds"`
+}
+
+// InteractionMetricsSource is satisfied by repositories that can aggregate metrics.
+type interactionMetricsRepo interface {
+	AggregateInteractionMetrics(ctx context.Context, conversationID *uuid.UUID) (answered, expired, pending int, avgWaitSeconds float64, err error)
+}
+
+// GetInteractionMetrics returns answer/expire rates and average wait time.
+// conversationID nil => global; otherwise scoped to one conversation.
+func (s *AgentInteractionService) GetInteractionMetrics(
+	ctx context.Context,
+	conversationID *uuid.UUID,
+) (InteractionMetrics, error) {
+	type metricsCapable interface {
+		AggregateInteractionMetrics(ctx context.Context, conversationID *uuid.UUID) (int, int, int, float64, error)
+	}
+	repo, ok := s.repo.(metricsCapable)
+	if !ok {
+		return InteractionMetrics{}, fmt.Errorf("interaction metrics not supported by repository")
+	}
+	answered, expired, pending, avgWait, err := repo.AggregateInteractionMetrics(ctx, conversationID)
+	if err != nil {
+		return InteractionMetrics{}, err
+	}
+	total := answered + expired + pending
+	m := InteractionMetrics{
+		Total:          total,
+		Answered:       answered,
+		Expired:        expired,
+		Pending:        pending,
+		AvgWaitSeconds: avgWait,
+	}
+	closed := answered + expired
+	if closed > 0 {
+		m.AnswerRate = float64(answered) / float64(closed)
+		m.ExpireRate = float64(expired) / float64(closed)
+	}
+	return m, nil
 }
