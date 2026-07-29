@@ -19,6 +19,11 @@ class AssessmentRequest(BaseModel):
     profile: dict[str, Any] = Field(..., description="User profile data")
     rag_context: str = Field(default="", description="RAG context from knowledge base")
     images: list[str] | None = Field(default=None, description="Base64 encoded posture images")
+    # Prefetched completed analysis_result aggregate from Go — prefer over images.
+    posture_analysis: dict[str, Any] | None = Field(
+        default=None,
+        description="Completed three-view posture analysis summary from user_uploads",
+    )
 
 
 class AssessmentResponse(BaseModel):
@@ -39,6 +44,7 @@ async def generate_assessment(request: AssessmentRequest):
             profile=request.profile,
             rag_context=request.rag_context,
             images=request.images,
+            posture_analysis=request.posture_analysis,
         )
         return AssessmentResponse(**result)
     except ValueError as e:

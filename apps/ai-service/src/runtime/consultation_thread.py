@@ -20,7 +20,7 @@ from ..services.agent.consultation_tools import (
     get_consultation_executor,
     get_consultation_registry,
 )
-from ..services.agent.orchestrator import build_fallback_reply, emit_citation_events
+from ..services.agent.reply_fallback import build_fallback_reply, emit_citation_events
 from ..services.agent.tool_types import ToolStatus
 from ..services.agent_workflow import get_agent_workflow
 from ..services.red_flag_detector import get_red_flag_detector
@@ -99,6 +99,7 @@ class ConsultationThreadState(TypedDict, total=False):
     profile: dict[str, Any]
     phase: str
     current_user_message: str
+    pending_user_images: list[dict[str, Any]]
     runtime_messages: list[dict[str, Any]]
     extracted_symptoms: Annotated[list[dict[str, Any]], _merge_symptoms]
     red_flag_result: dict[str, Any] | None
@@ -110,6 +111,8 @@ class ConsultationThreadState(TypedDict, total=False):
     llm_available: bool
     diagnosis_result: dict[str, Any] | None
     treatment_result: dict[str, Any] | None
+    # Prefetched by Go from user_uploads.analysis_result (Phase 3-B1 / P4).
+    posture_analysis: dict[str, Any] | None
 
 
 _ai_service_instance: AIService | None = None
@@ -121,6 +124,43 @@ def _get_ai_service() -> AIService:
     if _ai_service_instance is None:
         _ai_service_instance = AIService()
     return _ai_service_instance
+
+
+
+def _user_content_with_images(
+    text: str,
+    images: list[dict[str, Any]] | None,
+) -> str | list[dict[str, Any]]:
+    """Build OpenAI-compatible multimodal user content when images are present.
+
+    Text-only turns stay plain strings so existing prompts/tests keep working.
+    Image turns use the content-block list form already supported by ChatMessage.
+    """
+    cleaned = (text or "").strip()
+    refs = [img for img in (images or []) if isinstance(img, dict) and img.get("data_url")]
+    if not refs:
+        return cleaned
+
+    blocks: list[dict[str, Any]] = []
+    if cleaned:
+        blocks.append({"type": "text", "text": cleaned})
+    # Cap mirrors Go-side maxImages=3.
+    for img in refs[:3]:
+        data_url = str(img["data_url"])
+        # Basic shape guard: only accept data:image/* URLs resolved by Go.
+        if not data_url.startswith("data:image/"):
+            continue
+        blocks.append(
+            {
+                "type": "image_url",
+                "image_url": {"url": data_url},
+            }
+        )
+    if not blocks:
+        return cleaned or "（用户上传了照片，但未能读取图像内容）"
+    if len(blocks) == 1 and blocks[0].get("type") == "text":
+        return str(blocks[0].get("text") or cleaned)
+    return blocks
 
 
 def _runtime_messages_to_chat_messages(state: ConsultationThreadState) -> list[ChatMessage]:
@@ -178,6 +218,10 @@ def _get_conversation_text(state: ConsultationThreadState) -> str:
         content = message.get("content", "")
         if isinstance(content, str) and content:
             texts.append(content)
+        elif isinstance(content, list):
+            for block in content:
+                if isinstance(block, dict) and block.get("type") == "text" and block.get("text"):
+                    texts.append(str(block["text"]))
     return " ".join(texts)
 
 
@@ -196,19 +240,21 @@ def _determine_phase(extracted_symptoms: list[dict[str, Any]]) -> str:
 
 async def prepare_turn(state: ConsultationThreadState) -> dict[str, Any]:
     current_user_message = state.get("current_user_message", "").strip()
-    if not current_user_message:
+    pending_images = state.get("pending_user_images") or []
+    if not current_user_message and not pending_images:
         return {}
 
+    content = _user_content_with_images(current_user_message, pending_images)
     runtime_messages = list(state.get("runtime_messages", []))
-    runtime_messages.append({"role": "user", "content": current_user_message})
+    runtime_messages.append({"role": "user", "content": content})
     return {
         "runtime_messages": runtime_messages,
         "current_user_message": "",
+        "pending_user_images": [],
         "pending_tool_calls": [],
         "accumulated_text": "",
         "tool_rounds": 0,
     }
-
 
 async def safety_check(state: ConsultationThreadState, *, writer: StreamWriter) -> dict[str, Any]:
     detector = get_red_flag_detector()
@@ -406,6 +452,44 @@ async def execute_tool(state: ConsultationThreadState, *, writer: StreamWriter) 
                 "id": tool_call_id,
                 "tool": tool_name,
                 "result": {"has_results": has_results},
+            }
+        )
+        runtime_messages.append(
+            {"role": "tool", "tool_call_id": tool_call_id, "content": result_text}
+        )
+        return {
+            "runtime_messages": runtime_messages,
+            "pending_tool_calls": remaining,
+        }
+
+    if tool_name == "get_posture_analysis":
+        # Inject prefetched analysis so the pure tool never needs a reverse HTTP call.
+        tool_args = dict(arguments)
+        tool_args["_posture_analysis"] = state.get("posture_analysis") or {
+            "has_analysis": False,
+            "views": [],
+            "findings": [],
+            "summaries": [],
+        }
+        result = await executor.execute(tool_call_id, tool_name, tool_args)
+        has_analysis = False
+        result_text = result.error or "读取体态分析失败"
+        summary: dict[str, Any] = {}
+        if result.status == ToolStatus.SUCCESS:
+            content = result.content or {}
+            if isinstance(content, dict):
+                result_text = str(content.get("result_text", ""))
+                has_analysis = bool(content.get("has_analysis", False))
+                summary = content.get("summary") or {}
+        writer(
+            {
+                "type": "tool_result",
+                "id": tool_call_id,
+                "tool": tool_name,
+                "result": {
+                    "has_analysis": has_analysis,
+                    "summary": summary,
+                },
             }
         )
         runtime_messages.append(
@@ -619,9 +703,11 @@ async def stream_thread_turn(
     run_id: str,
     user_id: str,
     user_message: str,
+    images: list[dict[str, Any]] | None = None,
     profile: dict[str, Any],
     extracted_info: list[dict[str, Any]],
     phase: str,
+    posture_analysis: dict[str, Any] | None = None,
 ) -> AsyncIterator[StreamEvent]:
     graph = await get_runtime_graph()
     config = {"configurable": {"thread_id": thread_id}}
@@ -635,6 +721,13 @@ async def stream_thread_turn(
             "phase": phase,
             "extracted_symptoms": extracted_info,
             "current_user_message": user_message,
+            "pending_user_images": list(images or []),
+            "posture_analysis": posture_analysis or {
+                "has_analysis": False,
+                "views": [],
+                "findings": [],
+                "summaries": [],
+            },
         },
         config=config,
         stream_mode="custom",

@@ -1,8 +1,9 @@
 """ask_user tool — interrupt the run to request user input.
 
-This tool is registered but NOT included in the default consultation
-tool list passed to the LLM. It exists for future HITL flows where
-the runtime explicitly opts in.
+Registered in the default consultation tool list (see
+`consultation_tools.py`) and exposed to the LLM. The active runtime
+(`runtime/consultation_thread.py`) turns an INTERRUPTED result into a
+LangGraph `interrupt()`, which pauses the thread until the user answers.
 """
 
 from __future__ import annotations
@@ -57,6 +58,45 @@ ASK_USER_SCHEMA: dict[str, Any] = {
                 "type": "string",
                 "description": "提供给用户的额外上下文信息",
             },
+            "fields": {
+                "type": "array",
+                "description": (
+                    "结构化多字段表单（可选）。提供后前端一次收集多字段；"
+                    "单问路径保持兼容（不传 fields）。最多 3 个字段。"
+                ),
+                "maxItems": 3,
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "key": {
+                            "type": "string",
+                            "description": "字段标识，用于答案结构化落库",
+                        },
+                        "label": {
+                            "type": "string",
+                            "description": "展示给用户的字段标签",
+                        },
+                        "answer_type": {
+                            "type": "string",
+                            "enum": [
+                                "text",
+                                "single_choice",
+                                "multi_choice",
+                                "number",
+                                "date",
+                                "scale",
+                            ],
+                            "default": "text",
+                        },
+                        "options": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                        },
+                        "required": {"type": "boolean", "default": True},
+                    },
+                    "required": ["key", "label"],
+                },
+            },
         },
         "required": ["question"],
     },
@@ -92,6 +132,46 @@ def _normalize_choice_options(options: Any) -> list[str]:
             normalized.append(value)
     return normalized[:4]
 
+
+
+
+def _normalize_fields(raw: Any) -> list[dict[str, Any]]:
+    """Normalize multi-field form definitions (≤3 fields)."""
+    if not isinstance(raw, list):
+        return []
+    valid_types = {
+        "text",
+        "single_choice",
+        "multi_choice",
+        "number",
+        "date",
+        "scale",
+    }
+    fields: list[dict[str, Any]] = []
+    for item in raw[:3]:
+        if not isinstance(item, dict):
+            continue
+        key = str(item.get("key", "")).strip()
+        label = str(item.get("label", "")).strip()
+        if not key or not label:
+            continue
+        answer_type = item.get("answer_type", "text")
+        if answer_type not in valid_types:
+            answer_type = "text"
+        options = _normalize_choice_options(item.get("options", []))
+        required = item.get("required", True)
+        if not isinstance(required, bool):
+            required = True
+        fields.append(
+            {
+                "key": key,
+                "label": label,
+                "answer_type": answer_type,
+                "options": options,
+                "required": required,
+            }
+        )
+    return fields
 
 def _build_default_context(question: str, reason: str) -> str:
     if isinstance(reason, str) and reason.strip():
@@ -140,21 +220,26 @@ async def handle_ask_user(arguments: dict[str, Any]) -> ToolResult:
     context = str(arguments.get("context", "")).strip() or _build_default_context(
         question, reason
     )
+    fields = _normalize_fields(arguments.get("fields"))
+
+    content: dict[str, Any] = {
+        "question": question,
+        "reason": reason,
+        "answer_type": answer_type,
+        "options": options,
+        "allow_custom_input": allow_custom_input,
+        "required": arguments.get("required", True),
+        "context": context,
+    }
+    if fields:
+        content["fields"] = fields
 
     # Return interrupted — the run should pause here
     return ToolResult(
         tool_call_id="",
         tool_name="ask_user",
         status=ToolStatus.INTERRUPTED,
-        content={
-            "question": question,
-            "reason": reason,
-            "answer_type": answer_type,
-            "options": options,
-            "allow_custom_input": allow_custom_input,
-            "required": arguments.get("required", True),
-            "context": context,
-        },
+        content=content,
     )
 
 

@@ -96,6 +96,93 @@ class TestGovernance:
         assert f["label"]  # label repaired from KEY_LABELS
 
 
+    def test_schema_reject_blocks_findings(self, monkeypatch):
+        """When the forced gate rejects, raw findings must not leak."""
+        from src.runtime.governance import GuardedOutput
+        import src.services.posture_analyzer as posture_mod
+
+        def _reject(kind, payload, **kwargs):  # noqa: ANN001
+            return GuardedOutput(
+                verdict="rejected",
+                kind="posture",
+                payload=None,
+                reasons=["forced test reject"],
+                safety_fallback="安全兜底文案",
+            )
+
+        monkeypatch.setattr(posture_mod, "guard_structured_output", _reject)
+        raw = {
+            "findings": [
+                {
+                    "key": "forward_head",
+                    "label": "头前移",
+                    "severity": "moderate",
+                    "confidence": "high",
+                    "evidence": "耳垂前移",
+                }
+            ],
+            "summary_markdown": "头前移。",
+            "disclaimer": "仅供参考",
+        }
+        out = govern_posture_result(raw, "side")
+        assert out["governance"]["verdict"] == "rejected"
+        assert out["findings"] == []
+        assert "安全兜底" in out["summary_markdown"]
+        assert out.get("safety_fallback")
+
+
+    def test_geometric_metrics_survive_governance(self):
+        """Phase 2: metrics from the pose estimator are retained; VLM inventions are not."""
+        raw = {
+            "view": "side",
+            "findings": [
+                {
+                    "key": "forward_head",
+                    "label": "头前移",
+                    "severity": "moderate",
+                    "confidence": "high",
+                    "evidence": "VLM 描述",
+                    "metric": {"name": "craniovertebral_angle", "value": 99.0, "unit": "deg"},
+                },
+                {
+                    "key": "rounded_shoulders",
+                    "label": "圆肩",
+                    "severity": "mild",
+                    "confidence": "medium",
+                    "evidence": "invented",
+                    "metric": {"name": "fake_angle", "value": 12.0, "unit": "deg"},
+                },
+            ],
+            "summary_markdown": "头前移。",
+            "disclaimer": "仅供参考",
+        }
+        geo = [
+            {
+                "key": "forward_head",
+                "label": "头前移倾向",
+                "severity": "moderate",
+                "confidence": "high",
+                "evidence": "几何测量颅椎角 46.0°",
+                "metric": {"name": "craniovertebral_angle", "value": 46.0, "unit": "deg"},
+            }
+        ]
+        allowed = [
+            {"name": "craniovertebral_angle", "value": 46.0, "unit": "deg", "finding_key": "forward_head"}
+        ]
+        out = govern_posture_result(
+            raw,
+            "side",
+            geometric_findings=geo,
+            allowed_metrics=allowed,
+        )
+        by_key = {f["key"]: f for f in out["findings"]}
+        assert by_key["forward_head"]["metric"]["value"] == 46.0
+        # VLM-only invented metric must be stripped
+        if "rounded_shoulders" in by_key:
+            assert by_key["rounded_shoulders"]["metric"] is None
+        assert out.get("geometric_metrics")
+
+
 class TestAnalyzePosture:
     async def test_end_to_end_with_fake_ai(self):
         payload = {

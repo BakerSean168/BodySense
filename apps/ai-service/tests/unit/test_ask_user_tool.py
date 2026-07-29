@@ -101,3 +101,26 @@ def test_make_ask_user_tool():
     assert tool.category == ToolCategory.HUMAN
     assert tool.required_params == ["question"]
     assert tool.handler is not None
+
+
+@pytest.mark.asyncio
+async def test_handle_ask_user_multi_field_form():
+    result = await handle_ask_user({
+        "question": "请补充以下信息",
+        "fields": [
+            {"key": "body_part", "label": "不适部位", "answer_type": "text"},
+            {
+                "key": "symmetric",
+                "label": "是否双侧对称",
+                "answer_type": "single_choice",
+                "options": ["是", "否"],
+            },
+            {"key": "duration", "label": "持续多久", "answer_type": "text"},
+            {"key": "extra", "label": "应被截断", "answer_type": "text"},
+        ],
+    })
+    assert result.status == ToolStatus.INTERRUPTED
+    fields = result.content["fields"]
+    assert len(fields) == 3
+    assert fields[0]["key"] == "body_part"
+    assert fields[1]["options"] == ["是", "否"]

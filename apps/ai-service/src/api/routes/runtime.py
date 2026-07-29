@@ -17,9 +17,18 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/runtime", tags=["runtime"])
 
 
+class ImageRef(BaseModel):
+    """Server-resolved image for multimodal turns (data URL, never raw client URL)."""
+
+    upload_id: str | None = None
+    mime_type: str | None = None
+    data_url: str
+
+
 class UserInput(BaseModel):
     type: str = "user_message"
     text: str
+    images: list[ImageRef] = Field(default_factory=list)
 
 
 class ConsultationSnapshot(BaseModel):
@@ -30,6 +39,8 @@ class ConsultationSnapshot(BaseModel):
 class BusinessContext(BaseModel):
     profile: dict[str, Any] = Field(default_factory=dict)
     consultation_snapshot: ConsultationSnapshot = Field(default_factory=ConsultationSnapshot)
+    # Prefetched completed posture analysis from Go (user_uploads.analysis_result).
+    posture_analysis: dict[str, Any] | None = None
 
 
 class StartTurnRequest(BaseModel):
@@ -59,9 +70,11 @@ async def start_turn(thread_id: str, request: StartTurnRequest):
                 run_id=request.run_id,
                 user_id=request.user_id,
                 user_message=request.input.text,
+                images=[img.model_dump() for img in request.input.images],
                 profile=request.business_context.profile,
                 extracted_info=request.business_context.consultation_snapshot.extracted_info,
                 phase=request.business_context.consultation_snapshot.phase,
+                posture_analysis=request.business_context.posture_analysis,
             ):
                 yield json.dumps(event.model_dump(exclude_none=True), ensure_ascii=False) + "\n"
         except Exception:

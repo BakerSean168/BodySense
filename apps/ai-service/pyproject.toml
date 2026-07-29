@@ -26,6 +26,11 @@ ocr = [
 ml = [
     "sentence-transformers>=5.6.0",
 ]
+pose = [
+    "mediapipe>=0.10.14",
+    "opencv-python-headless>=4.10.0",
+    "numpy>=1.26.0",
+]
 dev = [
     "ruff>=0.12.0",
     "pytest>=8.4.0",
