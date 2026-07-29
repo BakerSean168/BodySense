@@ -13,6 +13,7 @@ from ..prompts.diagnosis import (
     get_diagnosis_prompt,
     get_treatment_prompt,
 )
+from ..runtime.governance import guard_structured_output
 from .faithfulness_checker import get_faithfulness_checker
 from .red_flag_detector import get_red_flag_detector
 
@@ -127,7 +128,14 @@ class DiagnosisService:
         if rag_results:
             validated["citations"] = rag_results
 
-        return validated
+        # Forced governance gate before emit/persist (P2 Phase A).
+        guarded = guard_structured_output(
+            "diagnosis",
+            validated,
+            rag_results=rag_results,
+            extracted_info=extracted_info,
+        )
+        return guarded.to_emit_dict()
 
     async def generate_treatment(
         self,
@@ -176,7 +184,8 @@ class DiagnosisService:
             TreatmentResponse, raw_result, "treatment"
         ).model_dump(exclude_none=True)
 
-        # Check faithfulness against RAG results
+        # Keep faithfulness annotation for clients that surface it, but the
+        # forced gate below owns accept/degrade/reject decisions.
         if rag_results:
             checker = get_faithfulness_checker()
             faithfulness = checker.check_treatment_faithfulness(
@@ -185,7 +194,13 @@ class DiagnosisService:
             validated["faithfulness"] = faithfulness.to_dict()
             validated["citations"] = rag_results
 
-        return validated
+        guarded = guard_structured_output(
+            "treatment",
+            validated,
+            rag_results=rag_results,
+            extracted_info=extracted_info,
+        )
+        return guarded.to_emit_dict()
 
     def _validate(
         self,
