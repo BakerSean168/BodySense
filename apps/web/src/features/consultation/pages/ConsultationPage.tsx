@@ -6,6 +6,7 @@ import { SessionHistorySidebar } from '../components/SessionHistorySidebar';
 import { SessionHistorySidebarSkeleton } from '../components/SessionHistorySidebarSkeleton';
 import { InfoPanelSkeleton } from '../components/InfoPanelSkeleton';
 import { ChatPanelSkeleton } from '../components/ChatPanelSkeleton';
+import { InteractionMetricsPanel } from '../components/InteractionMetricsPanel';
 import { consultationApi } from '../services/consultationService';
 import { consultationKeys } from '../services/consultationQueryKeys';
 import { useConversationsQuery } from '../hooks/useConversationsQuery';
@@ -703,6 +704,9 @@ export function ConsultationPage() {
                 <ChatPanelSkeleton />
               ) : (
                 <div className="relative flex h-full flex-col">
+                  <div className="px-4 pt-3">
+                    <InteractionMetricsPanel conversationId={displayedConversationId} />
+                  </div>
                   <Suspense fallback={<ChatPanelSkeleton />}>
                     <AssistantChatPanel
                       key={chatSessionKey}

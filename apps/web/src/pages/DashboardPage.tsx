@@ -5,12 +5,19 @@ import { useNavigate } from 'react-router';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { JourneyNextStepCard, useJourneyState } from '@/features/journey';
 
 export function DashboardPage() {
   const { user } = useAuthStore();
   const { profile, isLoading, fetchProfile } = useProfileStore();
   const navigate = useNavigate();
   const [profileChecked, setProfileChecked] = useState(false);
+  const {
+    journey,
+    isLoading: journeyLoading,
+    error: journeyError,
+    refresh: refreshJourney,
+  } = useJourneyState();
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -20,7 +27,9 @@ export function DashboardPage() {
     loadProfile();
   }, [fetchProfile]);
 
-  // If user has no profile, redirect to onboarding
+  // Onboarding is the one redirect the dashboard still owns: without a profile
+  // there is no journey to render. Every later step comes from the backend's
+  // `available_actions` instead of being inferred here.
   useEffect(() => {
     if (profileChecked && !isLoading && profile === null) {
       navigate('/onboarding');
@@ -72,18 +81,20 @@ export function DashboardPage() {
               欢迎回来，<span className="text-[#CD7B67]">{user?.email?.split('@')[0]}</span>
             </h1>
             <p className="text-[#5D6B63] text-base sm:text-lg leading-relaxed font-medium">
-              这是您的“体悟”个人健康管理中心。今天开始一次新的姿态评估，或者与 AI 健康助手聊聊您的身体感受吧。
+              这是您的“体悟”个人健康管理中心。下方“下一步”由后端旅程状态驱动，快捷操作可随时进入各功能。
             </p>
-            <div className="mt-7 flex flex-wrap gap-4">
-              <Button onClick={() => navigate('/consultation')} className="bg-[#CD7B67] hover:bg-[#B65E49] text-white border-none shadow-sm shadow-[#CD7B67]/15">
-                开始智能问诊
-              </Button>
-              <Button variant="outline" className="border-[#CD7B67] text-[#CD7B67] hover:bg-[#CD7B67]/5" onClick={() => navigate('/profile')}>
-                更新身体档案
-              </Button>
-            </div>
           </div>
         </div>
+
+        {/* Backend-derived next step — the only primary "what now?" surface.
+            available_actions from GET /journey own the main CTAs; the hero no
+            longer hard-codes consultation/profile buttons. */}
+        <JourneyNextStepCard
+          journey={journey}
+          isLoading={journeyLoading}
+          error={journeyError}
+          onRetry={refreshJourney}
+        />
 
         {/* Quick Actions Grid */}
         <div>

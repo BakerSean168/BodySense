@@ -7,7 +7,7 @@ import {
   type ThreadMessageLike,
 } from '@assistant-ui/react';
 import { consultationApi } from '../services/consultationService';
-import { consumeSSEStream } from './useSSEProcessor';
+import { consumeSSEStream, dispatchReplayEvents } from './useSSEProcessor';
 import {
   reduceActiveTurnEvent,
   INITIAL_ACTIVE_TURN_STATE,
@@ -24,6 +24,22 @@ import type {
   StreamEvent,
   PendingInteraction,
 } from '../types/consultation';
+
+/** Ephemeral image attachments for the next user turn (Phase 3-B2).
+ * ChatInput pushes upload_ids here; the model adapter drains them when
+ * composing the StartRun parts. Not a global store — single in-flight turn.
+ */
+export type ConsultationImageAttachment = {
+  uploadId: string;
+  mimeType?: string;
+  imageUrl?: string;
+};
+
+export const consultationAttachmentBuffer: {
+  next: ConsultationImageAttachment[];
+} = {
+  next: [],
+};
 
 export interface ConsultationAdapterOptions {
   onConversationCreated?: (conversationId: string) => void;
@@ -184,52 +200,66 @@ export function useAssistantChatRuntime(
         throw new Error(`HTTP ${response.status}`);
       }
 
-      const streamPromise = consumeSSEStream(response, {
-        onConversationCreated: (data) => {
+      let maxSeq = 0;
+      let sawStreamDone = false;
+      let networkError: Error | null = null;
+
+      const handlers = {
+        onConversationCreated: (data: StreamEvent) => {
           console.debug('[SSE] ②-SSE handler 收到 conversation.created → 准备 dispatch', {
             conversation_id: (data as StreamEvent).ids?.conversation_id,
             run_id: (data as StreamEvent).ids?.run_id,
           });
           dispatch(data as StreamEvent);
         },
-        onTitleGenerated: (data) => {
+        onTitleGenerated: (data: StreamEvent) => {
           console.debug('[SSE] ②-SSE handler 收到 title.generated → 准备 dispatch', {
             title: (data as StreamEvent).payload,
           });
           dispatch(data as StreamEvent);
         },
-        onMessagePersisted: (data) => dispatch(data as StreamEvent),
-        onRunStarted: (data) => dispatch(data as StreamEvent),
-        onRunResumed: (data) => dispatch(data as StreamEvent),
-        onRunInterrupted: (data) => dispatch(data as StreamEvent),
-        onRunCompleted: (data) => dispatch(data as StreamEvent),
-        onRunFailed: (data) => dispatch(data as StreamEvent),
-        onMessageCreated: (data) => dispatch(data as StreamEvent),
-        onTextDelta: (data) => dispatch(data as StreamEvent),
-        onToolCall: (data) => dispatch(data as StreamEvent),
-        onToolResult: (data) => dispatch(data as StreamEvent),
-        onExtractedInfo: (data) => dispatch(data as StreamEvent),
-        onHealthFeatures: (data) => dispatch(data as StreamEvent),
-        onPhaseChange: (data) => dispatch(data as StreamEvent),
-        onRedFlag: (data) => dispatch(data as StreamEvent),
-        onCitation: (data) => dispatch(data as StreamEvent),
-        onKnowledgeGap: (data) => dispatch(data as StreamEvent),
-        onInteractionRequired: (data) => dispatch(data as StreamEvent),
-        onInteractionAnswered: (data) => dispatch(data as StreamEvent),
-        onMessageCompleted: (data) => dispatch(data as StreamEvent),
-        onMessageFailed: (data) => dispatch(data as StreamEvent),
-        onDone: (data) => dispatch(data as StreamEvent),
-        onStreamError: (data) => {
-          streamError = new Error(data.payload.message);
+        onMessagePersisted: (data: StreamEvent) => dispatch(data as StreamEvent),
+        onRunStarted: (data: StreamEvent) => dispatch(data as StreamEvent),
+        onRunResumed: (data: StreamEvent) => dispatch(data as StreamEvent),
+        onRunInterrupted: (data: StreamEvent) => dispatch(data as StreamEvent),
+        onRunCompleted: (data: StreamEvent) => dispatch(data as StreamEvent),
+        onRunFailed: (data: StreamEvent) => dispatch(data as StreamEvent),
+        onMessageCreated: (data: StreamEvent) => dispatch(data as StreamEvent),
+        onTextDelta: (data: StreamEvent) => dispatch(data as StreamEvent),
+        onToolCall: (data: StreamEvent) => dispatch(data as StreamEvent),
+        onToolResult: (data: StreamEvent) => dispatch(data as StreamEvent),
+        onExtractedInfo: (data: StreamEvent) => dispatch(data as StreamEvent),
+        onHealthFeatures: (data: StreamEvent) => dispatch(data as StreamEvent),
+        onPhaseChange: (data: StreamEvent) => dispatch(data as StreamEvent),
+        onRedFlag: (data: StreamEvent) => dispatch(data as StreamEvent),
+        onCitation: (data: StreamEvent) => dispatch(data as StreamEvent),
+        onKnowledgeGap: (data: StreamEvent) => dispatch(data as StreamEvent),
+        onInteractionRequired: (data: StreamEvent) => dispatch(data as StreamEvent),
+        onInteractionAnswered: (data: StreamEvent) => dispatch(data as StreamEvent),
+        onMessageCompleted: (data: StreamEvent) => dispatch(data as StreamEvent),
+        onMessageFailed: (data: StreamEvent) => dispatch(data as StreamEvent),
+        onDone: (data: StreamEvent) => {
+          sawStreamDone = true;
+          dispatch(data as StreamEvent);
+        },
+        onStreamError: (data: StreamEvent) => {
+          streamError = new Error(
+            (data.payload as { message?: string })?.message ?? 'stream error',
+          );
           dispatch(data as StreamEvent);
           streamFinished = true;
           notifyQueueConsumer();
         },
-        onError: (err) => {
-          streamError = err;
+        onError: (err: Error) => {
+          // Network/read failure — attempt durable after_seq resume below.
+          networkError = err;
           streamFinished = true;
           notifyQueueConsumer();
         },
+      };
+
+      const streamPromise = consumeSSEStream(response, handlers).then((seq) => {
+        maxSeq = Math.max(maxSeq, seq);
       }).finally(() => {
         streamFinished = true;
         notifyQueueConsumer();
@@ -248,6 +278,43 @@ export function useAssistantChatRuntime(
       }
 
       await streamPromise;
+
+      // T0-2: if the live SSE dropped without stream.done, catch up from the
+      // durable event log using after_seq = maxSeq (backend already supports it).
+      if (!sawStreamDone && !streamError && networkError) {
+        const convId =
+          reducerState.conversationId ||
+          (conversationId !== 'new' ? conversationId : null);
+        const runId = reducerState.runId;
+        if (convId && runId) {
+          try {
+            let afterSeq = maxSeq;
+            let hasMore = true;
+            while (hasMore) {
+              const page = await consultationApi.listRunEvents(convId, runId, {
+                afterSeq,
+                limit: 200,
+              });
+              const parseState = dispatchReplayEvents(page.events, handlers, {
+                currentEvent: '',
+                maxSeq: afterSeq,
+              });
+              afterSeq = parseState.maxSeq;
+              maxSeq = Math.max(maxSeq, afterSeq);
+              hasMore = page.hasMore;
+              if (page.events.length === 0) break;
+            }
+            networkError = null;
+          } catch (resumeErr) {
+            streamError =
+              resumeErr instanceof Error ? resumeErr : networkError;
+          }
+        } else {
+          streamError = networkError;
+        }
+      } else if (networkError && !streamError) {
+        streamError = networkError;
+      }
 
       if (streamError) {
         throw streamError;
@@ -276,6 +343,38 @@ export function useAssistantChatRuntime(
         .map((p) => p.text)
         .join('');
 
+      const attachments = consultationAttachmentBuffer.next.splice(
+        0,
+        consultationAttachmentBuffer.next.length,
+      );
+      const parts: Array<{
+        type: string;
+        text?: string;
+        upload_id?: string;
+        mime_type?: string;
+        image_url?: string;
+      }> = [];
+      const text = content.trim();
+      if (text) {
+        parts.push({ type: 'text', text });
+      } else if (attachments.length > 0) {
+        parts.push({
+          type: 'text',
+          text: '请结合我附上的照片，分析与体态/不适相关的可见信息，并给出谨慎建议。',
+        });
+      }
+      for (const image of attachments.slice(0, 3)) {
+        parts.push({
+          type: 'image',
+          upload_id: image.uploadId,
+          ...(image.mimeType ? { mime_type: image.mimeType } : {}),
+          ...(image.imageUrl ? { image_url: image.imageUrl } : {}),
+        });
+      }
+      if (parts.length === 0) {
+        parts.push({ type: 'text', text: content || ' ' });
+      }
+
       setIsStreaming(true);
 
       yield* streamConsultationRun(() =>
@@ -285,7 +384,7 @@ export function useAssistantChatRuntime(
           requestId: crypto.randomUUID(),
           message: {
             role: 'user',
-            parts: [{ type: 'text', text: content }],
+            parts,
           },
         }),
       );

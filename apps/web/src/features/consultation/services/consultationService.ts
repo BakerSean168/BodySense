@@ -11,6 +11,7 @@ import type {
   TreatmentPlan,
   ConversationShare,
   SharedConversation,
+  StreamEvent,
 } from '../types/consultation';
 
 const API_BASE = '/api/v1';
@@ -38,7 +39,13 @@ export const consultationApi = {
     requestId: string;
     message: {
       role: string;
-      parts: { type: string; text: string }[];
+      parts: Array<{
+        type: string;
+        text?: string;
+        upload_id?: string;
+        mime_type?: string;
+        image_url?: string;
+      }>;
     };
   }): Promise<Response> {
     return authFetch(`${API_BASE}/consultation-runs`, {
@@ -209,6 +216,86 @@ export const consultationApi = {
   /**
    * Resume a pending interaction and continue the interrupted thread stream.
    */
+
+  /**
+   * Incremental durable event log for a run (T0-2 resume).
+   * Pass afterSeq to skip already-consumed events (exclusive lower bound).
+   */
+  async listRunEvents(
+    conversationId: string,
+    runId: string,
+    params?: { afterSeq?: number; limit?: number },
+  ): Promise<{
+    events: StreamEvent[];
+    hasMore: boolean;
+    nextAfterSeq: number | null;
+  }> {
+    const searchParams = new URLSearchParams();
+    if (params?.afterSeq != null) searchParams.set('after_seq', String(params.afterSeq));
+    if (params?.limit != null) searchParams.set('limit', String(params.limit));
+    const query = searchParams.toString();
+    const raw = await authFetch(
+      `${API_BASE}/conversations/${conversationId}/runs/${runId}/events${query ? '?' + query : ''}`,
+    ).then((res) =>
+      parseJson<{
+        events: Array<{
+          seq: number;
+          channel: string;
+          type: string;
+          ids: unknown;
+          payload: unknown;
+          created_at: string;
+        }>;
+        hasMore: boolean;
+        nextAfterSeq?: number | null;
+      }>(res),
+    );
+
+    const events: StreamEvent[] = raw.events.map((item) => {
+      const ids =
+        typeof item.ids === 'string'
+          ? (JSON.parse(item.ids) as StreamEvent['ids'])
+          : ((item.ids ?? {}) as StreamEvent['ids']);
+      const payload =
+        typeof item.payload === 'string'
+          ? (JSON.parse(item.payload) as StreamEvent['payload'])
+          : ((item.payload ?? {}) as StreamEvent['payload']);
+      return {
+        version: 1,
+        seq: item.seq,
+        channel: item.channel,
+        type: item.type,
+        ids,
+        payload,
+      } as StreamEvent;
+    });
+
+    return {
+      events,
+      hasMore: raw.hasMore,
+      nextAfterSeq: raw.nextAfterSeq ?? null,
+    };
+  },
+  async getInteractionMetrics(
+    conversationId: string,
+  ): Promise<{
+    total: number;
+    answered: number;
+    expired: number;
+    pending: number;
+    answer_rate: number;
+    expire_rate: number;
+    avg_wait_seconds: number;
+  }> {
+    const res = await authFetch(
+      `${API_BASE}/consultations/${conversationId}/interaction-metrics`,
+    );
+    if (!res.ok) {
+      throw new Error(`interaction metrics failed: ${res.status}`);
+    }
+    return res.json();
+  },
+
   async resumeInteractionStream(
     conversationId: string,
     interactionId: string,
@@ -244,4 +331,5 @@ export type {
   Message,
   ConversationShare,
   SharedConversation,
+  StreamEvent,
 } from '../types/consultation';
