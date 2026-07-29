@@ -167,6 +167,28 @@ export type RedFlagDetectedEvent = StreamEventBase<
   { has_red_flags: boolean; flags: unknown[] }
 >;
 
+export type OutputReviewedEvent = StreamEventBase<
+  'safety',
+  'safety.output_reviewed',
+  {
+    kind: string;
+    verdict: 'accepted' | 'degraded' | 'rejected';
+    reasons?: string[];
+    issues?: unknown[];
+  }
+>;
+
+export type OutputRejectedEvent = StreamEventBase<
+  'safety',
+  'safety.output_rejected',
+  {
+    kind: string;
+    verdict: 'rejected';
+    reasons?: string[];
+    safety_fallback?: string;
+  }
+>;
+
 export type UsageReportedEvent = StreamEventBase<
   'usage',
   'usage.reported',
@@ -191,16 +213,41 @@ export type StreamErrorEvent = StreamEventBase<
   { message: string }
 >;
 
+export type InteractionQuestionField = {
+  key: string;
+  label: string;
+  answer_type?: 'text' | 'single_choice' | 'multi_choice' | 'number' | 'date' | 'scale' | 'select';
+  options?: string[];
+  required?: boolean;
+};
+
+export type InteractionQuestion = {
+  question: string;
+  answer_type?: string;
+  options?: string[];
+  context?: string;
+  allow_custom_input?: boolean;
+  required?: boolean;
+  /** Optional multi-field form (≤3). Single-question path omits this. */
+  fields?: InteractionQuestionField[];
+};
+
 export type InteractionRequiredEvent = StreamEventBase<
   'state',
   'state.interaction.required',
-  { interaction_id: string; question: { question: string; answer_type: string; options?: string[]; context?: string } }
+  { interaction_id: string; question: InteractionQuestion }
 >;
 
 export type InteractionAnsweredEvent = StreamEventBase<
   'state',
   'state.interaction.answered',
   { interaction_id: string; answer: unknown }
+>;
+
+export type InteractionExpiredEvent = StreamEventBase<
+  'state',
+  'state.interaction.expired',
+  { interaction_id: string; expired_at: string; reason?: string }
 >;
 
 export type JobCreatedEvent = StreamEventBase<
@@ -249,12 +296,15 @@ export type StreamEvent =
   | CitationAddedEvent
   | KnowledgeGapEvent
   | RedFlagDetectedEvent
+  | OutputReviewedEvent
+  | OutputRejectedEvent
   | UsageReportedEvent
   | TitleGeneratedEvent
   | StreamDoneEvent
   | StreamErrorEvent
   | InteractionRequiredEvent
   | InteractionAnsweredEvent
+  | InteractionExpiredEvent
   | JobCreatedEvent
   | JobProgressEvent
   | JobCompletedEvent

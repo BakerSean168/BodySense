@@ -4,5 +4,24 @@
   "sourceRoot": "packages/contracts/src",
   "projectType": "library",
   "tags": ["scope:shared", "type:lib"],
-  "targets": {}
+  "targets": {
+    "test": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "options": {
+        "commands": [
+          "cd apps/api && go test ./internal/dto -count=1 -run 'Fixture|StreamEvent|Schema'",
+          "cd apps/ai-service && uv run pytest tests/unit/test_stream_event.py -q"
+        ],
+        "parallel": false
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "options": {
+        "command": "pnpm exec tsc -p packages/contracts/tsconfig.json --noEmit"
+      }
+    }
+  }
 }

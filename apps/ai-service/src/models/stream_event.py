@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 StreamChannel = Literal[
     "conversation",
+    "run",
     "message",
     "tool",
     "state",
@@ -16,6 +17,7 @@ StreamChannel = Literal[
     "usage",
     "job",
     "stream",
+    "title",
 ]
 
 
