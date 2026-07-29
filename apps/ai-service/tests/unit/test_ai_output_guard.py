@@ -65,64 +65,31 @@ def test_governance_result_to_dict_includes_validated_output(guard):
     assert d["validated_output"] == "正常文本内容，足够长以通过检查。"
 
 
-def test_validate_treatment_accepted(guard):
-    """Treatment plan with exercises grounded in RAG results is accepted."""
-    treatment_plan = {
-        "correction_exercises": [
-            {"name": "臀桥", "sets": 3, "reps": 10},
+def test_treatment_gate_moved_to_runtime_governance_seam():
+    """validate_treatment was dead code; treatment now uses guard_structured_output."""
+    from src.runtime.governance import guard_structured_output
+
+    grounded = guard_structured_output(
+        "treatment",
+        {
+            "treatment_plan": {
+                "correction_exercises": [{"name": "臀桥", "sets": 3, "reps": 10}],
+            }
+        },
+        rag_results=[
+            {
+                "title": "臀桥训练",
+                "body_markdown": "臀桥是一种常见的臀部激活训练。",
+                "clips": [],
+            }
         ],
-    }
-    rag_results = [
-        {"title": "臀桥训练", "body_markdown": "臀桥是一种常见的臀部激活训练。", "clips": []},
-    ]
-    context = GovernanceContext(
-        output_type="treatment",
-        rag_results=rag_results,
     )
-    result = guard.validate_treatment(treatment_plan, context)
-    # Should not be rejected (may be degraded due to no red flag issues)
-    assert result.status in (GovernanceStatus.ACCEPTED, GovernanceStatus.DEGRADED)
+    assert grounded.verdict in ("accepted", "degraded")
+    assert grounded.payload is not None
 
-
-def test_validate_treatment_rejected_missing_exercises(guard):
-    """Treatment plan without correction_exercises is rejected by schema."""
-    treatment_plan = {"other_field": "value"}
-    context = GovernanceContext(output_type="treatment")
-    result = guard.validate_treatment(treatment_plan, context)
-    assert result.status == GovernanceStatus.REJECTED
-    assert any("correction_exercises" in i.message for i in result.issues)
-
-
-def test_validate_treatment_faithfulness_warning(guard):
-    """Treatment with ungrounded exercises produces faithfulness warnings."""
-    treatment_plan = {
-        "correction_exercises": [
-            {"name": "完全虚构的动作XYZ", "sets": 3},
-        ],
-    }
-    rag_results = [
-        {"title": "臀桥训练", "body_markdown": "臀桥训练内容", "clips": []},
-    ]
-    context = GovernanceContext(
-        output_type="treatment",
-        rag_results=rag_results,
-    )
-    result = guard.validate_treatment(treatment_plan, context)
-    faithfulness_issues = [i for i in result.issues if i.policy == "faithfulness"]
-    assert len(faithfulness_issues) > 0
-
-
-def test_validate_treatment_no_rag_skips_faithfulness(guard):
-    """Without RAG results, faithfulness check is skipped."""
-    treatment_plan = {
-        "correction_exercises": [
-            {"name": "臀桥", "sets": 3},
-        ],
-    }
-    context = GovernanceContext(output_type="treatment", rag_results=[])
-    result = guard.validate_treatment(treatment_plan, context)
-    faithfulness_issues = [i for i in result.issues if i.policy == "faithfulness"]
-    assert len(faithfulness_issues) == 0
+    missing = guard_structured_output("treatment", {"other_field": "value"})
+    assert missing.verdict == "rejected"
+    assert missing.payload is None
 
 
 def test_validate_text_output_red_flag_detected(guard):

@@ -5,8 +5,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from .policies import check_empty_output, check_faithfulness, check_red_flags, check_schema_valid
-from .types import GovernanceContext, GovernanceIssue, GovernanceResult, GovernanceStatus
+from .policies import check_empty_output, check_red_flags, check_schema_valid
+from .types import GovernanceIssue, GovernanceResult, GovernanceStatus
 
 logger = logging.getLogger(__name__)
 
@@ -57,31 +57,6 @@ class AIOutputGuard:
         issues.extend(check_red_flags(output_text, ctx))
 
         return self._build_result(issues, validated_output=output)
-
-    def validate_treatment(
-        self,
-        treatment_plan: dict[str, Any],
-        context: GovernanceContext,
-    ) -> GovernanceResult:
-        """Validate a treatment plan with faithfulness checking.
-
-        Runs schema, safety, and faithfulness policies.
-        """
-        issues: list[GovernanceIssue] = []
-
-        # Schema: treatment plan should have correction_exercises
-        issues.extend(check_schema_valid(treatment_plan, ["correction_exercises"]))
-
-        # Safety: red flag check
-        import json
-        output_text = json.dumps(treatment_plan, ensure_ascii=False)
-        ctx_dict = {"extracted_info": context.extracted_info}
-        issues.extend(check_red_flags(output_text, ctx_dict))
-
-        # Faithfulness: check exercises against RAG results
-        issues.extend(check_faithfulness(treatment_plan, context))
-
-        return self._build_result(issues, validated_output=treatment_plan)
 
     def _build_result(
         self,

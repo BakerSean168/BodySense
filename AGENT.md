@@ -13,12 +13,15 @@
 
 ## 技术栈
 
-- **前端**：React 19 + TypeScript 6 + Vite 8 + shadcn/ui + Tailwind CSS 4
+- **前端**：React 19 + TypeScript 7（native `tsc` side-by-side）+ Vite 8 + react-router 8 + shadcn/ui + Tailwind CSS 4
 - **后端**：Go 1.26 + Gin 1.12 + GORM
 - **AI 服务**：Python 3.13 + FastAPI + LangChain v1 + uv
 - **数据库**：PostgreSQL 18 (pgvector) + Redis 7
 - **部署**：Docker Compose + Caddy + Watchtower
-- **Monorepo**：Nx workspace + pnpm 11
+- **Monorepo**：Nx 23 + pnpm 11 + ESLint 10 + Vitest 4
+- **TS 过渡**：`typescript` 指向官方 `@typescript/typescript6`（经典 programmatic API，供 ESLint/Nx）；`typescript7` 为原生 TS 7 `tsc`（typecheck）。待 TS 7.1 稳定 API 后收敛为单包。
+
+
 
 ## 项目结构
 

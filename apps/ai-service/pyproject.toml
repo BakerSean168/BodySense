@@ -4,16 +4,16 @@ version = "0.1.0"
 description = "BodySense AI Service - posture analysis and RAG"
 requires-python = ">=3.13"
 dependencies = [
-    "fastapi>=0.136.0",
-    "uvicorn>=0.34.0",
-    "openai>=1.30.0",
-    "psycopg[binary,pool]>=3.2.0",
-    "pgvector>=0.4.0",
-    "redis>=5.2.0",
-    "python-dotenv>=1.1.0",
-    "Pillow>=11.0.0",
-    "python-multipart>=0.0.18",
-    "langgraph>=0.4.0",
+    "fastapi>=0.140.13",
+    "uvicorn>=0.51.0",
+    "openai>=2.50.0",
+    "psycopg[binary,pool]>=3.3.4",
+    "pgvector>=0.5.0",
+    "redis>=7.0.0",
+    "python-dotenv>=1.2.2",
+    "Pillow>=12.3.0",
+    "python-multipart>=0.0.32",
+    "langgraph>=1.2.10",
     "pyyaml>=6.0.3",
     "langgraph-checkpoint-postgres>=3.1.0",
 ]
@@ -21,16 +21,22 @@ dependencies = [
 [project.optional-dependencies]
 ocr = [
     "pytesseract>=0.3.13",
-    "PyMuPDF>=1.25.0",
+    "PyMuPDF>=1.27.0",
 ]
 ml = [
-    "sentence-transformers>=5.6.0",
+    "sentence-transformers>=5.6.1",
+]
+pose = [
+    # MediaPipe 1.x Tasks API (solutions API removed in 1.0).
+    "mediapipe>=1.0.0",
+    "numpy>=2.5.0",
 ]
 dev = [
-    "ruff>=0.12.0",
-    "pytest>=8.4.0",
-    "pytest-asyncio>=0.26.0",
-    "httpx>=0.28.0",
+    "ruff>=0.16.0",
+    "pytest>=9.1.0",
+    "pytest-asyncio>=1.4.0",
+    "httpx>=0.28.1",
+    "httpx2>=2.9.0",
 ]
 
 [tool.ruff]

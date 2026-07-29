@@ -1,12 +1,18 @@
 """Shared pytest fixtures for BodySense AI Service tests."""
 
 import asyncio
+import os
 from typing import Generator
 
 import pytest
 from fastapi.testclient import TestClient
 
-from src.main import app
+# Tests have no Postgres, so the durable checkpointer cannot initialize. Opt in
+# to the ephemeral saver explicitly — startup fails loudly without this flag by
+# design, so that a deployed environment never degrades by accident.
+os.environ.setdefault("BODYSENSE_ALLOW_EPHEMERAL_CHECKPOINTER", "true")
+
+from src.main import app  # noqa: E402
 
 
 @pytest.fixture(scope="session")

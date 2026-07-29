@@ -1,9 +1,15 @@
 # T0 亮点方案（二）：事件溯源 + 投影 + 流回放的流式架构
+> ✅ **已完成并归档**（2026-07-29）。实施落地见对应代码与测试；本文件移入 archive 仅作历史记录。
+
 
 > 文档状态：调研 + 增强方案（待评审）
 > 创建日期：2026-07-10
 > 关联：`docs/project-review-2026-07-10.md` §1 T0-2、§2.2 G-1、§2.3 W-4、§4-3
 > 真值来源：当前代码。文中 `file:line` 为撰写时锚点，实施前以最新代码为准。
+
+> ✅ **现状校正（2026-07-26，见 [architecture-review-2026-07-26.md](./architecture-review-2026-07-26.md)）**：
+> 本文第 1 节描述的事件日志(`runtime_events` append-only + 单调 `seq`)、`recordPublicEvent` 落库、`replayCompletedRun` 幂等回放、`thread_projection` 投影**均已在 Go 侧实现并运行**，Go 侧锚点有效。这与 `docs/architecture/stream-event-contract-runtime.md` 标注的「~30% 未实现」冲突——**以本文和当前代码为准，架构文档标注滞后**。
+> 因此本文的 Phase A/B/C/D 全部是**在已落地能力上的增强**（增量回放端点、前端断线续传、写放大优化），非从零新建。Phase B 前端续传是审查点名的高性价比增强。
 
 ---
 

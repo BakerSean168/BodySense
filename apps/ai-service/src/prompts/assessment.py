@@ -56,7 +56,58 @@ ASSESSMENT_DISCLAIMER = (
 )
 
 
-def get_assessment_prompt(profile: dict, rag_context: str = "") -> str:
+def format_posture_analysis_section(posture_analysis: dict | None) -> str:
+    """Render stored posture analysis_result into assessment prompt text.
+
+    Pure helper so unit tests can assert assessment reuses completed analysis
+    without invoking the LLM.
+    """
+    if not isinstance(posture_analysis, dict) or not posture_analysis.get("has_analysis"):
+        return ""
+
+    lines = ["## 已完成的体态照片分析（复用 analysis_result，勿重新臆测角度）"]
+    for view in posture_analysis.get("views") or []:
+        if not isinstance(view, dict):
+            continue
+        view_name = view.get("view") or view.get("file_type") or "unknown"
+        analysis = view.get("analysis") or {}
+        if not isinstance(analysis, dict):
+            lines.append(f"- 视角 {view_name}：已有分析")
+            continue
+        confidence = analysis.get("overall_confidence", "")
+        header = f"- 视角 {view_name}"
+        if confidence:
+            header += f"（置信度：{confidence}）"
+        lines.append(header)
+        for finding in (analysis.get("findings") or [])[:8]:
+            if not isinstance(finding, dict):
+                continue
+            label = finding.get("label") or finding.get("key") or "发现"
+            severity = finding.get("severity", "")
+            evidence = finding.get("evidence", "")
+            item = f"  · {label}"
+            if severity:
+                item += f"（{severity}）"
+            if evidence:
+                item += f"：{evidence}"
+            lines.append(item)
+        summary_md = (analysis.get("summary_markdown") or "").strip()
+        if summary_md:
+            lines.append(f"  摘要：{summary_md[:280]}")
+
+    for text in posture_analysis.get("summaries") or []:
+        if text and not any(text[:40] in line for line in lines):
+            lines.append(f"- 综合摘要：{str(text)[:280]}")
+
+    lines.append("请将上述已存储发现纳入体态维度评分与问题识别，不要要求重新上传照片。")
+    return "\n".join(lines)
+
+
+def get_assessment_prompt(
+    profile: dict,
+    rag_context: str = "",
+    posture_analysis: dict | None = None,
+) -> str:
     """Build the assessment prompt from user profile."""
     parts = ["请根据以下用户信息生成健康评估报告：\n"]
 
@@ -82,6 +133,10 @@ def get_assessment_prompt(profile: dict, rag_context: str = "") -> str:
         parts.append(f"- 既往伤病史：{profile['injury_history']}")
     if profile.get("self_description"):
         parts.append(f"- 自我描述：{profile['self_description']}")
+
+    posture_section = format_posture_analysis_section(posture_analysis)
+    if posture_section:
+        parts.append("\n" + posture_section)
 
     # RAG context
     if rag_context:

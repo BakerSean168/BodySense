@@ -53,9 +53,698 @@
     "payload": {
       "interaction_id": "interaction-1",
       "question": {
-        "question": "哪里最不舒服？",
+        "question": "疼痛是否双侧对称？",
+        "answer_type": "select",
+        "options": [
+          "是",
+          "否"
+        ]
+      }
+    }
+  },
+  {
+    "version": 1,
+    "seq": 4,
+    "channel": "run",
+    "type": "run.started",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": null,
+      "tool_call_id": null,
+      "interaction_id": null,
+      "job_id": null
+    },
+    "payload": {
+      "status": "running",
+      "source": "start_turn"
+    }
+  },
+  {
+    "version": 1,
+    "seq": 5,
+    "channel": "title",
+    "type": "title.generated",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": null,
+      "tool_call_id": null,
+      "interaction_id": null,
+      "job_id": null
+    },
+    "payload": {
+      "title": "肩颈不适咨询"
+    }
+  },
+  {
+    "version": 1,
+    "seq": 6,
+    "channel": "safety",
+    "type": "safety.output_reviewed",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": null,
+      "tool_call_id": null,
+      "interaction_id": null,
+      "job_id": null
+    },
+    "payload": {
+      "kind": "diagnosis",
+      "verdict": "accepted",
+      "reasons": [],
+      "issues": []
+    }
+  },
+  {
+    "version": 1,
+    "seq": 7,
+    "channel": "safety",
+    "type": "safety.output_rejected",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": null,
+      "tool_call_id": null,
+      "interaction_id": null,
+      "job_id": null
+    },
+    "payload": {
+      "kind": "treatment",
+      "verdict": "rejected",
+      "reasons": [
+        "Missing required field: treatment_plan"
+      ],
+      "safety_fallback": "出于安全考虑，本次未能生成可下发的训练方案。"
+    }
+  },
+  {
+    "version": 1,
+    "seq": 8,
+    "channel": "conversation",
+    "type": "conversation.created",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": null,
+      "tool_call_id": null,
+      "interaction_id": null,
+      "job_id": null
+    },
+    "payload": {
+      "title": "",
+      "title_status": "pending",
+      "status": "active",
+      "last_message_at": "2026-07-28T00:00:00Z",
+      "created_at": "2026-07-28T00:00:00Z"
+    }
+  },
+  {
+    "version": 1,
+    "seq": 9,
+    "channel": "run",
+    "type": "run.resumed",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": null,
+      "tool_call_id": null,
+      "interaction_id": "interaction-1",
+      "job_id": null
+    },
+    "payload": {
+      "status": "running",
+      "interaction_id": "interaction-1"
+    }
+  },
+  {
+    "version": 1,
+    "seq": 10,
+    "channel": "run",
+    "type": "run.interrupted",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": null,
+      "tool_call_id": null,
+      "interaction_id": "interaction-1",
+      "job_id": null
+    },
+    "payload": {
+      "status": "waiting_user",
+      "interaction_id": "interaction-1"
+    }
+  },
+  {
+    "version": 1,
+    "seq": 11,
+    "channel": "run",
+    "type": "run.completed",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": null,
+      "tool_call_id": null,
+      "interaction_id": null,
+      "job_id": null
+    },
+    "payload": {
+      "status": "completed",
+      "usage": {
+        "input_tokens": 10,
+        "output_tokens": 20
+      }
+    }
+  },
+  {
+    "version": 1,
+    "seq": 12,
+    "channel": "run",
+    "type": "run.failed",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": null,
+      "tool_call_id": null,
+      "interaction_id": null,
+      "job_id": null
+    },
+    "payload": {
+      "status": "failed",
+      "error": {
+        "message": "stream failed"
+      }
+    }
+  },
+  {
+    "version": 1,
+    "seq": 13,
+    "channel": "message",
+    "type": "message.persisted",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": "msg-user-1",
+      "tool_call_id": null,
+      "interaction_id": null,
+      "job_id": null
+    },
+    "payload": {
+      "client_message_id": "client-1",
+      "role": "user"
+    }
+  },
+  {
+    "version": 1,
+    "seq": 14,
+    "channel": "message",
+    "type": "message.created",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": "msg-1",
+      "tool_call_id": null,
+      "interaction_id": null,
+      "job_id": null
+    },
+    "payload": {
+      "role": "assistant",
+      "status": "streaming"
+    }
+  },
+  {
+    "version": 1,
+    "seq": 15,
+    "channel": "message",
+    "type": "message.completed",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": "msg-1",
+      "tool_call_id": null,
+      "interaction_id": null,
+      "job_id": null
+    },
+    "payload": {
+      "status": "completed",
+      "finish_reason": "stop"
+    }
+  },
+  {
+    "version": 1,
+    "seq": 16,
+    "channel": "message",
+    "type": "message.failed",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": "msg-1",
+      "tool_call_id": null,
+      "interaction_id": null,
+      "job_id": null
+    },
+    "payload": {
+      "status": "failed",
+      "error": {
+        "message": "model error"
+      }
+    }
+  },
+  {
+    "version": 1,
+    "seq": 17,
+    "channel": "tool",
+    "type": "tool.call",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": "msg-1",
+      "tool_call_id": "tool-2",
+      "interaction_id": null,
+      "job_id": null
+    },
+    "payload": {
+      "tool": "search_knowledge",
+      "args": {
+        "query": "圆肩"
+      }
+    }
+  },
+  {
+    "version": 1,
+    "seq": 18,
+    "channel": "tool",
+    "type": "tool.result",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": "msg-1",
+      "tool_call_id": "tool-2",
+      "interaction_id": null,
+      "job_id": null
+    },
+    "payload": {
+      "tool": "search_knowledge",
+      "result": {
+        "hits": 1
+      }
+    }
+  },
+  {
+    "version": 1,
+    "seq": 19,
+    "channel": "state",
+    "type": "state.extracted_info.upsert",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": "msg-1",
+      "tool_call_id": null,
+      "interaction_id": null,
+      "job_id": null
+    },
+    "payload": {
+      "info": {
+        "body_part": "颈",
+        "symptom_type": "酸痛",
+        "severity": "中"
+      }
+    }
+  },
+  {
+    "version": 1,
+    "seq": 20,
+    "channel": "state",
+    "type": "state.health_features.upsert",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": null,
+      "tool_call_id": null,
+      "interaction_id": null,
+      "job_id": null
+    },
+    "payload": {
+      "health_features": {
+        "discomforts": [
+          {
+            "label": "颈酸",
+            "source": "extracted_info"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "version": 1,
+    "seq": 21,
+    "channel": "state",
+    "type": "state.phase.changed",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": null,
+      "tool_call_id": null,
+      "interaction_id": null,
+      "job_id": null
+    },
+    "payload": {
+      "from": "collecting",
+      "to": "analysis_ready",
+      "reason": "enough_info"
+    }
+  },
+  {
+    "version": 1,
+    "seq": 22,
+    "channel": "state",
+    "type": "state.interaction.answered",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": null,
+      "tool_call_id": null,
+      "interaction_id": "interaction-1",
+      "job_id": null
+    },
+    "payload": {
+      "interaction_id": "interaction-1",
+      "answer": {
+        "text": "是"
+      }
+    }
+  },
+  {
+    "version": 1,
+    "seq": 23,
+    "channel": "source",
+    "type": "source.citation.added",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": "msg-1",
+      "tool_call_id": null,
+      "interaction_id": null,
+      "job_id": null
+    },
+    "payload": {
+      "citation": {
+        "title": "圆肩纠正",
+        "summary": "开胸拉伸"
+      }
+    }
+  },
+  {
+    "version": 1,
+    "seq": 24,
+    "channel": "source",
+    "type": "source.knowledge_gap",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": null,
+      "tool_call_id": null,
+      "interaction_id": null,
+      "job_id": null
+    },
+    "payload": {
+      "query": "罕见病",
+      "message": "知识库暂无足够匹配"
+    }
+  },
+  {
+    "version": 1,
+    "seq": 25,
+    "channel": "safety",
+    "type": "safety.red_flag.detected",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": "msg-1",
+      "tool_call_id": null,
+      "interaction_id": null,
+      "job_id": null
+    },
+    "payload": {
+      "has_red_flags": true,
+      "flags": [
+        {
+          "category": "neurologic",
+          "message": "麻木无力"
+        }
+      ]
+    }
+  },
+  {
+    "version": 1,
+    "seq": 26,
+    "channel": "usage",
+    "type": "usage.reported",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": null,
+      "tool_call_id": null,
+      "interaction_id": null,
+      "job_id": null
+    },
+    "payload": {
+      "usage": {
+        "input_tokens": 12,
+        "output_tokens": 34
+      }
+    }
+  },
+  {
+    "version": 1,
+    "seq": 27,
+    "channel": "stream",
+    "type": "stream.done",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": null,
+      "tool_call_id": null,
+      "interaction_id": null,
+      "job_id": null
+    },
+    "payload": {}
+  },
+  {
+    "version": 1,
+    "seq": 28,
+    "channel": "stream",
+    "type": "stream.error",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": null,
+      "tool_call_id": null,
+      "interaction_id": null,
+      "job_id": null
+    },
+    "payload": {
+      "message": "upstream timeout"
+    }
+  },
+  {
+    "version": 1,
+    "seq": 29,
+    "channel": "job",
+    "type": "job.created",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": null,
+      "turn_id": null,
+      "message_id": null,
+      "tool_call_id": null,
+      "interaction_id": null,
+      "job_id": "job-1"
+    },
+    "payload": {
+      "job_type": "upload.posture_analyze",
+      "status": "queued"
+    }
+  },
+  {
+    "version": 1,
+    "seq": 30,
+    "channel": "job",
+    "type": "job.completed",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": null,
+      "turn_id": null,
+      "message_id": null,
+      "tool_call_id": null,
+      "interaction_id": null,
+      "job_id": "job-1"
+    },
+    "payload": {
+      "result": {
+        "view": "front"
+      }
+    }
+  },
+  {
+    "version": 1,
+    "seq": 31,
+    "channel": "job",
+    "type": "job.failed",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": null,
+      "turn_id": null,
+      "message_id": null,
+      "tool_call_id": null,
+      "interaction_id": null,
+      "job_id": "job-1"
+    },
+    "payload": {
+      "error": {
+        "message": "vision timeout"
+      }
+    }
+  },
+  {
+    "version": 1,
+    "seq": 32,
+    "channel": "state",
+    "type": "state.diagnosis.ready",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": null,
+      "tool_call_id": null,
+      "interaction_id": null,
+      "job_id": null
+    },
+    "payload": {
+      "diagnoses": [
+        {
+          "name": "圆肩倾向",
+          "confidence": "中"
+        }
+      ]
+    }
+  },
+  {
+    "version": 1,
+    "seq": 33,
+    "channel": "state",
+    "type": "state.treatment.ready",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": null,
+      "tool_call_id": null,
+      "interaction_id": null,
+      "job_id": null
+    },
+    "payload": {
+      "treatment_plan": {
+        "goal": "改善圆肩",
+        "duration_weeks": 4
+      }
+    }
+  },
+  {
+    "version": 1,
+    "seq": 35,
+    "channel": "state",
+    "type": "state.interaction.expired",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": null,
+      "tool_call_id": "tool-1",
+      "interaction_id": "interaction-1",
+      "job_id": null
+    },
+    "payload": {
+      "interaction_id": "interaction-1",
+      "expired_at": "2026-07-26T12:00:00Z",
+      "reason": "ttl_elapsed"
+    }
+  },
+  {
+    "version": 1,
+    "seq": 34,
+    "channel": "state",
+    "type": "state.interaction.required",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": null,
+      "tool_call_id": "tool-fields-1",
+      "interaction_id": "interaction-fields-1",
+      "job_id": null
+    },
+    "payload": {
+      "interaction_id": "interaction-fields-1",
+      "question": {
+        "question": "请补充本次不适的关键信息",
         "answer_type": "text",
-        "required": true
+        "context": "用于完善问诊特征",
+        "fields": [
+          {
+            "key": "body_part",
+            "label": "主要部位",
+            "answer_type": "single_choice",
+            "options": [
+              "颈",
+              "肩",
+              "腰"
+            ],
+            "required": true
+          },
+          {
+            "key": "nature",
+            "label": "性质",
+            "answer_type": "text",
+            "required": true
+          },
+          {
+            "key": "symmetric",
+            "label": "是否对称",
+            "answer_type": "single_choice",
+            "options": [
+              "是",
+              "否"
+            ],
+            "required": true
+          }
+        ]
       }
     }
   }

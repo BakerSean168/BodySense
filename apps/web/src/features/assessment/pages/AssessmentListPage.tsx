@@ -7,6 +7,7 @@ import {
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { JourneySoftGuard } from '@/features/journey';
 
 const GRADE_COLORS: Record<string, string> = {
   A: 'from-primary-700 to-primary-500 text-[#FBFBFA] shadow-primary-700/20',
@@ -73,6 +74,7 @@ export function AssessmentListPage() {
 
   return (
     <MainLayout>
+      <JourneySoftGuard route="assessment">
       <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-[#F7F5F0] p-6 rounded-[28px] border border-[#E5E3DF] relative overflow-hidden">
@@ -171,6 +173,7 @@ export function AssessmentListPage() {
           </div>
         </div>
       </div>
+      </JourneySoftGuard>
     </MainLayout>
   );
 }

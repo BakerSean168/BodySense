@@ -53,7 +53,7 @@ export function UploadStep() {
     return uploads.filter((u) => u.file_type === 'report');
   };
 
-  const handleFileChange = async (type: FileType, file: File) => {
+  const handleFileChange = async (type: 'photo_front' | 'photo_side' | 'photo_back' | 'report', file: File) => {
     setError(null);
     setUploadingTypes((prev) => ({ ...prev, [type]: true }));
 
@@ -66,7 +66,7 @@ export function UploadStep() {
     }
   };
 
-  const handleSelectClick = (type: FileType) => {
+  const handleSelectClick = (type: 'photo_front' | 'photo_side' | 'photo_back' | 'report') => {
     fileInputRefs[type].current?.click();
   };
 

@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,11 +13,13 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/repository"
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 )
 
 const (
@@ -36,29 +39,36 @@ var allowedMimeTypes = map[string]bool{
 
 // Allowed file type values
 var allowedFileTypes = map[string]bool{
-	"photo_front": true,
-	"photo_side":  true,
-	"photo_back":  true,
-	"report":      true,
+	"consultation_photo": true, // ad-hoc chat attachment (no auto posture job)
+	"photo_front":        true,
+	"photo_side":         true,
+	"photo_back":         true,
+	"report":             true,
 }
 
 // UploadService handles upload business logic.
 type UploadService struct {
-	uploadRepo   *repository.UploadRepository
-	jobRuntime   *JobRuntime
-	aiServiceURL string
+	uploadRepo          *repository.UploadRepository
+	jobRuntime          *JobRuntime
+	outputReviewService *OutputReviewService
+	aiServiceURL        string
 }
 
 // NewUploadService creates a new UploadService.
-func NewUploadService(uploadRepo *repository.UploadRepository, jobRuntime *JobRuntime) *UploadService {
+func NewUploadService(
+	uploadRepo *repository.UploadRepository,
+	jobRuntime *JobRuntime,
+	outputReviewService *OutputReviewService,
+) *UploadService {
 	aiServiceURL := os.Getenv("AI_SERVICE_URL")
 	if aiServiceURL == "" {
 		aiServiceURL = "http://localhost:8100"
 	}
 	return &UploadService{
-		uploadRepo:   uploadRepo,
-		jobRuntime:   jobRuntime,
-		aiServiceURL: aiServiceURL,
+		uploadRepo:          uploadRepo,
+		jobRuntime:          jobRuntime,
+		outputReviewService: outputReviewService,
+		aiServiceURL:        aiServiceURL,
 	}
 }
 
@@ -66,7 +76,7 @@ func NewUploadService(uploadRepo *repository.UploadRepository, jobRuntime *JobRu
 func (s *UploadService) UploadFile(ctx context.Context, userID uuid.UUID, file *multipart.FileHeader, fileType string) (*model.UserUpload, error) {
 	// Validate file type
 	if !allowedFileTypes[fileType] {
-		return nil, errors.New("invalid file type: must be photo_front, photo_side, photo_back, or report")
+		return nil, errors.New("invalid file type: must be consultation_photo, photo_front, photo_side, photo_back, or report")
 	}
 
 	// Validate file size
@@ -202,6 +212,37 @@ func (s *UploadService) GetUpload(ctx context.Context, userID uuid.UUID, uploadI
 }
 
 // DeleteUpload deletes an upload and its file from disk.
+// ReadImageDataURL loads an image upload owned by userID and returns a
+// data-URL suitable for multimodal LLM input. Rejects non-image mime types
+// and enforces a size cap so chat turns cannot smuggle huge payloads.
+func (s *UploadService) ReadImageDataURL(ctx context.Context, userID, uploadID uuid.UUID) (string, string, error) {
+	upload, err := s.GetUpload(ctx, userID, uploadID)
+	if err != nil {
+		return "", "", err
+	}
+	if upload == nil {
+		return "", "", errors.New("upload not found")
+	}
+	mime := upload.MimeType
+	if !strings.HasPrefix(mime, "image/") {
+		return "", "", errors.New("upload is not an image")
+	}
+	const maxBytes = 8 << 20 // 8 MiB
+	if upload.FileSize > maxBytes {
+		return "", "", errors.New("image too large for consultation multimodal input")
+	}
+	data, err := os.ReadFile(upload.FilePath)
+	if err != nil {
+		return "", "", fmt.Errorf("read upload file: %w", err)
+	}
+	if len(data) > maxBytes {
+		return "", "", errors.New("image too large for consultation multimodal input")
+	}
+	encoded := base64.StdEncoding.EncodeToString(data)
+	dataURL := fmt.Sprintf("data:%s;base64,%s", mime, encoded)
+	return dataURL, mime, nil
+}
+
 func (s *UploadService) DeleteUpload(ctx context.Context, userID uuid.UUID, uploadID uuid.UUID) error {
 	upload, err := s.uploadRepo.GetByID(ctx, uploadID)
 	if err != nil {
@@ -536,10 +577,67 @@ func (s *UploadService) processPostureJob(ctx context.Context, job model.Job) er
 		return err
 	}
 
+	s.recordPostureGovernance(ctx, job, respBody)
+
 	_ = s.jobRuntime.UpdateProgress(ctx, job.ID, map[string]any{"stage": "posture_completed", "percent": 100})
 	_ = s.jobRuntime.TransitionTo(ctx, job.ID, "completed", json.RawMessage(respBody), nil)
 	_ = s.uploadRepo.UpdateAnalysisResult(ctx, uploadID, job.UserID, "completed", respBody)
 	return nil
+}
+
+// recordPostureGovernance audits the P2 gate result for posture analysis jobs.
+func (s *UploadService) recordPostureGovernance(ctx context.Context, job model.Job, respBody []byte) {
+	if s.outputReviewService == nil || len(respBody) == 0 {
+		return
+	}
+
+	var parsed map[string]any
+	if err := json.Unmarshal(respBody, &parsed); err != nil {
+		return
+	}
+
+	verdict := "unknown"
+	issues := datatypes.JSON("[]")
+	var validated datatypes.JSON
+
+	if gov, ok := parsed["governance"].(map[string]any); ok {
+		if v, ok := gov["verdict"].(string); ok && v != "" {
+			verdict = v
+		}
+		if rawIssues, ok := gov["issues"]; ok {
+			if b, err := json.Marshal(rawIssues); err == nil {
+				issues = datatypes.JSON(b)
+			}
+		}
+	}
+
+	if verdict == "accepted" || verdict == "degraded" {
+		safe := make(map[string]any, len(parsed))
+		for k, v := range parsed {
+			if k == "governance" || k == "safety_fallback" {
+				continue
+			}
+			safe[k] = v
+		}
+		if b, err := json.Marshal(safe); err == nil {
+			validated = datatypes.JSON(b)
+		}
+	}
+
+	jobID := job.ID
+	userID := job.UserID
+	s.outputReviewService.RecordReview(
+		ctx,
+		"posture",
+		verdict,
+		&userID,
+		nil,
+		&jobID,
+		nil,
+		issues,
+		validated,
+		datatypes.JSON(respBody),
+	)
 }
 
 func (s *UploadService) timeoutPostureJob(ctx context.Context, job model.Job) error {
@@ -571,4 +669,97 @@ func parsePostureJobInput(job model.Job) (postureJobInput, error) {
 // Used by the profile summary and (Phase 3-B1) the consultation Agent tool.
 func (s *UploadService) GetPostureAnalyses(ctx context.Context, userID uuid.UUID) ([]model.UserUpload, error) {
 	return s.uploadRepo.GetLatestPostureAnalyses(ctx, userID)
+}
+
+// PostureAnalysisView is one completed single-view analysis, stripped of raw
+// file metadata so consultation tools and assessment can consume it safely.
+type PostureAnalysisView struct {
+	UploadID       string          `json:"upload_id"`
+	View           string          `json:"view"`
+	FileType       string          `json:"file_type"`
+	AnalysisStatus string          `json:"analysis_status"`
+	Analysis       json.RawMessage `json:"analysis"`
+	CreatedAt      time.Time       `json:"created_at"`
+}
+
+// PostureAnalysisSummary is the Agent/assessment-facing aggregate of the
+// user's latest completed three-view posture analyses.
+type PostureAnalysisSummary struct {
+	HasAnalysis bool                  `json:"has_analysis"`
+	Views       []PostureAnalysisView `json:"views"`
+	// Findings is a flattened list of finding objects across views for quick use.
+	Findings []any `json:"findings"`
+	// Summaries is per-view summary_markdown text when present.
+	Summaries []string `json:"summaries"`
+}
+
+// viewFromFileType maps upload file_type to the posture view id.
+func viewFromFileType(fileType string) string {
+	switch fileType {
+	case "photo_front":
+		return "front"
+	case "photo_side":
+		return "side"
+	case "photo_back":
+		return "back"
+	default:
+		return fileType
+	}
+}
+
+// BuildPostureAnalysisSummary collapses completed posture uploads into the
+// compact shape shared by the read-only HTTP endpoint, consultation business
+// context, and assessment reuse. Prefer the newest completed row per view.
+func BuildPostureAnalysisSummary(uploads []model.UserUpload) PostureAnalysisSummary {
+	summary := PostureAnalysisSummary{
+		HasAnalysis: false,
+		Views:       []PostureAnalysisView{},
+		Findings:    []any{},
+		Summaries:   []string{},
+	}
+	if len(uploads) == 0 {
+		return summary
+	}
+
+	seenView := map[string]bool{}
+	for _, upload := range uploads {
+		view := viewFromFileType(upload.FileType)
+		if seenView[view] {
+			continue
+		}
+		if len(upload.AnalysisResult) == 0 {
+			continue
+		}
+		seenView[view] = true
+		summary.HasAnalysis = true
+		summary.Views = append(summary.Views, PostureAnalysisView{
+			UploadID:       upload.ID.String(),
+			View:           view,
+			FileType:       upload.FileType,
+			AnalysisStatus: upload.AnalysisStatus,
+			Analysis:       upload.AnalysisResult,
+			CreatedAt:      upload.CreatedAt,
+		})
+
+		var parsed map[string]any
+		if err := json.Unmarshal(upload.AnalysisResult, &parsed); err == nil {
+			if findings, ok := parsed["findings"].([]any); ok {
+				summary.Findings = append(summary.Findings, findings...)
+			}
+			if text, ok := parsed["summary_markdown"].(string); ok && text != "" {
+				summary.Summaries = append(summary.Summaries, text)
+			}
+		}
+	}
+	return summary
+}
+
+// GetPostureAnalysisSummary loads and collapses the caller's completed posture
+// analyses. Empty result (no completed analysis) is not an error.
+func (s *UploadService) GetPostureAnalysisSummary(ctx context.Context, userID uuid.UUID) (PostureAnalysisSummary, error) {
+	uploads, err := s.GetPostureAnalyses(ctx, userID)
+	if err != nil {
+		return PostureAnalysisSummary{}, err
+	}
+	return BuildPostureAnalysisSummary(uploads), nil
 }

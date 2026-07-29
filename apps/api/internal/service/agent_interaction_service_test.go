@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"time"
 	"testing"
 
 	"github.com/bodysense/api/internal/model"
@@ -67,6 +68,28 @@ func (r *fakeInteractionRepo) CancelPending(_ context.Context, id uuid.UUID) (bo
 	}
 	interaction.Status = "cancelled"
 	return true, nil
+}
+
+func (r *fakeInteractionRepo) ExpirePending(_ context.Context, id uuid.UUID) (bool, error) {
+	item, ok := r.byID[id]
+	if !ok || item.Status != "pending" {
+		return false, nil
+	}
+	item.Status = "expired"
+	return true, nil
+}
+
+func (r *fakeInteractionRepo) ListExpiredPending(_ context.Context, now time.Time, limit int) ([]model.AgentInteraction, error) {
+	var out []model.AgentInteraction
+	for _, item := range r.byID {
+		if item.Status == "pending" && item.ExpiresAt != nil && !item.ExpiresAt.After(now) {
+			out = append(out, *item)
+			if limit > 0 && len(out) >= limit {
+				break
+			}
+		}
+	}
+	return out, nil
 }
 
 func (r *fakeInteractionRepo) ListPendingByConversation(_ context.Context, conversationID uuid.UUID) ([]model.AgentInteraction, error) {
@@ -163,5 +186,44 @@ func TestAgentInteractionServiceCancelPending(t *testing.T) {
 	}
 	if cancelled.Status != "cancelled" {
 		t.Errorf("status = %q, want cancelled", cancelled.Status)
+	}
+}
+
+func TestAgentInteractionServiceResumeRejectsExpired(t *testing.T) {
+	repo := newFakeInteractionRepo()
+	svc := NewAgentInteractionService(repo, &fakeRunStatusRepo{})
+	interaction, err := svc.CreatePendingInteraction(context.Background(), uuid.New(), uuid.New(), "call-exp", datatypes.JSON(`{}`))
+	if err != nil {
+		t.Fatalf("CreatePendingInteraction: %v", err)
+	}
+	past := time.Now().UTC().Add(-time.Hour)
+	interaction.ExpiresAt = &past
+	repo.byID[interaction.ID].ExpiresAt = &past
+
+	err = svc.ResumeInteraction(context.Background(), interaction.ID, datatypes.JSON(`{"text":"late"}`))
+	if !errors.Is(err, ErrInteractionExpired) {
+		t.Fatalf("expected ErrInteractionExpired, got %v", err)
+	}
+}
+
+func TestAgentInteractionServiceExpireSweep(t *testing.T) {
+	repo := newFakeInteractionRepo()
+	svc := NewAgentInteractionService(repo, &fakeRunStatusRepo{})
+	interaction, err := svc.CreatePendingInteraction(context.Background(), uuid.New(), uuid.New(), "call-sweep", datatypes.JSON(`{}`))
+	if err != nil {
+		t.Fatalf("CreatePendingInteraction: %v", err)
+	}
+	past := time.Now().UTC().Add(-time.Minute)
+	repo.byID[interaction.ID].ExpiresAt = &past
+
+	expired, err := svc.ExpireExpiredInteractions(context.Background(), 10)
+	if err != nil {
+		t.Fatalf("ExpireExpiredInteractions: %v", err)
+	}
+	if len(expired) != 1 {
+		t.Fatalf("expected 1 expired, got %d", len(expired))
+	}
+	if repo.byID[interaction.ID].Status != "expired" {
+		t.Fatalf("expected status expired, got %s", repo.byID[interaction.ID].Status)
 	}
 }

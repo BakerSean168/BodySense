@@ -1,9 +1,15 @@
 # 体态照片 AI 分析 —— 详细实施方案
+> ✅ **已完成并归档**（2026-07-29）。含 Phase 1/2/3-B1/3-B2。
 
-> 文档状态：Phase 1 已实施（PR #39），Phase 2 / 3-B1 / 3-B2 待实施
+
+> 文档状态：Phase 1（PR #39）+ Phase 2（pose estimator）+ Phase 3-B1（get_posture_analysis + assessment 复用）已落地；**仅 Phase 3-B2 多模态会话传图仍待实施**
 > 创建日期：2026-07-10
 > 关联：`docs/project-review-2026-07-10.md` §4-7、PRD 3.1.2 / 3.3.3
 > 范围：①引导页体态照片的 AI 分析　②诊断台的图片输入能力
+
+> ⚠️ **集成校正（2026-07-26，见 [architecture-review-2026-07-26.md](./architecture-review-2026-07-26.md) P4）**：
+> 架构审查确认 Phase 1 的分析结果 `user_uploads.analysis_result` 当前是**孤岛**——既未被问诊(`consultation/` 0 命中)读取，也未被评估(`assessment_service.go` 另发原图重算)复用。
+> 本文 **Phase 3-B1（`get_posture_analysis` Agent 工具）就是审查 P4「接入问诊」那一半的落地方案**，两者是同一件事，不重复规划。审查额外补充了 P4 的另一半：**让 assessment 复用 `analysis_result` 而非重跑多模态**（本文未覆盖，见审查报告）。建议 Phase 3-B1 与「assessment 复用」合并为一个「体态分析接入主线」的 PR 批次。
 
 ---
 

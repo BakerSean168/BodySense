@@ -18,6 +18,7 @@ class AssessmentService:
         profile: dict[str, Any],
         rag_context: str = "",
         images: list[str] | None = None,
+        posture_analysis: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Generate a health assessment report based on user profile.
@@ -25,29 +26,41 @@ class AssessmentService:
         Args:
             profile: User profile data.
             rag_context: Optional RAG context from knowledge base.
-            images: Optional list of Base64 encoded posture images.
+            images: Optional residual Base64 posture images for views that do
+                not yet have a completed ``analysis_result``. Go only sends
+                these for incomplete views; they must still be attached even
+                when other views already have stored analysis.
+            posture_analysis: Optional completed three-view analysis summary
+                from ``user_uploads.analysis_result``. Embedded into the text
+                prompt so completed views are not re-sent as raw pixels.
 
         Returns:
             Assessment result as a dict with health_grade, dimension_scores,
             identified_issues, and improvement_summary.
         """
-        # Build messages
-        user_prompt = get_assessment_prompt(profile, rag_context)
+        # Always embed stored analysis into the text prompt when present.
+        user_prompt = get_assessment_prompt(
+            profile,
+            rag_context,
+            posture_analysis=posture_analysis,
+        )
 
-        if images:
+        # Hybrid: residual images (incomplete views) ride alongside stored
+        # analysis text. Only skip multimodal blocks when there are no images.
+        residual = [img for img in (images or []) if img]
+        if residual:
             content_list: list[dict[str, Any]] = [
                 {"type": "text", "text": user_prompt}
             ]
-            for img in images:
+            for img in residual:
                 if not img.startswith("data:"):
-                    # Default to jpeg base64
                     img = f"data:image/jpeg;base64,{img}"
-                content_list.append({
-                    "type": "image_url",
-                    "image_url": {
-                        "url": img
+                content_list.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": img},
                     }
-                })
+                )
             user_msg = ChatMessage(role="user", content=content_list)
         else:
             user_msg = ChatMessage(role="user", content=user_prompt)
