@@ -393,65 +393,109 @@ def findings_from_metrics(metrics: list[GeometricMetric]) -> list[dict[str, Any]
 # ---------------------------------------------------------------------------
 # MediaPipe extraction (optional)
 # ---------------------------------------------------------------------------
+# MediaPipe Tasks PoseLandmarker (1.x). The classic ``mp.solutions`` API was
+# removed in 1.0; we lazy-load a lite .task model into the user cache.
+# ---------------------------------------------------------------------------
 
-_mp_pose = None
+_POSE_MODEL_URL = (
+    "https://storage.googleapis.com/mediapipe-models/pose_landmarker/"
+    "pose_landmarker_lite/float16/latest/pose_landmarker_lite.task"
+)
+_POSE_MODEL_NAME = "pose_landmarker_lite.task"
+
+_landmarker = None
 _mp_import_attempted = False
 
 
+def _pose_model_path() -> Any:
+    """Return a local path to the Pose Landmarker model, downloading if needed."""
+    from pathlib import Path
+
+    cache_dir = Path.home() / ".cache" / "bodysense" / "mediapipe"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    model_path = cache_dir / _POSE_MODEL_NAME
+    if model_path.exists() and model_path.stat().st_size > 0:
+        return model_path
+
+    import urllib.request
+
+    tmp_path = model_path.with_suffix(".task.partial")
+    logger.info("downloading MediaPipe pose model to %s", model_path)
+    urllib.request.urlretrieve(_POSE_MODEL_URL, tmp_path)  # noqa: S310 — fixed Google CDN URL
+    tmp_path.replace(model_path)
+    return model_path
+
+
 def mediapipe_available() -> bool:
-    global _mp_pose, _mp_import_attempted
+    """True when MediaPipe Tasks + a usable PoseLandmarker can be constructed."""
+    global _landmarker, _mp_import_attempted
     if _mp_import_attempted:
-        return _mp_pose is not None
+        return _landmarker is not None
     _mp_import_attempted = True
     try:
-        import mediapipe as mp  # type: ignore
+        from mediapipe.tasks.python import vision
+        from mediapipe.tasks.python.core import base_options as base_options_module
 
-        _mp_pose = mp.solutions.pose
+        model_path = _pose_model_path()
+        options = vision.PoseLandmarkerOptions(
+            base_options=base_options_module.BaseOptions(
+                model_asset_path=str(model_path),
+            ),
+            running_mode=vision.RunningMode.IMAGE,
+            num_poses=1,
+            min_pose_detection_confidence=0.5,
+            min_pose_presence_confidence=0.5,
+            min_tracking_confidence=0.5,
+        )
+        _landmarker = vision.PoseLandmarker.create_from_options(options)
         return True
-    except Exception as exc:  # noqa: BLE001 — optional dep
-        logger.info("mediapipe not available; pose geometry disabled: %s", exc)
-        _mp_pose = None
+    except Exception as exc:  # noqa: BLE001 — optional dep / model fetch
+        logger.info("mediapipe Tasks pose unavailable; geometry disabled: %s", exc)
+        _landmarker = None
         return False
 
 
 def extract_landmarks(image_bytes: bytes) -> dict[int, Landmark] | None:
-    """Run MediaPipe Pose and return index→Landmark, or None on failure."""
+    """Run MediaPipe Pose Landmarker and return index→Landmark, or None."""
     if not mediapipe_available():
         return None
 
     try:
-        import cv2  # type: ignore
         import numpy as np  # type: ignore
+        from mediapipe.tasks.python.vision.core import image as mp_image_module
     except Exception as exc:  # noqa: BLE001
-        logger.info("opencv/numpy missing for pose extraction: %s", exc)
+        logger.info("numpy/mediapipe image helpers missing: %s", exc)
         return None
 
     try:
-        arr = np.frombuffer(image_bytes, dtype=np.uint8)
-        image = cv2.imdecode(arr, cv2.IMREAD_COLOR)
-        if image is None:
-            return None
-        rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        # Decode via mediapipe Image which accepts encoded bytes through numpy RGB.
+        import cv2  # type: ignore
 
-        pose_mod = _mp_pose
-        assert pose_mod is not None
-        with pose_mod.Pose(
-            static_image_mode=True,
-            model_complexity=1,
-            enable_segmentation=False,
-            min_detection_confidence=0.5,
-        ) as pose:
-            result = pose.process(rgb)
+        arr = np.frombuffer(image_bytes, dtype=np.uint8)
+        bgr = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+        if bgr is None:
+            return None
+        rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+        mp_image = mp_image_module.Image(
+            image_format=mp_image_module.ImageFormat.SRGB,
+            data=np.ascontiguousarray(rgb),
+        )
+
+        assert _landmarker is not None
+        result = _landmarker.detect(mp_image)
         if not result.pose_landmarks:
             return None
 
+        # Tasks API returns a list of pose landmark lists (one per person).
+        pose = result.pose_landmarks[0]
         out: dict[int, Landmark] = {}
-        for idx, lm in enumerate(result.pose_landmarks.landmark):
-            out[idx] = Landmark(
-                x=float(lm.x),
-                y=float(lm.y),
-                visibility=float(getattr(lm, "visibility", 1.0) or 0.0),
+        for idx, lm in enumerate(pose):
+            visibility = float(
+                getattr(lm, "visibility", None)
+                or getattr(lm, "presence", None)
+                or 1.0
             )
+            out[idx] = Landmark(x=float(lm.x), y=float(lm.y), visibility=visibility)
         return out
     except Exception:
         logger.exception("pose landmark extraction failed")
