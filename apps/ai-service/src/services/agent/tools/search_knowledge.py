@@ -7,7 +7,7 @@ from typing import Any
 from ....rag.knowledge_library import get_knowledge_library
 from ..tool_types import RuntimeToolDefinition, ToolCategory
 
-# Tool schema — same as the existing KNOWLEDGE_SEARCH_TOOL in consultation_graph.py
+# Tool schema for the search_knowledge tool
 SEARCH_KNOWLEDGE_SCHEMA: dict[str, Any] = {
     "name": "search_knowledge",
     "description": (

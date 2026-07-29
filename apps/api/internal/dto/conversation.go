@@ -2,29 +2,22 @@ package dto
 
 import "encoding/json"
 
-type SendMessageRequest struct {
-	ConversationID  *string     `json:"conversationId"`
-	ClientDraftID   string      `json:"clientDraftId,omitempty" binding:"max=128"`
-	ClientMessageID string      `json:"clientMessageId" binding:"required,max=128"`
-	RequestID       string      `json:"requestId" binding:"required,max=128"`
-	Message         MessageDTO  `json:"message" binding:"required"`
-	Context         *ContextDTO `json:"context,omitempty"`
-}
-
 type MessageDTO struct {
 	Role     string          `json:"role"`
 	Parts    []PartDTO       `json:"parts" binding:"required,min=1,dive"`
 	Metadata json.RawMessage `json:"metadata,omitempty"`
 }
 
+// PartDTO is a single message part. Text parts carry `text`; image parts carry
+// `upload_id` (preferred) and optional display metadata. Image bytes are never
+// inlined in the persisted part — Go resolves upload_id at turn time.
 type PartDTO struct {
-	Type string `json:"type"`
-	Text string `json:"text,omitempty"`
-}
-
-type ContextDTO struct {
-	Entry     string `json:"entry,omitempty"`
-	ProfileID string `json:"profileId,omitempty"`
+	Type     string `json:"type"`
+	Text     string `json:"text,omitempty"`
+	UploadID string `json:"upload_id,omitempty"`
+	MimeType string `json:"mime_type,omitempty"`
+	// Optional client-side preview URL (not trusted by the backend).
+	ImageURL string `json:"image_url,omitempty"`
 }
 
 type PinRequest struct {
