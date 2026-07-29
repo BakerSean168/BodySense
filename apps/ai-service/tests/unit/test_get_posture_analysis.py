@@ -10,7 +10,6 @@ from src.services.agent.tools.get_posture_analysis import (
     read_posture_analysis,
 )
 
-
 SAMPLE_SUMMARY = {
     "has_analysis": True,
     "views": [

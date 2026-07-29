@@ -115,7 +115,11 @@ def _angle_deg(ax: float, ay: float, bx: float, by: float, cx: float, cy: float)
 
 
 def _midpoint(a: Landmark, b: Landmark) -> Landmark:
-    return Landmark(x=(a.x + b.x) / 2, y=(a.y + b.y) / 2, visibility=min(a.visibility, b.visibility))
+    return Landmark(
+        x=(a.x + b.x) / 2,
+        y=(a.y + b.y) / 2,
+        visibility=min(a.visibility, b.visibility),
+    )
 
 
 def _visible(lm: Landmark | None, min_vis: float = 0.5) -> bool:

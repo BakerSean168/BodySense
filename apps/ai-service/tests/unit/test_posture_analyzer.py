@@ -98,8 +98,8 @@ class TestGovernance:
 
     def test_schema_reject_blocks_findings(self, monkeypatch):
         """When the forced gate rejects, raw findings must not leak."""
-        from src.runtime.governance import GuardedOutput
         import src.services.posture_analyzer as posture_mod
+        from src.runtime.governance import GuardedOutput
 
         def _reject(kind, payload, **kwargs):  # noqa: ANN001
             return GuardedOutput(
@@ -167,7 +167,12 @@ class TestGovernance:
             }
         ]
         allowed = [
-            {"name": "craniovertebral_angle", "value": 46.0, "unit": "deg", "finding_key": "forward_head"}
+            {
+                "name": "craniovertebral_angle",
+                "value": 46.0,
+                "unit": "deg",
+                "finding_key": "forward_head",
+            }
         ]
         out = govern_posture_result(
             raw,
