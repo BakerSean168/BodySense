@@ -1,4 +1,6 @@
 # Final Agent Runtime Architecture Proposal
+> ✅ **已完成并归档**（2026-07-29）。实施落地见对应代码与测试；本文件移入 archive 仅作历史记录。
+
 
 **Status**: Proposed final state  
 **Audience**: Go API, Python AI runtime, Web consultation workbench  

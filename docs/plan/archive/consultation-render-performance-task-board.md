@@ -1,12 +1,14 @@
 # 问诊工作台渲染性能优化任务看板
 
+> **✅ 已上线（归档于 2026-07-13）** — 功能实现（Phase 1-3 核心）全部落地并已上线，`AuthBootstrap`、`ProtectedRoute` 骨架、页面级 `lazy()`、panel 拆分均已在代码中生效。唯一剩余的 `P3-03` 仅为可选的性能录制存档（真实业务数据体感复测 + DevTools Performance 时间线录制），不阻塞功能，故整套方案归档。如需补录性能轨迹，可从本文件恢复该待办。
+>
 > 进行中（2026-07-06）。基于 [consultation-render-performance-implementation-flow.md](./consultation-render-performance-implementation-flow.md) 继续下沉，提供可直接拆 issue 的执行看板。
 
 ## 当前完成概览
 
 - 已完成：`P0-01`、`P0-02`、`P0-03`、`P1-01`、`P1-02`、`P1-03`、`P1-04`、`P2-01`、`P2-02`
 - 已评估暂不实施：`P2-03`
-- 待完成：`P3-03`
+- 待完成（可选存档，不阻塞上线）：`P3-03`
 
 ## 里程碑
 

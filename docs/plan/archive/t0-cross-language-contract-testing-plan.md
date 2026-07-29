@@ -1,9 +1,15 @@
 # T0 亮点方案（三）：跨语言契约测试（Go / Python / TS 三方一致）
+> ✅ **已完成并归档**（2026-07-29）。实施落地见对应代码与测试；本文件移入 archive 仅作历史记录。
+
 
 > 文档状态：调研 + 增强方案（待评审）
 > 创建日期：2026-07-10
 > 关联：`docs/project-review-2026-07-10.md` §1 T0-3
 > 真值来源：当前代码。文中 `file:line` 为撰写时锚点，实施前以最新代码为准。
+
+> ⚠️ **现状校正（2026-07-26，见 [architecture-review-2026-07-26.md](./architecture-review-2026-07-26.md) P5）**：
+> 本文 §2 担心的「C-1 fixture 覆盖窄」已经酿成**真实契约漂移**：`StreamChannel` 枚举在 TS(权威，含 `run`/`title`) 与 Python `stream_event.py:9-19` / `stream-event.v1.schema.json` 之间不一致，后端**确实在发** `run.started`(`runtime.go:138`)、`title.generated`(`:210`)，但 fixture 里没有这两类样本，所以现有 parity 测试**没抓到**。
+> 这使本文 Phase A/B 从「锦上添花」升级为「**修真实 bug 的必要防线**」。实施 Phase B 时，`run`/`title` channel 就是现成的验收样本：补上 fixture 后 parity 测试应立即变红,再对齐 Python/Schema 枚举转绿。P5 的短期修复（补枚举+补 fixture）应视为本文 Phase A+B 的第一个 PR。
 
 ---
 

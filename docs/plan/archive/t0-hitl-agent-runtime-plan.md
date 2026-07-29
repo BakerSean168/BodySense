@@ -1,9 +1,16 @@
 # T0 亮点方案（一）：人在回路（HITL）的持久化 Agent 运行时
+> ✅ **已完成并归档**（2026-07-29）。实施落地见对应代码与测试；本文件移入 archive 仅作历史记录。
+
 
 > 文档状态：调研 + 增强方案（待评审）
 > 创建日期：2026-07-10
 > 关联：`docs/project-review-2026-07-10.md` §1 T0-1、§4-3
 > 真值来源：当前代码。文中 `file:line` 为撰写时锚点，实施前以最新代码为准。
+
+> ⚠️ **锚点校正（2026-07-26，见 [architecture-review-2026-07-26.md](./architecture-review-2026-07-26.md) P1）**：
+> 本文第 1 节的 Python 侧锚点 `orchestrator.py:363 _handle_ask_user` 指向的是**未挂载的死路径**（`services/consultation_graph.py` + `AgentOrchestrator`，未在 `main.py` include）。**当前生效的 HITL 实现在 `/runtime` 路径**：`apps/ai-service/src/runtime/consultation_thread.py`，用 LangGraph 原生 `interrupt()`（:432）+ `Command(resume=...)`（:687）+ Postgres checkpointer（:529）实现，比本文描述的旧路径更完善。
+> Go 侧锚点（`runtime.go:858 handleInteractionRequired` 等）仍然有效。
+> **实施本方案的 Phase A/B/C 前，必须先完成 P1 死路径清理**（否则会在错误的文件上加功能）。Phase A（超时回收）、Phase C（可观测性）与 Go 侧解耦，可独立推进；Phase B（多字段中断）需落在 `consultation_thread.py` 的 `ask_user` 节点而非 `orchestrator.py`。
 
 ---
 
