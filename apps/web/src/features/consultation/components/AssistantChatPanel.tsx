@@ -1,4 +1,4 @@
-import { AssistantRuntimeProvider, useThread, useComposerRuntime, useThreadRuntime, ThreadPrimitive, MessagePrimitive, useMessage, type ThreadAssistantMessagePart, type ThreadMessageLike } from "@assistant-ui/react";
+import { AssistantRuntimeProvider, useAui, useAuiState, ThreadPrimitive, MessagePrimitive, type ThreadAssistantMessagePart, type ThreadMessageLike } from "@assistant-ui/react";
 import { MarkdownTextPrimitive } from "@assistant-ui/react-markdown";
 import remarkGfm from "remark-gfm";
 import { useAssistantChatRuntime } from "../hooks/useAssistantChatRuntime";
@@ -262,9 +262,10 @@ interface ChatContentProps {
  * ThreadPrimitive.Messages renders historical messages.
  */
 function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) {
-  const thread = useThread();
-  const threadRuntime = useThreadRuntime();
-  const composerRuntime = useComposerRuntime();
+  const aui = useAui();
+  const threadMessages = useAuiState((state) => state.thread.messages);
+  const threadRuntime = aui.thread;
+  const composerRuntime = aui.composer;
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -312,7 +313,7 @@ function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) 
         behavior: 'smooth',
       });
     }
-  }, [thread.messages, activeTurn]);
+  }, [threadMessages, activeTurn]);
 
   const handleAddImages = useCallback(
     async (files: FileList | null) => {
@@ -424,7 +425,7 @@ function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) 
 
   // Determine if the conversation has no user or assistant messages
   const isEmptyConversation =
-    thread.messages.filter((m) => m.role === 'user' || m.role === 'assistant').length === 0;
+    threadMessages.filter((message) => message.role === 'user' || message.role === 'assistant').length === 0;
 
   // Render centered Layout for new/empty conversations
   if (isEmptyConversation && !hasPendingInteraction) {
@@ -523,7 +524,7 @@ function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) 
 }
 
 function CustomUserMessage() {
-  const metadata = useMessage((state) => state.metadata) as
+  const metadata = useAuiState((state) => state.message.metadata) as
     | { custom?: { is_interaction_answer?: boolean } }
     | undefined;
 
@@ -549,9 +550,9 @@ function CustomUserMessage() {
  * Streaming display is handled by StreamingAssistantTurn separately.
  */
 function CustomAssistantMessage() {
-  const content = useMessage((state) => state.content) as readonly ThreadAssistantMessagePart[];
-  const isLast = useMessage((state) => state.isLast);
-  const metadata = useMessage((state) => state.metadata) as
+  const content = useAuiState((state) => state.message.content) as readonly ThreadAssistantMessagePart[];
+  const isLast = useAuiState((state) => state.message.isLast);
+  const metadata = useAuiState((state) => state.message.metadata) as
     | { custom?: { interaction_history?: boolean; interaction?: import('../types/consultation').InteractionHistoryItem } }
     | undefined;
   const activeTurn = useActiveTurnState();

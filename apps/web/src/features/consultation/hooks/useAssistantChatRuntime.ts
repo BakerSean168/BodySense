@@ -3,9 +3,17 @@ import {
   useLocalRuntime,
   type ChatModelAdapter,
   type ChatModelRunResult,
-  type ThreadRuntime,
   type ThreadMessageLike,
 } from '@assistant-ui/react';
+
+/** Minimal thread handle used to resume HITL runs under assistant-ui 0.15. */
+export type ConsultationThreadController = {
+  resumeRun: (config: {
+    parentId: string | null;
+    stream: () => AsyncGenerator<ChatModelRunResult, void, unknown>;
+  }) => void;
+  getState: () => { messages: readonly { id?: string }[] };
+};
 import { consultationApi } from '../services/consultationService';
 import { consumeSSEStream, dispatchReplayEvents } from './useSSEProcessor';
 import {
@@ -396,7 +404,7 @@ export function useAssistantChatRuntime(
   });
 
   const resumeInteraction = useCallback(
-    (threadRuntime: ThreadRuntime, interactionId: string, answer: unknown) => {
+    (threadRuntime: ConsultationThreadController, interactionId: string, answer: unknown) => {
       setIsStreaming(true);
       threadRuntime.resumeRun({
         parentId: threadRuntime.getState().messages.at(-1)?.id ?? null,
