@@ -80,6 +80,12 @@ pose = [
     { name = "numpy" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "ruff" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.140.13" },
@@ -106,6 +112,12 @@ requires-dist = [
     { name = "uvicorn", specifier = ">=0.51.0" },
 ]
 provides-extras = ["ocr", "ml", "pose", "dev"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest", specifier = ">=9.1.1" },
+    { name = "ruff", specifier = ">=0.16.0" },
+]
 
 [[package]]
 name = "certifi"

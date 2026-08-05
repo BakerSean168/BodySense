@@ -1,3 +1,17 @@
+/**
+ * Button —— 基于 @base-ui 的 ButtonPrimitive 封装一个带 variant/size 变体的按钮。
+ *
+ * ===== 值得学的点 =====
+ * - cva（class-variance-authority）把“视觉变体”建模成类型安全的 variant/size，
+ *   `VariantProps<typeof buttonVariants>` 会自动从 cva 定义里推导出对应的 props 类型。
+ * - 这是一个“类型化包装组件”：用 `extends ButtonPrimitive.Props` 继承底层原语的
+ *   全部属性，再叠加自有可选 props（如 isLoading），最后把剩余 props 透传给原语。
+ *
+ * 深入笔记（Thought Forest 文件名）：
+ * - react-typescript-component-and-hook-types.md
+ * - react-typed-wrapper-and-polymorphic-components.md
+ */
+
 import * as React from "react"
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
