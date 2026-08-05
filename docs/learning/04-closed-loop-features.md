@@ -152,7 +152,18 @@
 | 前端解析 | `features/consultation/hooks/useSSEProcessor.ts` | ReadableStream、TextDecoder、事件映射分发（**注释最全，先读它**） |
 | 前端运行时 | `features/consultation/hooks/useAssistantChatRuntime.ts` | useRef/useCallback、流式状态累加 |
 | Go 运行时 | `internal/consultation/runtime.go` | 事件持久化 `recordPublicEvent`、回放 `replayCompletedRun` |
-| Python Agent | `services/agent/orchestrator.py` | 工具调用、`ask_user` 中断、fallback |
+| Python 运行时 | `runtime/consultation_thread.py` | LangGraph 状态、工具调用、`ask_user` 中断、多模态消息与事件生成 |
+| Python 治理 | `runtime/governance.py` | 运行时事件和输出的确定性治理 |
+| Python 工具 | `services/agent/tools/` | `ask_user`、知识检索、体态档案等可组合工具 |
+
+### 最新代码已经具备什么
+
+- 对话内图片上传和 Go 侧安全解析已接通。
+- Python 运行时能构造多模态 user content。
+- 体态档案工具与姿态几何估计已实现。
+- 公共流事件有共享 schema、fixture 和三端测试。
+
+这些能力不再作为“待实现功能”，而是用于学习跨语言契约、运行时校验、断线恢复和并发正确性。
 
 ### 为什么它值得作为"终极练习"
 - 它综合了前两条闭环的所有基础，再叠加：SSE 流式协议、事件溯源、HITL（人在回路）Agent、跨语言契约。

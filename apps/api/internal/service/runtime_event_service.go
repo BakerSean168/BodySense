@@ -1,5 +1,14 @@
 package service
 
+// Learning path (Thought Forest note filenames):
+//   - go-context.md
+//   - go-error-wrapping.md
+//   - go-interfaces.md
+//   - go-sync-package.md
+//   - go-slices.md
+//
+// This file is a useful example of a small Go interface around persistence,
+// explicit error propagation, mutex-protected shared state, and batch I/O.
 import (
 	"context"
 	"encoding/json"
@@ -17,6 +26,9 @@ import (
 const defaultDeltaFlushSize = 32
 
 type runtimeEventRepo interface {
+	// The service depends on the smallest persistence capability it needs,
+	// rather than on a concrete GORM repository. Tests can provide a lightweight
+	// fake that satisfies this method set implicitly.
 	Create(ctx context.Context, event *model.RuntimeEvent) error
 	CreateBatch(ctx context.Context, events []*model.RuntimeEvent) error
 	ListByRunID(ctx context.Context, conversationID, runID uuid.UUID, afterSeq, limit int) ([]model.RuntimeEvent, bool, error)
@@ -32,6 +44,9 @@ type RuntimeEventService struct {
 	repo           runtimeEventRepo
 	deltaFlushSize int
 
+	// mu protects deltaBuffer, not the repository. Every read or write of the
+	// slice header must happen while holding this lock because append can replace
+	// its backing array. Never hold the lock during database I/O.
 	mu          sync.Mutex
 	deltaBuffer []*model.RuntimeEvent
 }
@@ -122,15 +137,21 @@ func (s *RuntimeEventService) Flush(ctx context.Context) error {
 		s.mu.Unlock()
 		return nil
 	}
+	// Copy the slice header out and detach the shared buffer while locked. The
+	// batch elements remain valid because both slices contain pointers.
 	batch := s.deltaBuffer
 	s.deltaBuffer = nil
 	s.mu.Unlock()
 
+	// Database I/O happens after Unlock so slow storage does not block producers
+	// from enqueueing new deltas.
 	if err := s.repo.CreateBatch(ctx, batch); err != nil {
 		// Put failed batch back so a retry can re-flush (best-effort).
 		s.mu.Lock()
 		s.deltaBuffer = append(batch, s.deltaBuffer...)
 		s.mu.Unlock()
+		// %w preserves the original error in the chain, allowing callers to use
+		// errors.Is/errors.As while still adding operation-specific context.
 		return fmt.Errorf("flush runtime event deltas: %w", err)
 	}
 	return nil

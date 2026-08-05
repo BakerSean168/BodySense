@@ -1,3 +1,17 @@
+/**
+ * Public stream-event contract shared by the Web consumer and contract tests.
+ *
+ * Learning path (Thought Forest note filenames):
+ * - typescript-generics-keyof-and-indexed-access.md
+ * - typescript-discriminated-unions-and-exhaustiveness.md
+ * - typescript-unknown-vs-any.md
+ * - typescript-static-types-and-runtime-validation.md
+ *
+ * Important boundary: these declarations disappear at runtime. Receiving JSON
+ * that is asserted as `StreamEvent` does not validate it; validation belongs at
+ * the network boundary before reducers or components consume the event.
+ */
+
 export type StreamChannel =
   | 'conversation'
   | 'run'
@@ -22,8 +36,13 @@ export interface StreamEventIds {
 }
 
 export interface StreamEventBase<
+  // Each concrete event supplies literal arguments such as
+  // <'run', 'run.started', { status: 'running'; ... }>. Keeping those
+  // literals is what later lets `event.type` discriminate the union.
   TChannel extends StreamChannel,
   TType extends string,
+  // Payloads must be object-shaped. The default `Record<string, never>`
+  // means “no payload keys are permitted”, not “an arbitrary object”.
   TPayload extends Record<string, unknown> = Record<string, never>,
 > {
   version: 1;
@@ -275,6 +294,10 @@ export type JobFailedEvent = StreamEventBase<
 >;
 
 export type StreamEvent =
+  // This is a discriminated union: every member has a literal `type`.
+  // A switch on event.type therefore narrows payload to the matching shape.
+  // Adding a member here should make exhaustive consumers fail to compile
+  // until they consciously handle or ignore the new protocol event.
   | ConversationCreatedEvent
   | RunStartedEvent
   | RunResumedEvent

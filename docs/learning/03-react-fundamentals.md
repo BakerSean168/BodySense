@@ -6,6 +6,7 @@
 > - `apps/web/src/stores/authStore.ts`（Zustand 全局状态）
 > - `apps/web/src/features/consultation/hooks/useConversationsQuery.ts`（TanStack Query）
 > - `apps/web/src/features/consultation/hooks/useSSEProcessor.ts`（真实代码已有详尽中文注释，可直接读）
+> - `packages/contracts/src/stream-events.ts`（配合 `docs/learning/06-javascript-typescript-streaming.md` 学习 TS 事件联合）
 
 ---
 

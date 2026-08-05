@@ -10,6 +10,15 @@
  *   data: {"type":"message.text.delta","payload":{"text":"你好"}}
  *
  * 这个文件做的事情就是：把这些文本行解析出来，根据事件类型调用对应的回调函数。
+ *
+ * 深入笔记（Thought Forest 文件名）：
+ * - web-streams-and-incremental-text-decoding.md
+ * - ndjson-sse-and-streaming-protocol-boundaries.md
+ * - abortcontroller-and-async-cancellation.md
+ * - typescript-static-types-and-runtime-validation.md
+ *
+ * 分层提醒：本文件处理“字节块 → 文本行 → 协议事件”。JSON 能解析并不等于
+ * 已通过 StreamEvent 运行时校验；可信类型边界应在事件进入 reducer 前建立。
  */
 
 // ======================== 类型导入 ========================
