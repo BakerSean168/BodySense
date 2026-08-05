@@ -23,6 +23,16 @@ func (r *RuntimeEventRepository) Create(ctx context.Context, event *model.Runtim
 	return r.db.WithContext(ctx).Create(event).Error
 }
 
+// CreateBatch appends multiple runtime events in one statement.
+// Used by the text.delta write buffer to cut write amplification while keeping
+// one row per event (replay equivalence with the live stream).
+func (r *RuntimeEventRepository) CreateBatch(ctx context.Context, events []*model.RuntimeEvent) error {
+	if len(events) == 0 {
+		return nil
+	}
+	return r.db.WithContext(ctx).Create(&events).Error
+}
+
 // ListByRunID returns events for a run after the provided sequence, ordered by seq ascending.
 // Returns limit+1 rows internally to determine hasMore.
 func (r *RuntimeEventRepository) ListByRunID(

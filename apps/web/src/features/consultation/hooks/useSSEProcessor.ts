@@ -10,6 +10,15 @@
  *   data: {"type":"message.text.delta","payload":{"text":"你好"}}
  *
  * 这个文件做的事情就是：把这些文本行解析出来，根据事件类型调用对应的回调函数。
+ *
+ * 深入笔记（Thought Forest 文件名）：
+ * - web-streams-and-incremental-text-decoding.md
+ * - ndjson-sse-and-streaming-protocol-boundaries.md
+ * - abortcontroller-and-async-cancellation.md
+ * - typescript-static-types-and-runtime-validation.md
+ *
+ * 分层提醒：本文件处理“字节块 → 文本行 → 协议事件”。JSON 能解析并不等于
+ * 已通过 StreamEvent 运行时校验；可信类型边界应在事件进入 reducer 前建立。
  */
 
 // ======================== 类型导入 ========================
@@ -127,9 +136,16 @@ type HandlerFn = (data: StreamEvent) => void;
 //              为什么需要它？因为 event 行和 data 行是分开的两行，
 //              我们需要先记住 event 类型，等读到 data 行时才知道该调用哪个回调。
 //   handlers —— 调用方传入的所有事件回调函数
+export interface SSEParseState {
+  /** Last event: line type remembered across lines. */
+  currentEvent: string;
+  /** Highest StreamEvent.seq observed so far (for after_seq resume). */
+  maxSeq: number;
+}
+
 export function processSSELine(
   line: string,
-  state: { currentEvent: string },  // 可变状态：记住最近一次读到的事件类型
+  state: SSEParseState,  // 可变状态：记住最近一次读到的事件类型 + maxSeq
   handlers: SSEHandlers              // 所有事件的回调函数集合
 ): void {
   // 去掉行首尾的空白字符（如空格、\r 等）
@@ -168,6 +184,11 @@ export function processSSELine(
       // 优先使用 data 中自带的 type 字段，如果没有则回退到 state 中记住的 event 类型。
       // 为什么有这个回退？因为有些 SSE 实现只在 event 行声明类型，data 中不带 type 字段。
       const eventType = event.type || state.currentEvent;
+
+      // Monotonic seq tracking enables GET .../events?after_seq=N resume.
+      if (typeof event.seq === 'number' && event.seq > state.maxSeq) {
+        state.maxSeq = event.seq;
+      }
 
       // 用事件类型在映射表中查找对应的回调函数名
       // 例如 "message.text.delta" → "onTextDelta"
@@ -220,7 +241,7 @@ export function processSSELine(
 export async function consumeSSEStream(
   response: Response,
   handlers: SSEHandlers
-): Promise<void> {
+): Promise<number> {
   // 从 Response 的 body 中获取 ReadableStream 的 reader。
   // reader 是逐块读取流数据的工具。
   // 用 ?. 是因为 body 可能为 null（理论上不会，但防御性编程）。
@@ -229,7 +250,7 @@ export async function consumeSSEStream(
   // 如果拿不到 reader（比如 body 为空），触发 onError 回调并退出
   if (!reader) {
     handlers.onError?.(new Error('No response body'));
-    return;
+    return 0;
   }
 
   // TextDecoder 用于把二进制数据（Uint8Array）解码成字符串。
@@ -239,7 +260,7 @@ export async function consumeSSEStream(
   // state 对象：在多行解析之间保持状态（记住当前事件类型）
   // 用对象而不是普通变量，是因为 processSSELine 需要修改它，
   // 对象是引用传递，函数内的修改会影响到外层。
-  const state = { currentEvent: '' };
+  const state: SSEParseState = { currentEvent: '', maxSeq: 0 };
 
   // buffer：文本缓冲区。
   // 因为流中读到的数据块不一定刚好在换行符处断开，
@@ -293,4 +314,33 @@ export async function consumeSSEStream(
     // 确保 err 是 Error 类型，如果不是则用 String() 转换后包装成 Error。
     handlers.onError?.(err instanceof Error ? err : new Error(String(err)));
   }
+  return state.maxSeq;
+}
+
+/**
+ * Dispatch a batch of durable StreamEvents (e.g. from GET .../events?after_seq=N)
+ * through the same handler map used for live SSE, skipping seq already seen.
+ */
+export function dispatchReplayEvents(
+  events: readonly StreamEvent[],
+  handlers: SSEHandlers,
+  state: SSEParseState = { currentEvent: '', maxSeq: 0 },
+): SSEParseState {
+  const sorted = [...events].sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0));
+  for (const event of sorted) {
+    if (typeof event.seq === 'number' && event.seq <= state.maxSeq) {
+      continue; // de-dupe
+    }
+    if (typeof event.seq === 'number' && event.seq > state.maxSeq) {
+      state.maxSeq = event.seq;
+    }
+    const eventType = event.type;
+    const handlerKey = EVENT_MAP[eventType];
+    if (!handlerKey) continue;
+    const handler = handlers[handlerKey];
+    if (handler) {
+      (handler as HandlerFn)(event);
+    }
+  }
+  return state;
 }

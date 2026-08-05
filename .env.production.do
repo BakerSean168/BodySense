@@ -35,5 +35,5 @@ ASR_PROVIDER=asr_api
 ASK_USER_ENABLED=true
 AI_SERVICE_URL=http://ai-service:8100
 
-VITE_API_BASE_URL=/api
 VITE_WS_URL=wss://bodydoo.bakersean.top/ws
+CONNECT_TO_PRODUCTION_VPS=ssh DO-bodysense-deploy

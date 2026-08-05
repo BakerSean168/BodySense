@@ -1,4 +1,5 @@
 import { authFetch } from '@/features/auth/services/authService';
+import { safeJson } from '@/lib/api-url';
 
 export interface DimensionScores {
   posture: number;
@@ -48,11 +49,13 @@ export const assessmentApi = {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
+      const error = await safeJson<Record<string, string>>(response).catch(
+        () => ({}) as Record<string, string>,
+      );
       throw new Error(error.error || 'Failed to generate assessment');
     }
 
-    return response.json();
+    return safeJson(response);
   },
 
   // Get a specific report
@@ -63,7 +66,7 @@ export const assessmentApi = {
       throw new Error('Failed to get report');
     }
 
-    return response.json();
+    return safeJson(response);
   },
 
   // List all reports
@@ -76,6 +79,6 @@ export const assessmentApi = {
       throw new Error('Failed to list reports');
     }
 
-    return response.json();
+    return safeJson(response);
   },
 };

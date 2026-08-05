@@ -22,6 +22,15 @@ func (r *fakeRuntimeEventRepo) Create(ctx context.Context, event *model.RuntimeE
 	return nil
 }
 
+func (r *fakeRuntimeEventRepo) CreateBatch(ctx context.Context, events []*model.RuntimeEvent) error {
+	for _, event := range events {
+		if err := r.Create(ctx, event); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *fakeRuntimeEventRepo) ListByRunID(ctx context.Context, conversationID, runID uuid.UUID, afterSeq, limit int) ([]model.RuntimeEvent, bool, error) {
 	out := make([]model.RuntimeEvent, 0, len(r.events))
 	for _, event := range r.events {

@@ -108,3 +108,75 @@ func (r *AgentInteractionRepository) ListByRunID(ctx context.Context, runID uuid
 		Find(&interactions).Error
 	return interactions, err
 }
+
+// ExpirePending marks a pending interaction as expired if still pending.
+func (r *AgentInteractionRepository) ExpirePending(ctx context.Context, id uuid.UUID) (bool, error) {
+	result := r.db.WithContext(ctx).
+		Model(&model.AgentInteraction{}).
+		Where("id = ? AND status = 'pending'", id).
+		Update("status", "expired")
+	return result.RowsAffected > 0, result.Error
+}
+
+// ListExpiredPending returns pending interactions whose expires_at has passed.
+func (r *AgentInteractionRepository) ListExpiredPending(ctx context.Context, now time.Time, limit int) ([]model.AgentInteraction, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	var interactions []model.AgentInteraction
+	err := r.db.WithContext(ctx).
+		Where("status = 'pending' AND expires_at IS NOT NULL AND expires_at <= ?", now).
+		Order("expires_at ASC").
+		Limit(limit).
+		Find(&interactions).Error
+	return interactions, err
+}
+
+// AggregateInteractionMetrics projects answer/expire/pending counts and average wait.
+// conversationID nil => global aggregate.
+func (r *AgentInteractionRepository) AggregateInteractionMetrics(
+	ctx context.Context,
+	conversationID *uuid.UUID,
+) (answered, expired, pending int, avgWaitSeconds float64, err error) {
+	type row struct {
+		Status string
+		Count  int
+	}
+	q := r.db.WithContext(ctx).Model(&model.AgentInteraction{}).
+		Select("status, count(*) as count").
+		Group("status")
+	if conversationID != nil {
+		q = q.Where("conversation_id = ?", *conversationID)
+	}
+	var rows []row
+	if err = q.Scan(&rows).Error; err != nil {
+		return
+	}
+	for _, item := range rows {
+		switch item.Status {
+		case "answered":
+			answered = item.Count
+		case "expired":
+			expired = item.Count
+		case "pending":
+			pending = item.Count
+		}
+	}
+
+	// Average wait: answered_at - created_at for answered rows.
+	type waitRow struct {
+		Avg float64
+	}
+	var wait waitRow
+	wq := r.db.WithContext(ctx).Model(&model.AgentInteraction{}).
+		Select("COALESCE(AVG(EXTRACT(EPOCH FROM (answered_at - created_at))), 0) as avg").
+		Where("status = ? AND answered_at IS NOT NULL", "answered")
+	if conversationID != nil {
+		wq = wq.Where("conversation_id = ?", *conversationID)
+	}
+	if err = wq.Scan(&wait).Error; err != nil {
+		return
+	}
+	avgWaitSeconds = wait.Avg
+	return
+}

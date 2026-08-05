@@ -1,4 +1,4 @@
-import { AssistantRuntimeProvider, useThread, useComposerRuntime, useThreadRuntime, ThreadPrimitive, MessagePrimitive, useMessage, type ThreadAssistantMessagePart, type ThreadMessageLike } from "@assistant-ui/react";
+import { AssistantRuntimeProvider, useAui, useAuiState, ThreadPrimitive, MessagePrimitive, type ThreadAssistantMessagePart, type ThreadMessageLike } from "@assistant-ui/react";
 import { MarkdownTextPrimitive } from "@assistant-ui/react-markdown";
 import remarkGfm from "remark-gfm";
 import { useAssistantChatRuntime } from "../hooks/useAssistantChatRuntime";
@@ -8,6 +8,8 @@ import type { Citation, ConsultationPhase, ExtractedInfo, HealthFeatures } from 
 import type { ActiveTurnState } from "../runtime/activeTurnReducer";
 import { buildAssistantMessagePartsViewModel } from "../runtime/assistantMessagePartsViewModel";
 import { selectIsComposerLocked } from "../runtime/activeTurnSelectors";
+import { useUploadStore } from "@/stores/uploadStore";
+import { consultationAttachmentBuffer } from "../hooks/useAssistantChatRuntime";
 import { StreamingAssistantTurn } from "./StreamingAssistantTurn";
 import { StreamingTurnToolCalls } from "./StreamingTurnToolCalls";
 import { RedFlagBanner } from "./RedFlagBanner";
@@ -139,6 +141,13 @@ function InitialActiveTurnHydrator({
   return null;
 }
 
+interface PendingChatImage {
+  uploadId: string;
+  previewUrl: string;
+  mimeType: string;
+  name: string;
+}
+
 interface ChatInputAreaProps {
   inputText: string;
   setInputText: (text: string) => void;
@@ -147,6 +156,10 @@ interface ChatInputAreaProps {
   handleSend: () => void;
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   isCentered?: boolean;
+  pendingImages: PendingChatImage[];
+  onAddImages: (files: FileList | null) => void;
+  onRemoveImage: (uploadId: string) => void;
+  isUploadingImage: boolean;
 }
 
 function ChatInputArea({
@@ -157,32 +170,83 @@ function ChatInputArea({
   handleSend,
   textareaRef,
   isCentered = false,
+  pendingImages,
+  onAddImages,
+  onRemoveImage,
+  isUploadingImage,
 }: ChatInputAreaProps) {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const canSend = Boolean(inputText.trim() || pendingImages.length > 0);
+
   return (
-    <div className="flex items-end gap-2 w-full">
-      <textarea
-        ref={textareaRef}
-        value={inputText}
-        onChange={(e) => setInputText(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder="描述您的症状、体态问题或身体感受..."
-        disabled={isComposerLocked}
-        rows={1}
-        className={`flex-1 resize-none rounded-2xl border border-[#D6D3CD] px-4 py-3.5 text-sm bg-white
-                   focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent
-                   disabled:bg-[#F7F5F0] disabled:text-gray-400
-                   placeholder:text-gray-400 ${isCentered ? "shadow-md" : "shadow-sm"}`}
-        style={{ maxHeight: '150px' }}
-      />
-      <button
-        onClick={handleSend}
-        disabled={isComposerLocked || !inputText.trim()}
-        className="flex-shrink-0 rounded-full bg-[#CD7B67] px-6 py-3.5 text-sm font-semibold text-white
-                   hover:bg-[#B65E49] focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2
-                   disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-300 shadow-sm shadow-[#CD7B67]/15"
-      >
-        发送
-      </button>
+    <div className="flex w-full flex-col gap-2">
+      {pendingImages.length > 0 && (
+        <div className="flex flex-wrap gap-2 px-1">
+          {pendingImages.map((image) => (
+            <div
+              key={image.uploadId}
+              className="relative h-16 w-16 overflow-hidden rounded-lg border border-[#D6D3CD] bg-white"
+            >
+              <img src={image.previewUrl} alt={image.name} className="h-full w-full object-cover" />
+              <button
+                type="button"
+                onClick={() => onRemoveImage(image.uploadId)}
+                disabled={isComposerLocked}
+                className="absolute right-0.5 top-0.5 rounded-full bg-black/60 px-1.5 text-[10px] text-white"
+                aria-label="移除图片"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex items-end gap-2 w-full">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            onAddImages(e.target.files);
+            e.target.value = '';
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isComposerLocked || isUploadingImage || pendingImages.length >= 3}
+          className="flex-shrink-0 rounded-full border border-[#D6D3CD] bg-white px-3 py-3.5 text-sm text-[#5D6B63]
+                     hover:bg-[#F7F5F0] disabled:cursor-not-allowed disabled:opacity-50"
+          title="上传体态/症状照片"
+        >
+          {isUploadingImage ? '…' : '图片'}
+        </button>
+        <textarea
+          ref={textareaRef}
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="描述您的症状、体态问题或身体感受，也可附上照片..."
+          disabled={isComposerLocked}
+          rows={1}
+          className={`flex-1 resize-none rounded-2xl border border-[#D6D3CD] px-4 py-3.5 text-sm bg-white
+                     focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent
+                     disabled:bg-[#F7F5F0] disabled:text-gray-400
+                     placeholder:text-gray-400 ${isCentered ? "shadow-md" : "shadow-sm"}`}
+          style={{ maxHeight: '150px' }}
+        />
+        <button
+          onClick={handleSend}
+          disabled={isComposerLocked || !canSend || isUploadingImage}
+          className="flex-shrink-0 rounded-full bg-[#CD7B67] px-6 py-3.5 text-sm font-semibold text-white
+                     hover:bg-[#B65E49] focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2
+                     disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-300 shadow-sm shadow-[#CD7B67]/15"
+        >
+          发送
+        </button>
+      </div>
     </div>
   );
 }
@@ -198,9 +262,10 @@ interface ChatContentProps {
  * ThreadPrimitive.Messages renders historical messages.
  */
 function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) {
-  const thread = useThread();
-  const threadRuntime = useThreadRuntime();
-  const composerRuntime = useComposerRuntime();
+  const aui = useAui();
+  const threadMessages = useAuiState((state) => state.thread.messages);
+  const threadRuntime = aui.thread;
+  const composerRuntime = aui.composer;
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -211,6 +276,9 @@ function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) 
   const [inputText, setInputText] = useState(() => {
     return conversationId === 'new' ? draftMessage : '';
   });
+  const [pendingImages, setPendingImages] = useState<PendingChatImage[]>([]);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const uploadFile = useUploadStore((s) => s.uploadFile);
 
   // Sync store draft when user types, only for new conversations
   useEffect(() => {
@@ -245,17 +313,82 @@ function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) 
         behavior: 'smooth',
       });
     }
-  }, [thread.messages, activeTurn]);
+  }, [threadMessages, activeTurn]);
+
+  const handleAddImages = useCallback(
+    async (files: FileList | null) => {
+      if (!files || files.length === 0 || isComposerLocked) return;
+      const remaining = Math.max(0, 3 - pendingImages.length);
+      const selected = Array.from(files).slice(0, remaining);
+      if (selected.length === 0) return;
+      setIsUploadingImage(true);
+      try {
+        const uploaded: PendingChatImage[] = [];
+        for (const file of selected) {
+          const record = await uploadFile(file, 'consultation_photo');
+          uploaded.push({
+            uploadId: record.id,
+            previewUrl: URL.createObjectURL(file),
+            mimeType: record.mime_type || file.type,
+            name: file.name,
+          });
+        }
+        setPendingImages((prev) => [...prev, ...uploaded].slice(0, 3));
+      } catch (err) {
+        console.error('consultation image upload failed', err);
+      } finally {
+        setIsUploadingImage(false);
+      }
+    },
+    [isComposerLocked, pendingImages.length, uploadFile],
+  );
+
+  const handleRemoveImage = useCallback((uploadId: string) => {
+    setPendingImages((prev) => {
+      const target = prev.find((item) => item.uploadId === uploadId);
+      if (target?.previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
+      return prev.filter((item) => item.uploadId !== uploadId);
+    });
+  }, []);
 
   const handleSend = useCallback(() => {
-    if (!inputText.trim() || isComposerLocked) return;
-    composerRuntime.setText(inputText.trim());
+    if (isComposerLocked || isUploadingImage) return;
+    if (!inputText.trim() && pendingImages.length === 0) return;
+
+    consultationAttachmentBuffer.next = pendingImages.map((image) => ({
+      uploadId: image.uploadId,
+      mimeType: image.mimeType,
+      imageUrl: image.previewUrl.startsWith('blob:') ? undefined : image.previewUrl,
+    }));
+
+    const text =
+      inputText.trim() ||
+      (pendingImages.length > 0
+        ? '请结合我附上的照片，分析与体态/不适相关的可见信息，并给出谨慎建议。'
+        : '');
+    composerRuntime.setText(text);
     composerRuntime.send();
     if (conversationId === 'new') {
       clearDraftMessage();
     }
     setInputText('');
-  }, [inputText, isComposerLocked, composerRuntime, conversationId, clearDraftMessage]);
+    setPendingImages((prev) => {
+      for (const image of prev) {
+        if (image.previewUrl.startsWith('blob:')) URL.revokeObjectURL(image.previewUrl);
+      }
+      return [];
+    });
+  }, [
+    inputText,
+    isComposerLocked,
+    isUploadingImage,
+    pendingImages,
+    composerRuntime,
+    conversationId,
+    clearDraftMessage,
+  ]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -292,7 +425,7 @@ function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) 
 
   // Determine if the conversation has no user or assistant messages
   const isEmptyConversation =
-    thread.messages.filter((m) => m.role === 'user' || m.role === 'assistant').length === 0;
+    threadMessages.filter((message) => message.role === 'user' || message.role === 'assistant').length === 0;
 
   // Render centered Layout for new/empty conversations
   if (isEmptyConversation && !hasPendingInteraction) {
@@ -330,6 +463,10 @@ function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) 
               handleSend={handleSend}
               textareaRef={textareaRef}
               isCentered={true}
+              pendingImages={pendingImages}
+              onAddImages={handleAddImages}
+              onRemoveImage={handleRemoveImage}
+              isUploadingImage={isUploadingImage}
             />
           </div>
         </div>
@@ -370,21 +507,24 @@ function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) 
           </p>
         )}
         <ChatInputArea
-          inputText={inputText}
-          setInputText={setInputText}
-          isComposerLocked={isComposerLocked}
-          handleKeyDown={handleKeyDown}
-          handleSend={handleSend}
-          textareaRef={textareaRef}
-          isCentered={false}
-        />
+              inputText={inputText}
+              setInputText={setInputText}
+              isComposerLocked={isComposerLocked}
+              handleKeyDown={handleKeyDown}
+              handleSend={handleSend}
+              textareaRef={textareaRef}
+              pendingImages={pendingImages}
+              onAddImages={handleAddImages}
+              onRemoveImage={handleRemoveImage}
+              isUploadingImage={isUploadingImage}
+            />
       </div>
     </ThreadPrimitive.Root>
   );
 }
 
 function CustomUserMessage() {
-  const metadata = useMessage((state) => state.metadata) as
+  const metadata = useAuiState((state) => state.message.metadata) as
     | { custom?: { is_interaction_answer?: boolean } }
     | undefined;
 
@@ -410,9 +550,9 @@ function CustomUserMessage() {
  * Streaming display is handled by StreamingAssistantTurn separately.
  */
 function CustomAssistantMessage() {
-  const content = useMessage((state) => state.content) as readonly ThreadAssistantMessagePart[];
-  const isLast = useMessage((state) => state.isLast);
-  const metadata = useMessage((state) => state.metadata) as
+  const content = useAuiState((state) => state.message.content) as readonly ThreadAssistantMessagePart[];
+  const isLast = useAuiState((state) => state.message.isLast);
+  const metadata = useAuiState((state) => state.message.metadata) as
     | { custom?: { interaction_history?: boolean; interaction?: import('../types/consultation').InteractionHistoryItem } }
     | undefined;
   const activeTurn = useActiveTurnState();
@@ -455,7 +595,20 @@ function CustomAssistantMessage() {
                 Text: () => <MarkdownTextPrimitive smooth={false} remarkPlugins={[remarkGfm]} />,
                 Source: () => null,
                 File: () => null,
-                Image: () => null,
+                Image: (props) => {
+                  const src =
+                    (props as { image?: string }).image ||
+                    (props as { src?: string }).src ||
+                    '';
+                  if (!src) return null;
+                  return (
+                    <img
+                      src={src}
+                      alt="用户上传"
+                      className="mt-2 max-h-48 rounded-lg border border-[#E5E3DF] object-contain"
+                    />
+                  );
+                },
                 Reasoning: () => null,
                 data: { Fallback: () => null },
                 tools: { Fallback: () => null },

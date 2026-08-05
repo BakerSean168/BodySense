@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.3.0",
   "type": "module",
-  "packageManager": "pnpm@11.0.0",
+  "packageManager": "pnpm@11.17.0",
   "engines": {
     "node": ">=24.0.0",
     "pnpm": ">=11.0.0"
@@ -35,27 +35,31 @@
     "docker:prod:logs": "docker compose -f docker/docker-compose.prod.yml --env-file .env.production --env-file .env.production.local logs -f",
     "docker:prod:ps": "docker compose -f docker/docker-compose.prod.yml --env-file .env.production --env-file .env.production.local ps",
     "docker:prod:pull": "docker compose -f docker/docker-compose.prod.yml --env-file .env.production --env-file .env.production.local pull",
-    "docker:prod:restart": "docker compose -f docker/docker-compose.prod.yml --env-file .env.production --env-file .env.production.local restart"
+    "docker:prod:restart": "docker compose -f docker/docker-compose.prod.yml --env-file .env.production --env-file .env.production.local restart",
+    "tsc7": "node ./node_modules/typescript7/bin/tsc"
   },
   "devDependencies": {
-    "@commitlint/cli": "^19.8.1",
-    "@commitlint/config-conventional": "^19.8.1",
-    "@nx/eslint": "22.5.3",
-    "@nx/eslint-plugin": "22.5.3",
-    "@nx/js": "22.5.3",
-    "@nx/vite": "22.5.3",
-    "@nx/vitest": "22.5.3",
-    "@nx/web": "22.5.3",
-    "@nx/workspace": "22.5.3",
-    "eslint": "^9.0.0",
+    "@commitlint/cli": "^21.2.1",
+    "@commitlint/config-conventional": "^21.2.0",
+    "@eslint/js": "^10.0.1",
+    "@nx/eslint": "23.1.0",
+    "@nx/eslint-plugin": "23.1.0",
+    "@nx/js": "23.1.0",
+    "@nx/vite": "23.1.0",
+    "@nx/vitest": "23.1.0",
+    "@nx/web": "23.1.0",
+    "@nx/workspace": "23.1.0",
+    "eslint": "^10.8.0",
     "husky": "^9.1.7",
-    "jsdom": "^29.1.1",
-    "nx": "22.5.3",
+    "jiti": "^2.6.1",
+    "jsdom": "^30.0.0",
+    "nx": "23.1.0",
     "nx-mcp": "0.25.0",
-    "prettier": "^3.5.3",
-    "typescript": "~6.0.3",
-    "typescript-eslint": "^8.39.1",
-    "vite": "^8.0.10",
-    "vitest": "^3.2.1"
+    "prettier": "^3.9.6",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "typescript-eslint": "^8.65.0",
+    "typescript7": "npm:typescript@7.0.2",
+    "vite": "^8.1.5",
+    "vitest": "^4.1.10"
   }
 }

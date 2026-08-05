@@ -181,3 +181,23 @@ func (h *ConsultationHandler) ResumeInteraction(c *gin.Context) {
 		respondError(c, err.Status, err.Code, err.Message)
 	}
 }
+
+// GetInteractionMetrics handles GET /api/v1/consultations/:id/interaction-metrics
+// T0-1 Phase C: lightweight projection over agent_interactions for this conversation.
+func (h *ConsultationHandler) GetInteractionMetrics(c *gin.Context) {
+	if _, ok := getUserUUID(c); !ok {
+		return
+	}
+	conversationID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "INVALID_ID", "invalid consultation id")
+		return
+	}
+	metrics, err := h.interactionService.GetInteractionMetrics(c.Request.Context(), &conversationID)
+	if err != nil {
+		log.Printf("interaction metrics for %s: %v", conversationID, err)
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to compute interaction metrics")
+		return
+	}
+	c.JSON(http.StatusOK, metrics)
+}

@@ -11,6 +11,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { toast } from 'sonner';
+import { JourneySoftGuard } from '@/features/journey';
 
 export function TrainingPage() {
   const { id } = useParams<{ id: string }>();
@@ -192,20 +193,22 @@ export function TrainingPage() {
   if (!plan) {
     return (
       <MainLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Card className="p-8 text-center shadow-xl max-w-sm w-full">
-            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
-              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <p className="text-lg font-bold text-slate-900 mb-2">未找到训练计划</p>
-            <p className="text-slate-500 mb-6 text-sm">Plan not found.</p>
-            <Button onClick={() => navigate('/dashboard')} className="w-full">
-              返回首页 (Return to Dashboard)
-            </Button>
-          </Card>
-        </div>
+        <JourneySoftGuard route="training">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <Card className="p-8 text-center shadow-xl max-w-sm w-full">
+              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
+                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <p className="text-lg font-bold text-slate-900 mb-2">未找到训练计划</p>
+              <p className="text-slate-500 mb-6 text-sm">Plan not found.</p>
+              <Button onClick={() => navigate('/dashboard')} className="w-full">
+                返回首页 (Return to Dashboard)
+              </Button>
+            </Card>
+          </div>
+        </JourneySoftGuard>
       </MainLayout>
     );
   }
@@ -216,6 +219,7 @@ export function TrainingPage() {
 
   return (
     <MainLayout>
+      <JourneySoftGuard route="training">
       <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 text-white p-8 rounded-3xl shadow-xl relative overflow-hidden">
@@ -555,6 +559,7 @@ export function TrainingPage() {
           </div>
         </div>
       </div>
+      </JourneySoftGuard>
 
       {/* Immersive Player Fullscreen Overlay */}
       {isPlayerOpen && (() => {

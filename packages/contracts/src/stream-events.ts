@@ -1,3 +1,17 @@
+/**
+ * Public stream-event contract shared by the Web consumer and contract tests.
+ *
+ * Learning path (Thought Forest note filenames):
+ * - typescript-generics-keyof-and-indexed-access.md
+ * - typescript-discriminated-unions-and-exhaustiveness.md
+ * - typescript-unknown-vs-any.md
+ * - typescript-static-types-and-runtime-validation.md
+ *
+ * Important boundary: these declarations disappear at runtime. Receiving JSON
+ * that is asserted as `StreamEvent` does not validate it; validation belongs at
+ * the network boundary before reducers or components consume the event.
+ */
+
 export type StreamChannel =
   | 'conversation'
   | 'run'
@@ -22,8 +36,13 @@ export interface StreamEventIds {
 }
 
 export interface StreamEventBase<
+  // Each concrete event supplies literal arguments such as
+  // <'run', 'run.started', { status: 'running'; ... }>. Keeping those
+  // literals is what later lets `event.type` discriminate the union.
   TChannel extends StreamChannel,
   TType extends string,
+  // Payloads must be object-shaped. The default `Record<string, never>`
+  // means “no payload keys are permitted”, not “an arbitrary object”.
   TPayload extends Record<string, unknown> = Record<string, never>,
 > {
   version: 1;
@@ -167,6 +186,28 @@ export type RedFlagDetectedEvent = StreamEventBase<
   { has_red_flags: boolean; flags: unknown[] }
 >;
 
+export type OutputReviewedEvent = StreamEventBase<
+  'safety',
+  'safety.output_reviewed',
+  {
+    kind: string;
+    verdict: 'accepted' | 'degraded' | 'rejected';
+    reasons?: string[];
+    issues?: unknown[];
+  }
+>;
+
+export type OutputRejectedEvent = StreamEventBase<
+  'safety',
+  'safety.output_rejected',
+  {
+    kind: string;
+    verdict: 'rejected';
+    reasons?: string[];
+    safety_fallback?: string;
+  }
+>;
+
 export type UsageReportedEvent = StreamEventBase<
   'usage',
   'usage.reported',
@@ -191,16 +232,41 @@ export type StreamErrorEvent = StreamEventBase<
   { message: string }
 >;
 
+export type InteractionQuestionField = {
+  key: string;
+  label: string;
+  answer_type?: 'text' | 'single_choice' | 'multi_choice' | 'number' | 'date' | 'scale' | 'select';
+  options?: string[];
+  required?: boolean;
+};
+
+export type InteractionQuestion = {
+  question: string;
+  answer_type?: string;
+  options?: string[];
+  context?: string;
+  allow_custom_input?: boolean;
+  required?: boolean;
+  /** Optional multi-field form (≤3). Single-question path omits this. */
+  fields?: InteractionQuestionField[];
+};
+
 export type InteractionRequiredEvent = StreamEventBase<
   'state',
   'state.interaction.required',
-  { interaction_id: string; question: { question: string; answer_type: string; options?: string[]; context?: string } }
+  { interaction_id: string; question: InteractionQuestion }
 >;
 
 export type InteractionAnsweredEvent = StreamEventBase<
   'state',
   'state.interaction.answered',
   { interaction_id: string; answer: unknown }
+>;
+
+export type InteractionExpiredEvent = StreamEventBase<
+  'state',
+  'state.interaction.expired',
+  { interaction_id: string; expired_at: string; reason?: string }
 >;
 
 export type JobCreatedEvent = StreamEventBase<
@@ -228,6 +294,10 @@ export type JobFailedEvent = StreamEventBase<
 >;
 
 export type StreamEvent =
+  // This is a discriminated union: every member has a literal `type`.
+  // A switch on event.type therefore narrows payload to the matching shape.
+  // Adding a member here should make exhaustive consumers fail to compile
+  // until they consciously handle or ignore the new protocol event.
   | ConversationCreatedEvent
   | RunStartedEvent
   | RunResumedEvent
@@ -249,12 +319,15 @@ export type StreamEvent =
   | CitationAddedEvent
   | KnowledgeGapEvent
   | RedFlagDetectedEvent
+  | OutputReviewedEvent
+  | OutputRejectedEvent
   | UsageReportedEvent
   | TitleGeneratedEvent
   | StreamDoneEvent
   | StreamErrorEvent
   | InteractionRequiredEvent
   | InteractionAnsweredEvent
+  | InteractionExpiredEvent
   | JobCreatedEvent
   | JobProgressEvent
   | JobCompletedEvent

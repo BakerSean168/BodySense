@@ -19,13 +19,13 @@ export function LoginForm() {
     const errors: { email?: string; password?: string } = {};
 
     if (!email) {
-      errors.email = 'Email is required';
+      errors.email = '请输入邮箱地址';
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-      errors.email = 'Invalid email format';
+      errors.email = '邮箱格式不正确';
     }
 
     if (!password) {
-      errors.password = 'Password is required';
+      errors.password = '请输入密码';
     }
 
     setValidationErrors(errors);
@@ -51,7 +51,7 @@ export function LoginForm() {
       <Input
         id="email"
         type="email"
-        label="Email address"
+        label="邮箱地址"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         placeholder="your@email.com"
@@ -61,7 +61,7 @@ export function LoginForm() {
       <Input
         id="password"
         type="password"
-        label="Password"
+        label="密码"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         placeholder="••••••••"
@@ -80,7 +80,7 @@ export function LoginForm() {
         className="w-full mt-2"
         size="lg"
       >
-        Sign in
+        登录
       </Button>
     </form>
   );

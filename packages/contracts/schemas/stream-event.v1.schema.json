@@ -10,7 +10,7 @@
     "seq": { "type": "integer", "minimum": 1 },
     "channel": {
       "type": "string",
-      "enum": ["conversation", "message", "tool", "state", "source", "safety", "usage", "job", "stream"]
+      "enum": ["conversation", "run", "message", "tool", "state", "source", "safety", "usage", "job", "stream", "title"]
     },
     "type": { "type": "string", "minLength": 1 },
     "ids": {

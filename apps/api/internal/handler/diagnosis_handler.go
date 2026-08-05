@@ -8,6 +8,7 @@ import (
 	"github.com/bodysense/api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 )
 
 // DiagnosisHandler handles diagnosis and treatment HTTP requests.
@@ -15,6 +16,7 @@ type DiagnosisHandler struct {
 	consultationService *service.ConsultationService
 	profileService      *service.ProfileService
 	aiClient            *service.AIClient
+	outputReviewService *service.OutputReviewService
 	aiServiceURL        string
 }
 
@@ -23,11 +25,13 @@ func NewDiagnosisHandler(
 	consultationService *service.ConsultationService,
 	profileService *service.ProfileService,
 	aiClient *service.AIClient,
+	outputReviewService *service.OutputReviewService,
 ) *DiagnosisHandler {
 	return &DiagnosisHandler{
 		consultationService: consultationService,
 		profileService:      profileService,
 		aiClient:            aiClient,
+		outputReviewService: outputReviewService,
 		aiServiceURL:        aiClient.BaseURL(),
 	}
 }
@@ -98,9 +102,17 @@ func (h *DiagnosisHandler) AnalyzeDiagnosis(c *gin.Context) {
 		return
 	}
 
-	// Parse and persist the result
+	// Parse and persist only when governance accepted/degraded the payload.
+	// Rejected responses deliberately omit the raw model content.
 	var diagnosisResult map[string]any
 	if json.Unmarshal(result, &diagnosisResult) == nil {
+		h.recordGovernedOutput(c, "diagnosis", &uid, &conversationID, nil, diagnosisResult, result)
+		if gov, ok := diagnosisResult["governance"].(map[string]any); ok {
+			if verdict, _ := gov["verdict"].(string); verdict == "rejected" {
+				c.Data(http.StatusOK, "application/json", result)
+				return
+			}
+		}
 		if err := h.consultationService.UpdateDiagnosis(c.Request.Context(), conversationID, uid, diagnosisResult); err != nil {
 			log.Printf("failed to save diagnosis for consultation %s: %v", conversationID, err)
 		}
@@ -199,9 +211,16 @@ func (h *DiagnosisHandler) GenerateTreatment(c *gin.Context) {
 		return
 	}
 
-	// Parse and persist the result
+	// Parse and persist only when governance accepted/degraded the payload.
 	var treatmentResult map[string]any
 	if json.Unmarshal(result, &treatmentResult) == nil {
+		h.recordGovernedOutput(c, "treatment", &uid, &conversationID, nil, treatmentResult, result)
+		if gov, ok := treatmentResult["governance"].(map[string]any); ok {
+			if verdict, _ := gov["verdict"].(string); verdict == "rejected" {
+				c.Data(http.StatusOK, "application/json", result)
+				return
+			}
+		}
 		var treatmentPlanToSave any
 		if planObj, ok := treatmentResult["treatment_plan"].(map[string]any); ok {
 			treatmentPlanToSave = planObj
@@ -217,4 +236,60 @@ func (h *DiagnosisHandler) GenerateTreatment(c *gin.Context) {
 	}
 
 	c.Data(http.StatusOK, "application/json", result)
+}
+
+// recordGovernedOutput writes the P2 governance conclusion to ai_output_reviews.
+// Non-blocking: OutputReviewService already logs persistence errors.
+func (h *DiagnosisHandler) recordGovernedOutput(
+	c *gin.Context,
+	outputType string,
+	userID, conversationID, jobID *uuid.UUID,
+	parsed map[string]any,
+	raw []byte,
+) {
+	if h.outputReviewService == nil {
+		return
+	}
+
+	verdict := "unknown"
+	issues := datatypes.JSON("[]")
+	var validated datatypes.JSON
+
+	if gov, ok := parsed["governance"].(map[string]any); ok {
+		if v, ok := gov["verdict"].(string); ok && v != "" {
+			verdict = v
+		}
+		if rawIssues, ok := gov["issues"]; ok {
+			if b, err := json.Marshal(rawIssues); err == nil {
+				issues = datatypes.JSON(b)
+			}
+		}
+	}
+
+	// Persist the deliverable surface only when it was allowed through the gate.
+	if verdict == "accepted" || verdict == "degraded" {
+		safe := make(map[string]any, len(parsed))
+		for k, v := range parsed {
+			if k == "governance" || k == "safety_fallback" {
+				continue
+			}
+			safe[k] = v
+		}
+		if b, err := json.Marshal(safe); err == nil {
+			validated = datatypes.JSON(b)
+		}
+	}
+
+	h.outputReviewService.RecordReview(
+		c.Request.Context(),
+		outputType,
+		verdict,
+		userID,
+		nil,
+		jobID,
+		conversationID,
+		issues,
+		validated,
+		datatypes.JSON(raw),
+	)
 }

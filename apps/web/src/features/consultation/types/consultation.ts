@@ -16,10 +16,13 @@ import type {
   TitleGeneratedEvent,
   StreamDoneEvent,
   StreamErrorEvent,
+  InteractionRequiredEvent,
+  InteractionAnsweredEvent,
+  InteractionExpiredEvent,
   StreamEvent,
 } from '@bodysense/contracts';
 
-export type { StreamEvent };
+export type { StreamEvent, InteractionRequiredEvent, InteractionAnsweredEvent, InteractionExpiredEvent };
 
 
 export interface Conversation {
@@ -263,7 +266,7 @@ export interface PendingInteraction {
   tool_call_id: string;
   tool_name: string;
   question: AskUserQuestion;
-  status: 'pending' | 'answered' | 'cancelled';
+  status: 'pending' | 'answered' | 'cancelled' | 'expired';
   answer?: unknown;
   created_at: string;
   answered_at?: string | null;
@@ -288,6 +291,14 @@ export interface ProjectedToolCall {
   metadata: Record<string, unknown>;
 }
 
+export interface AskUserField {
+  key: string;
+  label: string;
+  answer_type: 'text' | 'single_choice' | 'multi_choice' | 'number' | 'date' | 'scale';
+  options?: string[];
+  required?: boolean;
+}
+
 export interface AskUserQuestion {
   question: string;
   reason?: string;
@@ -296,6 +307,8 @@ export interface AskUserQuestion {
   allow_custom_input?: boolean;
   required?: boolean;
   context?: string;
+  /** Optional multi-field form (T0-1). When present, UI collects all fields once. */
+  fields?: AskUserField[];
 }
 
 export interface ToolCallInfo {
@@ -304,30 +317,6 @@ export interface ToolCallInfo {
   args: unknown;
   result?: unknown;
   status: 'running' | 'completed';
-}
-
-export interface InteractionRequiredEvent {
-  version: 1;
-  seq: number;
-  type: 'state.interaction.required';
-  channel: 'state';
-  ids: { conversation_id?: string; run_id?: string; interaction_id?: string };
-  payload: {
-    interaction_id: string;
-    question: AskUserQuestion;
-  };
-}
-
-export interface InteractionAnsweredEvent {
-  version: 1;
-  seq: number;
-  type: 'state.interaction.answered';
-  channel: 'state';
-  ids: { conversation_id?: string; run_id?: string; interaction_id?: string };
-  payload: {
-    interaction_id: string;
-    answer: unknown;
-  };
 }
 
 export interface ConversationListResponse {

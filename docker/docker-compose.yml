@@ -118,7 +118,7 @@ services:
       - '5173:5173'
     # ── 前端只拿公开配置 ──
     environment:
-      VITE_API_BASE_URL: http://localhost:${API_PORT:-8080}
+      VITE_WS_URL: ws://localhost:${WS_PORT:-8080}/ws
     networks:
       - bodysense-network
 

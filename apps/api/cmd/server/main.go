@@ -15,6 +15,7 @@ import (
 	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/handler"
 	"github.com/bodysense/api/internal/middleware"
+	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/repository"
 	"github.com/bodysense/api/internal/service"
 	"github.com/bodysense/api/internal/workflow"
@@ -68,8 +69,6 @@ func main() {
 	profileService := service.NewProfileService(profileRepo)
 	jobRepo := repository.NewJobRepository(database.DB)
 	jobRuntime := service.NewJobRuntime(jobRepo)
-	uploadService := service.NewUploadService(uploadRepo, jobRuntime)
-	uploadService.StartOCRWorker(context.Background(), 10*time.Second, 10*time.Minute)
 	aiClient := service.NewAIClient()
 	messageService := service.NewMessageService(messageRepo)
 	runService := service.NewRunService(runRepo)
@@ -81,14 +80,25 @@ func main() {
 	assessmentService := service.NewAssessmentService(assessmentRepo, profileService, uploadRepo)
 	authHandler := handler.NewAuthHandler(authService)
 	profileHandler := handler.NewProfileHandler(profileService)
-	uploadHandler := handler.NewUploadHandler(uploadService)
 	agentToolRepo := repository.NewAgentToolCallRepository(database.DB)
 	agentToolService := service.NewAgentToolService(agentToolRepo)
 	interactionRepo := repository.NewAgentInteractionRepository(database.DB)
 	interactionService := service.NewAgentInteractionService(interactionRepo, runRepo)
+	interactionService.StartInteractionExpiryWorker(
+		context.Background(),
+		time.Minute,
+		func(ctx context.Context, interaction model.AgentInteraction) {
+			if err := runtimeEventService.RecordInteractionExpired(ctx, &interaction); err != nil {
+				log.Printf("record interaction expired event %s: %v", interaction.ID, err)
+			}
+		},
+	)
 	threadProjectionService := service.NewThreadProjectionService(conversationRepo, consultationRepo, messageRepo, interactionRepo, runtimeEventService, threadProjectionRepo)
 	outputReviewRepo := repository.NewAIOutputReviewRepository(database.DB)
 	outputReviewService := service.NewOutputReviewService(outputReviewRepo)
+	uploadService := service.NewUploadService(uploadRepo, jobRuntime, outputReviewService)
+	uploadService.StartUploadWorker(context.Background(), 10*time.Second, 10*time.Minute)
+	uploadHandler := handler.NewUploadHandler(uploadService)
 	consultationRuntime := consultationruntime.NewRuntime(
 		conversationService,
 		consultationService,
@@ -101,6 +111,7 @@ func main() {
 		outputReviewService,
 		threadProjectionService,
 		runtimeEventService,
+		uploadService,
 	)
 	convHandler := handler.NewConversationHandler(conversationService, shareService)
 	runtimeEventHandler := handler.NewRuntimeEventHandler(runtimeEventService, conversationService)
@@ -110,7 +121,7 @@ func main() {
 		interactionService,
 		consultationRuntime,
 	)
-	diagnosisHandler := handler.NewDiagnosisHandler(consultationService, profileService, aiClient)
+	diagnosisHandler := handler.NewDiagnosisHandler(consultationService, profileService, aiClient, outputReviewService)
 	trainingRepo := repository.NewTrainingRepository(database.DB)
 	trainingService := service.NewTrainingService(trainingRepo, profileService)
 	trainingHandler := handler.NewTrainingHandler(trainingService)
@@ -194,6 +205,9 @@ func main() {
 		// Upload routes
 		protected.POST("/uploads", uploadHandler.Upload)
 		protected.GET("/uploads", uploadHandler.GetUploads)
+		// Static path must be registered before /uploads/:id so Gin does not
+		// treat "posture-analysis" as an upload id.
+		protected.GET("/uploads/posture-analysis", uploadHandler.GetPostureAnalysis)
 		protected.GET("/uploads/:id", uploadHandler.GetUpload)
 		protected.DELETE("/uploads/:id", uploadHandler.DeleteUpload)
 
@@ -222,6 +236,7 @@ func main() {
 		consultations.POST("/:id/diagnosis", diagnosisHandler.AnalyzeDiagnosis)
 		consultations.POST("/:id/treatment", diagnosisHandler.GenerateTreatment)
 		consultations.POST("/:id/interrupts/:interactionId/answers", consultationHandler.ResumeInteraction)
+		consultations.GET("/:id/interaction-metrics", consultationHandler.GetInteractionMetrics)
 
 		// Health journey (read-only)
 		protected.GET("/journey", journeyHandler.GetJourneyState)

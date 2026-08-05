@@ -124,6 +124,32 @@ func (h *UploadHandler) GetUpload(c *gin.Context) {
 	c.JSON(http.StatusOK, upload)
 }
 
+// GetPostureAnalysis handles GET /api/v1/uploads/posture-analysis
+// Returns the caller's latest completed three-view posture analyses (or an
+// empty summary when none exist). Used by the consultation Agent tool and
+// profile surfaces so analysis_result is no longer a write-only island.
+func (h *UploadHandler) GetPostureAnalysis(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	uid, err := uuid.Parse(userID.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		return
+	}
+
+	summary, err := h.uploadService.GetPostureAnalysisSummary(c.Request.Context(), uid)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get posture analysis"})
+		return
+	}
+
+	c.JSON(http.StatusOK, summary)
+}
+
 // DeleteUpload handles DELETE /api/v1/uploads/:id
 // Deletes an upload and its file from disk.
 func (h *UploadHandler) DeleteUpload(c *gin.Context) {

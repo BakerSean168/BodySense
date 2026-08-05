@@ -14,8 +14,8 @@ EXTRACT_SYMPTOM_SCHEMA = SYMPTOM_EXTRACTION_TOOL
 async def handle_extract_symptom_info(arguments: dict[str, Any]) -> dict[str, Any]:
     """Validate and normalize extracted symptom info.
 
-    Returns the normalized arguments dict. The orchestration layer
-    (consultation_graph) is responsible for:
+    Returns the normalized arguments dict. The active runtime graph
+    (runtime/consultation_thread.py) is responsible for:
     - Per-response dedupe by body_part
     - Emitting extracted_info SSE events
     - Creating tool result messages for the LLM

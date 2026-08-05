@@ -4,6 +4,12 @@
  *
  * Uses a split-context pattern (state + actions) to avoid full-tree re-renders
  * when only the state changes.
+ *
+ * Learning path (Thought Forest note filenames):
+ * - react-use-reducer.md
+ * - react-context-and-state-management.md
+ * - react-typescript-component-and-hook-types.md
+ * - typescript-discriminated-unions-and-exhaustiveness.md
  */
 
 import {
@@ -49,6 +55,9 @@ const ActiveTurnActionsContext = createContext<ActiveTurnActions | null>(null);
 // ---------------------------------------------------------------------------
 
 type TurnAction =
+  // `type` is the discriminant. Each branch carries only the data required by
+  // that transition, so the reducer cannot accidentally read fields belonging
+  // to another action.
   | { type: 'DISPATCH_EVENT'; event: StreamEvent }
   | { type: 'RESET_TURN' }
   | { type: 'HYDRATE_TURN'; state: ActiveTurnState }
@@ -56,6 +65,8 @@ type TurnAction =
   | { type: 'MARK_INTERACTION_ANSWERED'; interactionId: string };
 
 function turnReducer(state: ActiveTurnState, action: TurnAction): ActiveTurnState {
+  // Reducers must stay pure: same state + action => same next state. Network
+  // calls, logging and callback invocation belong outside this function.
   switch (action.type) {
     case 'DISPATCH_EVENT':
       return reduceActiveTurnEvent(state, action.event).state;
@@ -86,6 +97,8 @@ function turnReducer(state: ActiveTurnState, action: TurnAction): ActiveTurnStat
 export function ActiveTurnProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(turnReducer, INITIAL_ACTIVE_TURN_STATE);
 
+  // React guarantees `dispatch` is stable. These wrappers are memoized so the
+  // actions context also exposes stable function identities to consumers.
   const dispatchEvent = useCallback((event: StreamEvent) => {
     dispatch({ type: 'DISPATCH_EVENT', event });
   }, []);
@@ -108,6 +121,8 @@ export function ActiveTurnProvider({ children }: { children: ReactNode }) {
 
   // Stable ref — functions are stable (useCallback with [] deps), so the object
   // content never changes. Keeping it in a ref avoids context value thrashing.
+  // A ref is appropriate because changing its current value would not be UI
+  // state and must not trigger a render.
   const actions = useRef<ActiveTurnActions>({
     dispatchEvent,
     resetTurn,

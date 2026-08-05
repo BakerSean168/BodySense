@@ -37,9 +37,19 @@ type AIClient struct {
 	baseURL    string
 }
 
+// ConsultationImageRef is a single user-attached image for multimodal turns.
+// DataURL is a data: URL resolved server-side from an owned upload; never trust
+// client-supplied raw URLs for model input.
+type ConsultationImageRef struct {
+	UploadID string `json:"upload_id,omitempty"`
+	MimeType string `json:"mime_type,omitempty"`
+	DataURL  string `json:"data_url"`
+}
+
 type ConsultationUserInput struct {
-	Type string `json:"type"`
-	Text string `json:"text"`
+	Type   string                 `json:"type"`
+	Text   string                 `json:"text"`
+	Images []ConsultationImageRef `json:"images,omitempty"`
 }
 
 type ConsultationSnapshot struct {
@@ -50,6 +60,10 @@ type ConsultationSnapshot struct {
 type ConsultationBusinessContext struct {
 	Profile              json.RawMessage      `json:"profile"`
 	ConsultationSnapshot ConsultationSnapshot `json:"consultation_snapshot"`
+	// PostureAnalysis is the user's completed three-view analysis summary,
+	// prefetched by Go so the consultation Agent tool can read it without a
+	// Python→Go round trip. Omitempty keeps legacy clients happy when empty.
+	PostureAnalysis json.RawMessage `json:"posture_analysis,omitempty"`
 }
 
 type StartConsultationTurnRequest struct {
