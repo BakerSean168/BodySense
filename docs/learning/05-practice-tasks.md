@@ -20,6 +20,7 @@
 ## L0 · 读懂与热身
 
 ### P1 · 清理流式链路调试日志（JavaScript / TypeScript / React）
+> 相关笔记：[[react-use-reducer|useReducer]] · [[react-context-and-state-management|Context 与状态边界]] · [[web-streams-and-incremental-text-decoding|Web Streams 增量解码]]
 
 **练习目标**：区分纯函数、业务副作用和开发期诊断。
 
@@ -43,6 +44,7 @@
 - `web:lint`、`web:typecheck` 和现有测试通过。
 
 ### P2 · 为姿态指标补业务范围校验（Python）
+> 相关笔记：[[python-typing-basics|Python 类型基础]] · [[typescript-static-types-and-runtime-validation|TS 静态类型与运行时校验]]
 
 **练习目标**：理解类型提示和运行时校验的区别。
 
@@ -67,6 +69,7 @@
 ## L1 · 安全边界
 
 ### P3 · 从 `unknown` 解析回放事件（TypeScript）
+> 相关笔记：[[typescript-discriminated-unions-and-exhaustiveness|可辨识联合与穷尽]] · [[typescript-unknown-vs-any|unknown 与 any]] · [[typescript-static-types-and-runtime-validation|TS 静态类型与运行时校验]]
 
 **练习目标**：联合类型、类型守卫、运行时校验、错误上下文。
 
@@ -93,6 +96,7 @@
 - 不用 `as unknown as StreamEvent` 绕过检查。
 
 ### P4 · 强化流分块测试（JavaScript）
+> 相关笔记：[[web-streams-and-incremental-text-decoding|Web Streams 增量解码]] · [[ndjson-sse-and-streaming-protocol-boundaries|NDJSON/SSE 协议边界]] · [[typescript-static-types-and-runtime-validation|TS 静态类型与运行时校验]]
 
 **练习目标**：ReadableStream、TextDecoder、缓冲区和协议边界。
 
@@ -116,6 +120,7 @@
 ## L2 · 异步正确性
 
 ### P5 · 知识库改异步数据库连接池（Python）
+> 相关笔记：[[python-async-programming|Python 异步编程]] · [[python-error-handling|Python 错误处理]] · [[python-iterators-and-generators|Python 迭代器与生成器]]
 
 **练习目标**：事件循环、同步 I/O、连接池、异步上下文管理器。
 
@@ -138,6 +143,7 @@
 - 连接池关闭有测试或可观察验证。
 
 ### P6 · 把本地 embedding 移出事件循环（Python）
+> 相关笔记：[[python-async-programming|Python 异步编程]] · [[python-iterators-and-generators|Python 迭代器与生成器]]
 
 **练习目标**：区分 I/O 阻塞与 CPU 阻塞。
 
@@ -159,6 +165,7 @@
 ## L3 · 跨层功能
 
 ### P7 · 流式事件运行时校验贯穿前端入口（TS / React）
+> 相关笔记：[[typescript-static-types-and-runtime-validation|TS 静态类型与运行时校验]] · [[typescript-discriminated-unions-and-exhaustiveness|可辨识联合与穷尽]] · [[react-use-reducer|useReducer]]
 
 **练习目标**：把 P3 的解析器接入直播流与回放流，形成单一可信入口。
 
@@ -178,6 +185,7 @@
 验收：同一个坏 fixture 在直播和回放入口都以一致方式失败。
 
 ### P8 · 事件续传与取消的端到端演练（React / Go）
+> 相关笔记：[[abortcontroller-and-async-cancellation|AbortController 取消]] · [[go-context|Go context]] · [[go-sync-package|Go sync 包]] · [[typescript-discriminated-unions-and-exhaustiveness|可辨识联合与穷尽]]
 
 **练习目标**：AbortController、最后序号、幂等回放、重复事件处理。
 
@@ -202,6 +210,7 @@
 ## L4 · 独立设计
 
 ### P9 · 设计并交付一个新的健康旅程纵向切片
+> 相关笔记：[[bodysense-moc|BodySense MOC]] · [[typescript-learning-roadmap|TypeScript 学习路线]] · [[go-learning-roadmap|Go 学习路线]] · [[python-learning-roadmap|Python 学习路线]]
 
 候选方向：
 

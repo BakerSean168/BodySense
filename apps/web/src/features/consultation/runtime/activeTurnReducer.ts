@@ -1,11 +1,25 @@
 /**
- * ActiveTurnReducer — pure reducer for the current assistant turn's streaming state.
+ * ActiveTurnReducer —— 当前 AI 回复这一“轮(turn)”流式状态的纯 reducer。
  *
- * Uses Record<id, T> maps for natural upsert semantics (toolCalls, citations, knowledgeGaps).
+ * ===== 它解决什么问题 =====
+ * 流式事件是一条一条到达的；UI 需要在不丢失已累积内容的前提下，把每个
+ * StreamEvent 合并进当前状态。这里把它做成纯函数：
+ *   (current: ActiveTurnState, event: StreamEvent) => { state, effects }
+ * 不直接改 UI、不发请求——只算“下一步状态”，并把需要副作用的事（建会话、
+ * 落库、阶段切换等）打包成 effects 交还给上层 hook 去执行。
  *
- * Consumes StreamEvent v1 and produces ActiveTurnState without side effects.
- * Parent-level effects (conversation_created, phase_changed, etc.) are returned
- * separately for the hook layer to execute.
+ * ===== 几个值得注意的设计点 =====
+ * - 用 `Record<id, T>` 做天然 upsert（toolCalls / citations / knowledgeGaps）。
+ * - 用 `event.type` 可辨识联合做 switch，未覆盖的类型走 default（见底部）。
+ * - 用 `lastSeqByType` 做基于 seq 的幂等守卫，避免后端重复事件重复生效。
+ * - 所有更新都是不可变展开（{ ...current, ... }），不原地改对象。
+ *
+ * 深入笔记（Thought Forest 文件名）：
+ * - react-use-reducer.md
+ * - react-context-and-state-management.md
+ * - typescript-discriminated-unions-and-exhaustiveness.md
+ * - typescript-unknown-vs-any.md
+ * - typescript-static-types-and-runtime-validation.md
  */
 
 import type {
@@ -285,6 +299,8 @@ export function reduceActiveTurnEvent(
     case 'safety.red_flag.detected': {
       processed = true;
       const payload = event.payload as { has_red_flags: boolean; flags: unknown[] };
+      // 运行时边界：契约只保证 payload 是 unknown，把“已确认形状”的类型断言收口到
+      // 这一处，避免到处 as。详见 typescript-unknown-vs-any / static-types-and-runtime-validation。
       const redFlagEvent = payload as unknown as RedFlagEvent;
       next = { ...current, redFlag: redFlagEvent };
       effects.push({ type: 'red_flag', flags: redFlagEvent });
@@ -471,6 +487,8 @@ export function reduceActiveTurnEvent(
     }
 
     // --- Unknown events ----------------------------------------------------
+    // default 分支处理“契约之外”的事件：保持幂等，不抛错、也不丢失已累积状态。
+    // 可辨识联合要求穷尽所有已知类型；未知类型属于运行时边界，交给上层决定。
     default:
       break;
   }

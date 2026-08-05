@@ -1,3 +1,17 @@
+/**
+ * Input —— 用 forwardRef 转发 DOM ref 的受控输入框封装。
+ *
+ * ===== 值得学的点 =====
+ * - `forwardRef<HTMLInputElement, InputProps>` 把原生 DOM 节点 ref 透传给内部
+ *   `<input>`，同时保持组件可被父级用 ref 直接操作底层元素。
+ * - `InputProps extends InputHTMLAttributes<HTMLInputElement>`：复用原生 input 的
+ *   全部合法属性，再叠加 label / error 等自有 props，剩余属性用 `{ ...props }` 透传。
+ *
+ * 深入笔记（Thought Forest 文件名）：
+ * - react-typescript-component-and-hook-types.md
+ * - react-typed-wrapper-and-polymorphic-components.md
+ */
+
 import React, { type InputHTMLAttributes, forwardRef } from 'react';
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
