@@ -220,3 +220,50 @@ async def test_generate_treatment_no_faithfulness_without_rag(monkeypatch):
 
     assert "faithfulness" not in result
     assert "citations" not in result
+
+
+@pytest.mark.asyncio
+async def test_generate_diagnosis_characterizes_public_payload(monkeypatch):
+    """Freeze the accepted diagnosis payload before replacing the LLM layer."""
+    monkeypatch.setattr(
+        "src.services.diagnosis_service.AIService",
+        lambda: _FakeAIService(DIAGNOSIS_JSON),
+    )
+
+    rag_results = [
+        {
+            "title": "头前伸自测",
+            "summary": "久坐与颈肩酸胀可能与头前伸相关。",
+            "content": "",
+        }
+    ]
+
+    result = await DiagnosisService().generate_diagnosis(
+        extracted_info=[
+            {"body_part": "颈椎", "symptom_type": "酸胀", "severity": "轻度"}
+        ],
+        profile={"age": 30, "occupation": "程序员"},
+        conversation_summary="久坐后颈肩酸胀",
+        rag_context="## 知识库\n头前伸相关资料",
+        rag_results=rag_results,
+        use_case="llm.json",
+    )
+
+    assert result["diagnoses"] == [
+        {
+            "name": "头前伸倾向",
+            "confidence": "中",
+            "severity": "轻度",
+            "basis": "颈肩酸胀",
+            "typical_symptoms": "颈肩酸胀",
+            "differential": "需区分",
+        }
+    ]
+    assert result["citations"] == rag_results
+    assert result["governance"] == {
+        "verdict": "accepted",
+        "kind": "diagnosis",
+        "reasons": [],
+        "issues": [],
+    }
+    assert "safety_fallback" not in result
