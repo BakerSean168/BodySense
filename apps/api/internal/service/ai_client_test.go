@@ -108,3 +108,66 @@ func TestGenerateTreatmentSendsConfirmedDiagnosis(t *testing.T) {
 		t.Fatalf("expected use_case llm.json, got %#v", captured["use_case"])
 	}
 }
+
+func TestAnalyzeDiagnosisSendsPythonContract(t *testing.T) {
+	var captured map[string]any
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/diagnosis/analyze" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		if r.Method != http.MethodPost {
+			t.Fatalf("expected POST, got %s", r.Method)
+		}
+		if err := json.NewDecoder(r.Body).Decode(&captured); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"diagnoses":[{"name":"头前伸倾向","confidence":"中","severity":"轻度","basis":"久坐后颈肩酸胀","typical_symptoms":"颈肩酸胀"}],"governance":{"verdict":"accepted","kind":"diagnosis","reasons":[],"issues":[]}}`))
+	}))
+	defer server.Close()
+
+	client := &AIClient{
+		httpClient: server.Client(),
+		baseURL:    server.URL,
+	}
+
+	result, err := client.AnalyzeDiagnosis(context.Background(), DiagnosisRequest{
+		ExtractedInfo:       json.RawMessage(`[{"body_part":"颈椎","symptom_type":"酸胀"}]`),
+		Profile:             json.RawMessage(`{"age":30,"occupation":"程序员"}`),
+		ConversationSummary: "久坐后颈肩酸胀",
+		RAGContext:          "## 知识库\n头前伸相关资料",
+		RAGResults:          json.RawMessage(`[{"title":"头前伸自测"}]`),
+		UseCase:             "llm.json",
+	})
+	if err != nil {
+		t.Fatalf("AnalyzeDiagnosis returned error: %v", err)
+	}
+
+	if captured["use_case"] != "llm.json" {
+		t.Fatalf("expected use_case llm.json, got %#v", captured["use_case"])
+	}
+	if captured["conversation_summary"] != "久坐后颈肩酸胀" {
+		t.Fatalf("unexpected conversation_summary: %#v", captured["conversation_summary"])
+	}
+	if captured["rag_context"] != "## 知识库\n头前伸相关资料" {
+		t.Fatalf("unexpected rag_context: %#v", captured["rag_context"])
+	}
+
+	for _, key := range []string{"extracted_info", "profile", "rag_results"} {
+		if _, ok := captured[key]; !ok {
+			t.Fatalf("missing %s in request: %#v", key, captured)
+		}
+	}
+
+	var response map[string]any
+	if err := json.Unmarshal(result, &response); err != nil {
+		t.Fatalf("AnalyzeDiagnosis returned invalid JSON: %v", err)
+	}
+	if _, ok := response["diagnoses"]; !ok {
+		t.Fatalf("missing diagnoses in response: %#v", response)
+	}
+	if governance, ok := response["governance"].(map[string]any); !ok || governance["verdict"] != "accepted" {
+		t.Fatalf("expected accepted governance response, got %#v", response["governance"])
+	}
+}
