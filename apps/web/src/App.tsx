@@ -6,6 +6,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AppShellSkeleton } from "./components/layout/AppShellSkeleton";
+import { RouteErrorBoundary } from "./components/errors/RouteErrorBoundary";
 import { Toaster } from "./components/ui/sonner";
 import { queryClient } from "./lib/queryClient";
 import { ThemeProvider } from "./components/theme/ThemeProvider";
@@ -73,9 +74,11 @@ function ProtectedRouteElement({
 }) {
   return (
     <ProtectedRoute>
-      <Suspense fallback={<RouteFallback variant={variant} />}>
-        {children}
-      </Suspense>
+      <RouteErrorBoundary variant={variant}>
+        <Suspense fallback={<RouteFallback variant={variant} />}>
+          {children}
+        </Suspense>
+      </RouteErrorBoundary>
     </ProtectedRoute>
   );
 }

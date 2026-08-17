@@ -24,9 +24,9 @@ export function WorkspaceNextActionCard({
     return (
       <Card className="p-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-4 w-24 rounded bg-[#E5E3DF]" />
-          <div className="h-6 w-2/3 rounded bg-[#E5E3DF]" />
-          <div className="h-10 w-40 rounded-lg bg-[#E5E3DF]" />
+          <div className="h-4 w-24 rounded bg-muted" />
+          <div className="h-6 w-2/3 rounded bg-muted" />
+          <div className="h-10 w-40 rounded-lg bg-muted" />
         </div>
       </Card>
     );
@@ -35,10 +35,10 @@ export function WorkspaceNextActionCard({
   if (error || !workspace) {
     return (
       <Card className="p-6">
-        <h2 className="text-lg font-display font-semibold text-[#2E3C36]">
+        <h2 className="text-lg font-display font-semibold text-foreground">
           下一步
         </h2>
-        <p className="mt-2 text-sm text-[#5D6B63]">
+        <p className="mt-2 text-sm text-muted-foreground">
           暂时无法获取长期健康工作区状态。
         </p>
         <Button variant="outline" size="sm" className="mt-4" onClick={onRetry}>
@@ -53,10 +53,10 @@ export function WorkspaceNextActionCard({
   if (!primary) {
     return (
       <Card className="p-6">
-        <h2 className="text-lg font-display font-semibold text-[#2E3C36]">
+        <h2 className="text-lg font-display font-semibold text-foreground">
           下一步
         </h2>
-        <p className="mt-2 text-sm text-[#5D6B63]">
+        <p className="mt-2 text-sm text-muted-foreground">
           当前没有需要优先处理的事项，可以继续记录身体变化。
         </p>
       </Card>
@@ -65,15 +65,15 @@ export function WorkspaceNextActionCard({
 
   return (
     <Card className="p-6 sm:p-8">
-      <h2 className="text-lg font-display font-semibold text-[#2E3C36]">
+      <h2 className="text-lg font-display font-semibold text-foreground">
         下一步
       </h2>
-      <p className="mt-4 text-base font-medium leading-relaxed text-[#2E3C36]">
+      <p className="mt-4 text-base font-medium leading-relaxed text-foreground">
         {primary.description}
       </p>
       <div className="mt-6 flex flex-wrap gap-3">
         <Button
-          className="bg-[#CD7B67] text-white shadow-sm shadow-[#CD7B67]/15 hover:bg-[#B65E49]"
+          className="bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
           onClick={() => navigate(primary.href)}
         >
           {primary.label}
@@ -82,7 +82,7 @@ export function WorkspaceNextActionCard({
           <Fragment key={action.kind}>
             <Button
               variant="outline"
-              className="border-[#CD7B67] text-[#CD7B67] hover:bg-[#CD7B67]/5"
+              className="border-primary/40 text-primary hover:bg-primary/5"
               onClick={() => navigate(action.href)}
             >
               {action.label}

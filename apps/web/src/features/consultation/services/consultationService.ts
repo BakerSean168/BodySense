@@ -1,4 +1,5 @@
 import { authFetch } from "@/features/auth/services/authService";
+import { expectJson } from "@/lib/api-client";
 import type {
   Conversation,
   ConversationListResponse,
@@ -19,11 +20,8 @@ const API_BASE = "/api/v1";
  * Skips the ok check when the caller needs the raw Response (e.g. SSE).
  */
 async function parseJson<T>(res: Response): Promise<T> {
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`API ${res.status}: ${body || res.statusText}`);
-  }
-  return res.json();
+  if (res.status === 204) return undefined as T;
+  return expectJson<T>(res);
 }
 
 export const consultationApi = {
@@ -195,8 +193,8 @@ export const consultationApi = {
   async listDiagnosisHistory(
     limit = 20,
   ): Promise<{ analyses: DiagnosisAnalysis[] }> {
-    return authFetch(`${API_BASE}/diagnosis-analyses?limit=${limit}`).then((res) =>
-      parseJson<{ analyses: DiagnosisAnalysis[] }>(res),
+    return authFetch(`${API_BASE}/diagnosis-analyses?limit=${limit}`).then(
+      (res) => parseJson<{ analyses: DiagnosisAnalysis[] }>(res),
     );
   },
 
@@ -273,13 +271,11 @@ export const consultationApi = {
     expire_rate: number;
     avg_wait_seconds: number;
   }> {
-    const res = await authFetch(
-      `${API_BASE}/consultations/${conversationId}/interaction-metrics`,
+    return expectJson(
+      await authFetch(
+        `${API_BASE}/consultations/${conversationId}/interaction-metrics`,
+      ),
     );
-    if (!res.ok) {
-      throw new Error(`interaction metrics failed: ${res.status}`);
-    }
-    return res.json();
   },
 
   async resumeInteractionStream(

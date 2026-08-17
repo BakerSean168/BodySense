@@ -7,24 +7,19 @@ import {
   useRef,
 } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { toast } from "sonner";
 import { SessionHistorySidebar } from "../components/SessionHistorySidebar";
 import { SessionHistorySidebarSkeleton } from "../components/SessionHistorySidebarSkeleton";
 import { InfoPanelSkeleton } from "../components/InfoPanelSkeleton";
 import { ChatPanelSkeleton } from "../components/ChatPanelSkeleton";
 import { InteractionMetricsPanel } from "../components/InteractionMetricsPanel";
-import { consultationApi } from "../services/consultationService";
-import { consultationKeys } from "../services/consultationQueryKeys";
 import { useConversationsQuery } from "../hooks/useConversationsQuery";
 import { useConsultationThreadQuery } from "../hooks/useConsultationThreadQuery";
+import { useConversationActions } from "../hooks/useConversationActions";
+import { useThreadProjectionActions } from "../hooks/useThreadProjectionActions";
+import { useDiagnosisActions } from "../hooks/useDiagnosisActions";
 import type {
-  ConversationListResponse,
-  ExtractedInfo,
   InteractionHistoryItem,
   ConsultationPhase,
-  DiagnosisCandidateAssessmentState,
-  ConsultationThread,
 } from "../types/consultation";
 import {
   buildActiveTurnSeedFromRuntimeEvents,
@@ -41,7 +36,6 @@ import {
   BodyStateWorkbench,
   OutcomeTrendsPanel,
   TreatmentPanel,
-  healthWorkspaceQueryKey,
   useHealthWorkspaceQuery,
 } from "@/features/workspace";
 
@@ -71,7 +65,6 @@ export function ConsultationPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const queryClient = useQueryClient();
   const workspaceQuery = useHealthWorkspaceQuery();
 
   // --- Derived identity: URL is the single source of truth for "which conversation" ---
@@ -85,6 +78,12 @@ export function ConsultationPage() {
       return query ? `${pathname}?${query}` : pathname;
     },
     [searchParams],
+  );
+  const navigateToConversation = useCallback(
+    (conversationId?: string | null) => {
+      navigate(consultationLocation(conversationId), { replace: true });
+    },
+    [consultationLocation, navigate],
   );
 
   const [chatSessionKey, setChatSessionKey] = useState<string>("new");
@@ -130,12 +129,6 @@ export function ConsultationPage() {
     (bodyState?.facts?.length ?? 0) +
     (bodyState?.observations?.length ?? 0) +
     (bodyState?.hypotheses?.length ?? 0);
-  const diagnosisHistoryQuery = useQuery({
-    queryKey: ["diagnosis-history"],
-    queryFn: () => consultationApi.listDiagnosisHistory(20),
-    staleTime: 30_000,
-  });
-  const diagnosisHistory = diagnosisHistoryQuery.data?.analyses ?? [];
   const pendingInteractions = displayedThread?.pending_interactions ?? [];
   const interactionHistory = displayedThread?.interaction_history ?? [];
 
@@ -148,14 +141,13 @@ export function ConsultationPage() {
       !conversationsQuery.isPending &&
       conversations.length > 0
     ) {
-      navigate(consultationLocation(conversations[0].id), { replace: true });
+      navigateToConversation(conversations[0].id);
     }
   }, [
     routeConversationId,
     conversationsQuery.isPending,
     conversations,
-    navigate,
-    consultationLocation,
+    navigateToConversation,
   ]);
 
   // Keep rendering the previously resolved conversation until the target thread is ready.
@@ -180,7 +172,6 @@ export function ConsultationPage() {
   // Client-only presentation state. The active workspace mode is URL-addressable.
   const workspaceView = parseWorkspaceView(searchParams.get("view"));
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   const handleWorkspaceViewChange = useCallback(
     (view: WorkspaceView) => {
@@ -191,441 +182,49 @@ export function ConsultationPage() {
     [searchParams, setSearchParams],
   );
 
-  // --- Handlers ---
+  // Server-state actions are isolated in feature hooks; this page composes them.
+  const conversationActions = useConversationActions({
+    conversations,
+    routeConversationId,
+    navigateTo: navigateToConversation,
+  });
+  const threadActions = useThreadProjectionActions({
+    routeConversationId,
+    activeConversationIdRef,
+  });
+  const diagnosisActions = useDiagnosisActions({
+    conversationId: routeConversationId,
+    bodyState,
+    analysis: diagnosisAnalysis,
+  });
+  const diagnosisHistory = diagnosisActions.history;
 
-  // ADR 0004: the product exposes one long-lived health conversation. The old
-  // "new consultation" affordance now resolves to that conversation when it
-  // already exists; only a first-time user stays on the true empty /consultation route.
   const handleNewConsultation = useCallback(() => {
     const existingConversationId = conversations[0]?.id;
     if (existingConversationId) {
-      navigate(consultationLocation(existingConversationId), { replace: true });
+      navigateToConversation(existingConversationId);
       return;
     }
-    if (routeConversationId) {
-      navigate(consultationLocation(), { replace: true });
-    }
-  }, [conversations, routeConversationId, navigate, consultationLocation]);
+    if (routeConversationId) navigateToConversation();
+  }, [conversations, navigateToConversation, routeConversationId]);
 
   const handleSelectConversation = useCallback(
     (conversationId: string) => {
       setIsHistoryOpen(false);
-      navigate(consultationLocation(conversationId), { replace: true });
+      navigateToConversation(conversationId);
     },
-    [navigate, consultationLocation],
+    [navigateToConversation],
   );
-
-  const handlePrefetchConversation = useCallback(
-    (conversationId: string) => {
-      if (!conversationId || conversationId === routeConversationId) {
-        return;
-      }
-
-      const threadQueryKey = consultationKeys.thread(conversationId);
-      const existingState = queryClient.getQueryState(threadQueryKey);
-
-      if (existingState?.fetchStatus === "fetching") {
-        return;
-      }
-
-      if (queryClient.getQueryData(threadQueryKey)) {
-        return;
-      }
-
-      void queryClient.prefetchQuery({
-        queryKey: threadQueryKey,
-        queryFn: () => consultationApi.getConsultationThread(conversationId),
-        staleTime: 30_000,
-      });
-    },
-    [routeConversationId, queryClient],
-  );
-
-  const handleDeleteConversation = useCallback(
-    async (conversationId: string) => {
-      try {
-        await consultationApi.deleteConversation(conversationId);
-
-        // Update conversations list cache
-        queryClient.setQueryData<ConversationListResponse>(
-          consultationKeys.conversations(),
-          (old) =>
-            old
-              ? {
-                  ...old,
-                  conversations: old.conversations.filter(
-                    (c) => c.id !== conversationId,
-                  ),
-                }
-              : old,
-        );
-
-        // Remove detail caches for the deleted conversation
-        queryClient.removeQueries({
-          queryKey: consultationKeys.thread(conversationId),
-        });
-
-        // If we just deleted the currently-viewed conversation, navigate away.
-        // The route change will cause query to become disabled → data resets.
-        if (routeConversationId === conversationId) {
-          navigate(consultationLocation(), { replace: true });
-        }
-      } catch (err) {
-        console.error("Failed to delete conversation:", err);
-      }
-    },
-    [routeConversationId, navigate, queryClient, consultationLocation],
-  );
-
-  const handleDeleteAll = useCallback(async () => {
-    try {
-      await Promise.all(
-        conversations.map((c) => consultationApi.deleteConversation(c.id)),
-      );
-
-      // Clear the list cache
-      queryClient.setQueryData<ConversationListResponse>(
-        consultationKeys.conversations(),
-        { conversations: [], next_cursor: null, has_more: false },
-      );
-
-      // Remove all thread detail caches
-      queryClient.removeQueries({
-        queryKey: [...consultationKeys.all, "thread"],
-      });
-
-      navigate(consultationLocation(), { replace: true });
-    } catch (err) {
-      console.error("Failed to delete all conversations:", err);
-    }
-  }, [conversations, navigate, queryClient, consultationLocation]);
-
-  const handlePinConversation = useCallback(
-    async (conversationId: string, pinned: boolean) => {
-      try {
-        await consultationApi.pinConversation(conversationId, pinned);
-
-        // Update conversations list cache
-        queryClient.setQueryData<ConversationListResponse>(
-          consultationKeys.conversations(),
-          (old) =>
-            old
-              ? {
-                  ...old,
-                  conversations: old.conversations.map((c) =>
-                    c.id === conversationId
-                      ? {
-                          ...c,
-                          pinned,
-                          pinned_at: pinned ? new Date().toISOString() : null,
-                        }
-                      : c,
-                  ),
-                }
-              : old,
-        );
-
-        // Update conversation detail cache if loaded
-        queryClient.setQueryData<ConsultationThread>(
-          consultationKeys.thread(conversationId),
-          (old) =>
-            old
-              ? {
-                  ...old,
-                  conversation: {
-                    ...old.conversation,
-                    pinned,
-                    pinned_at: pinned ? new Date().toISOString() : null,
-                  },
-                }
-              : old,
-        );
-      } catch (err) {
-        console.error("Failed to pin conversation:", err);
-      }
-    },
-    [queryClient],
-  );
-
-  const handleRenameConversation = useCallback(
-    async (conversationId: string, title: string) => {
-      try {
-        await consultationApi.renameTitle(conversationId, title);
-
-        // Update conversations list cache
-        queryClient.setQueryData<ConversationListResponse>(
-          consultationKeys.conversations(),
-          (old) =>
-            old
-              ? {
-                  ...old,
-                  conversations: old.conversations.map((c) =>
-                    c.id === conversationId ? { ...c, title } : c,
-                  ),
-                }
-              : old,
-        );
-
-        // Update conversation detail cache if loaded
-        queryClient.setQueryData<ConsultationThread>(
-          consultationKeys.thread(conversationId),
-          (old) =>
-            old
-              ? {
-                  ...old,
-                  conversation: {
-                    ...old.conversation,
-                    title,
-                    title_status: "generated",
-                  },
-                }
-              : old,
-        );
-      } catch (err) {
-        console.error("Failed to rename conversation:", err);
-      }
-    },
-    [queryClient],
-  );
-
-  const handleShareConversation = useCallback(
-    async (conversationId: string) => {
-      try {
-        const result = await consultationApi.shareConversation(conversationId);
-        await navigator.clipboard.writeText(result.shareUrl);
-        toast.success("分享链接已复制到剪贴板");
-      } catch (err) {
-        console.error("Failed to share conversation:", err);
-        toast.error("分享失败，请稍后重试");
-      }
-    },
-    [],
-  );
-
-  const handleUnshareConversation = useCallback(
-    async (conversationId: string) => {
-      try {
-        await consultationApi.unshareConversation(conversationId);
-        toast.success("已取消分享");
-      } catch (err) {
-        console.error("Failed to unshare conversation:", err);
-        toast.error("取消分享失败，请稍后重试");
-      }
-    },
-    [],
-  );
-
-  // --- SSE Callbacks ---
-
-  const handleTitleGenerated = useCallback(
-    (title: string) => {
-      const convId = activeConversationIdRef.current ?? routeConversationId;
-      console.debug("[SSE] ⑤ ConsultationPage.handleTitleGenerated 开始执行", {
-        title,
-        convId,
-        activeRef: activeConversationIdRef.current,
-        routeConversationId,
-      });
-      if (!convId) {
-        console.warn("[SSE] ⚠️ handleTitleGenerated: convId 为空，跳过更新");
-        return;
-      }
-
-      // Update conversation detail cache
-      queryClient.setQueryData<ConsultationThread>(
-        consultationKeys.thread(convId),
-        (old) =>
-          old
-            ? {
-                ...old,
-                conversation: {
-                  ...old.conversation,
-                  title,
-                  title_status: "generated",
-                },
-              }
-            : old,
-      );
-      console.debug("[SSE] ⑤ handleTitleGenerated → 已更新 thread 详情缓存", {
-        convId,
-        title,
-      });
-
-      // Update conversations list cache
-      queryClient.setQueryData<ConversationListResponse>(
-        consultationKeys.conversations(),
-        (old) =>
-          old
-            ? {
-                ...old,
-                conversations: old.conversations.map((c) =>
-                  c.id === convId
-                    ? { ...c, title, title_status: "generated" as const }
-                    : c,
-                ),
-              }
-            : old,
-      );
-      console.debug(
-        "[SSE] ⑤ handleTitleGenerated → 已更新会话列表缓存 ✅ 完成",
-      );
-    },
-    [routeConversationId, queryClient],
-  );
-
-  const handleMessagePersisted = useCallback(
-    (clientMessageId: string, messageId: string) => {
-      const convId = activeConversationIdRef.current ?? routeConversationId;
-      if (!convId) return;
-
-      // Update messages in the conversation detail cache
-      queryClient.setQueryData<ConsultationThread>(
-        consultationKeys.thread(convId),
-        (old) =>
-          old
-            ? {
-                ...old,
-                messages: old.messages.map((m) =>
-                  m.id === clientMessageId ? { ...m, id: messageId } : m,
-                ),
-              }
-            : old,
-      );
-    },
-    [routeConversationId, queryClient],
-  );
-
-  const handleExtractedInfoUpdate = useCallback(
-    async (info: ExtractedInfo[]) => {
-      const convId = activeConversationIdRef.current ?? routeConversationId;
-      if (!convId) return;
-      await queryClient.cancelQueries({
-        queryKey: consultationKeys.thread(convId),
-      });
-      queryClient.setQueryData<ConsultationThread>(
-        consultationKeys.thread(convId),
-        (old) => (old ? { ...old, extracted_info: info } : old),
-      );
-    },
-    [routeConversationId, queryClient],
-  );
-
-  const handlePhaseChange = useCallback(
-    async (newPhase: ConsultationPhase) => {
-      const convId = activeConversationIdRef.current ?? routeConversationId;
-      if (!convId) return;
-
-      // Skip if phase hasn't changed — avoids unnecessary cancelQueries + setQueryData
-      const current = queryClient.getQueryData<ConsultationThread>(
-        consultationKeys.thread(convId),
-      );
-      if (current?.phase === newPhase) return;
-
-      await queryClient.cancelQueries({
-        queryKey: consultationKeys.thread(convId),
-      });
-      queryClient.setQueryData<ConsultationThread>(
-        consultationKeys.thread(convId),
-        (old) => (old ? { ...old, phase: newPhase } : old),
-      );
-    },
-    [routeConversationId, queryClient],
-  );
-
-  const handleStreamFinished = useCallback(() => {
-    const convId = activeConversationIdRef.current ?? routeConversationId;
-    if (!convId) return;
-    // Invalidate the durable thread projection and conversation list after the stream completes.
-    queryClient.invalidateQueries({
-      queryKey: consultationKeys.thread(convId),
-    });
-    queryClient.invalidateQueries({
-      queryKey: consultationKeys.conversations(),
-    });
-    queryClient.invalidateQueries({ queryKey: healthWorkspaceQueryKey });
-  }, [routeConversationId, queryClient]);
-
-  // --- Diagnosis / Treatment Mutations ---
-
-  const analyzeDiagnosisMutation = useMutation({
-    mutationFn: () => {
-      if (!routeConversationId) throw new Error("No active conversation");
-      return consultationApi.analyzeDiagnosis(routeConversationId);
-    },
-    onMutate: () => {
-      setAnalysisError(null);
-    },
-    onSuccess: (result) => {
-      queryClient.setQueryData<ConsultationThread>(
-        consultationKeys.thread(routeConversationId!),
-        (old) =>
-          old
-            ? {
-                ...old,
-                diagnosis: result,
-                phase:
-                  result.status === "completed" || result.status === "partial"
-                    ? "analysis_ready"
-                    : old.phase,
-              }
-            : old,
-      );
-      queryClient.invalidateQueries({ queryKey: ["diagnosis-history"] });
-      queryClient.invalidateQueries({ queryKey: healthWorkspaceQueryKey });
-    },
-    onError: () => {
-      setAnalysisError("生成可能性分析失败，请稍后重试");
-    },
-  });
-
-  const saveDiagnosisAssessmentsMutation = useMutation({
-    mutationFn: async (
-      items: Array<{
-        candidate_id: string;
-        state: DiagnosisCandidateAssessmentState;
-      }>,
-    ) => {
-      const analysisId = diagnosisAnalysis?.analysis_id;
-      if (!analysisId) throw new Error("No durable diagnosis analysis");
-      await consultationApi.assessDiagnosisCandidates(analysisId, items);
-    },
-    onMutate: () => setAnalysisError(null),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["diagnosis-history"] });
-      queryClient.invalidateQueries({ queryKey: healthWorkspaceQueryKey });
-      toast.success("已保存你对这些可能性的判断");
-    },
-    onError: () => setAnalysisError("保存判断失败，请稍后重试"),
-  });
 
   const handleAnalyzeDiagnosis = useCallback(() => {
-    const hasBodyStateInput =
-      (bodyState?.facts?.length ?? 0) > 0 ||
-      (bodyState?.observations?.length ?? 0) > 0;
     if (
-      !routeConversationId ||
-      !hasBodyStateInput ||
-      analyzeDiagnosisMutation.isPending
+      !diagnosisActions.canAnalyze ||
+      diagnosisActions.isAnalyzing ||
+      workspace?.capabilities.can_request_diagnosis === false
     )
       return;
-    analyzeDiagnosisMutation.mutate();
-  }, [routeConversationId, bodyState, analyzeDiagnosisMutation]);
-
-  const handleSaveDiagnosisAssessments = useCallback(
-    async (
-      items: Array<{
-        candidate_id: string;
-        state: DiagnosisCandidateAssessmentState;
-      }>,
-    ) => {
-      await saveDiagnosisAssessmentsMutation.mutateAsync(items);
-    },
-    [saveDiagnosisAssessmentsMutation],
-  );
-
-  const isAnalyzingDiagnosis = analyzeDiagnosisMutation.isPending;
-  const isSavingDiagnosisAssessments =
-    saveDiagnosisAssessmentsMutation.isPending;
+    diagnosisActions.analyze();
+  }, [diagnosisActions, workspace?.capabilities.can_request_diagnosis]);
 
   // --- Loading / Error States ---
   const isConversationListLoading =
@@ -656,15 +255,15 @@ export function ConsultationPage() {
     <SessionHistorySidebar
       conversations={conversations}
       activeId={routeConversationId}
-      onPrefetch={handlePrefetchConversation}
+      onPrefetch={conversationActions.prefetchConversation}
       onSelect={handleSelectConversation}
       onNew={handleNewConsultation}
-      onDelete={handleDeleteConversation}
-      onDeleteAll={handleDeleteAll}
-      onPin={handlePinConversation}
-      onRename={handleRenameConversation}
-      onShare={handleShareConversation}
-      onUnshare={handleUnshareConversation}
+      onDelete={conversationActions.deleteConversation}
+      onDeleteAll={conversationActions.deleteAllConversations}
+      onPin={conversationActions.pinConversation}
+      onRename={conversationActions.renameConversation}
+      onShare={conversationActions.shareConversation}
+      onUnshare={conversationActions.unshareConversation}
     />
   );
 
@@ -696,15 +295,7 @@ export function ConsultationPage() {
               <p className="mb-6 text-sm text-muted-foreground">
                 当前会话内容暂时无法加载，请稍后重试。
               </p>
-              <Button
-                onClick={() => {
-                  if (!routeConversationId) return;
-                  void queryClient.invalidateQueries({
-                    queryKey: consultationKeys.thread(routeConversationId),
-                  });
-                }}
-                className="w-full"
-              >
+              <Button onClick={threadActions.retryThread} className="w-full">
                 重新加载
               </Button>
             </Card>
@@ -734,37 +325,9 @@ export function ConsultationPage() {
                   justCreatedRef.current = newId;
                   activeConversationIdRef.current = newId;
 
-                  queryClient.setQueryData<ConversationListResponse>(
-                    consultationKeys.conversations(),
-                    (old) => {
-                      if (!old) return old;
-                      const now = new Date().toISOString();
-                      return {
-                        ...old,
-                        conversations: [
-                          {
-                            id: newId,
-                            title: "",
-                            title_status: "pending" as const,
-                            status: "active" as const,
-                            pinned: false,
-                            pinned_at: null,
-                            default_model: null,
-                            last_message_at: now,
-                            message_count: 0,
-                            metadata: {},
-                            created_at: now,
-                            updated_at: now,
-                          },
-                          ...old.conversations.filter(
-                            (conversation) => conversation.id !== newId,
-                          ),
-                        ],
-                      };
-                    },
-                  );
+                  threadActions.registerConversation(newId);
 
-                  navigate(consultationLocation(newId), { replace: true });
+                  navigateToConversation(newId);
                 }}
                 initialMessages={toInitialThreadTimeline(
                   historicalMessages,
@@ -772,11 +335,11 @@ export function ConsultationPage() {
                 )}
                 initialActiveTurn={initialTurnSeed?.activeTurn ?? null}
                 initialExtractedInfo={extractedInfo}
-                onExtractedInfoUpdate={handleExtractedInfoUpdate}
-                onPhaseChange={handlePhaseChange}
-                onTitleGenerated={handleTitleGenerated}
-                onMessagePersisted={handleMessagePersisted}
-                onStreamFinished={handleStreamFinished}
+                onExtractedInfoUpdate={threadActions.updateExtractedInfo}
+                onPhaseChange={threadActions.updatePhase}
+                onTitleGenerated={threadActions.updateTitle}
+                onMessagePersisted={threadActions.reconcileMessageId}
+                onStreamFinished={threadActions.finishStream}
               />
             </Suspense>
             {isThreadSwitching ? (
@@ -794,8 +357,7 @@ export function ConsultationPage() {
   const bodyStateReady = Boolean(bodyState);
   const canRequestDiagnosis =
     workspace?.capabilities.can_request_diagnosis ??
-    ((bodyState?.facts?.length ?? 0) > 0 ||
-      (bodyState?.observations?.length ?? 0) > 0);
+    diagnosisActions.canAnalyze;
 
   const stateWorkspace = workspaceUnavailable ? (
     <WorkspaceError message="会话详情加载失败，暂时无法展示长期身体状态。" />
@@ -813,11 +375,6 @@ export function ConsultationPage() {
           ...bodyState,
           hypotheses: bodyState.hypotheses ?? [],
         }}
-        onChanged={() =>
-          queryClient.invalidateQueries({
-            queryKey: healthWorkspaceQueryKey,
-          })
-        }
       />
     </div>
   ) : (
@@ -842,16 +399,16 @@ export function ConsultationPage() {
         {candidates.length === 0 ? (
           <Button
             onClick={handleAnalyzeDiagnosis}
-            disabled={!canRequestDiagnosis || isAnalyzingDiagnosis}
+            disabled={!canRequestDiagnosis || diagnosisActions.isAnalyzing}
             className="shrink-0"
           >
-            {isAnalyzingDiagnosis ? "分析中..." : "生成当前分析"}
+            {diagnosisActions.isAnalyzing ? "分析中..." : "生成当前分析"}
           </Button>
         ) : null}
       </div>
-      {analysisError ? (
+      {diagnosisActions.error ? (
         <p className="rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
-          {analysisError}
+          {diagnosisActions.error}
         </p>
       ) : null}
       <Suspense fallback={<InfoPanelSkeleton />}>
@@ -871,8 +428,8 @@ export function ConsultationPage() {
             candidates={candidates}
             citations={diagnosisAnalysis?.citations}
             freshness={diagnosisAnalysis?.freshness}
-            onSaveAssessments={handleSaveDiagnosisAssessments}
-            isSavingAssessments={isSavingDiagnosisAssessments}
+            onSaveAssessments={diagnosisActions.saveAssessments}
+            isSavingAssessments={diagnosisActions.isSavingAssessments}
           />
         )}
       </Suspense>
@@ -894,14 +451,7 @@ export function ConsultationPage() {
         title="当前方案"
         description="AI 只创建可审核 proposal；接受、暂停与执行均由明确业务边界控制。"
       />
-      <TreatmentPanel
-        workspace={workspace}
-        onChanged={() =>
-          queryClient.invalidateQueries({
-            queryKey: healthWorkspaceQueryKey,
-          })
-        }
-      />
+      <TreatmentPanel workspace={workspace} />
     </div>
   ) : (
     <WorkspaceEmptyState

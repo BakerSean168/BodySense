@@ -9,4 +9,8 @@ export const consultationKeys = {
   sessionEmpty: () => [...consultationKeys.all, "session", "empty"] as const,
   thread: (id: string) => [...consultationKeys.all, "thread", id] as const,
   threadEmpty: () => [...consultationKeys.all, "thread", "empty"] as const,
+  diagnosisHistoryAll: () =>
+    [...consultationKeys.all, "diagnosis-history"] as const,
+  diagnosisHistory: (limit: number) =>
+    [...consultationKeys.diagnosisHistoryAll(), limit] as const,
 };

@@ -1,8 +1,9 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BodyStateWorkbench } from "../BodyStateWorkbench";
-import { workspaceApi } from "../../services/workspaceService";
+import { workspaceApi } from "../../api/workspaceApi";
 
 vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
@@ -17,38 +18,41 @@ describe("BodyStateWorkbench observation review", () => {
     const review = vi
       .spyOn(workspaceApi, "reviewObservation")
       .mockResolvedValue({});
-    const onChanged = vi.fn().mockResolvedValue(undefined);
     const user = userEvent.setup();
 
+    const queryClient = new QueryClient({
+      defaultOptions: { mutations: { retry: false } },
+    });
     render(
-      <BodyStateWorkbench
-        snapshot={{
-          user_id: "user-1",
-          current_revision: 5,
-          safety_state: {},
-          facts: [],
-          observations: [],
-          pending_observations: [
-            {
-              id: "observation-1",
-              kind: "posture_alignment",
-              body_region: "肩部",
-              method: "posture_photo_front",
-              value: {
-                label: "高低肩倾向",
-                description: "右侧肩峰略高",
+      <QueryClientProvider client={queryClient}>
+        <BodyStateWorkbench
+          snapshot={{
+            user_id: "user-1",
+            current_revision: 5,
+            safety_state: {},
+            facts: [],
+            observations: [],
+            pending_observations: [
+              {
+                id: "observation-1",
+                kind: "posture_alignment",
+                body_region: "肩部",
+                method: "posture_photo_front",
+                value: {
+                  label: "高低肩倾向",
+                  description: "右侧肩峰略高",
+                },
+                review_state: "unverified",
+                lifecycle_state: "active",
+                excluded_from_reasoning: true,
+                updated_revision: 5,
               },
-              review_state: "unverified",
-              lifecycle_state: "active",
-              excluded_from_reasoning: true,
-              updated_revision: 5,
-            },
-          ],
-          hypotheses: [],
-          recent_revisions: [],
-        }}
-        onChanged={onChanged}
-      />,
+            ],
+            hypotheses: [],
+            recent_revisions: [],
+          }}
+        />
+      </QueryClientProvider>,
     );
 
     expect(screen.getByText("高低肩倾向")).toBeInTheDocument();
@@ -59,6 +63,5 @@ describe("BodyStateWorkbench observation review", () => {
     await user.click(screen.getByRole("button", { name: "确认观察" }));
 
     expect(review).toHaveBeenCalledWith("observation-1", 5, "confirmed");
-    expect(onChanged).toHaveBeenCalledOnce();
   });
 });
