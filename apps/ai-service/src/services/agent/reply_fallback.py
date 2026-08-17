@@ -9,7 +9,7 @@ functions with no dependency on the LangGraph runtime.
 from __future__ import annotations
 
 import re
-from typing import Any, Protocol
+from typing import Any, Callable, Protocol
 
 
 class StreamWriter(Protocol):
@@ -55,7 +55,7 @@ def build_fallback_reply(
     return "\n".join(lines)
 
 
-def emit_citation_events(search_results: list[Any], writer: StreamWriter) -> None:
+def emit_citation_events(search_results: list[Any], writer: Callable[[Any], None]) -> None:
     """Emit NDJSON citation events for knowledge search results."""
     for result in search_results:
         body = getattr(result, "body_markdown", "") or ""

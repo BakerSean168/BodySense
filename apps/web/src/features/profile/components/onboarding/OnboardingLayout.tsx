@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+import type { ReactNode } from "react";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 
 interface OnboardingLayoutProps {
   children: ReactNode;
@@ -34,8 +34,18 @@ export function OnboardingLayout({
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-indigo-600 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-primary-500/30">
-          <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          <svg
+            className="w-8 h-8 text-white"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+            />
           </svg>
         </div>
         <h1 className="text-center text-3xl font-bold text-slate-900 tracking-tight mb-2">
@@ -50,8 +60,12 @@ export function OnboardingLayout({
         {/* Progress bar */}
         <div className="mb-6 px-4 sm:px-0">
           <div className="flex justify-between text-sm font-medium text-slate-500 mb-3">
-            <span>步骤 {currentStep + 1} / {totalSteps}</span>
-            <span className="text-primary-600">{Math.round(((currentStep + 1) / totalSteps) * 100)}%</span>
+            <span>
+              步骤 {currentStep + 1} / {totalSteps}
+            </span>
+            <span className="text-primary-600">
+              {Math.round(((currentStep + 1) / totalSteps) * 100)}%
+            </span>
           </div>
           <div className="w-full bg-slate-200/60 rounded-full h-2.5 overflow-hidden backdrop-blur-sm">
             <div
@@ -63,9 +77,7 @@ export function OnboardingLayout({
 
         {/* Content card */}
         <Card className="py-8 px-6 sm:px-10 shadow-xl border-slate-100/50 bg-white/90 backdrop-blur-md">
-          <div className="min-h-[300px]">
-            {children}
-          </div>
+          <div className="min-h-[300px]">{children}</div>
         </Card>
 
         {/* Navigation buttons */}
@@ -85,7 +97,7 @@ export function OnboardingLayout({
             isLoading={isLoading}
             className="w-2/3 shadow-md shadow-primary-500/20"
           >
-            {isLastStep ? '完成' : '下一步'}
+            {isLastStep ? "完成" : "下一步"}
           </Button>
         </div>
       </div>

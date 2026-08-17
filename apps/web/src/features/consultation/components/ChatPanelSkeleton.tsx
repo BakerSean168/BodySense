@@ -1,10 +1,15 @@
 function SkeletonBlock({ className }: { className: string }) {
-  return <div className={`animate-pulse rounded-2xl bg-[#ECE8E1] ${className}`} />;
+  return (
+    <div className={`animate-pulse rounded-2xl bg-[#ECE8E1] ${className}`} />
+  );
 }
 
 export function ChatPanelSkeleton() {
   return (
-    <div className="flex h-full flex-col bg-white p-4" data-testid="chat-panel-skeleton">
+    <div
+      className="flex h-full flex-col bg-white p-4"
+      data-testid="chat-panel-skeleton"
+    >
       <div className="flex-1 space-y-4">
         <div className="flex justify-start">
           <SkeletonBlock className="h-20 w-[72%] rounded-[20px] rounded-bl-[4px]" />

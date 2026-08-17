@@ -58,9 +58,7 @@ def test_detect_worsening_symptoms():
 def test_detect_severity_in_extracted_info():
     detector = RedFlagDetector()
     result = detector.detect(
-        extracted_info=[
-            {"body_part": "腰部", "severity": "重度", "symptom_type": "疼痛"}
-        ],
+        extracted_info=[{"body_part": "腰部", "severity": "重度", "symptom_type": "疼痛"}],
         conversation_text="",
     )
     assert result.has_red_flags is True
@@ -72,9 +70,7 @@ def test_detect_severity_in_extracted_info():
 def test_no_red_flags_for_mild_symptoms():
     detector = RedFlagDetector()
     result = detector.detect(
-        extracted_info=[
-            {"body_part": "肩部", "severity": "轻度", "symptom_type": "酸胀"}
-        ],
+        extracted_info=[{"body_part": "肩部", "severity": "轻度", "symptom_type": "酸胀"}],
         conversation_text="久坐后肩膀有点酸",
     )
     assert result.has_red_flags is False

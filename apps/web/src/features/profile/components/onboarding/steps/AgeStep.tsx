@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 
 interface AgeStepProps {
   value: number | undefined;
@@ -6,8 +6,8 @@ interface AgeStepProps {
 }
 
 export function AgeStep({ value, onChange }: AgeStepProps) {
-  const [inputValue, setInputValue] = useState(value?.toString() || '');
-  const [error, setError] = useState('');
+  const [inputValue, setInputValue] = useState(value?.toString() || "");
+  const [error, setError] = useState("");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -15,11 +15,11 @@ export function AgeStep({ value, onChange }: AgeStepProps) {
 
     const num = parseInt(val, 10);
     if (isNaN(num)) {
-      setError('请输入有效的年龄');
+      setError("请输入有效的年龄");
     } else if (num < 1 || num > 150) {
-      setError('年龄必须在 1-150 之间');
+      setError("年龄必须在 1-150 之间");
     } else {
-      setError('');
+      setError("");
       onChange(num);
     }
   };

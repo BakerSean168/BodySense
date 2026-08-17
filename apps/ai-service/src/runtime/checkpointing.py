@@ -5,13 +5,13 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-from psycopg.rows import dict_row
+from psycopg import AsyncConnection
+from psycopg.rows import DictRow, dict_row
 from psycopg_pool import AsyncConnectionPool
 
 logger = logging.getLogger(__name__)
@@ -32,8 +32,8 @@ CONNECT_TIMEOUT_SECONDS = 5.0
 
 _init_lock = asyncio.Lock()
 _checkpointer: Any | None = None
-_checkpointer_context: AsyncIterator[Any] | None = None
-_checkpointer_pool: AsyncConnectionPool | None = None
+_checkpointer_context: Any | None = None
+_checkpointer_pool: AsyncConnectionPool[AsyncConnection[DictRow]] | None = None
 
 
 class CheckpointerUnavailableError(RuntimeError):
@@ -72,7 +72,7 @@ async def initialize_runtime_checkpointer() -> Any:
 
         database_url = _build_database_url()
         try:
-            pool = AsyncConnectionPool(
+            pool: AsyncConnectionPool[AsyncConnection[DictRow]] = AsyncConnectionPool(
                 database_url,
                 kwargs={"autocommit": True, "prepare_threshold": 0, "row_factory": dict_row},
                 open=False,

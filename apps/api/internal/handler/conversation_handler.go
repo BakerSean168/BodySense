@@ -326,6 +326,5 @@ func (h *ConversationHandler) GetSharedConversation(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.SharedConversationResponse{
 		Title:    share.SnapshotTitle,
 		Messages: json.RawMessage(share.SnapshotMessages),
-		Metadata: json.RawMessage(share.SnapshotMetadata),
 	})
 }

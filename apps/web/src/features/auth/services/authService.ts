@@ -1,12 +1,15 @@
-import { useAuthStore } from '@/stores/authStore';
-import { apiUrl, safeJson, extractErrorMessage } from '@/lib/api-url';
+import { useAuthStore } from "@/stores/authStore";
+import { apiUrl, safeJson, extractErrorMessage } from "@/lib/api-url";
 
 interface FetchOptions extends RequestInit {
   skipAuth?: boolean;
 }
 
 // Custom fetch wrapper with automatic token refresh
-export async function authFetch(url: string, options: FetchOptions = {}): Promise<Response> {
+export async function authFetch(
+  url: string,
+  options: FetchOptions = {},
+): Promise<Response> {
   const { skipAuth = false, ...fetchOptions } = options;
   const { accessToken, refreshAccessToken } = useAuthStore.getState();
 
@@ -42,9 +45,9 @@ export async function authFetch(url: string, options: FetchOptions = {}): Promis
 // Auth API functions
 export const authApi = {
   register: async (email: string, password: string) => {
-    const response = await authFetch('/api/v1/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const response = await authFetch("/api/v1/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
       skipAuth: true,
     });
@@ -57,9 +60,9 @@ export const authApi = {
   },
 
   login: async (email: string, password: string) => {
-    const response = await authFetch('/api/v1/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const response = await authFetch("/api/v1/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
       skipAuth: true,
     });
@@ -72,9 +75,9 @@ export const authApi = {
   },
 
   logout: async (refreshToken: string) => {
-    const response = await authFetch('/api/v1/auth/logout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const response = await authFetch("/api/v1/auth/logout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refresh_token: refreshToken }),
     });
 
@@ -82,7 +85,7 @@ export const authApi = {
   },
 
   getMe: async () => {
-    const response = await authFetch('/api/v1/me');
+    const response = await authFetch("/api/v1/me");
 
     if (!response.ok) {
       throw new Error(await extractErrorMessage(response));

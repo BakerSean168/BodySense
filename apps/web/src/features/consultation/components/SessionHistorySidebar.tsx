@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/Button';
+import { useState } from "react";
+import { Button } from "@/components/ui/Button";
 import {
   Dialog,
   DialogContent,
@@ -7,9 +7,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { SessionCard } from './SessionCard';
-import type { Conversation } from '../types/consultation';
+} from "@/components/ui/dialog";
+import { SessionCard } from "./SessionCard";
+import type { Conversation } from "../types/consultation";
 
 interface SessionHistorySidebarProps {
   conversations: Conversation[];
@@ -40,8 +40,8 @@ export function SessionHistorySidebar({
 }: SessionHistorySidebarProps) {
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
 
-  const pinnedConversations = conversations.filter(c => c.pinned);
-  const unpinnedConversations = conversations.filter(c => !c.pinned);
+  const pinnedConversations = conversations.filter((c) => c.pinned);
+  const unpinnedConversations = conversations.filter((c) => !c.pinned);
 
   return (
     <div className="flex flex-col h-full">
@@ -65,7 +65,7 @@ export function SessionHistorySidebar({
         <div className="px-3 py-2">
           <h3 className="text-xs font-medium text-gray-500 mb-2">📌 已置顶</h3>
           <div className="space-y-1">
-            {pinnedConversations.map(conv => (
+            {pinnedConversations.map((conv) => (
               <SessionCard
                 key={conv.id}
                 conversation={conv}
@@ -89,7 +89,7 @@ export function SessionHistorySidebar({
       <div className="flex-1 overflow-y-auto px-3 py-2">
         <h3 className="text-xs font-medium text-gray-500 mb-2">全部会话</h3>
         <div className="space-y-1">
-          {unpinnedConversations.map(conv => (
+          {unpinnedConversations.map((conv) => (
             <SessionCard
               key={conv.id}
               conversation={conv}
@@ -116,10 +116,19 @@ export function SessionHistorySidebar({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteAllDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteAllDialog(false)}
+            >
               取消
             </Button>
-            <Button variant="destructive" onClick={() => { onDeleteAll(); setShowDeleteAllDialog(false); }}>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                onDeleteAll();
+                setShowDeleteAllDialog(false);
+              }}
+            >
               确认清空
             </Button>
           </DialogFooter>

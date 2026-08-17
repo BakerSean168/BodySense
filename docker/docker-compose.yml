@@ -98,6 +98,9 @@ services:
       MIMO_BASE_URL: ${MIMO_BASE_URL:-}
       MIMO_API_KEY: ${MIMO_API_KEY:-}
       ASK_USER_ENABLED: ${ASK_USER_ENABLED:-false}
+      # Explicit local/CI validation seam. Production leaves this false.
+      BODYSENSE_DETERMINISTIC_AI: ${BODYSENSE_DETERMINISTIC_AI:-false}
+      BODYSENSE_E2E_STUB_AI: ${BODYSENSE_E2E_STUB_AI:-0}
       SPACES_ENDPOINT: ${SPACES_ENDPOINT:-}
       SPACES_REGION: ${SPACES_REGION:-}
       SPACES_BUCKET: ${SPACES_BUCKET:-}
@@ -115,10 +118,14 @@ services:
       context: ../
       dockerfile: apps/web/Dockerfile
     ports:
-      - '5173:5173'
+      - '${WEB_PORT:-5173}:5173'
     # ── 前端只拿公开配置 ──
     environment:
       VITE_WS_URL: ws://localhost:${WS_PORT:-8080}/ws
+      VITE_DEV_API_TARGET: http://api:8080
+    depends_on:
+      api:
+        condition: service_healthy
     networks:
       - bodysense-network
 

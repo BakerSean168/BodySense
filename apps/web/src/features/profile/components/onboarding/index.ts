@@ -1,2 +1,2 @@
-export { OnboardingWizard } from './OnboardingWizard';
-export { OnboardingLayout } from './OnboardingLayout';
+export { OnboardingWizard } from "./OnboardingWizard";
+export { OnboardingLayout } from "./OnboardingLayout";

@@ -25,20 +25,20 @@
 import type {
   StreamEvent,
   ExtractedInfo,
-  HealthFeatures,
   Citation,
   RedFlagEvent,
   PendingInteraction,
   AskUserQuestion,
   ToolCallInfo,
-} from '../types/consultation';
-import type { ThreadAssistantMessagePart } from '@assistant-ui/react';
+} from "../types/consultation";
+import type { ThreadAssistantMessagePart } from "@assistant-ui/react";
 
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
 
-export type StreamStatus = 'idle' | 'streaming' | 'interrupted' | 'completed' | 'failed';
+export type StreamStatus =
+  "idle" | "streaming" | "interrupted" | "completed" | "failed";
 
 export interface ActiveTurnState {
   runId: string | null;
@@ -62,7 +62,7 @@ export interface ActiveTurnState {
   /** Final message parts generated on completion, compatible with assistant-ui. */
   finalParts: ThreadAssistantMessagePart[];
   /** Highest seq processed per event type (backend mixes multiple seq sources). */
-  lastSeqByType: Partial<Record<StreamEvent['type'], number>>;
+  lastSeqByType: Partial<Record<StreamEvent["type"], number>>;
   /** Error message if status is 'failed'. */
   error?: string;
 }
@@ -71,8 +71,8 @@ export const INITIAL_ACTIVE_TURN_STATE: ActiveTurnState = {
   runId: null,
   conversationId: null,
   assistantMessageId: null,
-  status: 'idle',
-  text: '',
+  status: "idle",
+  text: "",
   toolCallsById: {},
   citationsByKey: {},
   knowledgeGapsByKey: {},
@@ -93,18 +93,21 @@ export function resetActiveTurnState(): ActiveTurnState {
 // ---------------------------------------------------------------------------
 
 export type ActiveTurnEffect =
-  | { type: 'conversation_created'; conversationId: string; replacesDraftId?: string }
-  | { type: 'message_persisted'; clientMessageId: string; messageId: string }
-  | { type: 'extracted_info_updated'; info: ExtractedInfo }
-  | { type: 'health_features_updated'; healthFeatures: HealthFeatures }
-  | { type: 'phase_changed'; from: string; to: string }
-  | { type: 'red_flag'; flags: RedFlagEvent }
-  | { type: 'citation_added'; citation: Citation }
-  | { type: 'interaction_required'; interaction: PendingInteraction }
-  | { type: 'interaction_answered'; interactionId: string }
-  | { type: 'message_completed'; data: unknown }
-  | { type: 'title_generated'; title: string }
-  | { type: 'stream_error'; message: string };
+  | {
+      type: "conversation_created";
+      conversationId: string;
+      replacesDraftId?: string;
+    }
+  | { type: "message_persisted"; clientMessageId: string; messageId: string }
+  | { type: "extracted_info_updated"; info: ExtractedInfo }
+  | { type: "phase_changed"; from: string; to: string }
+  | { type: "red_flag"; flags: RedFlagEvent }
+  | { type: "citation_added"; citation: Citation }
+  | { type: "interaction_required"; interaction: PendingInteraction }
+  | { type: "interaction_answered"; interactionId: string }
+  | { type: "message_completed"; data: unknown }
+  | { type: "title_generated"; title: string }
+  | { type: "stream_error"; message: string };
 
 export interface ReduceResult {
   state: ActiveTurnState;
@@ -133,91 +136,92 @@ export function reduceActiveTurnEvent(
 
   switch (event.type) {
     // --- Lifecycle ---------------------------------------------------------
-    case 'conversation.created': {
+    case "conversation.created": {
       processed = true;
       const payload = event.payload as { replaces_draft_id?: string };
-      const conversationId = event.ids.conversation_id || '';
-      console.debug('[SSE] ③ Reducer 处理 conversation.created → 产生 effect', {
+      const conversationId = event.ids.conversation_id || "";
+      console.debug("[SSE] ③ Reducer 处理 conversation.created → 产生 effect", {
         conversationId,
         runId: event.ids.run_id,
         replacesDraftId: payload.replaces_draft_id,
         prevStatus: current.status,
-        nextStatus: 'streaming',
+        nextStatus: "streaming",
       });
       next = {
         ...current,
         conversationId,
         runId: event.ids.run_id || null,
-        status: 'streaming',
+        status: "streaming",
         error: undefined,
       };
       effects.push({
-        type: 'conversation_created',
+        type: "conversation_created",
         conversationId,
         replacesDraftId: payload.replaces_draft_id,
       });
       break;
     }
 
-    case 'run.started':
-    case 'run.resumed': {
+    case "run.started":
+    case "run.resumed": {
       processed = true;
       next = {
         ...current,
         conversationId: event.ids.conversation_id || current.conversationId,
         runId: event.ids.run_id || current.runId,
-        status: 'streaming',
-        pendingInteraction: event.type === 'run.resumed' ? null : current.pendingInteraction,
+        status: "streaming",
+        pendingInteraction:
+          event.type === "run.resumed" ? null : current.pendingInteraction,
         error: undefined,
       };
       break;
     }
 
-    case 'run.interrupted': {
+    case "run.interrupted": {
       processed = true;
-      next = { ...current, status: 'interrupted' };
+      next = { ...current, status: "interrupted" };
       break;
     }
 
-    case 'run.completed': {
+    case "run.completed": {
       processed = true;
       next = { ...current, runId: event.ids.run_id || current.runId };
       break;
     }
 
-    case 'run.failed': {
+    case "run.failed": {
       processed = true;
       const payload = event.payload as { error?: { message?: string } };
       next = {
         ...current,
-        status: 'failed',
-        error: payload.error?.message || current.error || 'run failed',
+        status: "failed",
+        error: payload.error?.message || current.error || "run failed",
       };
       break;
     }
 
-    case 'message.persisted': {
+    case "message.persisted": {
       processed = true;
       const payload = event.payload as { client_message_id: string };
-      const messageId = event.ids.message_id || '';
+      const messageId = event.ids.message_id || "";
       next = { ...current };
       effects.push({
-        type: 'message_persisted',
+        type: "message_persisted",
         clientMessageId: payload.client_message_id,
         messageId,
       });
       break;
     }
 
-    case 'message.created': {
+    case "message.created": {
       processed = true;
-      const messageId = event.ids.message_id || '';
-      next = { ...current, assistantMessageId: messageId, status: 'streaming' };
+      const messageId = event.ids.message_id || "";
+      next = { ...current, assistantMessageId: messageId, status: "streaming" };
       break;
     }
 
     // --- Text streaming ----------------------------------------------------
-    case 'message.text.delta': {
+    case "message.text.delta": {
       processed = true;
       const payload = event.payload as { delta: string };
       next = { ...current, text: current.text + payload.delta };
@@ -225,7 +229,7 @@ export function reduceActiveTurnEvent(
     }
 
     // --- State events ------------------------------------------------------
-    case 'state.extracted_info.upsert': {
+    case "state.extracted_info.upsert": {
       processed = true;
       const payload = event.payload as { info: ExtractedInfo };
       const info = payload.info;
@@ -237,34 +241,23 @@ export function reduceActiveTurnEvent(
           [info.body_part]: { ...prev, ...info },
         },
       };
-      effects.push({ type: 'extracted_info_updated', info });
+      effects.push({ type: "extracted_info_updated", info });
       break;
     }
 
-    case 'state.health_features.upsert': {
-      processed = true;
-      const payload = event.payload as { health_features: HealthFeatures };
-      next = { ...current };
-      effects.push({
-        type: 'health_features_updated',
-        healthFeatures: payload.health_features,
-      });
-      break;
-    }
-
-    case 'state.phase.changed': {
+    case "state.phase.changed": {
       processed = true;
       const payload = event.payload as { from?: string; to: string };
       effects.push({
-        type: 'phase_changed',
-        from: payload.from || '',
+        type: "phase_changed",
+        from: payload.from || "",
         to: payload.to,
       });
       break;
     }
 
     // --- Source events ------------------------------------------------------
-    case 'source.citation.added': {
+    case "source.citation.added": {
       processed = true;
       const payload = event.payload as { citation: Citation };
       const citation = payload.citation;
@@ -274,12 +267,12 @@ export function reduceActiveTurnEvent(
           ...current,
           citationsByKey: { ...current.citationsByKey, [key]: citation },
         };
-        effects.push({ type: 'citation_added', citation });
+        effects.push({ type: "citation_added", citation });
       }
       break;
     }
 
-    case 'source.knowledge_gap': {
+    case "source.knowledge_gap": {
       processed = true;
       const payload = event.payload as { query: string; message: string };
       const key = payload.query;
@@ -296,77 +289,83 @@ export function reduceActiveTurnEvent(
     }
 
     // --- Safety events -----------------------------------------------------
-    case 'safety.red_flag.detected': {
+    case "safety.red_flag.detected": {
       processed = true;
-      const payload = event.payload as { has_red_flags: boolean; flags: unknown[] };
+      const payload = event.payload as {
+        has_red_flags: boolean;
+        flags: unknown[];
+      };
       // 运行时边界：契约只保证 payload 是 unknown，把“已确认形状”的类型断言收口到
       // 这一处，避免到处 as。详见 typescript-unknown-vs-any / static-types-and-runtime-validation。
       const redFlagEvent = payload as unknown as RedFlagEvent;
       next = { ...current, redFlag: redFlagEvent };
-      effects.push({ type: 'red_flag', flags: redFlagEvent });
+      effects.push({ type: "red_flag", flags: redFlagEvent });
       break;
     }
 
     // --- Completion --------------------------------------------------------
-    case 'message.completed': {
+    case "message.completed": {
       processed = true;
       next = {
         ...current,
-        status: 'completed',
+        status: "completed",
         finalParts: buildFinalMessageParts(current),
       };
-      effects.push({ type: 'message_completed', data: event.payload });
+      effects.push({ type: "message_completed", data: event.payload });
       break;
     }
 
-    case 'message.failed': {
+    case "message.failed": {
       processed = true;
-      const payload = event.payload as { status: 'failed'; error: { message: string } };
+      const payload = event.payload as {
+        status: "failed";
+        error: { message: string };
+      };
       next = {
         ...current,
-        status: 'failed',
-        error: payload.error?.message || 'stream failed',
+        status: "failed",
+        error: payload.error?.message || "stream failed",
       };
       break;
     }
 
-    case 'stream.done': {
+    case "stream.done": {
       processed = true;
-      if (current.status === 'interrupted') {
+      if (current.status === "interrupted") {
         next = current;
         break;
       }
-      if (current.status !== 'completed' && current.status !== 'failed') {
+      if (current.status !== "completed" && current.status !== "failed") {
         next = {
           ...current,
-          status: 'completed',
+          status: "completed",
           finalParts: buildFinalMessageParts(current),
         };
       }
       break;
     }
 
-    case 'title.generated': {
+    case "title.generated": {
       processed = true;
       const payload = event.payload as { title: string };
-      console.debug('[SSE] ③ Reducer 处理 title.generated → 产生 effect', {
+      console.debug("[SSE] ③ Reducer 处理 title.generated → 产生 effect", {
         title: payload.title,
         currentConversationId: current.conversationId,
       });
-      effects.push({ type: 'title_generated', title: payload.title });
+      effects.push({ type: "title_generated", title: payload.title });
       break;
     }
 
-    case 'stream.error': {
+    case "stream.error": {
       processed = true;
       const payload = event.payload as { message: string };
-      next = { ...current, status: 'failed', error: payload.message };
-      effects.push({ type: 'stream_error', message: payload.message });
+      next = { ...current, status: "failed", error: payload.message };
+      effects.push({ type: "stream_error", message: payload.message });
       break;
     }
 
     // --- Interaction events ------------------------------------------------
-    case 'state.interaction.required': {
+    case "state.interaction.required": {
       processed = true;
       const payload = event.payload as {
         interaction_id: string;
@@ -374,41 +373,52 @@ export function reduceActiveTurnEvent(
       };
       const interaction: PendingInteraction = {
         id: payload.interaction_id,
-        run_id: event.ids.run_id || '',
-        conversation_id: event.ids.conversation_id || '',
-        tool_call_id: event.ids.tool_call_id || '',
-        tool_name: 'ask_user',
+        run_id: event.ids.run_id || "",
+        conversation_id: event.ids.conversation_id || "",
+        tool_call_id: event.ids.tool_call_id || "",
+        tool_name: "ask_user",
         question: payload.question,
-        status: 'pending',
+        status: "pending",
         created_at: new Date().toISOString(),
       };
-      next = { ...current, pendingInteraction: interaction, status: 'interrupted' };
-      effects.push({ type: 'interaction_required', interaction });
+      next = {
+        ...current,
+        pendingInteraction: interaction,
+        status: "interrupted",
+      };
+      effects.push({ type: "interaction_required", interaction });
       break;
     }
 
-    case 'state.interaction.answered': {
+    case "state.interaction.answered": {
       processed = true;
-      const payload = event.payload as { interaction_id: string; answer?: unknown };
+      const payload = event.payload as {
+        interaction_id: string;
+        answer?: unknown;
+      };
       next = {
         ...current,
         pendingInteraction: current.pendingInteraction
           ? {
               ...current.pendingInteraction,
-              status: 'answered',
+              status: "answered",
               answer: payload.answer,
             }
           : null,
       };
-      effects.push({ type: 'interaction_answered', interactionId: payload.interaction_id });
+      effects.push({
+        type: "interaction_answered",
+        interactionId: payload.interaction_id,
+      });
       break;
     }
 
     // --- Tool events ---------------------------------------------------------
-    case 'tool.call': {
+    case "tool.call": {
       processed = true;
       const payload = event.payload as { tool: string; args: unknown };
-      const toolCallId = event.ids.tool_call_id || `tc_${crypto.randomUUID().slice(0, 8)}`;
+      const toolCallId =
+        event.ids.tool_call_id || `tc_${crypto.randomUUID().slice(0, 8)}`;
       const toolName = payload.tool.trim();
       if (!current.toolCallsById[toolCallId]) {
         next = {
@@ -419,7 +429,7 @@ export function reduceActiveTurnEvent(
               id: toolCallId,
               tool: toolName,
               args: payload.args,
-              status: 'running',
+              status: "running",
             },
           },
         };
@@ -427,21 +437,25 @@ export function reduceActiveTurnEvent(
       break;
     }
 
-    case 'tool.result': {
+    case "tool.result": {
       processed = true;
       const payload = event.payload as { tool: string; result: unknown };
-      const toolCallId = event.ids.tool_call_id || '';
+      const toolCallId = event.ids.tool_call_id || "";
       const toolName = payload.tool.trim();
 
       // Exact match by tool_call_id
       if (toolCallId && current.toolCallsById[toolCallId]) {
         const existing = current.toolCallsById[toolCallId];
-        if (existing.status === 'completed') break; // already completed
+        if (existing.status === "completed") break; // already completed
         next = {
           ...current,
           toolCallsById: {
             ...current.toolCallsById,
-            [toolCallId]: { ...existing, result: payload.result, status: 'completed' },
+            [toolCallId]: {
+              ...existing,
+              result: payload.result,
+              status: "completed",
+            },
           },
         };
         break;
@@ -450,11 +464,11 @@ export function reduceActiveTurnEvent(
       // Conservative fallback: only match by tool name when there is exactly
       // one running candidate. Multiple same-name tools would be ambiguous.
       const fallbackEntries = Object.entries(current.toolCallsById).filter(
-        ([, tc]) => tc.tool === toolName && tc.status === 'running',
+        ([, tc]) => tc.tool === toolName && tc.status === "running",
       );
       if (fallbackEntries.length === 1) {
         console.warn(
-          '[activeTurnReducer] tool.result matched by name fallback (no exact tool_call_id match)',
+          "[activeTurnReducer] tool.result matched by name fallback (no exact tool_call_id match)",
           { toolName: toolName, fallbackId: fallbackEntries[0][0] },
         );
         const [fallbackId, tc] = fallbackEntries[0];
@@ -462,14 +476,19 @@ export function reduceActiveTurnEvent(
           ...current,
           toolCallsById: {
             ...current.toolCallsById,
-            [fallbackId]: { ...tc, result: payload.result, status: 'completed' },
+            [fallbackId]: {
+              ...tc,
+              result: payload.result,
+              status: "completed",
+            },
           },
         };
         break;
       }
 
       // Placeholder
-      const placeholderId = toolCallId || `tc_ph_${Object.keys(current.toolCallsById).length}`;
+      const placeholderId =
+        toolCallId || `tc_ph_${Object.keys(current.toolCallsById).length}`;
       next = {
         ...current,
         toolCallsById: {
@@ -479,7 +498,7 @@ export function reduceActiveTurnEvent(
             tool: toolName,
             args: null,
             result: payload.result,
-            status: 'completed',
+            status: "completed",
           },
         },
       };
@@ -511,24 +530,28 @@ export function reduceActiveTurnEvent(
 // ---------------------------------------------------------------------------
 
 /** Build final message parts from the accumulated active turn state. */
-function buildFinalMessageParts(state: ActiveTurnState): ThreadAssistantMessagePart[] {
+function buildFinalMessageParts(
+  state: ActiveTurnState,
+): ThreadAssistantMessagePart[] {
   const parts: ThreadAssistantMessagePart[] = [];
 
   if (state.text) {
-    parts.push({ type: 'text', text: state.text });
+    parts.push({ type: "text", text: state.text });
   }
 
   for (const citation of Object.values(state.citationsByKey)) {
     const bodysenseMetadata: Record<string, string> = {};
     if (citation.summary) bodysenseMetadata.summary = citation.summary;
     if (citation.snippet) bodysenseMetadata.snippet = citation.snippet;
-    if (citation.source_title) bodysenseMetadata.source_title = citation.source_title;
-    if (citation.source_author) bodysenseMetadata.source_author = citation.source_author;
+    if (citation.source_title)
+      bodysenseMetadata.source_title = citation.source_title;
+    if (citation.source_author)
+      bodysenseMetadata.source_author = citation.source_author;
     parts.push({
-      type: 'source',
-      sourceType: 'url',
+      type: "source",
+      sourceType: "url",
       id: `src_${crypto.randomUUID().slice(0, 8)}`,
-      url: (citation as { url?: string }).url || '',
+      url: (citation as { url?: string }).url || "",
       title: citation.title,
       providerMetadata:
         Object.keys(bodysenseMetadata).length > 0
@@ -538,11 +561,11 @@ function buildFinalMessageParts(state: ActiveTurnState): ThreadAssistantMessageP
   }
 
   if (state.redFlag?.has_red_flags) {
-    parts.push({ type: 'data', name: 'red_flag', data: state.redFlag });
+    parts.push({ type: "data", name: "red_flag", data: state.redFlag });
   }
 
   for (const gap of Object.values(state.knowledgeGapsByKey)) {
-    parts.push({ type: 'data', name: 'knowledge_gap', data: gap });
+    parts.push({ type: "data", name: "knowledge_gap", data: gap });
   }
 
   return parts;

@@ -68,9 +68,11 @@ check_wsl.bat
 # Logs
 *.log
 
-# Coverage
+# Coverage / browser test artifacts
 coverage/
 .nyc_output/
+playwright-report/
+test-results/
 
 # Secrets
 *.pem

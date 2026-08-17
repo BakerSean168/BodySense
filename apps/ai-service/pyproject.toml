@@ -16,6 +16,7 @@ dependencies = [
     "langgraph>=1.2.10",
     "pyyaml>=6.0.3",
     "langgraph-checkpoint-postgres>=3.1.0",
+    "pydantic-ai-slim[openai]>=2.31.0",
 ]
 
 [project.optional-dependencies]
@@ -52,6 +53,7 @@ asyncio_mode = "auto"
 
 [dependency-groups]
 dev = [
+    "pyright>=1.1.411",
     "pytest>=9.1.1",
     "ruff>=0.16.0",
 ]

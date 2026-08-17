@@ -18,7 +18,6 @@ import (
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/repository"
 	"github.com/bodysense/api/internal/service"
-	"github.com/bodysense/api/internal/workflow"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -55,8 +54,13 @@ func main() {
 	profileRepo := repository.NewProfileRepository(database.DB)
 	uploadRepo := repository.NewUploadRepository(database.DB)
 	consultationRepo := repository.NewConsultationRepository(database.DB)
+	bodyStateRepo := repository.NewBodyStateRepository(database.DB)
+	diagnosisAnalysisRepo := repository.NewDiagnosisAnalysisRepository(database.DB)
+	diagnosisFreshnessRepo := repository.NewDiagnosisFreshnessRepository(database.DB)
+	treatmentRepo := repository.NewTreatmentRepository(database.DB)
 	conversationRepo := repository.NewConversationRepository(database.DB)
 	messageRepo := repository.NewMessageRepository(database.DB)
+	messageContextRepo := repository.NewMessageContextRepository(database.DB)
 	runRepo := repository.NewRunRepository(database.DB)
 	runtimeEventRepo := repository.NewRuntimeEventRepository(database.DB)
 	threadProjectionRepo := repository.NewThreadProjectionRepository(database.DB)
@@ -71,13 +75,33 @@ func main() {
 	jobRuntime := service.NewJobRuntime(jobRepo)
 	aiClient := service.NewAIClient()
 	messageService := service.NewMessageService(messageRepo)
+	contextRetrievalService := service.NewContextRetrievalService(messageContextRepo)
 	runService := service.NewRunService(runRepo)
 	runtimeEventService := service.NewRuntimeEventService(runtimeEventRepo)
 	conversationService := service.NewConversationService(conversationRepo, messageRepo, runRepo, shareRepo, aiClient)
 	shareService := service.NewShareService(conversationRepo, messageRepo, shareRepo)
 	consultationService := service.NewConsultationService(consultationRepo, conversationRepo)
+	bodyStateService := service.NewBodyStateService(bodyStateRepo)
+	diagnosisAnalysisService := service.NewDiagnosisAnalysisService(diagnosisAnalysisRepo)
+	diagnosisFreshnessService := service.NewDiagnosisFreshnessService(diagnosisFreshnessRepo, bodyStateService)
+	treatmentService := service.NewTreatmentService(
+		treatmentRepo,
+		diagnosisAnalysisService,
+		bodyStateService,
+		diagnosisFreshnessService,
+		profileService,
+		aiClient,
+		database.NewTransactionManager(database.DB),
+	)
 	assessmentRepo := repository.NewAssessmentRepository(database.DB)
-	assessmentService := service.NewAssessmentService(assessmentRepo, profileService, uploadRepo)
+	assessmentService := service.NewAssessmentService(
+		assessmentRepo,
+		profileService,
+		uploadRepo,
+		bodyStateService,
+		aiClient,
+		database.NewTransactionManager(database.DB),
+	)
 	authHandler := handler.NewAuthHandler(authService)
 	profileHandler := handler.NewProfileHandler(profileService)
 	agentToolRepo := repository.NewAgentToolCallRepository(database.DB)
@@ -112,26 +136,56 @@ func main() {
 		threadProjectionService,
 		runtimeEventService,
 		uploadService,
+		bodyStateService,
+	)
+	consultationRuntime.AttachLongitudinalContextServices(
+		contextRetrievalService,
+		diagnosisAnalysisService,
+		diagnosisFreshnessService,
+		treatmentService,
 	)
 	convHandler := handler.NewConversationHandler(conversationService, shareService)
 	runtimeEventHandler := handler.NewRuntimeEventHandler(runtimeEventService, conversationService)
-	threadProjectionHandler := handler.NewThreadProjectionHandler(threadProjectionService)
+	threadProjectionHandler := handler.NewThreadProjectionHandler(threadProjectionService, bodyStateService)
+	bodyStateHandler := handler.NewBodyStateHandler(bodyStateService)
 	consultationHandler := handler.NewConsultationHandler(
 		consultationService,
 		interactionService,
 		consultationRuntime,
+		bodyStateService,
 	)
-	diagnosisHandler := handler.NewDiagnosisHandler(consultationService, profileService, aiClient, outputReviewService)
+	diagnosisHandler := handler.NewDiagnosisHandler(
+		consultationService,
+		profileService,
+		aiClient,
+		outputReviewService,
+		bodyStateService,
+		diagnosisAnalysisService,
+		diagnosisFreshnessService,
+	)
 	trainingRepo := repository.NewTrainingRepository(database.DB)
-	trainingService := service.NewTrainingService(trainingRepo, profileService)
+	trainingService := service.NewTrainingService(
+		trainingRepo,
+		treatmentService,
+		database.NewTransactionManager(database.DB),
+	)
 	trainingHandler := handler.NewTrainingHandler(trainingService)
+	treatmentHandler := handler.NewTreatmentHandler(treatmentService, trainingService)
 	reassessmentHandler := handler.NewReassessmentHandler(trainingService)
 	assessmentHandler := handler.NewAssessmentHandler(assessmentService)
 	knowledgeHandler := handler.NewKnowledgeHandler()
 
-	// Health journey (read-only workflow)
-	journeyWorkflow := workflow.NewHealthJourneyWorkflow(profileRepo, uploadRepo, consultationRepo, assessmentRepo, trainingRepo)
-	journeyHandler := handler.NewHealthJourneyHandler(journeyWorkflow)
+	// Continuous health workspace is the single capability/read model for the product loop.
+	healthWorkspaceService := service.NewHealthWorkspaceService(
+		profileService,
+		consultationService,
+		bodyStateService,
+		diagnosisAnalysisService,
+		diagnosisFreshnessService,
+		treatmentService,
+		trainingService,
+	)
+	healthWorkspaceHandler := handler.NewHealthWorkspaceHandler(healthWorkspaceService)
 
 	// HTTP server
 	port := os.Getenv("API_PORT")
@@ -145,7 +199,7 @@ func main() {
 	corsOrigins := parseCORSOrigins()
 	r.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", resolveCORSOrigin(c.Request.Header.Get("Origin"), corsOrigins))
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
 
@@ -231,15 +285,42 @@ func main() {
 		consultations.GET("/:id", consultationHandler.GetConsultation)
 		consultations.GET("/:id/thread", threadProjectionHandler.GetConsultationThread)
 
-		consultations.PUT("/:id/health-features", consultationHandler.UpdateHealthFeatures)
-		consultations.PUT("/:id/confirm", consultationHandler.ConfirmDiagnosis)
 		consultations.POST("/:id/diagnosis", diagnosisHandler.AnalyzeDiagnosis)
-		consultations.POST("/:id/treatment", diagnosisHandler.GenerateTreatment)
+
+		// Diagnosis history is user-scoped and pinned to BodyState revisions.
+		protected.GET("/diagnosis-analyses", diagnosisHandler.ListDiagnosisHistory)
+		protected.GET("/diagnosis-analyses/:analysisId", diagnosisHandler.GetDiagnosisAnalysis)
+		protected.PUT("/diagnosis-analyses/:analysisId/assessment", diagnosisHandler.AssessDiagnosisCandidates)
+
+		// Revisioned Treatment / Intervention / Outcome loop.
+		protected.POST("/treatments/proposals", treatmentHandler.GenerateProposal)
+		protected.GET("/treatments/current", treatmentHandler.GetCurrent)
+		protected.POST("/treatments/current/review", treatmentHandler.ReviewCurrent)
+		protected.GET("/treatments/revisions", treatmentHandler.ListRevisions)
+		protected.GET("/treatments/revisions/:revisionId", treatmentHandler.GetRevision)
+		protected.POST("/treatments/revisions/:revisionId/accept", treatmentHandler.AcceptRevision)
+		protected.POST("/treatments/revisions/:revisionId/reject", treatmentHandler.RejectRevision)
+		protected.POST("/outcomes", treatmentHandler.RecordOutcome)
+		protected.GET("/outcomes", treatmentHandler.ListOutcomes)
+
 		consultations.POST("/:id/interrupts/:interactionId/answers", consultationHandler.ResumeInteraction)
 		consultations.GET("/:id/interaction-metrics", consultationHandler.GetInteractionMetrics)
 
-		// Health journey (read-only)
-		protected.GET("/journey", journeyHandler.GetJourneyState)
+		// Longitudinal BodyState (ADR 0004)
+		protected.GET("/body-state", bodyStateHandler.GetCurrent)
+		protected.POST("/body-state/facts", bodyStateHandler.UpsertFact)
+		protected.POST("/body-state/facts/:id/correct", bodyStateHandler.CorrectFact)
+		protected.PATCH("/body-state/facts/:id/temporal", bodyStateHandler.UpdateFactTemporal)
+		protected.PATCH("/body-state/facts/:id/review", bodyStateHandler.ReviewFact)
+		protected.POST("/body-state/observations", bodyStateHandler.AddObservation)
+		protected.PATCH("/body-state/observations/:id/review", bodyStateHandler.ReviewObservation)
+		protected.POST("/body-state/hypotheses", bodyStateHandler.AddHypothesis)
+		protected.PATCH("/body-state/hypotheses/:id/lifecycle", bodyStateHandler.UpdateHypothesisLifecycle)
+		protected.GET("/body-state/evidence", bodyStateHandler.ListEvidence)
+		protected.POST("/body-state/safety/resolve", bodyStateHandler.ResolveSafety)
+
+		// Capability-based continuous health workspace.
+		protected.GET("/health-workspace", healthWorkspaceHandler.Get)
 
 		// Assessment routes
 		protected.POST("/assessment/generate", assessmentHandler.GenerateAssessment)
@@ -247,13 +328,11 @@ func main() {
 		protected.GET("/assessment/:id", assessmentHandler.GetReport)
 
 		// Training routes
-		protected.POST("/training/generate", trainingHandler.GeneratePlan)
 		protected.GET("/training", trainingHandler.ListPlans)
 		protected.GET("/training/:id", trainingHandler.GetPlan)
 		protected.GET("/training/:id/today", trainingHandler.GetTodayTask)
 		protected.POST("/training/:id/checkin", trainingHandler.CheckIn)
 		protected.PUT("/training/:id/log", trainingHandler.UpdateLog)
-		protected.PUT("/training/:id/phases", trainingHandler.UpdatePlanPhases)
 		protected.GET("/training/:id/progress", trainingHandler.GetProgress)
 		protected.POST("/training/:id/reassess", reassessmentHandler.SubmitReassessment)
 	}

@@ -46,12 +46,10 @@ class MiMoOmniASRProvider(ASRProvider):
         base_url: str | None = None,
         model: str | None = None,
     ):
-        self.api_key = (
-            api_key
-            or os.getenv(_ENV_API_KEY)
-            or os.getenv("OPENAI_API_KEY")
+        self.api_key = api_key or os.getenv(_ENV_API_KEY) or os.getenv("OPENAI_API_KEY")
+        self.base_url = base_url or os.getenv(
+            _ENV_BASE_URL, "https://token-plan-cn.xiaomimimo.com/v1"
         )
-        self.base_url = base_url or os.getenv(_ENV_BASE_URL, "https://token-plan-cn.xiaomimimo.com/v1")
         self.model = model or os.getenv(_ENV_MODEL, "mimo-v2.5")
 
         if not self.api_key:
@@ -93,9 +91,9 @@ class MiMoOmniASRProvider(ASRProvider):
                         )
                     )
                     segment_index += 1
-                logger.info(f"Chunk {i+1}/{len(chunk_paths)} done: {len(segments)} segments")
+                logger.info(f"Chunk {i + 1}/{len(chunk_paths)} done: {len(segments)} segments")
             except Exception as e:
-                logger.error(f"Chunk {i+1}/{len(chunk_paths)} failed: {e}")
+                logger.error(f"Chunk {i + 1}/{len(chunk_paths)} failed: {e}")
             finally:
                 chunk_path.unlink(missing_ok=True)
 
@@ -178,9 +176,19 @@ def _ffmpeg_split(audio_path: Path, chunk_sec: int) -> list[Path]:
 
     # Get duration
     result = subprocess.run(
-        ["ffprobe", "-v", "error", "-show_entries", "format=duration",
-         "-of", "default=noprint_wrappers=1:nokey=1", str(audio_path)],
-        capture_output=True, text=True, timeout=30,
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            str(audio_path),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
     )
     duration = float(result.stdout.strip())
 
@@ -188,8 +196,20 @@ def _ffmpeg_split(audio_path: Path, chunk_sec: int) -> list[Path]:
         # No need to split
         chunk_path = output_dir / "chunk_000.wav"
         subprocess.run(
-            ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
-             "-i", str(audio_path), "-ac", "1", "-ar", "16000", str(chunk_path)],
+            [
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-i",
+                str(audio_path),
+                "-ac",
+                "1",
+                "-ar",
+                "16000",
+                str(chunk_path),
+            ],
             timeout=120,
         )
         return [chunk_path]
@@ -201,9 +221,24 @@ def _ffmpeg_split(audio_path: Path, chunk_sec: int) -> list[Path]:
     while start < duration:
         chunk_path = output_dir / f"chunk_{index:03d}.wav"
         subprocess.run(
-            ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
-             "-ss", str(start), "-t", str(chunk_sec),
-             "-i", str(audio_path), "-ac", "1", "-ar", "16000", str(chunk_path)],
+            [
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-ss",
+                str(start),
+                "-t",
+                str(chunk_sec),
+                "-i",
+                str(audio_path),
+                "-ac",
+                "1",
+                "-ar",
+                "16000",
+                str(chunk_path),
+            ],
             timeout=120,
         )
         if chunk_path.exists() and chunk_path.stat().st_size > 0:

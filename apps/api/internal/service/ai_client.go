@@ -15,21 +15,35 @@ import (
 )
 
 type DiagnosisRequest struct {
-	ExtractedInfo       json.RawMessage `json:"extracted_info"`
-	Profile             json.RawMessage `json:"profile,omitempty"`
-	ConversationSummary string          `json:"conversation_summary,omitempty"`
-	RAGContext          string          `json:"rag_context,omitempty"`
-	RAGResults          json.RawMessage `json:"rag_results,omitempty"`
-	UseCase             string          `json:"use_case,omitempty"`
+	UserID string `json:"user_id,omitempty"`
+	// New ADR 0004 boundary: Diagnosis pins exact durable BodyState input.
+	BodyStateRevision int64           `json:"body_state_revision"`
+	BodyState         json.RawMessage `json:"body_state"`
+	RelevantHistory   json.RawMessage `json:"relevant_history,omitempty"`
+	Profile           json.RawMessage `json:"profile,omitempty"`
+	UseCase           string          `json:"use_case,omitempty"`
 }
 
-type TreatmentRequest struct {
-	ConfirmedDiagnosis json.RawMessage `json:"confirmed_diagnosis"`
-	ExtractedInfo      json.RawMessage `json:"extracted_info"`
-	Profile            json.RawMessage `json:"profile,omitempty"`
-	RAGContext         string          `json:"rag_context,omitempty"`
-	RAGResults         json.RawMessage `json:"rag_results,omitempty"`
-	UseCase            string          `json:"use_case,omitempty"`
+// TreatmentRecommendationRequest pins exact durable identities and returns a
+// proposal that still requires explicit user acceptance in Go.
+type TreatmentRecommendationRequest struct {
+	UserID               string          `json:"user_id,omitempty"`
+	BodyStateRevision    int64           `json:"body_state_revision"`
+	BodyState            json.RawMessage `json:"body_state"`
+	DiagnosisAnalysis    json.RawMessage `json:"diagnosis_analysis"`
+	CandidateAssessments json.RawMessage `json:"candidate_assessments,omitempty"`
+	Profile              json.RawMessage `json:"profile,omitempty"`
+	UserConstraints      json.RawMessage `json:"user_constraints,omitempty"`
+	Evidence             json.RawMessage `json:"evidence,omitempty"`
+	UseCase              string          `json:"use_case,omitempty"`
+}
+
+type AssessmentGenerationRequest struct {
+	Profile         json.RawMessage `json:"profile"`
+	RAGContext      string          `json:"rag_context,omitempty"`
+	Images          []string        `json:"images,omitempty"`
+	PostureAnalysis json.RawMessage `json:"posture_analysis,omitempty"`
+	UseCase         string          `json:"use_case,omitempty"`
 }
 
 type AIClient struct {
@@ -52,17 +66,26 @@ type ConsultationUserInput struct {
 	Images []ConsultationImageRef `json:"images,omitempty"`
 }
 
-type ConsultationSnapshot struct {
+type ConsultationRuntimeState struct {
 	Phase         string          `json:"phase"`
 	ExtractedInfo json.RawMessage `json:"extracted_info"`
 }
 
 type ConsultationBusinessContext struct {
-	Profile              json.RawMessage      `json:"profile"`
-	ConsultationSnapshot ConsultationSnapshot `json:"consultation_snapshot"`
+	Profile json.RawMessage `json:"profile"`
+	// BodyState is durable user-level health truth. RuntimeState carries only
+	// transient consultation orchestration state such as extraction and phase.
+	BodyState    json.RawMessage          `json:"body_state,omitempty"`
+	RuntimeState ConsultationRuntimeState `json:"runtime_state"`
+	// RelevantHistory is a small quoted retrieval result from older messages.
+	// It is never health truth and current BodyState always has precedence.
+	RelevantHistory  []ConsultationHistoricalMessage `json:"relevant_history,omitempty"`
+	CurrentDiagnosis json.RawMessage                 `json:"current_diagnosis,omitempty"`
+	CurrentTreatment json.RawMessage                 `json:"current_treatment,omitempty"`
+	RecentOutcomes   json.RawMessage                 `json:"recent_outcomes,omitempty"`
 	// PostureAnalysis is the user's completed three-view analysis summary,
 	// prefetched by Go so the consultation Agent tool can read it without a
-	// Python→Go round trip. Omitempty keeps legacy clients happy when empty.
+	// Python→Go round trip.
 	PostureAnalysis json.RawMessage `json:"posture_analysis,omitempty"`
 }
 
@@ -176,14 +199,20 @@ func (c *AIClient) streamNDJSON(
 	return events, nil
 }
 
+// GenerateAssessment calls the typed observation-only Assessment Agent.
+func (c *AIClient) GenerateAssessment(ctx context.Context, req AssessmentGenerationRequest) (json.RawMessage, error) {
+	return c.callJSON(ctx, "/api/assessment/generate", req)
+}
+
 // AnalyzeDiagnosis calls /api/diagnosis/analyze.
 func (c *AIClient) AnalyzeDiagnosis(ctx context.Context, req DiagnosisRequest) (json.RawMessage, error) {
 	return c.callJSON(ctx, "/api/diagnosis/analyze", req)
 }
 
-// GenerateTreatment calls /api/diagnosis/treatment.
-func (c *AIClient) GenerateTreatment(ctx context.Context, req TreatmentRequest) (json.RawMessage, error) {
-	return c.callJSON(ctx, "/api/diagnosis/treatment", req)
+// RecommendTreatment calls the typed Treatment Agent. The result is a proposal;
+// only Go can accept it into the durable current Treatment aggregate.
+func (c *AIClient) RecommendTreatment(ctx context.Context, req TreatmentRecommendationRequest) (json.RawMessage, error) {
+	return c.callJSON(ctx, "/api/treatment/recommend", req)
 }
 
 // TitleGenerateRequest is the request body for /api/title/generate.

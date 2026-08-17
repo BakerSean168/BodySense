@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { useAuthStore } from '@/stores/authStore';
+import { useEffect } from "react";
+import { useAuthStore } from "@/stores/authStore";
 
 export function AuthBootstrap() {
   const hasHydrated = useAuthStore((state) => state.hasHydrated);

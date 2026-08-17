@@ -87,9 +87,7 @@ def extract_text_from_pdf(pdf_bytes: bytes) -> tuple[str, float]:
     doc.close()
 
     full_text = "\n\n".join(all_text)
-    avg_confidence = (
-        sum(all_confidences) / len(all_confidences) if all_confidences else 0.0
-    )
+    avg_confidence = sum(all_confidences) / len(all_confidences) if all_confidences else 0.0
 
     return full_text, avg_confidence
 

@@ -1,35 +1,23 @@
 package handler
 
 import (
-	"bytes"
-	"encoding/json"
-	"io"
 	"net/http"
-	"os"
 
 	"github.com/bodysense/api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
-// ReassessmentHandler handles reassessment HTTP requests.
+// ReassessmentHandler converts structured training feedback into Outcomes and,
+// when deterministic policy recommends review, a new Treatment proposal.
 type ReassessmentHandler struct {
 	trainingService *service.TrainingService
-	aiServiceURL    string
 }
 
 func NewReassessmentHandler(trainingService *service.TrainingService) *ReassessmentHandler {
-	aiServiceURL := os.Getenv("AI_SERVICE_URL")
-	if aiServiceURL == "" {
-		aiServiceURL = "http://localhost:8100"
-	}
-	return &ReassessmentHandler{
-		trainingService: trainingService,
-		aiServiceURL:    aiServiceURL,
-	}
+	return &ReassessmentHandler{trainingService: trainingService}
 }
 
-// SubmitReassessment handles POST /api/v1/training/:id/reassess
 func (h *ReassessmentHandler) SubmitReassessment(c *gin.Context) {
 	uid, ok := getUserUUID(c)
 	if !ok {
@@ -40,51 +28,30 @@ func (h *ReassessmentHandler) SubmitReassessment(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid plan id"})
 		return
 	}
-
-	// Verify plan belongs to user
-	plan, err := h.trainingService.GetPlan(c.Request.Context(), planID, uid)
-	if err != nil || plan == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "plan not found"})
-		return
+	var req struct {
+		Feedback struct {
+			SymptomChanges  string     `json:"symptom_changes"`
+			TrainingFeeling string     `json:"training_feeling"`
+			Difficulties    string     `json:"difficulties"`
+			BodyRegion      string     `json:"body_region"`
+			ConcernKey      string     `json:"concern_key"`
+			Trend           string     `json:"trend"`
+			FactID          *uuid.UUID `json:"fact_id"`
+		} `json:"feedback" binding:"required"`
 	}
-
-	// Parse feedback
-	var reqBody struct {
-		Feedback map[string]any `json:"feedback" binding:"required"`
-	}
-	if err := c.ShouldBindJSON(&reqBody); err != nil {
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	// Get training logs
-	logs, _ := h.trainingService.GetLogsByPlanID(c.Request.Context(), planID)
-	logsJSON, _ := json.Marshal(logs)
-
-	// Get plan as map
-	planJSON, _ := json.Marshal(plan)
-	var planMap map[string]any
-	_ = json.Unmarshal(planJSON, &planMap)
-
-	// Call AI service
-	aiReq := map[string]any{
-		"feedback":      reqBody.Feedback,
-		"training_logs": json.RawMessage(logsJSON),
-		"current_plan":  planMap,
-	}
-	aiReqBody, _ := json.Marshal(aiReq)
-
-	resp, err := http.Post(
-		h.aiServiceURL+"/api/reassessment/analyze",
-		"application/json",
-		bytes.NewBuffer(aiReqBody),
-	)
+	result, err := h.trainingService.Reassess(c.Request.Context(), planID, uid, service.TrainingFeedbackInput{
+		SymptomChanges: req.Feedback.SymptomChanges, TrainingFeeling: req.Feedback.TrainingFeeling,
+		Difficulties: req.Feedback.Difficulties, BodyRegion: req.Feedback.BodyRegion,
+		ConcernKey: req.Feedback.ConcernKey, Trend: req.Feedback.Trend, FactID: req.Feedback.FactID,
+		Notes: req.Feedback.TrainingFeeling,
+	})
 	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to connect to AI service"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	defer resp.Body.Close()
-
-	respBody, _ := io.ReadAll(resp.Body)
-	c.Data(resp.StatusCode, "application/json", respBody)
+	c.JSON(http.StatusOK, result)
 }

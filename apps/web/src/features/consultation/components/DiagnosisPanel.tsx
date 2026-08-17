@@ -1,340 +1,305 @@
-import { useState } from 'react';
-import type { Diagnosis, TreatmentPlan, Citation } from '../services/consultationService';
+import { useMemo, useState } from "react";
+import type {
+  Citation,
+  DiagnosisCandidate,
+  DiagnosisCandidateAssessmentState,
+  DiagnosisFreshness,
+} from "../types/consultation";
 
 interface DiagnosisPanelProps {
-  diagnoses: Diagnosis[];
+  analysisId?: string;
+  bodyStateRevision?: number;
+  status?:
+    "completed" | "partial" | "insufficient_information" | "safety_blocked";
+  summary?: string;
+  candidates: DiagnosisCandidate[];
   citations?: Citation[];
-  treatmentPlan: TreatmentPlan | null;
-  onConfirmAndGenerateTreatment: (diagnosis: Diagnosis) => void;
-  isGeneratingTreatment?: boolean;
+  freshness?: DiagnosisFreshness;
+  onSaveAssessments?: (
+    items: Array<{
+      candidate_id: string;
+      state: DiagnosisCandidateAssessmentState;
+    }>,
+  ) => Promise<void> | void;
+  isSavingAssessments?: boolean;
 }
 
 const CONFIDENCE_COLORS: Record<string, string> = {
-  '高': 'bg-green-100 text-green-800',
-  '中': 'bg-yellow-100 text-yellow-800',
-  '低': 'bg-gray-100 text-gray-800',
+  高: "bg-green-100 text-green-800",
+  中: "bg-yellow-100 text-yellow-800",
+  低: "bg-gray-100 text-gray-800",
 };
 
 const SEVERITY_COLORS: Record<string, string> = {
-  '轻度': 'bg-green-100 text-green-800',
-  '中度': 'bg-yellow-100 text-yellow-800',
-  '重度': 'bg-red-100 text-red-800',
+  轻度: "bg-green-100 text-green-800",
+  中度: "bg-yellow-100 text-yellow-800",
+  重度: "bg-red-100 text-red-800",
 };
 
+const ASSESSMENT_OPTIONS: Array<{
+  state: DiagnosisCandidateAssessmentState;
+  label: string;
+}> = [
+  { state: "confirmed", label: "✓ 符合我的情况" },
+  { state: "unsure", label: "? 不确定" },
+  { state: "not_applicable", label: "○ 暂不符合" },
+];
+
+const FRESHNESS_LABELS: Record<string, string> = {
+  fresh: "与当前 BodyState 一致",
+  potentially_stale: "可能需要复核",
+  stale: "已过期，需重新分析",
+};
+
+const FRESHNESS_STYLES: Record<string, string> = {
+  fresh: "bg-emerald-100 text-emerald-700",
+  potentially_stale: "bg-amber-100 text-amber-700",
+  stale: "bg-red-100 text-red-700",
+};
+
+/**
+ * DiagnosisAnalysis is immutable and pinned to one exact BodyState revision.
+ *
+ * Candidate assessment semantics:
+ * - candidates are NOT radio buttons and there is no "pick exactly one" rule;
+ * - every candidate may receive an independent user assessment;
+ * - unselected/unassessed candidates remain part of the historical analysis;
+ * - saving candidate assessments does not automatically generate Treatment.
+ */
 export function DiagnosisPanel({
-  diagnoses,
+  analysisId,
+  bodyStateRevision,
+  status = "completed",
+  summary,
+  candidates,
   citations,
-  treatmentPlan,
-  onConfirmAndGenerateTreatment,
-  isGeneratingTreatment,
+  freshness,
+  onSaveAssessments,
+  isSavingAssessments,
 }: DiagnosisPanelProps) {
-  const [selectedDiagnosis, setSelectedDiagnosis] = useState<Diagnosis | null>(null);
-  const [expandedCitationIndex, setExpandedCitationIndex] = useState<number | null>(null);
+  const [assessments, setAssessments] = useState<
+    Record<string, DiagnosisCandidateAssessmentState>
+  >({});
+  const [expandedCitationIndex, setExpandedCitationIndex] = useState<
+    number | null
+  >(null);
 
-  if (treatmentPlan) {
-    return <TreatmentPlanView plan={treatmentPlan} />;
-  }
+  const grouped = useMemo(() => {
+    const groups = new Map<string, DiagnosisCandidate[]>();
+    for (const diagnosis of candidates) {
+      const key = diagnosis.concern_key || "general";
+      groups.set(key, [...(groups.get(key) ?? []), diagnosis]);
+    }
+    return [...groups.entries()];
+  }, [candidates]);
 
-  if (diagnoses.length === 0) {
-    return null;
-  }
-
-  const findMatchingCitations = (diagnosisName: string, citationsList?: Citation[]) => {
-    if (!citationsList) return [];
-    const dName = diagnosisName.toLowerCase();
-    return citationsList.filter(c => {
-      const cTitle = c.title.toLowerCase();
-      const cSlug = c.problem_slug?.toLowerCase() || '';
-      return dName.includes(cTitle) || cTitle.includes(dName) || dName.includes(cSlug) || cSlug.includes(dName);
-    });
-  };
-
-  return (
-    <div className="space-y-4">
-      <h3 className="text-sm font-semibold text-gray-700">可能性分析</h3>
-
-      {diagnoses.map((diagnosis, i) => {
-        const matches = findMatchingCitations(diagnosis.name, citations);
-        return (
-          <div
-            key={i}
-            className={`rounded-lg border p-4 cursor-pointer transition-all ${
-              selectedDiagnosis?.name === diagnosis.name
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-200 hover:border-gray-300'
-            }`}
-            onClick={() => setSelectedDiagnosis(diagnosis)}
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <h4 className="font-medium text-gray-900">{diagnosis.name}</h4>
-              <span
-                className={`rounded-full px-2 py-0.5 text-xs font-medium ${CONFIDENCE_COLORS[diagnosis.confidence] || ''}`}
-              >
-                置信度：{diagnosis.confidence}
-              </span>
-              <span
-                className={`rounded-full px-2 py-0.5 text-xs font-medium ${SEVERITY_COLORS[diagnosis.severity] || ''}`}
-              >
-                {diagnosis.severity}
-              </span>
-            </div>
-
-            <p className="text-sm text-gray-600 mb-2">{diagnosis.basis}</p>
-
-            {diagnosis.typical_symptoms && (
-              <p className="text-xs text-gray-500">
-                典型表现：{diagnosis.typical_symptoms}
-              </p>
-            )}
-
-            {diagnosis.differential && (
-              <p className="text-xs text-gray-500 mt-1">
-                区别说明：{diagnosis.differential}
-              </p>
-            )}
-
-            {matches.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-gray-100 flex flex-wrap gap-2 items-center text-xs text-gray-500">
-                <span className="font-medium text-gray-600">📖 知识库来源:</span>
-                {matches.map((citation, idx) => (
-                  <span
-                    key={idx}
-                    className="inline-flex items-center bg-gray-100 px-2 py-0.5 rounded text-gray-700 hover:bg-gray-200 transition-colors"
-                    title={citation.summary}
-                  >
-                    {citation.source_title} {citation.source_author ? `(${citation.source_author})` : ''}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })}
-
-      {/* Action buttons */}
-      <div className="flex gap-3">
-        <button
-          onClick={() => selectedDiagnosis && onConfirmAndGenerateTreatment(selectedDiagnosis)}
-          disabled={!selectedDiagnosis || isGeneratingTreatment}
-          className="flex-1 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white
-                     hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed
-                     transition-colors"
-        >
-          {isGeneratingTreatment ? '生成中...' : '确认诊断并生成改善方案'}
-        </button>
-      </div>
-
-      {/* Citations list */}
-      {citations && citations.length > 0 && (
-        <div className="mt-6 border-t pt-4">
-          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">📚 知识库参考来源</h4>
-          <div className="space-y-2">
-            {citations.map((citation, idx) => (
-              <div key={idx} className="border border-gray-200 rounded-lg overflow-hidden bg-white">
-                <button
-                  onClick={() => setExpandedCitationIndex(expandedCitationIndex === idx ? null : idx)}
-                  className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-blue-600 text-[10px] font-semibold bg-blue-50 px-1.5 py-0.5 rounded-full border border-blue-100">
-                      {citation.category === 'definition' ? '定义' : citation.category === 'exercise' ? '训练' : '自测'}
-                    </span>
-                    <span className="font-medium text-sm text-gray-800">{citation.title}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-gray-400">
-                    <span className="truncate max-w-[200px]">
-                      {citation.source_title} {citation.source_author ? `· ${citation.source_author}` : ''}
-                    </span>
-                    <svg
-                      className={`w-4 h-4 transform transition-transform ${expandedCitationIndex === idx ? 'rotate-180' : ''}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </div>
-                </button>
-                {expandedCitationIndex === idx && (
-                  <div className="p-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-600 leading-relaxed max-h-60 overflow-y-auto">
-                    {citation.summary && (
-                      <p className="font-medium mb-2 text-gray-700 bg-white p-2 rounded border border-gray-100">
-                        【内容摘要】{citation.summary}
-                      </p>
-                    )}
-                    <div className="prose prose-sm max-w-none text-gray-600 font-sans whitespace-pre-wrap">
-                      {citation.body_markdown || citation.content}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function TreatmentPlanView({ plan }: { plan: TreatmentPlan }) {
-  const [expandedCitationIndex, setExpandedCitationIndex] = useState<number | null>(null);
-  const citations = plan.citations;
-
-  const findExerciseCitations = (exerciseName: string, citationsList?: Citation[]) => {
-    if (!citationsList) return [];
-    const eName = exerciseName.toLowerCase();
-    return citationsList.filter(c => {
-      const cTitle = c.title.toLowerCase();
-      const cSummary = c.summary?.toLowerCase() || '';
-      const cContent = (c.body_markdown || c.content || '').toLowerCase();
-      return eName.includes(cTitle) || cTitle.includes(eName) || cSummary.includes(eName) || cContent.includes(eName);
-    });
-  };
-
-  return (
-    <div className="space-y-4">
-      <h3 className="text-sm font-semibold text-gray-700">改善方案</h3>
-
-      {/* Goal */}
-      <div className="rounded-lg border p-4">
-        <h4 className="font-medium text-gray-900 mb-1">训练目标</h4>
-        <p className="text-sm text-gray-600">{plan.goal}</p>
-        <p className="text-xs text-gray-500 mt-1">
-          建议周期：{plan.duration_weeks} 周
+  if (candidates.length === 0) {
+    return (
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+        <p className="text-sm font-semibold text-amber-900">
+          {status === "safety_blocked"
+            ? "当前分析受安全状态限制"
+            : "当前信息不足以形成可靠候选"}
         </p>
+        {summary ? (
+          <p className="mt-1 text-xs text-amber-800">{summary}</p>
+        ) : null}
+      </div>
+    );
+  }
+
+  const saveItems = Object.entries(assessments)
+    .filter(([candidateId]) => Boolean(candidateId))
+    .map(([candidate_id, state]) => ({ candidate_id, state }));
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-700">可能性分析</h3>
+          {summary ? (
+            <p className="mt-1 text-xs text-gray-500">{summary}</p>
+          ) : null}
+        </div>
+        {bodyStateRevision != null ? (
+          <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">
+            BodyState R{bodyStateRevision}
+          </span>
+        ) : null}
       </div>
 
-      {/* Exercises */}
-      {plan.correction_exercises?.length > 0 && (
-        <div className="rounded-lg border p-4">
-          <h4 className="font-medium text-gray-900 mb-3">矫正动作</h4>
-          <div className="space-y-3">
-            {plan.correction_exercises.map((exercise, i) => {
-              const matches = findExerciseCitations(exercise.name, citations);
-              return (
-                <div key={i} className="bg-gray-50 rounded p-3">
-                  <div className="font-medium text-sm text-gray-800 flex justify-between items-center gap-2 flex-wrap">
-                    <span>{exercise.name}</span>
-                    {matches.length > 0 && (
-                      <span className="text-[10px] text-gray-400 font-normal truncate max-w-[200px]" title={matches[0].source_title}>
-                        📚 科学依据: {matches[0].source_title}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-600 mt-1">
-                    {exercise.description}
-                  </p>
-                  <div className="flex gap-4 mt-2 text-xs text-gray-500">
-                    <span>组数：{exercise.sets}</span>
-                    <span>次数：{exercise.reps}</span>
-                  </div>
-                  {exercise.notes && (
-                    <p className="text-xs text-orange-600 mt-1">
-                      ⚠️ {exercise.notes}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
+      {freshness ? (
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span
+              className={`rounded-full px-2 py-1 font-semibold ${
+                FRESHNESS_STYLES[freshness.state] || "bg-gray-100 text-gray-700"
+              }`}
+            >
+              {FRESHNESS_LABELS[freshness.state] || freshness.state}
+            </span>
+            <span className="text-gray-500">
+              已对照 BodyState R{freshness.evaluated_against_revision}
+            </span>
           </div>
+          {freshness.reasons.length > 0 ? (
+            <ul className="mt-2 space-y-1 text-gray-600">
+              {freshness.reasons.map((reason, index) => (
+                <li key={`${reason.code}-${index}`}>• {reason.message}</li>
+              ))}
+            </ul>
+          ) : null}
         </div>
-      )}
+      ) : null}
 
-      {/* Daily habits */}
-      {plan.daily_habits?.length > 0 && (
-        <div className="rounded-lg border p-4">
-          <h4 className="font-medium text-gray-900 mb-2">日常习惯调整</h4>
-          <ul className="space-y-1">
-            {plan.daily_habits.map((habit, i) => (
-              <li key={i} className="text-sm text-gray-600 flex items-start gap-2">
-                <span className="text-blue-500">•</span>
-                {habit}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {grouped.map(([concernKey, candidates]) => (
+        <section key={concernKey} className="space-y-2">
+          {grouped.length > 1 ? (
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-[#709a83]">
+              {concernKey === "general" ? "综合" : concernKey}
+            </h4>
+          ) : null}
 
-      {/* Nutrition */}
-      {plan.nutrition_advice && (
-        <div className="rounded-lg border p-4">
-          <h4 className="font-medium text-gray-900 mb-2">饮食建议</h4>
-          <p className="text-sm text-gray-600">{plan.nutrition_advice}</p>
-        </div>
-      )}
+          {candidates.map((diagnosis, index) => {
+            const candidateId = diagnosis.candidate_id ?? "";
+            return (
+              <article
+                key={candidateId || `${concernKey}-${index}`}
+                className="rounded-lg border border-gray-200 bg-white p-4"
+              >
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <h4 className="font-medium text-gray-900">
+                    {diagnosis.name}
+                  </h4>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${CONFIDENCE_COLORS[diagnosis.confidence] || ""}`}
+                  >
+                    置信度：{diagnosis.confidence}
+                  </span>
+                  {diagnosis.severity ? (
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${SEVERITY_COLORS[diagnosis.severity] || ""}`}
+                    >
+                      {diagnosis.severity}
+                    </span>
+                  ) : null}
+                  {diagnosis.evidence_strength ? (
+                    <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+                      证据：{diagnosis.evidence_strength}
+                    </span>
+                  ) : null}
+                </div>
 
-      {/* Timeline */}
-      <div className="rounded-lg border p-4">
-        <h4 className="font-medium text-gray-900 mb-2">预期改善周期</h4>
-        <p className="text-sm text-gray-600">{plan.expected_timeline}</p>
-      </div>
+                {diagnosis.basis ? (
+                  <p className="mb-2 text-sm text-gray-600">
+                    {diagnosis.basis}
+                  </p>
+                ) : null}
+                {diagnosis.reasoning_summary ? (
+                  <p className="mb-2 text-xs text-gray-500">
+                    分析：{diagnosis.reasoning_summary}
+                  </p>
+                ) : null}
+                {diagnosis.typical_symptoms ? (
+                  <p className="text-xs text-gray-500">
+                    典型表现：{diagnosis.typical_symptoms}
+                  </p>
+                ) : null}
+                {diagnosis.differential ? (
+                  <p className="mt-1 text-xs text-gray-500">
+                    区别说明：{diagnosis.differential}
+                  </p>
+                ) : null}
+                {(diagnosis.counterevidence_ids?.length ?? 0) > 0 ? (
+                  <p className="mt-2 text-xs text-amber-700">
+                    存在 {diagnosis.counterevidence_ids!.length}{" "}
+                    项反向/削弱证据，详情将在历史分析中保留。
+                  </p>
+                ) : null}
 
-      {/* Warning signs */}
-      {plan.warning_signs?.length > 0 && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-          <h4 className="font-medium text-red-800 mb-2">⚠️ 警示信号</h4>
-          <ul className="space-y-1">
-            {plan.warning_signs.map((sign, i) => (
-              <li key={i} className="text-sm text-red-700 flex items-start gap-2">
-                <span>•</span>
-                {sign}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+                {candidateId && onSaveAssessments ? (
+                  <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    {ASSESSMENT_OPTIONS.map((option) => (
+                      <button
+                        key={option.state}
+                        type="button"
+                        onClick={() =>
+                          setAssessments((current) => ({
+                            ...current,
+                            [candidateId]: option.state,
+                          }))
+                        }
+                        className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                          assessments[candidateId] === option.state
+                            ? "border-primary-600 bg-primary-100 text-primary-900"
+                            : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </article>
+            );
+          })}
+        </section>
+      ))}
 
-      {/* Citations / References */}
-      {citations && citations.length > 0 && (
-        <div className="rounded-lg border p-4 bg-white">
-          <h4 className="font-medium text-gray-900 mb-2">📚 方案科学依据</h4>
+      {analysisId && onSaveAssessments ? (
+        <button
+          type="button"
+          disabled={saveItems.length === 0 || isSavingAssessments}
+          onClick={() => onSaveAssessments(saveItems)}
+          className="w-full rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-800 disabled:cursor-not-allowed disabled:bg-gray-300"
+        >
+          {isSavingAssessments ? "保存中..." : "保存我的判断"}
+        </button>
+      ) : null}
+
+      {citations && citations.length > 0 ? (
+        <div className="border-t pt-4">
+          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+            📚 参考来源
+          </h4>
           <div className="space-y-2">
-            {citations.map((citation, idx) => (
-              <div key={idx} className="border border-gray-100 rounded overflow-hidden">
+            {citations.map((citation, index) => (
+              <div
+                key={`${citation.title}-${index}`}
+                className="overflow-hidden rounded-lg border border-gray-200 bg-white"
+              >
                 <button
                   type="button"
-                  onClick={() => setExpandedCitationIndex(expandedCitationIndex === idx ? null : idx)}
-                  className="w-full flex items-center justify-between p-2.5 text-left hover:bg-gray-50 transition-colors text-xs"
+                  onClick={() =>
+                    setExpandedCitationIndex(
+                      expandedCitationIndex === index ? null : index,
+                    )
+                  }
+                  className="flex w-full items-center justify-between p-3 text-left text-xs hover:bg-gray-50"
                 >
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-gray-700">{citation.title}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-[11px] text-gray-400">
-                    <span className="truncate max-w-[180px]">{citation.source_title} {citation.source_author ? `· ${citation.source_author}` : ''}</span>
-                    <svg
-                      className={`w-3 h-3 transform transition-transform flex-shrink-0 ${expandedCitationIndex === idx ? 'rotate-180' : ''}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </div>
+                  <span className="font-medium text-gray-800">
+                    {citation.title}
+                  </span>
+                  <span className="text-gray-400">
+                    {expandedCitationIndex === index ? "收起" : "查看"}
+                  </span>
                 </button>
-                {expandedCitationIndex === idx && (
-                  <div className="p-3 bg-gray-50 border-t border-gray-100 text-[11px] text-gray-600 leading-relaxed max-h-40 overflow-y-auto">
-                    {citation.summary && (
-                      <p className="font-medium mb-1 text-gray-700 bg-white p-2 rounded border border-gray-100">
-                        【摘要】{citation.summary}
-                      </p>
-                    )}
-                    <div className="whitespace-pre-wrap font-sans text-gray-500">
-                      {citation.body_markdown || citation.content}
-                    </div>
+                {expandedCitationIndex === index ? (
+                  <div className="border-t bg-gray-50 p-3 text-xs leading-relaxed text-gray-600">
+                    {citation.summary ||
+                      citation.body_markdown ||
+                      citation.content}
                   </div>
-                )}
+                ) : null}
               </div>
             ))}
           </div>
         </div>
-      )}
+      ) : null}
 
-      {/* Disclaimer */}
-      <div className="rounded-lg bg-yellow-50 border border-yellow-200 p-3">
-        <p className="text-xs text-yellow-800">
-          本方案仅供参考，不构成医疗诊断或治疗方案。如存在持续疼痛或严重不适，建议前往专业医疗机构就诊。
-        </p>
-      </div>
+      <p className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-xs text-yellow-800">
+        可能性分析仅用于辅助理解和跟踪身体状态，不构成医疗诊断。
+      </p>
     </div>
   );
 }

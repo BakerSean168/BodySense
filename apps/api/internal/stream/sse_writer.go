@@ -36,7 +36,9 @@ func (s *SSEWriter) sendEvent(event string, data any) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(s.w, "event: %s\ndata: %s\n\n", event, string(jsonData))
+	if _, err := fmt.Fprintf(s.w, "event: %s\ndata: %s\n\n", event, string(jsonData)); err != nil {
+		return err
+	}
 	s.flush()
 	return nil
 }

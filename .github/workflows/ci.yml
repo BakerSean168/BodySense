@@ -11,9 +11,97 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ── Frontend (web) ──────────────────────────────────
-  web:
+  quality:
+    name: Repository quality gate
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.26"
+          cache-dependency-path: apps/api/go.sum
+      - uses: astral-sh/setup-uv@v9.0.0
+        with:
+          version: "0.12"
+      - run: pnpm install --frozen-lockfile
+      - name: Sync Python development environment
+        working-directory: apps/ai-service
+        run: uv sync --frozen --extra dev --extra ocr
+      - name: Run the same release gate used locally
+        run: bash scripts/validate-repo.sh
+
+  migrations:
+    name: PostgreSQL migration replay
+    runs-on: ubuntu-latest
+    needs: quality
+    services:
+      postgres:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_USER: bodysense
+          POSTGRES_PASSWORD: bodysense123
+          POSTGRES_DB: bodysense_migration_validator
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U bodysense -d bodysense_migration_validator"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.26"
+          cache-dependency-path: apps/api/go.sum
+      - name: Validate full up and latest down/up replay
+        working-directory: apps/api
+        run: >-
+          go run ./cmd/migration-validator
+          -database-url 'postgres://bodysense:bodysense123@127.0.0.1:5432/bodysense_migration_validator?sslmode=disable'
+          -migrations 'file://migrations'
+      - name: Validate longitudinal domain semantics
+        working-directory: apps/api
+        run: >-
+          go run ./cmd/domain-validator
+          -database-url 'postgres://bodysense:bodysense123@127.0.0.1:5432/bodysense_migration_validator?sslmode=disable'
+
+  e2e:
+    env:
+      BODYSENSE_E2E_STUB_AI: "1"
+    name: Browser longitudinal health E2E
+    runs-on: ubuntu-latest
+    needs: quality
+    services:
+      postgres:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_USER: bodysense
+          POSTGRES_PASSWORD: bodysense123
+          POSTGRES_DB: bodysense
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U bodysense -d bodysense"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -21,43 +109,82 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm nx run web:lint
-      - run: pnpm nx run web:typecheck
-      - run: pnpm nx run web:build
-
-  # ── Backend (api) ───────────────────────────────────
-  api:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/api
-    steps:
-      - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
-          go-version: '1.26'
+          go-version: "1.26"
           cache-dependency-path: apps/api/go.sum
-      - run: go vet ./...
-      - run: go build ./...
-      - run: go test ./...
-
-  # ── AI Service ──────────────────────────────────────
-  ai-service:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/ai-service
-    steps:
-      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v9.0.0
         with:
-          version: '0.12'
-      - run: uv sync --frozen --extra dev --extra ocr
-      - run: uv run ruff check .
-      - run: uv run pytest
+          version: "0.12"
+      - run: pnpm install --frozen-lockfile
+      - name: Sync Python E2E environment
+        working-directory: apps/ai-service
+        run: uv sync --frozen --extra ocr
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Start Go API
+        working-directory: apps/api
+        env:
+          API_PORT: "8080"
+          DB_HOST: 127.0.0.1
+          DB_PORT: "5432"
+          DB_NAME: bodysense
+          DB_USER: bodysense
+          DB_PASSWORD: bodysense123
+          DB_SSLMODE: disable
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: "6379"
+          REDIS_PASSWORD: ""
+          JWT_SECRET_KEY: bodysense-ci-e2e-secret
+          CORS_ORIGINS: http://127.0.0.1:5173
+          AI_SERVICE_URL: http://127.0.0.1:18100
+        run: |
+          go run ./cmd/server > /tmp/bodysense-api.log 2>&1 &
+          echo $! > /tmp/bodysense-api.pid
+      - name: Wait for API
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:8080/api/health; then exit 0; fi
+            sleep 2
+          done
+          cat /tmp/bodysense-api.log
+          exit 1
+      - name: Start AI service
+        working-directory: apps/ai-service
+        env:
+          ENVIRONMENT: e2e
+          BODYSENSE_DETERMINISTIC_AI: "true"
+          DATABASE_URL: postgresql://bodysense:bodysense123@127.0.0.1:5432/bodysense
+        run: |
+          uv run uvicorn src.main:app --host 127.0.0.1 --port 18100 > /tmp/bodysense-ai.log 2>&1 &
+          echo $! > /tmp/bodysense-ai.pid
+      - name: Wait for AI service
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:18100/health; then exit 0; fi
+            sleep 2
+          done
+          cat /tmp/bodysense-ai.log
+          exit 1
+      - name: Run browser E2E
+        env:
+          CI: "true"
+          E2E_BASE_URL: http://127.0.0.1:5173
+          E2E_API_BASE_URL: http://127.0.0.1:8080
+        run: pnpm e2e
+      - name: Print service logs on failure
+        if: failure()
+        run: |
+          cat /tmp/bodysense-api.log || true
+          cat /tmp/bodysense-ai.log || true
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: playwright-report
+          path: playwright-report/
+          if-no-files-found: ignore
 
-  # ── Commit message validation ───────────────────────
   commit-lint:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'

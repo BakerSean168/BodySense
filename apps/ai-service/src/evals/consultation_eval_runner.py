@@ -11,8 +11,6 @@ from typing import Any
 
 import yaml
 
-from src.models.consultation import ChatContext, ExtractedInfo
-from src.services.agent_workflow import ConsultationAgentWorkflow
 from src.services.faithfulness_checker import get_faithfulness_checker
 from src.services.red_flag_detector import get_red_flag_detector
 
@@ -49,80 +47,11 @@ def load_eval_cases(cases_path: Path) -> dict[str, list[dict[str, Any]]]:
     return {suite: cases for suite, cases in data.items() if isinstance(cases, list)}
 
 
-def _build_context(raw_context: dict[str, Any] | None) -> ChatContext:
-    """Build a lightweight chat context for workflow evaluation."""
-    context = raw_context or {}
-    return ChatContext(
-        session_id="eval-session",
-        user_id="eval-user",
-        phase=context.get("phase", "collecting"),
-        extracted_info=ExtractedInfo.from_list(context.get("extracted_symptoms", [])),
-        messages=context.get("messages", []),
-        profile=context.get("profile", {}),
-    )
-
-
 def _round_rate(passed: int, total: int) -> float:
     """Return pass rate percentage rounded for reports."""
     if total == 0:
         return 0.0
     return round((passed / total) * 100, 2)
-
-
-def _run_workflow_suite(cases: list[dict[str, Any]]) -> list[EvalCaseResult]:
-    """Run workflow intent and routing evals."""
-    workflow = ConsultationAgentWorkflow()
-    results: list[EvalCaseResult] = []
-
-    for case in cases:
-        expected = case.get("expect", {})
-        context = _build_context(case.get("context"))
-        message = case.get("message", "")
-
-        intent = workflow.classify_intent(message, context)
-        decision = workflow.decide_next_action(intent, context, message)
-        should_interrupt = workflow.should_interrupt_for_follow_up(message, context)
-        should_analyze = workflow.should_analyze(context.extracted_info)
-
-        checks = {
-            "intent": expected.get("intent") == intent.value
-            if "intent" in expected
-            else True,
-            "action": expected.get("action") == decision.action.value
-            if "action" in expected
-            else True,
-            "should_interrupt_for_follow_up": (
-                expected.get("should_interrupt_for_follow_up") == should_interrupt
-                if "should_interrupt_for_follow_up" in expected
-                else True
-            ),
-            "should_analyze": expected.get("should_analyze") == should_analyze
-            if "should_analyze" in expected
-            else True,
-        }
-        passed = all(checks.values())
-
-        results.append(
-            EvalCaseResult(
-                suite="workflow",
-                case_id=case["id"],
-                title=case["title"],
-                passed=passed,
-                details={
-                    "checks": checks,
-                    "expected": expected,
-                    "actual": {
-                        "intent": intent.value,
-                        "action": decision.action.value,
-                        "should_interrupt_for_follow_up": should_interrupt,
-                        "should_analyze": should_analyze,
-                        "reasoning": decision.reasoning,
-                    },
-                },
-            )
-        )
-
-    return results
 
 
 def _run_red_flag_suite(cases: list[dict[str, Any]]) -> list[EvalCaseResult]:
@@ -176,7 +105,7 @@ def _run_faithfulness_suite(cases: list[dict[str, Any]]) -> list[EvalCaseResult]
     for case in cases:
         expected = case.get("expect", {})
         result = checker.check_treatment_faithfulness(
-            treatment_plan=case.get("treatment_plan", {}),
+            treatment=case.get("treatment", {}),
             rag_results=case.get("rag_results", []),
         )
         grounded = [exercise.name for exercise in result.exercises if exercise.grounded]
@@ -219,12 +148,11 @@ def run_consultation_evals(cases_path: Path = DEFAULT_CASES_PATH) -> dict[str, A
     cases_by_suite = load_eval_cases(cases_path)
 
     case_results: list[EvalCaseResult] = []
-    case_results.extend(_run_workflow_suite(cases_by_suite.get("workflow", [])))
     case_results.extend(_run_red_flag_suite(cases_by_suite.get("red_flags", [])))
     case_results.extend(_run_faithfulness_suite(cases_by_suite.get("faithfulness", [])))
 
     suite_summaries: list[dict[str, Any]] = []
-    for suite_name in ("workflow", "red_flags", "faithfulness"):
+    for suite_name in ("red_flags", "faithfulness"):
         suite_cases = [case for case in case_results if case.suite == suite_name]
         passed_cases = sum(1 for case in suite_cases if case.passed)
         suite_summaries.append(
@@ -275,9 +203,7 @@ def render_markdown_summary(report: dict[str, Any]) -> str:
     ]
 
     for suite in report["suites"]:
-        lines.append(
-            "| {suite} | {passed_cases} | {total_cases} | {pass_rate}% |".format(**suite)
-        )
+        lines.append("| {suite} | {passed_cases} | {total_cases} | {pass_rate}% |".format(**suite))
 
     failed_cases = [case for case in report["cases"] if not case["passed"]]
     lines.extend(["", "## Failed Cases", ""])

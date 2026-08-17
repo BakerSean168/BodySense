@@ -1,4 +1,4 @@
-import type { RedFlag } from '../types/consultation';
+import type { RedFlag } from "../types/consultation";
 
 interface RedFlagBannerProps {
   redFlags: RedFlag[];
@@ -6,15 +6,15 @@ interface RedFlagBannerProps {
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
-  severe_pain: '严重疼痛',
-  radiating_pain: '放射痛',
-  numbness: '神经症状',
-  neurological: '神经系统',
-  trauma: '外伤',
-  worsening: '症状加重',
-  infection: '感染征兆',
-  systemic: '全身症状',
-  severe_symptom: '重度症状',
+  severe_pain: "严重疼痛",
+  radiating_pain: "放射痛",
+  numbness: "神经症状",
+  neurological: "神经系统",
+  trauma: "外伤",
+  worsening: "症状加重",
+  infection: "感染征兆",
+  systemic: "全身症状",
+  severe_symptom: "重度症状",
 };
 
 export function RedFlagBanner({ redFlags, onAcknowledge }: RedFlagBannerProps) {
@@ -39,9 +39,7 @@ export function RedFlagBanner({ redFlags, onAcknowledge }: RedFlagBannerProps) {
           </svg>
         </div>
         <div className="flex-1">
-          <h3 className="text-sm font-semibold text-red-800">
-            ⚠️ 安全提醒
-          </h3>
+          <h3 className="text-sm font-semibold text-red-800">⚠️ 安全提醒</h3>
           <div className="mt-2 space-y-2">
             {redFlags.map((flag, i) => (
               <div key={i} className="text-sm text-red-700">

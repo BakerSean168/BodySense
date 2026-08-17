@@ -103,12 +103,14 @@ class AICurator:
             ChatMessage(role="user", content=user_prompt),
         ]
 
-        response = await ai.generate(AiRequest(
-            use_case="llm.json",
-            messages=messages,
-            temperature=0.3,
-            max_tokens=2048,
-        ))
+        response = await ai.generate(
+            AiRequest(
+                use_case="llm.json",
+                messages=messages,
+                temperature=0.3,
+                max_tokens=2048,
+            )
+        )
         result = _parse_curator_response(response.text)
 
         # Determine review status based on quality score

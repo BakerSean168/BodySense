@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { apiUrl, safeJson } from '@/lib/api-url';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { apiUrl, safeJson } from "@/lib/api-url";
 
 interface User {
   id: string;
@@ -60,9 +60,9 @@ async function doRefresh(
   }
 
   try {
-    const response = await fetch(apiUrl('/api/v1/auth/refresh'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const response = await fetch(apiUrl("/api/v1/auth/refresh"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refresh_token: refreshToken }),
     });
 
@@ -72,7 +72,10 @@ async function doRefresh(
       return false;
     }
 
-    const data = await safeJson<{ access_token: string; refresh_token: string }>(response);
+    const data = await safeJson<{
+      access_token: string;
+      refresh_token: string;
+    }>(response);
 
     set({
       accessToken: data.access_token,
@@ -122,9 +125,9 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await fetch(apiUrl('/api/v1/auth/login'), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+          const response = await fetch(apiUrl("/api/v1/auth/login"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, password }),
           });
 
@@ -136,7 +139,7 @@ export const useAuthStore = create<AuthState>()(
 
           if (!response.ok) {
             throw new Error(
-              (typeof data === 'object' && data?.message) || '登录失败',
+              (typeof data === "object" && data?.message) || "登录失败",
             );
           }
 
@@ -155,7 +158,7 @@ export const useAuthStore = create<AuthState>()(
         } catch (error) {
           set({
             isLoading: false,
-            error: error instanceof Error ? error.message : '登录失败',
+            error: error instanceof Error ? error.message : "登录失败",
           });
           throw error;
         }
@@ -165,9 +168,9 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await fetch(apiUrl('/api/v1/auth/register'), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+          const response = await fetch(apiUrl("/api/v1/auth/register"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, password }),
           });
 
@@ -179,7 +182,7 @@ export const useAuthStore = create<AuthState>()(
 
           if (!response.ok) {
             throw new Error(
-              (typeof data === 'object' && data?.message) || '注册失败',
+              (typeof data === "object" && data?.message) || "注册失败",
             );
           }
 
@@ -198,7 +201,7 @@ export const useAuthStore = create<AuthState>()(
         } catch (error) {
           set({
             isLoading: false,
-            error: error instanceof Error ? error.message : '注册失败',
+            error: error instanceof Error ? error.message : "注册失败",
           });
           throw error;
         }
@@ -209,9 +212,9 @@ export const useAuthStore = create<AuthState>()(
 
         // Call logout endpoint to invalidate refresh token
         if (refreshToken) {
-          fetch(apiUrl('/api/v1/auth/logout'), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+          fetch(apiUrl("/api/v1/auth/logout"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ refresh_token: refreshToken }),
           }).catch(console.error);
         }
@@ -236,7 +239,7 @@ export const useAuthStore = create<AuthState>()(
           set({ isVerifyingSession: true, error: null });
 
           const requestMe = async (token: string) =>
-            fetch(apiUrl('/api/v1/me'), {
+            fetch(apiUrl("/api/v1/me"), {
               headers: {
                 Authorization: `Bearer ${token}`,
               },
@@ -262,7 +265,7 @@ export const useAuthStore = create<AuthState>()(
               return false;
             }
 
-            const user = (await safeJson<User>(response));
+            const user = await safeJson<User>(response);
             set({
               user,
               isAuthenticated: true,
@@ -303,7 +306,7 @@ export const useAuthStore = create<AuthState>()(
         if (!accessToken) return;
 
         try {
-          const response = await fetch(apiUrl('/api/v1/me'), {
+          const response = await fetch(apiUrl("/api/v1/me"), {
             headers: {
               Authorization: `Bearer ${accessToken}`,
             },
@@ -314,14 +317,14 @@ export const useAuthStore = create<AuthState>()(
             set({ user, isAuthResolved: true });
           }
         } catch (error) {
-          console.error('Failed to fetch user:', error);
+          console.error("Failed to fetch user:", error);
         }
       },
 
       clearError: () => set({ error: null }),
     }),
     {
-      name: 'auth-storage',
+      name: "auth-storage",
       partialize: (state) => ({
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
@@ -331,6 +334,6 @@ export const useAuthStore = create<AuthState>()(
       onRehydrateStorage: () => (state) => {
         state?.setHydrated();
       },
-    }
-  )
+    },
+  ),
 );

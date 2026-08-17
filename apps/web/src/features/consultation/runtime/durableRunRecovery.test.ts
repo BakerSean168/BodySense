@@ -1,0 +1,95 @@
+import { describe, expect, it, vi } from "vitest";
+import type { StreamEvent } from "../types/consultation";
+import { recoverDurableRunEvents } from "./durableRunRecovery";
+
+function event(
+  seq: number,
+  type: StreamEvent["type"],
+  payload: StreamEvent["payload"],
+): StreamEvent {
+  return {
+    version: 1,
+    seq,
+    channel: type.startsWith("stream.") ? "stream" : "message",
+    type,
+    ids: {
+      conversation_id: "conversation-1",
+      run_id: "run-1",
+      turn_id: "turn-1",
+      message_id: "message-1",
+      tool_call_id: null,
+      interaction_id: null,
+    },
+    payload,
+  } as StreamEvent;
+}
+
+describe("recoverDurableRunEvents", () => {
+  it("keeps polling empty pages until a persisted terminal event arrives", async () => {
+    const requestedAfterSeq: number[] = [];
+    const pages = [
+      { events: [], hasMore: false, nextAfterSeq: null },
+      {
+        events: [event(4, "message.text.delta", { delta: "hello" })],
+        hasMore: false,
+        nextAfterSeq: 4,
+      },
+      {
+        events: [event(5, "stream.done", {})],
+        hasMore: false,
+        nextAfterSeq: 5,
+      },
+    ];
+    let now = 0;
+    const onTextDelta = vi.fn();
+    const onDone = vi.fn();
+
+    const result = await recoverDurableRunEvents({
+      afterSeq: 3,
+      fetchPage: async (afterSeq) => {
+        requestedAfterSeq.push(afterSeq);
+        return (
+          pages.shift() ?? { events: [], hasMore: false, nextAfterSeq: null }
+        );
+      },
+      handlers: { onTextDelta, onDone },
+      timeoutMs: 1_000,
+      pollIntervalMs: 10,
+      now: () => now,
+      sleep: async (ms) => {
+        now += ms;
+      },
+    });
+
+    expect(requestedAfterSeq).toEqual([3, 3, 4]);
+    expect(onTextDelta).toHaveBeenCalledWith(
+      expect.objectContaining({ seq: 4, payload: { delta: "hello" } }),
+    );
+    expect(onDone).toHaveBeenCalledWith(
+      expect.objectContaining({ seq: 5, type: "stream.done" }),
+    );
+    expect(result).toEqual({ maxSeq: 5, terminalType: "stream.done" });
+  });
+
+  it("fails explicitly instead of treating an empty durable page as completion", async () => {
+    let now = 0;
+    await expect(
+      recoverDurableRunEvents({
+        fetchPage: async () => ({
+          events: [],
+          hasMore: false,
+          nextAfterSeq: null,
+        }),
+        handlers: {},
+        timeoutMs: 20,
+        pollIntervalMs: 10,
+        now: () => now,
+        sleep: async (ms) => {
+          now += ms;
+        },
+      }),
+    ).rejects.toThrow(
+      "Timed out while recovering the durable consultation run",
+    );
+  });
+});

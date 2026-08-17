@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 
+	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -20,13 +21,13 @@ func NewAssessmentRepository(db *gorm.DB) *AssessmentRepository {
 
 // Create creates a new assessment report.
 func (r *AssessmentRepository) Create(ctx context.Context, report *model.AssessmentReport) error {
-	return r.db.WithContext(ctx).Create(report).Error
+	return database.FromContext(ctx, r.db).Create(report).Error
 }
 
 // GetByID retrieves an assessment report by ID and user ID.
 func (r *AssessmentRepository) GetByID(ctx context.Context, id, userID uuid.UUID) (*model.AssessmentReport, error) {
 	var report model.AssessmentReport
-	err := r.db.WithContext(ctx).
+	err := database.FromContext(ctx, r.db).
 		Where("id = ? AND user_id = ?", id, userID).
 		First(&report).Error
 
@@ -44,7 +45,7 @@ func (r *AssessmentRepository) ListByUserID(ctx context.Context, userID uuid.UUI
 	var reports []model.AssessmentReport
 	var total int64
 
-	query := r.db.WithContext(ctx).Where("user_id = ?", userID)
+	query := database.FromContext(ctx, r.db).Where("user_id = ?", userID)
 
 	// Count total
 	if err := query.Model(&model.AssessmentReport{}).Count(&total).Error; err != nil {

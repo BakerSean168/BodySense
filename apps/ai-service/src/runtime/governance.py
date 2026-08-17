@@ -38,8 +38,8 @@ OutputKind = Literal["diagnosis", "treatment", "posture"]
 
 # Fields that must be present for each structured kind.
 _REQUIRED_FIELDS: dict[OutputKind, list[str]] = {
-    "diagnosis": ["diagnoses"],
-    "treatment": ["treatment_plan"],
+    "diagnosis": ["candidates"],
+    "treatment": ["goal", "interventions"],
     "posture": ["view", "findings", "summary_markdown", "disclaimer"],
 }
 
@@ -122,8 +122,7 @@ class GuardedOutput:
                     "kind": self.kind,
                     "verdict": "rejected",
                     "reasons": list(self.reasons),
-                    "safety_fallback": self.safety_fallback
-                    or _SAFETY_FALLBACK[self.kind],
+                    "safety_fallback": self.safety_fallback or _SAFETY_FALLBACK[self.kind],
                 }
             )
         return events
@@ -139,6 +138,11 @@ _RED_FLAG_SCAN_EXCLUDE = frozenset(
         "faithfulness",
         "governance",
         "safety_note",
+        "safety_notes",
+        "safety_summary",
+        "review_triggers",
+        "stop_conditions",
+        "missing_information",
         "safety_fallback",
     }
 )
@@ -170,13 +174,7 @@ def _collect_issues(
 ) -> list[GovernanceIssue]:
     """Run schema + red_flag + (treatment) faithfulness policies."""
     issues: list[GovernanceIssue] = []
-    required = _REQUIRED_FIELDS[kind]
-    issues.extend(check_schema_valid(payload, required))
-
-    if kind == "treatment":
-        plan = payload.get("treatment_plan")
-        if isinstance(plan, dict):
-            issues.extend(check_schema_valid(plan, ["correction_exercises"]))
+    issues.extend(check_schema_valid(payload, _REQUIRED_FIELDS[kind]))
 
     issues.extend(
         check_red_flags(
@@ -186,14 +184,12 @@ def _collect_issues(
     )
 
     if kind == "treatment" and rag_results:
-        plan = payload.get("treatment_plan")
-        if isinstance(plan, dict):
-            ctx = GovernanceContext(
-                output_type="treatment",
-                rag_results=rag_results,
-                extracted_info=extracted_info or [],
-            )
-            issues.extend(check_faithfulness(plan, ctx))
+        ctx = GovernanceContext(
+            output_type="treatment",
+            rag_results=rag_results,
+            extracted_info=extracted_info or [],
+        )
+        issues.extend(check_faithfulness(payload, ctx))
 
     return issues
 

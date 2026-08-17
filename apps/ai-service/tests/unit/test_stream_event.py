@@ -102,9 +102,10 @@ def test_stream_event_fixture_parity():
 
 def test_fixture_matches_schema():
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
-    assert schema["properties"]["channel"]["enum"] == sorted(_CHANNEL_ENUM) or set(
-        schema["properties"]["channel"]["enum"]
-    ) == _CHANNEL_ENUM
+    assert (
+        schema["properties"]["channel"]["enum"] == sorted(_CHANNEL_ENUM)
+        or set(schema["properties"]["channel"]["enum"]) == _CHANNEL_ENUM
+    )
 
     data = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
     for item in data:
@@ -113,9 +114,7 @@ def test_fixture_matches_schema():
 
 def test_fixture_covers_required_event_types():
     required = set(
-        json.loads(REQUIRED_TYPES_PATH.read_text(encoding="utf-8"))[
-            "required_event_types"
-        ]
+        json.loads(REQUIRED_TYPES_PATH.read_text(encoding="utf-8"))["required_event_types"]
     )
     data = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
     present = {item["type"] for item in data}

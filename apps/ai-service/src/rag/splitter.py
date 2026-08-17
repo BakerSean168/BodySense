@@ -149,20 +149,45 @@ def classify_text(text: str) -> str:
         (
             "self_check",
             [
-                "自测", "测试", "筛查", "摔查", "判断",
-                "从侧面看", "侧面看", "自然放松", "站姿",
-                "耳垂", "肩峰", "前方", "观察",
+                "自测",
+                "测试",
+                "筛查",
+                "摔查",
+                "判断",
+                "从侧面看",
+                "侧面看",
+                "自然放松",
+                "站姿",
+                "耳垂",
+                "肩峰",
+                "前方",
+                "观察",
             ],
         ),
         (
             "exercise",
             [
-                "动作", "训练", "练习", "拉伸", "放松", "激活",
-                "回收", "后缩", "伸展", "处理方法",
-                "第一步", "第二步", "第三步",
-                "准备一个", "保留30秒", "两组",
-                "网球", "毛巾",
-                "旋转", "强化", "关节松动",
+                "动作",
+                "训练",
+                "练习",
+                "拉伸",
+                "放松",
+                "激活",
+                "回收",
+                "后缩",
+                "伸展",
+                "处理方法",
+                "第一步",
+                "第二步",
+                "第三步",
+                "准备一个",
+                "保留30秒",
+                "两组",
+                "网球",
+                "毛巾",
+                "旋转",
+                "强化",
+                "关节松动",
             ],
         ),
         (
@@ -207,9 +232,7 @@ def _groups_to_units(
         )
 
         category = (
-            f"exercise.{problem_slug}"
-            if dominant_type == "exercise"
-            else f"posture.{problem_slug}"
+            f"exercise.{problem_slug}" if dominant_type == "exercise" else f"posture.{problem_slug}"
         )
 
         body_lines = [
@@ -260,11 +283,7 @@ def _should_split_group(
     if transition_match and current_duration >= 8:
         return True
 
-    if (
-        next_type in {"self_check", "exercise"}
-        and next_type != dominant
-        and current_duration >= 5
-    ):
+    if next_type in {"self_check", "exercise"} and next_type != dominant and current_duration >= 5:
         return True
 
     if next_type != dominant and current_duration >= 8 and current_chars >= 35:

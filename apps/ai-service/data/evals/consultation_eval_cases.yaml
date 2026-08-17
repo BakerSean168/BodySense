@@ -1,90 +1,3 @@
-workflow:
-  - id: shoulder-neck-supplement
-    title: 肩颈酸胀症状补充应触发追问
-    message: 我久坐后肩膀酸胀两周了
-    context:
-      phase: collecting
-      extracted_symptoms: []
-    expect:
-      intent: supplement_symptom
-      action: ask_follow_up
-      should_interrupt_for_follow_up: true
-
-  - id: posture-observation-first-response
-    title: 头前伸观察场景应先给初步解释
-    message: 我感觉自己有点头前伸
-    context:
-      phase: collecting
-      extracted_symptoms: []
-    expect:
-      intent: general_question
-      action: provide_info
-      should_interrupt_for_follow_up: false
-
-  - id: ready-for-analysis
-    title: 信息充分时分析请求应进入诊断
-    message: 帮我分析一下这是什么问题
-    context:
-      phase: collecting
-      extracted_symptoms:
-        - body_part: 颈椎
-          symptom_type: 酸胀
-          trigger: 久坐低头后
-          severity: 中度
-        - body_part: 肩部
-          symptom_type: 僵硬
-    expect:
-      intent: request_analysis
-      action: generate_diagnosis
-      should_analyze: true
-
-  - id: treatment-before-diagnosis
-    title: 未完成诊断前请求方案应继续追问
-    message: 那我该怎么改善
-    context:
-      phase: collecting
-      extracted_symptoms: []
-    expect:
-      intent: request_treatment
-      action: ask_follow_up
-
-  - id: diagnosis-confirmed
-    title: 确认诊断后应进入治疗生成
-    message: 是的，就是这个
-    context:
-      phase: ready_for_analysis
-      extracted_symptoms:
-        - body_part: 腰部
-          symptom_type: 钝痛
-          duration: 1个月
-          trigger: 久坐后
-    expect:
-      intent: confirm_diagnosis
-      action: generate_treatment
-      should_analyze: true
-
-  - id: critical-signal-follow-up
-    title: 麻木无力等高危信号应优先追问
-    message: 最近手指麻木无力，肩颈也不舒服
-    context:
-      phase: collecting
-      extracted_symptoms: []
-    expect:
-      intent: supplement_symptom
-      action: ask_follow_up
-      should_interrupt_for_follow_up: true
-
-  - id: insufficient-analysis-readiness
-    title: 只有部位没有细节时不应进入分析
-    message: 帮我看看
-    context:
-      phase: collecting
-      extracted_symptoms:
-        - body_part: 肩部
-    expect:
-      intent: request_analysis
-      should_analyze: false
-
 red_flags:
   - id: severe-pain
     title: 剧烈疼痛应命中 severe_pain
@@ -118,9 +31,12 @@ red_flags:
 faithfulness:
   - id: grounded-stretch
     title: 胸小肌拉伸应被识别为有据可依
-    treatment_plan:
-      correction_exercises:
-        - name: 胸小肌拉伸
+    treatment:
+      status: proposed
+      goal: 改善圆肩
+      interventions:
+        - kind: exercise
+          title: 胸小肌拉伸
           description: 靠门框进行温和拉伸
     rag_results:
       - title: 胸小肌拉伸方法
@@ -134,9 +50,12 @@ faithfulness:
 
   - id: alias-grounded
     title: 别名动作应通过知识内容匹配命中
-    treatment_plan:
-      correction_exercises:
-        - name: 收下巴
+    treatment:
+      status: proposed
+      goal: 改善头前伸
+      interventions:
+        - kind: exercise
+          title: 收下巴
           description: 颈椎后缩训练
     rag_results:
       - title: 头前伸改善
@@ -150,9 +69,12 @@ faithfulness:
 
   - id: ungrounded-squat
     title: 未被知识检索支持的动作应标记为未落地
-    treatment_plan:
-      correction_exercises:
-        - name: 深蹲
+    treatment:
+      status: proposed
+      goal: 测试未落地动作
+      interventions:
+        - kind: exercise
+          title: 深蹲
           description: 负重深蹲训练
     rag_results:
       - title: 肩颈改善

@@ -57,9 +57,7 @@ class LLMSplitter:
         except Exception:
             logger.warning("LLM splitting failed, falling back to heuristic", exc_info=True)
             fallback = HeuristicSplitter()
-            return await fallback.split(
-                transcript_segments, problem_slug, problem_display_name
-            )
+            return await fallback.split(transcript_segments, problem_slug, problem_display_name)
 
     async def _split_with_llm(
         self,
@@ -89,12 +87,14 @@ class LLMSplitter:
                 ChatMessage(role="user", content=user_prompt),
             ]
 
-            response = await ai.generate(AiRequest(
-                use_case="llm.json",
-                messages=messages,
-                temperature=0.3,
-                max_tokens=2048,
-            ))
+            response = await ai.generate(
+                AiRequest(
+                    use_case="llm.json",
+                    messages=messages,
+                    temperature=0.3,
+                    max_tokens=2048,
+                )
+            )
             raw_units = _parse_llm_response(response.text)
 
             for raw_unit in raw_units:

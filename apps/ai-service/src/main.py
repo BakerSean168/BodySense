@@ -29,9 +29,9 @@ from .api.routes import (  # noqa: E402
     knowledge,
     ocr,
     posture,
-    reassessment,
     runtime,
     title,
+    treatment,
 )
 from .runtime.checkpointing import runtime_checkpointer_lifespan  # noqa: E402
 
@@ -40,6 +40,7 @@ from .runtime.checkpointing import runtime_checkpointer_lifespan  # noqa: E402
 async def app_lifespan(_: FastAPI):
     async with runtime_checkpointer_lifespan():
         yield
+
 
 app = FastAPI(
     title="BodySense AI Service",
@@ -64,7 +65,7 @@ app.include_router(posture.router)
 app.include_router(runtime.router)
 app.include_router(assessment.router)
 app.include_router(diagnosis.router)
-app.include_router(reassessment.router)
+app.include_router(treatment.router)
 app.include_router(title.router)
 
 

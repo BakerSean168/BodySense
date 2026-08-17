@@ -5,14 +5,16 @@
  * from the selector layer.
  */
 
-import type { ToolCallInfo } from '../types/consultation';
-import { ToolCallItem } from './ToolCallItem';
+import type { ToolCallInfo } from "../types/consultation";
+import { ToolCallItem } from "./ToolCallItem";
 
 interface StreamingTurnToolCallsProps {
   toolCalls: ToolCallInfo[];
 }
 
-export function StreamingTurnToolCalls({ toolCalls }: StreamingTurnToolCallsProps) {
+export function StreamingTurnToolCalls({
+  toolCalls,
+}: StreamingTurnToolCallsProps) {
   if (toolCalls.length === 0) return null;
 
   return (

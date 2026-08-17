@@ -104,22 +104,35 @@ func TestRecordPublicEventMapsStreamEvent(t *testing.T) {
 	}
 }
 
-func TestRecordPublicEventSkipsNonReplayableEvent(t *testing.T) {
-	repo := &mockRuntimeEventRepo{}
-	svc := NewRuntimeEventService(repo)
+func TestRecordPublicEventPersistsTerminalStreamEvents(t *testing.T) {
+	for _, eventType := range []string{"stream.done", "stream.error"} {
+		t.Run(eventType, func(t *testing.T) {
+			repo := &mockRuntimeEventRepo{}
+			svc := NewRuntimeEventService(repo)
+			conversationID := uuid.New()
+			runID := uuid.New()
 
-	err := svc.RecordPublicEvent(
-		context.Background(),
-		uuid.New(),
-		uuid.New(),
-		nil,
-		dto.StreamEvent{Type: "stream.done", Payload: json.RawMessage(`{}`)},
-	)
-	if err != nil {
-		t.Fatalf("RecordPublicEvent returned error: %v", err)
-	}
-	if len(repo.created) != 0 {
-		t.Fatalf("expected no stored event, got %d", len(repo.created))
+			err := svc.RecordPublicEvent(
+				context.Background(),
+				conversationID,
+				runID,
+				nil,
+				dto.StreamEvent{
+					Version: 1,
+					Seq:     9,
+					Channel: "stream",
+					Type:    eventType,
+					IDs:     dto.StreamEventIDs{ConversationID: conversationID.String(), RunID: runID.String()},
+					Payload: json.RawMessage(`{}`),
+				},
+			)
+			if err != nil {
+				t.Fatalf("RecordPublicEvent returned error: %v", err)
+			}
+			if len(repo.created) != 1 || repo.created[0].Type != eventType {
+				t.Fatalf("expected persisted %s, got %#v", eventType, repo.created)
+			}
+		})
 	}
 }
 

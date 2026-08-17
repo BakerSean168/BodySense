@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
+	"strings"
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
@@ -20,6 +22,9 @@ func NewMessageRepository(db *gorm.DB) *MessageRepository {
 
 // Create creates a new message.
 func (r *MessageRepository) Create(ctx context.Context, message *model.Message) error {
+	if strings.TrimSpace(message.ContentText) == "" {
+		message.ContentText = messageTextFromParts(message.Parts)
+	}
 	return r.db.WithContext(ctx).Create(message).Error
 }
 
@@ -61,7 +66,7 @@ func (r *MessageRepository) UpdateParts(ctx context.Context, id, conversationID 
 	return r.db.WithContext(ctx).
 		Model(&model.Message{}).
 		Where("id = ? AND conversation_id = ?", id, conversationID).
-		Update("parts", parts).Error
+		Updates(map[string]any{"parts": parts, "content_text": messageTextFromParts(parts)}).Error
 }
 
 // GetNextSeq returns the next sequence number for a conversation.
@@ -83,16 +88,18 @@ func (r *MessageRepository) UpdateCompletedWithStatus(ctx context.Context, id, c
 		Model(&model.Message{}).
 		Where("id = ? AND conversation_id = ?", id, conversationID).
 		Updates(map[string]any{
-			"parts":  parts,
-			"status": status,
+			"parts":        parts,
+			"content_text": messageTextFromParts(parts),
+			"status":       status,
 		}).Error
 }
 
 // UpdateCompleted updates a message with completion data: parts, usage tokens, and provider info.
 func (r *MessageRepository) UpdateCompleted(ctx context.Context, id, conversationID uuid.UUID, parts any, usage map[string]any, providerInfo map[string]any) error {
 	updates := map[string]any{
-		"status": "completed",
-		"parts":  parts,
+		"status":       "completed",
+		"parts":        parts,
+		"content_text": messageTextFromParts(parts),
 	}
 	if v, ok := usage["input_tokens"]; ok {
 		updates["input_tokens"] = v
@@ -117,4 +124,26 @@ func (r *MessageRepository) UpdateCompleted(ctx context.Context, id, conversatio
 		Model(&model.Message{}).
 		Where("id = ? AND conversation_id = ?", id, conversationID).
 		Updates(updates).Error
+}
+
+func messageTextFromParts(parts any) string {
+	encoded, err := json.Marshal(parts)
+	if err != nil {
+		return ""
+	}
+	var values []map[string]any
+	if err := json.Unmarshal(encoded, &values); err != nil {
+		return ""
+	}
+	texts := make([]string, 0, len(values))
+	for _, value := range values {
+		if value["type"] != "text" {
+			continue
+		}
+		text, _ := value["text"].(string)
+		if text = strings.TrimSpace(text); text != "" {
+			texts = append(texts, text)
+		}
+	}
+	return strings.Join(texts, "\n")
 }

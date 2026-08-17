@@ -19,15 +19,9 @@ class EmbeddingGenerator:
         base_url: Optional[str] = None,
     ):
         self.provider = os.getenv("EMBEDDING_PROVIDER", "hashing")
-        self.model = model or os.getenv(
-            "EMBEDDING_MODEL", "paraphrase-multilingual-MiniLM-L12-v2"
-        )
+        self.model = model or os.getenv("EMBEDDING_MODEL", "paraphrase-multilingual-MiniLM-L12-v2")
         self.dimension = int(os.getenv("EMBEDDING_DIMENSIONS", str(dimension)))
-        self.api_key = (
-            api_key
-            or os.getenv("EMBEDDING_API_KEY")
-            or os.getenv("OPENAI_API_KEY")
-        )
+        self.api_key = api_key or os.getenv("EMBEDDING_API_KEY") or os.getenv("OPENAI_API_KEY")
         self.base_url = base_url or os.getenv("EMBEDDING_BASE_URL")
         self._client: Optional[AsyncOpenAI] = None
         self._local_model = None
@@ -35,7 +29,9 @@ class EmbeddingGenerator:
     def _get_local_model(self):
         """Get or create local sentence-transformers model."""
         if self._local_model is None:
-            from sentence_transformers import SentenceTransformer
+            from sentence_transformers import (  # pyright: ignore[reportMissingImports]
+                SentenceTransformer,
+            )
 
             self._local_model = SentenceTransformer(self.model)
             # Update dimension based on model output
@@ -61,7 +57,7 @@ class EmbeddingGenerator:
                 continue
             for n in (1, 2, 3):
                 for index in range(max(0, len(source_text) - n + 1)):
-                    gram = source_text[index:index + n]
+                    gram = source_text[index : index + n]
                     if gram.strip():
                         features.append((gram, weight / n))
 
@@ -82,13 +78,12 @@ class EmbeddingGenerator:
         """Lazy initialization of OpenAI-compatible client."""
         if self._client is None:
             if not self.api_key:
-                raise ValueError(
-                    "EMBEDDING_API_KEY or OPENAI_API_KEY is required"
-                )
-            kwargs = {"api_key": self.api_key}
+                raise ValueError("EMBEDDING_API_KEY or OPENAI_API_KEY is required")
+            assert self.api_key is not None
             if self.base_url:
-                kwargs["base_url"] = self.base_url
-            self._client = AsyncOpenAI(**kwargs)
+                self._client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
+            else:
+                self._client = AsyncOpenAI(api_key=self.api_key)
         return self._client
 
     async def generate(self, text: str) -> list[float]:
@@ -146,8 +141,7 @@ class EmbeddingGenerator:
         # Validate dimension
         if embeddings and len(embeddings[0]) != self.dimension:
             raise ValueError(
-                f"Embedding dimension mismatch: expected {self.dimension}, "
-                f"got {len(embeddings[0])}"
+                f"Embedding dimension mismatch: expected {self.dimension}, got {len(embeddings[0])}"
             )
 
         return embeddings
@@ -167,7 +161,7 @@ class EmbeddingGenerator:
         Returns:
             Embedding vector.
         """
-        last_error = None
+        last_error: Exception | None = None
         for attempt in range(max_retries):
             try:
                 return await self.generate(text)
@@ -178,6 +172,8 @@ class EmbeddingGenerator:
 
                     await asyncio.sleep(2**attempt)
 
+        if last_error is None:
+            raise RuntimeError("Embedding generation failed after retries")
         raise last_error
 
 

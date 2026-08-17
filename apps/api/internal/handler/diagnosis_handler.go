@@ -1,38 +1,51 @@
 package handler
 
 import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 
+	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 )
 
-// DiagnosisHandler handles diagnosis and treatment HTTP requests.
+// DiagnosisHandler exposes the single BodyState-backed Diagnosis HTTP boundary.
 type DiagnosisHandler struct {
-	consultationService *service.ConsultationService
-	profileService      *service.ProfileService
-	aiClient            *service.AIClient
-	outputReviewService *service.OutputReviewService
-	aiServiceURL        string
+	consultationService       *service.ConsultationService
+	profileService            *service.ProfileService
+	aiClient                  *service.AIClient
+	outputReviewService       *service.OutputReviewService
+	bodyStateService          *service.BodyStateService
+	diagnosisAnalysisService  *service.DiagnosisAnalysisService
+	diagnosisFreshnessService *service.DiagnosisFreshnessService
 }
 
-// NewDiagnosisHandler creates a new DiagnosisHandler.
 func NewDiagnosisHandler(
 	consultationService *service.ConsultationService,
 	profileService *service.ProfileService,
 	aiClient *service.AIClient,
 	outputReviewService *service.OutputReviewService,
+	bodyStateService *service.BodyStateService,
+	diagnosisAnalysisService *service.DiagnosisAnalysisService,
+	diagnosisFreshnessService *service.DiagnosisFreshnessService,
 ) *DiagnosisHandler {
 	return &DiagnosisHandler{
-		consultationService: consultationService,
-		profileService:      profileService,
-		aiClient:            aiClient,
-		outputReviewService: outputReviewService,
-		aiServiceURL:        aiClient.BaseURL(),
+		consultationService:       consultationService,
+		profileService:            profileService,
+		aiClient:                  aiClient,
+		outputReviewService:       outputReviewService,
+		bodyStateService:          bodyStateService,
+		diagnosisAnalysisService:  diagnosisAnalysisService,
+		diagnosisFreshnessService: diagnosisFreshnessService,
 	}
 }
 
@@ -60,7 +73,14 @@ func (h *DiagnosisHandler) AnalyzeDiagnosis(c *gin.Context) {
 		return
 	}
 
-	// Get user profile
+	// Diagnosis has one durable path: exact BodyState revision -> immutable
+	// DiagnosisAnalysis. Refuse to run if that domain boundary is not wired rather
+	// than falling back to consultation_sessions.diagnosis as a second truth.
+	if h.bodyStateService == nil || h.diagnosisAnalysisService == nil {
+		respondError(c, http.StatusServiceUnavailable, "DIAGNOSIS_DOMAIN_UNAVAILABLE", "BodyState-backed diagnosis services are not configured")
+		return
+	}
+
 	profile, err := h.profileService.GetProfile(c.Request.Context(), uid)
 	profileJSON := json.RawMessage("{}")
 	if err == nil && profile != nil {
@@ -69,173 +89,387 @@ func (h *DiagnosisHandler) AnalyzeDiagnosis(c *gin.Context) {
 		}
 	}
 
-	// Parse extracted info from session
-	extractedInfoJSON := json.RawMessage("[]")
-	if len(session.ExtractedInfo) > 0 {
-		extractedInfoJSON = json.RawMessage(session.ExtractedInfo)
-	}
+	h.analyzeDiagnosisFromBodyState(c, uid, conversationID, profileJSON)
+}
 
-	// Build RAG context from knowledge search
-	diagReq := service.DiagnosisRequest{
-		ExtractedInfo: extractedInfoJSON,
-		Profile:       profileJSON,
-		UseCase:       "llm.json",
-	}
-
-	// Knowledge search for RAG context
-	var extractedInfoList []any
-	_ = json.Unmarshal(extractedInfoJSON, &extractedInfoList)
-	if query := buildDiagnosisKnowledgeQuery(extractedInfoList); query != "" {
-		ragResults, searchErr := searchKnowledge(c.Request.Context(), h.aiServiceURL, query)
-		if searchErr == nil && len(ragResults) > 0 {
-			diagReq.RAGContext = buildKnowledgeContext(ragResults)
-			ragResultsJSON, _ := json.Marshal(ragResults)
-			diagReq.RAGResults = ragResultsJSON
-		}
-	}
-
-	// Call AI service
-	result, err := h.aiClient.AnalyzeDiagnosis(c.Request.Context(), diagReq)
+// analyzeDiagnosisFromBodyState is the new production boundary. It deliberately
+// avoids broad Go-side RAG on every diagnosis run: Diagnosis primarily synthesizes
+// durable BodyState + temporal history, while Python may later do targeted retrieval
+// for explicit evidence gaps.
+func (h *DiagnosisHandler) analyzeDiagnosisFromBodyState(
+	c *gin.Context,
+	uid uuid.UUID,
+	conversationID uuid.UUID,
+	profileJSON json.RawMessage,
+) {
+	snapshot, err := h.bodyStateService.GetSnapshot(c.Request.Context(), uid, 50)
 	if err != nil {
-		log.Printf("AI diagnosis analysis failed for consultation %s: %v", conversationID, err)
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load body state")
+		return
+	}
+	if snapshot.CurrentRevision == 0 || (len(snapshot.Facts) == 0 && len(snapshot.Observations) == 0) {
+		respondError(c, http.StatusConflict, "BODY_STATE_NOT_READY", "body state does not yet contain enough structured information for diagnosis")
+		return
+	}
+
+	// Safety is a Go-owned business gate, not merely an LLM suggestion. A
+	// requires_review BodyState creates a reproducible safety-blocked analysis with
+	// zero candidates instead of running ordinary possible-diagnosis generation.
+	var safetyState struct {
+		HasRedFlags bool   `json:"has_red_flags"`
+		Status      string `json:"status"`
+	}
+	_ = json.Unmarshal(snapshot.SafetyState, &safetyState)
+	if safetyState.HasRedFlags && safetyState.Status == "requires_review" {
+		blockedRaw, _ := json.Marshal(map[string]any{
+			"status":                 "safety_blocked",
+			"scope":                  "full_body",
+			"summary":                "当前身体状态包含需要优先处理的安全信号，暂不生成普通可能性候选。",
+			"candidates":             []any{},
+			"cross_concern_patterns": []any{},
+			"information_gaps":       []any{},
+			"safety_summary":         json.RawMessage(snapshot.SafetyState),
+			"citations":              []any{},
+			"governance": map[string]any{
+				"kind":    "diagnosis",
+				"verdict": "rejected",
+				"reasons": []string{"active_body_state_safety_concern"},
+				"issues":  []any{},
+			},
+		})
+		analysis, persistErr := h.diagnosisAnalysisService.PersistAIResult(
+			c.Request.Context(), uid, snapshot.CurrentRevision, blockedRaw,
+		)
+		if persistErr != nil {
+			log.Printf("failed to persist safety-blocked diagnosis for user %s: %v", uid, persistErr)
+			respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to persist diagnosis safety state")
+			return
+		}
+		blockedPayload := h.diagnosisAnalysisService.PublicPayload(analysis)
+		if h.diagnosisFreshnessService != nil {
+			if freshness, freshErr := h.diagnosisFreshnessService.GetOrEvaluate(c.Request.Context(), uid, analysis); freshErr == nil {
+				blockedPayload["freshness"] = freshness
+			}
+		}
+		c.JSON(http.StatusOK, blockedPayload)
+		return
+	}
+
+	bodyStateJSON, err := json.Marshal(snapshot)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode body state")
+		return
+	}
+	historyJSON, _ := json.Marshal(snapshot.RecentRevisions)
+	result, err := h.aiClient.AnalyzeDiagnosis(c.Request.Context(), service.DiagnosisRequest{
+		UserID:            uid.String(),
+		BodyStateRevision: snapshot.CurrentRevision,
+		BodyState:         bodyStateJSON,
+		RelevantHistory:   historyJSON,
+		Profile:           profileJSON,
+		UseCase:           "llm.json",
+	})
+	if err != nil {
+		log.Printf("AI diagnosis analysis failed for BodyState R%d user %s: %v", snapshot.CurrentRevision, uid, err)
 		respondError(c, http.StatusBadGateway, "AI_SERVICE_ERROR", "failed to analyze diagnosis")
 		return
 	}
 
-	// Parse and persist only when governance accepted/degraded the payload.
-	// Rejected responses deliberately omit the raw model content.
-	var diagnosisResult map[string]any
-	if json.Unmarshal(result, &diagnosisResult) == nil {
-		h.recordGovernedOutput(c, "diagnosis", &uid, &conversationID, nil, diagnosisResult, result)
-		if gov, ok := diagnosisResult["governance"].(map[string]any); ok {
-			if verdict, _ := gov["verdict"].(string); verdict == "rejected" {
-				c.Data(http.StatusOK, "application/json", result)
-				return
-			}
+	var parsed map[string]any
+	if err := json.Unmarshal(result, &parsed); err != nil {
+		respondError(c, http.StatusBadGateway, "INVALID_AI_RESPONSE", "diagnosis response was not valid JSON")
+		return
+	}
+	// Diagnosis may discover a safety signal that was not previously committed by
+	// Consultation. Promote the detector result back into the user-level BodyState
+	// before persisting the analysis so future runs remain safety-constrained.
+	if redFlags, ok := parsed["red_flags"].(map[string]any); ok {
+		safetyPayload, marshalErr := json.Marshal(redFlags)
+		if marshalErr != nil {
+			respondError(c, http.StatusBadGateway, "INVALID_AI_RESPONSE", "diagnosis safety response was not valid")
+			return
 		}
-		if err := h.consultationService.UpdateDiagnosis(c.Request.Context(), conversationID, uid, diagnosisResult); err != nil {
-			log.Printf("failed to save diagnosis for consultation %s: %v", conversationID, err)
+		if err := h.bodyStateService.RecordSafetyEvent(c.Request.Context(), uid, safetyPayload); err != nil {
+			log.Printf("failed to promote Diagnosis safety signal into BodyState for user %s: %v", uid, err)
+			respondError(c, http.StatusInternalServerError, "SAFETY_STATE_PERSISTENCE_FAILED", "failed to persist diagnosis safety state")
+			return
 		}
-		if err := h.consultationService.UpdatePhase(c.Request.Context(), conversationID, uid, "analysis_ready"); err != nil {
-			log.Printf("failed to update phase for consultation %s: %v", conversationID, err)
+	}
+	h.recordGovernedOutput(c, "diagnosis", &uid, &conversationID, nil, parsed, result)
+	if gov, ok := parsed["governance"].(map[string]any); ok {
+		if verdict, _ := gov["verdict"].(string); verdict == "rejected" {
+			c.Data(http.StatusOK, "application/json", result)
+			return
 		}
 	}
 
-	c.Data(http.StatusOK, "application/json", result)
+	// Persist traceable citations as Evidence before freezing candidate references.
+	// This keeps literature/tool material separate from accepted user Facts.
+	if normalized, evidenceErr := h.persistDiagnosisEvidence(c.Request.Context(), uid, parsed); evidenceErr == nil {
+		result = normalized
+	} else {
+		log.Printf("failed to persist Diagnosis evidence for user %s: %v", uid, evidenceErr)
+	}
+
+	analysis, err := h.diagnosisAnalysisService.PersistAIResult(
+		c.Request.Context(), uid, snapshot.CurrentRevision, result,
+	)
+	if err != nil {
+		log.Printf("failed to persist diagnosis analysis for user %s BodyState R%d: %v", uid, snapshot.CurrentRevision, err)
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to persist diagnosis analysis")
+		return
+	}
+	if hypothesisErr := h.commitDiagnosisHypotheses(c.Request.Context(), uid, analysis); hypothesisErr != nil {
+		log.Printf("failed to project Diagnosis hypotheses for analysis %s: %v", analysis.ID, hypothesisErr)
+	}
+	publicPayload := h.diagnosisAnalysisService.PublicPayload(analysis)
+	if h.diagnosisFreshnessService != nil {
+		if freshness, freshErr := h.diagnosisFreshnessService.GetOrEvaluate(c.Request.Context(), uid, analysis); freshErr == nil {
+			publicPayload["freshness"] = freshness
+		}
+	}
+
+	if analysis.Status == "completed" || analysis.Status == "partial" {
+		if err := h.consultationService.UpdatePhase(c.Request.Context(), conversationID, uid, "analysis_ready"); err != nil {
+			log.Printf("failed to update consultation analysis phase for consultation %s: %v", conversationID, err)
+		}
+	}
+
+	c.JSON(http.StatusOK, publicPayload)
 }
 
-// GenerateTreatment handles POST /api/v1/consultations/:id/treatment
-func (h *DiagnosisHandler) GenerateTreatment(c *gin.Context) {
+// ListDiagnosisHistory handles GET /api/v1/diagnosis-analyses.
+// Diagnosis history is now the user's analytical timeline; no separate
+// MedicalRecord aggregate is required to preserve historical reasoning.
+func (h *DiagnosisHandler) ListDiagnosisHistory(c *gin.Context) {
 	uid, ok := getUserUUID(c)
 	if !ok {
 		return
 	}
-
-	conversationID, err := uuid.Parse(c.Param("id"))
+	if h.diagnosisAnalysisService == nil {
+		respondError(c, http.StatusServiceUnavailable, "DIAGNOSIS_HISTORY_UNAVAILABLE", "diagnosis history is not configured")
+		return
+	}
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	analyses, err := h.diagnosisAnalysisService.List(c.Request.Context(), uid, limit)
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "INVALID_ID", "invalid consultation id")
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load diagnosis history")
 		return
 	}
+	items := make([]map[string]any, 0, len(analyses))
+	freshnessByID := map[uuid.UUID]model.DiagnosisAnalysisFreshness{}
+	if h.diagnosisFreshnessService != nil {
+		if values, freshErr := h.diagnosisFreshnessService.PreviewMany(c.Request.Context(), uid, analyses); freshErr == nil {
+			freshnessByID = values
+		}
+	}
+	for i := range analyses {
+		payload := h.diagnosisAnalysisService.PublicPayload(&analyses[i])
+		if freshness, exists := freshnessByID[analyses[i].ID]; exists {
+			payload["freshness"] = freshness
+		}
+		items = append(items, payload)
+	}
+	c.JSON(http.StatusOK, gin.H{"analyses": items})
+}
 
-	// Verify session exists and belongs to user
-	session, err := h.consultationService.GetConsultation(c.Request.Context(), conversationID, uid)
+// GetDiagnosisAnalysis handles GET /api/v1/diagnosis-analyses/:analysisId.
+func (h *DiagnosisHandler) GetDiagnosisAnalysis(c *gin.Context) {
+	uid, ok := getUserUUID(c)
+	if !ok {
+		return
+	}
+	analysisID, err := uuid.Parse(c.Param("analysisId"))
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get consultation")
+		respondError(c, http.StatusBadRequest, "INVALID_ID", "invalid analysis id")
 		return
 	}
-	if session == nil {
-		respondError(c, http.StatusNotFound, "NOT_FOUND", "consultation not found")
+	analysis, err := h.diagnosisAnalysisService.GetByID(c.Request.Context(), analysisID, uid)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load diagnosis analysis")
 		return
 	}
+	if analysis == nil {
+		respondError(c, http.StatusNotFound, "NOT_FOUND", "diagnosis analysis not found")
+		return
+	}
+	assessments, err := h.diagnosisAnalysisService.ListAssessments(c.Request.Context(), uid, analysisID)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load candidate assessments")
+		return
+	}
+	payload := h.diagnosisAnalysisService.PublicPayload(analysis)
+	payload["candidate_assessments"] = assessments
+	if h.diagnosisFreshnessService != nil {
+		if freshness, freshErr := h.diagnosisFreshnessService.Preview(c.Request.Context(), uid, analysis); freshErr == nil {
+			payload["freshness"] = freshness
+		}
+	}
+	c.JSON(http.StatusOK, payload)
+}
 
-	// Validate that the current phase allows treatment generation
-	if session.Phase != "diagnosis_confirmed" {
-		respondError(c, http.StatusConflict, "INVALID_PHASE", "diagnosis must be confirmed before generating treatment plan")
+// AssessDiagnosisCandidates handles PUT /api/v1/diagnosis-analyses/:analysisId/assessment.
+// Unmentioned candidates remain unassessed; they are never deleted simply because
+// the user did not select them.
+func (h *DiagnosisHandler) AssessDiagnosisCandidates(c *gin.Context) {
+	uid, ok := getUserUUID(c)
+	if !ok {
 		return
 	}
-
-	// Parse request body (confirmed diagnosis)
-	var reqBody struct {
-		ConfirmedDiagnosis map[string]any `json:"confirmedDiagnosis" binding:"required"`
+	analysisID, err := uuid.Parse(c.Param("analysisId"))
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "INVALID_ID", "invalid analysis id")
+		return
 	}
-	if err := c.ShouldBindJSON(&reqBody); err != nil {
+	var req struct {
+		Candidates []struct {
+			CandidateID string `json:"candidate_id" binding:"required"`
+			State       string `json:"state" binding:"required"`
+		} `json:"candidates" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
 		respondError(c, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
 	}
-
-	// Get user profile
-	profile, err := h.profileService.GetProfile(c.Request.Context(), uid)
-	profileJSON := json.RawMessage("{}")
-	if err == nil && profile != nil {
-		if pj, marshalErr := json.Marshal(profile); marshalErr == nil {
-			profileJSON = pj
+	states := make(map[uuid.UUID]string, len(req.Candidates))
+	for _, item := range req.Candidates {
+		candidateID, err := uuid.Parse(item.CandidateID)
+		if err != nil {
+			respondError(c, http.StatusBadRequest, "INVALID_CANDIDATE_ID", "invalid candidate id")
+			return
 		}
+		states[candidateID] = item.State
 	}
-
-	// Parse extracted info from session
-	extractedInfoJSON := json.RawMessage("[]")
-	if len(session.ExtractedInfo) > 0 {
-		extractedInfoJSON = json.RawMessage(session.ExtractedInfo)
-	}
-
-	confirmedDiagnosisJSON, err := json.Marshal(reqBody.ConfirmedDiagnosis)
+	assessments, err := h.diagnosisAnalysisService.AssessCandidates(c.Request.Context(), uid, analysisID, states)
 	if err != nil {
-		respondError(c, http.StatusBadRequest, "INVALID_REQUEST", "invalid confirmed diagnosis")
+		respondError(c, http.StatusBadRequest, "INVALID_CANDIDATE_ASSESSMENT", err.Error())
 		return
 	}
+	c.JSON(http.StatusOK, gin.H{"analysis_id": analysisID, "candidate_assessments": assessments})
+}
 
-	treatmentReq := service.TreatmentRequest{
-		ConfirmedDiagnosis: confirmedDiagnosisJSON,
-		ExtractedInfo:      extractedInfoJSON,
-		Profile:            profileJSON,
-		UseCase:            "llm.json",
+func (h *DiagnosisHandler) persistDiagnosisEvidence(
+	ctx context.Context,
+	userID uuid.UUID,
+	parsed map[string]any,
+) (json.RawMessage, error) {
+	if h.bodyStateService == nil {
+		return json.Marshal(parsed)
 	}
-
-	// Knowledge search for RAG context
-	var extractedInfoList []any
-	_ = json.Unmarshal(extractedInfoJSON, &extractedInfoList)
-	if query := buildTreatmentKnowledgeQuery(reqBody.ConfirmedDiagnosis, extractedInfoList); query != "" {
-		ragResults, searchErr := searchKnowledge(c.Request.Context(), h.aiServiceURL, query)
-		if searchErr == nil && len(ragResults) > 0 {
-			treatmentReq.RAGContext = buildKnowledgeContext(ragResults)
-			ragResultsJSON, _ := json.Marshal(ragResults)
-			treatmentReq.RAGResults = ragResultsJSON
+	rawCitations, _ := parsed["citations"].([]any)
+	if len(rawCitations) == 0 {
+		return json.Marshal(parsed)
+	}
+	identityMap := map[string]string{}
+	for index, rawCitation := range rawCitations {
+		citation, ok := rawCitation.(map[string]any)
+		if !ok {
+			continue
 		}
-	}
-
-	// Call AI service
-	result, err := h.aiClient.GenerateTreatment(c.Request.Context(), treatmentReq)
-	if err != nil {
-		log.Printf("AI treatment generation failed for consultation %s: %v", conversationID, err)
-		respondError(c, http.StatusBadGateway, "AI_SERVICE_ERROR", "failed to generate treatment")
-		return
-	}
-
-	// Parse and persist only when governance accepted/degraded the payload.
-	var treatmentResult map[string]any
-	if json.Unmarshal(result, &treatmentResult) == nil {
-		h.recordGovernedOutput(c, "treatment", &uid, &conversationID, nil, treatmentResult, result)
-		if gov, ok := treatmentResult["governance"].(map[string]any); ok {
-			if verdict, _ := gov["verdict"].(string); verdict == "rejected" {
-				c.Data(http.StatusOK, "application/json", result)
-				return
+		sourceType := firstHandlerString(citation, "source_type", "type", "source")
+		if sourceType == "" {
+			sourceType = "knowledge"
+		}
+		sourceKey := firstHandlerString(citation, "source_key", "id", "source_id", "url", "uri")
+		if sourceKey == "" {
+			encoded, _ := json.Marshal(citation)
+			digest := sha256.Sum256(encoded)
+			sourceKey = "citation:" + hex.EncodeToString(digest[:12])
+		}
+		version := firstHandlerString(citation, "source_version", "version", "updated_at")
+		metadata, _ := json.Marshal(citation)
+		stored, err := h.bodyStateService.UpsertEvidence(ctx, userID, model.BodyStateEvidence{
+			SourceType: sourceType, SourceKey: sourceKey, SourceVersion: version,
+			Title:    firstHandlerString(citation, "title", "name"),
+			Summary:  firstHandlerString(citation, "summary", "content"),
+			Excerpt:  firstHandlerString(citation, "excerpt", "chunk", "text"),
+			Metadata: datatypes.JSON(metadata),
+		})
+		if err != nil {
+			return nil, err
+		}
+		storedID := stored.ID.String()
+		citation["evidence_id"] = storedID
+		citation["source_key"] = sourceKey
+		rawCitations[index] = citation
+		for _, key := range []string{sourceKey, firstHandlerString(citation, "id"), firstHandlerString(citation, "source_id"), firstHandlerString(citation, "url"), storedID} {
+			if key != "" {
+				identityMap[key] = storedID
 			}
 		}
-		var treatmentPlanToSave any
-		if planObj, ok := treatmentResult["treatment_plan"].(map[string]any); ok {
-			treatmentPlanToSave = planObj
-		} else {
-			treatmentPlanToSave = treatmentResult
+	}
+	parsed["citations"] = rawCitations
+	if candidates, ok := parsed["candidates"].([]any); ok {
+		for index, rawCandidate := range candidates {
+			candidate, ok := rawCandidate.(map[string]any)
+			if !ok {
+				continue
+			}
+			if references, ok := candidate["supporting_evidence_ids"].([]any); ok {
+				normalized := make([]string, 0, len(references))
+				for _, rawReference := range references {
+					reference := strings.TrimSpace(fmt.Sprint(rawReference))
+					if mapped := identityMap[reference]; mapped != "" {
+						normalized = append(normalized, mapped)
+					} else if _, err := uuid.Parse(reference); err == nil {
+						normalized = append(normalized, reference)
+					}
+				}
+				candidate["supporting_evidence_ids"] = normalized
+			}
+			candidates[index] = candidate
 		}
-		if err := h.consultationService.UpdateTreatmentPlan(c.Request.Context(), conversationID, uid, treatmentPlanToSave); err != nil {
-			log.Printf("failed to save treatment plan for consultation %s: %v", conversationID, err)
-		}
-		if err := h.consultationService.UpdatePhase(c.Request.Context(), conversationID, uid, "plan_ready"); err != nil {
-			log.Printf("failed to update phase for consultation %s: %v", conversationID, err)
+		parsed["candidates"] = candidates
+	}
+	return json.Marshal(parsed)
+}
+
+func (h *DiagnosisHandler) commitDiagnosisHypotheses(
+	ctx context.Context,
+	userID uuid.UUID,
+	analysis *model.DiagnosisAnalysisRecord,
+) error {
+	if h.bodyStateService == nil || analysis == nil {
+		return nil
+	}
+	for _, candidate := range analysis.Candidates {
+		confidence := candidate.Confidence
+		_, _, err := h.bodyStateService.AddDiagnosisHypothesis(ctx, userID, model.BodyStateHypothesis{
+			ConcernKey:               candidate.ConcernKey,
+			Statement:                candidate.Name,
+			LifecycleState:           "active",
+			Confidence:               &confidence,
+			SupportingFactIDs:        candidate.BasisFactIDs,
+			SupportingObservationIDs: candidate.BasisObservationIDs,
+			SupportingEvidenceIDs:    candidate.SupportingEvidenceIDs,
+			CounterevidenceIDs:       candidate.CounterevidenceIDs,
+			SourceAnalysisID:         &analysis.ID,
+			Provenance: datatypes.JSON(mustHandlerJSON(map[string]any{
+				"source_type":       "diagnosis_analysis",
+				"analysis_id":       analysis.ID,
+				"candidate_id":      candidate.ID,
+				"reasoning_summary": candidate.ReasoningSummary,
+			})),
+		})
+		if err != nil {
+			return err
 		}
 	}
+	return nil
+}
 
-	c.Data(http.StatusOK, "application/json", result)
+func firstHandlerString(values map[string]any, keys ...string) string {
+	for _, key := range keys {
+		if value := strings.TrimSpace(fmt.Sprint(values[key])); value != "" && value != "<nil>" {
+			return value
+		}
+	}
+	return ""
+}
+
+func mustHandlerJSON(value any) []byte {
+	encoded, _ := json.Marshal(value)
+	return encoded
 }
 
 // recordGovernedOutput writes the P2 governance conclusion to ai_output_reviews.

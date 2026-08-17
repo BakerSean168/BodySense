@@ -15,13 +15,3 @@ type ResumeConsultationInteractionRequest struct {
 	RequestID string          `json:"requestId" binding:"required,max=128"`
 	Answer    json.RawMessage `json:"answer" binding:"required"`
 }
-
-// UpdateHealthFeaturesRequest is the request to update health features for a session.
-type UpdateHealthFeaturesRequest struct {
-	HealthFeatures json.RawMessage `json:"health_features" binding:"required"`
-}
-
-// ConfirmDiagnosisRequest is the request to confirm a diagnosis.
-type ConfirmDiagnosisRequest struct {
-	Diagnosis json.RawMessage `json:"diagnosis" binding:"required"`
-}

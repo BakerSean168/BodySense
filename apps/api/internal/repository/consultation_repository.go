@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/bodysense/api/internal/model"
@@ -54,14 +55,6 @@ func (r *ConsultationRepository) ListByConversationIDs(ctx context.Context, conv
 	return sessions, err
 }
 
-// UpdateHealthFeatures updates the health_features JSONB field of a session.
-func (r *ConsultationRepository) UpdateHealthFeatures(ctx context.Context, conversationID uuid.UUID, healthFeatures any) error {
-	return r.db.WithContext(ctx).
-		Model(&model.ConsultationSession{}).
-		Where("conversation_id = ?", conversationID).
-		Update("health_features", healthFeatures).Error
-}
-
 // UpdatePhase updates the workflow phase of a consultation session.
 func (r *ConsultationRepository) UpdatePhase(ctx context.Context, conversationID uuid.UUID, phase string) error {
 	return r.db.WithContext(ctx).
@@ -70,27 +63,30 @@ func (r *ConsultationRepository) UpdatePhase(ctx context.Context, conversationID
 		Update("phase", phase).Error
 }
 
-// UpdateDiagnosis updates the diagnosis field of a session.
-func (r *ConsultationRepository) UpdateDiagnosis(ctx context.Context, conversationID uuid.UUID, diagnosis any) error {
-	return r.db.WithContext(ctx).
-		Model(&model.ConsultationSession{}).
-		Where("conversation_id = ?", conversationID).
-		Update("diagnosis", diagnosis).Error
-}
-
-// UpdateTreatmentPlan updates the treatment_plan field of a session.
-func (r *ConsultationRepository) UpdateTreatmentPlan(ctx context.Context, conversationID uuid.UUID, treatmentPlan any) error {
-	return r.db.WithContext(ctx).
-		Model(&model.ConsultationSession{}).
-		Where("conversation_id = ?", conversationID).
-		Update("treatment_plan", treatmentPlan).Error
-}
-
 // Delete removes a consultation session by conversation ID.
 func (r *ConsultationRepository) Delete(ctx context.Context, conversationID uuid.UUID) error {
 	return r.db.WithContext(ctx).
 		Where("conversation_id = ?", conversationID).
 		Delete(&model.ConsultationSession{}).Error
+}
+
+// GetLatestByUserID resolves the canonical long-lived consultation for a user.
+// Historical conversations are retained, but new product flows reuse the most
+// recently active consultation instead of requiring users to create another one.
+func (r *ConsultationRepository) GetLatestByUserID(ctx context.Context, userID uuid.UUID) (*model.ConsultationSession, error) {
+	var session model.ConsultationSession
+	err := r.db.WithContext(ctx).
+		Joins("JOIN conversations ON conversations.id = consultation_sessions.conversation_id").
+		Where("conversations.user_id = ? AND conversations.status = ? AND conversations.deleted_at IS NULL", userID, "active").
+		Order("COALESCE(conversations.last_message_at, conversations.created_at) DESC").
+		First(&session).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &session, nil
 }
 
 // ListByUserID retrieves consultation sessions for a user via the conversations join.
@@ -122,11 +118,43 @@ func (r *ConsultationRepository) CreateRunEnvelope(
 	var existed bool
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Serialize run creation per user. This also prevents two concurrent
+		// conversation-less requests from creating separate "long-lived" sessions.
+		var owner model.User
+		if err := tx.WithContext(ctx).
+			Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ?", userID).
+			First(&owner).Error; err != nil {
+			return err
+		}
 		resolvedConversationID, resolvedSession, err := r.resolveRunConversation(ctx, tx, userID, conversationID)
 		if err != nil {
 			return err
 		}
 		session = resolvedSession
+
+		var lockedConversation model.Conversation
+		if err := tx.WithContext(ctx).
+			Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ? AND user_id = ? AND deleted_at IS NULL", resolvedConversationID, userID).
+			First(&lockedConversation).Error; err != nil {
+			return err
+		}
+		if lockedConversation.ActiveRunID != nil {
+			var active model.Run
+			activeErr := tx.WithContext(ctx).Where("id = ?", *lockedConversation.ActiveRunID).First(&active).Error
+			if activeErr == nil && (active.Status == "running" || active.Status == "waiting_user") {
+				return model.ErrConversationRunInProgress
+			}
+			if activeErr != nil && !errors.Is(activeErr, gorm.ErrRecordNotFound) {
+				return activeErr
+			}
+			if err := tx.WithContext(ctx).Model(&model.Conversation{}).
+				Where("id = ? AND user_id = ?", resolvedConversationID, userID).
+				Updates(map[string]any{"active_run_id": nil, "active_stream_id": ""}).Error; err != nil {
+				return err
+			}
+		}
 
 		var userSeq int
 		if err := tx.WithContext(ctx).
@@ -210,6 +238,43 @@ func (r *ConsultationRepository) CreateRunEnvelope(
 	return session, run, userMsg, assistantMsg, turnID, existed, nil
 }
 
+func (r *ConsultationRepository) ensureConversationRunAvailable(
+	ctx context.Context,
+	tx *gorm.DB,
+	conversation *model.Conversation,
+) error {
+	if conversation.ActiveRunID != nil {
+		var active model.Run
+		err := tx.WithContext(ctx).
+			Where("id = ? AND conversation_id = ?", *conversation.ActiveRunID, conversation.ID).
+			First(&active).Error
+		if err != nil && err != gorm.ErrRecordNotFound {
+			return err
+		}
+		if err == nil && (active.Status == "running" || active.Status == "waiting_user") {
+			return model.ErrConversationRunInProgress
+		}
+		conversation.ActiveRunID = nil
+		conversation.ActiveStreamID = ""
+		if err := tx.WithContext(ctx).Model(&model.Conversation{}).
+			Where("id = ?", conversation.ID).
+			Updates(map[string]any{"active_run_id": nil, "active_stream_id": ""}).Error; err != nil {
+			return err
+		}
+	}
+
+	var pendingInteractions int64
+	if err := tx.WithContext(ctx).Model(&model.AgentInteraction{}).
+		Where("conversation_id = ? AND status = ?", conversation.ID, "pending").
+		Count(&pendingInteractions).Error; err != nil {
+		return err
+	}
+	if pendingInteractions > 0 {
+		return model.ErrConversationRunInProgress
+	}
+	return nil
+}
+
 func (r *ConsultationRepository) resolveRunConversation(
 	ctx context.Context,
 	tx *gorm.DB,
@@ -219,8 +284,12 @@ func (r *ConsultationRepository) resolveRunConversation(
 	if conversationID != nil && *conversationID != uuid.Nil {
 		var conversation model.Conversation
 		if err := tx.WithContext(ctx).
+			Clauses(clause.Locking{Strength: "UPDATE"}).
 			Where("id = ? AND user_id = ? AND deleted_at IS NULL", *conversationID, userID).
 			First(&conversation).Error; err != nil {
+			return uuid.Nil, nil, err
+		}
+		if err := r.ensureConversationRunAvailable(ctx, tx, &conversation); err != nil {
 			return uuid.Nil, nil, err
 		}
 
@@ -235,11 +304,21 @@ func (r *ConsultationRepository) resolveRunConversation(
 
 	var conversation model.Conversation
 	err := tx.WithContext(ctx).
-		Where("user_id = ? AND status = ? AND last_message_at IS NULL AND deleted_at IS NULL", userID, "active").
-		Order("created_at DESC").
+		Joins("JOIN consultation_sessions ON consultation_sessions.conversation_id = conversations.id").
+		Where("conversations.user_id = ? AND conversations.status = ? AND conversations.deleted_at IS NULL", userID, "active").
+		Order("COALESCE(conversations.last_message_at, conversations.created_at) DESC").
 		First(&conversation).Error
 	switch {
 	case err == nil:
+		if err := tx.WithContext(ctx).
+			Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ? AND user_id = ? AND deleted_at IS NULL", conversation.ID, userID).
+			First(&conversation).Error; err != nil {
+			return uuid.Nil, nil, err
+		}
+		if err := r.ensureConversationRunAvailable(ctx, tx, &conversation); err != nil {
+			return uuid.Nil, nil, err
+		}
 		var session model.ConsultationSession
 		if err := tx.WithContext(ctx).
 			Where("conversation_id = ?", conversation.ID).
@@ -252,7 +331,6 @@ func (r *ConsultationRepository) resolveRunConversation(
 		session = model.ConsultationSession{
 			ConversationID: conversation.ID,
 			ExtractedInfo:  datatypes.JSON("[]"),
-			HealthFeatures: datatypes.JSON(`{}`),
 			Phase:          "collecting",
 		}
 		if err := tx.WithContext(ctx).Create(&session).Error; err != nil {

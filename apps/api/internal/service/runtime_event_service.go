@@ -74,7 +74,6 @@ func ShouldPersistEvent(eventType string) bool {
 		"tool.call",
 		"tool.result",
 		"state.extracted_info.upsert",
-		"state.health_features.upsert",
 		"state.phase.changed",
 		"source.citation.added",
 		"source.knowledge_gap",
@@ -87,7 +86,9 @@ func ShouldPersistEvent(eventType string) bool {
 		"message.completed",
 		"message.failed",
 		"title.generated",
-		"usage.reported":
+		"usage.reported",
+		"stream.done",
+		"stream.error":
 		return true
 	default:
 		return false

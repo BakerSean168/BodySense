@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 interface ConsultationState {
   draftMessage: string;
@@ -10,12 +10,12 @@ interface ConsultationState {
 export const useConsultationStore = create<ConsultationState>()(
   persist(
     (set) => ({
-      draftMessage: '',
+      draftMessage: "",
       setDraftMessage: (message: string) => set({ draftMessage: message }),
-      clearDraftMessage: () => set({ draftMessage: '' }),
+      clearDraftMessage: () => set({ draftMessage: "" }),
     }),
     {
-      name: 'bodysense-consultation-storage',
-    }
-  )
+      name: "bodysense-consultation-storage",
+    },
+  ),
 );

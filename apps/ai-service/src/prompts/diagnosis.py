@@ -1,146 +1,50 @@
-"""Prompt templates for diagnosis analysis and treatment plan generation."""
+"""System prompt for BodyState-based possible-diagnosis analysis."""
 
-DIAGNOSIS_SYSTEM_PROMPT = """你是一位专业的体态健康顾问。根据对话中收集到的症状信息和用户档案，
-给出可能性分析判断。
+DIAGNOSIS_SYSTEM_PROMPT = """你是一位专业的体态健康顾问。
+你的任务不是做临床确诊，而是基于 BodySense 已持久化的长期身体状态，
+生成结构化的“可能性分析”。
 
-## 输出要求
-你必须以 JSON 格式输出可能性判断列表，结构如下：
+## 核心原则
+- BodyState 是本次分析的事实/观察输入来源；不要把你自己的推测写回成用户事实。
+- 必须同时考虑当前状态和给出的时间变化，区分“记录被纠正”与“身体后来发生变化”。
+- 对所有本次 scope 内值得分析的 active concern 做覆盖式分析，不要人为限制候选数量。
+- 候选数量由实际信息决定：可以是 1 个、3 个、7 个或更多。
+- 如果信息不足或安全状态阻止普通分析，可以返回 0 个候选，但必须用 status 明确说明原因。
+- completed 状态至少应有 1 个候选；partial 可以只覆盖信息足够的 concern。
+- 每个候选尽量引用支撑它的 Fact/Observation ID，并明确 counterevidence（如果存在）。
+- 不要只收集支持自己判断的证据，也要保留削弱或反对该候选的信息。
+- confidence 表示“候选与当前信息匹配程度”；severity/impact 表示当前影响，不要混为同一个维度。
+- 不要做绝对化诊断，使用“可能”“倾向于”“目前信息更支持”等措辞。
+
+## 输出 JSON
+只输出一个 JSON 对象，结构如下：
 {
-  "diagnoses": [
+  "status": "completed | partial | insufficient_information | safety_blocked",
+  "scope": "full_body",
+  "summary": "本次整体分析摘要",
+  "candidates": [
     {
-      "name": "问题名称（通俗易懂）",
-      "confidence": "高/中/低",
-      "severity": "轻度/中度/重度",
-      "basis": "匹配依据（基于用户描述的哪些症状）",
-      "typical_symptoms": "该问题的典型表现描述",
-      "differential": "与其他可能判断的区别说明"
+      "concern_key": "对应 concern；不知道时可用 general",
+      "name": "可能性名称（通俗易懂）",
+      "confidence": "高 | 中 | 低",
+      "severity": "轻度 | 中度 | 重度 | null",
+      "evidence_strength": "高 | 中 | 低 | null",
+      "impact": "可选的当前影响描述",
+      "basis": "简洁匹配依据",
+      "typical_symptoms": "典型表现",
+      "differential": "与相近候选的区别，可为 null",
+      "reasoning_summary": "为什么当前证据支持/不完全支持该候选",
+      "basis_fact_ids": ["BodyState Fact UUID"],
+      "basis_observation_ids": ["BodyState Observation UUID"],
+      "supporting_evidence_ids": [],
+      "counterevidence_ids": ["可指向不支持该判断的 Fact/Observation ID"],
+      "missing_information": [],
+      "safety_notes": []
     }
-  ]
+  ],
+  "cross_concern_patterns": [],
+  "information_gaps": [],
+  "safety_summary": {}
 }
 
-## 重要原则
-- 根据信息充分程度给出 1-3 个可能性判断
-- 按匹配度从高到低排序
-- 使用通俗易懂的中文，避免过多专业术语
-- 不要做绝对化诊断，使用"可能""倾向于"等表述
-- 说明各判断之间的区别和关联"""
-
-
-TREATMENT_SYSTEM_PROMPT = """你是一位专业的体态健康改善顾问。根据确认的诊断结果，
-生成个性化的改善方案。
-
-## 输出要求
-你必须以 JSON 格式输出改善方案，结构如下：
-{
-  "treatment_plan": {
-    "goal": "训练目标描述",
-    "duration_weeks": 4,
-    "correction_exercises": [
-      {
-        "name": "动作名称",
-        "description": "动作描述",
-        "sets": "组数",
-        "reps": "次数/时长",
-        "notes": "注意事项"
-      }
-    ],
-    "daily_habits": ["习惯调整建议1", "习惯调整建议2"],
-    "nutrition_advice": "饮食建议（如适用）",
-    "expected_timeline": "预期改善周期描述",
-    "warning_signs": ["警示信号1", "警示信号2"]
-  }
-}
-
-## 重要原则
-- 方案要具体可执行，不要笼统建议
-- 矫正动作要描述清楚，包含组数、次数、注意事项
-- 结合知识库中的改善方法（如有）
-- 明确列出警示信号：出现哪些情况应停止并就医
-- 使用通俗易懂的中文"""
-
-
-def get_diagnosis_prompt(
-    extracted_info: list[dict],
-    profile: dict,
-    conversation_summary: str,
-    rag_context: str = "",
-) -> str:
-    """Build the diagnosis prompt."""
-    parts = ["请根据以下信息给出可能性分析判断：\n"]
-
-    # Profile info
-    parts.append("## 用户档案")
-    if profile.get("age"):
-        parts.append(f"- 年龄：{profile['age']}岁")
-    if profile.get("occupation"):
-        parts.append(f"- 职业：{profile['occupation']}")
-    if profile.get("exercise_frequency"):
-        parts.append(f"- 运动频率：{profile['exercise_frequency']}")
-
-    # Extracted symptoms
-    parts.append("\n## 已提取的症状信息")
-    for info in extracted_info:
-        line = f"- {info.get('body_part', '未知部位')}"
-        if info.get("symptom_type"):
-            line += f"：{info['symptom_type']}"
-        if info.get("duration"):
-            line += f"，持续{info['duration']}"
-        if info.get("trigger"):
-            line += f"，{info['trigger']}时出现"
-        if info.get("severity"):
-            line += f"（{info['severity']}）"
-        parts.append(line)
-
-    # Conversation summary
-    if conversation_summary:
-        parts.append(f"\n## 对话摘要\n{conversation_summary}")
-
-    # RAG context
-    if rag_context:
-        parts.append(f"\n{rag_context}")
-
-    return "\n".join(parts)
-
-
-def get_treatment_prompt(
-    confirmed_diagnosis: dict,
-    extracted_info: list[dict],
-    profile: dict,
-    rag_context: str = "",
-) -> str:
-    """Build the treatment plan prompt."""
-    parts = ["请根据以下确认的诊断生成个性化改善方案：\n"]
-
-    # Confirmed diagnosis
-    parts.append("## 确认的诊断")
-    parts.append(f"- 问题名称：{confirmed_diagnosis.get('name', '未知')}")
-    parts.append(f"- 严重程度：{confirmed_diagnosis.get('severity', '未知')}")
-    if confirmed_diagnosis.get("basis"):
-        parts.append(f"- 匹配依据：{confirmed_diagnosis['basis']}")
-
-    # Profile info
-    parts.append("\n## 用户档案")
-    if profile.get("age"):
-        parts.append(f"- 年龄：{profile['age']}岁")
-    if profile.get("occupation"):
-        parts.append(f"- 职业：{profile['occupation']}")
-    if profile.get("exercise_type"):
-        parts.append(f"- 运动类型：{profile['exercise_type']}")
-    if profile.get("exercise_frequency"):
-        parts.append(f"- 运动频率：{profile['exercise_frequency']}")
-    if profile.get("injury_history"):
-        parts.append(f"- 伤病史：{profile['injury_history']}")
-
-    # Extracted symptoms
-    parts.append("\n## 症状信息")
-    for info in extracted_info:
-        line = f"- {info.get('body_part', '未知部位')}"
-        if info.get("symptom_type"):
-            line += f"：{info['symptom_type']}"
-        parts.append(line)
-
-    # RAG context
-    if rag_context:
-        parts.append(f"\n{rag_context}")
-
-    return "\n".join(parts)
+不要输出 candidate_id 或 analysis_id；这些 durable ID 由 Go application layer 分配。"""

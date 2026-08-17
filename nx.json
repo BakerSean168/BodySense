@@ -22,41 +22,68 @@
   },
   "targetDefaults": {
     "build": {
-      "dependsOn": ["^build"],
-      "inputs": ["production", "^production"],
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "production",
+        "^production"
+      ],
       "cache": true
     },
     "serve": {
-      "dependsOn": ["^build"],
+      "dependsOn": [
+        "^build"
+      ],
       "cache": false
     },
     "test": {
-      "inputs": ["default", "^production"],
+      "inputs": [
+        "default",
+        "^production"
+      ],
       "cache": true
     },
     "lint": {
-      "inputs": ["default", "{workspaceRoot}/eslint.config.mjs"],
+      "inputs": [
+        "default",
+        "{workspaceRoot}/eslint.config.mjs"
+      ],
       "cache": true
     },
     "typecheck": {
-      "dependsOn": ["^build"],
-      "inputs": ["production", "^production"],
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "production",
+        "^production"
+      ],
       "cache": true
     },
     "test:watch": {
       "cache": false
     },
     "test:coverage": {
-      "inputs": ["default", "^production"],
+      "inputs": [
+        "default",
+        "^production"
+      ],
       "cache": true
     },
     "test:integration": {
-      "inputs": ["default", "^production"],
+      "inputs": [
+        "default",
+        "^production"
+      ],
       "cache": false,
       "parallelism": false
     },
     "e2e": {
-      "inputs": ["default", "^production"],
+      "inputs": [
+        "default",
+        "^production"
+      ],
       "cache": false
     }
   },
@@ -77,5 +104,6 @@
         "typecheckTargetName": "typecheck"
       }
     }
-  ]
+  ],
+  "analytics": true
 }

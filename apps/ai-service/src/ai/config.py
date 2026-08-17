@@ -1,4 +1,5 @@
 """YAML configuration loading with environment variable interpolation."""
+
 from __future__ import annotations
 
 import logging
@@ -58,6 +59,7 @@ _ENV_VAR_PATTERN = re.compile(r"\$\{([^}]+)\}")
 
 def _interpolate_env(value: str) -> str:
     """Replace ${VAR_NAME} with environment variable values."""
+
     def replacer(match: re.Match) -> str:
         var_name = match.group(1)
         env_value = os.environ.get(var_name)
@@ -91,10 +93,12 @@ def load_config(config_path: str | Path) -> RouterConfig:
             continue
         models = []
         for model_raw in provider_raw.get("models", []):
-            models.append(ModelConfig(
-                id=model_raw["id"],
-                capabilities=set(model_raw.get("capabilities", [])),
-            ))
+            models.append(
+                ModelConfig(
+                    id=model_raw["id"],
+                    capabilities=set(model_raw.get("capabilities", [])),
+                )
+            )
         providers[provider_id] = ProviderConfig(
             type=provider_raw["type"],
             base_url=base_url,
@@ -112,10 +116,12 @@ def load_config(config_path: str | Path) -> RouterConfig:
         )
         candidates = []
         for cand_raw in route_raw.get("candidates", []):
-            candidates.append(RouteCandidate(
-                provider=cand_raw["provider"],
-                model=cand_raw["model"],
-            ))
+            candidates.append(
+                RouteCandidate(
+                    provider=cand_raw["provider"],
+                    model=cand_raw["model"],
+                )
+            )
         routes[route_id] = RouteConfig(defaults=defaults, candidates=candidates)
 
     return RouterConfig(providers=providers, routes=routes)

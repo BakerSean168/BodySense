@@ -13,7 +13,7 @@
 
 /** Backend origin — empty string for same-origin deployments. */
 export const API_BASE_URL: string =
-  (import.meta.env.VITE_API_BASE_URL as string) || '';
+  (import.meta.env.VITE_API_BASE_URL as string) || "";
 
 /** Build a full URL from a backend path. */
 export function apiUrl(path: string): string {
@@ -29,13 +29,13 @@ export function apiUrl(path: string): string {
  * the server returns HTML (e.g. Caddy 404 page) or plain text.
  */
 export async function safeJson<T = unknown>(res: Response): Promise<T> {
-  const ct = res.headers.get('content-type') || '';
-  if (ct.includes('application/json')) {
+  const ct = res.headers.get("content-type") || "";
+  if (ct.includes("application/json")) {
     return res.json() as Promise<T>;
   }
   const text = await res.text();
   // Best-effort: some servers forget the content-type header.
-  if (text.startsWith('{') || text.startsWith('[')) {
+  if (text.startsWith("{") || text.startsWith("[")) {
     try {
       return JSON.parse(text) as T;
     } catch {
@@ -54,13 +54,13 @@ export async function safeJson<T = unknown>(res: Response): Promise<T> {
 export async function extractErrorMessage(res: Response): Promise<string> {
   const body: unknown = await safeJson(res);
 
-  if (body && typeof body === 'object') {
+  if (body && typeof body === "object") {
     const obj = body as Record<string, unknown>;
     const msg = obj.message ?? obj.error;
-    if (typeof msg === 'string') return msg;
+    if (typeof msg === "string") return msg;
   }
 
-  if (typeof body === 'string' && body.length > 0) return body;
+  if (typeof body === "string" && body.length > 0) return body;
 
   return res.statusText || `Request failed (${res.status})`;
 }

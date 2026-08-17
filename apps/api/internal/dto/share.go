@@ -10,5 +10,4 @@ type ShareResponse struct {
 type SharedConversationResponse struct {
 	Title    string          `json:"title"`
 	Messages json.RawMessage `json:"messages"`
-	Metadata json.RawMessage `json:"metadata,omitempty"`
 }

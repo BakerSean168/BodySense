@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 
 	"github.com/bodysense/api/internal/model"
@@ -11,13 +10,10 @@ import (
 )
 
 type fakeConsultationRepository struct {
-	session              *model.ConsultationSession
-	createdSession       *model.ConsultationSession
-	updatedPhase         string
-	updatedHealthFeatures json.RawMessage
-	updatedDiagnosis     json.RawMessage
-	updatedTreatmentPlan json.RawMessage
-	sessions             []model.ConsultationSession
+	session        *model.ConsultationSession
+	createdSession *model.ConsultationSession
+	updatedPhase   string
+	sessions       []model.ConsultationSession
 }
 
 func (r *fakeConsultationRepository) Create(ctx context.Context, session *model.ConsultationSession) error {
@@ -33,45 +29,16 @@ func (r *fakeConsultationRepository) GetByConversationID(ctx context.Context, co
 	return r.session, nil
 }
 
+func (r *fakeConsultationRepository) GetLatestByUserID(ctx context.Context, userID uuid.UUID) (*model.ConsultationSession, error) {
+	return r.session, nil
+}
+
 func (r *fakeConsultationRepository) ListByConversationIDs(ctx context.Context, conversationIDs []uuid.UUID) ([]model.ConsultationSession, error) {
 	return r.sessions, nil
 }
 
-func (r *fakeConsultationRepository) UpdateHealthFeatures(ctx context.Context, conversationID uuid.UUID, healthFeatures any) error {
-	data, _ := healthFeatures.(json.RawMessage)
-	if data == nil {
-		if bytes, ok := healthFeatures.([]byte); ok {
-			data = json.RawMessage(bytes)
-		}
-	}
-	r.updatedHealthFeatures = data
-	return nil
-}
-
 func (r *fakeConsultationRepository) UpdatePhase(ctx context.Context, conversationID uuid.UUID, phase string) error {
 	r.updatedPhase = phase
-	return nil
-}
-
-func (r *fakeConsultationRepository) UpdateDiagnosis(ctx context.Context, conversationID uuid.UUID, diagnosis any) error {
-	data, _ := diagnosis.(json.RawMessage)
-	if data == nil {
-		if bytes, ok := diagnosis.([]byte); ok {
-			data = json.RawMessage(bytes)
-		}
-	}
-	r.updatedDiagnosis = data
-	return nil
-}
-
-func (r *fakeConsultationRepository) UpdateTreatmentPlan(ctx context.Context, conversationID uuid.UUID, treatmentPlan any) error {
-	data, _ := treatmentPlan.(json.RawMessage)
-	if data == nil {
-		if bytes, ok := treatmentPlan.([]byte); ok {
-			data = json.RawMessage(bytes)
-		}
-	}
-	r.updatedTreatmentPlan = data
 	return nil
 }
 
@@ -97,7 +64,7 @@ func (r *fakeConsultationRepository) CreateRunEnvelope(
 	}
 	session := r.session
 	if session == nil || session.ConversationID != resolvedConversationID {
-		session = &model.ConsultationSession{ConversationID: resolvedConversationID, ExtractedInfo: datatypes.JSON("[]"), HealthFeatures: datatypes.JSON(`{}`), Phase: "collecting"}
+		session = &model.ConsultationSession{ConversationID: resolvedConversationID, ExtractedInfo: datatypes.JSON("[]"), Phase: "collecting"}
 		r.session = session
 	}
 	turnID := uuid.New()
@@ -193,12 +160,12 @@ func TestUpdatePhaseAllowsForwardTransition(t *testing.T) {
 	ownership.addConversation(conversationID, userID)
 	svc := NewConsultationService(repo, ownership)
 
-	if err := svc.UpdatePhase(context.Background(), conversationID, userID, "plan_ready"); err != nil {
+	if err := svc.UpdatePhase(context.Background(), conversationID, userID, "analysis_ready"); err != nil {
 		t.Fatalf("UpdatePhase returned error: %v", err)
 	}
 
-	if repo.updatedPhase != "plan_ready" {
-		t.Fatalf("expected phase plan_ready, got %q", repo.updatedPhase)
+	if repo.updatedPhase != "analysis_ready" {
+		t.Fatalf("expected phase analysis_ready, got %q", repo.updatedPhase)
 	}
 }
 
@@ -208,7 +175,7 @@ func TestUpdatePhaseBlocksBackwardRegression(t *testing.T) {
 	repo := &fakeConsultationRepository{
 		session: &model.ConsultationSession{
 			ConversationID: conversationID,
-			Phase:          "plan_ready",
+			Phase:          "analysis_ready",
 		},
 	}
 	ownership := newFakeConversationOwnershipChecker()
@@ -277,97 +244,6 @@ func TestCreateConsultationFailsOwnershipCheck(t *testing.T) {
 	err := svc.CreateConsultation(context.Background(), conversationID, otherUserID)
 	if err == nil {
 		t.Fatal("expected error for ownership check failure, got nil")
-	}
-}
-
-func TestUpdateHealthFeaturesPersistsData(t *testing.T) {
-	conversationID := uuid.New()
-	userID := uuid.New()
-	repo := &fakeConsultationRepository{
-		session: &model.ConsultationSession{
-			ConversationID: conversationID,
-			Phase:          "collecting",
-		},
-	}
-	ownership := newFakeConversationOwnershipChecker()
-	ownership.addConversation(conversationID, userID)
-	svc := NewConsultationService(repo, ownership)
-
-	healthFeatures := map[string]any{
-		"posture_findings":     []map[string]any{},
-		"discomforts":         []map[string]any{{"label": "酸胀", "body_part": "肩部"}},
-		"negative_findings":   []map[string]any{},
-		"movement_limitations": []map[string]any{},
-		"red_flags":           []map[string]any{},
-		"user_answers":        []map[string]any{},
-	}
-	if err := svc.UpdateHealthFeatures(context.Background(), conversationID, userID, healthFeatures); err != nil {
-		t.Fatalf("UpdateHealthFeatures returned error: %v", err)
-	}
-
-	if repo.updatedHealthFeatures == nil {
-		t.Fatal("expected health features to be persisted")
-	}
-
-	var parsed map[string][]map[string]any
-	if err := json.Unmarshal(repo.updatedHealthFeatures, &parsed); err != nil {
-		t.Fatalf("persisted data is invalid JSON: %v", err)
-	}
-	if len(parsed["discomforts"]) != 1 || parsed["discomforts"][0]["body_part"] != "肩部" {
-		t.Fatalf("unexpected persisted data: %v", parsed)
-	}
-}
-
-func TestUpdateDiagnosisPersistsData(t *testing.T) {
-	conversationID := uuid.New()
-	userID := uuid.New()
-	repo := &fakeConsultationRepository{
-		session: &model.ConsultationSession{
-			ConversationID: conversationID,
-			Phase:          "collecting",
-		},
-	}
-	ownership := newFakeConversationOwnershipChecker()
-	ownership.addConversation(conversationID, userID)
-	svc := NewConsultationService(repo, ownership)
-
-	diagnosis := map[string]any{
-		"diagnoses": []map[string]any{
-			{"name": "头前伸倾向", "confidence": "中"},
-		},
-	}
-	if err := svc.UpdateDiagnosis(context.Background(), conversationID, userID, diagnosis); err != nil {
-		t.Fatalf("UpdateDiagnosis returned error: %v", err)
-	}
-
-	if repo.updatedDiagnosis == nil {
-		t.Fatal("expected diagnosis to be persisted")
-	}
-}
-
-func TestUpdateTreatmentPlanPersistsData(t *testing.T) {
-	conversationID := uuid.New()
-	userID := uuid.New()
-	repo := &fakeConsultationRepository{
-		session: &model.ConsultationSession{
-			ConversationID: conversationID,
-			Phase:          "collecting",
-		},
-	}
-	ownership := newFakeConversationOwnershipChecker()
-	ownership.addConversation(conversationID, userID)
-	svc := NewConsultationService(repo, ownership)
-
-	plan := map[string]any{
-		"goal":           "缓解肩颈酸胀",
-		"duration_weeks": 4,
-	}
-	if err := svc.UpdateTreatmentPlan(context.Background(), conversationID, userID, plan); err != nil {
-		t.Fatalf("UpdateTreatmentPlan returned error: %v", err)
-	}
-
-	if repo.updatedTreatmentPlan == nil {
-		t.Fatal("expected treatment plan to be persisted")
 	}
 }
 
@@ -446,6 +322,48 @@ func TestCreateSessionReusesEmptySession(t *testing.T) {
 		t.Fatalf("expected session to be reused (same ID), got %s and %s", session1.ConversationID, session2.ConversationID)
 	}
 }
+func TestCreateRunEnvelopeReusesLongLivedConversationWhenIDIsOmitted(t *testing.T) {
+	conversationID := uuid.New()
+	userID := uuid.New()
+	repo := &fakeConsultationRepository{session: &model.ConsultationSession{
+		ConversationID: conversationID,
+		ExtractedInfo:  datatypes.JSON("[]"),
+		Phase:          "collecting",
+	}}
+	svc := NewConsultationService(repo, newFakeConversationOwnershipChecker())
+
+	envelope, err := svc.CreateRunEnvelope(
+		context.Background(), userID, nil, "req-long-lived",
+		datatypes.JSON(`[{"type":"text","text":"continue"}]`), datatypes.JSON("{}"), "consultation-thread",
+	)
+	if err != nil {
+		t.Fatalf("CreateRunEnvelope returned error: %v", err)
+	}
+	if envelope.Session.ConversationID != conversationID || envelope.Run.ConversationID != conversationID {
+		t.Fatalf("expected long-lived conversation %s, got session=%s run=%s", conversationID, envelope.Session.ConversationID, envelope.Run.ConversationID)
+	}
+	if envelope.ConversationCreated {
+		t.Fatal("reusing the long-lived conversation must not emit conversation.created semantics")
+	}
+}
+
+func TestCreateRunEnvelopeMarksOnlyFirstConversationAsCreated(t *testing.T) {
+	userID := uuid.New()
+	repo := &fakeConsultationRepository{}
+	svc := NewConsultationService(repo, newFakeConversationOwnershipChecker())
+
+	envelope, err := svc.CreateRunEnvelope(
+		context.Background(), userID, nil, "req-first",
+		datatypes.JSON(`[{"type":"text","text":"hello"}]`), datatypes.JSON("{}"), "consultation-thread",
+	)
+	if err != nil {
+		t.Fatalf("CreateRunEnvelope returned error: %v", err)
+	}
+	if !envelope.ConversationCreated {
+		t.Fatal("the user's first consultation should be marked as newly created")
+	}
+}
+
 func TestCreateRunEnvelopeReturnsDurableShell(t *testing.T) {
 	conversationID := uuid.New()
 	userID := uuid.New()

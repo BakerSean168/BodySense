@@ -1,20 +1,18 @@
-import { authFetch } from '@/features/auth/services/authService';
+import { authFetch } from "@/features/auth/services/authService";
 import type {
   Conversation,
   ConversationListResponse,
   Message,
   ConsultationSession,
   ConsultationThread,
-  HealthFeatures,
-  Diagnosis,
   DiagnosisAnalysis,
-  TreatmentPlan,
+  DiagnosisCandidateAssessmentState,
   ConversationShare,
   SharedConversation,
   StreamEvent,
-} from '../types/consultation';
+} from "../types/consultation";
 
-const API_BASE = '/api/v1';
+const API_BASE = "/api/v1";
 
 /**
  * Parse a Response as JSON, throwing on non-ok status.
@@ -22,7 +20,7 @@ const API_BASE = '/api/v1';
  */
 async function parseJson<T>(res: Response): Promise<T> {
   if (!res.ok) {
-    const body = await res.text().catch(() => '');
+    const body = await res.text().catch(() => "");
     throw new Error(`API ${res.status}: ${body || res.statusText}`);
   }
   return res.json();
@@ -49,14 +47,13 @@ export const consultationApi = {
     };
   }): Promise<Response> {
     return authFetch(`${API_BASE}/consultation-runs`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(params),
     });
   },
 
   // ===== General Conversation API =====
-
 
   /**
    * List conversations with cursor-based pagination.
@@ -66,12 +63,12 @@ export const consultationApi = {
     limit?: number;
   }): Promise<ConversationListResponse> {
     const searchParams = new URLSearchParams();
-    if (params?.cursor) searchParams.set('cursor', params.cursor);
-    if (params?.limit) searchParams.set('limit', String(params.limit));
+    if (params?.cursor) searchParams.set("cursor", params.cursor);
+    if (params?.limit) searchParams.set("limit", String(params.limit));
     const query = searchParams.toString();
-    return authFetch(`${API_BASE}/conversations${query ? '?' + query : ''}`).then(
-      (res) => parseJson<ConversationListResponse>(res),
-    );
+    return authFetch(
+      `${API_BASE}/conversations${query ? "?" + query : ""}`,
+    ).then((res) => parseJson<ConversationListResponse>(res));
   },
 
   /**
@@ -90,7 +87,7 @@ export const consultationApi = {
    */
   async deleteConversation(id: string): Promise<void> {
     await authFetch(`${API_BASE}/conversations/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
     }).then((res) => parseJson<void>(res));
   },
 
@@ -99,8 +96,8 @@ export const consultationApi = {
    */
   async pinConversation(id: string, pinned: boolean): Promise<void> {
     await authFetch(`${API_BASE}/conversations/${id}/pin`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ pinned }),
     }).then((res) => parseJson<void>(res));
   },
@@ -110,7 +107,7 @@ export const consultationApi = {
    */
   async generateTitle(id: string): Promise<void> {
     await authFetch(`${API_BASE}/conversations/${id}/title`, {
-      method: 'POST',
+      method: "POST",
     }).then((res) => parseJson<void>(res));
   },
 
@@ -119,8 +116,8 @@ export const consultationApi = {
    */
   async renameTitle(id: string, title: string): Promise<void> {
     await authFetch(`${API_BASE}/conversations/${id}/title`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title }),
     }).then((res) => parseJson<void>(res));
   },
@@ -130,7 +127,7 @@ export const consultationApi = {
    */
   async shareConversation(id: string): Promise<ConversationShare> {
     return authFetch(`${API_BASE}/conversations/${id}/share`, {
-      method: 'POST',
+      method: "POST",
     }).then((res) => parseJson<ConversationShare>(res));
   },
 
@@ -139,7 +136,7 @@ export const consultationApi = {
    */
   async unshareConversation(id: string): Promise<void> {
     await authFetch(`${API_BASE}/conversations/${id}/share`, {
-      method: 'DELETE',
+      method: "DELETE",
     }).then((res) => parseJson<void>(res));
   },
 
@@ -172,45 +169,35 @@ export const consultationApi = {
   },
 
   /**
-   * Update structured health features for a consultation.
-   */
-  async updateHealthFeatures(id: string, healthFeatures: HealthFeatures): Promise<void> {
-    await authFetch(`${API_BASE}/consultations/${id}/health-features`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ health_features: healthFeatures }),
-    }).then((res) => parseJson<void>(res));
-  },
-
-  /**
-   * Confirm a diagnosis.
-   */
-  async confirmDiagnosis(id: string, diagnosis: Diagnosis): Promise<void> {
-    await authFetch(`${API_BASE}/consultations/${id}/confirm`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ diagnosis }),
-    }).then((res) => parseJson<void>(res));
-  },
-
-  /**
    * Trigger AI diagnosis analysis.
    */
   async analyzeDiagnosis(id: string): Promise<DiagnosisAnalysis> {
     return authFetch(`${API_BASE}/consultations/${id}/diagnosis`, {
-      method: 'POST',
+      method: "POST",
     }).then((res) => parseJson<DiagnosisAnalysis>(res));
   },
 
-  /**
-   * Generate a treatment plan.
-   */
-  async generateTreatment(id: string, confirmedDiagnosis: Diagnosis): Promise<TreatmentPlan> {
-    return authFetch(`${API_BASE}/consultations/${id}/treatment`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ confirmedDiagnosis }),
-    }).then((res) => parseJson<TreatmentPlan>(res));
+  /** Persist the user's interpretation of Diagnosis candidates without deleting any candidate. */
+  async assessDiagnosisCandidates(
+    analysisId: string,
+    candidates: Array<{
+      candidate_id: string;
+      state: DiagnosisCandidateAssessmentState;
+    }>,
+  ): Promise<void> {
+    await authFetch(`${API_BASE}/diagnosis-analyses/${analysisId}/assessment`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ candidates }),
+    }).then((res) => parseJson<void>(res));
+  },
+
+  async listDiagnosisHistory(
+    limit = 20,
+  ): Promise<{ analyses: DiagnosisAnalysis[] }> {
+    return authFetch(`${API_BASE}/diagnosis-analyses?limit=${limit}`).then((res) =>
+      parseJson<{ analyses: DiagnosisAnalysis[] }>(res),
+    );
   },
 
   /**
@@ -231,11 +218,12 @@ export const consultationApi = {
     nextAfterSeq: number | null;
   }> {
     const searchParams = new URLSearchParams();
-    if (params?.afterSeq != null) searchParams.set('after_seq', String(params.afterSeq));
-    if (params?.limit != null) searchParams.set('limit', String(params.limit));
+    if (params?.afterSeq != null)
+      searchParams.set("after_seq", String(params.afterSeq));
+    if (params?.limit != null) searchParams.set("limit", String(params.limit));
     const query = searchParams.toString();
     const raw = await authFetch(
-      `${API_BASE}/conversations/${conversationId}/runs/${runId}/events${query ? '?' + query : ''}`,
+      `${API_BASE}/conversations/${conversationId}/runs/${runId}/events${query ? "?" + query : ""}`,
     ).then((res) =>
       parseJson<{
         events: Array<{
@@ -253,13 +241,13 @@ export const consultationApi = {
 
     const events: StreamEvent[] = raw.events.map((item) => {
       const ids =
-        typeof item.ids === 'string'
-          ? (JSON.parse(item.ids) as StreamEvent['ids'])
-          : ((item.ids ?? {}) as StreamEvent['ids']);
+        typeof item.ids === "string"
+          ? (JSON.parse(item.ids) as StreamEvent["ids"])
+          : ((item.ids ?? {}) as StreamEvent["ids"]);
       const payload =
-        typeof item.payload === 'string'
-          ? (JSON.parse(item.payload) as StreamEvent['payload'])
-          : ((item.payload ?? {}) as StreamEvent['payload']);
+        typeof item.payload === "string"
+          ? (JSON.parse(item.payload) as StreamEvent["payload"])
+          : ((item.payload ?? {}) as StreamEvent["payload"]);
       return {
         version: 1,
         seq: item.seq,
@@ -276,9 +264,7 @@ export const consultationApi = {
       nextAfterSeq: raw.nextAfterSeq ?? null,
     };
   },
-  async getInteractionMetrics(
-    conversationId: string,
-  ): Promise<{
+  async getInteractionMetrics(conversationId: string): Promise<{
     total: number;
     answered: number;
     expired: number;
@@ -307,29 +293,10 @@ export const consultationApi = {
     return authFetch(
       `${API_BASE}/consultations/${conversationId}/interrupts/${interactionId}/answers`,
       {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(params),
       },
     );
   },
 };
-
-// Re-export domain types for backward compatibility with existing consumers.
-// Prefer importing from '../types/consultation' in new code.
-export type {
-  ConsultationSession,
-  ConsultationThread,
-  ConsultationPhase,
-  HealthFeatures,
-  Diagnosis,
-  DiagnosisAnalysis,
-  TreatmentPlan,
-  Citation,
-  Conversation,
-  ConversationListResponse,
-  Message,
-  ConversationShare,
-  SharedConversation,
-  StreamEvent,
-} from '../types/consultation';

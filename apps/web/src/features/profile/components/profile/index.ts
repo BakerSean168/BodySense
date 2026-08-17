@@ -1,2 +1,2 @@
-export { ProfileView } from './ProfileView';
-export { ProfileEdit } from './ProfileEdit';
+export { ProfileView } from "./ProfileView";
+export { ProfileEdit } from "./ProfileEdit";

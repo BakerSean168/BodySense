@@ -3,8 +3,8 @@ package service
 import (
 	"context"
 	"errors"
-	"time"
 	"testing"
+	"time"
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"

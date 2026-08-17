@@ -1,11 +1,11 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -13,9 +13,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/Button';
-import type { Conversation } from '../types/consultation';
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/Button";
+import type { Conversation } from "../types/consultation";
 
 interface SessionCardProps {
   conversation: Conversation;
@@ -41,7 +41,7 @@ export function SessionCard({
   onUnshare,
 }: SessionCardProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState('');
+  const [editTitle, setEditTitle] = useState("");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -54,7 +54,7 @@ export function SessionCard({
 
   const handleRename = () => {
     setIsEditing(true);
-    setEditTitle(conversation.title || '新咨询');
+    setEditTitle(conversation.title || "新咨询");
   };
 
   const handleSaveRename = () => {
@@ -68,15 +68,15 @@ export function SessionCard({
     setIsEditing(false);
   };
 
-  const displayTitle = conversation.title || '新咨询';
+  const displayTitle = conversation.title || "新咨询";
 
   return (
     <div
       data-testid={`session-card-${conversation.id}`}
       className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
         isActive
-          ? 'bg-primary-50 text-primary-900'
-          : 'bg-gray-50 hover:bg-gray-100'
+          ? "bg-primary-50 text-primary-900"
+          : "bg-gray-50 hover:bg-gray-100"
       }`}
       onPointerEnter={() => onPrefetch?.()}
       onPointerDown={() => onPrefetch?.()}
@@ -90,14 +90,14 @@ export function SessionCard({
             ref={inputRef}
             type="text"
             value={editTitle}
-            onChange={e => setEditTitle(e.target.value)}
+            onChange={(e) => setEditTitle(e.target.value)}
             onBlur={handleSaveRename}
-            onKeyDown={e => {
-              if (e.key === 'Enter') handleSaveRename();
-              if (e.key === 'Escape') handleCancelRename();
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleSaveRename();
+              if (e.key === "Escape") handleCancelRename();
             }}
             className="w-full bg-white border rounded px-2 py-1 text-sm"
-            onClick={e => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           />
         ) : (
           <span className="text-sm truncate block">{displayTitle}</span>
@@ -107,16 +107,19 @@ export function SessionCard({
       {/* 操作按钮 — hover 时显示 */}
       <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
         <button
-          onClick={e => { e.stopPropagation(); onPin(!conversation.pinned); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onPin(!conversation.pinned);
+          }}
           className="p-1 hover:bg-gray-200 rounded text-xs"
-          title={conversation.pinned ? '取消置顶' : '置顶'}
+          title={conversation.pinned ? "取消置顶" : "置顶"}
         >
           📌
         </button>
 
         <DropdownMenu>
           <DropdownMenuTrigger
-            onClick={e => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
             className="p-1 hover:bg-gray-200 rounded text-xs"
           >
             ⋯
@@ -124,7 +127,9 @@ export function SessionCard({
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={handleRename}>重命名</DropdownMenuItem>
             <DropdownMenuItem onClick={onShare}>复制链接</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onUnshare()}>取消分享</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onUnshare()}>
+              取消分享
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => setShowDeleteDialog(true)}
@@ -146,10 +151,19 @@ export function SessionCard({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+            >
               取消
             </Button>
-            <Button variant="destructive" onClick={() => { onDelete(); setShowDeleteDialog(false); }}>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                onDelete();
+                setShowDeleteDialog(false);
+              }}
+            >
               删除
             </Button>
           </DialogFooter>

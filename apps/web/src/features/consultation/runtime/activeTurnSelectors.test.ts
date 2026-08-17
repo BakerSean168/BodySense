@@ -2,7 +2,7 @@
  * Tests for ActiveTurnSelectors — view model derivation from ActiveTurnState.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from "vitest";
 import {
   selectActiveTurnViewModel,
   selectVisibleToolCalls,
@@ -11,8 +11,11 @@ import {
   selectIsComposerLocked,
   selectHasVisibleContent,
   selectHasRenderableContent,
-} from './activeTurnSelectors';
-import { INITIAL_ACTIVE_TURN_STATE, type ActiveTurnState } from './activeTurnReducer';
+} from "./activeTurnSelectors";
+import {
+  INITIAL_ACTIVE_TURN_STATE,
+  type ActiveTurnState,
+} from "./activeTurnReducer";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -26,109 +29,151 @@ function stateWith(overrides: Partial<ActiveTurnState> = {}): ActiveTurnState {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('activeTurnSelectors', () => {
-  describe('selectVisibleToolCalls', () => {
-    it('returns empty array for empty state', () => {
+describe("activeTurnSelectors", () => {
+  describe("selectVisibleToolCalls", () => {
+    it("returns empty array for empty state", () => {
       expect(selectVisibleToolCalls(INITIAL_ACTIVE_TURN_STATE)).toEqual([]);
     });
 
-    it('filters out ask_user tools', () => {
+    it("filters out ask_user tools", () => {
       const state = stateWith({
         toolCallsById: {
-          'tc-1': { id: 'tc-1', tool: 'search_knowledge', args: { query: 'back' }, status: 'running' },
-          'tc-2': { id: 'tc-2', tool: 'ask_user', args: { question: 'age?' }, status: 'running' },
+          "tc-1": {
+            id: "tc-1",
+            tool: "search_knowledge",
+            args: { query: "back" },
+            status: "running",
+          },
+          "tc-2": {
+            id: "tc-2",
+            tool: "ask_user",
+            args: { question: "age?" },
+            status: "running",
+          },
         },
       });
       const result = selectVisibleToolCalls(state);
       expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('tc-1');
+      expect(result[0].id).toBe("tc-1");
     });
 
-    it('sorts running tools before completed', () => {
+    it("sorts running tools before completed", () => {
       const state = stateWith({
         toolCallsById: {
-          'tc-a': { id: 'tc-a', tool: 'search_knowledge', args: { query: 'a' }, status: 'completed', result: {} },
-          'tc-b': { id: 'tc-b', tool: 'search_knowledge', args: { query: 'b' }, status: 'running' },
-          'tc-c': { id: 'tc-c', tool: 'extract_symptom_info', args: { body_part: 'c' }, status: 'completed', result: {} },
+          "tc-a": {
+            id: "tc-a",
+            tool: "search_knowledge",
+            args: { query: "a" },
+            status: "completed",
+            result: {},
+          },
+          "tc-b": {
+            id: "tc-b",
+            tool: "search_knowledge",
+            args: { query: "b" },
+            status: "running",
+          },
+          "tc-c": {
+            id: "tc-c",
+            tool: "extract_symptom_info",
+            args: { body_part: "c" },
+            status: "completed",
+            result: {},
+          },
         },
       });
       const result = selectVisibleToolCalls(state);
       expect(result).toHaveLength(3);
-      expect(result[0].status).toBe('running');
-      expect(result[1].status).toBe('completed');
-      expect(result[2].status).toBe('completed');
+      expect(result[0].status).toBe("running");
+      expect(result[1].status).toBe("completed");
+      expect(result[2].status).toBe("completed");
     });
   });
 
-  describe('selectStreamingMarkdown', () => {
-    it('returns the text field', () => {
-      const state = stateWith({ text: '# Hello\n\nWorld' });
-      expect(selectStreamingMarkdown(state)).toBe('# Hello\n\nWorld');
+  describe("selectStreamingMarkdown", () => {
+    it("returns the text field", () => {
+      const state = stateWith({ text: "# Hello\n\nWorld" });
+      expect(selectStreamingMarkdown(state)).toBe("# Hello\n\nWorld");
     });
   });
 
-  describe('selectIsInterrupted', () => {
-    it('returns true when status is interrupted', () => {
-      expect(selectIsInterrupted(stateWith({ status: 'interrupted' }))).toBe(true);
+  describe("selectIsInterrupted", () => {
+    it("returns true when status is interrupted", () => {
+      expect(selectIsInterrupted(stateWith({ status: "interrupted" }))).toBe(
+        true,
+      );
     });
 
-    it('returns false when status is streaming', () => {
-      expect(selectIsInterrupted(stateWith({ status: 'streaming' }))).toBe(false);
-    });
-  });
-
-  describe('selectIsComposerLocked', () => {
-    it('returns true while streaming', () => {
-      expect(selectIsComposerLocked(stateWith({ status: 'streaming' }))).toBe(true);
-    });
-
-    it('returns true while interrupted', () => {
-      expect(selectIsComposerLocked(stateWith({ status: 'interrupted' }))).toBe(true);
-    });
-
-    it('returns false after the turn is completed', () => {
-      expect(selectIsComposerLocked(stateWith({ status: 'completed' }))).toBe(false);
+    it("returns false when status is streaming", () => {
+      expect(selectIsInterrupted(stateWith({ status: "streaming" }))).toBe(
+        false,
+      );
     });
   });
 
-  describe('selectHasVisibleContent', () => {
-    it('returns false for empty state', () => {
+  describe("selectIsComposerLocked", () => {
+    it("returns true while streaming", () => {
+      expect(selectIsComposerLocked(stateWith({ status: "streaming" }))).toBe(
+        true,
+      );
+    });
+
+    it("returns true while interrupted", () => {
+      expect(selectIsComposerLocked(stateWith({ status: "interrupted" }))).toBe(
+        true,
+      );
+    });
+
+    it("returns false after the turn is completed", () => {
+      expect(selectIsComposerLocked(stateWith({ status: "completed" }))).toBe(
+        false,
+      );
+    });
+  });
+
+  describe("selectHasVisibleContent", () => {
+    it("returns false for empty state", () => {
       expect(selectHasVisibleContent(INITIAL_ACTIVE_TURN_STATE)).toBe(false);
     });
 
-    it('returns true when text is non-empty', () => {
-      expect(selectHasVisibleContent(stateWith({ text: 'Hello' }))).toBe(true);
+    it("returns true when text is non-empty", () => {
+      expect(selectHasVisibleContent(stateWith({ text: "Hello" }))).toBe(true);
     });
 
-    it('returns true when tool calls exist', () => {
+    it("returns true when tool calls exist", () => {
       expect(
         selectHasVisibleContent(
           stateWith({
             toolCallsById: {
-              'tc-1': { id: 'tc-1', tool: 'search', args: {}, status: 'running' },
+              "tc-1": {
+                id: "tc-1",
+                tool: "search",
+                args: {},
+                status: "running",
+              },
             },
           }),
         ),
       ).toBe(true);
     });
 
-    it('returns true for a pending interaction even without bubble content', () => {
+    it("returns true for a pending interaction even without bubble content", () => {
       expect(
         selectHasVisibleContent(
           stateWith({
             pendingInteraction: {
-              id: 'ia-1',
-              run_id: 'run-1',
-              conversation_id: 'conv-1',
-              tool_call_id: 'tc-1',
-              tool_name: 'ask_user',
+              id: "ia-1",
+              run_id: "run-1",
+              conversation_id: "conv-1",
+              tool_call_id: "tc-1",
+              tool_name: "ask_user",
               question: {
-                question: '是否有颈肩不适？',
-                answer_type: 'single_choice',
-                options: ['有', '无'],
+                question: "是否有颈肩不适？",
+                answer_type: "single_choice",
+                options: ["有", "无"],
               },
-              status: 'pending',
-              created_at: '2026-07-06T00:00:00Z',
+              status: "pending",
+              created_at: "2026-07-06T00:00:00Z",
             },
           }),
         ),
@@ -136,27 +181,32 @@ describe('activeTurnSelectors', () => {
     });
   });
 
-  describe('selectHasRenderableContent', () => {
-    it('returns false for ask_user-only active turns', () => {
+  describe("selectHasRenderableContent", () => {
+    it("returns false for ask_user-only active turns", () => {
       expect(
         selectHasRenderableContent(
           stateWith({
             pendingInteraction: {
-              id: 'ia-1',
-              run_id: 'run-1',
-              conversation_id: 'conv-1',
-              tool_call_id: 'tc-1',
-              tool_name: 'ask_user',
+              id: "ia-1",
+              run_id: "run-1",
+              conversation_id: "conv-1",
+              tool_call_id: "tc-1",
+              tool_name: "ask_user",
               question: {
-                question: '是否有颈肩不适？',
-                answer_type: 'single_choice',
-                options: ['有', '无'],
+                question: "是否有颈肩不适？",
+                answer_type: "single_choice",
+                options: ["有", "无"],
               },
-              status: 'pending',
-              created_at: '2026-07-06T00:00:00Z',
+              status: "pending",
+              created_at: "2026-07-06T00:00:00Z",
             },
             toolCallsById: {
-              'tc-1': { id: 'tc-1', tool: 'ask_user', args: { question: '是否有颈肩不适？' }, status: 'running' },
+              "tc-1": {
+                id: "tc-1",
+                tool: "ask_user",
+                args: { question: "是否有颈肩不适？" },
+                status: "running",
+              },
             },
           }),
         ),
@@ -164,25 +214,30 @@ describe('activeTurnSelectors', () => {
     });
   });
 
-  describe('selectActiveTurnViewModel', () => {
-    it('combines all selectors into a single view model', () => {
+  describe("selectActiveTurnViewModel", () => {
+    it("combines all selectors into a single view model", () => {
       const state = stateWith({
-        text: 'Hello',
-        status: 'streaming',
+        text: "Hello",
+        status: "streaming",
         toolCallsById: {
-          'tc-1': { id: 'tc-1', tool: 'search_knowledge', args: { query: 'x' }, status: 'running' },
+          "tc-1": {
+            id: "tc-1",
+            tool: "search_knowledge",
+            args: { query: "x" },
+            status: "running",
+          },
         },
         citationsByKey: {
-          'Guide': { title: 'Guide', summary: 'A guide' },
+          Guide: { title: "Guide", summary: "A guide" },
         },
         knowledgeGapsByKey: {
-          'posture': { query: 'posture', message: 'Not found' },
+          posture: { query: "posture", message: "Not found" },
         },
       });
 
       const vm = selectActiveTurnViewModel(state);
 
-      expect(vm.streamingMarkdown).toBe('Hello');
+      expect(vm.streamingMarkdown).toBe("Hello");
       expect(vm.toolCalls).toHaveLength(1);
       expect(vm.citations).toHaveLength(1);
       expect(vm.knowledgeGaps).toHaveLength(1);

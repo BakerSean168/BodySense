@@ -1,3 +1,13 @@
+CREATE EXTENSION IF NOT EXISTS vector;
+
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
 CREATE TABLE IF NOT EXISTS knowledge_sources (
     id BIGSERIAL PRIMARY KEY,
     source_key VARCHAR(200) NOT NULL UNIQUE,

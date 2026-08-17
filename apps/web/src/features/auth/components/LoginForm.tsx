@@ -1,15 +1,15 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router';
-import { useAuthStore } from '@/stores/authStore';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { useAuthStore } from "@/stores/authStore";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
 export function LoginForm() {
   const navigate = useNavigate();
   const { login, isLoading, error, clearError } = useAuthStore();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [validationErrors, setValidationErrors] = useState<{
     email?: string;
     password?: string;
@@ -19,13 +19,13 @@ export function LoginForm() {
     const errors: { email?: string; password?: string } = {};
 
     if (!email) {
-      errors.email = '请输入邮箱地址';
+      errors.email = "请输入邮箱地址";
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-      errors.email = '邮箱格式不正确';
+      errors.email = "邮箱格式不正确";
     }
 
     if (!password) {
-      errors.password = '请输入密码';
+      errors.password = "请输入密码";
     }
 
     setValidationErrors(errors);
@@ -40,7 +40,7 @@ export function LoginForm() {
 
     try {
       await login(email, password);
-      navigate('/dashboard');
+      navigate("/dashboard");
     } catch {
       // Error is handled by the store
     }

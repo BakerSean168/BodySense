@@ -1,33 +1,34 @@
-import type { ThreadAssistantMessagePart, ThreadMessageLike } from '@assistant-ui/react';
+import type {
+  ThreadAssistantMessagePart,
+  ThreadMessageLike,
+} from "@assistant-ui/react";
 import type {
   InteractionHistoryItem,
   Message,
   MessagePart,
   PendingInteraction,
   StreamEvent,
-} from '../types/consultation';
+} from "../types/consultation";
 import {
   INITIAL_ACTIVE_TURN_STATE,
   reduceActiveTurnEvent,
   type ActiveTurnState,
-} from './activeTurnReducer';
+} from "./activeTurnReducer";
 
-type ToolCallPartLike = Extract<MessagePart, { type: 'tool-call' | 'tool_call' }>;
-type ToolResultPartLike = Extract<MessagePart, { type: 'tool-result' | 'tool_result' }>;
 type JsonPrimitive = string | number | boolean | null;
 type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
 type JsonObject = { [key: string]: JsonValue };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function isJsonValue(value: unknown): value is JsonValue {
   if (
     value === null ||
-    typeof value === 'string' ||
-    typeof value === 'number' ||
-    typeof value === 'boolean'
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
   ) {
     return true;
   }
@@ -75,103 +76,70 @@ function asProviderMetadata(
   return Object.keys(result).length > 0 ? result : undefined;
 }
 
-function getToolName(part: ToolCallPartLike | ToolResultPartLike): string {
-  const toolName = 'toolName' in part ? part.toolName : undefined;
-  return toolName ?? part.tool ?? 'unknown_tool';
-}
-
-function getToolCallId(part: ToolCallPartLike | ToolResultPartLike): string | undefined {
-  const toolCallId = 'toolCallId' in part ? part.toolCallId : undefined;
-  return toolCallId ?? part.tool_call_id ?? undefined;
-}
-
 function normalizeAssistantParts(
   message: Message,
 ): ThreadAssistantMessagePart[] {
   const normalized: ThreadAssistantMessagePart[] = [];
   const runningToolPartIndexById = new Map<string, number>();
-  let legacyToolCounter = 0;
-
-  const findLatestOpenToolByName = (toolName: string): number | undefined => {
-    for (let index = normalized.length - 1; index >= 0; index -= 1) {
-      const part = normalized[index];
-      if (part?.type !== 'tool-call') continue;
-      if (part.toolName !== toolName) continue;
-      if (part.result !== undefined) continue;
-      return index;
-    }
-    return undefined;
-  };
-
   for (const part of message.parts) {
     switch (part.type) {
-      case 'text': {
+      case "text": {
         if (!part.text) continue;
         const previous = normalized[normalized.length - 1];
-        if (previous?.type === 'text') {
+        if (previous?.type === "text") {
           normalized[normalized.length - 1] = {
             ...previous,
             text: `${previous.text}${part.text}`,
           };
         } else {
-          normalized.push({ type: 'text', text: part.text });
+          normalized.push({ type: "text", text: part.text });
         }
         break;
       }
 
-      case 'source': {
+      case "source": {
         normalized.push({
-          type: 'source',
-          sourceType: 'url',
+          type: "source",
+          sourceType: "url",
           id: part.id ?? `src-${message.id}-${normalized.length}`,
           title: part.title,
-          url: part.url ?? '',
+          url: part.url ?? "",
           providerMetadata: asProviderMetadata(part.providerMetadata),
         });
         break;
       }
 
-      case 'data': {
+      case "data": {
         normalized.push({
-          type: 'data',
+          type: "data",
           name: part.name,
           data: part.data,
         });
         break;
       }
 
-      case 'tool-call':
-      case 'tool_call': {
-        const toolName = getToolName(part);
-        const toolCallId =
-          getToolCallId(part) ?? `legacy-tool-${message.id}-${legacyToolCounter++}`;
+      case "tool-call": {
         const args = asJsonObject(part.args);
         normalized.push({
-          type: 'tool-call',
-          toolCallId,
-          toolName,
+          type: "tool-call",
+          toolCallId: part.toolCallId,
+          toolName: part.toolName,
           args,
           argsText:
-            typeof part.argsText === 'string' ? part.argsText : JSON.stringify(args),
+            typeof part.argsText === "string"
+              ? part.argsText
+              : JSON.stringify(args),
         });
-        runningToolPartIndexById.set(toolCallId, normalized.length - 1);
+        runningToolPartIndexById.set(part.toolCallId, normalized.length - 1);
         break;
       }
 
-      case 'tool-result':
-      case 'tool_result': {
-        const toolName = getToolName(part);
-        const toolCallId = getToolCallId(part);
-        const exactIndex = toolCallId
-          ? runningToolPartIndexById.get(toolCallId)
-          : undefined;
-        const fallbackIndex =
-          exactIndex ?? findLatestOpenToolByName(toolName);
-
-        if (fallbackIndex !== undefined) {
-          const existing = normalized[fallbackIndex];
-          if (existing?.type === 'tool-call') {
-            normalized[fallbackIndex] = {
+      case "tool-result": {
+        const toolPartIndex = runningToolPartIndexById.get(part.toolCallId);
+        if (toolPartIndex !== undefined) {
+          const existing = normalized[toolPartIndex];
+          if (existing?.type === "tool-call") {
+            normalized[toolPartIndex] = {
               ...existing,
               result: part.result,
             };
@@ -180,12 +148,11 @@ function normalizeAssistantParts(
         }
 
         normalized.push({
-          type: 'tool-call',
-          toolCallId:
-            toolCallId ?? `legacy-tool-result-${message.id}-${legacyToolCounter++}`,
-          toolName,
+          type: "tool-call",
+          toolCallId: part.toolCallId,
+          toolName: part.toolName,
           args: {},
-          argsText: '',
+          argsText: "",
           result: part.result,
         });
         break;
@@ -196,39 +163,38 @@ function normalizeAssistantParts(
   return normalized;
 }
 
-function toAssistantStatus(message: Message): ThreadMessageLike['status'] {
+function toAssistantStatus(message: Message): ThreadMessageLike["status"] {
   switch (message.status) {
-    case 'completed':
-      return { type: 'complete', reason: 'stop' };
-    case 'failed':
+    case "completed":
+      return { type: "complete", reason: "stop" };
+    case "failed":
       return {
-        type: 'incomplete',
-        reason: 'error',
+        type: "incomplete",
+        reason: "error",
         error: message.error
           ? {
               code: message.error.code,
               message: message.error.message,
             }
-          : { message: 'message failed' },
+          : { message: "message failed" },
       };
-    case 'aborted':
-      return { type: 'incomplete', reason: 'cancelled' };
-    case 'streaming':
-    case 'submitted':
-      return { type: 'running' };
+    case "aborted":
+      return { type: "incomplete", reason: "cancelled" };
+    case "streaming":
+    case "submitted":
+      return { type: "running" };
     default:
-      return { type: 'complete', reason: 'unknown' };
+      return { type: "complete", reason: "unknown" };
   }
 }
 
 export function toInitialThreadMessage(message: Message): ThreadMessageLike {
-  const sourceMetadata =
-    isRecord(message.metadata) ? message.metadata : {};
+  const sourceMetadata = isRecord(message.metadata) ? message.metadata : {};
 
-  if (message.role === 'assistant') {
+  if (message.role === "assistant") {
     return {
       id: message.id,
-      role: 'assistant',
+      role: "assistant",
       content: normalizeAssistantParts(message),
       status: toAssistantStatus(message),
       createdAt: new Date(message.created_at),
@@ -244,13 +210,16 @@ export function toInitialThreadMessage(message: Message): ThreadMessageLike {
 
   return {
     id: message.id,
-    role: message.role === 'system' ? 'system' : 'user',
+    role: message.role === "system" ? "system" : "user",
     content:
       message.content_text ||
       message.parts
-        .filter((part): part is Extract<MessagePart, { type: 'text' }> => part.type === 'text')
+        .filter(
+          (part): part is Extract<MessagePart, { type: "text" }> =>
+            part.type === "text",
+        )
         .map((part) => part.text)
-        .join(''),
+        .join(""),
     createdAt: new Date(message.created_at),
     metadata: {
       custom: {
@@ -262,16 +231,20 @@ export function toInitialThreadMessage(message: Message): ThreadMessageLike {
   };
 }
 
-export function toInitialThreadMessages(messages: readonly Message[]): ThreadMessageLike[] {
+export function toInitialThreadMessages(
+  messages: readonly Message[],
+): ThreadMessageLike[] {
   return messages.map(toInitialThreadMessage);
 }
 
-function toInteractionHistoryMessage(interaction: InteractionHistoryItem): ThreadMessageLike {
+function toInteractionHistoryMessage(
+  interaction: InteractionHistoryItem,
+): ThreadMessageLike {
   return {
     id: `interaction-${interaction.id}`,
-    role: 'assistant',
+    role: "assistant",
     content: [],
-    status: { type: 'complete', reason: 'stop' },
+    status: { type: "complete", reason: "stop" },
     createdAt: new Date(interaction.answered_at || interaction.created_at),
     metadata: {
       custom: {
@@ -289,7 +262,7 @@ export function toInitialThreadTimeline(
   const timeline = [
     ...messages.map(toInitialThreadMessage),
     ...interactionHistory
-      .filter((interaction) => interaction.status !== 'pending')
+      .filter((interaction) => interaction.status !== "pending")
       .map(toInteractionHistoryMessage),
   ];
 
@@ -321,7 +294,10 @@ export function buildActiveTurnSeedFromRuntimeEvents(
     activeTurn = reduceActiveTurnEvent(activeTurn, event).state;
   }
 
-  if (activeTurn.status !== 'streaming' && activeTurn.status !== 'interrupted') {
+  if (
+    activeTurn.status !== "streaming" &&
+    activeTurn.status !== "interrupted"
+  ) {
     return null;
   }
 
@@ -334,7 +310,10 @@ export function buildActiveTurnSeedFromRuntimeEvents(
     activeTurn = {
       ...activeTurn,
       pendingInteraction: projectedPending,
-      status: projectedPending.status === 'pending' ? 'interrupted' : activeTurn.status,
+      status:
+        projectedPending.status === "pending"
+          ? "interrupted"
+          : activeTurn.status,
     };
   }
 
@@ -355,7 +334,9 @@ function selectProjectedPendingInteraction(
   }
 
   if (interactionId) {
-    const exact = pending.find((interaction) => interaction.id === interactionId);
+    const exact = pending.find(
+      (interaction) => interaction.id === interactionId,
+    );
     if (exact) {
       return exact;
     }
@@ -370,7 +351,10 @@ function selectProjectedPendingInteraction(
     }
   }
 
-  return pending
-    .filter((interaction) => interaction.status === 'pending')
-    .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0] ?? null;
+  return (
+    pending
+      .filter((interaction) => interaction.status === "pending")
+      .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0] ??
+    null
+  );
 }

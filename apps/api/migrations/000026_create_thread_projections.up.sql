@@ -12,8 +12,6 @@ CREATE TABLE thread_projections (
     metadata                 JSONB NOT NULL DEFAULT '{}',
     phase                    VARCHAR(30) NOT NULL DEFAULT 'collecting',
     extracted_info           JSONB NOT NULL DEFAULT '[]',
-    diagnosis                JSONB,
-    treatment_plan           JSONB,
     pending_interactions     JSONB NOT NULL DEFAULT '[]',
     conversation_created_at  TIMESTAMPTZ NOT NULL,
     conversation_updated_at  TIMESTAMPTZ NOT NULL,

@@ -1,4 +1,5 @@
 """OpenAI-compatible provider implementation."""
+
 from __future__ import annotations
 
 import json
@@ -62,7 +63,7 @@ class OpenAICompatibleProvider:
         except openai.RateLimitError as e:
             raise RateLimitError(str(e)) from e
         except openai.APIError as e:
-            raise ProviderError(str(e), status_code=e.status_code) from e
+            raise ProviderError(str(e), status_code=getattr(e, "status_code", None)) from e
 
         choice = response.choices[0]
         tool_calls = None
@@ -110,7 +111,7 @@ class OpenAICompatibleProvider:
         except openai.RateLimitError as e:
             raise RateLimitError(str(e)) from e
         except openai.APIError as e:
-            raise ProviderError(str(e), status_code=e.status_code) from e
+            raise ProviderError(str(e), status_code=getattr(e, "status_code", None)) from e
 
         # Accumulate tool call state
         tool_call_accumulators: dict[int, dict] = {}
@@ -188,7 +189,7 @@ class OpenAICompatibleProvider:
         except openai.RateLimitError as e:
             raise RateLimitError(str(e)) from e
         except openai.APIError as e:
-            raise ProviderError(str(e), status_code=e.status_code) from e
+            raise ProviderError(str(e), status_code=getattr(e, "status_code", None)) from e
 
     async def health_check(self) -> bool:
         try:
@@ -244,9 +245,11 @@ class OpenAICompatibleProvider:
                         tc.function.name,
                         e,
                     )
-            result.append(ToolCall(
-                id=tc.id,
-                name=tc.function.name,
-                arguments=args,
-            ))
+            result.append(
+                ToolCall(
+                    id=tc.id,
+                    name=tc.function.name,
+                    arguments=args,
+                )
+            )
         return result

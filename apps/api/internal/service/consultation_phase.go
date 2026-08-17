@@ -1,24 +1,13 @@
 package service
 
-// ConsultationPhaseRank defines the ordering of consultation workflow phases.
-// Higher rank means a later phase. Phase transitions are only allowed to
-// equal or higher rank (no regression).
-//
-// Phase definitions (must match frontend ConsultationPhase type):
-//   - collecting:           symptom information gathering
-//   - ready_for_analysis:   enough info collected, can request diagnosis
-//   - analysis_ready:       diagnosis generated, awaiting user confirmation
-//   - diagnosis_confirmed:  user confirmed a diagnosis candidate
-//   - plan_ready:           treatment plan generated
-//   - completed:            session ended
+// ConsultationPhaseRank orders the only phases owned by Consultation.
+// Diagnosis assessment, Treatment and longitudinal monitoring are separate
+// durable domains and must not be encoded as later consultation phases.
 var ConsultationPhaseRank = map[string]int{
-	"":                    -1,
-	"collecting":          0,
-	"ready_for_analysis":  1,
-	"analysis_ready":      2,
-	"diagnosis_confirmed": 3,
-	"plan_ready":          4,
-	"completed":           5,
+	"":                   -1,
+	"collecting":         0,
+	"ready_for_analysis": 1,
+	"analysis_ready":     2,
 }
 
 // ShouldAdvancePhase returns true when transitioning from current to next

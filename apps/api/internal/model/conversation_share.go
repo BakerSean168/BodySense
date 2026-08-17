@@ -13,7 +13,6 @@ type ConversationShare struct {
 	ConversationID   uuid.UUID      `gorm:"type:uuid;not null;index" json:"conversation_id"`
 	ShareToken       string         `gorm:"type:varchar(32);uniqueIndex;not null" json:"share_token"`
 	SnapshotMessages datatypes.JSON `gorm:"type:jsonb;not null" json:"snapshot_messages"`
-	SnapshotMetadata datatypes.JSON `gorm:"type:jsonb" json:"snapshot_metadata,omitempty"`
 	SnapshotTitle    string         `gorm:"type:varchar(200)" json:"snapshot_title,omitempty"`
 	CreatedAt        time.Time      `gorm:"not null;default:now()" json:"created_at"`
 }

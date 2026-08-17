@@ -311,12 +311,7 @@ def compute_frontal_metrics(landmarks: dict[int, Landmark], view: str) -> list[G
             )
 
     # Spine midline offset: mid-shoulders vs mid-hips horizontal distance.
-    if (
-        _visible(left_sh)
-        and _visible(right_sh)
-        and _visible(left_hip)
-        and _visible(right_hip)
-    ):
+    if _visible(left_sh) and _visible(right_sh) and _visible(left_hip) and _visible(right_hip):
         mid_sh = _midpoint(left_sh, right_sh)  # type: ignore[arg-type]
         mid_hip = _midpoint(left_hip, right_hip)  # type: ignore[arg-type]
         offset = abs(mid_sh.x - mid_hip.x)
@@ -433,8 +428,10 @@ def mediapipe_available() -> bool:
         return _landmarker is not None
     _mp_import_attempted = True
     try:
-        from mediapipe.tasks.python import vision
-        from mediapipe.tasks.python.core import base_options as base_options_module
+        from mediapipe.tasks.python import vision  # pyright: ignore[reportMissingImports]
+        from mediapipe.tasks.python.core import (  # pyright: ignore[reportMissingImports]
+            base_options as base_options_module,
+        )
 
         model_path = _pose_model_path()
         options = vision.PoseLandmarkerOptions(
@@ -462,7 +459,9 @@ def extract_landmarks(image_bytes: bytes) -> dict[int, Landmark] | None:
 
     try:
         import numpy as np  # type: ignore
-        from mediapipe.tasks.python.vision.core import image as mp_image_module
+        from mediapipe.tasks.python.vision.core import (  # pyright: ignore[reportMissingImports]
+            image as mp_image_module,
+        )
     except Exception as exc:  # noqa: BLE001
         logger.info("numpy/mediapipe image helpers missing: %s", exc)
         return None
@@ -491,9 +490,7 @@ def extract_landmarks(image_bytes: bytes) -> dict[int, Landmark] | None:
         out: dict[int, Landmark] = {}
         for idx, lm in enumerate(pose):
             visibility = float(
-                getattr(lm, "visibility", None)
-                or getattr(lm, "presence", None)
-                or 1.0
+                getattr(lm, "visibility", None) or getattr(lm, "presence", None) or 1.0
             )
             out[idx] = Landmark(x=float(lm.x), y=float(lm.y), visibility=visibility)
         return out

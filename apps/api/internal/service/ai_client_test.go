@@ -42,7 +42,7 @@ func TestChatStreamSendsFlatPythonRequestAndParsesStreamEvent(t *testing.T) {
 			},
 			BusinessContext: ConsultationBusinessContext{
 				Profile: json.RawMessage(`{"age":30}`),
-				ConsultationSnapshot: ConsultationSnapshot{
+				RuntimeState: ConsultationRuntimeState{
 					Phase:         "collecting",
 					ExtractedInfo: json.RawMessage(`[]`),
 				},
@@ -72,18 +72,21 @@ func TestChatStreamSendsFlatPythonRequestAndParsesStreamEvent(t *testing.T) {
 	}
 }
 
-func TestGenerateTreatmentSendsConfirmedDiagnosis(t *testing.T) {
+func TestAnalyzeDiagnosisSendsPythonContract(t *testing.T) {
 	var captured map[string]any
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/diagnosis/treatment" {
+		if r.URL.Path != "/api/diagnosis/analyze" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		if r.Method != http.MethodPost {
+			t.Fatalf("expected POST, got %s", r.Method)
 		}
 		if err := json.NewDecoder(r.Body).Decode(&captured); err != nil {
 			t.Fatalf("decode request: %v", err)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"treatment_plan":{"goal":"test"}}`))
+		_, _ = w.Write([]byte(`{"candidates":[{"name":"头前伸倾向","confidence":"中","severity":"轻度","basis":"久坐后颈肩酸胀","typical_symptoms":"颈肩酸胀"}],"governance":{"verdict":"accepted","kind":"diagnosis","reasons":[],"issues":[]}}`))
 	}))
 	defer server.Close()
 
@@ -92,19 +95,39 @@ func TestGenerateTreatmentSendsConfirmedDiagnosis(t *testing.T) {
 		baseURL:    server.URL,
 	}
 
-	_, err := client.GenerateTreatment(context.Background(), TreatmentRequest{
-		ConfirmedDiagnosis: json.RawMessage(`{"name":"头前伸"}`),
-		ExtractedInfo:      json.RawMessage(`[]`),
-		UseCase:            "llm.json",
+	result, err := client.AnalyzeDiagnosis(context.Background(), DiagnosisRequest{
+		UserID:            "user-1",
+		BodyStateRevision: 12,
+		BodyState:         json.RawMessage(`{"current_revision":12,"facts":[{"id":"fact-1","kind":"discomfort","value":"颈肩酸胀"}],"observations":[]}`),
+		RelevantHistory:   json.RawMessage(`[{"revision":11,"change_type":"fact.temporal_changed"}]`),
+		Profile:           json.RawMessage(`{"age":30,"occupation":"程序员"}`),
+		UseCase:           "llm.json",
 	})
 	if err != nil {
-		t.Fatalf("GenerateTreatment returned error: %v", err)
+		t.Fatalf("AnalyzeDiagnosis returned error: %v", err)
 	}
 
-	if _, ok := captured["confirmed_diagnosis"]; !ok {
-		t.Fatalf("missing confirmed_diagnosis in request: %#v", captured)
-	}
 	if captured["use_case"] != "llm.json" {
 		t.Fatalf("expected use_case llm.json, got %#v", captured["use_case"])
+	}
+	if captured["body_state_revision"] != float64(12) {
+		t.Fatalf("unexpected body_state_revision: %#v", captured["body_state_revision"])
+	}
+
+	for _, key := range []string{"user_id", "body_state", "relevant_history", "profile"} {
+		if _, ok := captured[key]; !ok {
+			t.Fatalf("missing %s in request: %#v", key, captured)
+		}
+	}
+
+	var response map[string]any
+	if err := json.Unmarshal(result, &response); err != nil {
+		t.Fatalf("AnalyzeDiagnosis returned invalid JSON: %v", err)
+	}
+	if _, ok := response["candidates"]; !ok {
+		t.Fatalf("missing candidates in response: %#v", response)
+	}
+	if governance, ok := response["governance"].(map[string]any); !ok || governance["verdict"] != "accepted" {
+		t.Fatalf("expected accepted governance response, got %#v", response["governance"])
 	}
 }

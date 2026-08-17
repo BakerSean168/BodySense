@@ -1,15 +1,17 @@
 interface AppShellSkeletonProps {
-  variant?: 'default' | 'consultation';
+  variant?: "default" | "consultation";
 }
 
 function SkeletonBlock({ className }: { className: string }) {
-  return <div className={`animate-pulse rounded-2xl bg-[#E9E6DF] ${className}`} />;
+  return (
+    <div className={`animate-pulse rounded-2xl bg-[#E9E6DF] ${className}`} />
+  );
 }
 
 export function AppShellSkeleton({
-  variant = 'default',
+  variant = "default",
 }: AppShellSkeletonProps) {
-  const isConsultation = variant === 'consultation';
+  const isConsultation = variant === "consultation";
 
   return (
     <div
@@ -57,7 +59,10 @@ export function AppShellSkeleton({
                   <div className="space-y-3">
                     <SkeletonBlock className="h-10 w-full rounded-full" />
                     {Array.from({ length: 6 }).map((_, index) => (
-                      <SkeletonBlock key={index} className="h-14 w-full rounded-2xl" />
+                      <SkeletonBlock
+                        key={index}
+                        className="h-14 w-full rounded-2xl"
+                      />
                     ))}
                   </div>
                 </div>

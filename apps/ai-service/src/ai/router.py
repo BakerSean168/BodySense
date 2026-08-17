@@ -1,4 +1,5 @@
 """Model router with circuit breaker."""
+
 from __future__ import annotations
 
 import logging
@@ -40,9 +41,7 @@ class ModelRouter:
             return False
         return True
 
-    def select(
-        self, use_case: str, required_capabilities: set[str] | None = None
-    ) -> AiProvider:
+    def select(self, use_case: str, required_capabilities: set[str] | None = None) -> AiProvider:
         """Select a provider for the given use_case."""
         route = self._config.routes.get(use_case)
         if not route:
@@ -86,7 +85,7 @@ class ModelRouter:
         _, prev_count = self._circuit_breaker.get(key, (0.0, 0))
         new_count = prev_count + 1
         # Exponential backoff: 60s, 120s, 240s, capped at 480s
-        cooldown = min(_COOLDOWN_BASE * (2 ** prev_count), _COOLDOWN_MAX)
+        cooldown = min(_COOLDOWN_BASE * (2**prev_count), _COOLDOWN_MAX)
         self._circuit_breaker[key] = (time.monotonic() + cooldown, new_count)
         logger.warning(
             "Circuit breaker tripped for %s (failure #%d, cooldown=%.0fs)",

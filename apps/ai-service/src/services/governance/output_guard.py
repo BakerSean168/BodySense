@@ -53,6 +53,7 @@ class AIOutputGuard:
 
         # Red flag check on serialized output
         import json
+
         output_text = json.dumps(output, ensure_ascii=False)
         issues.extend(check_red_flags(output_text, ctx))
 
