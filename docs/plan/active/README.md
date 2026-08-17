@@ -1,11 +1,14 @@
 # Active Plans
 
-There is currently no unfinished migration plan in this directory.
+The longitudinal backend domain refactor completed on 2026-08-16. The active implementation effort is now the React desktop workbench refactor:
 
-The longitudinal domain refactor and hardening work completed on 2026-08-16. The authoritative implementation description is:
+- [`react-desktop-workbench-refactor-2026-08-17.md`](./react-desktop-workbench-refactor-2026-08-17.md)
+- UI/UX source of truth: [`../../architecture/web-desktop-workbench-ui-ux.md`](../../architecture/web-desktop-workbench-ui-ux.md)
+
+Backend business architecture remains authoritative in:
 
 - [`../../architecture/current-longitudinal-system.md`](../../architecture/current-longitudinal-system.md)
 - [`../../architecture/longitudinal-body-state-domain.md`](../../architecture/longitudinal-body-state-domain.md)
 - [`../../adr/0004-adopt-longitudinal-body-state-model.md`](../../adr/0004-adopt-longitudinal-body-state-model.md)
 
-Completed plans, checkpoints and superseded designs are preserved under [`../archive/2026-08-longitudinal-refactor`](../archive/2026-08-longitudinal-refactor) for learning and audit only. They are not instructions for current implementation.
+Completed plans, checkpoints and superseded designs remain under [`../archive`](../archive) for learning and audit only.

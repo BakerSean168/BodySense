@@ -8,6 +8,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AppShellSkeleton } from "./components/layout/AppShellSkeleton";
 import { Toaster } from "./components/ui/sonner";
 import { queryClient } from "./lib/queryClient";
+import { ThemeProvider } from "./components/theme/ThemeProvider";
 
 const DashboardPage = lazy(() =>
   import("./pages/DashboardPage").then((module) => ({
@@ -81,101 +82,109 @@ function ProtectedRouteElement({
 
 export function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthBootstrap />
-        <Toaster />
-        <Routes>
-          {/* Public routes */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route
-            path="/consultation/share/:token"
-            element={
-              <Suspense fallback={<RouteFallback variant="consultation" />}>
-                <SharePage />
-              </Suspense>
-            }
-          />
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="light"
+      forcedTheme="light"
+      enableSystem={false}
+      disableTransitionOnChange
+    >
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <AuthBootstrap />
+          <Toaster />
+          <Routes>
+            {/* Public routes */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route
+              path="/consultation/share/:token"
+              element={
+                <Suspense fallback={<RouteFallback variant="consultation" />}>
+                  <SharePage />
+                </Suspense>
+              }
+            />
 
-          {/* Protected routes */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRouteElement>
-                <DashboardPage />
-              </ProtectedRouteElement>
-            }
-          />
-          <Route
-            path="/onboarding"
-            element={
-              <ProtectedRouteElement>
-                <OnboardingPage />
-              </ProtectedRouteElement>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRouteElement>
-                <ProfilePage />
-              </ProtectedRouteElement>
-            }
-          />
-          <Route
-            path="/consultation"
-            element={
-              <ProtectedRouteElement variant="consultation">
-                <ConsultationPage />
-              </ProtectedRouteElement>
-            }
-          />
-          <Route
-            path="/consultation/:id"
-            element={
-              <ProtectedRouteElement variant="consultation">
-                <ConsultationPage />
-              </ProtectedRouteElement>
-            }
-          />
-          <Route
-            path="/assessment"
-            element={
-              <ProtectedRouteElement>
-                <AssessmentListPage />
-              </ProtectedRouteElement>
-            }
-          />
-          <Route
-            path="/assessment/:id"
-            element={
-              <ProtectedRouteElement>
-                <AssessmentDetailPage />
-              </ProtectedRouteElement>
-            }
-          />
-          <Route
-            path="/history"
-            element={
-              <ProtectedRouteElement>
-                <HistoryPage />
-              </ProtectedRouteElement>
-            }
-          />
-          <Route
-            path="/training/:id"
-            element={
-              <ProtectedRouteElement>
-                <TrainingPage />
-              </ProtectedRouteElement>
-            }
-          />
+            {/* Protected routes */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRouteElement>
+                  <DashboardPage />
+                </ProtectedRouteElement>
+              }
+            />
+            <Route
+              path="/onboarding"
+              element={
+                <ProtectedRouteElement>
+                  <OnboardingPage />
+                </ProtectedRouteElement>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRouteElement>
+                  <ProfilePage />
+                </ProtectedRouteElement>
+              }
+            />
+            <Route
+              path="/consultation"
+              element={
+                <ProtectedRouteElement variant="consultation">
+                  <ConsultationPage />
+                </ProtectedRouteElement>
+              }
+            />
+            <Route
+              path="/consultation/:id"
+              element={
+                <ProtectedRouteElement variant="consultation">
+                  <ConsultationPage />
+                </ProtectedRouteElement>
+              }
+            />
+            <Route
+              path="/assessment"
+              element={
+                <ProtectedRouteElement>
+                  <AssessmentListPage />
+                </ProtectedRouteElement>
+              }
+            />
+            <Route
+              path="/assessment/:id"
+              element={
+                <ProtectedRouteElement>
+                  <AssessmentDetailPage />
+                </ProtectedRouteElement>
+              }
+            />
+            <Route
+              path="/history"
+              element={
+                <ProtectedRouteElement>
+                  <HistoryPage />
+                </ProtectedRouteElement>
+              }
+            />
+            <Route
+              path="/training/:id"
+              element={
+                <ProtectedRouteElement>
+                  <TrainingPage />
+                </ProtectedRouteElement>
+              }
+            />
 
-          {/* Redirect root to dashboard */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </QueryClientProvider>
+            {/* Redirect root to dashboard */}
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
