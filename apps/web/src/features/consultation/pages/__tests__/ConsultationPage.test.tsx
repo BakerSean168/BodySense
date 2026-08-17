@@ -175,9 +175,9 @@ describe("ConsultationPage", () => {
     expect(await screen.findByTestId("assistant-chat-panel")).toHaveTextContent(
       "conv-1",
     );
-    expect(screen.getByText("长期健康工作台")).toBeInTheDocument();
+    expect(screen.getByText("身体状态地图")).toBeInTheDocument();
     expect(screen.getAllByText("正在切换会话")).toHaveLength(2);
-    expect(screen.getAllByText("目标会话")).toHaveLength(3);
+    expect(screen.getAllByText("目标会话")).toHaveLength(2);
     expect(screen.queryByTestId("chat-panel-skeleton")).not.toBeInTheDocument();
     expect(screen.queryByTestId("info-panel-skeleton")).not.toBeInTheDocument();
   });
