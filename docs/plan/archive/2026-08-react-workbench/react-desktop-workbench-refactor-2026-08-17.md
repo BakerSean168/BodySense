@@ -1,17 +1,17 @@
 # React Desktop Workbench Refactor Plan
 
-> Status: Batch C implemented locally; awaiting reviewed PR and merge
+> Status: Completed and archived
 > Started: 2026-08-17
 > Target branch sequence: one reviewed PR per batch, each merged only after CI is green
 > UI source of truth: `docs/architecture/web-desktop-workbench-ui-ux.md`
 
 ## 0. Implementation record
 
-| Batch                          | Commit         | PR         | Merge / validation state                                                    |
-| ------------------------------ | -------------- | ---------- | --------------------------------------------------------------------------- |
-| A — shell foundation           | `2ed1f6c`      | #45        | merged as `690b508`; PR checks and main CI run `32027181859` passed         |
-| B — consultation workbench     | `fd71cb0`      | #46        | merged as `b2c27a1`; PR checks and main CI run `32038310048` passed         |
-| C — data engineering / quality | pending commit | pending PR | implementation and local release/deploy gates passed; remote review pending |
+| Batch                          | Commit    | PR  | Merge / validation state                                            |
+| ------------------------------ | --------- | --- | ------------------------------------------------------------------- |
+| A — shell foundation           | `2ed1f6c` | #45 | merged as `690b508`; PR checks and main CI run `32027181859` passed |
+| B — consultation workbench     | `a4db22f` | #46 | merged as `b2c27a1`; PR checks and main CI run `32029308962` passed |
+| C — data engineering / quality | `9bc4bdf` | #47 | merged as `54f59b2`; PR checks and main CI run `32031544045` passed |
 
 Batch C local validation on 2026-08-17:
 
@@ -259,3 +259,43 @@ The refactor is complete only when:
 4. the application uses the chat + workspace layout from the supplied wireframe;
 5. React data boundaries match the documented target architecture;
 6. the working tree is clean and local `main` matches `origin/main`.
+
+## 9. Closeout
+
+All planned batches were implemented, reviewed and merged independently:
+
+- PR #45 — application shell foundation;
+- PR #46 — resizable/collapsible consultation workbench;
+- PR #47 — query/mutation/data-boundary isolation and quality completion.
+
+Every PR completed the same four GitHub checks successfully:
+
+- Repository quality gate;
+- commit-lint;
+- PostgreSQL migration replay;
+- Browser longitudinal health E2E.
+
+Post-merge `main` CI also completed successfully for merge commits `690b508`, `b2c27a1` and `54f59b2`. The final implementation satisfies the original wireframe behavior, keeps Go/Python contracts unchanged and leaves no active frontend refactor item in this plan.
+
+### Final architecture outcome
+
+- desktop application navigation uses a compact rail;
+- consultation uses a resizable chat + primary workspace split;
+- chat collapses to zero width and restores its previous width;
+- State, Diagnosis, Treatment and Progress are URL-addressable;
+- mobile uses an explicit chat/workspace switch;
+- server state is owned by TanStack Query option factories and feature hooks;
+- presentation components do not directly reconcile query caches;
+- structured API errors preserve backend code/status;
+- route error boundaries, semantic status tokens and reduced-motion handling are active;
+- the complete longitudinal browser loop remains green.
+
+### Completion checklist
+
+- [x] all three implementation batches merged to `main`;
+- [x] PR checks green for all batches;
+- [x] post-merge `main` checks green for all batches;
+- [x] UI matches the supplied expanded/focused workbench structure;
+- [x] React data boundaries match the target architecture;
+- [x] local release and deploy validation passed;
+- [x] implementation plan archived with actual commits, PRs and CI runs.
