@@ -1,14 +1,16 @@
 # Active Plans
 
-The longitudinal backend domain refactor completed on 2026-08-16. The active implementation effort is now the React desktop workbench refactor:
+There is no active implementation plan as of 2026-08-17.
 
-- [`react-desktop-workbench-refactor-2026-08-17.md`](./react-desktop-workbench-refactor-2026-08-17.md)
-- UI/UX source of truth: [`../../architecture/web-desktop-workbench-ui-ux.md`](../../architecture/web-desktop-workbench-ui-ux.md)
+The React desktop workbench refactor is complete and archived at:
 
-Backend business architecture remains authoritative in:
+- [`../archive/2026-08-react-workbench/react-desktop-workbench-refactor-2026-08-17.md`](../archive/2026-08-react-workbench/react-desktop-workbench-refactor-2026-08-17.md)
 
-- [`../../architecture/current-longitudinal-system.md`](../../architecture/current-longitudinal-system.md)
-- [`../../architecture/longitudinal-body-state-domain.md`](../../architecture/longitudinal-body-state-domain.md)
-- [`../../adr/0004-adopt-longitudinal-body-state-model.md`](../../adr/0004-adopt-longitudinal-body-state-model.md)
+Current authoritative documents:
+
+- UI/UX: [`../../architecture/web-desktop-workbench-ui-ux.md`](../../architecture/web-desktop-workbench-ui-ux.md)
+- Current system: [`../../architecture/current-longitudinal-system.md`](../../architecture/current-longitudinal-system.md)
+- BodyState domain: [`../../architecture/longitudinal-body-state-domain.md`](../../architecture/longitudinal-body-state-domain.md)
+- Business decision: [`../../adr/0004-adopt-longitudinal-body-state-model.md`](../../adr/0004-adopt-longitudinal-body-state-model.md)
 
 Completed plans, checkpoints and superseded designs remain under [`../archive`](../archive) for learning and audit only.
