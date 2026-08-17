@@ -1,14 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { consultationApi } from "../services/consultationService";
-import { consultationKeys } from "../services/consultationQueryKeys";
+import { consultationThreadQueryOptions } from "../services/consultationQueryOptions";
 
 export function useConsultationThreadQuery(conversationId: string | null) {
+  const resolvedId = conversationId ?? "__disabled__";
   return useQuery({
-    queryKey: conversationId
-      ? consultationKeys.thread(conversationId)
-      : consultationKeys.threadEmpty(),
-    queryFn: () => consultationApi.getConsultationThread(conversationId!),
-    enabled: !!conversationId,
+    ...consultationThreadQueryOptions(resolvedId),
+    enabled: Boolean(conversationId),
     placeholderData: (previousData) => previousData,
   });
 }

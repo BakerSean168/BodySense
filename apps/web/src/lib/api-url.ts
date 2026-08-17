@@ -29,7 +29,7 @@ export function apiUrl(path: string): string {
  * the server returns HTML (e.g. Caddy 404 page) or plain text.
  */
 export async function safeJson<T = unknown>(res: Response): Promise<T> {
-  const ct = res.headers.get("content-type") || "";
+  const ct = res.headers?.get?.("content-type") || "";
   if (ct.includes("application/json")) {
     return res.json() as Promise<T>;
   }
@@ -58,6 +58,10 @@ export async function extractErrorMessage(res: Response): Promise<string> {
     const obj = body as Record<string, unknown>;
     const msg = obj.message ?? obj.error;
     if (typeof msg === "string") return msg;
+    if (msg && typeof msg === "object") {
+      const nested = msg as Record<string, unknown>;
+      if (typeof nested.message === "string") return nested.message;
+    }
   }
 
   if (typeof body === "string" && body.length > 0) return body;

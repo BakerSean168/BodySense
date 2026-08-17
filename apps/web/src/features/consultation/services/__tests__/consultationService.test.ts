@@ -12,13 +12,17 @@ import { consultationApi } from "../consultationService";
 const mockAuthFetch = vi.mocked(authFetch);
 
 function mockResponse(body: unknown, ok = true, status = 200): Response {
-  return {
-    ok,
-    status,
-    json: () => Promise.resolve(body),
-    text: () => Promise.resolve(JSON.stringify(body)),
-    statusText: "OK",
-  } as unknown as Response;
+  const resolvedStatus = ok
+    ? status >= 200 && status < 300
+      ? status
+      : 200
+    : status >= 400
+      ? status
+      : 500;
+  return new Response(JSON.stringify(body), {
+    status: resolvedStatus,
+    headers: { "content-type": "application/json" },
+  });
 }
 
 describe("consultationApi", () => {

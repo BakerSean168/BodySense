@@ -52,7 +52,7 @@ vi.mock("@/features/workspace", () => ({
     data: undefined,
     isPending: false,
   }),
-  healthWorkspaceQueryKey: ["health-workspace"],
+  workspaceKeys: { all: ["workspace"] },
   BodyStateWorkbench: () => (
     <div data-testid="body-state-workbench">body-state-workbench</div>
   ),

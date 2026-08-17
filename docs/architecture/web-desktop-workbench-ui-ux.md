@@ -1,6 +1,6 @@
 # BodySense Desktop Workbench UI/UX
 
-> Status: Active UI source of truth
+> Status: Implemented UI source of truth
 > Date: 2026-08-17
 > Scope: React web application shell and longitudinal health workbench
 > Business source of truth: ADR 0004, Longitudinal BodyState Domain Model, Current Longitudinal System
@@ -75,7 +75,7 @@ Default views show summaries and next actions. Revision history, provenance, evi
 
 ### 2.6 Theme unity
 
-Chat and workspace always share one global theme. A dark chat panel beside a light workspace is prohibited. Theme switching is global and persisted.
+Chat and workspace always share one global theme. A dark chat panel beside a light workspace is prohibited. The current release deliberately forces one coherent light theme while the remaining non-workbench routes are migrated to semantic tokens; the provider and dark-token foundation stay global so theme switching can be enabled later without pane-local themes.
 
 ## 3. Information architecture
 
@@ -94,7 +94,6 @@ ApplicationFrame
 │   └── History
 ├── GlobalTopBar
 │   ├── Current section
-│   ├── Theme toggle
 │   └── User menu
 └── Route content
 ```
@@ -105,7 +104,7 @@ The workbench route uses an immersive variant with its own domain toolbar.
 
 - left: chat expand/collapse control and conversation/history access;
 - center: route-addressable workspace tabs;
-- right: BodyState revision summary, theme control and user menu;
+- right: BodyState revision summary and user menu;
 - keyboard: `Cmd/Ctrl+B` toggles chat, number shortcuts may switch workspace tabs later.
 
 ### 3.3 Chat dock
@@ -278,9 +277,39 @@ Primary references:
 1. Desktop chat can be resized, collapsed and restored without losing thread state.
 2. Focused mode gives the workspace the full available width.
 3. State, Diagnosis, Treatment and Progress are explicit, deep-linkable modes.
-4. The same global theme applies to chat and workspace.
+4. The same global theme applies to chat and workspace; mixed pane themes are impossible.
 5. Mobile uses a deterministic chat/workspace switch rather than a broken compressed split.
 6. UI actions remain governed by backend-provided capabilities and mutation-boundary errors.
 7. Reload restores conversation, active workspace mode and chat preference.
 8. Unit tests cover shell state, selectors and critical action rendering.
 9. Playwright covers expanded/collapsed navigation and the longitudinal loop.
+
+## 10. Implemented component map
+
+```text
+App.tsx
+└── RouteErrorBoundary + route Suspense
+
+MainLayout
+├── AppNavigationRail
+├── mobile navigation drawer
+├── AppUserMenu
+└── route content
+
+ConsultationPage
+├── useConversationsQuery / useConsultationThreadQuery
+├── useConversationActions
+├── useThreadProjectionActions
+├── useDiagnosisActions
+└── ConsultationWorkbenchShell
+    ├── resizable/collapsible chat Panel
+    ├── ConversationHistoryDrawer
+    └── WorkspaceViewport
+        ├── BodyOverview
+        ├── State: BodyStateWorkbench
+        ├── Diagnosis: DiagnosisPanel + history
+        ├── Treatment: TreatmentPanel
+        └── Progress: OutcomeTrendsPanel
+```
+
+Server projections use feature-owned TanStack Query option factories. Mutation hooks own invalidation and structured error handling. Only auth and presentation preferences use persisted client stores; health truth remains server-owned.

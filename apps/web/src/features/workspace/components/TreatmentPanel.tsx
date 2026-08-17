@@ -13,11 +13,15 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import type { HealthWorkspace, TreatmentRevision } from "../types/workspace";
-import { workspaceApi } from "../services/workspaceService";
+import { errorMessage } from "@/lib/api-client";
+import {
+  useTreatmentCommand,
+  type TreatmentCommand,
+} from "../hooks/useTreatmentCommand";
+import { selectProposedTreatmentRevisions } from "../model/workspaceSelectors";
 
 interface TreatmentPanelProps {
   workspace: HealthWorkspace;
-  onChanged: () => Promise<unknown> | unknown;
 }
 
 const statusLabels: Record<string, string> = {
@@ -38,7 +42,8 @@ function prescriptionText(value: Record<string, unknown>) {
     .join(" · ");
 }
 
-export function TreatmentPanel({ workspace, onChanged }: TreatmentPanelProps) {
+export function TreatmentPanel({ workspace }: TreatmentPanelProps) {
+  const treatmentCommand = useTreatmentCommand();
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [acceptedTrainingPlanId, setAcceptedTrainingPlanId] = useState<
     string | null
@@ -50,10 +55,7 @@ export function TreatmentPanel({ workspace, onChanged }: TreatmentPanelProps) {
   const [interventionId, setInterventionId] = useState("");
 
   const proposals = useMemo(
-    () =>
-      workspace.treatment_revisions.filter(
-        (revision) => revision.acceptance_state === "proposed",
-      ),
+    () => selectProposedTreatmentRevisions(workspace),
     [workspace.treatment_revisions],
   );
   const current = workspace.treatment?.current || null;
@@ -62,19 +64,16 @@ export function TreatmentPanel({ workspace, onChanged }: TreatmentPanelProps) {
 
   const mutate = async (
     key: string,
-    operation: () => Promise<unknown>,
+    command: TreatmentCommand,
     success: string,
   ): Promise<unknown | null> => {
     setBusyKey(key);
     try {
-      const result = await operation();
-      await onChanged();
+      const result = await treatmentCommand.mutateAsync(command);
       toast.success(success);
       return result;
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Treatment 操作失败",
-      );
+      toast.error(errorMessage(error, "Treatment 操作失败"));
       return null;
     } finally {
       setBusyKey(null);
@@ -89,7 +88,7 @@ export function TreatmentPanel({ workspace, onChanged }: TreatmentPanelProps) {
     }
     await mutate(
       "generate",
-      () => workspaceApi.generateTreatmentProposal(analysisId),
+      { type: "generateProposal", diagnosisAnalysisId: analysisId },
       "已创建方案 proposal；需要明确接受后才会执行",
     );
   };
@@ -97,11 +96,11 @@ export function TreatmentPanel({ workspace, onChanged }: TreatmentPanelProps) {
   const accept = async (revision: TreatmentRevision) => {
     const result = await mutate(
       `accept:${revision.id}`,
-      () =>
-        workspaceApi.acceptTreatmentRevision(
-          revision.id,
-          workspace.conversation_id,
-        ),
+      {
+        type: "acceptRevision",
+        revisionId: revision.id,
+        consultationId: workspace.conversation_id,
+      },
       `已接受 Treatment R${revision.revision}`,
     );
     const accepted = result as {
@@ -121,8 +120,9 @@ export function TreatmentPanel({ workspace, onChanged }: TreatmentPanelProps) {
     const selected = interventions.find((item) => item.id === interventionId);
     const result = await mutate(
       "outcome",
-      () =>
-        workspaceApi.recordOutcome({
+      {
+        type: "recordOutcome",
+        input: {
           treatment_id: acceptedRevision.treatment_id,
           treatment_revision_id: acceptedRevision.id,
           intervention_id: selected?.id,
@@ -137,7 +137,8 @@ export function TreatmentPanel({ workspace, onChanged }: TreatmentPanelProps) {
             trend: outcomeTrend,
           },
           notes: outcomeDescription.trim(),
-        }),
+        },
+      },
       "Outcome 已记录，并进入 BodyState / review policy",
     );
     if (result) {
@@ -172,7 +173,7 @@ export function TreatmentPanel({ workspace, onChanged }: TreatmentPanelProps) {
       </div>
 
       {workspace.capabilities.requires_treatment_review && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-200">
+        <div className="rounded-xl border border-warning/35 bg-warning/10 p-3 text-xs text-warning-foreground">
           <div className="flex items-center gap-2 font-medium">
             <AlertTriangle className="h-4 w-4" />
             当前方案需要审核
@@ -190,7 +191,7 @@ export function TreatmentPanel({ workspace, onChanged }: TreatmentPanelProps) {
             onClick={() =>
               mutate(
                 "review",
-                workspaceApi.reviewCurrentTreatment,
+                { type: "reviewCurrent" },
                 "已重新计算当前方案审核状态",
               )
             }
@@ -364,7 +365,7 @@ export function TreatmentPanel({ workspace, onChanged }: TreatmentPanelProps) {
                   onClick={() =>
                     mutate(
                       `reject:${revision.id}`,
-                      () => workspaceApi.rejectTreatmentRevision(revision.id),
+                      { type: "rejectRevision", revisionId: revision.id },
                       "已拒绝该 proposal，历史仍保留",
                     )
                   }

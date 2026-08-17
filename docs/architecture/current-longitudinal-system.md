@@ -1,7 +1,7 @@
 # BodySense Current Longitudinal System
 
-> Status: authoritative current implementation  
-> Updated: 2026-08-16  
+> Status: authoritative current implementation
+> Updated: 2026-08-17
 > Supersedes: linear Health Journey, session `health_features`, session diagnosis/treatment JSON, and direct Training plan mutation.
 
 ## 1. Product loop
@@ -36,15 +36,16 @@ There is no user-level terminal `completed` state. `HealthWorkspace` derives cur
 
 ## 2. State ownership
 
-| State | Owner | Rules |
-|---|---|---|
-| Conversation messages, run envelopes, public runtime events | Go | Durable public ledger, request idempotency, one active run per user conversation |
-| LangGraph checkpoints, tool loop, interrupt/resume | Python | Agent runtime only; not business truth |
-| BodyState current projection and revisions | Go | One per user, optimistic concurrency, semantic revisions |
-| DiagnosisAnalysis and candidate assessments | Go | Analysis immutable; user assessment separate and independently editable |
-| Treatment and TreatmentRevision | Go | AI may propose; only Go accepts; accepted revisions are immutable |
-| Intervention, TrainingPlan, TrainingLog, Outcome | Go | Training is an execution projection of an accepted revision |
-| Capability/action projection | Go `HealthWorkspace` | Pure read; no hidden mutation from GET |
+| State                                                       | Owner                | Rules                                                                                                                                |
+| ----------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Conversation messages, run envelopes, public runtime events | Go                   | Durable public ledger, request idempotency, one active run per user conversation                                                     |
+| LangGraph checkpoints, tool loop, interrupt/resume          | Python               | Agent runtime only; not business truth                                                                                               |
+| BodyState current projection and revisions                  | Go                   | One per user, optimistic concurrency, semantic revisions                                                                             |
+| DiagnosisAnalysis and candidate assessments                 | Go                   | Analysis immutable; user assessment separate and independently editable                                                              |
+| Treatment and TreatmentRevision                             | Go                   | AI may propose; only Go accepts; accepted revisions are immutable                                                                    |
+| Intervention, TrainingPlan, TrainingLog, Outcome            | Go                   | Training is an execution projection of an accepted revision                                                                          |
+| Capability/action projection                                | Go `HealthWorkspace` | Pure read; no hidden mutation from GET                                                                                               |
+| React query cache and workbench preferences                 | Web                  | Server projection cache only; URL owns active conversation/workspace mode; Zustand owns presentation preferences, never health truth |
 
 ## 3. Mandatory mutation invariants
 
@@ -136,7 +137,46 @@ POST /api/v1/outcomes
 GET  /api/v1/health-workspace
 ```
 
-## 6. Verification contract
+## 6. React presentation architecture
+
+The web application is a projection consumer, not another domain owner.
+
+```text
+React route
+├── URL identity
+│   ├── /consultation/:conversationId
+│   └── ?view=state|diagnosis|treatment|progress
+├── TanStack Query server state
+│   ├── canonical query key/options factories
+│   ├── conversation/thread/diagnosis projections
+│   └── HealthWorkspace projection
+├── feature-owned mutation hooks
+│   ├── BodyState commands
+│   ├── Diagnosis assessment commands
+│   ├── Treatment/Outcome commands
+│   └── centralized invalidation/error mapping
+├── assistant-ui runtime
+│   └── active streaming turn remains mounted across panel collapse
+└── Zustand presentation preferences
+    ├── chat expanded/collapsed
+    ├── last desktop chat width
+    └── mobile chat/workspace surface
+```
+
+The desktop consultation route is an immersive workbench:
+
+- chat is a resizable companion and can collapse completely;
+- State, Diagnosis, Treatment and Progress are explicit route-addressable modes;
+- conversation history is an accessible drawer rather than a permanent third column;
+- the body map is an information organizer, not a diagnostic visualization;
+- component rendering does not directly edit TanStack caches;
+- route-level error boundaries preserve a clear recovery path without implying that durable server data was lost;
+- semantic status tokens distinguish success, warning and safety states without relying on color alone;
+- reduced-motion preferences are respected globally.
+
+`ConsultationPage` composes feature hooks. Query options, cache reconciliation, mutation invalidation and API error normalization live outside presentation components. Backend mutation boundaries remain authoritative when UI capability projections are stale.
+
+## 7. Verification contract
 
 The release gate is shared by local validation and CI:
 

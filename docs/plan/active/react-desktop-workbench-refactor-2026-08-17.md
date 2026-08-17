@@ -1,9 +1,28 @@
 # React Desktop Workbench Refactor Plan
 
-> Status: Active
+> Status: Batch C implemented locally; awaiting reviewed PR and merge
 > Started: 2026-08-17
 > Target branch sequence: one reviewed PR per batch, each merged only after CI is green
 > UI source of truth: `docs/architecture/web-desktop-workbench-ui-ux.md`
+
+## 0. Implementation record
+
+| Batch                          | Commit         | PR         | Merge / validation state                                                    |
+| ------------------------------ | -------------- | ---------- | --------------------------------------------------------------------------- |
+| A — shell foundation           | `2ed1f6c`      | #45        | merged as `690b508`; PR checks and main CI run `32027181859` passed         |
+| B — consultation workbench     | `fd71cb0`      | #46        | merged as `b2c27a1`; PR checks and main CI run `32038310048` passed         |
+| C — data engineering / quality | pending commit | pending PR | implementation and local release/deploy gates passed; remote review pending |
+
+Batch C local validation on 2026-08-17:
+
+- repository lint/type/test/build gate: passed;
+- Web: 29 test files, 140 tests passed;
+- Python: 182 tests passed;
+- Go full test suite: passed;
+- PostgreSQL full-up/latest-down/replay-up: passed at migration version 34;
+- domain semantics validator: BodyState, Treatment activation and Outcome feedback passed;
+- browser longitudinal E2E: 3 passed;
+- `LOCAL_DEPLOY_VALIDATION=PASS`.
 
 ## 1. Why this refactor exists
 
@@ -102,7 +121,7 @@ Why not hand-roll: pointer capture, keyboard behavior, constraints and ARIA sepa
 
 ## 5. Batch plan
 
-### Batch A — Foundation and application shell
+### Batch A — Foundation and application shell ✅
 
 Branch: `feature/web-workbench-foundation`
 
@@ -128,7 +147,7 @@ Acceptance:
 - `pnpm verify:release` passes;
 - PR checks pass before merge.
 
-### Batch B — Consultation workbench cutover
+### Batch B — Consultation workbench cutover ✅
 
 Branch after Batch A merge: `feature/web-consultation-workbench`
 
@@ -154,7 +173,7 @@ Acceptance:
 - current longitudinal E2E remains green;
 - PR checks pass before merge.
 
-### Batch C — Data engineering, quality and completion
+### Batch C — Data engineering, quality and completion ✅ locally validated
 
 Branch after Batch B merge: `feature/web-workbench-data-quality`
 

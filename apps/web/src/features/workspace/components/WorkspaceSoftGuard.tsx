@@ -48,15 +48,15 @@ export function WorkspaceSoftGuard({
 
   return (
     <Card className="mx-auto max-w-xl p-8 text-center shadow-sm">
-      <h2 className="text-xl font-display font-semibold text-[#2E3C36]">
+      <h2 className="text-xl font-display font-semibold text-foreground">
         还不能进入{title}
       </h2>
-      <p className="mt-3 text-sm font-medium leading-relaxed text-[#5D6B63]">
+      <p className="mt-3 text-sm font-medium leading-relaxed text-muted-foreground">
         {hint}
       </p>
       <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
         <Button
-          className="bg-[#CD7B67] text-white shadow-sm shadow-[#CD7B67]/15 hover:bg-[#B65E49]"
+          className="bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
           onClick={() => navigate(primary?.href ?? "/dashboard")}
         >
           {primary?.label ?? "返回首页"}

@@ -1,13 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { workspaceApi } from "../services/workspaceService";
+import {
+  healthWorkspaceQueryKey,
+  healthWorkspaceQueryOptions,
+} from "../api/workspaceQueryOptions";
 
-export const healthWorkspaceQueryKey = ["health-workspace"] as const;
+export { healthWorkspaceQueryKey };
 
 export function useHealthWorkspaceQuery() {
-  return useQuery({
-    queryKey: healthWorkspaceQueryKey,
-    queryFn: workspaceApi.get,
-    staleTime: 10_000,
-    refetchOnWindowFocus: false,
-  });
+  return useQuery(healthWorkspaceQueryOptions());
 }

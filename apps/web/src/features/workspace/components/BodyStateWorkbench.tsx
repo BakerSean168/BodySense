@@ -19,11 +19,14 @@ import type {
   BodyStateObservation,
   BodyStateSnapshot,
 } from "@/features/consultation/types/consultation";
-import { workspaceApi } from "../services/workspaceService";
+import { errorMessage } from "@/lib/api-client";
+import {
+  useBodyStateCommand,
+  type BodyStateCommand,
+} from "../hooks/useBodyStateCommand";
 
 interface BodyStateWorkbenchProps {
   snapshot: BodyStateSnapshot;
-  onChanged: () => Promise<unknown> | unknown;
 }
 
 const factKindLabels: Record<string, string> = {
@@ -52,10 +55,8 @@ function safetyState(snapshot: BodyStateSnapshot) {
   };
 }
 
-export function BodyStateWorkbench({
-  snapshot,
-  onChanged,
-}: BodyStateWorkbenchProps) {
+export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
+  const bodyStateCommand = useBodyStateCommand();
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [kind, setKind] = useState("discomfort");
@@ -70,18 +71,15 @@ export function BodyStateWorkbench({
 
   const mutate = async (
     key: string,
-    operation: () => Promise<unknown>,
+    command: BodyStateCommand,
     success: string,
   ) => {
     setBusyKey(key);
     try {
-      await operation();
-      await onChanged();
+      await bodyStateCommand.mutateAsync(command);
       toast.success(success);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "更新 BodyState 失败",
-      );
+      toast.error(errorMessage(error, "更新 BodyState 失败"));
     } finally {
       setBusyKey(null);
     }
@@ -94,8 +92,10 @@ export function BodyStateWorkbench({
     }
     await mutate(
       "add-fact",
-      () =>
-        workspaceApi.addFact(snapshot.current_revision, {
+      {
+        type: "addFact",
+        expectedRevision: snapshot.current_revision,
+        fact: {
           kind,
           body_region: bodyRegion.trim(),
           concern_key: bodyRegion.trim()
@@ -107,7 +107,8 @@ export function BodyStateWorkbench({
           lifecycle_state: "active",
           trend: "unknown",
           observed_at: new Date().toISOString(),
-        }),
+        },
+      },
       "已作为新的当前事实记录",
     );
     setValue("");
@@ -120,8 +121,11 @@ export function BodyStateWorkbench({
     const fact = correction.fact;
     await mutate(
       `correct:${fact.id}`,
-      () =>
-        workspaceApi.correctFact(fact.id, snapshot.current_revision, {
+      {
+        type: "correctFact",
+        factId: fact.id,
+        expectedRevision: snapshot.current_revision,
+        replacement: {
           concern_key: fact.concern_key || "general",
           kind: fact.kind,
           body_region: fact.body_region || "",
@@ -132,7 +136,8 @@ export function BodyStateWorkbench({
           lifecycle_state: "active",
           trend: fact.trend || "unknown",
           observed_at: fact.observed_at || new Date().toISOString(),
-        }),
+        },
+      },
       "已保留旧记录，并创建纠正后的事实",
     );
     setCorrection(null);
@@ -173,7 +178,7 @@ export function BodyStateWorkbench({
       </div>
 
       {safety.active && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
+        <div className="rounded-xl border border-destructive/25 bg-destructive/10 p-3 text-sm text-destructive">
           <div className="flex items-center gap-2 font-medium">
             <AlertTriangle className="h-4 w-4" />
             当前安全状态需要优先审核
@@ -187,7 +192,7 @@ export function BodyStateWorkbench({
               value={safetyNote}
               onChange={(event) => setSafetyNote(event.target.value)}
               placeholder="记录审核依据（建议填写）"
-              className="min-w-0 flex-1 rounded-lg border border-red-200 bg-background px-3 py-2 text-xs text-foreground outline-none focus:border-red-400"
+              className="min-w-0 flex-1 rounded-lg border border-destructive/25 bg-background px-3 py-2 text-xs text-foreground outline-none focus:border-destructive"
             />
             <Button
               size="sm"
@@ -196,12 +201,12 @@ export function BodyStateWorkbench({
               onClick={() =>
                 mutate(
                   "resolve-safety",
-                  () =>
-                    workspaceApi.resolveSafety(
-                      snapshot.current_revision,
-                      "cleared_by_review",
-                      safetyNote.trim(),
-                    ),
+                  {
+                    type: "resolveSafety",
+                    expectedRevision: snapshot.current_revision,
+                    resolution: "cleared_by_review",
+                    note: safetyNote.trim(),
+                  },
                   "安全状态已通过明确审核更新",
                 )
               }
@@ -255,12 +260,12 @@ export function BodyStateWorkbench({
       )}
 
       {pendingObservations.length > 0 && (
-        <section className="space-y-2 rounded-xl border border-amber-200 bg-amber-50/60 p-3 dark:border-amber-900/50 dark:bg-amber-950/20">
+        <section className="space-y-2 rounded-xl border border-warning/35 bg-warning/10 p-3">
           <div>
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-200">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-warning-foreground">
               待审核 Observation · {pendingObservations.length}
             </h4>
-            <p className="mt-1 text-xs leading-5 text-amber-700 dark:text-amber-300">
+            <p className="mt-1 text-xs leading-5 text-warning-foreground/85">
               来自图片或 AI 评估的观察在确认前不会进入 Diagnosis reasoning。
             </p>
           </div>
@@ -276,7 +281,7 @@ export function BodyStateWorkbench({
             return (
               <div
                 key={observation.id}
-                className="rounded-lg border border-amber-200 bg-background p-3 dark:border-amber-900/50"
+                className="rounded-lg border border-warning/35 bg-background p-3"
               >
                 <div className="text-xs text-muted-foreground">
                   {observation.body_region || "全身"} ·{" "}
@@ -298,12 +303,12 @@ export function BodyStateWorkbench({
                     onClick={() =>
                       mutate(
                         `confirm-observation:${observation.id}`,
-                        () =>
-                          workspaceApi.reviewObservation(
-                            observation.id,
-                            snapshot.current_revision,
-                            "confirmed",
-                          ),
+                        {
+                          type: "reviewObservation",
+                          observationId: observation.id,
+                          expectedRevision: snapshot.current_revision,
+                          reviewState: "confirmed",
+                        },
                         "Observation 已确认并进入长期 BodyState reasoning",
                       )
                     }
@@ -320,12 +325,12 @@ export function BodyStateWorkbench({
                     onClick={() =>
                       mutate(
                         `reject-observation:${observation.id}`,
-                        () =>
-                          workspaceApi.reviewObservation(
-                            observation.id,
-                            snapshot.current_revision,
-                            "rejected",
-                          ),
+                        {
+                          type: "reviewObservation",
+                          observationId: observation.id,
+                          expectedRevision: snapshot.current_revision,
+                          reviewState: "rejected",
+                        },
                         "Observation 已拒绝，不会进入 reasoning",
                       )
                     }
@@ -365,8 +370,8 @@ export function BodyStateWorkbench({
                     <span
                       className={`rounded-full px-1.5 py-0.5 ${
                         fact.review_state === "confirmed"
-                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-                          : "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
+                          ? "bg-success/20 text-success-foreground"
+                          : "bg-warning/20 text-warning-foreground"
                       }`}
                     >
                       {fact.review_state === "confirmed" ? "已确认" : "待确认"}
@@ -379,8 +384,8 @@ export function BodyStateWorkbench({
               </div>
 
               {correction?.fact.id === fact.id ? (
-                <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50/70 p-2 dark:border-amber-900/50 dark:bg-amber-950/20">
-                  <p className="mb-2 text-xs text-amber-800 dark:text-amber-200">
+                <div className="mt-3 rounded-lg border border-warning/35 bg-warning/10 p-2">
+                  <p className="mb-2 text-xs text-warning-foreground">
                     “记录纠正”表示旧记录本身有误；系统会保留旧版本并创建
                     replacement。
                   </p>
@@ -420,12 +425,12 @@ export function BodyStateWorkbench({
                         onClick={() =>
                           mutate(
                             `confirm:${fact.id}`,
-                            () =>
-                              workspaceApi.reviewFact(
-                                fact.id,
-                                snapshot.current_revision,
-                                "confirmed",
-                              ),
+                            {
+                              type: "reviewFact",
+                              factId: fact.id,
+                              expectedRevision: snapshot.current_revision,
+                              reviewState: "confirmed",
+                            },
                             "已确认这条事实，没有改变其时间语义",
                           )
                         }
@@ -440,12 +445,12 @@ export function BodyStateWorkbench({
                         onClick={() =>
                           mutate(
                             `reject:${fact.id}`,
-                            () =>
-                              workspaceApi.reviewFact(
-                                fact.id,
-                                snapshot.current_revision,
-                                "rejected",
-                              ),
+                            {
+                              type: "reviewFact",
+                              factId: fact.id,
+                              expectedRevision: snapshot.current_revision,
+                              reviewState: "rejected",
+                            },
                             "已标记为不接受的提取结果",
                           )
                         }
@@ -470,14 +475,12 @@ export function BodyStateWorkbench({
                     onClick={() =>
                       mutate(
                         `improving:${fact.id}`,
-                        () =>
-                          workspaceApi.updateFactTemporal(
-                            fact.id,
-                            snapshot.current_revision,
-                            {
-                              trend: "improving",
-                            },
-                          ),
+                        {
+                          type: "updateFactTemporal",
+                          factId: fact.id,
+                          expectedRevision: snapshot.current_revision,
+                          input: { trend: "improving" },
+                        },
                         "已记录为后来正在改善",
                       )
                     }
@@ -492,14 +495,12 @@ export function BodyStateWorkbench({
                     onClick={() =>
                       mutate(
                         `worsening:${fact.id}`,
-                        () =>
-                          workspaceApi.updateFactTemporal(
-                            fact.id,
-                            snapshot.current_revision,
-                            {
-                              trend: "worsening",
-                            },
-                          ),
+                        {
+                          type: "updateFactTemporal",
+                          factId: fact.id,
+                          expectedRevision: snapshot.current_revision,
+                          input: { trend: "worsening" },
+                        },
                         "已记录为后来加重",
                       )
                     }
@@ -514,16 +515,16 @@ export function BodyStateWorkbench({
                     onClick={() =>
                       mutate(
                         `resolved:${fact.id}`,
-                        () =>
-                          workspaceApi.updateFactTemporal(
-                            fact.id,
-                            snapshot.current_revision,
-                            {
-                              lifecycle_state: "resolved",
-                              trend: "improving",
-                              valid_until: new Date().toISOString(),
-                            },
-                          ),
+                        {
+                          type: "updateFactTemporal",
+                          factId: fact.id,
+                          expectedRevision: snapshot.current_revision,
+                          input: {
+                            lifecycle_state: "resolved",
+                            trend: "improving",
+                            valid_until: new Date().toISOString(),
+                          },
+                        },
                         "已记录为后来恢复；旧事实仍保留在历史中",
                       )
                     }
@@ -581,12 +582,12 @@ export function BodyStateWorkbench({
                       onClick={() =>
                         mutate(
                           `hypothesis:${hypothesis.id}:${state}`,
-                          () =>
-                            workspaceApi.updateHypothesisLifecycle(
-                              hypothesis.id,
-                              snapshot.current_revision,
-                              state,
-                            ),
+                          {
+                            type: "updateHypothesisLifecycle",
+                            hypothesisId: hypothesis.id,
+                            expectedRevision: snapshot.current_revision,
+                            lifecycleState: state,
+                          },
                           `假设已更新为 ${state}`,
                         )
                       }

@@ -1,11 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { consultationApi } from "../services/consultationService";
-import { consultationKeys } from "../services/consultationQueryKeys";
+import { conversationsQueryOptions } from "../services/consultationQueryOptions";
 
 export function useConversationsQuery() {
   return useQuery({
-    queryKey: consultationKeys.conversations(),
-    queryFn: () => consultationApi.listConversations({ limit: 50 }),
+    ...conversationsQueryOptions(50),
     select: (data) => data.conversations,
   });
 }

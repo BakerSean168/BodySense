@@ -1,5 +1,5 @@
 import { authFetch } from "@/features/auth/services/authService";
-import { extractErrorMessage, safeJson } from "@/lib/api-url";
+import { expectEmpty, expectJson } from "@/lib/api-client";
 import type { BodyStateFact } from "@/features/consultation/types/consultation";
 import type {
   HealthWorkspace,
@@ -9,11 +9,11 @@ import type {
 } from "../types/workspace";
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await authFetch(url, init);
-  if (!response.ok) {
-    throw new Error(await extractErrorMessage(response));
-  }
-  return (await safeJson(response)) as T;
+  return expectJson<T>(await authFetch(url, init));
+}
+
+async function requestEmpty(url: string, init?: RequestInit): Promise<void> {
+  return expectEmpty(await authFetch(url, init));
 }
 
 const jsonHeaders = { "Content-Type": "application/json" };
@@ -152,7 +152,7 @@ export const workspaceApi = {
     ),
 
   rejectTreatmentRevision: (revisionId: string) =>
-    request<void>(`/api/v1/treatments/revisions/${revisionId}/reject`, {
+    requestEmpty(`/api/v1/treatments/revisions/${revisionId}/reject`, {
       method: "POST",
     }),
 
