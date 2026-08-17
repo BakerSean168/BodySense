@@ -12,9 +12,9 @@
  * - react-effects-and-external-systems.md
  */
 
-import { useQuery } from '@tanstack/react-query';
-import { consultationApi } from '../services/consultationService';
-import { consultationKeys } from '../services/consultationQueryKeys';
+import { useQuery } from "@tanstack/react-query";
+import { consultationApi } from "../services/consultationService";
+import { consultationKeys } from "../services/consultationQueryKeys";
 
 export function useConsultationSessionQuery(conversationId: string | null) {
   return useQuery({

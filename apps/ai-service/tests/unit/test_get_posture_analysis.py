@@ -76,9 +76,7 @@ def test_read_posture_analysis_filters_by_view():
 
 @pytest.mark.asyncio
 async def test_handle_get_posture_analysis_uses_injected_context():
-    result = await handle_get_posture_analysis(
-        {"_posture_analysis": SAMPLE_SUMMARY}
-    )
+    result = await handle_get_posture_analysis({"_posture_analysis": SAMPLE_SUMMARY})
     assert result["has_analysis"] is True
     assert "耳垂" in result["result_text"]
 

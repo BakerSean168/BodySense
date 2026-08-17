@@ -1,222 +1,172 @@
-import pytest
+"""DiagnosisService tests for the single BodyState -> typed Agent boundary."""
 
+import pytest
+from pydantic_ai.models.test import TestModel
+
+from src.agents.diagnosis_agent import create_diagnosis_agent
 from src.services.diagnosis_service import DiagnosisService
 
 
-class _FakeAiResponse:
-    """Minimal stand-in for AiResponse with just the .text attribute."""
-
-    def __init__(self, text: str):
-        self.text = text
-
-
-class _FakeAIService:
-    """Fake AIService that returns pre-configured JSON text."""
-
-    def __init__(self, text: str):
-        self._text = text
-
-    async def generate(self, req):
-        return _FakeAiResponse(self._text)
-
-
-@pytest.mark.asyncio
-async def test_generate_diagnosis_validates_response_schema(monkeypatch):
-    monkeypatch.setattr(
-        "src.services.diagnosis_service.AIService",
-        lambda: _FakeAIService(
-            """
+def _body_state(revision: int = 12) -> dict:
+    return {
+        "current_revision": revision,
+        "facts": [
             {
-              "diagnoses": [
-                {
-                  "name": "头前伸倾向",
-                  "confidence": "中",
-                  "severity": "轻度",
-                  "basis": "用户描述颈肩酸胀且久坐后明显。",
-                  "typical_symptoms": "颈肩酸胀、头颈前移、久坐后不适。",
-                  "differential": "需与急性颈椎神经症状区分。"
-                }
-              ]
+                "id": "fact-neck-1",
+                "kind": "discomfort",
+                "body_region": "颈肩",
+                "value": "久坐后酸胀",
+                "details": {"trigger": "久坐"},
+                "lifecycle_state": "active",
+                "trend": "stable",
             }
-            """
-        ),
-    )
-
-    result = await DiagnosisService().generate_diagnosis(
-        extracted_info=[{"body_part": "颈椎", "symptom_type": "酸胀"}],
-        profile={},
-    )
-
-    assert result["diagnoses"][0]["name"] == "头前伸倾向"
-    assert result["diagnoses"][0]["confidence"] == "中"
-
-
-@pytest.mark.asyncio
-async def test_generate_diagnosis_rejects_invalid_schema(monkeypatch):
-    monkeypatch.setattr(
-        "src.services.diagnosis_service.AIService",
-        lambda: _FakeAIService('{"diagnoses": [{"name": "头前伸倾向"}]}'),
-    )
-
-    with pytest.raises(ValueError, match="Invalid diagnosis response schema"):
-        await DiagnosisService().generate_diagnosis(
-            extracted_info=[{"body_part": "颈椎", "symptom_type": "酸胀"}],
-            profile={},
-        )
-
-
-@pytest.mark.asyncio
-async def test_generate_treatment_validates_response_schema(monkeypatch):
-    monkeypatch.setattr(
-        "src.services.diagnosis_service.AIService",
-        lambda: _FakeAIService(
-            """
+        ],
+        "observations": [
             {
-              "treatment_plan": {
-                "goal": "缓解颈肩酸胀并改善头前伸",
-                "duration_weeks": 4,
-                "correction_exercises": [
-                  {
-                    "name": "胸小肌拉伸",
-                    "description": "靠门框进行温和拉伸。",
-                    "sets": "2组",
-                    "reps": "每次30秒",
-                    "notes": "避免耸肩。"
-                  }
-                ],
-                "daily_habits": ["每45分钟起身活动"],
-                "expected_timeline": "2-4周观察酸胀变化。",
-                "warning_signs": ["出现放射痛或麻木无力时及时就医"]
-              }
+                "id": "obs-neck-1",
+                "kind": "posture_findings",
+                "body_region": "头颈",
+                "method": "posture_analysis",
+                "value": {"label": "耳部相对肩部偏前"},
+                "lifecycle_state": "active",
             }
-            """
-        ),
-    )
-
-    result = await DiagnosisService().generate_treatment(
-        confirmed_diagnosis={"name": "头前伸倾向", "severity": "轻度"},
-        extracted_info=[{"body_part": "颈椎", "symptom_type": "酸胀"}],
-        profile={},
-    )
-
-    plan = result["treatment_plan"]
-    assert plan["goal"] == "缓解颈肩酸胀并改善头前伸"
-    assert plan["correction_exercises"][0]["name"] == "胸小肌拉伸"
-
-
-# --- Diagnosis integration with red flags ---
-
-
-DIAGNOSIS_JSON = """
-{
-  "diagnoses": [
-    {
-      "name": "头前伸倾向",
-      "confidence": "中",
-      "severity": "轻度",
-      "basis": "颈肩酸胀",
-      "typical_symptoms": "颈肩酸胀",
-      "differential": "需区分"
+        ],
     }
-  ]
-}
-"""
+
+
+def _candidate(index: int = 1) -> dict:
+    return {
+        "concern_key": "region:头颈",
+        "name": f"候选 {index}",
+        "confidence": "中",
+        "severity": "轻度",
+        "evidence_strength": "中",
+        "basis": "当前事实与观察存在匹配",
+        "typical_symptoms": "颈肩酸胀",
+        "reasoning_summary": "综合当前 BodyState 后存在一定匹配",
+        "basis_fact_ids": ["fact-neck-1"],
+        "basis_observation_ids": ["obs-neck-1"],
+        "counterevidence_ids": [],
+    }
+
+
+def _agent_output(candidates: list[dict], status: str = "completed") -> dict:
+    return {
+        "status": status,
+        "scope": "full_body",
+        "summary": "当前身体状态可能涉及多个相关模式。",
+        "candidates": candidates,
+        "cross_concern_patterns": [],
+        "information_gaps": [],
+        "safety_summary": {},
+    }
+
+
+def _service(output: dict) -> tuple[DiagnosisService, TestModel]:
+    model = TestModel(custom_output_args=output)
+    service = DiagnosisService(diagnosis_agent=create_diagnosis_agent(model))
+    return service, model
 
 
 @pytest.mark.asyncio
-async def test_generate_diagnosis_includes_red_flags_when_detected(monkeypatch):
-    monkeypatch.setattr(
-        "src.services.diagnosis_service.AIService",
-        lambda: _FakeAIService(DIAGNOSIS_JSON),
+async def test_generate_diagnosis_uses_exact_body_state_revision() -> None:
+    service, model = _service(_agent_output([_candidate()]))
+
+    result = await service.generate_diagnosis(
+        body_state_revision=12,
+        body_state=_body_state(12),
+        relevant_history=[{"revision": 11, "change_type": "fact.temporal_changed"}],
+        profile={"age": 30},
     )
 
-    result = await DiagnosisService().generate_diagnosis(
-        extracted_info=[{"body_part": "颈椎", "symptom_type": "酸胀"}],
-        profile={},
-        conversation_summary="剧烈疼痛，手指麻木无力",
-    )
-
-    assert "red_flags" in result
-    assert result["red_flags"]["has_red_flags"] is True
-    assert len(result["red_flags"]["flags"]) > 0
+    assert result["status"] == "completed"
+    assert result["candidates"][0]["basis_fact_ids"] == ["fact-neck-1"]
+    assert "R12" in str(model.last_model_request_parameters)
+    assert "fact-neck-1" in str(model.last_model_request_parameters)
 
 
 @pytest.mark.asyncio
-async def test_generate_diagnosis_no_red_flags_for_mild(monkeypatch):
-    monkeypatch.setattr(
-        "src.services.diagnosis_service.AIService",
-        lambda: _FakeAIService(DIAGNOSIS_JSON),
+async def test_generate_diagnosis_does_not_cap_candidate_count_at_three() -> None:
+    service, _ = _service(_agent_output([_candidate(i) for i in range(1, 9)]))
+    result = await service.generate_diagnosis(
+        body_state_revision=12,
+        body_state=_body_state(12),
     )
-
-    result = await DiagnosisService().generate_diagnosis(
-        extracted_info=[{"body_part": "颈椎", "symptom_type": "酸胀", "severity": "轻度"}],
-        profile={},
-        conversation_summary="肩膀有点酸",
-    )
-
-    assert "red_flags" not in result
-
-
-# --- Treatment integration with faithfulness ---
-
-
-TREATMENT_JSON = """
-{
-  "treatment_plan": {
-    "goal": "缓解颈肩酸胀",
-    "duration_weeks": 4,
-    "correction_exercises": [
-      {
-        "name": "胸小肌拉伸",
-        "description": "靠门框拉伸。",
-        "sets": "2组",
-        "reps": "30秒",
-        "notes": ""
-      }
-    ],
-    "daily_habits": ["每45分钟起身"],
-    "expected_timeline": "2-4周",
-    "warning_signs": ["放射痛就医"]
-  }
-}
-"""
+    assert len(result["candidates"]) == 8
 
 
 @pytest.mark.asyncio
-async def test_generate_treatment_includes_faithfulness_with_rag(monkeypatch):
-    monkeypatch.setattr(
-        "src.services.diagnosis_service.AIService",
-        lambda: _FakeAIService(TREATMENT_JSON),
+async def test_generate_diagnosis_allows_zero_candidates_when_information_is_insufficient() -> None:
+    service, _ = _service(_agent_output([], status="insufficient_information"))
+    result = await service.generate_diagnosis(
+        body_state_revision=12,
+        body_state=_body_state(12),
     )
-
-    rag_results = [
-        {"title": "胸小肌拉伸方法", "summary": "拉伸", "content": ""}
-    ]
-
-    result = await DiagnosisService().generate_treatment(
-        confirmed_diagnosis={"name": "头前伸倾向", "severity": "轻度"},
-        extracted_info=[{"body_part": "颈椎", "symptom_type": "酸胀"}],
-        profile={},
-        rag_results=rag_results,
-    )
-
-    assert "faithfulness" in result
-    assert result["faithfulness"]["faithful"] is True
-    assert "citations" in result
+    assert result["status"] == "insufficient_information"
+    assert result["candidates"] == []
 
 
 @pytest.mark.asyncio
-async def test_generate_treatment_no_faithfulness_without_rag(monkeypatch):
-    monkeypatch.setattr(
-        "src.services.diagnosis_service.AIService",
-        lambda: _FakeAIService(TREATMENT_JSON),
+async def test_generate_diagnosis_blocks_current_positive_red_flag_before_agent_run() -> None:
+    service, model = _service(_agent_output([_candidate()]))
+    state = _body_state(12)
+    state["facts"].append(
+        {
+            "id": "fact-safety-1",
+            "kind": "discomfort",
+            "body_region": "右脚",
+            "value": "脚趾麻木",
+            "details": {},
+            "lifecycle_state": "active",
+            "trend": "worsening",
+        }
     )
 
-    result = await DiagnosisService().generate_treatment(
-        confirmed_diagnosis={"name": "头前伸倾向", "severity": "轻度"},
-        extracted_info=[{"body_part": "颈椎", "symptom_type": "酸胀"}],
-        profile={},
+    result = await service.generate_diagnosis(body_state_revision=12, body_state=state)
+
+    assert result["status"] == "safety_blocked"
+    assert result["candidates"] == []
+    assert model.last_model_request_parameters is None
+
+
+@pytest.mark.asyncio
+async def test_negative_or_historical_red_flag_words_do_not_block_current_diagnosis() -> None:
+    service, model = _service(_agent_output([_candidate()]))
+    state = _body_state(12)
+    state["facts"].append(
+        {
+            "id": "fact-negative-1",
+            "kind": "negative_finding",
+            "body_region": "右脚",
+            "value": "无脚趾麻木",
+            "details": {},
+            "lifecycle_state": "active",
+            "trend": "stable",
+        }
     )
 
-    assert "faithfulness" not in result
-    assert "citations" not in result
+    result = await service.generate_diagnosis(
+        body_state_revision=12,
+        body_state=state,
+        relevant_history=[{"revision": 8, "changes": {"historical": "2019 年曾扭伤"}}],
+    )
+
+    assert result["status"] == "completed"
+    assert model.last_model_request_parameters is not None
+
+
+@pytest.mark.asyncio
+async def test_generate_diagnosis_rejects_missing_body_state() -> None:
+    service, _ = _service(_agent_output([_candidate()]))
+    with pytest.raises(ValueError, match="body_state is required"):
+        await service.generate_diagnosis(body_state_revision=12, body_state={})
+
+
+@pytest.mark.asyncio
+async def test_generate_diagnosis_rejects_revision_mismatch() -> None:
+    service, _ = _service(_agent_output([_candidate()]))
+    with pytest.raises(ValueError, match="does not match"):
+        await service.generate_diagnosis(
+            body_state_revision=13,
+            body_state=_body_state(12),
+        )

@@ -14,8 +14,7 @@ _default_executor: ToolExecutor | None = None
 
 
 def get_consultation_registry() -> ToolRegistry:
-    """Get or create the default consultation ToolRegistry.
-    """
+    """Get or create the default consultation ToolRegistry."""
     global _default_registry
     if _default_registry is None:
         _default_registry = ToolRegistry()

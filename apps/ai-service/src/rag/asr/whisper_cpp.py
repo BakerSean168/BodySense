@@ -61,7 +61,7 @@ class WhisperCppProvider(ASRProvider):
         if not audio_path.exists():
             raise FileNotFoundError(f"Audio file not found: {audio_path}")
 
-        model_path = self._ensure_model(self.model_name)
+        model_path = self._ensure_model(self.model_name or DEFAULT_MODEL)
         workdir = audio_path.parent
         output_path = workdir / "transcript.raw.jsonl"
 
@@ -79,9 +79,7 @@ class WhisperCppProvider(ASRProvider):
         """Ensure whisper.cpp model file exists, downloading from Hugging Face if needed."""
         if model_name not in WHISPER_MODEL_URLS:
             supported = ", ".join(sorted(WHISPER_MODEL_URLS))
-            raise ValueError(
-                f"Unsupported whisper model '{model_name}'. Supported: {supported}"
-            )
+            raise ValueError(f"Unsupported whisper model '{model_name}'. Supported: {supported}")
 
         self._whisper_root.mkdir(parents=True, exist_ok=True)
         model_path = self._whisper_root / model_name
@@ -115,11 +113,15 @@ class WhisperCppProvider(ASRProvider):
         command = [
             "ffmpeg",
             "-hide_banner",
-            "-loglevel", "error",
+            "-loglevel",
+            "error",
             "-y",
-            "-i", audio_rel,
-            "-af", filter_arg,
-            "-f", "null",
+            "-i",
+            audio_rel,
+            "-af",
+            filter_arg,
+            "-f",
+            "null",
             "-",
         ]
         subprocess.run(command, cwd=workdir, check=True)

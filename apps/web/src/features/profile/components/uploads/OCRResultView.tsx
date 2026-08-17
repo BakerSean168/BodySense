@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import type { OCRResult, HealthIndicator } from '../../types/upload.types';
+import { useState } from "react";
+import type { OCRResult, HealthIndicator } from "../../types/upload.types";
 
 interface OCRResultViewProps {
   result: OCRResult;
@@ -9,11 +9,7 @@ export function OCRResultView({ result }: OCRResultViewProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   if (!result.indicators || result.indicators.length === 0) {
-    return (
-      <div className="text-sm text-gray-500">
-        未识别到健康指标
-      </div>
-    );
+    return <div className="text-sm text-gray-500">未识别到健康指标</div>;
   }
 
   return (
@@ -61,14 +57,19 @@ export function OCRResultView({ result }: OCRResultViewProps) {
         className="text-sm text-blue-600 hover:text-blue-500 flex items-center gap-1"
       >
         <svg
-          className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+          className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-90" : ""}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 5l7 7-7 7"
+          />
         </svg>
-        {isExpanded ? '隐藏原始文本' : '查看原始文本'}
+        {isExpanded ? "隐藏原始文本" : "查看原始文本"}
       </button>
 
       {isExpanded && (
@@ -83,10 +84,10 @@ export function OCRResultView({ result }: OCRResultViewProps) {
 }
 
 function IndicatorRow({ indicator }: { indicator: HealthIndicator }) {
-  const isLowConfidence = indicator.confidence === 'low';
+  const isLowConfidence = indicator.confidence === "low";
 
   return (
-    <tr className={isLowConfidence ? 'bg-yellow-50' : ''}>
+    <tr className={isLowConfidence ? "bg-yellow-50" : ""}>
       <td className="px-3 py-2 text-sm text-gray-900">
         {indicator.name}
         {isLowConfidence && (
@@ -97,10 +98,10 @@ function IndicatorRow({ indicator }: { indicator: HealthIndicator }) {
         {indicator.value}
       </td>
       <td className="px-3 py-2 text-sm text-gray-500">
-        {indicator.unit || '-'}
+        {indicator.unit || "-"}
       </td>
       <td className="px-3 py-2 text-sm text-gray-500">
-        {indicator.reference_range || '-'}
+        {indicator.reference_range || "-"}
       </td>
       <td className="px-3 py-2">
         <ConfidenceBadge confidence={indicator.confidence} />
@@ -111,15 +112,15 @@ function IndicatorRow({ indicator }: { indicator: HealthIndicator }) {
 
 function ConfidenceBadge({ confidence }: { confidence: string }) {
   const styles = {
-    high: 'bg-green-100 text-green-800',
-    medium: 'bg-yellow-100 text-yellow-800',
-    low: 'bg-red-100 text-red-800',
+    high: "bg-green-100 text-green-800",
+    medium: "bg-yellow-100 text-yellow-800",
+    low: "bg-red-100 text-red-800",
   };
 
   const labels = {
-    high: '高',
-    medium: '中',
-    low: '低',
+    high: "高",
+    medium: "中",
+    low: "低",
   };
 
   return (

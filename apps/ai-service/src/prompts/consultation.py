@@ -1,6 +1,5 @@
 """Prompt templates for the consultation chat flow."""
 
-
 # System prompt for the consultation chat
 SYSTEM_PROMPT = """你是一位专业的体态健康顾问，名叫"体态助手"。
 你的职责是通过对话帮助用户分析体态问题，提供专业的健康建议。
@@ -197,12 +196,7 @@ def build_rag_context(search_results: list[dict]) -> str:
     for i, result in enumerate(search_results[:3], 1):
         title = result.get("title", "")
         summary = result.get("summary", "")
-        content = (
-            result.get("body_markdown")
-            or result.get("content")
-            or summary
-            or ""
-        )
+        content = result.get("body_markdown") or result.get("content") or summary or ""
         category = result.get("category") or result.get("problem_slug", "")
         source_title = result.get("source_title", "")
         source_timestamp = result.get("source_timestamp", "")

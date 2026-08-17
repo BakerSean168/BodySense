@@ -138,7 +138,7 @@
       "kind": "treatment",
       "verdict": "rejected",
       "reasons": [
-        "Missing required field: treatment_plan"
+        "Missing required field: goal"
       ],
       "safety_fallback": "出于安全考虑，本次未能生成可下发的训练方案。"
     }
@@ -390,31 +390,6 @@
   },
   {
     "version": 1,
-    "seq": 20,
-    "channel": "state",
-    "type": "state.health_features.upsert",
-    "ids": {
-      "conversation_id": "conv-1",
-      "run_id": "run-1",
-      "turn_id": "turn-1",
-      "message_id": null,
-      "tool_call_id": null,
-      "interaction_id": null,
-      "job_id": null
-    },
-    "payload": {
-      "health_features": {
-        "discomforts": [
-          {
-            "label": "颈酸",
-            "source": "extracted_info"
-          }
-        ]
-      }
-    }
-  },
-  {
-    "version": 1,
     "seq": 21,
     "channel": "state",
     "type": "state.phase.changed",
@@ -629,50 +604,6 @@
     "payload": {
       "error": {
         "message": "vision timeout"
-      }
-    }
-  },
-  {
-    "version": 1,
-    "seq": 32,
-    "channel": "state",
-    "type": "state.diagnosis.ready",
-    "ids": {
-      "conversation_id": "conv-1",
-      "run_id": "run-1",
-      "turn_id": "turn-1",
-      "message_id": null,
-      "tool_call_id": null,
-      "interaction_id": null,
-      "job_id": null
-    },
-    "payload": {
-      "diagnoses": [
-        {
-          "name": "圆肩倾向",
-          "confidence": "中"
-        }
-      ]
-    }
-  },
-  {
-    "version": 1,
-    "seq": 33,
-    "channel": "state",
-    "type": "state.treatment.ready",
-    "ids": {
-      "conversation_id": "conv-1",
-      "run_id": "run-1",
-      "turn_id": "turn-1",
-      "message_id": null,
-      "tool_call_id": null,
-      "interaction_id": null,
-      "job_id": null
-    },
-    "payload": {
-      "treatment_plan": {
-        "goal": "改善圆肩",
-        "duration_weeks": 4
       }
     }
   },

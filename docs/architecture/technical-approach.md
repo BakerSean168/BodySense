@@ -1,8 +1,13 @@
 # BodySense — AI 体态健康助手 技术方案文档
 
+> **Historical implementation reference.** Routes and domain ownership in this document may be obsolete. See [Current Longitudinal System](./current-longitudinal-system.md).
+
+
 > **⚠️ HISTORICAL — 初始设计文档。** 本文档为 2026-06-19 的初稿，描述项目启动时的架构选型和 API 设计。后续架构演进详见：
 > - [ADR 0001: 深化运行时模块](../adr/0001-deepen-runtime-modules.md)
-> - [ADR 0002: Agent Runtime 所有权模型](../adr/0002-agent-runtime-ownership.md)（当前真值）
+> - [ADR 0002: Agent Runtime 所有权模型](../adr/0002-agent-runtime-ownership.md)（runtime 当前真值）
+> - [ADR 0004: Longitudinal BodyState](../adr/0004-adopt-longitudinal-body-state-model.md)（business domain 当前真值）
+> - [Longitudinal BodyState Domain Model](./longitudinal-body-state-domain.md)
 > - [Final Agent Runtime Architecture](../plan/active/final-agent-runtime-architecture.md)
 
 **文档版本**：v1.0

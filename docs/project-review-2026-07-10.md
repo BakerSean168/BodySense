@@ -1,5 +1,8 @@
 # BodySense 全面项目审查报告
 
+> **Historical review snapshot.** Findings refer to the pre-longitudinal implementation. See `docs/architecture/current-longitudinal-system.md` for current behavior.
+
+
 > 审查日期：2026-07-10
 > 审查范围：AI 服务（Python）、后端（Go）、前端（React）、工程化/DevOps、产品完整性、求职亮点
 > 审查方式：逐文件阅读实际代码与配置（非仅看文件名）

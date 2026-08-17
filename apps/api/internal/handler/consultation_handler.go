@@ -15,6 +15,7 @@ import (
 type ConsultationHandler struct {
 	consultationService *service.ConsultationService
 	interactionService  *service.AgentInteractionService
+	bodyStateService    *service.BodyStateService
 	runtime             *consultationruntime.Runtime
 }
 
@@ -23,10 +24,16 @@ func NewConsultationHandler(
 	consultationService *service.ConsultationService,
 	interactionService *service.AgentInteractionService,
 	runtime *consultationruntime.Runtime,
+	bodyStateServices ...*service.BodyStateService,
 ) *ConsultationHandler {
+	var bodyStateService *service.BodyStateService
+	if len(bodyStateServices) > 0 {
+		bodyStateService = bodyStateServices[0]
+	}
 	return &ConsultationHandler{
 		consultationService: consultationService,
 		interactionService:  interactionService,
+		bodyStateService:    bodyStateService,
 		runtime:             runtime,
 	}
 }
@@ -81,68 +88,6 @@ func (h *ConsultationHandler) GetConsultation(c *gin.Context) {
 	session.PendingInteractions = pendingInteractions
 
 	c.JSON(http.StatusOK, session)
-}
-
-// UpdateHealthFeatures handles PUT /api/v1/consultations/:id/health-features
-func (h *ConsultationHandler) UpdateHealthFeatures(c *gin.Context) {
-	uid, ok := getUserUUID(c)
-	if !ok {
-		return
-	}
-
-	conversationID, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		respondError(c, http.StatusBadRequest, "INVALID_ID", "invalid consultation id")
-		return
-	}
-
-	var req dto.UpdateHealthFeaturesRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		respondError(c, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-		return
-	}
-
-	if err := h.consultationService.UpdateHealthFeatures(c.Request.Context(), conversationID, uid, req.HealthFeatures); err != nil {
-		log.Printf("failed to update health features for consultation %s: %v", conversationID, err)
-		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to update health features")
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "health features updated"})
-}
-
-// ConfirmDiagnosis handles PUT /api/v1/consultations/:id/confirm
-func (h *ConsultationHandler) ConfirmDiagnosis(c *gin.Context) {
-	uid, ok := getUserUUID(c)
-	if !ok {
-		return
-	}
-
-	conversationID, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		respondError(c, http.StatusBadRequest, "INVALID_ID", "invalid consultation id")
-		return
-	}
-
-	var req dto.ConfirmDiagnosisRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		respondError(c, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-		return
-	}
-
-	if err := h.consultationService.UpdateDiagnosis(c.Request.Context(), conversationID, uid, req.Diagnosis); err != nil {
-		log.Printf("failed to update diagnosis for consultation %s: %v", conversationID, err)
-		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to confirm diagnosis")
-		return
-	}
-
-	if err := h.consultationService.UpdatePhase(c.Request.Context(), conversationID, uid, "diagnosis_confirmed"); err != nil {
-		log.Printf("failed to update phase for consultation %s: %v", conversationID, err)
-		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to update consultation phase")
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "diagnosis confirmed"})
 }
 
 // ResumeInteraction handles POST /api/v1/consultations/:id/interrupts/:interactionId/answers

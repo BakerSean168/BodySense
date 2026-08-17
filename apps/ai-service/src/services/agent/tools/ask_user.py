@@ -16,8 +16,7 @@ from ..tool_types import RuntimeToolDefinition, ToolCategory, ToolResult, ToolSt
 ASK_USER_SCHEMA: dict[str, Any] = {
     "name": "ask_user",
     "description": (
-        "暂停当前流程，向用户提出一个问题并等待回答。"
-        "仅在需要用户提供关键信息才能继续时使用。"
+        "暂停当前流程，向用户提出一个问题并等待回答。仅在需要用户提供关键信息才能继续时使用。"
     ),
     "parameters": {
         "type": "object",
@@ -133,8 +132,6 @@ def _normalize_choice_options(options: Any) -> list[str]:
     return normalized[:4]
 
 
-
-
 def _normalize_fields(raw: Any) -> list[dict[str, Any]]:
     """Normalize multi-field form definitions (≤3 fields)."""
     if not isinstance(raw, list):
@@ -172,6 +169,7 @@ def _normalize_fields(raw: Any) -> list[dict[str, Any]]:
             }
         )
     return fields
+
 
 def _build_default_context(question: str, reason: str) -> str:
     if isinstance(reason, str) and reason.strip():
@@ -217,9 +215,7 @@ async def handle_ask_user(arguments: dict[str, Any]) -> ToolResult:
         allow_custom_input = bool(options)
 
     reason = str(arguments.get("reason", "")).strip()
-    context = str(arguments.get("context", "")).strip() or _build_default_context(
-        question, reason
-    )
+    context = str(arguments.get("context", "")).strip() or _build_default_context(question, reason)
     fields = _normalize_fields(arguments.get("fields"))
 
     content: dict[str, Any] = {

@@ -5,10 +5,11 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, LiteralString, Optional, cast
 
 import psycopg
 from pgvector.psycopg import register_vector
+from psycopg import sql
 from psycopg.types.json import Jsonb
 
 from .embedding import EmbeddingGenerator, get_embedding_generator
@@ -106,8 +107,7 @@ class KnowledgeLibrary:
         if password is None:
             password = "bodysense123"
             logger.warning(
-                "DB_PASSWORD not set, using default password. "
-                "Set DB_PASSWORD in your .env file."
+                "DB_PASSWORD not set, using default password. Set DB_PASSWORD in your .env file."
             )
         return f"postgresql://{user}:{password}@{host}:{port}/{name}"
 
@@ -147,8 +147,7 @@ class KnowledgeLibrary:
             conn.commit()
 
         embedding_inputs = [
-            "\n".join([unit.title, unit.summary, unit.body_markdown])
-            for unit in pack.units
+            "\n".join([unit.title, unit.summary, unit.body_markdown]) for unit in pack.units
         ]
         embeddings = await self.embedding_generator.generate_batch(embedding_inputs)
 
@@ -181,7 +180,10 @@ class KnowledgeLibrary:
                     Jsonb(pack.source.metadata),
                 ),
             )
-            source_id = cur.fetchone()[0]
+            row = cur.fetchone()
+            if row is None:
+                raise RuntimeError("Failed to persist knowledge source row")
+            source_id = row[0]
 
             for segment in pack.transcript_segments:
                 cur.execute(
@@ -236,7 +238,10 @@ class KnowledgeLibrary:
                         Jsonb({"problem_display_name": unit.problem_display_name}),
                     ),
                 )
-                unit_id_by_key[unit.unit_key] = cur.fetchone()[0]
+                row = cur.fetchone()
+                if row is None:
+                    raise RuntimeError("Failed to persist knowledge unit row")
+                unit_id_by_key[unit.unit_key] = row[0]
 
             for clip in pack.clips:
                 cur.execute(
@@ -323,7 +328,7 @@ class KnowledgeLibrary:
         params.extend([embedding, candidate_limit])
 
         with conn.cursor() as cur:
-            cur.execute(sql, params)
+            cur.execute(cast("LiteralString", sql), params)
             rows = cur.fetchall()
 
         if not rows:
@@ -417,12 +422,14 @@ class KnowledgeLibrary:
             for row in rows
         ]
 
-    _ALLOWED_TABLES = frozenset({
-        "knowledge_sources",
-        "knowledge_segments",
-        "knowledge_units",
-        "knowledge_clips",
-    })
+    _ALLOWED_TABLES = frozenset(
+        {
+            "knowledge_sources",
+            "knowledge_segments",
+            "knowledge_units",
+            "knowledge_clips",
+        }
+    )
 
     async def stats(self) -> dict[str, int]:
         """Return normalized knowledge table counts."""
@@ -430,8 +437,9 @@ class KnowledgeLibrary:
         counts: dict[str, int] = {}
         with conn.cursor() as cur:
             for table_name in self._ALLOWED_TABLES:
-                cur.execute(f"SELECT COUNT(*) FROM {table_name}")
-                counts[table_name] = cur.fetchone()[0]
+                cur.execute(sql.SQL("SELECT COUNT(*) FROM {}").format(sql.Identifier(table_name)))
+                row = cur.fetchone()
+                counts[table_name] = row[0] if row is not None else 0
         return counts
 
     async def close(self):

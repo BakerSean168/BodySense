@@ -19,14 +19,14 @@ import {
   useCallback,
   useRef,
   type ReactNode,
-} from 'react';
-import type { StreamEvent } from '../types/consultation';
+} from "react";
+import type { StreamEvent } from "../types/consultation";
 import {
   reduceActiveTurnEvent,
   INITIAL_ACTIVE_TURN_STATE,
   resetActiveTurnState,
   type ActiveTurnState,
-} from '../runtime/activeTurnReducer';
+} from "../runtime/activeTurnReducer";
 
 // ---------------------------------------------------------------------------
 // Context types
@@ -58,33 +58,39 @@ type TurnAction =
   // `type` is the discriminant. Each branch carries only the data required by
   // that transition, so the reducer cannot accidentally read fields belonging
   // to another action.
-  | { type: 'DISPATCH_EVENT'; event: StreamEvent }
-  | { type: 'RESET_TURN' }
-  | { type: 'HYDRATE_TURN'; state: ActiveTurnState }
-  | { type: 'DISMISS_RED_FLAG' }
-  | { type: 'MARK_INTERACTION_ANSWERED'; interactionId: string };
+  | { type: "DISPATCH_EVENT"; event: StreamEvent }
+  | { type: "RESET_TURN" }
+  | { type: "HYDRATE_TURN"; state: ActiveTurnState }
+  | { type: "DISMISS_RED_FLAG" }
+  | { type: "MARK_INTERACTION_ANSWERED"; interactionId: string };
 
-function turnReducer(state: ActiveTurnState, action: TurnAction): ActiveTurnState {
+function turnReducer(
+  state: ActiveTurnState,
+  action: TurnAction,
+): ActiveTurnState {
   // Reducers must stay pure: same state + action => same next state. Network
   // calls, logging and callback invocation belong outside this function.
   switch (action.type) {
-    case 'DISPATCH_EVENT':
+    case "DISPATCH_EVENT":
       return reduceActiveTurnEvent(state, action.event).state;
-    case 'RESET_TURN':
+    case "RESET_TURN":
       return resetActiveTurnState();
-    case 'HYDRATE_TURN':
+    case "HYDRATE_TURN":
       return action.state;
-    case 'DISMISS_RED_FLAG':
+    case "DISMISS_RED_FLAG":
       return { ...state, redFlag: null };
-    case 'MARK_INTERACTION_ANSWERED':
-      if (!state.pendingInteraction || state.pendingInteraction.id !== action.interactionId) {
+    case "MARK_INTERACTION_ANSWERED":
+      if (
+        !state.pendingInteraction ||
+        state.pendingInteraction.id !== action.interactionId
+      ) {
         return state;
       }
       return {
         ...state,
         pendingInteraction: {
           ...state.pendingInteraction,
-          status: 'answered',
+          status: "answered",
         },
       };
   }
@@ -100,23 +106,23 @@ export function ActiveTurnProvider({ children }: { children: ReactNode }) {
   // React guarantees `dispatch` is stable. These wrappers are memoized so the
   // actions context also exposes stable function identities to consumers.
   const dispatchEvent = useCallback((event: StreamEvent) => {
-    dispatch({ type: 'DISPATCH_EVENT', event });
+    dispatch({ type: "DISPATCH_EVENT", event });
   }, []);
 
   const resetTurn = useCallback(() => {
-    dispatch({ type: 'RESET_TURN' });
+    dispatch({ type: "RESET_TURN" });
   }, []);
 
   const hydrateTurn = useCallback((s: ActiveTurnState) => {
-    dispatch({ type: 'HYDRATE_TURN', state: s });
+    dispatch({ type: "HYDRATE_TURN", state: s });
   }, []);
 
   const dismissRedFlag = useCallback(() => {
-    dispatch({ type: 'DISMISS_RED_FLAG' });
+    dispatch({ type: "DISMISS_RED_FLAG" });
   }, []);
 
   const markInteractionAnswered = useCallback((interactionId: string) => {
-    dispatch({ type: 'MARK_INTERACTION_ANSWERED', interactionId });
+    dispatch({ type: "MARK_INTERACTION_ANSWERED", interactionId });
   }, []);
 
   // Stable ref — functions are stable (useCallback with [] deps), so the object
@@ -153,7 +159,9 @@ export function useActiveTurnState(): ActiveTurnState {
 export function useActiveTurnActions(): ActiveTurnActions {
   const ctx = useContext(ActiveTurnActionsContext);
   if (!ctx) {
-    throw new Error('useActiveTurnActions must be used within ActiveTurnProvider');
+    throw new Error(
+      "useActiveTurnActions must be used within ActiveTurnProvider",
+    );
   }
   return ctx;
 }

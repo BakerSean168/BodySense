@@ -29,16 +29,16 @@ def test_validate_text_output_degraded_empty(guard):
 
 
 def test_validate_structured_output_accepted(guard):
-    output = {"diagnoses": [{"name": "圆肩", "confidence": "高"}]}
-    result = guard.validate_structured_output(output, required_fields=["diagnoses"])
+    output = {"candidates": [{"name": "圆肩", "confidence": "高"}]}
+    result = guard.validate_structured_output(output, required_fields=["candidates"])
     assert result.status == GovernanceStatus.ACCEPTED
 
 
 def test_validate_structured_output_rejected_missing_field(guard):
-    output = {"diagnoses": []}
+    output = {"candidates": []}
     result = guard.validate_structured_output(
         output,
-        required_fields=["diagnoses", "treatment_plan"],
+        required_fields=["candidates", "treatment_plan"],
     )
     assert result.status == GovernanceStatus.REJECTED
     assert any("Missing required field" in i.message for i in result.issues)
@@ -72,9 +72,17 @@ def test_treatment_gate_moved_to_runtime_governance_seam():
     grounded = guard_structured_output(
         "treatment",
         {
-            "treatment_plan": {
-                "correction_exercises": [{"name": "臀桥", "sets": 3, "reps": 10}],
-            }
+            "status": "proposed",
+            "goal": "改善髋部稳定性",
+            "duration_weeks": 4,
+            "interventions": [
+                {
+                    "kind": "exercise",
+                    "title": "臀桥",
+                    "description": "进行可控的髋伸训练。",
+                    "prescription": {"sets": 3, "reps": 10},
+                }
+            ],
         },
         rag_results=[
             {

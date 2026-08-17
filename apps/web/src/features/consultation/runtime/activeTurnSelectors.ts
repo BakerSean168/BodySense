@@ -5,8 +5,13 @@
  * to avoid duplicating sort/dedup/filter logic across components.
  */
 
-import type { ActiveTurnState } from './activeTurnReducer';
-import type { ToolCallInfo, Citation, RedFlagEvent, PendingInteraction } from '../types/consultation';
+import type { ActiveTurnState } from "./activeTurnReducer";
+import type {
+  ToolCallInfo,
+  Citation,
+  RedFlagEvent,
+  PendingInteraction,
+} from "../types/consultation";
 
 // ---------------------------------------------------------------------------
 // View Model
@@ -29,7 +34,9 @@ export interface ActiveTurnViewModel {
 // Selectors
 // ---------------------------------------------------------------------------
 
-export function selectActiveTurnViewModel(state: ActiveTurnState): ActiveTurnViewModel {
+export function selectActiveTurnViewModel(
+  state: ActiveTurnState,
+): ActiveTurnViewModel {
   return {
     streamingMarkdown: selectStreamingMarkdown(state),
     toolCalls: selectVisibleToolCalls(state),
@@ -37,8 +44,8 @@ export function selectActiveTurnViewModel(state: ActiveTurnState): ActiveTurnVie
     knowledgeGaps: selectKnowledgeGaps(state),
     redFlag: state.redFlag,
     pendingInteraction: state.pendingInteraction,
-    isRunning: state.status === 'streaming',
-    isInterrupted: state.status === 'interrupted',
+    isRunning: state.status === "streaming",
+    isInterrupted: state.status === "interrupted",
     hasVisibleContent: selectHasVisibleContent(state),
     hasRenderableContent: selectHasRenderableContent(state),
   };
@@ -52,11 +59,11 @@ export function selectStreamingMarkdown(state: ActiveTurnState): string {
 /** Tool calls sorted (running first, completed last), ask_user filtered out. */
 export function selectVisibleToolCalls(state: ActiveTurnState): ToolCallInfo[] {
   const calls = Object.values(state.toolCallsById).filter(
-    (tc) => tc.tool !== 'ask_user',
+    (tc) => tc.tool !== "ask_user",
   );
   calls.sort((a, b) => {
     if (a.status === b.status) return 0;
-    return a.status === 'running' ? -1 : 1;
+    return a.status === "running" ? -1 : 1;
   });
   return calls;
 }
@@ -80,12 +87,12 @@ export function selectKnowledgeGaps(
 
 /** Whether the turn is interrupted (waiting for user input). */
 export function selectIsInterrupted(state: ActiveTurnState): boolean {
-  return state.status === 'interrupted';
+  return state.status === "interrupted";
 }
 
 /** Whether the composer should stay locked until the current turn fully settles. */
 export function selectIsComposerLocked(state: ActiveTurnState): boolean {
-  return state.status === 'streaming' || state.status === 'interrupted';
+  return state.status === "streaming" || state.status === "interrupted";
 }
 
 /** Whether the active turn has any visible content to render. */

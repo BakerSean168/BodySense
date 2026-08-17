@@ -1,5 +1,5 @@
-import { authFetch } from '@/features/auth/services/authService';
-import { safeJson } from '@/lib/api-url';
+import { authFetch } from "@/features/auth/services/authService";
+import { safeJson } from "@/lib/api-url";
 
 export interface DimensionScores {
   posture: number;
@@ -9,76 +9,57 @@ export interface DimensionScores {
   overall: number;
 }
 
-export interface IdentifiedIssue {
-  issue: string;
-  severity: '轻度' | '中度' | '重度';
-  description: string;
-  priority: number;
-}
-
-export interface ImprovementSummary {
-  exercise?: string;
-  lifestyle?: string;
-  nutrition?: string;
-  general?: string;
+export interface AssessmentObservation {
+  concern_key?: string;
+  kind: string;
+  body_region: string;
+  value: Record<string, unknown>;
+  condition?: Record<string, unknown>;
+  evidence: string;
+  confidence?: string;
 }
 
 export interface AssessmentReport {
   id: string;
   user_id: string;
-  health_grade: string;
+  health_grade: "A" | "B" | "C" | "D";
   dimension_scores: DimensionScores;
-  identified_issues: IdentifiedIssue[];
-  improvement_summary: ImprovementSummary;
+  observations: AssessmentObservation[];
+  summary: { text?: string } | string;
+  information_gaps: string[];
   created_at: string;
 }
 
 export interface AssessmentListResponse {
   reports: AssessmentReport[];
   total: number;
-  limit: number;
-  offset: number;
 }
 
 export const assessmentApi = {
-  // Generate a new assessment report
-  generate: async (): Promise<AssessmentReport> => {
-    const response = await authFetch('/api/v1/assessment/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+  async generate(): Promise<AssessmentReport> {
+    const response = await authFetch("/api/v1/assessment/generate", {
+      method: "POST",
     });
-
-    if (!response.ok) {
-      const error = await safeJson<Record<string, string>>(response).catch(
-        () => ({}) as Record<string, string>,
-      );
-      throw new Error(error.error || 'Failed to generate assessment');
-    }
-
-    return safeJson(response);
+    if (!response.ok) throw new Error("Failed to generate assessment");
+    return safeJson<AssessmentReport>(response);
   },
 
-  // Get a specific report
-  getReport: async (id: string): Promise<AssessmentReport> => {
+  async getReport(id: string): Promise<AssessmentReport> {
     const response = await authFetch(`/api/v1/assessment/${id}`);
-
-    if (!response.ok) {
-      throw new Error('Failed to get report');
-    }
-
-    return safeJson(response);
+    if (!response.ok) throw new Error("Failed to load assessment");
+    return safeJson<AssessmentReport>(response);
   },
 
-  // List all reports
-  listReports: async (limit = 20, offset = 0): Promise<AssessmentListResponse> => {
-    const response = await authFetch(
-      `/api/v1/assessment?limit=${limit}&offset=${offset}`
-    );
-
-    if (!response.ok) {
-      throw new Error('Failed to list reports');
-    }
-
-    return safeJson(response);
+  async listReports(params?: {
+    limit?: number;
+    offset?: number;
+  }): Promise<AssessmentListResponse> {
+    const search = new URLSearchParams();
+    if (params?.limit != null) search.set("limit", String(params.limit));
+    if (params?.offset != null) search.set("offset", String(params.offset));
+    const suffix = search.size ? `?${search.toString()}` : "";
+    const response = await authFetch(`/api/v1/assessment${suffix}`);
+    if (!response.ok) throw new Error("Failed to load assessments");
+    return safeJson<AssessmentListResponse>(response);
   },
 };

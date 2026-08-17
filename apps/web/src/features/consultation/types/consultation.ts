@@ -6,7 +6,6 @@ import type {
   ToolCallEvent,
   ToolResultEvent,
   ExtractedInfoUpsertEvent,
-  HealthFeaturesUpsertEvent,
   PhaseChangedEvent,
   CitationAddedEvent,
   KnowledgeGapEvent,
@@ -20,16 +19,20 @@ import type {
   InteractionAnsweredEvent,
   InteractionExpiredEvent,
   StreamEvent,
-} from '@bodysense/contracts';
+} from "@bodysense/contracts";
 
-export type { StreamEvent, InteractionRequiredEvent, InteractionAnsweredEvent, InteractionExpiredEvent };
-
+export type {
+  StreamEvent,
+  InteractionRequiredEvent,
+  InteractionAnsweredEvent,
+  InteractionExpiredEvent,
+};
 
 export interface Conversation {
   id: string;
   title: string | null;
-  title_status: 'pending' | 'generating' | 'generated';
-  status: 'active' | 'archived' | 'deleted';
+  title_status: "pending" | "generating" | "generated";
+  status: "active" | "archived" | "deleted";
   pinned: boolean;
   pinned_at: string | null;
   default_model: string | null;
@@ -46,8 +49,8 @@ export interface Message {
   turn_id: string;
   run_id?: string | null;
   parent_message_id?: string | null;
-  role: 'user' | 'assistant' | 'system' | 'tool';
-  status: 'submitted' | 'streaming' | 'completed' | 'failed' | 'aborted';
+  role: "user" | "assistant" | "system" | "tool";
+  status: "submitted" | "streaming" | "completed" | "failed" | "aborted";
   seq: number;
   parts: MessagePart[];
   content_text: string;
@@ -65,38 +68,34 @@ export interface Message {
 }
 
 export type MessagePart =
-  | { type: 'text'; text: string }
+  | { type: "text"; text: string }
   | {
-      type: 'source';
+      type: "source";
       title?: string;
       snippet?: string;
       url?: string;
       id?: string;
-      sourceType?: 'url' | 'document';
+      sourceType?: "url" | "document";
       providerMetadata?: Record<string, unknown>;
     }
   | {
-      type: 'data';
+      type: "data";
       name: string;
       data: unknown;
     }
   | {
-      type: 'tool-call' | 'tool_call';
-      tool?: string;
-      toolName?: string;
+      type: "tool-call";
+      toolName: string;
       args: unknown;
       argsText?: string;
-      toolCallId?: string;
-      tool_call_id?: string;
+      toolCallId: string;
       result?: unknown;
     }
   | {
-      type: 'tool-result' | 'tool_result';
-      tool?: string;
-      toolName?: string;
+      type: "tool-result";
+      toolName: string;
       result: unknown;
-      toolCallId?: string;
-      tool_call_id?: string;
+      toolCallId: string;
     };
 
 export interface ErrorInfo {
@@ -109,7 +108,7 @@ export interface Run {
   conversation_id: string;
   turn_id: string;
   request_id: string;
-  status: 'running' | 'completed' | 'failed' | 'cancelled';
+  status: "running" | "completed" | "failed" | "cancelled";
   model: string;
   provider: string | null;
   started_at: string;
@@ -128,9 +127,8 @@ export interface ConsultationSession {
   conversation_id: string;
   phase: ConsultationPhase;
   extracted_info: ExtractedInfo[];
-  health_features: HealthFeatures;
+  body_state?: BodyStateSnapshot | null;
   diagnosis: DiagnosisAnalysis | null;
-  treatment_plan: TreatmentPlan | null;
   pending_interactions?: PendingInteraction[];
   interaction_history?: InteractionHistoryItem[];
   created_at: string;
@@ -148,12 +146,7 @@ export interface ConsultationThread extends ConsultationSession {
 }
 
 export type ConsultationPhase =
-  | 'collecting'
-  | 'ready_for_analysis'
-  | 'analysis_ready'
-  | 'diagnosis_confirmed'
-  | 'plan_ready'
-  | 'completed';
+  "collecting" | "ready_for_analysis" | "analysis_ready";
 
 export interface ExtractedInfo {
   body_part: string;
@@ -166,56 +159,140 @@ export interface ExtractedInfo {
   confirmed?: boolean;
 }
 
-export interface HealthFeatureItem {
-  label: string;
-  body_part?: string;
-  value?: string;
-  details?: string;
-  source?: string;
-  confirmed?: boolean;
-  metadata?: Record<string, unknown>;
+export interface BodyStateFact {
+  id: string;
+  concern_key?: string;
+  kind: string;
+  body_region?: string;
+  value: string;
+  details?: Record<string, unknown>;
+  origin: string;
+  review_state: "unverified" | "confirmed" | "rejected" | string;
+  lifecycle_state: "active" | "inactive" | "resolved" | "corrected" | string;
+  trend: "unknown" | "stable" | "improving" | "worsening" | string;
+  source_key?: string;
+  provenance?: Record<string, unknown>;
+  observed_at?: string | null;
+  valid_from?: string | null;
+  valid_until?: string | null;
+  supersedes_fact_id?: string | null;
+  created_revision?: number;
+  updated_revision: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
-export interface HealthFeatures {
-  posture_findings: HealthFeatureItem[];
-  discomforts: HealthFeatureItem[];
-  negative_findings: HealthFeatureItem[];
-  movement_limitations: HealthFeatureItem[];
-  red_flags: HealthFeatureItem[];
-  user_answers: HealthFeatureItem[];
+export interface BodyStateObservation {
+  id: string;
+  concern_key?: string;
+  kind: string;
+  body_region?: string;
+  method?: string;
+  value: Record<string, unknown>;
+  condition?: Record<string, unknown>;
+  source_key?: string;
+  provenance?: Record<string, unknown>;
+  observed_at?: string | null;
+  review_state: "unverified" | "confirmed" | "rejected" | string;
+  lifecycle_state: string;
+  excluded_from_reasoning?: boolean;
+  created_revision?: number;
+  updated_revision: number;
 }
 
-export interface Diagnosis {
+export interface BodyStateHypothesis {
+  id: string;
+  concern_key: string;
+  statement: string;
+  lifecycle_state:
+    "active" | "strengthened" | "weakened" | "unsupported" | "retired" | string;
+  confidence?: string | null;
+  supporting_fact_ids: string[];
+  supporting_observation_ids: string[];
+  supporting_evidence_ids: string[];
+  counterevidence_ids: string[];
+  source_analysis_id?: string | null;
+  provenance?: Record<string, unknown>;
+  created_revision: number;
+  updated_revision: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface BodyStateRevision {
+  id: string;
+  revision: number;
+  change_type: string;
+  source: string;
+  changes: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface BodyStateSnapshot {
+  user_id: string;
+  current_revision: number;
+  safety_state: Record<string, unknown>;
+  facts: BodyStateFact[];
+  observations: BodyStateObservation[];
+  pending_observations?: BodyStateObservation[];
+  hypotheses?: BodyStateHypothesis[];
+  recent_revisions?: BodyStateRevision[];
+}
+
+export type DiagnosisCandidateAssessmentState =
+  "confirmed" | "unsure" | "not_applicable";
+
+export interface DiagnosisCandidate {
+  candidate_id?: string;
+  concern_key?: string;
   name: string;
-  confidence: '高' | '中' | '低';
-  severity: '轻度' | '中度' | '重度';
+  confidence: "高" | "中" | "低";
+  severity?: "轻度" | "中度" | "重度";
+  evidence_strength?: "高" | "中" | "低";
+  impact?: string;
   basis: string;
   typical_symptoms?: string;
   differential?: string;
+  reasoning_summary?: string;
+  basis_fact_ids?: string[];
+  basis_observation_ids?: string[];
+  supporting_evidence_ids?: string[];
+  counterevidence_ids?: string[];
+  missing_information?: string[];
+  safety_notes?: string[];
+}
+
+export interface DiagnosisFreshness {
+  analysis_id: string;
+  state: "fresh" | "potentially_stale" | "stale";
+  evaluated_against_revision: number;
+  reasons: Array<{
+    code: string;
+    revision?: number;
+    change_type?: string;
+    item_id?: string;
+    concern_key?: string;
+    message: string;
+  }>;
+  checked_at: string;
 }
 
 export interface DiagnosisAnalysis {
-  diagnoses: Diagnosis[];
+  analysis_id?: string;
+  body_state_revision?: number;
+  status?:
+    "completed" | "partial" | "insufficient_information" | "safety_blocked";
+  scope?: string;
+  summary?: string;
+  candidates: DiagnosisCandidate[];
   citations?: Citation[];
-}
-
-export interface TreatmentPlan {
-  goal: string;
-  duration_weeks: number;
-  correction_exercises: ExercisePlan[];
-  daily_habits: string[];
-  nutrition_advice?: string;
-  expected_timeline: string;
-  warning_signs: string[];
-  citations?: Citation[];
-}
-
-export interface ExercisePlan {
-  name: string;
-  description: string;
-  sets?: string;
-  reps?: string;
-  notes?: string;
+  freshness?: DiagnosisFreshness;
+  candidate_assessments?: Array<{
+    candidate_id: string;
+    state: DiagnosisCandidateAssessmentState;
+    notes?: string;
+  }>;
+  created_at?: string;
 }
 
 export interface Citation {
@@ -238,7 +315,6 @@ export interface ConversationShare {
 export interface SharedConversation {
   title: string;
   messages: Message[];
-  metadata: Record<string, unknown> | null;
 }
 
 export type SSEConversationCreated = ConversationCreatedEvent;
@@ -248,7 +324,6 @@ export type SSETextDelta = MessageTextDeltaEvent;
 export type SSEToolCall = ToolCallEvent;
 export type SSEToolResult = ToolResultEvent;
 export type SSEExtractedInfo = ExtractedInfoUpsertEvent;
-export type SSEHealthFeatures = HealthFeaturesUpsertEvent;
 export type SSEPhaseChange = PhaseChangedEvent;
 export type SSECitation = CitationAddedEvent;
 export type SSEKnowledgeGap = KnowledgeGapEvent;
@@ -266,7 +341,7 @@ export interface PendingInteraction {
   tool_call_id: string;
   tool_name: string;
   question: AskUserQuestion;
-  status: 'pending' | 'answered' | 'cancelled' | 'expired';
+  status: "pending" | "answered" | "cancelled" | "expired";
   answer?: unknown;
   created_at: string;
   answered_at?: string | null;
@@ -282,7 +357,7 @@ export interface ProjectedToolCall {
   message_id: string | null;
   tool_name: string;
   arguments: unknown;
-  status: 'running' | 'succeeded' | 'failed';
+  status: "running" | "succeeded" | "failed";
   result: unknown | null;
   error: unknown | null;
   created_at: string;
@@ -294,7 +369,8 @@ export interface ProjectedToolCall {
 export interface AskUserField {
   key: string;
   label: string;
-  answer_type: 'text' | 'single_choice' | 'multi_choice' | 'number' | 'date' | 'scale';
+  answer_type:
+    "text" | "single_choice" | "multi_choice" | "number" | "date" | "scale";
   options?: string[];
   required?: boolean;
 }
@@ -302,7 +378,7 @@ export interface AskUserField {
 export interface AskUserQuestion {
   question: string;
   reason?: string;
-  answer_type: 'text' | 'single_choice' | 'multi_choice' | 'number' | 'date';
+  answer_type: "text" | "single_choice" | "multi_choice" | "number" | "date";
   options?: string[];
   allow_custom_input?: boolean;
   required?: boolean;
@@ -316,7 +392,7 @@ export interface ToolCallInfo {
   tool: string;
   args: unknown;
   result?: unknown;
-  status: 'running' | 'completed';
+  status: "running" | "completed";
 }
 
 export interface ConversationListResponse {

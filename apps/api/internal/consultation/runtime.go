@@ -3,6 +3,7 @@ package consultation
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -23,10 +24,21 @@ const (
 	sseTimeout   = 5 * time.Minute
 )
 
+func durableExecutionContext(parent context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.WithoutCancel(parent), sseTimeout)
+}
+
 type HTTPError struct {
 	Status  int
 	Code    string
 	Message string
+}
+
+type runtimeBodyStateService interface {
+	GetSnapshot(ctx context.Context, userID uuid.UUID, historyLimit int) (*service.BodyStateSnapshot, error)
+	UpsertExtractedSymptom(ctx context.Context, userID, runID uuid.UUID, info json.RawMessage) error
+	RecordSafetyEvent(ctx context.Context, userID uuid.UUID, payload json.RawMessage) error
+	RecordInteractionAnswer(ctx context.Context, userID, interactionID uuid.UUID, question datatypes.JSON, answer json.RawMessage) error
 }
 
 func (e *HTTPError) Error() string {
@@ -34,19 +46,24 @@ func (e *HTTPError) Error() string {
 }
 
 type Runtime struct {
-	conversationService     *service.ConversationService
-	consultationService     *service.ConsultationService
-	profileService          *service.ProfileService
-	messageService          *service.MessageService
-	runService              *service.RunService
-	aiClient                *service.AIClient
-	agentToolService        *service.AgentToolService
-	interactionService      *service.AgentInteractionService
-	outputReviewService     *service.OutputReviewService
-	threadProjectionService *service.ThreadProjectionService
-	runtimeEventService     *service.RuntimeEventService
-	uploadService           *service.UploadService
-	streamRuntime           *stream.Runtime
+	conversationService       *service.ConversationService
+	consultationService       *service.ConsultationService
+	profileService            *service.ProfileService
+	messageService            *service.MessageService
+	runService                *service.RunService
+	aiClient                  *service.AIClient
+	agentToolService          *service.AgentToolService
+	interactionService        *service.AgentInteractionService
+	outputReviewService       *service.OutputReviewService
+	threadProjectionService   *service.ThreadProjectionService
+	runtimeEventService       *service.RuntimeEventService
+	uploadService             *service.UploadService
+	bodyStateService          runtimeBodyStateService
+	contextRetrievalService   *service.ContextRetrievalService
+	diagnosisAnalysisService  *service.DiagnosisAnalysisService
+	diagnosisFreshnessService *service.DiagnosisFreshnessService
+	treatmentService          *service.TreatmentService
+	streamRuntime             *stream.Runtime
 }
 
 func NewRuntime(
@@ -62,7 +79,12 @@ func NewRuntime(
 	threadProjectionService *service.ThreadProjectionService,
 	runtimeEventService *service.RuntimeEventService,
 	uploadService *service.UploadService,
+	bodyStateServices ...runtimeBodyStateService,
 ) *Runtime {
+	var bodyStateService runtimeBodyStateService
+	if len(bodyStateServices) > 0 {
+		bodyStateService = bodyStateServices[0]
+	}
 	return &Runtime{
 		conversationService:     conversationService,
 		consultationService:     consultationService,
@@ -76,8 +98,23 @@ func NewRuntime(
 		threadProjectionService: threadProjectionService,
 		runtimeEventService:     runtimeEventService,
 		uploadService:           uploadService,
+		bodyStateService:        bodyStateService,
 		streamRuntime:           stream.NewRuntime(),
 	}
+}
+
+// AttachLongitudinalContextServices adds optional read-only business context
+// collaborators without expanding the stable runtime constructor used by tests.
+func (r *Runtime) AttachLongitudinalContextServices(
+	contextRetrieval *service.ContextRetrievalService,
+	diagnosis *service.DiagnosisAnalysisService,
+	freshness *service.DiagnosisFreshnessService,
+	treatment *service.TreatmentService,
+) {
+	r.contextRetrievalService = contextRetrieval
+	r.diagnosisAnalysisService = diagnosis
+	r.diagnosisFreshnessService = freshness
+	r.treatmentService = treatment
 }
 
 // StartRun handles a unified consultation run request.
@@ -104,8 +141,8 @@ func (r *Runtime) StartRun(
 
 	// --- 2. Resolve requested conversation identity ---
 	var requestedConversationID *uuid.UUID
-	isNewConversation := req.ConversationID == nil || *req.ConversationID == ""
-	if !isNewConversation {
+	conversationIDMissing := req.ConversationID == nil || *req.ConversationID == ""
+	if !conversationIDMissing {
 		parsed, err := uuid.Parse(*req.ConversationID)
 		if err != nil {
 			return httpErr(http.StatusBadRequest, "INVALID_ID", "invalid conversation id")
@@ -129,7 +166,7 @@ func (r *Runtime) StartRun(
 	}
 
 	// --- 4. Create turn envelope (conversation/session + run + messages) ---
-	session, turn, run, userMsg, assistantMsg, baseIDs, setupErr := r.createTurnEnvelope(
+	session, turn, run, userMsg, assistantMsg, baseIDs, conversationCreated, setupErr := r.createTurnEnvelope(
 		ctx, uid, requestedConversationID, req.RequestID,
 		datatypes.JSON(userPartsJSON), datatypes.JSON("{}"),
 	)
@@ -137,10 +174,13 @@ func (r *Runtime) StartRun(
 		return setupErr
 	}
 	conversationID := session.ConversationID
+	isNewConversation := conversationCreated
+	executionCtx, cancelExecution := durableExecutionContext(ctx)
+	defer cancelExecution()
 
 	sw := r.streamRuntime.NewWriter(w, baseIDs)
 	r.sendNewEvent(
-		ctx,
+		executionCtx,
 		sw,
 		"run",
 		"run.started",
@@ -175,25 +215,25 @@ func (r *Runtime) StartRun(
 	}
 
 	// --- 7. Emit message.persisted + message.created ---
-	r.emitUserTurnStarted(ctx, sw, req.ClientMessageID, userMsg, assistantMsg)
-	r.refreshThreadProjection(ctx, conversationID, uid)
+	r.emitUserTurnStarted(executionCtx, sw, req.ClientMessageID, userMsg, assistantMsg)
+	r.refreshThreadProjection(executionCtx, conversationID, uid)
 
 	// --- 8. Stream AI response ---
-	result, stopped := r.executeRunFlow(ctx, sw, uid, conversationID, turn, run, assistantMsg, baseIDs, userText, req.Message.Parts, session)
+	result, stopped := r.executeRunFlow(executionCtx, sw, uid, conversationID, turn, run, assistantMsg, baseIDs, userText, req.Message.Parts, session)
 	if stopped {
 		return nil
 	}
 
 	// --- 9. Persist completed turn ---
-	r.finishTurn(ctx, sw, uid, conversationID, run, assistantMsg, turn, result, baseIDs)
+	r.finishTurn(executionCtx, sw, uid, conversationID, run, assistantMsg, turn, result, baseIDs)
 
 	// --- 10. Generate title for new conversations (non-blocking) ---
 	if isNewConversation {
-		r.generateTitleAndNotify(ctx, conversationID, uid, sw, baseIDs)
+		r.generateTitleAndNotify(executionCtx, conversationID, uid, sw, baseIDs)
 	}
 
 	// --- 11. Emit stream.done ---
-	r.sendNewEvent(ctx, sw, "stream", "stream.done", baseIDs, map[string]any{}, "", "stream.done")
+	r.sendNewEvent(executionCtx, sw, "stream", "stream.done", baseIDs, map[string]any{}, "", "stream.done")
 	return nil
 }
 
@@ -240,9 +280,6 @@ func (r *Runtime) executeRunFlow(
 	parts []dto.PartDTO,
 	session *model.ConsultationSession,
 ) (streamResult, bool) {
-	streamCtx, cancel := context.WithTimeout(ctx, sseTimeout)
-	defer cancel()
-
 	profileJSON, profileErr := r.loadProfileJSON(ctx, uid)
 	if profileErr != nil {
 		r.failBeforeStreaming(ctx, sw, run, assistantMsg, uid, conversationID, "failed to load profile")
@@ -252,7 +289,7 @@ func (r *Runtime) executeRunFlow(
 	images := r.resolveConsultationImages(ctx, uid, parts)
 
 	events, err := r.aiClient.StartConsultationTurn(
-		streamCtx,
+		ctx,
 		conversationID.String(),
 		service.StartConsultationTurnRequest{
 			RunID:          run.ID.String(),
@@ -263,7 +300,7 @@ func (r *Runtime) executeRunFlow(
 				Text:   userText,
 				Images: images,
 			},
-			BusinessContext: r.buildBusinessContext(ctx, uid, profileJSON, session),
+			BusinessContext: r.buildBusinessContext(ctx, uid, conversationID, userText, profileJSON, session),
 		},
 	)
 	if err != nil {
@@ -279,7 +316,6 @@ func (r *Runtime) executeRunFlow(
 		AssistantMsg:    assistantMsg,
 		BaseIDs:         baseIDs,
 		CurrentPhase:    session.Phase,
-		RequestDone:     ctx.Done(),
 		AssistantMsgID:  assistantMsg.ID.String(),
 		ConversationStr: conversationID.String(),
 	})
@@ -374,6 +410,13 @@ func (r *Runtime) ResumeInteraction(
 		return httpErr(http.StatusNotFound, "NOT_FOUND", "interaction not found")
 	}
 
+	// The interaction answer is a durable health input, not merely a chat message.
+	// Commit it before closing the interaction so a persistence failure remains
+	// retryable and never resumes the Agent from an unrecorded health answer.
+	if err := r.persistInteractionAnswer(ctx, uid, interactionID, interaction.Question, req.Answer); err != nil {
+		return httpErr(http.StatusInternalServerError, "BODY_STATE_PERSISTENCE_FAILED", "failed to persist interaction answer")
+	}
+
 	if err := r.interactionService.ResumeInteraction(ctx, interactionID, datatypes.JSON(req.Answer)); err != nil {
 		switch {
 		case err == service.ErrInteractionNotFound:
@@ -393,8 +436,12 @@ func (r *Runtime) ResumeInteraction(
 		}
 	}
 
+	if err := r.runService.CompleteRun(ctx, interaction.RunID, uid, nil, ""); err != nil {
+		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to close interrupted run")
+	}
+
 	answerPartsJSON, answerMetadata := interactionAnswerParts(req.Answer, interactionID.String())
-	_, turn, run, _, assistantMsg, baseIDs, setupErr := r.createTurnEnvelope(
+	_, turn, run, _, assistantMsg, baseIDs, _, setupErr := r.createTurnEnvelope(
 		ctx,
 		uid,
 		&conversationID,
@@ -425,23 +472,6 @@ func (r *Runtime) ResumeInteraction(
 		"",
 		"state.interaction.answered",
 	)
-	if healthFeatures := healthFeaturesFromInteraction(interaction.Question, datatypes.JSON(req.Answer)); healthFeatures != nil {
-		r.sendNewEvent(
-			ctx,
-			sw,
-			"state",
-			"state.health_features.upsert",
-			dto.StreamEventIDs{
-				ConversationID: conversationID.String(),
-				RunID:          run.ID.String(),
-				TurnID:         turn.String(),
-				InteractionID:  interactionID.String(),
-			},
-			map[string]any{"health_features": healthFeatures},
-			"",
-			"state.health_features.upsert",
-		)
-	}
 	r.sendNewEvent(
 		ctx,
 		sw,
@@ -473,16 +503,16 @@ func (r *Runtime) ResumeInteraction(
 	)
 	r.refreshThreadProjection(ctx, conversationID, uid)
 
-	streamCtx, cancel := context.WithTimeout(ctx, sseTimeout)
-	defer cancel()
+	executionCtx, cancelExecution := durableExecutionContext(ctx)
+	defer cancelExecution()
 
-	profileJSON, profileErr := r.loadProfileJSON(ctx, uid)
+	profileJSON, profileErr := r.loadProfileJSON(executionCtx, uid)
 	if profileErr != nil {
 		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load profile")
 	}
 
 	events, err := r.aiClient.ResumeConsultationInterrupt(
-		streamCtx,
+		executionCtx,
 		conversationID.String(),
 		interactionID.String(),
 		service.ResumeConsultationInterruptRequest{
@@ -491,15 +521,15 @@ func (r *Runtime) ResumeInteraction(
 			UserID:          uid.String(),
 			InterruptID:     interactionID.String(),
 			Answer:          json.RawMessage(req.Answer),
-			BusinessContext: r.buildBusinessContext(ctx, uid, profileJSON, session),
+			BusinessContext: r.buildBusinessContext(executionCtx, uid, conversationID, extractAnswerText(req.Answer), profileJSON, session),
 		},
 	)
 	if err != nil {
-		r.failBeforeStreaming(ctx, sw, run, assistantMsg, uid, conversationID, "AI service unavailable")
+		r.failBeforeStreaming(executionCtx, sw, run, assistantMsg, uid, conversationID, "AI service unavailable")
 		return nil
 	}
 
-	result, stopped := r.streamAIEvents(ctx, sw, events, streamState{
+	result, stopped := r.streamAIEvents(executionCtx, sw, events, streamState{
 		UID:             uid,
 		ConversationID:  conversationID,
 		TurnID:          turn,
@@ -507,7 +537,6 @@ func (r *Runtime) ResumeInteraction(
 		AssistantMsg:    assistantMsg,
 		BaseIDs:         baseIDs,
 		CurrentPhase:    session.Phase,
-		RequestDone:     ctx.Done(),
 		AssistantMsgID:  assistantMsg.ID.String(),
 		ConversationStr: conversationID.String(),
 	})
@@ -515,9 +544,9 @@ func (r *Runtime) ResumeInteraction(
 		return nil
 	}
 
-	r.finishTurn(ctx, sw, uid, conversationID, run, assistantMsg, turn, result, baseIDs)
-	r.sendNewEvent(ctx, sw, "stream", "stream.done", baseIDs, map[string]any{}, "", "stream.done")
-	r.maybeGenerateTitle(ctx, conversationID, uid)
+	r.finishTurn(executionCtx, sw, uid, conversationID, run, assistantMsg, turn, result, baseIDs)
+	r.sendNewEvent(executionCtx, sw, "stream", "stream.done", baseIDs, map[string]any{}, "", "stream.done")
+	r.maybeGenerateTitle(executionCtx, conversationID, uid)
 	return nil
 }
 
@@ -535,6 +564,7 @@ func (r *Runtime) createTurnEnvelope(
 	*model.Message,
 	*model.Message,
 	dto.StreamEventIDs,
+	bool,
 	*HTTPError,
 ) {
 	envelope, err := r.consultationService.CreateRunEnvelope(
@@ -547,14 +577,21 @@ func (r *Runtime) createTurnEnvelope(
 		"consultation-thread",
 	)
 	if err != nil {
-		return nil, uuid.Nil, nil, nil, nil, dto.StreamEventIDs{}, httpErr(
+		if errors.Is(err, model.ErrConversationRunInProgress) {
+			return nil, uuid.Nil, nil, nil, nil, dto.StreamEventIDs{}, false, httpErr(
+				http.StatusConflict,
+				"RUN_IN_PROGRESS",
+				"this conversation already has an active run",
+			)
+		}
+		return nil, uuid.Nil, nil, nil, nil, dto.StreamEventIDs{}, false, httpErr(
 			http.StatusInternalServerError,
 			"INTERNAL_ERROR",
 			"failed to create run envelope",
 		)
 	}
 	if envelope.Existed {
-		return nil, uuid.Nil, nil, nil, nil, dto.StreamEventIDs{}, httpErr(
+		return nil, uuid.Nil, nil, nil, nil, dto.StreamEventIDs{}, false, httpErr(
 			http.StatusConflict,
 			"RUN_IN_PROGRESS",
 			"a run with this request ID already exists",
@@ -565,7 +602,7 @@ func (r *Runtime) createTurnEnvelope(
 		ConversationID: envelope.Session.ConversationID.String(),
 		RunID:          envelope.Run.ID.String(),
 		TurnID:         envelope.TurnID.String(),
-	}, nil
+	}, envelope.ConversationCreated, nil
 }
 func (r *Runtime) emitUserTurnStarted(
 	ctx context.Context,
@@ -627,15 +664,66 @@ func (r *Runtime) loadProfileJSON(ctx context.Context, uid uuid.UUID) (json.RawM
 func (r *Runtime) buildBusinessContext(
 	ctx context.Context,
 	uid uuid.UUID,
+	conversationID uuid.UUID,
+	queryText string,
 	profileJSON json.RawMessage,
 	session *model.ConsultationSession,
 ) service.ConsultationBusinessContext {
 	bc := service.ConsultationBusinessContext{
 		Profile: profileJSON,
-		ConsultationSnapshot: service.ConsultationSnapshot{
+		RuntimeState: service.ConsultationRuntimeState{
 			Phase:         session.Phase,
 			ExtractedInfo: json.RawMessage(session.ExtractedInfo),
 		},
+	}
+	var bodyStateSnapshot *service.BodyStateSnapshot
+	if r.bodyStateService != nil {
+		if snapshot, err := r.bodyStateService.GetSnapshot(ctx, uid, 20); err != nil {
+			log.Printf("body state context load failed for user %s: %v", uid, err)
+		} else {
+			bodyStateSnapshot = snapshot
+			if raw, marshalErr := json.Marshal(snapshot); marshalErr == nil {
+				bc.BodyState = raw
+			}
+		}
+	}
+	if r.contextRetrievalService != nil {
+		if history, err := r.contextRetrievalService.Retrieve(
+			ctx, uid, conversationID, queryText, bodyStateSnapshot,
+		); err != nil {
+			log.Printf("historical context retrieval failed for conversation %s: %v", conversationID, err)
+		} else {
+			bc.RelevantHistory = history
+		}
+	}
+	if r.diagnosisAnalysisService != nil {
+		if analysis, err := r.diagnosisAnalysisService.GetLatest(ctx, uid); err != nil {
+			log.Printf("current diagnosis context load failed for user %s: %v", uid, err)
+		} else if analysis != nil {
+			payload := r.diagnosisAnalysisService.PublicPayload(analysis)
+			if r.diagnosisFreshnessService != nil {
+				if freshness, freshErr := r.diagnosisFreshnessService.Preview(ctx, uid, analysis); freshErr == nil {
+					payload["freshness"] = freshness
+				}
+			}
+			if raw, marshalErr := json.Marshal(payload); marshalErr == nil {
+				bc.CurrentDiagnosis = raw
+			}
+		}
+	}
+	if r.treatmentService != nil {
+		if treatment, err := r.treatmentService.PreviewCurrentReview(ctx, uid); err != nil {
+			log.Printf("current treatment context load failed for user %s: %v", uid, err)
+		} else if treatment != nil {
+			if raw, marshalErr := json.Marshal(treatment); marshalErr == nil {
+				bc.CurrentTreatment = raw
+			}
+		}
+		if outcomes, err := r.treatmentService.ListOutcomes(ctx, uid, 12); err == nil {
+			if raw, marshalErr := json.Marshal(outcomes); marshalErr == nil {
+				bc.RecentOutcomes = raw
+			}
+		}
 	}
 	if r.uploadService == nil {
 		return bc
@@ -659,7 +747,6 @@ type streamState struct {
 	AssistantMsg    *model.Message
 	BaseIDs         dto.StreamEventIDs
 	CurrentPhase    string
-	RequestDone     <-chan struct{}
 	AssistantMsgID  string
 	ConversationStr string
 }
@@ -683,25 +770,6 @@ func (r *Runtime) streamAIEvents(
 
 	for {
 		select {
-		case <-state.RequestDone:
-			log.Printf("client disconnected during stream for conversation %s", state.ConversationID)
-			bg := context.Background()
-			_ = r.runService.FailRun(
-				bg,
-				state.Run.ID,
-				state.UID,
-				map[string]any{"message": "client disconnected"},
-			)
-			_ = r.messageService.UpdateMessageStatus(
-				bg,
-				state.AssistantMsg.ID,
-				state.ConversationID,
-				"aborted",
-			)
-			r.clearActiveRun(bg, state.ConversationID, state.UID)
-			r.refreshThreadProjection(bg, state.ConversationID, state.UID)
-			return result, true
-
 		case event, ok := <-events:
 			if !ok {
 				return result, false
@@ -751,10 +819,10 @@ func (r *Runtime) handleAIEvent(
 		result.AssistantParts = append(
 			result.AssistantParts,
 			map[string]any{
-				"type":         "tool_call",
-				"tool":         payload.Tool,
-				"args":         payload.Args,
-				"tool_call_id": event.IDs.ToolCallID,
+				"type":       "tool-call",
+				"toolName":   payload.Tool,
+				"args":       payload.Args,
+				"toolCallId": event.IDs.ToolCallID,
 			},
 		)
 		msgID := state.AssistantMsg.ID
@@ -778,10 +846,10 @@ func (r *Runtime) handleAIEvent(
 		result.AssistantParts = append(
 			result.AssistantParts,
 			map[string]any{
-				"type":         "tool_result",
-				"tool":         payload.Tool,
-				"result":       payload.Result,
-				"tool_call_id": event.IDs.ToolCallID,
+				"type":       "tool-result",
+				"toolName":   payload.Tool,
+				"result":     payload.Result,
+				"toolCallId": event.IDs.ToolCallID,
 			},
 		)
 		r.agentToolService.RecordToolResult(
@@ -793,27 +861,16 @@ func (r *Runtime) handleAIEvent(
 		)
 
 	case "state.extracted_info.upsert":
-		r.sendEvent(ctx, sw, event, state.AssistantMsgID, event.Type)
 		var payload struct {
 			Info json.RawMessage `json:"info"`
 		}
 		_ = event.PayloadAs(&payload)
-		if healthFeatures := healthFeaturesFromExtractedInfo(payload.Info); healthFeatures != nil {
-			r.sendNewEvent(
-				ctx,
-				sw,
-				"state",
-				"state.health_features.upsert",
-				dto.StreamEventIDs{
-					ConversationID: state.ConversationID.String(),
-					RunID:          state.Run.ID.String(),
-					TurnID:         state.TurnID.String(),
-				},
-				map[string]any{"health_features": healthFeatures},
-				state.AssistantMsgID,
-				"state.health_features.upsert",
-			)
+		if err := r.persistExtractedSymptom(ctx, state.UID, state.Run.ID, payload.Info); err != nil {
+			log.Printf("failed to persist extracted symptom in BodyState for run %s: %v", state.Run.ID, err)
+			r.failActiveStream(ctx, sw, state, "failed to persist durable health state")
+			return true
 		}
+		r.sendEvent(ctx, sw, event, state.AssistantMsgID, event.Type)
 
 	case "source.citation.added":
 		r.sendEvent(ctx, sw, event, state.AssistantMsgID, event.Type)
@@ -824,6 +881,11 @@ func (r *Runtime) handleAIEvent(
 		result.AssistantParts = append(result.AssistantParts, dataPart("knowledge_gap", event.Payload))
 
 	case "safety.red_flag.detected":
+		if err := r.persistSafetyEvent(ctx, state.UID, event.Payload); err != nil {
+			log.Printf("failed to persist BodyState safety event for run %s: %v", state.Run.ID, err)
+			r.failActiveStream(ctx, sw, state, "failed to persist safety state")
+			return true
+		}
 		r.sendEvent(ctx, sw, event, state.AssistantMsgID, event.Type)
 		result.AssistantParts = append(result.AssistantParts, dataPart("red_flag", event.Payload))
 
@@ -1160,6 +1222,7 @@ func (r *Runtime) replayCompletedRun(ctx context.Context, w http.ResponseWriter,
 	}
 
 	maxSeq := 0
+	sawStreamDone := false
 	for _, stored := range events {
 		var ids dto.StreamEventIDs
 		if len(stored.IDs) > 0 {
@@ -1176,6 +1239,9 @@ func (r *Runtime) replayCompletedRun(ctx context.Context, w http.ResponseWriter,
 		if stored.Seq > maxSeq {
 			maxSeq = stored.Seq
 		}
+		if stored.Type == "stream.done" {
+			sawStreamDone = true
+		}
 
 		if err := sw.WriteEvent(ctx, dto.StreamEvent{
 			Version: 1,
@@ -1190,6 +1256,9 @@ func (r *Runtime) replayCompletedRun(ctx context.Context, w http.ResponseWriter,
 		}
 	}
 
+	if sawStreamDone {
+		return
+	}
 	if err := sw.WriteEvent(ctx, dto.StreamEvent{
 		Version: 1,
 		Seq:     maxSeq + 1,
@@ -1214,7 +1283,44 @@ func (r *Runtime) maybeGenerateTitle(ctx context.Context, conversationID, userID
 	}
 }
 
+func (r *Runtime) persistExtractedSymptom(
+	ctx context.Context,
+	userID, runID uuid.UUID,
+	info json.RawMessage,
+) error {
+	if r.bodyStateService == nil {
+		return errors.New("BodyState service is not configured")
+	}
+	return r.bodyStateService.UpsertExtractedSymptom(ctx, userID, runID, info)
+}
+
+func (r *Runtime) persistSafetyEvent(
+	ctx context.Context,
+	userID uuid.UUID,
+	payload json.RawMessage,
+) error {
+	if r.bodyStateService == nil {
+		return errors.New("BodyState service is not configured")
+	}
+	return r.bodyStateService.RecordSafetyEvent(ctx, userID, payload)
+}
+
+func (r *Runtime) persistInteractionAnswer(
+	ctx context.Context,
+	userID, interactionID uuid.UUID,
+	question datatypes.JSON,
+	answer json.RawMessage,
+) error {
+	if r.bodyStateService == nil {
+		return errors.New("BodyState service is not configured")
+	}
+	return r.bodyStateService.RecordInteractionAnswer(ctx, userID, interactionID, question, answer)
+}
+
 func (r *Runtime) clearActiveRun(ctx context.Context, conversationID, userID uuid.UUID) {
+	if r.conversationService == nil {
+		return
+	}
 	if err := r.conversationService.UpdateActiveRunID(ctx, conversationID, userID, nil, ""); err != nil {
 		log.Printf("failed to clear active_run_id for conversation %s: %v", conversationID, err)
 	}
@@ -1327,8 +1433,12 @@ func (r *Runtime) failActiveStream(
 		"message.failed",
 	)
 	r.sendNewEvent(ctx, sw, "stream", "stream.done", state.BaseIDs, map[string]any{}, "", "stream.done")
-	_ = r.runService.FailRun(ctx, state.Run.ID, state.UID, map[string]any{"message": message})
-	_ = r.messageService.UpdateMessageStatus(ctx, state.AssistantMsg.ID, state.ConversationID, "failed")
+	if r.runService != nil {
+		_ = r.runService.FailRun(ctx, state.Run.ID, state.UID, map[string]any{"message": message})
+	}
+	if r.messageService != nil {
+		_ = r.messageService.UpdateMessageStatus(ctx, state.AssistantMsg.ID, state.ConversationID, "failed")
+	}
 	r.clearActiveRun(ctx, state.ConversationID, state.UID)
 	r.refreshThreadProjection(ctx, state.ConversationID, state.UID)
 }
@@ -1347,11 +1457,10 @@ func (r *Runtime) sendNewEvent(
 		log.Printf("SSE build error (%s): %v", label, err)
 		return
 	}
+	r.recordPublicEvent(ctx, event)
 	if err := sw.WriteEvent(ctx, event); err != nil {
 		log.Printf("SSE write error (%s): %v", label, err)
-		return
 	}
-	r.recordPublicEvent(ctx, event)
 }
 
 func (r *Runtime) sendEvent(
@@ -1362,11 +1471,10 @@ func (r *Runtime) sendEvent(
 	label string,
 ) {
 	enriched := sw.EnrichEvent(event, messageID)
+	r.recordPublicEvent(ctx, enriched)
 	if err := sw.WriteEvent(ctx, enriched); err != nil {
 		log.Printf("SSE write error (%s): %v", label, err)
-		return
 	}
-	r.recordPublicEvent(ctx, enriched)
 }
 
 func (r *Runtime) recordPublicEvent(ctx context.Context, event dto.StreamEvent) {
@@ -1469,7 +1577,7 @@ func interactionAnswerParts(answer json.RawMessage, interactionID string) (datat
 		"is_interaction_answer": true,
 		"interaction_id":        interactionID,
 	}
-	// Preserve structured multi-field answers for health_features / analytics.
+	// Preserve structured multi-field answers for runtime audit and analytics.
 	var raw map[string]any
 	if err := json.Unmarshal(answer, &raw); err == nil {
 		if fields, ok := raw["fields"].(map[string]any); ok && len(fields) > 0 {
@@ -1516,119 +1624,6 @@ func extractAnswerText(answer json.RawMessage) string {
 		return string(b)
 	}
 	return ""
-}
-
-func healthFeaturesFromExtractedInfo(info json.RawMessage) map[string]any {
-	if len(info) == 0 {
-		return nil
-	}
-	var parsed map[string]any
-	if err := json.Unmarshal(info, &parsed); err != nil {
-		return nil
-	}
-	bodyPart, _ := parsed["body_part"].(string)
-	label, _ := parsed["symptom_type"].(string)
-	if label == "" {
-		label = bodyPart
-	}
-	if label == "" {
-		return nil
-	}
-
-	item := map[string]any{
-		"label":  label,
-		"source": "extracted_info",
-	}
-	if bodyPart != "" {
-		item["body_part"] = bodyPart
-	}
-	if severity, ok := parsed["severity"].(string); ok && strings.TrimSpace(severity) != "" {
-		item["value"] = severity
-	}
-
-	details := make([]string, 0, 3)
-	for _, key := range []string{"duration", "trigger", "relief"} {
-		if value, ok := parsed[key].(string); ok && strings.TrimSpace(value) != "" {
-			details = append(details, value)
-		}
-	}
-	if len(details) > 0 {
-		item["details"] = strings.Join(details, "，")
-	}
-
-	return emptyHealthFeaturesMapWith("discomforts", item)
-}
-
-func healthFeaturesFromInteraction(question datatypes.JSON, answer datatypes.JSON) map[string]any {
-	questionText, questionContext := parseInteractionQuestion(question)
-	answerText := extractAnswerText(json.RawMessage(answer))
-	if strings.TrimSpace(questionText) == "" || strings.TrimSpace(answerText) == "" {
-		return nil
-	}
-
-	userAnswer := map[string]any{
-		"label":   questionText,
-		"value":   answerText,
-		"details": questionContext,
-		"source":  "ask_user",
-	}
-
-	result := emptyHealthFeaturesMapWith("user_answers", userAnswer)
-	if isNegativeAnswer(answerText) && containsAny(questionText+questionContext, "不适", "疼痛", "酸痛", "麻木") {
-		result["negative_findings"] = []any{
-			map[string]any{
-				"label":   "未报告相关不适",
-				"value":   answerText,
-				"details": questionText,
-				"source":  "ask_user",
-			},
-		}
-	}
-	return result
-}
-
-func parseInteractionQuestion(question datatypes.JSON) (string, string) {
-	if len(question) == 0 {
-		return "", ""
-	}
-	var payload map[string]any
-	if err := json.Unmarshal(question, &payload); err != nil {
-		return "", ""
-	}
-	text, _ := payload["question"].(string)
-	context, _ := payload["context"].(string)
-	return text, context
-}
-
-func isNegativeAnswer(answer string) bool {
-	switch strings.TrimSpace(strings.ToLower(answer)) {
-	case "无", "没有", "否", "no", "none":
-		return true
-	default:
-		return false
-	}
-}
-
-func containsAny(text string, keywords ...string) bool {
-	for _, keyword := range keywords {
-		if strings.Contains(text, keyword) {
-			return true
-		}
-	}
-	return false
-}
-
-func emptyHealthFeaturesMapWith(category string, item map[string]any) map[string]any {
-	result := map[string]any{
-		"posture_findings":     []any{},
-		"discomforts":          []any{},
-		"negative_findings":    []any{},
-		"movement_limitations": []any{},
-		"red_flags":            []any{},
-		"user_answers":         []any{},
-	}
-	result[category] = []any{item}
-	return result
 }
 
 func citationPart(payload json.RawMessage) map[string]any {

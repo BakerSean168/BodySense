@@ -1,4 +1,4 @@
-"""Tests for RAG faithfulness checker."""
+"""Tests for RAG faithfulness checking on typed Treatment interventions."""
 
 from src.services.faithfulness_checker import (
     FaithfulnessChecker,
@@ -6,17 +6,27 @@ from src.services.faithfulness_checker import (
 )
 
 
+def _treatment(*titles: str) -> dict:
+    return {
+        "status": "proposed",
+        "goal": "测试目标",
+        "interventions": [
+            {
+                "kind": "exercise",
+                "title": title,
+                "description": "测试动作",
+                "prescription": {},
+            }
+            for title in titles
+        ],
+    }
+
+
 def test_exercise_grounded_in_rag_title():
     checker = FaithfulnessChecker()
     result = checker.check_treatment_faithfulness(
-        treatment_plan={
-            "correction_exercises": [
-                {"name": "胸小肌拉伸", "description": "靠门框进行温和拉伸。"}
-            ]
-        },
-        rag_results=[
-            {"title": "胸小肌拉伸方法", "summary": "针对圆肩的拉伸", "content": ""}
-        ],
+        treatment=_treatment("胸小肌拉伸"),
+        rag_results=[{"title": "胸小肌拉伸方法", "summary": "针对圆肩的拉伸", "content": ""}],
     )
     assert result.faithful is True
     assert result.exercises[0].grounded is True
@@ -27,11 +37,7 @@ def test_exercise_grounded_in_rag_title():
 def test_exercise_grounded_in_rag_content():
     checker = FaithfulnessChecker()
     result = checker.check_treatment_faithfulness(
-        treatment_plan={
-            "correction_exercises": [
-                {"name": "猫牛式", "description": "四点跪位脊柱屈伸。"}
-            ]
-        },
+        treatment=_treatment("猫牛式"),
         rag_results=[
             {
                 "title": "腰痛改善动作",
@@ -48,11 +54,7 @@ def test_exercise_grounded_in_rag_content():
 def test_exercise_not_grounded():
     checker = FaithfulnessChecker()
     result = checker.check_treatment_faithfulness(
-        treatment_plan={
-            "correction_exercises": [
-                {"name": "深蹲", "description": "负重深蹲训练。"}
-            ]
-        },
+        treatment=_treatment("深蹲"),
         rag_results=[
             {
                 "title": "肩颈改善",
@@ -69,12 +71,7 @@ def test_exercise_not_grounded():
 def test_mixed_grounded_and_ungrounded():
     checker = FaithfulnessChecker()
     result = checker.check_treatment_faithfulness(
-        treatment_plan={
-            "correction_exercises": [
-                {"name": "臀桥", "description": "仰卧臀桥。"},
-                {"name": "深蹲", "description": "负重深蹲。"},
-            ]
-        },
+        treatment=_treatment("臀桥", "深蹲"),
         rag_results=[
             {
                 "title": "腰痛改善",
@@ -89,33 +86,34 @@ def test_mixed_grounded_and_ungrounded():
     assert len(result.ungrounded_exercises) == 1
 
 
-def test_empty_exercises():
+def test_empty_exercises_are_vacuously_faithful():
     checker = FaithfulnessChecker()
     result = checker.check_treatment_faithfulness(
-        treatment_plan={"correction_exercises": []},
+        treatment=_treatment(),
         rag_results=[],
     )
-    assert result.faithful is False
+    assert result.faithful is True
     assert len(result.exercises) == 0
 
 
-def test_no_exercises_key():
+def test_non_exercise_interventions_are_not_faithfulness_checked():
     checker = FaithfulnessChecker()
     result = checker.check_treatment_faithfulness(
-        treatment_plan={},
+        treatment={
+            "status": "proposed",
+            "goal": "行为调整",
+            "interventions": [{"kind": "habit", "title": "每小时起身"}],
+        },
         rag_results=[],
     )
-    assert result.faithful is False
+    assert result.faithful is True
+    assert result.exercises == []
 
 
 def test_exercise_grounded_in_clips():
     checker = FaithfulnessChecker()
     result = checker.check_treatment_faithfulness(
-        treatment_plan={
-            "correction_exercises": [
-                {"name": "颈部后缩", "description": "收下巴训练。"}
-            ]
-        },
+        treatment=_treatment("颈部后缩"),
         rag_results=[
             {
                 "title": "头前伸改善",
@@ -132,11 +130,7 @@ def test_exercise_grounded_in_clips():
 def test_alias_matching():
     checker = FaithfulnessChecker()
     result = checker.check_treatment_faithfulness(
-        treatment_plan={
-            "correction_exercises": [
-                {"name": "收下巴", "description": "颈椎后缩训练。"}
-            ]
-        },
+        treatment=_treatment("收下巴"),
         rag_results=[
             {
                 "title": "头前伸改善",
@@ -152,38 +146,29 @@ def test_alias_matching():
 def test_to_dict_format():
     checker = FaithfulnessChecker()
     result = checker.check_treatment_faithfulness(
-        treatment_plan={
-            "correction_exercises": [
-                {"name": "胸小肌拉伸", "description": "拉伸。"}
-            ]
-        },
-        rag_results=[
-            {"title": "胸小肌拉伸", "summary": "", "content": ""}
-        ],
+        treatment=_treatment("胸小肌拉伸"),
+        rag_results=[{"title": "胸小肌拉伸", "summary": "", "content": ""}],
     )
-    d = result.to_dict()
-    assert "faithful" in d
-    assert "exercises" in d
-    assert "ungrounded_exercises" in d
-    if d["exercises"]:
-        assert "name" in d["exercises"][0]
-        assert "grounded" in d["exercises"][0]
-        assert "source" in d["exercises"][0]
-        assert "confidence" in d["exercises"][0]
+    data = result.to_dict()
+    assert "faithful" in data
+    assert "exercises" in data
+    assert "ungrounded_exercises" in data
+    if data["exercises"]:
+        assert "name" in data["exercises"][0]
+        assert "grounded" in data["exercises"][0]
+        assert "source" in data["exercises"][0]
+        assert "confidence" in data["exercises"][0]
 
 
 def test_singleton_returns_same_instance():
-    c1 = get_faithfulness_checker()
-    c2 = get_faithfulness_checker()
-    assert c1 is c2
+    first = get_faithfulness_checker()
+    second = get_faithfulness_checker()
+    assert first is second
 
 
 def test_single_char_exercise_not_grounded():
-    """Single-character exercise names should not match (guard against false positives)."""
     checker = get_faithfulness_checker()
-    plan = {"correction_exercises": [{"name": "臀"}]}
     rag = [{"title": "臀桥训练", "body_markdown": "臀桥是很好的臀部训练动作"}]
-    result = checker.check_treatment_faithfulness(plan, rag)
-    # "臀" is only 1 char after normalization — should be rejected by length guard
+    result = checker.check_treatment_faithfulness(_treatment("臀"), rag)
     assert result.exercises[0].grounded is False
     assert result.exercises[0].confidence == "low"

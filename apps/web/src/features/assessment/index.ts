@@ -1,10 +1,9 @@
-export { AssessmentListPage } from './pages/AssessmentListPage';
-export { AssessmentDetailPage } from './pages/AssessmentDetailPage';
-export { assessmentApi } from './services/assessmentService';
+export { AssessmentListPage } from "./pages/AssessmentListPage";
+export { AssessmentDetailPage } from "./pages/AssessmentDetailPage";
+export { assessmentApi } from "./services/assessmentService";
 export type {
   AssessmentReport,
   DimensionScores,
-  IdentifiedIssue,
-  ImprovementSummary,
+  AssessmentObservation,
   AssessmentListResponse,
-} from './services/assessmentService';
+} from "./services/assessmentService";

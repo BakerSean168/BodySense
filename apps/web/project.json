@@ -29,6 +29,13 @@
       "options": {
         "command": "pnpm exec vitest run --config apps/web/vite.config.ts"
       }
+    },
+    "e2e": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "pnpm exec playwright test"
+      }
     }
   }
 }

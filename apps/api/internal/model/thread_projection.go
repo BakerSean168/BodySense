@@ -22,9 +22,6 @@ type ThreadProjection struct {
 	Metadata              datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"metadata"`
 	Phase                 string         `gorm:"type:varchar(30);not null;default:'collecting'" json:"phase"`
 	ExtractedInfo         datatypes.JSON `gorm:"type:jsonb;not null;default:'[]'" json:"extracted_info"`
-	HealthFeatures        datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"health_features"`
-	Diagnosis             datatypes.JSON `gorm:"type:jsonb" json:"diagnosis,omitempty"`
-	TreatmentPlan         datatypes.JSON `gorm:"type:jsonb" json:"treatment_plan,omitempty"`
 	PendingInteractions   datatypes.JSON `gorm:"type:jsonb;not null;default:'[]'" json:"pending_interactions"`
 	InteractionHistory    datatypes.JSON `gorm:"type:jsonb;not null;default:'[]'" json:"interaction_history"`
 	ConversationCreatedAt time.Time      `gorm:"column:conversation_created_at;not null" json:"conversation_created_at"`

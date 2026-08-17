@@ -79,7 +79,7 @@ def _normalize_exercise_name(name: str) -> str:
 def _find_matching_source(
     exercise_name: str,
     rag_results: list[dict],
-) -> tuple[bool, str | None, str]:
+) -> tuple[bool, str | None, Literal["high", "medium", "low"]]:
     """
     Find if an exercise matches any RAG result.
 
@@ -117,9 +117,7 @@ def _find_matching_source(
         if normalized == canonical.lower() or normalized in [a.lower() for a in aliases]:
             # Found an alias, check if canonical matches RAG
             for result in rag_results:
-                content = (
-                    result.get("body_markdown") or result.get("content") or ""
-                ).lower()
+                content = (result.get("body_markdown") or result.get("content") or "").lower()
                 if canonical.lower() in content:
                     return True, result.get("title"), "medium"
 
@@ -131,28 +129,23 @@ class FaithfulnessChecker:
 
     def check_treatment_faithfulness(
         self,
-        treatment_plan: dict,
+        treatment: dict,
         rag_results: list[dict],
     ) -> FaithfulnessResult:
-        """
-        Check each exercise in treatment plan against RAG results.
-
-        Args:
-            treatment_plan: The treatment plan dict with correction_exercises.
-            rag_results: RAG search results from knowledge base.
-
-        Returns:
-            FaithfulnessResult with per-exercise status.
-        """
-        exercises_data = treatment_plan.get("correction_exercises", [])
-        if not exercises_data:
-            return FaithfulnessResult(faithful=False, exercises=[])
+        """Check exercise interventions in a typed Treatment proposal against RAG results."""
+        exercise_interventions = [
+            intervention
+            for intervention in treatment.get("interventions", [])
+            if isinstance(intervention, dict) and intervention.get("kind") == "exercise"
+        ]
+        if not exercise_interventions:
+            return FaithfulnessResult(faithful=True, exercises=[])
 
         exercise_results: list[ExerciseFaithfulness] = []
         ungrounded: list[str] = []
 
-        for exercise in exercises_data:
-            name = exercise.get("name", "")
+        for exercise in exercise_interventions:
+            name = str(exercise.get("title") or "").strip()
             if not name:
                 continue
 

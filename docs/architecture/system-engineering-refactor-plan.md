@@ -1,6 +1,9 @@
 # System Engineering Refactor Plan
 
-> 说明：咨询工作台的 runtime 重构已经落到新的 final-state 路径，详见 [`docs/adr/0002-agent-runtime-ownership.md`](../adr/0002-agent-runtime-ownership.md) 和 [`docs/plan/active/final-agent-runtime-architecture.md`](../plan/active/final-agent-runtime-architecture.md)。本汇总文档中的旧 `chat/send` / `ContextBuilder` 路线应视为历史方案。
+> **Completed historical plan.** Do not use its Journey state machine as current architecture. See [Current Longitudinal System](./current-longitudinal-system.md).
+
+
+> **2026-08-15 alignment note:** 本文档是历史系统工程汇总，不再承担核心业务领域定义。Agent runtime ownership 以 [ADR 0002](../adr/0002-agent-runtime-ownership.md) 为准；长期健康业务模型以 [ADR 0004](../adr/0004-adopt-longitudinal-body-state-model.md) 与 [Longitudinal BodyState Domain Model](./longitudinal-body-state-domain.md) 为准。本文后续仍出现的线性 `HealthJourneyWorkflow`、多 consultation/session health truth、`MedicalRecord` 终点等语义应视为历史方案。当前实施路线见 [`longitudinal-body-state-migration-plan.md`](../plan/active/longitudinal-body-state-migration-plan.md)。
 
 **文档版本**：v1.0  
 **更新日期**：2026-06-29  
@@ -23,7 +26,7 @@
 | Stream Event Contract | [stream-event-contract-runtime.md](./stream-event-contract-runtime.md) | ~30% | Go StreamRuntime、StreamEvent v1 |
 | AI Output Governance | [ai-output-governance.md](./ai-output-governance.md) | ~35% | AIOutputGuard 骨架、OutputReviewService |
 | Knowledge Lifecycle | [knowledge-lifecycle-architecture.md](./knowledge-lifecycle-architecture.md) | ~25% | lifecycle schema、publication repo |
-| Health Journey | [health-journey-workflow.md](./health-journey-workflow.md) | 0% | 未开始 |
+| Longitudinal Health Loop | [longitudinal-health-loop.md](./longitudinal-health-loop.md) | Active target | 替代旧线性 Health Journey；BodyState 为持续闭环中心 |
 
 **未完成事项**汇总在各子文档的 Implementation Status 段中。原始实施计划归档于 `docs/plan/archive/implementation/`。
 

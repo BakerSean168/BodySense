@@ -1,10 +1,15 @@
 function SkeletonBlock({ className }: { className: string }) {
-  return <div className={`animate-pulse rounded-2xl bg-[#E9E6DF] ${className}`} />;
+  return (
+    <div className={`animate-pulse rounded-2xl bg-[#E9E6DF] ${className}`} />
+  );
 }
 
 export function SessionHistorySidebarSkeleton() {
   return (
-    <div className="flex h-full flex-col" data-testid="session-history-sidebar-skeleton">
+    <div
+      className="flex h-full flex-col"
+      data-testid="session-history-sidebar-skeleton"
+    >
       <div className="space-y-2 p-3">
         <SkeletonBlock className="h-10 w-full rounded-full" />
         <SkeletonBlock className="h-4 w-24 rounded-full" />

@@ -10,7 +10,7 @@
       "outputs": ["{projectRoot}/bin"],
       "options": {
         "cwd": "apps/api",
-        "command": "go build -o bin/api ./..."
+        "command": "mkdir -p bin && go build -o bin/api ./cmd/server"
       }
     },
     "serve": {

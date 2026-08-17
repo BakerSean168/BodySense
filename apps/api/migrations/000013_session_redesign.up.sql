@@ -129,6 +129,9 @@ CREATE TABLE runs (
 );
 
 CREATE INDEX idx_runs_conversation ON runs (conversation_id);
+CREATE UNIQUE INDEX idx_runs_one_running_per_conversation
+    ON runs (conversation_id)
+    WHERE status = 'running';
 CREATE INDEX idx_runs_turn         ON runs (turn_id);
 
 -- 4. conversation_shares -------------------------------------------------
@@ -138,7 +141,6 @@ CREATE TABLE conversation_shares (
     conversation_id     UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
     share_token         VARCHAR(32) UNIQUE NOT NULL,
     snapshot_messages   JSONB NOT NULL,
-    snapshot_metadata   JSONB,
     snapshot_title      VARCHAR(200),
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -153,11 +155,8 @@ CREATE TABLE consultation_sessions (
 
     phase               VARCHAR(30) NOT NULL DEFAULT 'collecting',
     -- collecting / ready_for_analysis / analysis_ready
-    -- diagnosis_confirmed / plan_ready / completed
 
     extracted_info      JSONB NOT NULL DEFAULT '[]',
-    diagnosis           JSONB,
-    treatment_plan      JSONB,
 
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -165,5 +164,4 @@ CREATE TABLE consultation_sessions (
 );
 
 CREATE INDEX idx_consultation_phase
-    ON consultation_sessions (phase)
-    WHERE phase != 'completed';
+    ON consultation_sessions (phase);

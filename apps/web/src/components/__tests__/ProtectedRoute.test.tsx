@@ -1,10 +1,10 @@
-import { describe, expect, it, afterEach } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router';
-import { ProtectedRoute } from '../ProtectedRoute';
-import { useAuthStore } from '@/stores/authStore';
+import { describe, expect, it, afterEach } from "vitest";
+import { act, render, screen } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router";
+import { ProtectedRoute } from "../ProtectedRoute";
+import { useAuthStore } from "@/stores/authStore";
 
-function renderProtectedRoute(path = '/consultation') {
+function renderProtectedRoute(path = "/consultation") {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
@@ -30,7 +30,7 @@ function renderProtectedRoute(path = '/consultation') {
   );
 }
 
-describe('ProtectedRoute', () => {
+describe("ProtectedRoute", () => {
   afterEach(() => {
     act(() => {
       useAuthStore.setState({
@@ -47,7 +47,7 @@ describe('ProtectedRoute', () => {
     });
   });
 
-  it('renders shell skeleton before auth store hydration completes', () => {
+  it("renders shell skeleton before auth store hydration completes", () => {
     act(() => {
       useAuthStore.setState({
         hasHydrated: false,
@@ -56,15 +56,15 @@ describe('ProtectedRoute', () => {
       });
     });
 
-    renderProtectedRoute('/dashboard');
+    renderProtectedRoute("/dashboard");
 
-    expect(screen.getByTestId('app-shell-skeleton')).toHaveAttribute(
-      'data-variant',
-      'default',
+    expect(screen.getByTestId("app-shell-skeleton")).toHaveAttribute(
+      "data-variant",
+      "default",
     );
   });
 
-  it('renders consultation shell skeleton while persisted session is verifying', () => {
+  it("renders consultation shell skeleton while persisted session is verifying", () => {
     act(() => {
       useAuthStore.setState({
         hasHydrated: true,
@@ -73,15 +73,15 @@ describe('ProtectedRoute', () => {
       });
     });
 
-    renderProtectedRoute('/consultation');
+    renderProtectedRoute("/consultation");
 
-    expect(screen.getByTestId('app-shell-skeleton')).toHaveAttribute(
-      'data-variant',
-      'consultation',
+    expect(screen.getByTestId("app-shell-skeleton")).toHaveAttribute(
+      "data-variant",
+      "consultation",
     );
   });
 
-  it('redirects to login after hydration when unauthenticated', () => {
+  it("redirects to login after hydration when unauthenticated", () => {
     act(() => {
       useAuthStore.setState({
         hasHydrated: true,
@@ -90,12 +90,12 @@ describe('ProtectedRoute', () => {
       });
     });
 
-    renderProtectedRoute('/dashboard');
+    renderProtectedRoute("/dashboard");
 
-    expect(screen.getByText('登录页')).toBeInTheDocument();
+    expect(screen.getByText("登录页")).toBeInTheDocument();
   });
 
-  it('renders children when auth is hydrated and resolved', () => {
+  it("renders children when auth is hydrated and resolved", () => {
     act(() => {
       useAuthStore.setState({
         hasHydrated: true,
@@ -104,8 +104,8 @@ describe('ProtectedRoute', () => {
       });
     });
 
-    renderProtectedRoute('/dashboard');
+    renderProtectedRoute("/dashboard");
 
-    expect(screen.getByText('控制台内容')).toBeInTheDocument();
+    expect(screen.getByText("控制台内容")).toBeInTheDocument();
   });
 });

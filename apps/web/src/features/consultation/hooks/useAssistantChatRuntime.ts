@@ -1,10 +1,10 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from "react";
 import {
   useLocalRuntime,
   type ChatModelAdapter,
   type ChatModelRunResult,
   type ThreadMessageLike,
-} from '@assistant-ui/react';
+} from "@assistant-ui/react";
 
 /** Minimal thread handle used to resume HITL runs under assistant-ui 0.15. */
 export type ConsultationThreadController = {
@@ -14,24 +14,24 @@ export type ConsultationThreadController = {
   }) => void;
   getState: () => { messages: readonly { id?: string }[] };
 };
-import { consultationApi } from '../services/consultationService';
-import { consumeSSEStream, dispatchReplayEvents } from './useSSEProcessor';
+import { consultationApi } from "../services/consultationService";
+import { consumeSSEStream } from "./useSSEProcessor";
+import { recoverDurableRunEvents } from "../runtime/durableRunRecovery";
 import {
   reduceActiveTurnEvent,
   INITIAL_ACTIVE_TURN_STATE,
   resetActiveTurnState,
   type ActiveTurnState,
   type ActiveTurnEffect,
-} from '../runtime/activeTurnReducer';
+} from "../runtime/activeTurnReducer";
 import type {
   ExtractedInfo,
-  HealthFeatures,
   Citation,
   SSERedFlag,
   SSEMessageCompleted,
   StreamEvent,
   PendingInteraction,
-} from '../types/consultation';
+} from "../types/consultation";
 
 /** Ephemeral image attachments for the next user turn (Phase 3-B2).
  * ChatInput pushes upload_ids here; the model adapter drains them when
@@ -53,9 +53,8 @@ export interface ConsultationAdapterOptions {
   onConversationCreated?: (conversationId: string) => void;
   onMessagePersisted?: (clientMessageId: string, messageId: string) => void;
   onExtractedInfoUpdate?: (info: ExtractedInfo) => void;
-  onHealthFeaturesUpdate?: (healthFeatures: HealthFeatures) => void;
   onPhaseChange?: (from: string, to: string) => void;
-  onRedFlag?: (flag: SSERedFlag['payload']) => void;
+  onRedFlag?: (flag: SSERedFlag["payload"]) => void;
   onCitation?: (citation: Citation) => void;
   onTitleGenerated?: (title: string) => void;
   onMessageCompleted?: (data: SSEMessageCompleted) => void;
@@ -69,14 +68,16 @@ export interface ConsultationAdapterOptions {
 export function useAssistantChatRuntime(
   conversationId: string,
   initialMessages: ThreadMessageLike[] = [],
-  options: ConsultationAdapterOptions = {}
+  options: ConsultationAdapterOptions = {},
 ) {
   const [isStreaming, setIsStreaming] = useState(false);
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
   // Ref to stabilize resumeInteraction — avoids re-creating on every render
-  type StreamRunFn = (startRequest: () => Promise<Response>) => AsyncGenerator<ChatModelRunResult>;
+  type StreamRunFn = (
+    startRequest: () => Promise<Response>,
+  ) => AsyncGenerator<ChatModelRunResult>;
   const streamConsultationRunRef = useRef<StreamRunFn | null>(null);
 
   async function* streamConsultationRun(
@@ -123,50 +124,54 @@ export function useAssistantChatRuntime(
     function applyEffects(effects: ActiveTurnEffect[]) {
       for (const effect of effects) {
         switch (effect.type) {
-          case 'conversation_created':
-            console.debug('[SSE] ④ applyEffects → 触发 onConversationCreated 回调', {
-              conversationId: effect.conversationId,
-              hasCallback: !!optionsRef.current.onConversationCreated,
-            });
+          case "conversation_created":
+            console.debug(
+              "[SSE] ④ applyEffects → 触发 onConversationCreated 回调",
+              {
+                conversationId: effect.conversationId,
+                hasCallback: !!optionsRef.current.onConversationCreated,
+              },
+            );
             optionsRef.current.onConversationCreated?.(effect.conversationId);
             break;
-          case 'message_persisted':
+          case "message_persisted":
             optionsRef.current.onMessagePersisted?.(
               effect.clientMessageId,
               effect.messageId,
             );
             break;
-          case 'extracted_info_updated':
+          case "extracted_info_updated":
             optionsRef.current.onExtractedInfoUpdate?.(effect.info);
             break;
-          case 'health_features_updated':
-            optionsRef.current.onHealthFeaturesUpdate?.(effect.healthFeatures);
-            break;
-          case 'phase_changed':
+          case "phase_changed":
             optionsRef.current.onPhaseChange?.(effect.from, effect.to);
             break;
-          case 'red_flag':
-            optionsRef.current.onRedFlag?.(effect.flags as SSERedFlag['payload']);
+          case "red_flag":
+            optionsRef.current.onRedFlag?.(
+              effect.flags as SSERedFlag["payload"],
+            );
             break;
-          case 'citation_added':
+          case "citation_added":
             optionsRef.current.onCitation?.(effect.citation);
             break;
-          case 'interaction_required':
+          case "interaction_required":
             optionsRef.current.onInteractionRequired?.(effect.interaction);
             break;
-          case 'interaction_answered':
+          case "interaction_answered":
             break;
-          case 'message_completed':
-            optionsRef.current.onMessageCompleted?.(effect.data as SSEMessageCompleted);
+          case "message_completed":
+            optionsRef.current.onMessageCompleted?.(
+              effect.data as SSEMessageCompleted,
+            );
             break;
-          case 'title_generated':
-            console.debug('[SSE] ④ applyEffects → 触发 onTitleGenerated 回调', {
+          case "title_generated":
+            console.debug("[SSE] ④ applyEffects → 触发 onTitleGenerated 回调", {
               title: effect.title,
               hasCallback: !!optionsRef.current.onTitleGenerated,
             });
             optionsRef.current.onTitleGenerated?.(effect.title);
             break;
-          case 'stream_error':
+          case "stream_error":
             break;
           default:
             break;
@@ -178,23 +183,30 @@ export function useAssistantChatRuntime(
       const result = reduceActiveTurnEvent(reducerState, event);
       reducerState = result.state;
       // 🔍 追踪关键事件的 effect 产生情况
-      if (event.type === 'conversation.created' || event.type === 'title.generated') {
-        console.debug(`[SSE] ④ dispatch(${event.type}) → effects 数量: ${result.effects.length}`, {
-          effects: result.effects.map(e => e.type),
-          hasConversationCreatedCb: !!optionsRef.current.onConversationCreated,
-          hasTitleGeneratedCb: !!optionsRef.current.onTitleGenerated,
-        });
+      if (
+        event.type === "conversation.created" ||
+        event.type === "title.generated"
+      ) {
+        console.debug(
+          `[SSE] ④ dispatch(${event.type}) → effects 数量: ${result.effects.length}`,
+          {
+            effects: result.effects.map((e) => e.type),
+            hasConversationCreatedCb:
+              !!optionsRef.current.onConversationCreated,
+            hasTitleGeneratedCb: !!optionsRef.current.onTitleGenerated,
+          },
+        );
       }
       applyEffects(result.effects);
       optionsRef.current.onActiveTurnUpdate?.(reducerState);
 
       switch (event.type) {
-        case 'message.text.delta':
-        case 'state.interaction.required':
+        case "message.text.delta":
+        case "state.interaction.required":
           enqueueResult(buildStreamingSnapshot(reducerState));
           break;
-        case 'message.completed':
-        case 'stream.done':
+        case "message.completed":
+        case "stream.done":
           enqueueResult(buildCompletedSnapshot(reducerState));
           break;
         default:
@@ -214,19 +226,26 @@ export function useAssistantChatRuntime(
 
       const handlers = {
         onConversationCreated: (data: StreamEvent) => {
-          console.debug('[SSE] ②-SSE handler 收到 conversation.created → 准备 dispatch', {
-            conversation_id: (data as StreamEvent).ids?.conversation_id,
-            run_id: (data as StreamEvent).ids?.run_id,
-          });
+          console.debug(
+            "[SSE] ②-SSE handler 收到 conversation.created → 准备 dispatch",
+            {
+              conversation_id: (data as StreamEvent).ids?.conversation_id,
+              run_id: (data as StreamEvent).ids?.run_id,
+            },
+          );
           dispatch(data as StreamEvent);
         },
         onTitleGenerated: (data: StreamEvent) => {
-          console.debug('[SSE] ②-SSE handler 收到 title.generated → 准备 dispatch', {
-            title: (data as StreamEvent).payload,
-          });
+          console.debug(
+            "[SSE] ②-SSE handler 收到 title.generated → 准备 dispatch",
+            {
+              title: (data as StreamEvent).payload,
+            },
+          );
           dispatch(data as StreamEvent);
         },
-        onMessagePersisted: (data: StreamEvent) => dispatch(data as StreamEvent),
+        onMessagePersisted: (data: StreamEvent) =>
+          dispatch(data as StreamEvent),
         onRunStarted: (data: StreamEvent) => dispatch(data as StreamEvent),
         onRunResumed: (data: StreamEvent) => dispatch(data as StreamEvent),
         onRunInterrupted: (data: StreamEvent) => dispatch(data as StreamEvent),
@@ -237,14 +256,16 @@ export function useAssistantChatRuntime(
         onToolCall: (data: StreamEvent) => dispatch(data as StreamEvent),
         onToolResult: (data: StreamEvent) => dispatch(data as StreamEvent),
         onExtractedInfo: (data: StreamEvent) => dispatch(data as StreamEvent),
-        onHealthFeatures: (data: StreamEvent) => dispatch(data as StreamEvent),
         onPhaseChange: (data: StreamEvent) => dispatch(data as StreamEvent),
         onRedFlag: (data: StreamEvent) => dispatch(data as StreamEvent),
         onCitation: (data: StreamEvent) => dispatch(data as StreamEvent),
         onKnowledgeGap: (data: StreamEvent) => dispatch(data as StreamEvent),
-        onInteractionRequired: (data: StreamEvent) => dispatch(data as StreamEvent),
-        onInteractionAnswered: (data: StreamEvent) => dispatch(data as StreamEvent),
-        onMessageCompleted: (data: StreamEvent) => dispatch(data as StreamEvent),
+        onInteractionRequired: (data: StreamEvent) =>
+          dispatch(data as StreamEvent),
+        onInteractionAnswered: (data: StreamEvent) =>
+          dispatch(data as StreamEvent),
+        onMessageCompleted: (data: StreamEvent) =>
+          dispatch(data as StreamEvent),
         onMessageFailed: (data: StreamEvent) => dispatch(data as StreamEvent),
         onDone: (data: StreamEvent) => {
           sawStreamDone = true;
@@ -252,7 +273,7 @@ export function useAssistantChatRuntime(
         },
         onStreamError: (data: StreamEvent) => {
           streamError = new Error(
-            (data.payload as { message?: string })?.message ?? 'stream error',
+            (data.payload as { message?: string })?.message ?? "stream error",
           );
           dispatch(data as StreamEvent);
           streamFinished = true;
@@ -266,12 +287,14 @@ export function useAssistantChatRuntime(
         },
       };
 
-      const streamPromise = consumeSSEStream(response, handlers).then((seq) => {
-        maxSeq = Math.max(maxSeq, seq);
-      }).finally(() => {
-        streamFinished = true;
-        notifyQueueConsumer();
-      });
+      const streamPromise = consumeSSEStream(response, handlers)
+        .then((seq) => {
+          maxSeq = Math.max(maxSeq, seq);
+        })
+        .finally(() => {
+          streamFinished = true;
+          notifyQueueConsumer();
+        });
 
       while (!streamFinished || pendingResults.length > 0) {
         if (pendingResults.length === 0) {
@@ -292,30 +315,23 @@ export function useAssistantChatRuntime(
       if (!sawStreamDone && !streamError && networkError) {
         const convId =
           reducerState.conversationId ||
-          (conversationId !== 'new' ? conversationId : null);
+          (conversationId !== "new" ? conversationId : null);
         const runId = reducerState.runId;
         if (convId && runId) {
           try {
-            let afterSeq = maxSeq;
-            let hasMore = true;
-            while (hasMore) {
-              const page = await consultationApi.listRunEvents(convId, runId, {
-                afterSeq,
-                limit: 200,
-              });
-              const parseState = dispatchReplayEvents(page.events, handlers, {
-                currentEvent: '',
-                maxSeq: afterSeq,
-              });
-              afterSeq = parseState.maxSeq;
-              maxSeq = Math.max(maxSeq, afterSeq);
-              hasMore = page.hasMore;
-              if (page.events.length === 0) break;
-            }
+            const recovered = await recoverDurableRunEvents({
+              afterSeq: maxSeq,
+              fetchPage: (afterSeq) =>
+                consultationApi.listRunEvents(convId, runId, {
+                  afterSeq,
+                  limit: 200,
+                }),
+              handlers,
+            });
+            maxSeq = Math.max(maxSeq, recovered.maxSeq);
             networkError = null;
           } catch (resumeErr) {
-            streamError =
-              resumeErr instanceof Error ? resumeErr : networkError;
+            streamError = resumeErr instanceof Error ? resumeErr : networkError;
           }
         } else {
           streamError = networkError;
@@ -331,9 +347,9 @@ export function useAssistantChatRuntime(
       setIsStreaming(false);
       optionsRef.current.onStreamFinished?.();
       if (
-        reducerState.status === 'completed' ||
-        reducerState.status === 'failed' ||
-        reducerState.status === 'idle'
+        reducerState.status === "completed" ||
+        reducerState.status === "failed" ||
+        reducerState.status === "idle"
       ) {
         optionsRef.current.onActiveTurnUpdate?.(resetActiveTurnState());
       }
@@ -347,9 +363,9 @@ export function useAssistantChatRuntime(
     async *run({ messages }): AsyncGenerator<ChatModelRunResult> {
       const lastMessage = messages[messages.length - 1];
       const content = lastMessage.content
-        .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+        .filter((p): p is { type: "text"; text: string } => p.type === "text")
         .map((p) => p.text)
-        .join('');
+        .join("");
 
       const attachments = consultationAttachmentBuffer.next.splice(
         0,
@@ -364,34 +380,34 @@ export function useAssistantChatRuntime(
       }> = [];
       const text = content.trim();
       if (text) {
-        parts.push({ type: 'text', text });
+        parts.push({ type: "text", text });
       } else if (attachments.length > 0) {
         parts.push({
-          type: 'text',
-          text: '请结合我附上的照片，分析与体态/不适相关的可见信息，并给出谨慎建议。',
+          type: "text",
+          text: "请结合我附上的照片，分析与体态/不适相关的可见信息，并给出谨慎建议。",
         });
       }
       for (const image of attachments.slice(0, 3)) {
         parts.push({
-          type: 'image',
+          type: "image",
           upload_id: image.uploadId,
           ...(image.mimeType ? { mime_type: image.mimeType } : {}),
           ...(image.imageUrl ? { image_url: image.imageUrl } : {}),
         });
       }
       if (parts.length === 0) {
-        parts.push({ type: 'text', text: content || ' ' });
+        parts.push({ type: "text", text: content || " " });
       }
 
       setIsStreaming(true);
 
       yield* streamConsultationRun(() =>
         consultationApi.startConsultationRun({
-          conversationId: conversationId === 'new' ? null : conversationId,
+          conversationId: conversationId === "new" ? null : conversationId,
           clientMessageId: `tmp_${crypto.randomUUID()}`,
           requestId: crypto.randomUUID(),
           message: {
-            role: 'user',
+            role: "user",
             parts,
           },
         }),
@@ -404,21 +420,30 @@ export function useAssistantChatRuntime(
   });
 
   const resumeInteraction = useCallback(
-    (threadRuntime: ConsultationThreadController, interactionId: string, answer: unknown) => {
+    (
+      threadRuntime: ConsultationThreadController,
+      interactionId: string,
+      answer: unknown,
+    ) => {
       setIsStreaming(true);
       threadRuntime.resumeRun({
         parentId: threadRuntime.getState().messages.at(-1)?.id ?? null,
         stream: async function* () {
           const runFn = streamConsultationRunRef.current;
           if (!runFn) {
-            throw new Error('streamConsultationRun not initialized — resumeInteraction called before first render');
+            throw new Error(
+              "streamConsultationRun not initialized — resumeInteraction called before first render",
+            );
           }
-          yield* runFn(
-            () =>
-              consultationApi.resumeInteractionStream(conversationId, interactionId, {
+          yield* runFn(() =>
+            consultationApi.resumeInteractionStream(
+              conversationId,
+              interactionId,
+              {
                 requestId: crypto.randomUUID(),
                 answer,
-              }),
+              },
+            ),
           );
         },
       });
@@ -429,18 +454,22 @@ export function useAssistantChatRuntime(
   return { runtime, isStreaming, resumeInteraction };
 }
 
-function buildStreamingSnapshot(state: ActiveTurnState): ChatModelRunResult | null {
+function buildStreamingSnapshot(
+  state: ActiveTurnState,
+): ChatModelRunResult | null {
   if (!state.text) {
     return null;
   }
 
   return {
-    content: [{ type: 'text', text: state.text }],
+    content: [{ type: "text", text: state.text }],
   };
 }
 
-function buildCompletedSnapshot(state: ActiveTurnState): ChatModelRunResult | null {
-  if (state.status !== 'completed') {
+function buildCompletedSnapshot(
+  state: ActiveTurnState,
+): ChatModelRunResult | null {
+  if (state.status !== "completed") {
     return null;
   }
 

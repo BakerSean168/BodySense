@@ -1,10 +1,32 @@
-import { AssistantRuntimeProvider, useAui, useAuiState, ThreadPrimitive, MessagePrimitive, type ThreadAssistantMessagePart, type ThreadMessageLike } from "@assistant-ui/react";
+import {
+  AssistantRuntimeProvider,
+  useAui,
+  useAuiState,
+  ThreadPrimitive,
+  MessagePrimitive,
+  type ThreadAssistantMessagePart,
+  type ThreadMessageLike,
+} from "@assistant-ui/react";
 import { MarkdownTextPrimitive } from "@assistant-ui/react-markdown";
 import remarkGfm from "remark-gfm";
 import { useAssistantChatRuntime } from "../hooks/useAssistantChatRuntime";
-import { ActiveTurnProvider, useActiveTurnActions, useActiveTurnState } from "../context/ActiveTurnContext";
-import React, { useRef, useEffect, useState, useCallback, useMemo } from "react";
-import type { Citation, ConsultationPhase, ExtractedInfo, HealthFeatures } from "../types/consultation";
+import {
+  ActiveTurnProvider,
+  useActiveTurnActions,
+  useActiveTurnState,
+} from "../context/ActiveTurnContext";
+import React, {
+  useRef,
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+} from "react";
+import type {
+  Citation,
+  ConsultationPhase,
+  ExtractedInfo,
+} from "../types/consultation";
 import type { ActiveTurnState } from "../runtime/activeTurnReducer";
 import { buildAssistantMessagePartsViewModel } from "../runtime/assistantMessagePartsViewModel";
 import { selectIsComposerLocked } from "../runtime/activeTurnSelectors";
@@ -22,7 +44,6 @@ interface AssistantChatPanelProps {
   initialMessages?: ThreadMessageLike[];
   initialActiveTurn?: ActiveTurnState | null;
   initialExtractedInfo?: ExtractedInfo[];
-  onHealthFeaturesUpdate?: (healthFeatures: HealthFeatures) => void;
   onExtractedInfoUpdate?: (info: ExtractedInfo[]) => void;
   onPhaseChange?: (phase: ConsultationPhase) => void;
   onCitation?: (citation: Citation) => void;
@@ -34,7 +55,11 @@ interface AssistantChatPanelProps {
 /**
  * Bridge that syncs the adapter's active turn state into ActiveTurnContext.
  */
-function ActiveTurnBridge({ bridgeRef }: { bridgeRef: React.MutableRefObject<((state: ActiveTurnState) => void) | null> }) {
+function ActiveTurnBridge({
+  bridgeRef,
+}: {
+  bridgeRef: React.MutableRefObject<((state: ActiveTurnState) => void) | null>;
+}) {
   const { hydrateTurn } = useActiveTurnActions();
   bridgeRef.current = hydrateTurn;
   return null;
@@ -52,7 +77,6 @@ export function AssistantChatPanel({
   initialMessages = [],
   initialActiveTurn = null,
   initialExtractedInfo: _initialExtractedInfo = [],
-  onHealthFeaturesUpdate,
   onExtractedInfoUpdate,
   onPhaseChange,
   onCitation,
@@ -69,42 +93,58 @@ export function AssistantChatPanel({
 
   const activeTurnRef = useRef<((state: ActiveTurnState) => void) | null>(null);
 
-  const adapterOptions = useMemo(() => ({
-    onConversationCreated: onConversationCreated
-      ? (id: string) => {
-          console.debug('[SSE] ⓪ AssistantChatPanel → 桥接 onConversationCreated', { id });
-          onConversationCreated(id);
+  const adapterOptions = useMemo(
+    () => ({
+      onConversationCreated: onConversationCreated
+        ? (id: string) => {
+            console.debug(
+              "[SSE] ⓪ AssistantChatPanel → 桥接 onConversationCreated",
+              { id },
+            );
+            onConversationCreated(id);
+          }
+        : undefined,
+      onExtractedInfoUpdate: (info: ExtractedInfo) => {
+        const existing = extractedInfoRef.current;
+        const idx = existing.findIndex((e) => e.body_part === info.body_part);
+        if (idx >= 0) {
+          const updated = [...existing];
+          updated[idx] = { ...updated[idx], ...info };
+          extractedInfoRef.current = updated;
+        } else {
+          extractedInfoRef.current = [...existing, info];
         }
-      : undefined,
-    onExtractedInfoUpdate: (info: ExtractedInfo) => {
-      const existing = extractedInfoRef.current;
-      const idx = existing.findIndex((e) => e.body_part === info.body_part);
-      if (idx >= 0) {
-        const updated = [...existing];
-        updated[idx] = { ...updated[idx], ...info };
-        extractedInfoRef.current = updated;
-      } else {
-        extractedInfoRef.current = [...existing, info];
-      }
-      onExtractedInfoUpdate?.(extractedInfoRef.current);
-    },
-    onHealthFeaturesUpdate,
-    onPhaseChange: (_from: string, to: string) => {
-      onPhaseChange?.(to as ConsultationPhase);
-    },
-    onCitation,
-    onTitleGenerated: onTitleGenerated
-      ? (title: string) => {
-          console.debug('[SSE] ⓪ AssistantChatPanel → 桥接 onTitleGenerated', { title });
-          onTitleGenerated(title);
-        }
-      : undefined,
-    onMessagePersisted,
-    onStreamFinished,
-    onActiveTurnUpdate: (state: ActiveTurnState) => {
-      activeTurnRef.current?.(state);
-    },
-  }), [onConversationCreated, onExtractedInfoUpdate, onHealthFeaturesUpdate, onPhaseChange, onCitation, onTitleGenerated, onMessagePersisted, onStreamFinished]);
+        onExtractedInfoUpdate?.(extractedInfoRef.current);
+      },
+      onPhaseChange: (_from: string, to: string) => {
+        onPhaseChange?.(to as ConsultationPhase);
+      },
+      onCitation,
+      onTitleGenerated: onTitleGenerated
+        ? (title: string) => {
+            console.debug(
+              "[SSE] ⓪ AssistantChatPanel → 桥接 onTitleGenerated",
+              { title },
+            );
+            onTitleGenerated(title);
+          }
+        : undefined,
+      onMessagePersisted,
+      onStreamFinished,
+      onActiveTurnUpdate: (state: ActiveTurnState) => {
+        activeTurnRef.current?.(state);
+      },
+    }),
+    [
+      onConversationCreated,
+      onExtractedInfoUpdate,
+      onPhaseChange,
+      onCitation,
+      onTitleGenerated,
+      onMessagePersisted,
+      onStreamFinished,
+    ],
+  );
 
   const { runtime, resumeInteraction } = useAssistantChatRuntime(
     conversationId,
@@ -117,7 +157,10 @@ export function AssistantChatPanel({
       <ActiveTurnBridge bridgeRef={activeTurnRef} />
       <AssistantRuntimeProvider runtime={runtime}>
         <InitialActiveTurnHydrator initialActiveTurn={initialActiveTurn} />
-        <ChatContent conversationId={conversationId} onResumeInteraction={resumeInteraction} />
+        <ChatContent
+          conversationId={conversationId}
+          onResumeInteraction={resumeInteraction}
+        />
       </AssistantRuntimeProvider>
     </ActiveTurnProvider>
   );
@@ -187,7 +230,11 @@ function ChatInputArea({
               key={image.uploadId}
               className="relative h-16 w-16 overflow-hidden rounded-lg border border-[#D6D3CD] bg-white"
             >
-              <img src={image.previewUrl} alt={image.name} className="h-full w-full object-cover" />
+              <img
+                src={image.previewUrl}
+                alt={image.name}
+                className="h-full w-full object-cover"
+              />
               <button
                 type="button"
                 onClick={() => onRemoveImage(image.uploadId)}
@@ -210,18 +257,20 @@ function ChatInputArea({
           className="hidden"
           onChange={(e) => {
             onAddImages(e.target.files);
-            e.target.value = '';
+            e.target.value = "";
           }}
         />
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          disabled={isComposerLocked || isUploadingImage || pendingImages.length >= 3}
+          disabled={
+            isComposerLocked || isUploadingImage || pendingImages.length >= 3
+          }
           className="flex-shrink-0 rounded-full border border-[#D6D3CD] bg-white px-3 py-3.5 text-sm text-[#5D6B63]
                      hover:bg-[#F7F5F0] disabled:cursor-not-allowed disabled:opacity-50"
           title="上传体态/症状照片"
         >
-          {isUploadingImage ? '…' : '图片'}
+          {isUploadingImage ? "…" : "图片"}
         </button>
         <textarea
           ref={textareaRef}
@@ -235,7 +284,7 @@ function ChatInputArea({
                      focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent
                      disabled:bg-[#F7F5F0] disabled:text-gray-400
                      placeholder:text-gray-400 ${isCentered ? "shadow-md" : "shadow-sm"}`}
-          style={{ maxHeight: '150px' }}
+          style={{ maxHeight: "150px" }}
         />
         <button
           onClick={handleSend}
@@ -253,7 +302,9 @@ function ChatInputArea({
 
 interface ChatContentProps {
   conversationId: string;
-  onResumeInteraction: ReturnType<typeof useAssistantChatRuntime>['resumeInteraction'];
+  onResumeInteraction: ReturnType<
+    typeof useAssistantChatRuntime
+  >["resumeInteraction"];
 }
 
 /**
@@ -261,7 +312,10 @@ interface ChatContentProps {
  * from ActiveTurnContext. StreamingAssistantTurn renders the live turn;
  * ThreadPrimitive.Messages renders historical messages.
  */
-function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) {
+function ChatContent({
+  conversationId,
+  onResumeInteraction,
+}: ChatContentProps) {
   const aui = useAui();
   const threadMessages = useAuiState((state) => state.thread.messages);
   const threadRuntime = aui.thread;
@@ -270,11 +324,15 @@ function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const draftMessage = useConsultationStore((state) => state.draftMessage);
-  const setDraftMessage = useConsultationStore((state) => state.setDraftMessage);
-  const clearDraftMessage = useConsultationStore((state) => state.clearDraftMessage);
+  const setDraftMessage = useConsultationStore(
+    (state) => state.setDraftMessage,
+  );
+  const clearDraftMessage = useConsultationStore(
+    (state) => state.clearDraftMessage,
+  );
 
   const [inputText, setInputText] = useState(() => {
-    return conversationId === 'new' ? draftMessage : '';
+    return conversationId === "new" ? draftMessage : "";
   });
   const [pendingImages, setPendingImages] = useState<PendingChatImage[]>([]);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -282,17 +340,17 @@ function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) 
 
   // Sync store draft when user types, only for new conversations
   useEffect(() => {
-    if (conversationId === 'new') {
+    if (conversationId === "new") {
       setDraftMessage(inputText);
     }
   }, [inputText, conversationId, setDraftMessage]);
 
   // When conversationId changes, if it becomes 'new', load draft. Otherwise clear.
   useEffect(() => {
-    if (conversationId === 'new') {
+    if (conversationId === "new") {
       setInputText(draftMessage);
     } else {
-      setInputText('');
+      setInputText("");
     }
   }, [conversationId, draftMessage]);
 
@@ -310,7 +368,7 @@ function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) 
     if (container) {
       container.scrollTo({
         top: container.scrollHeight,
-        behavior: 'smooth',
+        behavior: "smooth",
       });
     }
   }, [threadMessages, activeTurn]);
@@ -325,7 +383,7 @@ function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) 
       try {
         const uploaded: PendingChatImage[] = [];
         for (const file of selected) {
-          const record = await uploadFile(file, 'consultation_photo');
+          const record = await uploadFile(file, "consultation_photo");
           uploaded.push({
             uploadId: record.id,
             previewUrl: URL.createObjectURL(file),
@@ -335,7 +393,7 @@ function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) 
         }
         setPendingImages((prev) => [...prev, ...uploaded].slice(0, 3));
       } catch (err) {
-        console.error('consultation image upload failed', err);
+        console.error("consultation image upload failed", err);
       } finally {
         setIsUploadingImage(false);
       }
@@ -346,7 +404,7 @@ function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) 
   const handleRemoveImage = useCallback((uploadId: string) => {
     setPendingImages((prev) => {
       const target = prev.find((item) => item.uploadId === uploadId);
-      if (target?.previewUrl.startsWith('blob:')) {
+      if (target?.previewUrl.startsWith("blob:")) {
         URL.revokeObjectURL(target.previewUrl);
       }
       return prev.filter((item) => item.uploadId !== uploadId);
@@ -360,23 +418,26 @@ function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) 
     consultationAttachmentBuffer.next = pendingImages.map((image) => ({
       uploadId: image.uploadId,
       mimeType: image.mimeType,
-      imageUrl: image.previewUrl.startsWith('blob:') ? undefined : image.previewUrl,
+      imageUrl: image.previewUrl.startsWith("blob:")
+        ? undefined
+        : image.previewUrl,
     }));
 
     const text =
       inputText.trim() ||
       (pendingImages.length > 0
-        ? '请结合我附上的照片，分析与体态/不适相关的可见信息，并给出谨慎建议。'
-        : '');
+        ? "请结合我附上的照片，分析与体态/不适相关的可见信息，并给出谨慎建议。"
+        : "");
     composerRuntime.setText(text);
     composerRuntime.send();
-    if (conversationId === 'new') {
+    if (conversationId === "new") {
       clearDraftMessage();
     }
-    setInputText('');
+    setInputText("");
     setPendingImages((prev) => {
       for (const image of prev) {
-        if (image.previewUrl.startsWith('blob:')) URL.revokeObjectURL(image.previewUrl);
+        if (image.previewUrl.startsWith("blob:"))
+          URL.revokeObjectURL(image.previewUrl);
       }
       return [];
     });
@@ -391,16 +452,19 @@ function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) 
   ]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
   };
 
-  const handleResume = useCallback(async (interactionId: string, answer: unknown) => {
-    markInteractionAnswered(interactionId);
-    onResumeInteraction(threadRuntime, interactionId, answer);
-  }, [markInteractionAnswered, onResumeInteraction, threadRuntime]);
+  const handleResume = useCallback(
+    async (interactionId: string, answer: unknown) => {
+      markInteractionAnswered(interactionId);
+      onResumeInteraction(threadRuntime, interactionId, answer);
+    },
+    [markInteractionAnswered, onResumeInteraction, threadRuntime],
+  );
 
   const handleInteractionAnswer = useCallback(
     async (answer: unknown) => {
@@ -412,7 +476,9 @@ function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) 
       try {
         await handleResume(interaction.id, answer);
       } catch (err) {
-        setInteractionError(err instanceof Error ? err.message : '提交失败，请重试');
+        setInteractionError(
+          err instanceof Error ? err.message : "提交失败，请重试",
+        );
       } finally {
         setIsSubmitting(false);
       }
@@ -421,11 +487,14 @@ function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) 
   );
 
   const hasPendingInteraction =
-    activeTurn.pendingInteraction && activeTurn.pendingInteraction.status === 'pending';
+    activeTurn.pendingInteraction &&
+    activeTurn.pendingInteraction.status === "pending";
 
   // Determine if the conversation has no user or assistant messages
   const isEmptyConversation =
-    threadMessages.filter((message) => message.role === 'user' || message.role === 'assistant').length === 0;
+    threadMessages.filter(
+      (message) => message.role === "user" || message.role === "assistant",
+    ).length === 0;
 
   // Render centered Layout for new/empty conversations
   if (isEmptyConversation && !hasPendingInteraction) {
@@ -435,8 +504,18 @@ function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) 
           {/* Posture/Health logo/decoration */}
           <div className="flex justify-center">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary-100 to-primary-50 flex items-center justify-center text-primary-700 shadow-md shadow-primary-700/5 border border-primary-200/50">
-              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              <svg
+                className="w-8 h-8"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                />
               </svg>
             </div>
           </div>
@@ -446,7 +525,7 @@ function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) 
             <h2 className="text-2xl md:text-3xl font-display font-bold text-[#1A221E] tracking-tight">
               开始一次新的健康咨询
             </h2>
-            
+
             {/* Subtitle */}
             <p className="text-sm md:text-base text-[#4A554E] max-w-lg mx-auto leading-relaxed font-medium">
               描述你的问题，我会帮你逐步分析并给出建议。
@@ -478,7 +557,10 @@ function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) 
   return (
     <ThreadPrimitive.Root className="flex flex-col h-full bg-white">
       {/* Messages area */}
-      <ThreadPrimitive.Viewport ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+      <ThreadPrimitive.Viewport
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto p-4 space-y-4"
+      >
         <ThreadPrimitive.Empty>
           <div className="hidden" />
         </ThreadPrimitive.Empty>
@@ -492,7 +574,9 @@ function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) 
 
         {/* Streaming assistant turn from ActiveTurnState */}
         <StreamingAssistantTurn
-          onInteractionSubmit={hasPendingInteraction ? handleInteractionAnswer : undefined}
+          onInteractionSubmit={
+            hasPendingInteraction ? handleInteractionAnswer : undefined
+          }
           isInteractionSubmitting={isSubmitting}
           interactionError={interactionError}
           onInteractionRetry={() => setInteractionError(null)}
@@ -507,17 +591,17 @@ function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) 
           </p>
         )}
         <ChatInputArea
-              inputText={inputText}
-              setInputText={setInputText}
-              isComposerLocked={isComposerLocked}
-              handleKeyDown={handleKeyDown}
-              handleSend={handleSend}
-              textareaRef={textareaRef}
-              pendingImages={pendingImages}
-              onAddImages={handleAddImages}
-              onRemoveImage={handleRemoveImage}
-              isUploadingImage={isUploadingImage}
-            />
+          inputText={inputText}
+          setInputText={setInputText}
+          isComposerLocked={isComposerLocked}
+          handleKeyDown={handleKeyDown}
+          handleSend={handleSend}
+          textareaRef={textareaRef}
+          pendingImages={pendingImages}
+          onAddImages={handleAddImages}
+          onRemoveImage={handleRemoveImage}
+          isUploadingImage={isUploadingImage}
+        />
       </div>
     </ThreadPrimitive.Root>
   );
@@ -525,8 +609,7 @@ function ChatContent({ conversationId, onResumeInteraction }: ChatContentProps) 
 
 function CustomUserMessage() {
   const metadata = useAuiState((state) => state.message.metadata) as
-    | { custom?: { is_interaction_answer?: boolean } }
-    | undefined;
+    { custom?: { is_interaction_answer?: boolean } } | undefined;
 
   // If this message has metadata indicating it's an interaction answer, hide it!
   const isInteractionAnswer = metadata?.custom?.is_interaction_answer === true;
@@ -550,10 +633,17 @@ function CustomUserMessage() {
  * Streaming display is handled by StreamingAssistantTurn separately.
  */
 function CustomAssistantMessage() {
-  const content = useAuiState((state) => state.message.content) as readonly ThreadAssistantMessagePart[];
+  const content = useAuiState(
+    (state) => state.message.content,
+  ) as readonly ThreadAssistantMessagePart[];
   const isLast = useAuiState((state) => state.message.isLast);
   const metadata = useAuiState((state) => state.message.metadata) as
-    | { custom?: { interaction_history?: boolean; interaction?: import('../types/consultation').InteractionHistoryItem } }
+    | {
+        custom?: {
+          interaction_history?: boolean;
+          interaction?: import("../types/consultation").InteractionHistoryItem;
+        };
+      }
     | undefined;
   const activeTurn = useActiveTurnState();
 
@@ -568,7 +658,8 @@ function CustomAssistantMessage() {
   }, [content]);
 
   const isMessageActive =
-    isLast && (activeTurn.status === 'streaming' || activeTurn.status === 'interrupted');
+    isLast &&
+    (activeTurn.status === "streaming" || activeTurn.status === "interrupted");
 
   if (isMessageActive) {
     return null;
@@ -592,14 +683,19 @@ function CustomAssistantMessage() {
           <div className="text-sm leading-relaxed font-medium prose-markdown">
             <MessagePrimitive.Content
               components={{
-                Text: () => <MarkdownTextPrimitive smooth={false} remarkPlugins={[remarkGfm]} />,
+                Text: () => (
+                  <MarkdownTextPrimitive
+                    smooth={false}
+                    remarkPlugins={[remarkGfm]}
+                  />
+                ),
                 Source: () => null,
                 File: () => null,
                 Image: (props) => {
                   const src =
                     (props as { image?: string }).image ||
                     (props as { src?: string }).src ||
-                    '';
+                    "";
                   if (!src) return null;
                   return (
                     <img
@@ -618,13 +714,15 @@ function CustomAssistantMessage() {
 
           {viewModel.citations.length > 0 && (
             <div className="rounded-xl px-3 py-2 bg-[#EEF2EE] border border-[#D4DDD4]">
-              <p className="text-xs font-semibold text-[#5A7A64] mb-1">参考知识</p>
+              <p className="text-xs font-semibold text-[#5A7A64] mb-1">
+                参考知识
+              </p>
               <div className="flex flex-wrap gap-1.5">
                 {viewModel.citations.map((c) => (
                   <span
                     key={c.title}
                     className="inline-block rounded-full bg-white px-2.5 py-0.5 text-xs text-[#3D5A47] border border-[#C8D8CC]"
-                    title={c.summary || c.snippet || c.content || ''}
+                    title={c.summary || c.snippet || c.content || ""}
                   >
                     {c.title}
                   </span>
@@ -636,13 +734,29 @@ function CustomAssistantMessage() {
           {viewModel.knowledgeGaps.length > 0 && (
             <div className="rounded-xl px-3 py-2 bg-[#FFF8F0] border border-[#F0D4B0]">
               <div className="flex items-start gap-2">
-                <svg className="w-4 h-4 text-[#D4864A] mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg
+                  className="w-4 h-4 text-[#D4864A] mt-0.5 flex-shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
                 <div>
-                  <p className="text-xs font-semibold text-[#A06030]">知识库提示</p>
+                  <p className="text-xs font-semibold text-[#A06030]">
+                    知识库提示
+                  </p>
                   <p className="text-xs text-[#8B6A4A] mt-0.5">
-                    知识库中暂未收录「{viewModel.knowledgeGaps.map((gap) => gap.query).join('」「')}」的专项资料，以下建议仅供参考。
+                    知识库中暂未收录「
+                    {viewModel.knowledgeGaps
+                      .map((gap) => gap.query)
+                      .join("」「")}
+                    」的专项资料，以下建议仅供参考。
                   </p>
                 </div>
               </div>

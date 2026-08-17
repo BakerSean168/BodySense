@@ -19,20 +19,35 @@
 
 ---
 
-## 2. 工程化架构设计文档
+## 2. 核心业务领域与工程化架构
 
-以下文档定义了系统各核心子模块的目标架构。每个文档顶部的 **Implementation Status** 段标注了当前实现进度。
+### 2.1 业务领域 Source of Truth
 
-| 文档 | 子模块 | 实现进度 | 关键已实现 |
+BodySense 当前业务领域的最高层设计以以下文档为准：
+
+- ⭐ **[Longitudinal BodyState Domain Model](./longitudinal-body-state-domain.md)**  
+  *定义一用户一份长期 BodyState、Fact / Observation / Hypothesis / Evidence、时间语义、Diagnosis / Treatment 生命周期及核心 invariant。*
+- 🔁 **[Longitudinal Health Loop](./longitudinal-health-loop.md)**  
+  *用持续的 BodyState → Diagnosis → Treatment → Outcome → BodyState 闭环替代旧的线性 Health Journey。*
+- 📦 **[Longitudinal Body Health Feature Spec](../feature_spec_longitudinal_body_health.md)**  
+  *定义用户看到的长期健康工作台、Diagnosis 历史、当前 Treatment 与趋势交互。*
+
+如果旧文档与上述领域模型冲突，以 ADR 0004 + Longitudinal BodyState Domain Model 为准。
+
+### 2.2 工程化架构设计文档
+
+以下文档定义系统各核心子模块的目标架构：
+
+| 文档 | 子模块 | 状态 | 说明 |
 |---|---|---|---|
-| [System Engineering Refactor Plan](./system-engineering-refactor-plan.md) | 总控计划 | — | 汇总七个子模块的系统级重构方案 |
+| [System Engineering Refactor Plan](./system-engineering-refactor-plan.md) | 总控计划 | 历史/需逐步对齐 | 早期系统级重构方案，遇到业务模型冲突时以新领域模型为准 |
 | [Context Engineering Architecture](./context-engineering-architecture.md) | 上下文工程 | ⚠️ 归档 | ADR 0002 取代了 Go ContextBuilder 方案 |
 | [Agent Tool Calling Runtime](./agent-tool-calling-runtime.md) | 工具调用运行时 | ⚠️ 部分归档 | 设计概念仍有效，执行路径已被 ADR 0002 取代 |
 | [AI Run / Job Runtime](./ai-run-job-runtime.md) | 任务运行时 | ~50% | jobs schema、Go JobRuntime、OCR 迁移 |
 | [Stream Event Contract Runtime](./stream-event-contract-runtime.md) | 流事件契约 | ~30% | Go StreamRuntime、StreamEvent v1 |
 | [AI Output Governance](./ai-output-governance.md) | AI 输出治理 | ~35% | AIOutputGuard 骨架、OutputReviewService |
 | [Knowledge Lifecycle](./knowledge-lifecycle-architecture.md) | 知识生命周期 | ~25% | lifecycle schema、publication repo |
-| [Health Journey Workflow](./health-journey-workflow.md) | 健康旅程 | 0% | 未开始 |
+| [Longitudinal Health Loop](./longitudinal-health-loop.md) | 长期健康闭环 | Active target | 替代旧线性 Health Journey；BodyState 为闭环中心 |
 
 ---
 
@@ -42,7 +57,10 @@
   *决定保留三服务架构（React/Go/Python），深化 StreamRuntime、ToolRuntime、JobRuntime，而非引入新 Agent 框架。*
 
 - **[ADR 0002: Python 拥有 Agent Runtime 真值，Go 拥有 Durable Ledger 真值](../adr/0002-agent-runtime-ownership.md)** ⭐
-  *修正 ADR 0001 中 Go 为业务真相源的表述：Python 通过 LangGraph checkpoint 拥有 Agent Thread 运行时真值，Go 拥有 Runtime Event Log 和 projection 持久化，Web 为纯 projection consumer。删除了 ContextBuilder、chat_handler、synthetic resume 等旧路径。*
+  *Python 通过 LangGraph checkpoint 拥有 Agent Thread 运行时真值；Go 拥有用户业务真值、Runtime Event Log 和 projection；Web 为 projection consumer。*
+
+- **[ADR 0004: Adopt a Longitudinal BodyState as the Core Health Domain Model](../adr/0004-adopt-longitudinal-body-state-model.md)** ⭐
+  *一用户一份长期 BodyState；Conversation 只是交互入口；Diagnosis / Treatment pin 明确 BodyState revision；取消 MedicalRecord 作为核心 aggregate，并用 BodyState / Diagnosis / Treatment 历史表达长期健康变化。*
 
 ---
 
@@ -75,3 +93,7 @@
 ### 实施过程记录
 - **Phase 实施计划**：[implementation/](../plan/archive/implementation/) — 16 个 Phase 的详细设计文档
 - **审计修复报告**：[audit/](../plan/archive/audit/) — 4 份修复报告和 1 份修复基线快照
+
+## Current source of truth
+
+- [Current Longitudinal System](./current-longitudinal-system.md) — authoritative implemented architecture

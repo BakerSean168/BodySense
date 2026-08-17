@@ -1,7 +1,7 @@
-import { create } from 'zustand';
-import { useAuthStore } from './authStore';
-import type { UserUpload } from '@/features/profile/types/upload.types';
-import { apiUrl, safeJson, extractErrorMessage } from '@/lib/api-url';
+import { create } from "zustand";
+import { useAuthStore } from "./authStore";
+import type { UserUpload } from "@/features/profile/types/upload.types";
+import { apiUrl, safeJson, extractErrorMessage } from "@/lib/api-url";
 
 interface UploadState {
   uploads: UserUpload[];
@@ -31,24 +31,25 @@ export const useUploadStore = create<UploadState>()((set) => ({
         return;
       }
 
-      const response = await fetch(apiUrl('/api/v1/uploads'), {
+      const response = await fetch(apiUrl("/api/v1/uploads"), {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch uploads');
+        throw new Error("Failed to fetch uploads");
       }
 
       const uploads = await safeJson<UserUpload[]>(response);
       set({ uploads: uploads || [], isLoading: false });
     } catch (error) {
-      console.error('Failed to fetch uploads:', error);
+      console.error("Failed to fetch uploads:", error);
       set({
         uploads: [],
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to fetch uploads',
+        error:
+          error instanceof Error ? error.message : "Failed to fetch uploads",
       });
     }
   },
@@ -60,15 +61,15 @@ export const useUploadStore = create<UploadState>()((set) => ({
       const { accessToken } = useAuthStore.getState();
 
       if (!accessToken) {
-        throw new Error('Not authenticated');
+        throw new Error("Not authenticated");
       }
 
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('file_type', fileType);
+      formData.append("file", file);
+      formData.append("file_type", fileType);
 
-      const response = await fetch(apiUrl('/api/v1/uploads'), {
-        method: 'POST',
+      const response = await fetch(apiUrl("/api/v1/uploads"), {
+        method: "POST",
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
@@ -89,7 +90,7 @@ export const useUploadStore = create<UploadState>()((set) => ({
     } catch (error) {
       set({
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to upload file',
+        error: error instanceof Error ? error.message : "Failed to upload file",
       });
       throw error;
     }
@@ -102,11 +103,11 @@ export const useUploadStore = create<UploadState>()((set) => ({
       const { accessToken } = useAuthStore.getState();
 
       if (!accessToken) {
-        throw new Error('Not authenticated');
+        throw new Error("Not authenticated");
       }
 
       const response = await fetch(apiUrl(`/api/v1/uploads/${id}`), {
-        method: 'DELETE',
+        method: "DELETE",
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
@@ -123,7 +124,8 @@ export const useUploadStore = create<UploadState>()((set) => ({
     } catch (error) {
       set({
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to delete upload',
+        error:
+          error instanceof Error ? error.message : "Failed to delete upload",
       });
       throw error;
     }

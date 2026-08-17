@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
-import type { ToolCallInfo } from '../types/consultation';
-import { ToolCallItem } from './ToolCallItem';
+import { useMemo } from "react";
+import type { ToolCallInfo } from "../types/consultation";
+import { ToolCallItem } from "./ToolCallItem";
 
 interface ToolCallCardProps {
   toolCalls: ToolCallInfo[];
@@ -21,7 +21,7 @@ export function ToolCallCard({ toolCalls }: ToolCallCardProps) {
     const deduped = Array.from(seen.values());
     deduped.sort((a, b) => {
       if (a.status === b.status) return 0;
-      return a.status === 'running' ? -1 : 1;
+      return a.status === "running" ? -1 : 1;
     });
     return deduped;
   }, [toolCalls]);
@@ -29,7 +29,7 @@ export function ToolCallCard({ toolCalls }: ToolCallCardProps) {
   if (normalizedCalls.length === 0) return null;
 
   // Filter out ask_user — those are rendered as AskUserCard separately
-  const visibleCalls = normalizedCalls.filter((tc) => tc.tool !== 'ask_user');
+  const visibleCalls = normalizedCalls.filter((tc) => tc.tool !== "ask_user");
   if (visibleCalls.length === 0) return null;
 
   return (

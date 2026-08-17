@@ -66,7 +66,7 @@ class FunASRProvider(ASRProvider):
             raise FileNotFoundError(f"Audio file not found: {audio_path}")
 
         runtime_dir = self._ensure_runtime()
-        model_path = self._ensure_model(self.model_name)
+        model_path = self._ensure_model(self.model_name or _DEFAULT_MODEL)
         chunks = _detect_audio_chunks(audio_path)
 
         chunk_dir = audio_path.parent / ".sensevoice_chunks"
@@ -169,9 +169,12 @@ def _detect_audio_chunks(audio_path: Path) -> list[tuple[float, float]]:
     command = [
         "ffmpeg",
         "-hide_banner",
-        "-i", str(audio_path),
-        "-af", "silencedetect=n=-35dB:d=0.35",
-        "-f", "null",
+        "-i",
+        str(audio_path),
+        "-af",
+        "silencedetect=n=-35dB:d=0.35",
+        "-f",
+        "null",
         "-",
     ]
     result = subprocess.run(
@@ -247,13 +250,19 @@ def _extract_audio_chunk(
     command = [
         "ffmpeg",
         "-hide_banner",
-        "-loglevel", "error",
+        "-loglevel",
+        "error",
         "-y",
-        "-ss", str(max(0.0, start_sec)),
-        "-to", str(max(start_sec, end_sec)),
-        "-i", str(audio_path),
-        "-ac", "1",
-        "-ar", "16000",
+        "-ss",
+        str(max(0.0, start_sec)),
+        "-to",
+        str(max(start_sec, end_sec)),
+        "-i",
+        str(audio_path),
+        "-ac",
+        "1",
+        "-ar",
+        "16000",
         str(output_path),
     ]
     subprocess.run(command, check=True)
@@ -271,8 +280,10 @@ def _run_funasr_binary(
     """
     command = [
         str(binary_path),
-        "-m", str(model_path),
-        "-a", str(audio_path),
+        "-m",
+        str(model_path),
+        "-a",
+        str(audio_path),
     ]
     completed = subprocess.run(
         command,
@@ -289,9 +300,12 @@ def _probe_duration(media_path: Path) -> float | None:
     """Probe media duration using ffprobe."""
     command = [
         "ffprobe",
-        "-v", "error",
-        "-show_entries", "format=duration",
-        "-of", "default=noprint_wrappers=1:nokey=1",
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "default=noprint_wrappers=1:nokey=1",
         str(media_path),
     ]
     result = subprocess.run(command, check=True, capture_output=True, text=True)

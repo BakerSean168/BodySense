@@ -35,18 +35,12 @@ class ASRAPIProvider(ASRProvider):
         base_url: str | None = None,
         model: str | None = None,
     ):
-        self.api_key = (
-            api_key
-            or os.getenv(_ENV_API_KEY)
-            or os.getenv("OPENAI_API_KEY")
-        )
+        self.api_key = api_key or os.getenv(_ENV_API_KEY) or os.getenv("OPENAI_API_KEY")
         self.base_url = base_url or os.getenv(_ENV_BASE_URL)
         self.model = model or os.getenv(_ENV_MODEL, "mimo-v2.5-asr")
 
         if not self.api_key:
-            raise ValueError(
-                f"{_ENV_API_KEY} or OPENAI_API_KEY is required for asr_api provider"
-            )
+            raise ValueError(f"{_ENV_API_KEY} or OPENAI_API_KEY is required for asr_api provider")
 
         self._client = None
 
@@ -55,10 +49,11 @@ class ASRAPIProvider(ASRProvider):
         if self._client is None:
             from openai import AsyncOpenAI
 
-            kwargs = {"api_key": self.api_key}
+            assert self.api_key is not None
             if self.base_url:
-                kwargs["base_url"] = self.base_url
-            self._client = AsyncOpenAI(**kwargs)
+                self._client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
+            else:
+                self._client = AsyncOpenAI(api_key=self.api_key)
         return self._client
 
     async def transcribe(

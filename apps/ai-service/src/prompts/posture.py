@@ -19,23 +19,23 @@ VIEW_LABEL: dict[str, str] = {
 # both enforce this allow-list so the model never guesses across views.
 VIEW_ALLOWED_KEYS: dict[str, list[str]] = {
     "side": [
-        "forward_head",          # 头前移
-        "rounded_shoulders",     # 圆肩
-        "kyphosis",              # 驼背
+        "forward_head",  # 头前移
+        "rounded_shoulders",  # 圆肩
+        "kyphosis",  # 驼背
         "pelvic_anterior_tilt",  # 骨盆前倾
-        "knee_hyperextension",   # 膝超伸
+        "knee_hyperextension",  # 膝超伸
     ],
     "front": [
-        "shoulder_tilt",         # 高低肩
-        "pelvic_lateral_tilt",   # 骨盆侧倾
-        "head_tilt",             # 头侧倾
-        "knee_valgus_varus",     # 膝内外翻
+        "shoulder_tilt",  # 高低肩
+        "pelvic_lateral_tilt",  # 骨盆侧倾
+        "head_tilt",  # 头侧倾
+        "knee_valgus_varus",  # 膝内外翻
     ],
     "back": [
-        "shoulder_tilt",           # 高低肩
-        "scapular_asymmetry",      # 肩胛不对称
-        "spinal_lateral_deviation",# 脊柱侧弯倾向
-        "pelvic_lateral_tilt",     # 骨盆侧倾
+        "shoulder_tilt",  # 高低肩
+        "scapular_asymmetry",  # 肩胛不对称
+        "spinal_lateral_deviation",  # 脊柱侧弯倾向
+        "pelvic_lateral_tilt",  # 骨盆侧倾
     ],
 }
 

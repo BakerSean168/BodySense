@@ -95,7 +95,6 @@ class TestGovernance:
         assert f["confidence"] == "low"
         assert f["label"]  # label repaired from KEY_LABELS
 
-
     def test_schema_reject_blocks_findings(self, monkeypatch):
         """When the forced gate rejects, raw findings must not leak."""
         import src.services.posture_analyzer as posture_mod
@@ -129,7 +128,6 @@ class TestGovernance:
         assert out["findings"] == []
         assert "安全兜底" in out["summary_markdown"]
         assert out.get("safety_fallback")
-
 
     def test_geometric_metrics_survive_governance(self):
         """Phase 2: metrics from the pose estimator are retained; VLM inventions are not."""

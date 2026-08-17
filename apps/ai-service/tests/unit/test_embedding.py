@@ -12,10 +12,13 @@ class TestEmbeddingGenerator:
 
     def test_init_default(self):
         """Test default initialization with OpenAI provider."""
-        with patch.dict("os.environ", {
-            "EMBEDDING_PROVIDER": "openai",
-            "EMBEDDING_MODEL": "all-MiniLM-L6-v2",
-        }):
+        with patch.dict(
+            "os.environ",
+            {
+                "EMBEDDING_PROVIDER": "openai",
+                "EMBEDDING_MODEL": "all-MiniLM-L6-v2",
+            },
+        ):
             gen = EmbeddingGenerator(api_key="test-key")
             assert gen.model == "all-MiniLM-L6-v2"
             assert gen.dimension == 1536
@@ -24,9 +27,12 @@ class TestEmbeddingGenerator:
 
     def test_init_custom(self):
         """Test custom initialization."""
-        with patch.dict("os.environ", {
-            "EMBEDDING_DIMENSIONS": "768",
-        }):
+        with patch.dict(
+            "os.environ",
+            {
+                "EMBEDDING_DIMENSIONS": "768",
+            },
+        ):
             gen = EmbeddingGenerator(
                 model="custom-model",
                 dimension=768,
@@ -129,9 +135,7 @@ class TestEmbeddingGenerator:
         gen.provider = "openai"
 
         gen._client = MagicMock()
-        gen._client.embeddings.create = AsyncMock(
-            side_effect=Exception("API Error")
-        )
+        gen._client.embeddings.create = AsyncMock(side_effect=Exception("API Error"))
 
         with pytest.raises(Exception, match="API Error"):
             await gen.generate_with_retry("test text", max_retries=2)

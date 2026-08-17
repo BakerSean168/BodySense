@@ -23,17 +23,10 @@ def load_generated_pack(path: str | Path) -> GeneratedKnowledgePack:
 
     source = payload["source"]
     transcript_segments = [
-        TranscriptSegment(**segment)
-        for segment in payload["transcript_segments"]
+        TranscriptSegment(**segment) for segment in payload["transcript_segments"]
     ]
-    units = [
-        KnowledgeUnitCandidate(**unit)
-        for unit in payload["units"]
-    ]
-    clips = [
-        KnowledgeClipCandidate(**clip)
-        for clip in payload["clips"]
-    ]
+    units = [KnowledgeUnitCandidate(**unit) for unit in payload["units"]]
+    clips = [KnowledgeClipCandidate(**clip) for clip in payload["clips"]]
 
     return GeneratedKnowledgePack(
         source=SourceVideoMetadata(**source),

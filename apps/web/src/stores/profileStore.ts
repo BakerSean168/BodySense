@@ -1,7 +1,7 @@
-import { create } from 'zustand';
-import { authFetch } from '@/features/auth/services/authService';
-import { useAuthStore } from './authStore';
-import { safeJson, extractErrorMessage } from '@/lib/api-url';
+import { create } from "zustand";
+import { authFetch } from "@/features/auth/services/authService";
+import { useAuthStore } from "./authStore";
+import { safeJson, extractErrorMessage } from "@/lib/api-url";
 
 export interface UserProfile {
   id: string;
@@ -50,7 +50,7 @@ export const useProfileStore = create<ProfileState>()((set) => ({
       }
 
       // Use authFetch for automatic 401 handling (token refresh + logout on failure)
-      const response = await authFetch('/api/v1/profile');
+      const response = await authFetch("/api/v1/profile");
 
       if (response.status === 401) {
         // Token invalid or user doesn't exist — authFetch already tried refresh,
@@ -60,18 +60,19 @@ export const useProfileStore = create<ProfileState>()((set) => ({
       }
 
       if (!response.ok) {
-        throw new Error('Failed to fetch profile');
+        throw new Error("Failed to fetch profile");
       }
 
       // Response may be null for new users (no profile yet)
       const profile = await safeJson<UserProfile | null>(response);
       set({ profile: profile || null, isLoading: false });
     } catch (error) {
-      console.error('Failed to fetch profile:', error);
+      console.error("Failed to fetch profile:", error);
       set({
         profile: null,
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to fetch profile',
+        error:
+          error instanceof Error ? error.message : "Failed to fetch profile",
       });
     }
   },
@@ -83,21 +84,21 @@ export const useProfileStore = create<ProfileState>()((set) => ({
       const { isAuthenticated } = useAuthStore.getState();
 
       if (!isAuthenticated) {
-        throw new Error('Not authenticated');
+        throw new Error("Not authenticated");
       }
 
       // Use authFetch for automatic 401 handling
-      const response = await authFetch('/api/v1/profile', {
-        method: 'PUT',
+      const response = await authFetch("/api/v1/profile", {
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
       });
 
       if (response.status === 401) {
         set({ isLoading: false });
-        throw new Error('Session expired, please login again');
+        throw new Error("Session expired, please login again");
       }
 
       if (!response.ok) {
@@ -109,7 +110,8 @@ export const useProfileStore = create<ProfileState>()((set) => ({
     } catch (error) {
       set({
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to update profile',
+        error:
+          error instanceof Error ? error.message : "Failed to update profile",
       });
       throw error;
     }

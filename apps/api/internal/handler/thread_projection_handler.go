@@ -14,11 +14,15 @@ import (
 // ThreadProjectionHandler exposes projection-backed consultation thread reads.
 type ThreadProjectionHandler struct {
 	threadProjectionService *service.ThreadProjectionService
+	bodyStateService        *service.BodyStateService
 }
 
-// NewThreadProjectionHandler creates a new ThreadProjectionHandler.
-func NewThreadProjectionHandler(threadProjectionService *service.ThreadProjectionService) *ThreadProjectionHandler {
-	return &ThreadProjectionHandler{threadProjectionService: threadProjectionService}
+// NewThreadProjectionHandler creates the thread read boundary with BodyState as the health source of truth.
+func NewThreadProjectionHandler(
+	threadProjectionService *service.ThreadProjectionService,
+	bodyStateService *service.BodyStateService,
+) *ThreadProjectionHandler {
+	return &ThreadProjectionHandler{threadProjectionService: threadProjectionService, bodyStateService: bodyStateService}
 }
 
 // GetConsultationThread handles GET /api/v1/consultations/:id/thread.
@@ -44,6 +48,11 @@ func (h *ThreadProjectionHandler) GetConsultationThread(c *gin.Context) {
 		return
 	}
 
+	var bodyState any
+	if snapshot, loadErr := h.bodyStateService.GetSnapshot(c.Request.Context(), uid, 20); loadErr == nil {
+		bodyState = snapshot
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"conversation_id": projection.ConversationID,
 		"conversation": gin.H{
@@ -63,9 +72,7 @@ func (h *ThreadProjectionHandler) GetConsultationThread(c *gin.Context) {
 		},
 		"phase":                projection.Phase,
 		"extracted_info":       rawJSONOrEmptyArray(projection.ExtractedInfo),
-		"health_features":      rawJSONOrEmptyObject(projection.HealthFeatures),
-		"diagnosis":            rawJSONOrNull(projection.Diagnosis),
-		"treatment_plan":       rawJSONOrNull(projection.TreatmentPlan),
+		"body_state":           bodyState,
 		"pending_interactions": rawJSONOrEmptyArray(projection.PendingInteractions),
 		"interaction_history":  rawJSONOrEmptyArray(projection.InteractionHistory),
 		"active_turn_run_id":   activeTurnRunID,
@@ -88,13 +95,6 @@ func rawJSONOrEmptyObject(value []byte) json.RawMessage {
 func rawJSONOrEmptyArray(value []byte) json.RawMessage {
 	if len(value) == 0 {
 		return json.RawMessage(`[]`)
-	}
-	return value
-}
-
-func rawJSONOrNull(value []byte) any {
-	if len(value) == 0 {
-		return nil
 	}
 	return value
 }

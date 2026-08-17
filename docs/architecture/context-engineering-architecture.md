@@ -1,5 +1,8 @@
 # BodySense 上下文工程架构
 
+> **Historical context-engineering reference.** Retired stream events and session health projections are not current contracts. See [Current Longitudinal System](./current-longitudinal-system.md).
+
+
 > **⚠️ HISTORICAL — 本方案已被 ADR 0002 完全取代。**
 >
 > 本文档描述的 Go 侧 `ContextBuilder` + `ChatHandler` 上下文组装方案已被删除。当前实现中 Python 通过 LangGraph checkpoint 拥有 Agent Thread 运行时真值，Go 仅负责 Runtime Event Log 和 projection 持久化。详见：

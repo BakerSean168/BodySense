@@ -67,14 +67,11 @@ async def analyze_posture(
     metrics_hint = ""
     if geo_metrics:
         lines = [
-            f"- {m.name}={m.value}{m.unit} → {m.finding_key}/{m.severity}"
-            for m in geo_metrics
+            f"- {m.name}={m.value}{m.unit} → {m.finding_key}/{m.severity}" for m in geo_metrics
         ]
         metrics_hint = (
             "\n以下数值来自姿态关键点几何计算，请在解释中引用它们，"
-            "但不要编造任何未列出的角度或数值：\n"
-            + "\n".join(lines)
-            + "\n"
+            "但不要编造任何未列出的角度或数值：\n" + "\n".join(lines) + "\n"
         )
 
     b64 = base64.b64encode(image_bytes).decode()
@@ -195,17 +192,22 @@ def govern_posture_result(
         metric = item.get("metric")
         if isinstance(metric, dict) and metric.get("name") in allowed_by_name:
             src = allowed_by_name[str(metric["name"])]
-            try:
-                if float(metric.get("value")) == float(src["value"]):
-                    item["metric"] = {
-                        "name": src["name"],
-                        "value": src["value"],
-                        "unit": src["unit"],
-                    }
-                else:
-                    item["metric"] = None
-            except (TypeError, ValueError):
+            metric_value = metric.get("value")
+            src_value = src.get("value") if isinstance(src, dict) else None
+            if metric_value is None or src_value is None:
                 item["metric"] = None
+            else:
+                try:
+                    if float(metric_value) == float(src_value):
+                        item["metric"] = {
+                            "name": src["name"],
+                            "value": src["value"],
+                            "unit": src["unit"],
+                        }
+                    else:
+                        item["metric"] = None
+                except (TypeError, ValueError):
+                    item["metric"] = None
         else:
             item["metric"] = None
         # Normalize label / severity / confidence.
@@ -231,15 +233,15 @@ def govern_posture_result(
 
     # Red-flag scan over the summary + evidence text (high-recall, reuses the
     # consultation detector). Merge with any model-declared red flags.
-    scan_text = data.get("summary_markdown", "") + " " + " ".join(
-        f.get("evidence", "") for f in cleaned_findings
+    scan_text = (
+        data.get("summary_markdown", "")
+        + " "
+        + " ".join(f.get("evidence", "") for f in cleaned_findings)
     )
     rf = get_red_flag_detector().detect([], scan_text)
     if rf.has_red_flags:
         existing = {
-            (r.get("category"), r.get("message"))
-            for r in data["red_flags"]
-            if isinstance(r, dict)
+            (r.get("category"), r.get("message")) for r in data["red_flags"] if isinstance(r, dict)
         }
         for flag in rf.flags:
             item = {"category": flag.category, "message": flag.message}

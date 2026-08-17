@@ -1,13 +1,17 @@
-import { describe, expect, it, vi } from 'vitest';
-import { processSSELine, dispatchReplayEvents, type SSEHandlers } from './useSSEProcessor';
+import { describe, expect, it, vi } from "vitest";
+import {
+  processSSELine,
+  dispatchReplayEvents,
+  type SSEHandlers,
+} from "./useSSEProcessor";
 
-describe('processSSELine', () => {
-  it('dispatches structured text delta events by envelope type', () => {
+describe("processSSELine", () => {
+  it("dispatches structured text delta events by envelope type", () => {
     const onTextDelta = vi.fn();
     const handlers: SSEHandlers = { onTextDelta };
-    const state = { currentEvent: '', maxSeq: 0 };
+    const state = { currentEvent: "", maxSeq: 0 };
 
-    processSSELine('event: message.text.delta', state, handlers);
+    processSSELine("event: message.text.delta", state, handlers);
     processSSELine(
       'data: {"version":1,"seq":1,"channel":"message","type":"message.text.delta","ids":{"message_id":"m1"},"payload":{"delta":"hello"}}',
       state,
@@ -16,18 +20,18 @@ describe('processSSELine', () => {
 
     expect(onTextDelta).toHaveBeenCalledWith(
       expect.objectContaining({
-        type: 'message.text.delta',
-        payload: { delta: 'hello' },
+        type: "message.text.delta",
+        payload: { delta: "hello" },
       }),
     );
   });
 
-  it('dispatches stream.done as a structured event', () => {
+  it("dispatches stream.done as a structured event", () => {
     const onDone = vi.fn();
     const handlers: SSEHandlers = { onDone };
-    const state = { currentEvent: '', maxSeq: 0 };
+    const state = { currentEvent: "", maxSeq: 0 };
 
-    processSSELine('event: stream.done', state, handlers);
+    processSSELine("event: stream.done", state, handlers);
     processSSELine(
       'data: {"version":1,"seq":2,"channel":"stream","type":"stream.done","ids":{},"payload":{}}',
       state,
@@ -36,44 +40,20 @@ describe('processSSELine', () => {
 
     expect(onDone).toHaveBeenCalledWith(
       expect.objectContaining({
-        type: 'stream.done',
+        type: "stream.done",
         payload: {},
-      }),
-    );
-  });
-
-  it('dispatches state.health_features.upsert events', () => {
-    const onHealthFeatures = vi.fn();
-    const handlers: SSEHandlers = { onHealthFeatures };
-    const state = { currentEvent: '', maxSeq: 0 };
-
-    processSSELine('event: state.health_features.upsert', state, handlers);
-    processSSELine(
-      'data: {"version":1,"seq":3,"channel":"state","type":"state.health_features.upsert","ids":{"conversation_id":"c1"},"payload":{"health_features":{"posture_findings":[{"label":"头前移"}],"discomforts":[],"negative_findings":[],"movement_limitations":[],"red_flags":[],"user_answers":[]}}}',
-      state,
-      handlers,
-    );
-
-    expect(onHealthFeatures).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: 'state.health_features.upsert',
-        payload: expect.objectContaining({
-          health_features: expect.objectContaining({
-            posture_findings: [{ label: '头前移' }],
-          }),
-        }),
       }),
     );
   });
 });
 
-describe('seq tracking and replay', () => {
-  it('tracks maxSeq from structured envelopes', () => {
+describe("seq tracking and replay", () => {
+  it("tracks maxSeq from structured envelopes", () => {
     const onTextDelta = vi.fn();
     const handlers: SSEHandlers = { onTextDelta };
-    const state = { currentEvent: '', maxSeq: 0 };
+    const state = { currentEvent: "", maxSeq: 0 };
 
-    processSSELine('event: message.text.delta', state, handlers);
+    processSSELine("event: message.text.delta", state, handlers);
     processSSELine(
       'data: {"version":1,"seq":5,"channel":"message","type":"message.text.delta","ids":{},"payload":{"delta":"a"}}',
       state,
@@ -82,7 +62,7 @@ describe('seq tracking and replay', () => {
     expect(state.maxSeq).toBe(5);
   });
 
-  it('dispatchReplayEvents skips already-seen seq and advances maxSeq', () => {
+  it("dispatchReplayEvents skips already-seen seq and advances maxSeq", () => {
     const onTextDelta = vi.fn();
     const handlers: SSEHandlers = { onTextDelta };
     const state = dispatchReplayEvents(
@@ -90,26 +70,26 @@ describe('seq tracking and replay', () => {
         {
           version: 1,
           seq: 3,
-          channel: 'message',
-          type: 'message.text.delta',
+          channel: "message",
+          type: "message.text.delta",
           ids: {},
-          payload: { delta: 'old' },
+          payload: { delta: "old" },
         } as never,
         {
           version: 1,
           seq: 4,
-          channel: 'message',
-          type: 'message.text.delta',
+          channel: "message",
+          type: "message.text.delta",
           ids: {},
-          payload: { delta: 'new' },
+          payload: { delta: "new" },
         } as never,
       ],
       handlers,
-      { currentEvent: '', maxSeq: 3 },
+      { currentEvent: "", maxSeq: 3 },
     );
     expect(onTextDelta).toHaveBeenCalledTimes(1);
     expect(onTextDelta).toHaveBeenCalledWith(
-      expect.objectContaining({ seq: 4, payload: { delta: 'new' } }),
+      expect.objectContaining({ seq: 4, payload: { delta: "new" } }),
     );
     expect(state.maxSeq).toBe(4);
   });

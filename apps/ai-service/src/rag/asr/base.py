@@ -16,6 +16,7 @@ class ASRProvider(Protocol):
     """
 
     name: str
+    model_name: str | None = None
 
     async def transcribe(
         self,

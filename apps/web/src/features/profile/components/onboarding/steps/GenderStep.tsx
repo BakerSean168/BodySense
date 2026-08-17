@@ -4,8 +4,8 @@ interface GenderStepProps {
 }
 
 const GENDER_OPTIONS = [
-  { value: 'male', label: '男' },
-  { value: 'female', label: '女' },
+  { value: "male", label: "男" },
+  { value: "female", label: "女" },
 ];
 
 export function GenderStep({ value, onChange }: GenderStepProps) {
@@ -24,8 +24,8 @@ export function GenderStep({ value, onChange }: GenderStepProps) {
             onClick={() => onChange(option.value)}
             className={`p-4 rounded-lg border-2 text-center font-medium transition-colors ${
               value === option.value
-                ? 'border-blue-500 bg-blue-50 text-blue-700'
-                : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                ? "border-blue-500 bg-blue-50 text-blue-700"
+                : "border-gray-200 hover:border-gray-300 text-gray-700"
             }`}
           >
             {option.label}

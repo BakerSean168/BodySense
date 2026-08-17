@@ -151,7 +151,7 @@ class VideoIngestionPipeline:
                 original_file_path=str(video_path),
                 language=request.language,
                 duration_sec=_probe_duration(video_path),
-                transcript_provider=request.transcript_provider,
+                transcript_provider=request.transcript_provider or "whisper.cpp",
                 transcript_model=request.transcript_model or request.whisper_model,
                 transcript_file_path=str(artifact_dir / "transcript.txt"),
                 metadata={
@@ -197,9 +197,7 @@ class VideoIngestionPipeline:
 
             # Create ASR provider and transcribe
             provider_name = (
-                request.transcript_provider.strip().lower()
-                if request.transcript_provider
-                else None
+                request.transcript_provider.strip().lower() if request.transcript_provider else None
             )
             provider = get_asr_provider(provider=provider_name, data_root=self.data_root)
 
@@ -232,13 +230,19 @@ def _probe_duration(video_path: Path) -> float | None:
     """Probe video duration using ffprobe."""
     command = [
         "ffprobe",
-        "-v", "error",
-        "-show_entries", "format=duration",
-        "-of", "default=noprint_wrappers=1:nokey=1",
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "default=noprint_wrappers=1:nokey=1",
         str(video_path),
     ]
     result = subprocess.run(
-        command, check=True, capture_output=True, text=True,
+        command,
+        check=True,
+        capture_output=True,
+        text=True,
         timeout=_SUBPROCESS_TIMEOUT,
     )
     value = result.stdout.strip()
@@ -250,12 +254,16 @@ def _extract_audio(video_path: Path, audio_path: Path) -> None:
     command = [
         "ffmpeg",
         "-hide_banner",
-        "-loglevel", "error",
+        "-loglevel",
+        "error",
         "-y",
-        "-i", str(video_path),
+        "-i",
+        str(video_path),
         "-vn",
-        "-ac", "1",
-        "-ar", "16000",
+        "-ac",
+        "1",
+        "-ar",
+        "16000",
         str(audio_path),
     ]
     subprocess.run(command, check=True, timeout=_SUBPROCESS_TIMEOUT)

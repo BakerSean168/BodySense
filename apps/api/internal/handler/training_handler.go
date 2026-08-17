@@ -17,32 +17,6 @@ func NewTrainingHandler(trainingService *service.TrainingService) *TrainingHandl
 	return &TrainingHandler{trainingService: trainingService}
 }
 
-// GeneratePlan handles POST /api/v1/training/generate
-func (h *TrainingHandler) GeneratePlan(c *gin.Context) {
-	uid, ok := getUserUUID(c)
-	if !ok {
-		return
-	}
-
-	var req struct {
-		ConsultationID *uuid.UUID     `json:"consultation_id"`
-		Diagnosis      map[string]any `json:"diagnosis"`
-		Preferences    map[string]any `json:"preferences"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	plan, err := h.trainingService.GeneratePlan(c.Request.Context(), uid, req.ConsultationID, req.Diagnosis, req.Preferences)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusCreated, plan)
-}
-
 // GetPlan handles GET /api/v1/training/:id
 func (h *TrainingHandler) GetPlan(c *gin.Context) {
 	uid, ok := getUserUUID(c)
@@ -134,61 +108,41 @@ func (h *TrainingHandler) UpdateLog(c *gin.Context) {
 	}
 
 	var req struct {
-		Notes     string `json:"notes"`
-		Exercises any    `json:"exercises"`
+		Notes           string     `json:"notes"`
+		Exercises       any        `json:"exercises"`
+		SymptomChanges  string     `json:"symptom_changes"`
+		TrainingFeeling string     `json:"training_feeling"`
+		Difficulties    string     `json:"difficulties"`
+		BodyRegion      string     `json:"body_region"`
+		ConcernKey      string     `json:"concern_key"`
+		Trend           string     `json:"trend"`
+		FactID          *uuid.UUID `json:"fact_id"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	proposal, err := h.trainingService.UpdateLog(c.Request.Context(), planID, uid, req.Notes, req.Exercises)
+	result, err := h.trainingService.UpdateLogWithFeedback(c.Request.Context(), planID, uid, service.TrainingFeedbackInput{
+		Notes: req.Notes, Exercises: req.Exercises, SymptomChanges: req.SymptomChanges,
+		TrainingFeeling: req.TrainingFeeling, Difficulties: req.Difficulties,
+		BodyRegion: req.BodyRegion, ConcernKey: req.ConcernKey, Trend: req.Trend, FactID: req.FactID,
+	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	if proposal != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"message":      "log updated",
-			"has_proposal": true,
-			"proposal":     proposal,
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
+	response := gin.H{
 		"message":      "log updated",
 		"has_proposal": false,
-	})
-}
-
-// UpdatePlanPhases handles PUT /api/v1/training/:id/phases
-func (h *TrainingHandler) UpdatePlanPhases(c *gin.Context) {
-	uid, ok := getUserUUID(c)
-	if !ok {
-		return
+		"result":       result,
 	}
-	planID, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid plan id"})
-		return
+	if proposal, exists := result["proposal"]; exists && proposal != nil {
+		response["has_proposal"] = true
+		response["proposal"] = proposal
 	}
-
-	var req struct {
-		Phases any `json:"phases"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	if err := h.trainingService.UpdatePlanPhases(c.Request.Context(), planID, uid, req.Phases); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "plan phases updated successfully"})
+	c.JSON(http.StatusOK, response)
 }
 
 // GetProgress handles GET /api/v1/training/:id/progress

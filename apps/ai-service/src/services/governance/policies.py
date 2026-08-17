@@ -20,12 +20,14 @@ def check_red_flags(output_text: str, context: dict[str, Any]) -> list[Governanc
 
     if result.has_red_flags:
         for flag in result.flags:
-            issues.append(GovernanceIssue(
-                policy="red_flag_safety",
-                severity=IssueSeverity.WARNING,
-                message=flag.message,
-                details={"category": flag.category, "matched_text": flag.matched_text},
-            ))
+            issues.append(
+                GovernanceIssue(
+                    policy="red_flag_safety",
+                    severity=IssueSeverity.WARNING,
+                    message=flag.message,
+                    details={"category": flag.category, "matched_text": flag.matched_text},
+                )
+            )
 
     return issues
 
@@ -35,34 +37,34 @@ def check_schema_valid(output: dict[str, Any], required_fields: list[str]) -> li
     issues: list[GovernanceIssue] = []
     for field in required_fields:
         if field not in output or output[field] is None:
-            issues.append(GovernanceIssue(
-                policy="schema_validation",
-                severity=IssueSeverity.ERROR,
-                message=f"Missing required field: {field}",
-            ))
+            issues.append(
+                GovernanceIssue(
+                    policy="schema_validation",
+                    severity=IssueSeverity.ERROR,
+                    message=f"Missing required field: {field}",
+                )
+            )
     return issues
 
 
 def check_empty_output(output_text: str) -> list[GovernanceIssue]:
     """Check for empty or trivially short outputs."""
     if not output_text or len(output_text.strip()) < 10:
-        return [GovernanceIssue(
-            policy="completeness",
-            severity=IssueSeverity.WARNING,
-            message="Output is empty or too short",
-        )]
+        return [
+            GovernanceIssue(
+                policy="completeness",
+                severity=IssueSeverity.WARNING,
+                message="Output is empty or too short",
+            )
+        ]
     return []
 
 
 def check_faithfulness(
-    treatment_plan: dict[str, Any],
+    treatment: dict[str, Any],
     context: GovernanceContext,
 ) -> list[GovernanceIssue]:
-    """Check treatment plan faithfulness against RAG results.
-
-    Wraps FaithfulnessChecker as a governance policy. Ungrounded exercises
-    produce warning issues; all exercises ungrounded produces an error.
-    """
+    """Check typed Treatment exercise interventions against RAG results."""
     issues: list[GovernanceIssue] = []
     rag_results = context.rag_results
 
@@ -71,25 +73,33 @@ def check_faithfulness(
         return issues
 
     checker = get_faithfulness_checker()
-    result = checker.check_treatment_faithfulness(treatment_plan, rag_results)
+    result = checker.check_treatment_faithfulness(treatment, rag_results)
 
     if not result.faithful:
         for exercise_name in result.ungrounded_exercises:
-            issues.append(GovernanceIssue(
-                policy="faithfulness",
-                severity=IssueSeverity.WARNING,
-                message=f"Exercise not grounded in knowledge base: {exercise_name}",
-                details={"exercise": exercise_name},
-            ))
+            issues.append(
+                GovernanceIssue(
+                    policy="faithfulness",
+                    severity=IssueSeverity.WARNING,
+                    message=f"Exercise not grounded in knowledge base: {exercise_name}",
+                    details={"exercise": exercise_name},
+                )
+            )
 
-        # If ALL exercises are ungrounded, escalate to error
-        exercises = treatment_plan.get("correction_exercises", [])
+        # If ALL exercise interventions are ungrounded, escalate to error.
+        exercises = [
+            intervention
+            for intervention in treatment.get("interventions", [])
+            if isinstance(intervention, dict) and intervention.get("kind") == "exercise"
+        ]
         if exercises and len(result.ungrounded_exercises) == len(exercises):
-            issues.append(GovernanceIssue(
-                policy="faithfulness",
-                severity=IssueSeverity.ERROR,
-                message="All exercises are ungrounded — treatment plan may be hallucinated",
-                details={"ungrounded_count": len(result.ungrounded_exercises)},
-            ))
+            issues.append(
+                GovernanceIssue(
+                    policy="faithfulness",
+                    severity=IssueSeverity.ERROR,
+                    message="All exercises are ungrounded — treatment plan may be hallucinated",
+                    details={"ungrounded_count": len(result.ungrounded_exercises)},
+                )
+            )
 
     return issues
