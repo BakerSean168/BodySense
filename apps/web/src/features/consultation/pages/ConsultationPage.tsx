@@ -6,7 +6,7 @@ import {
   useCallback,
   useRef,
 } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { SessionHistorySidebar } from "../components/SessionHistorySidebar";
@@ -33,6 +33,10 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { ConsultationWorkbenchShell } from "../components/workbench/ConsultationWorkbenchShell";
+import { ConversationHistoryDrawer } from "../components/workbench/ConversationHistoryDrawer";
+import { WorkspaceViewport } from "../components/workbench/WorkspaceViewport";
+import { parseWorkspaceView, type WorkspaceView } from "../model/workbenchView";
 import {
   BodyStateWorkbench,
   OutcomeTrendsPanel,
@@ -40,8 +44,6 @@ import {
   healthWorkspaceQueryKey,
   useHealthWorkspaceQuery,
 } from "@/features/workspace";
-
-type MobileTab = "chat" | "info";
 
 const AssistantChatPanel = lazy(() =>
   import("../components/AssistantChatPanel").then((module) => ({
@@ -68,11 +70,22 @@ const PHASE_LABELS: Record<ConsultationPhase, string> = {
 export function ConsultationPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const workspaceQuery = useHealthWorkspaceQuery();
 
   // --- Derived identity: URL is the single source of truth for "which conversation" ---
   const routeConversationId = id && id !== "new" ? id : null;
+  const consultationLocation = useCallback(
+    (conversationId?: string | null) => {
+      const pathname = conversationId
+        ? `/consultation/${conversationId}`
+        : "/consultation";
+      const query = searchParams.toString();
+      return query ? `${pathname}?${query}` : pathname;
+    },
+    [searchParams],
+  );
 
   const [chatSessionKey, setChatSessionKey] = useState<string>("new");
   const justCreatedRef = useRef<string | null>(null);
@@ -135,13 +148,14 @@ export function ConsultationPage() {
       !conversationsQuery.isPending &&
       conversations.length > 0
     ) {
-      navigate(`/consultation/${conversations[0].id}`, { replace: true });
+      navigate(consultationLocation(conversations[0].id), { replace: true });
     }
   }, [
     routeConversationId,
     conversationsQuery.isPending,
     conversations,
     navigate,
+    consultationLocation,
   ]);
 
   // Keep rendering the previously resolved conversation until the target thread is ready.
@@ -163,10 +177,19 @@ export function ConsultationPage() {
     setChatSessionKey(`conversation:${displayedConversationId}`);
   }, [displayedConversationId, routeConversationId]);
 
-  // UI state
-  const [mobileTab, setMobileTab] = useState<MobileTab>("chat");
-  const [isMobileHistoryOpen, setIsMobileHistoryOpen] = useState(false);
+  // Client-only presentation state. The active workspace mode is URL-addressable.
+  const workspaceView = parseWorkspaceView(searchParams.get("view"));
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+
+  const handleWorkspaceViewChange = useCallback(
+    (view: WorkspaceView) => {
+      const next = new URLSearchParams(searchParams);
+      next.set("view", view);
+      setSearchParams(next, { replace: true });
+    },
+    [searchParams, setSearchParams],
+  );
 
   // --- Handlers ---
 
@@ -176,20 +199,20 @@ export function ConsultationPage() {
   const handleNewConsultation = useCallback(() => {
     const existingConversationId = conversations[0]?.id;
     if (existingConversationId) {
-      navigate(`/consultation/${existingConversationId}`, { replace: true });
+      navigate(consultationLocation(existingConversationId), { replace: true });
       return;
     }
     if (routeConversationId) {
-      navigate("/consultation", { replace: true });
+      navigate(consultationLocation(), { replace: true });
     }
-  }, [conversations, routeConversationId, navigate]);
+  }, [conversations, routeConversationId, navigate, consultationLocation]);
 
   const handleSelectConversation = useCallback(
     (conversationId: string) => {
-      setIsMobileHistoryOpen(false);
-      navigate(`/consultation/${conversationId}`, { replace: true });
+      setIsHistoryOpen(false);
+      navigate(consultationLocation(conversationId), { replace: true });
     },
-    [navigate],
+    [navigate, consultationLocation],
   );
 
   const handlePrefetchConversation = useCallback(
@@ -245,13 +268,13 @@ export function ConsultationPage() {
         // If we just deleted the currently-viewed conversation, navigate away.
         // The route change will cause query to become disabled → data resets.
         if (routeConversationId === conversationId) {
-          navigate("/consultation", { replace: true });
+          navigate(consultationLocation(), { replace: true });
         }
       } catch (err) {
         console.error("Failed to delete conversation:", err);
       }
     },
-    [routeConversationId, navigate, queryClient],
+    [routeConversationId, navigate, queryClient, consultationLocation],
   );
 
   const handleDeleteAll = useCallback(async () => {
@@ -271,11 +294,11 @@ export function ConsultationPage() {
         queryKey: [...consultationKeys.all, "thread"],
       });
 
-      navigate("/consultation", { replace: true });
+      navigate(consultationLocation(), { replace: true });
     } catch (err) {
       console.error("Failed to delete all conversations:", err);
     }
-  }, [conversations, navigate, queryClient]);
+  }, [conversations, navigate, queryClient, consultationLocation]);
 
   const handlePinConversation = useCallback(
     async (conversationId: string, pinned: boolean) => {
@@ -611,8 +634,6 @@ export function ConsultationPage() {
     Boolean(routeConversationId) && threadQuery.isPending && !threadData;
   const hasThreadError =
     Boolean(routeConversationId) && threadQuery.isError && !isThreadOutOfSync;
-  const isThreadReadyForRoute =
-    !routeConversationId || displayedConversationId === routeConversationId;
   const displayedPhaseLabel = phase ? PHASE_LABELS[phase] : "正在切换会话";
   const chatConversationId = displayedConversationId ?? "new";
 
@@ -629,482 +650,387 @@ export function ConsultationPage() {
       )
     : messages;
 
-  return (
-    <MainLayout fullHeight={true}>
-      <div className="h-full w-full flex flex-col bg-[#FBFBFA] relative overflow-hidden">
-        {/* Background decorations */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-primary-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20 translate-y-1/2 -translate-x-1/2 pointer-events-none" />
+  const historyPanel = isConversationListLoading ? (
+    <SessionHistorySidebarSkeleton />
+  ) : (
+    <SessionHistorySidebar
+      conversations={conversations}
+      activeId={routeConversationId}
+      onPrefetch={handlePrefetchConversation}
+      onSelect={handleSelectConversation}
+      onNew={handleNewConsultation}
+      onDelete={handleDeleteConversation}
+      onDeleteAll={handleDeleteAll}
+      onPin={handlePinConversation}
+      onRename={handleRenameConversation}
+      onShare={handleShareConversation}
+      onUnshare={handleUnshareConversation}
+    />
+  );
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-[#FBFBFA] border-b border-[#E5E3DF] z-20 relative shadow-sm">
-          <div className="flex items-center gap-4">
-            {/* Mobile history toggle */}
-            <button
-              onClick={() => setIsMobileHistoryOpen(true)}
-              className="lg:hidden w-10 h-10 rounded-full bg-[#e2ebe5]/50 flex items-center justify-center text-primary-700 hover:bg-[#e2ebe5] transition-colors border border-[#c5d7cc]/25"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </button>
-            <div>
-              <h1 className="text-xl font-display font-semibold text-[#1A221E] flex items-center gap-2">
-                智能问诊工作台
-                {(currentConversation || selectedConversationSummary) && (
-                  <span className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                  </span>
-                )}
-              </h1>
-              <p className="text-xs font-semibold text-[#709a83] uppercase tracking-wider">
-                {routeConversationId || currentConversation
-                  ? "会话已激活"
-                  : "准备咨询"}
-                {" · "}
-                {displayedPhaseLabel}
+  const chatPanel = (
+    <div className="h-full min-h-0 bg-muted/20 p-3 sm:p-4">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+        {hasThreadError || hasThreadSwitchError ? (
+          <div className="flex h-full items-center justify-center p-6">
+            <Card className="max-w-md border border-border bg-card p-8 text-center shadow-none">
+              <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full border border-destructive/20 bg-destructive/10 text-destructive">
+                <svg
+                  className="size-7"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+              </div>
+              <p className="mb-2 text-lg font-semibold text-foreground">
+                加载会话失败
               </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile tab switcher */}
-        <div className="flex bg-[#FBFBFA] border-b border-[#E5E3DF] md:hidden z-10">
-          <button
-            onClick={() => setMobileTab("chat")}
-            className={`flex-1 py-3 text-sm font-semibold transition-all ${
-              mobileTab === "chat"
-                ? "text-primary-700 border-b-2 border-primary-700 bg-primary-50/50"
-                : "text-[#4A554E] hover:text-[#1A221E] hover:bg-primary-50/20"
-            }`}
-          >
-            咨询对话
-          </button>
-          <button
-            onClick={() => setMobileTab("info")}
-            className={`flex-1 py-3 text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
-              mobileTab === "info"
-                ? "text-primary-700 border-b-2 border-primary-700 bg-primary-50/50"
-                : "text-[#4A554E] hover:text-[#1A221E] hover:bg-primary-50/20"
-            }`}
-          >
-            身体状态
-            {bodyStateItemCount > 0 && isThreadReadyForRoute && (
-              <span
-                className={`inline-flex items-center justify-center px-2 py-0.5 text-xs rounded-full ${
-                  mobileTab === "info"
-                    ? "bg-primary-700 text-[#FBFBFA]"
-                    : "bg-[#e2ebe5] text-primary-900"
-                }`}
+              <p className="mb-6 text-sm text-muted-foreground">
+                当前会话内容暂时无法加载，请稍后重试。
+              </p>
+              <Button
+                onClick={() => {
+                  if (!routeConversationId) return;
+                  void queryClient.invalidateQueries({
+                    queryKey: consultationKeys.thread(routeConversationId),
+                  });
+                }}
+                className="w-full"
               >
-                {bodyStateItemCount}
-              </span>
-            )}
-          </button>
-        </div>
-
-        {/* Main content area */}
-        <div className="flex-1 flex min-h-0 overflow-hidden relative z-10 w-full px-3 md:px-6">
-          {/* Desktop left sidebar */}
-          <div className="w-64 border-r border-[#E5E3DF] flex-col min-h-0 bg-[#FBFBFA]/50 shrink-0 hidden lg:flex pr-4 py-4 md:py-6">
-            {isConversationListLoading ? (
-              <SessionHistorySidebarSkeleton />
-            ) : (
-              <SessionHistorySidebar
-                conversations={conversations}
-                activeId={routeConversationId}
-                onPrefetch={handlePrefetchConversation}
-                onSelect={handleSelectConversation}
-                onNew={handleNewConsultation}
-                onDelete={handleDeleteConversation}
-                onDeleteAll={handleDeleteAll}
-                onPin={handlePinConversation}
-                onRename={handleRenameConversation}
-                onShare={handleShareConversation}
-                onUnshare={handleUnshareConversation}
+                重新加载
+              </Button>
+            </Card>
+          </div>
+        ) : isThreadLoading ? (
+          <ChatPanelSkeleton />
+        ) : (
+          <div className="relative flex h-full min-h-0 flex-col">
+            <div className="shrink-0 px-4 pt-3">
+              <InteractionMetricsPanel
+                conversationId={displayedConversationId}
               />
-            )}
-          </div>
+            </div>
+            <Suspense fallback={<ChatPanelSkeleton />}>
+              <AssistantChatPanel
+                key={chatSessionKey}
+                conversationId={chatConversationId}
+                onConversationCreated={(newId) => {
+                  console.debug(
+                    "[SSE] ⑤ ConsultationPage.onConversationCreated 开始执行",
+                    {
+                      newId,
+                      currentRouteId: id,
+                      currentActiveRef: activeConversationIdRef.current,
+                    },
+                  );
+                  justCreatedRef.current = newId;
+                  activeConversationIdRef.current = newId;
 
-          {/* Chat area */}
-          <div
-            className={`flex-1 flex flex-col md:px-4 py-4 md:py-6 min-h-0 ${
-              mobileTab !== "chat" ? "hidden md:flex" : ""
-            }`}
-          >
-            <Card className="flex-1 flex flex-col overflow-hidden bg-white/95 backdrop-blur-md border border-[#E5E3DF]">
-              {hasThreadError || hasThreadSwitchError ? (
-                <div className="flex h-full items-center justify-center p-6">
-                  <Card className="max-w-md border border-[#E5E3DF] bg-white p-8 text-center shadow-none">
-                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-red-100 bg-red-50 text-[#B65E49]">
-                      <svg
-                        className="h-8 w-8"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                        />
-                      </svg>
-                    </div>
-                    <p className="mb-2 text-lg font-display font-semibold text-[#1A221E]">
-                      加载会话失败
-                    </p>
-                    <p className="mb-6 text-sm font-medium text-[#4A554E]">
-                      当前会话内容暂时无法加载，请稍后重试。
-                    </p>
-                    <Button
-                      onClick={() => {
-                        if (!routeConversationId) return;
-                        queryClient.invalidateQueries({
-                          queryKey:
-                            consultationKeys.thread(routeConversationId),
-                        });
-                      }}
-                      className="w-full"
-                    >
-                      重新加载
-                    </Button>
-                  </Card>
-                </div>
-              ) : isThreadLoading ? (
-                <ChatPanelSkeleton />
-              ) : (
-                <div className="relative flex h-full flex-col">
-                  <div className="px-4 pt-3">
-                    <InteractionMetricsPanel
-                      conversationId={displayedConversationId}
-                    />
-                  </div>
-                  <Suspense fallback={<ChatPanelSkeleton />}>
-                    <AssistantChatPanel
-                      key={chatSessionKey}
-                      conversationId={chatConversationId}
-                      onConversationCreated={(newId) => {
-                        console.debug(
-                          "[SSE] ⑤ ConsultationPage.onConversationCreated 开始执行",
+                  queryClient.setQueryData<ConversationListResponse>(
+                    consultationKeys.conversations(),
+                    (old) => {
+                      if (!old) return old;
+                      const now = new Date().toISOString();
+                      return {
+                        ...old,
+                        conversations: [
                           {
-                            newId,
-                            currentRouteId: id,
-                            currentActiveRef: activeConversationIdRef.current,
+                            id: newId,
+                            title: "",
+                            title_status: "pending" as const,
+                            status: "active" as const,
+                            pinned: false,
+                            pinned_at: null,
+                            default_model: null,
+                            last_message_at: now,
+                            message_count: 0,
+                            metadata: {},
+                            created_at: now,
+                            updated_at: now,
                           },
-                        );
-                        justCreatedRef.current = newId;
-                        activeConversationIdRef.current = newId;
+                          ...old.conversations.filter(
+                            (conversation) => conversation.id !== newId,
+                          ),
+                        ],
+                      };
+                    },
+                  );
 
-                        queryClient.setQueryData<ConversationListResponse>(
-                          consultationKeys.conversations(),
-                          (old) => {
-                            if (!old) return old;
-                            const now = new Date().toISOString();
-                            return {
-                              ...old,
-                              conversations: [
-                                {
-                                  id: newId,
-                                  title: "",
-                                  title_status: "pending" as const,
-                                  status: "active" as const,
-                                  pinned: false,
-                                  pinned_at: null,
-                                  default_model: null,
-                                  last_message_at: now,
-                                  message_count: 0,
-                                  metadata: {},
-                                  created_at: now,
-                                  updated_at: now,
-                                },
-                                ...old.conversations.filter(
-                                  (c) => c.id !== newId,
-                                ),
-                              ],
-                            };
-                          },
-                        );
-
-                        navigate(`/consultation/${newId}`, { replace: true });
-                      }}
-                      initialMessages={toInitialThreadTimeline(
-                        historicalMessages,
-                        interactionHistory as InteractionHistoryItem[],
-                      )}
-                      initialActiveTurn={initialTurnSeed?.activeTurn ?? null}
-                      initialExtractedInfo={extractedInfo}
-                      onExtractedInfoUpdate={handleExtractedInfoUpdate}
-                      onPhaseChange={handlePhaseChange}
-                      onTitleGenerated={handleTitleGenerated}
-                      onMessagePersisted={handleMessagePersisted}
-                      onStreamFinished={handleStreamFinished}
-                    />
-                  </Suspense>
-                  {isThreadSwitching ? (
-                    <PanelTransitionOverlay
-                      label={
-                        selectedConversationSummary?.title || "正在切换会话"
-                      }
-                    />
-                  ) : null}
-                </div>
-              )}
-            </Card>
+                  navigate(consultationLocation(newId), { replace: true });
+                }}
+                initialMessages={toInitialThreadTimeline(
+                  historicalMessages,
+                  interactionHistory as InteractionHistoryItem[],
+                )}
+                initialActiveTurn={initialTurnSeed?.activeTurn ?? null}
+                initialExtractedInfo={extractedInfo}
+                onExtractedInfoUpdate={handleExtractedInfoUpdate}
+                onPhaseChange={handlePhaseChange}
+                onTitleGenerated={handleTitleGenerated}
+                onMessagePersisted={handleMessagePersisted}
+                onStreamFinished={handleStreamFinished}
+              />
+            </Suspense>
+            {isThreadSwitching ? (
+              <PanelTransitionOverlay
+                label={selectedConversationSummary?.title || "正在切换会话"}
+              />
+            ) : null}
           </div>
-
-          {/* Info panel */}
-          <div
-            className={`w-full md:w-[380px] lg:w-[420px] flex-shrink-0 flex flex-col md:pl-4 py-4 md:py-6 min-h-0 ${
-              mobileTab !== "info" ? "hidden md:flex" : ""
-            }`}
-          >
-            <Card className="flex-1 overflow-hidden flex flex-col bg-white/95 backdrop-blur-md border border-[#E5E3DF]">
-              {hasThreadError || hasThreadSwitchError ? (
-                <div className="flex h-full items-center justify-center p-6">
-                  <p className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-                    会话详情加载失败，暂时无法展示健康特征。
-                  </p>
-                </div>
-              ) : isThreadLoading ? (
-                <InfoPanelSkeleton />
-              ) : (
-                <div className="relative flex h-full flex-col">
-                  <div className="p-4 border-b border-[#E5E3DF] bg-[#F7F5F0]/50 flex items-center justify-between">
-                    <h3 className="font-display font-semibold text-[#1A221E] flex items-center gap-2">
-                      <svg
-                        className="w-5 h-5 text-primary-600"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                        />
-                      </svg>
-                      长期健康工作台
-                    </h3>
-                    <span className="text-xs font-semibold px-2.5 py-1 bg-primary-100 text-primary-900 rounded-full border border-primary-200/50">
-                      BodyState R{bodyState?.current_revision ?? 0}
-                    </span>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-4 bg-slate-50/10 custom-scrollbar">
-                    <div>
-                      {workspaceQuery.isPending && !bodyState ? (
-                        <InfoPanelSkeleton />
-                      ) : bodyState ? (
-                        <BodyStateWorkbench
-                          snapshot={{
-                            ...bodyState,
-                            hypotheses: bodyState.hypotheses ?? [],
-                          }}
-                          onChanged={() =>
-                            queryClient.invalidateQueries({
-                              queryKey: healthWorkspaceQueryKey,
-                            })
-                          }
-                        />
-                      ) : (
-                        <Card className="border border-dashed border-[#E5E3DF] bg-white p-5 text-center text-sm text-[#4A554E] shadow-none">
-                          BodyState
-                          尚未建立。继续对话后，事实与观察会进入长期状态。
-                        </Card>
-                      )}
-                      <div className="mt-4 rounded-lg border border-[#E5E3DF] bg-white p-4">
-                        <div className="mb-3 flex items-center justify-between gap-3">
-                          <div>
-                            <h3 className="text-sm font-semibold text-[#1A221E]">
-                              可能性分析
-                            </h3>
-                            <p className="text-xs font-medium text-[#709a83]">
-                              {displayedPhaseLabel} · 基于当前 BodyState
-                              及其时间变化生成分析
-                            </p>
-                          </div>
-                          {candidates.length === 0 ? (
-                            <Button
-                              onClick={handleAnalyzeDiagnosis}
-                              disabled={
-                                ((bodyState?.facts?.length ?? 0) === 0 &&
-                                  (bodyState?.observations?.length ?? 0) ===
-                                    0) ||
-                                isAnalyzingDiagnosis
-                              }
-                              className="shrink-0 rounded-full px-4 py-2 text-xs"
-                            >
-                              {isAnalyzingDiagnosis
-                                ? "分析中..."
-                                : "生成当前分析"}
-                            </Button>
-                          ) : null}
-                        </div>
-                        {analysisError ? (
-                          <p className="mb-3 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
-                            {analysisError}
-                          </p>
-                        ) : null}
-                        <Suspense fallback={<InfoPanelSkeleton />}>
-                          {candidates.length === 0 &&
-                          diagnosisAnalysis?.status !==
-                            "insufficient_information" &&
-                          diagnosisAnalysis?.status !== "safety_blocked" ? (
-                            <p className="text-xs text-gray-400">
-                              BodyState
-                              中形成至少一项事实或观察后，可以生成可能性分析。
-                            </p>
-                          ) : (
-                            <DiagnosisPanel
-                              analysisId={diagnosisAnalysis?.analysis_id}
-                              bodyStateRevision={
-                                diagnosisAnalysis?.body_state_revision
-                              }
-                              status={diagnosisAnalysis?.status}
-                              summary={diagnosisAnalysis?.summary}
-                              candidates={candidates}
-                              citations={diagnosisAnalysis?.citations}
-                              freshness={diagnosisAnalysis?.freshness}
-                              onSaveAssessments={handleSaveDiagnosisAssessments}
-                              isSavingAssessments={isSavingDiagnosisAssessments}
-                            />
-                          )}
-                        </Suspense>
-                        <Suspense fallback={null}>
-                          <DiagnosisHistoryPanel
-                            analyses={diagnosisHistory}
-                            currentAnalysisId={diagnosisAnalysis?.analysis_id}
-                          />
-                        </Suspense>
-                        {workspace ? (
-                          <div className="mt-4 space-y-4">
-                            <TreatmentPanel
-                              workspace={workspace}
-                              onChanged={() =>
-                                queryClient.invalidateQueries({
-                                  queryKey: healthWorkspaceQueryKey,
-                                })
-                              }
-                            />
-                            <OutcomeTrendsPanel
-                              trends={workspace.trends}
-                              outcomes={workspace.recent_outcomes}
-                            />
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                  {isThreadSwitching ? (
-                    <PanelTransitionOverlay
-                      label={
-                        selectedConversationSummary?.title || "正在切换会话"
-                      }
-                    />
-                  ) : null}
-                </div>
-              )}
-            </Card>
-          </div>
-        </div>
+        )}
       </div>
+    </div>
+  );
 
-      {/* Mobile history drawer */}
-      {isMobileHistoryOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden flex">
-          {/* Overlay */}
-          <div
-            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm"
-            onClick={() => setIsMobileHistoryOpen(false)}
+  const workspaceUnavailable = hasThreadError || hasThreadSwitchError;
+  const bodyStateReady = Boolean(bodyState);
+  const canRequestDiagnosis =
+    workspace?.capabilities.can_request_diagnosis ??
+    ((bodyState?.facts?.length ?? 0) > 0 ||
+      (bodyState?.observations?.length ?? 0) > 0);
+
+  const stateWorkspace = workspaceUnavailable ? (
+    <WorkspaceError message="会话详情加载失败，暂时无法展示长期身体状态。" />
+  ) : isThreadLoading || (workspaceQuery.isPending && !bodyState) ? (
+    <InfoPanelSkeleton />
+  ) : bodyStateReady && bodyState ? (
+    <div className="space-y-4">
+      <WorkspaceHeading
+        eyebrow="Durable state"
+        title="当前身体状态"
+        description="事实、已确认观察与活动中的假设共同组成可追溯的长期 BodyState。"
+      />
+      <BodyStateWorkbench
+        snapshot={{
+          ...bodyState,
+          hypotheses: bodyState.hypotheses ?? [],
+        }}
+        onChanged={() =>
+          queryClient.invalidateQueries({
+            queryKey: healthWorkspaceQueryKey,
+          })
+        }
+      />
+    </div>
+  ) : (
+    <WorkspaceEmptyState
+      title="BodyState 尚未建立"
+      description="继续对话或记录一项事实后，长期身体状态会在这里形成。"
+    />
+  );
+
+  const diagnosisWorkspace = workspaceUnavailable ? (
+    <WorkspaceError message="会话详情加载失败，暂时无法展示可能性分析。" />
+  ) : isThreadLoading ? (
+    <InfoPanelSkeleton />
+  ) : (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <WorkspaceHeading
+          eyebrow="Reasoning snapshot"
+          title="可能性分析"
+          description={`${displayedPhaseLabel} · 每次分析固定到明确的 BodyState revision，并保留不确定性。`}
+        />
+        {candidates.length === 0 ? (
+          <Button
+            onClick={handleAnalyzeDiagnosis}
+            disabled={!canRequestDiagnosis || isAnalyzingDiagnosis}
+            className="shrink-0"
+          >
+            {isAnalyzingDiagnosis ? "分析中..." : "生成当前分析"}
+          </Button>
+        ) : null}
+      </div>
+      {analysisError ? (
+        <p className="rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
+          {analysisError}
+        </p>
+      ) : null}
+      <Suspense fallback={<InfoPanelSkeleton />}>
+        {candidates.length === 0 &&
+        diagnosisAnalysis?.status !== "insufficient_information" &&
+        diagnosisAnalysis?.status !== "safety_blocked" ? (
+          <WorkspaceEmptyState
+            title="尚无当前分析"
+            description="BodyState 中形成至少一项事实或已确认观察后，可以生成可能性分析。"
           />
-          {/* Drawer content */}
-          <div className="relative w-72 max-w-xs bg-[#FBFBFA] h-full flex flex-col border-r border-[#E5E3DF] animate-in slide-in-from-left duration-300">
-            <div className="p-4 border-b border-[#E5E3DF] flex justify-between items-center bg-white">
-              <h3 className="font-display font-semibold text-[#2E3C36] flex items-center gap-1.5">
-                <svg
-                  className="w-5 h-5 text-[#709a83]"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                咨询历史
-              </h3>
-              <button
-                onClick={() => setIsMobileHistoryOpen(false)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-            <div className="flex-1 overflow-hidden">
-              {isConversationListLoading ? (
-                <SessionHistorySidebarSkeleton />
-              ) : (
-                <SessionHistorySidebar
-                  conversations={conversations}
-                  activeId={routeConversationId}
-                  onPrefetch={handlePrefetchConversation}
-                  onSelect={handleSelectConversation}
-                  onNew={handleNewConsultation}
-                  onDelete={handleDeleteConversation}
-                  onDeleteAll={handleDeleteAll}
-                  onPin={handlePinConversation}
-                  onRename={handleRenameConversation}
-                  onShare={handleShareConversation}
-                  onUnshare={handleUnshareConversation}
-                />
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+        ) : (
+          <DiagnosisPanel
+            analysisId={diagnosisAnalysis?.analysis_id}
+            bodyStateRevision={diagnosisAnalysis?.body_state_revision}
+            status={diagnosisAnalysis?.status}
+            summary={diagnosisAnalysis?.summary}
+            candidates={candidates}
+            citations={diagnosisAnalysis?.citations}
+            freshness={diagnosisAnalysis?.freshness}
+            onSaveAssessments={handleSaveDiagnosisAssessments}
+            isSavingAssessments={isSavingDiagnosisAssessments}
+          />
+        )}
+      </Suspense>
+      <Suspense fallback={null}>
+        <DiagnosisHistoryPanel
+          analyses={diagnosisHistory}
+          currentAnalysisId={diagnosisAnalysis?.analysis_id}
+        />
+      </Suspense>
+    </div>
+  );
+
+  const treatmentWorkspace = workspaceUnavailable ? (
+    <WorkspaceError message="会话详情加载失败，暂时无法展示当前方案。" />
+  ) : workspace ? (
+    <div className="space-y-4">
+      <WorkspaceHeading
+        eyebrow="Reviewable strategy"
+        title="当前方案"
+        description="AI 只创建可审核 proposal；接受、暂停与执行均由明确业务边界控制。"
+      />
+      <TreatmentPanel
+        workspace={workspace}
+        onChanged={() =>
+          queryClient.invalidateQueries({
+            queryKey: healthWorkspaceQueryKey,
+          })
+        }
+      />
+    </div>
+  ) : (
+    <WorkspaceEmptyState
+      title="尚无方案"
+      description="完成并审核可能性分析后，才能生成需要明确接受的方案 proposal。"
+    />
+  );
+
+  const progressWorkspace = workspaceUnavailable ? (
+    <WorkspaceError message="会话详情加载失败，暂时无法展示长期进展。" />
+  ) : workspace ? (
+    <div className="space-y-4">
+      <WorkspaceHeading
+        eyebrow="Outcome loop"
+        title="变化与进展"
+        description="记录干预后的变化，并保持“时间关联”与“已证明因果”之间的边界。"
+      />
+      <OutcomeTrendsPanel
+        trends={workspace.trends}
+        outcomes={workspace.recent_outcomes}
+      />
+    </div>
+  ) : (
+    <WorkspaceEmptyState
+      title="尚无进展记录"
+      description="接受方案并记录训练或身体变化后，趋势会在这里出现。"
+    />
+  );
+
+  const workspacePanel = (
+    <WorkspaceViewport
+      view={workspaceView}
+      bodyState={bodyState}
+      state={stateWorkspace}
+      diagnosis={diagnosisWorkspace}
+      treatment={treatmentWorkspace}
+      progress={progressWorkspace}
+      overlay={
+        isThreadSwitching ? (
+          <PanelTransitionOverlay
+            label={selectedConversationSummary?.title || "正在切换会话"}
+          />
+        ) : null
+      }
+    />
+  );
+
+  return (
+    <MainLayout fullHeight chrome="immersive">
+      <ConsultationWorkbenchShell
+        title="智能问诊工作台"
+        phaseLabel={`${currentConversation?.title || selectedConversationSummary?.title || (routeConversationId ? "会话已激活" : "准备咨询")} · ${displayedPhaseLabel}`}
+        bodyStateRevision={bodyState?.current_revision ?? 0}
+        bodyStateItemCount={bodyStateItemCount}
+        workspaceView={workspaceView}
+        onWorkspaceViewChange={handleWorkspaceViewChange}
+        onOpenHistory={() => setIsHistoryOpen(true)}
+        chat={chatPanel}
+        workspace={workspacePanel}
+      />
+      <ConversationHistoryDrawer
+        open={isHistoryOpen}
+        onOpenChange={setIsHistoryOpen}
+      >
+        {historyPanel}
+      </ConversationHistoryDrawer>
     </MainLayout>
   );
 }
 
 function PanelTransitionOverlay({ label }: { label: string }) {
   return (
-    <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/72 backdrop-blur-[2px]">
-      <div className="rounded-2xl border border-[#E5E3DF] bg-white/95 px-5 py-4 text-center shadow-sm">
-        <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-[#D7D4CE] border-t-primary-700" />
-        <p className="mt-3 text-sm font-semibold text-[#1A221E]">
+    <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/72 backdrop-blur-[2px]">
+      <div className="rounded-2xl border border-border bg-popover/95 px-5 py-4 text-center shadow-sm">
+        <div className="mx-auto size-8 animate-spin rounded-full border-2 border-muted border-t-primary" />
+        <p className="mt-3 text-sm font-semibold text-foreground">
           正在切换会话
         </p>
-        <p className="mt-1 max-w-[220px] text-xs font-medium text-[#709a83]">
+        <p className="mt-1 max-w-[220px] text-xs text-muted-foreground">
           {label}
         </p>
       </div>
+    </div>
+  );
+}
+
+function WorkspaceHeading({
+  eyebrow,
+  title,
+  description,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <header>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+        {eyebrow}
+      </p>
+      <h2 className="mt-1 text-xl font-semibold text-foreground">{title}</h2>
+      <p className="mt-1.5 max-w-2xl text-sm leading-6 text-muted-foreground">
+        {description}
+      </p>
+    </header>
+  );
+}
+
+function WorkspaceEmptyState({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-dashed border-border bg-muted/25 px-5 py-10 text-center">
+      <p className="text-sm font-semibold text-foreground">{title}</p>
+      <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-muted-foreground">
+        {description}
+      </p>
+    </div>
+  );
+}
+
+function WorkspaceError({ message }: { message: string }) {
+  return (
+    <div className="rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-4 text-sm text-destructive">
+      {message}
     </div>
   );
 }

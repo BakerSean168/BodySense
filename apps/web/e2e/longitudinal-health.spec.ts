@@ -73,17 +73,32 @@ test("register -> profile -> durable BodyState fact survives reload", async ({
     page.getByRole("heading", { name: "长期 BodyState" }),
   ).toBeVisible();
 
+  await page.getByRole("button", { name: "收起对话区" }).click();
+  await expect(page.getByRole("button", { name: "展开对话区" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("button", { name: "展开对话区" })).toBeVisible();
+
+  await page.getByRole("tab", { name: "分析" }).click();
+  await expect(page).toHaveURL(/view=diagnosis/);
+  await expect(page.getByRole("heading", { name: "可能性分析" })).toBeVisible();
+  await page.getByRole("tab", { name: /状态/ }).click();
+  await expect(page).toHaveURL(/view=state/);
+
   await page.getByRole("button", { name: "新事实" }).click();
   await page.getByPlaceholder("身体区域，例如：颈肩").fill("颈肩");
   await page.getByPlaceholder("当前事实内容").fill("久坐后颈肩酸胀");
   await page.getByRole("button", { name: "记录事实" }).click();
 
   await expect(page.getByText("久坐后颈肩酸胀")).toBeVisible();
-  await expect(page.getByText("R1", { exact: true })).toBeVisible();
+  await expect(
+    page.getByTestId("workspace").getByText("R1", { exact: true }),
+  ).toBeVisible();
 
   await page.reload();
   await expect(page.getByText("久坐后颈肩酸胀")).toBeVisible();
-  await expect(page.getByText("R1", { exact: true })).toBeVisible();
+  await expect(
+    page.getByTestId("workspace").getByText("R1", { exact: true }),
+  ).toBeVisible();
 });
 
 test("full longitudinal loop enforces gates and remains discoverable after reload", async ({
