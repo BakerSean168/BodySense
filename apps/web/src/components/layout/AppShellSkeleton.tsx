@@ -3,9 +3,7 @@ interface AppShellSkeletonProps {
 }
 
 function SkeletonBlock({ className }: { className: string }) {
-  return (
-    <div className={`animate-pulse rounded-2xl bg-[#E9E6DF] ${className}`} />
-  );
+  return <div className={`animate-pulse rounded-xl bg-muted ${className}`} />;
 }
 
 export function AppShellSkeleton({
@@ -15,70 +13,48 @@ export function AppShellSkeleton({
 
   return (
     <div
-      className="min-h-screen bg-slate-50 flex"
+      className="flex min-h-dvh bg-background"
       data-testid="app-shell-skeleton"
       data-variant={variant}
     >
-      <div className="hidden lg:flex w-64 shrink-0 border-r border-[#E5E3DF] bg-[#F7F5F0]">
-        <div className="flex w-full flex-col">
-          <div className="flex h-16 items-center gap-3 border-b border-[#E5E3DF] px-6">
-            <SkeletonBlock className="h-8 w-8 rounded-xl" />
-            <SkeletonBlock className="h-5 w-20 rounded-full" />
-          </div>
-          <div className="flex-1 space-y-3 px-4 py-6">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <SkeletonBlock key={index} className="h-11 w-full rounded-full" />
-            ))}
-          </div>
-          <div className="border-t border-[#E5E3DF] p-4">
-            <SkeletonBlock className="h-16 w-full" />
-            <SkeletonBlock className="mt-3 h-10 w-full rounded-full" />
-          </div>
+      <aside className="hidden h-dvh w-[72px] shrink-0 flex-col border-r border-border bg-sidebar md:flex">
+        <div className="flex h-16 items-center justify-center border-b border-border">
+          <SkeletonBlock className="size-9" />
         </div>
-      </div>
+        <div className="flex flex-1 flex-col items-center gap-3 px-2 py-4">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <SkeletonBlock key={index} className="size-11" />
+          ))}
+        </div>
+      </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-[#FBFBFA]">
-        <div className="flex h-16 items-center justify-between border-b border-[#E5E3DF] bg-white/90 px-4 lg:hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="flex h-16 items-center justify-between border-b border-border px-4">
           <div className="flex items-center gap-3">
-            <SkeletonBlock className="h-8 w-8 rounded-xl" />
-            <SkeletonBlock className="h-5 w-16 rounded-full" />
+            <SkeletonBlock className="size-9 md:hidden" />
+            <div>
+              <SkeletonBlock className="h-4 w-28" />
+              <SkeletonBlock className="mt-2 h-3 w-36" />
+            </div>
           </div>
-          <SkeletonBlock className="h-10 w-10 rounded-xl" />
+          <div className="flex gap-2">
+            <SkeletonBlock className="size-8" />
+            <SkeletonBlock className="size-8 rounded-full" />
+          </div>
         </div>
 
-        <main className="flex-1 overflow-hidden">
+        <main className="min-h-0 flex-1 overflow-hidden">
           {isConsultation ? (
-            <div className="flex h-full w-full flex-col overflow-hidden">
-              <div className="border-b border-[#E5E3DF] bg-[#FBFBFA] px-6 py-4">
-                <SkeletonBlock className="h-6 w-48 rounded-full" />
-                <SkeletonBlock className="mt-2 h-4 w-32 rounded-full" />
-              </div>
-
-              <div className="flex flex-1 min-h-0 gap-4 px-3 py-4 md:px-6 md:py-6">
-                <div className="hidden w-64 shrink-0 lg:block">
-                  <div className="space-y-3">
-                    <SkeletonBlock className="h-10 w-full rounded-full" />
-                    {Array.from({ length: 6 }).map((_, index) => (
-                      <SkeletonBlock
-                        key={index}
-                        className="h-14 w-full rounded-2xl"
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex min-h-0 flex-1 flex-col">
-                  <SkeletonBlock className="flex-1 min-h-[320px] w-full rounded-[28px]" />
-                </div>
-
-                <div className="hidden w-[420px] shrink-0 md:block">
-                  <SkeletonBlock className="h-full min-h-[320px] w-full rounded-[28px]" />
-                </div>
+            <div className="flex h-full min-h-0 gap-4 p-4 lg:p-6">
+              <SkeletonBlock className="hidden h-full w-[38%] md:block" />
+              <div className="flex min-w-0 flex-1 flex-col gap-4">
+                <SkeletonBlock className="h-12 w-full" />
+                <SkeletonBlock className="min-h-0 flex-1 w-full" />
               </div>
             </div>
           ) : (
-            <div className="space-y-6 px-6 py-8 lg:px-10">
-              <SkeletonBlock className="h-10 w-64 rounded-full" />
+            <div className="mx-auto w-full max-w-[1600px] space-y-6 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+              <SkeletonBlock className="h-10 w-64" />
               <SkeletonBlock className="h-36 w-full" />
               <div className="grid gap-6 lg:grid-cols-2">
                 <SkeletonBlock className="h-48 w-full" />

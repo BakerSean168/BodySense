@@ -6,8 +6,10 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  --font-display: "Fraunces", Georgia, serif;
+  --font-sans:
+    "Geist Variable", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-display: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
 
   --color-primary-50: #f1f5f2;
   --color-primary-100: #e2ebe5;
@@ -22,10 +24,10 @@
   --color-primary-950: #0b130f;
 
   /* Custom Terracotta / Clay Accents */
-  --color-accent-terracotta: #CD7B67;
-  --color-accent-clay: #B65E49;
-  --color-accent-linen: #FBFBFA;
-  --color-accent-sand: #F7F5F0;
+  --color-accent-terracotta: #cd7b67;
+  --color-accent-clay: #b65e49;
+  --color-accent-linen: #fbfbfa;
+  --color-accent-sand: #f7f5f0;
 }
 
 @layer base {
@@ -34,9 +36,14 @@
     font-family: var(--font-sans);
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-display);
-    @apply font-semibold tracking-tight text-[#1A221E];
+    @apply font-semibold tracking-tight text-foreground;
   }
   * {
     @apply border-border outline-ring/50;
@@ -68,9 +75,15 @@
   }
 
   @keyframes morph {
-    0% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
-    50% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
-    100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+    0% {
+      border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+    }
+    50% {
+      border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%;
+    }
+    100% {
+      border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+    }
   }
 
   .custom-scrollbar::-webkit-scrollbar {
@@ -92,7 +105,7 @@
 
 @theme inline {
   --font-heading: var(--font-sans);
-  --font-sans: 'Geist Variable', sans-serif;
+  --font-sans: "Geist Variable", sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -150,8 +163,8 @@
   --accent: oklch(0.94 0.02 155);
   --accent-foreground: oklch(0.25 0.04 155);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.90 0.015 155);
-  --input: oklch(0.90 0.015 155);
+  --border: oklch(0.9 0.015 155);
+  --input: oklch(0.9 0.015 155);
   --ring: oklch(0.45 0.06 155);
   --chart-1: oklch(0.65 0.08 155);
   --chart-2: oklch(0.55 0.07 155);
@@ -165,7 +178,7 @@
   --sidebar-primary-foreground: oklch(0.98 0.005 155);
   --sidebar-accent: oklch(0.94 0.02 155);
   --sidebar-accent-foreground: oklch(0.25 0.04 155);
-  --sidebar-border: oklch(0.90 0.015 155);
+  --sidebar-border: oklch(0.9 0.015 155);
   --sidebar-ring: oklch(0.45 0.06 155);
 }
 
@@ -179,11 +192,11 @@
   --primary: oklch(0.65 0.08 155);
   --primary-foreground: oklch(0.14 0.02 155);
   --secondary: oklch(0.22 0.03 155);
-  --secondary-foreground: oklch(0.90 0.02 155);
+  --secondary-foreground: oklch(0.9 0.02 155);
   --muted: oklch(0.22 0.03 155);
   --muted-foreground: oklch(0.65 0.04 155);
   --accent: oklch(0.22 0.03 155);
-  --accent-foreground: oklch(0.90 0.02 155);
+  --accent-foreground: oklch(0.9 0.02 155);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(0.28 0.03 155);
   --input: oklch(0.28 0.03 155);
@@ -198,7 +211,7 @@
   --sidebar-primary: oklch(0.65 0.08 155);
   --sidebar-primary-foreground: oklch(0.14 0.02 155);
   --sidebar-accent: oklch(0.22 0.03 155);
-  --sidebar-accent-foreground: oklch(0.90 0.02 155);
+  --sidebar-accent-foreground: oklch(0.9 0.02 155);
   --sidebar-border: oklch(0.28 0.03 155);
   --sidebar-ring: oklch(0.55 0.07 155);
 }
@@ -218,9 +231,15 @@
   margin-bottom: 0.375rem;
 }
 
-.prose-markdown h1 { font-size: 1.15rem; }
-.prose-markdown h2 { font-size: 1.05rem; }
-.prose-markdown h3 { font-size: 1rem; }
+.prose-markdown h1 {
+  font-size: 1.15rem;
+}
+.prose-markdown h2 {
+  font-size: 1.05rem;
+}
+.prose-markdown h3 {
+  font-size: 1rem;
+}
 
 .prose-markdown p {
   margin-bottom: 0.5rem;
@@ -277,4 +296,4 @@
 .prose-markdown strong {
   font-weight: 700;
   color: var(--color-primary-900);
-}
+}

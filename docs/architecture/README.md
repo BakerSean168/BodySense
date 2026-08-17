@@ -9,13 +9,13 @@
 描述系统当前的真实架构、技术选型和部署拓扑：
 
 - 📑 **[技术方案大纲 (Technical Approach)](./technical-approach.md)**
-  *项目核心技术选型（React 19, Go 1.26, Python 3.13, PostgreSQL 18）、Monorepo 结构、三端接口契约与安全机制。*
+  _项目核心技术选型（React 19, Go 1.26, Python 3.13, PostgreSQL 18）、Monorepo 结构、三端接口契约与安全机制。_
 
 - 🐳 **[部署与运维架构 (Deployment Architecture)](./deployment-architecture.md)**
-  *Docker Compose 容器编排（Caddy、Go API、FastAPI、Redis 7、PostgreSQL 18）、CI/CD 流水线、阿里云部署拓扑。*
+  _Docker Compose 容器编排（Caddy、Go API、FastAPI、Redis 7、PostgreSQL 18）、CI/CD 流水线、阿里云部署拓扑。_
 
-- 🧠 **[上下文工程架构 (Context Engineering Architecture)](./context-engineering-architecture.md)** ⚠️ *已归档*
-  *原设计的 Go ContextBuilder 方案已被 ADR 0002 取代。当前由 Python LangGraph checkpoint 拥有 Agent Thread 真值。*
+- 🧠 **[上下文工程架构 (Context Engineering Architecture)](./context-engineering-architecture.md)** ⚠️ _已归档_
+  _原设计的 Go ContextBuilder 方案已被 ADR 0002 取代。当前由 Python LangGraph checkpoint 拥有 Agent Thread 真值。_
 
 ---
 
@@ -26,11 +26,13 @@
 BodySense 当前业务领域的最高层设计以以下文档为准：
 
 - ⭐ **[Longitudinal BodyState Domain Model](./longitudinal-body-state-domain.md)**  
-  *定义一用户一份长期 BodyState、Fact / Observation / Hypothesis / Evidence、时间语义、Diagnosis / Treatment 生命周期及核心 invariant。*
+  _定义一用户一份长期 BodyState、Fact / Observation / Hypothesis / Evidence、时间语义、Diagnosis / Treatment 生命周期及核心 invariant。_
 - 🔁 **[Longitudinal Health Loop](./longitudinal-health-loop.md)**  
-  *用持续的 BodyState → Diagnosis → Treatment → Outcome → BodyState 闭环替代旧的线性 Health Journey。*
+  _用持续的 BodyState → Diagnosis → Treatment → Outcome → BodyState 闭环替代旧的线性 Health Journey。_
 - 📦 **[Longitudinal Body Health Feature Spec](../feature_spec_longitudinal_body_health.md)**  
-  *定义用户看到的长期健康工作台、Diagnosis 历史、当前 Treatment 与趋势交互。*
+  _定义用户看到的长期健康工作台、Diagnosis 历史、当前 Treatment 与趋势交互。_
+- 🖥️ **[Desktop Workbench UI/UX](./web-desktop-workbench-ui-ux.md)**
+  _定义 React 桌面工作台的 chat + workspace 布局、视觉语言、响应式行为与可访问性。_
 
 如果旧文档与上述领域模型冲突，以 ADR 0004 + Longitudinal BodyState Domain Model 为准。
 
@@ -38,29 +40,29 @@ BodySense 当前业务领域的最高层设计以以下文档为准：
 
 以下文档定义系统各核心子模块的目标架构：
 
-| 文档 | 子模块 | 状态 | 说明 |
-|---|---|---|---|
-| [System Engineering Refactor Plan](./system-engineering-refactor-plan.md) | 总控计划 | 历史/需逐步对齐 | 早期系统级重构方案，遇到业务模型冲突时以新领域模型为准 |
-| [Context Engineering Architecture](./context-engineering-architecture.md) | 上下文工程 | ⚠️ 归档 | ADR 0002 取代了 Go ContextBuilder 方案 |
-| [Agent Tool Calling Runtime](./agent-tool-calling-runtime.md) | 工具调用运行时 | ⚠️ 部分归档 | 设计概念仍有效，执行路径已被 ADR 0002 取代 |
-| [AI Run / Job Runtime](./ai-run-job-runtime.md) | 任务运行时 | ~50% | jobs schema、Go JobRuntime、OCR 迁移 |
-| [Stream Event Contract Runtime](./stream-event-contract-runtime.md) | 流事件契约 | ~30% | Go StreamRuntime、StreamEvent v1 |
-| [AI Output Governance](./ai-output-governance.md) | AI 输出治理 | ~35% | AIOutputGuard 骨架、OutputReviewService |
-| [Knowledge Lifecycle](./knowledge-lifecycle-architecture.md) | 知识生命周期 | ~25% | lifecycle schema、publication repo |
-| [Longitudinal Health Loop](./longitudinal-health-loop.md) | 长期健康闭环 | Active target | 替代旧线性 Health Journey；BodyState 为闭环中心 |
+| 文档                                                                      | 子模块         | 状态            | 说明                                                   |
+| ------------------------------------------------------------------------- | -------------- | --------------- | ------------------------------------------------------ |
+| [System Engineering Refactor Plan](./system-engineering-refactor-plan.md) | 总控计划       | 历史/需逐步对齐 | 早期系统级重构方案，遇到业务模型冲突时以新领域模型为准 |
+| [Context Engineering Architecture](./context-engineering-architecture.md) | 上下文工程     | ⚠️ 归档         | ADR 0002 取代了 Go ContextBuilder 方案                 |
+| [Agent Tool Calling Runtime](./agent-tool-calling-runtime.md)             | 工具调用运行时 | ⚠️ 部分归档     | 设计概念仍有效，执行路径已被 ADR 0002 取代             |
+| [AI Run / Job Runtime](./ai-run-job-runtime.md)                           | 任务运行时     | ~50%            | jobs schema、Go JobRuntime、OCR 迁移                   |
+| [Stream Event Contract Runtime](./stream-event-contract-runtime.md)       | 流事件契约     | ~30%            | Go StreamRuntime、StreamEvent v1                       |
+| [AI Output Governance](./ai-output-governance.md)                         | AI 输出治理    | ~35%            | AIOutputGuard 骨架、OutputReviewService                |
+| [Knowledge Lifecycle](./knowledge-lifecycle-architecture.md)              | 知识生命周期   | ~25%            | lifecycle schema、publication repo                     |
+| [Longitudinal Health Loop](./longitudinal-health-loop.md)                 | 长期健康闭环   | Active target   | 替代旧线性 Health Journey；BodyState 为闭环中心        |
 
 ---
 
 ## 3. 架构决策记录 (ADR)
 
 - **[ADR 0001: 围绕流式 AI 工作流深化运行时模块](../adr/0001-deepen-runtime-modules.md)**
-  *决定保留三服务架构（React/Go/Python），深化 StreamRuntime、ToolRuntime、JobRuntime，而非引入新 Agent 框架。*
+  _决定保留三服务架构（React/Go/Python），深化 StreamRuntime、ToolRuntime、JobRuntime，而非引入新 Agent 框架。_
 
 - **[ADR 0002: Python 拥有 Agent Runtime 真值，Go 拥有 Durable Ledger 真值](../adr/0002-agent-runtime-ownership.md)** ⭐
-  *Python 通过 LangGraph checkpoint 拥有 Agent Thread 运行时真值；Go 拥有用户业务真值、Runtime Event Log 和 projection；Web 为 projection consumer。*
+  _Python 通过 LangGraph checkpoint 拥有 Agent Thread 运行时真值；Go 拥有用户业务真值、Runtime Event Log 和 projection；Web 为 projection consumer。_
 
 - **[ADR 0004: Adopt a Longitudinal BodyState as the Core Health Domain Model](../adr/0004-adopt-longitudinal-body-state-model.md)** ⭐
-  *一用户一份长期 BodyState；Conversation 只是交互入口；Diagnosis / Treatment pin 明确 BodyState revision；取消 MedicalRecord 作为核心 aggregate，并用 BodyState / Diagnosis / Treatment 历史表达长期健康变化。*
+  _一用户一份长期 BodyState；Conversation 只是交互入口；Diagnosis / Treatment pin 明确 BodyState revision；取消 MedicalRecord 作为核心 aggregate，并用 BodyState / Diagnosis / Treatment 历史表达长期健康变化。_
 
 ---
 
@@ -69,8 +71,9 @@ BodySense 当前业务领域的最高层设计以以下文档为准：
 随着项目迭代，阶段性实施方案已归档至此。可追溯各模块的设计原委与演进历程：
 
 ### 核心底座与会话重设计
+
 - **通用会话管理统一重构**：[会话管理系统统一重设计方案](../plan/archive/unified-session-redesign.md)
-  *解决了并发读-改-写竞态、缺乏幂等控制、会话消息绑定领域的问题。引入通用 conversations / messages / runs / shares 抽象，PostgreSQL 18 原生 uuidv7() 主键。*
+  _解决了并发读-改-写竞态、缺乏幂等控制、会话消息绑定领域的问题。引入通用 conversations / messages / runs / shares 抽象，PostgreSQL 18 原生 uuidv7() 主键。_
   - 子方案：[Schema 设计](../plan/archive/01-schema-design.md) · [API 设计](../plan/archive/02-api-design.md) · [SSE 流式协议](../plan/archive/03-sse-protocol.md) · [Go-Python 契约](../plan/archive/04-python-contract.md) · [前端适配器](../plan/archive/05-frontend.md) · [实施路线图](../plan/archive/06-implementation-roadmap.md) · [方案总览](../plan/archive/00-overview.md)
 
 - **多 Provider AI 服务网关**：[多供应商 AI 路由设计方案](../plan/archive/multi-provider-ai-router.md)
@@ -78,11 +81,13 @@ BodySense 当前业务领域的最高层设计以以下文档为准：
 - **安全认证**：[JWT 认证系统设计](../plan/archive/issue-2-auth-jwt.md)
 
 ### 咨询工作台与业务功能链路
+
 - **端到端核心功能合集 (Issues 6-12)**：[核心业务功能实施总案](../plan/archive/issues-6-12-implementation.md)
 
 - **咨询工作台深度优化**：[代码质量修复](../plan/archive/consultation-workbench-code-quality-fixes.md) · [核心分析](../plan/archive/consultation-workbench-ai-agent-core-analysis.md)
 
 ### AI 算法与 RAG 知识库
+
 - **自动化视频知识库入库**：[头前移自动知识入库方案](../plan/archive/issue-13-forward-head-knowledge-pilot.md)
   - 子方案：[ASR 基准对比](../plan/archive/asr-base-vs-small-benchmark.md) · [实测统计](../plan/archive/asr-candidates-field-test-results.md) · [入库状态](../plan/archive/issue-13-live-ingestion-status.md)
 
@@ -91,6 +96,7 @@ BodySense 当前业务领域的最高层设计以以下文档为准：
 - **文件上传与 OCR 模块**：[图片/文件上传与 OCR 方案](../plan/archive/issue-5-file-upload-ocr.md)
 
 ### 实施过程记录
+
 - **Phase 实施计划**：[implementation/](../plan/archive/implementation/) — 16 个 Phase 的详细设计文档
 - **审计修复报告**：[audit/](../plan/archive/audit/) — 4 份修复报告和 1 份修复基线快照
 
