@@ -4,9 +4,12 @@ These tests intentionally encode the new ADR 0004 rules rather than preserving
 old ``1..3`` candidate assumptions.
 """
 
+from typing import Any
+
 import pytest
 from pydantic import ValidationError
 
+from src.models.dependencies import EvidenceSearcher
 from src.models.diagnosis import (
     DiagnosisAgentOutput,
     DiagnosisCandidateDraft,
@@ -79,3 +82,39 @@ def test_dependencies_slots_prevent_arbitrary_runtime_bag() -> None:
     deps = DiagnosisDependencies(body_state_revision=1, body_state={})
     with pytest.raises(AttributeError):
         deps.unplanned_field = "should fail"  # type: ignore[attr-defined]
+
+
+class FakeEvidenceSearcher:
+    async def search(self, query: str, *, top_k: int = 5) -> list[dict[str, Any]]:
+
+        return [
+            {"id": f"evidence-{i}", "content": f"Evidence content {i} for query '{query}'"}
+            for i in range(1, top_k + 1)
+        ]
+
+
+def test_dependencies_can_include_evidence_searcher() -> None:
+    searcher: EvidenceSearcher = FakeEvidenceSearcher()
+    deps = DiagnosisDependencies(
+        body_state_revision=1,
+        body_state={},
+        evidence_searcher=searcher,
+    )
+    assert deps.evidence_searcher is searcher
+
+
+def test_dependencies_retrieved_evidence_should_use_list() -> None:
+    deps_a = DiagnosisDependencies(
+        body_state_revision=1,
+        body_state={},
+    )
+    deps_b = DiagnosisDependencies(
+        body_state_revision=1,
+        body_state={},
+    )
+    assert len(deps_a.retrieved_evidence) == 0
+    assert len(deps_b.retrieved_evidence) == 0
+    deps_a.retrieved_evidence.append({"id": "evidence-1", "content": "Evidence content 1"})
+    assert len(deps_a.retrieved_evidence) == 1
+    assert len(deps_b.retrieved_evidence) == 0  # Ensure deps_b is unaffected
+    assert deps_a.retrieved_evidence is not deps_b.retrieved_evidence
