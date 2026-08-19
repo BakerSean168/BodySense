@@ -1,6 +1,8 @@
 # Active Plans
 
-There is no active implementation plan as of 2026-08-17.
+Current active implementation plan:
+
+- [`diagnosis-agent-governance-eval-plan-2026-08-19.md`](./diagnosis-agent-governance-eval-plan-2026-08-19.md) — Diagnosis eval baseline, configuration identity, EvidenceGap control, SafetyEnvelope/DecisionTrace, provenance, replay and promotion readiness before new Treatment-domain work.
 
 The React desktop workbench refactor is complete and archived at:
 

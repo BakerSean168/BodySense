@@ -4,6 +4,7 @@ cd "$(git rev-parse --show-toplevel)"
 pnpm lint
 pnpm typecheck
 pnpm test
+pnpm nx run ai-service:eval:diagnosis
 pnpm build
 git diff --check
 git diff --cached --check

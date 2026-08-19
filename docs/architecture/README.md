@@ -64,6 +64,9 @@ BodySense 当前业务领域的最高层设计以以下文档为准：
 - **[ADR 0004: Adopt a Longitudinal BodyState as the Core Health Domain Model](../adr/0004-adopt-longitudinal-body-state-model.md)** ⭐
   _一用户一份长期 BodyState；Conversation 只是交互入口；Diagnosis / Treatment pin 明确 BodyState revision；取消 MedicalRecord 作为核心 aggregate，并用 BodyState / Diagnosis / Treatment 历史表达长期健康变化。_
 
+- **[ADR 0005: Adopt a Standalone LiteLLM Model Gateway for Agent Model Execution](../adr/0005-adopt-standalone-litellm-model-gateway.md)** ⭐
+  _Diagnosis Agent 通过独立 LiteLLM Gateway 访问逻辑模型组；Gateway 负责 provider 路由/回退/凭据/遥测，Go 继续拥有业务 authority。_
+
 ---
 
 ## 4. 历史方案与设计文档归档 (Archived Plans)
