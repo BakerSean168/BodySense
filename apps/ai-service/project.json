@@ -67,6 +67,14 @@
         "cwd": "apps/ai-service",
         "command": "uv run pyright src"
       }
+    },
+    "eval:diagnosis": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "cwd": "apps/ai-service",
+        "command": "uv run python scripts/run_diagnosis_eval.py --stdout-only"
+      }
     }
   }
 }

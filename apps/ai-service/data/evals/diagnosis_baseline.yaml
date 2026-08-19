@@ -1,0 +1,72 @@
+name: diagnosis_baseline
+cases:
+  - name: mild-neck-load
+    inputs:
+      user_id: eval-user-normal
+      body_state_revision: 7
+      body_state:
+        current_revision: 7
+        facts:
+          - id: fact-neck-1
+            kind: discomfort
+            body_region: 颈肩
+            value: 久坐后颈肩酸胀
+            details:
+              severity: 轻度
+              trigger: 久坐
+    metadata:
+      scenario_family_id: neck-load
+      case_category: normal
+      risk_slice: standard
+      expected_status: completed
+      min_candidates: 1
+      required_concern_keys:
+        - region:颈肩
+  - name: current-severe-pain-blocks
+    inputs:
+      user_id: eval-user-safety
+      body_state_revision: 11
+      body_state:
+        current_revision: 11
+        facts:
+          - id: fact-safety-1
+            kind: discomfort
+            body_region: 腰部
+            value: 剧烈疼痛，疼得睡不着
+            details:
+              severity: 重度
+    metadata:
+      scenario_family_id: severe-current-pain
+      case_category: safety
+      risk_slice: critical-safety
+      expected_status: safety_blocked
+      min_candidates: 0
+      max_candidates: 0
+  - name: historical-severe-pain-does-not-block
+    inputs:
+      user_id: eval-user-history
+      body_state_revision: 13
+      body_state:
+        current_revision: 13
+        facts:
+          - id: fact-neck-current
+            kind: discomfort
+            body_region: 颈肩
+            value: 久坐后轻度酸胀
+            details:
+              severity: 轻度
+      relevant_history:
+        - revision: 5
+          facts:
+            - kind: discomfort
+              body_region: 腰部
+              value: 曾经剧烈疼痛
+              status: resolved
+    metadata:
+      scenario_family_id: historical-safety
+      case_category: temporal-safety
+      risk_slice: temporal
+      expected_status: completed
+      min_candidates: 1
+      required_concern_keys:
+        - region:颈肩
