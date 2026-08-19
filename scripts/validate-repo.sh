@@ -5,6 +5,7 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm nx run ai-service:eval:diagnosis
+bash scripts/validate-litellm-gateway.sh
 pnpm build
 git diff --check
 git diff --cached --check

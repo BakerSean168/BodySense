@@ -671,6 +671,8 @@ Acceptance:
 - a direct internal OpenAI-compatible call through the gateway reaches the configured model group;
 - provider fallback can be characterized without BodySense business logic knowing provider identities.
 
+Implementation checkpoint (2026-08-19): NS-200/NS-210 establishes the pinned v1.97.0 gateway, production provider graph, internal authentication, health checks, and a deterministic container smoke that proves authenticated OpenAI compatibility, usage metadata, and primary-to-fallback behavior. Provider secrets intentionally remain available to the legacy `ai-service` path until Phase 2 switches Diagnosis to the gateway; removing them earlier would break the protected current path. That temporary duplication is a migration bridge, not accepted target state. Live-provider validation requires deployment credentials and is therefore separate from the credential-free deterministic CI smoke.
+
 ### Phase 2 — Rebuild Python model boundary around LiteLLM
 
 Goal: PydanticAI talks only to the logical model gateway.
