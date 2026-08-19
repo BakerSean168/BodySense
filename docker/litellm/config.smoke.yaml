@@ -1,0 +1,22 @@
+# Deterministic local/CI smoke config. It preserves the production logical model and
+# fallback graph while replacing physical providers with LiteLLM's built-in mocks.
+model_list:
+  - model_name: bodysense-diagnosis
+    litellm_params:
+      model: openai/gpt-4o-mini
+      api_key: sk-not-used
+      mock_response: litellm.InternalServerError
+  - model_name: bodysense-diagnosis-fallback
+    litellm_params:
+      model: openai/gpt-4o-mini
+      api_key: sk-not-used
+      mock_response: bodysense-gateway-fallback-ok
+
+router_settings:
+  num_retries: 0
+  fallbacks:
+    - bodysense-diagnosis:
+        - bodysense-diagnosis-fallback
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY

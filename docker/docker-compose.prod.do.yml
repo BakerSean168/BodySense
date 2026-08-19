@@ -25,6 +25,38 @@ services:
   # 业务服务
   # ---------------------------------------------------------------------------
 
+  # Defined ahead of the application cutover; Phase 2 removes this profile gate.
+  litellm-gateway:
+    profiles: [ai-gateway]
+    image: ${LITELLM_IMAGE:-docker.litellm.ai/berriai/litellm:v1.97.0}
+    restart: unless-stopped
+    init: true
+    deploy:
+      resources:
+        limits:
+          cpus: '0.35'
+          memory: 512M
+        reservations:
+          memory: 192M
+    logging: *default-logging
+    command: ['--config', '/app/config.yaml', '--port', '4000']
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?set LITELLM_MASTER_KEY}
+      MIMO_BASE_URL: ${MIMO_BASE_URL:-https://token-plan-cn.xiaomimimo.com/v1}
+      MIMO_API_KEY: ${MIMO_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      - ./litellm/config.yaml:/app/config.yaml:ro
+    networks:
+      - bodysense-network
+    healthcheck:
+      test: ['CMD', 'python', '-c', "import urllib.request; urllib.request.urlopen('http://localhost:4000/health/liveliness')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
   ai-service:
     image: ${REGISTRY}/bodysense-ai-service:${AI_TAG:-prod-latest}
     restart: unless-stopped
