@@ -1,0 +1,31 @@
+package service
+
+import (
+	"fmt"
+	"os"
+	"strings"
+)
+
+const defaultDiagnosisConfigurationID = "diag-config-f492eb1c0c6676ae"
+
+// AgentDeploymentPolicy is the Go-owned mutable pointer from business role to
+// an immutable Agent configuration. Python may execute this identity, but does
+// not choose which configuration receives production traffic.
+type AgentDeploymentPolicy struct {
+	diagnosisConfigurationID string
+}
+
+func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
+	id := strings.TrimSpace(os.Getenv("DIAGNOSIS_AGENT_CONFIGURATION_ID"))
+	if id == "" {
+		id = defaultDiagnosisConfigurationID
+	}
+	if !strings.HasPrefix(id, "diag-config-") {
+		return nil, fmt.Errorf("invalid Diagnosis Agent configuration id %q", id)
+	}
+	return &AgentDeploymentPolicy{diagnosisConfigurationID: id}, nil
+}
+
+func (p *AgentDeploymentPolicy) DiagnosisConfigurationID() string {
+	return p.diagnosisConfigurationID
+}

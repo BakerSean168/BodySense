@@ -215,7 +215,7 @@ func (s *DiagnosisAnalysisService) PublicPayload(analysis *model.DiagnosisAnalys
 		}
 		candidates = append(candidates, item)
 	}
-	return map[string]any{
+	payload := map[string]any{
 		"analysis_id":            analysis.ID,
 		"body_state_revision":    analysis.BodyStateRevision,
 		"status":                 analysis.Status,
@@ -229,6 +229,13 @@ func (s *DiagnosisAnalysisService) PublicPayload(analysis *model.DiagnosisAnalys
 		"governance":             json.RawMessage(analysis.Governance),
 		"created_at":             analysis.CreatedAt,
 	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(analysis.RawOutput, &raw); err == nil {
+		if configuration := raw["agent_configuration"]; len(configuration) > 0 && string(configuration) != "null" {
+			payload["agent_configuration"] = configuration
+		}
+	}
+	return payload
 }
 
 func diagnosisJSON(raw json.RawMessage, fallback string) datatypes.JSON {

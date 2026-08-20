@@ -18,6 +18,10 @@ from ..agents.diagnosis_agent import create_diagnosis_agent
 from ..agents.evidence import KnowledgeEvidenceSearcher
 from ..ai.diagnosis_gateway_model import diagnosis_model_settings
 from ..ai.diagnosis_model_boundary import get_diagnosis_runtime_model
+from ..configuration.diagnosis_agent_config import (
+    DiagnosisAgentManifest,
+    get_diagnosis_configuration,
+)
 from ..models.dependencies import EvidenceSearcher
 from ..models.diagnosis import DiagnosisAgentOutput, DiagnosisDependencies
 from ..runtime.governance import guard_structured_output
@@ -27,7 +31,7 @@ from ..testing_support.deterministic_ai import (
 )
 from .red_flag_detector import get_red_flag_detector
 
-ModelResolver = Callable[[], Model]
+ModelResolver = Callable[[DiagnosisAgentManifest], Model]
 EvidenceSearcherFactory = Callable[[str], EvidenceSearcher]
 
 
@@ -39,7 +43,7 @@ class DiagnosisService:
         model_resolver: ModelResolver | None = None,
         evidence_searcher_factory: EvidenceSearcherFactory | None = None,
     ) -> None:
-        self._agent = diagnosis_agent or create_diagnosis_agent()
+        self._agent = diagnosis_agent
         self._model_resolver = (
             model_resolver
             if model_resolver is not None
@@ -52,6 +56,7 @@ class DiagnosisService:
         *,
         user_id: str = "",
         body_state_revision: int,
+        configuration_id: str,
         body_state: dict[str, Any],
         relevant_history: list[dict[str, Any]] | None = None,
         profile: dict[str, Any] | None = None,
@@ -68,6 +73,7 @@ class DiagnosisService:
         if current_revision and current_revision != body_state_revision:
             raise ValueError("body_state_revision does not match body_state.current_revision")
 
+        config = get_diagnosis_configuration(configuration_id)
         profile = profile or {}
         relevant_history = relevant_history or []
         rag_results = rag_results or []
@@ -89,14 +95,17 @@ class DiagnosisService:
                 "safety_summary": {"red_flags": red_flag_result.to_dict()},
                 "red_flags": red_flag_result.to_dict(),
             }
+            blocked["agent_configuration"] = config.provenance()
             if rag_results:
                 blocked["citations"] = rag_results
-            return guard_structured_output(
+            guarded = guard_structured_output(
                 "diagnosis",
                 blocked,
                 rag_results=rag_results,
                 extracted_info=red_flag_input,
-            ).to_emit_dict()
+                policy_revision=config.governance_policy_revision,
+            )
+            return _emit_with_configuration(guarded.to_emit_dict(), config)
 
         output, citations = await self._run_typed_agent(
             user_id=user_id,
@@ -106,6 +115,7 @@ class DiagnosisService:
             profile=profile,
             rag_context=rag_context,
             rag_results=rag_results,
+            config=config,
         )
 
         validated: dict[str, Any] = {
@@ -119,15 +129,18 @@ class DiagnosisService:
             "cross_concern_patterns": output.cross_concern_patterns,
             "information_gaps": output.information_gaps,
             "safety_summary": output.safety_summary,
+            "agent_configuration": config.provenance(),
         }
         if citations:
             validated["citations"] = citations
-        return guard_structured_output(
+        guarded = guard_structured_output(
             "diagnosis",
             validated,
             rag_results=citations or rag_results,
             extracted_info=red_flag_input,
-        ).to_emit_dict()
+            policy_revision=config.governance_policy_revision,
+        )
+        return _emit_with_configuration(guarded.to_emit_dict(), config)
 
     async def _run_typed_agent(
         self,
@@ -139,6 +152,7 @@ class DiagnosisService:
         profile: dict[str, Any],
         rag_context: str,
         rag_results: list[dict[str, Any]],
+        config: DiagnosisAgentManifest,
     ) -> tuple[DiagnosisAgentOutput, list[dict[str, Any]]]:
         searcher: EvidenceSearcher | None = None
         if user_id and self._evidence_searcher_factory is not None:
@@ -155,13 +169,28 @@ class DiagnosisService:
         )
         run_kwargs: dict[str, Any] = {"deps": deps}
         if self._model_resolver is not None:
-            run_kwargs["model"] = self._model_resolver()
-            run_kwargs["model_settings"] = diagnosis_model_settings()
-        result = await self._agent.run(
+            run_kwargs["model"] = self._model_resolver(config)
+            run_kwargs["model_settings"] = diagnosis_model_settings(config)
+        agent = self._agent or create_diagnosis_agent(
+            prompt_revision=config.prompt_revision,
+            output_schema_revision=config.output_schema_revision,
+            tool_policy_revision=config.tool_policy_revision,
+            evidence_policy_revision=config.evidence_policy_revision,
+        )
+        result = await agent.run(
             "Synthesize all supported possible-diagnosis candidates from the pinned durable state.",
             **run_kwargs,
         )
         return result.output, _dedupe_evidence(deps.retrieved_evidence)
+
+
+def _emit_with_configuration(
+    payload: dict[str, Any], config: DiagnosisAgentManifest
+) -> dict[str, Any]:
+    """Attach execution identity even when governance suppresses model content."""
+    result = dict(payload)
+    result["agent_configuration"] = config.provenance()
+    return result
 
 
 def _dedupe_evidence(items: list[dict[str, Any]]) -> list[dict[str, Any]]:

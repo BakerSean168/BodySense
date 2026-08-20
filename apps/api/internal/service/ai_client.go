@@ -15,7 +15,8 @@ import (
 )
 
 type DiagnosisRequest struct {
-	UserID string `json:"user_id,omitempty"`
+	UserID          string `json:"user_id,omitempty"`
+	ConfigurationID string `json:"configuration_id"`
 	// New ADR 0004 boundary: Diagnosis pins exact durable BodyState input.
 	BodyStateRevision int64           `json:"body_state_revision"`
 	BodyState         json.RawMessage `json:"body_state"`

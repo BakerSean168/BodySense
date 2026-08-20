@@ -9,6 +9,7 @@ from src.agents.diagnosis_agent import create_diagnosis_agent
 from src.agents.treatment_agent import create_treatment_agent
 from src.ai import AiRequest, AIService
 from src.ai.types import ChatMessage
+from src.configuration.diagnosis_agent_config import get_default_diagnosis_configuration
 from src.services.assessment_service import AssessmentService
 from src.services.diagnosis_service import DiagnosisService
 from src.services.treatment_agent_service import TreatmentAgentService
@@ -46,6 +47,7 @@ async def test_deterministic_typed_agents_keep_structured_contracts() -> None:
     )
     diagnosis_result = await diagnosis.generate_diagnosis(
         body_state_revision=1,
+        configuration_id=get_default_diagnosis_configuration().configuration_id,
         body_state={
             "current_revision": 1,
             "facts": [

@@ -18,6 +18,7 @@ class DiagnosisRequest(BaseModel):
 
     user_id: str = ""
     body_state_revision: int = Field(gt=0)
+    configuration_id: str = Field(min_length=1)
     body_state: dict[str, Any]
     relevant_history: list[dict[str, Any]] = Field(default_factory=list)
     profile: dict[str, Any] = Field(default_factory=dict)
@@ -81,6 +82,7 @@ async def analyze_diagnosis(request: DiagnosisRequest):
             "information_gaps": [],
             "safety_summary": {},
             "citations": [],
+            "agent_configuration": {"id": request.configuration_id, "role": "diagnosis"},
             "governance": {
                 "kind": "diagnosis",
                 "verdict": "accepted",
@@ -95,6 +97,7 @@ async def analyze_diagnosis(request: DiagnosisRequest):
         return await get_diagnosis_service().generate_diagnosis(
             user_id=request.user_id,
             body_state_revision=request.body_state_revision,
+            configuration_id=request.configuration_id,
             body_state=request.body_state,
             relevant_history=request.relevant_history,
             profile=request.profile,

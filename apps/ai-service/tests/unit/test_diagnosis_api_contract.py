@@ -18,6 +18,7 @@ def _payload() -> dict:
     return {
         "user_id": "user-1",
         "body_state_revision": 12,
+        "configuration_id": "diag-config-test",
         "body_state": {
             "current_revision": 12,
             "facts": [{"id": "fact-1", "kind": "discomfort", "value": "颈肩酸胀"}],
@@ -52,6 +53,7 @@ def test_analyze_diagnosis_applies_optional_defaults(client, monkeypatch):
     monkeypatch.setattr("src.api.routes.diagnosis.get_diagnosis_service", lambda: fake)
     payload = {
         "body_state_revision": 12,
+        "configuration_id": "diag-config-test",
         "body_state": {"current_revision": 12, "facts": [], "observations": []},
     }
 
@@ -61,6 +63,7 @@ def test_analyze_diagnosis_applies_optional_defaults(client, monkeypatch):
     assert fake.captured == {
         "user_id": "",
         "body_state_revision": 12,
+        "configuration_id": "diag-config-test",
         "body_state": payload["body_state"],
         "relevant_history": [],
         "profile": {},

@@ -710,6 +710,8 @@ Acceptance:
 - provider secrets/runtime host changes do not;
 - production can identify exactly which immutable Agent config served a run.
 
+Implementation checkpoint (2026-08-20): NS-400/NS-410 introduces an immutable repository-versioned Diagnosis Agent manifest with canonical SHA-256 **behavior** fingerprinting (`diag-config-f492eb1c0c6676ae`). File-format metadata (`manifest_revision`) and runtime host/provider credentials are excluded from identity, while prompt/schema/tool/evidence/governance/decision/model-group revisions plus generation settings are included. The current evidence/tool and decision revisions are deliberately labeled legacy/pre-envelope so later Phase 5/6 behavior changes necessarily produce a new configuration identity. The mutable deployment pointer is Go-owned via `AgentDeploymentPolicy`; Go sends the selected `configuration_id`, Python resolves that exact manifest, validates that its runtime supports the selected prompt/schema/tool/evidence/governance/model-group revisions, and returns execution provenance on every governance path. Go rejects a response whose configuration identity or role differs from the selected deployment pointer. Eval summaries and the Diagnosis read model expose the same identity; dedicated durable provenance columns remain Phase 7 work.
+
 ### Phase 4 — Pydantic Evals Diagnosis qualification system
 
 Goal: create a first-class eval platform before further behavioral changes.

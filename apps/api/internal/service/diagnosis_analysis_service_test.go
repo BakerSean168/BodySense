@@ -7,6 +7,7 @@ import (
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 )
 
 type fakeDiagnosisAnalysisRepository struct {
@@ -159,5 +160,19 @@ func TestAssessCandidatesPersistsIndependentUserState(t *testing.T) {
 	}
 	if items[0].AssessedAt.IsZero() || items[1].AssessedAt.IsZero() {
 		t.Fatal("candidate assessments must record an audit timestamp")
+	}
+}
+
+func TestPublicPayloadExposesAgentConfigurationFromImmutableRawOutput(t *testing.T) {
+	svc := NewDiagnosisAnalysisService(&fakeDiagnosisAnalysisRepository{})
+	raw := datatypes.JSON(`{"status":"completed","agent_configuration":{"id":"diag-config-test","role":"diagnosis"}}`)
+	analysis := &model.DiagnosisAnalysisRecord{ID: uuid.New(), RawOutput: raw}
+	payload := svc.PublicPayload(analysis)
+	configuration, ok := payload["agent_configuration"].(json.RawMessage)
+	if !ok {
+		t.Fatalf("expected raw agent_configuration provenance, got %#v", payload["agent_configuration"])
+	}
+	if !json.Valid(configuration) || string(configuration) != `{"id":"diag-config-test","role":"diagnosis"}` {
+		t.Fatalf("unexpected Agent configuration provenance: %s", configuration)
 	}
 }

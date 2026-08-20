@@ -4,6 +4,9 @@ from src.ai.diagnosis_gateway_model import (
     get_diagnosis_gateway_model,
 )
 from src.ai.diagnosis_model_boundary import get_diagnosis_runtime_model
+from src.configuration.diagnosis_agent_config import get_default_diagnosis_configuration
+
+CONFIG = get_default_diagnosis_configuration()
 
 
 def test_diagnosis_model_is_logical_gateway_model(monkeypatch) -> None:
@@ -16,7 +19,7 @@ def test_diagnosis_model_is_logical_gateway_model(monkeypatch) -> None:
     assert DIAGNOSIS_LOGICAL_MODEL == "bodysense-diagnosis"
     assert model.model_name == DIAGNOSIS_LOGICAL_MODEL
     assert str(model.provider.base_url) == "http://gateway.test:4000/v1/"
-    assert diagnosis_model_settings() == {"temperature": 0.3, "max_tokens": 2048}
+    assert diagnosis_model_settings(CONFIG) == {"temperature": 0.3, "max_tokens": 2048}
 
 
 def test_runtime_model_uses_gateway_when_new_runtime_contract_is_enabled(monkeypatch) -> None:
@@ -25,7 +28,7 @@ def test_runtime_model_uses_gateway_when_new_runtime_contract_is_enabled(monkeyp
     monkeypatch.setenv("LITELLM_API_KEY", "sk-internal-test")
     get_diagnosis_gateway_model.cache_clear()
 
-    model = get_diagnosis_runtime_model()
+    model = get_diagnosis_runtime_model(CONFIG)
 
     assert model.model_name == DIAGNOSIS_LOGICAL_MODEL
 
@@ -43,7 +46,7 @@ def test_runtime_model_defaults_to_legacy_only_for_unsynchronized_runtime(monkey
     monkeypatch.delenv("DIAGNOSIS_MODEL_BACKEND", raising=False)
     monkeypatch.setattr("src.ai.pydantic_model.get_pydantic_model", fake_legacy_model)
 
-    assert get_diagnosis_runtime_model() is expected
+    assert get_diagnosis_runtime_model(CONFIG) is expected
     assert calls == ["llm.json"]
 
 
@@ -55,4 +58,4 @@ def test_runtime_model_rejects_unknown_backend(monkeypatch) -> None:
 
     monkeypatch.setenv("DIAGNOSIS_MODEL_BACKEND", "surprise")
     with pytest.raises(NoAvailableProviderError, match="DIAGNOSIS_MODEL_BACKEND"):
-        get_diagnosis_runtime_model()
+        get_diagnosis_runtime_model(CONFIG)

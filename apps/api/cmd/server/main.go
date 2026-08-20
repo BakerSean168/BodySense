@@ -74,6 +74,10 @@ func main() {
 	jobRepo := repository.NewJobRepository(database.DB)
 	jobRuntime := service.NewJobRuntime(jobRepo)
 	aiClient := service.NewAIClient()
+	agentDeploymentPolicy, err := service.NewAgentDeploymentPolicy()
+	if err != nil {
+		log.Fatalf("failed to configure Agent deployment policy: %v", err)
+	}
 	messageService := service.NewMessageService(messageRepo)
 	contextRetrievalService := service.NewContextRetrievalService(messageContextRepo)
 	runService := service.NewRunService(runRepo)
@@ -162,6 +166,7 @@ func main() {
 		bodyStateService,
 		diagnosisAnalysisService,
 		diagnosisFreshnessService,
+		agentDeploymentPolicy,
 	)
 	trainingRepo := repository.NewTrainingRepository(database.DB)
 	trainingService := service.NewTrainingService(
