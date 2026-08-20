@@ -136,10 +136,75 @@ func (s *DiagnosisReplayService) CounterfactualReplay(
 	if err != nil {
 		return nil, err
 	}
+	return s.counterfactualCompare(ctx, userID, analysis, input, baseline, targetConfigurationID)
+}
+
+// CounterfactualFrozen compares a transient served result with another immutable
+// configuration without forcing the served result into DiagnosisAnalysis
+// persistence. This is required for legacy pre-envelope rejected responses:
+// rollout can still detect unsafe Challenger relaxation without changing the
+// user's characterized Champion response contract.
+func (s *DiagnosisReplayService) CounterfactualFrozen(
+	ctx context.Context,
+	userID uuid.UUID,
+	replayInput json.RawMessage,
+	baselineRaw json.RawMessage,
+	sourceConfigurationID string,
+	targetConfigurationID string,
+) (*DiagnosisReplayReport, error) {
+	input, err := decodeDiagnosisReplayInput(replayInput)
+	if err != nil {
+		return nil, err
+	}
+	var baseline map[string]any
+	if len(baselineRaw) == 0 || json.Unmarshal(baselineRaw, &baseline) != nil {
+		return nil, errors.New("transient Diagnosis baseline is not valid JSON")
+	}
+	status, _ := baseline["status"].(string)
+	analysis := &model.DiagnosisAnalysisRecord{
+		ID: uuid.Nil, BodyStateRevision: input.BodyStateRevision,
+		Status: status, AgentConfigurationID: sourceConfigurationID,
+	}
+	return s.counterfactualCompare(ctx, userID, analysis, input, baseline, targetConfigurationID)
+}
+
+func (s *DiagnosisReplayService) counterfactualCompare(
+	ctx context.Context,
+	userID uuid.UUID,
+	analysis *model.DiagnosisAnalysisRecord,
+	input DiagnosisReplayInput,
+	baseline map[string]any,
+	targetConfigurationID string,
+) (*DiagnosisReplayReport, error) {
 	targetConfigurationID = strings.TrimSpace(targetConfigurationID)
 	policyRevision, err := DiagnosisDecisionPolicyRevisionForConfiguration(targetConfigurationID)
 	if err != nil {
 		return nil, err
+	}
+	if policyRevision == DiagnosisDecisionPolicyV1 {
+		probe := map[string]any{
+			"status":     "completed",
+			"candidates": []any{map[string]any{"name": "counterfactual-preflight", "confidence": "n/a"}},
+			"governance": map[string]any{"verdict": "accepted"},
+		}
+		preflight := EvaluateDiagnosisDecision(policyRevision, replaySafetyState(input.BodyState), probe)
+		if preflight.Outcome == DiagnosisBlock {
+			replayed := ApplyDiagnosisDecision(map[string]any{
+				"status": "safety_blocked", "scope": "full_body",
+				"summary":    "counterfactual Go pre-agent safety gate blocked ordinary Diagnosis",
+				"candidates": []any{}, "cross_concern_patterns": []any{},
+				"information_gaps": []any{}, "citations": []any{},
+				"safety_summary":       replaySafetyState(input.BodyState),
+				"governance":           map[string]any{"kind": "diagnosis", "verdict": "rejected", "reasons": []string{"active_body_state_safety_concern"}, "issues": []any{}},
+				"agent_configuration":  map[string]any{"id": targetConfigurationID, "role": "diagnosis", "decision_policy_revision": policyRevision},
+				"execution_provenance": map[string]any{"status": "bypassed", "runtime": "go", "reason": "counterfactual_pre_agent_safety_gate"},
+			}, preflight)
+			result, _ := json.Marshal(replayed)
+			return buildDiagnosisReplayReport(
+				"counterfactual", analysis, input, targetConfigurationID,
+				baseline, replayed, result,
+			), nil
+		}
 	}
 	if s.ai == nil {
 		return nil, errors.New("Diagnosis replay AI client is not configured")

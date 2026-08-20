@@ -1,0 +1,118 @@
+{
+  "challenger_configuration_id": "diag-config-5a4a13627e14b4cf",
+  "champion_configuration_id": "diag-config-f492eb1c0c6676ae",
+  "dataset_fingerprint": "82c4ed3bf191e5318c347ac3a9aa5b15986f2934e2ead55a1a0ea0d6b2519c52",
+  "interaction_experiment": {
+    "reason": "cumulative challengers changed one governed boundary at a time; v2 isolates EvidenceGap and v3 isolates Go DecisionAuthority",
+    "required": false
+  },
+  "name": "diagnosis_promotion_v1",
+  "qualification_chain": [
+    {
+      "comparison": null,
+      "configuration_id": "diag-config-f492eb1c0c6676ae",
+      "pass_rate": 1.0,
+      "predecessor_configuration_id": null,
+      "qualified": true,
+      "report": "data/evals/reports/diagnosis_champion_baseline.json"
+    },
+    {
+      "comparison": {
+        "candidate_configuration_id": "diag-config-20fbfc23ca09cbab",
+        "candidate_pass_rate": 1.0,
+        "champion_configuration_id": "diag-config-f492eb1c0c6676ae",
+        "champion_pass_rate": 1.0,
+        "critical_regressions": [],
+        "improvements": [],
+        "margin": 0.02,
+        "non_inferior": true,
+        "pass_rate_delta": 0.0,
+        "promotion_eligible": true,
+        "regressions": [],
+        "slice_deltas": {
+          "challenge": 0.0,
+          "critical-safety": 0.0,
+          "historical-isolation": 0.0,
+          "infection-risk": 0.0,
+          "model-bypass": 0.0,
+          "neurological-risk": 0.0,
+          "no-treatment-side-effect": 0.0,
+          "severe-pain": 0.0,
+          "standard": 0.0,
+          "structured-severity": 0.0,
+          "temporal": 0.0
+        },
+        "slice_regressions": []
+      },
+      "configuration_id": "diag-config-20fbfc23ca09cbab",
+      "pass_rate": 1.0,
+      "predecessor_configuration_id": "diag-config-f492eb1c0c6676ae",
+      "qualified": true,
+      "report": "data/evals/reports/diagnosis_evidence_gap_challenger.json"
+    },
+    {
+      "comparison": {
+        "candidate_configuration_id": "diag-config-5a4a13627e14b4cf",
+        "candidate_pass_rate": 1.0,
+        "champion_configuration_id": "diag-config-20fbfc23ca09cbab",
+        "champion_pass_rate": 1.0,
+        "critical_regressions": [],
+        "improvements": [],
+        "margin": 0.02,
+        "non_inferior": true,
+        "pass_rate_delta": 0.0,
+        "promotion_eligible": true,
+        "regressions": [],
+        "slice_deltas": {
+          "challenge": 0.0,
+          "critical-safety": 0.0,
+          "historical-isolation": 0.0,
+          "infection-risk": 0.0,
+          "model-bypass": 0.0,
+          "neurological-risk": 0.0,
+          "no-treatment-side-effect": 0.0,
+          "severe-pain": 0.0,
+          "standard": 0.0,
+          "structured-severity": 0.0,
+          "temporal": 0.0
+        },
+        "slice_regressions": []
+      },
+      "configuration_id": "diag-config-5a4a13627e14b4cf",
+      "pass_rate": 1.0,
+      "predecessor_configuration_id": "diag-config-20fbfc23ca09cbab",
+      "qualified": true,
+      "report": "data/evals/reports/diagnosis_decision_authority_challenger.json"
+    }
+  ],
+  "ready_for_shadow": true,
+  "reasons": [],
+  "required_policy_reports": [
+    {
+      "minimum_pass_rate": 1.0,
+      "pass_rate": 1.0,
+      "passed": 5,
+      "report": "data/evals/reports/diagnosis_evidence_policy_v2.json",
+      "total": 5
+    }
+  ],
+  "rollout": {
+    "canary_steps_bps": [
+      500,
+      2500,
+      5000
+    ],
+    "promotion_bps": 10000,
+    "shadow_min_samples": 20,
+    "stable_assignment": "sha256-subject-salt-v1",
+    "stop_rules": {
+      "challenger_errors_before_pause": 1,
+      "configuration_mismatches": 0,
+      "forbidden_side_effects": 0,
+      "max_hard_mismatch_rate": 0.1,
+      "max_semantic_mismatch_rate": 0.25,
+      "rate_gate_min_samples": 20,
+      "unsafe_relaxations": 0
+    }
+  }
+}

@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 export BODYSENSE_E2E_STUB_AI=1
+# Exercise the real Phase-9 shadow path in the hermetic validator. Production
+# Compose defaults to champion until operators explicitly advance the rollout.
+export DIAGNOSIS_ROLLOUT_STAGE="shadow"
+export DIAGNOSIS_PROMOTION_RECORD="diagnosis_promotion_v1"
+export DIAGNOSIS_CHAMPION_CONFIGURATION_ID="diag-config-f492eb1c0c6676ae"
+export DIAGNOSIS_CHALLENGER_CONFIGURATION_ID="diag-config-5a4a13627e14b4cf"
+export DIAGNOSIS_ROLLOUT_SALT="local-deploy-shadow-v1"
 
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
@@ -94,5 +101,13 @@ migration_db="bodysense_migration_validator"
 E2E_BASE_URL="http://127.0.0.1:${WEB_PORT}" \
 E2E_API_BASE_URL="http://127.0.0.1:${API_PORT}" \
 pnpm e2e
+
+shadow_observations="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM diagnosis_rollout_observations WHERE stage='shadow' AND champion_configuration_id='diag-config-f492eb1c0c6676ae' AND challenger_configuration_id='diag-config-5a4a13627e14b4cf';")"
+shadow_blockers="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM diagnosis_rollout_observations WHERE stage='shadow' AND (unsafe_relaxation OR forbidden_side_effect OR configuration_mismatch OR shadow_error <> '');")"
+if [[ "$shadow_observations" -lt 1 || "$shadow_blockers" -ne 0 ]]; then
+  echo "DIAGNOSIS_SHADOW_VALIDATION=FAIL observations=${shadow_observations} blockers=${shadow_blockers}" >&2
+  exit 1
+fi
+echo "DIAGNOSIS_SHADOW_VALIDATION=PASS observations=${shadow_observations} blockers=${shadow_blockers}"
 
 echo "LOCAL_DEPLOY_VALIDATION=PASS"
