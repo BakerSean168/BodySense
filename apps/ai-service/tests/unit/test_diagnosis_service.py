@@ -86,6 +86,11 @@ async def test_generate_diagnosis_uses_exact_body_state_revision() -> None:
     assert result["candidates"][0]["basis_fact_ids"] == ["fact-neck-1"]
     assert result["agent_configuration"]["id"].startswith("diag-config-")
     assert result["agent_configuration"]["role"] == "diagnosis"
+    assert result["execution_provenance"]["status"] == "executed"
+    assert result["execution_provenance"]["runtime"] == "pydantic-ai"
+    assert result["execution_provenance"]["gateway_reported_model"] == "test"
+    assert result["execution_provenance"]["usage"]["requests"] >= 1
+    assert result["execution_provenance"]["agent_run_id"]
     assert "R12" in str(model.last_model_request_parameters)
     assert "fact-neck-1" in str(model.last_model_request_parameters)
 
@@ -136,6 +141,8 @@ async def test_generate_diagnosis_blocks_current_positive_red_flag_before_agent_
     assert result["status"] == "safety_blocked"
     assert result["candidates"] == []
     assert result["agent_configuration"]["id"].startswith("diag-config-")
+    assert result["execution_provenance"]["status"] == "bypassed"
+    assert result["execution_provenance"]["reason"] == "python_pre_agent_safety_gate"
     assert model.last_model_request_parameters is None
 
 

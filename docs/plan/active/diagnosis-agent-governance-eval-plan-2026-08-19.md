@@ -788,6 +788,8 @@ Deliverables:
 - evidence/tool attempt identities;
 - reload/detail tests.
 
+Implementation checkpoint (2026-08-20): NS-710/NS-800 adds additive migration `000035_add_diagnosis_decision_trace` and promotes Diagnosis audit metadata from temporary `RawOutput` parsing into first-class immutable columns: indexed `agent_configuration_id`, full `agent_configuration`, `decision_trace`, `execution_provenance`, and `evidence_acquisition_trace`. `diagnosis-decision-trace-v1` ties the exact BodyState revision to configuration, runtime execution/bypass, typed EvidenceAttempts/evidence identities, Python governance evidence, and the Go authority decision. PydanticAI run metadata now records only actually observed fields (`gateway_reported_model`, provider adapter, run/conversation IDs and usage); absent physical-provider/fallback metadata is not invented. Both Python and Go pre-agent safety gates emit explicit bypass provenance. Historical rows are backfilled only from provenance already present in immutable raw output, while new writes build the durable trace at persistence time. The public/detail read model now reads provenance from dedicated columns rather than reparsing raw output.
+
 ### Phase 8 — Replay / configuration comparison
 
 Goal: make failures reusable as regression evidence.

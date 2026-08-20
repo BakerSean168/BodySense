@@ -41,6 +41,10 @@ type aiDiagnosisPayload struct {
 	SafetySummary        json.RawMessage   `json:"safety_summary"`
 	Citations            json.RawMessage   `json:"citations"`
 	Governance           json.RawMessage   `json:"governance"`
+	AgentConfiguration   json.RawMessage   `json:"agent_configuration"`
+	DecisionAuthority    json.RawMessage   `json:"decision_authority"`
+	ExecutionProvenance  json.RawMessage   `json:"execution_provenance"`
+	EvidenceAcquisition  json.RawMessage   `json:"evidence_acquisition"`
 }
 
 type aiDiagnosisItem struct {
@@ -94,16 +98,27 @@ func (s *DiagnosisAnalysisService) PersistAIResult(
 	}
 
 	now := time.Now().UTC()
+	configurationID, configuration := diagnosisConfigurationProvenance(payload.AgentConfiguration)
+	execution := diagnosisJSON(payload.ExecutionProvenance, `{}`)
+	evidenceTrace := diagnosisJSON(payload.EvidenceAcquisition, `{}`)
+	decisionTrace := buildDiagnosisDecisionTrace(
+		bodyStateRevision, payload, configuration, execution, evidenceTrace,
+	)
 	analysis := &model.DiagnosisAnalysisRecord{
 		ID: uuid.New(), UserID: userID, BodyStateRevision: bodyStateRevision,
 		Status: payload.Status, Scope: payload.Scope, Summary: payload.Summary,
-		CrossConcernPatterns: diagnosisJSON(payload.CrossConcernPatterns, `[]`),
-		InformationGaps:      diagnosisJSON(payload.InformationGaps, `[]`),
-		SafetySummary:        diagnosisJSON(payload.SafetySummary, `{}`),
-		Citations:            diagnosisJSON(payload.Citations, `[]`),
-		Governance:           diagnosisJSON(payload.Governance, `{}`),
-		RawOutput:            datatypes.JSON(raw),
-		CreatedAt:            now,
+		CrossConcernPatterns:     diagnosisJSON(payload.CrossConcernPatterns, `[]`),
+		InformationGaps:          diagnosisJSON(payload.InformationGaps, `[]`),
+		SafetySummary:            diagnosisJSON(payload.SafetySummary, `{}`),
+		Citations:                diagnosisJSON(payload.Citations, `[]`),
+		Governance:               diagnosisJSON(payload.Governance, `{}`),
+		AgentConfigurationID:     configurationID,
+		AgentConfiguration:       configuration,
+		DecisionTrace:            decisionTrace,
+		ExecutionProvenance:      execution,
+		EvidenceAcquisitionTrace: evidenceTrace,
+		RawOutput:                datatypes.JSON(raw),
+		CreatedAt:                now,
 	}
 
 	candidates := make([]model.DiagnosisCandidateRecord, 0, len(payload.Candidates))
@@ -216,29 +231,65 @@ func (s *DiagnosisAnalysisService) PublicPayload(analysis *model.DiagnosisAnalys
 		candidates = append(candidates, item)
 	}
 	payload := map[string]any{
-		"analysis_id":            analysis.ID,
-		"body_state_revision":    analysis.BodyStateRevision,
-		"status":                 analysis.Status,
-		"scope":                  analysis.Scope,
-		"summary":                analysis.Summary,
-		"candidates":             candidates,
-		"cross_concern_patterns": json.RawMessage(analysis.CrossConcernPatterns),
-		"information_gaps":       json.RawMessage(analysis.InformationGaps),
-		"safety_summary":         json.RawMessage(analysis.SafetySummary),
-		"citations":              json.RawMessage(analysis.Citations),
-		"governance":             json.RawMessage(analysis.Governance),
-		"created_at":             analysis.CreatedAt,
+		"analysis_id":                analysis.ID,
+		"body_state_revision":        analysis.BodyStateRevision,
+		"status":                     analysis.Status,
+		"scope":                      analysis.Scope,
+		"summary":                    analysis.Summary,
+		"candidates":                 candidates,
+		"cross_concern_patterns":     json.RawMessage(analysis.CrossConcernPatterns),
+		"information_gaps":           json.RawMessage(analysis.InformationGaps),
+		"safety_summary":             json.RawMessage(analysis.SafetySummary),
+		"citations":                  json.RawMessage(analysis.Citations),
+		"governance":                 json.RawMessage(analysis.Governance),
+		"agent_configuration_id":     analysis.AgentConfigurationID,
+		"agent_configuration":        json.RawMessage(analysis.AgentConfiguration),
+		"decision_trace":             json.RawMessage(analysis.DecisionTrace),
+		"execution_provenance":       json.RawMessage(analysis.ExecutionProvenance),
+		"evidence_acquisition_trace": json.RawMessage(analysis.EvidenceAcquisitionTrace),
+		"created_at":                 analysis.CreatedAt,
 	}
 	var raw map[string]json.RawMessage
 	if err := json.Unmarshal(analysis.RawOutput, &raw); err == nil {
-		if configuration := raw["agent_configuration"]; len(configuration) > 0 && string(configuration) != "null" {
-			payload["agent_configuration"] = configuration
-		}
 		if decision := raw["decision_authority"]; len(decision) > 0 && string(decision) != "null" {
 			payload["decision_authority"] = decision
 		}
 	}
 	return payload
+}
+
+func diagnosisConfigurationProvenance(raw json.RawMessage) (string, datatypes.JSON) {
+	configuration := diagnosisJSON(raw, `{}`)
+	var metadata struct {
+		ID string `json:"id"`
+	}
+	_ = json.Unmarshal(configuration, &metadata)
+	return metadata.ID, configuration
+}
+
+func buildDiagnosisDecisionTrace(
+	bodyStateRevision int64,
+	payload aiDiagnosisPayload,
+	configuration datatypes.JSON,
+	execution datatypes.JSON,
+	evidence datatypes.JSON,
+) datatypes.JSON {
+	authorityMode := "pre-envelope-compatibility"
+	decisionAuthority := diagnosisJSON(payload.DecisionAuthority, `{}`)
+	if len(payload.DecisionAuthority) > 0 && string(payload.DecisionAuthority) != "null" {
+		authorityMode = "go-decision-policy"
+	}
+	trace, _ := json.Marshal(map[string]any{
+		"trace_revision":       "diagnosis-decision-trace-v1",
+		"body_state_revision":  bodyStateRevision,
+		"authority_mode":       authorityMode,
+		"agent_configuration":  json.RawMessage(configuration),
+		"execution_provenance": json.RawMessage(execution),
+		"evidence_acquisition": json.RawMessage(evidence),
+		"agent_governance":     json.RawMessage(diagnosisJSON(payload.Governance, `{}`)),
+		"decision_authority":   json.RawMessage(decisionAuthority),
+	})
+	return datatypes.JSON(trace)
 }
 
 func diagnosisJSON(raw json.RawMessage, fallback string) datatypes.JSON {

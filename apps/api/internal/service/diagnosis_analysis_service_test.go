@@ -96,7 +96,7 @@ func TestPersistDiagnosisAnalysisAllowsZeroCandidatesForSafetyBlocked(t *testing
 	svc := NewDiagnosisAnalysisService(repo)
 	raw := json.RawMessage(`{"status":"safety_blocked","scope":"full_body","candidates":[],"safety_summary":{"has_red_flags":true}}`)
 
-	analysis, err := svc.PersistAIResult(context.Background(), uuid.New(), 9, raw)
+	analysis, err := svc.PersistAIResult(context.Background(), uuid.New(), 9, json.RawMessage(raw))
 	if err != nil {
 		t.Fatalf("safety-blocked analysis should be durable: %v", err)
 	}
@@ -163,20 +163,59 @@ func TestAssessCandidatesPersistsIndependentUserState(t *testing.T) {
 	}
 }
 
-func TestPublicPayloadExposesAgentConfigurationFromImmutableRawOutput(t *testing.T) {
-	svc := NewDiagnosisAnalysisService(&fakeDiagnosisAnalysisRepository{})
-	raw := datatypes.JSON(`{"status":"completed","agent_configuration":{"id":"diag-config-test","role":"diagnosis"},"decision_authority":{"policy_revision":"diagnosis-decision-policy-v1","outcome":"allow-normal","reasons":[]}}`)
-	analysis := &model.DiagnosisAnalysisRecord{ID: uuid.New(), RawOutput: raw}
-	payload := svc.PublicPayload(analysis)
-	configuration, ok := payload["agent_configuration"].(json.RawMessage)
-	if !ok {
-		t.Fatalf("expected raw agent_configuration provenance, got %#v", payload["agent_configuration"])
+func TestPersistAndPublicPayloadUseDedicatedDiagnosisProvenance(t *testing.T) {
+	repo := &fakeDiagnosisAnalysisRepository{}
+	svc := NewDiagnosisAnalysisService(repo)
+	raw := datatypes.JSON(`{
+		"status":"completed",
+		"scope":"full_body",
+		"summary":"qualified result",
+		"candidates":[{"name":"candidate","confidence":"中"}],
+		"governance":{"kind":"diagnosis","verdict":"accepted"},
+		"agent_configuration":{"id":"diag-config-test","role":"diagnosis","decision_policy_revision":"diagnosis-decision-policy-v1"},
+		"execution_provenance":{"status":"executed","runtime":"pydantic-ai","gateway_reported_model":"test-model","provider_adapter":"test","agent_run_id":"run-1","usage":{"requests":1,"input_tokens":10,"output_tokens":5,"total_tokens":15}},
+		"evidence_acquisition":{"policy_revision":"diagnosis-evidence-gap-v2","budget":{"used_searches":1},"attempts":[{"gap":{"gap_id":"g1"},"evidence_ids":["e1"]}],"unresolved_critical_gaps":[]},
+		"decision_authority":{"policy_revision":"diagnosis-decision-policy-v1","outcome":"allow-normal","reasons":[]}
+	}`)
+	analysis, err := svc.PersistAIResult(context.Background(), uuid.New(), 9, json.RawMessage(raw))
+	if err != nil {
+		t.Fatalf("PersistAIResult: %v", err)
 	}
-	if !json.Valid(configuration) || string(configuration) != `{"id":"diag-config-test","role":"diagnosis"}` {
-		t.Fatalf("unexpected Agent configuration provenance: %s", configuration)
+	if analysis.AgentConfigurationID != "diag-config-test" {
+		t.Fatalf("expected dedicated configuration id, got %q", analysis.AgentConfigurationID)
+	}
+	if string(analysis.AgentConfiguration) == "{}" || string(analysis.ExecutionProvenance) == "{}" {
+		t.Fatalf("expected dedicated configuration/execution provenance: %#v", analysis)
+	}
+	if string(analysis.EvidenceAcquisitionTrace) == "{}" || string(analysis.DecisionTrace) == "{}" {
+		t.Fatalf("expected evidence + decision trace columns: %#v", analysis)
+	}
+	var trace map[string]any
+	if err := json.Unmarshal(analysis.DecisionTrace, &trace); err != nil {
+		t.Fatalf("decode DecisionTrace: %v", err)
+	}
+	if trace["trace_revision"] != "diagnosis-decision-trace-v1" || trace["authority_mode"] != "go-decision-policy" {
+		t.Fatalf("unexpected DecisionTrace identity: %#v", trace)
+	}
+	repo.byID = analysis
+	reloaded, err := svc.GetByID(context.Background(), analysis.ID, analysis.UserID)
+	if err != nil || reloaded == nil {
+		t.Fatalf("reload Diagnosis provenance: analysis=%#v err=%v", reloaded, err)
+	}
+	if reloaded.AgentConfigurationID != "diag-config-test" || string(reloaded.DecisionTrace) == "{}" {
+		t.Fatalf("reload lost durable provenance: %#v", reloaded)
+	}
+	payload := svc.PublicPayload(reloaded)
+	configuration, ok := payload["agent_configuration"].(json.RawMessage)
+	if !ok || !json.Valid(configuration) {
+		t.Fatalf("expected dedicated agent_configuration provenance, got %#v", payload["agent_configuration"])
+	}
+	decisionTrace, ok := payload["decision_trace"].(json.RawMessage)
+	if !ok || !json.Valid(decisionTrace) {
+		t.Fatalf("expected durable DecisionTrace, got %#v", payload["decision_trace"])
 	}
 	decision, ok := payload["decision_authority"].(json.RawMessage)
 	if !ok || !json.Valid(decision) {
-		t.Fatalf("expected decision authority provenance, got %#v", payload["decision_authority"])
+		t.Fatalf("expected public decision authority, got %#v", payload["decision_authority"])
 	}
 }

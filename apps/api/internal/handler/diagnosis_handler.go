@@ -149,6 +149,10 @@ func (h *DiagnosisHandler) analyzeDiagnosisFromBodyState(
 					"id": configurationID, "role": "diagnosis",
 					"decision_policy_revision": decisionPolicyRevision,
 				},
+				"execution_provenance": map[string]any{
+					"status": "bypassed", "runtime": "go",
+					"reason": "go_pre_agent_safety_gate",
+				},
 				"governance": map[string]any{
 					"kind": "diagnosis", "verdict": "rejected",
 					"reasons": []string{"active_body_state_safety_concern"}, "issues": []any{},
@@ -179,6 +183,14 @@ func (h *DiagnosisHandler) analyzeDiagnosisFromBodyState(
 				"candidates": []any{}, "cross_concern_patterns": []any{},
 				"information_gaps": []any{}, "safety_summary": json.RawMessage(snapshot.SafetyState),
 				"citations": []any{},
+				"agent_configuration": map[string]any{
+					"id": configurationID, "role": "diagnosis",
+					"decision_policy_revision": decisionPolicyRevision,
+				},
+				"execution_provenance": map[string]any{
+					"status": "bypassed", "runtime": "go",
+					"reason": "go_pre_agent_safety_gate",
+				},
 				"governance": map[string]any{
 					"kind": "diagnosis", "verdict": "rejected",
 					"reasons": []string{"active_body_state_safety_concern"}, "issues": []any{},
