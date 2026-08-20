@@ -25,7 +25,6 @@ const (
 	DiagnosisPromotionRecordV1          = "diagnosis_promotion_v1"
 	defaultTreatmentConfigurationID     = "treat-config-85718f8e90ac9d80"
 	treatmentEvidenceGapConfigurationID = "treat-config-f68eec9846664596"
-	TreatmentDecisionPolicyV1           = "treatment-go-acceptance-v1"
 	treatmentLogicalModelV1             = "bodysense-structured"
 )
 

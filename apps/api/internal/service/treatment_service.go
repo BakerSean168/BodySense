@@ -23,7 +23,7 @@ var (
 
 type treatmentRepository interface {
 	CreateProposal(ctx context.Context, userID uuid.UUID, revision model.TreatmentRevision, interventions []model.Intervention) (*model.Treatment, *model.TreatmentRevision, error)
-	AcceptRevision(ctx context.Context, userID, revisionID uuid.UUID, expectedBodyStateRevision int64) (*model.Treatment, *model.TreatmentRevision, bool, error)
+	AcceptRevision(ctx context.Context, userID, revisionID uuid.UUID, expectedBodyStateRevision int64, acceptanceDecisionTrace datatypes.JSON) (*model.Treatment, *model.TreatmentRevision, bool, error)
 	RejectRevision(ctx context.Context, userID, revisionID uuid.UUID) error
 	SetStatus(ctx context.Context, userID uuid.UUID, status string, reasons datatypes.JSON) (*model.Treatment, error)
 	GetCurrent(ctx context.Context, userID uuid.UUID) (*model.Treatment, error)
@@ -148,16 +148,29 @@ func (s *TreatmentService) GenerateProposal(
 	if err != nil {
 		return nil, err
 	}
-	if analysis == nil || (analysis.Status != "completed" && analysis.Status != "partial") || len(analysis.Candidates) == 0 {
-		return nil, ErrTreatmentDiagnosisNotReady
+	facts := TreatmentDecisionFacts{
+		SafetyState:              json.RawMessage(`{}`),
+		CandidateAssessmentReady: true,
+		MaterialReviewStatus:     model.TreatmentStatusActive,
 	}
+	if analysis != nil {
+		facts.DiagnosisStatus = analysis.Status
+		facts.CandidateCount = len(analysis.Candidates)
+	}
+	if decision := EvaluateTreatmentDecision(TreatmentDecisionPolicyV1, TreatmentDecisionGeneration, facts); decision.Outcome == TreatmentBlock {
+		return nil, treatmentDecisionError(decision)
+	}
+
 	if s.freshness != nil {
-		freshness, err := s.freshness.GetOrEvaluate(ctx, userID, analysis)
-		if err != nil {
-			return nil, err
+		freshness, freshnessErr := s.freshness.GetOrEvaluate(ctx, userID, analysis)
+		if freshnessErr != nil {
+			return nil, freshnessErr
 		}
-		if freshness != nil && freshness.State != model.DiagnosisFreshnessFresh {
-			return nil, ErrTreatmentAnalysisStale
+		if freshness != nil {
+			facts.FreshnessState = freshness.State
+		}
+		if decision := EvaluateTreatmentDecision(TreatmentDecisionPolicyV1, TreatmentDecisionGeneration, facts); decision.Outcome == TreatmentBlock {
+			return nil, treatmentDecisionError(decision)
 		}
 	}
 
@@ -165,16 +178,26 @@ func (s *TreatmentService) GenerateProposal(
 	if err != nil {
 		return nil, err
 	}
-	if bodyStateRequiresSafetyReview(snapshot.SafetyState) {
-		return nil, ErrTreatmentSafetyBlocked
+	facts.SafetyState = snapshot.SafetyState
+	facts.CurrentBodyStateRevision = snapshot.CurrentRevision
+	if decision := EvaluateTreatmentDecision(TreatmentDecisionPolicyV1, TreatmentDecisionGeneration, facts); decision.Outcome == TreatmentBlock {
+		return nil, treatmentDecisionError(decision)
 	}
+
 	assessments, err := s.diagnosis.ListAssessments(ctx, userID, analysis.ID)
 	if err != nil {
 		return nil, err
 	}
-	if !treatmentCandidateAssessmentsReady(analysis, assessments) {
-		return nil, ErrTreatmentCandidateAssessmentRequired
+	facts.CandidateAssessmentReady = treatmentCandidateAssessmentsReady(analysis, assessments)
+	generationDecision := EvaluateTreatmentDecision(
+		TreatmentDecisionPolicyV1,
+		TreatmentDecisionGeneration,
+		facts,
+	)
+	if generationDecision.Outcome != TreatmentAllowProposal {
+		return nil, treatmentDecisionError(generationDecision)
 	}
+
 	profilePayload := json.RawMessage(`{}`)
 	if s.profiles != nil {
 		if profile, profileErr := s.profiles.GetProfile(ctx, userID); profileErr == nil && profile != nil {
@@ -233,6 +256,12 @@ func (s *TreatmentService) GenerateProposal(
 			evidenceIDs = append(evidenceIDs, parsed)
 		}
 	}
+	generationTrace := buildTreatmentDecisionTrace(
+		generationDecision,
+		facts,
+		analysis.ID,
+		configurationID,
+	)
 	_, revision, err := s.repo.CreateProposal(ctx, userID, model.TreatmentRevision{
 		SourceBodyStateRevision:   snapshot.CurrentRevision,
 		SourceDiagnosisAnalysisID: analysis.ID,
@@ -246,6 +275,7 @@ func (s *TreatmentService) GenerateProposal(
 		AgentConfiguration:        datatypes.JSON(normalizeRaw(payload.AgentConfiguration, `{}`)),
 		ExecutionProvenance:       datatypes.JSON(normalizeRaw(payload.ExecutionProvenance, `{}`)),
 		EvidenceAcquisitionTrace:  datatypes.JSON(normalizeRaw(payload.EvidenceAcquisition, `{}`)),
+		GenerationDecisionTrace:   generationTrace,
 		ChangeReason:              strings.TrimSpace(input.ChangeReason),
 	}, interventions)
 	if err != nil {
@@ -270,35 +300,56 @@ func (s *TreatmentService) AcceptProposal(ctx context.Context, userID, revisionI
 	if err != nil {
 		return nil, err
 	}
-	if bodyStateRequiresSafetyReview(snapshot.SafetyState) {
-		return nil, ErrTreatmentSafetyBlocked
+	facts := TreatmentDecisionFacts{
+		SafetyState:              snapshot.SafetyState,
+		CandidateAssessmentReady: true,
+		ProposalAcceptanceState:  revision.AcceptanceState,
+		SourceBodyStateRevision:  revision.SourceBodyStateRevision,
+		CurrentBodyStateRevision: snapshot.CurrentRevision,
+		MaterialReviewStatus:     model.TreatmentStatusActive,
+		MaterialReviewReasons:    []TreatmentReviewReason{},
+		DiagnosisStatus:          "completed",
+		CandidateCount:           1,
+		FreshnessState:           model.DiagnosisFreshnessFresh,
 	}
-	if snapshot.CurrentRevision < revision.SourceBodyStateRevision {
-		return nil, ErrTreatmentProposalOutdated
+	if decision := EvaluateTreatmentDecision(TreatmentDecisionPolicyV1, TreatmentDecisionAcceptance, facts); decision.Outcome == TreatmentBlock {
+		return nil, treatmentDecisionError(decision)
 	}
 
 	analysis, err := s.diagnosis.GetByID(ctx, revision.SourceDiagnosisAnalysisID, userID)
 	if err != nil {
 		return nil, err
 	}
-	if analysis == nil || (analysis.Status != "completed" && analysis.Status != "partial") || len(analysis.Candidates) == 0 {
-		return nil, ErrTreatmentDiagnosisNotReady
+	facts.DiagnosisStatus = ""
+	facts.CandidateCount = 0
+	if analysis != nil {
+		facts.DiagnosisStatus = analysis.Status
+		facts.CandidateCount = len(analysis.Candidates)
 	}
+	if decision := EvaluateTreatmentDecision(TreatmentDecisionPolicyV1, TreatmentDecisionAcceptance, facts); decision.Outcome == TreatmentBlock {
+		return nil, treatmentDecisionError(decision)
+	}
+
 	if s.freshness != nil {
 		freshness, freshnessErr := s.freshness.GetOrEvaluate(ctx, userID, analysis)
 		if freshnessErr != nil {
 			return nil, freshnessErr
 		}
-		if freshness != nil && freshness.State != model.DiagnosisFreshnessFresh {
-			return nil, ErrTreatmentAnalysisStale
+		facts.FreshnessState = ""
+		if freshness != nil {
+			facts.FreshnessState = freshness.State
+		}
+		if decision := EvaluateTreatmentDecision(TreatmentDecisionPolicyV1, TreatmentDecisionAcceptance, facts); decision.Outcome == TreatmentBlock {
+			return nil, treatmentDecisionError(decision)
 		}
 	}
 	assessments, err := s.diagnosis.ListAssessments(ctx, userID, analysis.ID)
 	if err != nil {
 		return nil, err
 	}
-	if !treatmentCandidateAssessmentsReady(analysis, assessments) {
-		return nil, ErrTreatmentCandidateAssessmentRequired
+	facts.CandidateAssessmentReady = treatmentCandidateAssessmentsReady(analysis, assessments)
+	if decision := EvaluateTreatmentDecision(TreatmentDecisionPolicyV1, TreatmentDecisionAcceptance, facts); decision.Outcome == TreatmentBlock {
+		return nil, treatmentDecisionError(decision)
 	}
 
 	if snapshot.CurrentRevision > revision.SourceBodyStateRevision {
@@ -306,13 +357,30 @@ func (s *TreatmentService) AcceptProposal(ctx context.Context, userID, revisionI
 		if revisionErr != nil {
 			return nil, revisionErr
 		}
-		status, reasons := EvaluateTreatmentReviewPolicy(analysis, revisions)
-		if status != model.TreatmentStatusActive || len(reasons) > 0 {
-			return nil, ErrTreatmentProposalOutdated
-		}
+		facts.MaterialReviewStatus, facts.MaterialReviewReasons = EvaluateTreatmentReviewPolicy(analysis, revisions)
 	}
+	acceptanceDecision := EvaluateTreatmentDecision(
+		TreatmentDecisionPolicyV1,
+		TreatmentDecisionAcceptance,
+		facts,
+	)
+	if acceptanceDecision.Outcome != TreatmentAllowAcceptance {
+		return nil, treatmentDecisionError(acceptanceDecision)
+	}
+	acceptanceTrace := buildTreatmentDecisionTrace(
+		acceptanceDecision,
+		facts,
+		analysis.ID,
+		revision.AgentConfigurationID,
+	)
 
-	treatment, _, accepted, err := s.repo.AcceptRevision(ctx, userID, revisionID, snapshot.CurrentRevision)
+	treatment, _, accepted, err := s.repo.AcceptRevision(
+		ctx,
+		userID,
+		revisionID,
+		snapshot.CurrentRevision,
+		acceptanceTrace,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -577,12 +645,50 @@ func treatmentCandidateAssessmentsReady(
 }
 
 func bodyStateRequiresSafetyReview(raw json.RawMessage) bool {
-	var state struct {
-		HasRedFlags bool   `json:"has_red_flags"`
-		Status      string `json:"status"`
+	requiresReview, err := strictTreatmentSafetyReview(raw)
+	return err != nil || requiresReview
+}
+
+func treatmentDecisionError(decision TreatmentDecision) error {
+	if len(decision.Reasons) == 0 {
+		return ErrTreatmentSafetyBlocked
 	}
-	_ = json.Unmarshal(raw, &state)
-	return state.HasRedFlags && (state.Status == "requires_review" || state.Status == "active")
+	switch decision.Reasons[0] {
+	case "diagnosis_not_ready":
+		return ErrTreatmentDiagnosisNotReady
+	case "diagnosis_not_fresh":
+		return ErrTreatmentAnalysisStale
+	case "active_body_state_safety_concern", "malformed_or_unknown_safety_state",
+		"unsupported_decision_policy_revision", "unsupported_decision_phase":
+		return fmt.Errorf("%w: %s", ErrTreatmentSafetyBlocked, decision.Reasons[0])
+	case "candidate_assessment_required":
+		return ErrTreatmentCandidateAssessmentRequired
+	case "proposal_not_proposed":
+		return errors.New("only proposed treatment revisions can be accepted")
+	case "body_state_revision_regressed", "material_related_body_state_change":
+		return ErrTreatmentProposalOutdated
+	default:
+		return fmt.Errorf("%w: %s", ErrTreatmentSafetyBlocked, decision.Reasons[0])
+	}
+}
+
+func buildTreatmentDecisionTrace(
+	decision TreatmentDecision,
+	facts TreatmentDecisionFacts,
+	diagnosisAnalysisID uuid.UUID,
+	agentConfigurationID string,
+) datatypes.JSON {
+	trace, _ := json.Marshal(map[string]any{
+		"trace_revision":         TreatmentDecisionTraceV1,
+		"policy_revision":        decision.PolicyRevision,
+		"phase":                  decision.Phase,
+		"outcome":                decision.Outcome,
+		"reasons":                decision.Reasons,
+		"diagnosis_analysis_id":  diagnosisAnalysisID,
+		"agent_configuration_id": agentConfigurationID,
+		"facts":                  facts,
+	})
+	return datatypes.JSON(trace)
 }
 
 func normalizeTreatmentAgentPayload(raw json.RawMessage) (*treatmentAgentPayload, error) {

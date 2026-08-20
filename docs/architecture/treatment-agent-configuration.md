@@ -81,7 +81,13 @@ Migration `000039_add_treatment_evidence_acquisition_trace` persists that non-au
 
 The v2 Challenger passes the same `treatment_qualification_v1` dataset 4/4 with the same dataset fingerprint as v1, producing zero deterministic regressions and a pass-rate delta of 0.0. The dedicated Treatment EvidenceGap policy suite passes 5/5. This makes v2 eligible for later rollout-governance work, but it does **not** promote v2: all committed Compose definitions continue to default `TREATMENT_AGENT_CONFIGURATION_ID` to v1.
 
-Future Treatment work still needs durable Go decision/acceptance trace and an explicit shadow/canary/promotion policy before any governed production rollout of v2.
+## Go DecisionAuthority and DecisionTrace
+
+Go's existing Treatment generation and acceptance gates are now represented by the pure `treatment-go-acceptance-v1` deny-overrides policy. The policy deliberately excludes model confidence and Agent prose. Its authority facts are Diagnosis status/candidate count, Diagnosis freshness, durable BodyState safety state, candidate-assessment readiness, proposal acceptance state, pinned/current BodyState revisions, and the deterministic material-change review result.
+
+Malformed, unknown or internally inconsistent BodyState safety facts fail closed. A valid proposal stores `generation_decision_trace`; successful acceptance stores `acceptance_decision_trace` in the same repository transaction that changes the revision to accepted and moves the current Treatment pointer. The acceptance trace is computed against an exact BodyState revision, and the existing transaction guard requires that same revision still be current before the transition commits. Both traces include the policy version, phase, outcome/reasons, DiagnosisAnalysis identity, Agent configuration identity and evaluated facts.
+
+This closes deterministic authority provenance for successful Treatment artifacts. An explicit Treatment shadow/canary/promotion policy is still required before any governed production rollout of v2.
 
 ## Protected contracts
 

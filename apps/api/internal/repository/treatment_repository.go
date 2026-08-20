@@ -122,6 +122,7 @@ func (r *TreatmentRepository) AcceptRevision(
 	ctx context.Context,
 	userID, revisionID uuid.UUID,
 	expectedBodyStateRevision int64,
+	acceptanceDecisionTrace datatypes.JSON,
 ) (*model.Treatment, *model.TreatmentRevision, bool, error) {
 	var treatment model.Treatment
 	var revision model.TreatmentRevision
@@ -171,9 +172,10 @@ func (r *TreatmentRepository) AcceptRevision(
 		if err := tx.WithContext(ctx).Model(&model.TreatmentRevision{}).
 			Where("id = ? AND treatment_id = ?", revision.ID, locked.ID).
 			Updates(map[string]any{
-				"acceptance_state": model.TreatmentAcceptanceAccepted,
-				"lifecycle_state":  model.TreatmentStatusActive,
-				"accepted_at":      now,
+				"acceptance_state":          model.TreatmentAcceptanceAccepted,
+				"lifecycle_state":           model.TreatmentStatusActive,
+				"accepted_at":               now,
+				"acceptance_decision_trace": acceptanceDecisionTrace,
 			}).Error; err != nil {
 			return err
 		}
