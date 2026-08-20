@@ -1,0 +1,61 @@
+{
+  "use_cases": [
+    {
+      "name": "consultation.reply (services/agent tool_executor/tool_registry/reply_fallback + runtime/consultation_thread.py + prompts/consultation.py)",
+      "gateway_routed": true,
+      "has_immutable_config": false,
+      "has_go_provenance": false,
+      "has_evals": false,
+      "has_replay_governance": false
+    },
+    {
+      "name": "runtime (api/routes/runtime.py transport for consultation.reply)",
+      "gateway_routed": true,
+      "has_immutable_config": false,
+      "has_go_provenance": false,
+      "has_evals": false,
+      "has_replay_governance": false
+    },
+    {
+      "name": "posture.analyze (services/posture_analyzer.py, pose_estimator.py, api/routes/posture.py, prompts/posture.py)",
+      "gateway_routed": true,
+      "has_immutable_config": false,
+      "has_go_provenance": false,
+      "has_evals": false,
+      "has_replay_governance": false
+    },
+    {
+      "name": "conversation.title (api/routes/title.py)",
+      "gateway_routed": true,
+      "has_immutable_config": false,
+      "has_go_provenance": false,
+      "has_evals": false,
+      "has_replay_governance": false
+    },
+    {
+      "name": "knowledge.curate (rag/ai_curator.py, knowledge_library.py, api/routes/knowledge.py)",
+      "gateway_routed": true,
+      "has_immutable_config": false,
+      "has_go_provenance": false,
+      "has_evals": false,
+      "has_replay_governance": false
+    },
+    {
+      "name": "knowledge.split (rag/ai_splitter.py, curated_source.py, api/routes/knowledge.py)",
+      "gateway_routed": true,
+      "has_immutable_config": false,
+      "has_go_provenance": false,
+      "has_evals": false,
+      "has_replay_governance": false
+    },
+    {
+      "name": "ocr (services/ocr.py, indicator_extractor.py, api/routes/ocr.py) - NON-LLM classical Tesseract+regex",
+      "gateway_routed": false,
+      "has_immutable_config": false,
+      "has_go_provenance": false,
+      "has_evals": false,
+      "has_replay_governance": false
+    }
+  ],
+  "overall_gap_summary": "## North-Star Gap Report (excl. diagnosis/treatment/assessment)\n\nNorth-Star reference (Diagnosis/Treatment): immutable AgentConfiguration manifest in config/agents/*.yaml (fingerprint + configuration_id) -> PydanticAI Agent -> LiteLLM gateway logical model -> Go pins configuration_id on request and persists DecisionTrace/ExecutionProvenance/AgentConfigurationID in DB, plus replay + rollout governance + promotion policy. ALL audited use-cases below stop at the LiteLLM gateway logical-model layer only; NONE carry an immutable manifest and NONE are Go decision-authority-provenanced or replay-governed.\n\n### consultation.reply (+ runtime transport)\n- CURRENT: LangGraph checkpointed thread (runtime/consultation_thread.py) calls AIService.generate_stream(use_case='consultation.reply' -> LiteLLM 'bodysense-consultation', temp 0.7, 2048). Tool loop via services/agent tool_registry/tool_executor/reply_fallback. Safety via red_flag_detector + ask_user interrupt. reply_fallback is deterministic (no LLM). NOT a bare PydanticAI Agent - it is a LangGraph runtime over the raw OpenAI-compat gateway path; no immutable config, no decision trace. Prompt (prompts/consultation.py) is a plain module-level string with NO revision constant (contrast DIAGNOSIS_PROMPT_REVISION).\n- HAS primitive: LiteLLM gateway routing; citation/knowledge-gap events; red-flag safety detection; checkpointing; deterministic fallback.\n- MISSING primitive: immutable AgentConfiguration manifest + fingerprint/configuration_id; prompt/model/generation revision constants; PydanticAI typed agent boundary over gateway; Go decision trace / execution provenance / AgentConfigurationID persistence (Go consultation/thread_projection handler persists runtime events only); eval of the actual LLM reply (consultation_eval_runner covers only red_flags + faithfulness safety surfaces, not reply generation); replay; rollout governance.\n\n### posture.analyze\n- CURRENT: posture_analyzer.py -> AIService.generate(use_case='posture.analyze' -> 'bodysense-posture', temp 0.2, json_object) + MediaPipe geometric fusion (pose_estimator.py, non-LLM) + governance seam guard_structured_output('posture') -> verdict accepted/degraded/rejected (runtime/governance.py). Best non-NorthStar use-case by far (single governance gate + anti-hallucination metric stripping + red-flag scan).\n- HAS primitive: gateway routing; structured-output governance gate; red-flag/faithfulness checks; anti-hallucination geometric constraint; required-field schema check.\n- MISSING primitive: immutable config manifest/config_id; decision trace/provenance persisted by Go (upload path stores analysis_result JSON but no AgentConfigurationID/provenance/replay); evals; replay/rollout governance.\n\n### conversation.title\n- CURRENT: title.py -> AIService.generate(use_case=TITLE_ROUTE -> 'bodysense-text', temp 0.3, 100) with hardcoded _TITLE_PROMPT; on error returns '新对话'.\n- HAS primitive: LiteLLM gateway logical route.\n- MISSING primitive: immutable config; Go provenance; evals; replay/governance (all absent; low-risk utility but zero governance).\n\n### knowledge.curate / knowledge.split\n- CURRENT: ai_curator.py (KNOWLEDGE_CURATOR_ROUTE -> 'bodysense-structured', temp 0.3, json_object) per-unit; ai_splitter.py (KNOWLEDGE_SPLITTER_ROUTE) batching with HeuristicSplitter fallback. Both pure AIService.generate over gateway; 3-stage JSON parse fallback; non-blocking failure handling.\n- HAS primitive: LiteLLM gateway routing; non-blocking failure + heuristic fallback; review_status quality flag (curator).\n- MISSING primitive: immutable config; Go provenance/decision trace (ingestion writes to knowledge library only); evals; replay/governance.\n\n### ocr\n- CURRENT: classical Tesseract (chi_sim+eng) + regex indicator_extractor. NOT an LLM consumption point; absent from _GATEWAY_ROUTES. No LLM, so North-Star LLM primitives are N/A.\n- HAS primitive: deterministic confidence scoring; file-type/size guards.\n- MISSING primitive (N/A for LLM North-Star): no LLM gateway/config/provenance/evals/replay needed.\n\n### Overall\nAll logical routes are gateway-routed via the shared _GATEWAY_ROUTES registry - that is the ONLY completed North-Star primitive for every non-diagnosis/treatment/assessment use-case. Everything beyond routing (immutable configuration, Go decision authority + provenance, replay, rollout governance) is implemented exclusively for diagnosis/treatment; the rest are ungoverned gate calls with ad-hoc safety (posture) or none (title/knowledge). Highest-impact gap: consultation.reply (primary user-facing health dialog) has no immutable config, no Go-persisted decision trace/provenance, and no reply-generation evals."
+}

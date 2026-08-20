@@ -1,44 +1,25 @@
 # Active Plans
 
-There is currently no active Diagnosis Agent platform migration plan. The
-configuration/eval/EvidenceGap/DecisionAuthority/provenance/replay/promotion and
-legacy-routing retirement program completed on 2026-08-20 and is archived at:
+The current active program is the **Assessment Agent Platform North-Star Refactor & Governance Plan**
+(bringing the Assessment role to full parity with the already-completed Diagnosis and Treatment
+platforms):
 
-- [`../archive/2026-08-diagnosis-agent-platform/README.md`](../archive/2026-08-diagnosis-agent-platform/README.md)
-- [`../archive/2026-08-diagnosis-agent-platform/diagnosis-agent-governance-eval-plan-2026-08-19.md`](../archive/2026-08-diagnosis-agent-platform/diagnosis-agent-governance-eval-plan-2026-08-19.md)
-- [`../archive/2026-08-diagnosis-agent-platform/diagnosis-legacy-deletion-ledger-2026-08-19.md`](../archive/2026-08-diagnosis-agent-platform/diagnosis-legacy-deletion-ledger-2026-08-19.md)
+- [`assessment-agent-northstar-plan-2026-08-20.md`](./assessment-agent-northstar-plan-2026-08-20.md)
 
-The Treatment frozen-input replay/comparison pass is complete and archived at:
+Work proceeds in the shared program loop: design → implement → batch review → repair → full gates →
+PR → checks → merge → next phase. This program continues until every AI Service Agent role has
+converged on the layered North-Star platform (Go authority/provenance → Python PydanticAI runtime →
+LiteLLM gateway), not until one PR is merged.
 
-- [`../archive/2026-08-treatment-replay-comparison/README.md`](../archive/2026-08-treatment-replay-comparison/README.md)
+## Archived (completed) programs
 
-The Treatment rollout-governance pass is complete and archived at:
+- Diagnosis Agent platform (Phase 0–10) — archived under `../archive/2026-08-diagnosis-agent-platform/`
+- Treatment Agent platform (foundation, EvidenceGap, DecisionTrace, replay/comparison, rollout
+  governance) — archived under `../archive/2026-08-treatment-*/`
 
-- [`../archive/2026-08-treatment-rollout-governance/README.md`](../archive/2026-08-treatment-rollout-governance/README.md)
+Authoritative architecture documents:
 
-The Treatment DecisionTrace authority pass is complete and archived at:
-
-- [`../archive/2026-08-treatment-decision-trace/README.md`](../archive/2026-08-treatment-decision-trace/README.md)
-
-The Treatment EvidenceGap Challenger is complete and archived at:
-
-- [`../archive/2026-08-treatment-evidence-gap/README.md`](../archive/2026-08-treatment-evidence-gap/README.md)
-
-The Treatment Agent platform foundation is also complete and archived at:
-
-- [`../archive/2026-08-treatment-agent-platform-foundation/README.md`](../archive/2026-08-treatment-agent-platform-foundation/README.md)
-
-The React desktop workbench refactor is complete and archived at:
-
-- [`../archive/2026-08-react-workbench/react-desktop-workbench-refactor-2026-08-17.md`](../archive/2026-08-react-workbench/react-desktop-workbench-refactor-2026-08-17.md)
-
-Current authoritative documents:
-
-- UI/UX: [`../../architecture/web-desktop-workbench-ui-ux.md`](../../architecture/web-desktop-workbench-ui-ux.md)
-- Current system: [`../../architecture/current-longitudinal-system.md`](../../architecture/current-longitudinal-system.md)
-- Model gateway: [`../../architecture/model-gateway-routing.md`](../../architecture/model-gateway-routing.md)
-- Diagnosis promotion: [`../../architecture/diagnosis-promotion-governance.md`](../../architecture/diagnosis-promotion-governance.md)
-- BodyState domain: [`../../architecture/longitudinal-body-state-domain.md`](../../architecture/longitudinal-body-state-domain.md)
-- Business decision: [`../../adr/0004-adopt-longitudinal-body-state-model.md`](../../adr/0004-adopt-longitudinal-body-state-model.md)
-
-Completed plans, checkpoints and superseded designs remain under [`../archive`](../archive) for learning and audit only.
+- [`../../architecture/current-longitudinal-system.md`](../../architecture/current-longitudinal-system.md)
+- [`../../architecture/model-gateway-routing.md`](../../architecture/model-gateway-routing.md)
+- [`../../architecture/treatment-agent-configuration.md`](../../architecture/treatment-agent-configuration.md)
+- [`../../architecture/treatment-promotion-governance.md`](../../architecture/treatment-promotion-governance.md)
