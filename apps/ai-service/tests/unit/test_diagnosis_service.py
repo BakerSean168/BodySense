@@ -3,7 +3,6 @@
 import pytest
 from pydantic_ai.models.test import TestModel
 
-from src.agents.diagnosis_agent import create_diagnosis_agent
 from src.configuration.diagnosis_agent_config import get_default_diagnosis_configuration
 from src.services.diagnosis_service import DiagnosisService
 
@@ -67,7 +66,7 @@ def _agent_output(candidates: list[dict], status: str = "completed") -> dict:
 
 def _service(output: dict) -> tuple[DiagnosisService, TestModel]:
     model = TestModel(custom_output_args=output)
-    service = DiagnosisService(diagnosis_agent=create_diagnosis_agent(model))
+    service = DiagnosisService(model_resolver=lambda _config: model)
     return service, model
 
 

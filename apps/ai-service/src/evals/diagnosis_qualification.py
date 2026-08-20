@@ -14,7 +14,7 @@ from pydantic_ai import ToolCallPart, capture_run_messages
 from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 
-from src.agents.diagnosis_agent import create_diagnosis_agent
+from src.agents.diagnosis_agent import diagnosis_tool_names
 from src.configuration.diagnosis_agent_config import (
     DiagnosisAgentManifest,
     get_default_diagnosis_configuration,
@@ -65,7 +65,6 @@ class DiagnosisEvalMetadata(BaseModel):
     critical: bool = False
     expected_status: str = Field(min_length=1)
     expected_agent_executed: bool = True
-    expected_available_tools: list[str] = Field(default_factory=lambda: ["search_evidence"])
     max_tool_calls: int = Field(default=0, ge=0)
     min_candidates: int = Field(default=0, ge=0)
     max_candidates: int | None = Field(default=None, ge=0)
@@ -211,11 +210,17 @@ class ToolTracePolicy(
         trace = ctx.output.trace
         if trace.agent_executed != metadata.expected_agent_executed:
             return False
-        if sorted(trace.available_tools) != sorted(metadata.expected_available_tools):
+        config = get_diagnosis_configuration(ctx.output.configuration_id)
+        expected_tools = (
+            diagnosis_tool_names(config.tool_policy_revision)
+            if metadata.expected_agent_executed
+            else []
+        )
+        if sorted(trace.available_tools) != sorted(expected_tools):
             return False
         if len(trace.tool_calls) > metadata.max_tool_calls:
             return False
-        return all(name in metadata.expected_available_tools for name in trace.tool_calls)
+        return all(name in expected_tools for name in trace.tool_calls)
 
 
 def load_dataset_document(path: Path = DEFAULT_DATASET_PATH) -> DiagnosisDatasetDocument:
@@ -272,14 +277,7 @@ def _configured_deterministic_service(
     config: DiagnosisAgentManifest,
 ) -> tuple[DiagnosisService, Any]:
     model = deterministic_diagnosis_model(call_tools=[])
-    agent = create_diagnosis_agent(
-        model,
-        prompt_revision=config.prompt_revision,
-        output_schema_revision=config.output_schema_revision,
-        tool_policy_revision=config.tool_policy_revision,
-        evidence_policy_revision=config.evidence_policy_revision,
-    )
-    return DiagnosisService(diagnosis_agent=agent), model
+    return DiagnosisService(model_resolver=lambda _config: model), model
 
 
 def build_deterministic_task(configuration_id: str | None = None) -> Any:

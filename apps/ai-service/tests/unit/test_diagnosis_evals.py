@@ -1,6 +1,7 @@
 import copy
 from pathlib import Path
 
+from src.configuration.diagnosis_agent_config import CONFIG_ROOT, load_manifest
 from src.evals.diagnosis_qualification import (
     DATASET_SCHEMA_PATH,
     DEFAULT_DATASET_PATH,
@@ -75,3 +76,23 @@ def test_qualification_dataset_path_is_repository_data_file() -> None:
     assert isinstance(DEFAULT_DATASET_PATH, Path)
     assert DEFAULT_DATASET_PATH.name == "diagnosis_qualification.yaml"
     assert DEFAULT_DATASET_PATH.exists()
+
+
+def test_evidence_gap_challenger_is_paired_non_inferior_to_v1_champion() -> None:
+    champion = report_summary(
+        run_diagnosis_qualification(configuration_id="diag-config-f492eb1c0c6676ae")
+    )
+    challenger_config = load_manifest(CONFIG_ROOT / "diagnosis-v2-evidence-gap.yaml")
+    challenger = report_summary(
+        run_diagnosis_qualification(configuration_id=challenger_config.configuration_id)
+    )
+
+    comparison = compare_qualification_summaries(champion, challenger)
+
+    assert challenger["qualification"]["qualified"] is True
+    assert comparison["non_inferior"] is True
+    assert comparison["promotion_eligible"] is True
+    assert comparison["pass_rate_delta"] == 0.0
+    assert comparison["critical_regressions"] == []
+    cases = {case["name"]: case for case in challenger["cases"]}
+    assert cases["mild-neck-load"]["trace"]["available_tools"] == ["acquire_evidence"]

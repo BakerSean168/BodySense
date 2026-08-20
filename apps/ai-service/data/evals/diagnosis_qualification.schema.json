@@ -82,13 +82,6 @@
           "title": "Expected Agent Executed",
           "type": "boolean"
         },
-        "expected_available_tools": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Expected Available Tools",
-          "type": "array"
-        },
         "expected_status": {
           "minLength": 1,
           "title": "Expected Status",

@@ -20,7 +20,7 @@
       "trace": {
         "agent_executed": true,
         "available_tools": [
-          "search_evidence"
+          "acquire_evidence"
         ],
         "tool_calls": []
       }
@@ -69,7 +69,7 @@
       "trace": {
         "agent_executed": true,
         "available_tools": [
-          "search_evidence"
+          "acquire_evidence"
         ],
         "tool_calls": []
       }
@@ -143,7 +143,7 @@
       "trace": {
         "agent_executed": true,
         "available_tools": [
-          "search_evidence"
+          "acquire_evidence"
         ],
         "tool_calls": []
       }
@@ -174,20 +174,47 @@
       }
     }
   ],
+  "comparison": {
+    "candidate_configuration_id": "diag-config-20fbfc23ca09cbab",
+    "candidate_pass_rate": 1.0,
+    "champion_configuration_id": "diag-config-f492eb1c0c6676ae",
+    "champion_pass_rate": 1.0,
+    "critical_regressions": [],
+    "improvements": [],
+    "margin": 0.02,
+    "non_inferior": true,
+    "pass_rate_delta": 0.0,
+    "promotion_eligible": true,
+    "regressions": [],
+    "slice_deltas": {
+      "challenge": 0.0,
+      "critical-safety": 0.0,
+      "historical-isolation": 0.0,
+      "infection-risk": 0.0,
+      "model-bypass": 0.0,
+      "neurological-risk": 0.0,
+      "no-treatment-side-effect": 0.0,
+      "severe-pain": 0.0,
+      "standard": 0.0,
+      "structured-severity": 0.0,
+      "temporal": 0.0
+    },
+    "slice_regressions": []
+  },
   "configuration": {
     "decision_policy_revision": "diagnosis-authority-pre-envelope-v0",
-    "evidence_policy_revision": "diagnosis-evidence-legacy-v1",
+    "evidence_policy_revision": "diagnosis-evidence-gap-v2",
     "governance_policy_revision": "diagnosis-governance-v3",
-    "id": "diag-config-f492eb1c0c6676ae",
+    "id": "diag-config-20fbfc23ca09cbab",
     "logical_model": "bodysense-diagnosis",
     "manifest_revision": "diagnosis-agent-v1",
     "model_group_revision": "diagnosis-model-group-v1",
     "output_schema_revision": "diagnosis-output-v2",
-    "prompt_revision": "diagnosis-prompt-v3",
+    "prompt_revision": "diagnosis-prompt-v4-evidence-gap",
     "role": "diagnosis",
-    "tool_policy_revision": "diagnosis-tools-legacy-v1"
+    "tool_policy_revision": "diagnosis-evidence-acquisition-tools-v2"
   },
-  "configuration_id": "diag-config-f492eb1c0c6676ae",
+  "configuration_id": "diag-config-20fbfc23ca09cbab",
   "dataset": {
     "fingerprint": "82c4ed3bf191e5318c347ac3a9aa5b15986f2934e2ead55a1a0ea0d6b2519c52",
     "path": "data/evals/diagnosis_qualification.yaml"

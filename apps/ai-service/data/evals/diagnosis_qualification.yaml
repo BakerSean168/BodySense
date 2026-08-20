@@ -21,7 +21,6 @@ cases:
       slices: [standard, no-treatment-side-effect]
       expected_status: completed
       expected_agent_executed: true
-      expected_available_tools: [search_evidence]
       max_tool_calls: 0
       min_candidates: 1
       required_concern_keys: ["region:颈肩"]
@@ -47,7 +46,6 @@ cases:
       critical: true
       expected_status: safety_blocked
       expected_agent_executed: false
-      expected_available_tools: []
       max_tool_calls: 0
       min_candidates: 0
       max_candidates: 0
@@ -79,7 +77,6 @@ cases:
       slices: [temporal, historical-isolation]
       expected_status: completed
       expected_agent_executed: true
-      expected_available_tools: [search_evidence]
       max_tool_calls: 0
       min_candidates: 1
       required_concern_keys: ["region:颈肩"]
@@ -105,7 +102,6 @@ cases:
       critical: true
       expected_status: safety_blocked
       expected_agent_executed: false
-      expected_available_tools: []
       max_tool_calls: 0
       min_candidates: 0
       max_candidates: 0
@@ -131,7 +127,6 @@ cases:
       critical: true
       expected_status: safety_blocked
       expected_agent_executed: false
-      expected_available_tools: []
       max_tool_calls: 0
       min_candidates: 0
       max_candidates: 0
@@ -163,7 +158,6 @@ cases:
       slices: [temporal, historical-isolation, challenge]
       expected_status: completed
       expected_agent_executed: true
-      expected_available_tools: [search_evidence]
       max_tool_calls: 0
       min_candidates: 1
       required_concern_keys: ["region:颈肩"]
@@ -189,7 +183,6 @@ cases:
       critical: true
       expected_status: safety_blocked
       expected_agent_executed: false
-      expected_available_tools: []
       max_tool_calls: 0
       min_candidates: 0
       max_candidates: 0

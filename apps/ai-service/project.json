@@ -3,7 +3,10 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "apps/ai-service",
   "projectType": "application",
-  "tags": ["scope:ai", "type:app"],
+  "tags": [
+    "scope:ai",
+    "type:app"
+  ],
   "targets": {
     "serve": {
       "executor": "nx:run-commands",
@@ -23,7 +26,9 @@
     },
     "test:coverage": {
       "executor": "nx:run-commands",
-      "outputs": ["{projectRoot}/coverage"],
+      "outputs": [
+        "{projectRoot}/coverage"
+      ],
       "cache": true,
       "options": {
         "cwd": "apps/ai-service",
@@ -74,6 +79,14 @@
       "options": {
         "cwd": "apps/ai-service",
         "command": "uv run python scripts/run_diagnosis_eval.py --stdout-only"
+      }
+    },
+    "eval:diagnosis-evidence-policy": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "cwd": "apps/ai-service",
+        "command": "uv run python scripts/run_diagnosis_evidence_eval.py"
       }
     }
   }

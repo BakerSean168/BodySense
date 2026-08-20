@@ -26,8 +26,6 @@ def _payload() -> dict:
         },
         "relevant_history": [{"revision": 11, "change_type": "fact.temporal_changed"}],
         "profile": {"age": 30},
-        "rag_context": "",
-        "rag_results": None,
     }
 
 
@@ -67,8 +65,6 @@ def test_analyze_diagnosis_applies_optional_defaults(client, monkeypatch):
         "body_state": payload["body_state"],
         "relevant_history": [],
         "profile": {},
-        "rag_context": "",
-        "rag_results": None,
     }
 
 
@@ -111,3 +107,15 @@ def test_analyze_diagnosis_preserves_rejected_governance_body(client, monkeypatc
 
     assert response.status_code == 200
     assert response.json() == expected
+
+
+def test_analyze_diagnosis_rejects_legacy_preloaded_rag_bypass(client):
+    payload = _payload()
+    payload["rag_context"] = "legacy preloaded evidence"
+    payload["rag_results"] = [{"evidence_id": "legacy"}]
+
+    response = client.post("/api/diagnosis/analyze", json=payload)
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert {item["loc"][-1] for item in detail} == {"rag_context", "rag_results"}
