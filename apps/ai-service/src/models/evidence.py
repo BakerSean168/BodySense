@@ -1,4 +1,4 @@
-"""Typed evidence-gap and acquisition contracts for Diagnosis reasoning."""
+"""Typed evidence-gap and bounded acquisition contracts for Agent reasoning."""
 
 from __future__ import annotations
 
@@ -32,11 +32,11 @@ class EvidenceStopReason(StrEnum):
 
 
 class EvidenceGap(BaseModel):
-    """A concrete information deficit identified during Diagnosis reasoning.
+    """A concrete information deficit identified during Agent reasoning.
 
     ``user_fact`` gaps are never eligible for external retrieval. An
     ``external_knowledge`` gap must include a targeted query and a rationale for why
-    acquiring that evidence can materially change the Diagnosis analysis.
+    acquiring that evidence can materially change the governed Agent output.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")

@@ -55,10 +55,13 @@ def test_runtime_rejects_unimplemented_treatment_revisions() -> None:
         create_treatment_agent(evidence_policy_revision="treatment-evidence-does-not-exist")
 
 
-def test_go_control_plane_registers_repository_treatment_manifest() -> None:
+def test_go_control_plane_registers_every_repository_treatment_manifest() -> None:
     repo_root = Path(__file__).resolve().parents[4]
     go_policy = (
         repo_root / "apps/api/internal/service/agent_deployment_policy.go"
     ).read_text(encoding="utf-8")
-    config = get_default_treatment_configuration()
-    assert config.configuration_id in go_policy
+    manifests = [load_manifest(path) for path in sorted(CONFIG_ROOT.glob("treatment-*.yaml"))]
+    assert get_default_treatment_configuration() in manifests
+    for config in manifests:
+        assert config.configuration_id in go_policy
+        assert config.decision_policy_revision in go_policy

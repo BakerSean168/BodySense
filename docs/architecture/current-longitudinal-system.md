@@ -69,6 +69,7 @@ Generation and final acceptance both require:
 Final acceptance additionally re-reads current BodyState and rejects a proposal when a material related change occurred after its source revision. UI capabilities are advisory; the mutation boundary enforces the invariant again.
 
 Every AI-generated proposal also records the exact immutable Treatment Agent configuration and PydanticAI/LiteLLM execution provenance. Go selects the configuration, verifies configuration ID/role/decision-policy/runtime/logical-model identity before persistence, and never treats Agent provenance as acceptance authority.
+Treatment v2 additionally records a bounded `EvidenceGap` acquisition trace on the immutable TreatmentRevision. `user_fact` gaps cannot invoke external RAG, external knowledge searches have a finite per-run budget, and every stop reason is auditable. The current serving default remains Treatment v1; v2 is qualification-ready but not promoted.
 
 ### Outcome feedback
 
