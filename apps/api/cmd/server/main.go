@@ -159,6 +159,8 @@ func main() {
 		bodyStateService,
 	)
 	diagnosisReplayService := service.NewDiagnosisReplayService(diagnosisAnalysisService, aiClient)
+	diagnosisRolloutRepo := repository.NewDiagnosisRolloutRepository(database.DB)
+	diagnosisRolloutService := service.NewDiagnosisRolloutService(diagnosisRolloutRepo)
 	diagnosisHandler := handler.NewDiagnosisHandler(
 		consultationService,
 		profileService,
@@ -169,6 +171,7 @@ func main() {
 		diagnosisFreshnessService,
 		agentDeploymentPolicy,
 		diagnosisReplayService,
+		diagnosisRolloutService,
 	)
 	trainingRepo := repository.NewTrainingRepository(database.DB)
 	trainingService := service.NewTrainingService(

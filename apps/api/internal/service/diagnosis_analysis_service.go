@@ -45,6 +45,7 @@ type aiDiagnosisPayload struct {
 	DecisionAuthority    json.RawMessage   `json:"decision_authority"`
 	ExecutionProvenance  json.RawMessage   `json:"execution_provenance"`
 	EvidenceAcquisition  json.RawMessage   `json:"evidence_acquisition"`
+	RolloutProvenance    json.RawMessage   `json:"rollout_provenance"`
 }
 
 type aiDiagnosisItem struct {
@@ -300,6 +301,7 @@ func buildDiagnosisDecisionTrace(
 		"agent_configuration":  json.RawMessage(configuration),
 		"execution_provenance": json.RawMessage(execution),
 		"evidence_acquisition": json.RawMessage(evidence),
+		"rollout_provenance":   json.RawMessage(diagnosisJSON(payload.RolloutProvenance, `{}`)),
 		"agent_governance":     json.RawMessage(diagnosisJSON(payload.Governance, `{}`)),
 		"decision_authority":   json.RawMessage(decisionAuthority),
 	})

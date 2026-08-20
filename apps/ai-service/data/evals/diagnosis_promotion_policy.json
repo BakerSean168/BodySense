@@ -1,0 +1,51 @@
+{
+  "name": "diagnosis_promotion_v1",
+  "champion_configuration_id": "diag-config-f492eb1c0c6676ae",
+  "challenger_configuration_id": "diag-config-5a4a13627e14b4cf",
+  "qualification_chain": [
+    {
+      "report": "data/evals/reports/diagnosis_champion_baseline.json",
+      "configuration_id": "diag-config-f492eb1c0c6676ae",
+      "predecessor_configuration_id": null
+    },
+    {
+      "report": "data/evals/reports/diagnosis_evidence_gap_challenger.json",
+      "configuration_id": "diag-config-20fbfc23ca09cbab",
+      "predecessor_configuration_id": "diag-config-f492eb1c0c6676ae"
+    },
+    {
+      "report": "data/evals/reports/diagnosis_decision_authority_challenger.json",
+      "configuration_id": "diag-config-5a4a13627e14b4cf",
+      "predecessor_configuration_id": "diag-config-20fbfc23ca09cbab"
+    }
+  ],
+  "required_policy_reports": [
+    {
+      "report": "data/evals/reports/diagnosis_evidence_policy_v2.json",
+      "minimum_pass_rate": 1.0
+    }
+  ],
+  "interaction_experiment": {
+    "required": false,
+    "reason": "cumulative challengers changed one governed boundary at a time; v2 isolates EvidenceGap and v3 isolates Go DecisionAuthority"
+  },
+  "rollout": {
+    "shadow_min_samples": 20,
+    "canary_steps_bps": [
+      500,
+      2500,
+      5000
+    ],
+    "promotion_bps": 10000,
+    "stable_assignment": "sha256-subject-salt-v1",
+    "stop_rules": {
+      "unsafe_relaxations": 0,
+      "forbidden_side_effects": 0,
+      "configuration_mismatches": 0,
+      "challenger_errors_before_pause": 1,
+      "rate_gate_min_samples": 20,
+      "max_hard_mismatch_rate": 0.1,
+      "max_semantic_mismatch_rate": 0.25
+    }
+  }
+}

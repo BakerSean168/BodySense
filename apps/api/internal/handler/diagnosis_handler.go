@@ -30,6 +30,7 @@ type DiagnosisHandler struct {
 	diagnosisFreshnessService *service.DiagnosisFreshnessService
 	agentDeploymentPolicy     *service.AgentDeploymentPolicy
 	diagnosisReplayService    *service.DiagnosisReplayService
+	diagnosisRolloutService   *service.DiagnosisRolloutService
 }
 
 func NewDiagnosisHandler(
@@ -42,6 +43,7 @@ func NewDiagnosisHandler(
 	diagnosisFreshnessService *service.DiagnosisFreshnessService,
 	agentDeploymentPolicy *service.AgentDeploymentPolicy,
 	diagnosisReplayService *service.DiagnosisReplayService,
+	diagnosisRolloutService *service.DiagnosisRolloutService,
 ) *DiagnosisHandler {
 	return &DiagnosisHandler{
 		consultationService:       consultationService,
@@ -53,6 +55,7 @@ func NewDiagnosisHandler(
 		diagnosisFreshnessService: diagnosisFreshnessService,
 		agentDeploymentPolicy:     agentDeploymentPolicy,
 		diagnosisReplayService:    diagnosisReplayService,
+		diagnosisRolloutService:   diagnosisRolloutService,
 	}
 }
 
@@ -123,8 +126,9 @@ func (h *DiagnosisHandler) analyzeDiagnosisFromBodyState(
 		respondError(c, http.StatusServiceUnavailable, "AGENT_DEPLOYMENT_POLICY_UNAVAILABLE", "Diagnosis Agent deployment policy is not configured")
 		return
 	}
-	configurationID := h.agentDeploymentPolicy.DiagnosisConfigurationID()
-	decisionPolicyRevision := h.agentDeploymentPolicy.DiagnosisDecisionPolicyRevision()
+	routeSelection := h.agentDeploymentPolicy.SelectDiagnosisRoute(uid.String())
+	configurationID := routeSelection.ServedConfigurationID
+	decisionPolicyRevision := routeSelection.ServedDecisionPolicyRevision
 	bodyStateJSON, err := json.Marshal(snapshot)
 	if err != nil {
 		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode body state")
@@ -170,6 +174,7 @@ func (h *DiagnosisHandler) analyzeDiagnosisFromBodyState(
 					"status": "bypassed", "runtime": "go",
 					"reason": "go_pre_agent_safety_gate",
 				},
+				"rollout_provenance": routeSelection,
 				"governance": map[string]any{
 					"kind": "diagnosis", "verdict": "rejected",
 					"reasons": []string{"active_body_state_safety_concern"}, "issues": []any{},
@@ -184,6 +189,7 @@ func (h *DiagnosisHandler) analyzeDiagnosisFromBodyState(
 				respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to persist diagnosis safety state")
 				return
 			}
+			h.observeDiagnosisRollout(c.Request.Context(), uid, analysis, routeSelection)
 			h.respondWithDiagnosisAnalysis(c, uid, analysis)
 			return
 		}
@@ -208,6 +214,7 @@ func (h *DiagnosisHandler) analyzeDiagnosisFromBodyState(
 					"status": "bypassed", "runtime": "go",
 					"reason": "go_pre_agent_safety_gate",
 				},
+				"rollout_provenance": routeSelection,
 				"governance": map[string]any{
 					"kind": "diagnosis", "verdict": "rejected",
 					"reasons": []string{"active_body_state_safety_concern"}, "issues": []any{},
@@ -221,6 +228,7 @@ func (h *DiagnosisHandler) analyzeDiagnosisFromBodyState(
 				respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to persist diagnosis safety state")
 				return
 			}
+			h.observeDiagnosisRollout(c.Request.Context(), uid, analysis, routeSelection)
 			h.respondWithDiagnosisAnalysis(c, uid, analysis)
 			return
 		}
@@ -247,6 +255,12 @@ func (h *DiagnosisHandler) analyzeDiagnosisFromBodyState(
 	}
 	if !diagnosisConfigurationMatches(parsed, configurationID) {
 		respondError(c, http.StatusBadGateway, "INVALID_AGENT_CONFIGURATION", "diagnosis response did not match the selected Agent configuration")
+		return
+	}
+	parsed["rollout_provenance"] = routeSelection
+	result, err = json.Marshal(parsed)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode Diagnosis rollout provenance")
 		return
 	}
 	// Diagnosis may discover a safety signal that was not previously committed by
@@ -277,6 +291,9 @@ func (h *DiagnosisHandler) analyzeDiagnosisFromBodyState(
 		}
 	} else if gov, ok := parsed["governance"].(map[string]any); ok {
 		if verdict, _ := gov["verdict"].(string); verdict == "rejected" {
+			h.observeDiagnosisRolloutFrozen(
+				c.Request.Context(), uid, replayInput, result, routeSelection,
+			)
 			c.Data(http.StatusOK, "application/json", result)
 			return
 		}
@@ -298,6 +315,7 @@ func (h *DiagnosisHandler) analyzeDiagnosisFromBodyState(
 		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to persist diagnosis analysis")
 		return
 	}
+	h.observeDiagnosisRollout(c.Request.Context(), uid, analysis, routeSelection)
 	if hypothesisErr := h.commitDiagnosisHypotheses(c.Request.Context(), uid, analysis); hypothesisErr != nil {
 		log.Printf("failed to project Diagnosis hypotheses for analysis %s: %v", analysis.ID, hypothesisErr)
 	}
@@ -320,6 +338,51 @@ func (h *DiagnosisHandler) analyzeDiagnosisFromBodyState(
 // ListDiagnosisHistory handles GET /api/v1/diagnosis-analyses.
 // Diagnosis history is now the user's analytical timeline; no separate
 // MedicalRecord aggregate is required to preserve historical reasoning.
+
+func (h *DiagnosisHandler) observeDiagnosisRolloutFrozen(
+	ctx context.Context,
+	uid uuid.UUID,
+	replayInput json.RawMessage,
+	baseline json.RawMessage,
+	route service.DiagnosisRouteSelection,
+) {
+	if route.ShadowConfigurationID == "" || h.diagnosisReplayService == nil || h.diagnosisRolloutService == nil {
+		return
+	}
+	report, err := h.diagnosisReplayService.CounterfactualFrozen(
+		ctx, uid, replayInput, baseline, route.ServedConfigurationID, route.ShadowConfigurationID,
+	)
+	if recordErr := h.diagnosisRolloutService.RecordComparison(
+		ctx, route, uuid.Nil, report, err,
+	); recordErr != nil {
+		log.Printf("failed to persist transient Diagnosis rollout observation: %v", recordErr)
+	}
+	if err != nil {
+		log.Printf("Diagnosis %s transient comparison failed: %v", route.Stage, err)
+	}
+}
+
+func (h *DiagnosisHandler) observeDiagnosisRollout(
+	ctx context.Context,
+	uid uuid.UUID,
+	analysis *model.DiagnosisAnalysisRecord,
+	route service.DiagnosisRouteSelection,
+) {
+	if route.ShadowConfigurationID == "" || h.diagnosisReplayService == nil || h.diagnosisRolloutService == nil {
+		return
+	}
+	report, err := h.diagnosisReplayService.CounterfactualReplay(
+		ctx, uid, analysis.ID, route.ShadowConfigurationID,
+	)
+	if recordErr := h.diagnosisRolloutService.RecordComparison(
+		ctx, route, analysis.ID, report, err,
+	); recordErr != nil {
+		log.Printf("failed to persist Diagnosis rollout observation for analysis %s: %v", analysis.ID, recordErr)
+	}
+	if err != nil {
+		log.Printf("Diagnosis %s comparison failed for analysis %s: %v", route.Stage, analysis.ID, err)
+	}
+}
 
 func (h *DiagnosisHandler) respondWithDiagnosisAnalysis(
 	c *gin.Context,

@@ -88,6 +88,14 @@
         "cwd": "apps/ai-service",
         "command": "uv run python scripts/run_diagnosis_evidence_eval.py"
       }
+    },
+    "eval:diagnosis-promotion": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "cwd": "apps/ai-service",
+        "command": "uv run python scripts/run_diagnosis_promotion_eval.py"
+      }
     }
   }
 }

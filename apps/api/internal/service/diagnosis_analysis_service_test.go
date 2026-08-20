@@ -175,6 +175,7 @@ func TestPersistAndPublicPayloadUseDedicatedDiagnosisProvenance(t *testing.T) {
 		"agent_configuration":{"id":"diag-config-test","role":"diagnosis","decision_policy_revision":"diagnosis-decision-policy-v1"},
 		"execution_provenance":{"status":"executed","runtime":"pydantic-ai","gateway_reported_model":"test-model","provider_adapter":"test","agent_run_id":"run-1","usage":{"requests":1,"input_tokens":10,"output_tokens":5,"total_tokens":15}},
 		"evidence_acquisition":{"policy_revision":"diagnosis-evidence-gap-v2","budget":{"used_searches":1},"attempts":[{"gap":{"gap_id":"g1"},"evidence_ids":["e1"]}],"unresolved_critical_gaps":[]},
+		"rollout_provenance":{"stage":"canary","subject_bucket":42,"canary_bps":500,"served_configuration_id":"diag-config-test","champion_configuration_id":"diag-config-champion","challenger_configuration_id":"diag-config-test","promotion_record":"diagnosis_promotion_v1"},
 		"decision_authority":{"policy_revision":"diagnosis-decision-policy-v1","outcome":"allow-normal","reasons":[]}
 	}`)
 	analysis, err := svc.PersistAIResult(context.Background(), uuid.New(), 9, json.RawMessage(raw))
@@ -196,6 +197,10 @@ func TestPersistAndPublicPayloadUseDedicatedDiagnosisProvenance(t *testing.T) {
 	}
 	if trace["trace_revision"] != "diagnosis-decision-trace-v1" || trace["authority_mode"] != "go-decision-policy" {
 		t.Fatalf("unexpected DecisionTrace identity: %#v", trace)
+	}
+	rollout, ok := trace["rollout_provenance"].(map[string]any)
+	if !ok || rollout["stage"] != "canary" || rollout["promotion_record"] != DiagnosisPromotionRecordV1 {
+		t.Fatalf("DecisionTrace lost rollout provenance: %#v", trace)
 	}
 	repo.byID = analysis
 	reloaded, err := svc.GetByID(context.Background(), analysis.ID, analysis.UserID)
