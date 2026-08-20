@@ -180,3 +180,106 @@ func TestAgentDeploymentPolicyCanSelectQualifiedTreatmentChallengerWithoutChangi
 		t.Fatalf("default Treatment pointer changed unexpectedly: %q", defaultPolicy.TreatmentConfigurationID())
 	}
 }
+
+func clearTreatmentRolloutEnv(t *testing.T) {
+	t.Helper()
+	t.Setenv("TREATMENT_AGENT_CONFIGURATION_ID", "")
+	t.Setenv("TREATMENT_CHAMPION_CONFIGURATION_ID", "")
+	t.Setenv("TREATMENT_CHALLENGER_CONFIGURATION_ID", "")
+	t.Setenv("TREATMENT_ROLLOUT_STAGE", "")
+	t.Setenv("TREATMENT_CANARY_BPS", "")
+	t.Setenv("TREATMENT_ROLLOUT_SALT", "")
+	t.Setenv("TREATMENT_PROMOTION_RECORD", "")
+}
+
+func TestTreatmentRolloutDefaultsToChampionWithQualifiedV2Challenger(t *testing.T) {
+	clearDiagnosisRolloutEnv(t)
+	clearTreatmentRolloutEnv(t)
+	policy, err := NewAgentDeploymentPolicy()
+	if err != nil {
+		t.Fatal(err)
+	}
+	selection := policy.SelectTreatmentRoute("user-1")
+	if selection.Stage != TreatmentRolloutChampion || selection.ServedConfigurationID != defaultTreatmentConfigurationID {
+		t.Fatalf("unexpected Treatment default route: %#v", selection)
+	}
+	if selection.ChallengerConfigurationID != treatmentEvidenceGapConfigurationID || selection.ShadowConfigurationID != "" {
+		t.Fatalf("unexpected Treatment default Challenger: %#v", selection)
+	}
+}
+
+func TestTreatmentRolloutShadowRequiresApprovedPromotionAndPairsV2(t *testing.T) {
+	clearDiagnosisRolloutEnv(t)
+	clearTreatmentRolloutEnv(t)
+	t.Setenv("TREATMENT_ROLLOUT_STAGE", TreatmentRolloutShadow)
+	if _, err := NewAgentDeploymentPolicy(); err == nil {
+		t.Fatal("Treatment shadow must require an approved promotion record")
+	}
+	t.Setenv("TREATMENT_PROMOTION_RECORD", TreatmentPromotionRecordV1)
+	policy, err := NewAgentDeploymentPolicy()
+	if err != nil {
+		t.Fatal(err)
+	}
+	selection := policy.SelectTreatmentRoute("stable-user")
+	if selection.ServedConfigurationID != defaultTreatmentConfigurationID || selection.ShadowConfigurationID != treatmentEvidenceGapConfigurationID {
+		t.Fatalf("unexpected Treatment shadow route: %#v", selection)
+	}
+	if selection.PromotionRecord != TreatmentPromotionRecordV1 {
+		t.Fatalf("Treatment shadow route lost promotion identity: %#v", selection)
+	}
+}
+
+func TestTreatmentRolloutCanaryAssignmentIsStableAndOnlyAllowsApprovedSteps(t *testing.T) {
+	clearDiagnosisRolloutEnv(t)
+	clearTreatmentRolloutEnv(t)
+	t.Setenv("TREATMENT_ROLLOUT_STAGE", TreatmentRolloutCanary)
+	t.Setenv("TREATMENT_PROMOTION_RECORD", TreatmentPromotionRecordV1)
+	t.Setenv("TREATMENT_CANARY_BPS", "2500")
+	t.Setenv("TREATMENT_ROLLOUT_SALT", "treatment-rollout-test")
+	policy, err := NewAgentDeploymentPolicy()
+	if err != nil {
+		t.Fatal(err)
+	}
+	first := policy.SelectTreatmentRoute("user-stable")
+	for i := 0; i < 10; i++ {
+		got := policy.SelectTreatmentRoute("user-stable")
+		if got.SubjectBucket != first.SubjectBucket || got.ServedConfigurationID != first.ServedConfigurationID {
+			t.Fatalf("Treatment canary assignment changed: first=%#v got=%#v", first, got)
+		}
+	}
+	if first.ServedConfigurationID == first.ShadowConfigurationID {
+		t.Fatalf("Treatment canary must pair opposite configurations: %#v", first)
+	}
+
+	clearTreatmentRolloutEnv(t)
+	t.Setenv("TREATMENT_ROLLOUT_STAGE", TreatmentRolloutCanary)
+	t.Setenv("TREATMENT_PROMOTION_RECORD", TreatmentPromotionRecordV1)
+	t.Setenv("TREATMENT_CANARY_BPS", "1000")
+	if _, err := NewAgentDeploymentPolicy(); err == nil {
+		t.Fatal("Treatment canary must reject non-policy basis-point steps")
+	}
+}
+
+func TestTreatmentRolloutPromotedAndRollbackAreExplicit(t *testing.T) {
+	for _, tc := range []struct{ stage, want string }{
+		{TreatmentRolloutPromoted, treatmentEvidenceGapConfigurationID},
+		{TreatmentRolloutRollback, defaultTreatmentConfigurationID},
+	} {
+		t.Run(tc.stage, func(t *testing.T) {
+			clearDiagnosisRolloutEnv(t)
+			clearTreatmentRolloutEnv(t)
+			t.Setenv("TREATMENT_ROLLOUT_STAGE", tc.stage)
+			if tc.stage == TreatmentRolloutPromoted {
+				t.Setenv("TREATMENT_PROMOTION_RECORD", TreatmentPromotionRecordV1)
+			}
+			policy, err := NewAgentDeploymentPolicy()
+			if err != nil {
+				t.Fatal(err)
+			}
+			selection := policy.SelectTreatmentRoute("user")
+			if selection.ServedConfigurationID != tc.want || selection.ShadowConfigurationID != "" {
+				t.Fatalf("unexpected Treatment %s route: %#v", tc.stage, selection)
+			}
+		})
+	}
+}

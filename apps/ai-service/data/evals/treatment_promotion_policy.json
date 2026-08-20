@@ -1,0 +1,42 @@
+{
+  "name": "treatment_promotion_v1",
+  "champion_configuration_id": "treat-config-85718f8e90ac9d80",
+  "challenger_configuration_id": "treat-config-f68eec9846664596",
+  "qualification_chain": [
+    {
+      "report": "data/evals/reports/treatment_champion_baseline.json",
+      "configuration_id": "treat-config-85718f8e90ac9d80",
+      "predecessor_configuration_id": null
+    },
+    {
+      "report": "data/evals/reports/treatment_evidence_gap_challenger.json",
+      "configuration_id": "treat-config-f68eec9846664596",
+      "predecessor_configuration_id": "treat-config-85718f8e90ac9d80"
+    }
+  ],
+  "required_policy_reports": [
+    {
+      "report": "data/evals/reports/treatment_evidence_policy_v2.json",
+      "minimum_pass_rate": 1.0
+    }
+  ],
+  "interaction_experiment": {
+    "required": false,
+    "reason": "the Challenger changes only Treatment prompt/tool/evidence acquisition revisions while model group, output schema, governance and Go decision policy remain fixed"
+  },
+  "rollout": {
+    "shadow_min_samples": 20,
+    "canary_steps_bps": [500, 2500, 5000],
+    "promotion_bps": 10000,
+    "stable_assignment": "sha256-subject-salt-v1",
+    "stop_rules": {
+      "unsafe_relaxations": 0,
+      "forbidden_side_effects": 0,
+      "configuration_mismatches": 0,
+      "challenger_errors_before_pause": 1,
+      "rate_gate_min_samples": 20,
+      "max_hard_mismatch_rate": 0.1,
+      "max_semantic_mismatch_rate": 0.25
+    }
+  }
+}

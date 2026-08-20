@@ -12,6 +12,10 @@ The Treatment frozen-input replay/comparison pass is complete and archived at:
 
 - [`../archive/2026-08-treatment-replay-comparison/README.md`](../archive/2026-08-treatment-replay-comparison/README.md)
 
+The Treatment rollout-governance pass is complete and archived at:
+
+- [`../archive/2026-08-treatment-rollout-governance/README.md`](../archive/2026-08-treatment-rollout-governance/README.md)
+
 The Treatment DecisionTrace authority pass is complete and archived at:
 
 - [`../archive/2026-08-treatment-decision-trace/README.md`](../archive/2026-08-treatment-decision-trace/README.md)

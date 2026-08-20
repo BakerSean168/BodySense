@@ -65,30 +65,35 @@ type TreatmentReplaySnapshot struct {
 }
 
 type TreatmentReplayReport struct {
-	Mode                  string                    `json:"mode"`
-	SourceRevisionID      uuid.UUID                 `json:"source_revision_id"`
-	SourceConfigurationID string                    `json:"source_configuration_id"`
-	TargetConfigurationID string                    `json:"target_configuration_id"`
-	InputFingerprint      string                    `json:"input_fingerprint"`
-	ArtifactIntegrity     TreatmentReplayLayer      `json:"artifact_integrity"`
-	GenerationDecision    TreatmentDecision         `json:"generation_decision"`
-	Baseline              TreatmentReplaySnapshot   `json:"baseline"`
-	Replay                TreatmentReplaySnapshot   `json:"replay"`
-	Comparison            TreatmentReplayComparison `json:"comparison"`
-	Output                json.RawMessage           `json:"output"`
+	Mode                     string                    `json:"mode"`
+	SourceRevisionID         uuid.UUID                 `json:"source_revision_id"`
+	SourceConfigurationID    string                    `json:"source_configuration_id"`
+	TargetConfigurationID    string                    `json:"target_configuration_id"`
+	InputFingerprint         string                    `json:"input_fingerprint"`
+	ArtifactIntegrity        TreatmentReplayLayer      `json:"artifact_integrity"`
+	SourceGenerationDecision TreatmentDecision         `json:"source_generation_decision"`
+	GenerationDecision       TreatmentDecision         `json:"generation_decision"`
+	Baseline                 TreatmentReplaySnapshot   `json:"baseline"`
+	Replay                   TreatmentReplaySnapshot   `json:"replay"`
+	Comparison               TreatmentReplayComparison `json:"comparison"`
+	Output                   json.RawMessage           `json:"output"`
 }
 
 type treatmentReplayAI interface {
 	RecommendTreatment(ctx context.Context, req TreatmentRecommendationRequest) (json.RawMessage, error)
 }
 
-type TreatmentReplayService struct {
-	treatments *TreatmentService
-	ai         treatmentReplayAI
+type treatmentReplayRevisionSource interface {
+	GetRevision(ctx context.Context, userID, revisionID uuid.UUID) (*model.TreatmentRevision, error)
 }
 
-func NewTreatmentReplayService(treatments *TreatmentService, ai treatmentReplayAI) *TreatmentReplayService {
-	return &TreatmentReplayService{treatments: treatments, ai: ai}
+type TreatmentReplayService struct {
+	revisions treatmentReplayRevisionSource
+	ai        treatmentReplayAI
+}
+
+func NewTreatmentReplayService(revisions treatmentReplayRevisionSource, ai treatmentReplayAI) *TreatmentReplayService {
+	return &TreatmentReplayService{revisions: revisions, ai: ai}
 }
 
 func EncodeTreatmentReplayInput(
@@ -257,10 +262,10 @@ func (s *TreatmentReplayService) loadReplayCase(
 	userID uuid.UUID,
 	revisionID uuid.UUID,
 ) (*model.TreatmentRevision, TreatmentReplayInput, map[string]any, error) {
-	if s == nil || s.treatments == nil {
+	if s == nil || s.revisions == nil {
 		return nil, TreatmentReplayInput{}, nil, errors.New("Treatment replay service is not configured")
 	}
-	revision, err := s.treatments.GetRevision(ctx, userID, revisionID)
+	revision, err := s.revisions.GetRevision(ctx, userID, revisionID)
 	if err != nil {
 		return nil, TreatmentReplayInput{}, nil, err
 	}
@@ -333,18 +338,24 @@ func buildTreatmentReplayReport(
 	replayed map[string]any,
 	replayRaw json.RawMessage,
 ) *TreatmentReplayReport {
+	sourceDecision := EvaluateTreatmentDecision(
+		treatmentDecisionPolicyRevision(revision),
+		TreatmentDecisionGeneration,
+		input.GenerationFacts,
+	)
 	return &TreatmentReplayReport{
-		Mode:                  mode,
-		SourceRevisionID:      revision.ID,
-		SourceConfigurationID: revision.AgentConfigurationID,
-		TargetConfigurationID: targetConfigurationID,
-		InputFingerprint:      treatmentReplayInputFingerprint(input),
-		ArtifactIntegrity:     treatmentReplayArtifactIntegrity(revision, input, decision),
-		GenerationDecision:    decision,
-		Baseline:              treatmentReplaySnapshot(baseline),
-		Replay:                treatmentReplaySnapshot(replayed),
-		Comparison:            compareTreatmentReplayOutputs(baseline, replayed),
-		Output:                replayRaw,
+		Mode:                     mode,
+		SourceRevisionID:         revision.ID,
+		SourceConfigurationID:    revision.AgentConfigurationID,
+		TargetConfigurationID:    targetConfigurationID,
+		InputFingerprint:         treatmentReplayInputFingerprint(input),
+		ArtifactIntegrity:        treatmentReplayArtifactIntegrity(revision, input, sourceDecision),
+		SourceGenerationDecision: sourceDecision,
+		GenerationDecision:       decision,
+		Baseline:                 treatmentReplaySnapshot(baseline),
+		Replay:                   treatmentReplaySnapshot(replayed),
+		Comparison:               compareTreatmentReplayOutputs(baseline, replayed),
+		Output:                   replayRaw,
 	}
 }
 
