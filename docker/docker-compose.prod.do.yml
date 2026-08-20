@@ -70,25 +70,17 @@ services:
     logging: *default-logging
     environment:
       AI_SERVICE_PORT: ${AI_SERVICE_PORT:-8100}
-      DIAGNOSIS_MODEL_BACKEND: litellm
       LITELLM_BASE_URL: http://litellm-gateway:4000/v1
       LITELLM_API_KEY: ${LITELLM_MASTER_KEY:?set LITELLM_MASTER_KEY}
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE:-require}
       EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-openrouter}
       EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-1536}
-      LLM_PROVIDER: ${LLM_PROVIDER:-openrouter}
-      LLM_API_KEY: ${LLM_API_KEY:-}
-      LLM_MODEL: ${LLM_MODEL:-openai/gpt-oss-120b:free}
-      LLM_BASE_URL: ${LLM_BASE_URL:-https://openrouter.ai/api/v1}
       EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
       EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-https://openrouter.ai/api/v1}
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       ASR_PROVIDER: ${ASR_PROVIDER:-asr_api}
       ASR_API_KEY: ${ASR_API_KEY:-}
       ASR_API_BASE_URL: ${ASR_API_BASE_URL:-}
       ASR_API_MODEL: ${ASR_API_MODEL:-}
-      MIMO_BASE_URL: ${MIMO_BASE_URL:-}
-      MIMO_API_KEY: ${MIMO_API_KEY:-}
       ASK_USER_ENABLED: ${ASK_USER_ENABLED:-true}
       SPACES_ENDPOINT: ${SPACES_ENDPOINT:-}
       SPACES_REGION: ${SPACES_REGION:-}

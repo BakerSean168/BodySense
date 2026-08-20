@@ -1,6 +1,6 @@
-"""Multi-provider AI routing system."""
+"""Provider-neutral AI contracts backed by the internal LiteLLM gateway."""
 
-from .errors import AIError, ConfigError, NoAvailableProviderError, ProviderError, RateLimitError
+from .errors import AIError, GatewayError, GatewayRateLimitError, GatewayUnavailableError
 from .service import AIService
 from .types import AiRequest, AiResponse, AiStreamEvent, TokenUsage
 
@@ -10,9 +10,8 @@ __all__ = [
     "AiRequest",
     "AiResponse",
     "AiStreamEvent",
-    "ConfigError",
-    "NoAvailableProviderError",
-    "ProviderError",
-    "RateLimitError",
+    "GatewayError",
+    "GatewayRateLimitError",
+    "GatewayUnavailableError",
     "TokenUsage",
 ]

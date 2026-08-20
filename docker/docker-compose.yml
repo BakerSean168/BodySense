@@ -116,12 +116,6 @@ services:
     environment:
       AI_SERVICE_PORT: 8100
       DATABASE_URL: postgresql://${DB_USER:-bodysense}:${DB_PASSWORD:-bodysense123}@postgres-dev:5432/${DB_NAME:-bodysense}
-      LLM_PROVIDER: ${LLM_PROVIDER:-openrouter}
-      LLM_API_KEY: ${LLM_API_KEY:-}
-      LLM_MODEL: ${LLM_MODEL:-openai/gpt-oss-120b:free}
-      LLM_BASE_URL: ${LLM_BASE_URL:-https://openrouter.ai/api/v1}
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
-      DIAGNOSIS_MODEL_BACKEND: litellm
       LITELLM_BASE_URL: http://litellm-gateway:4000/v1
       LITELLM_API_KEY: ${LITELLM_MASTER_KEY:-sk-bodysense-dev-gateway}
       EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-hashing}
@@ -133,8 +127,6 @@ services:
       ASR_API_KEY: ${ASR_API_KEY:-}
       ASR_API_BASE_URL: ${ASR_API_BASE_URL:-}
       ASR_API_MODEL: ${ASR_API_MODEL:-}
-      MIMO_BASE_URL: ${MIMO_BASE_URL:-}
-      MIMO_API_KEY: ${MIMO_API_KEY:-}
       ASK_USER_ENABLED: ${ASK_USER_ENABLED:-false}
       # Explicit local/CI validation seam. Production leaves this false.
       BODYSENSE_DETERMINISTIC_AI: ${BODYSENSE_DETERMINISTIC_AI:-false}

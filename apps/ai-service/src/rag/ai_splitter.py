@@ -12,6 +12,7 @@ import re
 from typing import Any
 
 from ..ai import AiRequest, AIService
+from ..ai.gateway import KNOWLEDGE_SPLITTER_ROUTE
 from ..ai.types import ChatMessage
 from ..prompts.splitter import SPLITTER_SYSTEM_PROMPT, get_splitter_prompt
 from .knowledge_pack import KnowledgeUnitCandidate, TranscriptSegment, slugify
@@ -89,7 +90,7 @@ class LLMSplitter:
 
             response = await ai.generate(
                 AiRequest(
-                    use_case="llm.json",
+                    use_case=KNOWLEDGE_SPLITTER_ROUTE,
                     messages=messages,
                     temperature=0.3,
                     max_tokens=2048,

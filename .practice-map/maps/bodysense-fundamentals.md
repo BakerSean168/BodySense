@@ -67,34 +67,16 @@ Ruff: clean
 Pyright: 0 errors
 ```
 
-# Next Step
-
-**L1.1 · Production model routing seam。**
-
-下一次先读当前真实代码：
+# Current Routing Boundary
 
 ```text
-AIService
-  -> ModelRouter
-  -> OpenAICompatibleProvider
-  -> routing / fallback
+AIService / Typed Agent
+  -> BodySense logical model group
+  -> internal LiteLLM gateway
+  -> provider / retry / fallback
 ```
 
-再对照 PydanticAI：
-
-```text
-Model
-  -> Provider
-  -> FallbackModel / provider model
-```
-
-需要回答三个问题后再改代码：
-
-1. 哪些 routing/provider 能力可以交给 PydanticAI？
-2. 哪些 Mimo/OpenRouter/BodySense fallback 语义必须继续由项目拥有？
-3. model selection 应由 agent factory、DiagnosisService 还是 composition root 持有？
-
-回答清楚后进入 L1.2：只切换 DiagnosisService 的普通候选生成分支。
+Application code no longer owns `ModelRouter`, physical provider construction, or `FallbackModel`. Diagnosis additionally pins immutable AgentConfiguration and Go DecisionAuthority before normal delivery.
 
 # Protected Contracts
 

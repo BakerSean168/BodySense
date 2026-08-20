@@ -35,7 +35,6 @@ type TreatmentRecommendationRequest struct {
 	Profile              json.RawMessage `json:"profile,omitempty"`
 	UserConstraints      json.RawMessage `json:"user_constraints,omitempty"`
 	Evidence             json.RawMessage `json:"evidence,omitempty"`
-	UseCase              string          `json:"use_case,omitempty"`
 }
 
 type AssessmentGenerationRequest struct {
@@ -43,7 +42,6 @@ type AssessmentGenerationRequest struct {
 	RAGContext      string          `json:"rag_context,omitempty"`
 	Images          []string        `json:"images,omitempty"`
 	PostureAnalysis json.RawMessage `json:"posture_analysis,omitempty"`
-	UseCase         string          `json:"use_case,omitempty"`
 }
 
 type AIClient struct {

@@ -69,10 +69,6 @@ type AgentDeploymentPolicy struct {
 func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 	champion := strings.TrimSpace(os.Getenv("DIAGNOSIS_CHAMPION_CONFIGURATION_ID"))
 	if champion == "" {
-		// Temporary Phase-10 compatibility alias.
-		champion = strings.TrimSpace(os.Getenv("DIAGNOSIS_AGENT_CONFIGURATION_ID"))
-	}
-	if champion == "" {
 		champion = defaultDiagnosisConfigurationID
 	}
 	challenger := strings.TrimSpace(os.Getenv("DIAGNOSIS_CHALLENGER_CONFIGURATION_ID"))

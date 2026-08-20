@@ -73,7 +73,6 @@ async def test_treatment_service_keeps_proposal_shape_and_governance() -> None:
         profile={},
         user_constraints={},
         evidence=[],
-        use_case="llm.json",
     )
 
     assert result["status"] == "proposed"

@@ -22,8 +22,7 @@ from ..agents.evidence import (
     DiagnosisEvidenceAcquirer,
     KnowledgeEvidenceSearcher,
 )
-from ..ai.diagnosis_gateway_model import diagnosis_model_settings
-from ..ai.diagnosis_model_boundary import get_diagnosis_runtime_model
+from ..ai.diagnosis_gateway_model import diagnosis_model_settings, get_diagnosis_runtime_model
 from ..configuration.diagnosis_agent_config import (
     DiagnosisAgentManifest,
     get_diagnosis_configuration,

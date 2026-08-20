@@ -1,25 +1,21 @@
-"""Custom exceptions for the AI provider system."""
+"""Errors exposed by the internal LiteLLM gateway transport."""
 
 
 class AIError(Exception):
-    """Base exception for AI provider errors."""
+    """Base error for model-gateway operations."""
 
 
-class RateLimitError(AIError):
-    """Raised when a provider returns 429."""
+class GatewayRateLimitError(AIError):
+    """The internal gateway returned a rate-limit response."""
 
 
-class ProviderError(AIError):
-    """Raised for non-rate-limit provider errors."""
+class GatewayError(AIError):
+    """The internal gateway returned an API error."""
 
     def __init__(self, message: str, status_code: int | None = None):
         super().__init__(message)
         self.status_code = status_code
 
 
-class NoAvailableProviderError(AIError):
-    """Raised when all candidates for a use_case are unavailable."""
-
-
-class ConfigError(AIError):
-    """Raised for configuration errors."""
+class GatewayUnavailableError(AIError):
+    """The internal gateway or requested logical route is unavailable."""

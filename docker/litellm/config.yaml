@@ -1,19 +1,59 @@
 model_list:
-  # Public logical model group used by BodySense Diagnosis.
+  # Diagnosis: immutable Agent configuration selects this logical group only.
   - model_name: bodysense-diagnosis
     litellm_params:
-      # MiMo exposes an OpenAI-compatible API; provider-specific placement stays here.
       model: openai/mimo-v2.5-pro
       api_base: os.environ/MIMO_BASE_URL
       api_key: os.environ/MIMO_API_KEY
       timeout: 45
-
-  # Operational fallback group. BodySense application code never requests this name directly.
   - model_name: bodysense-diagnosis-fallback
     litellm_params:
       model: openrouter/deepseek/deepseek-chat
       api_key: os.environ/OPENROUTER_API_KEY
       timeout: 45
+
+  # General chat/tool use. Application code never names the physical model.
+  - model_name: bodysense-consultation
+    litellm_params:
+      model: openai/mimo-v2.5-pro
+      api_base: os.environ/MIMO_BASE_URL
+      api_key: os.environ/MIMO_API_KEY
+      timeout: 45
+
+  # Structured typed-Agent / knowledge JSON generation.
+  - model_name: bodysense-structured
+    litellm_params:
+      model: openai/mimo-v2.5-pro
+      api_base: os.environ/MIMO_BASE_URL
+      api_key: os.environ/MIMO_API_KEY
+      timeout: 45
+
+  # Small text generation such as conversation titles.
+  - model_name: bodysense-text
+    litellm_params:
+      model: openai/mimo-v2.5-pro
+      api_base: os.environ/MIMO_BASE_URL
+      api_key: os.environ/MIMO_API_KEY
+      timeout: 45
+
+  # Shared operational fallback for non-vision general groups.
+  - model_name: bodysense-general-fallback
+    litellm_params:
+      model: openrouter/deepseek/deepseek-chat
+      api_key: os.environ/OPENROUTER_API_KEY
+      timeout: 45
+
+  # Vision stays a distinct logical capability group.
+  - model_name: bodysense-posture
+    litellm_params:
+      model: openrouter/qwen/qwen2.5-vl-72b-instruct
+      api_key: os.environ/OPENROUTER_API_KEY
+      timeout: 60
+  - model_name: bodysense-posture-fallback
+    litellm_params:
+      model: openrouter/google/gemini-2.0-flash-001
+      api_key: os.environ/OPENROUTER_API_KEY
+      timeout: 60
 
 router_settings:
   num_retries: 1
@@ -21,7 +61,15 @@ router_settings:
   fallbacks:
     - bodysense-diagnosis:
         - bodysense-diagnosis-fallback
+    - bodysense-consultation:
+        - bodysense-general-fallback
+    - bodysense-structured:
+        - bodysense-general-fallback
+    - bodysense-text:
+        - bodysense-general-fallback
+    - bodysense-posture:
+        - bodysense-posture-fallback
 
 general_settings:
-  # All application traffic must authenticate to the internal gateway.
+  # All application LLM traffic authenticates only to this internal gateway.
   master_key: os.environ/LITELLM_MASTER_KEY

@@ -185,7 +185,6 @@ func (s *TreatmentService) GenerateProposal(
 		Profile:              profilePayload,
 		UserConstraints:      rawJSON(input.UserConstraints, `{}`),
 		Evidence:             rawJSON(evidence, `[]`),
-		UseCase:              "llm.json",
 	})
 	if err != nil {
 		return nil, err

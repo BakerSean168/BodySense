@@ -71,8 +71,8 @@ PY
 
 (
   cd "$ROOT/apps/ai-service"
-  LITELLM_BASE_URL="http://127.0.0.1:${host_port}/v1" \
-  LITELLM_API_KEY="$MASTER_KEY" \
+  export LITELLM_BASE_URL="http://127.0.0.1:${host_port}/v1"
+  export LITELLM_API_KEY="$MASTER_KEY"
   uv run python - <<'PY'
 from pydantic_ai import Agent
 
@@ -83,5 +83,45 @@ agent = Agent(get_diagnosis_gateway_model(), output_type=str)
 result = agent.run_sync("gateway adapter smoke")
 assert result.output == "bodysense-gateway-fallback-ok", result.output
 print("PYDANTICAI_LITELLM_ADAPTER_SMOKE=PASS logical_model=bodysense-diagnosis")
+PY
+
+  uv run python - <<'PY'
+import asyncio
+
+from src.ai import AIService, AiRequest
+from src.ai.gateway import (
+    ASSESSMENT_ROUTE,
+    CONSULTATION_ROUTE,
+    POSTURE_ROUTE,
+    TITLE_ROUTE,
+)
+from src.ai.types import ChatMessage
+
+
+async def main() -> None:
+    service = AIService()
+    cases = [
+        (CONSULTATION_ROUTE, "bodysense-consultation-ok"),
+        (ASSESSMENT_ROUTE, '{"status":"ok"}'),
+        (TITLE_ROUTE, "bodysense-text-ok"),
+        (POSTURE_ROUTE, '{"view":"front","findings":[]}'),
+    ]
+    for route, expected in cases:
+        response = await service.generate(
+            AiRequest(route, [ChatMessage(role="user", content="gateway route smoke")])
+        )
+        assert response.text == expected, (route, response.text)
+        assert response.provider == "litellm-gateway", response.provider
+    streamed = ""
+    async for event in service.generate_stream(
+        AiRequest(CONSULTATION_ROUTE, [ChatMessage(role="user", content="stream smoke")])
+    ):
+        if event.type == "text_delta":
+            streamed += event.text or ""
+    assert streamed == "bodysense-consultation-ok", streamed
+    print("AI_SERVICE_LITELLM_GATEWAY_SMOKE=PASS logical_groups=4 streaming=verified")
+
+
+asyncio.run(main())
 PY
 )

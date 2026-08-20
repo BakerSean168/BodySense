@@ -13,6 +13,7 @@ import logging
 from typing import Any
 
 from ..ai import AiRequest, AIService
+from ..ai.gateway import KNOWLEDGE_CURATOR_ROUTE
 from ..ai.types import ChatMessage
 from ..prompts.curator import CURATOR_SYSTEM_PROMPT, get_curator_prompt
 from .knowledge_pack import (
@@ -105,7 +106,7 @@ class AICurator:
 
         response = await ai.generate(
             AiRequest(
-                use_case="llm.json",
+                use_case=KNOWLEDGE_CURATOR_ROUTE,
                 messages=messages,
                 temperature=0.3,
                 max_tokens=2048,

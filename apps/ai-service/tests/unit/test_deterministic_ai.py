@@ -74,7 +74,6 @@ async def test_deterministic_typed_agents_keep_structured_contracts() -> None:
         profile={},
         user_constraints={},
         evidence=[],
-        use_case="llm.json",
     )
     assert treatment_result["status"] == "proposed"
     assert treatment_result["interventions"][0]["title"] == "下巴微收"

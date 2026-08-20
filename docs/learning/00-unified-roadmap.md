@@ -74,25 +74,27 @@ L0 不再要求按顺序重新读完；遇到代码断点时回查即可。
 
 下一步只剩三块：
 
-### L1.1 · Production model routing seam
+### L1.1 · Production model routing seam — 已完成
 
-对照：
+当前真值：
 
 ```text
-现有 BodySense
-AIService -> ModelRouter -> OpenAICompatibleProvider -> routing/fallback
+普通 LLM 调用
+AIService -> BodySense logical route -> LiteLLM gateway -> provider / retry / fallback
 
-PydanticAI
-Model -> Provider -> FallbackModel / provider-specific model
+Typed PydanticAI Agent
+Agent -> OpenAIProvider(internal LiteLLM endpoint) -> logical model group
+      -> LiteLLM -> provider / retry / fallback
 ```
 
-需要决定：
+关键结论：
 
-- 哪些 provider/routing 能力交给 PydanticAI。
-- 哪些 Mimo/OpenRouter/BodySense fallback 语义必须保留。
-- model selection 是 agent factory、service 还是 composition root 的职责。
+- Python application 不再构建 physical provider clients 或 fallback chain。
+- `models.yaml` / `ModelRouter` / PydanticAI `FallbackModel` 已退休。
+- Mimo/OpenRouter LLM credentials 只进入 LiteLLM gateway；ai-service 只拿内部 gateway credential。
+- business code 选择 logical route / immutable AgentConfiguration；LiteLLM 独占 provider selection 与 fallback。
 
-### L1.2 · DiagnosisService cutover
+### L1.2 · DiagnosisService cutover — 已完成
 
 只切换“普通候选生成”分支，继续保护：
 

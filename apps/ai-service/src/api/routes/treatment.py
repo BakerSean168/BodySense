@@ -7,7 +7,7 @@ import os
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from ...services.treatment_agent_service import get_treatment_agent_service
 
@@ -16,6 +16,8 @@ router = APIRouter(prefix="/api/treatment", tags=["treatment"])
 
 
 class TreatmentRecommendationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     user_id: str = ""
     body_state_revision: int = Field(ge=0)
     body_state: dict[str, Any]
@@ -24,7 +26,6 @@ class TreatmentRecommendationRequest(BaseModel):
     profile: dict[str, Any] = Field(default_factory=dict)
     user_constraints: dict[str, Any] = Field(default_factory=dict)
     evidence: list[dict[str, Any]] = Field(default_factory=list)
-    use_case: str = "llm.json"
 
 
 @router.post("/recommend")

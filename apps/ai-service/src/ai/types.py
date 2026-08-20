@@ -43,7 +43,7 @@ class TokenUsage:
 
 @dataclass
 class AiRequest:
-    use_case: str  # "consultation.reply" | "llm.json" | "llm.text"
+    use_case: str  # BodySense logical gateway route, never a physical provider/model
     messages: list[ChatMessage]
     tools: list[ToolDefinition] | None = None
     stream: bool = False

@@ -123,10 +123,8 @@ class KnowledgeBase:
 OPENROUTER_API_KEY=sk-your-openrouter-api-key-here
 
 # LLM 配置 (用于 reranking)
-LLM_PROVIDER=openrouter
-LLM_API_KEY=${OPENROUTER_API_KEY}
-LLM_MODEL=openai/gpt-oss-120b:free
-LLM_BASE_URL=https://openrouter.ai/api/v1
+LITELLM_BASE_URL=http://localhost:4000/v1
+LITELLM_API_KEY=your-internal-gateway-key
 
 # Embedding 配置
 EMBEDDING_PROVIDER=openrouter
@@ -250,10 +248,8 @@ reranker = CrossEncoderReranker(model="cross-encoder/ms-marco-MiniLM-L-6-v2")
 OPENROUTER_API_KEY=sk-your-openrouter-api-key-here
 
 # LLM (用于 reranking)
-LLM_PROVIDER=openrouter
-LLM_API_KEY=${OPENROUTER_API_KEY}
-LLM_MODEL=openai/gpt-oss-120b:free
-LLM_BASE_URL=https://openrouter.ai/api/v1
+LITELLM_BASE_URL=http://localhost:4000/v1
+LITELLM_API_KEY=your-internal-gateway-key
 
 # Embedding
 EMBEDDING_PROVIDER=openrouter
