@@ -26,6 +26,7 @@ type DiagnosisAnalysisRecord struct {
 	DecisionTrace            datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"decision_trace"`
 	ExecutionProvenance      datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"execution_provenance"`
 	EvidenceAcquisitionTrace datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"evidence_acquisition_trace"`
+	ReplayInput              datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"-"`
 	RawOutput                datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"-"`
 	CreatedAt                time.Time      `gorm:"not null;default:now()" json:"created_at"`
 

@@ -36,3 +36,13 @@ func TestAgentDeploymentPolicyRejectsUnknownConfiguration(t *testing.T) {
 		t.Fatal("unknown immutable configuration must fail closed")
 	}
 }
+
+func TestDiagnosisDecisionPolicyRevisionForConfigurationRejectsUnknownCounterfactual(t *testing.T) {
+	if _, err := DiagnosisDecisionPolicyRevisionForConfiguration("diag-config-not-registered"); err == nil {
+		t.Fatal("counterfactual replay must not execute an unknown configuration")
+	}
+	got, err := DiagnosisDecisionPolicyRevisionForConfiguration(diagnosisDecisionAuthorityConfigID)
+	if err != nil || got != DiagnosisDecisionPolicyV1 {
+		t.Fatalf("unexpected registered decision policy: %q err=%v", got, err)
+	}
+}

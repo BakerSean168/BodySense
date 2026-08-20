@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -28,6 +29,7 @@ type DiagnosisHandler struct {
 	diagnosisAnalysisService  *service.DiagnosisAnalysisService
 	diagnosisFreshnessService *service.DiagnosisFreshnessService
 	agentDeploymentPolicy     *service.AgentDeploymentPolicy
+	diagnosisReplayService    *service.DiagnosisReplayService
 }
 
 func NewDiagnosisHandler(
@@ -39,6 +41,7 @@ func NewDiagnosisHandler(
 	diagnosisAnalysisService *service.DiagnosisAnalysisService,
 	diagnosisFreshnessService *service.DiagnosisFreshnessService,
 	agentDeploymentPolicy *service.AgentDeploymentPolicy,
+	diagnosisReplayService *service.DiagnosisReplayService,
 ) *DiagnosisHandler {
 	return &DiagnosisHandler{
 		consultationService:       consultationService,
@@ -49,6 +52,7 @@ func NewDiagnosisHandler(
 		diagnosisAnalysisService:  diagnosisAnalysisService,
 		diagnosisFreshnessService: diagnosisFreshnessService,
 		agentDeploymentPolicy:     agentDeploymentPolicy,
+		diagnosisReplayService:    diagnosisReplayService,
 	}
 }
 
@@ -121,6 +125,19 @@ func (h *DiagnosisHandler) analyzeDiagnosisFromBodyState(
 	}
 	configurationID := h.agentDeploymentPolicy.DiagnosisConfigurationID()
 	decisionPolicyRevision := h.agentDeploymentPolicy.DiagnosisDecisionPolicyRevision()
+	bodyStateJSON, err := json.Marshal(snapshot)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode body state")
+		return
+	}
+	historyJSON, _ := json.Marshal(snapshot.RecentRevisions)
+	replayInput, err := service.EncodeDiagnosisReplayInput(
+		snapshot.CurrentRevision, bodyStateJSON, historyJSON, profileJSON,
+	)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to freeze Diagnosis replay input")
+		return
+	}
 
 	// Safety is a Go-owned business gate, not merely an LLM suggestion. The
 	// Phase-6 policy path evaluates durable safety state before any model call;
@@ -159,8 +176,8 @@ func (h *DiagnosisHandler) analyzeDiagnosisFromBodyState(
 				},
 			}, decision)
 			blockedRaw, _ := json.Marshal(blocked)
-			analysis, persistErr := h.diagnosisAnalysisService.PersistAIResult(
-				c.Request.Context(), uid, snapshot.CurrentRevision, blockedRaw,
+			analysis, persistErr := h.diagnosisAnalysisService.PersistAIResultWithReplayInput(
+				c.Request.Context(), uid, snapshot.CurrentRevision, blockedRaw, replayInput,
 			)
 			if persistErr != nil {
 				log.Printf("failed to persist decision-blocked diagnosis for user %s: %v", uid, persistErr)
@@ -196,8 +213,8 @@ func (h *DiagnosisHandler) analyzeDiagnosisFromBodyState(
 					"reasons": []string{"active_body_state_safety_concern"}, "issues": []any{},
 				},
 			})
-			analysis, persistErr := h.diagnosisAnalysisService.PersistAIResult(
-				c.Request.Context(), uid, snapshot.CurrentRevision, blockedRaw,
+			analysis, persistErr := h.diagnosisAnalysisService.PersistAIResultWithReplayInput(
+				c.Request.Context(), uid, snapshot.CurrentRevision, blockedRaw, replayInput,
 			)
 			if persistErr != nil {
 				log.Printf("failed to persist safety-blocked diagnosis for user %s: %v", uid, persistErr)
@@ -209,12 +226,6 @@ func (h *DiagnosisHandler) analyzeDiagnosisFromBodyState(
 		}
 	}
 
-	bodyStateJSON, err := json.Marshal(snapshot)
-	if err != nil {
-		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode body state")
-		return
-	}
-	historyJSON, _ := json.Marshal(snapshot.RecentRevisions)
 	result, err := h.aiClient.AnalyzeDiagnosis(c.Request.Context(), service.DiagnosisRequest{
 		UserID:            uid.String(),
 		ConfigurationID:   configurationID,
@@ -279,8 +290,8 @@ func (h *DiagnosisHandler) analyzeDiagnosisFromBodyState(
 		log.Printf("failed to persist Diagnosis evidence for user %s: %v", uid, evidenceErr)
 	}
 
-	analysis, err := h.diagnosisAnalysisService.PersistAIResult(
-		c.Request.Context(), uid, snapshot.CurrentRevision, result,
+	analysis, err := h.diagnosisAnalysisService.PersistAIResultWithReplayInput(
+		c.Request.Context(), uid, snapshot.CurrentRevision, result, replayInput,
 	)
 	if err != nil {
 		log.Printf("failed to persist diagnosis analysis for user %s BodyState R%d: %v", uid, snapshot.CurrentRevision, err)
@@ -399,6 +410,94 @@ func (h *DiagnosisHandler) GetDiagnosisAnalysis(c *gin.Context) {
 		}
 	}
 	c.JSON(http.StatusOK, payload)
+}
+
+// ReplayDiagnosisAnalysis handles POST /api/v1/diagnosis-analyses/:analysisId/replay.
+// It is deliberately read-only: replay never mutates BodyState, Evidence,
+// Hypothesis, consultation phase, or the source DiagnosisAnalysis.
+func (h *DiagnosisHandler) ReplayDiagnosisAnalysis(c *gin.Context) {
+	uid, ok := getUserUUID(c)
+	if !ok {
+		return
+	}
+	if h.diagnosisReplayService == nil {
+		respondError(c, http.StatusServiceUnavailable, "DIAGNOSIS_REPLAY_UNAVAILABLE", "diagnosis replay is not configured")
+		return
+	}
+	analysisID, err := uuid.Parse(c.Param("analysisId"))
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "INVALID_ID", "invalid analysis id")
+		return
+	}
+	var req struct {
+		Mode            string `json:"mode" binding:"required"`
+		ConfigurationID string `json:"configuration_id,omitempty"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+
+	var report *service.DiagnosisReplayReport
+	switch strings.TrimSpace(req.Mode) {
+	case "historical":
+		report, err = h.diagnosisReplayService.HistoricalReplay(c.Request.Context(), uid, analysisID)
+	case "counterfactual":
+		if strings.TrimSpace(req.ConfigurationID) == "" {
+			respondError(c, http.StatusBadRequest, "CONFIGURATION_REQUIRED", "counterfactual replay requires configuration_id")
+			return
+		}
+		report, err = h.diagnosisReplayService.CounterfactualReplay(
+			c.Request.Context(), uid, analysisID, req.ConfigurationID,
+		)
+	default:
+		respondError(c, http.StatusBadRequest, "INVALID_REPLAY_MODE", "replay mode must be historical or counterfactual")
+		return
+	}
+	if err != nil {
+		h.respondDiagnosisReplayError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, report)
+}
+
+// ExportDiagnosisRegressionCase exposes a source-controlled-dataset-shaped case
+// envelope without mutating the repository. A developer can review/redact the
+// frozen case before appending the nested `case` object to the regression split.
+func (h *DiagnosisHandler) ExportDiagnosisRegressionCase(c *gin.Context) {
+	uid, ok := getUserUUID(c)
+	if !ok {
+		return
+	}
+	if h.diagnosisReplayService == nil {
+		respondError(c, http.StatusServiceUnavailable, "DIAGNOSIS_REPLAY_UNAVAILABLE", "diagnosis replay is not configured")
+		return
+	}
+	analysisID, err := uuid.Parse(c.Param("analysisId"))
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "INVALID_ID", "invalid analysis id")
+		return
+	}
+	exported, err := h.diagnosisReplayService.ExportRegressionCase(c.Request.Context(), uid, analysisID)
+	if err != nil {
+		h.respondDiagnosisReplayError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, exported)
+}
+
+func (h *DiagnosisHandler) respondDiagnosisReplayError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, service.ErrDiagnosisReplayNotFound):
+		respondError(c, http.StatusNotFound, "NOT_FOUND", "diagnosis analysis not found")
+	case errors.Is(err, service.ErrDiagnosisReplayUnavailable):
+		respondError(c, http.StatusConflict, "DIAGNOSIS_REPLAY_INPUT_UNAVAILABLE", "this historical analysis predates frozen replay input")
+	case strings.Contains(err.Error(), "unknown Diagnosis Agent configuration id"):
+		respondError(c, http.StatusUnprocessableEntity, "UNKNOWN_AGENT_CONFIGURATION", err.Error())
+	default:
+		log.Printf("Diagnosis replay failed: %v", err)
+		respondError(c, http.StatusBadGateway, "DIAGNOSIS_REPLAY_FAILED", "diagnosis replay failed")
+	}
 }
 
 // AssessDiagnosisCandidates handles PUT /api/v1/diagnosis-analyses/:analysisId/assessment.

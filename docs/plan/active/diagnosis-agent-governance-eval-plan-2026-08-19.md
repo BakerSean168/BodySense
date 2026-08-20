@@ -801,6 +801,8 @@ Deliverables:
 - hard/semantic/presentation comparison layers;
 - export historical failure to Regression Dataset.
 
+Implementation checkpoint (2026-08-20): NS-810 adds a strict split between historical replay and counterfactual replay. New immutable DiagnosisAnalysis rows freeze the exact production-shaped `body_state_revision + body_state + relevant_history + profile` in private `replay_input` persistence (migration 000036), including pre-agent safety-blocked paths; old analyses without that snapshot fail closed rather than replaying today's BodyState. Historical replay performs no model call: it validates frozen artifact identity and deterministically re-evaluates the recorded Go DecisionAuthority where applicable. Counterfactual replay executes the same frozen case against an explicitly selected repository-known immutable configuration, verifies returned configuration identity, applies that configuration's Go decision policy, and remains side-effect free (no new DiagnosisAnalysis, BodyState/Evidence/Hypothesis mutation, or consultation phase update). Comparison is layered: hard status/authority/forbidden-side-effect invariants; structured semantic candidate cardinality/concern/support identities; presentation summary/name differences. A protected regression-export endpoint produces a `diagnosis_qualification_v1`-shaped case envelope with a synthetic eval user id, and a Pydantic-validated importer appends reviewed exports to the regression split while rejecting duplicates. Serving traffic remains on the Phase-3 Champion until Phase 9 promotion governance.
+
 ### Phase 9 — Promotion / Shadow / Canary
 
 Goal: prove the complete release governance loop with one real Challenger.

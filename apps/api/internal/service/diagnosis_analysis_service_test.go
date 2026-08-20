@@ -219,3 +219,22 @@ func TestPersistAndPublicPayloadUseDedicatedDiagnosisProvenance(t *testing.T) {
 		t.Fatalf("expected public decision authority, got %#v", payload["decision_authority"])
 	}
 }
+
+func TestPersistDiagnosisAnalysisFreezesReplayInputWithoutExposingItOnNormalReadModel(t *testing.T) {
+	repo := &fakeDiagnosisAnalysisRepository{}
+	svc := NewDiagnosisAnalysisService(repo)
+	input := replayTestInput(t, 12)
+	raw := replayTestRaw(diagnosisDecisionAuthorityConfigID, DiagnosisDecisionPolicyV1, "region:neck")
+
+	analysis, err := svc.PersistAIResultWithReplayInput(context.Background(), uuid.New(), 12, raw, input)
+	if err != nil {
+		t.Fatalf("PersistAIResultWithReplayInput: %v", err)
+	}
+	if string(analysis.ReplayInput) != string(input) {
+		t.Fatalf("replay input must be frozen exactly: %s", analysis.ReplayInput)
+	}
+	payload := svc.PublicPayload(analysis)
+	if _, exposed := payload["replay_input"]; exposed {
+		t.Fatal("normal Diagnosis read model must not expose frozen replay input")
+	}
+}

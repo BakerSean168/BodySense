@@ -158,6 +158,7 @@ func main() {
 		consultationRuntime,
 		bodyStateService,
 	)
+	diagnosisReplayService := service.NewDiagnosisReplayService(diagnosisAnalysisService, aiClient)
 	diagnosisHandler := handler.NewDiagnosisHandler(
 		consultationService,
 		profileService,
@@ -167,6 +168,7 @@ func main() {
 		diagnosisAnalysisService,
 		diagnosisFreshnessService,
 		agentDeploymentPolicy,
+		diagnosisReplayService,
 	)
 	trainingRepo := repository.NewTrainingRepository(database.DB)
 	trainingService := service.NewTrainingService(
@@ -296,6 +298,8 @@ func main() {
 		protected.GET("/diagnosis-analyses", diagnosisHandler.ListDiagnosisHistory)
 		protected.GET("/diagnosis-analyses/:analysisId", diagnosisHandler.GetDiagnosisAnalysis)
 		protected.PUT("/diagnosis-analyses/:analysisId/assessment", diagnosisHandler.AssessDiagnosisCandidates)
+		protected.POST("/diagnosis-analyses/:analysisId/replay", diagnosisHandler.ReplayDiagnosisAnalysis)
+		protected.GET("/diagnosis-analyses/:analysisId/regression-export", diagnosisHandler.ExportDiagnosisRegressionCase)
 
 		// Revisioned Treatment / Intervention / Outcome loop.
 		protected.POST("/treatments/proposals", treatmentHandler.GenerateProposal)
