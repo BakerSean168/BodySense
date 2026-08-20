@@ -8,6 +8,10 @@ legacy-routing retirement program completed on 2026-08-20 and is archived at:
 - [`../archive/2026-08-diagnosis-agent-platform/diagnosis-agent-governance-eval-plan-2026-08-19.md`](../archive/2026-08-diagnosis-agent-platform/diagnosis-agent-governance-eval-plan-2026-08-19.md)
 - [`../archive/2026-08-diagnosis-agent-platform/diagnosis-legacy-deletion-ledger-2026-08-19.md`](../archive/2026-08-diagnosis-agent-platform/diagnosis-legacy-deletion-ledger-2026-08-19.md)
 
+The Treatment Agent platform foundation is also complete and archived at:
+
+- [`../archive/2026-08-treatment-agent-platform-foundation/README.md`](../archive/2026-08-treatment-agent-platform-foundation/README.md)
+
 The React desktop workbench refactor is complete and archived at:
 
 - [`../archive/2026-08-react-workbench/react-desktop-workbench-refactor-2026-08-17.md`](../archive/2026-08-react-workbench/react-desktop-workbench-refactor-2026-08-17.md)

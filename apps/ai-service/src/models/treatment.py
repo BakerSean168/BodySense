@@ -9,6 +9,8 @@ from pydantic import BaseModel, Field, model_validator
 
 from .dependencies import EvidenceSearcher
 
+TREATMENT_OUTPUT_SCHEMA_REVISION = "treatment-output-v1"
+
 
 class TreatmentInterventionOutput(BaseModel):
     kind: Literal["exercise", "mobility", "habit", "self_test", "education", "monitoring"]
@@ -37,6 +39,14 @@ class TreatmentAgentOutput(BaseModel):
         if not self.review_triggers:
             self.review_triggers = ["症状明显加重或出现新的安全信号"]
         return self
+
+
+def get_treatment_output_type(
+    revision: str = TREATMENT_OUTPUT_SCHEMA_REVISION,
+) -> type[TreatmentAgentOutput]:
+    if revision != TREATMENT_OUTPUT_SCHEMA_REVISION:
+        raise ValueError(f"unsupported Treatment output schema revision: {revision}")
+    return TreatmentAgentOutput
 
 
 @dataclass(slots=True)

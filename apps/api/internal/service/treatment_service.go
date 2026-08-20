@@ -18,6 +18,7 @@ var (
 	ErrTreatmentAnalysisStale               = errors.New("diagnosis analysis requires review before treatment")
 	ErrTreatmentCandidateAssessmentRequired = errors.New("at least one diagnosis candidate must be assessed as confirmed or unsure")
 	ErrTreatmentProposalOutdated            = errors.New("treatment proposal no longer matches the current durable health state")
+	ErrTreatmentConfigurationMismatch       = errors.New("treatment Agent configuration identity mismatch")
 )
 
 type treatmentRepository interface {
@@ -60,6 +61,10 @@ type treatmentUnitOfWork interface {
 	WithinTransaction(ctx context.Context, fn func(context.Context) error) error
 }
 
+type treatmentDeploymentPolicy interface {
+	TreatmentConfigurationID() string
+}
+
 // TreatmentService owns application orchestration around typed AI proposals.
 // The reasoner can recommend; only this service/repository accepts a revision.
 type TreatmentService struct {
@@ -70,6 +75,7 @@ type TreatmentService struct {
 	profiles   *ProfileService
 	reasoner   treatmentReasoner
 	unitOfWork treatmentUnitOfWork
+	deployment treatmentDeploymentPolicy
 }
 
 func NewTreatmentService(
@@ -80,11 +86,12 @@ func NewTreatmentService(
 	profiles *ProfileService,
 	reasoner treatmentReasoner,
 	unitOfWork treatmentUnitOfWork,
+	deployment treatmentDeploymentPolicy,
 ) *TreatmentService {
 	return &TreatmentService{
 		repo: repo, diagnosis: diagnosis, bodyState: bodyState,
 		freshness: freshness, profiles: profiles, reasoner: reasoner,
-		unitOfWork: unitOfWork,
+		unitOfWork: unitOfWork, deployment: deployment,
 	}
 }
 
@@ -95,18 +102,20 @@ type TreatmentProposalInput struct {
 }
 
 type treatmentAgentPayload struct {
-	Status           string                             `json:"status"`
-	Summary          string                             `json:"summary"`
-	Goal             string                             `json:"goal"`
-	DurationWeeks    int                                `json:"duration_weeks"`
-	Interventions    []model.TreatmentInterventionDraft `json:"interventions"`
-	DailyHabits      []string                           `json:"daily_habits"`
-	ExpectedTimeline string                             `json:"expected_timeline"`
-	WarningSigns     []string                           `json:"warning_signs"`
-	ReviewTriggers   []string                           `json:"review_triggers"`
-	SafetyNotes      []string                           `json:"safety_notes"`
-	EvidenceIDs      []string                           `json:"evidence_ids"`
-	Governance       json.RawMessage                    `json:"governance"`
+	Status              string                             `json:"status"`
+	Summary             string                             `json:"summary"`
+	Goal                string                             `json:"goal"`
+	DurationWeeks       int                                `json:"duration_weeks"`
+	Interventions       []model.TreatmentInterventionDraft `json:"interventions"`
+	DailyHabits         []string                           `json:"daily_habits"`
+	ExpectedTimeline    string                             `json:"expected_timeline"`
+	WarningSigns        []string                           `json:"warning_signs"`
+	ReviewTriggers      []string                           `json:"review_triggers"`
+	SafetyNotes         []string                           `json:"safety_notes"`
+	EvidenceIDs         []string                           `json:"evidence_ids"`
+	Governance          json.RawMessage                    `json:"governance"`
+	AgentConfiguration  json.RawMessage                    `json:"agent_configuration"`
+	ExecutionProvenance json.RawMessage                    `json:"execution_provenance"`
 }
 
 func (s *TreatmentService) GenerateProposalForLatest(
@@ -176,8 +185,13 @@ func (s *TreatmentService) GenerateProposal(
 		return nil, err
 	}
 
+	if s.deployment == nil {
+		return nil, errors.New("treatment deployment policy is not configured")
+	}
+	configurationID := s.deployment.TreatmentConfigurationID()
 	raw, err := s.reasoner.RecommendTreatment(ctx, TreatmentRecommendationRequest{
 		UserID:               userID.String(),
+		ConfigurationID:      configurationID,
 		BodyStateRevision:    snapshot.CurrentRevision,
 		BodyState:            rawJSON(snapshot, `{}`),
 		DiagnosisAnalysis:    rawJSON(s.diagnosis.PublicPayload(analysis), `{}`),
@@ -191,6 +205,9 @@ func (s *TreatmentService) GenerateProposal(
 	}
 	payload, err := normalizeTreatmentAgentPayload(raw)
 	if err != nil {
+		return nil, err
+	}
+	if err := validateTreatmentAgentIdentity(payload, configurationID); err != nil {
 		return nil, err
 	}
 	plan := model.TreatmentPlanContent{
@@ -224,6 +241,9 @@ func (s *TreatmentService) GenerateProposal(
 		UserConstraints:           datatypes.JSON(rawJSON(input.UserConstraints, `{}`)),
 		EvidenceIDs:               datatypes.JSON(rawJSON(evidenceIDs, `[]`)),
 		Governance:                datatypes.JSON(normalizeRaw(payload.Governance, `{}`)),
+		AgentConfigurationID:      configurationID,
+		AgentConfiguration:        datatypes.JSON(normalizeRaw(payload.AgentConfiguration, `{}`)),
+		ExecutionProvenance:       datatypes.JSON(normalizeRaw(payload.ExecutionProvenance, `{}`)),
 		ChangeReason:              strings.TrimSpace(input.ChangeReason),
 	}, interventions)
 	if err != nil {
@@ -575,6 +595,37 @@ func normalizeTreatmentAgentPayload(raw json.RawMessage) (*treatmentAgentPayload
 		return nil, fmt.Errorf("unexpected treatment status %q", payload.Status)
 	}
 	return &payload, nil
+}
+
+func validateTreatmentAgentIdentity(payload *treatmentAgentPayload, expectedConfigurationID string) error {
+	if payload == nil || len(payload.AgentConfiguration) == 0 {
+		return ErrTreatmentConfigurationMismatch
+	}
+	var configuration struct {
+		ID                     string `json:"id"`
+		Role                   string `json:"role"`
+		DecisionPolicyRevision string `json:"decision_policy_revision"`
+	}
+	if err := json.Unmarshal(payload.AgentConfiguration, &configuration); err != nil {
+		return ErrTreatmentConfigurationMismatch
+	}
+	registration, ok := knownTreatmentConfigurations[expectedConfigurationID]
+	if !ok || configuration.ID != expectedConfigurationID || configuration.Role != "treatment" ||
+		configuration.DecisionPolicyRevision != registration.DecisionPolicyRevision {
+		return ErrTreatmentConfigurationMismatch
+	}
+	var execution struct {
+		Status       string `json:"status"`
+		Runtime      string `json:"runtime"`
+		LogicalModel string `json:"logical_model"`
+	}
+	if len(payload.ExecutionProvenance) == 0 ||
+		json.Unmarshal(payload.ExecutionProvenance, &execution) != nil ||
+		execution.Status != "executed" || execution.Runtime != "pydantic-ai" ||
+		execution.LogicalModel != registration.LogicalModel {
+		return ErrTreatmentConfigurationMismatch
+	}
+	return nil
 }
 
 func validateTreatmentPlan(plan model.TreatmentPlanContent) error {

@@ -138,3 +138,23 @@ func TestDiagnosisDecisionPolicyRevisionForConfigurationRejectsUnknownCounterfac
 		t.Fatalf("unexpected registered decision policy: %q err=%v", got, err)
 	}
 }
+
+func TestAgentDeploymentPolicyOwnsTreatmentConfigurationPointer(t *testing.T) {
+	clearDiagnosisRolloutEnv(t)
+	t.Setenv("TREATMENT_AGENT_CONFIGURATION_ID", "")
+	policy, err := NewAgentDeploymentPolicy()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if policy.TreatmentConfigurationID() != defaultTreatmentConfigurationID {
+		t.Fatalf("unexpected Treatment configuration: %q", policy.TreatmentConfigurationID())
+	}
+}
+
+func TestAgentDeploymentPolicyRejectsUnknownTreatmentConfiguration(t *testing.T) {
+	clearDiagnosisRolloutEnv(t)
+	t.Setenv("TREATMENT_AGENT_CONFIGURATION_ID", "treat-config-unknown")
+	if _, err := NewAgentDeploymentPolicy(); err == nil {
+		t.Fatal("unknown Treatment configuration must fail closed")
+	}
+}

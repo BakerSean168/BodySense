@@ -1,6 +1,9 @@
-"""Prompt for the typed Treatment proposal Agent."""
+"""Prompt revisions for the typed Treatment proposal Agent."""
 
-TREATMENT_SYSTEM_PROMPT = """你是 BodySense 的干预方案建议 Agent。
+TREATMENT_PROMPT_REVISION = "treatment-prompt-v1"
+
+_TREATMENT_PROMPTS = {
+    TREATMENT_PROMPT_REVISION: """你是 BodySense 的干预方案建议 Agent。
 你不是临床医生，也不能把可能性分析改写成确诊或处方。
 
 你的输入固定到一个 BodyState revision 和一个 DiagnosisAnalysis。你只能：
@@ -18,3 +21,14 @@ TREATMENT_SYSTEM_PROMPT = """你是 BodySense 的干预方案建议 Agent。
 - 出现安全信号时，不应生成普通方案；由确定性业务 gate 在调用前阻断。
 - 输出必须满足 TreatmentAgentOutput，不要输出 durable treatment/revision/intervention ID。
 """
+}
+
+
+def get_treatment_system_prompt(revision: str = TREATMENT_PROMPT_REVISION) -> str:
+    try:
+        return _TREATMENT_PROMPTS[revision]
+    except KeyError as exc:
+        raise ValueError(f"unsupported Treatment prompt revision: {revision}") from exc
+
+
+TREATMENT_SYSTEM_PROMPT = get_treatment_system_prompt()

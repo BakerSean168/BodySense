@@ -55,8 +55,9 @@ def deterministic_diagnosis_model(*, call_tools: list[str] | Literal["all"] = "a
     )
 
 
-def deterministic_treatment_model() -> Model:
+def deterministic_treatment_model(*, call_tools: list[str] | Literal["all"] = "all") -> Model:
     return TestModel(
+        call_tools=call_tools,
         custom_output_args={
             "status": "proposed",
             "summary": "以温和活动与久坐负荷管理为主，并持续记录变化。",
@@ -82,7 +83,7 @@ def deterministic_treatment_model() -> Model:
             "review_triggers": ["症状持续加重或出现新不适"],
             "safety_notes": [],
             "evidence_ids": [],
-        }
+        },
     )
 
 

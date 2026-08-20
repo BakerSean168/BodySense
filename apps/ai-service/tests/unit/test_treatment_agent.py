@@ -4,6 +4,7 @@ import pytest
 from pydantic_ai.models.test import TestModel
 
 from src.agents.treatment_agent import create_treatment_agent
+from src.configuration.treatment_agent_config import get_default_treatment_configuration
 from src.models.treatment import TreatmentAgentOutput, TreatmentDependencies
 from src.services.treatment_agent_service import TreatmentAgentService
 
@@ -62,11 +63,12 @@ async def test_treatment_agent_returns_typed_proposal() -> None:
 @pytest.mark.asyncio
 async def test_treatment_service_keeps_proposal_shape_and_governance() -> None:
     model = TestModel(custom_output_args=_proposal_output())
-    service = TreatmentAgentService(proposal_agent=create_treatment_agent(model))
+    service = TreatmentAgentService(model_resolver=lambda _config: model)
 
     result = await service.recommend(
         user_id="user-1",
         body_state_revision=18,
+        configuration_id=get_default_treatment_configuration().configuration_id,
         body_state=_deps().body_state,
         diagnosis_analysis=_deps().diagnosis_analysis,
         candidate_assessments=_deps().candidate_assessments,
@@ -78,3 +80,9 @@ async def test_treatment_service_keeps_proposal_shape_and_governance() -> None:
     assert result["status"] == "proposed"
     assert result["governance"]["verdict"] == "accepted"
     assert result["interventions"][0]["title"] == "下巴微收"
+    config = get_default_treatment_configuration()
+    assert result["agent_configuration"]["id"] == config.configuration_id
+    assert result["agent_configuration"]["role"] == "treatment"
+    assert result["execution_provenance"]["status"] == "executed"
+    assert result["execution_provenance"]["runtime"] == "pydantic-ai"
+    assert result["execution_provenance"]["agent_run_id"]

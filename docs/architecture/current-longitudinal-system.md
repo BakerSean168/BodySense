@@ -1,7 +1,7 @@
 # BodySense Current Longitudinal System
 
 > Status: authoritative current implementation
-> Updated: 2026-08-17
+> Updated: 2026-08-20
 > Supersedes: linear Health Journey, session `health_features`, session diagnosis/treatment JSON, and direct Training plan mutation.
 
 ## 1. Product loop
@@ -42,7 +42,7 @@ There is no user-level terminal `completed` state. `HealthWorkspace` derives cur
 | LangGraph checkpoints, tool loop, interrupt/resume          | Python               | Agent runtime only; not business truth                                                                                               |
 | BodyState current projection and revisions                  | Go                   | One per user, optimistic concurrency, semantic revisions                                                                             |
 | DiagnosisAnalysis and candidate assessments                 | Go                   | Analysis immutable; user assessment separate and independently editable                                                              |
-| Treatment and TreatmentRevision                             | Go                   | AI may propose; only Go accepts; accepted revisions are immutable                                                                    |
+| Treatment and TreatmentRevision                             | Go                   | AI may propose through an exact immutable Agent configuration; Go verifies/persists provenance and alone accepts; accepted revisions are immutable |
 | Intervention, TrainingPlan, TrainingLog, Outcome            | Go                   | Training is an execution projection of an accepted revision                                                                          |
 | Capability/action projection                                | Go `HealthWorkspace` | Pure read; no hidden mutation from GET                                                                                               |
 | React query cache and workbench preferences                 | Web                  | Server projection cache only; URL owns active conversation/workspace mode; Zustand owns presentation preferences, never health truth |
@@ -67,6 +67,8 @@ Generation and final acceptance both require:
 - no active safety review state.
 
 Final acceptance additionally re-reads current BodyState and rejects a proposal when a material related change occurred after its source revision. UI capabilities are advisory; the mutation boundary enforces the invariant again.
+
+Every AI-generated proposal also records the exact immutable Treatment Agent configuration and PydanticAI/LiteLLM execution provenance. Go selects the configuration, verifies configuration ID/role/decision-policy/runtime/logical-model identity before persistence, and never treats Agent provenance as acceptance authority.
 
 ### Outcome feedback
 

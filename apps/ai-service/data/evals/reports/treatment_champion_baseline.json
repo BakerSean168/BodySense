@@ -1,0 +1,147 @@
+{
+  "cases": [
+    {
+      "assertions": {
+        "ConfigurationProvenance": true,
+        "PinnedContext": true,
+        "ProposalOnly": true,
+        "ToolTrace": true,
+        "TreatmentContract": true
+      },
+      "name": "confirmed-neck-candidate",
+      "passed": true,
+      "slices": [
+        "confirmed",
+        "proposal-only"
+      ],
+      "split": "development"
+    },
+    {
+      "assertions": {
+        "ConfigurationProvenance": true,
+        "PinnedContext": true,
+        "ProposalOnly": true,
+        "ToolTrace": true,
+        "TreatmentContract": true
+      },
+      "name": "unsure-candidate-remains-reviewable",
+      "passed": true,
+      "slices": [
+        "unsure",
+        "human-review"
+      ],
+      "split": "holdout"
+    },
+    {
+      "assertions": {
+        "ConfigurationProvenance": true,
+        "PinnedContext": true,
+        "ProposalOnly": true,
+        "ToolTrace": true,
+        "TreatmentContract": true
+      },
+      "name": "user-constraint-is-in-run-context",
+      "passed": true,
+      "slices": [
+        "user-constraint",
+        "context-pinning"
+      ],
+      "split": "regression"
+    },
+    {
+      "assertions": {
+        "ConfigurationProvenance": true,
+        "PinnedContext": true,
+        "ProposalOnly": true,
+        "ToolTrace": true,
+        "TreatmentContract": true
+      },
+      "name": "existing-evidence-is-pinned",
+      "passed": true,
+      "slices": [
+        "evidence-context",
+        "challenge"
+      ],
+      "split": "challenge"
+    }
+  ],
+  "configuration": {
+    "decision_policy_revision": "treatment-go-acceptance-v1",
+    "evidence_policy_revision": "treatment-evidence-search-v1",
+    "governance_policy_revision": "treatment-governance-v1",
+    "id": "treat-config-85718f8e90ac9d80",
+    "logical_model": "bodysense-structured",
+    "manifest_revision": "treatment-agent-v1",
+    "model_group_revision": "treatment-model-group-v1",
+    "output_schema_revision": "treatment-output-v1",
+    "prompt_revision": "treatment-prompt-v1",
+    "role": "treatment",
+    "tool_policy_revision": "treatment-tools-v1"
+  },
+  "configuration_id": "treat-config-85718f8e90ac9d80",
+  "dataset": {
+    "fingerprint": "2a22aa2ca0a735a6fb71d000f283d0b79635dbbf9545be4fef1a0d2e120df4c0",
+    "path": "data/evals/treatment_qualification.yaml"
+  },
+  "failed": 0,
+  "mode": "deterministic",
+  "name": "treatment-qualification",
+  "passed": 4,
+  "qualification": {
+    "qualified": true,
+    "reasons": []
+  },
+  "slices": {
+    "challenge": {
+      "passed": 1,
+      "total": 1
+    },
+    "confirmed": {
+      "passed": 1,
+      "total": 1
+    },
+    "context-pinning": {
+      "passed": 1,
+      "total": 1
+    },
+    "evidence-context": {
+      "passed": 1,
+      "total": 1
+    },
+    "human-review": {
+      "passed": 1,
+      "total": 1
+    },
+    "proposal-only": {
+      "passed": 1,
+      "total": 1
+    },
+    "unsure": {
+      "passed": 1,
+      "total": 1
+    },
+    "user-constraint": {
+      "passed": 1,
+      "total": 1
+    }
+  },
+  "splits": {
+    "challenge": {
+      "passed": 1,
+      "total": 1
+    },
+    "development": {
+      "passed": 1,
+      "total": 1
+    },
+    "holdout": {
+      "passed": 1,
+      "total": 1
+    },
+    "regression": {
+      "passed": 1,
+      "total": 1
+    }
+  },
+  "total": 4
+}

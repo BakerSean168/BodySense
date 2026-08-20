@@ -96,6 +96,7 @@ func main() {
 		profileService,
 		aiClient,
 		database.NewTransactionManager(database.DB),
+		agentDeploymentPolicy,
 	)
 	assessmentRepo := repository.NewAssessmentRepository(database.DB)
 	assessmentService := service.NewAssessmentService(

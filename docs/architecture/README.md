@@ -50,6 +50,8 @@ BodySense 当前业务领域的最高层设计以以下文档为准：
 | [AI Output Governance](./ai-output-governance.md)                         | AI 输出治理    | ~35%            | AIOutputGuard 骨架、OutputReviewService                |
 | [Knowledge Lifecycle](./knowledge-lifecycle-architecture.md)              | 知识生命周期   | ~25%            | lifecycle schema、publication repo                     |
 | [Longitudinal Health Loop](./longitudinal-health-loop.md)                 | 长期健康闭环   | Active target   | 替代旧线性 Health Journey；BodyState 为闭环中心        |
+| [Model Gateway Routing](./model-gateway-routing.md)                     | 模型路由       | Current         | LiteLLM 为唯一物理 provider/fallback 边界               |
+| [Treatment Agent Configuration](./treatment-agent-configuration.md)             | Treatment Agent | Current       | Immutable config、Go identity gate、durable provenance、eval baseline |
 
 ---
 

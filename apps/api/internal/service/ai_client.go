@@ -28,6 +28,7 @@ type DiagnosisRequest struct {
 // proposal that still requires explicit user acceptance in Go.
 type TreatmentRecommendationRequest struct {
 	UserID               string          `json:"user_id,omitempty"`
+	ConfigurationID      string          `json:"configuration_id"`
 	BodyStateRevision    int64           `json:"body_state_revision"`
 	BodyState            json.RawMessage `json:"body_state"`
 	DiagnosisAnalysis    json.RawMessage `json:"diagnosis_analysis"`
