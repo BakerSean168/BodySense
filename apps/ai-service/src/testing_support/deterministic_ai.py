@@ -9,7 +9,7 @@ structured-output and governance paths.
 from __future__ import annotations
 
 import os
-from typing import Any
+from typing import Any, Literal
 
 from pydantic_ai.models import Model
 from pydantic_ai.models.test import TestModel
@@ -21,8 +21,9 @@ def deterministic_ai_enabled() -> bool:
     return os.getenv("BODYSENSE_DETERMINISTIC_AI", "").strip().lower() in _TRUE_VALUES
 
 
-def deterministic_diagnosis_model() -> Model:
+def deterministic_diagnosis_model(*, call_tools: list[str] | Literal["all"] = "all") -> Model:
     return TestModel(
+        call_tools=call_tools,
         custom_output_args={
             "status": "completed",
             "scope": "full_body",
@@ -50,7 +51,7 @@ def deterministic_diagnosis_model() -> Model:
             "cross_concern_patterns": [],
             "information_gaps": [],
             "safety_summary": {},
-        }
+        },
     )
 
 

@@ -31,17 +31,15 @@ Current provider selection below the Agent is migration-era implementation and i
 - Governance is forced before the result is persisted.
 - Diagnosis does not create Treatment.
 
-## Pydantic Evals characterization set
+## Pydantic Evals qualification set
 
-`apps/ai-service/data/evals/diagnosis_baseline.yaml` is the first executable characterization dataset. It intentionally starts small and deterministic:
+The original three-case characterization set has now evolved into the repository-versioned qualification dataset at `apps/ai-service/data/evals/diagnosis_qualification.yaml`, validated by `diagnosis_qualification.schema.json`. It keeps the original protected behaviors and adds split/slice coverage without changing the underlying business invariants.
 
-| Case | Protected behavior |
-| --- | --- |
-| `mild-neck-load` | ordinary BodyState produces a governed completed analysis |
-| `current-severe-pain-blocks` | current severe safety signal blocks candidate generation |
-| `historical-severe-pain-does-not-block` | old severe history does not become current safety state |
+The current deterministic Champion suite covers seven cases across `development`, `holdout`, `regression`, and `challenge`, including four critical-safety cases that must bypass the Agent completely, two temporal/history-isolation cases, and the ordinary no-Treatment-side-effect case. Tool-trace evaluation records whether the Agent ran, which tools were exposed, and whether any tool call occurred.
 
-The task executes the same `DiagnosisService -> PydanticAI Agent -> governance` application path used in production while injecting the deterministic PydanticAI test model. Provider/model benchmarking is deliberately excluded from this baseline.
+The task still executes the production-shaped `DiagnosisService -> PydanticAI Agent -> governance` path. Deterministic mode removes provider variance while retaining the real Agent schema/tool surface and exact immutable Agent configuration identity. The committed Champion evidence is `apps/ai-service/data/evals/reports/diagnosis_champion_baseline.json`.
+
+Qualification is deliberately deterministic where possible. A semantic LLM Judge is not used for rules that can be graded exactly; one should only be introduced for future semantic criteria that cannot be expressed as deterministic assertions and only after calibration.
 
 ## Validation command
 
@@ -50,4 +48,13 @@ cd apps/ai-service
 uv run python scripts/run_diagnosis_eval.py --stdout-only
 ```
 
-The baseline is a characterization gate, not a claim that the current architecture is the target architecture. Later phases extend it with slice-aware qualification, tool traces, non-inferiority, and live-provider mode.
+To compare an immutable Challenger against the committed Champion on the same dataset:
+
+```bash
+uv run python scripts/run_diagnosis_eval.py \
+  --configuration-id <diag-config-id> \
+  --compare-to data/evals/reports/diagnosis_champion_baseline.json \
+  --stdout-only
+```
+
+The report includes dataset/configuration fingerprints, split and slice results, evaluator totals, critical failures, and paired non-inferiority evidence. Live-provider benchmarking remains separate from this deterministic release qualification so provider availability cannot make the hard business gate flaky.
