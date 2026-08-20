@@ -1,0 +1,11 @@
+[
+  {"name":"normal-completed","safety_state":{},"payload":{"status":"completed","candidates":[{"name":"candidate","confidence":"中"}],"governance":{"verdict":"accepted"}},"expected_outcome":"allow-normal"},
+  {"name":"degraded-governance","safety_state":{},"payload":{"status":"completed","candidates":[{"name":"candidate","confidence":"高"}],"governance":{"verdict":"degraded"}},"expected_outcome":"allow-degraded"},
+  {"name":"insufficient-information","safety_state":{},"payload":{"status":"insufficient_information","candidates":[],"governance":{"verdict":"accepted"}},"expected_outcome":"abstain"},
+  {"name":"critical-evidence-gap","safety_state":{},"payload":{"status":"completed","candidates":[{"name":"candidate","confidence":"高"}],"governance":{"verdict":"accepted"},"evidence_acquisition":{"unresolved_critical_gaps":[{"gap_id":"critical"}]}},"expected_outcome":"abstain"},
+  {"name":"new-red-flag-overrides-high-confidence","safety_state":{},"payload":{"status":"completed","candidates":[{"name":"candidate","confidence":"高"}],"governance":{"verdict":"accepted"},"red_flags":{"has_red_flags":true}},"expected_outcome":"escalate"},
+  {"name":"active-durable-safety-overrides-high-confidence","safety_state":{"has_red_flags":true,"status":"requires_review"},"payload":{"status":"completed","candidates":[{"name":"candidate","confidence":"高"}],"governance":{"verdict":"accepted"}},"expected_outcome":"block"},
+  {"name":"python-rejected-overrides-high-confidence","safety_state":{},"payload":{"status":"completed","candidates":[{"name":"candidate","confidence":"高"}],"governance":{"verdict":"rejected"}},"expected_outcome":"block"},
+  {"name":"unknown-governance-fails-closed","safety_state":{},"payload":{"status":"completed","candidates":[{"name":"candidate","confidence":"高"}],"governance":{"verdict":"maybe"}},"expected_outcome":"block"},
+  {"name":"malformed-active-safety-fails-closed","safety_state":{"has_red_flags":"yes","status":"requires_review"},"payload":{"status":"completed","candidates":[{"name":"candidate","confidence":"高"}],"governance":{"verdict":"accepted"}},"expected_outcome":"block"}
+]

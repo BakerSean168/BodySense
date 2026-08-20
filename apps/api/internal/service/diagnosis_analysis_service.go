@@ -234,6 +234,9 @@ func (s *DiagnosisAnalysisService) PublicPayload(analysis *model.DiagnosisAnalys
 		if configuration := raw["agent_configuration"]; len(configuration) > 0 && string(configuration) != "null" {
 			payload["agent_configuration"] = configuration
 		}
+		if decision := raw["decision_authority"]; len(decision) > 0 && string(decision) != "null" {
+			payload["decision_authority"] = decision
+		}
 	}
 	return payload
 }

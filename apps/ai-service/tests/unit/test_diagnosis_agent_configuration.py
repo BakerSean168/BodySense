@@ -42,13 +42,18 @@ def test_unknown_configuration_is_rejected() -> None:
         get_diagnosis_configuration("diag-config-does-not-exist")
 
 
-def test_go_control_plane_default_points_at_python_manifest() -> None:
-    config = get_default_diagnosis_configuration()
+def test_go_control_plane_registers_every_repository_diagnosis_manifest() -> None:
     repo_root = Path(__file__).resolve().parents[4]
     go_policy = (repo_root / "apps/api/internal/service/agent_deployment_policy.go").read_text(
         encoding="utf-8"
+    ) + (repo_root / "apps/api/internal/service/diagnosis_decision_policy.go").read_text(
+        encoding="utf-8"
     )
-    assert f'defaultDiagnosisConfigurationID = "{config.configuration_id}"' in go_policy
+    manifests = [load_manifest(path) for path in sorted(CONFIG_ROOT.glob("diagnosis-*.yaml"))]
+    assert get_default_diagnosis_configuration() in manifests
+    for config in manifests:
+        assert config.configuration_id in go_policy
+        assert config.decision_policy_revision in go_policy
 
 
 def test_manifest_format_revision_does_not_change_behavior_identity() -> None:

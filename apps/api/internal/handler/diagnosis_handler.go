@@ -115,47 +115,86 @@ func (h *DiagnosisHandler) analyzeDiagnosisFromBodyState(
 		return
 	}
 
-	// Safety is a Go-owned business gate, not merely an LLM suggestion. A
-	// requires_review BodyState creates a reproducible safety-blocked analysis with
-	// zero candidates instead of running ordinary possible-diagnosis generation.
-	var safetyState struct {
-		HasRedFlags bool   `json:"has_red_flags"`
-		Status      string `json:"status"`
+	if h.agentDeploymentPolicy == nil {
+		respondError(c, http.StatusServiceUnavailable, "AGENT_DEPLOYMENT_POLICY_UNAVAILABLE", "Diagnosis Agent deployment policy is not configured")
+		return
 	}
-	_ = json.Unmarshal(snapshot.SafetyState, &safetyState)
-	if safetyState.HasRedFlags && safetyState.Status == "requires_review" {
-		blockedRaw, _ := json.Marshal(map[string]any{
-			"status":                 "safety_blocked",
-			"scope":                  "full_body",
-			"summary":                "当前身体状态包含需要优先处理的安全信号，暂不生成普通可能性候选。",
-			"candidates":             []any{},
-			"cross_concern_patterns": []any{},
-			"information_gaps":       []any{},
-			"safety_summary":         json.RawMessage(snapshot.SafetyState),
-			"citations":              []any{},
-			"governance": map[string]any{
-				"kind":    "diagnosis",
-				"verdict": "rejected",
-				"reasons": []string{"active_body_state_safety_concern"},
-				"issues":  []any{},
-			},
-		})
-		analysis, persistErr := h.diagnosisAnalysisService.PersistAIResult(
-			c.Request.Context(), uid, snapshot.CurrentRevision, blockedRaw,
+	configurationID := h.agentDeploymentPolicy.DiagnosisConfigurationID()
+	decisionPolicyRevision := h.agentDeploymentPolicy.DiagnosisDecisionPolicyRevision()
+
+	// Safety is a Go-owned business gate, not merely an LLM suggestion. The
+	// Phase-6 policy path evaluates durable safety state before any model call;
+	// pre-envelope configurations retain their characterized legacy behavior for
+	// historical replay until final promotion/retirement.
+	if decisionPolicyRevision == service.DiagnosisDecisionPolicyV1 {
+		probe := map[string]any{
+			"status":     "completed",
+			"candidates": []any{map[string]any{"name": "preflight", "confidence": "n/a"}},
+			"governance": map[string]any{"verdict": "accepted"},
+		}
+		decision := service.EvaluateDiagnosisDecision(
+			decisionPolicyRevision, snapshot.SafetyState, probe,
 		)
-		if persistErr != nil {
-			log.Printf("failed to persist safety-blocked diagnosis for user %s: %v", uid, persistErr)
-			respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to persist diagnosis safety state")
+		if decision.Outcome == service.DiagnosisBlock {
+			blocked := service.ApplyDiagnosisDecision(map[string]any{
+				"status":                 "safety_blocked",
+				"scope":                  "full_body",
+				"summary":                "当前身体状态包含需要优先处理的安全信号，暂不生成普通可能性候选。",
+				"candidates":             []any{},
+				"cross_concern_patterns": []any{},
+				"information_gaps":       []any{},
+				"safety_summary":         json.RawMessage(snapshot.SafetyState),
+				"citations":              []any{},
+				"agent_configuration": map[string]any{
+					"id": configurationID, "role": "diagnosis",
+					"decision_policy_revision": decisionPolicyRevision,
+				},
+				"governance": map[string]any{
+					"kind": "diagnosis", "verdict": "rejected",
+					"reasons": []string{"active_body_state_safety_concern"}, "issues": []any{},
+				},
+			}, decision)
+			blockedRaw, _ := json.Marshal(blocked)
+			analysis, persistErr := h.diagnosisAnalysisService.PersistAIResult(
+				c.Request.Context(), uid, snapshot.CurrentRevision, blockedRaw,
+			)
+			if persistErr != nil {
+				log.Printf("failed to persist decision-blocked diagnosis for user %s: %v", uid, persistErr)
+				respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to persist diagnosis safety state")
+				return
+			}
+			h.respondWithDiagnosisAnalysis(c, uid, analysis)
 			return
 		}
-		blockedPayload := h.diagnosisAnalysisService.PublicPayload(analysis)
-		if h.diagnosisFreshnessService != nil {
-			if freshness, freshErr := h.diagnosisFreshnessService.GetOrEvaluate(c.Request.Context(), uid, analysis); freshErr == nil {
-				blockedPayload["freshness"] = freshness
-			}
+	} else {
+		var safetyState struct {
+			HasRedFlags bool   `json:"has_red_flags"`
+			Status      string `json:"status"`
 		}
-		c.JSON(http.StatusOK, blockedPayload)
-		return
+		_ = json.Unmarshal(snapshot.SafetyState, &safetyState)
+		if safetyState.HasRedFlags && safetyState.Status == "requires_review" {
+			blockedRaw, _ := json.Marshal(map[string]any{
+				"status": "safety_blocked", "scope": "full_body",
+				"summary":    "当前身体状态包含需要优先处理的安全信号，暂不生成普通可能性候选。",
+				"candidates": []any{}, "cross_concern_patterns": []any{},
+				"information_gaps": []any{}, "safety_summary": json.RawMessage(snapshot.SafetyState),
+				"citations": []any{},
+				"governance": map[string]any{
+					"kind": "diagnosis", "verdict": "rejected",
+					"reasons": []string{"active_body_state_safety_concern"}, "issues": []any{},
+				},
+			})
+			analysis, persistErr := h.diagnosisAnalysisService.PersistAIResult(
+				c.Request.Context(), uid, snapshot.CurrentRevision, blockedRaw,
+			)
+			if persistErr != nil {
+				log.Printf("failed to persist safety-blocked diagnosis for user %s: %v", uid, persistErr)
+				respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to persist diagnosis safety state")
+				return
+			}
+			h.respondWithDiagnosisAnalysis(c, uid, analysis)
+			return
+		}
 	}
 
 	bodyStateJSON, err := json.Marshal(snapshot)
@@ -164,11 +203,6 @@ func (h *DiagnosisHandler) analyzeDiagnosisFromBodyState(
 		return
 	}
 	historyJSON, _ := json.Marshal(snapshot.RecentRevisions)
-	if h.agentDeploymentPolicy == nil {
-		respondError(c, http.StatusServiceUnavailable, "AGENT_DEPLOYMENT_POLICY_UNAVAILABLE", "Diagnosis Agent deployment policy is not configured")
-		return
-	}
-	configurationID := h.agentDeploymentPolicy.DiagnosisConfigurationID()
 	result, err := h.aiClient.AnalyzeDiagnosis(c.Request.Context(), service.DiagnosisRequest{
 		UserID:            uid.String(),
 		ConfigurationID:   configurationID,
@@ -208,7 +242,17 @@ func (h *DiagnosisHandler) analyzeDiagnosisFromBodyState(
 		}
 	}
 	h.recordGovernedOutput(c, "diagnosis", &uid, &conversationID, nil, parsed, result)
-	if gov, ok := parsed["governance"].(map[string]any); ok {
+	if decisionPolicyRevision == service.DiagnosisDecisionPolicyV1 {
+		decision := service.EvaluateDiagnosisDecision(
+			decisionPolicyRevision, snapshot.SafetyState, parsed,
+		)
+		parsed = service.ApplyDiagnosisDecision(parsed, decision)
+		result, err = json.Marshal(parsed)
+		if err != nil {
+			respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode Diagnosis decision")
+			return
+		}
+	} else if gov, ok := parsed["governance"].(map[string]any); ok {
 		if verdict, _ := gov["verdict"].(string); verdict == "rejected" {
 			c.Data(http.StatusOK, "application/json", result)
 			return
@@ -253,6 +297,20 @@ func (h *DiagnosisHandler) analyzeDiagnosisFromBodyState(
 // ListDiagnosisHistory handles GET /api/v1/diagnosis-analyses.
 // Diagnosis history is now the user's analytical timeline; no separate
 // MedicalRecord aggregate is required to preserve historical reasoning.
+
+func (h *DiagnosisHandler) respondWithDiagnosisAnalysis(
+	c *gin.Context,
+	uid uuid.UUID,
+	analysis *model.DiagnosisAnalysisRecord,
+) {
+	payload := h.diagnosisAnalysisService.PublicPayload(analysis)
+	if h.diagnosisFreshnessService != nil {
+		if freshness, err := h.diagnosisFreshnessService.GetOrEvaluate(c.Request.Context(), uid, analysis); err == nil {
+			payload["freshness"] = freshness
+		}
+	}
+	c.JSON(http.StatusOK, payload)
+}
 
 func diagnosisConfigurationMatches(payload map[string]any, expectedID string) bool {
 	configuration, ok := payload["agent_configuration"].(map[string]any)
