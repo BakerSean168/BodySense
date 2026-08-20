@@ -61,28 +61,18 @@ def normalize_evidence(user_id: str, result: Any) -> dict[str, Any]:
     }
 
 
-# Diagnosis v2 policy. Keep Treatment and the immutable Diagnosis v1 path on the
-# existing EvidenceSearcher adapter until their own migrations explicitly cut over.
 DIAGNOSIS_EVIDENCE_POLICY_V2 = "diagnosis-evidence-gap-v2"
+TREATMENT_EVIDENCE_POLICY_V2 = "treatment-evidence-gap-v2"
 
 
 @dataclass(slots=True)
-class DiagnosisEvidenceAcquirer:
-    """Policy-enforcing acquisition runtime for typed Diagnosis EvidenceGaps.
-
-    The model may declare a gap, but this object owns whether an external search is
-    legal and whether the per-run budget permits it. User facts can never be
-    synthesized by RAG because ``user_fact`` is a hard no-search source class.
-    """
+class _BoundedEvidenceAcquirer:
+    """Shared policy engine for one Agent run's typed EvidenceGaps."""
 
     searcher: EvidenceSearcher | None
     budget: EvidenceBudget
-    policy_revision: str = DIAGNOSIS_EVIDENCE_POLICY_V2
+    policy_revision: str
     attempts: list[EvidenceAttempt] = field(default_factory=list)
-
-    def __post_init__(self) -> None:
-        if self.policy_revision != DIAGNOSIS_EVIDENCE_POLICY_V2:
-            raise ValueError(f"unsupported Diagnosis evidence policy: {self.policy_revision}")
 
     async def acquire(self, gap: EvidenceGap, *, top_k: int = 5) -> EvidenceAcquisitionResult:
         bounded_top_k = max(1, min(top_k, self.budget.max_results_per_search))
@@ -164,3 +154,25 @@ class DiagnosisEvidenceAcquirer:
             attempts=list(self.attempts),
             unresolved_critical_gaps=unresolved,
         )
+
+
+@dataclass(slots=True)
+class DiagnosisEvidenceAcquirer(_BoundedEvidenceAcquirer):
+    """Diagnosis v2 wrapper over the shared bounded acquisition engine."""
+
+    policy_revision: str = DIAGNOSIS_EVIDENCE_POLICY_V2
+
+    def __post_init__(self) -> None:
+        if self.policy_revision != DIAGNOSIS_EVIDENCE_POLICY_V2:
+            raise ValueError(f"unsupported Diagnosis evidence policy: {self.policy_revision}")
+
+
+@dataclass(slots=True)
+class TreatmentEvidenceAcquirer(_BoundedEvidenceAcquirer):
+    """Treatment v2 wrapper over the shared bounded acquisition engine."""
+
+    policy_revision: str = TREATMENT_EVIDENCE_POLICY_V2
+
+    def __post_init__(self) -> None:
+        if self.policy_revision != TREATMENT_EVIDENCE_POLICY_V2:
+            raise ValueError(f"unsupported Treatment evidence policy: {self.policy_revision}")

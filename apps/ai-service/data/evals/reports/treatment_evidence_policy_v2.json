@@ -1,0 +1,43 @@
+{
+  "cases": [
+    {
+      "assertions": {
+        "TreatmentEvidencePolicyBehavior": true
+      },
+      "name": "no-gap-no-search",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "TreatmentEvidencePolicyBehavior": true
+      },
+      "name": "user-fact-never-rag",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "TreatmentEvidencePolicyBehavior": true
+      },
+      "name": "external-gap-targeted-search",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "TreatmentEvidencePolicyBehavior": true
+      },
+      "name": "critical-gap-zero-budget",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "TreatmentEvidencePolicyBehavior": true
+      },
+      "name": "second-critical-gap-stops-at-budget",
+      "passed": true
+    }
+  ],
+  "failed": 0,
+  "name": "treatment-evidence-policy-v2",
+  "passed": 5,
+  "total": 5
+}

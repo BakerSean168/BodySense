@@ -789,3 +789,57 @@ func TestTreatmentAgentIdentityRejectsPolicyAndRuntimeDrift(t *testing.T) {
 		})
 	}
 }
+
+func TestTreatmentEvidenceGapChallengerPersistsAcquisitionTrace(t *testing.T) {
+	userID := uuid.New()
+	analysis := &model.DiagnosisAnalysisRecord{
+		ID: uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 12,
+		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:shoulder", Name: "pattern", Confidence: "中"}},
+	}
+	repo := &fakeTreatmentRepo{}
+	trace := `{
+		"policy_revision":"treatment-evidence-gap-v2",
+		"budget":{"max_searches":2,"max_results_per_search":5,"used_searches":1,"remaining_searches":1},
+		"attempts":[{"gap":{"gap_id":"dose","kind":"external_knowledge","description":"dose evidence","rationale":"changes dose","critical":false,"query":"dose evidence"},"status":"evidence_returned","stop_reason":"evidence_returned","search_performed":true,"query":"dose evidence","requested_top_k":5,"evidence_ids":["evidence-dose"]}],
+		"unresolved_critical_gaps":[]
+	}`
+	svc := NewTreatmentService(
+		repo,
+		&fakeTreatmentDiagnosis{
+			analysis: analysis,
+			assessments: []model.DiagnosisCandidateAssessment{{
+				CandidateID: analysis.Candidates[0].ID,
+				State:       "confirmed",
+			}},
+		},
+		&fakeTreatmentBodyState{snapshot: &BodyStateSnapshot{UserID: userID, CurrentRevision: 12, SafetyState: json.RawMessage(`{}`)}},
+		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh},
+		nil,
+		fakeTreatmentReasoner{raw: json.RawMessage(`{
+			"status":"proposed","summary":"plan","goal":"improve tolerance","duration_weeks":4,
+			"interventions":[{"kind":"exercise","title":"graded load","description":"controlled","prescription":{"sets":2}}],
+			"daily_habits":[],"expected_timeline":"4 weeks","warning_signs":[],"review_triggers":["worsening"],"safety_notes":[],
+			"evidence_ids":["evidence-dose"],"evidence_acquisition":` + trace + `
+		}`)},
+		testTreatmentUnitOfWork{},
+		testTreatmentDeploymentPolicy{configurationID: treatmentEvidenceGapConfigurationID},
+	)
+
+	revision, err := svc.GenerateProposal(context.Background(), userID, TreatmentProposalInput{DiagnosisAnalysisID: analysis.ID})
+	if err != nil {
+		t.Fatalf("GenerateProposal returned error: %v", err)
+	}
+	if revision.AgentConfigurationID != treatmentEvidenceGapConfigurationID {
+		t.Fatalf("unexpected Challenger identity: %q", revision.AgentConfigurationID)
+	}
+	if string(revision.EvidenceAcquisitionTrace) == "{}" || !json.Valid(revision.EvidenceAcquisitionTrace) {
+		t.Fatalf("EvidenceGap trace was not persisted: %s", revision.EvidenceAcquisitionTrace)
+	}
+	var persisted map[string]any
+	if err := json.Unmarshal(revision.EvidenceAcquisitionTrace, &persisted); err != nil {
+		t.Fatal(err)
+	}
+	if persisted["policy_revision"] != "treatment-evidence-gap-v2" {
+		t.Fatalf("unexpected persisted policy trace: %#v", persisted)
+	}
+}

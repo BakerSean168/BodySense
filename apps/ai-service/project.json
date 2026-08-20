@@ -104,6 +104,14 @@
         "cwd": "apps/ai-service",
         "command": "uv run python scripts/run_treatment_eval.py --stdout-only"
       }
+    },
+    "eval:treatment-evidence-gap": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "cwd": "apps/ai-service",
+        "command": "uv run python scripts/run_treatment_evidence_eval.py --stdout-only"
+      }
     }
   }
 }

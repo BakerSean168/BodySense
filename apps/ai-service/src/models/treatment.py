@@ -7,7 +7,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
-from .dependencies import EvidenceSearcher
+from .dependencies import EvidenceAcquirer, EvidenceSearcher
 
 TREATMENT_OUTPUT_SCHEMA_REVISION = "treatment-output-v1"
 
@@ -60,4 +60,5 @@ class TreatmentDependencies:
     user_constraints: dict[str, Any] = field(default_factory=dict)
     evidence: list[dict[str, Any]] = field(default_factory=list)
     evidence_searcher: EvidenceSearcher | None = None
+    evidence_acquirer: EvidenceAcquirer | None = None
     retrieved_evidence: list[dict[str, Any]] = field(default_factory=list)

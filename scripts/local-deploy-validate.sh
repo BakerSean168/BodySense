@@ -8,6 +8,9 @@ export DIAGNOSIS_PROMOTION_RECORD="diagnosis_promotion_v1"
 export DIAGNOSIS_CHAMPION_CONFIGURATION_ID="diag-config-f492eb1c0c6676ae"
 export DIAGNOSIS_CHALLENGER_CONFIGURATION_ID="diag-config-5a4a13627e14b4cf"
 export DIAGNOSIS_ROLLOUT_SALT="local-deploy-shadow-v1"
+# Exercise the qualified Treatment v2 Challenger only in this hermetic validator.
+# Committed Compose defaults remain on Treatment v1 until rollout governance exists.
+export TREATMENT_AGENT_CONFIGURATION_ID="treat-config-f68eec9846664596"
 
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
@@ -109,5 +112,12 @@ if [[ "$shadow_observations" -lt 1 || "$shadow_blockers" -ne 0 ]]; then
   exit 1
 fi
 echo "DIAGNOSIS_SHADOW_VALIDATION=PASS observations=${shadow_observations} blockers=${shadow_blockers}"
+
+treatment_challenger_revisions="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_revisions WHERE agent_configuration_id='treat-config-f68eec9846664596';")"
+if [[ "$treatment_challenger_revisions" -lt 1 ]]; then
+  echo "TREATMENT_CHALLENGER_VALIDATION=FAIL revisions=${treatment_challenger_revisions}" >&2
+  exit 1
+fi
+echo "TREATMENT_CHALLENGER_VALIDATION=PASS revisions=${treatment_challenger_revisions}"
 
 echo "LOCAL_DEPLOY_VALIDATION=PASS"

@@ -361,3 +361,46 @@ def render_summary(run: TreatmentQualificationRun) -> str:
 
 def summary_json(run: TreatmentQualificationRun) -> str:
     return json.dumps(report_summary(run), ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+
+
+def compare_treatment_qualification_summaries(
+    champion: dict[str, Any],
+    challenger: dict[str, Any],
+    *,
+    non_inferiority_margin: float = 0.0,
+) -> dict[str, Any]:
+    """Paired deterministic comparison on the exact same Treatment dataset."""
+
+    champion_dataset = champion.get("dataset", {}).get("fingerprint")
+    challenger_dataset = challenger.get("dataset", {}).get("fingerprint")
+    if not champion_dataset or champion_dataset != challenger_dataset:
+        raise ValueError("Treatment qualification comparison requires one dataset fingerprint")
+
+    champion_cases = {str(case["name"]): bool(case["passed"]) for case in champion["cases"]}
+    challenger_cases = {str(case["name"]): bool(case["passed"]) for case in challenger["cases"]}
+    if set(champion_cases) != set(challenger_cases):
+        raise ValueError("Treatment qualification comparison requires the same case identities")
+
+    regressions = [
+        name for name, passed in champion_cases.items() if passed and not challenger_cases[name]
+    ]
+    champion_rate = float(champion["passed"]) / max(1, int(champion["total"]))
+    challenger_rate = float(challenger["passed"]) / max(1, int(challenger["total"]))
+    delta = challenger_rate - champion_rate
+    non_inferior = delta >= -non_inferiority_margin and not regressions
+    return {
+        "dataset_fingerprint": champion_dataset,
+        "champion_configuration_id": champion["configuration_id"],
+        "challenger_configuration_id": challenger["configuration_id"],
+        "champion_pass_rate": champion_rate,
+        "challenger_pass_rate": challenger_rate,
+        "pass_rate_delta": delta,
+        "non_inferiority_margin": non_inferiority_margin,
+        "regressions": regressions,
+        "non_inferior": non_inferior,
+        "promotion_eligible": bool(
+            non_inferior
+            and champion.get("qualification", {}).get("qualified")
+            and challenger.get("qualification", {}).get("qualified")
+        ),
+    }

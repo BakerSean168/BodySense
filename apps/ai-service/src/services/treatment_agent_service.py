@@ -7,7 +7,11 @@ from typing import Any
 
 from pydantic_ai.models import Model
 
-from ..agents.evidence import KnowledgeEvidenceSearcher
+from ..agents.evidence import (
+    TREATMENT_EVIDENCE_POLICY_V2,
+    KnowledgeEvidenceSearcher,
+    TreatmentEvidenceAcquirer,
+)
 from ..agents.treatment_agent import create_treatment_agent
 from ..ai.treatment_gateway_model import get_treatment_runtime_model, treatment_model_settings
 from ..configuration.treatment_agent_config import (
@@ -15,6 +19,7 @@ from ..configuration.treatment_agent_config import (
     get_treatment_configuration,
 )
 from ..models.dependencies import EvidenceSearcher
+from ..models.evidence import EvidenceBudget
 from ..models.treatment import TreatmentDependencies
 from ..runtime.governance import guard_structured_output
 from ..testing_support.deterministic_ai import (
@@ -57,6 +62,14 @@ class TreatmentAgentService:
             if user_id and self._evidence_searcher_factory is not None
             else None
         )
+        evidence_acquirer: TreatmentEvidenceAcquirer | None = None
+        if config.evidence_policy_revision == TREATMENT_EVIDENCE_POLICY_V2:
+            evidence_acquirer = TreatmentEvidenceAcquirer(
+                searcher=searcher,
+                budget=EvidenceBudget(max_searches=2, max_results_per_search=5),
+                policy_revision=config.evidence_policy_revision,
+            )
+
         deps = TreatmentDependencies(
             user_id=user_id,
             body_state_revision=body_state_revision,
@@ -67,6 +80,7 @@ class TreatmentAgentService:
             user_constraints=user_constraints,
             evidence=evidence,
             evidence_searcher=searcher,
+            evidence_acquirer=evidence_acquirer,
             retrieved_evidence=list(evidence),
         )
         agent = create_treatment_agent(
@@ -103,6 +117,8 @@ class TreatmentAgentService:
             policy_revision=config.governance_policy_revision,
         )
         emitted = guarded.to_emit_dict()
+        if evidence_acquirer is not None:
+            emitted["evidence_acquisition"] = evidence_acquirer.trace().model_dump(mode="json")
         emitted["agent_configuration"] = config.provenance()
         emitted["execution_provenance"] = _execution_provenance(result, config)
         return emitted

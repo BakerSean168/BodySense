@@ -20,12 +20,13 @@ const (
 	DiagnosisRolloutPromoted = "promoted"
 	DiagnosisRolloutRollback = "rollback"
 
-	defaultDiagnosisCanaryBPS       = 1000
-	defaultDiagnosisRolloutSalt     = "diagnosis-rollout-v1"
-	DiagnosisPromotionRecordV1      = "diagnosis_promotion_v1"
-	defaultTreatmentConfigurationID = "treat-config-85718f8e90ac9d80"
-	TreatmentDecisionPolicyV1       = "treatment-go-acceptance-v1"
-	treatmentLogicalModelV1         = "bodysense-structured"
+	defaultDiagnosisCanaryBPS           = 1000
+	defaultDiagnosisRolloutSalt         = "diagnosis-rollout-v1"
+	DiagnosisPromotionRecordV1          = "diagnosis_promotion_v1"
+	defaultTreatmentConfigurationID     = "treat-config-85718f8e90ac9d80"
+	treatmentEvidenceGapConfigurationID = "treat-config-f68eec9846664596"
+	TreatmentDecisionPolicyV1           = "treatment-go-acceptance-v1"
+	treatmentLogicalModelV1             = "bodysense-structured"
 )
 
 type diagnosisConfigurationRegistration struct {
@@ -39,6 +40,10 @@ type treatmentConfigurationRegistration struct {
 
 var knownTreatmentConfigurations = map[string]treatmentConfigurationRegistration{
 	defaultTreatmentConfigurationID: {
+		DecisionPolicyRevision: TreatmentDecisionPolicyV1,
+		LogicalModel:           treatmentLogicalModelV1,
+	},
+	treatmentEvidenceGapConfigurationID: {
 		DecisionPolicyRevision: TreatmentDecisionPolicyV1,
 		LogicalModel:           treatmentLogicalModelV1,
 	},

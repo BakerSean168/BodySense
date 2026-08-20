@@ -116,6 +116,7 @@ type treatmentAgentPayload struct {
 	Governance          json.RawMessage                    `json:"governance"`
 	AgentConfiguration  json.RawMessage                    `json:"agent_configuration"`
 	ExecutionProvenance json.RawMessage                    `json:"execution_provenance"`
+	EvidenceAcquisition json.RawMessage                    `json:"evidence_acquisition"`
 }
 
 func (s *TreatmentService) GenerateProposalForLatest(
@@ -244,6 +245,7 @@ func (s *TreatmentService) GenerateProposal(
 		AgentConfigurationID:      configurationID,
 		AgentConfiguration:        datatypes.JSON(normalizeRaw(payload.AgentConfiguration, `{}`)),
 		ExecutionProvenance:       datatypes.JSON(normalizeRaw(payload.ExecutionProvenance, `{}`)),
+		EvidenceAcquisitionTrace:  datatypes.JSON(normalizeRaw(payload.EvidenceAcquisition, `{}`)),
 		ChangeReason:              strings.TrimSpace(input.ChangeReason),
 	}, interventions)
 	if err != nil {

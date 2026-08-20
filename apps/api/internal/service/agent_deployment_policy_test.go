@@ -158,3 +158,25 @@ func TestAgentDeploymentPolicyRejectsUnknownTreatmentConfiguration(t *testing.T)
 		t.Fatal("unknown Treatment configuration must fail closed")
 	}
 }
+
+func TestAgentDeploymentPolicyCanSelectQualifiedTreatmentChallengerWithoutChangingDefault(t *testing.T) {
+	clearDiagnosisRolloutEnv(t)
+	t.Setenv("TREATMENT_AGENT_CONFIGURATION_ID", treatmentEvidenceGapConfigurationID)
+	policy, err := NewAgentDeploymentPolicy()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if policy.TreatmentConfigurationID() != treatmentEvidenceGapConfigurationID {
+		t.Fatalf("unexpected Treatment challenger: %q", policy.TreatmentConfigurationID())
+	}
+
+	clearDiagnosisRolloutEnv(t)
+	t.Setenv("TREATMENT_AGENT_CONFIGURATION_ID", "")
+	defaultPolicy, err := NewAgentDeploymentPolicy()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if defaultPolicy.TreatmentConfigurationID() != defaultTreatmentConfigurationID {
+		t.Fatalf("default Treatment pointer changed unexpectedly: %q", defaultPolicy.TreatmentConfigurationID())
+	}
+}
