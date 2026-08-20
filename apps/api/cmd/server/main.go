@@ -181,7 +181,10 @@ func main() {
 		database.NewTransactionManager(database.DB),
 	)
 	trainingHandler := handler.NewTrainingHandler(trainingService)
-	treatmentReplayService := service.NewTreatmentReplayService(treatmentService, aiClient)
+	treatmentReplayService := service.NewTreatmentReplayService(treatmentRepo, aiClient)
+	treatmentRolloutRepo := repository.NewTreatmentRolloutRepository(database.DB)
+	treatmentRolloutService := service.NewTreatmentRolloutService(treatmentRolloutRepo, treatmentReplayService)
+	treatmentService.AttachRolloutObserver(treatmentRolloutService)
 	treatmentHandler := handler.NewTreatmentHandler(treatmentService, trainingService, treatmentReplayService)
 	reassessmentHandler := handler.NewReassessmentHandler(trainingService)
 	assessmentHandler := handler.NewAssessmentHandler(assessmentService)

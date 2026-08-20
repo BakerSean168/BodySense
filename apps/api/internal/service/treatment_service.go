@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/bodysense/api/internal/model"
@@ -62,7 +63,16 @@ type treatmentUnitOfWork interface {
 }
 
 type treatmentDeploymentPolicy interface {
-	TreatmentConfigurationID() string
+	SelectTreatmentRoute(subjectID string) TreatmentRouteSelection
+}
+
+type treatmentRolloutObserver interface {
+	ObserveProposal(
+		ctx context.Context,
+		userID uuid.UUID,
+		route TreatmentRouteSelection,
+		revisionID uuid.UUID,
+	) error
 }
 
 // TreatmentService owns application orchestration around typed AI proposals.
@@ -76,6 +86,7 @@ type TreatmentService struct {
 	reasoner   treatmentReasoner
 	unitOfWork treatmentUnitOfWork
 	deployment treatmentDeploymentPolicy
+	rollout    treatmentRolloutObserver
 }
 
 func NewTreatmentService(
@@ -92,6 +103,12 @@ func NewTreatmentService(
 		repo: repo, diagnosis: diagnosis, bodyState: bodyState,
 		freshness: freshness, profiles: profiles, reasoner: reasoner,
 		unitOfWork: unitOfWork, deployment: deployment,
+	}
+}
+
+func (s *TreatmentService) AttachRolloutObserver(observer treatmentRolloutObserver) {
+	if s != nil {
+		s.rollout = observer
 	}
 }
 
@@ -144,6 +161,16 @@ func (s *TreatmentService) GenerateProposal(
 	userID uuid.UUID,
 	input TreatmentProposalInput,
 ) (*model.TreatmentRevision, error) {
+	if s.deployment == nil {
+		return nil, errors.New("treatment deployment policy is not configured")
+	}
+	route := s.deployment.SelectTreatmentRoute(userID.String())
+	configurationID := route.ServedConfigurationID
+	policyRevision := route.ServedDecisionPolicyRevision
+	if configurationID == "" || policyRevision == "" {
+		return nil, errors.New("treatment deployment policy returned an invalid route")
+	}
+
 	analysis, err := s.diagnosis.GetByID(ctx, input.DiagnosisAnalysisID, userID)
 	if err != nil {
 		return nil, err
@@ -157,7 +184,7 @@ func (s *TreatmentService) GenerateProposal(
 		facts.DiagnosisStatus = analysis.Status
 		facts.CandidateCount = len(analysis.Candidates)
 	}
-	if decision := EvaluateTreatmentDecision(TreatmentDecisionPolicyV1, TreatmentDecisionGeneration, facts); decision.Outcome == TreatmentBlock {
+	if decision := EvaluateTreatmentDecision(policyRevision, TreatmentDecisionGeneration, facts); decision.Outcome == TreatmentBlock {
 		return nil, treatmentDecisionError(decision)
 	}
 
@@ -169,7 +196,7 @@ func (s *TreatmentService) GenerateProposal(
 		if freshness != nil {
 			facts.FreshnessState = freshness.State
 		}
-		if decision := EvaluateTreatmentDecision(TreatmentDecisionPolicyV1, TreatmentDecisionGeneration, facts); decision.Outcome == TreatmentBlock {
+		if decision := EvaluateTreatmentDecision(policyRevision, TreatmentDecisionGeneration, facts); decision.Outcome == TreatmentBlock {
 			return nil, treatmentDecisionError(decision)
 		}
 	}
@@ -180,7 +207,7 @@ func (s *TreatmentService) GenerateProposal(
 	}
 	facts.SafetyState = snapshot.SafetyState
 	facts.CurrentBodyStateRevision = snapshot.CurrentRevision
-	if decision := EvaluateTreatmentDecision(TreatmentDecisionPolicyV1, TreatmentDecisionGeneration, facts); decision.Outcome == TreatmentBlock {
+	if decision := EvaluateTreatmentDecision(policyRevision, TreatmentDecisionGeneration, facts); decision.Outcome == TreatmentBlock {
 		return nil, treatmentDecisionError(decision)
 	}
 
@@ -190,7 +217,7 @@ func (s *TreatmentService) GenerateProposal(
 	}
 	facts.CandidateAssessmentReady = treatmentCandidateAssessmentsReady(analysis, assessments)
 	generationDecision := EvaluateTreatmentDecision(
-		TreatmentDecisionPolicyV1,
+		policyRevision,
 		TreatmentDecisionGeneration,
 		facts,
 	)
@@ -227,10 +254,6 @@ func (s *TreatmentService) GenerateProposal(
 		return nil, fmt.Errorf("freeze Treatment replay input: %w", err)
 	}
 
-	if s.deployment == nil {
-		return nil, errors.New("treatment deployment policy is not configured")
-	}
-	configurationID := s.deployment.TreatmentConfigurationID()
 	raw, err := s.reasoner.RecommendTreatment(ctx, TreatmentRecommendationRequest{
 		UserID:               userID.String(),
 		ConfigurationID:      configurationID,
@@ -295,10 +318,16 @@ func (s *TreatmentService) GenerateProposal(
 		EvidenceAcquisitionTrace:  datatypes.JSON(normalizeRaw(payload.EvidenceAcquisition, `{}`)),
 		GenerationDecisionTrace:   generationTrace,
 		ReplayInput:               datatypes.JSON(replayInput),
+		RolloutProvenance:         datatypes.JSON(rawJSON(route, `{}`)),
 		ChangeReason:              strings.TrimSpace(input.ChangeReason),
 	}, interventions)
 	if err != nil {
 		return nil, err
+	}
+	if s.rollout != nil && route.ShadowConfigurationID != "" {
+		if observeErr := s.rollout.ObserveProposal(ctx, userID, route, revision.ID); observeErr != nil {
+			log.Printf("failed to record Treatment %s shadow observation for revision %s: %v", route.Stage, revision.ID, observeErr)
+		}
 	}
 	return revision, nil
 }

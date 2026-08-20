@@ -113,7 +113,7 @@ func TestTreatmentHistoricalReplayIsDeterministicAndDoesNotCallAI(t *testing.T) 
 	revision, _ := treatmentReplayFixture(t, defaultTreatmentConfigurationID)
 	repo := &fakeTreatmentRepo{proposal: revision}
 	ai := &fakeTreatmentReplayAI{}
-	replay := NewTreatmentReplayService(&TreatmentService{repo: repo}, ai)
+	replay := NewTreatmentReplayService(repo, ai)
 
 	report, err := replay.HistoricalReplay(context.Background(), uuid.New(), revision.ID)
 	if err != nil {
@@ -134,7 +134,7 @@ func TestTreatmentCounterfactualReplayUsesExactFrozenInputAndIsReadOnly(t *testi
 	revision, frozen := treatmentReplayFixture(t, defaultTreatmentConfigurationID)
 	repo := &fakeTreatmentRepo{proposal: revision}
 	ai := &fakeTreatmentReplayAI{result: treatmentReplayCounterfactualPayload(t, treatmentEvidenceGapConfigurationID)}
-	replay := NewTreatmentReplayService(&TreatmentService{repo: repo}, ai)
+	replay := NewTreatmentReplayService(repo, ai)
 	originalAcceptance := revision.AcceptanceState
 
 	report, err := replay.CounterfactualReplay(
@@ -173,7 +173,7 @@ func TestTreatmentReplayOldRevisionFailsClosed(t *testing.T) {
 	revision, _ := treatmentReplayFixture(t, defaultTreatmentConfigurationID)
 	revision.ReplayInput = datatypes.JSON(`{}`)
 	ai := &fakeTreatmentReplayAI{}
-	replay := NewTreatmentReplayService(&TreatmentService{repo: &fakeTreatmentRepo{proposal: revision}}, ai)
+	replay := NewTreatmentReplayService(&fakeTreatmentRepo{proposal: revision}, ai)
 
 	_, err := replay.HistoricalReplay(context.Background(), uuid.New(), revision.ID)
 	if !errors.Is(err, ErrTreatmentReplayUnavailable) {
@@ -192,7 +192,7 @@ func TestTreatmentReplayArtifactIntegrityDetectsFrozenRevisionDrift(t *testing.T
 		t.Fatal(err)
 	}
 	revision.ReplayInput = datatypes.JSON(raw)
-	replay := NewTreatmentReplayService(&TreatmentService{repo: &fakeTreatmentRepo{proposal: revision}}, nil)
+	replay := NewTreatmentReplayService(&fakeTreatmentRepo{proposal: revision}, nil)
 
 	report, err := replay.HistoricalReplay(context.Background(), uuid.New(), revision.ID)
 	if err != nil {
@@ -205,7 +205,7 @@ func TestTreatmentReplayArtifactIntegrityDetectsFrozenRevisionDrift(t *testing.T
 
 func TestTreatmentRegressionExportRedactsDirectIdentifiers(t *testing.T) {
 	revision, _ := treatmentReplayFixture(t, defaultTreatmentConfigurationID)
-	replay := NewTreatmentReplayService(&TreatmentService{repo: &fakeTreatmentRepo{proposal: revision}}, nil)
+	replay := NewTreatmentReplayService(&fakeTreatmentRepo{proposal: revision}, nil)
 
 	exported, err := replay.ExportRegressionCase(context.Background(), uuid.New(), revision.ID)
 	if err != nil {
@@ -239,7 +239,7 @@ func TestTreatmentCounterfactualReplayPreflightBlockSkipsAI(t *testing.T) {
 	}
 	revision.ReplayInput = datatypes.JSON(raw)
 	ai := &fakeTreatmentReplayAI{result: treatmentReplayCounterfactualPayload(t, treatmentEvidenceGapConfigurationID)}
-	replay := NewTreatmentReplayService(&TreatmentService{repo: &fakeTreatmentRepo{proposal: revision}}, ai)
+	replay := NewTreatmentReplayService(&fakeTreatmentRepo{proposal: revision}, ai)
 
 	report, err := replay.CounterfactualReplay(
 		context.Background(), uuid.New(), revision.ID, treatmentEvidenceGapConfigurationID,
@@ -258,7 +258,7 @@ func TestTreatmentCounterfactualReplayPreflightBlockSkipsAI(t *testing.T) {
 func TestTreatmentCounterfactualReplayRejectsUnknownConfigurationWithoutAI(t *testing.T) {
 	revision, _ := treatmentReplayFixture(t, defaultTreatmentConfigurationID)
 	ai := &fakeTreatmentReplayAI{}
-	replay := NewTreatmentReplayService(&TreatmentService{repo: &fakeTreatmentRepo{proposal: revision}}, ai)
+	replay := NewTreatmentReplayService(&fakeTreatmentRepo{proposal: revision}, ai)
 
 	_, err := replay.CounterfactualReplay(context.Background(), uuid.New(), revision.ID, "treat-config-unknown")
 	if err == nil || !strings.Contains(err.Error(), "unknown Treatment Agent configuration id") {

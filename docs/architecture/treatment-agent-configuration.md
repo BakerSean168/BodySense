@@ -106,7 +106,13 @@ Replay comparison separates:
 
 The protected API exposes historical/counterfactual replay plus a privacy-sanitized regression export targeting `treatment_qualification_v1`. The Python Treatment regression importer validates that envelope against `TreatmentEvalCaseDocument` before appending a reviewed case. Prod-like validation exercises v2 -> v1 counterfactual replay in the longitudinal flow before acceptance and confirms the source revision remains proposed/read-only.
 
-An explicit Treatment shadow/canary/promotion policy is still required before any governed production rollout of v2.
+## Governed rollout
+
+Treatment v2 now has repository-versioned promotion evidence and a Go-owned rollout control plane. `treatment_promotion_v1` validates v1/v2 qualification on the same dataset fingerprint, zero deterministic regressions and the 5/5 EvidenceGap policy suite before non-Champion serving is admitted.
+
+`TreatmentService` performs stable per-user route selection for every proposal path, including Training-driven regeneration. Shadow/canary pairing reuses the exact frozen replay input through a read-only revision source; only the served run may persist a TreatmentRevision. Migration `000042_create_treatment_rollout_observations` stores anonymous paired observations, while each served revision stores `rollout_provenance`. The stop/progression evaluator is deny-first and never mutates deployment state.
+
+All committed Compose files still default to v1 / `champion`; rollout readiness is not automatic promotion. See [`treatment-promotion-governance.md`](./treatment-promotion-governance.md).
 
 ## Protected contracts
 

@@ -8,9 +8,15 @@ export DIAGNOSIS_PROMOTION_RECORD="diagnosis_promotion_v1"
 export DIAGNOSIS_CHAMPION_CONFIGURATION_ID="diag-config-f492eb1c0c6676ae"
 export DIAGNOSIS_CHALLENGER_CONFIGURATION_ID="diag-config-5a4a13627e14b4cf"
 export DIAGNOSIS_ROLLOUT_SALT="local-deploy-shadow-v1"
-# Exercise the qualified Treatment v2 Challenger only in this hermetic validator.
-# Committed Compose defaults remain on Treatment v1 until rollout governance exists.
-export TREATMENT_AGENT_CONFIGURATION_ID="treat-config-f68eec9846664596"
+# Exercise the approved Treatment v1 -> v2 shadow path only in this hermetic validator.
+# Committed Compose defaults remain Champion and never persist the v2 shadow result.
+export TREATMENT_AGENT_CONFIGURATION_ID="treat-config-85718f8e90ac9d80"
+export TREATMENT_CHAMPION_CONFIGURATION_ID="treat-config-85718f8e90ac9d80"
+export TREATMENT_CHALLENGER_CONFIGURATION_ID="treat-config-f68eec9846664596"
+export TREATMENT_ROLLOUT_STAGE="shadow"
+export TREATMENT_CANARY_BPS="500"
+export TREATMENT_PROMOTION_RECORD="treatment_promotion_v1"
+export TREATMENT_ROLLOUT_SALT="local-treatment-shadow-v1"
 
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
@@ -113,12 +119,15 @@ if [[ "$shadow_observations" -lt 1 || "$shadow_blockers" -ne 0 ]]; then
 fi
 echo "DIAGNOSIS_SHADOW_VALIDATION=PASS observations=${shadow_observations} blockers=${shadow_blockers}"
 
-treatment_challenger_revisions="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_revisions WHERE agent_configuration_id='treat-config-f68eec9846664596';")"
-if [[ "$treatment_challenger_revisions" -lt 1 ]]; then
-  echo "TREATMENT_CHALLENGER_VALIDATION=FAIL revisions=${treatment_challenger_revisions}" >&2
+treatment_shadow_observations="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_rollout_observations WHERE stage='shadow' AND champion_configuration_id='treat-config-85718f8e90ac9d80' AND challenger_configuration_id='treat-config-f68eec9846664596';")"
+treatment_shadow_blockers="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_rollout_observations WHERE stage='shadow' AND champion_configuration_id='treat-config-85718f8e90ac9d80' AND challenger_configuration_id='treat-config-f68eec9846664596' AND (unsafe_relaxation OR forbidden_side_effect OR configuration_mismatch OR shadow_error <> '');")"
+treatment_served_champion_revisions="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_revisions WHERE agent_configuration_id='treat-config-85718f8e90ac9d80' AND rollout_provenance->>'stage'='shadow';")"
+treatment_persisted_challenger_revisions="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_revisions WHERE agent_configuration_id='treat-config-f68eec9846664596';")"
+if [[ "$treatment_shadow_observations" -lt 1 || "$treatment_shadow_blockers" -ne 0 || "$treatment_served_champion_revisions" -lt 1 || "$treatment_persisted_challenger_revisions" -ne 0 ]]; then
+  echo "TREATMENT_SHADOW_VALIDATION=FAIL observations=${treatment_shadow_observations} blockers=${treatment_shadow_blockers} served_champion=${treatment_served_champion_revisions} persisted_challenger=${treatment_persisted_challenger_revisions}" >&2
   exit 1
 fi
-echo "TREATMENT_CHALLENGER_VALIDATION=PASS revisions=${treatment_challenger_revisions}"
+echo "TREATMENT_SHADOW_VALIDATION=PASS observations=${treatment_shadow_observations} blockers=${treatment_shadow_blockers} served_champion=${treatment_served_champion_revisions} persisted_challenger=${treatment_persisted_challenger_revisions}"
 
 treatment_decision_traces="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_revisions WHERE generation_decision_trace <> '{}'::jsonb AND acceptance_state='accepted' AND acceptance_decision_trace <> '{}'::jsonb;")"
 if [[ "$treatment_decision_traces" -lt 1 ]]; then

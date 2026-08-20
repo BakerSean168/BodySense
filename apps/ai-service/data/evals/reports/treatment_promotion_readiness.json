@@ -1,0 +1,71 @@
+{
+  "challenger_configuration_id": "treat-config-f68eec9846664596",
+  "champion_configuration_id": "treat-config-85718f8e90ac9d80",
+  "dataset_fingerprint": "2a22aa2ca0a735a6fb71d000f283d0b79635dbbf9545be4fef1a0d2e120df4c0",
+  "interaction_experiment": {
+    "reason": "the Challenger changes only Treatment prompt/tool/evidence acquisition revisions while model group, output schema, governance and Go decision policy remain fixed",
+    "required": false
+  },
+  "name": "treatment_promotion_v1",
+  "qualification_chain": [
+    {
+      "comparison": null,
+      "configuration_id": "treat-config-85718f8e90ac9d80",
+      "passed": 4,
+      "predecessor_configuration_id": null,
+      "qualified": true,
+      "report": "data/evals/reports/treatment_champion_baseline.json",
+      "total": 4
+    },
+    {
+      "comparison": {
+        "challenger_configuration_id": "treat-config-f68eec9846664596",
+        "challenger_pass_rate": 1.0,
+        "champion_configuration_id": "treat-config-85718f8e90ac9d80",
+        "champion_pass_rate": 1.0,
+        "dataset_fingerprint": "2a22aa2ca0a735a6fb71d000f283d0b79635dbbf9545be4fef1a0d2e120df4c0",
+        "non_inferior": true,
+        "non_inferiority_margin": 0.0,
+        "pass_rate_delta": 0.0,
+        "promotion_eligible": true,
+        "regressions": []
+      },
+      "configuration_id": "treat-config-f68eec9846664596",
+      "passed": 4,
+      "predecessor_configuration_id": "treat-config-85718f8e90ac9d80",
+      "qualified": true,
+      "report": "data/evals/reports/treatment_evidence_gap_challenger.json",
+      "total": 4
+    }
+  ],
+  "ready_for_shadow": true,
+  "reasons": [],
+  "required_policy_reports": [
+    {
+      "minimum_pass_rate": 1.0,
+      "pass_rate": 1.0,
+      "passed": 5,
+      "report": "data/evals/reports/treatment_evidence_policy_v2.json",
+      "total": 5
+    }
+  ],
+  "rollout": {
+    "canary_steps_bps": [
+      500,
+      2500,
+      5000
+    ],
+    "promotion_bps": 10000,
+    "shadow_min_samples": 20,
+    "stable_assignment": "sha256-subject-salt-v1",
+    "stop_rules": {
+      "challenger_errors_before_pause": 1,
+      "configuration_mismatches": 0,
+      "forbidden_side_effects": 0,
+      "max_hard_mismatch_rate": 0.1,
+      "max_semantic_mismatch_rate": 0.25,
+      "rate_gate_min_samples": 20,
+      "unsafe_relaxations": 0
+    }
+  }
+}

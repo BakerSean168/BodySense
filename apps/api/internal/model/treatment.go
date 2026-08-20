@@ -61,6 +61,7 @@ type TreatmentRevision struct {
 	GenerationDecisionTrace   datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"generation_decision_trace"`
 	AcceptanceDecisionTrace   datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"acceptance_decision_trace"`
 	ReplayInput               datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"-"`
+	RolloutProvenance         datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"rollout_provenance"`
 	ChangeReason              string         `gorm:"type:text;not null;default:''" json:"change_reason"`
 	CreatedAt                 time.Time      `gorm:"not null;default:now()" json:"created_at"`
 	AcceptedAt                *time.Time     `json:"accepted_at,omitempty"`

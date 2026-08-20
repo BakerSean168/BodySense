@@ -167,14 +167,60 @@ func (u testTreatmentUnitOfWork) WithinTransaction(ctx context.Context, fn func(
 }
 
 type testTreatmentDeploymentPolicy struct {
-	configurationID string
+	configurationID       string
+	shadowConfigurationID string
+	stage                 string
+	subjectBucket         int
+	canaryBPS             int
 }
 
-func (p testTreatmentDeploymentPolicy) TreatmentConfigurationID() string {
-	if p.configurationID != "" {
-		return p.configurationID
+func (p testTreatmentDeploymentPolicy) SelectTreatmentRoute(_ string) TreatmentRouteSelection {
+	served := p.configurationID
+	if served == "" {
+		served = defaultTreatmentConfigurationID
 	}
-	return defaultTreatmentConfigurationID
+	stage := p.stage
+	if stage == "" {
+		stage = TreatmentRolloutChampion
+	}
+	champion := defaultTreatmentConfigurationID
+	challenger := treatmentEvidenceGapConfigurationID
+	if served == treatmentEvidenceGapConfigurationID && p.shadowConfigurationID == defaultTreatmentConfigurationID {
+		champion, challenger = defaultTreatmentConfigurationID, treatmentEvidenceGapConfigurationID
+	}
+	registration := knownTreatmentConfigurations[served]
+	route := TreatmentRouteSelection{
+		Stage: stage, SubjectBucket: p.subjectBucket, ServedConfigurationID: served,
+		ServedDecisionPolicyRevision: registration.DecisionPolicyRevision,
+		ShadowConfigurationID:        p.shadowConfigurationID,
+		ChampionConfigurationID:      champion, ChallengerConfigurationID: challenger,
+		CanaryBPS: p.canaryBPS,
+	}
+	if route.ShadowConfigurationID != "" {
+		route.ShadowDecisionPolicyRevision = knownTreatmentConfigurations[route.ShadowConfigurationID].DecisionPolicyRevision
+	}
+	return route
+}
+
+type fakeTreatmentRolloutObserver struct {
+	calls      int
+	userID     uuid.UUID
+	revisionID uuid.UUID
+	route      TreatmentRouteSelection
+	err        error
+}
+
+func (f *fakeTreatmentRolloutObserver) ObserveProposal(
+	_ context.Context,
+	userID uuid.UUID,
+	route TreatmentRouteSelection,
+	revisionID uuid.UUID,
+) error {
+	f.calls++
+	f.userID = userID
+	f.route = route
+	f.revisionID = revisionID
+	return f.err
 }
 
 type fakeTreatmentReasoner struct {
@@ -1000,5 +1046,84 @@ func TestTreatmentMalformedSafetyStateFailsClosedBeforeAgentOrAcceptance(t *test
 	}
 	if repo.acceptCalled {
 		t.Fatal("malformed safety must block before repository acceptance")
+	}
+}
+
+func TestTreatmentGenerationPersistsRolloutRouteAndShadowFailureDoesNotFailServedProposal(t *testing.T) {
+	userID := uuid.New()
+	analysis := &model.DiagnosisAnalysisRecord{
+		ID: uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 30,
+		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
+	}
+	repo := &fakeTreatmentRepo{}
+	observer := &fakeTreatmentRolloutObserver{err: errors.New("shadow storage unavailable")}
+	deployment := testTreatmentDeploymentPolicy{
+		configurationID:       defaultTreatmentConfigurationID,
+		shadowConfigurationID: treatmentEvidenceGapConfigurationID,
+		stage:                 TreatmentRolloutShadow,
+		subjectBucket:         2468,
+		canaryBPS:             500,
+	}
+	svc := NewTreatmentService(
+		repo,
+		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
+		&fakeTreatmentBodyState{snapshot: &BodyStateSnapshot{UserID: userID, CurrentRevision: 30, SafetyState: json.RawMessage(`{}`)}},
+		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil,
+		fakeTreatmentReasoner{raw: json.RawMessage(`{
+			"status":"proposed","summary":"served champion","goal":"reduce load","duration_weeks":4,
+			"interventions":[{"kind":"exercise","title":"graded load","description":"controlled","prescription":{"sets":2}}],
+			"daily_habits":[],"expected_timeline":"4 weeks","warning_signs":[],"review_triggers":[],"safety_notes":[]
+		}`)},
+		testTreatmentUnitOfWork{}, deployment,
+	)
+	svc.AttachRolloutObserver(observer)
+
+	revision, err := svc.GenerateProposal(context.Background(), userID, TreatmentProposalInput{DiagnosisAnalysisID: analysis.ID})
+	if err != nil {
+		t.Fatalf("served Treatment proposal must survive shadow observation failure: %v", err)
+	}
+	if revision.AgentConfigurationID != defaultTreatmentConfigurationID {
+		t.Fatalf("shadow must not replace served Champion: %#v", revision)
+	}
+	var provenance TreatmentRouteSelection
+	if err := json.Unmarshal(revision.RolloutProvenance, &provenance); err != nil {
+		t.Fatalf("decode rollout provenance: %v", err)
+	}
+	if provenance.Stage != TreatmentRolloutShadow || provenance.SubjectBucket != 2468 ||
+		provenance.ServedConfigurationID != defaultTreatmentConfigurationID ||
+		provenance.ShadowConfigurationID != treatmentEvidenceGapConfigurationID {
+		t.Fatalf("unexpected durable Treatment rollout provenance: %#v", provenance)
+	}
+	if observer.calls != 1 || observer.userID != userID || observer.revisionID != revision.ID ||
+		observer.route.ShadowConfigurationID != treatmentEvidenceGapConfigurationID {
+		t.Fatalf("served proposal was not paired exactly once: %#v", observer)
+	}
+}
+
+func TestTreatmentChampionGenerationDoesNotInvokeRolloutObserver(t *testing.T) {
+	userID := uuid.New()
+	analysis := &model.DiagnosisAnalysisRecord{
+		ID: uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 31,
+		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
+	}
+	observer := &fakeTreatmentRolloutObserver{}
+	svc := NewTreatmentService(
+		&fakeTreatmentRepo{},
+		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
+		&fakeTreatmentBodyState{snapshot: &BodyStateSnapshot{UserID: userID, CurrentRevision: 31, SafetyState: json.RawMessage(`{}`)}},
+		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil,
+		fakeTreatmentReasoner{raw: json.RawMessage(`{
+			"status":"proposed","summary":"champion","goal":"reduce load","duration_weeks":4,
+			"interventions":[{"kind":"exercise","title":"graded load","description":"controlled","prescription":{}}],
+			"daily_habits":[],"expected_timeline":"4 weeks","warning_signs":[],"review_triggers":[],"safety_notes":[]
+		}`)},
+		testTreatmentUnitOfWork{}, testTreatmentDeploymentPolicy{},
+	)
+	svc.AttachRolloutObserver(observer)
+	if _, err := svc.GenerateProposal(context.Background(), userID, TreatmentProposalInput{DiagnosisAnalysisID: analysis.ID}); err != nil {
+		t.Fatal(err)
+	}
+	if observer.calls != 0 {
+		t.Fatalf("Champion-only stage must not execute a paired shadow, calls=%d", observer.calls)
 	}
 }
