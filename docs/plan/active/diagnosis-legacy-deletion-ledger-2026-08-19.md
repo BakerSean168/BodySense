@@ -11,7 +11,8 @@
 | provider credentials in `ai-service` | provider authentication | `litellm-gateway` only | compose/env validation proves AI service has only internal gateway credential | migration bridge: gateway owns new route; remove from AI service in Phase 2 cutover |
 | legacy `AIService` / `ModelRouter` provider policy | general application-level provider routing | gateway transport + role-specific typed Agents | repository-wide callers migrated; non-Agent utility calls have explicit gateway client | queued |
 | ad-hoc Diagnosis golden tests as release qualification | scattered deterministic examples | Pydantic Evals dataset/evaluators/qualification report | equivalent regression cases represented in eval suites | queued |
-| free-form `information_gaps` as acquisition control | model prose informs search behavior | typed `EvidenceGap` + `EvidenceBudget` + attempt trace | Agent tools accept gap identity and all search attempts are attributable | queued |
+| Diagnosis `rag_context` / `rag_results` request fields | allowed preloaded retrieval to bypass acquisition policy | no preloaded Diagnosis RAG; controlled tool acquisition only | Go has no caller and Python rejects the legacy fields | retired in Phase 5 |
+| free-form `information_gaps` as acquisition control | v1 Champion still exposes legacy bare `search_evidence`; v2 Challenger uses typed gaps | typed `EvidenceGap` + `EvidenceBudget` + attempt trace | final promoted Diagnosis configuration no longer exposes the v1 tool and replay can still resolve v1 | v2 retired this control in Phase 5; v1 compatibility remains until Phase 9/10 |
 
 | `DIAGNOSIS_MODEL_BACKEND` legacy migration branch | protects old Watchtower runtime from image-before-Compose cutover | LiteLLM-only Diagnosis boundary | all deployed Compose/runtime files set `litellm` and deployment smoke proves gateway before next AI image rollout | active migration bridge; delete in Phase 10 |
 

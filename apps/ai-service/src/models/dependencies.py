@@ -8,6 +8,12 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 
+from .evidence import EvidenceAcquisitionResult, EvidenceGap
+
 
 class EvidenceSearcher(Protocol):
     async def search(self, query: str, *, top_k: int = 5) -> list[dict[str, Any]]: ...
+
+
+class EvidenceAcquirer(Protocol):
+    async def acquire(self, gap: EvidenceGap, *, top_k: int = 5) -> EvidenceAcquisitionResult: ...

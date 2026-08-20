@@ -17,7 +17,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
-from .dependencies import EvidenceSearcher
+from .dependencies import EvidenceAcquirer, EvidenceSearcher
 
 DIAGNOSIS_OUTPUT_SCHEMA_REVISION = "diagnosis-output-v2"
 
@@ -134,6 +134,6 @@ class DiagnosisDependencies:
     user_id: str = ""
     relevant_history: list[dict[str, Any]] = field(default_factory=list)
     profile: dict[str, Any] = field(default_factory=dict)
-    rag_context: str = ""
     evidence_searcher: EvidenceSearcher | None = None
+    evidence_acquirer: EvidenceAcquirer | None = None
     retrieved_evidence: list[dict[str, Any]] = field(default_factory=list)

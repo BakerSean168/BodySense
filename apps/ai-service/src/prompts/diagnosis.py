@@ -1,6 +1,7 @@
 """System prompt for BodyState-based possible-diagnosis analysis."""
 
 DIAGNOSIS_PROMPT_REVISION = "diagnosis-prompt-v3"
+DIAGNOSIS_EVIDENCE_GAP_PROMPT_REVISION = "diagnosis-prompt-v4-evidence-gap"
 
 DIAGNOSIS_SYSTEM_PROMPT = """你是一位专业的体态健康顾问。
 你的任务不是做临床确诊，而是基于 BodySense 已持久化的长期身体状态，
@@ -52,8 +53,31 @@ DIAGNOSIS_SYSTEM_PROMPT = """你是一位专业的体态健康顾问。
 不要输出 candidate_id 或 analysis_id；这些 durable ID 由 Go application layer 分配。"""
 
 
+DIAGNOSIS_EVIDENCE_GAP_SYSTEM_PROMPT = (
+    DIAGNOSIS_SYSTEM_PROMPT
+    + """
+
+## Evidence acquisition v2
+- 不要用自由文本 query 直接搜索。只有存在会实质改变候选判断的具体信息缺口时，
+  才调用 acquire_evidence。
+- 每次调用必须声明 typed EvidenceGap：gap_id、kind、description、rationale、critical，
+  以及 external_knowledge gap 的 targeted query。
+- kind=user_fact 表示只能由用户/BodyState 提供的事实；绝不能用外部 RAG 猜测或补齐。
+- kind=external_knowledge 才允许受控检索；遵守工具返回的 EvidenceBudget 和 stop_reason。
+- 如果 critical gap 因 user_input_required、budget_exhausted、search_unavailable 或 no_results
+  仍未解决，必须在 information_gaps 中保留它，不得假装证据充分。
+- 没有实质证据缺口时不要调用 acquire_evidence。
+"""
+)
+
+
 def get_diagnosis_system_prompt(revision: str) -> str:
     """Resolve an immutable prompt revision used by an Agent configuration."""
-    if revision != DIAGNOSIS_PROMPT_REVISION:
-        raise ValueError(f"unsupported Diagnosis prompt revision: {revision}")
-    return DIAGNOSIS_SYSTEM_PROMPT
+    prompts = {
+        DIAGNOSIS_PROMPT_REVISION: DIAGNOSIS_SYSTEM_PROMPT,
+        DIAGNOSIS_EVIDENCE_GAP_PROMPT_REVISION: DIAGNOSIS_EVIDENCE_GAP_SYSTEM_PROMPT,
+    }
+    try:
+        return prompts[revision]
+    except KeyError as exc:
+        raise ValueError(f"unsupported Diagnosis prompt revision: {revision}") from exc

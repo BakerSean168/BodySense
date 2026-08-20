@@ -5,7 +5,7 @@ import os
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from ...services.diagnosis_service import get_diagnosis_service
 
@@ -14,7 +14,9 @@ router = APIRouter(prefix="/api/diagnosis", tags=["diagnosis"])
 
 
 class DiagnosisRequest(BaseModel):
-    """One diagnosis run pinned to a durable BodyState revision."""
+    """One diagnosis run pinned to durable state and an immutable Agent config."""
+
+    model_config = ConfigDict(extra="forbid")
 
     user_id: str = ""
     body_state_revision: int = Field(gt=0)
@@ -22,8 +24,6 @@ class DiagnosisRequest(BaseModel):
     body_state: dict[str, Any]
     relevant_history: list[dict[str, Any]] = Field(default_factory=list)
     profile: dict[str, Any] = Field(default_factory=dict)
-    rag_context: str = ""
-    rag_results: list[dict[str, Any]] | None = None
 
 
 @router.post("/analyze")
@@ -42,13 +42,9 @@ async def analyze_diagnosis(request: DiagnosisRequest):
             if isinstance(item, dict) and item.get("id")
         ]
         primary_fact = next((item for item in facts if isinstance(item, dict)), {})
-        primary_observation = next(
-            (item for item in observations if isinstance(item, dict)), {}
-        )
+        primary_observation = next((item for item in observations if isinstance(item, dict)), {})
         concern_key = str(
-            primary_fact.get("concern_key")
-            or primary_observation.get("concern_key")
-            or "general"
+            primary_fact.get("concern_key") or primary_observation.get("concern_key") or "general"
         )
         body_region = str(
             primary_fact.get("body_region")
@@ -101,8 +97,6 @@ async def analyze_diagnosis(request: DiagnosisRequest):
             body_state=request.body_state,
             relevant_history=request.relevant_history,
             profile=request.profile,
-            rag_context=request.rag_context,
-            rag_results=request.rag_results,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

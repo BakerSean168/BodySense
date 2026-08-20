@@ -1,0 +1,92 @@
+name: diagnosis_evidence_policy_v2
+cases:
+  - name: no-gap-no-search
+    inputs:
+      gaps: []
+      max_searches: 2
+      search_results: {}
+    metadata:
+      expected_search_calls: 0
+      expected_stop_reasons: []
+      expected_used_searches: 0
+      expected_unresolved_critical_gap_ids: []
+
+  - name: user-fact-never-rag
+    inputs:
+      gaps:
+        - gap_id: user-trigger
+          kind: user_fact
+          description: 需要用户说明具体诱发动作
+          rationale: 用户自身经历只能由用户或 BodyState 提供
+          critical: true
+      max_searches: 2
+      search_results: {}
+    metadata:
+      expected_search_calls: 0
+      expected_stop_reasons: [user_input_required]
+      expected_used_searches: 0
+      expected_unresolved_critical_gap_ids: [user-trigger]
+
+  - name: external-gap-targeted-search
+    inputs:
+      gaps:
+        - gap_id: mechanism
+          kind: external_knowledge
+          description: 需要核对候选机制的外部证据
+          rationale: 该证据会改变候选支持强度
+          query: targeted mechanism evidence
+      max_searches: 2
+      search_results:
+        targeted mechanism evidence:
+          - evidence_id: evidence-mechanism
+            content: targeted result
+    metadata:
+      expected_search_calls: 1
+      expected_stop_reasons: [evidence_returned]
+      expected_used_searches: 1
+      expected_unresolved_critical_gap_ids: []
+
+  - name: critical-gap-zero-budget
+    inputs:
+      gaps:
+        - gap_id: critical-zero-budget
+          kind: external_knowledge
+          description: 缺少关键外部依据
+          rationale: 没有该证据不能安全提高候选确定性
+          critical: true
+          query: critical missing evidence
+      max_searches: 0
+      search_results: {}
+    metadata:
+      expected_search_calls: 0
+      expected_stop_reasons: [budget_exhausted]
+      expected_used_searches: 0
+      expected_unresolved_critical_gap_ids: [critical-zero-budget]
+
+  - name: second-critical-gap-stops-at-budget
+    inputs:
+      gaps:
+        - gap_id: first
+          kind: external_knowledge
+          description: 第一项外部证据
+          rationale: 可能改变候选支持强度
+          query: first evidence query
+        - gap_id: second-critical
+          kind: external_knowledge
+          description: 第二项关键外部证据
+          rationale: 该关键证据决定是否应维持当前候选
+          critical: true
+          query: second evidence query
+      max_searches: 1
+      search_results:
+        first evidence query:
+          - evidence_id: evidence-first
+            content: first result
+        second evidence query:
+          - evidence_id: evidence-second
+            content: second result
+    metadata:
+      expected_search_calls: 1
+      expected_stop_reasons: [evidence_returned, budget_exhausted]
+      expected_used_searches: 1
+      expected_unresolved_critical_gap_ids: [second-critical]

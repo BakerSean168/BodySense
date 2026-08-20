@@ -5,7 +5,6 @@ from __future__ import annotations
 import pytest
 
 from src.agents.assessment_agent import create_assessment_agent
-from src.agents.diagnosis_agent import create_diagnosis_agent
 from src.agents.treatment_agent import create_treatment_agent
 from src.ai import AiRequest, AIService
 from src.ai.types import ChatMessage
@@ -42,9 +41,7 @@ async def test_generic_ai_service_streams_without_provider_calls(
 
 @pytest.mark.asyncio
 async def test_deterministic_typed_agents_keep_structured_contracts() -> None:
-    diagnosis = DiagnosisService(
-        diagnosis_agent=create_diagnosis_agent(deterministic_diagnosis_model())
-    )
+    diagnosis = DiagnosisService(model_resolver=lambda _config: deterministic_diagnosis_model())
     diagnosis_result = await diagnosis.generate_diagnosis(
         body_state_revision=1,
         configuration_id=get_default_diagnosis_configuration().configuration_id,

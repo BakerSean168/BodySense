@@ -11,11 +11,17 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from pydantic_ai import Agent
 from pydantic_ai.models import Model
 
-from ..agents.diagnosis_agent import create_diagnosis_agent
-from ..agents.evidence import KnowledgeEvidenceSearcher
+from ..agents.diagnosis_agent import (
+    DIAGNOSIS_EVIDENCE_POLICY_REVISION,
+    create_diagnosis_agent,
+)
+from ..agents.evidence import (
+    DIAGNOSIS_EVIDENCE_POLICY_V2,
+    DiagnosisEvidenceAcquirer,
+    KnowledgeEvidenceSearcher,
+)
 from ..ai.diagnosis_gateway_model import diagnosis_model_settings
 from ..ai.diagnosis_model_boundary import get_diagnosis_runtime_model
 from ..configuration.diagnosis_agent_config import (
@@ -24,6 +30,7 @@ from ..configuration.diagnosis_agent_config import (
 )
 from ..models.dependencies import EvidenceSearcher
 from ..models.diagnosis import DiagnosisAgentOutput, DiagnosisDependencies
+from ..models.evidence import EvidenceAcquisitionTrace, EvidenceBudget
 from ..runtime.governance import guard_structured_output
 from ..testing_support.deterministic_ai import (
     deterministic_ai_enabled,
@@ -39,16 +46,10 @@ class DiagnosisService:
     def __init__(
         self,
         *,
-        diagnosis_agent: Agent[DiagnosisDependencies, DiagnosisAgentOutput] | None = None,
         model_resolver: ModelResolver | None = None,
         evidence_searcher_factory: EvidenceSearcherFactory | None = None,
     ) -> None:
-        self._agent = diagnosis_agent
-        self._model_resolver = (
-            model_resolver
-            if model_resolver is not None
-            else (None if diagnosis_agent is not None else get_diagnosis_runtime_model)
-        )
+        self._model_resolver = model_resolver or get_diagnosis_runtime_model
         self._evidence_searcher_factory = evidence_searcher_factory
 
     async def generate_diagnosis(
@@ -60,8 +61,6 @@ class DiagnosisService:
         body_state: dict[str, Any],
         relevant_history: list[dict[str, Any]] | None = None,
         profile: dict[str, Any] | None = None,
-        rag_context: str = "",
-        rag_results: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Generate a governed analysis from one pinned durable BodyState revision."""
 
@@ -76,8 +75,6 @@ class DiagnosisService:
         config = get_diagnosis_configuration(configuration_id)
         profile = profile or {}
         relevant_history = relevant_history or []
-        rag_results = rag_results or []
-
         red_flag_input = _body_state_to_extracted_info(body_state)
         detector = get_red_flag_detector()
         red_flag_result = detector.detect(
@@ -96,25 +93,21 @@ class DiagnosisService:
                 "red_flags": red_flag_result.to_dict(),
             }
             blocked["agent_configuration"] = config.provenance()
-            if rag_results:
-                blocked["citations"] = rag_results
             guarded = guard_structured_output(
                 "diagnosis",
                 blocked,
-                rag_results=rag_results,
+                rag_results=[],
                 extracted_info=red_flag_input,
                 policy_revision=config.governance_policy_revision,
             )
             return _emit_with_configuration(guarded.to_emit_dict(), config)
 
-        output, citations = await self._run_typed_agent(
+        output, citations, evidence_trace = await self._run_typed_agent(
             user_id=user_id,
             body_state_revision=body_state_revision,
             body_state=body_state,
             relevant_history=relevant_history,
             profile=profile,
-            rag_context=rag_context,
-            rag_results=rag_results,
             config=config,
         )
 
@@ -127,16 +120,18 @@ class DiagnosisService:
                 for candidate in output.candidates
             ],
             "cross_concern_patterns": output.cross_concern_patterns,
-            "information_gaps": output.information_gaps,
+            "information_gaps": _merge_information_gaps(output.information_gaps, evidence_trace),
             "safety_summary": output.safety_summary,
             "agent_configuration": config.provenance(),
         }
         if citations:
             validated["citations"] = citations
+        if evidence_trace is not None:
+            validated["evidence_acquisition"] = evidence_trace.model_dump(mode="json")
         guarded = guard_structured_output(
             "diagnosis",
             validated,
-            rag_results=citations or rag_results,
+            rag_results=citations,
             extracted_info=red_flag_input,
             policy_revision=config.governance_policy_revision,
         )
@@ -150,28 +145,39 @@ class DiagnosisService:
         body_state: dict[str, Any],
         relevant_history: list[dict[str, Any]],
         profile: dict[str, Any],
-        rag_context: str,
-        rag_results: list[dict[str, Any]],
         config: DiagnosisAgentManifest,
-    ) -> tuple[DiagnosisAgentOutput, list[dict[str, Any]]]:
+    ) -> tuple[DiagnosisAgentOutput, list[dict[str, Any]], EvidenceAcquisitionTrace | None]:
         searcher: EvidenceSearcher | None = None
         if user_id and self._evidence_searcher_factory is not None:
             searcher = self._evidence_searcher_factory(user_id)
+
+        evidence_acquirer: DiagnosisEvidenceAcquirer | None = None
+        if config.evidence_policy_revision == DIAGNOSIS_EVIDENCE_POLICY_V2:
+            evidence_acquirer = DiagnosisEvidenceAcquirer(
+                searcher=searcher,
+                budget=EvidenceBudget(max_searches=2, max_results_per_search=5),
+                policy_revision=config.evidence_policy_revision,
+            )
+        elif config.evidence_policy_revision != DIAGNOSIS_EVIDENCE_POLICY_REVISION:
+            raise ValueError(
+                f"unsupported Diagnosis evidence policy revision: {config.evidence_policy_revision}"
+            )
+
         deps = DiagnosisDependencies(
             user_id=user_id,
             body_state_revision=body_state_revision,
             body_state=body_state,
             relevant_history=relevant_history,
             profile=profile,
-            rag_context=rag_context,
             evidence_searcher=searcher,
-            retrieved_evidence=list(rag_results),
+            evidence_acquirer=evidence_acquirer,
         )
-        run_kwargs: dict[str, Any] = {"deps": deps}
-        if self._model_resolver is not None:
-            run_kwargs["model"] = self._model_resolver(config)
-            run_kwargs["model_settings"] = diagnosis_model_settings(config)
-        agent = self._agent or create_diagnosis_agent(
+        run_kwargs: dict[str, Any] = {
+            "deps": deps,
+            "model": self._model_resolver(config),
+            "model_settings": diagnosis_model_settings(config),
+        }
+        agent = create_diagnosis_agent(
             prompt_revision=config.prompt_revision,
             output_schema_revision=config.output_schema_revision,
             tool_policy_revision=config.tool_policy_revision,
@@ -181,7 +187,19 @@ class DiagnosisService:
             "Synthesize all supported possible-diagnosis candidates from the pinned durable state.",
             **run_kwargs,
         )
-        return result.output, _dedupe_evidence(deps.retrieved_evidence)
+        evidence_trace = evidence_acquirer.trace() if evidence_acquirer is not None else None
+        return result.output, _dedupe_evidence(deps.retrieved_evidence), evidence_trace
+
+
+def _merge_information_gaps(
+    model_gaps: list[str], evidence_trace: EvidenceAcquisitionTrace | None
+) -> list[str]:
+    """Preserve critical unresolved gaps even when the model omits them after tool use."""
+
+    merged = list(model_gaps)
+    if evidence_trace is not None:
+        merged.extend(gap.description for gap in evidence_trace.unresolved_critical_gaps)
+    return list(dict.fromkeys(gap.strip() for gap in merged if gap.strip()))
 
 
 def _emit_with_configuration(
@@ -255,7 +273,7 @@ def get_diagnosis_service() -> DiagnosisService:
     if _diagnosis_service is None:
         if deterministic_ai_enabled():
             _diagnosis_service = DiagnosisService(
-                diagnosis_agent=create_diagnosis_agent(deterministic_diagnosis_model())
+                model_resolver=lambda _config: deterministic_diagnosis_model()
             )
         else:
             _diagnosis_service = DiagnosisService(
