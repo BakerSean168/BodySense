@@ -165,7 +165,7 @@ func TestAssessCandidatesPersistsIndependentUserState(t *testing.T) {
 
 func TestPublicPayloadExposesAgentConfigurationFromImmutableRawOutput(t *testing.T) {
 	svc := NewDiagnosisAnalysisService(&fakeDiagnosisAnalysisRepository{})
-	raw := datatypes.JSON(`{"status":"completed","agent_configuration":{"id":"diag-config-test","role":"diagnosis"}}`)
+	raw := datatypes.JSON(`{"status":"completed","agent_configuration":{"id":"diag-config-test","role":"diagnosis"},"decision_authority":{"policy_revision":"diagnosis-decision-policy-v1","outcome":"allow-normal","reasons":[]}}`)
 	analysis := &model.DiagnosisAnalysisRecord{ID: uuid.New(), RawOutput: raw}
 	payload := svc.PublicPayload(analysis)
 	configuration, ok := payload["agent_configuration"].(json.RawMessage)
@@ -174,5 +174,9 @@ func TestPublicPayloadExposesAgentConfigurationFromImmutableRawOutput(t *testing
 	}
 	if !json.Valid(configuration) || string(configuration) != `{"id":"diag-config-test","role":"diagnosis"}` {
 		t.Fatalf("unexpected Agent configuration provenance: %s", configuration)
+	}
+	decision, ok := payload["decision_authority"].(json.RawMessage)
+	if !ok || !json.Valid(decision) {
+		t.Fatalf("expected decision authority provenance, got %#v", payload["decision_authority"])
 	}
 }
