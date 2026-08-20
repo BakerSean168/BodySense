@@ -81,6 +81,7 @@ if [ ! -f "${DEPLOY_DIR}/.env.production.local" ]; then
     DB_PASSWORD=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 32)
     REDIS_PASSWORD=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 32)
     JWT_SECRET_KEY=$(openssl rand -base64 48)
+    LITELLM_MASTER_KEY=$(openssl rand -hex 32)
 
     cat > "${DEPLOY_DIR}/.env.production.local" << EOF
 # BodySense 生产环境敏感配置 (不提交 Git)
@@ -95,7 +96,11 @@ REDIS_PASSWORD=${REDIS_PASSWORD}
 # JWT 密钥
 JWT_SECRET_KEY=${JWT_SECRET_KEY}
 
-# OpenRouter API Key — 请手动填写你的 API Key
+# AI Service -> LiteLLM 内部网关认证密钥
+LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
+
+# Model provider keys — 至少配置当前 gateway route 所需的一个可用 provider
+MIMO_API_KEY=
 OPENROUTER_API_KEY=
 LLM_API_KEY=
 EMBEDDING_API_KEY=
@@ -103,9 +108,18 @@ EOF
 
     chmod 600 "${DEPLOY_DIR}/.env.production.local"
     echo "✅ .env.production.local 已生成 (权限 600)"
-    echo "⚠️  请手动编辑此文件填入 OPENROUTER_API_KEY"
+    echo "⚠️  请手动编辑此文件填入 MIMO_API_KEY / OPENROUTER_API_KEY"
 else
     echo "✅ .env.production.local 已存在"
+fi
+
+# Gateway migration is idempotent for servers created before LiteLLM existed.
+if ! grep -q '^LITELLM_MASTER_KEY=' "${DEPLOY_DIR}/.env.production.local"; then
+    echo "🔑 为现有部署生成 LiteLLM 内部网关密钥..."
+    LITELLM_MASTER_KEY=$(openssl rand -hex 32)
+    printf '\n# AI Service -> LiteLLM internal gateway auth\nLITELLM_MASTER_KEY=%s\n' \
+        "$LITELLM_MASTER_KEY" >> "${DEPLOY_DIR}/.env.production.local"
+    chmod 600 "${DEPLOY_DIR}/.env.production.local"
 fi
 
 # ── 6. 拉取镜像并启动服务 ───────────────────────────
@@ -140,5 +154,5 @@ echo "  查看日志: docker compose -f docker/docker-compose.prod.yml logs -f"
 echo "  重启服务: docker compose -f docker/docker-compose.prod.yml restart"
 echo "  停止服务: docker compose -f docker/docker-compose.prod.yml down"
 echo ""
-echo "⚠️  请编辑 ${DEPLOY_DIR}/.env.production.local 填入 OPENROUTER_API_KEY"
+echo "⚠️  请编辑 ${DEPLOY_DIR}/.env.production.local 填入 MIMO_API_KEY / OPENROUTER_API_KEY"
 echo "⚠️  然后重启: docker compose -f docker/docker-compose.prod.yml --env-file .env.production --env-file .env.production.local restart"

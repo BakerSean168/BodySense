@@ -16,7 +16,8 @@ from pydantic_ai.models import Model
 
 from ..agents.diagnosis_agent import create_diagnosis_agent
 from ..agents.evidence import KnowledgeEvidenceSearcher
-from ..ai.pydantic_model import get_pydantic_model, route_model_settings
+from ..ai.diagnosis_gateway_model import diagnosis_model_settings
+from ..ai.diagnosis_model_boundary import get_diagnosis_runtime_model
 from ..models.dependencies import EvidenceSearcher
 from ..models.diagnosis import DiagnosisAgentOutput, DiagnosisDependencies
 from ..runtime.governance import guard_structured_output
@@ -26,7 +27,7 @@ from ..testing_support.deterministic_ai import (
 )
 from .red_flag_detector import get_red_flag_detector
 
-ModelResolver = Callable[[str], Model]
+ModelResolver = Callable[[], Model]
 EvidenceSearcherFactory = Callable[[str], EvidenceSearcher]
 
 
@@ -42,7 +43,7 @@ class DiagnosisService:
         self._model_resolver = (
             model_resolver
             if model_resolver is not None
-            else (None if diagnosis_agent is not None else get_pydantic_model)
+            else (None if diagnosis_agent is not None else get_diagnosis_runtime_model)
         )
         self._evidence_searcher_factory = evidence_searcher_factory
 
@@ -56,7 +57,6 @@ class DiagnosisService:
         profile: dict[str, Any] | None = None,
         rag_context: str = "",
         rag_results: list[dict[str, Any]] | None = None,
-        use_case: str = "llm.json",
     ) -> dict[str, Any]:
         """Generate a governed analysis from one pinned durable BodyState revision."""
 
@@ -106,7 +106,6 @@ class DiagnosisService:
             profile=profile,
             rag_context=rag_context,
             rag_results=rag_results,
-            use_case=use_case,
         )
 
         validated: dict[str, Any] = {
@@ -140,7 +139,6 @@ class DiagnosisService:
         profile: dict[str, Any],
         rag_context: str,
         rag_results: list[dict[str, Any]],
-        use_case: str,
     ) -> tuple[DiagnosisAgentOutput, list[dict[str, Any]]]:
         searcher: EvidenceSearcher | None = None
         if user_id and self._evidence_searcher_factory is not None:
@@ -157,8 +155,8 @@ class DiagnosisService:
         )
         run_kwargs: dict[str, Any] = {"deps": deps}
         if self._model_resolver is not None:
-            run_kwargs["model"] = self._model_resolver(use_case)
-            run_kwargs["model_settings"] = route_model_settings(use_case)
+            run_kwargs["model"] = self._model_resolver()
+            run_kwargs["model_settings"] = diagnosis_model_settings()
         result = await self._agent.run(
             "Synthesize all supported possible-diagnosis candidates from the pinned durable state.",
             **run_kwargs,
@@ -232,7 +230,7 @@ def get_diagnosis_service() -> DiagnosisService:
             )
         else:
             _diagnosis_service = DiagnosisService(
-                model_resolver=get_pydantic_model,
+                model_resolver=get_diagnosis_runtime_model,
                 evidence_searcher_factory=KnowledgeEvidenceSearcher,
             )
     return _diagnosis_service

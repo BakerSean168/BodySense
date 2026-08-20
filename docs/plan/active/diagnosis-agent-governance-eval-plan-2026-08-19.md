@@ -690,6 +690,8 @@ Acceptance:
 - Diagnosis runs through PydanticAI -> LiteLLM -> provider;
 - no Diagnosis code constructs physical provider clients.
 
+Implementation checkpoint (2026-08-19): new runtime definitions resolve Diagnosis through the `bodysense-diagnosis` logical model on an authenticated OpenAI-compatible LiteLLM endpoint. `DiagnosisRequest.use_case` / `llm.json` was removed from both Go and Python HTTP/application contracts, and production Compose activates the gateway as a health dependency. The container smoke also executes a real PydanticAI request through the gateway and verifies fallback. A deliberately isolated `diagnosis_model_boundary` keeps one migration-only legacy branch when `DIAGNOSIS_MODEL_BACKEND` is absent, protecting older Watchtower-managed servers whose AI image can update before their Compose/runtime files. New Compose files always set `DIAGNOSIS_MODEL_BACKEND=litellm`; the bridge has a Phase 10 deletion condition after runtime synchronization is proven. Legacy physical routing otherwise remains only for non-Diagnosis AI consumers and is tracked for final retirement.
+
 ### Phase 3 — Agent Configuration platform
 
 Goal: make full Agent configuration the qualification unit.

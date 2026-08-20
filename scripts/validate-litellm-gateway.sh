@@ -68,3 +68,20 @@ print(
     f"model={body.get('model')} total_tokens={usage.get('total_tokens')} fallback=verified"
 )
 PY
+
+(
+  cd "$ROOT/apps/ai-service"
+  LITELLM_BASE_URL="http://127.0.0.1:${host_port}/v1" \
+  LITELLM_API_KEY="$MASTER_KEY" \
+  uv run python - <<'PY'
+from pydantic_ai import Agent
+
+from src.ai.diagnosis_gateway_model import get_diagnosis_gateway_model
+
+get_diagnosis_gateway_model.cache_clear()
+agent = Agent(get_diagnosis_gateway_model(), output_type=str)
+result = agent.run_sync("gateway adapter smoke")
+assert result.output == "bodysense-gateway-fallback-ok", result.output
+print("PYDANTICAI_LITELLM_ADAPTER_SMOKE=PASS logical_model=bodysense-diagnosis")
+PY
+)

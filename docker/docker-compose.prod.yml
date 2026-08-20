@@ -71,11 +71,8 @@ services:
   # 业务服务（Watchtower 自动更新 prod-latest 镜像）
   # ---------------------------------------------------------------------------
 
-  # Gateway is defined now but activated with the application cutover in Phase 2.
-  # Keeping it behind a profile prevents an infrastructure-only PR from changing
-  # the current production request path before ai-service is gateway-backed.
+  # Standalone model gateway. ai-service depends on its health before serving requests.
   litellm-gateway:
-    profiles: [ai-gateway]
     image: ${LITELLM_IMAGE:-docker.litellm.ai/berriai/litellm:v1.97.0}
     restart: unless-stopped
     init: true
@@ -111,6 +108,9 @@ services:
       com.centurylinklabs.watchtower.enable: 'true'
     environment:
       AI_SERVICE_PORT: ${AI_SERVICE_PORT:-8100}
+      DIAGNOSIS_MODEL_BACKEND: litellm
+      LITELLM_BASE_URL: http://litellm-gateway:4000/v1
+      LITELLM_API_KEY: ${LITELLM_MASTER_KEY:?set LITELLM_MASTER_KEY}
       DATABASE_URL: postgresql://${DB_USER:-bodysense}:${DB_PASSWORD:?set DB_PASSWORD}@postgres:5432/${DB_NAME:-bodysense}
       EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-hashing}
       EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-384}
@@ -124,6 +124,9 @@ services:
       WHISPER_MODEL: ${WHISPER_MODEL:-ggml-base.bin}
       ASK_USER_ENABLED: ${ASK_USER_ENABLED:-false}
       TZ: ${TZ:-Asia/Shanghai}
+    depends_on:
+      litellm-gateway:
+        condition: service_healthy
     networks:
       - bodysense-network
     healthcheck:

@@ -29,6 +29,7 @@ PY
 
 export DB_PORT="${VALIDATOR_DB_PORT:-$(pick_port 55432)}"
 export REDIS_PORT="${VALIDATOR_REDIS_PORT:-$(pick_port 56379)}"
+export LITELLM_PORT="${VALIDATOR_LITELLM_PORT:-$(pick_port 54000)}"
 export API_PORT="${VALIDATOR_API_PORT:-$(pick_port 18080)}"
 export AI_SERVICE_PORT="${VALIDATOR_AI_PORT:-$(pick_port 18100)}"
 export WEB_PORT="${VALIDATOR_WEB_PORT:-$(pick_port 15173)}"

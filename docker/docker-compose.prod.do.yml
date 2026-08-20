@@ -25,9 +25,8 @@ services:
   # 业务服务
   # ---------------------------------------------------------------------------
 
-  # Defined ahead of the application cutover; Phase 2 removes this profile gate.
+  # Standalone model gateway. ai-service depends on its health before serving requests.
   litellm-gateway:
-    profiles: [ai-gateway]
     image: ${LITELLM_IMAGE:-docker.litellm.ai/berriai/litellm:v1.97.0}
     restart: unless-stopped
     init: true
@@ -71,6 +70,9 @@ services:
     logging: *default-logging
     environment:
       AI_SERVICE_PORT: ${AI_SERVICE_PORT:-8100}
+      DIAGNOSIS_MODEL_BACKEND: litellm
+      LITELLM_BASE_URL: http://litellm-gateway:4000/v1
+      LITELLM_API_KEY: ${LITELLM_MASTER_KEY:?set LITELLM_MASTER_KEY}
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE:-require}
       EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-openrouter}
       EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-1536}
@@ -94,6 +96,9 @@ services:
       SPACES_ACCESS_KEY_ID: ${SPACES_ACCESS_KEY_ID:-}
       SPACES_SECRET_ACCESS_KEY: ${SPACES_SECRET_ACCESS_KEY:-}
       TZ: ${TZ:-Asia/Shanghai}
+    depends_on:
+      litellm-gateway:
+        condition: service_healthy
     networks:
       - bodysense-network
     healthcheck:

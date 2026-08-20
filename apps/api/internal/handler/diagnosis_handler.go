@@ -167,7 +167,6 @@ func (h *DiagnosisHandler) analyzeDiagnosisFromBodyState(
 		BodyState:         bodyStateJSON,
 		RelevantHistory:   historyJSON,
 		Profile:           profileJSON,
-		UseCase:           "llm.json",
 	})
 	if err != nil {
 		log.Printf("AI diagnosis analysis failed for BodyState R%d user %s: %v", snapshot.CurrentRevision, uid, err)

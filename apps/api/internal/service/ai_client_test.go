@@ -101,14 +101,13 @@ func TestAnalyzeDiagnosisSendsPythonContract(t *testing.T) {
 		BodyState:         json.RawMessage(`{"current_revision":12,"facts":[{"id":"fact-1","kind":"discomfort","value":"颈肩酸胀"}],"observations":[]}`),
 		RelevantHistory:   json.RawMessage(`[{"revision":11,"change_type":"fact.temporal_changed"}]`),
 		Profile:           json.RawMessage(`{"age":30,"occupation":"程序员"}`),
-		UseCase:           "llm.json",
 	})
 	if err != nil {
 		t.Fatalf("AnalyzeDiagnosis returned error: %v", err)
 	}
 
-	if captured["use_case"] != "llm.json" {
-		t.Fatalf("expected use_case llm.json, got %#v", captured["use_case"])
+	if _, exists := captured["use_case"]; exists {
+		t.Fatalf("Diagnosis contract must not expose provider/model routing intent: %#v", captured)
 	}
 	if captured["body_state_revision"] != float64(12) {
 		t.Fatalf("unexpected body_state_revision: %#v", captured["body_state_revision"])
