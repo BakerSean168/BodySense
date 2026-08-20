@@ -1,5 +1,7 @@
 """System prompt for BodyState-based possible-diagnosis analysis."""
 
+DIAGNOSIS_PROMPT_REVISION = "diagnosis-prompt-v3"
+
 DIAGNOSIS_SYSTEM_PROMPT = """你是一位专业的体态健康顾问。
 你的任务不是做临床确诊，而是基于 BodySense 已持久化的长期身体状态，
 生成结构化的“可能性分析”。
@@ -48,3 +50,10 @@ DIAGNOSIS_SYSTEM_PROMPT = """你是一位专业的体态健康顾问。
 }
 
 不要输出 candidate_id 或 analysis_id；这些 durable ID 由 Go application layer 分配。"""
+
+
+def get_diagnosis_system_prompt(revision: str) -> str:
+    """Resolve an immutable prompt revision used by an Agent configuration."""
+    if revision != DIAGNOSIS_PROMPT_REVISION:
+        raise ValueError(f"unsupported Diagnosis prompt revision: {revision}")
+    return DIAGNOSIS_SYSTEM_PROMPT

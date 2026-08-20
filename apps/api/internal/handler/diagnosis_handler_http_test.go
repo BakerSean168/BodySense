@@ -165,6 +165,21 @@ func newDiagnosisAIStub(t *testing.T, responseBody string) *diagnosisAIStub {
 		switch r.URL.Path {
 		case "/api/diagnosis/analyze":
 			stub.analyzeCalls++
+			var request struct {
+				ConfigurationID string `json:"configuration_id"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&request)
+			var response map[string]any
+			if err := json.Unmarshal([]byte(stub.responseBody), &response); err == nil {
+				if _, exists := response["agent_configuration"]; !exists {
+					response["agent_configuration"] = map[string]any{
+						"id":   request.ConfigurationID,
+						"role": "diagnosis",
+					}
+				}
+				encoded, _ := json.Marshal(response)
+				stub.responseBody = string(encoded)
+			}
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(stub.responseBody))
 		case "/api/knowledge/search":
@@ -259,6 +274,10 @@ func newDiagnosisHandlerHarness(
 	// t.Setenv restores the environment automatically after the test and prevents cross-test leakage.
 	t.Setenv("AI_SERVICE_URL", aiStub.server.URL)
 	aiClient := service.NewAIClient()
+	agentDeploymentPolicy, err := service.NewAgentDeploymentPolicy()
+	if err != nil {
+		t.Fatalf("NewAgentDeploymentPolicy: %v", err)
+	}
 
 	h := NewDiagnosisHandler(
 		service.NewConsultationService(repo, conversationRepo),
@@ -268,6 +287,7 @@ func newDiagnosisHandlerHarness(
 		nil,
 		nil,
 		nil,
+		agentDeploymentPolicy,
 	)
 
 	return h, repo, aiStub
@@ -312,6 +332,24 @@ func assertDiagnosisAPIErrorCode(t *testing.T, recorder *httptest.ResponseRecord
 	}
 	if body.Error.Code != expectedCode {
 		t.Fatalf("expected error code %q, got %q: %s", expectedCode, body.Error.Code, recorder.Body.String())
+	}
+}
+
+func TestDiagnosisConfigurationMatchesRequiresSelectedIDAndRole(t *testing.T) {
+	if diagnosisConfigurationMatches(map[string]any{
+		"agent_configuration": map[string]any{"id": "diag-config-wrong", "role": "diagnosis"},
+	}, "diag-config-selected") {
+		t.Fatal("mismatched Agent configuration must be rejected")
+	}
+	if diagnosisConfigurationMatches(map[string]any{
+		"agent_configuration": map[string]any{"id": "diag-config-selected", "role": "treatment"},
+	}, "diag-config-selected") {
+		t.Fatal("wrong Agent role must be rejected")
+	}
+	if !diagnosisConfigurationMatches(map[string]any{
+		"agent_configuration": map[string]any{"id": "diag-config-selected", "role": "diagnosis"},
+	}, "diag-config-selected") {
+		t.Fatal("selected Diagnosis Agent configuration should be accepted")
 	}
 }
 

@@ -24,6 +24,8 @@ def test_diagnosis_pydantic_evals_characterize_current_protected_behavior() -> N
     report = run_diagnosis_baseline()
     summary = report_summary(report)
     assert summary["total"] == 3
+    assert summary["configuration_id"].startswith("diag-config-")
+    assert summary["configuration"]["role"] == "diagnosis"
     assert summary["failed"] == 0
     assert summary["slices"]["critical-safety"] == {"passed": 1, "total": 1}
 

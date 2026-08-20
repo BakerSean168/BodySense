@@ -36,6 +36,8 @@ logger = logging.getLogger(__name__)
 
 OutputKind = Literal["diagnosis", "treatment", "posture"]
 
+DIAGNOSIS_GOVERNANCE_POLICY_REVISION = "diagnosis-governance-v3"
+
 # Fields that must be present for each structured kind.
 _REQUIRED_FIELDS: dict[OutputKind, list[str]] = {
     "diagnosis": ["candidates"],
@@ -244,8 +246,12 @@ def guard_structured_output(
     *,
     rag_results: list[dict[str, Any]] | None = None,
     extracted_info: list[dict[str, Any]] | None = None,
+    policy_revision: str | None = None,
 ) -> GuardedOutput:
     """Force-gate a structured diagnosis, treatment, or posture payload."""
+    if kind == "diagnosis" and policy_revision is not None:
+        if policy_revision != DIAGNOSIS_GOVERNANCE_POLICY_REVISION:
+            raise ValueError(f"unsupported Diagnosis governance policy revision: {policy_revision}")
     if not isinstance(payload, dict):
         return GuardedOutput(
             verdict="rejected",

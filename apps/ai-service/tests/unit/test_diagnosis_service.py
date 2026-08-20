@@ -4,7 +4,10 @@ import pytest
 from pydantic_ai.models.test import TestModel
 
 from src.agents.diagnosis_agent import create_diagnosis_agent
+from src.configuration.diagnosis_agent_config import get_default_diagnosis_configuration
 from src.services.diagnosis_service import DiagnosisService
+
+CONFIG_ID = get_default_diagnosis_configuration().configuration_id
 
 
 def _body_state(revision: int = 12) -> dict:
@@ -74,6 +77,7 @@ async def test_generate_diagnosis_uses_exact_body_state_revision() -> None:
 
     result = await service.generate_diagnosis(
         body_state_revision=12,
+        configuration_id=CONFIG_ID,
         body_state=_body_state(12),
         relevant_history=[{"revision": 11, "change_type": "fact.temporal_changed"}],
         profile={"age": 30},
@@ -81,6 +85,8 @@ async def test_generate_diagnosis_uses_exact_body_state_revision() -> None:
 
     assert result["status"] == "completed"
     assert result["candidates"][0]["basis_fact_ids"] == ["fact-neck-1"]
+    assert result["agent_configuration"]["id"].startswith("diag-config-")
+    assert result["agent_configuration"]["role"] == "diagnosis"
     assert "R12" in str(model.last_model_request_parameters)
     assert "fact-neck-1" in str(model.last_model_request_parameters)
 
@@ -90,6 +96,7 @@ async def test_generate_diagnosis_does_not_cap_candidate_count_at_three() -> Non
     service, _ = _service(_agent_output([_candidate(i) for i in range(1, 9)]))
     result = await service.generate_diagnosis(
         body_state_revision=12,
+        configuration_id=CONFIG_ID,
         body_state=_body_state(12),
     )
     assert len(result["candidates"]) == 8
@@ -100,6 +107,7 @@ async def test_generate_diagnosis_allows_zero_candidates_when_information_is_ins
     service, _ = _service(_agent_output([], status="insufficient_information"))
     result = await service.generate_diagnosis(
         body_state_revision=12,
+        configuration_id=CONFIG_ID,
         body_state=_body_state(12),
     )
     assert result["status"] == "insufficient_information"
@@ -122,10 +130,13 @@ async def test_generate_diagnosis_blocks_current_positive_red_flag_before_agent_
         }
     )
 
-    result = await service.generate_diagnosis(body_state_revision=12, body_state=state)
+    result = await service.generate_diagnosis(
+        body_state_revision=12, configuration_id=CONFIG_ID, body_state=state
+    )
 
     assert result["status"] == "safety_blocked"
     assert result["candidates"] == []
+    assert result["agent_configuration"]["id"].startswith("diag-config-")
     assert model.last_model_request_parameters is None
 
 
@@ -147,6 +158,7 @@ async def test_negative_or_historical_red_flag_words_do_not_block_current_diagno
 
     result = await service.generate_diagnosis(
         body_state_revision=12,
+        configuration_id=CONFIG_ID,
         body_state=state,
         relevant_history=[{"revision": 8, "changes": {"historical": "2019 年曾扭伤"}}],
     )
@@ -159,7 +171,9 @@ async def test_negative_or_historical_red_flag_words_do_not_block_current_diagno
 async def test_generate_diagnosis_rejects_missing_body_state() -> None:
     service, _ = _service(_agent_output([_candidate()]))
     with pytest.raises(ValueError, match="body_state is required"):
-        await service.generate_diagnosis(body_state_revision=12, body_state={})
+        await service.generate_diagnosis(
+            body_state_revision=12, configuration_id=CONFIG_ID, body_state={}
+        )
 
 
 @pytest.mark.asyncio
@@ -168,5 +182,6 @@ async def test_generate_diagnosis_rejects_revision_mismatch() -> None:
     with pytest.raises(ValueError, match="does not match"):
         await service.generate_diagnosis(
             body_state_revision=13,
+            configuration_id=CONFIG_ID,
             body_state=_body_state(12),
         )

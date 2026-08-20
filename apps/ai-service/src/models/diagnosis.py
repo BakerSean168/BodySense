@@ -19,6 +19,8 @@ from pydantic import BaseModel, Field, model_validator
 
 from .dependencies import EvidenceSearcher
 
+DIAGNOSIS_OUTPUT_SCHEMA_REVISION = "diagnosis-output-v2"
+
 
 class DiagnosisConfidence(StrEnum):
     """How well a candidate fits the available BodyState evidence."""
@@ -109,6 +111,13 @@ class DiagnosisAgentOutput(BaseModel):
         if self.status == "completed" and not self.candidates:
             raise ValueError("completed diagnosis analysis requires at least one candidate")
         return self
+
+
+def get_diagnosis_output_type(revision: str) -> type[DiagnosisAgentOutput]:
+    """Resolve the structured output schema bound to an Agent configuration."""
+    if revision != DIAGNOSIS_OUTPUT_SCHEMA_REVISION:
+        raise ValueError(f"unsupported Diagnosis output schema revision: {revision}")
+    return DiagnosisAgentOutput
 
 
 @dataclass(slots=True)

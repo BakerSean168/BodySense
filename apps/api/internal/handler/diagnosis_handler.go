@@ -27,6 +27,7 @@ type DiagnosisHandler struct {
 	bodyStateService          *service.BodyStateService
 	diagnosisAnalysisService  *service.DiagnosisAnalysisService
 	diagnosisFreshnessService *service.DiagnosisFreshnessService
+	agentDeploymentPolicy     *service.AgentDeploymentPolicy
 }
 
 func NewDiagnosisHandler(
@@ -37,6 +38,7 @@ func NewDiagnosisHandler(
 	bodyStateService *service.BodyStateService,
 	diagnosisAnalysisService *service.DiagnosisAnalysisService,
 	diagnosisFreshnessService *service.DiagnosisFreshnessService,
+	agentDeploymentPolicy *service.AgentDeploymentPolicy,
 ) *DiagnosisHandler {
 	return &DiagnosisHandler{
 		consultationService:       consultationService,
@@ -46,6 +48,7 @@ func NewDiagnosisHandler(
 		bodyStateService:          bodyStateService,
 		diagnosisAnalysisService:  diagnosisAnalysisService,
 		diagnosisFreshnessService: diagnosisFreshnessService,
+		agentDeploymentPolicy:     agentDeploymentPolicy,
 	}
 }
 
@@ -161,8 +164,14 @@ func (h *DiagnosisHandler) analyzeDiagnosisFromBodyState(
 		return
 	}
 	historyJSON, _ := json.Marshal(snapshot.RecentRevisions)
+	if h.agentDeploymentPolicy == nil {
+		respondError(c, http.StatusServiceUnavailable, "AGENT_DEPLOYMENT_POLICY_UNAVAILABLE", "Diagnosis Agent deployment policy is not configured")
+		return
+	}
+	configurationID := h.agentDeploymentPolicy.DiagnosisConfigurationID()
 	result, err := h.aiClient.AnalyzeDiagnosis(c.Request.Context(), service.DiagnosisRequest{
 		UserID:            uid.String(),
+		ConfigurationID:   configurationID,
 		BodyStateRevision: snapshot.CurrentRevision,
 		BodyState:         bodyStateJSON,
 		RelevantHistory:   historyJSON,
@@ -177,6 +186,10 @@ func (h *DiagnosisHandler) analyzeDiagnosisFromBodyState(
 	var parsed map[string]any
 	if err := json.Unmarshal(result, &parsed); err != nil {
 		respondError(c, http.StatusBadGateway, "INVALID_AI_RESPONSE", "diagnosis response was not valid JSON")
+		return
+	}
+	if !diagnosisConfigurationMatches(parsed, configurationID) {
+		respondError(c, http.StatusBadGateway, "INVALID_AGENT_CONFIGURATION", "diagnosis response did not match the selected Agent configuration")
 		return
 	}
 	// Diagnosis may discover a safety signal that was not previously committed by
@@ -240,6 +253,17 @@ func (h *DiagnosisHandler) analyzeDiagnosisFromBodyState(
 // ListDiagnosisHistory handles GET /api/v1/diagnosis-analyses.
 // Diagnosis history is now the user's analytical timeline; no separate
 // MedicalRecord aggregate is required to preserve historical reasoning.
+
+func diagnosisConfigurationMatches(payload map[string]any, expectedID string) bool {
+	configuration, ok := payload["agent_configuration"].(map[string]any)
+	if !ok {
+		return false
+	}
+	id, idOK := configuration["id"].(string)
+	role, roleOK := configuration["role"].(string)
+	return idOK && roleOK && id == expectedID && role == "diagnosis"
+}
+
 func (h *DiagnosisHandler) ListDiagnosisHistory(c *gin.Context) {
 	uid, ok := getUserUUID(c)
 	if !ok {

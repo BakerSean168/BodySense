@@ -12,6 +12,7 @@ from pydantic_evals import Dataset
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 
 from src.agents.diagnosis_agent import create_diagnosis_agent
+from src.configuration.diagnosis_agent_config import get_default_diagnosis_configuration
 from src.services.diagnosis_service import DiagnosisService
 from src.testing_support.deterministic_ai import deterministic_diagnosis_model
 
@@ -138,6 +139,7 @@ def load_diagnosis_dataset(path: Path = DEFAULT_DATASET_PATH) -> Dataset[
 def build_deterministic_task() -> Any:
     """Return an async task that exercises the same Diagnosis application path as production."""
 
+    config = get_default_diagnosis_configuration()
     service = DiagnosisService(
         diagnosis_agent=create_diagnosis_agent(deterministic_diagnosis_model())
     )
@@ -146,6 +148,7 @@ def build_deterministic_task() -> Any:
         return await service.generate_diagnosis(
             user_id=inputs.user_id,
             body_state_revision=inputs.body_state_revision,
+            configuration_id=config.configuration_id,
             body_state=inputs.body_state,
             relevant_history=inputs.relevant_history,
             profile=inputs.profile,
@@ -185,8 +188,11 @@ def report_summary(report: Any) -> dict[str, Any]:
                 "assertions": assertions,
             }
         )
+    config = get_default_diagnosis_configuration()
     return {
         "name": report.name,
+        "configuration_id": config.configuration_id,
+        "configuration": config.provenance(),
         "passed": passed,
         "total": len(report.cases),
         "failed": len(report.cases) - passed,
@@ -203,6 +209,7 @@ def render_summary(report: Any) -> str:
         "# Diagnosis Pydantic Evals Baseline",
         "",
         f"- Result: {summary['passed']}/{summary['total']} passed",
+        f"- Agent configuration: `{summary['configuration_id']}`",
         "- Mode: deterministic production-path characterization",
         "",
         "## Risk slices",

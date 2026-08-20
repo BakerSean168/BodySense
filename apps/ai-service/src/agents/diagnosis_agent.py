@@ -7,12 +7,25 @@ import json
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.models import Model
 
-from ..models.diagnosis import DiagnosisAgentOutput, DiagnosisDependencies
-from ..prompts.diagnosis import DIAGNOSIS_SYSTEM_PROMPT
+from ..models.diagnosis import (
+    DIAGNOSIS_OUTPUT_SCHEMA_REVISION,
+    DiagnosisAgentOutput,
+    DiagnosisDependencies,
+    get_diagnosis_output_type,
+)
+from ..prompts.diagnosis import DIAGNOSIS_PROMPT_REVISION, get_diagnosis_system_prompt
+
+DIAGNOSIS_TOOL_POLICY_REVISION = "diagnosis-tools-legacy-v1"
+DIAGNOSIS_EVIDENCE_POLICY_REVISION = "diagnosis-evidence-legacy-v1"
 
 
 def create_diagnosis_agent(
     model: Model | str | None = None,
+    *,
+    prompt_revision: str = DIAGNOSIS_PROMPT_REVISION,
+    output_schema_revision: str = DIAGNOSIS_OUTPUT_SCHEMA_REVISION,
+    tool_policy_revision: str = DIAGNOSIS_TOOL_POLICY_REVISION,
+    evidence_policy_revision: str = DIAGNOSIS_EVIDENCE_POLICY_REVISION,
 ) -> Agent[DiagnosisDependencies, DiagnosisAgentOutput]:
     """Create the production typed Diagnosis Agent.
 
@@ -20,11 +33,18 @@ def create_diagnosis_agent(
     supplies the configured fallback model at ``run`` time.
     """
 
+    if tool_policy_revision != DIAGNOSIS_TOOL_POLICY_REVISION:
+        raise ValueError(f"unsupported Diagnosis tool policy revision: {tool_policy_revision}")
+    if evidence_policy_revision != DIAGNOSIS_EVIDENCE_POLICY_REVISION:
+        raise ValueError(
+            f"unsupported Diagnosis evidence policy revision: {evidence_policy_revision}"
+        )
+
     agent = Agent(
         model,
         deps_type=DiagnosisDependencies,
-        output_type=DiagnosisAgentOutput,
-        system_prompt=DIAGNOSIS_SYSTEM_PROMPT,
+        output_type=get_diagnosis_output_type(output_schema_revision),
+        system_prompt=get_diagnosis_system_prompt(prompt_revision),
         name="bodysense_diagnosis",
         retries=2,
     )
