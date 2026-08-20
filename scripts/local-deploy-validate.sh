@@ -120,4 +120,11 @@ if [[ "$treatment_challenger_revisions" -lt 1 ]]; then
 fi
 echo "TREATMENT_CHALLENGER_VALIDATION=PASS revisions=${treatment_challenger_revisions}"
 
+treatment_decision_traces="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_revisions WHERE generation_decision_trace <> '{}'::jsonb AND acceptance_state='accepted' AND acceptance_decision_trace <> '{}'::jsonb;")"
+if [[ "$treatment_decision_traces" -lt 1 ]]; then
+  echo "TREATMENT_DECISION_TRACE_VALIDATION=FAIL accepted_traces=${treatment_decision_traces}" >&2
+  exit 1
+fi
+echo "TREATMENT_DECISION_TRACE_VALIDATION=PASS accepted_traces=${treatment_decision_traces}"
+
 echo "LOCAL_DEPLOY_VALIDATION=PASS"

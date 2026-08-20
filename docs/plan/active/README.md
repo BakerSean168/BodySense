@@ -8,6 +8,10 @@ legacy-routing retirement program completed on 2026-08-20 and is archived at:
 - [`../archive/2026-08-diagnosis-agent-platform/diagnosis-agent-governance-eval-plan-2026-08-19.md`](../archive/2026-08-diagnosis-agent-platform/diagnosis-agent-governance-eval-plan-2026-08-19.md)
 - [`../archive/2026-08-diagnosis-agent-platform/diagnosis-legacy-deletion-ledger-2026-08-19.md`](../archive/2026-08-diagnosis-agent-platform/diagnosis-legacy-deletion-ledger-2026-08-19.md)
 
+The Treatment DecisionTrace authority pass is complete and archived at:
+
+- [`../archive/2026-08-treatment-decision-trace/README.md`](../archive/2026-08-treatment-decision-trace/README.md)
+
 The Treatment EvidenceGap Challenger is complete and archived at:
 
 - [`../archive/2026-08-treatment-evidence-gap/README.md`](../archive/2026-08-treatment-evidence-gap/README.md)
