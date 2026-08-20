@@ -7,6 +7,7 @@ pnpm test
 pnpm nx run ai-service:eval:diagnosis
 pnpm nx run ai-service:eval:diagnosis-evidence-policy
 pnpm nx run ai-service:eval:diagnosis-promotion
+pnpm nx run ai-service:eval:treatment
 bash scripts/validate-litellm-gateway.sh
 pnpm build
 git diff --check

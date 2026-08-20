@@ -46,17 +46,18 @@ intent to gateway model groups:
 | `conversation.title` | `bodysense-text` | conversation title generation |
 | `posture.analyze` | `bodysense-posture` | multimodal posture analysis |
 
-Diagnosis is stricter: an immutable `AgentConfiguration` carries
-`logical_model=bodysense-diagnosis` and the model-group revision. Go chooses the
-configuration that serves the request; Python validates the revision and creates
-one PydanticAI `OpenAIChatModel` against the internal gateway.
+Typed Diagnosis and Treatment are stricter than generic utility routes: each immutable
+`AgentConfiguration` carries its logical model and model-group revision. Go chooses
+the exact configuration that serves the request; Python validates the manifest
+revisions and creates one PydanticAI model against the internal gateway. Diagnosis
+uses `bodysense-diagnosis`; Treatment v1 uses `bodysense-structured`.
 
 ## Ownership
 
 ### Application / Agent layer owns
 
 - business role and logical route;
-- immutable Diagnosis AgentConfiguration;
+- immutable Diagnosis and Treatment AgentConfiguration;
 - prompt/tool/evidence/governance revisions;
 - generation parameters that are part of Agent behavior identity;
 - Go DecisionAuthority, rollout selection, and business safety.

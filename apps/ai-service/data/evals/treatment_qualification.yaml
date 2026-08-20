@@ -1,0 +1,118 @@
+name: treatment_qualification_v1
+cases:
+  - name: confirmed-neck-candidate
+    inputs:
+      user_id: eval-treatment-confirmed
+      body_state_revision: 21
+      body_state:
+        current_revision: 21
+        facts:
+          - id: fact-neck
+            kind: discomfort
+            concern_key: "region:neck"
+            body_region: 颈肩
+            value: 久坐后酸胀
+      diagnosis_analysis:
+        analysis_id: analysis-neck
+        status: completed
+        candidates:
+          - id: candidate-neck
+            concern_key: "region:neck"
+            name: 久坐相关颈肩负荷模式
+      candidate_assessments:
+        - candidate_id: candidate-neck
+          state: confirmed
+    metadata:
+      split: development
+      slices: [confirmed, proposal-only]
+      required_assessment_states: [confirmed]
+
+  - name: unsure-candidate-remains-reviewable
+    inputs:
+      user_id: eval-treatment-unsure
+      body_state_revision: 22
+      body_state:
+        current_revision: 22
+        facts:
+          - id: fact-neck-unsure
+            kind: discomfort
+            concern_key: "region:neck"
+            body_region: 颈肩
+            value: 活动后轻度不适
+      diagnosis_analysis:
+        analysis_id: analysis-unsure
+        status: completed
+        candidates:
+          - id: candidate-unsure
+            concern_key: "region:neck"
+            name: 颈肩负荷模式
+      candidate_assessments:
+        - candidate_id: candidate-unsure
+          state: unsure
+    metadata:
+      split: holdout
+      slices: [unsure, human-review]
+      required_assessment_states: [unsure]
+
+  - name: user-constraint-is-in-run-context
+    inputs:
+      user_id: eval-treatment-constraint
+      body_state_revision: 23
+      body_state:
+        current_revision: 23
+        facts:
+          - id: fact-back
+            kind: discomfort
+            concern_key: "region:back"
+            body_region: 腰背
+            value: 久坐僵硬
+      diagnosis_analysis:
+        analysis_id: analysis-back
+        status: completed
+        candidates:
+          - id: candidate-back
+            concern_key: "region:back"
+            name: 久坐相关腰背负荷模式
+      candidate_assessments:
+        - candidate_id: candidate-back
+          state: confirmed
+      user_constraints:
+        equipment: none
+        avoid_floor_exercises: true
+    metadata:
+      split: regression
+      slices: [user-constraint, context-pinning]
+      required_assessment_states: [confirmed]
+      required_context_tokens: [avoid_floor_exercises]
+
+  - name: existing-evidence-is-pinned
+    inputs:
+      user_id: eval-treatment-evidence
+      body_state_revision: 24
+      body_state:
+        current_revision: 24
+        facts:
+          - id: fact-shoulder
+            kind: discomfort
+            concern_key: "region:shoulder"
+            body_region: 肩部
+            value: 抬臂后疲劳
+      diagnosis_analysis:
+        analysis_id: analysis-shoulder
+        status: completed
+        candidates:
+          - id: candidate-shoulder
+            concern_key: "region:shoulder"
+            name: 肩部负荷耐受模式
+      candidate_assessments:
+        - candidate_id: candidate-shoulder
+          state: confirmed
+      evidence:
+        - evidence_id: evidence-shoulder-1
+          title: 肩部渐进负荷原则
+          summary: 低风险渐进活动并根据症状调整
+    metadata:
+      split: challenge
+      slices: [evidence-context, challenge]
+      required_assessment_states: [confirmed]
+      required_context_tokens: [evidence-shoulder-1]

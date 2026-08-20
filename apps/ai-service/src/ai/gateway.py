@@ -63,14 +63,22 @@ def gateway_credentials() -> tuple[str, str]:
     return base_url, api_key
 
 
-@lru_cache(maxsize=16)
-def get_gateway_pydantic_model(use_case: str) -> Model:
-    """Return one PydanticAI model backed only by the internal LiteLLM gateway."""
+@lru_cache(maxsize=32)
+def get_gateway_model(logical_model: str) -> Model:
+    """Return one logical model backed only by the internal LiteLLM gateway."""
 
-    route = gateway_route(use_case)
+    if not logical_model.strip():
+        raise GatewayUnavailableError("LiteLLM logical model is required")
     base_url, api_key = gateway_credentials()
     provider = OpenAIProvider(base_url=base_url, api_key=api_key)
-    return OpenAIChatModel(route.logical_model, provider=provider)
+    return OpenAIChatModel(logical_model, provider=provider)
+
+
+@lru_cache(maxsize=16)
+def get_gateway_pydantic_model(use_case: str) -> Model:
+    """Resolve a generic business route to its logical gateway model."""
+
+    return get_gateway_model(gateway_route(use_case).logical_model)
 
 
 def gateway_model_settings(use_case: str) -> dict[str, object]:

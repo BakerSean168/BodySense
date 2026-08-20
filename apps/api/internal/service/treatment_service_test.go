@@ -160,10 +160,50 @@ func (u testTreatmentUnitOfWork) WithinTransaction(ctx context.Context, fn func(
 	return fn(ctx)
 }
 
-type fakeTreatmentReasoner struct{ raw json.RawMessage }
+type testTreatmentDeploymentPolicy struct {
+	configurationID string
+}
 
-func (f fakeTreatmentReasoner) RecommendTreatment(context.Context, TreatmentRecommendationRequest) (json.RawMessage, error) {
-	return f.raw, nil
+func (p testTreatmentDeploymentPolicy) TreatmentConfigurationID() string {
+	if p.configurationID != "" {
+		return p.configurationID
+	}
+	return defaultTreatmentConfigurationID
+}
+
+type fakeTreatmentReasoner struct {
+	raw     json.RawMessage
+	capture *TreatmentRecommendationRequest
+}
+
+func (f fakeTreatmentReasoner) RecommendTreatment(_ context.Context, req TreatmentRecommendationRequest) (json.RawMessage, error) {
+	if f.capture != nil {
+		*f.capture = req
+	}
+	if len(f.raw) == 0 {
+		return f.raw, nil
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(f.raw, &payload); err != nil {
+		return f.raw, nil
+	}
+	if _, exists := payload["agent_configuration"]; !exists {
+		payload["agent_configuration"] = map[string]any{
+			"id": req.ConfigurationID, "role": "treatment",
+			"decision_policy_revision": TreatmentDecisionPolicyV1,
+		}
+	}
+	if _, exists := payload["execution_provenance"]; !exists {
+		payload["execution_provenance"] = map[string]any{
+			"status": "executed", "runtime": "pydantic-ai",
+			"logical_model": treatmentLogicalModelV1,
+		}
+	}
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+	return encoded, nil
 }
 func TestTreatmentGenerateCreatesProposalWithoutMakingItCurrent(t *testing.T) {
 	userID := uuid.New()
@@ -172,6 +212,7 @@ func TestTreatmentGenerateCreatesProposalWithoutMakingItCurrent(t *testing.T) {
 		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
 	}
 	repo := &fakeTreatmentRepo{}
+	var captured TreatmentRecommendationRequest
 	svc := NewTreatmentService(
 		repo,
 		&fakeTreatmentDiagnosis{
@@ -188,8 +229,9 @@ func TestTreatmentGenerateCreatesProposalWithoutMakingItCurrent(t *testing.T) {
 			"status":"proposed","summary":"plan","goal":"reduce load","duration_weeks":4,
 			"interventions":[{"kind":"exercise","title":"chin tuck","description":"controlled","prescription":{"sets":3}}],
 			"daily_habits":[],"expected_timeline":"4 weeks","warning_signs":[],"review_triggers":[],"safety_notes":[]
-		}`)},
+		}`), capture: &captured},
 		testTreatmentUnitOfWork{},
+		testTreatmentDeploymentPolicy{},
 	)
 	revision, err := svc.GenerateProposal(context.Background(), userID, TreatmentProposalInput{DiagnosisAnalysisID: analysis.ID})
 	if err != nil {
@@ -204,8 +246,47 @@ func TestTreatmentGenerateCreatesProposalWithoutMakingItCurrent(t *testing.T) {
 	if revision.SourceBodyStateRevision != 9 || revision.SourceDiagnosisAnalysisID != analysis.ID {
 		t.Fatalf("proposal did not pin exact inputs: %#v", revision)
 	}
+	if captured.ConfigurationID != defaultTreatmentConfigurationID {
+		t.Fatalf("Treatment request lost config identity: %#v", captured)
+	}
+	if revision.AgentConfigurationID != defaultTreatmentConfigurationID || len(revision.AgentConfiguration) == 0 || len(revision.ExecutionProvenance) == 0 {
+		t.Fatalf("proposal lost Agent provenance: %#v", revision)
+	}
 	if len(revision.Interventions) != 1 {
 		t.Fatalf("expected one intervention, got %#v", revision.Interventions)
+	}
+}
+
+func TestTreatmentGenerationRejectsConfigurationMismatchBeforePersistence(t *testing.T) {
+	userID := uuid.New()
+	analysis := &model.DiagnosisAnalysisRecord{
+		ID: uuid.New(), UserID: userID, Status: "completed", BodyStateRevision: 7,
+		Candidates: []model.DiagnosisCandidateRecord{{ID: uuid.New(), ConcernKey: "region:neck", Name: "pattern", Confidence: "中"}},
+	}
+	repo := &fakeTreatmentRepo{}
+	svc := NewTreatmentService(
+		repo,
+		&fakeTreatmentDiagnosis{analysis: analysis, assessments: []model.DiagnosisCandidateAssessment{{CandidateID: analysis.Candidates[0].ID, State: "confirmed"}}},
+		&fakeTreatmentBodyState{snapshot: &BodyStateSnapshot{UserID: userID, CurrentRevision: 7, SafetyState: json.RawMessage(`{}`)}},
+		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh},
+		nil,
+		fakeTreatmentReasoner{raw: json.RawMessage(`{
+			"status":"proposed","summary":"plan","goal":"reduce load","duration_weeks":4,
+			"interventions":[{"kind":"exercise","title":"chin tuck","description":"controlled","prescription":{}}],
+			"expected_timeline":"4 weeks",
+			"agent_configuration":{"id":"treat-config-wrong","role":"treatment"},
+			"execution_provenance":{"status":"executed","runtime":"pydantic-ai"}
+		}`)},
+		testTreatmentUnitOfWork{},
+		testTreatmentDeploymentPolicy{},
+	)
+
+	_, err := svc.GenerateProposal(context.Background(), userID, TreatmentProposalInput{DiagnosisAnalysisID: analysis.ID})
+	if !errors.Is(err, ErrTreatmentConfigurationMismatch) {
+		t.Fatalf("expected configuration mismatch, got %v", err)
+	}
+	if repo.proposal != nil {
+		t.Fatal("configuration mismatch must fail before CreateProposal")
 	}
 }
 
@@ -218,6 +299,7 @@ func TestTreatmentGenerationBlockedBySafetyState(t *testing.T) {
 		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil,
 		fakeTreatmentReasoner{raw: json.RawMessage(`{}`)},
 		testTreatmentUnitOfWork{},
+		testTreatmentDeploymentPolicy{},
 	)
 	_, err := svc.GenerateProposal(context.Background(), userID, TreatmentProposalInput{DiagnosisAnalysisID: analysis.ID})
 	if !errors.Is(err, ErrTreatmentSafetyBlocked) {
@@ -264,6 +346,7 @@ func TestTreatmentGenerationRequiresCandidateAssessment(t *testing.T) {
 			"interventions":[{"kind":"exercise","title":"chin tuck","description":"controlled","prescription":{"sets":3}}]
 		}`)},
 		testTreatmentUnitOfWork{},
+		testTreatmentDeploymentPolicy{},
 	)
 
 	_, err := svc.GenerateProposal(context.Background(), userID, TreatmentProposalInput{DiagnosisAnalysisID: analysis.ID})
@@ -288,6 +371,7 @@ func TestTreatmentAcceptRevalidatesSafetyState(t *testing.T) {
 		&fakeTreatmentBodyState{snapshot: &BodyStateSnapshot{UserID: userID, CurrentRevision: 8, SafetyState: json.RawMessage(`{"has_red_flags":true,"status":"requires_review"}`)}},
 		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil, fakeTreatmentReasoner{},
 		testTreatmentUnitOfWork{},
+		testTreatmentDeploymentPolicy{},
 	)
 
 	_, err := svc.AcceptProposal(context.Background(), userID, repo.proposal.ID)
@@ -315,6 +399,7 @@ func TestTreatmentAcceptRejectsStaleDiagnosis(t *testing.T) {
 		&fakeTreatmentBodyState{snapshot: &BodyStateSnapshot{UserID: userID, CurrentRevision: 8, SafetyState: json.RawMessage(`{}`)}},
 		fakeTreatmentFreshness{state: model.DiagnosisFreshnessStale}, nil, fakeTreatmentReasoner{},
 		testTreatmentUnitOfWork{},
+		testTreatmentDeploymentPolicy{},
 	)
 
 	_, err := svc.AcceptProposal(context.Background(), userID, repo.proposal.ID)
@@ -345,6 +430,7 @@ func TestTreatmentAcceptRejectsRelatedBodyStateChange(t *testing.T) {
 		},
 		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil, fakeTreatmentReasoner{},
 		testTreatmentUnitOfWork{},
+		testTreatmentDeploymentPolicy{},
 	)
 
 	_, err := svc.AcceptProposal(context.Background(), userID, repo.proposal.ID)
@@ -375,6 +461,7 @@ func TestTreatmentAcceptAllowsUnrelatedChangeAndPinsCheckedRevision(t *testing.T
 		},
 		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil, fakeTreatmentReasoner{},
 		testTreatmentUnitOfWork{},
+		testTreatmentDeploymentPolicy{},
 	)
 
 	treatment, err := svc.AcceptProposal(context.Background(), userID, repo.proposal.ID)
@@ -408,6 +495,7 @@ func TestTreatmentAcceptRejectsConcurrentBodyStateChange(t *testing.T) {
 		&fakeTreatmentBodyState{snapshot: &BodyStateSnapshot{UserID: userID, CurrentRevision: 7, SafetyState: json.RawMessage(`{}`)}},
 		fakeTreatmentFreshness{state: model.DiagnosisFreshnessFresh}, nil, fakeTreatmentReasoner{},
 		testTreatmentUnitOfWork{},
+		testTreatmentDeploymentPolicy{},
 	)
 
 	_, err := svc.AcceptProposal(context.Background(), userID, repo.proposal.ID)
@@ -428,6 +516,7 @@ func TestRecordOutcomeUsesOneUnitOfWorkForOutcomeAndBodyState(t *testing.T) {
 		nil,
 		fakeTreatmentReasoner{},
 		testTreatmentUnitOfWork{called: &called},
+		testTreatmentDeploymentPolicy{},
 	)
 
 	stored, created, err := svc.RecordOutcome(context.Background(), uuid.New(), model.Outcome{
@@ -459,6 +548,7 @@ func TestRecordOutcomeRepairsDuplicateWithoutBodyStateLink(t *testing.T) {
 	bodyState := &fakeTreatmentBodyState{recordOutcomeRev: 22}
 	svc := NewTreatmentService(
 		repo, &fakeTreatmentDiagnosis{}, bodyState, nil, nil, fakeTreatmentReasoner{}, testTreatmentUnitOfWork{},
+		testTreatmentDeploymentPolicy{},
 	)
 
 	result, created, err := svc.RecordOutcome(context.Background(), userID, *stored)
@@ -488,6 +578,7 @@ func TestRecordOutcomeSkipsAlreadyAppliedDuplicate(t *testing.T) {
 	bodyState := &fakeTreatmentBodyState{}
 	svc := NewTreatmentService(
 		repo, &fakeTreatmentDiagnosis{}, bodyState, nil, nil, fakeTreatmentReasoner{}, testTreatmentUnitOfWork{},
+		testTreatmentDeploymentPolicy{},
 	)
 
 	_, created, err := svc.RecordOutcome(context.Background(), userID, *stored)
@@ -529,6 +620,7 @@ func TestTreatmentGetCurrentIsPure(t *testing.T) {
 			}},
 		},
 		nil, nil, fakeTreatmentReasoner{}, testTreatmentUnitOfWork{},
+		testTreatmentDeploymentPolicy{},
 	)
 
 	stored, err := svc.GetCurrent(context.Background(), userID)
@@ -558,6 +650,7 @@ func TestTreatmentPreviewDerivesReviewWithoutWriting(t *testing.T) {
 			}},
 		},
 		nil, nil, fakeTreatmentReasoner{}, testTreatmentUnitOfWork{},
+		testTreatmentDeploymentPolicy{},
 	)
 
 	projected, err := svc.PreviewCurrentReview(context.Background(), userID)
@@ -587,6 +680,7 @@ func TestTreatmentExplicitReviewPersistsDerivedStatus(t *testing.T) {
 			}},
 		},
 		nil, nil, fakeTreatmentReasoner{}, testTreatmentUnitOfWork{},
+		testTreatmentDeploymentPolicy{},
 	)
 
 	persisted, err := svc.EvaluateCurrentReview(context.Background(), userID)
@@ -634,5 +728,64 @@ func TestRawJSONUsesFallbackForNilContainers(t *testing.T) {
 	var evidence []model.BodyStateEvidence
 	if got := string(rawJSON(evidence, `[]`)); got != `[]` {
 		t.Fatalf("nil slice must use array fallback, got %s", got)
+	}
+}
+
+func TestTreatmentAgentIdentityRejectsPolicyAndRuntimeDrift(t *testing.T) {
+	validConfig := json.RawMessage(`{
+		"id":"treat-config-85718f8e90ac9d80",
+		"role":"treatment",
+		"decision_policy_revision":"treatment-go-acceptance-v1"
+	}`)
+	validExecution := json.RawMessage(`{
+		"status":"executed",
+		"runtime":"pydantic-ai",
+		"logical_model":"bodysense-structured"
+	}`)
+
+	cases := []struct {
+		name      string
+		config    json.RawMessage
+		execution json.RawMessage
+	}{
+		{
+			name: "decision-policy-drift",
+			config: json.RawMessage(`{
+				"id":"treat-config-85718f8e90ac9d80",
+				"role":"treatment",
+				"decision_policy_revision":"treatment-go-acceptance-v2"
+			}`),
+			execution: validExecution,
+		},
+		{
+			name:   "logical-model-drift",
+			config: validConfig,
+			execution: json.RawMessage(`{
+				"status":"executed",
+				"runtime":"pydantic-ai",
+				"logical_model":"unexpected-model"
+			}`),
+		},
+		{
+			name:   "runtime-drift",
+			config: validConfig,
+			execution: json.RawMessage(`{
+				"status":"executed",
+				"runtime":"direct-provider",
+				"logical_model":"bodysense-structured"
+			}`),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			payload := &treatmentAgentPayload{
+				AgentConfiguration:  tc.config,
+				ExecutionProvenance: tc.execution,
+			}
+			if err := validateTreatmentAgentIdentity(payload, defaultTreatmentConfigurationID); !errors.Is(err, ErrTreatmentConfigurationMismatch) {
+				t.Fatalf("expected fail-closed identity mismatch, got %v", err)
+			}
+		})
 	}
 }

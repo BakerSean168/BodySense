@@ -90,6 +90,10 @@ func newValidator(db *gorm.DB) *validator {
 	freshnessService := service.NewDiagnosisFreshnessService(freshnessRepo, bodyService)
 	treatmentRepo := repository.NewTreatmentRepository(db)
 	unitOfWork := database.NewTransactionManager(db)
+	agentDeploymentPolicy, err := service.NewAgentDeploymentPolicy()
+	if err != nil {
+		panic(fmt.Sprintf("configure Agent deployment policy: %v", err))
+	}
 	treatmentService := service.NewTreatmentService(
 		treatmentRepo,
 		diagnosisService,
@@ -98,6 +102,7 @@ func newValidator(db *gorm.DB) *validator {
 		nil,
 		nil,
 		unitOfWork,
+		agentDeploymentPolicy,
 	)
 	trainingService := service.NewTrainingService(
 		repository.NewTrainingRepository(db),

@@ -20,13 +20,28 @@ const (
 	DiagnosisRolloutPromoted = "promoted"
 	DiagnosisRolloutRollback = "rollback"
 
-	defaultDiagnosisCanaryBPS   = 1000
-	defaultDiagnosisRolloutSalt = "diagnosis-rollout-v1"
-	DiagnosisPromotionRecordV1  = "diagnosis_promotion_v1"
+	defaultDiagnosisCanaryBPS       = 1000
+	defaultDiagnosisRolloutSalt     = "diagnosis-rollout-v1"
+	DiagnosisPromotionRecordV1      = "diagnosis_promotion_v1"
+	defaultTreatmentConfigurationID = "treat-config-85718f8e90ac9d80"
+	TreatmentDecisionPolicyV1       = "treatment-go-acceptance-v1"
+	treatmentLogicalModelV1         = "bodysense-structured"
 )
 
 type diagnosisConfigurationRegistration struct {
 	DecisionPolicyRevision string
+}
+
+type treatmentConfigurationRegistration struct {
+	DecisionPolicyRevision string
+	LogicalModel           string
+}
+
+var knownTreatmentConfigurations = map[string]treatmentConfigurationRegistration{
+	defaultTreatmentConfigurationID: {
+		DecisionPolicyRevision: TreatmentDecisionPolicyV1,
+		LogicalModel:           treatmentLogicalModelV1,
+	},
 }
 
 var knownDiagnosisConfigurations = map[string]diagnosisConfigurationRegistration{
@@ -60,6 +75,7 @@ type DiagnosisRouteSelection struct {
 type AgentDeploymentPolicy struct {
 	championConfigurationID   string
 	challengerConfigurationID string
+	treatmentConfigurationID  string
 	stage                     string
 	canaryBPS                 int
 	rolloutSalt               string
@@ -113,6 +129,17 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 	if rolloutSalt == "" {
 		rolloutSalt = defaultDiagnosisRolloutSalt
 	}
+	treatmentConfigurationID := strings.TrimSpace(os.Getenv("TREATMENT_AGENT_CONFIGURATION_ID"))
+	if treatmentConfigurationID == "" {
+		treatmentConfigurationID = defaultTreatmentConfigurationID
+	}
+	if _, ok := knownTreatmentConfigurations[treatmentConfigurationID]; !ok {
+		return nil, fmt.Errorf(
+			"unknown Treatment Agent configuration id %q",
+			treatmentConfigurationID,
+		)
+	}
+
 	promotionRecord := strings.TrimSpace(os.Getenv("DIAGNOSIS_PROMOTION_RECORD"))
 	if stage == DiagnosisRolloutShadow || stage == DiagnosisRolloutCanary || stage == DiagnosisRolloutPromoted {
 		if promotionRecord != DiagnosisPromotionRecordV1 || champion != defaultDiagnosisConfigurationID || challenger != diagnosisDecisionAuthorityConfigID {
@@ -123,6 +150,7 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 	return &AgentDeploymentPolicy{
 		championConfigurationID:   champion,
 		challengerConfigurationID: challenger,
+		treatmentConfigurationID:  treatmentConfigurationID,
 		stage:                     stage,
 		canaryBPS:                 canaryBPS,
 		rolloutSalt:               rolloutSalt,
@@ -141,6 +169,10 @@ func (p *AgentDeploymentPolicy) DiagnosisDecisionPolicyRevision() string {
 }
 
 func (p *AgentDeploymentPolicy) DiagnosisRolloutStage() string { return p.stage }
+
+func (p *AgentDeploymentPolicy) TreatmentConfigurationID() string {
+	return p.treatmentConfigurationID
+}
 
 func (p *AgentDeploymentPolicy) SelectDiagnosisRoute(subjectID string) DiagnosisRouteSelection {
 	bucket := diagnosisStableRolloutBucket(p.rolloutSalt, subjectID)

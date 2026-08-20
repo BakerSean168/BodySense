@@ -73,6 +73,9 @@ PY
   cd "$ROOT/apps/ai-service"
   export LITELLM_BASE_URL="http://127.0.0.1:${host_port}/v1"
   export LITELLM_API_KEY="$MASTER_KEY"
+  # This smoke must exercise the real gateway even when the caller (for example
+  # local-deploy validation) enables deterministic Agent fixtures globally.
+  export BODYSENSE_DETERMINISTIC_AI="false"
   uv run python - <<'PY'
 from pydantic_ai import Agent
 

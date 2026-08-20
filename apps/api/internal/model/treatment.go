@@ -54,6 +54,9 @@ type TreatmentRevision struct {
 	UserConstraints           datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"user_constraints"`
 	EvidenceIDs               datatypes.JSON `gorm:"type:jsonb;not null;default:'[]'" json:"evidence_ids"`
 	Governance                datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"governance"`
+	AgentConfigurationID      string         `gorm:"type:varchar(80);not null;default:'';index" json:"agent_configuration_id"`
+	AgentConfiguration        datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"agent_configuration"`
+	ExecutionProvenance       datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"execution_provenance"`
 	ChangeReason              string         `gorm:"type:text;not null;default:''" json:"change_reason"`
 	CreatedAt                 time.Time      `gorm:"not null;default:now()" json:"created_at"`
 	AcceptedAt                *time.Time     `json:"accepted_at,omitempty"`

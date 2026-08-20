@@ -19,7 +19,8 @@ class TreatmentRecommendationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     user_id: str = ""
-    body_state_revision: int = Field(ge=0)
+    body_state_revision: int = Field(gt=0)
+    configuration_id: str = Field(min_length=1)
     body_state: dict[str, Any]
     diagnosis_analysis: dict[str, Any]
     candidate_assessments: list[dict[str, Any]] = Field(default_factory=list)
@@ -52,6 +53,16 @@ async def recommend_treatment(request: TreatmentRecommendationRequest):
             "review_triggers": ["symptoms worsen"],
             "safety_notes": ["do not continue through worsening symptoms"],
             "evidence_ids": [],
+            "agent_configuration": {
+                "id": request.configuration_id,
+                "role": "treatment",
+                "decision_policy_revision": "treatment-go-acceptance-v1",
+            },
+            "execution_provenance": {
+                "status": "executed",
+                "runtime": "pydantic-ai",
+                "logical_model": "bodysense-structured",
+            },
             "governance": {
                 "kind": "treatment",
                 "verdict": "accepted",

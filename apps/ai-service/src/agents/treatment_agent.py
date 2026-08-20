@@ -7,18 +7,44 @@ import json
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.models import Model
 
-from ..models.treatment import TreatmentAgentOutput, TreatmentDependencies
-from ..prompts.treatment import TREATMENT_SYSTEM_PROMPT
+from ..models.treatment import (
+    TREATMENT_OUTPUT_SCHEMA_REVISION,
+    TreatmentAgentOutput,
+    TreatmentDependencies,
+    get_treatment_output_type,
+)
+from ..prompts.treatment import TREATMENT_PROMPT_REVISION, get_treatment_system_prompt
+
+TREATMENT_TOOL_POLICY_REVISION = "treatment-tools-v1"
+TREATMENT_EVIDENCE_POLICY_REVISION = "treatment-evidence-search-v1"
+
+
+def treatment_tool_names(tool_policy_revision: str) -> list[str]:
+    if tool_policy_revision != TREATMENT_TOOL_POLICY_REVISION:
+        raise ValueError(f"unsupported Treatment tool policy revision: {tool_policy_revision}")
+    return ["search_evidence"]
 
 
 def create_treatment_agent(
     model: Model | str | None = None,
+    *,
+    prompt_revision: str = TREATMENT_PROMPT_REVISION,
+    output_schema_revision: str = TREATMENT_OUTPUT_SCHEMA_REVISION,
+    tool_policy_revision: str = TREATMENT_TOOL_POLICY_REVISION,
+    evidence_policy_revision: str = TREATMENT_EVIDENCE_POLICY_REVISION,
 ) -> Agent[TreatmentDependencies, TreatmentAgentOutput]:
+    if tool_policy_revision != TREATMENT_TOOL_POLICY_REVISION:
+        raise ValueError(f"unsupported Treatment tool policy revision: {tool_policy_revision}")
+    if evidence_policy_revision != TREATMENT_EVIDENCE_POLICY_REVISION:
+        raise ValueError(
+            f"unsupported Treatment evidence policy revision: {evidence_policy_revision}"
+        )
+
     agent = Agent(
         model,
         deps_type=TreatmentDependencies,
-        output_type=TreatmentAgentOutput,
-        system_prompt=TREATMENT_SYSTEM_PROMPT,
+        output_type=get_treatment_output_type(output_schema_revision),
+        system_prompt=get_treatment_system_prompt(prompt_revision),
         name="bodysense_treatment",
         retries=2,
     )
