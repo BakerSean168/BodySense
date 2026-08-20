@@ -7,35 +7,37 @@ import binascii
 from collections.abc import Callable
 from typing import Any
 
-from pydantic_ai import Agent, BinaryContent
+from pydantic_ai import BinaryContent
 from pydantic_ai.messages import UserContent
 from pydantic_ai.models import Model
 
 from ..agents.assessment_agent import create_assessment_agent
-from ..ai.gateway import ASSESSMENT_ROUTE, gateway_model_settings, get_gateway_pydantic_model
-from ..models.assessment import AssessmentAgentOutput, AssessmentDependencies
+from ..ai.assessment_gateway_model import (
+    assessment_model_settings,
+    get_assessment_runtime_model,
+)
+from ..configuration.assessment_agent_config import (
+    AssessmentAgentManifest,
+    get_assessment_configuration,
+    get_default_assessment_configuration,
+)
+from ..models.assessment import AssessmentDependencies
 from ..prompts.assessment import get_assessment_prompt
 from ..testing_support.deterministic_ai import (
     deterministic_ai_enabled,
     deterministic_assessment_model,
 )
 
-ModelResolver = Callable[[str], Model]
+ModelResolver = Callable[[AssessmentAgentManifest], Model]
 
 
 class AssessmentService:
     def __init__(
         self,
         *,
-        assessment_agent: Agent[AssessmentDependencies, AssessmentAgentOutput] | None = None,
         model_resolver: ModelResolver | None = None,
     ) -> None:
-        self._agent = assessment_agent or create_assessment_agent()
-        self._model_resolver = (
-            model_resolver
-            if model_resolver is not None
-            else (None if assessment_agent is not None else get_gateway_pydantic_model)
-        )
+        self._model_resolver = model_resolver or get_assessment_runtime_model
 
     async def generate_assessment(
         self,
@@ -43,7 +45,13 @@ class AssessmentService:
         rag_context: str = "",
         images: list[str] | None = None,
         posture_analysis: dict[str, Any] | None = None,
+        configuration_id: str | None = None,
     ) -> dict[str, Any]:
+        config = (
+            get_assessment_configuration(configuration_id)
+            if configuration_id
+            else get_default_assessment_configuration()
+        )
         deps = AssessmentDependencies(
             profile=profile,
             posture_analysis=posture_analysis or {},
@@ -53,18 +61,48 @@ class AssessmentService:
             profile,
             rag_context,
             posture_analysis=posture_analysis,
+            prompt_revision=config.prompt_revision,
         )
         content: list[UserContent] = [prompt]
         for image in images or []:
             if image:
                 content.append(_decode_image(image))
 
-        kwargs: dict[str, Any] = {"deps": deps}
-        if self._model_resolver is not None:
-            kwargs["model"] = self._model_resolver(ASSESSMENT_ROUTE)
-            kwargs["model_settings"] = gateway_model_settings(ASSESSMENT_ROUTE)
-        result = await self._agent.run(content, **kwargs)
-        return result.output.model_dump(mode="json")
+        agent = create_assessment_agent(
+            prompt_revision=config.prompt_revision,
+            output_schema_revision=config.output_schema_revision,
+            tool_policy_revision=config.tool_policy_revision,
+        )
+        run_kwargs: dict[str, Any] = {
+            "deps": deps,
+            "model": self._model_resolver(config),
+            "model_settings": assessment_model_settings(config),
+        }
+        result = await agent.run(content, **run_kwargs)
+        payload = result.output.model_dump(mode="json")
+        payload["agent_configuration"] = config.provenance()
+        payload["execution_provenance"] = _execution_provenance(result, config)
+        return payload
+
+
+def _execution_provenance(result: Any, config: AssessmentAgentManifest) -> dict[str, Any]:
+    response = result.response
+    usage = result.usage
+    return {
+        "status": "executed",
+        "runtime": "pydantic-ai",
+        "logical_model": config.logical_model,
+        "model_group_revision": config.model_group_revision,
+        "gateway_reported_model": response.model_name,
+        "provider_adapter": response.provider_name,
+        "agent_run_id": str(response.run_id) if response.run_id is not None else None,
+        "usage": {
+            "requests": usage.requests,
+            "input_tokens": usage.input_tokens,
+            "output_tokens": usage.output_tokens,
+            "total_tokens": (usage.input_tokens or 0) + (usage.output_tokens or 0),
+        },
+    }
 
 
 def _decode_image(value: str) -> BinaryContent:
@@ -91,8 +129,8 @@ def get_assessment_service() -> AssessmentService:
     if _assessment_service is None:
         if deterministic_ai_enabled():
             _assessment_service = AssessmentService(
-                assessment_agent=create_assessment_agent(deterministic_assessment_model())
+                model_resolver=lambda _config: deterministic_assessment_model()
             )
         else:
-            _assessment_service = AssessmentService(model_resolver=get_gateway_pydantic_model)
+            _assessment_service = AssessmentService()
     return _assessment_service

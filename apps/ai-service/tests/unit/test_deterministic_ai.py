@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import pytest
 
-from src.agents.assessment_agent import create_assessment_agent
 from src.ai import AiRequest, AIService
 from src.ai.types import ChatMessage
 from src.configuration.diagnosis_agent_config import get_default_diagnosis_configuration
@@ -80,7 +79,7 @@ async def test_deterministic_typed_agents_keep_structured_contracts() -> None:
     assert treatment_result["interventions"][0]["title"] == "下巴微收"
 
     assessment = AssessmentService(
-        assessment_agent=create_assessment_agent(deterministic_assessment_model())
+        model_resolver=lambda _config: deterministic_assessment_model()
     )
     assessment_result = await assessment.generate_assessment(profile={"age": 30})
     assert assessment_result["observations"][0]["kind"] == "posture_alignment"

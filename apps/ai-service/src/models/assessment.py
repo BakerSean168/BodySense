@@ -7,6 +7,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+ASSESSMENT_OUTPUT_SCHEMA_REVISION = "assessment-output-v1"
+
 
 class AssessmentDimensionScores(BaseModel):
     posture: float = Field(ge=0, le=100)
@@ -43,6 +45,14 @@ class AssessmentAgentOutput(BaseModel):
         if self.status == "completed" and not self.observations:
             raise ValueError("completed assessment requires at least one observation")
         return self
+
+
+def get_assessment_output_type(
+    revision: str = ASSESSMENT_OUTPUT_SCHEMA_REVISION,
+) -> type[AssessmentAgentOutput]:
+    if revision != ASSESSMENT_OUTPUT_SCHEMA_REVISION:
+        raise ValueError(f"unsupported Assessment output schema revision: {revision}")
+    return AssessmentAgentOutput
 
 
 @dataclass(slots=True)
