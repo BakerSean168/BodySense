@@ -215,9 +215,8 @@ ASR_API_MODEL=mimo-v2.5-asr
 
 ```env
 SPLITTER_PROVIDER=llm
-LLM_API_KEY=your-key
-LLM_BASE_URL=your-base-url
-LLM_MODEL=your-model
+LITELLM_API_KEY=your-internal-gateway-key
+LITELLM_BASE_URL=http://localhost:4000/v1
 ```
 
 ## AI 精修子系统

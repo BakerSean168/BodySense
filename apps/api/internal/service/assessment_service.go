@@ -124,7 +124,6 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 		Profile:         profilePayload,
 		Images:          images,
 		PostureAnalysis: posturePayload,
-		UseCase:         "llm.json",
 	})
 	if err != nil {
 		return nil, fmt.Errorf("generate typed assessment: %w", err)

@@ -1,54 +1,36 @@
-"""AIService - unified entry point for all LLM calls."""
+"""Provider-neutral LLM service backed exclusively by the internal LiteLLM gateway."""
 
 from __future__ import annotations
 
+import json
 import logging
-import os
 from collections.abc import AsyncIterator
-from pathlib import Path
-from typing import cast
+from typing import Any, cast
+
+import openai
 
 from ..testing_support.deterministic_ai import (
     deterministic_ai_enabled,
     deterministic_text_for,
     deterministic_usage,
 )
-from .config import RouteDefaults, load_config
-from .errors import NoAvailableProviderError, ProviderError, RateLimitError
-from .providers.base import AiProvider
-from .providers.openai_compatible import OpenAICompatibleProvider
-from .router import ModelRouter
-from .types import AiRequest, AiResponse, AiStreamEvent, TokenUsage
+from .errors import GatewayError, GatewayRateLimitError, GatewayUnavailableError
+from .gateway import gateway_credentials, gateway_route
+from .types import AiRequest, AiResponse, AiStreamEvent, TokenUsage, ToolCall
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_CONFIG_PATH = Path(__file__).parent.parent / "config" / "models.yaml"
-
 
 class AIService:
-    def __init__(self, config_path: str | Path | None = None):
-        if config_path is None:
-            config_path = os.environ.get("AI_CONFIG_PATH", _DEFAULT_CONFIG_PATH)
-        self._config = load_config(config_path)
-        self._providers: dict[str, AiProvider] = {}
-        self._init_providers()
-        self._router = ModelRouter(self._config, self._providers)
+    """Preserve the business-facing request contract while centralizing routing in LiteLLM."""
 
-    def _init_providers(self) -> None:
-        for provider_id, provider_cfg in self._config.providers.items():
-            for model_cfg in provider_cfg.models:
-                key = f"{provider_id}/{model_cfg.id}"
-                if provider_cfg.type == "openai-compatible":
-                    self._providers[key] = OpenAICompatibleProvider(
-                        provider_id=provider_id,
-                        model_id=model_cfg.id,
-                        base_url=provider_cfg.base_url,
-                        api_key=provider_cfg.api_key,
-                        capabilities=model_cfg.capabilities,
-                    )
+    def __init__(self) -> None:
+        self._client: openai.AsyncOpenAI | None = None
+        if not deterministic_ai_enabled():
+            base_url, api_key = gateway_credentials()
+            self._client = openai.AsyncOpenAI(base_url=base_url, api_key=api_key)
 
     async def generate(self, req: AiRequest) -> AiResponse:
-        """Non-streaming call with auto fallback."""
         if deterministic_ai_enabled():
             usage = TokenUsage(**deterministic_usage())
             return AiResponse(
@@ -58,33 +40,37 @@ class AIService:
                 usage=usage,
                 finish_reason="stop",
             )
-        route = self._config.routes.get(req.use_case)
-        if not route:
-            raise NoAvailableProviderError(f"No route for {req.use_case}")
 
-        merged = self._apply_defaults(req, route.defaults)
-        last_error = None
+        route = gateway_route(req.use_case)
+        client = self._require_client()
+        merged = self._apply_defaults(req)
+        kwargs = self._request_kwargs(merged, route.logical_model)
+        try:
+            response = await client.chat.completions.create(**kwargs)
+        except openai.RateLimitError as exc:
+            raise GatewayRateLimitError(str(exc)) from exc
+        except openai.APIError as exc:
+            raise GatewayError(str(exc), status_code=getattr(exc, "status_code", None)) from exc
 
-        for candidate in route.candidates:
-            # Skip candidates whose circuit breaker is open
-            if self._router.is_open(candidate.provider, candidate.model):
-                continue
-            try:
-                provider = self._router.get_provider(candidate.provider, candidate.model)
-                return await provider.generate(merged)
-            except RateLimitError as e:
-                self._router.trip_breaker(candidate.provider, candidate.model)
-                last_error = e
-                continue
-            except (ProviderError, NoAvailableProviderError) as e:
-                # Only trip breaker for rate limit; config errors (400/401) are not retryable
-                last_error = e
-                continue
-
-        raise NoAvailableProviderError(f"All candidates for {req.use_case} failed") from last_error
+        choice = response.choices[0]
+        usage = None
+        if response.usage:
+            usage = TokenUsage(
+                input_tokens=response.usage.prompt_tokens,
+                output_tokens=response.usage.completion_tokens,
+                total_tokens=response.usage.total_tokens,
+            )
+        return AiResponse(
+            text=choice.message.content or "",
+            model=response.model,
+            provider="litellm-gateway",
+            usage=usage,
+            finish_reason=choice.finish_reason,
+            tool_calls=self._parse_tool_calls(choice.message.tool_calls),
+            raw=response,
+        )
 
     async def generate_stream(self, req: AiRequest) -> AsyncIterator[AiStreamEvent]:
-        """Streaming call with auto fallback (only before first chunk)."""
         if deterministic_ai_enabled():
             text = deterministic_text_for(req.use_case)
             midpoint = max(1, len(text) // 2)
@@ -94,44 +80,167 @@ class AIService:
             yield AiStreamEvent(type="usage", usage=TokenUsage(**deterministic_usage()))
             yield AiStreamEvent(type="done", finish_reason="stop")
             return
-        route = self._config.routes.get(req.use_case)
-        if not route:
-            raise NoAvailableProviderError(f"No route for {req.use_case}")
 
-        merged = self._apply_defaults(req, route.defaults)
+        route = gateway_route(req.use_case)
+        client = self._require_client()
+        merged = self._apply_defaults(req)
         merged.stream = True
-        last_error = None
+        kwargs = self._request_kwargs(merged, route.logical_model)
+        kwargs["stream"] = True
+        kwargs["stream_options"] = {"include_usage": True}
+        try:
+            stream = await client.chat.completions.create(**kwargs)
+        except openai.RateLimitError as exc:
+            raise GatewayRateLimitError(str(exc)) from exc
+        except openai.APIError as exc:
+            raise GatewayError(str(exc), status_code=getattr(exc, "status_code", None)) from exc
 
-        for candidate in route.candidates:
-            # Skip candidates whose circuit breaker is open
-            if self._router.is_open(candidate.provider, candidate.model):
-                continue
-            try:
-                provider = self._router.get_provider(candidate.provider, candidate.model)
-                async for event in cast(
-                    "AsyncIterator[AiStreamEvent]", provider.generate_stream(merged)
-                ):
-                    yield event
-                return
-            except RateLimitError as e:
-                self._router.trip_breaker(candidate.provider, candidate.model)
-                last_error = e
-                continue
-            except (ProviderError, NoAvailableProviderError) as e:
-                # Only trip breaker for rate limit; config errors (400/401) are not retryable
-                last_error = e
-                continue
+        tool_call_accumulators: dict[int, dict[str, str]] = {}
+        finish_reason_emitted = False
+        try:
+            async for chunk in cast(Any, stream):
+                if not chunk.choices:
+                    if chunk.usage:
+                        yield AiStreamEvent(
+                            type="usage",
+                            usage=TokenUsage(
+                                input_tokens=chunk.usage.prompt_tokens,
+                                output_tokens=chunk.usage.completion_tokens,
+                                total_tokens=chunk.usage.total_tokens,
+                            ),
+                        )
+                    continue
+                choice = chunk.choices[0]
+                delta = choice.delta
+                if delta.content:
+                    yield AiStreamEvent(type="text_delta", text=delta.content)
+                if delta.tool_calls:
+                    for tc_delta in delta.tool_calls:
+                        accumulator = tool_call_accumulators.setdefault(
+                            tc_delta.index,
+                            {"id": "", "name": "", "arguments": ""},
+                        )
+                        if tc_delta.id:
+                            accumulator["id"] = tc_delta.id
+                        if tc_delta.function:
+                            if tc_delta.function.name:
+                                accumulator["name"] = tc_delta.function.name
+                            if tc_delta.function.arguments:
+                                accumulator["arguments"] += tc_delta.function.arguments
+                if choice.finish_reason and not finish_reason_emitted:
+                    finish_reason_emitted = True
+                    for index in sorted(tool_call_accumulators):
+                        accumulator = tool_call_accumulators[index]
+                        arguments: dict[str, Any] = {}
+                        if accumulator["arguments"]:
+                            try:
+                                arguments = json.loads(accumulator["arguments"])
+                            except json.JSONDecodeError:
+                                logger.warning(
+                                    "Failed to parse tool call arguments for %s",
+                                    accumulator["name"],
+                                )
+                        yield AiStreamEvent(
+                            type="tool_call_done",
+                            tool_call_id=accumulator["id"],
+                            tool_name=accumulator["name"],
+                            tool_arguments=arguments,
+                        )
+                    yield AiStreamEvent(type="done", finish_reason=choice.finish_reason)
+        except openai.RateLimitError as exc:
+            raise GatewayRateLimitError(str(exc)) from exc
+        except openai.APIError as exc:
+            raise GatewayError(str(exc), status_code=getattr(exc, "status_code", None)) from exc
 
-        raise NoAvailableProviderError(f"All candidates for {req.use_case} failed") from last_error
+    def _require_client(self) -> openai.AsyncOpenAI:
+        if self._client is None:
+            raise GatewayUnavailableError("LiteLLM gateway client is not configured")
+        return self._client
 
-    def _apply_defaults(self, req: AiRequest, defaults: RouteDefaults) -> AiRequest:
+    def _apply_defaults(self, req: AiRequest) -> AiRequest:
+        route = gateway_route(req.use_case)
         return AiRequest(
             use_case=req.use_case,
             messages=req.messages,
             tools=req.tools,
             stream=req.stream,
-            response_format=req.response_format or defaults.response_format,
-            temperature=req.temperature if req.temperature is not None else defaults.temperature,
-            max_tokens=req.max_tokens if req.max_tokens is not None else defaults.max_tokens,
+            response_format=req.response_format or route.response_format,
+            temperature=req.temperature if req.temperature is not None else route.temperature,
+            max_tokens=req.max_tokens if req.max_tokens is not None else route.max_tokens,
             metadata=req.metadata,
         )
+
+    def _request_kwargs(self, req: AiRequest, logical_model: str) -> dict[str, Any]:
+        kwargs: dict[str, Any] = {
+            "model": logical_model,
+            "messages": self._convert_messages(req.messages),
+        }
+        if req.tools:
+            kwargs["tools"] = self._convert_tools(req.tools)
+        if req.temperature is not None:
+            kwargs["temperature"] = req.temperature
+        if req.max_tokens is not None:
+            kwargs["max_tokens"] = req.max_tokens
+        if req.response_format == "json_object":
+            kwargs["response_format"] = {"type": "json_object"}
+        return kwargs
+
+    @staticmethod
+    def _convert_messages(messages: list[Any]) -> list[dict[str, Any]]:
+        result: list[dict[str, Any]] = []
+        for msg in messages:
+            item: dict[str, Any] = {"role": msg.role, "content": msg.content}
+            if msg.tool_calls:
+                item["tool_calls"] = [
+                    {
+                        "id": tc.id,
+                        "type": "function",
+                        "function": {
+                            "name": tc.name,
+                            "arguments": json.dumps(tc.arguments, ensure_ascii=False),
+                        },
+                    }
+                    for tc in msg.tool_calls
+                ]
+            if msg.tool_call_id:
+                item["tool_call_id"] = msg.tool_call_id
+            result.append(item)
+        return result
+
+    @staticmethod
+    def _convert_tools(tools: list[Any]) -> list[dict[str, Any]]:
+        return [
+            {
+                "type": "function",
+                "function": {
+                    "name": tool.name,
+                    "description": tool.description,
+                    "parameters": tool.parameters,
+                },
+            }
+            for tool in tools
+        ]
+
+    @staticmethod
+    def _parse_tool_calls(tool_calls: Any) -> list[ToolCall] | None:
+        if not tool_calls:
+            return None
+        result: list[ToolCall] = []
+        for tool_call in tool_calls:
+            arguments: dict[str, Any] = {}
+            if tool_call.function.arguments:
+                try:
+                    arguments = json.loads(tool_call.function.arguments)
+                except json.JSONDecodeError:
+                    logger.warning(
+                        "Failed to parse tool call arguments for %s",
+                        tool_call.function.name,
+                    )
+            result.append(
+                ToolCall(
+                    id=tool_call.id,
+                    name=tool_call.function.name,
+                    arguments=arguments,
+                )
+            )
+        return result

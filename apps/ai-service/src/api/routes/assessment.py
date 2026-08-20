@@ -6,7 +6,7 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from ...models.assessment import AssessmentAgentOutput
 from ...services.assessment_service import get_assessment_service
@@ -16,11 +16,12 @@ router = APIRouter(prefix="/api/assessment", tags=["assessment"])
 
 
 class AssessmentRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     profile: dict[str, Any] = Field(default_factory=dict)
     rag_context: str = ""
     images: list[str] = Field(default_factory=list)
     posture_analysis: dict[str, Any] = Field(default_factory=dict)
-    use_case: str = "llm.json"
 
 
 @router.post("/generate", response_model=AssessmentAgentOutput)

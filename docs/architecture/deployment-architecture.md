@@ -200,9 +200,8 @@ nginx 配置:
 - `JWT_SECRET_KEY` - JWT 签名密钥
 - `LITELLM_MASTER_KEY` - AI Service → LiteLLM 内部网关认证密钥
 - `MIMO_API_KEY` - MiMo provider API 密钥（仅 LiteLLM gateway 使用）
-- `OPENROUTER_API_KEY` - OpenRouter API 密钥
-- `LLM_API_KEY` - LLM API 密钥
-- `EMBEDDING_API_KEY` - Embedding API 密钥
+- `MIMO_API_KEY` / `OPENROUTER_API_KEY` - physical LLM provider keys, consumed only by LiteLLM gateway
+- `EMBEDDING_API_KEY` - Embedding API 密钥（独立于 LLM gateway）
 
 ### 非敏感变量 (.env.production)
 

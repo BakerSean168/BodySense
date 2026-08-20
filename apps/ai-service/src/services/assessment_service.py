@@ -12,7 +12,7 @@ from pydantic_ai.messages import UserContent
 from pydantic_ai.models import Model
 
 from ..agents.assessment_agent import create_assessment_agent
-from ..ai.pydantic_model import get_pydantic_model, route_model_settings
+from ..ai.gateway import ASSESSMENT_ROUTE, gateway_model_settings, get_gateway_pydantic_model
 from ..models.assessment import AssessmentAgentOutput, AssessmentDependencies
 from ..prompts.assessment import get_assessment_prompt
 from ..testing_support.deterministic_ai import (
@@ -34,7 +34,7 @@ class AssessmentService:
         self._model_resolver = (
             model_resolver
             if model_resolver is not None
-            else (None if assessment_agent is not None else get_pydantic_model)
+            else (None if assessment_agent is not None else get_gateway_pydantic_model)
         )
 
     async def generate_assessment(
@@ -43,7 +43,6 @@ class AssessmentService:
         rag_context: str = "",
         images: list[str] | None = None,
         posture_analysis: dict[str, Any] | None = None,
-        use_case: str = "llm.json",
     ) -> dict[str, Any]:
         deps = AssessmentDependencies(
             profile=profile,
@@ -62,8 +61,8 @@ class AssessmentService:
 
         kwargs: dict[str, Any] = {"deps": deps}
         if self._model_resolver is not None:
-            kwargs["model"] = self._model_resolver(use_case)
-            kwargs["model_settings"] = route_model_settings(use_case)
+            kwargs["model"] = self._model_resolver(ASSESSMENT_ROUTE)
+            kwargs["model_settings"] = gateway_model_settings(ASSESSMENT_ROUTE)
         result = await self._agent.run(content, **kwargs)
         return result.output.model_dump(mode="json")
 
@@ -95,5 +94,5 @@ def get_assessment_service() -> AssessmentService:
                 assessment_agent=create_assessment_agent(deterministic_assessment_model())
             )
         else:
-            _assessment_service = AssessmentService(model_resolver=get_pydantic_model)
+            _assessment_service = AssessmentService(model_resolver=get_gateway_pydantic_model)
     return _assessment_service

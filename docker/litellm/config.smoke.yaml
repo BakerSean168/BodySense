@@ -1,5 +1,5 @@
-# Deterministic local/CI smoke config. It preserves the production logical model and
-# fallback graph while replacing physical providers with LiteLLM's built-in mocks.
+# Hermetic gateway topology: all public logical groups exist while only the
+# Diagnosis group intentionally exercises the fallback edge.
 model_list:
   - model_name: bodysense-diagnosis
     litellm_params:
@@ -11,12 +11,50 @@ model_list:
       model: openai/gpt-4o-mini
       api_key: sk-not-used
       mock_response: bodysense-gateway-fallback-ok
+  - model_name: bodysense-consultation
+    litellm_params:
+      model: openai/gpt-4o-mini
+      api_key: sk-not-used
+      mock_response: bodysense-consultation-ok
+  - model_name: bodysense-structured
+    litellm_params:
+      model: openai/gpt-4o-mini
+      api_key: sk-not-used
+      mock_response: '{"status":"ok"}'
+  - model_name: bodysense-text
+    litellm_params:
+      model: openai/gpt-4o-mini
+      api_key: sk-not-used
+      mock_response: bodysense-text-ok
+  - model_name: bodysense-general-fallback
+    litellm_params:
+      model: openai/gpt-4o-mini
+      api_key: sk-not-used
+      mock_response: bodysense-general-fallback-ok
+  - model_name: bodysense-posture
+    litellm_params:
+      model: openai/gpt-4o-mini
+      api_key: sk-not-used
+      mock_response: '{"view":"front","findings":[]}'
+  - model_name: bodysense-posture-fallback
+    litellm_params:
+      model: openai/gpt-4o-mini
+      api_key: sk-not-used
+      mock_response: '{"view":"front","findings":[]}'
 
 router_settings:
   num_retries: 0
   fallbacks:
     - bodysense-diagnosis:
         - bodysense-diagnosis-fallback
+    - bodysense-consultation:
+        - bodysense-general-fallback
+    - bodysense-structured:
+        - bodysense-general-fallback
+    - bodysense-text:
+        - bodysense-general-fallback
+    - bodysense-posture:
+        - bodysense-posture-fallback
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY

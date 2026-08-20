@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from ...ai import AiRequest, AIService
+from ...ai.gateway import TITLE_ROUTE
 from ...ai.types import ChatMessage
 
 logger = logging.getLogger(__name__)
@@ -78,7 +79,7 @@ async def generate_title(request: TitleGenerateRequest):
 
     try:
         req = AiRequest(
-            use_case="llm.text",
+            use_case=TITLE_ROUTE,
             messages=llm_messages,
             stream=False,
             temperature=0.3,

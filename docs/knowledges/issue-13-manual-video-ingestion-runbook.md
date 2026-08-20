@@ -385,7 +385,7 @@ SPLITTER_PROVIDER=heuristic
 
 ### 方案 B：`llm`（LLM 语义切分）
 
-用 LLM 做语义理解，切分质量更高，标题/摘要更自然。需要配置 `LLM_API_KEY` 和 `LLM_BASE_URL`。
+用 LLM 做语义理解，切分质量更高，标题/摘要更自然。需要配置 `LITELLM_API_KEY` 和 `LITELLM_BASE_URL`。
 
 ```powershell
 --splitter-provider llm
@@ -406,7 +406,7 @@ AI 精修会对每个知识单元做：
 --ai-refine
 ```
 
-需要配置 `LLM_API_KEY` 和 `LLM_BASE_URL`。失败的单元会保留原样，不会阻塞流程。
+需要配置 `LITELLM_API_KEY` 和 `LITELLM_BASE_URL`。失败的单元会保留原样，不会阻塞流程。
 
 ## 第 9 步：先做 dry-run，不直接写库
 

@@ -108,19 +108,13 @@ services:
       com.centurylinklabs.watchtower.enable: 'true'
     environment:
       AI_SERVICE_PORT: ${AI_SERVICE_PORT:-8100}
-      DIAGNOSIS_MODEL_BACKEND: litellm
       LITELLM_BASE_URL: http://litellm-gateway:4000/v1
       LITELLM_API_KEY: ${LITELLM_MASTER_KEY:?set LITELLM_MASTER_KEY}
       DATABASE_URL: postgresql://${DB_USER:-bodysense}:${DB_PASSWORD:?set DB_PASSWORD}@postgres:5432/${DB_NAME:-bodysense}
       EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-hashing}
       EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-384}
-      LLM_PROVIDER: ${LLM_PROVIDER:-openrouter}
-      LLM_API_KEY: ${LLM_API_KEY:-}
-      LLM_MODEL: ${LLM_MODEL:-openai/gpt-oss-120b:free}
-      LLM_BASE_URL: ${LLM_BASE_URL:-https://openrouter.ai/api/v1}
       EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
       EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-https://openrouter.ai/api/v1}
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       WHISPER_MODEL: ${WHISPER_MODEL:-ggml-base.bin}
       ASK_USER_ENABLED: ${ASK_USER_ENABLED:-false}
       TZ: ${TZ:-Asia/Shanghai}

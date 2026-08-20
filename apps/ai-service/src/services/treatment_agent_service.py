@@ -10,7 +10,7 @@ from pydantic_ai.models import Model
 
 from ..agents.evidence import KnowledgeEvidenceSearcher
 from ..agents.treatment_agent import create_treatment_agent
-from ..ai.pydantic_model import get_pydantic_model, route_model_settings
+from ..ai.gateway import TREATMENT_ROUTE, gateway_model_settings, get_gateway_pydantic_model
 from ..models.dependencies import EvidenceSearcher
 from ..models.treatment import TreatmentAgentOutput, TreatmentDependencies
 from ..runtime.governance import guard_structured_output
@@ -46,7 +46,6 @@ class TreatmentAgentService:
         profile: dict[str, Any],
         user_constraints: dict[str, Any],
         evidence: list[dict[str, Any]],
-        use_case: str,
     ) -> dict[str, Any]:
         searcher = (
             self._evidence_searcher_factory(user_id)
@@ -67,8 +66,8 @@ class TreatmentAgentService:
         )
         kwargs: dict[str, Any] = {"deps": deps}
         if self._model_resolver is not None:
-            kwargs["model"] = self._model_resolver(use_case)
-            kwargs["model_settings"] = route_model_settings(use_case)
+            kwargs["model"] = self._model_resolver(TREATMENT_ROUTE)
+            kwargs["model_settings"] = gateway_model_settings(TREATMENT_ROUTE)
         result = await self._proposal_agent.run(
             "Create one reviewable intervention proposal from the pinned durable inputs.",
             **kwargs,
@@ -100,7 +99,7 @@ def get_treatment_agent_service() -> TreatmentAgentService:
             )
         else:
             _treatment_agent_service = TreatmentAgentService(
-                model_resolver=get_pydantic_model,
+                model_resolver=get_gateway_pydantic_model,
                 evidence_searcher_factory=KnowledgeEvidenceSearcher,
             )
     return _treatment_agent_service

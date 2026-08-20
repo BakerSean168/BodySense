@@ -102,7 +102,6 @@ LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
 # Model provider keys — 至少配置当前 gateway route 所需的一个可用 provider
 MIMO_API_KEY=
 OPENROUTER_API_KEY=
-LLM_API_KEY=
 EMBEDDING_API_KEY=
 EOF
 

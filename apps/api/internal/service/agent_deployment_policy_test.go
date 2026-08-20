@@ -7,7 +7,6 @@ import (
 
 func clearDiagnosisRolloutEnv(t *testing.T) {
 	t.Helper()
-	t.Setenv("DIAGNOSIS_AGENT_CONFIGURATION_ID", "")
 	t.Setenv("DIAGNOSIS_CHAMPION_CONFIGURATION_ID", "")
 	t.Setenv("DIAGNOSIS_CHALLENGER_CONFIGURATION_ID", "")
 	t.Setenv("DIAGNOSIS_ROLLOUT_STAGE", "")

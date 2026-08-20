@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted — implemented and legacy routing retired in Phase 10 (2026-08-20)
 
 ## Date
 
@@ -35,7 +35,7 @@ Go API
 
 LiteLLM owns provider credentials and physical-provider routing. Python Agent code requests a logical model group and does not construct provider clients. Go remains the owner of business authority and durable health state.
 
-The first logical model group is `bodysense-diagnosis`.
+The first logical model group was `bodysense-diagnosis`. Phase 10 generalized the same boundary to `bodysense-consultation`, `bodysense-structured`, `bodysense-text`, and `bodysense-posture`, allowing the application-owned physical router to be deleted repository-wide.
 
 ## Protected contracts
 
@@ -78,9 +78,6 @@ After cutover and parity verification, the following Diagnosis routing responsib
 
 During migration, the previous routing path may coexist only behind an explicit compatibility seam. Rollback is permitted by reverting the service cutover; it must not mutate historical Diagnosis analyses or their BodyState revision pins.
 
-## Follow-up
+## Implementation outcome
 
-- Establish the gateway service and logical model group.
-- Rebuild the PydanticAI model adapter against the gateway.
-- Move provider secrets to the gateway.
-- Delete legacy Diagnosis routing once repository-wide call-site search proves no consumers remain.
+All follow-ups are complete. The repository-wide call-site migration allowed deletion of `models.yaml`, `ModelRouter`, physical provider clients, `pydantic_model.py`, PydanticAI `FallbackModel` construction, and the temporary Diagnosis backend switch. `AIService` remains only as a provider-neutral business transport facade over LiteLLM logical groups. See [Model Gateway Routing Architecture](../architecture/model-gateway-routing.md).

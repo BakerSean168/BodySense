@@ -120,7 +120,7 @@ def deterministic_assessment_model() -> Model:
 def deterministic_text_for(use_case: str) -> str:
     if use_case == "consultation.reply":
         return "我已经记录了你的描述。你可以在右侧 BodyState 中补充、确认或纠正当前事实。"
-    if use_case == "llm.text":
+    if use_case == "conversation.title":
         return "颈肩状态记录"
     return "{}"
 
