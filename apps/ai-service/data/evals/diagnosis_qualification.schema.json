@@ -1,0 +1,193 @@
+{
+  "$defs": {
+    "DiagnosisEvalCaseDocument": {
+      "additionalProperties": false,
+      "properties": {
+        "inputs": {
+          "$ref": "#/$defs/DiagnosisEvalInputs"
+        },
+        "metadata": {
+          "$ref": "#/$defs/DiagnosisEvalMetadata"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "inputs",
+        "metadata"
+      ],
+      "title": "DiagnosisEvalCaseDocument",
+      "type": "object"
+    },
+    "DiagnosisEvalInputs": {
+      "additionalProperties": false,
+      "description": "Frozen production-shaped input for one Diagnosis qualification case.",
+      "properties": {
+        "body_state": {
+          "additionalProperties": true,
+          "title": "Body State",
+          "type": "object"
+        },
+        "body_state_revision": {
+          "exclusiveMinimum": 0,
+          "title": "Body State Revision",
+          "type": "integer"
+        },
+        "profile": {
+          "additionalProperties": true,
+          "title": "Profile",
+          "type": "object"
+        },
+        "relevant_history": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Relevant History",
+          "type": "array"
+        },
+        "user_id": {
+          "default": "eval-user",
+          "title": "User Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "body_state_revision",
+        "body_state"
+      ],
+      "title": "DiagnosisEvalInputs",
+      "type": "object"
+    },
+    "DiagnosisEvalMetadata": {
+      "additionalProperties": false,
+      "description": "Case taxonomy plus deterministic hard expectations used for qualification.",
+      "properties": {
+        "case_category": {
+          "minLength": 1,
+          "title": "Case Category",
+          "type": "string"
+        },
+        "critical": {
+          "default": false,
+          "title": "Critical",
+          "type": "boolean"
+        },
+        "expected_agent_executed": {
+          "default": true,
+          "title": "Expected Agent Executed",
+          "type": "boolean"
+        },
+        "expected_available_tools": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Expected Available Tools",
+          "type": "array"
+        },
+        "expected_status": {
+          "minLength": 1,
+          "title": "Expected Status",
+          "type": "string"
+        },
+        "forbidden_output_fields": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Forbidden Output Fields",
+          "type": "array"
+        },
+        "max_candidates": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Candidates"
+        },
+        "max_tool_calls": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Max Tool Calls",
+          "type": "integer"
+        },
+        "min_candidates": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Min Candidates",
+          "type": "integer"
+        },
+        "required_concern_keys": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Required Concern Keys",
+          "type": "array"
+        },
+        "scenario_family_id": {
+          "minLength": 1,
+          "title": "Scenario Family Id",
+          "type": "string"
+        },
+        "slices": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Slices",
+          "type": "array"
+        },
+        "split": {
+          "enum": [
+            "development",
+            "holdout",
+            "regression",
+            "challenge"
+          ],
+          "title": "Split",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scenario_family_id",
+        "case_category",
+        "split",
+        "slices",
+        "expected_status"
+      ],
+      "title": "DiagnosisEvalMetadata",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "cases": {
+      "items": {
+        "$ref": "#/$defs/DiagnosisEvalCaseDocument"
+      },
+      "minItems": 1,
+      "title": "Cases",
+      "type": "array"
+    },
+    "name": {
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "cases"
+  ],
+  "title": "DiagnosisDatasetDocument",
+  "type": "object"
+}

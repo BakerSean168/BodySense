@@ -731,6 +731,8 @@ Acceptance:
 
 - one command evaluates an immutable configuration and outputs slice-aware qualification evidence.
 
+Implementation checkpoint (2026-08-20): NS-500 upgrades the three-case characterization smoke into `diagnosis_qualification_v1`: seven schema-validated Pydantic Evals cases spanning development/holdout/regression/challenge, with multi-slice taxonomy and four hard `critical-safety` cases. Deterministic evaluators cover response contract, expected status, candidate policy, no-Treatment side effects, exact Agent configuration provenance, and Agent/tool trace behavior. Safety cases prove the model is bypassed entirely; normal cases prove the configured `search_evidence` tool surface without introducing artificial tool calls. Qualification emits dataset/configuration fingerprints, split/slice/evaluator evidence and hard-gate reasons. A paired non-inferiority comparator uses the same dataset fingerprint, blocks any critical regression, enforces a predeclared 0.02 margin, and distinguishes non-inferiority from promotion eligibility. The current Champion (`diag-config-f492eb1c0c6676ae`) is committed as machine-readable evidence and passes 7/7 with all required splits and critical slices green. Semantic LLM judging remains intentionally absent until a criterion exists that deterministic grading cannot express.
+
 ### Phase 5 — EvidenceGap runtime redesign
 
 Goal: replace model-driven bare search with a controlled evidence acquisition loop.
