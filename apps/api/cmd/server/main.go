@@ -106,7 +106,7 @@ func main() {
 		bodyStateService,
 		aiClient,
 		database.NewTransactionManager(database.DB),
-	)
+	).WithAssessmentDeployment(agentDeploymentPolicy)
 	authHandler := handler.NewAuthHandler(authService)
 	profileHandler := handler.NewProfileHandler(profileService)
 	agentToolRepo := repository.NewAgentToolCallRepository(database.DB)

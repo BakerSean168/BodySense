@@ -39,6 +39,7 @@ type TreatmentRecommendationRequest struct {
 }
 
 type AssessmentGenerationRequest struct {
+	ConfigurationID string          `json:"configuration_id,omitempty"`
 	Profile         json.RawMessage `json:"profile"`
 	RAGContext      string          `json:"rag_context,omitempty"`
 	Images          []string        `json:"images,omitempty"`

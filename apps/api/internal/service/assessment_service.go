@@ -44,6 +44,7 @@ type AssessmentService struct {
 	bodyState      assessmentBodyStateSource
 	reasoner       assessmentReasoner
 	unitOfWork     treatmentUnitOfWork
+	deployment     *AgentDeploymentPolicy
 }
 
 func NewAssessmentService(
@@ -62,6 +63,14 @@ func NewAssessmentService(
 		reasoner:       reasoner,
 		unitOfWork:     unitOfWork,
 	}
+}
+
+// WithAssessmentDeployment attaches the Go-owned deployment policy so Assessment
+// generation resolves its champion Agent configuration through the North-Star
+// control plane and records provenance/decision trace on the immutable report.
+func (s *AssessmentService) WithAssessmentDeployment(p *AgentDeploymentPolicy) *AssessmentService {
+	s.deployment = p
+	return s
 }
 
 type assessmentObservationDraft struct {
@@ -120,7 +129,19 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 		posturePayload, _ = json.Marshal(BuildPostureAnalysisSummary(completedPosture))
 	}
 
+	configurationID := ""
+	policyRevision := ""
+	if s.deployment != nil {
+		route := s.deployment.SelectAssessmentRoute(userID.String())
+		configurationID = route.ServedConfigurationID
+		policyRevision = route.ServedDecisionPolicyRevision
+		if configurationID == "" || policyRevision == "" {
+			return nil, errors.New("assessment deployment policy returned an invalid route")
+		}
+	}
+
 	raw, err := s.reasoner.GenerateAssessment(ctx, AssessmentGenerationRequest{
+		ConfigurationID: configurationID,
 		Profile:         profilePayload,
 		Images:          images,
 		PostureAnalysis: posturePayload,
@@ -133,13 +154,29 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 		return nil, err
 	}
 
+	provenance, provenanceErr := parseAssessmentProvenance(raw)
+	if provenanceErr != nil {
+		return nil, provenanceErr
+	}
+	if configurationID != "" && provenance.AgentConfigurationID != "" {
+		if err := validateAssessmentAgentIdentity(provenance, configurationID, policyRevision); err != nil {
+			return nil, err
+		}
+	}
+
+	generationTrace := buildAssessmentGenerationTrace(provenance, configurationID, policyRevision)
+
 	report := &model.AssessmentReport{
 		ID: uuid.New(), UserID: userID, Status: payload.Status,
 		HealthGrade: payload.HealthGrade, Summary: strings.TrimSpace(payload.Summary),
-		DimensionScores: jsonRaw(payload.DimensionScores, `{}`),
-		InformationGaps: jsonRaw(payload.InformationGaps, `[]`),
-		SafetyNotes:     jsonRaw(payload.SafetyNotes, `[]`),
-		CreatedAt:       time.Now().UTC(),
+		DimensionScores:         jsonRaw(payload.DimensionScores, `{}`),
+		InformationGaps:         jsonRaw(payload.InformationGaps, `[]`),
+		SafetyNotes:             jsonRaw(payload.SafetyNotes, `[]`),
+		AgentConfigurationID:    provenance.AgentConfigurationID,
+		AgentConfiguration:      datatypes.JSON(normalizeRaw(provenance.AgentConfiguration, `{}`)),
+		ExecutionProvenance:     datatypes.JSON(normalizeRaw(provenance.ExecutionProvenance, `{}`)),
+		GenerationDecisionTrace: datatypes.JSON(generationTrace),
+		CreatedAt:               time.Now().UTC(),
 	}
 	projected := make([]map[string]any, 0, len(payload.Observations))
 	err = s.unitOfWork.WithinTransaction(ctx, func(txCtx context.Context) error {
@@ -272,6 +309,84 @@ func jsonRaw(value any, fallback string) json.RawMessage {
 	encoded, err := json.Marshal(value)
 	if err != nil {
 		return json.RawMessage(fallback)
+	}
+	return encoded
+}
+
+type assessmentProvenance struct {
+	AgentConfigurationID    string          `json:"id"`
+	AgentConfiguration      json.RawMessage `json:"agent_configuration"`
+	ExecutionProvenance     json.RawMessage `json:"execution_provenance"`
+	agentConfigurationText  string
+	executionProvenanceText string
+}
+
+func parseAssessmentProvenance(raw json.RawMessage) (assessmentProvenance, error) {
+	var outer struct {
+		AgentConfiguration  map[string]any `json:"agent_configuration"`
+		ExecutionProvenance map[string]any `json:"execution_provenance"`
+	}
+	if err := json.Unmarshal(raw, &outer); err != nil {
+		return assessmentProvenance{}, fmt.Errorf("decode assessment provenance: %w", err)
+	}
+	configID, _ := outer.AgentConfiguration["id"].(string)
+	configJSON, err := json.Marshal(outer.AgentConfiguration)
+	if err != nil {
+		return assessmentProvenance{}, fmt.Errorf("encode assessment agent configuration: %w", err)
+	}
+	execJSON, err := json.Marshal(outer.ExecutionProvenance)
+	if err != nil {
+		return assessmentProvenance{}, fmt.Errorf("encode assessment execution provenance: %w", err)
+	}
+	return assessmentProvenance{
+		AgentConfigurationID:    configID,
+		AgentConfiguration:      configJSON,
+		ExecutionProvenance:     execJSON,
+		agentConfigurationText:  string(configJSON),
+		executionProvenanceText: string(execJSON),
+	}, nil
+}
+
+func validateAssessmentAgentIdentity(
+	prov assessmentProvenance,
+	expectedConfigurationID string,
+	expectedPolicyRevision string,
+) error {
+	if prov.AgentConfigurationID != expectedConfigurationID {
+		return fmt.Errorf(
+			"Assessment agent configuration mismatch: got %q want %q",
+			prov.AgentConfigurationID,
+			expectedConfigurationID,
+		)
+	}
+	if strings.TrimSpace(prov.agentConfigurationText) == "" || strings.TrimSpace(prov.executionProvenanceText) == "" {
+		return errors.New("Assessment response missing agent configuration or execution provenance")
+	}
+	if expectedPolicyRevision != "" {
+		registration, ok := knownAssessmentConfigurations[expectedConfigurationID]
+		if !ok || registration.DecisionPolicyRevision != expectedPolicyRevision {
+			return errors.New("Assessment deployment policy revision not registered for configuration")
+		}
+	}
+	return nil
+}
+
+func buildAssessmentGenerationTrace(
+	prov assessmentProvenance,
+	configurationID string,
+	policyRevision string,
+) json.RawMessage {
+	trace := map[string]any{
+		"status":                   "generated",
+		"phase":                    "generation",
+		"agent_configuration_id":   configurationID,
+		"decision_policy_revision": policyRevision,
+		"evaluated":                prov.AgentConfigurationID != "",
+		"outcome":                  "accepted",
+	}
+	encoded, err := json.Marshal(trace)
+	if err != nil {
+		return json.RawMessage(`{}`)
 	}
 	return encoded
 }
