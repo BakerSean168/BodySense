@@ -10,19 +10,24 @@ import (
 // DiagnosisAnalysis is an immutable analytical artifact pinned to one exact
 // BodyState revision. Later health changes never rewrite this row.
 type DiagnosisAnalysisRecord struct {
-	ID                   uuid.UUID      `gorm:"type:uuid;primaryKey" json:"analysis_id"`
-	UserID               uuid.UUID      `gorm:"type:uuid;not null;index" json:"user_id"`
-	BodyStateRevision    int64          `gorm:"not null;index" json:"body_state_revision"`
-	Status               string         `gorm:"type:varchar(40);not null" json:"status"`
-	Scope                string         `gorm:"type:varchar(40);not null;default:'full_body'" json:"scope"`
-	Summary              string         `gorm:"type:text;not null;default:''" json:"summary"`
-	CrossConcernPatterns datatypes.JSON `gorm:"type:jsonb;not null;default:'[]'" json:"cross_concern_patterns"`
-	InformationGaps      datatypes.JSON `gorm:"type:jsonb;not null;default:'[]'" json:"information_gaps"`
-	SafetySummary        datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"safety_summary"`
-	Citations            datatypes.JSON `gorm:"type:jsonb;not null;default:'[]'" json:"citations"`
-	Governance           datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"governance"`
-	RawOutput            datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"-"`
-	CreatedAt            time.Time      `gorm:"not null;default:now()" json:"created_at"`
+	ID                       uuid.UUID      `gorm:"type:uuid;primaryKey" json:"analysis_id"`
+	UserID                   uuid.UUID      `gorm:"type:uuid;not null;index" json:"user_id"`
+	BodyStateRevision        int64          `gorm:"not null;index" json:"body_state_revision"`
+	Status                   string         `gorm:"type:varchar(40);not null" json:"status"`
+	Scope                    string         `gorm:"type:varchar(40);not null;default:'full_body'" json:"scope"`
+	Summary                  string         `gorm:"type:text;not null;default:''" json:"summary"`
+	CrossConcernPatterns     datatypes.JSON `gorm:"type:jsonb;not null;default:'[]'" json:"cross_concern_patterns"`
+	InformationGaps          datatypes.JSON `gorm:"type:jsonb;not null;default:'[]'" json:"information_gaps"`
+	SafetySummary            datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"safety_summary"`
+	Citations                datatypes.JSON `gorm:"type:jsonb;not null;default:'[]'" json:"citations"`
+	Governance               datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"governance"`
+	AgentConfigurationID     string         `gorm:"type:varchar(80);not null;default:'';index" json:"agent_configuration_id"`
+	AgentConfiguration       datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"agent_configuration"`
+	DecisionTrace            datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"decision_trace"`
+	ExecutionProvenance      datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"execution_provenance"`
+	EvidenceAcquisitionTrace datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"evidence_acquisition_trace"`
+	RawOutput                datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"-"`
+	CreatedAt                time.Time      `gorm:"not null;default:now()" json:"created_at"`
 
 	Candidates []DiagnosisCandidateRecord `gorm:"-" json:"candidates"`
 }

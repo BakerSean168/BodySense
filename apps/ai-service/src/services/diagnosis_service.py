@@ -100,9 +100,15 @@ class DiagnosisService:
                 extracted_info=red_flag_input,
                 policy_revision=config.governance_policy_revision,
             )
-            return _emit_with_configuration(guarded.to_emit_dict(), config)
+            return _emit_with_configuration(
+                guarded.to_emit_dict(),
+                config,
+                execution_provenance=_bypassed_execution_provenance(
+                    config, "python_pre_agent_safety_gate"
+                ),
+            )
 
-        output, citations, evidence_trace = await self._run_typed_agent(
+        output, citations, evidence_trace, execution_provenance = await self._run_typed_agent(
             user_id=user_id,
             body_state_revision=body_state_revision,
             body_state=body_state,
@@ -135,7 +141,9 @@ class DiagnosisService:
             extracted_info=red_flag_input,
             policy_revision=config.governance_policy_revision,
         )
-        return _emit_with_configuration(guarded.to_emit_dict(), config)
+        return _emit_with_configuration(
+            guarded.to_emit_dict(), config, execution_provenance=execution_provenance
+        )
 
     async def _run_typed_agent(
         self,
@@ -146,7 +154,12 @@ class DiagnosisService:
         relevant_history: list[dict[str, Any]],
         profile: dict[str, Any],
         config: DiagnosisAgentManifest,
-    ) -> tuple[DiagnosisAgentOutput, list[dict[str, Any]], EvidenceAcquisitionTrace | None]:
+    ) -> tuple[
+        DiagnosisAgentOutput,
+        list[dict[str, Any]],
+        EvidenceAcquisitionTrace | None,
+        dict[str, Any],
+    ]:
         searcher: EvidenceSearcher | None = None
         if user_id and self._evidence_searcher_factory is not None:
             searcher = self._evidence_searcher_factory(user_id)
@@ -188,7 +201,12 @@ class DiagnosisService:
             **run_kwargs,
         )
         evidence_trace = evidence_acquirer.trace() if evidence_acquirer is not None else None
-        return result.output, _dedupe_evidence(deps.retrieved_evidence), evidence_trace
+        return (
+            result.output,
+            _dedupe_evidence(deps.retrieved_evidence),
+            evidence_trace,
+            _execution_provenance(result, config),
+        )
 
 
 def _merge_information_gaps(
@@ -203,12 +221,49 @@ def _merge_information_gaps(
 
 
 def _emit_with_configuration(
-    payload: dict[str, Any], config: DiagnosisAgentManifest
+    payload: dict[str, Any],
+    config: DiagnosisAgentManifest,
+    *,
+    execution_provenance: dict[str, Any],
 ) -> dict[str, Any]:
-    """Attach execution identity even when governance suppresses model content."""
+    """Attach immutable configuration and runtime provenance after governance filtering."""
     result = dict(payload)
     result["agent_configuration"] = config.provenance()
+    result["execution_provenance"] = execution_provenance
     return result
+
+
+def _execution_provenance(result: Any, config: DiagnosisAgentManifest) -> dict[str, Any]:
+    response = result.response
+    usage = result.usage
+    return {
+        "status": "executed",
+        "runtime": "pydantic-ai",
+        "logical_model": config.logical_model,
+        "model_group_revision": config.model_group_revision,
+        "gateway_reported_model": response.model_name,
+        "provider_adapter": response.provider_name,
+        "agent_run_id": str(response.run_id) if response.run_id is not None else None,
+        "conversation_id": (
+            str(response.conversation_id) if response.conversation_id is not None else None
+        ),
+        "usage": {
+            "requests": usage.requests,
+            "input_tokens": usage.input_tokens,
+            "output_tokens": usage.output_tokens,
+            "total_tokens": (usage.input_tokens or 0) + (usage.output_tokens or 0),
+        },
+    }
+
+
+def _bypassed_execution_provenance(config: DiagnosisAgentManifest, reason: str) -> dict[str, Any]:
+    return {
+        "status": "bypassed",
+        "runtime": "pydantic-ai",
+        "reason": reason,
+        "logical_model": config.logical_model,
+        "model_group_revision": config.model_group_revision,
+    }
 
 
 def _dedupe_evidence(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
