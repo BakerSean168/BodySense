@@ -37,6 +37,9 @@ const (
 	defaultTreatmentCanaryBPS   = 500
 	defaultTreatmentRolloutSalt = "treatment-rollout-v1"
 	TreatmentPromotionRecordV1  = "treatment_promotion_v1"
+
+	defaultAssessmentConfigurationID = "assess-config-fbff8155337b388d"
+	assessmentLogicalModelV1         = "bodysense-structured"
 )
 
 type diagnosisConfigurationRegistration struct {
@@ -44,6 +47,11 @@ type diagnosisConfigurationRegistration struct {
 }
 
 type treatmentConfigurationRegistration struct {
+	DecisionPolicyRevision string
+	LogicalModel           string
+}
+
+type assessmentConfigurationRegistration struct {
 	DecisionPolicyRevision string
 	LogicalModel           string
 }
@@ -56,6 +64,17 @@ var knownTreatmentConfigurations = map[string]treatmentConfigurationRegistration
 	treatmentEvidenceGapConfigurationID: {
 		DecisionPolicyRevision: TreatmentDecisionPolicyV1,
 		LogicalModel:           treatmentLogicalModelV1,
+	},
+}
+
+// AssessmentDecisionPolicyV1 is the deterministic fail-closed generation policy
+// revision for the Assessment role (mirrors treatment-go-acceptance-v1 naming).
+const AssessmentDecisionPolicyV1 = "assessment-go-generation-v1"
+
+var knownAssessmentConfigurations = map[string]assessmentConfigurationRegistration{
+	defaultAssessmentConfigurationID: {
+		DecisionPolicyRevision: AssessmentDecisionPolicyV1,
+		LogicalModel:           assessmentLogicalModelV1,
 	},
 }
 
@@ -97,6 +116,19 @@ type TreatmentRouteSelection struct {
 	PromotionRecord              string `json:"promotion_record,omitempty"`
 }
 
+type AssessmentRouteSelection struct {
+	Stage                        string `json:"stage"`
+	SubjectBucket                int    `json:"subject_bucket"`
+	ServedConfigurationID        string `json:"served_configuration_id"`
+	ServedDecisionPolicyRevision string `json:"served_decision_policy_revision"`
+	ShadowConfigurationID        string `json:"shadow_configuration_id,omitempty"`
+	ShadowDecisionPolicyRevision string `json:"shadow_decision_policy_revision,omitempty"`
+	ChampionConfigurationID      string `json:"champion_configuration_id"`
+	ChallengerConfigurationID    string `json:"challenger_configuration_id"`
+	CanaryBPS                    int    `json:"canary_bps"`
+	PromotionRecord              string `json:"promotion_record,omitempty"`
+}
+
 // AgentDeploymentPolicy is the Go-owned mutable pointer from business role to
 // immutable repository-known Agent configurations. Rollout changes selection;
 // it never mutates an Agent configuration.
@@ -114,6 +146,13 @@ type AgentDeploymentPolicy struct {
 	treatmentCanaryBPS                 int
 	treatmentRolloutSalt               string
 	treatmentPromotionRecord           string
+
+	assessmentChampionConfigurationID   string
+	assessmentChallengerConfigurationID string
+	assessmentStage                     string
+	assessmentCanaryBPS                 int
+	assessmentRolloutSalt               string
+	assessmentPromotionRecord           string
 }
 
 func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
@@ -237,19 +276,82 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		}
 	}
 
+	assessmentChampion := strings.TrimSpace(os.Getenv("ASSESSMENT_CHAMPION_CONFIGURATION_ID"))
+	if assessmentChampion == "" {
+		assessmentChampion = defaultAssessmentConfigurationID
+	}
+	if err := validateAssessmentConfigurationID(assessmentChampion); err != nil {
+		return nil, err
+	}
+	assessmentChallenger := strings.TrimSpace(os.Getenv("ASSESSMENT_CHALLENGER_CONFIGURATION_ID"))
+	if assessmentChallenger == "" {
+		// No challenger yet: Assessment has a single Champion configuration.
+		assessmentChallenger = assessmentChampion
+	}
+	if err := validateAssessmentConfigurationID(assessmentChallenger); err != nil {
+		return nil, err
+	}
+
+	assessmentStage := strings.TrimSpace(strings.ToLower(os.Getenv("ASSESSMENT_ROLLOUT_STAGE")))
+	if assessmentStage == "" {
+		assessmentStage = DiagnosisRolloutChampion
+	}
+	if !validRolloutStage(assessmentStage) {
+		return nil, fmt.Errorf("invalid Assessment rollout stage %q", assessmentStage)
+	}
+	// A challenger is only required once a non-Champion stage is requested.
+	if assessmentStage != DiagnosisRolloutChampion && assessmentStage != DiagnosisRolloutRollback {
+		if assessmentChampion == assessmentChallenger {
+			return nil, fmt.Errorf("Assessment rollout stage %q requires a distinct challenger configuration", assessmentStage)
+		}
+	}
+	assessmentCanaryBPS := defaultDiagnosisCanaryBPS
+	if raw := strings.TrimSpace(os.Getenv("ASSESSMENT_CANARY_BPS")); raw != "" {
+		value, err := strconv.Atoi(raw)
+		if err != nil {
+			return nil, fmt.Errorf("invalid ASSESSMENT_CANARY_BPS %q", raw)
+		}
+		assessmentCanaryBPS = value
+	}
+	if assessmentCanaryBPS < 0 || assessmentCanaryBPS > 10000 {
+		return nil, fmt.Errorf("ASSESSMENT_CANARY_BPS must be between 0 and 10000")
+	}
+	if assessmentStage == DiagnosisRolloutCanary && (assessmentCanaryBPS <= 0 || assessmentCanaryBPS >= 10000) {
+		return nil, fmt.Errorf("canary stage requires ASSESSMENT_CANARY_BPS between 1 and 9999")
+	}
+	assessmentRolloutSalt := strings.TrimSpace(os.Getenv("ASSESSMENT_ROLLOUT_SALT"))
+	if assessmentRolloutSalt == "" {
+		assessmentRolloutSalt = defaultDiagnosisRolloutSalt
+	}
+	assessmentPromotionRecord := strings.TrimSpace(os.Getenv("ASSESSMENT_PROMOTION_RECORD"))
+	if assessmentStage == DiagnosisRolloutShadow || assessmentStage == DiagnosisRolloutCanary || assessmentStage == DiagnosisRolloutPromoted {
+		if assessmentPromotionRecord == "" {
+			return nil, fmt.Errorf(
+				"Assessment rollout stage %q requires an approved promotion record",
+				assessmentStage,
+			)
+		}
+	}
+
 	return &AgentDeploymentPolicy{
-		diagnosisChampionConfigurationID:   diagnosisChampion,
-		diagnosisChallengerConfigurationID: diagnosisChallenger,
-		diagnosisStage:                     diagnosisStage,
-		diagnosisCanaryBPS:                 diagnosisCanaryBPS,
-		diagnosisRolloutSalt:               diagnosisRolloutSalt,
-		diagnosisPromotionRecord:           diagnosisPromotionRecord,
-		treatmentChampionConfigurationID:   treatmentChampion,
-		treatmentChallengerConfigurationID: treatmentChallenger,
-		treatmentStage:                     treatmentStage,
-		treatmentCanaryBPS:                 treatmentCanaryBPS,
-		treatmentRolloutSalt:               treatmentRolloutSalt,
-		treatmentPromotionRecord:           treatmentPromotionRecord,
+		diagnosisChampionConfigurationID:    diagnosisChampion,
+		diagnosisChallengerConfigurationID:  diagnosisChallenger,
+		diagnosisStage:                      diagnosisStage,
+		diagnosisCanaryBPS:                  diagnosisCanaryBPS,
+		diagnosisRolloutSalt:                diagnosisRolloutSalt,
+		diagnosisPromotionRecord:            diagnosisPromotionRecord,
+		treatmentChampionConfigurationID:    treatmentChampion,
+		treatmentChallengerConfigurationID:  treatmentChallenger,
+		treatmentStage:                      treatmentStage,
+		treatmentCanaryBPS:                  treatmentCanaryBPS,
+		treatmentRolloutSalt:                treatmentRolloutSalt,
+		treatmentPromotionRecord:            treatmentPromotionRecord,
+		assessmentChampionConfigurationID:   assessmentChampion,
+		assessmentChallengerConfigurationID: assessmentChallenger,
+		assessmentStage:                     assessmentStage,
+		assessmentCanaryBPS:                 assessmentCanaryBPS,
+		assessmentRolloutSalt:               assessmentRolloutSalt,
+		assessmentPromotionRecord:           assessmentPromotionRecord,
 	}, nil
 }
 
@@ -381,6 +483,73 @@ func validateTreatmentConfigurationID(id string) error {
 	}
 	if _, ok := knownTreatmentConfigurations[id]; !ok {
 		return fmt.Errorf("unknown Treatment Agent configuration id %q", id)
+	}
+	return nil
+}
+
+// AssessmentConfigurationID returns the champion Assessment configuration
+// pointer (the stable pre-rollout compatibility accessor).
+func (p *AgentDeploymentPolicy) AssessmentConfigurationID() string {
+	return p.assessmentChampionConfigurationID
+}
+
+func (p *AgentDeploymentPolicy) AssessmentDecisionPolicyRevision() string {
+	return knownAssessmentConfigurations[p.assessmentChampionConfigurationID].DecisionPolicyRevision
+}
+
+func (p *AgentDeploymentPolicy) AssessmentRolloutStage() string { return p.assessmentStage }
+
+func (p *AgentDeploymentPolicy) SelectAssessmentRoute(subjectID string) AssessmentRouteSelection {
+	bucket := stableRolloutBucket(p.assessmentRolloutSalt, subjectID)
+	served := p.assessmentChampionConfigurationID
+	shadow := ""
+
+	switch p.assessmentStage {
+	case DiagnosisRolloutShadow:
+		shadow = p.assessmentChallengerConfigurationID
+	case DiagnosisRolloutCanary:
+		if bucket < p.assessmentCanaryBPS {
+			served = p.assessmentChallengerConfigurationID
+			shadow = p.assessmentChampionConfigurationID
+		} else {
+			shadow = p.assessmentChallengerConfigurationID
+		}
+	case DiagnosisRolloutPromoted:
+		served = p.assessmentChallengerConfigurationID
+	case DiagnosisRolloutRollback:
+		served = p.assessmentChampionConfigurationID
+	}
+
+	selection := AssessmentRouteSelection{
+		Stage: stageOrChampion(p.assessmentStage), SubjectBucket: bucket,
+		ServedConfigurationID:        served,
+		ServedDecisionPolicyRevision: knownAssessmentConfigurations[served].DecisionPolicyRevision,
+		ShadowConfigurationID:        shadow,
+		ChampionConfigurationID:      p.assessmentChampionConfigurationID,
+		ChallengerConfigurationID:    p.assessmentChallengerConfigurationID,
+		CanaryBPS:                    p.assessmentCanaryBPS,
+		PromotionRecord:              p.assessmentPromotionRecord,
+	}
+	if shadow != "" {
+		selection.ShadowDecisionPolicyRevision = knownAssessmentConfigurations[shadow].DecisionPolicyRevision
+	}
+	return selection
+}
+
+func AssessmentDecisionPolicyRevisionForConfiguration(configurationID string) (string, error) {
+	registration, ok := knownAssessmentConfigurations[strings.TrimSpace(configurationID)]
+	if !ok {
+		return "", fmt.Errorf("unknown Assessment Agent configuration id %q", configurationID)
+	}
+	return registration.DecisionPolicyRevision, nil
+}
+
+func validateAssessmentConfigurationID(id string) error {
+	if !strings.HasPrefix(id, "assess-config-") {
+		return fmt.Errorf("invalid Assessment Agent configuration id %q", id)
+	}
+	if _, ok := knownAssessmentConfigurations[id]; !ok {
+		return fmt.Errorf("unknown Assessment Agent configuration id %q", id)
 	}
 	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/bodysense/api/internal/model"
@@ -161,5 +162,80 @@ func TestAssessmentProjectionFailurePreventsReportPersistence(t *testing.T) {
 	}
 	if repo.created != nil {
 		t.Fatal("report must not persist after observation projection failure")
+	}
+}
+
+func assessmentOutputWithProvenance() json.RawMessage {
+	return json.RawMessage(`{
+		"status":"completed",
+		"health_grade":"B",
+		"dimension_scores":{"posture":72,"exercise":68,"lifestyle":70,"injury_risk":75,"overall":71},
+		"observations":[{
+			"kind":"posture_alignment","body_region":"肩部","label":"高低肩倾向",
+			"description":"右侧肩峰略高","severity":"轻度","confidence":"中",
+			"method":"posture_photo_front","condition":{"view":"front"}
+		}],
+		"summary":"当前资料支持一项待审核观察。",
+		"information_gaps":[],"safety_notes":[],
+		"agent_configuration":{"id":"assess-config-fbff8155337b388d","role":"assessment","decision_policy_revision":"assessment-go-generation-v1"},
+		"execution_provenance":{"status":"executed","runtime":"pydantic-ai","logical_model":"bodysense-structured"}
+	}`)
+}
+
+func TestAssessmentPersistsAgentProvenanceAndDecisionTrace(t *testing.T) {
+	userID := uuid.New()
+	repo := &fakeAssessmentRepository{}
+	policy, err := NewAgentDeploymentPolicy()
+	if err != nil {
+		t.Fatalf("NewAgentDeploymentPolicy: %v", err)
+	}
+	svc := NewAssessmentService(
+		repo,
+		fakeAssessmentProfileSource{profile: &model.UserProfile{UserID: userID}},
+		fakeAssessmentUploadSource{},
+		&fakeAssessmentBodyState{},
+		fakeAssessmentReasoner{raw: assessmentOutputWithProvenance()},
+		testTreatmentUnitOfWork{},
+	).WithAssessmentDeployment(policy)
+
+	report, err := svc.GenerateAssessment(context.Background(), userID)
+	if err != nil {
+		t.Fatalf("GenerateAssessment: %v", err)
+	}
+	if report.AgentConfigurationID != defaultAssessmentConfigurationID {
+		t.Fatalf("expected agent configuration id %q, got %q", defaultAssessmentConfigurationID, report.AgentConfigurationID)
+	}
+	if len(report.AgentConfiguration) == 0 || len(report.ExecutionProvenance) == 0 {
+		t.Fatal("report must persist agent configuration and execution provenance")
+	}
+	if string(report.GenerationDecisionTrace) == "{}" || len(report.GenerationDecisionTrace) == 0 {
+		t.Fatal("report must persist a generation decision trace")
+	}
+}
+
+func TestAssessmentRejectsIdentityMismatch(t *testing.T) {
+	userID := uuid.New()
+	policy, err := NewAgentDeploymentPolicy()
+	if err != nil {
+		t.Fatalf("NewAgentDeploymentPolicy: %v", err)
+	}
+	// Response claims a different (unknown) configuration id than the deployment pointer.
+	wrong := json.RawMessage(strings.Replace(
+		string(assessmentOutputWithProvenance()),
+		"assess-config-fbff8155337b388d",
+		"assess-config-0000000000000000",
+		1,
+	))
+	svc := NewAssessmentService(
+		&fakeAssessmentRepository{},
+		fakeAssessmentProfileSource{profile: &model.UserProfile{UserID: userID}},
+		fakeAssessmentUploadSource{},
+		&fakeAssessmentBodyState{},
+		fakeAssessmentReasoner{raw: wrong},
+		testTreatmentUnitOfWork{},
+	).WithAssessmentDeployment(policy)
+
+	if _, err := svc.GenerateAssessment(context.Background(), userID); err == nil {
+		t.Fatal("identity mismatch must fail closed")
 	}
 }
