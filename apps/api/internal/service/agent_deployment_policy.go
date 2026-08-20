@@ -56,3 +56,14 @@ func (p *AgentDeploymentPolicy) DiagnosisConfigurationID() string {
 func (p *AgentDeploymentPolicy) DiagnosisDecisionPolicyRevision() string {
 	return knownDiagnosisConfigurations[p.diagnosisConfigurationID].DecisionPolicyRevision
 }
+
+// DiagnosisDecisionPolicyRevisionForConfiguration resolves one immutable
+// repository-known Diagnosis configuration without changing the serving pointer.
+// Replay, shadow, and qualification paths use this to evaluate a selected config.
+func DiagnosisDecisionPolicyRevisionForConfiguration(configurationID string) (string, error) {
+	registration, ok := knownDiagnosisConfigurations[strings.TrimSpace(configurationID)]
+	if !ok {
+		return "", fmt.Errorf("unknown Diagnosis Agent configuration id %q", configurationID)
+	}
+	return registration.DecisionPolicyRevision, nil
+}

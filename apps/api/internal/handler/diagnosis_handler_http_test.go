@@ -288,6 +288,7 @@ func newDiagnosisHandlerHarness(
 		nil,
 		nil,
 		agentDeploymentPolicy,
+		nil, // replay service is wired explicitly in replay contract tests.
 	)
 
 	return h, repo, aiStub

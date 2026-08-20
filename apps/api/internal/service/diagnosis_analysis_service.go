@@ -74,6 +74,19 @@ func (s *DiagnosisAnalysisService) PersistAIResult(
 	bodyStateRevision int64,
 	raw json.RawMessage,
 ) (*model.DiagnosisAnalysisRecord, error) {
+	return s.PersistAIResultWithReplayInput(ctx, userID, bodyStateRevision, raw, nil)
+}
+
+// PersistAIResultWithReplayInput freezes the exact production-shaped input used
+// for the run. Replay input is audit/research data and never participates in the
+// mutable BodyState projection after the analysis is committed.
+func (s *DiagnosisAnalysisService) PersistAIResultWithReplayInput(
+	ctx context.Context,
+	userID uuid.UUID,
+	bodyStateRevision int64,
+	raw json.RawMessage,
+	replayInput json.RawMessage,
+) (*model.DiagnosisAnalysisRecord, error) {
 	var payload aiDiagnosisPayload
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return nil, fmt.Errorf("decode diagnosis result: %w", err)
@@ -117,6 +130,7 @@ func (s *DiagnosisAnalysisService) PersistAIResult(
 		DecisionTrace:            decisionTrace,
 		ExecutionProvenance:      execution,
 		EvidenceAcquisitionTrace: evidenceTrace,
+		ReplayInput:              diagnosisJSON(replayInput, `{}`),
 		RawOutput:                datatypes.JSON(raw),
 		CreatedAt:                now,
 	}
