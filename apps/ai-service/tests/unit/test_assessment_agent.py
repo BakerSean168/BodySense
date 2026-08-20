@@ -60,7 +60,7 @@ async def test_assessment_agent_returns_typed_observations_without_advice() -> N
 @pytest.mark.asyncio
 async def test_assessment_service_supports_typed_multimodal_content() -> None:
     model = TestModel(custom_output_args=_output())
-    service = AssessmentService(assessment_agent=create_assessment_agent(model))
+    service = AssessmentService(model_resolver=lambda _config: model)
     image = "data:image/jpeg;base64," + base64.b64encode(b"fake-jpeg").decode()
 
     result = await service.generate_assessment(
@@ -71,5 +71,30 @@ async def test_assessment_service_supports_typed_multimodal_content() -> None:
 
     assert result["status"] == "completed"
     assert result["observations"][0]["kind"] == "posture_alignment"
+    # immutable configuration + execution provenance are attached to the payload
+    assert result["agent_configuration"]["role"] == "assessment"
+    assert result["agent_configuration"]["logical_model"] == "bodysense-structured"
+    assert result["execution_provenance"]["runtime"] == "pydantic-ai"
     request = str(model.last_model_request_parameters)
     assert "正面观轻微高低肩" in request
+
+
+@pytest.mark.asyncio
+async def test_assessment_service_resolves_immutable_configuration() -> None:
+    from src.configuration.assessment_agent_config import get_default_assessment_configuration
+
+    model = TestModel(custom_output_args=_output())
+    service = AssessmentService(model_resolver=lambda _config: model)
+    default_config = get_default_assessment_configuration()
+
+    result = await service.generate_assessment(
+        profile={"age": 30},
+        configuration_id=default_config.configuration_id,
+    )
+
+    assert result["agent_configuration"]["id"] == default_config.configuration_id
+    assert (
+        result["agent_configuration"]["decision_policy_revision"]
+        == "assessment-go-generation-v1"
+    )
+    assert result["execution_provenance"]["logical_model"] == "bodysense-structured"
