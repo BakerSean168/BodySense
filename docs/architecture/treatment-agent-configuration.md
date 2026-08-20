@@ -87,7 +87,26 @@ Go's existing Treatment generation and acceptance gates are now represented by t
 
 Malformed, unknown or internally inconsistent BodyState safety facts fail closed. A valid proposal stores `generation_decision_trace`; successful acceptance stores `acceptance_decision_trace` in the same repository transaction that changes the revision to accepted and moves the current Treatment pointer. The acceptance trace is computed against an exact BodyState revision, and the existing transaction guard requires that same revision still be current before the transition commits. Both traces include the policy version, phase, outcome/reasons, DiagnosisAnalysis identity, Agent configuration identity and evaluated facts.
 
-This closes deterministic authority provenance for successful Treatment artifacts. An explicit Treatment shadow/canary/promotion policy is still required before any governed production rollout of v2.
+This closes deterministic authority provenance for successful Treatment artifacts.
+
+## Frozen-input replay and comparison
+
+Treatment replay is deliberately split into two different operations:
+
+- **historical replay** never invokes an LLM. It decodes the private frozen input stored with the source TreatmentRevision, recomputes `treatment-go-acceptance-v1` generation authority, verifies the source BodyState revision/DiagnosisAnalysis/configuration/stored generation DecisionTrace, and reconstructs the immutable proposal artifact for deterministic integrity checks;
+- **counterfactual replay** uses that exact same frozen input but sends it to an explicitly selected repository-known Treatment configuration. The result is transient and cannot create, accept, reject or otherwise mutate Treatment/Training/BodyState/Diagnosis. Go generation authority is recomputed before any Agent call, so a frozen hard blocker bypasses the model.
+
+Migration `000041_add_treatment_replay_input` stores the private replay envelope as `replay_input` (`json:"-"` in the public model). It freezes the actual serialized BodyState, Diagnosis payload, candidate assessments, profile, user constraints, evidence and the exact generation-authority facts used by Go. Old revisions without this envelope explicitly return replay unavailable; current BodyState is never substituted for historical input.
+
+Replay comparison separates:
+
+- **hard**: proposal status, governance verdict, proposal-only/no durable side-effect surface;
+- **semantic**: intervention count/kinds, evidence identities, duration and safety/review cardinality;
+- **presentation**: summary, goal and intervention titles.
+
+The protected API exposes historical/counterfactual replay plus a privacy-sanitized regression export targeting `treatment_qualification_v1`. The Python Treatment regression importer validates that envelope against `TreatmentEvalCaseDocument` before appending a reviewed case. Prod-like validation exercises v2 -> v1 counterfactual replay in the longitudinal flow before acceptance and confirms the source revision remains proposed/read-only.
+
+An explicit Treatment shadow/canary/promotion policy is still required before any governed production rollout of v2.
 
 ## Protected contracts
 

@@ -208,6 +208,24 @@ func (s *TreatmentService) GenerateProposal(
 	if err != nil {
 		return nil, err
 	}
+	bodyStatePayload := rawJSON(snapshot, `{}`)
+	diagnosisPayload := rawJSON(s.diagnosis.PublicPayload(analysis), `{}`)
+	assessmentsPayload := rawJSON(assessments, `[]`)
+	constraintsPayload := rawJSON(input.UserConstraints, `{}`)
+	evidencePayload := rawJSON(evidence, `[]`)
+	replayInput, err := EncodeTreatmentReplayInput(
+		snapshot.CurrentRevision,
+		bodyStatePayload,
+		diagnosisPayload,
+		assessmentsPayload,
+		profilePayload,
+		constraintsPayload,
+		evidencePayload,
+		facts,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("freeze Treatment replay input: %w", err)
+	}
 
 	if s.deployment == nil {
 		return nil, errors.New("treatment deployment policy is not configured")
@@ -217,12 +235,12 @@ func (s *TreatmentService) GenerateProposal(
 		UserID:               userID.String(),
 		ConfigurationID:      configurationID,
 		BodyStateRevision:    snapshot.CurrentRevision,
-		BodyState:            rawJSON(snapshot, `{}`),
-		DiagnosisAnalysis:    rawJSON(s.diagnosis.PublicPayload(analysis), `{}`),
-		CandidateAssessments: rawJSON(assessments, `[]`),
+		BodyState:            bodyStatePayload,
+		DiagnosisAnalysis:    diagnosisPayload,
+		CandidateAssessments: assessmentsPayload,
 		Profile:              profilePayload,
-		UserConstraints:      rawJSON(input.UserConstraints, `{}`),
-		Evidence:             rawJSON(evidence, `[]`),
+		UserConstraints:      constraintsPayload,
+		Evidence:             evidencePayload,
 	})
 	if err != nil {
 		return nil, err
@@ -276,6 +294,7 @@ func (s *TreatmentService) GenerateProposal(
 		ExecutionProvenance:       datatypes.JSON(normalizeRaw(payload.ExecutionProvenance, `{}`)),
 		EvidenceAcquisitionTrace:  datatypes.JSON(normalizeRaw(payload.EvidenceAcquisition, `{}`)),
 		GenerationDecisionTrace:   generationTrace,
+		ReplayInput:               datatypes.JSON(replayInput),
 		ChangeReason:              strings.TrimSpace(input.ChangeReason),
 	}, interventions)
 	if err != nil {

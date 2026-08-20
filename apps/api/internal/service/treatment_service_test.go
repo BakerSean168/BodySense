@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/bodysense/api/internal/model"
@@ -209,6 +211,14 @@ func (f fakeTreatmentReasoner) RecommendTreatment(_ context.Context, req Treatme
 	}
 	return encoded, nil
 }
+func jsonBytesEqual(left, right json.RawMessage) bool {
+	var leftValue any
+	var rightValue any
+	return json.Unmarshal(left, &leftValue) == nil &&
+		json.Unmarshal(right, &rightValue) == nil &&
+		reflect.DeepEqual(leftValue, rightValue)
+}
+
 func TestTreatmentGenerateCreatesProposalWithoutMakingItCurrent(t *testing.T) {
 	userID := uuid.New()
 	analysis := &model.DiagnosisAnalysisRecord{
@@ -255,6 +265,26 @@ func TestTreatmentGenerateCreatesProposalWithoutMakingItCurrent(t *testing.T) {
 	}
 	if revision.AgentConfigurationID != defaultTreatmentConfigurationID || len(revision.AgentConfiguration) == 0 || len(revision.ExecutionProvenance) == 0 {
 		t.Fatalf("proposal lost Agent provenance: %#v", revision)
+	}
+	frozen, err := decodeTreatmentReplayInput(json.RawMessage(revision.ReplayInput))
+	if err != nil {
+		t.Fatalf("decode frozen Treatment replay input: %v", err)
+	}
+	if frozen.BodyStateRevision != captured.BodyStateRevision ||
+		!jsonBytesEqual(frozen.BodyState, captured.BodyState) ||
+		!jsonBytesEqual(frozen.DiagnosisAnalysis, captured.DiagnosisAnalysis) ||
+		!jsonBytesEqual(frozen.CandidateAssessments, captured.CandidateAssessments) ||
+		!jsonBytesEqual(frozen.Profile, captured.Profile) ||
+		!jsonBytesEqual(frozen.UserConstraints, captured.UserConstraints) ||
+		!jsonBytesEqual(frozen.Evidence, captured.Evidence) {
+		t.Fatalf("frozen replay input differs from actual Agent request: frozen=%#v captured=%#v", frozen, captured)
+	}
+	serialized, err := json.Marshal(revision)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(serialized), "replay_input") {
+		t.Fatalf("private replay input leaked through TreatmentRevision JSON: %s", serialized)
 	}
 	if len(revision.Interventions) != 1 {
 		t.Fatalf("expected one intervention, got %#v", revision.Interventions)
