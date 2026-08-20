@@ -91,36 +91,29 @@ physical provider/model
 
 ## 4. Phase plan
 
-### Phase 1 — Immutable Assessment Agent configuration
+### Phase 1 — Immutable Assessment Agent configuration ✅ (PR #65)
 
-- Add `apps/ai-service/config/agents/assessment-v1.yaml` (role=`assessment`, prompt/schema/tool/
-  governance/decision/logical-model revisions, generation settings) modeled on `treatment-v1.yaml`.
-- Add `apps/ai-service/src/configuration/assessment_agent_config.py` mirroring
-  `treatment_agent_config.py` (frozen manifest, canonical behavior JSON, SHA-256 fingerprint,
-  `assess-config-<fingerprint[:16]>` id, provenance()).
-- Add Python unit tests: deterministic fingerprint, id stability, config resolution, unknown-id rejection.
-- **Do not** change production serving yet (Assessment remains on today's path) — this phase only
-  introduces the artifact and its identity.
+- `apps/ai-service/config/agents/assessment-v1.yaml` + `src/configuration/assessment_agent_config.py`
+  → stable identity `assess-config-fbff8155337b388d`; 5 deterministic tests.
 
-### Phase 2 — Assessment runtime resolution through the manifest
+### Phase 2 — Assessment runtime resolution through the manifest ✅ (PR #65)
 
-- Teach `AssessmentAgentService` (Python) to resolve the exact immutable manifest, build the PydanticAI
-  Assessment Agent from it, and return `agent_configuration` + `execution_provenance` alongside the
-  typed assessment payload.
-- Assessment continues through the existing `assessment.generate` LiteLLM logical route.
-- Add a qualification baseline suite (`assessment_qualification_v1`) mirroring `treatment_qualification_v1`:
-  typed report contract, observation-only/derived-report boundary, exact config + execution provenance,
-  no executable prescription output.
+- `AssessmentService` resolves the manifest, builds the exact PydanticAI Agent from its
+  revisions, runs through the LiteLLM logical model, returns `agent_configuration` +
+  `execution_provenance`. Prompt/output-schema/tool revision constants + validation.
+  Python suite: 252 passed.
 
-### Phase 3 — Go ownership: deployment policy + provenance + decision trace
+### Phase 3 — Go ownership: deployment policy + provenance + decision trace ✅ (PR #66)
 
-- Extend `agent_deployment_policy.go` with Assessment champion pointer + `knownAssessmentConfigurations`.
-- Add `AssessmentGenerationRequest.configuration_id` and route resolution.
-- Migration `000043_add_assessment_agent_provenance`: add `agent_configuration_id`,
-  `agent_configuration`, `execution_provenance`, `generation_decision_trace` to immutable
-  `assessment_reports` (report rows remain immutable once persisted).
-- Go `AssessmentService` persists provenance and a deterministic generation decision trace atomically
-  with the report + BodyState observation transaction.
+- Migration `000043_add_assessment_agent_provenance` adds `agent_configuration_id`,
+  `agent_configuration`, `execution_provenance`, `generation_decision_trace` to
+  immutable `assessment_reports`.
+- `AgentDeploymentPolicy` resolves an Assessment champion configuration (single-Champion
+  default; distinct challenger required only for non-Champion rollout stages).
+- Go `AssessmentService` fail-closes on the returned immutable Agent identity, persists
+  provenance + deterministic generation decision trace atomically with the report and
+  BodyState observations. main.go wires the policy in.
+- Go build + Assessment/DeploymentPolicy tests pass.
 
 ### Phase 4 — Assessment frozen-input replay + comparison
 
