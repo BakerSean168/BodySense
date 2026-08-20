@@ -92,15 +92,18 @@ BodySense 采用 GitHub Actions + 阿里云 ACR + Docker Compose + Caddy + Watch
 | Web | `bodysense-web` | 80 (内部) | `wget http://127.0.0.1/` | ~20MB |
 | API | `bodysense-api` | 8080 (内部) | `curl http://localhost:8080/api/health` | ~50MB |
 | AI Service | `bodysense-ai-service` | 8100 (内部) | `python urllib http://localhost:8100/health` | ~200MB |
+| LiteLLM Gateway | `docker.litellm.ai/berriai/litellm:v1.97.0` | 4000 (内部) | `/health/liveliness` | ~200-500MB |
 | PostgreSQL | `pgvector/pgvector:pg18` | 5432 (内部) | `pg_isready` | ~100MB |
 | Redis | `redis:7-alpine` | 6379 (内部) | `redis-cli ping` | ~10MB |
 | Watchtower | `containrrr/watchtower` | - | - | ~20MB |
 
-**总内存预估: ~430MB** (系统保留 1.2GB)
+**业务容器常态内存预估: ~630–930MB**（LiteLLM 实际占用随并发、缓存与 provider client 状态变化；部署时以容器 metrics 为准）
 
 ### 网络拓扑
 
 所有容器连接到 `bodysense-network` 桥接网络。仅 Caddy 暴露端口到宿主机 (80/443)。PostgreSQL 和 Redis 端口仅绑定到 `127.0.0.1` 用于调试。
+
+Diagnosis 的 PydanticAI runtime 不再直接持有物理模型 provider 路由；它通过 `http://litellm-gateway:4000/v1` 请求逻辑模型 `bodysense-diagnosis`。LiteLLM 独立负责物理 provider、retry/fallback 与 usage telemetry。
 
 ## CI/CD 流水线
 
@@ -195,6 +198,8 @@ nginx 配置:
 - `DB_PASSWORD` - PostgreSQL 密码
 - `REDIS_PASSWORD` - Redis 密码
 - `JWT_SECRET_KEY` - JWT 签名密钥
+- `LITELLM_MASTER_KEY` - AI Service → LiteLLM 内部网关认证密钥
+- `MIMO_API_KEY` - MiMo provider API 密钥（仅 LiteLLM gateway 使用）
 - `OPENROUTER_API_KEY` - OpenRouter API 密钥
 - `LLM_API_KEY` - LLM API 密钥
 - `EMBEDDING_API_KEY` - Embedding API 密钥

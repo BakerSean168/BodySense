@@ -21,7 +21,6 @@ type DiagnosisRequest struct {
 	BodyState         json.RawMessage `json:"body_state"`
 	RelevantHistory   json.RawMessage `json:"relevant_history,omitempty"`
 	Profile           json.RawMessage `json:"profile,omitempty"`
-	UseCase           string          `json:"use_case,omitempty"`
 }
 
 // TreatmentRecommendationRequest pins exact durable identities and returns a

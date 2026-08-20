@@ -230,7 +230,7 @@ jobs:
           host: ${{ secrets.DROPLET_HOST }}
           username: ${{ secrets.DROPLET_USER }}
           key: ${{ secrets.DROPLET_SSH_KEY }}
-          source: '.env.production.do,docker/docker-compose.prod.do.yml,docker/Caddyfile'
+          source: '.env.production.do,docker/docker-compose.prod.do.yml,docker/Caddyfile,docker/litellm/config.yaml'
           target: /opt/bodysense
 
       - name: Deploy via SSH
@@ -248,6 +248,18 @@ jobs:
             cd /opt/bodysense
             umask 077
             printf '%s' "$ENV_PRODUCTION_DO_LOCAL" > .env.production.do.local
+
+            # Existing GitHub secrets may predate the model gateway. Keep one server-side
+            # key stable across deploys until the secret is explicitly updated.
+            if ! grep -q '^LITELLM_MASTER_KEY=' .env.production.do.local; then
+              if [ ! -s .litellm-master-key ]; then
+                openssl rand -hex 32 > .litellm-master-key
+                chmod 600 .litellm-master-key
+              fi
+              printf '\nLITELLM_MASTER_KEY=%s\n' "$(cat .litellm-master-key)" >> .env.production.do.local
+            fi
+
+            test -s docker/litellm/config.yaml
             printf '%s' "$DO_API_TOKEN" | docker login registry.digitalocean.com --username "$DO_API_TOKEN" --password-stdin
             docker compose -f docker/docker-compose.prod.do.yml \
               --env-file .env.production.do \

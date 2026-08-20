@@ -27,7 +27,6 @@ def _payload() -> dict:
         "profile": {"age": 30},
         "rag_context": "",
         "rag_results": None,
-        "use_case": "llm.json",
     }
 
 
@@ -67,7 +66,6 @@ def test_analyze_diagnosis_applies_optional_defaults(client, monkeypatch):
         "profile": {},
         "rag_context": "",
         "rag_results": None,
-        "use_case": "llm.json",
     }
 
 

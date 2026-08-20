@@ -23,7 +23,6 @@ class DiagnosisRequest(BaseModel):
     profile: dict[str, Any] = Field(default_factory=dict)
     rag_context: str = ""
     rag_results: list[dict[str, Any]] | None = None
-    use_case: str = "llm.json"
 
 
 @router.post("/analyze")
@@ -101,7 +100,6 @@ async def analyze_diagnosis(request: DiagnosisRequest):
             profile=request.profile,
             rag_context=request.rag_context,
             rag_results=request.rag_results,
-            use_case=request.use_case,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
