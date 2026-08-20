@@ -181,7 +181,8 @@ func main() {
 		database.NewTransactionManager(database.DB),
 	)
 	trainingHandler := handler.NewTrainingHandler(trainingService)
-	treatmentHandler := handler.NewTreatmentHandler(treatmentService, trainingService)
+	treatmentReplayService := service.NewTreatmentReplayService(treatmentService, aiClient)
+	treatmentHandler := handler.NewTreatmentHandler(treatmentService, trainingService, treatmentReplayService)
 	reassessmentHandler := handler.NewReassessmentHandler(trainingService)
 	assessmentHandler := handler.NewAssessmentHandler(assessmentService)
 	knowledgeHandler := handler.NewKnowledgeHandler()
@@ -311,6 +312,8 @@ func main() {
 		protected.POST("/treatments/current/review", treatmentHandler.ReviewCurrent)
 		protected.GET("/treatments/revisions", treatmentHandler.ListRevisions)
 		protected.GET("/treatments/revisions/:revisionId", treatmentHandler.GetRevision)
+		protected.POST("/treatments/revisions/:revisionId/replay", treatmentHandler.ReplayRevision)
+		protected.GET("/treatments/revisions/:revisionId/regression-export", treatmentHandler.ExportRegressionCase)
 		protected.POST("/treatments/revisions/:revisionId/accept", treatmentHandler.AcceptRevision)
 		protected.POST("/treatments/revisions/:revisionId/reject", treatmentHandler.RejectRevision)
 		protected.POST("/outcomes", treatmentHandler.RecordOutcome)

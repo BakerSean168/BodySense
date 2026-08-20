@@ -172,6 +172,8 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
       id: string;
       acceptance_state: string;
       source_diagnosis_analysis_id: string;
+      source_body_state_revision: number;
+      agent_configuration_id: string;
     };
   }>(
     await request.post(`${apiBase}/api/v1/treatments/proposals`, {
@@ -189,6 +191,81 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
   expect(proposalResponse.proposal.source_diagnosis_analysis_id).toBe(
     diagnosis.analysis_id,
   );
+
+  const historicalReplay = await expectJson<{
+    mode: string;
+    artifact_integrity: { match: boolean };
+    comparison: {
+      hard: { match: boolean };
+      semantic: { match: boolean };
+      presentation: { match: boolean };
+    };
+  }>(
+    await request.post(
+      `${apiBase}/api/v1/treatments/revisions/${proposalResponse.proposal.id}/replay`,
+      { headers: authHeaders, data: { mode: "historical" } },
+    ),
+    "historical Treatment replay",
+  );
+  expect(historicalReplay.mode).toBe("historical");
+  expect(historicalReplay.artifact_integrity.match).toBe(true);
+  expect(historicalReplay.comparison.hard.match).toBe(true);
+  expect(historicalReplay.comparison.semantic.match).toBe(true);
+  expect(historicalReplay.comparison.presentation.match).toBe(true);
+
+  const treatmentV1 = "treat-config-85718f8e90ac9d80";
+  const treatmentV2 = "treat-config-f68eec9846664596";
+  const counterfactualTarget =
+    proposalResponse.proposal.agent_configuration_id === treatmentV1
+      ? treatmentV2
+      : treatmentV1;
+  const counterfactualReplay = await expectJson<{
+    mode: string;
+    target_configuration_id: string;
+    comparison: { hard: { match: boolean } };
+  }>(
+    await request.post(
+      `${apiBase}/api/v1/treatments/revisions/${proposalResponse.proposal.id}/replay`,
+      {
+        headers: authHeaders,
+        data: {
+          mode: "counterfactual",
+          configuration_id: counterfactualTarget,
+        },
+        timeout: 60_000,
+      },
+    ),
+    "counterfactual Treatment replay",
+  );
+  expect(counterfactualReplay.mode).toBe("counterfactual");
+  expect(counterfactualReplay.target_configuration_id).toBe(
+    counterfactualTarget,
+  );
+  expect(counterfactualReplay.comparison.hard.match).toBe(true);
+
+  const regressionExport = await expectJson<{
+    schema_target: string;
+    case: { inputs: { body_state_revision: number } };
+  }>(
+    await request.get(
+      `${apiBase}/api/v1/treatments/revisions/${proposalResponse.proposal.id}/regression-export`,
+      { headers: authHeaders },
+    ),
+    "Treatment regression export",
+  );
+  expect(regressionExport.schema_target).toBe("treatment_qualification_v1");
+  expect(regressionExport.case.inputs.body_state_revision).toBe(
+    proposalResponse.proposal.source_body_state_revision,
+  );
+
+  const proposalAfterReplay = await expectJson<{ acceptance_state: string }>(
+    await request.get(
+      `${apiBase}/api/v1/treatments/revisions/${proposalResponse.proposal.id}`,
+      { headers: authHeaders },
+    ),
+    "Treatment proposal after replay",
+  );
+  expect(proposalAfterReplay.acceptance_state).toBe("proposed");
 
   const acceptance = await expectJson<{
     treatment: { status: string; current: { id: string } };

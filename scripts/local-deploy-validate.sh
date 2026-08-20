@@ -127,4 +127,11 @@ if [[ "$treatment_decision_traces" -lt 1 ]]; then
 fi
 echo "TREATMENT_DECISION_TRACE_VALIDATION=PASS accepted_traces=${treatment_decision_traces}"
 
+treatment_replay_inputs="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_revisions WHERE replay_input <> '{}'::jsonb;")"
+if [[ "$treatment_replay_inputs" -lt 1 ]]; then
+  echo "TREATMENT_REPLAY_INPUT_VALIDATION=FAIL replay_inputs=${treatment_replay_inputs}" >&2
+  exit 1
+fi
+echo "TREATMENT_REPLAY_INPUT_VALIDATION=PASS replay_inputs=${treatment_replay_inputs}"
+
 echo "LOCAL_DEPLOY_VALIDATION=PASS"

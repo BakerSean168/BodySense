@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/bodysense/api/internal/model"
@@ -19,10 +20,15 @@ import (
 type TreatmentHandler struct {
 	treatments *service.TreatmentService
 	training   *service.TrainingService
+	replay     *service.TreatmentReplayService
 }
 
-func NewTreatmentHandler(treatments *service.TreatmentService, training *service.TrainingService) *TreatmentHandler {
-	return &TreatmentHandler{treatments: treatments, training: training}
+func NewTreatmentHandler(
+	treatments *service.TreatmentService,
+	training *service.TrainingService,
+	replay *service.TreatmentReplayService,
+) *TreatmentHandler {
+	return &TreatmentHandler{treatments: treatments, training: training, replay: replay}
 }
 
 func (h *TreatmentHandler) GenerateProposal(c *gin.Context) {
@@ -162,6 +168,85 @@ func (h *TreatmentHandler) GetRevision(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, item)
+}
+
+// ReplayRevision is read-only: it never creates, accepts or rejects Treatment.
+func (h *TreatmentHandler) ReplayRevision(c *gin.Context) {
+	uid, ok := getUserUUID(c)
+	if !ok {
+		return
+	}
+	if h.replay == nil {
+		respondError(c, http.StatusServiceUnavailable, "TREATMENT_REPLAY_UNAVAILABLE", "treatment replay is not configured")
+		return
+	}
+	revisionID, err := uuid.Parse(c.Param("revisionId"))
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "INVALID_ID", "invalid treatment revision id")
+		return
+	}
+	var req struct {
+		Mode            string `json:"mode" binding:"required"`
+		ConfigurationID string `json:"configuration_id,omitempty"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+	var report *service.TreatmentReplayReport
+	switch strings.TrimSpace(req.Mode) {
+	case "historical":
+		report, err = h.replay.HistoricalReplay(c.Request.Context(), uid, revisionID)
+	case "counterfactual":
+		if strings.TrimSpace(req.ConfigurationID) == "" {
+			respondError(c, http.StatusBadRequest, "CONFIGURATION_REQUIRED", "counterfactual replay requires configuration_id")
+			return
+		}
+		report, err = h.replay.CounterfactualReplay(c.Request.Context(), uid, revisionID, req.ConfigurationID)
+	default:
+		respondError(c, http.StatusBadRequest, "INVALID_REPLAY_MODE", "replay mode must be historical or counterfactual")
+		return
+	}
+	if err != nil {
+		h.respondTreatmentReplayError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, report)
+}
+
+func (h *TreatmentHandler) ExportRegressionCase(c *gin.Context) {
+	uid, ok := getUserUUID(c)
+	if !ok {
+		return
+	}
+	if h.replay == nil {
+		respondError(c, http.StatusServiceUnavailable, "TREATMENT_REPLAY_UNAVAILABLE", "treatment replay is not configured")
+		return
+	}
+	revisionID, err := uuid.Parse(c.Param("revisionId"))
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "INVALID_ID", "invalid treatment revision id")
+		return
+	}
+	exported, err := h.replay.ExportRegressionCase(c.Request.Context(), uid, revisionID)
+	if err != nil {
+		h.respondTreatmentReplayError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, exported)
+}
+
+func (h *TreatmentHandler) respondTreatmentReplayError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, service.ErrTreatmentReplayNotFound):
+		respondError(c, http.StatusNotFound, "NOT_FOUND", "treatment revision not found")
+	case errors.Is(err, service.ErrTreatmentReplayUnavailable):
+		respondError(c, http.StatusConflict, "TREATMENT_REPLAY_INPUT_UNAVAILABLE", "this historical Treatment revision predates frozen replay input")
+	case strings.Contains(err.Error(), "unknown Treatment Agent configuration id"):
+		respondError(c, http.StatusUnprocessableEntity, "UNKNOWN_AGENT_CONFIGURATION", err.Error())
+	default:
+		respondError(c, http.StatusBadGateway, "TREATMENT_REPLAY_FAILED", "treatment replay failed")
+	}
 }
 
 func (h *TreatmentHandler) RecordOutcome(c *gin.Context) {
