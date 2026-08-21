@@ -65,6 +65,7 @@ type Runtime struct {
 	treatmentService          *service.TreatmentService
 	streamRuntime             *stream.Runtime
 	deployment                *service.AgentDeploymentPolicy
+	rolloutService            *service.ConsultationRolloutService
 	// pendingAgentConfiguration* holds the North-Star runtime identity captured
 	// from the runtime.agent_configuration event until the run is persisted.
 	pendingAgentConfigurationID string
@@ -123,6 +124,11 @@ func (r *Runtime) AttachLongitudinalContextServices(
 	r.diagnosisAnalysisService = diagnosis
 	r.diagnosisFreshnessService = freshness
 	r.treatmentService = treatment
+}
+
+// AttachRolloutService attaches the anonymous rollout observer (North-Star).
+func (r *Runtime) AttachRolloutService(rollout *service.ConsultationRolloutService) {
+	r.rolloutService = rollout
 }
 
 // StartRun handles a unified consultation run request.
@@ -1096,6 +1102,21 @@ func (r *Runtime) persistCompletedTurn(
 			datatypes.JSON(r.pendingExecutionProvenance),
 		); err != nil {
 			log.Printf("failed to persist run %s agent configuration: %v", run.ID, err)
+		}
+	}
+	// North-Star: collect anonymous shadow evidence when a distinct challenger
+	// configuration is active. Non-blocking; never affects the served reply.
+	if r.rolloutService != nil && r.pendingAgentConfigurationID != "" {
+		decision := &service.ConsultationRunDecision{
+			RunID:                      run.ID.String(),
+			SourceConfigurationID:      r.deployment.ConsultationConfigurationID(),
+			PersistedConfigurationID:   r.pendingAgentConfigurationID,
+			ConfigurationIdentityMatch: r.pendingAgentConfigurationID == r.deployment.ConsultationConfigurationID(),
+			ReplayInputFrozen:          len(run.ReplayInput) > 2,
+			ExecutionProvenance:        datatypes.JSON(r.pendingExecutionProvenance),
+		}
+		if err := r.rolloutService.ObserveRun(ctx, run, decision); err != nil {
+			log.Printf("failed to record consultation rollout observation for run %s: %v", run.ID, err)
 		}
 	}
 	r.recordGovernance(ctx, uid, conversationID, run.ID, result.GovernanceResult)

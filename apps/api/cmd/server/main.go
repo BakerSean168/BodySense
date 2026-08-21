@@ -156,6 +156,10 @@ func main() {
 		diagnosisFreshnessService,
 		treatmentService,
 	)
+	consultationRolloutRepo := repository.NewConsultationRolloutRepository(database.DB)
+	consultationRuntime.AttachRolloutService(
+		service.NewConsultationRolloutService(consultationRolloutRepo),
+	)
 	convHandler := handler.NewConversationHandler(conversationService, shareService)
 	runtimeEventHandler := handler.NewRuntimeEventHandler(runtimeEventService, conversationService)
 	threadProjectionHandler := handler.NewThreadProjectionHandler(threadProjectionService, bodyStateService)
