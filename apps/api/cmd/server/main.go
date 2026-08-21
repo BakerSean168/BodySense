@@ -131,7 +131,8 @@ func main() {
 	threadProjectionService := service.NewThreadProjectionService(conversationRepo, consultationRepo, messageRepo, interactionRepo, runtimeEventService, threadProjectionRepo)
 	outputReviewRepo := repository.NewAIOutputReviewRepository(database.DB)
 	outputReviewService := service.NewOutputReviewService(outputReviewRepo)
-	uploadService := service.NewUploadService(uploadRepo, jobRuntime, outputReviewService)
+	uploadService := service.NewUploadService(uploadRepo, jobRuntime, outputReviewService).
+		WithDeployment(agentDeploymentPolicy)
 	uploadService.StartUploadWorker(context.Background(), 10*time.Second, 10*time.Minute)
 	uploadHandler := handler.NewUploadHandler(uploadService)
 	consultationRuntime := consultationruntime.NewRuntime(

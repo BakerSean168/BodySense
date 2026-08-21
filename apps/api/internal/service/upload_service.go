@@ -52,6 +52,7 @@ type UploadService struct {
 	jobRuntime          *JobRuntime
 	outputReviewService *OutputReviewService
 	aiServiceURL        string
+	deployment          *AgentDeploymentPolicy
 }
 
 // NewUploadService creates a new UploadService.
@@ -70,6 +71,13 @@ func NewUploadService(
 		outputReviewService: outputReviewService,
 		aiServiceURL:        aiServiceURL,
 	}
+}
+
+// WithDeployment attaches the Go-owned deployment policy so posture analysis
+// resolves its champion Agent configuration through the North-Star control plane.
+func (s *UploadService) WithDeployment(deployment *AgentDeploymentPolicy) *UploadService {
+	s.deployment = deployment
+	return s
 }
 
 // UploadFile handles file upload: validates, saves to disk, creates DB record, and triggers OCR.
@@ -464,10 +472,11 @@ func parseOCRJobInput(job model.Job) (ocrJobInput, error) {
 // ---------------------------------------------------------------------------
 
 type postureJobInput struct {
-	UploadID string `json:"upload_id"`
-	FilePath string `json:"file_path"`
-	MimeType string `json:"mime_type"`
-	View     string `json:"view"` // "front" | "side" | "back"
+	UploadID        string `json:"upload_id"`
+	FilePath        string `json:"file_path"`
+	MimeType        string `json:"mime_type"`
+	View            string `json:"view"` // "front" | "side" | "back"
+	ConfigurationID string `json:"configuration_id,omitempty"`
 }
 
 // photoTypeToView maps the upload file_type to the analysis view sent to the
@@ -537,10 +546,11 @@ func (s *UploadService) enqueuePostureJob(ctx context.Context, uploadID, userID 
 
 	idempotencyKey := fmt.Sprintf("posture_analyze:%s", uploadID.String())
 	inputJSON, _ := json.Marshal(postureJobInput{
-		UploadID: uploadID.String(),
-		FilePath: filePath,
-		MimeType: mimeType,
-		View:     view,
+		UploadID:        uploadID.String(),
+		FilePath:        filePath,
+		MimeType:        mimeType,
+		View:            view,
+		ConfigurationID: s.deployment.PostureConfigurationID(),
 	})
 
 	job, existed, err := s.jobRuntime.CreateJobWithIdempotency(ctx, userID, postureJobType, inputJSON, idempotencyKey, nil, nil)
@@ -582,6 +592,10 @@ func (s *UploadService) processPostureJob(ctx context.Context, job model.Job) er
 	_ = s.jobRuntime.UpdateProgress(ctx, job.ID, map[string]any{"stage": "posture_completed", "percent": 100})
 	_ = s.jobRuntime.TransitionTo(ctx, job.ID, "completed", json.RawMessage(respBody), nil)
 	_ = s.uploadRepo.UpdateAnalysisResult(ctx, uploadID, job.UserID, "completed", respBody)
+	// North-Star: persist the exact immutable Agent configuration used.
+	if input.ConfigurationID != "" {
+		_ = s.uploadRepo.UpdateAgentConfiguration(ctx, uploadID, input.ConfigurationID)
+	}
 	return nil
 }
 

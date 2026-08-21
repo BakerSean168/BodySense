@@ -96,8 +96,8 @@ func (r *UploadRepository) UpdateAnalysisStatus(ctx context.Context, id, userID 
 		}).Error
 }
 
-// UpdateAnalysisResult updates the posture-analysis result and status for an
-// upload with ownership check.
+// UpdateAnalysisResult updates the analysis result + status for an upload
+// with ownership check.
 func (r *UploadRepository) UpdateAnalysisResult(ctx context.Context, id, userID uuid.UUID, status string, result json.RawMessage) error {
 	return r.db.WithContext(ctx).
 		Model(&model.UserUpload{}).
@@ -106,6 +106,18 @@ func (r *UploadRepository) UpdateAnalysisResult(ctx context.Context, id, userID 
 			"analysis_status": status,
 			"analysis_result": result,
 			"updated_at":      gorm.Expr("NOW()"),
+		}).Error
+}
+
+// UpdateAgentConfiguration persists the immutable Agent configuration used
+// for the analysis of this upload.
+func (r *UploadRepository) UpdateAgentConfiguration(ctx context.Context, id uuid.UUID, configurationID string) error {
+	return r.db.WithContext(ctx).
+		Model(&model.UserUpload{}).
+		Where("id = ?", id).
+		Updates(map[string]interface{}{
+			"agent_configuration_id": configurationID,
+			"updated_at":             gorm.Expr("NOW()"),
 		}).Error
 }
 

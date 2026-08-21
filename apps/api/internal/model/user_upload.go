@@ -23,8 +23,10 @@ type UserUpload struct {
 	// deliberately separate from OCRResult, which is report-specific.
 	AnalysisResult json.RawMessage `gorm:"type:jsonb" json:"analysis_result,omitempty"`
 	AnalysisStatus string          `gorm:"type:varchar(20);not null;default:'none'" json:"analysis_status"`
-	CreatedAt      time.Time       `gorm:"not null;default:now()" json:"created_at"`
-	UpdatedAt      time.Time       `gorm:"not null;default:now()" json:"updated_at"`
+	// North-Star: exact immutable Agent configuration used for this analysis.
+	AgentConfigurationID string    `gorm:"type:varchar(80);not null;default:'';index" json:"agent_configuration_id"`
+	CreatedAt            time.Time `gorm:"not null;default:now()" json:"created_at"`
+	UpdatedAt            time.Time `gorm:"not null;default:now()" json:"updated_at"`
 }
 
 // TableName specifies the table name for GORM.
