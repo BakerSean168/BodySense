@@ -90,11 +90,12 @@ type ConsultationBusinessContext struct {
 }
 
 type StartConsultationTurnRequest struct {
-	RunID           string                      `json:"run_id"`
-	ConversationID  string                      `json:"conversation_id"`
-	UserID          string                      `json:"user_id"`
-	Input           ConsultationUserInput       `json:"input"`
-	BusinessContext ConsultationBusinessContext `json:"business_context"`
+	RunID            string                      `json:"run_id"`
+	ConversationID   string                      `json:"conversation_id"`
+	UserID           string                      `json:"user_id"`
+	ConfigurationID  string                      `json:"configuration_id,omitempty"`
+	Input            ConsultationUserInput       `json:"input"`
+	BusinessContext  ConsultationBusinessContext `json:"business_context"`
 }
 
 type ResumeConsultationInterruptRequest struct {

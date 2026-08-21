@@ -31,6 +31,7 @@ StreamChannel = Literal[
     "job",
     "stream",
     "title",
+    "runtime",
 ]
 
 

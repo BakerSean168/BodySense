@@ -109,6 +109,7 @@ class StartTurnRequest(BaseModel):
     run_id: str
     conversation_id: str
     user_id: str
+    configuration_id: str | None = None
     input: UserInput
     business_context: BusinessContext = Field(default_factory=BusinessContext)
 
@@ -204,6 +205,7 @@ async def start_turn(thread_id: str, request: StartTurnRequest):
                 current_diagnosis=request.business_context.current_diagnosis,
                 current_treatment=request.business_context.current_treatment,
                 recent_outcomes=request.business_context.recent_outcomes,
+                configuration_id=request.configuration_id,
             ):
                 # NDJSON uses a real newline as the record boundary. Any newline
                 # inside a JSON string is escaped by json.dumps.
