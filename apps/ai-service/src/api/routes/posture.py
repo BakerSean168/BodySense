@@ -17,7 +17,11 @@ _VALID_VIEWS = {"front", "side", "back"}
 
 
 @router.post("/analyze", response_model=PostureAnalysisResponse)
-async def analyze(view: str = Form(...), file: UploadFile = File(...), configuration_id: str | None = Form(None)):
+async def analyze(
+    view: str = Form(...),
+    file: UploadFile = File(...),
+    configuration_id: str | None = Form(None),
+):
     """Analyze a single-view posture photo and return a structured, governed result."""
     if view not in _VALID_VIEWS:
         raise HTTPException(status_code=400, detail=f"invalid view: {view}")
@@ -39,7 +43,12 @@ async def analyze(view: str = Form(...), file: UploadFile = File(...), configura
         )
 
     try:
-        result = await analyze_posture(file_bytes, file.content_type, view, configuration_id=configuration_id)
+        result = await analyze_posture(
+            file_bytes,
+            file.content_type,
+            view,
+            configuration_id=configuration_id,
+        )
     except HTTPException:
         raise
     except Exception as e:

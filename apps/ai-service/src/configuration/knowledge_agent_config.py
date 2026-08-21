@@ -66,7 +66,9 @@ def load_manifest(path: Path) -> SingleShotAgentManifest:
     return SingleShotAgentManifest.model_validate(_load_yaml(path))
 
 
-def get_knowledge_curator_configuration(configuration_id: str | None = None) -> SingleShotAgentManifest:
+def get_knowledge_curator_configuration(
+    configuration_id: str | None = None,
+) -> SingleShotAgentManifest:
     if configuration_id:
         for path in sorted(CONFIG_ROOT.glob("knowledge-curator-*.yaml")):
             config = load_manifest(path)
@@ -76,7 +78,9 @@ def get_knowledge_curator_configuration(configuration_id: str | None = None) -> 
     return load_manifest(CONFIG_ROOT / "knowledge-curator-v1.yaml")
 
 
-def get_knowledge_splitter_configuration(configuration_id: str | None = None) -> SingleShotAgentManifest:
+def get_knowledge_splitter_configuration(
+    configuration_id: str | None = None,
+) -> SingleShotAgentManifest:
     if configuration_id:
         for path in sorted(CONFIG_ROOT.glob("knowledge-splitter-*.yaml")):
             config = load_manifest(path)

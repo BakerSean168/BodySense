@@ -6,8 +6,8 @@ import yaml
 from src.configuration.title_agent_config import (
     CONFIG_ROOT,
     TitleAgentManifest,
-    get_title_configuration,
     get_default_title_configuration,
+    get_title_configuration,
     load_manifest,
 )
 

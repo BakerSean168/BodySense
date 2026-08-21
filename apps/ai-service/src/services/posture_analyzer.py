@@ -19,11 +19,10 @@ import json
 import logging
 
 from ..ai import AiRequest, AIService
-from ..ai.types import ChatMessage
 from ..ai.posture_gateway_model import (
-    get_posture_runtime_model,
     posture_model_settings,
 )
+from ..ai.types import ChatMessage
 from ..configuration.posture_agent_config import (
     PostureAgentManifest,
     get_default_posture_configuration,

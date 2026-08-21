@@ -6,8 +6,8 @@ import yaml
 from src.configuration.posture_agent_config import (
     CONFIG_ROOT,
     PostureAgentManifest,
-    get_posture_configuration,
     get_default_posture_configuration,
+    get_posture_configuration,
     load_manifest,
 )
 
