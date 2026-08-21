@@ -187,7 +187,8 @@ func main() {
 	treatmentService.AttachRolloutObserver(treatmentRolloutService)
 	treatmentHandler := handler.NewTreatmentHandler(treatmentService, trainingService, treatmentReplayService)
 	reassessmentHandler := handler.NewReassessmentHandler(trainingService)
-	assessmentHandler := handler.NewAssessmentHandler(assessmentService)
+	assessmentHandler := handler.NewAssessmentHandler(assessmentService).
+		WithAssessmentReplay(service.NewAssessmentReplayService(assessmentService, aiClient))
 	knowledgeHandler := handler.NewKnowledgeHandler()
 
 	// Continuous health workspace is the single capability/read model for the product loop.
@@ -345,6 +346,8 @@ func main() {
 		protected.POST("/assessment/generate", assessmentHandler.GenerateAssessment)
 		protected.GET("/assessment", assessmentHandler.ListReports)
 		protected.GET("/assessment/:id", assessmentHandler.GetReport)
+		protected.POST("/assessment/:id/replay", assessmentHandler.ReplayAssessment)
+		protected.GET("/assessment/:id/regression-export", assessmentHandler.ExportAssessmentRegressionCase)
 
 		// Training routes
 		protected.GET("/training", trainingHandler.ListPlans)

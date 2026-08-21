@@ -166,6 +166,16 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 
 	generationTrace := buildAssessmentGenerationTrace(provenance, configurationID, policyRevision)
 
+	replayEnvelope, replayErr := encodeAssessmentReplayInput(
+		configurationID,
+		profilePayload,
+		posturePayload,
+		images,
+	)
+	if replayErr != nil {
+		return nil, replayErr
+	}
+
 	report := &model.AssessmentReport{
 		ID: uuid.New(), UserID: userID, Status: payload.Status,
 		HealthGrade: payload.HealthGrade, Summary: strings.TrimSpace(payload.Summary),
@@ -176,6 +186,7 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 		AgentConfiguration:      datatypes.JSON(normalizeRaw(provenance.AgentConfiguration, `{}`)),
 		ExecutionProvenance:     datatypes.JSON(normalizeRaw(provenance.ExecutionProvenance, `{}`)),
 		GenerationDecisionTrace: datatypes.JSON(generationTrace),
+		ReplayInput:             datatypes.JSON(replayEnvelope),
 		CreatedAt:               time.Now().UTC(),
 	}
 	projected := make([]map[string]any, 0, len(payload.Observations))
@@ -389,4 +400,64 @@ func buildAssessmentGenerationTrace(
 		return json.RawMessage(`{}`)
 	}
 	return encoded
+}
+
+// AssessmentReplayInput freezes the durable inputs that produced one assessment
+// report so historical/counterfactual replay can reproduce the report without
+// substituting today's BodyState. Images are stored as sanitized descriptors
+// (media-type + count), never raw base64, to keep the replay envelope private
+// and lightweight.
+type AssessmentReplayInput struct {
+	ConfigurationID string            `json:"configuration_id"`
+	Profile         json.RawMessage   `json:"profile"`
+	PostureAnalysis json.RawMessage   `json:"posture_analysis"`
+	Images          []imageDescriptor `json:"images"`
+}
+
+type imageDescriptor struct {
+	MediaType string `json:"media_type"`
+}
+
+func encodeAssessmentReplayInput(
+	configurationID string,
+	profile json.RawMessage,
+	posture json.RawMessage,
+	images []string,
+) (json.RawMessage, error) {
+	if len(profile) == 0 || !json.Valid(profile) {
+		profile = json.RawMessage(`{}`)
+	}
+	if len(posture) == 0 || !json.Valid(posture) {
+		posture = json.RawMessage(`{}`)
+	}
+	descriptors := make([]imageDescriptor, 0, len(images))
+	for _, image := range images {
+		mediaType := "image/*"
+		if start := strings.Index(image, "data:"); start == 0 {
+			if semi := strings.Index(image[start:], ";"); semi > 0 {
+				mediaType = image[start+5 : start+semi]
+			}
+		}
+		descriptors = append(descriptors, imageDescriptor{MediaType: mediaType})
+	}
+	return json.Marshal(AssessmentReplayInput{
+		ConfigurationID: configurationID,
+		Profile:         profile,
+		PostureAnalysis: posture,
+		Images:          descriptors,
+	})
+}
+
+func decodeAssessmentReplayInput(raw json.RawMessage) (AssessmentReplayInput, error) {
+	var input AssessmentReplayInput
+	if len(raw) == 0 || string(raw) == "{}" || string(raw) == "null" {
+		return input, ErrAssessmentReplayUnavailable
+	}
+	if err := json.Unmarshal(raw, &input); err != nil {
+		return input, fmt.Errorf("decode Assessment replay input: %w", err)
+	}
+	if len(input.Profile) == 0 || !json.Valid(input.Profile) {
+		return input, ErrAssessmentReplayUnavailable
+	}
+	return input, nil
 }

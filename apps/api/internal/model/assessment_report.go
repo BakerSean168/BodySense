@@ -28,6 +28,7 @@ type AssessmentReport struct {
 	AgentConfiguration      datatypes.JSON  `gorm:"type:jsonb;not null;default:'{}'" json:"agent_configuration"`
 	ExecutionProvenance     datatypes.JSON  `gorm:"type:jsonb;not null;default:'{}'" json:"execution_provenance"`
 	GenerationDecisionTrace datatypes.JSON  `gorm:"type:jsonb;not null;default:'{}'" json:"generation_decision_trace"`
+	ReplayInput             datatypes.JSON  `gorm:"type:jsonb;not null;default:'{}';column:replay_input" json:"-"`
 	CreatedAt               time.Time       `gorm:"not null;default:now()" json:"created_at"`
 }
 
