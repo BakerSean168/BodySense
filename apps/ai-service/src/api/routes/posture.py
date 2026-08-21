@@ -17,7 +17,7 @@ _VALID_VIEWS = {"front", "side", "back"}
 
 
 @router.post("/analyze", response_model=PostureAnalysisResponse)
-async def analyze(view: str = Form(...), file: UploadFile = File(...)):
+async def analyze(view: str = Form(...), file: UploadFile = File(...), configuration_id: str | None = Form(None)):
     """Analyze a single-view posture photo and return a structured, governed result."""
     if view not in _VALID_VIEWS:
         raise HTTPException(status_code=400, detail=f"invalid view: {view}")
@@ -39,12 +39,10 @@ async def analyze(view: str = Form(...), file: UploadFile = File(...)):
         )
 
     try:
-        result = await analyze_posture(file_bytes, file.content_type, view)
+        result = await analyze_posture(file_bytes, file.content_type, view, configuration_id=configuration_id)
     except HTTPException:
         raise
     except Exception as e:
-        # No usable vision provider / all candidates failed. Surface a clear
-        # 502 so the Go worker records a failed analysis instead of crashing.
         logger.exception("posture analysis failed")
         raise HTTPException(status_code=502, detail=f"posture analysis failed: {e}") from e
 

@@ -20,6 +20,15 @@ import logging
 
 from ..ai import AiRequest, AIService
 from ..ai.types import ChatMessage
+from ..ai.posture_gateway_model import (
+    get_posture_runtime_model,
+    posture_model_settings,
+)
+from ..configuration.posture_agent_config import (
+    PostureAgentManifest,
+    get_default_posture_configuration,
+    get_posture_configuration,
+)
 from ..prompts.posture import (
     DEFAULT_DISCLAIMER,
     KEY_LABELS,
@@ -57,9 +66,13 @@ async def analyze_posture(
     mime_type: str,
     view: str,
     ai: AIService | None = None,
+    configuration_id: str | None = None,
 ) -> dict:
     """Analyze a single posture photo and return a governed result dict."""
     ai = ai or _get_ai_service()
+
+    # North-Star: resolve the exact immutable Agent configuration.
+    manifest = get_posture_manifest(configuration_id)
 
     # Phase 2: geometric metrics first (empty list when pose extra missing).
     geo_metrics = estimate_pose_metrics(image_bytes, view)
@@ -98,11 +111,17 @@ async def analyze_posture(
         ),
     ]
 
+    # North-Star: pin the exact logical model + generation settings from the
+    # immutable manifest so the runtime honors the exact configuration identity.
     resp = await ai.generate(
         AiRequest(
             use_case="posture.analyze",
             messages=messages,
             response_format="json_object",
+            temperature=manifest.generation.temperature,
+            max_tokens=manifest.generation.max_tokens,
+            logical_model=manifest.logical_model,
+            model_settings=posture_model_settings(manifest),
         )
     )
 
@@ -112,12 +131,31 @@ async def analyze_posture(
         logger.warning("posture analysis returned non-JSON output; degrading")
         data = {}
 
-    return govern_posture_result(
+    result = govern_posture_result(
         data,
         view,
         geometric_findings=geo_findings,
         allowed_metrics=metrics_to_dicts(geo_metrics),
     )
+
+    # North-Star: attach the immutable Agent configuration + execution provenance.
+    result["agent_configuration"] = manifest.provenance()
+    result["execution_provenance"] = {
+        "status": "executed",
+        "runtime": "single-shot",
+        "logical_model": manifest.logical_model,
+        "model_group_revision": manifest.model_group_revision,
+        "provider": getattr(resp, "provider", ""),
+        "model": getattr(resp, "model", ""),
+    }
+    return result
+
+
+def get_posture_manifest(configuration_id: str | None = None) -> PostureAgentManifest:
+    """Resolve the exact immutable Posture Agent configuration."""
+    if configuration_id:
+        return get_posture_configuration(configuration_id)
+    return get_default_posture_configuration()
 
 
 def govern_posture_result(

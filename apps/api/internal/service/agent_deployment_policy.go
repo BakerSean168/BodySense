@@ -53,6 +53,8 @@ const (
 	assessmentLogicalModelV1         = "bodysense-structured"
 
 	defaultConsultationConfigurationID = "consult-config-2bd9b46735dd693c"
+
+	defaultPostureConfigurationID = "posture-config-67e6c2405c47b179"
 )
 
 type diagnosisConfigurationRegistration struct {
@@ -70,6 +72,11 @@ type assessmentConfigurationRegistration struct {
 }
 
 type consultationConfigurationRegistration struct {
+	DecisionPolicyRevision string
+	LogicalModel           string
+}
+
+type postureConfigurationRegistration struct {
 	DecisionPolicyRevision string
 	LogicalModel           string
 }
@@ -108,6 +115,17 @@ var knownConsultationConfigurations = map[string]consultationConfigurationRegist
 	defaultConsultationConfigurationID: {
 		DecisionPolicyRevision: ConsultationDecisionPolicyV1,
 		LogicalModel:           "bodysense-consultation",
+	},
+}
+
+// PostureDecisionPolicyV1 is the deterministic fail-closed analysis policy
+// revision for the Posture role.
+const PostureDecisionPolicyV1 = "posture-go-analysis-v1"
+
+var knownPostureConfigurations = map[string]postureConfigurationRegistration{
+	defaultPostureConfigurationID: {
+		DecisionPolicyRevision: PostureDecisionPolicyV1,
+		LogicalModel:           "bodysense-structured",
 	},
 }
 
@@ -188,6 +206,8 @@ type AgentDeploymentPolicy struct {
 	assessmentPromotionRecord           string
 
 	consultationChampionConfigurationID string
+
+	postureChampionConfigurationID string
 }
 
 func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
@@ -376,6 +396,14 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		return nil, err
 	}
 
+	postureChampion := strings.TrimSpace(os.Getenv("POSTURE_CHAMPION_CONFIGURATION_ID"))
+	if postureChampion == "" {
+		postureChampion = defaultPostureConfigurationID
+	}
+	if err := validatePostureConfigurationID(postureChampion); err != nil {
+		return nil, err
+	}
+
 	return &AgentDeploymentPolicy{
 		diagnosisChampionConfigurationID:    diagnosisChampion,
 		diagnosisChallengerConfigurationID:  diagnosisChallenger,
@@ -396,6 +424,7 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		assessmentRolloutSalt:               assessmentRolloutSalt,
 		assessmentPromotionRecord:           assessmentPromotionRecord,
 		consultationChampionConfigurationID: consultationChampion,
+		postureChampionConfigurationID:      postureChampion,
 	}, nil
 }
 
@@ -618,6 +647,29 @@ func validateConsultationConfigurationID(id string) error {
 	}
 	if _, ok := knownConsultationConfigurations[id]; !ok {
 		return fmt.Errorf("unknown Consultation Agent configuration id %q", id)
+	}
+	return nil
+}
+
+// PostureConfigurationID returns the champion Posture configuration pointer.
+func (p *AgentDeploymentPolicy) PostureConfigurationID() string {
+	return p.postureChampionConfigurationID
+}
+
+func PostureDecisionPolicyRevisionForConfiguration(configurationID string) (string, error) {
+	registration, ok := knownPostureConfigurations[strings.TrimSpace(configurationID)]
+	if !ok {
+		return "", fmt.Errorf("unknown Posture Agent configuration id %q", configurationID)
+	}
+	return registration.DecisionPolicyRevision, nil
+}
+
+func validatePostureConfigurationID(id string) error {
+	if !strings.HasPrefix(id, "posture-config-") {
+		return fmt.Errorf("invalid Posture Agent configuration id %q", id)
+	}
+	if _, ok := knownPostureConfigurations[id]; !ok {
+		return fmt.Errorf("unknown Posture Agent configuration id %q", id)
 	}
 	return nil
 }
