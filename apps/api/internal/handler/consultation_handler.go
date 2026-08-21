@@ -17,6 +17,7 @@ type ConsultationHandler struct {
 	interactionService  *service.AgentInteractionService
 	bodyStateService    *service.BodyStateService
 	runtime             *consultationruntime.Runtime
+	replayService       *service.ConsultationReplayService
 }
 
 // NewConsultationHandler creates a new ConsultationHandler.
@@ -36,6 +37,12 @@ func NewConsultationHandler(
 		bodyStateService:    bodyStateService,
 		runtime:             runtime,
 	}
+}
+
+// WithReplayService attaches the run-level decision authority replay service.
+func (h *ConsultationHandler) WithReplayService(replay *service.ConsultationReplayService) *ConsultationHandler {
+	h.replayService = replay
+	return h
 }
 
 // StartRun handles POST /api/v1/consultation-runs
@@ -145,4 +152,69 @@ func (h *ConsultationHandler) GetInteractionMetrics(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, metrics)
+}
+
+// ReplayRun handles POST /api/v1/consultation-runs/:id/replay. Read-only:
+// recomputes the Go decision authority for a completed run without a model call.
+func (h *ConsultationHandler) ReplayRun(c *gin.Context) {
+	if h.replayService == nil {
+		respondError(c, http.StatusServiceUnavailable, "REPLAY_UNAVAILABLE", "replay service not configured")
+		return
+	}
+	uid, ok := getUserUUID(c)
+	if !ok {
+		return
+	}
+	runID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "INVALID_ID", "invalid run id")
+		return
+	}
+	decision, err := h.replayService.HistoricalReplay(c.Request.Context(), uid, runID)
+	if err != nil {
+		switch {
+		case err == service.ErrConsultationReplayUnavailable:
+			respondError(c, http.StatusUnprocessableEntity, "REPLAY_UNAVAILABLE", "run predates North-Star provenance")
+		default:
+			respondError(c, http.StatusInternalServerError, "REPLAY_FAILED", err.Error())
+		}
+		return
+	}
+	c.JSON(http.StatusOK, decision)
+}
+
+// ReplayRunCounterfactual handles POST /api/v1/consultation-runs/:id/replay/counterfactual
+// with {"configuration_id": "..."}. Read-only.
+func (h *ConsultationHandler) ReplayRunCounterfactual(c *gin.Context) {
+	if h.replayService == nil {
+		respondError(c, http.StatusServiceUnavailable, "REPLAY_UNAVAILABLE", "replay service not configured")
+		return
+	}
+	uid, ok := getUserUUID(c)
+	if !ok {
+		return
+	}
+	runID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "INVALID_ID", "invalid run id")
+		return
+	}
+	var req struct {
+		ConfigurationID string `json:"configuration_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || req.ConfigurationID == "" {
+		respondError(c, http.StatusBadRequest, "INVALID_REQUEST", "configuration_id is required")
+		return
+	}
+	decision, err := h.replayService.CounterfactualReplay(c.Request.Context(), uid, runID, req.ConfigurationID)
+	if err != nil {
+		switch {
+		case err == service.ErrConsultationReplayUnavailable:
+			respondError(c, http.StatusUnprocessableEntity, "REPLAY_UNAVAILABLE", "run predates North-Star provenance")
+		default:
+			respondError(c, http.StatusInternalServerError, "REPLAY_FAILED", err.Error())
+		}
+		return
+	}
+	c.JSON(http.StatusOK, decision)
 }

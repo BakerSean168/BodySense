@@ -8,6 +8,7 @@ import (
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 )
 
 const defaultTitle = "新对话"
@@ -46,6 +47,7 @@ type runRepo interface {
 	UpdateStatus(ctx context.Context, id uuid.UUID, status string) error
 	CompleteRun(ctx context.Context, id, userID uuid.UUID, usage any, providerResponseID string) error
 	FailRun(ctx context.Context, id, userID uuid.UUID, errJSON any) error
+	UpdateAgentConfiguration(ctx context.Context, id uuid.UUID, configurationID string, configuration datatypes.JSON, provenance datatypes.JSON) error
 }
 
 type shareRepo interface {

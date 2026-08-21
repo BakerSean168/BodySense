@@ -165,7 +165,7 @@ func main() {
 		interactionService,
 		consultationRuntime,
 		bodyStateService,
-	)
+	).WithReplayService(service.NewConsultationReplayService(runRepo))
 	diagnosisReplayService := service.NewDiagnosisReplayService(diagnosisAnalysisService, aiClient)
 	diagnosisRolloutRepo := repository.NewDiagnosisRolloutRepository(database.DB)
 	diagnosisRolloutService := service.NewDiagnosisRolloutService(diagnosisRolloutRepo)
@@ -307,6 +307,9 @@ func main() {
 		consultations := protected.Group("/consultations")
 		consultations.GET("/:id", consultationHandler.GetConsultation)
 		consultations.GET("/:id/thread", threadProjectionHandler.GetConsultationThread)
+
+		protected.POST("/consultation-runs/:id/replay", consultationHandler.ReplayRun)
+		protected.POST("/consultation-runs/:id/replay/counterfactual", consultationHandler.ReplayRunCounterfactual)
 
 		consultations.POST("/:id/diagnosis", diagnosisHandler.AnalyzeDiagnosis)
 

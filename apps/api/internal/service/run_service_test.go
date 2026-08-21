@@ -6,6 +6,7 @@ import (
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 )
 
 // mockRunRepo implements the runRepo interface for testing.
@@ -83,6 +84,21 @@ func (m *mockRunRepo) FailRun(ctx context.Context, id, userID uuid.UUID, errJSON
 	if run, ok := m.runs[id]; ok {
 		run.Status = "failed"
 		m.lastStatus = "failed"
+	}
+	return nil
+}
+
+func (m *mockRunRepo) UpdateAgentConfiguration(
+	ctx context.Context,
+	id uuid.UUID,
+	configurationID string,
+	configuration datatypes.JSON,
+	provenance datatypes.JSON,
+) error {
+	if run, ok := m.runs[id]; ok {
+		run.AgentConfigurationID = configurationID
+		run.AgentConfiguration = configuration
+		run.ExecutionProvenance = provenance
 	}
 	return nil
 }
