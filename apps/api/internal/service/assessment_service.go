@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -45,6 +46,7 @@ type AssessmentService struct {
 	reasoner       assessmentReasoner
 	unitOfWork     treatmentUnitOfWork
 	deployment     *AgentDeploymentPolicy
+	rollout        *AssessmentRolloutService
 }
 
 func NewAssessmentService(
@@ -70,6 +72,13 @@ func NewAssessmentService(
 // control plane and records provenance/decision trace on the immutable report.
 func (s *AssessmentService) WithAssessmentDeployment(p *AgentDeploymentPolicy) *AssessmentService {
 	s.deployment = p
+	return s
+}
+
+// WithAssessmentRollout attaches the Go-owned rollout observer so served reports
+// trigger anonymous shadow observations when a Challenger is active.
+func (s *AssessmentService) WithAssessmentRollout(r *AssessmentRolloutService) *AssessmentService {
+	s.rollout = r
 	return s
 }
 
@@ -131,8 +140,10 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 
 	configurationID := ""
 	policyRevision := ""
+	var assessmentRoute *AssessmentRouteSelection
 	if s.deployment != nil {
 		route := s.deployment.SelectAssessmentRoute(userID.String())
+		assessmentRoute = &route
 		configurationID = route.ServedConfigurationID
 		policyRevision = route.ServedDecisionPolicyRevision
 		if configurationID == "" || policyRevision == "" {
@@ -164,7 +175,18 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 		}
 	}
 
-	generationTrace := buildAssessmentGenerationTrace(provenance, configurationID, policyRevision)
+	replayEnvelope, replayErr := encodeAssessmentReplayInput(
+		configurationID,
+		profilePayload,
+		posturePayload,
+		images,
+	)
+	if replayErr != nil {
+		return nil, replayErr
+	}
+	replayFingerprint := assessmentReplayInputFingerprintOfRaw(replayEnvelope)
+
+	generationTrace := buildAssessmentGenerationTrace(provenance, configurationID, policyRevision, replayFingerprint)
 
 	report := &model.AssessmentReport{
 		ID: uuid.New(), UserID: userID, Status: payload.Status,
@@ -176,6 +198,7 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 		AgentConfiguration:      datatypes.JSON(normalizeRaw(provenance.AgentConfiguration, `{}`)),
 		ExecutionProvenance:     datatypes.JSON(normalizeRaw(provenance.ExecutionProvenance, `{}`)),
 		GenerationDecisionTrace: datatypes.JSON(generationTrace),
+		ReplayInput:             datatypes.JSON(replayEnvelope),
 		CreatedAt:               time.Now().UTC(),
 	}
 	projected := make([]map[string]any, 0, len(payload.Observations))
@@ -229,6 +252,13 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 	})
 	if err != nil {
 		return nil, fmt.Errorf("persist assessment and BodyState observations: %w", err)
+	}
+	if s.rollout != nil && assessmentRoute != nil {
+		// Shadow observation is non-blocking evidence collection; it never
+		// changes the served report. Log failures so operators can trace.
+		if observeErr := s.rollout.ObserveReport(ctx, userID, *assessmentRoute, report.ID); observeErr != nil {
+			log.Printf("assessment rollout shadow observation failed: %v", observeErr)
+		}
 	}
 	return report, nil
 }
@@ -375,6 +405,7 @@ func buildAssessmentGenerationTrace(
 	prov assessmentProvenance,
 	configurationID string,
 	policyRevision string,
+	replayFingerprint string,
 ) json.RawMessage {
 	trace := map[string]any{
 		"status":                   "generated",
@@ -383,10 +414,71 @@ func buildAssessmentGenerationTrace(
 		"decision_policy_revision": policyRevision,
 		"evaluated":                prov.AgentConfigurationID != "",
 		"outcome":                  "accepted",
+		"replay_input_fingerprint": replayFingerprint,
 	}
 	encoded, err := json.Marshal(trace)
 	if err != nil {
 		return json.RawMessage(`{}`)
 	}
 	return encoded
+}
+
+// AssessmentReplayInput freezes the durable inputs that produced one assessment
+// report so historical/counterfactual replay can reproduce the report without
+// substituting today's BodyState. Images are stored as sanitized descriptors
+// (media-type + count), never raw base64, to keep the replay envelope private
+// and lightweight.
+type AssessmentReplayInput struct {
+	ConfigurationID string            `json:"configuration_id"`
+	Profile         json.RawMessage   `json:"profile"`
+	PostureAnalysis json.RawMessage   `json:"posture_analysis"`
+	Images          []imageDescriptor `json:"images"`
+}
+
+type imageDescriptor struct {
+	MediaType string `json:"media_type"`
+}
+
+func encodeAssessmentReplayInput(
+	configurationID string,
+	profile json.RawMessage,
+	posture json.RawMessage,
+	images []string,
+) (json.RawMessage, error) {
+	if len(profile) == 0 || !json.Valid(profile) {
+		profile = json.RawMessage(`{}`)
+	}
+	if len(posture) == 0 || !json.Valid(posture) {
+		posture = json.RawMessage(`{}`)
+	}
+	descriptors := make([]imageDescriptor, 0, len(images))
+	for _, image := range images {
+		mediaType := "image/*"
+		if start := strings.Index(image, "data:"); start == 0 {
+			if semi := strings.Index(image[start:], ";"); semi > 0 {
+				mediaType = image[start+5 : start+semi]
+			}
+		}
+		descriptors = append(descriptors, imageDescriptor{MediaType: mediaType})
+	}
+	return json.Marshal(AssessmentReplayInput{
+		ConfigurationID: configurationID,
+		Profile:         profile,
+		PostureAnalysis: posture,
+		Images:          descriptors,
+	})
+}
+
+func decodeAssessmentReplayInput(raw json.RawMessage) (AssessmentReplayInput, error) {
+	var input AssessmentReplayInput
+	if len(raw) == 0 || string(raw) == "{}" || string(raw) == "null" {
+		return input, ErrAssessmentReplayUnavailable
+	}
+	if err := json.Unmarshal(raw, &input); err != nil {
+		return input, fmt.Errorf("decode Assessment replay input: %w", err)
+	}
+	if len(input.Profile) == 0 || !json.Valid(input.Profile) {
+		return input, ErrAssessmentReplayUnavailable
+	}
+	return input, nil
 }

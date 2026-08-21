@@ -99,6 +99,11 @@ func main() {
 		agentDeploymentPolicy,
 	)
 	assessmentRepo := repository.NewAssessmentRepository(database.DB)
+	assessmentReplayService := service.NewAssessmentReplayService(assessmentRepo, aiClient)
+	assessmentRolloutService := service.NewAssessmentRolloutService(
+		repository.NewAssessmentRolloutRepository(database.DB),
+		assessmentReplayService,
+	)
 	assessmentService := service.NewAssessmentService(
 		assessmentRepo,
 		profileService,
@@ -106,7 +111,8 @@ func main() {
 		bodyStateService,
 		aiClient,
 		database.NewTransactionManager(database.DB),
-	).WithAssessmentDeployment(agentDeploymentPolicy)
+	).WithAssessmentDeployment(agentDeploymentPolicy).
+		WithAssessmentRollout(assessmentRolloutService)
 	authHandler := handler.NewAuthHandler(authService)
 	profileHandler := handler.NewProfileHandler(profileService)
 	agentToolRepo := repository.NewAgentToolCallRepository(database.DB)
@@ -187,7 +193,8 @@ func main() {
 	treatmentService.AttachRolloutObserver(treatmentRolloutService)
 	treatmentHandler := handler.NewTreatmentHandler(treatmentService, trainingService, treatmentReplayService)
 	reassessmentHandler := handler.NewReassessmentHandler(trainingService)
-	assessmentHandler := handler.NewAssessmentHandler(assessmentService)
+	assessmentHandler := handler.NewAssessmentHandler(assessmentService).
+		WithAssessmentReplay(assessmentReplayService)
 	knowledgeHandler := handler.NewKnowledgeHandler()
 
 	// Continuous health workspace is the single capability/read model for the product loop.
@@ -345,6 +352,8 @@ func main() {
 		protected.POST("/assessment/generate", assessmentHandler.GenerateAssessment)
 		protected.GET("/assessment", assessmentHandler.ListReports)
 		protected.GET("/assessment/:id", assessmentHandler.GetReport)
+		protected.POST("/assessment/:id/replay", assessmentHandler.ReplayAssessment)
+		protected.GET("/assessment/:id/regression-export", assessmentHandler.ExportAssessmentRegressionCase)
 
 		// Training routes
 		protected.GET("/training", trainingHandler.ListPlans)

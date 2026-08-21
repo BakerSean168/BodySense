@@ -11,12 +11,20 @@ import (
 
 // AssessmentHandler handles assessment HTTP requests.
 type AssessmentHandler struct {
-	assessmentService *service.AssessmentService
+	assessmentService       *service.AssessmentService
+	assessmentReplayService *service.AssessmentReplayService
 }
 
 // NewAssessmentHandler creates a new AssessmentHandler.
 func NewAssessmentHandler(assessmentService *service.AssessmentService) *AssessmentHandler {
 	return &AssessmentHandler{assessmentService: assessmentService}
+}
+
+// WithAssessmentReplay attaches the replay service (read-only historical /
+// counterfactual replay + regression export), mirroring Diagnosis/Treatment.
+func (h *AssessmentHandler) WithAssessmentReplay(s *service.AssessmentReplayService) *AssessmentHandler {
+	h.assessmentReplayService = s
+	return h
 }
 
 // GenerateAssessment handles POST /api/v1/assessment/generate
@@ -118,4 +126,100 @@ func (h *AssessmentHandler) ListReports(c *gin.Context) {
 		"limit":   limit,
 		"offset":  offset,
 	})
+}
+
+// ReplayAssessment handles POST /api/v1/assessment/:id/replay. It is read-only:
+// replay never creates a report and never mutates BodyState. `mode` is
+// historical (no model call, recompute integrity) or counterfactual (run the
+// frozen input against another immutable Assessment configuration, transient).
+func (h *AssessmentHandler) ReplayAssessment(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+	uid, err := uuid.Parse(userID.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		return
+	}
+	if h.assessmentReplayService == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "assessment replay is not configured"})
+		return
+	}
+	reportID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid report id"})
+		return
+	}
+	var req struct {
+		Mode            string `json:"mode" binding:"required"`
+		ConfigurationID string `json:"configuration_id,omitempty"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	var report *service.AssessmentReplayReport
+	switch req.Mode {
+	case "historical":
+		report, err = h.assessmentReplayService.HistoricalReplay(c.Request.Context(), uid, reportID)
+	case "counterfactual":
+		if req.ConfigurationID == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "counterfactual replay requires configuration_id"})
+			return
+		}
+		report, err = h.assessmentReplayService.CounterfactualReplay(
+			c.Request.Context(), uid, reportID, req.ConfigurationID,
+		)
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "replay mode must be historical or counterfactual"})
+		return
+	}
+	if err != nil {
+		h.respondAssessmentReplayError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, report)
+}
+
+// ExportAssessmentRegressionCase exposes a dataset-shaped case envelope without
+// mutating the repository, mirroring Diagnosis/Treatment regression export.
+func (h *AssessmentHandler) ExportAssessmentRegressionCase(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+	uid, err := uuid.Parse(userID.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		return
+	}
+	if h.assessmentReplayService == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "assessment replay is not configured"})
+		return
+	}
+	reportID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid report id"})
+		return
+	}
+	payload, err := h.assessmentReplayService.ExportRegressionCase(c.Request.Context(), uid, reportID)
+	if err != nil {
+		h.respondAssessmentReplayError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, payload)
+}
+
+func (h *AssessmentHandler) respondAssessmentReplayError(c *gin.Context, err error) {
+	switch {
+	case err == service.ErrAssessmentReplayNotFound:
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+	case err == service.ErrAssessmentReplayUnavailable:
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
 }

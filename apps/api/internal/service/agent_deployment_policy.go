@@ -24,6 +24,16 @@ const (
 	defaultDiagnosisRolloutSalt = "diagnosis-rollout-v1"
 	DiagnosisPromotionRecordV1  = "diagnosis_promotion_v1"
 
+	AssessmentRolloutChampion = "champion"
+	AssessmentRolloutShadow   = "shadow"
+	AssessmentRolloutCanary   = "canary"
+	AssessmentRolloutPromoted = "promoted"
+	AssessmentRolloutRollback = "rollback"
+
+	defaultAssessmentCanaryBPS   = 500
+	defaultAssessmentRolloutSalt = "assessment-rollout-v1"
+	AssessmentPromotionRecordV1  = "assessment_promotion_v1"
+
 	defaultTreatmentConfigurationID     = "treat-config-85718f8e90ac9d80"
 	treatmentEvidenceGapConfigurationID = "treat-config-f68eec9846664596"
 	treatmentLogicalModelV1             = "bodysense-structured"
@@ -39,6 +49,7 @@ const (
 	TreatmentPromotionRecordV1  = "treatment_promotion_v1"
 
 	defaultAssessmentConfigurationID = "assess-config-fbff8155337b388d"
+	assessmentV2ConfigurationID      = "assess-config-cae55474253e1601"
 	assessmentLogicalModelV1         = "bodysense-structured"
 )
 
@@ -73,6 +84,10 @@ const AssessmentDecisionPolicyV1 = "assessment-go-generation-v1"
 
 var knownAssessmentConfigurations = map[string]assessmentConfigurationRegistration{
 	defaultAssessmentConfigurationID: {
+		DecisionPolicyRevision: AssessmentDecisionPolicyV1,
+		LogicalModel:           assessmentLogicalModelV1,
+	},
+	assessmentV2ConfigurationID: {
 		DecisionPolicyRevision: AssessmentDecisionPolicyV1,
 		LogicalModel:           assessmentLogicalModelV1,
 	},
@@ -294,18 +309,18 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 
 	assessmentStage := strings.TrimSpace(strings.ToLower(os.Getenv("ASSESSMENT_ROLLOUT_STAGE")))
 	if assessmentStage == "" {
-		assessmentStage = DiagnosisRolloutChampion
+		assessmentStage = AssessmentRolloutChampion
 	}
 	if !validRolloutStage(assessmentStage) {
 		return nil, fmt.Errorf("invalid Assessment rollout stage %q", assessmentStage)
 	}
 	// A challenger is only required once a non-Champion stage is requested.
-	if assessmentStage != DiagnosisRolloutChampion && assessmentStage != DiagnosisRolloutRollback {
+	if assessmentStage != AssessmentRolloutChampion && assessmentStage != AssessmentRolloutRollback {
 		if assessmentChampion == assessmentChallenger {
 			return nil, fmt.Errorf("Assessment rollout stage %q requires a distinct challenger configuration", assessmentStage)
 		}
 	}
-	assessmentCanaryBPS := defaultDiagnosisCanaryBPS
+	assessmentCanaryBPS := defaultAssessmentCanaryBPS
 	if raw := strings.TrimSpace(os.Getenv("ASSESSMENT_CANARY_BPS")); raw != "" {
 		value, err := strconv.Atoi(raw)
 		if err != nil {
@@ -316,15 +331,15 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 	if assessmentCanaryBPS < 0 || assessmentCanaryBPS > 10000 {
 		return nil, fmt.Errorf("ASSESSMENT_CANARY_BPS must be between 0 and 10000")
 	}
-	if assessmentStage == DiagnosisRolloutCanary && (assessmentCanaryBPS <= 0 || assessmentCanaryBPS >= 10000) {
+	if assessmentStage == AssessmentRolloutCanary && (assessmentCanaryBPS <= 0 || assessmentCanaryBPS >= 10000) {
 		return nil, fmt.Errorf("canary stage requires ASSESSMENT_CANARY_BPS between 1 and 9999")
 	}
 	assessmentRolloutSalt := strings.TrimSpace(os.Getenv("ASSESSMENT_ROLLOUT_SALT"))
 	if assessmentRolloutSalt == "" {
-		assessmentRolloutSalt = defaultDiagnosisRolloutSalt
+		assessmentRolloutSalt = defaultAssessmentRolloutSalt
 	}
 	assessmentPromotionRecord := strings.TrimSpace(os.Getenv("ASSESSMENT_PROMOTION_RECORD"))
-	if assessmentStage == DiagnosisRolloutShadow || assessmentStage == DiagnosisRolloutCanary || assessmentStage == DiagnosisRolloutPromoted {
+	if assessmentStage == AssessmentRolloutShadow || assessmentStage == AssessmentRolloutCanary || assessmentStage == AssessmentRolloutPromoted {
 		if assessmentPromotionRecord == "" {
 			return nil, fmt.Errorf(
 				"Assessment rollout stage %q requires an approved promotion record",

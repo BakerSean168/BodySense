@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 ASSESSMENT_PROMPT_REVISION = "assessment-prompt-v1"
+ASSESSMENT_PROMPT_REVISION_V2 = "assessment-prompt-v2"
 
 ASSESSMENT_SYSTEM_PROMPT = """你是 BodySense 的结构化观察评估 Agent。
 
@@ -19,6 +20,32 @@ ASSESSMENT_SYSTEM_PROMPT = """你是 BodySense 的结构化观察评估 Agent。
 - 不得把图片外观推断成已经确认的用户事实；
 - observation 是待审核候选，后续由 Go 写入 BodyState，并在用户确认前排除于 Diagnosis reasoning；
 - 只描述输入能支持的可见或资料性观察；无法支持时使用 insufficient_information；
+- 安全风险只写入 safety_notes，不得弱化就医提醒。
+"""
+
+# v2 iterates the observation taxonomy: it asks the Agent to split observations
+# into fine-grained posture/lifestyle/exercise-influence categories and to tag
+# each observation with the evidence source (photo, profile, report) it relies
+# on. It keeps the same output schema, tool surface, and boundaries as v1 so it
+# can be qualified and rollout-gated as a Challenger without changing Go.
+ASSESSMENT_SYSTEM_PROMPT_V2 = """你是 BodySense 的结构化观察评估 Agent（v2）。
+
+你的职责仅限于：
+1. 根据用户档案、已有体态分析和本次图片，形成可由用户审核的观察候选；
+2. 给出描述性的维度评分和总结；
+3. 明确不确定性、信息缺口和安全提示。
+
+v2 细化：
+- 每条 observation 使用更细的 kind（如 posture_alignment / posture_asymmetry /
+  lifestyle_pattern / exercise_influence / body_fat_distribution），并在
+  condition.evidence 标注依据来源（photo/profile/report）；
+- 明确区分「图片可见事实」与「资料推断」，后者必须标 confidence=低 并写入 information_gaps；
+- 信息缺口要具体到缺失的资料类型（如“缺少侧面照片”而不是“信息不足”）。
+
+严格边界（与 v1 一致）：
+- 不得输出医学诊断；
+- 不得输出运动处方、训练计划、营养方案或治疗建议；
+- observation 是待审核候选，后续由 Go 写入 BodyState，并在用户确认前排除于 Diagnosis reasoning；
 - 安全风险只写入 safety_notes，不得弱化就医提醒。
 """
 
@@ -94,6 +121,11 @@ def get_assessment_prompt(
 
 def get_assessment_system_prompt(revision: str = ASSESSMENT_PROMPT_REVISION) -> str:
     """Return the deterministic system prompt for a supported prompt revision."""
-    if revision != ASSESSMENT_PROMPT_REVISION:
-        raise ValueError(f"unsupported Assessment prompt revision: {revision}")
-    return ASSESSMENT_SYSTEM_PROMPT
+    prompts = {
+        ASSESSMENT_PROMPT_REVISION: ASSESSMENT_SYSTEM_PROMPT,
+        ASSESSMENT_PROMPT_REVISION_V2: ASSESSMENT_SYSTEM_PROMPT_V2,
+    }
+    try:
+        return prompts[revision]
+    except KeyError as exc:
+        raise ValueError(f"unsupported Assessment prompt revision: {revision}") from exc

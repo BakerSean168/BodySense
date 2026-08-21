@@ -115,25 +115,28 @@ physical provider/model
   BodyState observations. main.go wires the policy in.
 - Go build + Assessment/DeploymentPolicy tests pass.
 
-### Phase 4 — Assessment frozen-input replay + comparison
+### Phase 4 — Assessment frozen-input replay + comparison ✅ (PR #67)
 
-- Migration `000044_add_assessment_replay_input`: freeze exact serialized profile + posture + BodyState
-  facts + uploads-derived inputs + generation-authority facts.
-- Add historical replay (no model call) and counterfactual replay against another immutable Assessment
-  configuration; hard/semantic/presentation drift comparison; privacy-sanitized regression export.
+- Migration `000044_add_assessment_replay_input` adds `replay_input` (private,
+  sanitized image descriptors; never raw base64). Go freezes profile + posture +
+  image descriptors transactionally with each report.
+- `AssessmentReplayService`: historical rebuild (no model call) + counterfactual
+  transient replay; hard/semantic/presentation comparison + input fingerprint +
+  artifact integrity; regression export (`assessment_qualification_v1`).
+- Handler + routes: `POST /assessment/:id/replay`, `GET /assessment/:id/regression-export`.
 
-### Phase 5 — Assessment rollout governance (shadow / canary / promotion)
+### Phase 5 — Assessment rollout governance ✅ (PR #67)
 
-- Add `assess-promotion-v1` governance, `AssessmentRolloutSelection`, stable per-user bucketing,
-  shadow/canary/promoted/rollback, anonymous `assessment_rollout_observations` (migration
-  `000045_create_assessment_rollout_observations`).
-- A Challenger config (`assessment-v2`) may carry an iterative refinement (e.g. evidence-gap or richer
-  observation taxonomy) gated behind the same promotion record and non-inferiority qualification.
+- Migration `000045_create_assessment_rollout_observations` (anonymous paired evidence).
+- `AssessmentRolloutService`: shadow counterfactual ObserveReport, RecordComparison,
+  Summarize, deny-first Progression (shadow → canary → promoted).
+- `AssessmentService` fires non-blocking shadow observation after persisting a report.
 
-### Phase 6 — Legacy boundary cleanup for Assessment
+### Phase 6 — Legacy boundary cleanup ✅ (resolved during Phase 2)
 
-- Retire the non-typed `assessmentReasoner` interface and any legacy `AIService` link for Assessment.
-- Remove `use_case` overrides and any parallel model construction left in the Assessment path.
+- Assessment no longer imports the legacy `AIService`/`AiRequest` path; the only
+  gateway reference is the `assessment.generate` logical route registry entry.
+  No residual legacy boundary remains to retire.
 
 ## 5. Completion gates (identical to Treatment/Diagnosis)
 
