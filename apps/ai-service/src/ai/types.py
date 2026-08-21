@@ -51,6 +51,10 @@ class AiRequest:
     temperature: float | None = None
     max_tokens: int | None = None
     metadata: dict[str, Any] | None = None
+    # North-Star: when set, these override the use_case route lookup so the
+    # exact immutable manifest configuration is honored end-to-end.
+    logical_model: str | None = None
+    model_settings: dict[str, Any] | None = None
 
 
 @dataclass

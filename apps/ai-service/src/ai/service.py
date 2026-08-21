@@ -158,6 +158,21 @@ class AIService:
         return self._client
 
     def _apply_defaults(self, req: AiRequest) -> AiRequest:
+        # North-Star: when the request pins an explicit logical model + settings
+        # (from the immutable manifest), honor them instead of the use_case route.
+        if req.logical_model is not None and req.model_settings is not None:
+            return AiRequest(
+                use_case=req.use_case,
+                messages=req.messages,
+                tools=req.tools,
+                stream=req.stream,
+                response_format=req.response_format,
+                temperature=req.temperature,
+                max_tokens=req.max_tokens,
+                metadata=req.metadata,
+                logical_model=req.logical_model,
+                model_settings=req.model_settings,
+            )
         route = gateway_route(req.use_case)
         return AiRequest(
             use_case=req.use_case,
