@@ -14,6 +14,9 @@ from typing import Any
 from ..ai import AiRequest, AIService
 from ..ai.gateway import KNOWLEDGE_SPLITTER_ROUTE
 from ..ai.types import ChatMessage
+from ..configuration.knowledge_agent_config import (
+    get_knowledge_splitter_configuration,
+)
 from ..prompts.splitter import SPLITTER_SYSTEM_PROMPT, get_splitter_prompt
 from .knowledge_pack import KnowledgeUnitCandidate, TranscriptSegment, slugify
 from .splitter import HeuristicSplitter
@@ -69,6 +72,9 @@ class LLMSplitter:
         """Core LLM splitting logic with batch handling."""
         ai = AIService()
 
+        # North-Star: resolve the exact immutable Agent configuration.
+        manifest = get_knowledge_splitter_configuration(None)
+
         # Split long transcripts into batches
         batches = _segment_batches(segments)
 
@@ -88,12 +94,20 @@ class LLMSplitter:
                 ChatMessage(role="user", content=user_prompt),
             ]
 
+            # North-Star: pin the exact logical model + generation settings from
+            # the immutable manifest so the runtime honors the exact configuration
+            # identity.
             response = await ai.generate(
                 AiRequest(
                     use_case=KNOWLEDGE_SPLITTER_ROUTE,
                     messages=messages,
-                    temperature=0.3,
-                    max_tokens=2048,
+                    temperature=manifest.generation.temperature,
+                    max_tokens=manifest.generation.max_tokens,
+                    logical_model=manifest.logical_model,
+                    model_settings={
+                        "temperature": manifest.generation.temperature,
+                        "max_tokens": manifest.generation.max_tokens,
+                    },
                 )
             )
             raw_units = _parse_llm_response(response.text)

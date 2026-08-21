@@ -15,6 +15,9 @@ from typing import Any
 from ..ai import AiRequest, AIService
 from ..ai.gateway import KNOWLEDGE_CURATOR_ROUTE
 from ..ai.types import ChatMessage
+from ..configuration.knowledge_agent_config import (
+    get_knowledge_curator_configuration,
+)
 from ..prompts.curator import CURATOR_SYSTEM_PROMPT, get_curator_prompt
 from .knowledge_pack import (
     GeneratedKnowledgePack,
@@ -89,6 +92,9 @@ class AICurator:
         """Refine a single knowledge unit via LLM."""
         ai = AIService()
 
+        # North-Star: resolve the exact immutable Agent configuration.
+        manifest = get_knowledge_curator_configuration(None)
+
         user_prompt = get_curator_prompt(
             title=unit.title,
             summary=unit.summary,
@@ -104,12 +110,19 @@ class AICurator:
             ChatMessage(role="user", content=user_prompt),
         ]
 
+        # North-Star: pin the exact logical model + generation settings from the
+        # immutable manifest so the runtime honors the exact configuration identity.
         response = await ai.generate(
             AiRequest(
                 use_case=KNOWLEDGE_CURATOR_ROUTE,
                 messages=messages,
-                temperature=0.3,
-                max_tokens=2048,
+                temperature=manifest.generation.temperature,
+                max_tokens=manifest.generation.max_tokens,
+                logical_model=manifest.logical_model,
+                model_settings={
+                    "temperature": manifest.generation.temperature,
+                    "max_tokens": manifest.generation.max_tokens,
+                },
             )
         )
         result = _parse_curator_response(response.text)
