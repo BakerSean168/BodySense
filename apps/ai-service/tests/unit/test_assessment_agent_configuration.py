@@ -54,3 +54,35 @@ def test_assessment_manifest_excludes_runtime_host_from_provenance() -> None:
     assert prov["role"] == "assessment"
     assert prov["logical_model"] == "bodysense-structured"
     assert "temperature" not in prov  # generation settings live in the behavior fingerprint
+
+
+def test_assessment_v2_challenger_is_repository_known_and_distinct() -> None:
+    from src.configuration.assessment_agent_config import (
+        get_assessment_configuration,
+        known_assessment_configuration_ids,
+    )
+
+    ids = known_assessment_configuration_ids()
+    assert len(ids) == 2
+    v1 = get_default_assessment_configuration().configuration_id
+    v2 = get_assessment_configuration("assess-config-cae55474253e1601").configuration_id
+    assert v1 != v2
+    assert v2 in ids
+    assert get_assessment_configuration(v2).prompt_revision == "assessment-prompt-v2"
+    # v2 keeps the same boundaries/schema/tool surface as v1 (governance parity).
+    assert get_assessment_configuration(v2).output_schema_revision == "assessment-output-v1"
+    assert get_assessment_configuration(v2).tool_policy_revision == "assessment-tools-none-v1"
+
+
+def test_assessment_v2_agent_accepts_v2_prompt_revision() -> None:
+    from src.agents.assessment_agent import create_assessment_agent
+    from src.prompts.assessment import (
+        ASSESSMENT_PROMPT_REVISION_V2,
+        get_assessment_system_prompt,
+    )
+
+    assert "v2" in get_assessment_system_prompt(ASSESSMENT_PROMPT_REVISION_V2)
+    agent = create_assessment_agent(prompt_revision=ASSESSMENT_PROMPT_REVISION_V2)
+    assert agent.name == "bodysense_assessment"
+    with pytest.raises(ValueError, match="unsupported Assessment prompt revision"):
+        get_assessment_system_prompt("assessment-prompt-does-not-exist")

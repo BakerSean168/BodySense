@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -20,6 +21,7 @@ func assessmentReplayTestReport() *model.AssessmentReport {
 		json.RawMessage(`{"has_analysis":true,"summaries":["正面观轻微高低肩"]}`),
 		[]string{"data:image/jpeg;base64,AAAA"},
 	)
+	fingerprint := assessmentReplayInputFingerprintOfRaw(env)
 	observations, _ := json.Marshal([]any{map[string]any{"kind": "posture_alignment", "label": "高低肩倾向"}})
 	return &model.AssessmentReport{
 		ID:                      reportID,
@@ -33,7 +35,7 @@ func assessmentReplayTestReport() *model.AssessmentReport {
 		AgentConfigurationID:    "assess-config-fbff8155337b388d",
 		AgentConfiguration:      datatypes.JSON(`{"id":"assess-config-fbff8155337b388d","role":"assessment"}`),
 		ExecutionProvenance:     datatypes.JSON(`{"status":"executed","runtime":"pydantic-ai"}`),
-		GenerationDecisionTrace: datatypes.JSON(`{"status":"generated","outcome":"accepted"}`),
+		GenerationDecisionTrace: datatypes.JSON(fmt.Sprintf(`{"status":"generated","outcome":"accepted","replay_input_fingerprint":%q}`, fingerprint)),
 		ReplayInput:             datatypes.JSON(env),
 		CreatedAt:               now,
 	}
@@ -67,6 +69,15 @@ func TestAssessmentHistoricalReplayRebuildsImmutableBaselineWithoutModel(t *test
 	}
 	if !replayed.ArtifactIntegrity.Match {
 		t.Fatalf("artifact integrity must hold: %+v", replayed.ArtifactIntegrity)
+	}
+	// Regression guard for the S1 bug: a clean historical self-replay must report
+	// Hard.Match == true (agent role identity must be validated, not the literal
+	// string "assessment" compared against the config id).
+	if !replayed.Comparison.Hard.Match {
+		t.Fatalf("clean historical replay must report hard match, got %+v", replayed.Comparison.Hard)
+	}
+	if replayed.Comparison.Semantic.Match != true {
+		t.Fatalf("clean historical replay must report semantic match, got %+v", replayed.Comparison.Semantic)
 	}
 	// ai is nil => historical replay performs no model call
 	if svc.ai != nil {

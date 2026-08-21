@@ -23,15 +23,15 @@ func (r *fakeAssessmentRolloutRepo) ListRecent(_ context.Context, _, _ string, _
 
 func testAssessmentRoute(stage, shadowID string) AssessmentRouteSelection {
 	return AssessmentRouteSelection{
-		Stage:                     stage,
-		SubjectBucket:             42,
-		CanaryBPS:                 defaultDiagnosisCanaryBPS,
-		ServedConfigurationID:     "assess-config-fbff8155337b388d",
+		Stage:                        stage,
+		SubjectBucket:                42,
+		CanaryBPS:                    defaultDiagnosisCanaryBPS,
+		ServedConfigurationID:        "assess-config-fbff8155337b388d",
 		ServedDecisionPolicyRevision: AssessmentDecisionPolicyV1,
-		ShadowConfigurationID:     shadowID,
-		ChampionConfigurationID:   "assess-config-fbff8155337b388d",
-		ChallengerConfigurationID: shadowID,
-		PromotionRecord:           "",
+		ShadowConfigurationID:        shadowID,
+		ChampionConfigurationID:      "assess-config-fbff8155337b388d",
+		ChallengerConfigurationID:    shadowID,
+		PromotionRecord:              "",
 	}
 }
 
@@ -67,18 +67,45 @@ func TestAssessmentRolloutRecordsShadowErrorEvidence(t *testing.T) {
 func TestAssessmentRolloutProgressionDenyFirst(t *testing.T) {
 	svc := NewAssessmentRolloutService(&fakeAssessmentRolloutRepo{}, nil)
 
-	hold := svc.Progression(&AssessmentRolloutSummary{
-		Samples: 5, ShadowErrors: 1, ForbiddenSideEffects: 0, HardMismatchRate: 0,
+	// Blocking signals => rollback, never promote.
+	rollback := svc.Progression(&AssessmentRolloutSummary{
+		Samples: 50, ForbiddenSideEffects: 1, ConfigurationMismatches: 0, HardMismatchRate: 0,
 	}, false)
-	if hold.Action != "hold" {
-		t.Fatalf("blocking signals must hold, got %q", hold.Action)
+	if rollback.Action != "rollback" {
+		t.Fatalf("blocking signals must rollback, got %q (%s)", rollback.Action, rollback.Reason)
 	}
 
+	// Too few samples => hold even when clean.
+	holdSamples := svc.Progression(&AssessmentRolloutSummary{
+		Stage: "shadow", Samples: 5, ForbiddenSideEffects: 0, ConfigurationMismatches: 0,
+		HardMismatchRate: 0, SemanticMismatchRate: 0,
+	}, false)
+	if holdSamples.Action != "hold" {
+		t.Fatalf("insufficient samples must hold, got %q", holdSamples.Action)
+	}
+
+	// Clean shadow window with enough samples => promote to canary.
 	promote := svc.Progression(&AssessmentRolloutSummary{
-		Stage: "shadow", Samples: 10, ForbiddenSideEffects: 0, ConfigurationMismatches: 0,
+		Stage: "shadow", Samples: AssessmentRolloutMinSamples, ForbiddenSideEffects: 0, ConfigurationMismatches: 0,
+		HardMismatchRate: 0, SemanticMismatchRate: 0,
+	}, false)
+	if promote.Action != "promote" || promote.NextStage != "canary" {
+		t.Fatalf("clean shadow window should promote to canary, got %+v", promote)
+	}
+
+	// canary requires a promotion record.
+	canaryHold := svc.Progression(&AssessmentRolloutSummary{
+		Stage: "canary", Samples: AssessmentRolloutMinSamples, ForbiddenSideEffects: 0, ConfigurationMismatches: 0,
+		HardMismatchRate: 0, SemanticMismatchRate: 0,
+	}, false)
+	if canaryHold.Action != "hold" {
+		t.Fatalf("canary without promotion record must hold, got %q", canaryHold.Action)
+	}
+	canaryPromote := svc.Progression(&AssessmentRolloutSummary{
+		Stage: "canary", Samples: AssessmentRolloutMinSamples, ForbiddenSideEffects: 0, ConfigurationMismatches: 0,
 		HardMismatchRate: 0, SemanticMismatchRate: 0,
 	}, true)
-	if promote.Action != "promote" || promote.NextStage != "canary" {
-		t.Fatalf("clean shadow with promotion record should promote, got %+v", promote)
+	if canaryPromote.Action != "promote" || canaryPromote.NextStage != "promoted" {
+		t.Fatalf("clean canary with promotion record should promote to promoted, got %+v", canaryPromote)
 	}
 }

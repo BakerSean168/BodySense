@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -174,8 +175,6 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 		}
 	}
 
-	generationTrace := buildAssessmentGenerationTrace(provenance, configurationID, policyRevision)
-
 	replayEnvelope, replayErr := encodeAssessmentReplayInput(
 		configurationID,
 		profilePayload,
@@ -185,6 +184,9 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 	if replayErr != nil {
 		return nil, replayErr
 	}
+	replayFingerprint := assessmentReplayInputFingerprintOfRaw(replayEnvelope)
+
+	generationTrace := buildAssessmentGenerationTrace(provenance, configurationID, policyRevision, replayFingerprint)
 
 	report := &model.AssessmentReport{
 		ID: uuid.New(), UserID: userID, Status: payload.Status,
@@ -253,8 +255,10 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 	}
 	if s.rollout != nil && assessmentRoute != nil {
 		// Shadow observation is non-blocking evidence collection; it never
-		// changes the served report.
-		_ = s.rollout.ObserveReport(ctx, userID, *assessmentRoute, report.ID)
+		// changes the served report. Log failures so operators can trace.
+		if observeErr := s.rollout.ObserveReport(ctx, userID, *assessmentRoute, report.ID); observeErr != nil {
+			log.Printf("assessment rollout shadow observation failed: %v", observeErr)
+		}
 	}
 	return report, nil
 }
@@ -401,6 +405,7 @@ func buildAssessmentGenerationTrace(
 	prov assessmentProvenance,
 	configurationID string,
 	policyRevision string,
+	replayFingerprint string,
 ) json.RawMessage {
 	trace := map[string]any{
 		"status":                   "generated",
@@ -409,6 +414,7 @@ func buildAssessmentGenerationTrace(
 		"decision_policy_revision": policyRevision,
 		"evaluated":                prov.AgentConfigurationID != "",
 		"outcome":                  "accepted",
+		"replay_input_fingerprint": replayFingerprint,
 	}
 	encoded, err := json.Marshal(trace)
 	if err != nil {

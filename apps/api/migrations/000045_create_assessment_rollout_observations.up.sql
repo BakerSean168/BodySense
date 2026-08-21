@@ -24,3 +24,8 @@ CREATE INDEX idx_assessment_rollout_observations_pair_stage
         canary_bps,
         created_at DESC
     );
+
+-- One observation per (report, shadow) pair prevents duplicate counting when a
+-- retry or double-invocation would otherwise write the same shadow evidence twice.
+CREATE UNIQUE INDEX uq_assessment_rollout_observation_pair
+    ON assessment_rollout_observations (source_report_id, shadow_configuration_id);

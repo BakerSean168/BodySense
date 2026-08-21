@@ -15,10 +15,16 @@ from ..models.assessment import (
 )
 from ..prompts.assessment import (
     ASSESSMENT_PROMPT_REVISION,
+    ASSESSMENT_PROMPT_REVISION_V2,
     get_assessment_system_prompt,
 )
 
 ASSESSMENT_TOOL_POLICY_REVISION = "assessment-tools-none-v1"
+
+_SUPPORTED_ASSESSMENT_PROMPT_REVISIONS = {
+    ASSESSMENT_PROMPT_REVISION,
+    ASSESSMENT_PROMPT_REVISION_V2,
+}
 
 
 def create_assessment_agent(
@@ -28,7 +34,7 @@ def create_assessment_agent(
     output_schema_revision: str = ASSESSMENT_OUTPUT_SCHEMA_REVISION,
     tool_policy_revision: str = ASSESSMENT_TOOL_POLICY_REVISION,
 ) -> Agent[AssessmentDependencies, AssessmentAgentOutput]:
-    if prompt_revision != ASSESSMENT_PROMPT_REVISION:
+    if prompt_revision not in _SUPPORTED_ASSESSMENT_PROMPT_REVISIONS:
         raise ValueError(f"unsupported Assessment prompt revision: {prompt_revision}")
     if tool_policy_revision != ASSESSMENT_TOOL_POLICY_REVISION:
         raise ValueError(

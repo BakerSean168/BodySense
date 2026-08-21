@@ -104,7 +104,14 @@ func (s *AssessmentRolloutService) RecordComparison(
 	} else if report != nil {
 		observation.Comparison = datatypes.JSON(assessmentMustJSON(report.Comparison))
 		observation.ForbiddenSideEffect = reportOutputHasForbiddenField(report.Output)
-		observation.ConfigurationMismatch = !report.Comparison.Hard.Match
+		// Identity mismatch is about the Agent configuration, not output drift:
+		// the replay envelope + report must agree, and the shadow must have been
+		// produced by the challenger. Output drift is measured separately via
+		// Comparison.Hard/Semantic mismatch rates.
+		observation.ConfigurationMismatch =
+			!report.ArtifactIntegrity.Match ||
+				report.SourceConfigurationID != route.ServedConfigurationID ||
+				report.TargetConfigurationID != route.ShadowConfigurationID
 	}
 	return s.repo.Create(ctx, observation)
 }
@@ -153,8 +160,16 @@ func (s *AssessmentRolloutService) Summarize(
 	return summary, nil
 }
 
+// Assessment rollout gate constants (mirror Treatment thresholds).
+const (
+	AssessmentRolloutMinSamples            = 20
+	AssessmentRolloutHardMismatchLimit     = 0.10 // 10%
+	AssessmentRolloutSemanticMismatchLimit = 0.25 // 25%
+)
+
 // Progression is deny-first: it recommends the next stage only when the evidence
-// window is clean enough and a promotion record is present for non-Champion goals.
+// window is large enough, clean enough, and a promotion record is present for
+// non-Champion goals. It can also recommend rollback when blocking signals appear.
 func (s *AssessmentRolloutService) Progression(
 	summary *AssessmentRolloutSummary,
 	hasPromotionRecord bool,
@@ -162,20 +177,30 @@ func (s *AssessmentRolloutService) Progression(
 	if summary == nil {
 		return &AssessmentRolloutProgression{PolicyRevision: AssessmentRolloutPolicyRevision, Action: "hold", Reason: "no evidence yet"}
 	}
-	if summary.ShadowErrors > 0 || summary.ForbiddenSideEffects > 0 || summary.ConfigurationMismatches > 0 {
-		return &AssessmentRolloutProgression{PolicyRevision: AssessmentRolloutPolicyRevision, Action: "hold", Reason: "blocking signals present"}
+	// Deny-first: any blocking signal rolls back or holds, never promotes.
+	if summary.ForbiddenSideEffects > 0 || summary.ConfigurationMismatches > 0 {
+		return &AssessmentRolloutProgression{PolicyRevision: AssessmentRolloutPolicyRevision, Action: "rollback", Reason: "blocking signals present (forbidden side effect or configuration mismatch)"}
 	}
-	if summary.Samples > 0 && summary.HardMismatchRate == 0 && summary.SemanticMismatchRate <= 0.05 {
-		switch summary.Stage {
-		case "shadow":
-			return &AssessmentRolloutProgression{PolicyRevision: AssessmentRolloutPolicyRevision, Action: "promote", NextStage: "canary", Reason: "shadow stable"}
-		case "canary":
-			if hasPromotionRecord {
-				return &AssessmentRolloutProgression{PolicyRevision: AssessmentRolloutPolicyRevision, Action: "promote", NextStage: "promoted", Reason: "canary clean and promotion record present"}
-			}
+	if summary.Samples < AssessmentRolloutMinSamples {
+		return &AssessmentRolloutProgression{PolicyRevision: AssessmentRolloutPolicyRevision, Action: "hold", Reason: "insufficient samples"}
+	}
+	if summary.ShadowErrors > 0 {
+		return &AssessmentRolloutProgression{PolicyRevision: AssessmentRolloutPolicyRevision, Action: "hold", Reason: "shadow errors present"}
+	}
+	if summary.HardMismatchRate > AssessmentRolloutHardMismatchLimit ||
+		summary.SemanticMismatchRate > AssessmentRolloutSemanticMismatchLimit {
+		return &AssessmentRolloutProgression{PolicyRevision: AssessmentRolloutPolicyRevision, Action: "hold", Reason: "mismatch rate above threshold"}
+	}
+	switch summary.Stage {
+	case "shadow":
+		return &AssessmentRolloutProgression{PolicyRevision: AssessmentRolloutPolicyRevision, Action: "promote", NextStage: "canary", Reason: "shadow stable"}
+	case "canary":
+		if hasPromotionRecord {
+			return &AssessmentRolloutProgression{PolicyRevision: AssessmentRolloutPolicyRevision, Action: "promote", NextStage: "promoted", Reason: "canary clean and promotion record present"}
 		}
+		return &AssessmentRolloutProgression{PolicyRevision: AssessmentRolloutPolicyRevision, Action: "hold", Reason: "promotion record missing"}
 	}
-	return &AssessmentRolloutProgression{PolicyRevision: AssessmentRolloutPolicyRevision, Action: "hold", Reason: "evidence insufficient or promotion record missing"}
+	return &AssessmentRolloutProgression{PolicyRevision: AssessmentRolloutPolicyRevision, Action: "hold", Reason: "unknown stage"}
 }
 
 func reportOutputHasForbiddenField(output json.RawMessage) bool {

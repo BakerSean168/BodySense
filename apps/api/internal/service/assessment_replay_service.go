@@ -184,6 +184,7 @@ func (s *AssessmentReplayService) ExportRegressionCase(
 		return nil, err
 	}
 	snapshot := assessmentReplaySnapshot(assessmentReplayBaseline(report))
+	executed := replayAgentExecuted(json.RawMessage(report.ExecutionProvenance))
 	caseName := "historical-" + strings.ReplaceAll(report.ID.String()[:13], "-", "")
 	return map[string]any{
 		"schema_target":    AssessmentRegressionExportSchema,
@@ -203,7 +204,7 @@ func (s *AssessmentReplayService) ExportRegressionCase(
 				"slices":                  []string{"historical-replay"},
 				"critical":                snapshot.Status == "insufficient_information",
 				"expected_status":         snapshot.Status,
-				"expected_agent_executed": true,
+				"expected_agent_executed": executed,
 				"min_observations":        snapshot.ObservationCount,
 				"forbidden_output_fields": []string{"treatment", "training_plan", "prescription"},
 			},
@@ -212,10 +213,6 @@ func (s *AssessmentReplayService) ExportRegressionCase(
 }
 
 func assessmentReplayBaseline(report *model.AssessmentReport) map[string]any {
-	var out map[string]any
-	if len(report.Observations) > 0 {
-		_ = json.Unmarshal(report.Observations, &out)
-	}
 	baseline := map[string]any{
 		"status":       report.Status,
 		"health_grade": report.HealthGrade,
@@ -249,12 +246,14 @@ func assessmentReplaySnapshot(payload map[string]any) AssessmentReplaySnapshot {
 		}
 	}
 	sort.Strings(kinds)
+	gaps := stringSlice(payload["information_gaps"])
+	sort.Strings(gaps)
 	return AssessmentReplaySnapshot{
 		Status:           firstString(payload["status"], ""),
 		HealthGrade:      firstString(payload["health_grade"], ""),
 		ObservationCount: len(obs),
 		ObservationKinds: kinds,
-		InformationGaps:  stringSlice(payload["information_gaps"]),
+		InformationGaps:  gaps,
 		SafetyNoteCount:  len(stringSlice(payload["safety_notes"])),
 		Summary:          firstString(payload["summary"], ""),
 	}
@@ -276,9 +275,22 @@ func assessmentReplayArtifactIntegrity(
 	input AssessmentReplayInput,
 	baseline map[string]any,
 ) AssessmentReplayLayer {
+	recomputedFingerprint := assessmentReplayInputFingerprint(input)
+	storedFingerprint := storedReplayInputFingerprint(json.RawMessage(report.GenerationDecisionTrace))
 	checks := []AssessmentReplayCheck{
-		{Name: "source_configuration_id", Match: report.AgentConfigurationID != ""},
-		{Name: "replay_input_frozen", Match: input.Profile != nil}, // decoded => present
+		{
+			Name:      "source_configuration_id_matches_replay_envelope",
+			Match:     report.AgentConfigurationID == input.ConfigurationID,
+			Baseline:  report.AgentConfigurationID,
+			Candidate: input.ConfigurationID,
+		},
+		{
+			Name:      "replay_input_fingerprint_matches_generation_trace",
+			Match:     storedFingerprint != "" && storedFingerprint == recomputedFingerprint,
+			Baseline:  storedFingerprint,
+			Candidate: recomputedFingerprint,
+		},
+		{Name: "replay_input_frozen", Match: len(input.Profile) > 0},
 		{Name: "report_immutable_status", Match: baseline["status"] != nil},
 	}
 	all := true
@@ -317,6 +329,21 @@ func assessmentReplayInputFingerprint(input AssessmentReplayInput) string {
 	return hex.EncodeToString(sum[:])
 }
 
+func assessmentReplayInputFingerprintOfRaw(raw json.RawMessage) string {
+	sum := sha256.Sum256(raw)
+	return hex.EncodeToString(sum[:])
+}
+
+// storedReplayInputFingerprint reads the fingerprint frozen at generation time
+// from the report's generation decision trace.
+func storedReplayInputFingerprint(trace json.RawMessage) string {
+	var payload struct {
+		ReplayInputFingerprint string `json:"replay_input_fingerprint"`
+	}
+	_ = json.Unmarshal(trace, &payload)
+	return payload.ReplayInputFingerprint
+}
+
 func assessmentReplayConfigurationMatches(payload map[string]any, expectedID string) bool {
 	configuration, ok := payload["agent_configuration"].(map[string]any)
 	if !ok {
@@ -325,6 +352,15 @@ func assessmentReplayConfigurationMatches(payload map[string]any, expectedID str
 	id, _ := configuration["id"].(string)
 	role, _ := configuration["role"].(string)
 	return id == expectedID && role == "assessment"
+}
+
+func assessmentReplayRoleIsAssessment(payload map[string]any) bool {
+	configuration, ok := payload["agent_configuration"].(map[string]any)
+	if !ok {
+		return false
+	}
+	role, _ := configuration["role"].(string)
+	return role == "assessment"
 }
 
 func cloneAssessmentPayload(payload map[string]any) map[string]any {
@@ -343,7 +379,10 @@ func compareAssessmentReplayOutputs(baseline, replayed map[string]any) Assessmen
 		{Name: "status", Match: bSnap.Status == rSnap.Status, Baseline: bSnap.Status, Candidate: rSnap.Status},
 		{Name: "health_grade", Match: bSnap.HealthGrade == rSnap.HealthGrade, Baseline: bSnap.HealthGrade, Candidate: rSnap.HealthGrade},
 		{Name: "observation_count", Match: bSnap.ObservationCount == rSnap.ObservationCount, Baseline: fmt.Sprintf("%d", bSnap.ObservationCount), Candidate: fmt.Sprintf("%d", rSnap.ObservationCount)},
-		{Name: "agent_configuration_role", Match: assessmentReplayConfigurationMatches(replayed, "assessment")},
+		// Identity of the Agent role is checked here; the exact configuration ID
+		// equality is verified separately (counterfactual at the call site via
+		// assessmentReplayConfigurationMatches, historical via ArtifactIntegrity).
+		{Name: "agent_configuration_role", Match: assessmentReplayRoleIsAssessment(replayed)},
 	}
 	semanticChecks := []AssessmentReplayCheck{
 		{Name: "observation_kinds", Match: equalStringSlices(bSnap.ObservationKinds, rSnap.ObservationKinds), Baseline: strings.Join(bSnap.ObservationKinds, ","), Candidate: strings.Join(rSnap.ObservationKinds, ",")},
