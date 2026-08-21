@@ -65,6 +65,11 @@ type Runtime struct {
 	treatmentService          *service.TreatmentService
 	streamRuntime             *stream.Runtime
 	deployment                *service.AgentDeploymentPolicy
+	// pendingAgentConfiguration* holds the North-Star runtime identity captured
+	// from the runtime.agent_configuration event until the run is persisted.
+	pendingAgentConfigurationID string
+	pendingAgentConfiguration   json.RawMessage
+	pendingExecutionProvenance  json.RawMessage
 }
 
 func NewRuntime(
@@ -926,6 +931,26 @@ func (r *Runtime) handleAIEvent(
 		result.Usage = payload.Usage
 		r.sendEvent(ctx, sw, event, state.AssistantMsgID, "usage.reported")
 
+	case "runtime.agent_configuration":
+		// North-Star: capture the immutable Agent configuration + execution
+		// provenance emitted by the Python runtime so it can be persisted on
+		// the durable run record.
+		var payload struct {
+			AgentConfiguration  json.RawMessage `json:"agent_configuration"`
+			ExecutionProvenance json.RawMessage `json:"execution_provenance"`
+		}
+		_ = event.PayloadAs(&payload)
+		r.pendingAgentConfigurationID = ""
+		if len(payload.AgentConfiguration) > 0 {
+			var prov struct {
+				ID string `json:"id"`
+			}
+			_ = json.Unmarshal(payload.AgentConfiguration, &prov)
+			r.pendingAgentConfigurationID = prov.ID
+		}
+		r.pendingAgentConfiguration = payload.AgentConfiguration
+		r.pendingExecutionProvenance = payload.ExecutionProvenance
+
 	case "stream.done":
 		var payload struct {
 			ResponseID string          `json:"response_id"`
@@ -1059,6 +1084,19 @@ func (r *Runtime) persistCompletedTurn(
 	}
 	if err := r.runService.CompleteRun(ctx, run.ID, uid, result.Usage, result.ProviderResponseID); err != nil {
 		log.Printf("failed to complete run %s: %v", run.ID, err)
+	}
+	// North-Star: persist the immutable Agent configuration + execution
+	// provenance captured from the runtime.agent_configuration event.
+	if r.pendingAgentConfigurationID != "" {
+		if err := r.runService.UpdateAgentConfiguration(
+			ctx,
+			run.ID,
+			r.pendingAgentConfigurationID,
+			datatypes.JSON(r.pendingAgentConfiguration),
+			datatypes.JSON(r.pendingExecutionProvenance),
+		); err != nil {
+			log.Printf("failed to persist run %s agent configuration: %v", run.ID, err)
+		}
 	}
 	r.recordGovernance(ctx, uid, conversationID, run.ID, result.GovernanceResult)
 	r.clearActiveRun(ctx, conversationID, uid)

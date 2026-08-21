@@ -6,6 +6,7 @@ import (
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -132,5 +133,24 @@ func (r *RunRepository) FailRun(ctx context.Context, id, userID uuid.UUID, errJS
 			"status":       "failed",
 			"error":        errJSON,
 			"completed_at": now,
+		}).Error
+}
+
+// UpdateAgentConfiguration persists the immutable Agent configuration +
+// execution provenance captured from the runtime.agent_configuration event.
+func (r *RunRepository) UpdateAgentConfiguration(
+	ctx context.Context,
+	id uuid.UUID,
+	configurationID string,
+	configuration datatypes.JSON,
+	provenance datatypes.JSON,
+) error {
+	return r.db.WithContext(ctx).
+		Model(&model.Run{}).
+		Where("id = ?", id).
+		Updates(map[string]any{
+			"agent_configuration_id": configurationID,
+			"agent_configuration":    configuration,
+			"execution_provenance":   provenance,
 		}).Error
 }
