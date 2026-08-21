@@ -41,8 +41,7 @@ func assessmentReplayTestReport() *model.AssessmentReport {
 
 func newAssessmentReplaySvc() (*AssessmentReplayService, *fakeAssessmentRepository) {
 	repo := &fakeAssessmentRepository{}
-	assessment := NewAssessmentService(repo, nil, nil, nil, nil, nil)
-	return NewAssessmentReplayService(assessment, nil), repo
+	return NewAssessmentReplayService(repo, nil), repo
 }
 
 func TestAssessmentHistoricalReplayRebuildsImmutableBaselineWithoutModel(t *testing.T) {

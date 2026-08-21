@@ -45,6 +45,7 @@ type AssessmentService struct {
 	reasoner       assessmentReasoner
 	unitOfWork     treatmentUnitOfWork
 	deployment     *AgentDeploymentPolicy
+	rollout        *AssessmentRolloutService
 }
 
 func NewAssessmentService(
@@ -70,6 +71,13 @@ func NewAssessmentService(
 // control plane and records provenance/decision trace on the immutable report.
 func (s *AssessmentService) WithAssessmentDeployment(p *AgentDeploymentPolicy) *AssessmentService {
 	s.deployment = p
+	return s
+}
+
+// WithAssessmentRollout attaches the Go-owned rollout observer so served reports
+// trigger anonymous shadow observations when a Challenger is active.
+func (s *AssessmentService) WithAssessmentRollout(r *AssessmentRolloutService) *AssessmentService {
+	s.rollout = r
 	return s
 }
 
@@ -131,8 +139,10 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 
 	configurationID := ""
 	policyRevision := ""
+	var assessmentRoute *AssessmentRouteSelection
 	if s.deployment != nil {
 		route := s.deployment.SelectAssessmentRoute(userID.String())
+		assessmentRoute = &route
 		configurationID = route.ServedConfigurationID
 		policyRevision = route.ServedDecisionPolicyRevision
 		if configurationID == "" || policyRevision == "" {
@@ -240,6 +250,11 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 	})
 	if err != nil {
 		return nil, fmt.Errorf("persist assessment and BodyState observations: %w", err)
+	}
+	if s.rollout != nil && assessmentRoute != nil {
+		// Shadow observation is non-blocking evidence collection; it never
+		// changes the served report.
+		_ = s.rollout.ObserveReport(ctx, userID, *assessmentRoute, report.ID)
 	}
 	return report, nil
 }

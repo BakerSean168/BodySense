@@ -99,6 +99,11 @@ func main() {
 		agentDeploymentPolicy,
 	)
 	assessmentRepo := repository.NewAssessmentRepository(database.DB)
+	assessmentReplayService := service.NewAssessmentReplayService(assessmentRepo, aiClient)
+	assessmentRolloutService := service.NewAssessmentRolloutService(
+		repository.NewAssessmentRolloutRepository(database.DB),
+		assessmentReplayService,
+	)
 	assessmentService := service.NewAssessmentService(
 		assessmentRepo,
 		profileService,
@@ -106,7 +111,8 @@ func main() {
 		bodyStateService,
 		aiClient,
 		database.NewTransactionManager(database.DB),
-	).WithAssessmentDeployment(agentDeploymentPolicy)
+	).WithAssessmentDeployment(agentDeploymentPolicy).
+		WithAssessmentRollout(assessmentRolloutService)
 	authHandler := handler.NewAuthHandler(authService)
 	profileHandler := handler.NewProfileHandler(profileService)
 	agentToolRepo := repository.NewAgentToolCallRepository(database.DB)
@@ -188,7 +194,7 @@ func main() {
 	treatmentHandler := handler.NewTreatmentHandler(treatmentService, trainingService, treatmentReplayService)
 	reassessmentHandler := handler.NewReassessmentHandler(trainingService)
 	assessmentHandler := handler.NewAssessmentHandler(assessmentService).
-		WithAssessmentReplay(service.NewAssessmentReplayService(assessmentService, aiClient))
+		WithAssessmentReplay(assessmentReplayService)
 	knowledgeHandler := handler.NewKnowledgeHandler()
 
 	// Continuous health workspace is the single capability/read model for the product loop.

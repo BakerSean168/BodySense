@@ -63,12 +63,22 @@ type AssessmentReplayReport struct {
 }
 
 type AssessmentReplayService struct {
-	assessments *AssessmentService
+	assessments assessmentRepository
 	ai          *AIClient
 }
 
-func NewAssessmentReplayService(assessments *AssessmentService, ai *AIClient) *AssessmentReplayService {
+// NewAssessmentReplayService attaches the Assessment repository (used to load an
+// immutable report by id) and the AI client (used only by counterfactual replay,
+// never by historical replay).
+func NewAssessmentReplayService(assessments assessmentRepository, ai *AIClient) *AssessmentReplayService {
 	return &AssessmentReplayService{assessments: assessments, ai: ai}
+}
+
+func (s *AssessmentReplayService) getReport(ctx context.Context, id, userID uuid.UUID) (*model.AssessmentReport, error) {
+	if s == nil || s.assessments == nil {
+		return nil, errors.New("Assessment replay repository is not configured")
+	}
+	return s.assessments.GetByID(ctx, id, userID)
 }
 
 // HistoricalReplay recomputes the deterministic generation authority and
@@ -82,7 +92,7 @@ func (s *AssessmentReplayService) HistoricalReplay(
 	if s == nil || s.assessments == nil {
 		return nil, errors.New("Assessment replay service is not configured")
 	}
-	report, err := s.assessments.GetReport(ctx, reportID, userID)
+	report, err := s.getReport(ctx, reportID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +124,7 @@ func (s *AssessmentReplayService) CounterfactualReplay(
 	if s == nil || s.assessments == nil {
 		return nil, errors.New("Assessment replay service is not configured")
 	}
-	report, err := s.assessments.GetReport(ctx, reportID, userID)
+	report, err := s.getReport(ctx, reportID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +172,7 @@ func (s *AssessmentReplayService) ExportRegressionCase(
 	userID uuid.UUID,
 	reportID uuid.UUID,
 ) (map[string]any, error) {
-	report, err := s.assessments.GetReport(ctx, reportID, userID)
+	report, err := s.getReport(ctx, reportID, userID)
 	if err != nil {
 		return nil, err
 	}
