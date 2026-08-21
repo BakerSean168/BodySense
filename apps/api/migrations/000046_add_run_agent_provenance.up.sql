@@ -5,5 +5,5 @@ ALTER TABLE runs
     ADD COLUMN replay_input JSONB NOT NULL DEFAULT '{}'::jsonb;
 
 CREATE INDEX idx_runs_agent_configuration
-    ON runs (agent_configuration_id, created_at DESC)
+    ON runs (agent_configuration_id, started_at DESC)
     WHERE agent_configuration_id <> '';
