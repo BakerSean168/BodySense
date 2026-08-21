@@ -6,6 +6,7 @@ import (
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 )
 
 // RunService handles run business logic.
@@ -110,6 +111,21 @@ func (s *RunService) MarkWaitingUser(ctx context.Context, id uuid.UUID) error {
 func (s *RunService) ResumeRunning(ctx context.Context, id uuid.UUID) error {
 	if err := s.runRepo.UpdateStatus(ctx, id, "running"); err != nil {
 		return fmt.Errorf("resume running: %w", err)
+	}
+	return nil
+}
+
+// UpdateAgentConfiguration persists the immutable Agent configuration +
+// execution provenance captured from the runtime.agent_configuration event.
+func (s *RunService) UpdateAgentConfiguration(
+	ctx context.Context,
+	id uuid.UUID,
+	configurationID string,
+	configuration datatypes.JSON,
+	provenance datatypes.JSON,
+) error {
+	if err := s.runRepo.UpdateAgentConfiguration(ctx, id, configurationID, configuration, provenance); err != nil {
+		return fmt.Errorf("update run agent configuration: %w", err)
 	}
 	return nil
 }

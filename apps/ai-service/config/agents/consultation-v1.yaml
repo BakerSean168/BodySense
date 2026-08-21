@@ -1,0 +1,11 @@
+role: consultation
+manifest_revision: consultation-agent-v1
+logical_model: bodysense-consultation
+model_group_revision: consultation-model-group-v1
+prompt_revision: consultation-prompt-v1
+tool_policy_revision: consultation-tools-v1
+governance_policy_revision: consultation-governance-v1
+decision_policy_revision: consultation-go-runtime-v1
+generation:
+  temperature: 0.7
+  max_tokens: 2048

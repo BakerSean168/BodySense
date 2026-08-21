@@ -13,7 +13,15 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, StreamWriter, interrupt
 
 from ..ai import AiRequest, AIService
+from ..ai.consultation_gateway_model import (
+    consultation_model_settings,
+)
 from ..ai.types import ChatMessage, ToolCall
+from ..configuration.consultation_agent_config import (
+    ConsultationAgentManifest,
+    get_consultation_configuration,
+    get_default_consultation_configuration,
+)
 from ..models.stream_event import StreamEvent, StreamEventFactory, StreamEventIds
 from ..prompts.consultation import format_profile_context, get_system_prompt
 from ..services.agent.consultation_tools import (
@@ -29,6 +37,13 @@ logger = logging.getLogger(__name__)
 
 MAX_CONTEXT_TURNS = 10
 MAX_TOOL_ROUNDS = 6
+
+
+def get_consultation_manifest(configuration_id: str | None = None):
+    """Resolve the exact immutable Consultation Agent configuration."""
+    if configuration_id:
+        return get_consultation_configuration(configuration_id)
+    return get_default_consultation_configuration()
 
 
 def _merge_symptoms(
@@ -76,6 +91,8 @@ class ConsultationThreadState(TypedDict, total=False):
     treatment_result: dict[str, Any] | None
     # Prefetched by Go from user_uploads.analysis_result (Phase 3-B1 / P4).
     posture_analysis: dict[str, Any] | None
+    # North-Star: resolved immutable Agent configuration for this turn.
+    consultation_manifest: ConsultationAgentManifest
 
 
 _ai_service_instance: AIService | None = None
@@ -343,6 +360,9 @@ async def llm_turn(state: ConsultationThreadState, *, writer: StreamWriter) -> d
         writer({"type": "stream_error", "message": "模型工具循环超过上限"})
         return {"pending_tool_calls": [], "tool_rounds": tool_rounds}
 
+    # North-Star: resolve the exact immutable manifest for this turn.
+    manifest = state.get("consultation_manifest") or get_consultation_manifest(None)
+
     try:
         ai = _get_ai_service()
     except Exception:
@@ -369,13 +389,17 @@ async def llm_turn(state: ConsultationThreadState, *, writer: StreamWriter) -> d
     accumulated_text = ""
     completed_tool_calls: list[dict[str, Any]] = []
 
+    # North-Star: pin the exact logical model + generation settings from the
+    # immutable manifest so the runtime honors the exact configuration identity.
     async for event in ai.generate_stream(
         AiRequest(
             use_case="consultation.reply",
             messages=_runtime_messages_to_chat_messages(state),
             tools=provider_tools,
-            temperature=0.7,
-            max_tokens=2048,
+            temperature=manifest.generation.temperature,
+            max_tokens=manifest.generation.max_tokens,
+            logical_model=manifest.logical_model,
+            model_settings=consultation_model_settings(manifest),
         )
     ):
         if event.type == "text_delta" and event.text:
@@ -745,10 +769,15 @@ async def stream_thread_turn(
     current_diagnosis: dict[str, Any] | None = None,
     current_treatment: dict[str, Any] | None = None,
     recent_outcomes: list[dict[str, Any]] | None = None,
+    configuration_id: str | None = None,
 ) -> AsyncIterator[StreamEvent]:
     graph = await get_runtime_graph()
     config = cast(RunnableConfig, {"configurable": {"thread_id": thread_id}})
     factory = StreamEventFactory(conversation_id=conversation_id)
+
+    # Resolve the exact immutable Agent configuration (North-Star identity).
+    manifest = get_consultation_manifest(configuration_id)
+    usage_state: dict[str, Any] = {}
 
     async for chunk in graph.astream(
         {
@@ -771,6 +800,7 @@ async def stream_thread_turn(
                 "findings": [],
                 "summaries": [],
             },
+            "consultation_manifest": manifest,
         },
         config=config,
         stream_mode="custom",
@@ -779,6 +809,8 @@ async def stream_thread_turn(
         if event is not None:
             event.ids.run_id = run_id
             yield event
+        if event is not None and event.channel == "usage":
+            usage_state = event.payload
 
     snapshot = await graph.aget_state(config)
     if snapshot.interrupts:
@@ -799,6 +831,24 @@ async def stream_thread_turn(
         )
         yield event
         return
+
+    # Emit immutable Agent configuration + execution provenance so Go can
+    # persist the exact runtime identity on the durable run record.
+    yield factory.next(
+        channel="runtime",
+        event_type="runtime.agent_configuration",
+        payload={
+            "agent_configuration": manifest.provenance(),
+            "execution_provenance": {
+                "status": "executed",
+                "runtime": "langgraph",
+                "logical_model": manifest.logical_model,
+                "model_group_revision": manifest.model_group_revision,
+                "usage": usage_state,
+            },
+        },
+        ids=StreamEventIds(run_id=run_id),
+    )
 
     yield factory.next(
         channel="stream",

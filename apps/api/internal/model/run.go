@@ -23,6 +23,12 @@ type Run struct {
 	Error              datatypes.JSON `gorm:"type:jsonb" json:"error,omitempty"`
 	Usage              datatypes.JSON `gorm:"type:jsonb" json:"usage,omitempty"`
 	Metadata           datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"metadata"`
+	// North-Star Agent Platform: exact immutable configuration + execution
+	// provenance + frozen replay input for this run.
+	AgentConfigurationID string         `gorm:"type:varchar(80);not null;default:'';index" json:"agent_configuration_id"`
+	AgentConfiguration   datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"agent_configuration"`
+	ExecutionProvenance  datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"execution_provenance"`
+	ReplayInput          datatypes.JSON `gorm:"type:jsonb;not null;default:'{}';column:replay_input" json:"-"`
 }
 
 // TableName specifies the table name for GORM.
