@@ -64,6 +64,7 @@ type Runtime struct {
 	diagnosisFreshnessService *service.DiagnosisFreshnessService
 	treatmentService          *service.TreatmentService
 	streamRuntime             *stream.Runtime
+	deployment                *service.AgentDeploymentPolicy
 }
 
 func NewRuntime(
@@ -79,6 +80,7 @@ func NewRuntime(
 	threadProjectionService *service.ThreadProjectionService,
 	runtimeEventService *service.RuntimeEventService,
 	uploadService *service.UploadService,
+	deployment *service.AgentDeploymentPolicy,
 	bodyStateServices ...runtimeBodyStateService,
 ) *Runtime {
 	var bodyStateService runtimeBodyStateService
@@ -98,6 +100,7 @@ func NewRuntime(
 		threadProjectionService: threadProjectionService,
 		runtimeEventService:     runtimeEventService,
 		uploadService:           uploadService,
+		deployment:              deployment,
 		bodyStateService:        bodyStateService,
 		streamRuntime:           stream.NewRuntime(),
 	}
@@ -292,9 +295,10 @@ func (r *Runtime) executeRunFlow(
 		ctx,
 		conversationID.String(),
 		service.StartConsultationTurnRequest{
-			RunID:          run.ID.String(),
-			ConversationID: conversationID.String(),
-			UserID:         uid.String(),
+			RunID:           run.ID.String(),
+			ConversationID:  conversationID.String(),
+			UserID:          uid.String(),
+			ConfigurationID: r.deployment.ConsultationConfigurationID(),
 			Input: service.ConsultationUserInput{
 				Type:   "user_message",
 				Text:   userText,

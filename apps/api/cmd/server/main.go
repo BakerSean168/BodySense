@@ -147,6 +147,7 @@ func main() {
 		threadProjectionService,
 		runtimeEventService,
 		uploadService,
+		agentDeploymentPolicy,
 		bodyStateService,
 	)
 	consultationRuntime.AttachLongitudinalContextServices(

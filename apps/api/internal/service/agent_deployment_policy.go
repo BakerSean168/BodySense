@@ -51,6 +51,8 @@ const (
 	defaultAssessmentConfigurationID = "assess-config-fbff8155337b388d"
 	assessmentV2ConfigurationID      = "assess-config-cae55474253e1601"
 	assessmentLogicalModelV1         = "bodysense-structured"
+
+	defaultConsultationConfigurationID = "consult-config-2bd9b46735dd693c"
 )
 
 type diagnosisConfigurationRegistration struct {
@@ -63,6 +65,11 @@ type treatmentConfigurationRegistration struct {
 }
 
 type assessmentConfigurationRegistration struct {
+	DecisionPolicyRevision string
+	LogicalModel           string
+}
+
+type consultationConfigurationRegistration struct {
 	DecisionPolicyRevision string
 	LogicalModel           string
 }
@@ -90,6 +97,17 @@ var knownAssessmentConfigurations = map[string]assessmentConfigurationRegistrati
 	assessmentV2ConfigurationID: {
 		DecisionPolicyRevision: AssessmentDecisionPolicyV1,
 		LogicalModel:           assessmentLogicalModelV1,
+	},
+}
+
+// ConsultationDecisionPolicyV1 is the deterministic fail-closed runtime policy
+// revision for the Consultation role.
+const ConsultationDecisionPolicyV1 = "consultation-go-runtime-v1"
+
+var knownConsultationConfigurations = map[string]consultationConfigurationRegistration{
+	defaultConsultationConfigurationID: {
+		DecisionPolicyRevision: ConsultationDecisionPolicyV1,
+		LogicalModel:           "bodysense-consultation",
 	},
 }
 
@@ -168,6 +186,8 @@ type AgentDeploymentPolicy struct {
 	assessmentCanaryBPS                 int
 	assessmentRolloutSalt               string
 	assessmentPromotionRecord           string
+
+	consultationChampionConfigurationID string
 }
 
 func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
@@ -348,6 +368,14 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		}
 	}
 
+	consultationChampion := strings.TrimSpace(os.Getenv("CONSULTATION_CHAMPION_CONFIGURATION_ID"))
+	if consultationChampion == "" {
+		consultationChampion = defaultConsultationConfigurationID
+	}
+	if err := validateConsultationConfigurationID(consultationChampion); err != nil {
+		return nil, err
+	}
+
 	return &AgentDeploymentPolicy{
 		diagnosisChampionConfigurationID:    diagnosisChampion,
 		diagnosisChallengerConfigurationID:  diagnosisChallenger,
@@ -367,6 +395,7 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		assessmentCanaryBPS:                 assessmentCanaryBPS,
 		assessmentRolloutSalt:               assessmentRolloutSalt,
 		assessmentPromotionRecord:           assessmentPromotionRecord,
+		consultationChampionConfigurationID: consultationChampion,
 	}, nil
 }
 
@@ -565,6 +594,30 @@ func validateAssessmentConfigurationID(id string) error {
 	}
 	if _, ok := knownAssessmentConfigurations[id]; !ok {
 		return fmt.Errorf("unknown Assessment Agent configuration id %q", id)
+	}
+	return nil
+}
+
+// ConsultationConfigurationID returns the champion Consultation configuration
+// pointer (the stable pre-rollout compatibility accessor).
+func (p *AgentDeploymentPolicy) ConsultationConfigurationID() string {
+	return p.consultationChampionConfigurationID
+}
+
+func ConsultationDecisionPolicyRevisionForConfiguration(configurationID string) (string, error) {
+	registration, ok := knownConsultationConfigurations[strings.TrimSpace(configurationID)]
+	if !ok {
+		return "", fmt.Errorf("unknown Consultation Agent configuration id %q", configurationID)
+	}
+	return registration.DecisionPolicyRevision, nil
+}
+
+func validateConsultationConfigurationID(id string) error {
+	if !strings.HasPrefix(id, "consult-config-") {
+		return fmt.Errorf("invalid Consultation Agent configuration id %q", id)
+	}
+	if _, ok := knownConsultationConfigurations[id]; !ok {
+		return fmt.Errorf("unknown Consultation Agent configuration id %q", id)
 	}
 	return nil
 }
