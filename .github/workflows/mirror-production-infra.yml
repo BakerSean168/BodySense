@@ -24,16 +24,16 @@ jobs:
       matrix:
         include:
           - name: pgvector
-            source: pgvector/pgvector:pg16
+            source: pgvector/pgvector:pg16@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b
             target: pgvector:pg16
           - name: redis
-            source: redis:7-alpine
+            source: redis:7-alpine@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf
             target: redis:7-alpine
           - name: caddy
-            source: caddy:2-alpine
+            source: caddy:2-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
             target: caddy:2-alpine
           - name: litellm
-            source: docker.litellm.ai/berriai/litellm:v1.97.0
+            source: docker.litellm.ai/berriai/litellm:v1.97.0@sha256:468c25f35f3e5ec4e414974f00deab93337b1b4d9953cabcfd3722e59415f834
             target: litellm:v1.97.0
     steps:
       - name: Login to Alibaba Cloud ACR
