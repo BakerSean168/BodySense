@@ -14,6 +14,15 @@ BACKUP_DIR="$ROOT/backups"
 RUNTIME_BACKUP_DIR="$ROOT/runtime-backups"
 FORCE=false
 CHECK_ONLY=false
+ROLLBACK_READY=false
+ROLLBACK_TAG=""
+ROLLBACK_WEB_REF=""
+ROLLBACK_API_REF=""
+ROLLBACK_AI_REF=""
+ROLLBACK_LITELLM_REF=""
+ROLLBACK_RUNTIME_DIR=""
+RUNTIME_CHANGED=false
+PREVIOUS_SCHEMA_STATE="unknown"
 for arg in "$@"; do
   case "$arg" in
     --force) FORCE=true ;;
@@ -66,13 +75,125 @@ image_revision() {
 container_image_id() {
   local id
   id=$(compose ps -q "$1" 2>/dev/null || true)
-  [ -n "$id" ] && docker inspect "$id" --format '{{.Image}}' 2>/dev/null || true
+  if [ -n "$id" ]; then
+    docker inspect "$id" --format '{{.Image}}' 2>/dev/null || true
+  fi
 }
 
 container_revision() {
   local image_id
   image_id=$(container_image_id "$1")
-  [ -n "$image_id" ] && docker image inspect "$image_id" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' 2>/dev/null || true
+  if [ -n "$image_id" ]; then
+    docker image inspect "$image_id" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' 2>/dev/null || true
+  fi
+}
+
+db_schema_state() {
+  local exists value
+  if ! exists=$(compose exec -T postgres psql -U "$DB_USER" -d "$DB_NAME" -Atc \
+    "SELECT to_regclass('public.schema_migrations') IS NOT NULL;" 2>/dev/null); then
+    printf '%s' unknown
+    return 0
+  fi
+  if [ "$exists" != t ]; then
+    printf '%s' uninitialized
+    return 0
+  fi
+  if ! value=$(compose exec -T postgres psql -U "$DB_USER" -d "$DB_NAME" -Atc \
+    "SELECT version::text || ':' || dirty::text FROM schema_migrations ORDER BY version DESC LIMIT 1;" \
+    2>/dev/null); then
+    printf '%s' unknown
+    return 0
+  fi
+  printf '%s' "${value:-uninitialized}"
+}
+
+prepare_rollback_images() {
+  local web_id api_id ai_id litellm_id stamp base_revision
+  web_id=$(container_image_id web)
+  api_id=$(container_image_id api)
+  ai_id=$(container_image_id ai-service)
+  litellm_id=$(container_image_id litellm-gateway)
+  if [ -z "$web_id" ] || [ -z "$api_id" ] || [ -z "$ai_id" ] || [ -z "$litellm_id" ]; then
+    log 'automatic rollback unavailable: previous application/LiteLLM image set is incomplete'
+    return 0
+  fi
+
+  base_revision="${managed_revision:-pre-managed}"
+  stamp=$(date -u +%Y%m%d-%H%M%S)
+  ROLLBACK_TAG="rollback-${base_revision:0:12}-${stamp}"
+  ROLLBACK_WEB_REF="$REGISTRY/$NAMESPACE/bodysense-web:$ROLLBACK_TAG"
+  ROLLBACK_API_REF="$REGISTRY/$NAMESPACE/bodysense-api:$ROLLBACK_TAG"
+  ROLLBACK_AI_REF="$REGISTRY/$NAMESPACE/bodysense-ai-service:$ROLLBACK_TAG"
+  ROLLBACK_LITELLM_REF="$REGISTRY/$NAMESPACE/litellm:$ROLLBACK_TAG"
+
+  docker tag "$web_id" "$ROLLBACK_WEB_REF"
+  docker tag "$api_id" "$ROLLBACK_API_REF"
+  docker tag "$ai_id" "$ROLLBACK_AI_REF"
+  docker tag "$litellm_id" "$ROLLBACK_LITELLM_REF"
+  ROLLBACK_READY=true
+}
+
+restore_runtime() {
+  [ "$RUNTIME_CHANGED" = true ] || return 0
+  [ -n "$ROLLBACK_RUNTIME_DIR" ] || return 1
+  [ -s "$ROLLBACK_RUNTIME_DIR/.env.production" ] || return 1
+  [ -s "$ROLLBACK_RUNTIME_DIR/docker/docker-compose.prod.yml" ] || return 1
+  [ -s "$ROLLBACK_RUNTIME_DIR/docker/Caddyfile" ] || return 1
+
+  install -m 0644 "$ROLLBACK_RUNTIME_DIR/.env.production" "$PUBLIC_ENV"
+  install -m 0644 "$ROLLBACK_RUNTIME_DIR/docker/docker-compose.prod.yml" "$COMPOSE"
+  install -m 0644 "$ROLLBACK_RUNTIME_DIR/docker/Caddyfile" "$ROOT/docker/Caddyfile"
+  if [ -f "$ROLLBACK_RUNTIME_DIR/docker/litellm/config.yaml" ]; then
+    install -d -m 0755 "$ROOT/docker/litellm"
+    install -m 0644 "$ROLLBACK_RUNTIME_DIR/docker/litellm/config.yaml" "$ROOT/docker/litellm/config.yaml"
+  else
+    rm -f "$ROOT/docker/litellm/config.yaml"
+  fi
+}
+
+rollback_deployment() {
+  local current_schema
+  if [ "$ROLLBACK_READY" != true ]; then
+    log 'automatic rollback skipped: no complete previous image set was captured'
+    return 2
+  fi
+
+  current_schema=$(db_schema_state)
+  if [ "$PREVIOUS_SCHEMA_STATE" = unknown ] || [ "$current_schema" = unknown ]; then
+    log "automatic rollback skipped: database schema state could not be verified before/after deployment"
+    return 3
+  fi
+  if [ "$current_schema" != "$PREVIOUS_SCHEMA_STATE" ]; then
+    log "automatic rollback skipped: database schema changed from $PREVIOUS_SCHEMA_STATE to $current_schema"
+    return 3
+  fi
+
+  log "database schema unchanged at $current_schema; restoring previous runtime and images"
+  restore_runtime || { log 'automatic rollback failed while restoring runtime files'; return 1; }
+
+  LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" compose up -d --no-deps litellm-gateway
+  LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" wait_healthy litellm-gateway 120 || return 1
+  LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" compose up -d --no-deps ai-service
+  LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" wait_healthy ai-service 120 || return 1
+  LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" compose up -d --no-deps api
+  LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" wait_healthy api 150 || return 1
+  LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" compose up -d --no-deps web
+  LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" wait_healthy web 90 || return 1
+  LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" compose up -d --no-deps caddy
+  LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1 || true
+  curl -fsS --max-time 15 "https://${APP_DOMAIN}/api/health" >/dev/null || return 1
+  log "automatic rollback restored managed revision ${managed_revision:-unknown}"
+  return 0
+}
+
+cleanup_rollback_tags() {
+  local ref
+  for ref in "$ROLLBACK_WEB_REF" "$ROLLBACK_API_REF" "$ROLLBACK_AI_REF" "$ROLLBACK_LITELLM_REF"; do
+    if [ -n "$ref" ]; then
+      docker rmi "$ref" >/dev/null 2>&1 || true
+    fi
+  done
 }
 
 wait_healthy() {
@@ -87,7 +208,9 @@ wait_healthy() {
     fi
     if [ $(( $(date +%s) - start )) -ge "$timeout" ]; then
       log "$service failed health wait"
-      [ -n "${id:-}" ] && docker logs --tail 120 "$id" 2>&1 || true
+      if [ -n "${id:-}" ]; then
+        docker logs --tail 120 "$id" 2>&1 || true
+      fi
       return 1
     fi
     sleep 2
@@ -117,13 +240,17 @@ sync_runtime() {
 
   old_runtime_revision=$(sed -n 's/^runtime_revision=//p' "$STATE_FILE" 2>/dev/null | tail -1 || true)
   [ -n "$old_runtime_revision" ] || old_runtime_revision=pre-managed
-  local archive="$RUNTIME_BACKUP_DIR/${old_runtime_revision}-$(date -u +%Y%m%d-%H%M%S)"
-  mkdir -p "$archive/docker"
+  local archive
+  archive="$RUNTIME_BACKUP_DIR/${old_runtime_revision}-$(date -u +%Y%m%d-%H%M%S)"
+  mkdir -p "$archive/docker/litellm"
   cp -f "$PUBLIC_ENV" "$archive/.env.production" 2>/dev/null || true
   cp -f "$COMPOSE" "$archive/docker/docker-compose.prod.yml" 2>/dev/null || true
   cp -f "$ROOT/docker/Caddyfile" "$archive/docker/Caddyfile" 2>/dev/null || true
+  cp -f "$ROOT/docker/litellm/config.yaml" "$archive/docker/litellm/config.yaml" 2>/dev/null || true
+  ROLLBACK_RUNTIME_DIR="$archive"
 
   install -d -m 0755 "$ROOT/docker/litellm" "$ROOT/scripts"
+  RUNTIME_CHANGED=true
   install -m 0644 "$stage/.env.production" "$PUBLIC_ENV"
   install -m 0644 "$stage/docker/docker-compose.prod.yml" "$COMPOSE"
   install -m 0644 "$stage/docker/Caddyfile" "$ROOT/docker/Caddyfile"
@@ -172,16 +299,46 @@ log "deploying coherent revision $desired_revision"
 # Legacy Watchtower updated containers independently and can race this coherent
 # release transaction. Remove it before the managed cutover on upgraded hosts.
 docker rm -f docker-watchtower-1 >/dev/null 2>&1 || true
+
+PREVIOUS_SCHEMA_STATE=$(db_schema_state)
+prepare_rollback_images
+
+# Back up the stable, currently-running database before any runtime files or
+# services are changed.
+backup="$BACKUP_DIR/bodysense-pre-${desired_revision:0:12}-$(date -u +%Y%m%d-%H%M%S).dump"
+compose exec -T postgres pg_dump -U "$DB_USER" -d "$DB_NAME" -Fc > "$backup"
+[ -s "$backup" ] || fail 'database backup is empty'
+sha256sum "$backup" > "$backup.sha256"
+log "database backup created: $(basename "$backup") schema=$PREVIOUS_SCHEMA_STATE"
+
 deploy_started=true
 on_exit() {
   status=$?
+  trap - EXIT
   if [ "$status" -ne 0 ] && [ "${deploy_started:-false}" = true ]; then
+    rollback_status=skipped
+    if rollback_deployment; then
+      rollback_status=restored
+    else
+      rollback_code=$?
+      case "$rollback_code" in
+        2) rollback_status=unavailable ;;
+        3) rollback_status=skipped-schema-changed ;;
+        *) rollback_status=failed ;;
+      esac
+    fi
+    current_schema=$(db_schema_state)
     cat > "$BLOCK_FILE" <<BLOCK
 revision=$desired_revision
 failed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+rollback=$rollback_status
+schema_before=$PREVIOUS_SCHEMA_STATE
+schema_after=$current_schema
+backup=$(basename "$backup")
 BLOCK
-    log "revision $desired_revision marked blocked after deployment failure"
+    log "revision $desired_revision marked blocked after deployment failure rollback=$rollback_status"
   fi
+  exit "$status"
 }
 trap on_exit EXIT
 checked_registry="$REGISTRY"
@@ -189,30 +346,28 @@ checked_namespace="$NAMESPACE"
 checked_web_tag="$WEB_TAG"
 checked_api_tag="$API_TAG"
 checked_ai_tag="$AI_TAG"
+checked_db_user="$DB_USER"
+checked_db_name="$DB_NAME"
 sync_runtime "$desired_revision"
 
 # Re-evaluate variables after the runtime bundle is synchronized. Deployment pointer
-# changes require a separate bootstrap; one release may not change the coordinates
-# that were used to establish image coherence.
+# or database identity changes require a separate bootstrap; one application release
+# may not silently change the coordinates used for the release transaction.
 REGISTRY=$(read_public_env REGISTRY)
 NAMESPACE=$(read_public_env ACR_NAMESPACE bodysense)
 WEB_TAG=$(read_public_env WEB_TAG prod-latest)
 API_TAG=$(read_public_env API_TAG prod-latest)
 AI_TAG=$(read_public_env AI_TAG prod-latest)
+DB_USER=$(read_public_env DB_USER bodysense)
+DB_NAME=$(read_public_env DB_NAME bodysense)
 [ "$REGISTRY" = "$checked_registry" ] || fail 'runtime bundle changed REGISTRY during deployment'
 [ "$NAMESPACE" = "$checked_namespace" ] || fail 'runtime bundle changed ACR_NAMESPACE during deployment'
 [ "$WEB_TAG" = "$checked_web_tag" ] || fail 'runtime bundle changed WEB_TAG during deployment'
 [ "$API_TAG" = "$checked_api_tag" ] || fail 'runtime bundle changed API_TAG during deployment'
 [ "$AI_TAG" = "$checked_ai_tag" ] || fail 'runtime bundle changed AI_TAG during deployment'
+[ "$DB_USER" = "$checked_db_user" ] || fail 'runtime bundle changed DB_USER during deployment'
+[ "$DB_NAME" = "$checked_db_name" ] || fail 'runtime bundle changed DB_NAME during deployment'
 APP_DOMAIN=$(read_public_env APP_DOMAIN body.bakersean.top)
-DB_USER=$(read_public_env DB_USER bodysense)
-DB_NAME=$(read_public_env DB_NAME bodysense)
-
-backup="$BACKUP_DIR/bodysense-pre-${desired_revision:0:12}-$(date -u +%Y%m%d-%H%M%S).dump"
-compose exec -T postgres pg_dump -U "$DB_USER" -d "$DB_NAME" -Fc > "$backup"
-[ -s "$backup" ] || fail 'database backup is empty'
-sha256sum "$backup" > "$backup.sha256"
-log "database backup created: $(basename "$backup")"
 
 compose pull litellm-gateway >/dev/null
 compose up -d --no-deps litellm-gateway
@@ -242,5 +397,7 @@ chmod 0644 "$STATE_FILE"
 rm -f "$BLOCK_FILE"
 deploy_started=false
 trap - EXIT
+cleanup_rollback_tags
 find "$BACKUP_DIR" -type f -name 'bodysense-pre-*.dump*' -mtime +14 -delete 2>/dev/null || true
+find "$RUNTIME_BACKUP_DIR" -mindepth 1 -maxdepth 1 -type d -mtime +14 -exec rm -rf {} + 2>/dev/null || true
 log "deployment successful revision=$desired_revision"
