@@ -23,10 +23,6 @@ permissions:
   contents: read
   actions: read
 
-env:
-  REGISTRY: ${{ secrets.ACR_REGISTRY }}
-  NAMESPACE: ${{ secrets.ACR_NAMESPACE }}
-
 jobs:
   verify-ci:
     name: Verify tested release revision
@@ -112,6 +108,11 @@ jobs:
     name: Build ${{ matrix.service }} immutable image
     needs: metadata
     runs-on: ubuntu-latest
+    environment:
+      name: production
+    env:
+      REGISTRY: ${{ secrets.ACR_REGISTRY }}
+      NAMESPACE: ${{ secrets.ACR_NAMESPACE }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -168,6 +169,9 @@ jobs:
     environment:
       name: production
       url: https://body.bakersean.top
+    env:
+      REGISTRY: ${{ secrets.ACR_REGISTRY }}
+      NAMESPACE: ${{ secrets.ACR_NAMESPACE }}
     if: github.ref_type == 'tag' || inputs.promote == true
     runs-on: ubuntu-latest
     steps:
