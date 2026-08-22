@@ -39,7 +39,7 @@ type TreatmentRecommendationRequest struct {
 }
 
 type AssessmentGenerationRequest struct {
-	ConfigurationID string          `json:"configuration_id,omitempty"`
+	ConfigurationID string          `json:"configuration_id"`
 	Profile         json.RawMessage `json:"profile"`
 	RAGContext      string          `json:"rag_context,omitempty"`
 	Images          []string        `json:"images,omitempty"`
@@ -93,7 +93,7 @@ type StartConsultationTurnRequest struct {
 	RunID           string                      `json:"run_id"`
 	ConversationID  string                      `json:"conversation_id"`
 	UserID          string                      `json:"user_id"`
-	ConfigurationID string                      `json:"configuration_id,omitempty"`
+	ConfigurationID string                      `json:"configuration_id"`
 	Input           ConsultationUserInput       `json:"input"`
 	BusinessContext ConsultationBusinessContext `json:"business_context"`
 }
@@ -218,44 +218,47 @@ func (c *AIClient) RecommendTreatment(ctx context.Context, req TreatmentRecommen
 
 // TitleGenerateRequest is the request body for /api/title/generate.
 type TitleGenerateRequest struct {
-	Messages []map[string]any `json:"messages"`
+	Messages        []map[string]any `json:"messages"`
+	ConfigurationID string           `json:"configuration_id"`
 }
 
 // TitleGenerateResponse is the response body from /api/title/generate.
 type TitleGenerateResponse struct {
-	Title string `json:"title"`
+	Title               string         `json:"title"`
+	AgentConfiguration  map[string]any `json:"agent_configuration"`
+	ExecutionProvenance map[string]any `json:"execution_provenance"`
 }
 
-// GenerateTitle calls /api/title/generate to produce a concise Chinese title.
-func (c *AIClient) GenerateTitle(ctx context.Context, messages []map[string]any) (string, error) {
-	req := TitleGenerateRequest{Messages: messages}
+// GenerateTitle calls /api/title/generate with the exact Go-selected immutable configuration.
+func (c *AIClient) GenerateTitle(ctx context.Context, messages []map[string]any, configurationID string) (*TitleGenerateResponse, error) {
+	req := TitleGenerateRequest{Messages: messages, ConfigurationID: configurationID}
 	body, err := json.Marshal(req)
 	if err != nil {
-		return "", fmt.Errorf("marshal request: %w", err)
+		return nil, fmt.Errorf("marshal request: %w", err)
 	}
 
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.baseURL+"/api/title/generate", bytes.NewReader(body))
 	if err != nil {
-		return "", fmt.Errorf("create request: %w", err)
+		return nil, fmt.Errorf("create request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
-		return "", fmt.Errorf("call AI service: %w", err)
+		return nil, fmt.Errorf("call AI service: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("AI service returned status %d: %s", resp.StatusCode, string(bodyBytes))
+		return nil, fmt.Errorf("AI service returned status %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
 	var result TitleGenerateResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", fmt.Errorf("decode response: %w", err)
+		return nil, fmt.Errorf("decode response: %w", err)
 	}
-	return result.Title, nil
+	return &result, nil
 }
 
 func (c *AIClient) callJSON(ctx context.Context, path string, req any) (json.RawMessage, error) {

@@ -13,7 +13,7 @@
       "cache": false,
       "options": {
         "cwd": "apps/ai-service",
-        "command": "uv run uvicorn src.main:app --reload --port 8100"
+        "command": "uv run --extra ocr uvicorn src.main:app --reload --port 8100"
       }
     },
     "test": {
@@ -21,7 +21,7 @@
       "cache": true,
       "options": {
         "cwd": "apps/ai-service",
-        "command": "uv run pytest"
+        "command": "uv run --extra dev --extra ocr pytest"
       }
     },
     "test:coverage": {
@@ -32,7 +32,7 @@
       "cache": true,
       "options": {
         "cwd": "apps/ai-service",
-        "command": "uv run pytest --cov=src --cov-report=term-missing"
+        "command": "uv run --extra dev --extra ocr pytest --cov=src --cov-report=term-missing"
       }
     },
     "eval": {

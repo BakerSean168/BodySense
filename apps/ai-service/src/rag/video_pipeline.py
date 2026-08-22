@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import logging
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from .asr import get_asr_provider
@@ -71,6 +71,8 @@ class VideoIngestionRequest:
     export_clips: bool = True
     splitter_provider: str = "heuristic"  # "heuristic" | "llm"
     ai_refine: bool = False  # 是否启用 AI 精修
+    splitter_configuration_id: str | None = None
+    curator_configuration_id: str | None = None
 
 
 class VideoIngestionPipeline:
@@ -124,12 +126,20 @@ class VideoIngestionPipeline:
         )
 
         # --- Step 4: Knowledge splitting ---
-        splitter = get_splitter(request.splitter_provider)
+        splitter = get_splitter(
+            request.splitter_provider,
+            configuration_id=request.splitter_configuration_id,
+        )
         units = await splitter.split(
             transcript_segments=transcript_segments,
             problem_slug=request.problem_slug,
             problem_display_name=request.problem_display_name,
         )
+
+        agent_execution: dict[str, object] = {}
+        splitter_execution = getattr(splitter, "execution_record", None)
+        if splitter_execution is not None:
+            agent_execution["knowledge_splitter"] = splitter_execution
 
         # --- Step 5: Export video clips ---
         clips = export_clips(
@@ -158,6 +168,7 @@ class VideoIngestionPipeline:
                     "video_stem": video_path.stem,
                     "artifact_dir": str(artifact_dir),
                     "splitter_provider": request.splitter_provider,
+                    "agent_execution": agent_execution,
                 },
             ),
             artifact_dir=str(artifact_dir),
@@ -170,8 +181,13 @@ class VideoIngestionPipeline:
         if request.ai_refine:
             from .ai_curator import AICurator
 
-            curator = AICurator()
+            curator = AICurator(configuration_id=request.curator_configuration_id)
             pack = await curator.refine_pack(pack)
+            metadata = dict(pack.source.metadata)
+            execution = dict(metadata.get("agent_execution", {}))
+            execution["knowledge_curator"] = curator.execution_record
+            metadata["agent_execution"] = execution
+            pack = replace(pack, source=replace(pack.source, metadata=metadata))
 
         # --- Step 8: Write to disk ---
         pack.write_json(artifact_dir / "generated_pack.json")

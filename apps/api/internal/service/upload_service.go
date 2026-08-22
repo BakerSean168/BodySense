@@ -489,12 +489,18 @@ var photoTypeToView = map[string]string{
 
 // executePostureCall sends a photo to the AI service posture endpoint together
 // with its view and returns the raw response body.
-func (s *UploadService) executePostureCall(filePath, mimeType, view string) ([]byte, error) {
+func (s *UploadService) executePostureCall(filePath, mimeType, view, configurationID string) ([]byte, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
 	if err := writer.WriteField("view", view); err != nil {
 		return nil, fmt.Errorf("failed to write view field: %w", err)
+	}
+	if strings.TrimSpace(configurationID) == "" {
+		return nil, fmt.Errorf("posture configuration id is required")
+	}
+	if err := writer.WriteField("configuration_id", configurationID); err != nil {
+		return nil, fmt.Errorf("failed to write configuration_id field: %w", err)
 	}
 
 	file, err := os.Open(filePath)
@@ -579,7 +585,7 @@ func (s *UploadService) processPostureJob(ctx context.Context, job model.Job) er
 	_ = s.jobRuntime.UpdateProgress(ctx, job.ID, map[string]any{"stage": "posture_analyzing", "percent": 10})
 	_ = s.uploadRepo.UpdateAnalysisStatus(ctx, uploadID, job.UserID, "processing")
 
-	respBody, err := s.executePostureCall(input.FilePath, input.MimeType, input.View)
+	respBody, err := s.executePostureCall(input.FilePath, input.MimeType, input.View, input.ConfigurationID)
 	if err != nil {
 		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": err.Error()})
 		errPayload, _ := json.Marshal(map[string]string{"error": err.Error()})
@@ -587,16 +593,72 @@ func (s *UploadService) processPostureJob(ctx context.Context, job model.Job) er
 		return err
 	}
 
-	s.recordPostureGovernance(ctx, job, respBody)
+	analysisPayload, err := validatePostureAgentResponse(respBody, input.ConfigurationID)
+	if err != nil {
+		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": err.Error()})
+		errPayload, _ := json.Marshal(map[string]string{"error": "posture agent identity validation failed"})
+		_ = s.uploadRepo.UpdateAnalysisResult(ctx, uploadID, job.UserID, "failed", errPayload)
+		return err
+	}
+
+	s.recordPostureGovernance(ctx, job, analysisPayload)
 
 	_ = s.jobRuntime.UpdateProgress(ctx, job.ID, map[string]any{"stage": "posture_completed", "percent": 100})
 	_ = s.jobRuntime.TransitionTo(ctx, job.ID, "completed", json.RawMessage(respBody), nil)
-	_ = s.uploadRepo.UpdateAnalysisResult(ctx, uploadID, job.UserID, "completed", respBody)
+	_ = s.uploadRepo.UpdateAnalysisResult(ctx, uploadID, job.UserID, "completed", analysisPayload)
 	// North-Star: persist the exact immutable Agent configuration used.
 	if input.ConfigurationID != "" {
 		_ = s.uploadRepo.UpdateAgentConfiguration(ctx, uploadID, input.ConfigurationID)
 	}
 	return nil
+}
+
+func validatePostureAgentResponse(respBody []byte, expectedConfigurationID string) ([]byte, error) {
+	registration, ok := knownPostureConfigurations[strings.TrimSpace(expectedConfigurationID)]
+	if !ok {
+		return nil, fmt.Errorf("unknown Posture Agent configuration id %q", expectedConfigurationID)
+	}
+	var envelope struct {
+		Status string         `json:"status"`
+		Result map[string]any `json:"result"`
+	}
+	if err := json.Unmarshal(respBody, &envelope); err != nil {
+		return nil, fmt.Errorf("decode posture agent response: %w", err)
+	}
+	if envelope.Status != "completed" || envelope.Result == nil {
+		return nil, fmt.Errorf("posture agent returned incomplete response")
+	}
+	configuration, ok := envelope.Result["agent_configuration"].(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("posture agent response missing agent_configuration")
+	}
+	if id, _ := configuration["id"].(string); id != expectedConfigurationID {
+		return nil, fmt.Errorf("posture agent configuration mismatch: got %q want %q", id, expectedConfigurationID)
+	}
+	if role, _ := configuration["role"].(string); role != "posture" {
+		return nil, fmt.Errorf("posture agent role mismatch: %q", role)
+	}
+	if policy, _ := configuration["decision_policy_revision"].(string); policy != registration.DecisionPolicyRevision {
+		return nil, fmt.Errorf("posture decision policy mismatch: %q", policy)
+	}
+	if logicalModel, _ := configuration["logical_model"].(string); logicalModel != registration.LogicalModel {
+		return nil, fmt.Errorf("posture logical model mismatch: %q", logicalModel)
+	}
+	execution, ok := envelope.Result["execution_provenance"].(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("posture agent response missing execution_provenance")
+	}
+	if logicalModel, _ := execution["logical_model"].(string); logicalModel != registration.LogicalModel {
+		return nil, fmt.Errorf("posture execution logical model mismatch: %q", logicalModel)
+	}
+	envelope.Result["generation_decision_trace"] = map[string]any{
+		"decision":                 "persist",
+		"authority":                "go",
+		"agent_configuration_id":   expectedConfigurationID,
+		"decision_policy_revision": registration.DecisionPolicyRevision,
+		"logical_model":            registration.LogicalModel,
+	}
+	return json.Marshal(envelope.Result)
 }
 
 // recordPostureGovernance audits the P2 gate result for posture analysis jobs.

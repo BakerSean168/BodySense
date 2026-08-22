@@ -104,3 +104,111 @@ def test_internal_typed_agent_http_contracts_reject_retired_model_route_intent()
                 "use_case": "llm.json",
             }
         )
+
+
+@pytest.mark.asyncio
+async def test_ai_service_honors_manifest_pinned_logical_model() -> None:
+    from types import SimpleNamespace
+
+    from src.ai.service import AIService
+    from src.ai.types import AiRequest, ChatMessage
+
+    class _Completions:
+        def __init__(self) -> None:
+            self.kwargs: dict[str, object] | None = None
+
+        async def create(self, **kwargs):
+            self.kwargs = kwargs
+            return SimpleNamespace(
+                choices=[
+                    SimpleNamespace(
+                        message=SimpleNamespace(content="ok", tool_calls=None),
+                        finish_reason="stop",
+                    )
+                ],
+                usage=None,
+                model="manifest-model",
+            )
+
+    completions = _Completions()
+    service = object.__new__(AIService)
+    service._client = SimpleNamespace(chat=SimpleNamespace(completions=completions))
+
+    await service.generate(
+        AiRequest(
+            use_case=TITLE_ROUTE,
+            messages=[ChatMessage(role="user", content="hello")],
+            logical_model="manifest-model",
+            model_settings={"temperature": 0.0, "max_tokens": 12},
+            temperature=0.0,
+            max_tokens=12,
+        )
+    )
+
+    assert completions.kwargs is not None
+    assert completions.kwargs["model"] == "manifest-model"
+
+
+@pytest.mark.asyncio
+async def test_ai_service_stream_honors_manifest_pinned_logical_model() -> None:
+    from types import SimpleNamespace
+
+    from src.ai.service import AIService
+    from src.ai.types import AiRequest, ChatMessage
+
+    class _EmptyStream:
+        def __aiter__(self):
+            return self
+
+        async def __anext__(self):
+            raise StopAsyncIteration
+
+    class _Completions:
+        def __init__(self) -> None:
+            self.kwargs: dict[str, object] | None = None
+
+        async def create(self, **kwargs):
+            self.kwargs = kwargs
+            return _EmptyStream()
+
+    completions = _Completions()
+    service = object.__new__(AIService)
+    service._client = SimpleNamespace(chat=SimpleNamespace(completions=completions))
+
+    events = [
+        event
+        async for event in service.generate_stream(
+            AiRequest(
+                use_case=POSTURE_ROUTE,
+                messages=[ChatMessage(role="user", content="hello")],
+                logical_model="manifest-vision-model",
+                model_settings={"temperature": 0.0, "max_tokens": 12},
+                temperature=0.0,
+                max_tokens=12,
+            )
+        )
+    ]
+
+    assert events == []
+    assert completions.kwargs is not None
+    assert completions.kwargs["model"] == "manifest-vision-model"
+
+
+def test_go_owned_internal_http_boundaries_require_configuration_identity() -> None:
+    from src.api.routes.assessment import AssessmentRequest
+    from src.api.routes.runtime import StartTurnRequest
+    from src.api.routes.title import TitleGenerateRequest
+
+    with pytest.raises(ValidationError, match="configuration_id"):
+        AssessmentRequest.model_validate({"profile": {}})
+    with pytest.raises(ValidationError, match="configuration_id"):
+        TitleGenerateRequest.model_validate({"messages": []})
+    with pytest.raises(ValidationError, match="configuration_id"):
+        StartTurnRequest.model_validate(
+            {
+                "run_id": "run-1",
+                "conversation_id": "conversation-1",
+                "user_id": "user-1",
+                "input": {"type": "user_message", "text": "hello"},
+            }
+        )

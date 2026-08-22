@@ -54,7 +54,14 @@ const (
 
 	defaultConsultationConfigurationID = "consult-config-2bd9b46735dd693c"
 
-	defaultPostureConfigurationID = "posture-config-67e6c2405c47b179"
+	defaultPostureConfigurationID = "posture-config-3a774008db422a31"
+
+	defaultTitleConfigurationID = "title-config-bcc5f3a39bc98200"
+	titleLogicalModelV1         = "bodysense-text"
+
+	defaultKnowledgeCuratorConfigurationID  = "knowledge-curator-config-59b2868d6fbbd12a"
+	defaultKnowledgeSplitterConfigurationID = "knowledge-splitter-config-b14201d581dbf854"
+	knowledgeLogicalModelV1                 = "bodysense-structured"
 )
 
 type diagnosisConfigurationRegistration struct {
@@ -77,6 +84,16 @@ type consultationConfigurationRegistration struct {
 }
 
 type postureConfigurationRegistration struct {
+	DecisionPolicyRevision string
+	LogicalModel           string
+}
+
+type titleConfigurationRegistration struct {
+	DecisionPolicyRevision string
+	LogicalModel           string
+}
+
+type knowledgeConfigurationRegistration struct {
 	DecisionPolicyRevision string
 	LogicalModel           string
 }
@@ -125,7 +142,35 @@ const PostureDecisionPolicyV1 = "posture-go-analysis-v1"
 var knownPostureConfigurations = map[string]postureConfigurationRegistration{
 	defaultPostureConfigurationID: {
 		DecisionPolicyRevision: PostureDecisionPolicyV1,
-		LogicalModel:           "bodysense-structured",
+		LogicalModel:           "bodysense-posture",
+	},
+}
+
+const TitleDecisionPolicyV1 = "title-go-generation-v1"
+
+var knownTitleConfigurations = map[string]titleConfigurationRegistration{
+	defaultTitleConfigurationID: {
+		DecisionPolicyRevision: TitleDecisionPolicyV1,
+		LogicalModel:           titleLogicalModelV1,
+	},
+}
+
+const (
+	KnowledgeCuratorDecisionPolicyV1  = "knowledge-curator-go-v1"
+	KnowledgeSplitterDecisionPolicyV1 = "knowledge-splitter-go-v1"
+)
+
+var knownKnowledgeCuratorConfigurations = map[string]knowledgeConfigurationRegistration{
+	defaultKnowledgeCuratorConfigurationID: {
+		DecisionPolicyRevision: KnowledgeCuratorDecisionPolicyV1,
+		LogicalModel:           knowledgeLogicalModelV1,
+	},
+}
+
+var knownKnowledgeSplitterConfigurations = map[string]knowledgeConfigurationRegistration{
+	defaultKnowledgeSplitterConfigurationID: {
+		DecisionPolicyRevision: KnowledgeSplitterDecisionPolicyV1,
+		LogicalModel:           knowledgeLogicalModelV1,
 	},
 }
 
@@ -207,7 +252,10 @@ type AgentDeploymentPolicy struct {
 
 	consultationChampionConfigurationID string
 
-	postureChampionConfigurationID string
+	postureChampionConfigurationID   string
+	titleChampionConfigurationID     string
+	knowledgeCuratorConfigurationID  string
+	knowledgeSplitterConfigurationID string
 }
 
 func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
@@ -404,6 +452,29 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		return nil, err
 	}
 
+	titleChampion := strings.TrimSpace(os.Getenv("TITLE_CHAMPION_CONFIGURATION_ID"))
+	if titleChampion == "" {
+		titleChampion = defaultTitleConfigurationID
+	}
+	if err := validateTitleConfigurationID(titleChampion); err != nil {
+		return nil, err
+	}
+
+	knowledgeCurator := strings.TrimSpace(os.Getenv("KNOWLEDGE_CURATOR_CONFIGURATION_ID"))
+	if knowledgeCurator == "" {
+		knowledgeCurator = defaultKnowledgeCuratorConfigurationID
+	}
+	if err := validateKnowledgeCuratorConfigurationID(knowledgeCurator); err != nil {
+		return nil, err
+	}
+	knowledgeSplitter := strings.TrimSpace(os.Getenv("KNOWLEDGE_SPLITTER_CONFIGURATION_ID"))
+	if knowledgeSplitter == "" {
+		knowledgeSplitter = defaultKnowledgeSplitterConfigurationID
+	}
+	if err := validateKnowledgeSplitterConfigurationID(knowledgeSplitter); err != nil {
+		return nil, err
+	}
+
 	return &AgentDeploymentPolicy{
 		diagnosisChampionConfigurationID:    diagnosisChampion,
 		diagnosisChallengerConfigurationID:  diagnosisChallenger,
@@ -425,6 +496,9 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		assessmentPromotionRecord:           assessmentPromotionRecord,
 		consultationChampionConfigurationID: consultationChampion,
 		postureChampionConfigurationID:      postureChampion,
+		titleChampionConfigurationID:        titleChampion,
+		knowledgeCuratorConfigurationID:     knowledgeCurator,
+		knowledgeSplitterConfigurationID:    knowledgeSplitter,
 	}, nil
 }
 
@@ -670,6 +744,72 @@ func validatePostureConfigurationID(id string) error {
 	}
 	if _, ok := knownPostureConfigurations[id]; !ok {
 		return fmt.Errorf("unknown Posture Agent configuration id %q", id)
+	}
+	return nil
+}
+
+func (p *AgentDeploymentPolicy) TitleConfigurationID() string {
+	return p.titleChampionConfigurationID
+}
+
+func TitleDecisionPolicyRevisionForConfiguration(configurationID string) (string, error) {
+	registration, ok := knownTitleConfigurations[strings.TrimSpace(configurationID)]
+	if !ok {
+		return "", fmt.Errorf("unknown Title Agent configuration id %q", configurationID)
+	}
+	return registration.DecisionPolicyRevision, nil
+}
+
+func validateTitleConfigurationID(id string) error {
+	if !strings.HasPrefix(id, "title-config-") {
+		return fmt.Errorf("invalid Title Agent configuration id %q", id)
+	}
+	if _, ok := knownTitleConfigurations[id]; !ok {
+		return fmt.Errorf("unknown Title Agent configuration id %q", id)
+	}
+	return nil
+}
+
+func (p *AgentDeploymentPolicy) KnowledgeCuratorConfigurationID() string {
+	return p.knowledgeCuratorConfigurationID
+}
+
+func (p *AgentDeploymentPolicy) KnowledgeSplitterConfigurationID() string {
+	return p.knowledgeSplitterConfigurationID
+}
+
+func (p *AgentDeploymentPolicy) KnowledgeCuratorDecisionPolicyRevision() string {
+	return knownKnowledgeCuratorConfigurations[p.knowledgeCuratorConfigurationID].DecisionPolicyRevision
+}
+
+func (p *AgentDeploymentPolicy) KnowledgeCuratorLogicalModel() string {
+	return knownKnowledgeCuratorConfigurations[p.knowledgeCuratorConfigurationID].LogicalModel
+}
+
+func (p *AgentDeploymentPolicy) KnowledgeSplitterDecisionPolicyRevision() string {
+	return knownKnowledgeSplitterConfigurations[p.knowledgeSplitterConfigurationID].DecisionPolicyRevision
+}
+
+func (p *AgentDeploymentPolicy) KnowledgeSplitterLogicalModel() string {
+	return knownKnowledgeSplitterConfigurations[p.knowledgeSplitterConfigurationID].LogicalModel
+}
+
+func validateKnowledgeCuratorConfigurationID(id string) error {
+	if !strings.HasPrefix(id, "knowledge-curator-config-") {
+		return fmt.Errorf("invalid Knowledge Curator Agent configuration id %q", id)
+	}
+	if _, ok := knownKnowledgeCuratorConfigurations[id]; !ok {
+		return fmt.Errorf("unknown Knowledge Curator Agent configuration id %q", id)
+	}
+	return nil
+}
+
+func validateKnowledgeSplitterConfigurationID(id string) error {
+	if !strings.HasPrefix(id, "knowledge-splitter-config-") {
+		return fmt.Errorf("invalid Knowledge Splitter Agent configuration id %q", id)
+	}
+	if _, ok := knownKnowledgeSplitterConfigurations[id]; !ok {
+		return fmt.Errorf("unknown Knowledge Splitter Agent configuration id %q", id)
 	}
 	return nil
 }

@@ -283,3 +283,43 @@ func TestTreatmentRolloutPromotedAndRollbackAreExplicit(t *testing.T) {
 		})
 	}
 }
+
+func TestAgentDeploymentPolicyOwnsUtilityAndKnowledgeAgentPointers(t *testing.T) {
+	clearDiagnosisRolloutEnv(t)
+	t.Setenv("TITLE_CHAMPION_CONFIGURATION_ID", "")
+	t.Setenv("KNOWLEDGE_CURATOR_CONFIGURATION_ID", "")
+	t.Setenv("KNOWLEDGE_SPLITTER_CONFIGURATION_ID", "")
+	policy, err := NewAgentDeploymentPolicy()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := policy.TitleConfigurationID(); got != defaultTitleConfigurationID {
+		t.Fatalf("unexpected Title configuration: %q", got)
+	}
+	if got := policy.KnowledgeCuratorConfigurationID(); got != defaultKnowledgeCuratorConfigurationID {
+		t.Fatalf("unexpected Knowledge Curator configuration: %q", got)
+	}
+	if got := policy.KnowledgeSplitterConfigurationID(); got != defaultKnowledgeSplitterConfigurationID {
+		t.Fatalf("unexpected Knowledge Splitter configuration: %q", got)
+	}
+}
+
+func TestAgentDeploymentPolicyRejectsUnknownUtilityAndKnowledgeConfigurations(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		env  string
+		id   string
+	}{
+		{"title", "TITLE_CHAMPION_CONFIGURATION_ID", "title-config-unknown"},
+		{"knowledge-curator", "KNOWLEDGE_CURATOR_CONFIGURATION_ID", "knowledge-curator-config-unknown"},
+		{"knowledge-splitter", "KNOWLEDGE_SPLITTER_CONFIGURATION_ID", "knowledge-splitter-config-unknown"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			clearDiagnosisRolloutEnv(t)
+			t.Setenv(tc.env, tc.id)
+			if _, err := NewAgentDeploymentPolicy(); err == nil {
+				t.Fatalf("unknown %s configuration must fail closed", tc.name)
+			}
+		})
+	}
+}

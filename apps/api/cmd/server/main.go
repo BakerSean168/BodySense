@@ -82,7 +82,7 @@ func main() {
 	contextRetrievalService := service.NewContextRetrievalService(messageContextRepo)
 	runService := service.NewRunService(runRepo)
 	runtimeEventService := service.NewRuntimeEventService(runtimeEventRepo)
-	conversationService := service.NewConversationService(conversationRepo, messageRepo, runRepo, shareRepo, aiClient)
+	conversationService := service.NewConversationService(conversationRepo, messageRepo, runRepo, shareRepo, aiClient).WithAgentDeployment(agentDeploymentPolicy)
 	shareService := service.NewShareService(conversationRepo, messageRepo, shareRepo)
 	consultationService := service.NewConsultationService(consultationRepo, conversationRepo)
 	bodyStateService := service.NewBodyStateService(bodyStateRepo)
@@ -201,7 +201,7 @@ func main() {
 	reassessmentHandler := handler.NewReassessmentHandler(trainingService)
 	assessmentHandler := handler.NewAssessmentHandler(assessmentService).
 		WithAssessmentReplay(assessmentReplayService)
-	knowledgeHandler := handler.NewKnowledgeHandler()
+	knowledgeHandler := handler.NewKnowledgeHandler(agentDeploymentPolicy)
 
 	// Continuous health workspace is the single capability/read model for the product loop.
 	healthWorkspaceService := service.NewHealthWorkspaceService(

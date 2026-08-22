@@ -34,8 +34,8 @@ class TitleGenerateRequest(BaseModel):
     messages: list[dict[str, Any]] = Field(
         ..., description="Conversation messages to generate a title from"
     )
-    configuration_id: str | None = Field(
-        None, description="Optional North-Star Agent configuration id"
+    configuration_id: str = Field(
+        ..., min_length=1, description="Go-selected immutable Agent configuration id"
     )
 
 

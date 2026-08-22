@@ -41,8 +41,35 @@ class AICurator:
     Low-quality units get flagged with review_status="ai_flagged".
     """
 
-    def __init__(self, max_concurrency: int = _MAX_CONCURRENCY):
+    def __init__(
+        self,
+        max_concurrency: int = _MAX_CONCURRENCY,
+        configuration_id: str | None = None,
+        ai: AIService | None = None,
+    ) -> None:
         self._semaphore = asyncio.Semaphore(max_concurrency)
+        self._manifest = get_knowledge_curator_configuration(configuration_id)
+        self._ai = ai
+        self._calls: list[dict[str, str]] = []
+        self._failed_units = 0
+
+    @property
+    def execution_record(self) -> dict[str, Any]:
+        providers = sorted({call["provider"] for call in self._calls if call.get("provider")})
+        models = sorted({call["model"] for call in self._calls if call.get("model")})
+        return {
+            "agent_configuration": self._manifest.provenance(),
+            "execution_provenance": {
+                "status": "degraded" if self._failed_units else "executed",
+                "runtime": "knowledge-curator",
+                "logical_model": self._manifest.logical_model,
+                "model_group_revision": self._manifest.model_group_revision,
+                "call_count": len(self._calls),
+                "failed_units": self._failed_units,
+                "providers": providers,
+                "models": models,
+            },
+        }
 
     async def refine_pack(
         self,
@@ -77,6 +104,7 @@ class AICurator:
             async with self._semaphore:
                 return await self._refine_unit(unit, problem_display_name)
         except Exception:
+            self._failed_units += 1
             logger.warning(
                 "AI refinement failed for unit %s, keeping original",
                 unit.unit_key,
@@ -90,10 +118,8 @@ class AICurator:
         problem_display_name: str,
     ) -> KnowledgeUnitCandidate:
         """Refine a single knowledge unit via LLM."""
-        ai = AIService()
-
-        # North-Star: resolve the exact immutable Agent configuration.
-        manifest = get_knowledge_curator_configuration(None)
+        ai = self._ai or AIService()
+        manifest = self._manifest
 
         user_prompt = get_curator_prompt(
             title=unit.title,
@@ -124,6 +150,12 @@ class AICurator:
                     "max_tokens": manifest.generation.max_tokens,
                 },
             )
+        )
+        self._calls.append(
+            {
+                "provider": response.provider,
+                "model": response.model,
+            }
         )
         result = _parse_curator_response(response.text)
 

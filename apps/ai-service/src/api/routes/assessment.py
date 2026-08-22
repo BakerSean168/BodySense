@@ -22,7 +22,7 @@ class AssessmentRequest(BaseModel):
     rag_context: str = ""
     images: list[str] = Field(default_factory=list)
     posture_analysis: dict[str, Any] = Field(default_factory=dict)
-    configuration_id: str | None = None
+    configuration_id: str = Field(min_length=1)
 
 
 @router.post("/generate")

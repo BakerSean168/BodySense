@@ -60,6 +60,10 @@ class PostureAnalysis(BaseModel):
     red_flags: list[PostureRedFlag] = Field(default_factory=list)
     summary_markdown: str = Field("", description="Plain-language summary")
     disclaimer: str = Field(..., description="Mandatory medical disclaimer")
+    governance: dict[str, object] | None = None
+    safety_fallback: str | None = None
+    agent_configuration: dict[str, str] | None = None
+    execution_provenance: dict[str, str] | None = None
 
 
 class PostureAnalysisResponse(BaseModel):

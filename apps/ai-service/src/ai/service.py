@@ -44,7 +44,8 @@ class AIService:
         route = gateway_route(req.use_case)
         client = self._require_client()
         merged = self._apply_defaults(req)
-        kwargs = self._request_kwargs(merged, route.logical_model)
+        logical_model = merged.logical_model or route.logical_model
+        kwargs = self._request_kwargs(merged, logical_model)
         try:
             response = await client.chat.completions.create(**kwargs)
         except openai.RateLimitError as exc:
@@ -85,7 +86,8 @@ class AIService:
         client = self._require_client()
         merged = self._apply_defaults(req)
         merged.stream = True
-        kwargs = self._request_kwargs(merged, route.logical_model)
+        logical_model = merged.logical_model or route.logical_model
+        kwargs = self._request_kwargs(merged, logical_model)
         kwargs["stream"] = True
         kwargs["stream_options"] = {"include_usage": True}
         try:

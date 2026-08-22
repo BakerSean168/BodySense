@@ -15,7 +15,7 @@ from src.configuration.posture_agent_config import (
 def test_default_posture_configuration_is_repository_versioned_and_stable() -> None:
     config = get_default_posture_configuration()
     assert config.role == "posture"
-    assert config.logical_model == "bodysense-structured"
+    assert config.logical_model == "bodysense-posture"
     assert config.configuration_id.startswith("posture-config-")
     assert len(config.configuration_id) == len("posture-config-") + 16
     assert (CONFIG_ROOT / "posture-v1.yaml").exists()
@@ -51,5 +51,5 @@ def test_posture_manifest_excludes_runtime_host_from_provenance() -> None:
     prov = config.provenance()
     assert prov["id"] == config.configuration_id
     assert prov["role"] == "posture"
-    assert prov["logical_model"] == "bodysense-structured"
+    assert prov["logical_model"] == "bodysense-posture"
     assert "temperature" not in prov

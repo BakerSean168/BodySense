@@ -45,6 +45,34 @@ class LLMSplitter:
     Falls back to HeuristicSplitter if LLM call fails.
     """
 
+    def __init__(
+        self,
+        configuration_id: str | None = None,
+        ai: AIService | None = None,
+    ) -> None:
+        self._manifest = get_knowledge_splitter_configuration(configuration_id)
+        self._ai = ai
+        self._calls: list[dict[str, str]] = []
+        self._fallback_used = False
+
+    @property
+    def execution_record(self) -> dict[str, Any]:
+        providers = sorted({call["provider"] for call in self._calls if call.get("provider")})
+        models = sorted({call["model"] for call in self._calls if call.get("model")})
+        return {
+            "agent_configuration": self._manifest.provenance(),
+            "execution_provenance": {
+                "status": "degraded" if self._fallback_used else "executed",
+                "runtime": "knowledge-splitter",
+                "logical_model": self._manifest.logical_model,
+                "model_group_revision": self._manifest.model_group_revision,
+                "call_count": len(self._calls),
+                "providers": providers,
+                "models": models,
+                "fallback": "heuristic" if self._fallback_used else "none",
+            },
+        }
+
     async def split(
         self,
         transcript_segments: list[TranscriptSegment],
@@ -59,6 +87,7 @@ class LLMSplitter:
                 transcript_segments, problem_slug, problem_display_name
             )
         except Exception:
+            self._fallback_used = True
             logger.warning("LLM splitting failed, falling back to heuristic", exc_info=True)
             fallback = HeuristicSplitter()
             return await fallback.split(transcript_segments, problem_slug, problem_display_name)
@@ -70,10 +99,8 @@ class LLMSplitter:
         problem_display_name: str,
     ) -> list[KnowledgeUnitCandidate]:
         """Core LLM splitting logic with batch handling."""
-        ai = AIService()
-
-        # North-Star: resolve the exact immutable Agent configuration.
-        manifest = get_knowledge_splitter_configuration(None)
+        ai = self._ai or AIService()
+        manifest = self._manifest
 
         # Split long transcripts into batches
         batches = _segment_batches(segments)
@@ -109,6 +136,12 @@ class LLMSplitter:
                         "max_tokens": manifest.generation.max_tokens,
                     },
                 )
+            )
+            self._calls.append(
+                {
+                    "provider": response.provider,
+                    "model": response.model,
+                }
             )
             raw_units = _parse_llm_response(response.text)
 
