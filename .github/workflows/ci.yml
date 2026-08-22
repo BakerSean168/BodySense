@@ -120,6 +120,26 @@ jobs:
         run: >-
           go run ./cmd/domain-validator
           -database-url 'postgres://bodysense:bodysense123@127.0.0.1:5432/bodysense_migration_validator?sslmode=disable'
+      - name: Validate pg_dump / pg_restore recovery path
+        working-directory: apps/api
+        env:
+          PGPASSWORD: bodysense123
+        run: |
+          set -euo pipefail
+          dump=/tmp/bodysense-production-upgrade.dump
+          restore_db=bodysense_restore_validator
+          pg_dump -h 127.0.0.1 -p 5432 -U bodysense -d bodysense_migration_validator -Fc -f "$dump"
+          pg_restore --list "$dump" >/dev/null
+          dropdb --if-exists -h 127.0.0.1 -p 5432 -U bodysense "$restore_db"
+          createdb -h 127.0.0.1 -p 5432 -U bodysense "$restore_db"
+          pg_restore --exit-on-error -h 127.0.0.1 -p 5432 -U bodysense -d "$restore_db" "$dump"
+
+          source_version="$(psql -h 127.0.0.1 -p 5432 -U bodysense -d bodysense_migration_validator -Atc 'select version from schema_migrations order by version desc limit 1')"
+          restored_version="$(psql -h 127.0.0.1 -p 5432 -U bodysense -d "$restore_db" -Atc 'select version from schema_migrations order by version desc limit 1')"
+          test "$source_version" = "$restored_version"
+
+          go run ./cmd/domain-validator \
+            -database-url "postgres://bodysense:bodysense123@127.0.0.1:5432/${restore_db}?sslmode=disable"
 
   e2e:
     env:

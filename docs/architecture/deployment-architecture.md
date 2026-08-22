@@ -70,7 +70,7 @@ Legacy migration-number gaps `2`, `3`, `5` predate the current production baseli
 Migration CI has two intentionally different paths:
 
 - PostgreSQL / pgvector 18 rebuilds the current migration history, stops at the published baseline `29`, then validates `29 -> latest` and latest `down -> up`.
-- PostgreSQL / pgvector 16 restores the schema-only `production-pg16-v29.sql` fixture captured from the real production-v29 schema, then validates `29 -> latest` and domain semantics. This avoids pretending the modern PostgreSQL-18 migration history can recreate an old PG16 database from version 1.
+- PostgreSQL / pgvector 16 restores the schema-only `production-pg16-v29.sql` fixture captured from the real production-v29 schema, then validates `29 -> latest` and domain semantics. It also creates a custom-format `pg_dump`, validates the archive, restores it into a fresh database, checks the migration version and reruns the domain validator against the restored database. This avoids pretending the modern PostgreSQL-18 migration history can recreate an old PG16 database from version 1 while continuously exercising the backup/restore path used by production.
 
 This exists because production was found at migration 29 while migration 29 had been deleted from the repository; that deletion caused the v0.4.0 API container to restart-loop. Published migrations are now treated as immutable release artifacts.
 
