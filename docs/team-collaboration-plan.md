@@ -373,4 +373,4 @@ PR review 是学习中最重要的环节之一。好的 review 不只是找 bug�
 ---
 
 *文档版本：v1.0 | 更新日期：2026-06-19*
-*关联文档：[PRD](PRD-体态健康AI助手.md) · [技术方案](architecture/technical-approach.md) · [AI 开发流程](ai-development-workflow.md) · [GitHub Issues](https://github.com/T1moooo/BodySense/issues)*
+*关联文档：[PRD](PRD-体态健康AI助手.md) · [技术方案](architecture/technical-approach.md) · [AI 开发流程](ai-development-workflow.md) · [GitHub Issues](https://github.com/BakerSean168/BodySense/issues)*

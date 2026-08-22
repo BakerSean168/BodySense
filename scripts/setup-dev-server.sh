@@ -26,7 +26,7 @@ set -euo pipefail
 
 # ── 配置 ──────────────────────────────────────────────
 DEV_DIR="/opt/bodysense-dev"
-REPO_URL="https://github.com/T1moooo/BodySense.git"
+REPO_URL="https://github.com/BakerSean168/BodySense.git"
 REPO_BRANCH="dev"
 
 # GitHub 认证: 优先使用 GITHUB_TOKEN 环境变量，其次尝试 SSH
@@ -126,7 +126,7 @@ echo "  Done."
 if [ ! -d "${DEV_DIR}/.git" ]; then
     # 构造认证 URL
     if [ -n "${GITHUB_TOKEN}" ]; then
-        AUTH_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/T1moooo/BodySense.git"
+        AUTH_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/BakerSean168/BodySense.git"
         echo ">>> 使用 GitHub Token 认证克隆..."
     else
         echo ">>> 请输入 GitHub Personal Access Token (权限: repo)"
@@ -137,7 +137,7 @@ if [ ! -d "${DEV_DIR}/.git" ]; then
             echo "Error: 未提供 Token，无法克隆私有仓库"
             exit 1
         fi
-        AUTH_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/T1moooo/BodySense.git"
+        AUTH_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/BakerSean168/BodySense.git"
     fi
 
     echo ">>> 克隆仓库到 ${DEV_DIR}..."
