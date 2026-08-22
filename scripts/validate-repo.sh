@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
+bash -n scripts/setup-server.sh scripts/production-deploy-watch.sh
 pnpm lint
 pnpm typecheck
 pnpm test
