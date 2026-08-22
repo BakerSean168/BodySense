@@ -32,49 +32,6 @@ jobs:
           admin="$(gh api "repos/${REPOSITORY}" --jq '.permissions.admin')"
           [[ "$admin" == true ]] || { echo 'BODYSENSE_WORKFLOW does not have repository admin permission.' >&2; exit 1; }
 
-      - name: Configure production environment
-        shell: bash
-        run: |
-          set -euo pipefail
-          cat > /tmp/production-environment.json <<'JSON'
-          {
-            "wait_timer": 0,
-            "prevent_self_review": false,
-            "reviewers": [],
-            "deployment_branch_policy": {
-              "protected_branches": false,
-              "custom_branch_policies": true
-            }
-          }
-          JSON
-          gh api --method PUT "repos/${REPOSITORY}/environments/production" \
-            --input /tmp/production-environment.json >/dev/null
-
-          existing="$(gh api "repos/${REPOSITORY}/environments/production/deployment-branch-policies" --paginate)"
-          if ! jq -e '.branch_policies[]? | select(.name == "main" and .type == "branch")' <<<"$existing" >/dev/null; then
-            gh api --method POST "repos/${REPOSITORY}/environments/production/deployment-branch-policies" \
-              -f name='main' -f type='branch' >/dev/null
-          fi
-          if ! jq -e '.branch_policies[]? | select(.name == "v*" and .type == "tag")' <<<"$existing" >/dev/null; then
-            gh api --method POST "repos/${REPOSITORY}/environments/production/deployment-branch-policies" \
-              -f name='v*' -f type='tag' >/dev/null
-          fi
-
-      - name: Copy ACR credentials into production environment
-        if: inputs.sync_acr_secrets == true
-        shell: bash
-        env:
-          ACR_REGISTRY: ${{ secrets.ACR_REGISTRY }}
-          ACR_NAMESPACE: ${{ secrets.ACR_NAMESPACE }}
-          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
-          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
-        run: |
-          set -euo pipefail
-          for key in ACR_REGISTRY ACR_NAMESPACE ACR_USERNAME ACR_PASSWORD; do
-            [[ -n "${!key}" ]] || { echo "$key repository secret is missing." >&2; exit 1; }
-            printf '%s' "${!key}" | gh secret set "$key" --env production --repo "$REPOSITORY"
-          done
-
       - name: Protect main branch
         shell: bash
         run: |
@@ -111,15 +68,63 @@ jobs:
           gh api --method PUT "repos/${REPOSITORY}/branches/main/protection" \
             --input /tmp/main-protection.json >/dev/null
 
+      - name: Configure production environment
+        id: production-environment
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/production-environment.json <<'JSON'
+          {
+            "wait_timer": 0,
+            "prevent_self_review": false,
+            "reviewers": [],
+            "deployment_branch_policy": {
+              "protected_branches": false,
+              "custom_branch_policies": true
+            }
+          }
+          JSON
+          gh api --method PUT "repos/${REPOSITORY}/environments/production" \
+            --input /tmp/production-environment.json >/dev/null
+
+          existing="$(gh api "repos/${REPOSITORY}/environments/production/deployment-branch-policies" --paginate)"
+          if ! jq -e '.branch_policies[]? | select(.name == "main" and .type == "branch")' <<<"$existing" >/dev/null; then
+            gh api --method POST "repos/${REPOSITORY}/environments/production/deployment-branch-policies" \
+              -f name='main' -f type='branch' >/dev/null
+          fi
+          if ! jq -e '.branch_policies[]? | select(.name == "v*" and .type == "tag")' <<<"$existing" >/dev/null; then
+            gh api --method POST "repos/${REPOSITORY}/environments/production/deployment-branch-policies" \
+              -f name='v*' -f type='tag' >/dev/null
+          fi
+
+      - name: Copy ACR credentials into production environment
+        if: inputs.sync_acr_secrets == true && steps.production-environment.outcome == 'success'
+        shell: bash
+        env:
+          ACR_REGISTRY: ${{ secrets.ACR_REGISTRY }}
+          ACR_NAMESPACE: ${{ secrets.ACR_NAMESPACE }}
+          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for key in ACR_REGISTRY ACR_NAMESPACE ACR_USERNAME ACR_PASSWORD; do
+            [[ -n "${!key}" ]] || { echo "$key repository secret is missing." >&2; exit 1; }
+            printf '%s' "${!key}" | gh secret set "$key" --env production --repo "$REPOSITORY"
+          done
+
       - name: Governance summary
         shell: bash
         run: |
           set -euo pipefail
           {
-            echo '### Repository production governance applied'
+            echo '### Repository production governance'
             echo '- `main` requires PR flow and all five CI checks, including commit lint.'
             echo '- Administrators are subject to branch protection.'
             echo '- Force pushes and branch deletion are disabled.'
-            echo '- `production` Environment permits only `main` and `v*` refs.'
-            echo '- Repository protection and production Environment policy are reconciled.'
+            if [[ '${{ steps.production-environment.outcome }}' == success ]]; then
+              echo '- `production` Environment policy reconciled successfully.'
+            else
+              echo '- ⚠️ `production` Environment policy was not changed because the PAT lacks Environment administration permission.'
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
