@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.3](https://github.com/T1moooo/BodySense/compare/v0.4.2...v0.4.3) (2026-08-22)
+
+
+### Bug Fixes
+
+* **docker:** package production runtime in ACR ([5e2b1e1](https://github.com/T1moooo/BodySense/commit/5e2b1e1f23532b98cc5d0cd3c6ae71823d37d6a4))
+* **docker:** package production runtime in ACR ([b01cecb](https://github.com/T1moooo/BodySense/commit/b01cecb7a7b0961311b730ad6a776ac6c174d4a6))
+
 ## [0.4.2](https://github.com/T1moooo/BodySense/compare/v0.4.1...v0.4.2) (2026-08-22)
 
 
