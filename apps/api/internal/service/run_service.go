@@ -2,12 +2,15 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 )
+
+var ErrRunTerminal = errors.New("run is already terminal")
 
 // RunService handles run business logic.
 type RunService struct {
@@ -83,12 +86,75 @@ func (s *RunService) CheckIdempotency(ctx context.Context, userID uuid.UUID, req
 	return nil, false, nil
 }
 
-// CompleteRun marks a run as completed with usage stats and provider response ID.
+// GetRunForUser returns a run only when it belongs to the requesting user.
+// Consultation HITL resume uses this to pin continuation to the immutable
+// configuration recorded on the interrupted source run.
+func (s *RunService) GetRunForUser(ctx context.Context, id, userID uuid.UUID) (*model.Run, error) {
+	run, err := s.runRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("get run: %w", err)
+	}
+	if run == nil || run.UserID != userID {
+		return nil, nil
+	}
+	return run, nil
+}
+
+// CompleteRun marks a run as completed unless another terminal transition won first.
 func (s *RunService) CompleteRun(ctx context.Context, id, userID uuid.UUID, usage any, providerResponseID string) error {
-	if err := s.runRepo.CompleteRun(ctx, id, userID, usage, providerResponseID); err != nil {
-		return fmt.Errorf("complete run: %w", err)
+	completed, err := s.TryCompleteRun(ctx, id, userID, usage, providerResponseID)
+	if err != nil {
+		return err
+	}
+	if !completed {
+		return ErrRunTerminal
 	}
 	return nil
+}
+
+// TryCompleteRun atomically completes an active run and reports whether this
+// caller won the terminal-state race.
+func (s *RunService) TryCompleteRun(ctx context.Context, id, userID uuid.UUID, usage any, providerResponseID string) (bool, error) {
+	completed, err := s.runRepo.TryCompleteRun(ctx, id, userID, usage, providerResponseID)
+	if err != nil {
+		return false, fmt.Errorf("complete run: %w", err)
+	}
+	return completed, nil
+}
+
+// CancelRun is authorized, idempotent cancellation for running/waiting runs.
+// It returns (run, transitioned, error). A second cancellation succeeds with
+// transitioned=false; completed/failed runs reject with ErrRunTerminal.
+func (s *RunService) CancelRun(ctx context.Context, id, userID uuid.UUID, reason string) (*model.Run, bool, error) {
+	run, err := s.GetRunForUser(ctx, id, userID)
+	if err != nil || run == nil {
+		return run, false, err
+	}
+	if run.Status == "cancelled" {
+		return run, false, nil
+	}
+	if run.Status == "completed" || run.Status == "failed" {
+		return run, false, ErrRunTerminal
+	}
+	if reason == "" {
+		reason = "cancelled_by_user"
+	}
+	transitioned, err := s.runRepo.CancelRun(ctx, id, userID, map[string]any{"reason": reason})
+	if err != nil {
+		return nil, false, fmt.Errorf("cancel run: %w", err)
+	}
+	if !transitioned {
+		latest, getErr := s.GetRunForUser(ctx, id, userID)
+		if getErr != nil {
+			return nil, false, getErr
+		}
+		if latest != nil && latest.Status == "cancelled" {
+			return latest, false, nil
+		}
+		return latest, false, ErrRunTerminal
+	}
+	run.Status = "cancelled"
+	return run, true, nil
 }
 
 // FailRun marks a run as failed with an error JSON payload.

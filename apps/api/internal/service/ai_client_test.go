@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/bodysense/api/internal/dto"
 )
 
 func TestChatStreamSendsFlatPythonRequestAndParsesStreamEvent(t *testing.T) {
@@ -130,5 +132,54 @@ func TestAnalyzeDiagnosisSendsPythonContract(t *testing.T) {
 	}
 	if governance, ok := response["governance"].(map[string]any); !ok || governance["verdict"] != "accepted" {
 		t.Fatalf("expected accepted governance response, got %#v", response["governance"])
+	}
+}
+
+func TestConsultationStreamConvertsMalformedNDJSONToProtocolError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/x-ndjson")
+		_, _ = w.Write([]byte("{not-json}\n"))
+	}))
+	defer server.Close()
+	client := &AIClient{httpClient: server.Client(), baseURL: server.URL}
+	events, err := client.StartConsultationTurn(context.Background(), "thread-1", StartConsultationTurnRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	event := <-events
+	if event.Type != "stream.error" || event.Channel != "stream" {
+		t.Fatalf("expected protocol stream.error, got %#v", event)
+	}
+	var payload struct {
+		Message string `json:"message"`
+	}
+	if err := event.PayloadAs(&payload); err != nil || payload.Message == "" {
+		t.Fatalf("expected sanitized protocol error payload, got %s (%v)", event.Payload, err)
+	}
+}
+
+func TestConsultationStreamRejectsUnknownInternalEventType(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/x-ndjson")
+		_, _ = w.Write([]byte(`{"version":1,"seq":1,"channel":"state","type":"state.unknown","ids":{},"payload":{}}` + "\n"))
+	}))
+	defer server.Close()
+	client := &AIClient{httpClient: server.Client(), baseURL: server.URL}
+	events, err := client.StartConsultationTurn(context.Background(), "thread-1", StartConsultationTurnRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	event := <-events
+	if event.Type != "stream.error" {
+		t.Fatalf("expected protocol stream.error, got %#v", event)
+	}
+}
+
+func TestValidateConsultationInternalEventRejectsMalformedRedFlag(t *testing.T) {
+	event, _ := dto.NewStreamEvent(1, "safety", "safety.red_flag.detected", dto.StreamEventIDs{}, map[string]any{
+		"has_red_flags": "yes", "flags": []any{},
+	})
+	if err := validateConsultationInternalEvent(event); err == nil {
+		t.Fatal("malformed authority payload must be rejected")
 	}
 }

@@ -23,12 +23,13 @@ interface RecoverDurableRunOptions {
 
 export interface DurableRunRecoveryResult {
   maxSeq: number;
-  terminalType: "stream.done" | "stream.error";
+  terminalType: "stream.done" | "stream.error" | "run.cancelled";
 }
 
 const TERMINAL_TYPES = new Set<StreamEvent["type"]>([
   "stream.done",
   "stream.error",
+  "run.cancelled",
 ]);
 
 const defaultSleep = (ms: number) =>
@@ -66,7 +67,11 @@ export async function recoverDurableRunEvents({
     const terminal = freshEvents.find((event) =>
       TERMINAL_TYPES.has(event.type),
     );
-    if (terminal?.type === "stream.done" || terminal?.type === "stream.error") {
+    if (
+      terminal?.type === "stream.done" ||
+      terminal?.type === "stream.error" ||
+      terminal?.type === "run.cancelled"
+    ) {
       return { maxSeq: state.maxSeq, terminalType: terminal.type };
     }
 

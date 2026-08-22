@@ -1,0 +1,92 @@
+[
+  {
+    "id": "exact-supported",
+    "slice": "exact supported exercise",
+    "treatment": {"goal": "改善圆肩", "evidence_ids": ["E1"], "interventions": [{"kind": "exercise", "title": "胸小肌拉伸", "description": "拉伸", "prescription": {"frequency": "每日一次"}}]},
+    "evidence": [{"evidence_id": "E1", "title": "胸小肌拉伸", "body_markdown": "胸小肌拉伸可用于圆肩管理，建议每日一次。", "admissible": true}],
+    "expected_support": "supported",
+    "expected_reason": "intervention_exact_or_alias_supported",
+    "expected_v1_faithful": true
+  },
+  {
+    "id": "alias-supported",
+    "slice": "alias synonym supported exercise",
+    "treatment": {"goal": "改善头前伸", "evidence_ids": ["E2"], "interventions": [{"kind": "exercise", "title": "收下巴", "description": "轻柔后收", "prescription": {}}]},
+    "evidence": [{"evidence_id": "E2", "title": "颈部后缩训练", "body_markdown": "颈部后缩训练可用于头前伸管理。", "admissible": true}],
+    "expected_support": "supported",
+    "expected_reason": "intervention_exact_or_alias_supported",
+    "expected_v1_faithful": true
+  },
+  {
+    "id": "dose-unsupported",
+    "slice": "exercise mentioned but dosage unsupported",
+    "treatment": {"goal": "髋部训练", "evidence_ids": ["E3"], "interventions": [{"kind": "exercise", "title": "臀桥", "description": "训练", "prescription": {"sets": 3, "reps": 12}}]},
+    "evidence": [{"evidence_id": "E3", "title": "臀桥训练", "body_markdown": "臀桥可以用于训练。示例剂量为2组，每组8次。", "admissible": true}],
+    "expected_support": "partial",
+    "expected_reason": "sets_not_supported_by_cited_evidence",
+    "expected_v1_faithful": true
+  },
+  {
+    "id": "contraindicated",
+    "slice": "contraindicated evidence",
+    "treatment": {"goal": "下肢训练", "evidence_ids": ["E4"], "interventions": [{"kind": "exercise", "title": "深蹲", "description": "训练", "prescription": {}}]},
+    "evidence": [{"evidence_id": "E4", "title": "深蹲注意事项", "body_markdown": "特定急性膝痛场景不建议进行深蹲，应先评估。", "admissible": true}],
+    "expected_support": "contraindicated",
+    "expected_reason": "intervention_contraindicated_by_cited_evidence",
+    "expected_v1_faithful": true
+  },
+  {
+    "id": "same-body-part",
+    "slice": "same body part but not intervention",
+    "treatment": {"goal": "颈肩管理", "evidence_ids": ["E5"], "interventions": [{"kind": "exercise", "title": "颈部后缩", "description": "训练", "prescription": {}}]},
+    "evidence": [{"evidence_id": "E5", "title": "颈肩疼痛概述", "body_markdown": "颈部与肩部不适可能与久坐负荷有关，本材料没有给出训练动作。", "admissible": true}],
+    "expected_support": "unsupported",
+    "expected_reason": "same_body_part_not_intervention",
+    "expected_v1_faithful": false
+  },
+  {
+    "id": "multiple-one-supports",
+    "slice": "multiple sources only one supports",
+    "treatment": {"goal": "核心稳定", "evidence_ids": ["E6A", "E6B"], "interventions": [{"kind": "exercise", "title": "鸟狗式", "description": "训练", "prescription": {"frequency": "每日一次"}}]},
+    "evidence": [{"evidence_id": "E6A", "title": "腰部稳定概述", "body_markdown": "介绍腰部稳定的基本概念。", "admissible": true}, {"evidence_id": "E6B", "title": "鸟狗式", "body_markdown": "鸟狗式可作为低负荷核心稳定练习，可每日一次。", "admissible": true}],
+    "expected_support": "supported",
+    "expected_reason": "intervention_exact_or_alias_supported",
+    "expected_v1_faithful": true
+  },
+  {
+    "id": "no-evidence",
+    "slice": "no evidence",
+    "treatment": {"goal": "训练", "evidence_ids": [], "interventions": [{"kind": "exercise", "title": "平板支撑", "description": "训练", "prescription": {}}]},
+    "evidence": [],
+    "expected_support": "unsupported",
+    "expected_reason": "no_supporting_evidence_ids",
+    "expected_v1_faithful": false
+  },
+  {
+    "id": "misleading-lexical-overlap",
+    "slice": "misleading high lexical overlap",
+    "treatment": {"goal": "肩胛管理", "evidence_ids": ["E8"], "interventions": [{"kind": "exercise", "title": "肩胛骨回缩", "description": "训练", "prescription": {}}]},
+    "evidence": [{"evidence_id": "E8", "title": "肩胛骨回缩术语讨论", "body_markdown": "本文提到肩胛骨回缩，但并不支持将肩胛骨回缩作为该场景的干预动作。", "admissible": true}],
+    "expected_support": "unsupported",
+    "expected_reason": "lexical_overlap_without_claim_support",
+    "expected_v1_faithful": true
+  },
+  {
+    "id": "short-token-false-positive",
+    "slice": "Chinese short-token false positive",
+    "treatment": {"goal": "臀部训练", "evidence_ids": ["E9"], "interventions": [{"kind": "exercise", "title": "臀", "description": "测试", "prescription": {}}]},
+    "evidence": [{"evidence_id": "E9", "title": "臀桥训练", "body_markdown": "臀桥是常见臀部训练动作。", "admissible": true}],
+    "expected_support": "unsupported",
+    "expected_reason": "same_body_part_not_intervention",
+    "expected_v1_faithful": false
+  },
+  {
+    "id": "progression-stop-supported",
+    "slice": "progression and stop-condition support",
+    "treatment": {"goal": "颈部管理", "evidence_ids": ["E10"], "interventions": [{"kind": "exercise", "title": "颈部后缩", "description": "训练", "prescription": {"progression": "每周逐步增加2次", "stop_conditions": ["疼痛或麻木明显加重时停止"]}}]},
+    "evidence": [{"evidence_id": "E10", "title": "颈部后缩", "body_markdown": "颈部后缩应循序渐进，每周逐步增加2次；如果疼痛或麻木明显加重时停止。", "admissible": true}],
+    "expected_support": "supported",
+    "expected_reason": "intervention_exact_or_alias_supported",
+    "expected_v1_faithful": true
+  }
+]

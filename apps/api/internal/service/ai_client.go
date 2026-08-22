@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/bodysense/api/internal/dto"
@@ -102,6 +103,7 @@ type ResumeConsultationInterruptRequest struct {
 	RunID           string                      `json:"run_id"`
 	ConversationID  string                      `json:"conversation_id"`
 	UserID          string                      `json:"user_id"`
+	ConfigurationID string                      `json:"configuration_id"`
 	InterruptID     string                      `json:"interrupt_id"`
 	Answer          json.RawMessage             `json:"answer"`
 	BusinessContext ConsultationBusinessContext `json:"business_context"`
@@ -180,13 +182,18 @@ func (c *AIClient) streamNDJSON(
 
 		for scanner.Scan() {
 			line := scanner.Bytes()
-			if len(line) == 0 {
+			if len(bytes.TrimSpace(line)) == 0 {
 				continue
 			}
 
 			var event dto.StreamEvent
 			if err := json.Unmarshal(line, &event); err != nil {
-				continue // skip malformed lines
+				sendConsultationProtocolError(ctx, events, fmt.Sprintf("malformed AI runtime NDJSON: %v", err))
+				return
+			}
+			if err := validateConsultationInternalEvent(event); err != nil {
+				sendConsultationProtocolError(ctx, events, fmt.Sprintf("invalid AI runtime event: %v", err))
+				return
 			}
 
 			select {
@@ -195,9 +202,171 @@ func (c *AIClient) streamNDJSON(
 				return
 			}
 		}
+		if err := scanner.Err(); err != nil {
+			sendConsultationProtocolError(ctx, events, fmt.Sprintf("AI runtime stream read failed: %v", err))
+		}
 	}()
 
 	return events, nil
+}
+
+var consultationInternalEventChannels = map[string]string{
+	"runtime.agent_configuration": "runtime",
+	"message.text.delta":          "message",
+	"tool.call":                   "tool",
+	"tool.result":                 "tool",
+	"state.extracted_info.upsert": "state",
+	"state.interaction.required":  "state",
+	"state.phase.changed":         "state",
+	"source.citation.added":       "source",
+	"source.knowledge_gap":        "source",
+	"safety.red_flag.detected":    "safety",
+	"safety.output_reviewed":      "safety",
+	"safety.output_rejected":      "safety",
+	"usage.reported":              "usage",
+	"stream.done":                 "stream",
+	"stream.error":                "stream",
+}
+
+func sendConsultationProtocolError(ctx context.Context, events chan<- dto.StreamEvent, message string) {
+	event, _ := dto.NewStreamEvent(
+		1,
+		"stream",
+		"stream.error",
+		dto.StreamEventIDs{},
+		map[string]any{"message": message},
+	)
+	select {
+	case events <- event:
+	case <-ctx.Done():
+	}
+}
+
+func validateConsultationInternalEvent(event dto.StreamEvent) error {
+	if event.Version != 1 {
+		return fmt.Errorf("unsupported version %d", event.Version)
+	}
+	if event.Seq < 1 {
+		return fmt.Errorf("seq must be >= 1")
+	}
+	expectedChannel, ok := consultationInternalEventChannels[event.Type]
+	if !ok {
+		return fmt.Errorf("unsupported event type %q", event.Type)
+	}
+	if event.Channel != expectedChannel {
+		return fmt.Errorf("event %q must use channel %q, got %q", event.Type, expectedChannel, event.Channel)
+	}
+	if len(event.Payload) == 0 || !json.Valid(event.Payload) {
+		return fmt.Errorf("event %q has malformed payload", event.Type)
+	}
+
+	switch event.Type {
+	case "runtime.agent_configuration":
+		var payload struct {
+			AgentConfiguration  json.RawMessage `json:"agent_configuration"`
+			ExecutionProvenance json.RawMessage `json:"execution_provenance"`
+		}
+		if err := event.PayloadAs(&payload); err != nil || len(payload.AgentConfiguration) == 0 || len(payload.ExecutionProvenance) == 0 {
+			return fmt.Errorf("runtime Agent configuration payload is malformed")
+		}
+	case "message.text.delta":
+		var payload struct {
+			Delta *string `json:"delta"`
+		}
+		if err := event.PayloadAs(&payload); err != nil || payload.Delta == nil {
+			return fmt.Errorf("message delta payload is malformed")
+		}
+	case "tool.call":
+		var payload struct {
+			Tool string          `json:"tool"`
+			Args json.RawMessage `json:"args"`
+		}
+		if err := event.PayloadAs(&payload); err != nil || strings.TrimSpace(payload.Tool) == "" || len(payload.Args) == 0 {
+			return fmt.Errorf("tool.call payload is malformed")
+		}
+	case "tool.result":
+		var payload struct {
+			Tool   string          `json:"tool"`
+			Result json.RawMessage `json:"result"`
+		}
+		if err := event.PayloadAs(&payload); err != nil || strings.TrimSpace(payload.Tool) == "" || len(payload.Result) == 0 {
+			return fmt.Errorf("tool.result payload is malformed")
+		}
+	case "state.extracted_info.upsert":
+		var payload struct {
+			Info json.RawMessage `json:"info"`
+		}
+		if err := event.PayloadAs(&payload); err != nil || len(payload.Info) == 0 {
+			return fmt.Errorf("extracted-info payload is malformed")
+		}
+	case "state.interaction.required":
+		var payload struct {
+			InteractionID string          `json:"interaction_id"`
+			Question      json.RawMessage `json:"question"`
+		}
+		if err := event.PayloadAs(&payload); err != nil || strings.TrimSpace(payload.InteractionID) == "" || len(payload.Question) == 0 {
+			return fmt.Errorf("interaction-required payload is malformed")
+		}
+	case "state.phase.changed":
+		var payload struct {
+			To     string `json:"to"`
+			Reason string `json:"reason"`
+		}
+		if err := event.PayloadAs(&payload); err != nil || strings.TrimSpace(payload.To) == "" || strings.TrimSpace(payload.Reason) == "" {
+			return fmt.Errorf("phase-change payload is malformed")
+		}
+	case "source.citation.added":
+		var payload struct {
+			Citation json.RawMessage `json:"citation"`
+		}
+		if err := event.PayloadAs(&payload); err != nil || len(payload.Citation) == 0 {
+			return fmt.Errorf("citation payload is malformed")
+		}
+	case "source.knowledge_gap":
+		var payload struct {
+			Query   string `json:"query"`
+			Message string `json:"message"`
+		}
+		if err := event.PayloadAs(&payload); err != nil || strings.TrimSpace(payload.Query) == "" || strings.TrimSpace(payload.Message) == "" {
+			return fmt.Errorf("knowledge-gap payload is malformed")
+		}
+	case "safety.red_flag.detected":
+		var raw map[string]json.RawMessage
+		if err := event.PayloadAs(&raw); err != nil || raw["has_red_flags"] == nil || raw["flags"] == nil {
+			return fmt.Errorf("red-flag payload is malformed")
+		}
+		var hasRedFlags bool
+		var flags []any
+		if err := json.Unmarshal(raw["has_red_flags"], &hasRedFlags); err != nil {
+			return fmt.Errorf("red-flag has_red_flags must be boolean")
+		}
+		if err := json.Unmarshal(raw["flags"], &flags); err != nil {
+			return fmt.Errorf("red-flag flags must be an array")
+		}
+	case "safety.output_reviewed", "safety.output_rejected":
+		var payload struct {
+			Kind    string `json:"kind"`
+			Verdict string `json:"verdict"`
+		}
+		if err := event.PayloadAs(&payload); err != nil || strings.TrimSpace(payload.Kind) == "" || strings.TrimSpace(payload.Verdict) == "" {
+			return fmt.Errorf("safety review payload is malformed")
+		}
+	case "usage.reported":
+		var payload struct {
+			Usage json.RawMessage `json:"usage"`
+		}
+		if err := event.PayloadAs(&payload); err != nil || len(payload.Usage) == 0 {
+			return fmt.Errorf("usage payload is malformed")
+		}
+	case "stream.error":
+		var payload struct {
+			Message string `json:"message"`
+		}
+		if err := event.PayloadAs(&payload); err != nil || strings.TrimSpace(payload.Message) == "" {
+			return fmt.Errorf("stream.error payload is malformed")
+		}
+	}
+	return nil
 }
 
 // GenerateAssessment calls the typed observation-only Assessment Agent.

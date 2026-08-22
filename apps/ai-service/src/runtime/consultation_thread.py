@@ -752,6 +752,39 @@ def _map_internal_event(
     return None
 
 
+def _runtime_agent_configuration_event(
+    factory: StreamEventFactory,
+    *,
+    manifest: ConsultationAgentManifest,
+    run_id: str,
+    usage: dict[str, Any] | None = None,
+) -> StreamEvent:
+    """Build the internal control-plane identity handshake for Go."""
+    return factory.next(
+        channel="runtime",
+        event_type="runtime.agent_configuration",
+        payload={
+            "agent_configuration": manifest.provenance(),
+            "execution_provenance": {
+                "status": "executed",
+                "runtime": "langgraph",
+                "logical_model": manifest.logical_model,
+                "model_group_revision": manifest.model_group_revision,
+                "usage": usage or {},
+            },
+        },
+        ids=StreamEventIds(run_id=run_id),
+    )
+
+
+def _checkpoint_manifest_configuration_id(value: Any) -> str:
+    if isinstance(value, ConsultationAgentManifest):
+        return value.configuration_id
+    if isinstance(value, dict):
+        return ConsultationAgentManifest.model_validate(value).configuration_id
+    raise ValueError("Consultation checkpoint is missing an immutable configuration manifest")
+
+
 async def stream_thread_turn(
     *,
     thread_id: str,
@@ -777,7 +810,10 @@ async def stream_thread_turn(
 
     # Resolve the exact immutable Agent configuration (North-Star identity).
     manifest = get_consultation_manifest(configuration_id)
-    usage_state: dict[str, Any] = {}
+
+    # Control-plane handshake MUST be first. Go validates and durably records
+    # this exact identity before it accepts any semantic/tool/state output.
+    yield _runtime_agent_configuration_event(factory, manifest=manifest, run_id=run_id)
 
     async for chunk in graph.astream(
         {
@@ -809,9 +845,6 @@ async def stream_thread_turn(
         if event is not None:
             event.ids.run_id = run_id
             yield event
-        if event is not None and event.channel == "usage":
-            usage_state = event.payload
-
     snapshot = await graph.aget_state(config)
     if snapshot.interrupts:
         pending_interrupt = snapshot.interrupts[0]
@@ -832,24 +865,6 @@ async def stream_thread_turn(
         yield event
         return
 
-    # Emit immutable Agent configuration + execution provenance so Go can
-    # persist the exact runtime identity on the durable run record.
-    yield factory.next(
-        channel="runtime",
-        event_type="runtime.agent_configuration",
-        payload={
-            "agent_configuration": manifest.provenance(),
-            "execution_provenance": {
-                "status": "executed",
-                "runtime": "langgraph",
-                "logical_model": manifest.logical_model,
-                "model_group_revision": manifest.model_group_revision,
-                "usage": usage_state,
-            },
-        },
-        ids=StreamEventIds(run_id=run_id),
-    )
-
     yield factory.next(
         channel="stream",
         event_type="stream.done",
@@ -863,6 +878,7 @@ async def resume_thread_interrupt(
     thread_id: str,
     conversation_id: str,
     run_id: str,
+    configuration_id: str,
     answer: dict[str, Any],
     profile: dict[str, Any] | None = None,
     body_state: dict[str, Any] | None = None,
@@ -874,6 +890,25 @@ async def resume_thread_interrupt(
     graph = await get_runtime_graph()
     config = cast(RunnableConfig, {"configurable": {"thread_id": thread_id}})
     factory = StreamEventFactory(conversation_id=conversation_id)
+
+    # A HITL resume is continuation of the same logical LangGraph thread. The
+    # Go source run supplies its durable configuration id; reconcile that with
+    # the checkpoint before executing any resumed semantic work.
+    manifest = get_consultation_manifest(configuration_id)
+    checkpoint = await graph.aget_state(config)
+    checkpoint_values = getattr(checkpoint, "values", None)
+    if not isinstance(checkpoint_values, dict):
+        raise ValueError("Consultation checkpoint has no runtime state")
+    checkpoint_configuration_id = _checkpoint_manifest_configuration_id(
+        checkpoint_values.get("consultation_manifest")
+    )
+    if checkpoint_configuration_id != manifest.configuration_id:
+        raise ValueError(
+            "Consultation resume configuration mismatch: "
+            f"checkpoint={checkpoint_configuration_id} requested={manifest.configuration_id}"
+        )
+
+    yield _runtime_agent_configuration_event(factory, manifest=manifest, run_id=run_id)
 
     # Refresh durable business context at resume time as well. The LangGraph
     # checkpoint owns runtime protocol state, while Go-owned BodyState may have

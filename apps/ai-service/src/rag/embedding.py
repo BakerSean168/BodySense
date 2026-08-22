@@ -1,5 +1,6 @@
 """Embedding generation module for RAG pipeline."""
 
+import asyncio
 import hashlib
 import math
 import os
@@ -25,19 +26,38 @@ class EmbeddingGenerator:
         self.base_url = base_url or os.getenv("EMBEDDING_BASE_URL")
         self._client: Optional[AsyncOpenAI] = None
         self._local_model = None
+        self._local_model_lock = asyncio.Lock()
+        self._local_encode_limit = asyncio.Semaphore(
+            max(1, int(os.getenv("LOCAL_EMBEDDING_MAX_CONCURRENCY", "2")))
+        )
 
-    def _get_local_model(self):
-        """Get or create local sentence-transformers model."""
-        if self._local_model is None:
-            from sentence_transformers import (  # pyright: ignore[reportMissingImports]
-                SentenceTransformer,
-            )
+    def _load_local_model_sync(self):
+        """Load SentenceTransformer on a worker thread, never the event loop."""
+        from sentence_transformers import (  # pyright: ignore[reportMissingImports]
+            SentenceTransformer,
+        )
 
-            self._local_model = SentenceTransformer(self.model)
-            # Update dimension based on model output
-            test_embedding = self._local_model.encode(["test"])
-            self.dimension = len(test_embedding[0])
+        model = SentenceTransformer(self.model)
+        test_embedding = model.encode(["test"])
+        return model, len(test_embedding[0])
+
+    async def _get_local_model(self):
+        """Concurrency-safe lazy model initialization off the event loop."""
+        if self._local_model is not None:
+            return self._local_model
+        async with self._local_model_lock:
+            if self._local_model is None:
+                model, dimension = await asyncio.to_thread(self._load_local_model_sync)
+                self._local_model = model
+                self.dimension = dimension
         return self._local_model
+
+    async def _encode_local(self, texts: list[str]) -> list[list[float]]:
+        """Bound local transformer compute and execute it on a worker thread."""
+        async with self._local_encode_limit:
+            model = await self._get_local_model()
+            embeddings = await asyncio.to_thread(model.encode, texts)
+        return [embedding.tolist() for embedding in embeddings]
 
     def _normalize_text(self, text: str) -> str:
         return " ".join(text.lower().split())
@@ -100,9 +120,7 @@ class EmbeddingGenerator:
             return self._hash_embedding(text)
 
         if self.provider == "local_transformer":
-            model = self._get_local_model()
-            embedding = model.encode([text])[0]
-            return embedding.tolist()
+            return (await self._encode_local([text]))[0]
 
         # Use OpenAI-compatible API
         embeddings = await self.generate_batch([text])
@@ -125,9 +143,7 @@ class EmbeddingGenerator:
             return [self._hash_embedding(text) for text in texts]
 
         if self.provider == "local_transformer":
-            model = self._get_local_model()
-            embeddings = model.encode(texts)
-            return [emb.tolist() for emb in embeddings]
+            return await self._encode_local(texts)
 
         # Use OpenAI-compatible API
         response = await self.client.embeddings.create(

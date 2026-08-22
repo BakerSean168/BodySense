@@ -1,7 +1,7 @@
 # BodySense Current Longitudinal System
 
 > Status: authoritative current implementation
-> Updated: 2026-08-20
+> Updated: 2026-08-23
 > Supersedes: linear Health Journey, session `health_features`, session diagnosis/treatment JSON, and direct Training plan mutation.
 
 ## 1. Product loop
@@ -100,23 +100,30 @@ Safety events are fail-closed. Interaction answers and extracted health inputs m
 
 ## 4. Runtime contract
 
-The current runtime deliberately uses **disconnect means cancel** semantics:
+The Consultation runtime uses **transport disconnect != business cancellation** semantics:
 
-1. the browser opens one SSE request;
-2. Go owns the run envelope and public event log;
-3. Python streams typed runtime events;
-4. Go persists and forwards them;
-5. HTTP disconnect cancels the producer, marks the run failed/assistant message aborted, and clears `active_run_id`;
-6. the user may submit a new request with a new request ID.
+1. the browser opens an SSE request;
+2. Go creates the durable Run, selects the exact immutable Consultation configuration and owns the public event ledger;
+3. Python resolves that exact manifest and emits `runtime.agent_configuration` as the **first internal control-plane event**;
+4. before accepting ordinary semantic/tool/state output, Go verifies configuration ID, role, decision-policy revision and logical model, then persists the run-local execution identity immediately;
+5. Python streams the remaining typed internal events; Go validates their supported type/channel/payload, maps them to public events, assigns/persists the public `(run_id, seq)` ordering and forwards SSE;
+6. an HTTP/SSE disconnect does **not** cancel durable inference. The run-scoped execution context survives transport cancellation up to its execution deadline;
+7. explicit `POST /api/v1/consultation-runs/:id/cancel` is the authorized cancellation command. It atomically moves an active/waiting Run to `cancelled`, cancels any pending HITL interaction, cancels the registered producer when one is live, and produces terminal `run.cancelled`;
+8. completion/cancellation/failure are conditional terminal transitions, so a late competitor cannot overwrite the winner.
 
-The event log supports history, page hydration and replay of already-produced events. It is not a promise that model generation continues in the background after the request disconnects.
+HITL resume is continuation of one logical LangGraph thread. Go reloads the interrupted source Run and sends its durable `agent_configuration_id`; Python reconciles that ID against the checkpointed Consultation manifest **before** executing `Command(resume=...)`. A Champion change while the user is waiting never silently switches the resumed thread.
 
-Run creation locks the user and target conversation transactionally. A second request with another request ID receives `409 RUN_IN_PROGRESS` while an active run exists.
+The public event ledger has one sequence domain per Run: `seq` is monotonic and unique for a given `run_id`. Live events use the Go `StreamWriter`; out-of-band events for waiting/inactive runs allocate `MAX(seq)+1` transactionally while locking the owning Run row. React replay therefore deduplicates by `(run_id, seq)`, not by event type. Server timestamps (for example interaction `created_at`) are part of durable projection input; reducers do not invent time/random identity during replay.
+
+The shared `@bodysense/contracts` runtime parser is the browser trust boundary for both live SSE and durable recovery rows. Unknown versions/types/channels or malformed event-specific payloads become explicit protocol failures; raw `JSON.parse(...) as StreamEvent` is not an accepted network boundary. Go applies the corresponding fail-closed rule to Python NDJSON rather than skipping malformed lines.
+
+Run creation locks the user and target conversation transactionally. A second request with another request ID receives `409 RUN_IN_PROGRESS` while an active run exists. Process-crash-resumable model execution remains out of scope: transport detachment is not a durable worker/job runtime.
 
 ## 5. Public domain API
 
 ```text
 POST /api/v1/consultation-runs
+POST /api/v1/consultation-runs/:id/cancel
 GET  /api/v1/consultations/:id/thread
 POST /api/v1/consultations/:id/diagnosis
 
@@ -142,6 +149,14 @@ POST /api/v1/training/:id/checkin
 POST /api/v1/outcomes
 GET  /api/v1/health-workspace
 ```
+
+## 5.1 Online RAG resource boundary
+
+`KnowledgeLibrary` is lifecycle-owned by the FastAPI application. Startup creates one bounded `psycopg_pool.AsyncConnectionPool`, registers pgvector on async connections and fails within a bounded connect timeout when PostgreSQL is unavailable. Search/list/stats and full source→segment→unit→clip ingestion use async connections/cursors; ingestion remains one database transaction. Shutdown closes only the pool owned by that library instance. Hidden per-request connection creation is not allowed.
+
+Remote embedding remains native async I/O. Local `SentenceTransformer` model initialization and `encode()` execute through `asyncio.to_thread` behind a bounded semaphore, so CPU-heavy inference cannot block the event loop or grow unbounded worker concurrency. Hashing fallback remains synchronous because its cost is small and deterministic.
+
+Treatment Grounding Eval v2 is currently an **eval-only diagnostic**. It performs deterministic cited-evidence/admissibility checks first, structured claim support second and allows an optional semantic Judge only for uncertain cases. The production Treatment faithfulness policy remains v1 until v2 disagreement data is reviewed and a separate qualification/promotion decision is made.
 
 ## 6. React presentation architecture
 

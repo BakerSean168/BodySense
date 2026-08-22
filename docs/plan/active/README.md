@@ -1,8 +1,8 @@
 # Active Plans
 
-There is currently **no unfinished AI Service Agent-platform migration plan**. The Agent-platform migration remains closed; however, a bounded post-closeout hardening plan is active for verified Consultation Runtime and Async/RAG boundary debt:
+There are currently **no unfinished AI Service Agent-platform or post-closeout hardening plans**. The Agent-platform migration remains closed, and the bounded Consultation Runtime / Async-RAG hardening audit has also completed its release gate and moved to archive:
 
-- [`consultation-runtime-rag-hardening-plan-2026-08-22.md`](./consultation-runtime-rag-hardening-plan-2026-08-22.md) — P0/P1 run-identity, stream-contract, cancellation, event-ordering and async RAG hardening discovered during the L1-L4 architecture audit.
+- [`../archive/consultation-runtime-rag-hardening-plan-2026-08-22.md`](../archive/consultation-runtime-rag-hardening-plan-2026-08-22.md) — completed 2026-08-23; run identity, stream contracts, cancellation, event ordering, async RAG and Grounding Eval v2 diagnostic hardening.
 
 The North-Star convergence program completed its final cross-role closeout on 2026-08-21. Historical
 implementation plans are preserved under `../archive/` rather than left active after their code has

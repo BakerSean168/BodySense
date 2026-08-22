@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/bodysense/api/internal/model"
@@ -73,11 +74,26 @@ func (m *mockRunRepo) UpdateStatus(ctx context.Context, id uuid.UUID, status str
 }
 
 func (m *mockRunRepo) CompleteRun(ctx context.Context, id, userID uuid.UUID, usage any, providerResponseID string) error {
-	if run, ok := m.runs[id]; ok {
+	_, err := m.TryCompleteRun(ctx, id, userID, usage, providerResponseID)
+	return err
+}
+
+func (m *mockRunRepo) TryCompleteRun(ctx context.Context, id, userID uuid.UUID, usage any, providerResponseID string) (bool, error) {
+	if run, ok := m.runs[id]; ok && run.UserID == userID && (run.Status == "running" || run.Status == "waiting_user") {
 		run.Status = "completed"
 		m.lastStatus = "completed"
+		return true, nil
 	}
-	return nil
+	return false, nil
+}
+
+func (m *mockRunRepo) CancelRun(_ context.Context, id, userID uuid.UUID, reason any) (bool, error) {
+	if run, ok := m.runs[id]; ok && run.UserID == userID && (run.Status == "running" || run.Status == "waiting_user") {
+		run.Status = "cancelled"
+		m.lastStatus = "cancelled"
+		return true, nil
+	}
+	return false, nil
 }
 
 func (m *mockRunRepo) FailRun(ctx context.Context, id, userID uuid.UUID, errJSON any) error {
@@ -144,5 +160,61 @@ func TestResumeRunning(t *testing.T) {
 
 	if repo.lastStatus != "running" {
 		t.Errorf("expected status running, got %s", repo.lastStatus)
+	}
+}
+
+func TestCancelRunIsIdempotentAndPreventsLaterCompletion(t *testing.T) {
+	repo := newMockRunRepo()
+	svc := NewRunService(repo)
+	ctx := context.Background()
+	userID := uuid.New()
+	run, err := svc.CreateRun(ctx, uuid.New(), uuid.New(), "cancel-idempotent", userID, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cancelled, transitioned, err := svc.CancelRun(ctx, run.ID, userID, "user_requested")
+	if err != nil {
+		t.Fatalf("first cancel: %v", err)
+	}
+	if !transitioned || cancelled.Status != "cancelled" {
+		t.Fatalf("first cancel should transition: run=%+v transitioned=%v", cancelled, transitioned)
+	}
+
+	cancelledAgain, transitionedAgain, err := svc.CancelRun(ctx, run.ID, userID, "user_requested")
+	if err != nil {
+		t.Fatalf("second cancel must be idempotent: %v", err)
+	}
+	if transitionedAgain || cancelledAgain.Status != "cancelled" {
+		t.Fatalf("second cancel should be no-op: run=%+v transitioned=%v", cancelledAgain, transitionedAgain)
+	}
+
+	completed, err := svc.TryCompleteRun(ctx, run.ID, userID, nil, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if completed {
+		t.Fatal("completion must not overwrite cancelled terminal state")
+	}
+}
+
+func TestCompletionWinsTerminalRaceAndLaterCancelRejects(t *testing.T) {
+	repo := newMockRunRepo()
+	svc := NewRunService(repo)
+	ctx := context.Background()
+	userID := uuid.New()
+	run, err := svc.CreateRun(ctx, uuid.New(), uuid.New(), "complete-wins", userID, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	completed, err := svc.TryCompleteRun(ctx, run.ID, userID, nil, "provider-response")
+	if err != nil || !completed {
+		t.Fatalf("completion should win: completed=%v err=%v", completed, err)
+	}
+
+	_, transitioned, err := svc.CancelRun(ctx, run.ID, userID, "too_late")
+	if !errors.Is(err, ErrRunTerminal) || transitioned {
+		t.Fatalf("late cancel should reject terminal run: transitioned=%v err=%v", transitioned, err)
 	}
 }

@@ -715,6 +715,17 @@ func ConsultationDecisionPolicyRevisionForConfiguration(configurationID string) 
 	return registration.DecisionPolicyRevision, nil
 }
 
+// ConsultationLogicalModelForConfiguration returns the repository-authorized logical
+// model for an immutable Consultation Agent configuration. It is used by the
+// Go↔Python runtime handshake to fail closed before semantic output is trusted.
+func ConsultationLogicalModelForConfiguration(configurationID string) (string, error) {
+	registration, ok := knownConsultationConfigurations[strings.TrimSpace(configurationID)]
+	if !ok {
+		return "", fmt.Errorf("unknown Consultation Agent configuration id %q", configurationID)
+	}
+	return registration.LogicalModel, nil
+}
+
 func validateConsultationConfigurationID(id string) error {
 	if !strings.HasPrefix(id, "consult-config-") {
 		return fmt.Errorf("invalid Consultation Agent configuration id %q", id)

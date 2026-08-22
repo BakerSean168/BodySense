@@ -13,6 +13,7 @@
       "cache": true,
       "options": {
         "commands": [
+          "pnpm exec vitest run packages/contracts/src/stream-event-parser.test.ts",
           "cd apps/api && go test ./internal/dto -count=1 -run 'Fixture|StreamEvent|Schema'",
           "cd apps/ai-service && uv run pytest tests/unit/test_stream_event.py -q"
         ],

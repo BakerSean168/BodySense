@@ -105,22 +105,44 @@ func (r *RunRepository) ListByConversationID(ctx context.Context, conversationID
 func (r *RunRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status string) error {
 	return r.db.WithContext(ctx).
 		Model(&model.Run{}).
-		Where("id = ?", id).
+		Where("id = ? AND status NOT IN ?", id, []string{"completed", "failed", "cancelled"}).
 		Update("status", status).Error
 }
 
-// CompleteRun marks a run as completed with usage and provider response ID.
+// CompleteRun marks a run as completed only from an active lifecycle state.
 func (r *RunRepository) CompleteRun(ctx context.Context, id, userID uuid.UUID, usage any, providerResponseID string) error {
+	_, err := r.TryCompleteRun(ctx, id, userID, usage, providerResponseID)
+	return err
+}
+
+// TryCompleteRun performs the terminal transition atomically. The boolean is
+// false when cancellation/failure/completion won the race first.
+func (r *RunRepository) TryCompleteRun(ctx context.Context, id, userID uuid.UUID, usage any, providerResponseID string) (bool, error) {
 	now := time.Now()
-	return r.db.WithContext(ctx).
+	result := r.db.WithContext(ctx).
 		Model(&model.Run{}).
-		Where("id = ? AND user_id = ?", id, userID).
+		Where("id = ? AND user_id = ? AND status IN ?", id, userID, []string{"running", "waiting_user"}).
 		Updates(map[string]any{
 			"status":               "completed",
 			"usage":                usage,
 			"provider_response_id": providerResponseID,
 			"completed_at":         now,
-		}).Error
+		})
+	return result.RowsAffected == 1, result.Error
+}
+
+// CancelRun atomically transitions an active/waiting run to cancelled.
+func (r *RunRepository) CancelRun(ctx context.Context, id, userID uuid.UUID, reason any) (bool, error) {
+	now := time.Now()
+	result := r.db.WithContext(ctx).
+		Model(&model.Run{}).
+		Where("id = ? AND user_id = ? AND status IN ?", id, userID, []string{"running", "waiting_user"}).
+		Updates(map[string]any{
+			"status":       "cancelled",
+			"error":        reason,
+			"completed_at": now,
+		})
+	return result.RowsAffected == 1, result.Error
 }
 
 // FailRun marks a run as failed with an error JSON payload.
@@ -128,7 +150,7 @@ func (r *RunRepository) FailRun(ctx context.Context, id, userID uuid.UUID, errJS
 	now := time.Now()
 	return r.db.WithContext(ctx).
 		Model(&model.Run{}).
-		Where("id = ? AND user_id = ?", id, userID).
+		Where("id = ? AND user_id = ? AND status IN ?", id, userID, []string{"running", "waiting_user"}).
 		Updates(map[string]any{
 			"status":       "failed",
 			"error":        errJSON,

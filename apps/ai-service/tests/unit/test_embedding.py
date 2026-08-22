@@ -141,3 +141,73 @@ class TestEmbeddingGenerator:
             await gen.generate_with_retry("test text", max_retries=2)
 
         assert gen._client.embeddings.create.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_local_transformer_encode_does_not_block_event_loop():
+    """A sleeping stand-in for CPU-heavy encode must run on a worker thread."""
+    import asyncio
+    import time
+
+    class Vector(list):
+        def tolist(self):
+            return list(self)
+
+    class BlockingModel:
+        def encode(self, texts):
+            time.sleep(0.06)
+            return [Vector([1.0, 2.0, 3.0]) for _ in texts]
+
+    gen = EmbeddingGenerator(dimension=3)
+    gen.provider = "local_transformer"
+    gen._load_local_model_sync = lambda: (BlockingModel(), 3)  # type: ignore[method-assign]
+
+    task = asyncio.create_task(gen.generate("heartbeat"))
+    heartbeats = 0
+    while not task.done():
+        await asyncio.sleep(0.005)
+        heartbeats += 1
+    result = await task
+
+    assert heartbeats >= 3
+    assert result == [1.0, 2.0, 3.0]
+    assert gen.dimension == 3
+
+
+@pytest.mark.asyncio
+async def test_local_transformer_concurrency_is_bounded(monkeypatch):
+    import asyncio
+    import threading
+    import time
+
+    monkeypatch.setenv("LOCAL_EMBEDDING_MAX_CONCURRENCY", "2")
+
+    class Vector(list):
+        def tolist(self):
+            return list(self)
+
+    class BlockingModel:
+        def __init__(self):
+            self.lock = threading.Lock()
+            self.active = 0
+            self.max_active = 0
+
+        def encode(self, texts):
+            with self.lock:
+                self.active += 1
+                self.max_active = max(self.max_active, self.active)
+            try:
+                time.sleep(0.03)
+                return [Vector([0.1, 0.2]) for _ in texts]
+            finally:
+                with self.lock:
+                    self.active -= 1
+
+    model = BlockingModel()
+    gen = EmbeddingGenerator(dimension=2)
+    gen.provider = "local_transformer"
+    gen._load_local_model_sync = lambda: (model, 2)  # type: ignore[method-assign]
+
+    results = await asyncio.gather(*(gen.generate(f"text-{i}") for i in range(8)))
+    assert all(result == [0.1, 0.2] for result in results)
+    assert model.max_active <= 2

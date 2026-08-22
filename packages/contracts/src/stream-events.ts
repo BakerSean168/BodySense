@@ -96,6 +96,12 @@ export type RunFailedEvent = StreamEventBase<
   { status: "failed"; error: { message: string } }
 >;
 
+export type RunCancelledEvent = StreamEventBase<
+  "run",
+  "run.cancelled",
+  { status: "cancelled"; reason: string }
+>;
+
 export type MessagePersistedEvent = StreamEventBase<
   "message",
   "message.persisted",
@@ -243,7 +249,7 @@ export type InteractionQuestion = {
 export type InteractionRequiredEvent = StreamEventBase<
   "state",
   "state.interaction.required",
-  { interaction_id: string; question: InteractionQuestion }
+  { interaction_id: string; question: InteractionQuestion; created_at: string }
 >;
 
 export type InteractionAnsweredEvent = StreamEventBase<
@@ -293,6 +299,7 @@ export type StreamEvent =
   | RunInterruptedEvent
   | RunCompletedEvent
   | RunFailedEvent
+  | RunCancelledEvent
   | MessagePersistedEvent
   | MessageCreatedEvent
   | MessageTextDeltaEvent

@@ -10,7 +10,11 @@ function event(
   return {
     version: 1,
     seq,
-    channel: type.startsWith("stream.") ? "stream" : "message",
+    channel: type.startsWith("stream.")
+      ? "stream"
+      : type.startsWith("run.")
+        ? "run"
+        : "message",
     type,
     ids: {
       conversation_id: "conversation-1",
@@ -69,6 +73,27 @@ describe("recoverDurableRunEvents", () => {
       expect.objectContaining({ seq: 5, type: "stream.done" }),
     );
     expect(result).toEqual({ maxSeq: 5, terminalType: "stream.done" });
+  });
+
+  it("treats persisted run.cancelled as a durable terminal event", async () => {
+    let now = 0;
+    const result = await recoverDurableRunEvents({
+      fetchPage: async () => ({
+        events: [
+          event(7, "run.cancelled", {
+            status: "cancelled",
+            reason: "cancelled_by_user",
+          }),
+        ],
+        hasMore: false,
+        nextAfterSeq: 7,
+      }),
+      handlers: {},
+      timeoutMs: 100,
+      now: () => now,
+      sleep: async (ms) => { now += ms; },
+    });
+    expect(result).toEqual({ maxSeq: 7, terminalType: "run.cancelled" });
   });
 
   it("fails explicitly instead of treating an empty durable page as completion", async () => {
