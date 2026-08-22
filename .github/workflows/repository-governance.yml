@@ -65,7 +65,7 @@ jobs:
           set -euo pipefail
           for key in ACR_REGISTRY ACR_NAMESPACE ACR_USERNAME ACR_PASSWORD; do
             [[ -n "${!key}" ]] || { echo "$key repository secret is missing." >&2; exit 1; }
-            gh secret set "$key" --env production --repo "$REPOSITORY" --body "${!key}"
+            printf '%s' "${!key}" | gh secret set "$key" --env production --repo "$REPOSITORY"
           done
 
       - name: Protect main branch
