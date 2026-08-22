@@ -2,6 +2,12 @@ name: Repository Production Governance
 
 on:
   workflow_dispatch:
+    inputs:
+      sync_acr_secrets:
+        description: Copy current repository ACR secrets into the production Environment
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -55,6 +61,7 @@ jobs:
           fi
 
       - name: Copy ACR credentials into production environment
+        if: inputs.sync_acr_secrets == true
         shell: bash
         env:
           ACR_REGISTRY: ${{ secrets.ACR_REGISTRY }}
@@ -114,5 +121,5 @@ jobs:
             echo '- Administrators are subject to branch protection.'
             echo '- Force pushes and branch deletion are disabled.'
             echo '- `production` Environment permits only `main` and `v*` refs.'
-            echo '- ACR credentials were copied to production Environment secrets.'
+            echo '- Repository protection and production Environment policy are reconciled.'
           } >> "$GITHUB_STEP_SUMMARY"
