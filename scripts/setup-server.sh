@@ -6,7 +6,7 @@ set -euo pipefail
 
 DEPLOY_DIR="${BODYSENSE_DEPLOY_ROOT:-/opt/bodysense}"
 SOURCE_DIR="${BODYSENSE_BOOTSTRAP_SOURCE:-/opt/bodysense-source}"
-REPO_URL="${REPO_URL:-https://github.com/T1moooo/BodySense.git}"
+REPO_URL="${REPO_URL:-https://github.com/BakerSean168/BodySense.git}"
 ACR_REGISTRY="${ACR_REGISTRY:-crpi-cv97phwhms6wy4as.cn-hangzhou.personal.cr.aliyuncs.com}"
 ACR_USERNAME="${ACR_USERNAME:-}"
 ACR_PASSWORD="${ACR_PASSWORD:-}"
