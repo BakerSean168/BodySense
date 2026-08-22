@@ -2,15 +2,15 @@ name: Build & Publish Production Images
 
 on:
   push:
-    tags: ['v*']
+    tags: ["v*"]
   workflow_dispatch:
     inputs:
       tag_override:
-        description: 'Immutable image tag override (manual runs only)'
+        description: "Immutable image tag override (manual runs only)"
         required: false
         type: string
       promote:
-        description: 'Also promote this manual candidate to prod-latest'
+        description: "Also promote this manual candidate to prod-latest"
         required: false
         default: false
         type: boolean
@@ -21,13 +21,59 @@ concurrency:
 
 permissions:
   contents: read
+  actions: read
 
 env:
   REGISTRY: ${{ secrets.ACR_REGISTRY }}
   NAMESPACE: ${{ secrets.ACR_NAMESPACE }}
 
 jobs:
+  verify-ci:
+    name: Verify tested release revision
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Require successful CI for the exact revision
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REVISION: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          PROMOTE: ${{ inputs.promote }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$EVENT_NAME" == workflow_dispatch && "$PROMOTE" == true && "$GITHUB_REF" != refs/heads/main ]]; then
+            echo 'Manual production promotion is allowed only from main.' >&2
+            exit 1
+          fi
+
+          git fetch --quiet origin main
+          if ! git merge-base --is-ancestor "$REVISION" origin/main; then
+            echo "Revision $REVISION is not reachable from main; refusing production publication." >&2
+            exit 1
+          fi
+
+          response="$(curl --fail-with-body -fsSL \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${REVISION}&event=push&status=completed&per_page=100")"
+
+          if ! jq -e --arg sha "$REVISION" \
+            '[.workflow_runs[] | select(.head_sha == $sha and .conclusion == "success")] | length > 0' \
+            <<<"$response" >/dev/null; then
+            echo "No successful completed CI push run exists for revision $REVISION." >&2
+            exit 1
+          fi
+
+          echo "Verified successful CI for exact revision $REVISION." >> "$GITHUB_STEP_SUMMARY"
+
   metadata:
+    needs: verify-ci
     name: Resolve release metadata
     runs-on: ubuntu-latest
     outputs:

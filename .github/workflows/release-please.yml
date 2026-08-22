@@ -1,23 +1,56 @@
+name: release-please
+
+# A release is considered only after the exact main revision has completed the
+# full CI workflow successfully. This prevents release tags from racing ahead of
+# migration and browser E2E gates.
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
 
 permissions:
   contents: write
   pull-requests: write
 
-name: release-please
+concurrency:
+  group: release-please-main
+  cancel-in-progress: true
 
 jobs:
   release-please:
+    if: >-
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
-      - uses: googleapis/release-please-action@v4
+      - name: Verify tested revision is still main HEAD
+        id: guard
+        shell: bash
+        env:
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          current_sha="$(git ls-remote "https://github.com/${REPOSITORY}.git" refs/heads/main | awk '{print $1}')"
+          if [[ -z "$current_sha" ]]; then
+            echo 'Unable to resolve main HEAD.' >&2
+            exit 1
+          fi
+          if [[ "$current_sha" != "$TESTED_SHA" ]]; then
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            echo "Main advanced from tested ${TESTED_SHA} to ${current_sha}; a newer CI run will own release processing." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "eligible=true" >> "$GITHUB_OUTPUT"
+          echo "Release processing is eligible for tested main revision ${TESTED_SHA}." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create or update release PR / release
+        if: steps.guard.outputs.eligible == 'true'
+        uses: googleapis/release-please-action@v4
         with:
-          # release-please 需要 PAT 才能正确触发后续 workflow (docker-deploy)
-          # 在 GitHub repo Settings → Secrets 中创建 BODYSENSE_WORKFLOW secret
-          # 如果暂时没有 PAT，可以用 GITHUB_TOKEN，但不会触发 tag-push 工作流
+          # A PAT is required so a release tag can trigger the production image
+          # workflow. GITHUB_TOKEN remains a fallback for release-PR maintenance.
           token: ${{ secrets.BODYSENSE_WORKFLOW || secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
