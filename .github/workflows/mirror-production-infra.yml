@@ -10,14 +10,15 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  REGISTRY: ${{ secrets.ACR_REGISTRY }}
-  NAMESPACE: ${{ secrets.ACR_NAMESPACE }}
-
 jobs:
   mirror:
     name: Mirror ${{ matrix.name }} to Alibaba ACR
     runs-on: ubuntu-latest
+    environment:
+      name: production
+    env:
+      REGISTRY: ${{ secrets.ACR_REGISTRY }}
+      NAMESPACE: ${{ secrets.ACR_NAMESPACE }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
