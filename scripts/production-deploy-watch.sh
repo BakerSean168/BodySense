@@ -196,6 +196,15 @@ cleanup_rollback_tags() {
   done
 }
 
+assert_container_revision() {
+  local service="$1" expected="$2" actual
+  actual=$(container_revision "$service")
+  if [ "$actual" != "$expected" ]; then
+    log "container revision mismatch service=$service expected=$expected actual=${actual:-none}"
+    return 1
+  fi
+}
+
 wait_healthy() {
   local service="$1" timeout="${2:-120}" id status start
   start=$(date +%s)
@@ -384,12 +393,15 @@ wait_healthy litellm-gateway 120 || fail 'litellm-gateway deployment failed'
 
 compose up -d --no-deps ai-service
 wait_healthy ai-service 120 || fail 'ai-service deployment failed'
+assert_container_revision ai-service "$desired_revision" || fail 'ai-service revision verification failed'
 
 compose up -d --no-deps api
 wait_healthy api 150 || fail 'api deployment failed'
+assert_container_revision api "$desired_revision" || fail 'api revision verification failed'
 
 compose up -d --no-deps web
 wait_healthy web 90 || fail 'web deployment failed'
+assert_container_revision web "$desired_revision" || fail 'web revision verification failed'
 
 # Caddy is infrastructure, but reload its config if the runtime bundle changed.
 compose up -d --no-deps caddy
