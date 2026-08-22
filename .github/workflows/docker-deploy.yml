@@ -87,6 +87,7 @@ jobs:
           context: .
           file: docker/Dockerfile.web
           push: true
+          provenance: false
           tags: |
             ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/bodysense-web:${{ steps.tag.outputs.tag }}
             ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/bodysense-web:prod-latest
@@ -103,6 +104,7 @@ jobs:
           context: apps/api
           file: apps/api/Dockerfile
           push: true
+          provenance: false
           tags: |
             ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/bodysense-api:${{ steps.tag.outputs.tag }}
             ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/bodysense-api:prod-latest
@@ -119,6 +121,7 @@ jobs:
           context: apps/ai-service
           file: apps/ai-service/Dockerfile
           push: true
+          provenance: false
           tags: |
             ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/bodysense-ai-service:${{ steps.tag.outputs.tag }}
             ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/bodysense-ai-service:prod-latest
