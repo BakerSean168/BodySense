@@ -21,6 +21,7 @@ feature branch
        - PostgreSQL 16 + 18 baseline/replay validation
        - browser longitudinal E2E
     -> merge main
+    -> full main CI must finish successfully
     -> release-please
     -> release PR + CI
     -> vX.Y.Z tag / GitHub Release
@@ -73,9 +74,9 @@ This exists because production was found at migration 29 while migration 29 had 
 
 ## Release management
 
-`release-please` owns application versions and GitHub releases. Conventional commits update the release PR; merging that PR creates a `vX.Y.Z` tag and GitHub Release.
+`release-please` owns application versions and GitHub releases. It is triggered only by a successful completed `CI` run for `main`, and it first verifies that the tested revision is still the current `main` HEAD. Conventional commits update the release PR; merging that PR causes another full main CI run, and only after that run succeeds can release-please create the `vX.Y.Z` tag and GitHub Release.
 
-`.github/workflows/docker-deploy.yml` consumes the release tag.
+`.github/workflows/docker-deploy.yml` consumes the release tag. Before any ACR login/build, it verifies that the exact tagged revision is reachable from `main` and has a completed successful `CI` push run. Manual production promotion is restricted to `main`.
 
 ### Immutable build first
 
