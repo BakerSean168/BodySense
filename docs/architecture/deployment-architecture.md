@@ -74,6 +74,10 @@ Migration CI has two intentionally different paths:
 
 This exists because production was found at migration 29 while migration 29 had been deleted from the repository; that deletion caused the v0.4.0 API container to restart-loop. Published migrations are now treated as immutable release artifacts.
 
+## Repository governance
+
+`main` is intended to be protected by required PR flow and the five CI checks (`Repository quality gate`, both PostgreSQL migration jobs, Browser E2E and `commit-lint`), with administrator bypass disabled. The `production` GitHub Environment is restricted to `main` and `v*` refs and stores the ACR credential set as environment secrets. `.github/workflows/repository-governance.yml` is the idempotent admin workflow that applies these repository settings using the existing `BODYSENSE_WORKFLOW` PAT without exposing its value.
+
 ## Release management
 
 `release-please` owns application versions and GitHub releases. It is triggered only by a successful completed `CI` run for `main`, and it first verifies that the tested revision is still the current `main` HEAD. Conventional commits update the release PR; merging that PR causes another full main CI run, and only after that run succeeds can release-please create the `vX.Y.Z` tag and GitHub Release.
