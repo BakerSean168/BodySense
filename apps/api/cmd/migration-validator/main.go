@@ -13,6 +13,7 @@ import (
 func main() {
 	databaseURL := flag.String("database-url", "", "PostgreSQL URL for a disposable validation database")
 	migrations := flag.String("migrations", "file://migrations", "golang-migrate source URL")
+	baselineVersion := flag.Uint("baseline-version", 0, "optional published production baseline to migrate through before latest")
 	flag.Parse()
 	if *databaseURL == "" {
 		log.Fatal("-database-url is required")
@@ -24,6 +25,20 @@ func main() {
 	}
 	defer m.Close()
 
+	if *baselineVersion > 0 {
+		if err := m.Migrate(*baselineVersion); err != nil && err != migrate.ErrNoChange {
+			log.Fatalf("production baseline migration failed at version %d: %v", *baselineVersion, err)
+		}
+		version, dirty, err := m.Version()
+		if err != nil {
+			log.Fatalf("read production baseline migration version: %v", err)
+		}
+		if dirty || version != *baselineVersion {
+			log.Fatalf("production baseline mismatch: want=%d got=%d dirty=%v", *baselineVersion, version, dirty)
+		}
+		fmt.Printf("PRODUCTION_BASELINE=PASS version=%d\n", version)
+	}
+
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
 		log.Fatalf("full migration up failed: %v", err)
 	}
@@ -33,6 +48,9 @@ func main() {
 	}
 	if dirty {
 		log.Fatalf("database is dirty at migration %d", latest)
+	}
+	if *baselineVersion > 0 && latest <= *baselineVersion {
+		log.Fatalf("latest migration %d does not advance production baseline %d", latest, *baselineVersion)
 	}
 	fmt.Printf("FULL_UP=PASS version=%d\n", latest)
 

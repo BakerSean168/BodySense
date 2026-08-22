@@ -77,7 +77,6 @@ def test_ai_service_compose_receives_gateway_credentials_not_llm_provider_secret
     for relative in (
         "docker/docker-compose.yml",
         "docker/docker-compose.prod.yml",
-        "docker/docker-compose.prod.do.yml",
     ):
         config = yaml.safe_load((ROOT / relative).read_text(encoding="utf-8"))
         ai_env = config["services"]["ai-service"]["environment"]

@@ -4,8 +4,8 @@
 # 启动全部服务：
 #   docker compose -f docker/docker-compose.prod.yml --env-file .env.production --env-file .env.production.local up -d
 #
-# Caddy 反向代理 (当前 HTTP 模式，有域名后切换 HTTPS)。
-# Watchtower 自动监测 prod-latest 镜像更新并滚动重启业务容器。
+# Caddy 反向代理并为 body.bakersean.top 提供 HTTPS。
+# systemd deploy watcher 只部署三镜像 revision 一致的 coherent release。
 # =============================================================================
 
 services:
@@ -14,7 +14,7 @@ services:
   # ---------------------------------------------------------------------------
 
   postgres:
-    image: pgvector/pgvector:pg18
+    image: ${REGISTRY:?set REGISTRY}/${ACR_NAMESPACE:-bodysense}/pgvector:pg16
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME:-bodysense}
@@ -25,7 +25,7 @@ services:
     ports:
       - '127.0.0.1:5432:5432'
     volumes:
-      - postgres-prod-data:/var/lib/postgresql
+      - postgres-prod-data:/var/lib/postgresql/data
     networks:
       - bodysense-network
     healthcheck:
@@ -36,7 +36,7 @@ services:
       start_period: 10s
 
   redis:
-    image: redis:7-alpine
+    image: ${REGISTRY:?set REGISTRY}/${ACR_NAMESPACE:-bodysense}/redis:7-alpine
     restart: unless-stopped
     command:
       - redis-server
@@ -68,7 +68,7 @@ services:
       start_period: 5s
 
   # ---------------------------------------------------------------------------
-  # 业务服务（Watchtower 自动更新 prod-latest 镜像）
+  # 业务服务（由宿主机 systemd deploy watcher 受控更新）
   # ---------------------------------------------------------------------------
 
   # Standalone model gateway. ai-service depends on its health before serving requests.
@@ -104,19 +104,20 @@ services:
     image: ${REGISTRY:?set REGISTRY}/${ACR_NAMESPACE:-bodysense}/bodysense-ai-service:${AI_TAG:-prod-latest}
     restart: unless-stopped
     init: true
-    labels:
-      com.centurylinklabs.watchtower.enable: 'true'
     environment:
       AI_SERVICE_PORT: ${AI_SERVICE_PORT:-8100}
+      ENVIRONMENT: production
       LITELLM_BASE_URL: http://litellm-gateway:4000/v1
       LITELLM_API_KEY: ${LITELLM_MASTER_KEY:?set LITELLM_MASTER_KEY}
       DATABASE_URL: postgresql://${DB_USER:-bodysense}:${DB_PASSWORD:?set DB_PASSWORD}@postgres:5432/${DB_NAME:-bodysense}
       EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-hashing}
-      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-384}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-1536}
       EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
       EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-https://openrouter.ai/api/v1}
       WHISPER_MODEL: ${WHISPER_MODEL:-ggml-base.bin}
       ASK_USER_ENABLED: ${ASK_USER_ENABLED:-false}
+      BODYSENSE_DETERMINISTIC_AI: 'false'
+      BODYSENSE_E2E_STUB_AI: '0'
       TZ: ${TZ:-Asia/Shanghai}
     depends_on:
       litellm-gateway:
@@ -140,8 +141,6 @@ services:
     image: ${REGISTRY:?set REGISTRY}/${ACR_NAMESPACE:-bodysense}/bodysense-api:${API_TAG:-prod-latest}
     restart: unless-stopped
     init: true
-    labels:
-      com.centurylinklabs.watchtower.enable: 'true'
     depends_on:
       postgres:
         condition: service_healthy
@@ -150,6 +149,7 @@ services:
       ai-service:
         condition: service_healthy
     environment:
+      APP_ENV: production
       API_PORT: 8080
       API_HOST: 0.0.0.0
       DB_HOST: postgres
@@ -164,6 +164,7 @@ services:
       JWT_ACCESS_TTL_HOURS: ${JWT_ACCESS_TTL_HOURS:-168}
       JWT_REFRESH_TTL_HOURS: ${JWT_REFRESH_TTL_HOURS:-720}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://115.29.222.2}
+      DB_SSLMODE: ${DB_SSLMODE:-disable}
       AI_SERVICE_URL: http://ai-service:${AI_SERVICE_PORT:-8100}
 
       DIAGNOSIS_CHAMPION_CONFIGURATION_ID: ${DIAGNOSIS_CHAMPION_CONFIGURATION_ID:-diag-config-f492eb1c0c6676ae}
@@ -196,8 +197,6 @@ services:
   web:
     image: ${REGISTRY:?set REGISTRY}/${ACR_NAMESPACE:-bodysense}/bodysense-web:${WEB_TAG:-prod-latest}
     restart: unless-stopped
-    labels:
-      com.centurylinklabs.watchtower.enable: 'true'
     depends_on:
       api:
         condition: service_healthy
@@ -211,11 +210,11 @@ services:
       start_period: 10s
 
   # ---------------------------------------------------------------------------
-  # 入口与自动化
+  # 入口（自动部署由宿主机 systemd watcher 管理）
   # ---------------------------------------------------------------------------
 
   caddy:
-    image: caddy:2-alpine
+    image: ${REGISTRY:?set REGISTRY}/${ACR_NAMESPACE:-bodysense}/caddy:2-alpine
     restart: unless-stopped
     depends_on:
       web:
@@ -231,21 +230,6 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
-    networks:
-      - bodysense-network
-
-  watchtower:
-    image: containrrr/watchtower
-    restart: unless-stopped
-    environment:
-      WATCHTOWER_CLEANUP: 'true'
-      WATCHTOWER_POLL_INTERVAL: ${WATCHTOWER_POLL_INTERVAL:-300}
-      WATCHTOWER_LABEL_ENABLE: 'true'
-      WATCHTOWER_ROLLING_RESTART: 'true'
-      WATCHTOWER_INCLUDE_RESTARTING: 'true'
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /root/.docker/config.json:/config.json:ro
     networks:
       - bodysense-network
 

@@ -1,12 +1,12 @@
 #!/bin/bash
 # =============================================================================
-# BodySense 开发工具初始化脚本 (DigitalOcean 4H8G)
+# BodySense 通用远程开发工具初始化脚本
 # =============================================================================
 # 安装 Zsh + Oh My Zsh + tmux + Neovim + AstroNvim，与 WSL 环境保持一致。
 #
 # 用法:
-#   scp scripts/setup-dev-tools.sh DO-dev:/root/setup-dev-tools.sh
-#   ssh DO-dev "chmod +x /root/setup-dev-tools.sh && /root/setup-dev-tools.sh"
+#   scp scripts/setup-dev-tools.sh <dev-host>:/tmp/setup-dev-tools.sh
+#   ssh <dev-host> "chmod +x /tmp/setup-dev-tools.sh && /tmp/setup-dev-tools.sh"
 #
 # 可安全重复运行（幂等）。
 # =============================================================================

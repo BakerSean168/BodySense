@@ -1,14 +1,14 @@
 #!/bin/bash
 # =============================================================================
-# BodySense 远程开发服务器初始化脚本 (DigitalOcean 4H8G)
+# BodySense 通用远程开发服务器初始化脚本
 # =============================================================================
-# 在 4H8G Droplet 上运行此脚本初始化远程开发环境：
+# 在任意 Linux 开发 VPS（例如 Oracle2）上运行此脚本初始化远程开发环境：
 #
-#   scp scripts/setup-dev-server.sh DO-dev:/root/setup-dev-server.sh
-#   ssh DO-dev "GITHUB_TOKEN=ghp_xxxxx /root/setup-dev-server.sh"
+#   scp scripts/setup-dev-server.sh <dev-host>:/tmp/setup-dev-server.sh
+#   ssh <dev-host> "GITHUB_TOKEN=ghp_xxxxx /tmp/setup-dev-server.sh"
 #
 #   或交互式输入 Token:
-#   ssh DO-dev "chmod +x /root/setup-dev-server.sh && /root/setup-dev-server.sh"
+#   ssh <dev-host> "chmod +x /tmp/setup-dev-server.sh && /tmp/setup-dev-server.sh"
 #
 # GitHub Token 获取: https://github.com/settings/tokens → Generate new token → repo
 #
