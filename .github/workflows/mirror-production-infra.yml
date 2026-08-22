@@ -1,0 +1,60 @@
+name: Mirror Production Infrastructure Images
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: production-infra-mirror
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ${{ secrets.ACR_REGISTRY }}
+  NAMESPACE: ${{ secrets.ACR_NAMESPACE }}
+
+jobs:
+  mirror:
+    name: Mirror ${{ matrix.name }} to Alibaba ACR
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: pgvector
+            source: pgvector/pgvector:pg16
+            target: pgvector:pg16
+          - name: redis
+            source: redis:7-alpine
+            target: redis:7-alpine
+          - name: caddy
+            source: caddy:2-alpine
+            target: caddy:2-alpine
+          - name: litellm
+            source: docker.litellm.ai/berriai/litellm:v1.97.0
+            target: litellm:v1.97.0
+    steps:
+      - name: Login to Alibaba Cloud ACR
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      - name: Pull pinned linux/amd64 source
+        run: docker pull --platform linux/amd64 "${{ matrix.source }}"
+      - name: Push pinned mirror
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="${REGISTRY}/${NAMESPACE}/${{ matrix.target }}"
+          docker tag "${{ matrix.source }}" "$target"
+          docker push "$target"
+      - name: Summary
+        shell: bash
+        run: |
+          target="${REGISTRY}/${NAMESPACE}/${{ matrix.target }}"
+          echo "### ${{ matrix.name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- source: \`${{ matrix.source }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- target: \`$target\`" >> "$GITHUB_STEP_SUMMARY"
