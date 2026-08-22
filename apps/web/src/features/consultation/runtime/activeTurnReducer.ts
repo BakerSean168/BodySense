@@ -11,7 +11,7 @@
  * ===== 几个值得注意的设计点 =====
  * - 用 `Record<id, T>` 做天然 upsert（toolCalls / citations / knowledgeGaps）。
  * - 用 `event.type` 可辨识联合做 switch，未覆盖的类型走 default（见底部）。
- * - 用 `lastSeqByType` 做基于 seq 的幂等守卫，避免后端重复事件重复生效。
+ * - 用 `(run_id, seq)` 做幂等守卫；后端是每个 run 的唯一公共序号所有者。
  * - 所有更新都是不可变展开（{ ...current, ... }），不原地改对象。
  *
  * 深入笔记（Thought Forest 文件名）：
@@ -38,7 +38,12 @@ import type { ThreadAssistantMessagePart } from "@assistant-ui/react";
 // ---------------------------------------------------------------------------
 
 export type StreamStatus =
-  "idle" | "streaming" | "interrupted" | "completed" | "failed";
+  | "idle"
+  | "streaming"
+  | "interrupted"
+  | "completed"
+  | "failed"
+  | "cancelled";
 
 export interface ActiveTurnState {
   runId: string | null;
@@ -61,8 +66,9 @@ export interface ActiveTurnState {
   extractedInfoByBodyPart: Record<string, ExtractedInfo>;
   /** Final message parts generated on completion, compatible with assistant-ui. */
   finalParts: ThreadAssistantMessagePart[];
-  /** Highest seq processed per event type (backend mixes multiple seq sources). */
-  lastSeqByType: Partial<Record<StreamEvent["type"], number>>;
+  /** Public event sequence is monotonic within a run and resets on run change. */
+  sequenceRunId: string | null;
+  lastSeq: number;
   /** Error message if status is 'failed'. */
   error?: string;
 }
@@ -80,7 +86,8 @@ export const INITIAL_ACTIVE_TURN_STATE: ActiveTurnState = {
   pendingInteraction: null,
   extractedInfoByBodyPart: {},
   finalParts: [],
-  lastSeqByType: {},
+  sequenceRunId: null,
+  lastSeq: 0,
 };
 
 /** Return a fresh initial state (factory for reset). */
@@ -122,11 +129,13 @@ export function reduceActiveTurnEvent(
   current: ActiveTurnState,
   event: StreamEvent,
 ): ReduceResult {
-  // Seq-based idempotency guard. Backend events currently mix locally-generated
-  // SSE events with AI-stream events that use different sequence spaces, so the
-  // safest comparable scope is the event type itself.
-  const lastSeqForType = current.lastSeqByType[event.type] ?? -1;
-  if (event.seq !== undefined && event.seq <= lastSeqForType) {
+  // Public seq has one owner (Go StreamWriter / transactional OOB allocator).
+  // Compare only within the same run; a resumed run has a new run_id and starts
+  // again at seq=1 while the logical LangGraph thread may continue.
+  const eventRunId = event.ids.run_id || current.runId;
+  const sameSequenceRun =
+    eventRunId !== null && eventRunId === current.sequenceRunId;
+  if (sameSequenceRun && event.seq <= current.lastSeq) {
     return { state: current, effects: [] };
   }
 
@@ -140,13 +149,6 @@ export function reduceActiveTurnEvent(
       processed = true;
       const payload = event.payload as { replaces_draft_id?: string };
       const conversationId = event.ids.conversation_id || "";
-      console.debug("[SSE] ③ Reducer 处理 conversation.created → 产生 effect", {
-        conversationId,
-        runId: event.ids.run_id,
-        replacesDraftId: payload.replaces_draft_id,
-        prevStatus: current.status,
-        nextStatus: "streaming",
-      });
       next = {
         ...current,
         conversationId,
@@ -196,6 +198,19 @@ export function reduceActiveTurnEvent(
         ...current,
         status: "failed",
         error: payload.error?.message || current.error || "run failed",
+      };
+      break;
+    }
+
+    case "run.cancelled": {
+      processed = true;
+      const payload = event.payload as { reason: string };
+      next = {
+        ...current,
+        runId: event.ids.run_id || current.runId,
+        status: "cancelled",
+        error: payload.reason,
+        pendingInteraction: null,
       };
       break;
     }
@@ -335,7 +350,11 @@ export function reduceActiveTurnEvent(
         next = current;
         break;
       }
-      if (current.status !== "completed" && current.status !== "failed") {
+      if (
+        current.status !== "completed" &&
+        current.status !== "failed" &&
+        current.status !== "cancelled"
+      ) {
         next = {
           ...current,
           status: "completed",
@@ -348,10 +367,6 @@ export function reduceActiveTurnEvent(
     case "title.generated": {
       processed = true;
       const payload = event.payload as { title: string };
-      console.debug("[SSE] ③ Reducer 处理 title.generated → 产生 effect", {
-        title: payload.title,
-        currentConversationId: current.conversationId,
-      });
       effects.push({ type: "title_generated", title: payload.title });
       break;
     }
@@ -370,6 +385,7 @@ export function reduceActiveTurnEvent(
       const payload = event.payload as {
         interaction_id: string;
         question: AskUserQuestion;
+        created_at: string;
       };
       const interaction: PendingInteraction = {
         id: payload.interaction_id,
@@ -379,7 +395,7 @@ export function reduceActiveTurnEvent(
         tool_name: "ask_user",
         question: payload.question,
         status: "pending",
-        created_at: new Date().toISOString(),
+        created_at: payload.created_at,
       };
       next = {
         ...current,
@@ -418,7 +434,7 @@ export function reduceActiveTurnEvent(
       processed = true;
       const payload = event.payload as { tool: string; args: unknown };
       const toolCallId =
-        event.ids.tool_call_id || `tc_${crypto.randomUUID().slice(0, 8)}`;
+        event.ids.tool_call_id || `tc_${eventRunId || "run"}_${event.seq}`;
       const toolName = payload.tool.trim();
       if (!current.toolCallsById[toolCallId]) {
         next = {
@@ -467,10 +483,6 @@ export function reduceActiveTurnEvent(
         ([, tc]) => tc.tool === toolName && tc.status === "running",
       );
       if (fallbackEntries.length === 1) {
-        console.warn(
-          "[activeTurnReducer] tool.result matched by name fallback (no exact tool_call_id match)",
-          { toolName: toolName, fallbackId: fallbackEntries[0][0] },
-        );
         const [fallbackId, tc] = fallbackEntries[0];
         next = {
           ...current,
@@ -512,13 +524,11 @@ export function reduceActiveTurnEvent(
       break;
   }
 
-  if (processed && event.seq !== undefined) {
+  if (processed) {
     next = {
       ...next,
-      lastSeqByType: {
-        ...next.lastSeqByType,
-        [event.type]: event.seq,
-      },
+      sequenceRunId: eventRunId,
+      lastSeq: event.seq,
     };
   }
 

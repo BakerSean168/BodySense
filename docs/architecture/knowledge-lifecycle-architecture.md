@@ -1,8 +1,8 @@
 # Knowledge Lifecycle 架构设计
 
-**文档版本**：v1.0  
-**更新日期**：2026-06-29  
-**状态**：设计稿  
+**文档版本**：v1.0
+**更新日期**：2026-08-23
+**状态**：设计稿
 **适用范围**：视频知识入库、RAG、知识精修、向量索引、引用、知识质量管理
 
 ---
@@ -144,6 +144,20 @@ PostgreSQL + pgvector + file artifacts
 ---
 
 ## 5. Module 设计
+
+### 5.0 Online KnowledgeLibrary async boundary
+
+当前在线 Python RAG 路径不允许在 `async def` 中隐藏同步 PostgreSQL 或本地 transformer 推理：
+
+- FastAPI lifespan 调用 `initialize_knowledge_library()` / `shutdown_knowledge_library()`；
+- `KnowledgeLibrary` 持有一个有界 `AsyncConnectionPool`（默认 min=1 / max=8，可配置），启动连接等待上限为 5 秒；
+- pgvector 通过 `register_vector_async` 在 async connection configure hook 注册；
+- `search`、`list_sources`、`stats` 使用 async connection/cursor；
+- `ingest_generated_pack` 的 source/segments/units/clips 仍在**同一个 async transaction** 内原子提交/回滚；
+- 不允许 lazy singleton accessor 自己做网络 I/O；测试可显式注入非 owned pool；
+- local `SentenceTransformer` 初始化和 `encode()` 用 `asyncio.to_thread`，并受 `LOCAL_EMBEDDING_MAX_CONCURRENCY` semaphore 限制；远程 embedding 继续使用原生 async API。
+
+这些规则属于 runtime resource ownership；它们不改变 knowledge publication/review authority。
 
 ### 5.1 KnowledgeSourceRegistry
 

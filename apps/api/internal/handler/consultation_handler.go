@@ -64,6 +64,35 @@ func (h *ConsultationHandler) StartRun(c *gin.Context) {
 	}
 }
 
+// CancelRun handles POST /api/v1/consultation-runs/:id/cancel. Transport
+// disconnect is intentionally not cancellation; this explicit command is.
+func (h *ConsultationHandler) CancelRun(c *gin.Context) {
+	uid, ok := getUserUUID(c)
+	if !ok {
+		return
+	}
+	runID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "INVALID_ID", "invalid run id")
+		return
+	}
+	var req struct {
+		Reason string `json:"reason"`
+	}
+	// Empty body is allowed and uses the canonical user-cancel reason.
+	if c.Request.ContentLength > 0 {
+		if err := c.ShouldBindJSON(&req); err != nil {
+			respondError(c, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+			return
+		}
+	}
+	if err := h.runtime.CancelRun(c.Request.Context(), uid, runID, req.Reason); err != nil {
+		respondError(c, err.Status, err.Code, err.Message)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "cancelled", "run_id": runID.String()})
+}
+
 // GetConsultation handles GET /api/v1/consultations/:id
 func (h *ConsultationHandler) GetConsultation(c *gin.Context) {
 	uid, ok := getUserUUID(c)

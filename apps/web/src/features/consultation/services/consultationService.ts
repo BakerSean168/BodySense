@@ -1,3 +1,4 @@
+import { parseStreamEvent } from "@bodysense/contracts";
 import { authFetch } from "@/features/auth/services/authService";
 import { expectJson } from "@/lib/api-client";
 import type {
@@ -238,22 +239,20 @@ export const consultationApi = {
     );
 
     const events: StreamEvent[] = raw.events.map((item) => {
-      const ids =
-        typeof item.ids === "string"
-          ? (JSON.parse(item.ids) as StreamEvent["ids"])
-          : ((item.ids ?? {}) as StreamEvent["ids"]);
-      const payload =
+      const ids: unknown =
+        typeof item.ids === "string" ? JSON.parse(item.ids) : (item.ids ?? {});
+      const payload: unknown =
         typeof item.payload === "string"
-          ? (JSON.parse(item.payload) as StreamEvent["payload"])
-          : ((item.payload ?? {}) as StreamEvent["payload"]);
-      return {
+          ? JSON.parse(item.payload)
+          : (item.payload ?? {});
+      return parseStreamEvent({
         version: 1,
         seq: item.seq,
         channel: item.channel,
         type: item.type,
         ids,
         payload,
-      } as StreamEvent;
+      });
     });
 
     return {

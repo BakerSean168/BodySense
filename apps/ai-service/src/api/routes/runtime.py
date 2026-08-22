@@ -22,7 +22,11 @@ from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from ...runtime.consultation_thread import resume_thread_interrupt, stream_thread_turn
+from ...runtime.consultation_thread import (
+    get_consultation_manifest,
+    resume_thread_interrupt,
+    stream_thread_turn,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -118,6 +122,7 @@ class ResumeInterruptRequest(BaseModel):
     run_id: str
     conversation_id: str
     user_id: str
+    configuration_id: str = Field(min_length=1)
     interrupt_id: str
     answer: dict[str, Any]
     business_context: BusinessContext = Field(default_factory=BusinessContext)
@@ -132,6 +137,25 @@ async def start_turn(thread_id: str, request: StartTurnRequest):
                 await asyncio.sleep(0.75)
             trigger_safety = "E2E_TRIGGER_SAFETY" in request.input.text
             seq = 1
+            manifest = get_consultation_manifest(request.configuration_id)
+            yield _stub_event(
+                seq=seq,
+                channel="runtime",
+                event_type="runtime.agent_configuration",
+                run_id=request.run_id,
+                conversation_id=request.conversation_id,
+                payload={
+                    "agent_configuration": manifest.provenance(),
+                    "execution_provenance": {
+                        "status": "executed",
+                        "runtime": "langgraph-e2e-stub",
+                        "logical_model": manifest.logical_model,
+                        "model_group_revision": manifest.model_group_revision,
+                        "usage": {},
+                    },
+                },
+            )
+            seq += 1
             if trigger_safety:
                 yield _stub_event(
                     seq=seq,
@@ -250,6 +274,7 @@ async def resume_interrupt(thread_id: str, interrupt_id: str, request: ResumeInt
                 thread_id=thread_id,
                 conversation_id=request.conversation_id,
                 run_id=request.run_id,
+                configuration_id=request.configuration_id,
                 answer=request.answer,
                 profile=request.business_context.profile,
                 body_state=request.business_context.body_state,

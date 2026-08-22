@@ -31,6 +31,7 @@ type runtimeEventRepo interface {
 	// fake that satisfies this method set implicitly.
 	Create(ctx context.Context, event *model.RuntimeEvent) error
 	CreateBatch(ctx context.Context, events []*model.RuntimeEvent) error
+	CreateWithNextSequence(ctx context.Context, event *model.RuntimeEvent) error
 	ListByRunID(ctx context.Context, conversationID, runID uuid.UUID, afterSeq, limit int) ([]model.RuntimeEvent, bool, error)
 	ListByConversationID(ctx context.Context, conversationID uuid.UUID) ([]model.RuntimeEvent, error)
 }
@@ -68,6 +69,7 @@ func ShouldPersistEvent(eventType string) bool {
 		"run.interrupted",
 		"run.completed",
 		"run.failed",
+		"run.cancelled",
 		"message.persisted",
 		"message.created",
 		"message.text.delta",
@@ -252,6 +254,37 @@ func (s *RuntimeEventService) ListAllRunEvents(
 	}
 }
 
+// RecordOutOfBandPublicEvent appends a public event when no live StreamWriter
+// owns sequencing (for example an expired HITL interaction while a run waits).
+// The repository allocates the next seq transactionally under a per-run row lock.
+func (s *RuntimeEventService) RecordOutOfBandPublicEvent(
+	ctx context.Context,
+	conversationID, runID uuid.UUID,
+	turnID *uuid.UUID,
+	channel, eventType string,
+	ids dto.StreamEventIDs,
+	payload any,
+) error {
+	if !ShouldPersistEvent(eventType) {
+		return fmt.Errorf("event %q is not a replayable public runtime event", eventType)
+	}
+	if err := s.Flush(ctx); err != nil {
+		return err
+	}
+	event, err := dto.NewStreamEvent(1, channel, eventType, ids, payload)
+	if err != nil {
+		return err
+	}
+	record, err := buildRuntimeEventRecord(conversationID, runID, turnID, event)
+	if err != nil {
+		return err
+	}
+	if err := s.repo.CreateWithNextSequence(ctx, record); err != nil {
+		return fmt.Errorf("create out-of-band runtime event: %w", err)
+	}
+	return nil
+}
+
 // RecordInteractionExpired persists a state.interaction.expired public event.
 // Used by the interaction expiry sweeper (no live SSE writer available).
 func (s *RuntimeEventService) RecordInteractionExpired(
@@ -261,12 +294,12 @@ func (s *RuntimeEventService) RecordInteractionExpired(
 	if interaction == nil {
 		return nil
 	}
-	// Synthetic seq: expiry is out-of-band relative to the live run counter.
-	// Use a high offset from unix micros to stay unique without contending the
-	// in-run seq allocator. Replay clients key primarily on type + ids.
-	seq := int(time.Now().UTC().UnixNano()%1_000_000_000) + 1_000_000
-	event, err := dto.NewStreamEvent(
-		seq,
+	now := time.Now().UTC()
+	return s.RecordOutOfBandPublicEvent(
+		ctx,
+		interaction.ConversationID,
+		interaction.RunID,
+		nil,
 		"state",
 		"state.interaction.expired",
 		dto.StreamEventIDs{
@@ -277,12 +310,34 @@ func (s *RuntimeEventService) RecordInteractionExpired(
 		},
 		map[string]any{
 			"interaction_id": interaction.ID.String(),
-			"expired_at":     time.Now().UTC().Format(time.RFC3339),
+			"expired_at":     now.Format(time.RFC3339Nano),
 			"reason":         "ttl_elapsed",
 		},
 	)
-	if err != nil {
-		return err
+}
+
+// RecordRunCancelled persists cancellation for a waiting run that has no live
+// writer left to own the public sequence.
+func (s *RuntimeEventService) RecordRunCancelled(ctx context.Context, run *model.Run, reason string) error {
+	if run == nil {
+		return nil
 	}
-	return s.RecordPublicEvent(ctx, interaction.ConversationID, interaction.RunID, nil, event)
+	if reason == "" {
+		reason = "cancelled_by_user"
+	}
+	turnID := run.TurnID
+	return s.RecordOutOfBandPublicEvent(
+		ctx,
+		run.ConversationID,
+		run.ID,
+		&turnID,
+		"run",
+		"run.cancelled",
+		dto.StreamEventIDs{
+			ConversationID: run.ConversationID.String(),
+			RunID:          run.ID.String(),
+			TurnID:         run.TurnID.String(),
+		},
+		map[string]any{"status": "cancelled", "reason": reason},
+	)
 }

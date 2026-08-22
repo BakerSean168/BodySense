@@ -33,12 +33,13 @@ from .api.routes import (  # noqa: E402
     title,
     treatment,
 )
+from .rag.knowledge_library import knowledge_library_lifespan  # noqa: E402
 from .runtime.checkpointing import runtime_checkpointer_lifespan  # noqa: E402
 
 
 @asynccontextmanager
 async def app_lifespan(_: FastAPI):
-    async with runtime_checkpointer_lifespan():
+    async with runtime_checkpointer_lifespan(), knowledge_library_lifespan():
         yield
 
 

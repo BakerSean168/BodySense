@@ -10,6 +10,7 @@
     "message.failed",
     "message.persisted",
     "message.text.delta",
+    "run.cancelled",
     "run.completed",
     "run.failed",
     "run.interrupted",

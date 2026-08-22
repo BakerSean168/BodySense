@@ -141,6 +141,7 @@ func TestDiagnosisDecisionPolicyRevisionForConfigurationRejectsUnknownCounterfac
 
 func TestAgentDeploymentPolicyOwnsTreatmentConfigurationPointer(t *testing.T) {
 	clearDiagnosisRolloutEnv(t)
+	clearTreatmentRolloutEnv(t)
 	t.Setenv("TREATMENT_AGENT_CONFIGURATION_ID", "")
 	policy, err := NewAgentDeploymentPolicy()
 	if err != nil {
@@ -153,6 +154,7 @@ func TestAgentDeploymentPolicyOwnsTreatmentConfigurationPointer(t *testing.T) {
 
 func TestAgentDeploymentPolicyRejectsUnknownTreatmentConfiguration(t *testing.T) {
 	clearDiagnosisRolloutEnv(t)
+	clearTreatmentRolloutEnv(t)
 	t.Setenv("TREATMENT_AGENT_CONFIGURATION_ID", "treat-config-unknown")
 	if _, err := NewAgentDeploymentPolicy(); err == nil {
 		t.Fatal("unknown Treatment configuration must fail closed")
@@ -161,6 +163,7 @@ func TestAgentDeploymentPolicyRejectsUnknownTreatmentConfiguration(t *testing.T)
 
 func TestAgentDeploymentPolicyCanSelectQualifiedTreatmentChallengerWithoutChangingDefault(t *testing.T) {
 	clearDiagnosisRolloutEnv(t)
+	clearTreatmentRolloutEnv(t)
 	t.Setenv("TREATMENT_AGENT_CONFIGURATION_ID", treatmentEvidenceGapConfigurationID)
 	policy, err := NewAgentDeploymentPolicy()
 	if err != nil {

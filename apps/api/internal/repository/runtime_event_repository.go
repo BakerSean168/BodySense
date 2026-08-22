@@ -6,6 +6,7 @@ import (
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // RuntimeEventRepository handles database operations for durable runtime events.
@@ -31,6 +32,31 @@ func (r *RuntimeEventRepository) CreateBatch(ctx context.Context, events []*mode
 		return nil
 	}
 	return r.db.WithContext(ctx).Create(&events).Error
+}
+
+// CreateWithNextSequence serializes out-of-band allocation on the owning run
+// row, then appends MAX(seq)+1 inside the same transaction. Live stream events
+// have their own writer; this method is reserved for waiting/inactive runs.
+func (r *RuntimeEventRepository) CreateWithNextSequence(ctx context.Context, event *model.RuntimeEvent) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var lockedRun model.Run
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Select("id").
+			Where("id = ?", event.RunID).
+			First(&lockedRun).Error; err != nil {
+			return err
+		}
+
+		var maxSeq int
+		if err := tx.Model(&model.RuntimeEvent{}).
+			Where("run_id = ?", event.RunID).
+			Select("COALESCE(MAX(seq), 0)").
+			Scan(&maxSeq).Error; err != nil {
+			return err
+		}
+		event.Seq = maxSeq + 1
+		return tx.Create(event).Error
+	})
 }
 
 // ListByRunID returns events for a run after the provided sequence, ordered by seq ascending.

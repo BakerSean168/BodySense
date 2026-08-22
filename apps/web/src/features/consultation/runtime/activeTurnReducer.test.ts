@@ -82,6 +82,7 @@ describe("ActiveTurnReducer", () => {
           "state.interaction.required",
           {
             interaction_id: "int-1",
+            created_at: "2026-08-23T00:00:00Z",
             question: {
               question: "Age?",
               answer_type: "number",
@@ -201,6 +202,7 @@ describe("ActiveTurnReducer", () => {
           "state.interaction.required",
           {
             interaction_id: "int-2",
+            created_at: "2026-08-23T00:00:00Z",
             question: {
               question: "Pain level?",
               answer_type: "number",
@@ -230,6 +232,7 @@ describe("ActiveTurnReducer", () => {
           "state.interaction.required",
           {
             interaction_id: "int-3",
+            created_at: "2026-08-23T00:00:00Z",
             question: {
               question: "More info?",
               answer_type: "text",
@@ -262,7 +265,7 @@ describe("ActiveTurnReducer", () => {
             required: true,
           },
           status: "pending",
-          created_at: new Date().toISOString(),
+          created_at: "2026-08-23T00:00:00Z",
         },
       };
 
@@ -415,89 +418,67 @@ describe("ActiveTurnReducer", () => {
     });
   });
 
-  describe("seq guard", () => {
-    it("ignores event with seq older than the last seq for the same event type", () => {
+  describe("run-aware seq guard", () => {
+    it("ignores any stale public event within the same run", () => {
       const current: ActiveTurnState = {
         ...INITIAL_ACTIVE_TURN_STATE,
-        lastSeqByType: {
-          "message.text.delta": 10,
-        },
+        runId: "run-1",
+        sequenceRunId: "run-1",
+        lastSeq: 10,
       };
 
       const { state } = reduceActiveTurnEvent(current, {
-        ...makeEvent("message.text.delta", { delta: "stale" }),
+        ...makeEvent("message.text.delta", { delta: "stale" }, { run_id: "run-1" }),
         seq: 5,
       });
-
-      expect(state.text).toBe("");
+      expect(state).toBe(current);
     });
 
-    it("processes event with seq newer than the last seq for the same event type", () => {
+    it("processes a newer public event and advances the canonical seq", () => {
       const current: ActiveTurnState = {
         ...INITIAL_ACTIVE_TURN_STATE,
-        lastSeqByType: {
-          "message.text.delta": 10,
-        },
+        runId: "run-1",
+        sequenceRunId: "run-1",
+        lastSeq: 10,
       };
 
       const { state } = reduceActiveTurnEvent(current, {
-        ...makeEvent("message.text.delta", { delta: "fresh" }),
+        ...makeEvent("message.text.delta", { delta: "fresh" }, { run_id: "run-1" }),
         seq: 15,
       });
-
       expect(state.text).toBe("fresh");
-      expect(state.lastSeqByType["message.text.delta"]).toBe(15);
+      expect(state.lastSeq).toBe(15);
     });
 
-    it("accepts lower seq values from a different event type", () => {
-      const stateAfterMessageCreated: ActiveTurnState = {
+    it("rejects lower seq even when the event type differs", () => {
+      const current: ActiveTurnState = {
         ...INITIAL_ACTIVE_TURN_STATE,
-        status: "streaming",
-        lastSeqByType: {
-          "message.created": 3,
-        },
+        runId: "run-1",
+        sequenceRunId: "run-1",
+        lastSeq: 3,
       };
-
-      const { state } = reduceActiveTurnEvent(stateAfterMessageCreated, {
-        ...makeEvent(
-          "source.citation.added",
-          { citation: { title: "Guide" } },
-          {},
-          "source",
-        ),
+      const { state } = reduceActiveTurnEvent(current, {
+        ...makeEvent("source.citation.added", { citation: { title: "Guide" } }, { run_id: "run-1" }, "source"),
         seq: 1,
       });
-
-      expect(state.citationsByKey.Guide).toBeDefined();
-      expect(state.lastSeqByType["source.citation.added"]).toBe(1);
+      expect(state).toBe(current);
+      expect(state.citationsByKey.Guide).toBeUndefined();
     });
 
-    it("preserves text deltas after a higher seq message event from a different type", () => {
-      const { state: s1 } = reduceActiveTurnEvent(INITIAL_ACTIVE_TURN_STATE, {
-        ...makeEvent("message.created", {
-          role: "assistant",
-          status: "streaming",
-        }),
-        seq: 3,
-      });
-
-      const { state: s2 } = reduceActiveTurnEvent(s1, {
-        ...makeEvent("message.text.delta", {
-          delta: "我理解你关注头部前移的问题。",
-        }),
+    it("accepts seq=1 when a new run starts", () => {
+      const current: ActiveTurnState = {
+        ...INITIAL_ACTIVE_TURN_STATE,
+        runId: "run-old",
+        sequenceRunId: "run-old",
+        lastSeq: 99,
+      };
+      const { state } = reduceActiveTurnEvent(current, {
+        ...makeEvent("run.resumed", { status: "running", interaction_id: "i" }, { run_id: "run-new" }, "run"),
         seq: 1,
       });
-
-      const { state: s3 } = reduceActiveTurnEvent(s2, {
-        ...makeEvent("message.text.delta", {
-          delta: "为了更好地分析你的情况。",
-        }),
-        seq: 2,
-      });
-
-      expect(s3.text).toBe(
-        "我理解你关注头部前移的问题。为了更好地分析你的情况。",
-      );
+      expect(state.runId).toBe("run-new");
+      expect(state.sequenceRunId).toBe("run-new");
+      expect(state.lastSeq).toBe(1);
     });
   });
 
@@ -535,6 +516,7 @@ describe("ActiveTurnReducer", () => {
           "state.interaction.required",
           {
             interaction_id: "int-1",
+            created_at: "2026-08-23T00:00:00Z",
             question: {
               question: "Age?",
               answer_type: "number",
@@ -595,7 +577,7 @@ describe("ActiveTurnReducer", () => {
           tool_name: "ask_user",
           question: { question: "Age?", answer_type: "number", required: true },
           status: "pending",
-          created_at: new Date().toISOString(),
+          created_at: "2026-08-23T00:00:00Z",
         },
       };
 
@@ -659,5 +641,49 @@ describe("ActiveTurnReducer", () => {
       expect(effects[0].type).toBe("phase_changed");
       expect(effects[0]).toMatchObject({ from: "collecting", to: "analyzing" });
     });
+  });
+});
+
+
+describe("ActiveTurnReducer deterministic replay", () => {
+  it("produces deep-equal state for identical public history", () => {
+    const history = [
+      makeEvent("run.started", { status: "running", source: "start_turn" }, { run_id: "run-det" }, "run"),
+      makeEvent("message.created", { role: "assistant", status: "streaming" }, { run_id: "run-det", message_id: "m-det" }, "message"),
+      makeEvent("tool.call", { tool: "search_knowledge", args: { query: "hip" } }, { run_id: "run-det" }, "tool"),
+      makeEvent("state.interaction.required", {
+        interaction_id: "int-det",
+        created_at: "2026-08-23T00:00:00Z",
+        question: { question: "Where?", answer_type: "text" },
+      }, { run_id: "run-det" }, "state"),
+    ];
+
+    const replay = () => history.reduce(
+      (state, event) => reduceActiveTurnEvent(state, event).state,
+      resetActiveTurnState(),
+    );
+    expect(replay()).toEqual(replay());
+  });
+
+  it("resets sequence comparison when run identity changes", () => {
+    const run1 = makeEvent("run.started", { status: "running", source: "start_turn" }, { run_id: "run-a" }, "run");
+    const first = reduceActiveTurnEvent(resetActiveTurnState(), run1).state;
+    const run2: StreamEvent = {
+      ...makeEvent("run.resumed", { status: "running", interaction_id: "i" }, { run_id: "run-b" }, "run"),
+      seq: 1,
+    } as StreamEvent;
+    const second = reduceActiveTurnEvent(first, run2).state;
+    expect(second.runId).toBe("run-b");
+    expect(second.sequenceRunId).toBe("run-b");
+    expect(second.lastSeq).toBe(1);
+  });
+
+  it("keeps cancelled terminal state after stream.done", () => {
+    const cancelled = reduceActiveTurnEvent(
+      resetActiveTurnState(),
+      makeEvent("run.cancelled", { status: "cancelled", reason: "cancelled_by_user" }, { run_id: "run-c" }, "run"),
+    ).state;
+    const done = reduceActiveTurnEvent(cancelled, makeEvent("stream.done", {}, { run_id: "run-c" }, "stream")).state;
+    expect(done.status).toBe("cancelled");
   });
 });

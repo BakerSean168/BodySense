@@ -3,11 +3,24 @@
 > **ADR 0002 交叉引用**：StreamEvent 契约设计、channel 分类和 replay 概念仍然有效。ADR 0002 确认 "Public SSE/Web stream events are derived from runtime events and remain the only frontend contract"。但事件的产生点已从 `ChatHandler` 转移到 consultation thread runtime（Go `consultation/runtime.go` → Python Agent Runtime → Go Runtime Event Log → Stream Contract）。文档中对 `ChatHandler` 的引用为历史参考。
 
 **文档版本**：v1.0
-**更新日期**：2026-06-29
-**状态**：设计稿（事件契约仍有效，产出点已迁移）
+**更新日期**：2026-08-23
+**状态**：当前公共事件契约 + 历史设计说明
 **适用范围**：咨询 SSE、工具事件、上下文事件、Job 进度、前端消息渲染
 
 ---
+
+## 0. 2026-08-23 authoritative runtime semantics
+
+后续章节保留最初的设计背景；以下规则描述当前实现，并在发生冲突时优先：
+
+- `packages/contracts/src/stream-events.ts` + `stream-event-parser.ts` + `stream-event.v1.schema.json` 是 Web 公共协议边界。live SSE 和 durable recovery 都必须 `unknown -> parseStreamEvent()`；内部 `runtime.*` 事件不能穿透到浏览器。
+- Go 从 Python 接收的是内部 NDJSON 协议。未知 version/type/channel、malformed JSON 或 authority payload 均转换为明确 `stream.error` 并使 Run fail-closed；不允许 `continue` 静默吞坏行。
+- `runtime.agent_configuration` 是内部控制面事件，不属于 Public StreamEvent。它必须是 Consultation start/resume 的第一事件并在普通语义输出前通过 Go 身份验证。
+- Public `seq` 的比较域是 **单个 `run_id`**。对任意同一 Run，持久化的 `(run_id, seq)` 唯一且单调；resume 创建新 Go Run 后可从 seq=1 重新开始。
+- live 事件由 `StreamWriter` 分配序号；没有 live writer 的 waiting/inactive Run 使用 RuntimeEvent repository 在 Run 行锁内事务性分配 `MAX(seq)+1`。禁止时间戳/随机数充当公共 seq。
+- React `ActiveTurn` 只按 `(run_id, seq)` 去重，并使用事件里的持久化时间/ID。相同 durable history 必须产生 deep-equal projection。
+- `run.cancelled` 是 v1 的向后兼容新增 terminal public event；它与 `stream.done` 一起表示显式业务取消的流终止。SSE 断开本身不是取消。
+
 
 ## Implementation Status
 
@@ -19,11 +32,11 @@
 | SSEWriter | ✅ 已完成 | 独立 SSE 写入器。 |
 | StreamEvent v1 契约 | ✅ 已完成 | packages/contracts 定义，JSON schema 存在。 |
 | interaction_id 扩展 | ✅ 已完成 | StreamEvent ID 中添加 interaction_id。 |
-| StreamEventReducer | 部分实现 | 前端 reducer 基础结构存在，pendingInteractions 扩展未完成。Phase 01c 部分完成。 |
+| StreamEventReducer | ✅ 已完成当前 Consultation 投影 | run-aware `(run_id, seq)` reducer、HITL、cancel、durable replay 均有 focused tests。 |
 | 事件命名规范化 | 部分实现 | 部分事件已按规范命名，部分仍为旧格式。 |
-| 事件持久化 / 回放 | 未实现 | replayable event persistence。 |
+| 事件持久化 / 回放 | ✅ 已完成 Consultation runtime | replayable RuntimeEvent ledger + durable recovery；out-of-band seq 事务化分配。 |
 | 完整 channel 分类 | 未实现 | message/state/tool/job/debug 等 channel 尚未完全分离。 |
-| 前端事件处理策略 | 未实现 | strict vs. optional vs. idempotent 状态事件策略。 |
+| 前端事件处理策略 | ✅ 已完成 Consultation boundary | 共享 runtime parser fail-closed，reducer 纯投影/确定性回放。 |
 
 **相关 Phase**：01b, 01c → 归档于 `docs/plan/archive/implementation/`
 

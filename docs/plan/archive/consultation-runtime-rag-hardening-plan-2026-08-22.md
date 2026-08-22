@@ -1,12 +1,73 @@
 # Consultation Runtime & RAG Hardening Plan — 2026-08-22
 
-> Status: **ACTIVE — evidence-based hardening plan**
+> Status: **COMPLETED — release-gate validated 2026-08-23**
 >
 > Scope: **L3 Consultation Runtime + L4 Python Async/RAG engineering debt discovered after the Agent Platform North-Star closeout**
 >
 > Non-goal: this is **not** a new Agent-platform migration and **not** a redesign of the successful Diagnosis/Treatment North-Star architecture.
 >
 > Audit baseline: local worktree `688be4c`; `origin/main` at audit time `89e7d5c`. The five remote-only commits touch CI / repository-owner references / setup scripts, not the L3/L4 architecture files reviewed here, so the findings apply to current `origin/main` as well.
+
+---
+
+## Closeout — 2026-08-23
+
+All tickets in this bounded hardening program are complete. The implementation preserved the closed Agent-platform ownership model while repairing the audited L3/L4 boundaries.
+
+| Ticket | Final state | Closure evidence |
+| --- | --- | --- |
+| BS-HARD-001/002 | **DONE** | Consultation execution identity is run-local; shared `pendingAgentConfiguration*` state removed; deterministic concurrency and race tests pass. |
+| BS-HARD-003 | **DONE** | Python emits `runtime.agent_configuration` first; Go validates repository-known ID/role/policy/model and persists identity before semantic output; missing/malformed/mismatch paths fail closed. |
+| BS-HARD-004 | **DONE** | HITL resume reloads the interrupted source Run configuration and reconciles it with the LangGraph checkpoint before resume. |
+| BS-HARD-010/011 | **DONE** | `@bodysense/contracts` exports the public runtime parser; live SSE and durable recovery both use `unknown -> parseStreamEvent`; negative fixtures reject internal/unknown/malformed events. |
+| BS-HARD-012 | **DONE** | Go no longer skips malformed Python NDJSON; protocol/type/channel/authority-payload failures become deterministic `stream.error` and failed runs. |
+| BS-HARD-020 | **DONE** | Transport disconnect is detached from business cancellation; explicit authorized/idempotent Run cancel exists; terminal DB transitions are race-safe and `run.cancelled` is durable/replayable. |
+| BS-HARD-030 | **DONE** | Out-of-band public events allocate `MAX(seq)+1` transactionally under the owning Run row lock; concurrent allocation test is monotonic/unique. |
+| BS-HARD-031 | **DONE** | React projection deduplicates by `(run_id, seq)`, uses server timestamps/derived IDs, and identical durable histories reduce to deep-equal state. |
+| BS-HARD-040 | **DONE** | KnowledgeLibrary uses one lifecycle-owned bounded `AsyncConnectionPool`; search/list/stats/ingest are async; ingestion rollback and bounded-startup tests pass. |
+| BS-HARD-041 | **DONE** | Local SentenceTransformer initialization/encode are offloaded with `asyncio.to_thread` behind a bounded semaphore; event-loop heartbeat and concurrency tests pass. |
+| BS-HARD-050 | **DONE — eval-only** | Grounding Eval v2 covers the required 10-case dataset and records 3 meaningful v1/v2 disagreements. Production Treatment governance remains v1 pending a separate qualification/promotion decision. |
+| BS-HARD-060 | **DONE** | Authoritative architecture docs synchronized and the full local release gate passed. |
+
+### Final validation evidence
+
+```text
+Focused Go consultation/service/repository: PASS
+Focused Go race: PASS
+Contracts parser/schema/typecheck: PASS
+Focused Web Consultation runtime: 36 passed
+Focused AI/RAG/Grounding: 46 passed
+
+pnpm lint: PASS
+pnpm typecheck: PASS (Pyright 0 errors)
+pnpm test: PASS
+  Web: 144 passed
+  AI: 303 passed
+  Go: go test ./... PASS
+pnpm build: PASS
+
+validate:local-deploy: PASS
+  API_HEALTH=PASS
+  AI_HEALTH=PASS
+  WEB_HEALTH=PASS
+  FULL_UP=PASS version=49
+  LATEST_DOWN=PASS version=48
+  LATEST_REPLAY_UP=PASS version=49
+  BODY_STATE_SEMANTICS=PASS
+  TREATMENT_ACTIVATION_ATOMICITY=PASS
+  OUTCOME_FEEDBACK_ATOMICITY=PASS
+  DOMAIN_SEMANTICS=PASS
+  Playwright longitudinal E2E: 3 passed
+  DIAGNOSIS_SHADOW_VALIDATION=PASS observations=3 blockers=0
+  TREATMENT_SHADOW_VALIDATION=PASS observations=3 blockers=0
+  TREATMENT_DECISION_TRACE_VALIDATION=PASS accepted_traces=2
+  TREATMENT_REPLAY_INPUT_VALIDATION=PASS replay_inputs=3
+  LOCAL_DEPLOY_VALIDATION=PASS
+
+git diff --check: PASS
+```
+
+Grounding Eval v2 remains deliberately **qualification-only**. The three captured v1 false-pass disagreements are unsupported dosage, contraindicated evidence, and misleading high lexical overlap. This closeout does not promote v2 into production governance.
 
 ---
 

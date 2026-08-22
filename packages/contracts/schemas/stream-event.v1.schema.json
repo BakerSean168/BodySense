@@ -4,28 +4,1008 @@
   "title": "BodySense StreamEvent v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["version", "seq", "channel", "type", "ids", "payload"],
+  "required": [
+    "version",
+    "seq",
+    "channel",
+    "type",
+    "ids",
+    "payload"
+  ],
   "properties": {
-    "version": { "const": 1 },
-    "seq": { "type": "integer", "minimum": 1 },
+    "version": {
+      "const": 1
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 1
+    },
     "channel": {
       "type": "string",
-      "enum": ["conversation", "run", "message", "tool", "state", "source", "safety", "usage", "job", "stream", "title"]
+      "enum": [
+        "conversation",
+        "run",
+        "message",
+        "tool",
+        "state",
+        "source",
+        "safety",
+        "usage",
+        "job",
+        "stream",
+        "title"
+      ]
     },
-    "type": { "type": "string", "minLength": 1 },
+    "type": {
+      "type": "string",
+      "minLength": 1
+    },
     "ids": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "conversation_id": { "type": ["string", "null"] },
-        "run_id": { "type": ["string", "null"] },
-        "turn_id": { "type": ["string", "null"] },
-        "message_id": { "type": ["string", "null"] },
-        "tool_call_id": { "type": ["string", "null"] },
-        "interaction_id": { "type": ["string", "null"] },
-        "job_id": { "type": ["string", "null"] }
+        "conversation_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "run_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "turn_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "message_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tool_call_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "interaction_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "job_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       }
     },
-    "payload": { "type": "object" }
-  }
+    "payload": {
+      "type": "object"
+    }
+  },
+  "allOf": [
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "type": {
+              "const": "conversation.created"
+            },
+            "channel": {
+              "const": "conversation"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "title",
+                "title_status",
+                "status",
+                "last_message_at",
+                "created_at"
+              ],
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "title_status": {
+                  "type": "string"
+                },
+                "status": {
+                  "const": "active"
+                },
+                "last_message_at": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "run.started"
+            },
+            "channel": {
+              "const": "run"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "status",
+                "source"
+              ],
+              "properties": {
+                "status": {
+                  "const": "running"
+                },
+                "source": {
+                  "const": "start_turn"
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "run.resumed"
+            },
+            "channel": {
+              "const": "run"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "status",
+                "interaction_id"
+              ],
+              "properties": {
+                "status": {
+                  "const": "running"
+                },
+                "interaction_id": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "run.interrupted"
+            },
+            "channel": {
+              "const": "run"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "status",
+                "interaction_id"
+              ],
+              "properties": {
+                "status": {
+                  "const": "waiting_user"
+                },
+                "interaction_id": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "run.completed"
+            },
+            "channel": {
+              "const": "run"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "const": "completed"
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "run.failed"
+            },
+            "channel": {
+              "const": "run"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "status",
+                "error"
+              ],
+              "properties": {
+                "status": {
+                  "const": "failed"
+                },
+                "error": {
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "run.cancelled"
+            },
+            "channel": {
+              "const": "run"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "status",
+                "reason"
+              ],
+              "properties": {
+                "status": {
+                  "const": "cancelled"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "message.persisted"
+            },
+            "channel": {
+              "const": "message"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "client_message_id",
+                "role"
+              ],
+              "properties": {
+                "client_message_id": {
+                  "type": "string"
+                },
+                "role": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "message.created"
+            },
+            "channel": {
+              "const": "message"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "role",
+                "status"
+              ],
+              "properties": {
+                "role": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "message.text.delta"
+            },
+            "channel": {
+              "const": "message"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "delta"
+              ],
+              "properties": {
+                "delta": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "message.completed"
+            },
+            "channel": {
+              "const": "message"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "status",
+                "finish_reason"
+              ],
+              "properties": {
+                "status": {
+                  "const": "completed"
+                },
+                "finish_reason": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "message.failed"
+            },
+            "channel": {
+              "const": "message"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "status",
+                "error"
+              ],
+              "properties": {
+                "status": {
+                  "const": "failed"
+                },
+                "error": {
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "tool.call"
+            },
+            "channel": {
+              "const": "tool"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "tool",
+                "args"
+              ],
+              "properties": {
+                "tool": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "tool.result"
+            },
+            "channel": {
+              "const": "tool"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "tool",
+                "result"
+              ],
+              "properties": {
+                "tool": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "state.extracted_info.upsert"
+            },
+            "channel": {
+              "const": "state"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "info"
+              ],
+              "properties": {}
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "state.phase.changed"
+            },
+            "channel": {
+              "const": "state"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "to",
+                "reason"
+              ],
+              "properties": {
+                "to": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "state.interaction.required"
+            },
+            "channel": {
+              "const": "state"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "interaction_id",
+                "question",
+                "created_at"
+              ],
+              "properties": {
+                "interaction_id": {
+                  "type": "string"
+                },
+                "question": {
+                  "type": "object",
+                  "required": [
+                    "question"
+                  ],
+                  "properties": {
+                    "question": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "created_at": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "state.interaction.answered"
+            },
+            "channel": {
+              "const": "state"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "interaction_id",
+                "answer"
+              ],
+              "properties": {
+                "interaction_id": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "state.interaction.expired"
+            },
+            "channel": {
+              "const": "state"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "interaction_id",
+                "expired_at"
+              ],
+              "properties": {
+                "interaction_id": {
+                  "type": "string"
+                },
+                "expired_at": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "source.citation.added"
+            },
+            "channel": {
+              "const": "source"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "citation"
+              ],
+              "properties": {}
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "source.knowledge_gap"
+            },
+            "channel": {
+              "const": "source"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "query",
+                "message"
+              ],
+              "properties": {
+                "query": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "safety.red_flag.detected"
+            },
+            "channel": {
+              "const": "safety"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "has_red_flags",
+                "flags"
+              ],
+              "properties": {
+                "has_red_flags": {
+                  "type": "boolean"
+                },
+                "flags": {
+                  "type": "array"
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "safety.output_reviewed"
+            },
+            "channel": {
+              "const": "safety"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "kind",
+                "verdict"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "verdict": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "safety.output_rejected"
+            },
+            "channel": {
+              "const": "safety"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "kind",
+                "verdict"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "verdict": {
+                  "const": "rejected"
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "usage.reported"
+            },
+            "channel": {
+              "const": "usage"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "usage"
+              ],
+              "properties": {}
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "title.generated"
+            },
+            "channel": {
+              "const": "title"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "title"
+              ],
+              "properties": {
+                "title": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "stream.done"
+            },
+            "channel": {
+              "const": "stream"
+            },
+            "payload": {
+              "type": "object",
+              "required": [],
+              "properties": {},
+              "maxProperties": 0
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "stream.error"
+            },
+            "channel": {
+              "const": "stream"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "message"
+              ],
+              "properties": {
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "job.created"
+            },
+            "channel": {
+              "const": "job"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "job_type"
+              ],
+              "properties": {
+                "job_type": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "job.progress"
+            },
+            "channel": {
+              "const": "job"
+            },
+            "payload": {
+              "type": "object",
+              "required": [],
+              "properties": {}
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "job.completed"
+            },
+            "channel": {
+              "const": "job"
+            },
+            "payload": {
+              "type": "object",
+              "required": [],
+              "properties": {}
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "job.failed"
+            },
+            "channel": {
+              "const": "job"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "error"
+              ],
+              "properties": {}
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        }
+      ]
+    }
+  ]
 }

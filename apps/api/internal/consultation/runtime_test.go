@@ -6,8 +6,11 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/model"
@@ -21,6 +24,59 @@ type fakeRuntimeEventRepo struct {
 	events []model.RuntimeEvent
 }
 
+type fakeConsultationRunRepo struct {
+	mu                     sync.Mutex
+	run                    *model.Run
+	updatedConfigurationID string
+	updatedConfiguration   datatypes.JSON
+	updatedProvenance      datatypes.JSON
+}
+
+func (r *fakeConsultationRunRepo) Create(context.Context, *model.Run) error { return nil }
+func (r *fakeConsultationRunRepo) CreateWithIdempotency(context.Context, *model.Run) (*model.Run, bool, error) {
+	return nil, false, nil
+}
+func (r *fakeConsultationRunRepo) GetByID(_ context.Context, id uuid.UUID) (*model.Run, error) {
+	if r.run != nil && r.run.ID == id {
+		clone := *r.run
+		return &clone, nil
+	}
+	return nil, nil
+}
+func (r *fakeConsultationRunRepo) GetByRequestID(context.Context, uuid.UUID, string) (*model.Run, error) {
+	return nil, nil
+}
+func (r *fakeConsultationRunRepo) ListByConversationID(context.Context, uuid.UUID) ([]model.Run, error) {
+	return nil, nil
+}
+func (r *fakeConsultationRunRepo) UpdateStatus(context.Context, uuid.UUID, string) error { return nil }
+func (r *fakeConsultationRunRepo) CompleteRun(context.Context, uuid.UUID, uuid.UUID, any, string) error {
+	return nil
+}
+func (r *fakeConsultationRunRepo) TryCompleteRun(context.Context, uuid.UUID, uuid.UUID, any, string) (bool, error) {
+	return true, nil
+}
+func (r *fakeConsultationRunRepo) CancelRun(context.Context, uuid.UUID, uuid.UUID, any) (bool, error) {
+	return true, nil
+}
+func (r *fakeConsultationRunRepo) FailRun(context.Context, uuid.UUID, uuid.UUID, any) error {
+	return nil
+}
+func (r *fakeConsultationRunRepo) UpdateAgentConfiguration(
+	_ context.Context,
+	_ uuid.UUID,
+	configurationID string,
+	configuration datatypes.JSON,
+	provenance datatypes.JSON,
+) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.updatedConfigurationID = configurationID
+	r.updatedConfiguration = append(datatypes.JSON(nil), configuration...)
+	r.updatedProvenance = append(datatypes.JSON(nil), provenance...)
+	return nil
+}
+
 func (r *fakeRuntimeEventRepo) Create(ctx context.Context, event *model.RuntimeEvent) error {
 	r.events = append(r.events, *event)
 	return nil
@@ -32,6 +88,20 @@ func (r *fakeRuntimeEventRepo) CreateBatch(ctx context.Context, events []*model.
 			return err
 		}
 	}
+	return nil
+}
+
+func (r *fakeRuntimeEventRepo) CreateWithNextSequence(ctx context.Context, event *model.RuntimeEvent) error {
+	maxSeq := 0
+	for i := range r.events {
+		if r.events[i].RunID == event.RunID && r.events[i].Seq > maxSeq {
+			maxSeq = r.events[i].Seq
+		}
+	}
+	clone := *event
+	clone.Seq = maxSeq + 1
+	event.Seq = clone.Seq
+	r.events = append(r.events, clone)
 	return nil
 }
 
@@ -264,5 +334,291 @@ func TestReplayCompletedRunDoesNotDuplicateStoredStreamDone(t *testing.T) {
 	})
 	if count := strings.Count(recorder.Body.String(), "event: stream.done"); count != 1 {
 		t.Fatalf("expected one stored stream.done, got %d: %s", count, recorder.Body.String())
+	}
+}
+
+func validConsultationHandshake(t *testing.T, state streamState) dto.StreamEvent {
+	t.Helper()
+	event, err := dto.NewStreamEvent(
+		1,
+		"runtime",
+		"runtime.agent_configuration",
+		state.BaseIDs,
+		map[string]any{
+			"agent_configuration": map[string]any{
+				"id":                       "consult-config-2bd9b46735dd693c",
+				"role":                     "consultation",
+				"decision_policy_revision": service.ConsultationDecisionPolicyV1,
+				"logical_model":            "bodysense-consultation",
+			},
+			"execution_provenance": map[string]any{
+				"runtime":       "langgraph",
+				"logical_model": "bodysense-consultation",
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("build handshake: %v", err)
+	}
+	return event
+}
+
+func TestRuntimeNoLongerOwnsPerRunPendingAgentConfiguration(t *testing.T) {
+	typeOfRuntime := reflect.TypeOf(Runtime{})
+	for _, fieldName := range []string{
+		"pendingAgentConfigurationID",
+		"pendingAgentConfiguration",
+		"pendingExecutionProvenance",
+	} {
+		if _, found := typeOfRuntime.FieldByName(fieldName); found {
+			t.Fatalf("service-global per-run field %s must not exist on Runtime", fieldName)
+		}
+	}
+}
+
+func TestValidateConsultationExecutionIdentity(t *testing.T) {
+	state := testStreamState()
+	state.ExpectedConfigurationID = "consult-config-2bd9b46735dd693c"
+	event := validConsultationHandshake(t, state)
+
+	identity, err := validateConsultationExecutionIdentity(event, state.ExpectedConfigurationID)
+	if err != nil {
+		t.Fatalf("valid handshake rejected: %v", err)
+	}
+	if identity.ConfigurationID != state.ExpectedConfigurationID {
+		t.Fatalf("unexpected configuration id: %s", identity.ConfigurationID)
+	}
+}
+
+func TestValidateConsultationExecutionIdentityRejectsMismatch(t *testing.T) {
+	state := testStreamState()
+	state.ExpectedConfigurationID = "consult-config-2bd9b46735dd693c"
+
+	tests := []struct {
+		name       string
+		mutate     func(map[string]any, map[string]any)
+		wantErrSub string
+	}{
+		{
+			name: "configuration id",
+			mutate: func(config, provenance map[string]any) {
+				config["id"] = "consult-config-wrong"
+			},
+			wantErrSub: "configuration id",
+		},
+		{
+			name: "role",
+			mutate: func(config, provenance map[string]any) {
+				config["role"] = "diagnosis"
+			},
+			wantErrSub: "role",
+		},
+		{
+			name: "decision policy",
+			mutate: func(config, provenance map[string]any) {
+				config["decision_policy_revision"] = "wrong-policy"
+			},
+			wantErrSub: "decision policy",
+		},
+		{
+			name: "configuration logical model",
+			mutate: func(config, provenance map[string]any) {
+				config["logical_model"] = "wrong-model"
+			},
+			wantErrSub: "logical model",
+		},
+		{
+			name: "execution logical model",
+			mutate: func(config, provenance map[string]any) {
+				provenance["logical_model"] = "wrong-model"
+			},
+			wantErrSub: "execution logical model",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			configuration := map[string]any{
+				"id":                       state.ExpectedConfigurationID,
+				"role":                     "consultation",
+				"decision_policy_revision": service.ConsultationDecisionPolicyV1,
+				"logical_model":            "bodysense-consultation",
+			}
+			provenance := map[string]any{
+				"runtime":       "langgraph",
+				"logical_model": "bodysense-consultation",
+			}
+			tt.mutate(configuration, provenance)
+			event, _ := dto.NewStreamEvent(1, "runtime", "runtime.agent_configuration", state.BaseIDs, map[string]any{
+				"agent_configuration":  configuration,
+				"execution_provenance": provenance,
+			})
+			_, err := validateConsultationExecutionIdentity(event, state.ExpectedConfigurationID)
+			if err == nil || !strings.Contains(err.Error(), tt.wantErrSub) {
+				t.Fatalf("expected %q error, got %v", tt.wantErrSub, err)
+			}
+		})
+	}
+}
+
+func TestStreamAIEventsFailsClosedBeforeFirstSemanticEventWithoutHandshake(t *testing.T) {
+	runtime := &Runtime{streamRuntime: stream.NewRuntime()}
+	state := testStreamState()
+	state.ExpectedConfigurationID = "consult-config-2bd9b46735dd693c"
+	recorder := httptest.NewRecorder()
+	sw := runtime.streamRuntime.NewWriter(recorder, state.BaseIDs)
+	events := make(chan dto.StreamEvent, 1)
+	textEvent, _ := dto.NewStreamEvent(1, "message", "message.text.delta", state.BaseIDs, map[string]any{"delta": "must not leak"})
+	events <- textEvent
+	close(events)
+
+	_, stopped := runtime.streamAIEvents(context.Background(), sw, events, state)
+	if !stopped {
+		t.Fatal("stream without first identity handshake must fail closed")
+	}
+	body := recorder.Body.String()
+	if strings.Contains(body, "must not leak") || strings.Contains(body, "message.text.delta") {
+		t.Fatalf("semantic output escaped before identity validation: %s", body)
+	}
+	if !strings.Contains(body, "run.failed") {
+		t.Fatalf("expected durable failed-run event, got %s", body)
+	}
+}
+
+func TestHandleAgentConfigurationPersistsIdentityImmediately(t *testing.T) {
+	repo := &fakeConsultationRunRepo{}
+	runtime := &Runtime{
+		runService:    service.NewRunService(repo),
+		streamRuntime: stream.NewRuntime(),
+	}
+	state := testStreamState()
+	state.ExpectedConfigurationID = "consult-config-2bd9b46735dd693c"
+	recorder := httptest.NewRecorder()
+	sw := runtime.streamRuntime.NewWriter(recorder, state.BaseIDs)
+	phase := "collecting"
+	result := streamResult{}
+
+	if stopped := runtime.handleAIEvent(
+		context.Background(), sw, validConsultationHandshake(t, state), state, &result, &phase,
+	); stopped {
+		t.Fatal("valid identity handshake unexpectedly stopped stream")
+	}
+	if repo.updatedConfigurationID != state.ExpectedConfigurationID {
+		t.Fatalf("identity was not persisted at handshake: got %q", repo.updatedConfigurationID)
+	}
+	if result.ExecutionIdentity.ConfigurationID != state.ExpectedConfigurationID {
+		t.Fatalf("identity was not retained run-locally: %+v", result.ExecutionIdentity)
+	}
+}
+
+func TestExecutionIdentityValidationIsConcurrentAndRunLocal(t *testing.T) {
+	state := testStreamState()
+	state.ExpectedConfigurationID = "consult-config-2bd9b46735dd693c"
+	const workers = 24
+	var wg sync.WaitGroup
+	errs := make(chan error, workers)
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func(marker int) {
+			defer wg.Done()
+			event, _ := dto.NewStreamEvent(1, "runtime", "runtime.agent_configuration", state.BaseIDs, map[string]any{
+				"agent_configuration": map[string]any{
+					"id":                       state.ExpectedConfigurationID,
+					"role":                     "consultation",
+					"decision_policy_revision": service.ConsultationDecisionPolicyV1,
+					"logical_model":            "bodysense-consultation",
+				},
+				"execution_provenance": map[string]any{
+					"runtime":        "langgraph",
+					"logical_model":  "bodysense-consultation",
+					"request_marker": marker,
+				},
+			})
+			identity, err := validateConsultationExecutionIdentity(event, state.ExpectedConfigurationID)
+			if err != nil {
+				errs <- err
+				return
+			}
+			var provenance map[string]any
+			if err := json.Unmarshal(identity.ExecutionProvenance, &provenance); err != nil {
+				errs <- err
+				return
+			}
+			if got := int(provenance["request_marker"].(float64)); got != marker {
+				errs <- errors.New("execution provenance crossed run-local validation boundary")
+			}
+		}(i)
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestDurableExecutionContextSurvivesTransportDisconnect(t *testing.T) {
+	parent, disconnect := context.WithCancel(context.Background())
+	executionCtx, cancelExecution := durableExecutionContext(parent)
+	defer cancelExecution()
+	disconnect()
+
+	select {
+	case <-executionCtx.Done():
+		t.Fatalf("transport disconnect must not cancel durable run: %v", executionCtx.Err())
+	case <-time.After(20 * time.Millisecond):
+	}
+}
+
+func TestRegisteredRunCancellationIsExplicit(t *testing.T) {
+	runtime := &Runtime{runCancels: make(map[uuid.UUID]context.CancelFunc)}
+	runID := uuid.New()
+	executionCtx, cancelExecution := context.WithCancel(context.Background())
+	defer cancelExecution()
+	unregister := runtime.registerRunCancellation(runID, cancelExecution)
+	defer unregister()
+
+	if !runtime.cancelRegisteredRun(runID) {
+		t.Fatal("explicit cancellation should find registered run")
+	}
+	select {
+	case <-executionCtx.Done():
+	case <-time.After(time.Second):
+		t.Fatal("registered cancellation did not cancel execution context")
+	}
+}
+
+func TestStreamAIEventsPrefersExplicitCancellationOverReadySemanticEvent(t *testing.T) {
+	state := testStreamState()
+	state.AssistantMsg = nil
+	repo := &fakeConsultationRunRepo{run: &model.Run{
+		ID: state.Run.ID, UserID: state.UID, ConversationID: state.ConversationID,
+		TurnID: state.TurnID, Status: "cancelled",
+	}}
+	runtime := &Runtime{
+		runService:    service.NewRunService(repo),
+		streamRuntime: stream.NewRuntime(),
+	}
+	state.ExpectedConfigurationID = "consult-config-2bd9b46735dd693c"
+	recorder := httptest.NewRecorder()
+	sw := runtime.streamRuntime.NewWriter(recorder, state.BaseIDs)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	events := make(chan dto.StreamEvent, 1)
+	textEvent, _ := dto.NewStreamEvent(
+		1, "message", "message.text.delta", state.BaseIDs,
+		map[string]any{"delta": "must-not-leak-after-cancel"},
+	)
+	events <- textEvent
+	close(events)
+
+	_, stopped := runtime.streamAIEvents(ctx, sw, events, state)
+	if !stopped {
+		t.Fatal("cancelled execution must stop even when a producer event is ready")
+	}
+	if strings.Contains(recorder.Body.String(), "must-not-leak-after-cancel") {
+		t.Fatalf("semantic event leaked after cancellation: %s", recorder.Body.String())
 	}
 }

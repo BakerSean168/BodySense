@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"sync"
 	"testing"
 
 	"github.com/bodysense/api/internal/dto"
@@ -11,21 +12,42 @@ import (
 )
 
 type mockRuntimeEventRepo struct {
+	mu                 sync.Mutex
 	created            []*model.RuntimeEvent
 	conversationEvents []model.RuntimeEvent
 }
 
 func (m *mockRuntimeEventRepo) Create(_ context.Context, event *model.RuntimeEvent) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	clone := *event
 	m.created = append(m.created, &clone)
 	return nil
 }
 
 func (m *mockRuntimeEventRepo) CreateBatch(_ context.Context, events []*model.RuntimeEvent) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	for _, event := range events {
 		clone := *event
 		m.created = append(m.created, &clone)
 	}
+	return nil
+}
+
+func (m *mockRuntimeEventRepo) CreateWithNextSequence(_ context.Context, event *model.RuntimeEvent) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	maxSeq := 0
+	for _, existing := range m.created {
+		if existing.RunID == event.RunID && existing.Seq > maxSeq {
+			maxSeq = existing.Seq
+		}
+	}
+	clone := *event
+	clone.Seq = maxSeq + 1
+	event.Seq = clone.Seq
+	m.created = append(m.created, &clone)
 	return nil
 }
 
@@ -220,5 +242,56 @@ func TestRecordInteractionExpired(t *testing.T) {
 	}
 	if repo.created[0].Type != "state.interaction.expired" {
 		t.Fatalf("unexpected type %s", repo.created[0].Type)
+	}
+}
+
+func TestRecordOutOfBandEventAllocatesMonotonicPerRunSequenceConcurrently(t *testing.T) {
+	repo := &mockRuntimeEventRepo{}
+	svc := NewRuntimeEventService(repo)
+	conversationID := uuid.New()
+	runID := uuid.New()
+	const workers = 32
+
+	var wg sync.WaitGroup
+	errs := make(chan error, workers)
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			errs <- svc.RecordOutOfBandPublicEvent(
+				context.Background(), conversationID, runID, nil,
+				"state", "state.interaction.expired",
+				dto.StreamEventIDs{ConversationID: conversationID.String(), RunID: runID.String(), InteractionID: uuid.New().String()},
+				map[string]any{"interaction_id": uuid.New().String(), "expired_at": "2026-08-23T00:00:00Z"},
+			)
+		}()
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+	seen := make(map[int]bool, workers)
+	for _, event := range repo.created {
+		if event.RunID != runID {
+			continue
+		}
+		if seen[event.Seq] {
+			t.Fatalf("duplicate seq %d", event.Seq)
+		}
+		seen[event.Seq] = true
+	}
+	if len(seen) != workers {
+		t.Fatalf("got %d sequences, want %d", len(seen), workers)
+	}
+	for seq := 1; seq <= workers; seq++ {
+		if !seen[seq] {
+			t.Fatalf("missing monotonic sequence %d", seq)
+		}
 	}
 }

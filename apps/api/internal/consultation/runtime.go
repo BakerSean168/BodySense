@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bodysense/api/internal/dto"
@@ -66,11 +67,9 @@ type Runtime struct {
 	streamRuntime             *stream.Runtime
 	deployment                *service.AgentDeploymentPolicy
 	rolloutService            *service.ConsultationRolloutService
-	// pendingAgentConfiguration* holds the North-Star runtime identity captured
-	// from the runtime.agent_configuration event until the run is persisted.
-	pendingAgentConfigurationID string
-	pendingAgentConfiguration   json.RawMessage
-	pendingExecutionProvenance  json.RawMessage
+
+	cancelMu   sync.Mutex
+	runCancels map[uuid.UUID]context.CancelFunc
 }
 
 func NewRuntime(
@@ -109,6 +108,7 @@ func NewRuntime(
 		deployment:              deployment,
 		bodyStateService:        bodyStateService,
 		streamRuntime:           stream.NewRuntime(),
+		runCancels:              make(map[uuid.UUID]context.CancelFunc),
 	}
 }
 
@@ -129,6 +129,69 @@ func (r *Runtime) AttachLongitudinalContextServices(
 // AttachRolloutService attaches the anonymous rollout observer (North-Star).
 func (r *Runtime) AttachRolloutService(rollout *service.ConsultationRolloutService) {
 	r.rolloutService = rollout
+}
+
+func (r *Runtime) registerRunCancellation(runID uuid.UUID, cancel context.CancelFunc) func() {
+	r.cancelMu.Lock()
+	r.runCancels[runID] = cancel
+	r.cancelMu.Unlock()
+	return func() {
+		r.cancelMu.Lock()
+		delete(r.runCancels, runID)
+		r.cancelMu.Unlock()
+	}
+}
+
+func (r *Runtime) cancelRegisteredRun(runID uuid.UUID) bool {
+	r.cancelMu.Lock()
+	cancel := r.runCancels[runID]
+	r.cancelMu.Unlock()
+	if cancel == nil {
+		return false
+	}
+	cancel()
+	return true
+}
+
+// CancelRun is an explicit business command. HTTP transport disconnects do not
+// call this method and therefore do not cancel durable execution.
+func (r *Runtime) CancelRun(ctx context.Context, uid, runID uuid.UUID, reason string) *HTTPError {
+	run, transitioned, err := r.runService.CancelRun(ctx, runID, uid, reason)
+	if err != nil {
+		if errors.Is(err, service.ErrRunTerminal) {
+			return httpErr(http.StatusConflict, "RUN_TERMINAL", "run is already terminal")
+		}
+		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to cancel run")
+	}
+	if run == nil {
+		return httpErr(http.StatusNotFound, "NOT_FOUND", "run not found")
+	}
+
+	// Pending HITL belongs to the cancelled run and must not remain answerable.
+	pending, pendingErr := r.interactionService.GetPendingInteractions(ctx, run.ConversationID)
+	if pendingErr != nil {
+		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load pending interactions")
+	}
+	for i := range pending {
+		if pending[i].RunID == runID {
+			if cancelErr := r.interactionService.CancelInteraction(ctx, pending[i].ID); cancelErr != nil && !errors.Is(cancelErr, service.ErrInteractionClosed) {
+				return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to cancel pending interaction")
+			}
+		}
+	}
+
+	// If an execution context is registered, it owns the live StreamWriter and
+	// will emit run.cancelled using the same per-run sequence. Waiting runs have
+	// no writer, so the endpoint appends the terminal event out-of-band.
+	active := r.cancelRegisteredRun(runID)
+	if transitioned && !active && r.runtimeEventService != nil {
+		if err := r.runtimeEventService.RecordRunCancelled(ctx, run, reason); err != nil {
+			return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to persist cancellation event")
+		}
+		r.clearActiveRun(ctx, run.ConversationID, uid)
+		r.refreshThreadProjection(ctx, run.ConversationID, uid)
+	}
+	return nil
 }
 
 // StartRun handles a unified consultation run request.
@@ -191,6 +254,8 @@ func (r *Runtime) StartRun(
 	isNewConversation := conversationCreated
 	executionCtx, cancelExecution := durableExecutionContext(ctx)
 	defer cancelExecution()
+	unregisterCancellation := r.registerRunCancellation(run.ID, cancelExecution)
+	defer unregisterCancellation()
 
 	sw := r.streamRuntime.NewWriter(w, baseIDs)
 	r.sendNewEvent(
@@ -238,8 +303,20 @@ func (r *Runtime) StartRun(
 		return nil
 	}
 
-	// --- 9. Persist completed turn ---
-	r.finishTurn(executionCtx, sw, uid, conversationID, run, assistantMsg, turn, result, baseIDs)
+	// --- 9. Persist completed turn. Explicit cancellation can win the race
+	// after the AI stream closes but before the terminal DB transition.
+	if executionCtx.Err() != nil {
+		r.handleExecutionContextDone(executionCtx, sw, streamState{
+			UID: uid, ConversationID: conversationID, TurnID: turn, Run: run, AssistantMsg: assistantMsg, BaseIDs: baseIDs, AssistantMsgID: assistantMsg.ID.String(),
+		})
+		return nil
+	}
+	if !r.finishTurn(executionCtx, sw, uid, conversationID, run, assistantMsg, turn, result, baseIDs) {
+		r.handleExecutionContextDone(executionCtx, sw, streamState{
+			UID: uid, ConversationID: conversationID, TurnID: turn, Run: run, AssistantMsg: assistantMsg, BaseIDs: baseIDs, AssistantMsgID: assistantMsg.ID.String(),
+		})
+		return nil
+	}
 
 	// --- 10. Generate title for new conversations (non-blocking) ---
 	if isNewConversation {
@@ -324,15 +401,16 @@ func (r *Runtime) executeRunFlow(
 	}
 
 	return r.streamAIEvents(ctx, sw, events, streamState{
-		UID:             uid,
-		ConversationID:  conversationID,
-		TurnID:          turn,
-		Run:             run,
-		AssistantMsg:    assistantMsg,
-		BaseIDs:         baseIDs,
-		CurrentPhase:    session.Phase,
-		AssistantMsgID:  assistantMsg.ID.String(),
-		ConversationStr: conversationID.String(),
+		UID:                     uid,
+		ConversationID:          conversationID,
+		TurnID:                  turn,
+		Run:                     run,
+		AssistantMsg:            assistantMsg,
+		BaseIDs:                 baseIDs,
+		CurrentPhase:            session.Phase,
+		AssistantMsgID:          assistantMsg.ID.String(),
+		ConversationStr:         conversationID.String(),
+		ExpectedConfigurationID: r.deployment.ConsultationConfigurationID(),
 	})
 }
 
@@ -347,38 +425,105 @@ func (r *Runtime) finishTurn(
 	turn uuid.UUID,
 	result streamResult,
 	baseIDs dto.StreamEventIDs,
-) {
-	r.persistCompletedTurn(ctx, uid, conversationID, run, assistantMsg, result)
-	r.refreshThreadProjection(ctx, conversationID, uid)
+) bool {
+	terminalCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+
+	completed, err := r.runService.TryCompleteRun(terminalCtx, run.ID, uid, result.Usage, result.ProviderResponseID)
+	if err != nil {
+		log.Printf("failed to complete run %s: %v", run.ID, err)
+		return false
+	}
+	if !completed {
+		return false
+	}
+
+	finalPartsJSON, _ := json.Marshal(result.AssistantParts)
+	if err := r.messageService.UpdateMessageCompleted(
+		terminalCtx,
+		assistantMsg.ID,
+		conversationID,
+		datatypes.JSON(finalPartsJSON),
+		nil,
+		nil,
+	); err != nil {
+		log.Printf("failed to update assistant message %s: %v", assistantMsg.ID, err)
+	}
+	if err := r.conversationService.UpdateLastMessageAt(terminalCtx, conversationID, uid); err != nil {
+		log.Printf("failed to update last_message_at for conversation %s: %v", conversationID, err)
+	}
+
+	if result.ExecutionIdentity.ConfigurationID != "" {
+		if err := r.runService.UpdateAgentConfiguration(
+			terminalCtx,
+			run.ID,
+			result.ExecutionIdentity.ConfigurationID,
+			datatypes.JSON(result.ExecutionIdentity.AgentConfiguration),
+			datatypes.JSON(result.ExecutionIdentity.ExecutionProvenance),
+		); err != nil {
+			log.Printf("failed to persist run %s agent configuration: %v", run.ID, err)
+		}
+	}
+	if r.rolloutService != nil && result.ExecutionIdentity.ConfigurationID != "" {
+		decision := &service.ConsultationRunDecision{
+			RunID:                      run.ID.String(),
+			SourceConfigurationID:      r.deployment.ConsultationConfigurationID(),
+			PersistedConfigurationID:   result.ExecutionIdentity.ConfigurationID,
+			ConfigurationIdentityMatch: result.ExecutionIdentity.ConfigurationID == r.deployment.ConsultationConfigurationID(),
+			ReplayInputFrozen:          len(run.ReplayInput) > 2,
+			ExecutionProvenance:        datatypes.JSON(result.ExecutionIdentity.ExecutionProvenance),
+		}
+		if err := r.rolloutService.ObserveRun(terminalCtx, run, decision); err != nil {
+			log.Printf("failed to record consultation rollout observation for run %s: %v", run.ID, err)
+		}
+	}
+	r.recordGovernance(terminalCtx, uid, conversationID, run.ID, result.GovernanceResult)
+	r.clearActiveRun(terminalCtx, conversationID, uid)
+	r.refreshThreadProjection(terminalCtx, conversationID, uid)
 	r.sendNewEvent(
-		ctx,
-		sw,
-		"run",
-		"run.completed",
-		dto.StreamEventIDs{
-			ConversationID: conversationID.String(),
-			RunID:          run.ID.String(),
-			TurnID:         turn.String(),
-		},
-		map[string]any{"status": "completed", "usage": result.Usage},
-		"",
-		"run.completed",
+		terminalCtx, sw, "run", "run.completed",
+		dto.StreamEventIDs{ConversationID: conversationID.String(), RunID: run.ID.String(), TurnID: turn.String()},
+		map[string]any{"status": "completed", "usage": result.Usage}, "", "run.completed",
 	)
 	r.sendNewEvent(
-		ctx,
-		sw,
-		"message",
-		"message.completed",
-		dto.StreamEventIDs{
-			ConversationID: conversationID.String(),
-			RunID:          run.ID.String(),
-			TurnID:         turn.String(),
-			MessageID:      assistantMsg.ID.String(),
-		},
+		terminalCtx, sw, "message", "message.completed",
+		dto.StreamEventIDs{ConversationID: conversationID.String(), RunID: run.ID.String(), TurnID: turn.String(), MessageID: assistantMsg.ID.String()},
 		map[string]any{"status": "completed", "finish_reason": "stop", "usage": result.Usage},
-		assistantMsg.ID.String(),
-		"message.completed",
+		assistantMsg.ID.String(), "message.completed",
 	)
+	return true
+}
+
+func (r *Runtime) handleExecutionContextDone(ctx context.Context, sw *stream.StreamWriter, state streamState) {
+	terminalCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	run, err := r.runService.GetRunForUser(terminalCtx, state.Run.ID, state.UID)
+	if err != nil {
+		log.Printf("load terminal run %s after context cancellation: %v", state.Run.ID, err)
+		return
+	}
+	if run != nil && run.Status == "cancelled" {
+		if state.AssistantMsg != nil {
+			parts, _ := json.Marshal([]map[string]any{})
+			_ = r.messageService.UpdateMessageCompletedWithStatus(
+				terminalCtx, state.AssistantMsg.ID, state.ConversationID,
+				datatypes.JSON(parts), "aborted",
+			)
+		}
+		r.sendNewEvent(
+			terminalCtx, sw, "run", "run.cancelled",
+			dto.StreamEventIDs{ConversationID: state.ConversationID.String(), RunID: state.Run.ID.String(), TurnID: state.TurnID.String()},
+			map[string]any{"status": "cancelled", "reason": "cancelled_by_user"}, "", "run.cancelled",
+		)
+		r.sendNewEvent(terminalCtx, sw, "stream", "stream.done", state.BaseIDs, map[string]any{}, "", "stream.done")
+		r.clearActiveRun(terminalCtx, state.ConversationID, state.UID)
+		r.refreshThreadProjection(terminalCtx, state.ConversationID, state.UID)
+		return
+	}
+
+	// Deadline/host-side cancellation is operational failure, distinct from an
+	// explicit user cancellation command.
+	r.failActiveStream(terminalCtx, sw, state, "consultation execution deadline exceeded")
 }
 
 func (r *Runtime) ResumeInteraction(
@@ -425,6 +570,28 @@ func (r *Runtime) ResumeInteraction(
 		return httpErr(http.StatusNotFound, "NOT_FOUND", "interaction not found")
 	}
 
+	// Resume is continuation of the exact logical Agent thread. Pin it to the
+	// immutable configuration recorded on the interrupted source run instead of
+	// silently switching to the current Champion while the user was waiting.
+	sourceRun, err := r.runService.GetRunForUser(ctx, interaction.RunID, uid)
+	if err != nil {
+		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load interrupted run")
+	}
+	if sourceRun == nil || sourceRun.ConversationID != conversationID {
+		return httpErr(http.StatusNotFound, "NOT_FOUND", "interrupted run not found")
+	}
+	pinnedConfigurationID := strings.TrimSpace(sourceRun.AgentConfigurationID)
+	if pinnedConfigurationID == "" {
+		return httpErr(
+			http.StatusConflict,
+			"INTERACTION_NOT_RESUMABLE",
+			"interrupted run predates durable Agent configuration identity; start a new run",
+		)
+	}
+	if _, err := service.ConsultationDecisionPolicyRevisionForConfiguration(pinnedConfigurationID); err != nil {
+		return httpErr(http.StatusConflict, "INTERACTION_NOT_RESUMABLE", "interrupted run configuration is no longer repository-authorized")
+	}
+
 	// The interaction answer is a durable health input, not merely a chat message.
 	// Commit it before closing the interaction so a persistence failure remains
 	// retryable and never resumes the Agent from an unrecorded health answer.
@@ -451,8 +618,12 @@ func (r *Runtime) ResumeInteraction(
 		}
 	}
 
-	if err := r.runService.CompleteRun(ctx, interaction.RunID, uid, nil, ""); err != nil {
+	closedSourceRun, err := r.runService.TryCompleteRun(ctx, interaction.RunID, uid, nil, "")
+	if err != nil {
 		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to close interrupted run")
+	}
+	if !closedSourceRun {
+		return httpErr(http.StatusConflict, "RUN_TERMINAL", "interrupted run was cancelled or already closed")
 	}
 
 	answerPartsJSON, answerMetadata := interactionAnswerParts(req.Answer, interactionID.String())
@@ -520,6 +691,8 @@ func (r *Runtime) ResumeInteraction(
 
 	executionCtx, cancelExecution := durableExecutionContext(ctx)
 	defer cancelExecution()
+	unregisterCancellation := r.registerRunCancellation(run.ID, cancelExecution)
+	defer unregisterCancellation()
 
 	profileJSON, profileErr := r.loadProfileJSON(executionCtx, uid)
 	if profileErr != nil {
@@ -534,6 +707,7 @@ func (r *Runtime) ResumeInteraction(
 			RunID:           run.ID.String(),
 			ConversationID:  conversationID.String(),
 			UserID:          uid.String(),
+			ConfigurationID: pinnedConfigurationID,
 			InterruptID:     interactionID.String(),
 			Answer:          json.RawMessage(req.Answer),
 			BusinessContext: r.buildBusinessContext(executionCtx, uid, conversationID, extractAnswerText(req.Answer), profileJSON, session),
@@ -545,21 +719,27 @@ func (r *Runtime) ResumeInteraction(
 	}
 
 	result, stopped := r.streamAIEvents(executionCtx, sw, events, streamState{
-		UID:             uid,
-		ConversationID:  conversationID,
-		TurnID:          turn,
-		Run:             run,
-		AssistantMsg:    assistantMsg,
-		BaseIDs:         baseIDs,
-		CurrentPhase:    session.Phase,
-		AssistantMsgID:  assistantMsg.ID.String(),
-		ConversationStr: conversationID.String(),
+		UID:                     uid,
+		ConversationID:          conversationID,
+		TurnID:                  turn,
+		Run:                     run,
+		AssistantMsg:            assistantMsg,
+		BaseIDs:                 baseIDs,
+		CurrentPhase:            session.Phase,
+		AssistantMsgID:          assistantMsg.ID.String(),
+		ConversationStr:         conversationID.String(),
+		ExpectedConfigurationID: pinnedConfigurationID,
 	})
 	if stopped {
 		return nil
 	}
 
-	r.finishTurn(executionCtx, sw, uid, conversationID, run, assistantMsg, turn, result, baseIDs)
+	if executionCtx.Err() != nil || !r.finishTurn(executionCtx, sw, uid, conversationID, run, assistantMsg, turn, result, baseIDs) {
+		r.handleExecutionContextDone(executionCtx, sw, streamState{
+			UID: uid, ConversationID: conversationID, TurnID: turn, Run: run, AssistantMsg: assistantMsg, BaseIDs: baseIDs, AssistantMsgID: assistantMsg.ID.String(),
+		})
+		return nil
+	}
 	r.sendNewEvent(executionCtx, sw, "stream", "stream.done", baseIDs, map[string]any{}, "", "stream.done")
 	r.maybeGenerateTitle(executionCtx, conversationID, uid)
 	return nil
@@ -755,15 +935,22 @@ func (r *Runtime) buildBusinessContext(
 }
 
 type streamState struct {
-	UID             uuid.UUID
-	ConversationID  uuid.UUID
-	TurnID          uuid.UUID
-	Run             *model.Run
-	AssistantMsg    *model.Message
-	BaseIDs         dto.StreamEventIDs
-	CurrentPhase    string
-	AssistantMsgID  string
-	ConversationStr string
+	UID                     uuid.UUID
+	ConversationID          uuid.UUID
+	TurnID                  uuid.UUID
+	Run                     *model.Run
+	AssistantMsg            *model.Message
+	BaseIDs                 dto.StreamEventIDs
+	CurrentPhase            string
+	AssistantMsgID          string
+	ConversationStr         string
+	ExpectedConfigurationID string
+}
+
+type ConsultationExecutionIdentity struct {
+	ConfigurationID     string
+	AgentConfiguration  json.RawMessage
+	ExecutionProvenance json.RawMessage
 }
 
 type streamResult struct {
@@ -771,6 +958,7 @@ type streamResult struct {
 	Usage              any
 	ProviderResponseID string
 	GovernanceResult   datatypes.JSON
+	ExecutionIdentity  ConsultationExecutionIdentity
 }
 
 func (r *Runtime) streamAIEvents(
@@ -782,11 +970,26 @@ func (r *Runtime) streamAIEvents(
 	result := streamResult{}
 	eventCount := 0
 	phase := state.CurrentPhase
+	handshakeAccepted := false
 
 	for {
 		select {
+		case <-ctx.Done():
+			r.handleExecutionContextDone(ctx, sw, state)
+			return result, true
 		case event, ok := <-events:
+			// If explicit cancellation raced with a ready producer event, prefer
+			// the business terminal state over accepting one more semantic event.
+			// A select may choose either ready case, so re-check the context here.
+			if ctx.Err() != nil {
+				r.handleExecutionContextDone(ctx, sw, state)
+				return result, true
+			}
 			if !ok {
+				if !handshakeAccepted {
+					r.failActiveStream(ctx, sw, state, "missing runtime Agent configuration handshake")
+					return result, true
+				}
 				return result, false
 			}
 
@@ -797,11 +1000,104 @@ func (r *Runtime) streamAIEvents(
 				return result, true
 			}
 
+			// The immutable execution identity is a control-plane handshake, not
+			// ordinary semantic output. Nothing else is trusted until it is the
+			// first event and has been validated/persisted by Go.
+			if !handshakeAccepted && event.Type != "runtime.agent_configuration" {
+				r.failActiveStream(ctx, sw, state, "runtime Agent configuration handshake must be the first event")
+				return result, true
+			}
+			if handshakeAccepted && event.Type == "runtime.agent_configuration" {
+				r.failActiveStream(ctx, sw, state, "duplicate runtime Agent configuration handshake")
+				return result, true
+			}
+
 			if r.handleAIEvent(ctx, sw, event, state, &result, &phase) {
 				return result, true
 			}
+			if event.Type == "runtime.agent_configuration" {
+				handshakeAccepted = result.ExecutionIdentity.ConfigurationID != ""
+				if !handshakeAccepted {
+					r.failActiveStream(ctx, sw, state, "invalid runtime Agent configuration handshake")
+					return result, true
+				}
+			}
 		}
 	}
+}
+
+type consultationConfigurationEnvelope struct {
+	ID                     string `json:"id"`
+	Role                   string `json:"role"`
+	DecisionPolicyRevision string `json:"decision_policy_revision"`
+	LogicalModel           string `json:"logical_model"`
+}
+
+type consultationExecutionProvenanceEnvelope struct {
+	LogicalModel string `json:"logical_model"`
+}
+
+func validateConsultationExecutionIdentity(
+	event dto.StreamEvent,
+	expectedConfigurationID string,
+) (ConsultationExecutionIdentity, error) {
+	if event.Type != "runtime.agent_configuration" || event.Channel != "runtime" {
+		return ConsultationExecutionIdentity{}, fmt.Errorf("unexpected handshake event %s/%s", event.Channel, event.Type)
+	}
+	expectedConfigurationID = strings.TrimSpace(expectedConfigurationID)
+	if expectedConfigurationID == "" {
+		return ConsultationExecutionIdentity{}, errors.New("missing expected Consultation configuration id")
+	}
+	expectedPolicy, err := service.ConsultationDecisionPolicyRevisionForConfiguration(expectedConfigurationID)
+	if err != nil {
+		return ConsultationExecutionIdentity{}, err
+	}
+	expectedLogicalModel, err := service.ConsultationLogicalModelForConfiguration(expectedConfigurationID)
+	if err != nil {
+		return ConsultationExecutionIdentity{}, err
+	}
+
+	var payload struct {
+		AgentConfiguration  json.RawMessage `json:"agent_configuration"`
+		ExecutionProvenance json.RawMessage `json:"execution_provenance"`
+	}
+	if err := event.PayloadAs(&payload); err != nil {
+		return ConsultationExecutionIdentity{}, fmt.Errorf("decode handshake payload: %w", err)
+	}
+	if len(payload.AgentConfiguration) == 0 || len(payload.ExecutionProvenance) == 0 {
+		return ConsultationExecutionIdentity{}, errors.New("handshake is missing configuration or execution provenance")
+	}
+
+	var configuration consultationConfigurationEnvelope
+	if err := json.Unmarshal(payload.AgentConfiguration, &configuration); err != nil {
+		return ConsultationExecutionIdentity{}, fmt.Errorf("decode Agent configuration: %w", err)
+	}
+	var provenance consultationExecutionProvenanceEnvelope
+	if err := json.Unmarshal(payload.ExecutionProvenance, &provenance); err != nil {
+		return ConsultationExecutionIdentity{}, fmt.Errorf("decode execution provenance: %w", err)
+	}
+
+	if configuration.ID != expectedConfigurationID {
+		return ConsultationExecutionIdentity{}, fmt.Errorf("configuration id %q != expected %q", configuration.ID, expectedConfigurationID)
+	}
+	if configuration.Role != "consultation" {
+		return ConsultationExecutionIdentity{}, fmt.Errorf("role %q != consultation", configuration.Role)
+	}
+	if configuration.DecisionPolicyRevision != expectedPolicy {
+		return ConsultationExecutionIdentity{}, fmt.Errorf("decision policy %q != expected %q", configuration.DecisionPolicyRevision, expectedPolicy)
+	}
+	if configuration.LogicalModel != expectedLogicalModel {
+		return ConsultationExecutionIdentity{}, fmt.Errorf("logical model %q != expected %q", configuration.LogicalModel, expectedLogicalModel)
+	}
+	if provenance.LogicalModel != expectedLogicalModel {
+		return ConsultationExecutionIdentity{}, fmt.Errorf("execution logical model %q != expected %q", provenance.LogicalModel, expectedLogicalModel)
+	}
+
+	return ConsultationExecutionIdentity{
+		ConfigurationID:     configuration.ID,
+		AgentConfiguration:  append(json.RawMessage(nil), payload.AgentConfiguration...),
+		ExecutionProvenance: append(json.RawMessage(nil), payload.ExecutionProvenance...),
+	}, nil
 }
 
 func (r *Runtime) handleAIEvent(
@@ -817,7 +1113,10 @@ func (r *Runtime) handleAIEvent(
 		var payload struct {
 			Delta string `json:"delta"`
 		}
-		_ = event.PayloadAs(&payload)
+		if err := event.PayloadAs(&payload); err != nil {
+			r.failActiveStream(ctx, sw, state, "invalid message delta payload")
+			return true
+		}
 		r.sendEvent(ctx, sw, event, state.AssistantMsgID, "text.delta")
 		result.AssistantParts = append(
 			result.AssistantParts,
@@ -829,7 +1128,10 @@ func (r *Runtime) handleAIEvent(
 			Tool string          `json:"tool"`
 			Args json.RawMessage `json:"args"`
 		}
-		_ = event.PayloadAs(&payload)
+		if err := event.PayloadAs(&payload); err != nil {
+			r.failActiveStream(ctx, sw, state, "invalid tool.call payload")
+			return true
+		}
 		r.sendEvent(ctx, sw, event, state.AssistantMsgID, "tool.call")
 		result.AssistantParts = append(
 			result.AssistantParts,
@@ -856,7 +1158,10 @@ func (r *Runtime) handleAIEvent(
 			Tool   string          `json:"tool"`
 			Result json.RawMessage `json:"result"`
 		}
-		_ = event.PayloadAs(&payload)
+		if err := event.PayloadAs(&payload); err != nil {
+			r.failActiveStream(ctx, sw, state, "invalid tool.result payload")
+			return true
+		}
 		r.sendEvent(ctx, sw, event, state.AssistantMsgID, "tool.result")
 		result.AssistantParts = append(
 			result.AssistantParts,
@@ -879,7 +1184,10 @@ func (r *Runtime) handleAIEvent(
 		var payload struct {
 			Info json.RawMessage `json:"info"`
 		}
-		_ = event.PayloadAs(&payload)
+		if err := event.PayloadAs(&payload); err != nil {
+			r.failActiveStream(ctx, sw, state, "invalid extracted-info payload")
+			return true
+		}
 		if err := r.persistExtractedSymptom(ctx, state.UID, state.Run.ID, payload.Info); err != nil {
 			log.Printf("failed to persist extracted symptom in BodyState for run %s: %v", state.Run.ID, err)
 			r.failActiveStream(ctx, sw, state, "failed to persist durable health state")
@@ -916,7 +1224,10 @@ func (r *Runtime) handleAIEvent(
 			To     string `json:"to"`
 			Reason string `json:"reason"`
 		}
-		_ = event.PayloadAs(&payload)
+		if err := event.PayloadAs(&payload); err != nil {
+			r.failActiveStream(ctx, sw, state, "invalid phase-change payload")
+			return true
+		}
 		if payload.From == "" {
 			payload.From = *phase
 		}
@@ -933,29 +1244,36 @@ func (r *Runtime) handleAIEvent(
 		var payload struct {
 			Usage json.RawMessage `json:"usage"`
 		}
-		_ = event.PayloadAs(&payload)
+		if err := event.PayloadAs(&payload); err != nil {
+			r.failActiveStream(ctx, sw, state, "invalid usage payload")
+			return true
+		}
 		result.Usage = payload.Usage
 		r.sendEvent(ctx, sw, event, state.AssistantMsgID, "usage.reported")
 
 	case "runtime.agent_configuration":
-		// North-Star: capture the immutable Agent configuration + execution
-		// provenance emitted by the Python runtime so it can be persisted on
-		// the durable run record.
-		var payload struct {
-			AgentConfiguration  json.RawMessage `json:"agent_configuration"`
-			ExecutionProvenance json.RawMessage `json:"execution_provenance"`
+		identity, err := validateConsultationExecutionIdentity(event, state.ExpectedConfigurationID)
+		if err != nil {
+			log.Printf("rejected Consultation runtime identity for run %s: %v", state.Run.ID, err)
+			r.failActiveStream(ctx, sw, state, "runtime Agent configuration identity mismatch")
+			return true
 		}
-		_ = event.PayloadAs(&payload)
-		r.pendingAgentConfigurationID = ""
-		if len(payload.AgentConfiguration) > 0 {
-			var prov struct {
-				ID string `json:"id"`
-			}
-			_ = json.Unmarshal(payload.AgentConfiguration, &prov)
-			r.pendingAgentConfigurationID = prov.ID
+		if r.runService == nil {
+			r.failActiveStream(ctx, sw, state, "runtime Agent configuration persistence unavailable")
+			return true
 		}
-		r.pendingAgentConfiguration = payload.AgentConfiguration
-		r.pendingExecutionProvenance = payload.ExecutionProvenance
+		if err := r.runService.UpdateAgentConfiguration(
+			ctx,
+			state.Run.ID,
+			identity.ConfigurationID,
+			datatypes.JSON(identity.AgentConfiguration),
+			datatypes.JSON(identity.ExecutionProvenance),
+		); err != nil {
+			log.Printf("failed to persist Consultation runtime identity for run %s: %v", state.Run.ID, err)
+			r.failActiveStream(ctx, sw, state, "failed to persist runtime Agent configuration identity")
+			return true
+		}
+		result.ExecutionIdentity = identity
 
 	case "stream.done":
 		var payload struct {
@@ -963,7 +1281,10 @@ func (r *Runtime) handleAIEvent(
 			Usage      json.RawMessage `json:"usage"`
 			Governance json.RawMessage `json:"governance"`
 		}
-		_ = event.PayloadAs(&payload)
+		if err := event.PayloadAs(&payload); err != nil {
+			r.failActiveStream(ctx, sw, state, "invalid stream.done payload")
+			return true
+		}
 		if payload.ResponseID != "" {
 			result.ProviderResponseID = payload.ResponseID
 		}
@@ -978,7 +1299,9 @@ func (r *Runtime) handleAIEvent(
 		var payload struct {
 			Message string `json:"message"`
 		}
-		_ = event.PayloadAs(&payload)
+		if err := event.PayloadAs(&payload); err != nil {
+			payload.Message = "AI runtime protocol error"
+		}
 		r.sendEvent(ctx, sw, event, state.AssistantMsgID, "stream.error")
 		r.failActiveStream(ctx, sw, state, payload.Message)
 		return true
@@ -997,8 +1320,12 @@ func (r *Runtime) handleInteractionRequired(
 	var payload struct {
 		InteractionID string          `json:"interaction_id"`
 		Question      json.RawMessage `json:"question"`
+		CreatedAt     string          `json:"created_at,omitempty"`
 	}
-	_ = event.PayloadAs(&payload)
+	if err := event.PayloadAs(&payload); err != nil {
+		r.failActiveStream(ctx, sw, state, "invalid interaction-required payload")
+		return true
+	}
 
 	interaction, err := r.interactionService.CreatePendingInteraction(
 		ctx,
@@ -1026,6 +1353,7 @@ func (r *Runtime) handleInteractionRequired(
 	interactionID := interaction.ID.String()
 	event.IDs.InteractionID = interactionID
 	payload.InteractionID = interactionID
+	payload.CreatedAt = interaction.CreatedAt.UTC().Format(time.RFC3339Nano)
 	if patched, err := json.Marshal(payload); err == nil {
 		event.Payload = patched
 	}
@@ -1066,63 +1394,6 @@ func (r *Runtime) handleInteractionRequired(
 	return true
 }
 
-func (r *Runtime) persistCompletedTurn(
-	ctx context.Context,
-	uid uuid.UUID,
-	conversationID uuid.UUID,
-	run *model.Run,
-	assistantMsg *model.Message,
-	result streamResult,
-) {
-	finalPartsJSON, _ := json.Marshal(result.AssistantParts)
-	if err := r.messageService.UpdateMessageCompleted(
-		ctx,
-		assistantMsg.ID,
-		conversationID,
-		datatypes.JSON(finalPartsJSON),
-		nil,
-		nil,
-	); err != nil {
-		log.Printf("failed to update assistant message %s: %v", assistantMsg.ID, err)
-	}
-	if err := r.conversationService.UpdateLastMessageAt(ctx, conversationID, uid); err != nil {
-		log.Printf("failed to update last_message_at for conversation %s: %v", conversationID, err)
-	}
-	if err := r.runService.CompleteRun(ctx, run.ID, uid, result.Usage, result.ProviderResponseID); err != nil {
-		log.Printf("failed to complete run %s: %v", run.ID, err)
-	}
-	// North-Star: persist the immutable Agent configuration + execution
-	// provenance captured from the runtime.agent_configuration event.
-	if r.pendingAgentConfigurationID != "" {
-		if err := r.runService.UpdateAgentConfiguration(
-			ctx,
-			run.ID,
-			r.pendingAgentConfigurationID,
-			datatypes.JSON(r.pendingAgentConfiguration),
-			datatypes.JSON(r.pendingExecutionProvenance),
-		); err != nil {
-			log.Printf("failed to persist run %s agent configuration: %v", run.ID, err)
-		}
-	}
-	// North-Star: collect anonymous shadow evidence when a distinct challenger
-	// configuration is active. Non-blocking; never affects the served reply.
-	if r.rolloutService != nil && r.pendingAgentConfigurationID != "" {
-		decision := &service.ConsultationRunDecision{
-			RunID:                      run.ID.String(),
-			SourceConfigurationID:      r.deployment.ConsultationConfigurationID(),
-			PersistedConfigurationID:   r.pendingAgentConfigurationID,
-			ConfigurationIdentityMatch: r.pendingAgentConfigurationID == r.deployment.ConsultationConfigurationID(),
-			ReplayInputFrozen:          len(run.ReplayInput) > 2,
-			ExecutionProvenance:        datatypes.JSON(r.pendingExecutionProvenance),
-		}
-		if err := r.rolloutService.ObserveRun(ctx, run, decision); err != nil {
-			log.Printf("failed to record consultation rollout observation for run %s: %v", run.ID, err)
-		}
-	}
-	r.recordGovernance(ctx, uid, conversationID, run.ID, result.GovernanceResult)
-	r.clearActiveRun(ctx, conversationID, uid)
-}
-
 func (r *Runtime) handleSafetyOutputEvent(
 	ctx context.Context,
 	sw *stream.StreamWriter,
@@ -1139,7 +1410,10 @@ func (r *Runtime) handleSafetyOutputEvent(
 		Issues         json.RawMessage `json:"issues"`
 		SafetyFallback string          `json:"safety_fallback"`
 	}
-	_ = event.PayloadAs(&payload)
+	if err := event.PayloadAs(&payload); err != nil {
+		log.Printf("invalid safety output payload for run %s: %v", state.Run.ID, err)
+		return
+	}
 
 	partName := "output_reviewed"
 	if event.Type == "safety.output_rejected" {

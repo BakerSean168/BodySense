@@ -309,6 +309,7 @@ func main() {
 
 		// Consultation domain
 		protected.POST("/consultation-runs", consultationHandler.StartRun)
+		protected.POST("/consultation-runs/:id/cancel", consultationHandler.CancelRun)
 		consultations := protected.Group("/consultations")
 		consultations.GET("/:id", consultationHandler.GetConsultation)
 		consultations.GET("/:id/thread", threadProjectionHandler.GetConsultationThread)

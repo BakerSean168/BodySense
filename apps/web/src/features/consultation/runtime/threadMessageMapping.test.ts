@@ -202,6 +202,7 @@ describe("threadMessageMapping", () => {
           "state.interaction.required",
           {
             interaction_id: "int-1",
+            created_at: pendingInteraction.created_at,
             question: pendingInteraction.question,
           },
           "state",

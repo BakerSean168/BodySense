@@ -56,6 +56,19 @@ reasoning. They receive the strongest governance envelope:
 Diagnosis and Treatment remain the reference implementations. Assessment adapts replay to derived
 reports. Consultation adapts replay/rollout to a multi-turn checkpointed runtime.
 
+#### Consultation execution-identity handshake
+
+Consultation is multi-turn and streaming, so response-end provenance is too late to be the trust boundary. For every start or resume:
+
+- Go selects/pins the expected repository-known Consultation configuration before calling Python.
+- Python emits `runtime.agent_configuration` as the first internal event after resolving the manifest and before any message/tool/state output.
+- Go validates configuration ID, `role=consultation`, decision-policy revision and logical model against repository registration, then persists the exact identity on the active Run immediately.
+- Missing, malformed, duplicate or mismatched handshakes fail closed before ordinary semantic output is accepted.
+- The identity is run-local; the shared `consultation.Runtime` never stores request-scoped pending configuration/provenance.
+- HITL resume reloads the interrupted source Run configuration and Python verifies it equals the checkpointed manifest before resuming the graph. Current Champion selection cannot replace an already-pinned waiting thread.
+
+Observed completion usage/provider details may enrich provenance but cannot rewrite the immutable configuration identity established by the handshake.
+
 ### B. Perception Agent
 
 Role: **Posture**.

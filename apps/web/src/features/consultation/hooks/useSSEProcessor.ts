@@ -21,6 +21,8 @@
  * 已通过 StreamEvent 运行时校验；可信类型边界应在事件进入 reducer 前建立。
  */
 
+import { parseStreamEvent } from "@bodysense/contracts";
+
 // ======================== 类型导入 ========================
 // 从 consultation 类型文件中导入所有 SSE 事件的 TypeScript 类型。
 // 这些类型定义了每个事件的 data 结构（有哪些字段、字段是什么类型）。
@@ -175,15 +177,15 @@ export function processSSELine(
     const dataStr = trimmed.slice(6);
 
     try {
-      // 把 JSON 字符串解析成 JavaScript 对象
-      const data = JSON.parse(dataStr);
-
-      // 类型断言：把解析出来的对象当作 StreamEvent 类型
-      const event = data as StreamEvent;
-
-      // 优先使用 data 中自带的 type 字段，如果没有则回退到 state 中记住的 event 类型。
-      // 为什么有这个回退？因为有些 SSE 实现只在 event 行声明类型，data 中不带 type 字段。
-      const eventType = event.type || state.currentEvent;
+      // JSON.parse 只证明语法正确；真正的可信边界由共享 contracts parser 建立。
+      const data: unknown = JSON.parse(dataStr);
+      const event = parseStreamEvent(data);
+      if (state.currentEvent && state.currentEvent !== event.type) {
+        throw new Error(
+          `SSE event/data type mismatch: event=${state.currentEvent} data=${event.type}`,
+        );
+      }
+      const eventType = event.type;
 
       // Monotonic seq tracking enables GET .../events?after_seq=N resume.
       if (typeof event.seq === "number" && event.seq > state.maxSeq) {
@@ -205,8 +207,8 @@ export function processSSELine(
           ) {
             console.debug(`[SSE] ② data 行解析成功 → 分发事件: ${eventType}`, {
               handlerKey,
-              conversation_id: (event as StreamEvent).ids?.conversation_id,
-              payload: (event as StreamEvent).payload,
+              conversation_id: event.ids?.conversation_id,
+              payload: event.payload,
             });
           }
           // 调用回调函数，把事件数据传进去
@@ -231,8 +233,11 @@ export function processSSELine(
       // 如果 handlerKey 为 undefined（事件类型不在映射表中），
       // 说明这是一个我们不认识的事件，静默忽略即可。
     } catch (err) {
-      // JSON 解析失败（后端发来了格式错误的数据），打印警告但不中断流处理
-      console.warn("[SSE] malformed JSON payload:", dataStr, err);
+      const protocolError = new Error(
+        `Invalid consultation SSE event: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      console.warn("[SSE] protocol validation failed:", dataStr, protocolError);
+      handlers.onError?.(protocolError);
     }
   }
 
