@@ -53,6 +53,8 @@ This prevents a polling deployer from serving a mixed release while ACR promotio
 
 The same `scripts/validate-repo.sh` entrypoint is used locally and in CI. It covers lint, typecheck, Go/Python/Web tests, Agent qualification/promotion evals, LiteLLM smoke and production builds.
 
+Third-party GitHub Actions are pinned to immutable commit SHAs rather than movable major-version tags. `.github/dependabot.yml` tracks the `github-actions` ecosystem weekly so upgrades arrive as reviewable PRs instead of silently changing the CI/CD execution environment.
+
 `scripts/validate-migration-history.sh` additionally enforces migration history rules:
 
 - every non-legacy migration version has both `up` and `down` files;
