@@ -1,0 +1,16 @@
+FROM scratch
+
+ARG BUILD_DATE
+ARG VCS_REF
+ARG VERSION
+LABEL org.opencontainers.image.title="bodysense-runtime" \
+      org.opencontainers.image.description="BodySense production runtime configuration bundle" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.version="${VERSION}"
+
+COPY .env.production /runtime/.env.production
+COPY docker/docker-compose.prod.yml /runtime/docker/docker-compose.prod.yml
+COPY docker/Caddyfile /runtime/docker/Caddyfile
+COPY docker/litellm/config.yaml /runtime/docker/litellm/config.yaml
+COPY scripts/production-deploy-watch.sh /runtime/scripts/production-deploy-watch.sh
