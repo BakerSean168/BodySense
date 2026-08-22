@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/T1moooo/BodySense/compare/v0.4.1...v0.4.2) (2026-08-22)
+
+
+### Bug Fixes
+
+* create production runtime directories before sync ([#75](https://github.com/T1moooo/BodySense/issues/75)) ([d0ca2e8](https://github.com/T1moooo/BodySense/commit/d0ca2e83ea42d38d1eadd6990a2d42933772b853))
+
 ## [0.4.1](https://github.com/T1moooo/BodySense/compare/v0.4.0...v0.4.1) (2026-08-22)
 
 
