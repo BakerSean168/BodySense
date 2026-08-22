@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.1](https://github.com/T1moooo/BodySense/compare/v0.4.0...v0.4.1) (2026-08-22)
+
+
+### Bug Fixes
+
+* **api:** restore published migration 29 compatibility ([c9093fc](https://github.com/T1moooo/BodySense/commit/c9093fce832b98c3129c4a29e6378cf6f0b0e566))
+* **ci:** harden Alibaba production delivery ([d7c986d](https://github.com/T1moooo/BodySense/commit/d7c986d530465004a6c00e4779888c00015fc0d5))
+
 ## [0.4.0](https://github.com/T1moooo/BodySense/compare/v0.3.0...v0.4.0) (2026-08-22)
 
 
