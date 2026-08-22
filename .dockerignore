@@ -22,3 +22,5 @@ apps/ai-service/data/benchmarks
 apps/ai-service/data/knowledge_sources
 apps/ai-service/**/*.mp4
 apps/ai-service/**/*.wav
+
+!.env.production

@@ -26,13 +26,13 @@ feature branch
     -> release PR + CI
     -> vX.Y.Z tag / GitHub Release
     -> Build & Publish Production Images
-       - build Web/API/AI in parallel
+       - build Web/API/AI/runtime artifacts in parallel
        - push immutable vX.Y.Z images
-       - only after all three succeed: promote all to prod-latest
+       - only after all four succeed: promote all to prod-latest
     -> Alibaba Cloud systemd deploy watcher
        - pull the three prod-latest pointers
-       - require identical OCI revision labels
-       - fetch the exact repository revision for runtime files
+       - require identical OCI revision labels across Web/API/AI/runtime
+       - extract runtime files from the coherent ACR runtime image
        - validate Compose against production secrets
        - back up PostgreSQL
        - deploy AI -> API -> Web with health gates
@@ -41,7 +41,7 @@ feature branch
 
 The critical invariant is:
 
-> `prod-latest` is only a movable pointer. A deployment is eligible only when Web, API and AI Service all point to images built from the same immutable Git revision.
+> `prod-latest` is only a movable pointer. A deployment is eligible only when Web, API, AI Service and the runtime bundle all point to artifacts built from the same immutable Git revision.
 
 This prevents a polling deployer from serving a mixed release while ACR promotion is still in progress.
 
@@ -86,13 +86,16 @@ This exists because production was found at migration 29 while migration 29 had 
 
 ### Immutable build first
 
-Web, API and AI Service are built in parallel as Linux/amd64 images and pushed only with the immutable release tag first:
+Web, API, AI Service and a small runtime configuration bundle are built in parallel as Linux/amd64-compatible OCI images and pushed only with the immutable release tag first:
 
 ```text
 bodysense-web:vX.Y.Z
 bodysense-api:vX.Y.Z
 bodysense-ai-service:vX.Y.Z
+bodysense-runtime:vX.Y.Z
 ```
+
+The runtime image contains only tracked non-secret production runtime files (`.env.production`, Compose, Caddy, LiteLLM config and the deploy watcher). Secrets remain on the production host and are never embedded in the image.
 
 Each image records `org.opencontainers.image.revision=<git SHA>`.
 
@@ -106,6 +109,7 @@ The promotion job is attached to the GitHub `production` Environment, which give
 bodysense-web:prod-latest
 bodysense-api:prod-latest
 bodysense-ai-service:prod-latest
+bodysense-runtime:prod-latest
 ```
 
 to the new immutable artifacts. If one build fails, **none** of the production pointers are promoted.
@@ -129,8 +133,8 @@ Before touching running containers it:
 1. pulls Web/API/AI `prod-latest`;
 2. reads each image OCI revision label;
 3. refuses deployment unless all three revisions are non-empty and identical;
-4. fetches that exact Git revision from the public BodySense repository;
-5. stages `.env.production`, production Compose, Caddy and deployment scripts from the same revision;
+4. pulls the `bodysense-runtime:prod-latest` artifact and requires its OCI revision label to match Web/API/AI;
+5. extracts `.env.production`, production Compose, Caddy, LiteLLM config and the deployment watcher from that runtime artifact;
 6. validates `docker compose config` with the server's untracked `.env.production.local`.
 
 Secrets are never fetched from Git and are never overwritten.
@@ -226,3 +230,7 @@ docker compose -p docker -f docker/docker-compose.prod.yml \
   --env-file .env.production \
   --env-file .env.production.local ps
 ```
+
+### Runtime artifact boundary
+
+Normal production reconciliation is ACR-contained: once a server is bootstrapped, a release does not need GitHub to fetch runtime files. GitHub remains the source plane for CI/release creation and for first-host bootstrap; ACR is the complete release artifact plane used by the production watcher.

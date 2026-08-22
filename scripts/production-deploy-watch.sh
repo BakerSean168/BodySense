@@ -5,8 +5,6 @@ ROOT="${BODYSENSE_DEPLOY_ROOT:-/opt/bodysense}"
 PUBLIC_ENV="$ROOT/.env.production"
 SECRET_ENV="$ROOT/.env.production.local"
 COMPOSE="$ROOT/docker/docker-compose.prod.yml"
-REPO_DIR="$ROOT/.release-src"
-REPO_URL="${BODYSENSE_REPO_URL:-https://github.com/T1moooo/BodySense.git}"
 STATE_FILE="$ROOT/.deploy-state"
 BLOCK_FILE="$ROOT/.deploy-blocked"
 LOCK_FILE="$ROOT/.deploy.lock"
@@ -53,6 +51,7 @@ NAMESPACE=$(read_public_env ACR_NAMESPACE bodysense)
 WEB_TAG=$(read_public_env WEB_TAG prod-latest)
 API_TAG=$(read_public_env API_TAG prod-latest)
 AI_TAG=$(read_public_env AI_TAG prod-latest)
+RUNTIME_TAG=$(read_public_env RUNTIME_TAG prod-latest)
 APP_DOMAIN=$(read_public_env APP_DOMAIN body.bakersean.top)
 AUTO_DEPLOY=$(read_public_env AUTO_DEPLOY_ENABLED true)
 DB_USER=$(read_public_env DB_USER bodysense)
@@ -63,6 +62,7 @@ DB_NAME=$(read_public_env DB_NAME bodysense)
 web_ref="$REGISTRY/$NAMESPACE/bodysense-web:$WEB_TAG"
 api_ref="$REGISTRY/$NAMESPACE/bodysense-api:$API_TAG"
 ai_ref="$REGISTRY/$NAMESPACE/bodysense-ai-service:$AI_TAG"
+runtime_ref="$REGISTRY/$NAMESPACE/bodysense-runtime:$RUNTIME_TAG"
 
 compose() {
   docker compose -p docker -f "$COMPOSE" --env-file "$PUBLIC_ENV" --env-file "$SECRET_ENV" "$@"
@@ -227,29 +227,28 @@ wait_healthy() {
 }
 
 sync_runtime() {
-  local revision="$1" stage="$ROOT/.runtime-next" old_runtime_revision
-  if [ ! -d "$REPO_DIR/.git" ]; then
-    rm -rf "$REPO_DIR"
-    git clone --filter=blob:none --no-checkout "$REPO_URL" "$REPO_DIR" >/dev/null
-  fi
-  git -C "$REPO_DIR" fetch --quiet --depth=1 origin "$revision"
-  git -C "$REPO_DIR" checkout --quiet --detach FETCH_HEAD
-  [ "$(git -C "$REPO_DIR" rev-parse HEAD)" = "$revision" ] || fail 'runtime checkout revision mismatch'
+  local revision="$1" stage="$ROOT/.runtime-next" old_runtime_revision runtime_container archive
 
   rm -rf "$stage"
-  mkdir -p "$stage/docker/litellm" "$stage/scripts"
-  install -m 0644 "$REPO_DIR/.env.production" "$stage/.env.production"
-  install -m 0644 "$REPO_DIR/docker/docker-compose.prod.yml" "$stage/docker/docker-compose.prod.yml"
-  install -m 0644 "$REPO_DIR/docker/Caddyfile" "$stage/docker/Caddyfile"
-  [ -f "$REPO_DIR/docker/litellm/config.yaml" ] && install -m 0644 "$REPO_DIR/docker/litellm/config.yaml" "$stage/docker/litellm/config.yaml"
-  install -m 0755 "$REPO_DIR/scripts/production-deploy-watch.sh" "$stage/scripts/production-deploy-watch.sh"
+  mkdir -p "$stage"
+  runtime_container=$(docker create "$runtime_ref" /bin/true)
+  if ! docker cp "$runtime_container:/runtime/." "$stage/"; then
+    docker rm -f "$runtime_container" >/dev/null 2>&1 || true
+    fail 'failed to extract ACR runtime bundle'
+  fi
+  docker rm "$runtime_container" >/dev/null
+
+  [ -s "$stage/.env.production" ] || fail 'runtime bundle missing .env.production'
+  [ -s "$stage/docker/docker-compose.prod.yml" ] || fail 'runtime bundle missing production Compose'
+  [ -s "$stage/docker/Caddyfile" ] || fail 'runtime bundle missing Caddyfile'
+  [ -s "$stage/scripts/production-deploy-watch.sh" ] || fail 'runtime bundle missing deploy watcher'
+  [ "$(image_revision "$runtime_ref")" = "$revision" ] || fail 'runtime bundle revision mismatch'
 
   docker compose -p docker -f "$stage/docker/docker-compose.prod.yml" \
     --env-file "$stage/.env.production" --env-file "$SECRET_ENV" config -q
 
   old_runtime_revision=$(sed -n 's/^runtime_revision=//p' "$STATE_FILE" 2>/dev/null | tail -1 || true)
   [ -n "$old_runtime_revision" ] || old_runtime_revision=pre-managed
-  local archive
   archive="$RUNTIME_BACKUP_DIR/${old_runtime_revision}-$(date -u +%Y%m%d-%H%M%S)"
   mkdir -p "$archive/docker/litellm"
   cp -f "$PUBLIC_ENV" "$archive/.env.production" 2>/dev/null || true
@@ -271,13 +270,17 @@ log 'checking ACR production pointers'
 docker pull "$web_ref" >/dev/null
 docker pull "$api_ref" >/dev/null
 docker pull "$ai_ref" >/dev/null
+docker pull "$runtime_ref" >/dev/null
 
 web_revision=$(image_revision "$web_ref")
 api_revision=$(image_revision "$api_ref")
 ai_revision=$(image_revision "$ai_ref")
+runtime_revision=$(image_revision "$runtime_ref")
 [ -n "$web_revision" ] || fail 'web image is missing org.opencontainers.image.revision'
-[ "$web_revision" = "$api_revision" ] || { log "release not coherent yet: web=$web_revision api=$api_revision ai=$ai_revision"; exit 0; }
-[ "$web_revision" = "$ai_revision" ] || { log "release not coherent yet: web=$web_revision api=$api_revision ai=$ai_revision"; exit 0; }
+[ -n "$runtime_revision" ] || fail 'runtime image is missing org.opencontainers.image.revision'
+[ "$web_revision" = "$api_revision" ] || { log "release not coherent yet: web=$web_revision api=$api_revision ai=$ai_revision runtime=$runtime_revision"; exit 0; }
+[ "$web_revision" = "$ai_revision" ] || { log "release not coherent yet: web=$web_revision api=$api_revision ai=$ai_revision runtime=$runtime_revision"; exit 0; }
+[ "$web_revision" = "$runtime_revision" ] || { log "release not coherent yet: web=$web_revision api=$api_revision ai=$ai_revision runtime=$runtime_revision"; exit 0; }
 desired_revision="$web_revision"
 blocked_revision=$(sed -n 's/^revision=//p' "$BLOCK_FILE" 2>/dev/null | tail -1 || true)
 if ! $FORCE && [ "$blocked_revision" = "$desired_revision" ]; then
@@ -291,7 +294,7 @@ current_ai=$(container_revision ai-service)
 managed_revision=$(sed -n 's/^revision=//p' "$STATE_FILE" 2>/dev/null | tail -1 || true)
 
 if $CHECK_ONLY; then
-  log "coherent candidate revision=$desired_revision current_web=${current_web:-none} current_api=${current_api:-none} current_ai=${current_ai:-none} managed=${managed_revision:-none}"
+  log "coherent candidate revision=$desired_revision runtime=$runtime_revision current_web=${current_web:-none} current_api=${current_api:-none} current_ai=${current_ai:-none} managed=${managed_revision:-none}"
   exit 0
 fi
 
@@ -364,6 +367,7 @@ checked_namespace="$NAMESPACE"
 checked_web_tag="$WEB_TAG"
 checked_api_tag="$API_TAG"
 checked_ai_tag="$AI_TAG"
+checked_runtime_tag="$RUNTIME_TAG"
 checked_db_user="$DB_USER"
 checked_db_name="$DB_NAME"
 sync_runtime "$desired_revision"
@@ -376,6 +380,7 @@ NAMESPACE=$(read_public_env ACR_NAMESPACE bodysense)
 WEB_TAG=$(read_public_env WEB_TAG prod-latest)
 API_TAG=$(read_public_env API_TAG prod-latest)
 AI_TAG=$(read_public_env AI_TAG prod-latest)
+RUNTIME_TAG=$(read_public_env RUNTIME_TAG prod-latest)
 DB_USER=$(read_public_env DB_USER bodysense)
 DB_NAME=$(read_public_env DB_NAME bodysense)
 [ "$REGISTRY" = "$checked_registry" ] || fail 'runtime bundle changed REGISTRY during deployment'
@@ -383,6 +388,7 @@ DB_NAME=$(read_public_env DB_NAME bodysense)
 [ "$WEB_TAG" = "$checked_web_tag" ] || fail 'runtime bundle changed WEB_TAG during deployment'
 [ "$API_TAG" = "$checked_api_tag" ] || fail 'runtime bundle changed API_TAG during deployment'
 [ "$AI_TAG" = "$checked_ai_tag" ] || fail 'runtime bundle changed AI_TAG during deployment'
+[ "$RUNTIME_TAG" = "$checked_runtime_tag" ] || fail 'runtime bundle changed RUNTIME_TAG during deployment'
 [ "$DB_USER" = "$checked_db_user" ] || fail 'runtime bundle changed DB_USER during deployment'
 [ "$DB_NAME" = "$checked_db_name" ] || fail 'runtime bundle changed DB_NAME during deployment'
 APP_DOMAIN=$(read_public_env APP_DOMAIN body.bakersean.top)
@@ -412,6 +418,7 @@ curl -fsS --max-time 15 "https://${APP_DOMAIN}/api/health" >/dev/null || fail 'e
 cat > "$STATE_FILE" <<STATE
 revision=$desired_revision
 runtime_revision=$desired_revision
+runtime_source=acr
 deployed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 STATE
 chmod 0644 "$STATE_FILE"
