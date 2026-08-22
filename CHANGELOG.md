@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/BakerSean168/BodySense/compare/v0.4.3...v0.5.0) (2026-08-22)
+
+
+### Features
+
+* **main:** harden consultation runtime and RAG boundaries ([#91](https://github.com/BakerSean168/BodySense/issues/91)) ([142d8de](https://github.com/BakerSean168/BodySense/commit/142d8de00f179a00aa837bcc820e66daa8cf3e59))
+
 ## [0.4.3](https://github.com/T1moooo/BodySense/compare/v0.4.2...v0.4.3) (2026-08-22)
 
 
