@@ -48,7 +48,7 @@ class Splitter(Protocol):
 # ---------------------------------------------------------------------------
 
 
-def get_splitter(provider: str | None = None) -> Splitter:
+def get_splitter(provider: str | None = None, configuration_id: str | None = None) -> Splitter:
     """Create a splitter based on configuration.
 
     Priority: explicit ``provider`` argument > ``SPLITTER_PROVIDER`` env var > ``heuristic``.
@@ -61,7 +61,7 @@ def get_splitter(provider: str | None = None) -> Splitter:
     if name == "llm":
         from .ai_splitter import LLMSplitter
 
-        return LLMSplitter()
+        return LLMSplitter(configuration_id=configuration_id)
 
     raise ValueError(f"Unsupported splitter provider '{name}'. Supported: heuristic, llm")
 

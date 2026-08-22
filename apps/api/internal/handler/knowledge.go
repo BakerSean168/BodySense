@@ -3,6 +3,7 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -13,17 +14,27 @@ import (
 )
 
 // KnowledgeHandler handles knowledge base related requests.
+type knowledgeAgentDeployment interface {
+	KnowledgeCuratorConfigurationID() string
+	KnowledgeCuratorDecisionPolicyRevision() string
+	KnowledgeCuratorLogicalModel() string
+	KnowledgeSplitterConfigurationID() string
+	KnowledgeSplitterDecisionPolicyRevision() string
+	KnowledgeSplitterLogicalModel() string
+}
+
 type KnowledgeHandler struct {
 	aiServiceURL string
+	deployment   knowledgeAgentDeployment
 }
 
 // NewKnowledgeHandler creates a new KnowledgeHandler.
-func NewKnowledgeHandler() *KnowledgeHandler {
+func NewKnowledgeHandler(deployment knowledgeAgentDeployment) *KnowledgeHandler {
 	aiServiceURL := os.Getenv("AI_SERVICE_URL")
 	if aiServiceURL == "" {
 		aiServiceURL = "http://localhost:8100"
 	}
-	return &KnowledgeHandler{aiServiceURL: aiServiceURL}
+	return &KnowledgeHandler{aiServiceURL: aiServiceURL, deployment: deployment}
 }
 
 // SearchRequest represents the request to search knowledge base.
@@ -36,16 +47,20 @@ type SearchRequest struct {
 
 // IngestVideoRequest represents the request to ingest a local video source.
 type IngestVideoRequest struct {
-	VideoPath          string `json:"video_path" binding:"required"`
-	ProblemSlug        string `json:"problem_slug" binding:"required"`
-	ProblemDisplayName string `json:"problem_display_name" binding:"required"`
-	Author             string `json:"author" binding:"required"`
-	SourceTitle        string `json:"source_title,omitempty"`
-	Language           string `json:"language,omitempty"`
-	WhisperModel       string `json:"whisper_model,omitempty"`
-	ForceTranscribe    bool   `json:"force_transcribe,omitempty"`
-	ExportClips        bool   `json:"export_clips,omitempty"`
-	OverwriteSource    bool   `json:"overwrite_source,omitempty"`
+	VideoPath               string `json:"video_path" binding:"required"`
+	ProblemSlug             string `json:"problem_slug" binding:"required"`
+	ProblemDisplayName      string `json:"problem_display_name" binding:"required"`
+	Author                  string `json:"author" binding:"required"`
+	SourceTitle             string `json:"source_title,omitempty"`
+	Language                string `json:"language,omitempty"`
+	WhisperModel            string `json:"whisper_model,omitempty"`
+	ForceTranscribe         bool   `json:"force_transcribe,omitempty"`
+	ExportClips             bool   `json:"export_clips,omitempty"`
+	OverwriteSource         bool   `json:"overwrite_source,omitempty"`
+	SplitterProvider        string `json:"splitter_provider,omitempty"`
+	AIRefine                bool   `json:"ai_refine,omitempty"`
+	SplitterConfigurationID string `json:"splitter_configuration_id,omitempty"`
+	CuratorConfigurationID  string `json:"curator_configuration_id,omitempty"`
 }
 
 // sanitizeProxyResponse returns a generic error message for non-2xx AI service responses
@@ -61,19 +76,17 @@ func sanitizeProxyResponse(statusCode int, body []byte) (int, []byte) {
 // validateVideoPath checks that the video path is within an allowed directory
 // and does not contain path traversal sequences.
 func validateVideoPath(path string) bool {
-	if path == "" {
+	normalized := strings.ReplaceAll(strings.TrimSpace(path), "\\", "/")
+	if normalized == "" || strings.HasPrefix(normalized, "/") {
 		return false
 	}
-	// Reject path traversal
-	cleaned := filepath.Clean(path)
-	if strings.Contains(cleaned, "..") {
-		return false
+	for _, part := range strings.Split(normalized, "/") {
+		if part == ".." {
+			return false
+		}
 	}
-	// Must be an absolute path or within a known base directory
-	if !filepath.IsAbs(cleaned) {
-		return false
-	}
-	return true
+	cleaned := filepath.Clean(normalized)
+	return !filepath.IsAbs(cleaned) && cleaned != "." && cleaned != ".."
 }
 
 // SearchKnowledge handles POST /api/knowledge/search
@@ -127,7 +140,7 @@ func (h *KnowledgeHandler) IngestVideo(c *gin.Context) {
 
 	// Validate video path to prevent path traversal
 	if !validateVideoPath(req.VideoPath) {
-		respondError(c, http.StatusBadRequest, "INVALID_VIDEO_PATH", "video_path must be an absolute path without traversal sequences")
+		respondError(c, http.StatusBadRequest, "INVALID_VIDEO_PATH", "video_path must be relative to the knowledge data root without traversal sequences")
 		return
 	}
 
@@ -136,6 +149,30 @@ func (h *KnowledgeHandler) IngestVideo(c *gin.Context) {
 	}
 	if req.WhisperModel == "" {
 		req.WhisperModel = "ggml-base.bin"
+	}
+	if req.SplitterProvider == "" {
+		req.SplitterProvider = "heuristic"
+	}
+	if req.SplitterProvider != "heuristic" && req.SplitterProvider != "llm" {
+		respondError(c, http.StatusBadRequest, "INVALID_SPLITTER_PROVIDER", "splitter_provider must be heuristic or llm")
+		return
+	}
+	// North-Star: callers choose the capability, never an immutable Agent id.
+	req.SplitterConfigurationID = ""
+	req.CuratorConfigurationID = ""
+	if req.SplitterProvider == "llm" {
+		if h.deployment == nil {
+			respondError(c, http.StatusServiceUnavailable, "AGENT_DEPLOYMENT_UNAVAILABLE", "knowledge Agent deployment policy is unavailable")
+			return
+		}
+		req.SplitterConfigurationID = h.deployment.KnowledgeSplitterConfigurationID()
+	}
+	if req.AIRefine {
+		if h.deployment == nil {
+			respondError(c, http.StatusServiceUnavailable, "AGENT_DEPLOYMENT_UNAVAILABLE", "knowledge Agent deployment policy is unavailable")
+			return
+		}
+		req.CuratorConfigurationID = h.deployment.KnowledgeCuratorConfigurationID()
 	}
 
 	body, err := json.Marshal(req)
@@ -162,7 +199,70 @@ func (h *KnowledgeHandler) IngestVideo(c *gin.Context) {
 	}
 
 	status, sanitized := sanitizeProxyResponse(resp.StatusCode, respBody)
+	if status >= 200 && status < 300 {
+		if err := h.validateKnowledgeAgentExecution(respBody, req); err != nil {
+			respondError(c, http.StatusBadGateway, "AGENT_IDENTITY_MISMATCH", "knowledge Agent execution identity validation failed")
+			return
+		}
+	}
 	c.Data(status, "application/json", sanitized)
+}
+
+func (h *KnowledgeHandler) validateKnowledgeAgentExecution(body []byte, req IngestVideoRequest) error {
+	if req.SplitterProvider != "llm" && !req.AIRefine {
+		return nil
+	}
+	var response struct {
+		AgentExecution map[string]struct {
+			AgentConfiguration  map[string]any `json:"agent_configuration"`
+			ExecutionProvenance map[string]any `json:"execution_provenance"`
+		} `json:"agent_execution"`
+	}
+	if err := json.Unmarshal(body, &response); err != nil {
+		return err
+	}
+	check := func(key, expectedID, expectedRole, expectedPolicy, expectedModel string) error {
+		record, ok := response.AgentExecution[key]
+		if !ok {
+			return fmt.Errorf("missing %s execution record", key)
+		}
+		id, _ := record.AgentConfiguration["id"].(string)
+		role, _ := record.AgentConfiguration["role"].(string)
+		policy, _ := record.AgentConfiguration["decision_policy_revision"].(string)
+		logicalModel, _ := record.AgentConfiguration["logical_model"].(string)
+		if id != expectedID || role != expectedRole || policy != expectedPolicy || logicalModel != expectedModel {
+			return fmt.Errorf("%s immutable configuration mismatch", key)
+		}
+		executionStatus, _ := record.ExecutionProvenance["status"].(string)
+		executionModel, _ := record.ExecutionProvenance["logical_model"].(string)
+		if (executionStatus != "executed" && executionStatus != "degraded") || executionModel != expectedModel {
+			return fmt.Errorf("%s execution provenance mismatch", key)
+		}
+		return nil
+	}
+	if req.SplitterProvider == "llm" {
+		if err := check(
+			"knowledge_splitter",
+			req.SplitterConfigurationID,
+			"knowledge_splitter",
+			h.deployment.KnowledgeSplitterDecisionPolicyRevision(),
+			h.deployment.KnowledgeSplitterLogicalModel(),
+		); err != nil {
+			return err
+		}
+	}
+	if req.AIRefine {
+		if err := check(
+			"knowledge_curator",
+			req.CuratorConfigurationID,
+			"knowledge_curator",
+			h.deployment.KnowledgeCuratorDecisionPolicyRevision(),
+			h.deployment.KnowledgeCuratorLogicalModel(),
+		); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // ListSources handles GET /api/knowledge/sources

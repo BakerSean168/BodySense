@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/bodysense/api/internal/model"
@@ -20,7 +22,8 @@ type conversationRepo interface {
 	Update(ctx context.Context, conversation *model.Conversation) error
 	SoftDelete(ctx context.Context, id, userID uuid.UUID) error
 	UpdatePinned(ctx context.Context, id, userID uuid.UUID, pinned bool) error
-	UpdateTitle(ctx context.Context, id, userID uuid.UUID, title string) error
+	UpdateManualTitle(ctx context.Context, id, userID uuid.UUID, title string) error
+	UpdateTitleGeneration(ctx context.Context, id, userID uuid.UUID, title, status, configurationID string, configuration, provenance, decisionTrace []byte) error
 	UpdateTitleStatus(ctx context.Context, id, userID uuid.UUID, status string) error
 	UpdateLastMessageAt(ctx context.Context, id, userID uuid.UUID) error
 	UpdateActiveRunID(ctx context.Context, id, userID uuid.UUID, runID *uuid.UUID, streamID string) error
@@ -65,6 +68,7 @@ type ConversationService struct {
 	runRepo          runRepo
 	shareRepo        shareRepo
 	aiClient         *AIClient
+	deployment       *AgentDeploymentPolicy
 }
 
 // NewConversationService creates a new ConversationService.
@@ -82,6 +86,19 @@ func NewConversationService(
 		shareRepo:        shareRepo,
 		aiClient:         aiClient,
 	}
+}
+
+// WithAgentDeployment attaches the Go-owned immutable Agent configuration pointer.
+func (s *ConversationService) WithAgentDeployment(deployment *AgentDeploymentPolicy) *ConversationService {
+	s.deployment = deployment
+	return s
+}
+
+func (s *ConversationService) titleConfigurationID() string {
+	if s.deployment != nil {
+		return s.deployment.TitleConfigurationID()
+	}
+	return defaultTitleConfigurationID
 }
 
 // CreateConversation creates a new conversation for a user with the given model.
@@ -180,11 +197,8 @@ func (s *ConversationService) RenameTitle(ctx context.Context, id, userID uuid.U
 		return fmt.Errorf("conversation not found: %s", id)
 	}
 
-	if err := s.conversationRepo.UpdateTitle(ctx, id, userID, title); err != nil {
-		return fmt.Errorf("update title: %w", err)
-	}
-	if err := s.conversationRepo.UpdateTitleStatus(ctx, id, userID, "generated"); err != nil {
-		return fmt.Errorf("update title status: %w", err)
+	if err := s.conversationRepo.UpdateManualTitle(ctx, id, userID, title); err != nil {
+		return fmt.Errorf("persist manual title: %w", err)
 	}
 	return nil
 }
@@ -249,22 +263,23 @@ func (s *ConversationService) GenerateTitleSync(ctx context.Context, id, userID 
 		msgPayload = append(msgPayload, m)
 	}
 
-	title, err := s.aiClient.GenerateTitle(ctx, msgPayload)
+	configurationID := s.titleConfigurationID()
+	generated, err := s.aiClient.GenerateTitle(ctx, msgPayload, configurationID)
 	if err != nil {
 		_ = s.conversationRepo.UpdateTitleStatus(ctx, id, userID, "failed")
 		return "", fmt.Errorf("generate title: %w", err)
 	}
-
+	title, configurationJSON, provenanceJSON, traceJSON, err := validateTitleAgentResponse(generated, configurationID)
+	if err != nil {
+		_ = s.conversationRepo.UpdateTitleStatus(ctx, id, userID, "failed")
+		return "", err
+	}
 	if title == "" {
 		title = defaultTitle
 	}
-
-	if err := s.conversationRepo.UpdateTitle(ctx, id, userID, title); err != nil {
+	if err := s.conversationRepo.UpdateTitleGeneration(ctx, id, userID, title, "generated", configurationID, configurationJSON, provenanceJSON, traceJSON); err != nil {
 		_ = s.conversationRepo.UpdateTitleStatus(ctx, id, userID, "failed")
-		return "", fmt.Errorf("update title: %w", err)
-	}
-	if err := s.conversationRepo.UpdateTitleStatus(ctx, id, userID, "generated"); err != nil {
-		return title, fmt.Errorf("update title status: %w", err)
+		return "", fmt.Errorf("persist title generation: %w", err)
 	}
 
 	return title, nil
@@ -319,6 +334,55 @@ func (s *ConversationService) ListRuns(ctx context.Context, conversationID, user
 	return runs, nil
 }
 
+func validateTitleAgentResponse(response *TitleGenerateResponse, expectedConfigurationID string) (string, []byte, []byte, []byte, error) {
+	if response == nil {
+		return "", nil, nil, nil, fmt.Errorf("title Agent returned no response")
+	}
+	registration, ok := knownTitleConfigurations[strings.TrimSpace(expectedConfigurationID)]
+	if !ok {
+		return "", nil, nil, nil, fmt.Errorf("unknown Title Agent configuration id %q", expectedConfigurationID)
+	}
+	configuration := response.AgentConfiguration
+	if id, _ := configuration["id"].(string); id != expectedConfigurationID {
+		return "", nil, nil, nil, fmt.Errorf("title Agent configuration mismatch: got %q want %q", id, expectedConfigurationID)
+	}
+	if role, _ := configuration["role"].(string); role != "title" {
+		return "", nil, nil, nil, fmt.Errorf("title Agent role mismatch: %q", role)
+	}
+	if policy, _ := configuration["decision_policy_revision"].(string); policy != registration.DecisionPolicyRevision {
+		return "", nil, nil, nil, fmt.Errorf("title Agent decision policy mismatch: %q", policy)
+	}
+	if model, _ := configuration["logical_model"].(string); model != registration.LogicalModel {
+		return "", nil, nil, nil, fmt.Errorf("title Agent logical model mismatch: %q", model)
+	}
+	provenance := response.ExecutionProvenance
+	if status, _ := provenance["status"].(string); status != "executed" {
+		return "", nil, nil, nil, fmt.Errorf("title Agent execution status is %q", status)
+	}
+	if model, _ := provenance["logical_model"].(string); model != registration.LogicalModel {
+		return "", nil, nil, nil, fmt.Errorf("title Agent execution logical model mismatch: %q", model)
+	}
+	configurationJSON, err := json.Marshal(configuration)
+	if err != nil {
+		return "", nil, nil, nil, fmt.Errorf("marshal title Agent configuration: %w", err)
+	}
+	provenanceJSON, err := json.Marshal(provenance)
+	if err != nil {
+		return "", nil, nil, nil, fmt.Errorf("marshal title execution provenance: %w", err)
+	}
+	traceJSON, err := json.Marshal(map[string]any{
+		"decision":                 "persist",
+		"authority":                "go",
+		"agent_configuration_id":   expectedConfigurationID,
+		"decision_policy_revision": registration.DecisionPolicyRevision,
+		"logical_model":            registration.LogicalModel,
+	})
+	if err != nil {
+		return "", nil, nil, nil, fmt.Errorf("marshal title decision trace: %w", err)
+	}
+	return response.Title, configurationJSON, provenanceJSON, traceJSON, nil
+}
+
 // generateTitleAsync calls the AI service to generate a title for the conversation.
 func (s *ConversationService) generateTitleAsync(id, userID uuid.UUID) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -351,24 +415,25 @@ func (s *ConversationService) generateTitleAsync(id, userID uuid.UUID) {
 		msgPayload = append(msgPayload, m)
 	}
 
-	// Call AI service to generate title
-	title, err := s.aiClient.GenerateTitle(ctx, msgPayload)
+	// Call AI service with the exact Go-selected immutable Title configuration.
+	configurationID := s.titleConfigurationID()
+	generated, err := s.aiClient.GenerateTitle(ctx, msgPayload, configurationID)
 	if err != nil {
 		log.Printf("generateTitleAsync: AI service call failed for %s: %v", id, err)
 		_ = s.conversationRepo.UpdateTitleStatus(ctx, id, userID, "failed")
 		return
 	}
-
-	if title == "" {
-		title = defaultTitle
-	}
-
-	if err := s.conversationRepo.UpdateTitle(ctx, id, userID, title); err != nil {
-		log.Printf("generateTitleAsync: failed to update title for %s: %v", id, err)
+	title, configurationJSON, provenanceJSON, traceJSON, err := validateTitleAgentResponse(generated, configurationID)
+	if err != nil {
+		log.Printf("generateTitleAsync: title Agent identity validation failed for %s: %v", id, err)
 		_ = s.conversationRepo.UpdateTitleStatus(ctx, id, userID, "failed")
 		return
 	}
-	if err := s.conversationRepo.UpdateTitleStatus(ctx, id, userID, "generated"); err != nil {
-		log.Printf("generateTitleAsync: failed to update title status for %s: %v", id, err)
+	if title == "" {
+		title = defaultTitle
+	}
+	if err := s.conversationRepo.UpdateTitleGeneration(ctx, id, userID, title, "generated", configurationID, configurationJSON, provenanceJSON, traceJSON); err != nil {
+		log.Printf("generateTitleAsync: failed to persist generated title for %s: %v", id, err)
+		_ = s.conversationRepo.UpdateTitleStatus(ctx, id, userID, "failed")
 	}
 }

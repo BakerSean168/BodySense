@@ -15,7 +15,7 @@ from src.configuration.title_agent_config import (
 def test_default_title_configuration_is_repository_versioned_and_stable() -> None:
     config = get_default_title_configuration()
     assert config.role == "title"
-    assert config.logical_model == "bodysense-structured"
+    assert config.logical_model == "bodysense-text"
     assert config.configuration_id.startswith("title-config-")
     assert len(config.configuration_id) == len("title-config-") + 16
     assert (CONFIG_ROOT / "title-v1.yaml").exists()
@@ -51,5 +51,5 @@ def test_title_manifest_excludes_runtime_host_from_provenance() -> None:
     prov = config.provenance()
     assert prov["id"] == config.configuration_id
     assert prov["role"] == "title"
-    assert prov["logical_model"] == "bodysense-structured"
+    assert prov["logical_model"] == "bodysense-text"
     assert "temperature" not in prov

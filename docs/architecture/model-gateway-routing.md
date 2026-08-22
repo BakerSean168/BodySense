@@ -1,66 +1,115 @@
 # Model Gateway Routing Architecture
 
-Status: current architecture after Diagnosis Agent platform Phase 10 (2026-08-20)
+Status: current architecture after the AI Service Agent-platform closeout (2026-08-21)
 
 ## One model-execution topology
 
-BodySense now has one LLM provider-routing topology:
+BodySense has one LLM provider-routing topology:
 
 ```text
-Business role / utility
+Go business/deployment authority
         |
-        | selects only a BodySense logical route or immutable AgentConfiguration
+        | selects a repository-known immutable AgentConfiguration
         v
 Python AI service
-  - AIService (provider-neutral request/stream adapter)
-  - PydanticAI typed Agents
+  - typed PydanticAI Agents where appropriate
+  - LangGraph Consultation runtime
+  - AIService provider-neutral request/stream transport for utility/offline roles
         |
-        | LITELLM_BASE_URL + LITELLM_API_KEY only
+        | exact manifest logical_model + generation settings
         v
 Standalone LiteLLM gateway
   - physical provider credentials
-  - provider/model selection
-  - retry/fallback
+  - physical provider/model mapping
+  - provider retry/fallback
         |
         v
-MiMo / OpenRouter physical models
+Physical providers / models
 ```
 
-Application code does not construct physical provider candidates or fallback
-chains. `AIService` remains as a business-facing transport facade because
-Consultation/RAG/Title/Posture already depend on its stable request and streaming
-contracts; its former provider-routing responsibility has been removed.
+Application code does not construct physical provider candidates or fallback chains. `AIService`
+remains as a stable transport facade for Consultation/Knowledge/Title/Posture; its former provider
+routing responsibility is retired.
 
 ## Logical groups
 
-The repository-owned logical route registry in `src/ai/gateway.py` maps business
-intent to gateway model groups:
+The repository-owned logical route registry in `src/ai/gateway.py` provides the allowed BodySense
+logical groups:
 
 | Business route | LiteLLM logical group | Typical consumer |
 | --- | --- | --- |
 | `consultation.reply` | `bodysense-consultation` | Consultation runtime + tools |
 | `assessment.generate` | `bodysense-structured` | typed Assessment Agent |
 | `treatment.proposal` | `bodysense-structured` | typed Treatment Agent |
-| `knowledge.curate` | `bodysense-structured` | knowledge refinement |
-| `knowledge.split` | `bodysense-structured` | semantic video splitting |
-| `conversation.title` | `bodysense-text` | conversation title generation |
-| `posture.analyze` | `bodysense-posture` | multimodal posture analysis |
+| `knowledge.curate` | `bodysense-structured` | Knowledge Curator |
+| `knowledge.split` | `bodysense-structured` | Knowledge Splitter |
+| `conversation.title` | `bodysense-text` | Title Agent |
+| `posture.analyze` | `bodysense-posture` | multimodal Posture Agent |
 
-Typed Diagnosis and Treatment are stricter than generic utility routes: each immutable
-`AgentConfiguration` carries its logical model and model-group revision. Go chooses
-the exact configuration that serves the request; Python validates the manifest
-revisions and creates one PydanticAI model against the internal gateway. Diagnosis
-uses `bodysense-diagnosis`; Treatment v1 uses `bodysense-structured`.
+Diagnosis uses its immutable manifest logical group `bodysense-diagnosis`.
+
+## Manifest pinning is authoritative
+
+The logical route registry defines which logical groups are valid for a business route and supplies a
+compatibility default for provider-neutral plumbing. It is **not** a second Agent deployment authority.
+
+When an immutable Agent manifest supplies `logical_model`, that exact logical model is authoritative:
+
+```text
+Go selects configuration_id
+  -> Python resolves exact manifest
+  -> AI request carries manifest.logical_model
+  -> AIService must preserve it
+  -> LiteLLM receives that logical model
+```
+
+`AIService.generate()` and `generate_stream()` therefore use an explicitly pinned request model before
+falling back to the route default. Regression tests cover both normal and streaming execution. This
+closes the historical bug where an apparently pinned manifest could be silently replaced by the route
+registry model.
+
+The role/config registrations in Go also record expected decision-policy revision and logical model.
+Responses are fail-closed where Go owns a durable artifact or application boundary.
+
+## Internal HTTP configuration authority
+
+The application-facing Python boundaries for Assessment, Consultation turn start, Posture and Title
+require `configuration_id`. Knowledge requires exact Splitter/Curator ids whenever those LLM
+capabilities are enabled. Production Go callers supply these values from `AgentDeploymentPolicy`.
+
+Python default-manifest helpers are allowed for unit tests/offline experiments; omission at a Go-owned
+production boundary is not allowed to silently select a serving configuration.
 
 ## Ownership
 
-### Application / Agent layer owns
+### Go application / Agent policy owns
 
-- business role and logical route;
-- immutable Diagnosis and Treatment AgentConfiguration;
-- prompt/tool/evidence/governance revisions;
-- generation parameters that are part of Agent behavior identity;
-- Go DecisionAuthority, rollout selection, and business safety.
+- business role and whether an LLM capability is enabled;
+- repository-known serving configuration pointer / rollout selection;
+- immutable Agent configuration identity expected from Python;
+- deterministic decision/safety authority appropriate to the role;
+- durable business provenance and replay/rollout records where the role requires them.
+
+### Immutable Agent manifests own
+
+- role;
+- logical model / model-group revision;
+- prompt revision;
+- output-schema revision;
+- tool-policy revision;
+- governance/decision-policy revision;
+- behavior-significant generation settings.
+
+These fields are fingerprinted into the immutable configuration id. Runtime hostnames, credentials and
+physical provider choice are intentionally excluded.
+
+### Python runtime owns
+
+- resolving and validating the exact immutable manifest;
+- typed reasoning/runtime implementation;
+- construction of prompt/tool/model adapters from that manifest;
+- returning actual execution provenance (runtime, logical model, physical provider/model when
+  available).
 
 ### LiteLLM owns
 
@@ -69,7 +118,19 @@ uses `bodysense-diagnosis`; Treatment v1 uses `bodysense-structured`.
 - provider retry/fallback;
 - gateway transport availability and provider telemetry.
 
-LiteLLM is not allowed to become BodySense safety or promotion authority.
+LiteLLM is not allowed to become BodySense safety, clinical or promotion authority.
+
+## Role-appropriate governance
+
+Not every LLM consumer needs the Diagnosis canary machinery. The governing rule is documented in
+[`agent-platform-role-governance.md`](./agent-platform-role-governance.md):
+
+- clinical decision/conversational Agents: qualification + replay + rollout appropriate to the role;
+- Posture perception: exact config/provenance + deterministic output governance + downstream clinical
+  gates;
+- Title utility: exact config/provenance, no clinical rollout requirement;
+- Knowledge offline content: exact config/lineage + human publication/review authority;
+- OCR/ASR/Embedding/Pose: non-LLM mechanisms, not fake Agents.
 
 ## Credential isolation
 
@@ -80,15 +141,15 @@ LITELLM_BASE_URL
 LITELLM_API_KEY
 ```
 
-for LLM traffic. `MIMO_API_KEY`, `MIMO_BASE_URL`, and `OPENROUTER_API_KEY` are
-injected into `litellm-gateway`, not into `ai-service`.
+for LLM traffic. `MIMO_API_KEY`, `MIMO_BASE_URL`, and `OPENROUTER_API_KEY` are injected into
+`litellm-gateway`, not into `ai-service`.
 
-Embedding and ASR credentials are separate non-LLM subsystems and are not covered
-by this routing boundary (`EMBEDDING_*`, `ASR_*`).
+Embedding and ASR credentials are separate non-LLM subsystems and are not covered by the LLM routing
+boundary (`EMBEDDING_*`, `ASR_*`).
 
 ## Retired implementation
 
-Phase 10 physically deleted:
+Diagnosis Phase 10 physically deleted the old application-owned provider stack:
 
 ```text
 src/ai/config.py
@@ -102,33 +163,34 @@ DIAGNOSIS_AGENT_CONFIGURATION_ID compatibility alias
 llm.json / llm.text business routing semantics
 ```
 
-PydanticAI `FallbackModel` is no longer constructed by BodySense. Provider
-fallback is exercised through the real LiteLLM container smoke instead.
+PydanticAI `FallbackModel` is no longer constructed by BodySense. Provider fallback is exercised
+through the real LiteLLM container smoke instead.
+
+Keeping `AIService` as a provider-neutral transport is **not** keeping the old provider router. It may
+translate BodySense request/stream types to the internal OpenAI-compatible LiteLLM endpoint, but it may
+not choose a physical provider or override an immutable manifest model.
 
 ## Immutable older Agent configurations
 
-Diagnosis v1/v2 manifests remain resolvable on purpose. v1 is still the repository
-default Champion until the explicit Phase-9 observation gates justify advancing a
-real environment; it is also the rollback/replay reference. Keeping an immutable
-old Agent configuration is not keeping an old provider-routing stack: all of its
-model execution now goes through the same LiteLLM gateway topology.
+Older Diagnosis/Treatment/Assessment manifests remain resolvable when they are real Champion,
+rollback, qualification or replay artifacts. Keeping an immutable historical Agent configuration is
+not keeping an old provider-routing stack: all model execution uses the same LiteLLM boundary.
 
-The v1 bare `search_evidence` tool policy therefore remains reachable only because
-that configuration is a real rollout artifact. Newer v2/v3 configurations use the
-typed EvidenceGap acquisition contract. It must not be deleted merely to make a
-migration ledger look empty; it can be retired from serving after an actual
-promotion, while historical replay can continue to resolve its immutable manifest.
+Historical manifests may be retired from serving only through their role's governance process; replay
+can continue to resolve them after serving retirement.
 
 ## Verification
 
-Structural tests fail if retired router artifacts reappear or if `ai-service`
-Compose receives physical LLM provider credentials. Repository release validation
-also executes a real LiteLLM container smoke that proves:
+Structural/release tests fail if retired router artifacts reappear or if `ai-service` Compose receives
+physical LLM provider credentials. Current validation also covers:
 
-- authenticated gateway access;
-- Diagnosis primary-to-fallback behavior;
-- PydanticAI Diagnosis adapter through the gateway;
-- AIService requests across consultation / structured / text / posture groups;
-- streaming through the gateway.
+- manifest logical-model pinning for normal and streaming AIService calls;
+- cross-language repository-known configuration identities;
+- Posture Go -> Python config pinning + response identity validation;
+- Title Go-owned identity + durable provenance;
+- Knowledge Go-selected Splitter/Curator ids + provider/model lineage;
+- authenticated LiteLLM access and real gateway routing smoke;
+- Diagnosis/Treatment qualification/promotion suites;
+- full Go/Python/Web/contracts quality gates and PostgreSQL migration replay.
 
-This architecture is the single model-routing truth for current code.
+This document is the single model-routing truth for current code.

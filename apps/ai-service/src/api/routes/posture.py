@@ -20,7 +20,7 @@ _VALID_VIEWS = {"front", "side", "back"}
 async def analyze(
     view: str = Form(...),
     file: UploadFile = File(...),
-    configuration_id: str | None = Form(None),
+    configuration_id: str = Form(..., min_length=1),
 ):
     """Analyze a single-view posture photo and return a structured, governed result."""
     if view not in _VALID_VIEWS:

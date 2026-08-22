@@ -207,3 +207,11 @@ The longitudinal browser suite covers:
 - TrainingPlan discovery after page reload;
 - training feedback → Outcome → BodyState revision;
 - Treatment review recommendation.
+
+## Agent platform governance reference
+
+LLM-backed runtime ownership, immutable configuration requirements, and the role-specific distinction
+between clinical decision Agents, Posture perception, Title utility, offline Knowledge Agents, and
+non-LLM mechanisms are defined in
+[`agent-platform-role-governance.md`](./agent-platform-role-governance.md). Model/provider routing is
+defined in [`model-gateway-routing.md`](./model-gateway-routing.md).

@@ -33,9 +33,10 @@ func TestChatStreamSendsFlatPythonRequestAndParsesStreamEvent(t *testing.T) {
 		context.Background(),
 		"thread-1",
 		StartConsultationTurnRequest{
-			RunID:          "run-1",
-			ConversationID: "conv-1",
-			UserID:         "u1",
+			RunID:           "run-1",
+			ConversationID:  "conv-1",
+			UserID:          "u1",
+			ConfigurationID: defaultConsultationConfigurationID,
 			Input: ConsultationUserInput{
 				Type: "user_message",
 				Text: "hello",
@@ -65,7 +66,7 @@ func TestChatStreamSendsFlatPythonRequestAndParsesStreamEvent(t *testing.T) {
 		t.Fatal("timed out waiting for stream event")
 	}
 
-	for _, key := range []string{"run_id", "conversation_id", "user_id", "input", "business_context"} {
+	for _, key := range []string{"run_id", "conversation_id", "user_id", "configuration_id", "input", "business_context"} {
 		if _, ok := captured[key]; !ok {
 			t.Fatalf("missing top-level key %q in request: %#v", key, captured)
 		}

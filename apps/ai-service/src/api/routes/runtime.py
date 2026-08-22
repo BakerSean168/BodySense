@@ -109,7 +109,7 @@ class StartTurnRequest(BaseModel):
     run_id: str
     conversation_id: str
     user_id: str
-    configuration_id: str | None = None
+    configuration_id: str = Field(min_length=1)
     input: UserInput
     business_context: BusinessContext = Field(default_factory=BusinessContext)
 

@@ -1,25 +1,25 @@
 # Active Plans
 
-The current active program is the **Assessment Agent Platform North-Star Refactor & Governance Plan**
-(bringing the Assessment role to full parity with the already-completed Diagnosis and Treatment
-platforms):
+There is currently **no unfinished AI Service Agent-platform migration plan**.
 
-- [`assessment-agent-northstar-plan-2026-08-20.md`](./assessment-agent-northstar-plan-2026-08-20.md)
+The North-Star convergence program completed its final cross-role closeout on 2026-08-21. Historical
+implementation plans are preserved under `../archive/` rather than left active after their code has
+merged or reached release-gate-ready state.
 
-Work proceeds in the shared program loop: design → implement → batch review → repair → full gates →
-PR → checks → merge → next phase. This program continues until every AI Service Agent role has
-converged on the layered North-Star platform (Go authority/provenance → Python PydanticAI runtime →
-LiteLLM gateway), not until one PR is merged.
+Completed program families:
 
-## Archived (completed) programs
+- Diagnosis Agent platform — `../archive/2026-08-diagnosis-agent-platform/`
+- Treatment Agent platform — `../archive/2026-08-treatment-*/`
+- Assessment Agent platform — `../archive/2026-08-assessment-agent-platform/`
+- Consultation Agent platform — `../archive/2026-08-consultation-agent-platform/`
+- Cross-role Posture / Title / Knowledge closeout — `../archive/2026-08-agent-platform-closeout/`
 
-- Diagnosis Agent platform (Phase 0–10) — archived under `../archive/2026-08-diagnosis-agent-platform/`
-- Treatment Agent platform (foundation, EvidenceGap, DecisionTrace, replay/comparison, rollout
-  governance) — archived under `../archive/2026-08-treatment-*/`
-
-Authoritative architecture documents:
+Authoritative current architecture:
 
 - [`../../architecture/current-longitudinal-system.md`](../../architecture/current-longitudinal-system.md)
 - [`../../architecture/model-gateway-routing.md`](../../architecture/model-gateway-routing.md)
-- [`../../architecture/treatment-agent-configuration.md`](../../architecture/treatment-agent-configuration.md)
-- [`../../architecture/treatment-promotion-governance.md`](../../architecture/treatment-promotion-governance.md)
+- [`../../architecture/agent-platform-role-governance.md`](../../architecture/agent-platform-role-governance.md)
+
+A future model/prompt/tool/schema change that creates a Challenger should start a **new** active plan
+with an immutable configuration identity, qualification evidence and the governance required by that
+role class. Do not reopen completed migration plans merely to make a new behavior change.

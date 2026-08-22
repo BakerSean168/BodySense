@@ -229,3 +229,63 @@ func mustParseUUID(s string) uuid.UUID {
 	}
 	return id
 }
+
+func TestExecutePostureCallPinsConfiguration(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/posture/analyze" {
+			http.NotFound(w, r)
+			return
+		}
+		if err := r.ParseMultipartForm(10 << 20); err != nil {
+			t.Fatalf("parse multipart: %v", err)
+		}
+		if got := r.FormValue("view"); got != "side" {
+			t.Fatalf("view = %q", got)
+		}
+		if got := r.FormValue("configuration_id"); got != defaultPostureConfigurationID {
+			t.Fatalf("configuration_id = %q, want %q", got, defaultPostureConfigurationID)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"status":"completed","result":{"view":"side","findings":[],"summary_markdown":"ok","disclaimer":"d","agent_configuration":{"id":"%s","role":"posture","decision_policy_revision":"%s","logical_model":"bodysense-posture"},"execution_provenance":{"logical_model":"bodysense-posture"}}}`, defaultPostureConfigurationID, PostureDecisionPolicyV1)
+	}))
+	defer server.Close()
+
+	file := filepath.Join(t.TempDir(), "side.jpg")
+	if err := os.WriteFile(file, []byte("fake-image"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	svc := &UploadService{aiServiceURL: server.URL}
+	body, err := svc.executePostureCall(file, "image/jpeg", "side", defaultPostureConfigurationID)
+	if err != nil {
+		t.Fatalf("executePostureCall: %v", err)
+	}
+	if _, err := validatePostureAgentResponse(body, defaultPostureConfigurationID); err != nil {
+		t.Fatalf("validate response: %v", err)
+	}
+}
+
+func TestValidatePostureAgentResponseRejectsIdentityMismatch(t *testing.T) {
+	body := []byte(`{"status":"completed","result":{"agent_configuration":{"id":"posture-config-wrong","role":"posture","decision_policy_revision":"posture-go-analysis-v1","logical_model":"bodysense-posture"},"execution_provenance":{"logical_model":"bodysense-posture"}}}`)
+	if _, err := validatePostureAgentResponse(body, defaultPostureConfigurationID); err == nil {
+		t.Fatal("expected configuration mismatch")
+	}
+}
+
+func TestValidatePostureAgentResponseUnwrapsAndAddsDecisionTrace(t *testing.T) {
+	body := []byte(fmt.Sprintf(`{"status":"completed","result":{"view":"front","findings":[],"summary_markdown":"ok","disclaimer":"d","agent_configuration":{"id":"%s","role":"posture","decision_policy_revision":"%s","logical_model":"bodysense-posture"},"execution_provenance":{"logical_model":"bodysense-posture"}}}`, defaultPostureConfigurationID, PostureDecisionPolicyV1))
+	result, err := validatePostureAgentResponse(body, defaultPostureConfigurationID)
+	if err != nil {
+		t.Fatalf("validatePostureAgentResponse: %v", err)
+	}
+	var parsed map[string]any
+	if err := json.Unmarshal(result, &parsed); err != nil {
+		t.Fatal(err)
+	}
+	if parsed["view"] != "front" {
+		t.Fatalf("result was not unwrapped: %#v", parsed)
+	}
+	trace, ok := parsed["generation_decision_trace"].(map[string]any)
+	if !ok || trace["authority"] != "go" || trace["decision"] != "persist" {
+		t.Fatalf("missing Go decision trace: %#v", parsed["generation_decision_trace"])
+	}
+}

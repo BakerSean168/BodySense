@@ -1,6 +1,6 @@
 # Assessment Agent Platform North-Star Refactor & Governance Plan
 
-> Status: Active
+> Status: Completed (2026-08-21)
 > Created: 2026-08-20
 > Owner: BodySense AI / Agent Platform program
 > Reframes: the Assessment agent hypothesis into the same layered North-Star platform already proven by Diagnosis (Phase 0–10) and Treatment.
@@ -149,9 +149,9 @@ PR checks: Repository quality gate, commit-lint, PostgreSQL migration replay, Br
 Production/default Assessment must remain serving the existing behavior until every gate passes and the
 rollout governance record is approved.
 
-## 6. Out of scope for this plan (later waves, tracked separately)
+## 6. Program handoff / final disposition
 
-The same North-Star matrix still needs to be extended to the remaining consumers:
-consultation.reply, posture.analyze, conversation.title, knowledge.curate/split, ocr, and the legacy
-`AIService`/`AiRequest` application path. Those are separate phases/BPRs under the same program banner
-(see README for the program backlog).
+Assessment Phase 1–6 is complete. The later Agent-platform waves also converged Consultation,
+Posture, Title, Knowledge Curator and Knowledge Splitter. OCR/ASR/Embedding were explicitly
+classified as non-LLM mechanisms rather than fake Agents. See
+`docs/architecture/agent-platform-role-governance.md` and the final closeout archive.

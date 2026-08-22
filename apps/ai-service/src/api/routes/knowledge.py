@@ -2,10 +2,10 @@
 
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Any, Literal, Optional
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from ...rag import (
     VideoIngestionPipeline,
@@ -26,7 +26,7 @@ class IngestVideoRequestModel(BaseModel):
     video_path: str = Field(
         ...,
         min_length=1,
-        description="Absolute local path to the source video",
+        description="Path relative to the configured knowledge data root",
     )
     problem_slug: str = Field(..., min_length=1, max_length=100)
     problem_display_name: str = Field(..., min_length=1, max_length=255)
@@ -39,6 +39,18 @@ class IngestVideoRequestModel(BaseModel):
     force_transcribe: bool = False
     export_clips: bool = True
     overwrite_source: bool = False
+    splitter_provider: Literal["heuristic", "llm"] = "heuristic"
+    ai_refine: bool = False
+    splitter_configuration_id: Optional[str] = None
+    curator_configuration_id: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_agent_configuration_pinning(self):
+        if self.splitter_provider == "llm" and not self.splitter_configuration_id:
+            raise ValueError("splitter_configuration_id is required for LLM splitting")
+        if self.ai_refine and not self.curator_configuration_id:
+            raise ValueError("curator_configuration_id is required for AI refinement")
+        return self
 
 
 class IngestVideoResponse(BaseModel):
@@ -51,6 +63,7 @@ class IngestVideoResponse(BaseModel):
     transcript_segments: int
     knowledge_units: int
     clips: int
+    agent_execution: dict[str, Any] = Field(default_factory=dict)
 
 
 class SearchRequest(BaseModel):
@@ -119,7 +132,7 @@ async def ingest_video(request: IngestVideoRequestModel):
         pipeline = VideoIngestionPipeline()
         pack = await pipeline.ingest(
             VideoIngestionRequest(
-                video_path=request.video_path,
+                video_path=str(resolved),
                 problem_slug=request.problem_slug,
                 problem_display_name=request.problem_display_name,
                 author=request.author,
@@ -130,6 +143,10 @@ async def ingest_video(request: IngestVideoRequestModel):
                 whisper_model=request.whisper_model,
                 force_transcribe=request.force_transcribe,
                 export_clips=request.export_clips,
+                splitter_provider=request.splitter_provider,
+                ai_refine=request.ai_refine,
+                splitter_configuration_id=request.splitter_configuration_id,
+                curator_configuration_id=request.curator_configuration_id,
             )
         )
 
@@ -146,6 +163,7 @@ async def ingest_video(request: IngestVideoRequestModel):
             transcript_segments=len(pack.transcript_segments),
             knowledge_units=len(pack.units),
             clips=len(pack.clips),
+            agent_execution=dict(pack.source.metadata.get("agent_execution", {})),
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

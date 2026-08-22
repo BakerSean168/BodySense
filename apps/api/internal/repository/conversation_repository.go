@@ -116,12 +116,34 @@ func (r *ConversationRepository) UpdatePinned(ctx context.Context, id, userID uu
 		Updates(updates).Error
 }
 
-// UpdateTitle updates the title of a conversation with ownership check.
-func (r *ConversationRepository) UpdateTitle(ctx context.Context, id, userID uuid.UUID, title string) error {
+// UpdateManualTitle atomically persists a user-authored title and clears any stale AI lineage.
+func (r *ConversationRepository) UpdateManualTitle(ctx context.Context, id, userID uuid.UUID, title string) error {
 	return r.db.WithContext(ctx).
 		Model(&model.Conversation{}).
 		Where("id = ? AND user_id = ? AND deleted_at IS NULL", id, userID).
-		Update("title", title).Error
+		Updates(map[string]any{
+			"title":                        title,
+			"title_status":                 "generated",
+			"title_agent_configuration_id": "",
+			"title_agent_configuration":    []byte(`{}`),
+			"title_execution_provenance":   []byte(`{}`),
+			"title_decision_trace":         []byte(`{}`),
+		}).Error
+}
+
+// UpdateTitleGeneration atomically persists the generated title and its immutable Agent provenance.
+func (r *ConversationRepository) UpdateTitleGeneration(ctx context.Context, id, userID uuid.UUID, title, status, configurationID string, configuration, provenance, decisionTrace []byte) error {
+	return r.db.WithContext(ctx).
+		Model(&model.Conversation{}).
+		Where("id = ? AND user_id = ? AND deleted_at IS NULL", id, userID).
+		Updates(map[string]any{
+			"title":                        title,
+			"title_status":                 status,
+			"title_agent_configuration_id": configurationID,
+			"title_agent_configuration":    configuration,
+			"title_execution_provenance":   provenance,
+			"title_decision_trace":         decisionTrace,
+		}).Error
 }
 
 // UpdateTitleStatus updates the title_status of a conversation with ownership check.
