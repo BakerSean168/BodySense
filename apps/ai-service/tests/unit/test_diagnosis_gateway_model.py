@@ -66,6 +66,5 @@ def test_diagnosis_source_cannot_reintroduce_legacy_provider_routing() -> None:
     for compose in (
         ROOT / "docker/docker-compose.yml",
         ROOT / "docker/docker-compose.prod.yml",
-        ROOT / "docker/docker-compose.prod.do.yml",
     ):
         assert "DIAGNOSIS_MODEL_BACKEND" not in compose.read_text(encoding="utf-8")

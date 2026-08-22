@@ -1,0 +1,12 @@
+[Unit]
+Description=Poll BodySense ACR release pointers
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+RandomizedDelaySec=20s
+Persistent=true
+Unit=bodysense-deploy-watch.service
+
+[Install]
+WantedBy=timers.target

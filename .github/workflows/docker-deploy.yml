@@ -1,4 +1,4 @@
-name: Build & Push Docker Images
+name: Build & Publish Production Images
 
 on:
   push:
@@ -6,144 +6,141 @@ on:
   workflow_dispatch:
     inputs:
       tag_override:
-        description: 'Override image tag (leave empty for auto-generated)'
+        description: 'Immutable image tag override (manual runs only)'
         required: false
         type: string
+      promote:
+        description: 'Also promote this manual candidate to prod-latest'
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
-  group: docker-deploy-${{ github.ref }}
+  group: production-image-publish-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
   contents: read
 
 env:
-  NODE_VERSION: '24'
+  REGISTRY: ${{ secrets.ACR_REGISTRY }}
+  NAMESPACE: ${{ secrets.ACR_NAMESPACE }}
 
 jobs:
-  build-and-push:
-    name: Build & Push Images
+  metadata:
+    name: Resolve release metadata
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      revision: ${{ steps.meta.outputs.revision }}
+      build_date: ${{ steps.meta.outputs.build_date }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
+      - uses: actions/checkout@v7
         with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Setup pnpm
-        run: corepack enable && pnpm --version
-
-      - name: Cache pnpm store
-        uses: actions/cache@v6
-        with:
-          path: ~/.local/share/pnpm/store/v3
-          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: pnpm-store-${{ runner.os }}-
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile --reporter=append-only
-        env:
-          CI: 'true'
-
-      - name: Build web application
-        run: pnpm nx run web:build
-        env:
-          CI: 'true'
-
-      - name: Resolve image tag
-        id: tag
+          fetch-depth: 0
+      - id: meta
+        shell: bash
         run: |
-          VERSION=$(node -p "require('./package.json').version")
-          SHA=$(git rev-parse --short=12 HEAD)
-          STAMP=$(date -u +%Y%m%d-%H%M%S)
+          set -euo pipefail
+          revision="$(git rev-parse HEAD)"
+          short_sha="$(git rev-parse --short=12 HEAD)"
+          build_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          stamp="$(date -u +%Y%m%d-%H%M%S)"
 
-          if [ -n "${{ inputs.tag_override }}" ]; then
-            TAG="${{ inputs.tag_override }}"
+          if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
+            tag="${GITHUB_REF_NAME}"
+          elif [[ -n "${{ inputs.tag_override }}" ]]; then
+            tag="${{ inputs.tag_override }}"
+            [[ "$tag" != v* ]] || { echo "manual runs may not overwrite immutable release tags" >&2; exit 1; }
           else
-            TAG="v${VERSION}-prod.${STAMP}-${SHA}"
+            tag="manual-${stamp}-${short_sha}"
           fi
 
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-          echo "### 🏷️ Image Tag: \`${TAG}\`" >> "$GITHUB_STEP_SUMMARY"
+          [[ "$tag" =~ ^[A-Za-z0-9_.-]+$ ]] || { echo "invalid image tag: $tag" >&2; exit 1; }
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "revision=$revision" >> "$GITHUB_OUTPUT"
+          echo "build_date=$build_date" >> "$GITHUB_OUTPUT"
+          echo "### Production candidate: \`$tag\` @ \`${short_sha}\`" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Login to ACR
+  build:
+    name: Build ${{ matrix.service }} immutable image
+    needs: metadata
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: web
+            image: bodysense-web
+            context: .
+            dockerfile: docker/Dockerfile.web
+            cache_scope: web
+          - service: api
+            image: bodysense-api
+            context: apps/api
+            dockerfile: apps/api/Dockerfile
+            cache_scope: api
+          - service: ai-service
+            image: bodysense-ai-service
+            context: apps/ai-service
+            dockerfile: apps/ai-service/Dockerfile
+            cache_scope: ai-service
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Login to Alibaba Cloud ACR
         uses: docker/login-action@v4
         with:
-          registry: ${{ secrets.ACR_REGISTRY }}
+          registry: ${{ env.REGISTRY }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
-
-      - name: Build and push Web image
+      - name: Build and push immutable image
         uses: docker/build-push-action@v7
         with:
-          context: .
-          file: docker/Dockerfile.web
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
           push: true
           provenance: false
-          tags: |
-            ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/bodysense-web:${{ steps.tag.outputs.tag }}
-            ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/bodysense-web:prod-latest
+          tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.image }}:${{ needs.metadata.outputs.tag }}
           build-args: |
-            BUILD_DATE=${{ github.event.head_commit.timestamp }}
-            VCS_REF=${{ github.sha }}
-            VERSION=${{ steps.tag.outputs.tag }}
-          cache-from: type=gha,scope=web
-          cache-to: type=gha,mode=max,scope=web
+            BUILD_DATE=${{ needs.metadata.outputs.build_date }}
+            VCS_REF=${{ needs.metadata.outputs.revision }}
+            VERSION=${{ needs.metadata.outputs.tag }}
+          cache-from: type=gha,scope=${{ matrix.cache_scope }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.cache_scope }}
 
-      - name: Build and push API image
-        uses: docker/build-push-action@v7
+  promote:
+    name: Promote coherent production pointers
+    needs: [metadata, build]
+    if: github.ref_type == 'tag' || inputs.promote == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/setup-buildx-action@v4
+      - name: Login to Alibaba Cloud ACR
+        uses: docker/login-action@v4
         with:
-          context: apps/api
-          file: apps/api/Dockerfile
-          push: true
-          provenance: false
-          tags: |
-            ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/bodysense-api:${{ steps.tag.outputs.tag }}
-            ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/bodysense-api:prod-latest
-          build-args: |
-            BUILD_DATE=${{ github.event.head_commit.timestamp }}
-            VCS_REF=${{ github.sha }}
-            VERSION=${{ steps.tag.outputs.tag }}
-          cache-from: type=gha,scope=api
-          cache-to: type=gha,mode=max,scope=api
-
-      - name: Build and push AI Service image
-        uses: docker/build-push-action@v7
-        with:
-          context: apps/ai-service
-          file: apps/ai-service/Dockerfile
-          push: true
-          provenance: false
-          tags: |
-            ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/bodysense-ai-service:${{ steps.tag.outputs.tag }}
-            ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/bodysense-ai-service:prod-latest
-          build-args: |
-            BUILD_DATE=${{ github.event.head_commit.timestamp }}
-            VCS_REF=${{ github.sha }}
-            VERSION=${{ steps.tag.outputs.tag }}
-          cache-from: type=gha,scope=ai-service
-          cache-to: type=gha,mode=max,scope=ai-service
-
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      - name: Promote immutable images to prod-latest
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ needs.metadata.outputs.tag }}"
+          for image in bodysense-web bodysense-api bodysense-ai-service; do
+            src="${REGISTRY}/${NAMESPACE}/${image}:${tag}"
+            dst="${REGISTRY}/${NAMESPACE}/${image}:prod-latest"
+            docker buildx imagetools create --tag "$dst" "$src"
+          done
       - name: Summary
         run: |
-          TAG="${{ steps.tag.outputs.tag }}"
-          REGISTRY="${{ secrets.ACR_REGISTRY }}"
-          NS="${{ secrets.ACR_NAMESPACE }}"
           {
-            echo "### ✅ Images pushed"
-            echo "| Image | Tag |"
-            echo "|-------|-----|"
-            echo "| \`${REGISTRY}/${NS}/bodysense-web\` | \`${TAG}\` + \`prod-latest\` |"
-            echo "| \`${REGISTRY}/${NS}/bodysense-api\` | \`${TAG}\` + \`prod-latest\` |"
-            echo "| \`${REGISTRY}/${NS}/bodysense-ai-service\` | \`${TAG}\` + \`prod-latest\` |"
-            echo ""
-            echo "Watchtower will auto-detect the \`prod-latest\` update within the configured poll interval."
+            echo '### Production image promotion complete'
+            echo ''
+            echo '- Immutable tag: `${{ needs.metadata.outputs.tag }}`'
+            echo '- Revision: `${{ needs.metadata.outputs.revision }}`'
+            echo '- `prod-latest` was promoted only after all three immutable images succeeded.'
+            echo '- The production watcher deploys only when all three image revision labels match.'
           } >> "$GITHUB_STEP_SUMMARY"

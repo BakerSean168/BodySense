@@ -1,5 +1,8 @@
 # BodySense 云原生部署实践方案
 
+> **Retired 2026-08-22:** DigitalOcean is no longer an active BodySense environment. The implementation artifacts were moved to `docs/archive/deployment/digitalocean/`. This document is historical only.
+
+
 > 在阿里云生产环境之外，搭建一套 DigitalOcean 云原生部署环境用于学习与实践
 > 版本: v1.1 · 2026-07-05
 

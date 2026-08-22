@@ -1,267 +1,199 @@
-# BodySense 部署架构
+# BodySense deployment architecture
 
-## 概览
+> Current production architecture, 2026-08-22.
 
-BodySense 采用 GitHub Actions + 阿里云 ACR + Docker Compose + Caddy + Watchtower 的全自动化 CI/CD 流水线。代码合并到 `main` 分支后，release-please 自动管理版本发布；版本标签触发镜像构建并推送到 ACR；服务器上的 Watchtower 自动拉取新镜像并滚动重启。
+## Environment roles
 
-```
-开发者 → push to dev → PR to main → merge
-                                    ↓
-                            release-please 创建 release PR
-                                    ↓
-                            release PR 合并 → 生成 tag (v0.1.0)
-                                    ↓
-                            docker-deploy.yml 触发
-                                    ↓
-                    ┌───────────────┼───────────────┐
-                    ↓               ↓               ↓
-              构建 web 镜像    构建 api 镜像   构建 ai-service 镜像
-                    ↓               ↓               ↓
-                    └───────┬───────┴───────┬───────┘
-                            ↓               ↓
-                    推送到阿里云 ACR (prod-latest + 版本号)
-                            ↓
-                    服务器 Watchtower 检测到新镜像
-                            ↓
-                    自动 pull + 滚动重启容器
-```
+- **Oracle2** is development / local deploy validation / temporary product preview. It is not production.
+- **GitHub Actions** is the CI and release build plane.
+- **Alibaba Cloud ACR** is the production image registry.
+- **Alibaba Cloud ECS** (`body.bakersean.top`) is the only production runtime.
+- **DigitalOcean** is retired and preserved only under `docs/archive/deployment/digitalocean/`.
 
-## 基础设施
+## Production delivery flow
 
-### 阿里云服务器
-
-- OS: Debian 13 (trixie)
-- IP: 115.29.222.2
-- CPU: 2 vCPU
-- 内存: 1.6 GB
-- 磁盘: 40 GB (36 GB 可用)
-- 访问: `ssh ali` (root 用户)
-- 域名: `body.bakersean.top` → 解析到 115.29.222.2
-
-### 阿里云容器镜像服务 (ACR)
-
-- Registry: `crpi-cv97phwhms6wy4as.cn-hangzhou.personal.cr.aliyuncs.com`
-- Namespace: `bodysense`
-- 镜像:
-  - `bodysense/bodysense-web:prod-latest`
-  - `bodysense/bodysense-api:prod-latest`
-  - `bodysense/bodysense-ai-service:prod-latest`
-
-## 服务架构
-
-### 容器拓扑
-
-```
-                    ┌──────────────────────────┐
-                    │      Caddy (80/443)       │  ← 反向代理 + HTTPS (有域名时)
-                    │   http://115.29.222.2     │  ← HTTP (当前，无域名)
-                    └──────────┬───────────────┘
-                               │
-                    ┌──────────┴───────────────┐
-                    │   Web (nginx:80)         │  ← 静态文件 + SPA 路由
-                    │   bodysense-web           │  ← /api/ 反向代理到 api:8080
-                    └──────────┬───────────────┘
-                               │
-                    ┌──────────┴───────────────┐
-                    │   API (Go:8080)           │  ← REST API + JWT 认证
-                    │   bodysense-api            │  ← /api/health 健康检查
-                    └──┬────────┬───────────────┘
-                       │        │
-              ┌────────┴──┐ ┌──┴──────────────┐
-              │ PostgreSQL │ │ AI Service (8100)│
-              │   pg18     │ │ bodysense-ai    │  ← FastAPI + RAG
-              │ + pgvector │ │ -service         │  ← /health 健康检查
-              └────────────┘ └──┬───────────────┘
-                              │
-                       ┌──────┴──────┐
-                       │  Redis (6379)│  ← 缓存 + 会话
-                       │  redis:7     │
-                       └─────────────┘
-
-          ┌──────────────────────────────┐
-          │   Watchtower                │  ← 每 5 分钟轮询 ACR
-          │   自动更新 prod-latest 镜像  │  ← 滚动重启业务容器
-          └──────────────────────────────┘
+```text
+feature branch
+    -> PR
+    -> CI
+       - repository quality gate
+       - migration history immutability
+       - PostgreSQL 16 + 18 baseline/replay validation
+       - browser longitudinal E2E
+    -> merge main
+    -> release-please
+    -> release PR + CI
+    -> vX.Y.Z tag / GitHub Release
+    -> Build & Publish Production Images
+       - build Web/API/AI in parallel
+       - push immutable vX.Y.Z images
+       - only after all three succeed: promote all to prod-latest
+    -> Alibaba Cloud systemd deploy watcher
+       - pull the three prod-latest pointers
+       - require identical OCI revision labels
+       - fetch the exact repository revision for runtime files
+       - validate Compose against production secrets
+       - back up PostgreSQL
+       - deploy AI -> API -> Web with health gates
+       - verify public HTTPS health
 ```
 
-### 服务清单
+The critical invariant is:
 
-| 服务 | 镜像 | 端口 | 健康检查 | 内存预估 |
-|------|------|------|----------|----------|
-| Caddy | `caddy:2-alpine` | 80, 443 | - | ~30MB |
-| Web | `bodysense-web` | 80 (内部) | `wget http://127.0.0.1/` | ~20MB |
-| API | `bodysense-api` | 8080 (内部) | `curl http://localhost:8080/api/health` | ~50MB |
-| AI Service | `bodysense-ai-service` | 8100 (内部) | `python urllib http://localhost:8100/health` | ~200MB |
-| LiteLLM Gateway | `docker.litellm.ai/berriai/litellm:v1.97.0` | 4000 (内部) | `/health/liveliness` | ~200-500MB |
-| PostgreSQL | `pgvector/pgvector:pg18` | 5432 (内部) | `pg_isready` | ~100MB |
-| Redis | `redis:7-alpine` | 6379 (内部) | `redis-cli ping` | ~10MB |
-| Watchtower | `containrrr/watchtower` | - | - | ~20MB |
+> `prod-latest` is only a movable pointer. A deployment is eligible only when Web, API and AI Service all point to images built from the same immutable Git revision.
 
-**业务容器常态内存预估: ~630–930MB**（LiteLLM 实际占用随并发、缓存与 provider client 状态变化；部署时以容器 metrics 为准）
+This prevents a polling deployer from serving a mixed release while ACR promotion is still in progress.
 
-### 网络拓扑
+## CI
 
-所有容器连接到 `bodysense-network` 桥接网络。仅 Caddy 暴露端口到宿主机 (80/443)。PostgreSQL 和 Redis 端口仅绑定到 `127.0.0.1` 用于调试。
+`.github/workflows/ci.yml` runs for pushes and pull requests to `main` / `dev`.
 
-Diagnosis 的 PydanticAI runtime 不再直接持有物理模型 provider 路由；它通过 `http://litellm-gateway:4000/v1` 请求逻辑模型 `bodysense-diagnosis`。LiteLLM 独立负责物理 provider、retry/fallback 与 usage telemetry。
+### Repository quality gate
 
-## CI/CD 流水线
+The same `scripts/validate-repo.sh` entrypoint is used locally and in CI. It covers lint, typecheck, Go/Python/Web tests, Agent qualification/promotion evals, LiteLLM smoke and production builds.
 
-### 1. CI 流水线 (`.github/workflows/ci.yml`)
+`scripts/validate-migration-history.sh` additionally enforces migration history rules:
 
-已存在。触发条件: push 到 `main`/`dev`，PR 到 `main`/`dev`。
+- every non-legacy migration version has both `up` and `down` files;
+- published migration 29 can never disappear again;
+- every currently published SQL migration is frozen by SHA-256 manifest;
+- adding a migration requires explicitly extending the checksum manifest;
+- editing a published migration fails CI.
 
-- web: lint + typecheck + build
-- api: go vet + go build + go test
-- ai-service: ruff check + pytest
-- commit-lint: PR 时校验 commit message
+Legacy migration-number gaps `2`, `3`, `5` predate the current production baseline and are explicitly grandfathered. From the known published production baseline onward, the sequence is continuous.
 
-### 2. Release-Please (`.github/workflows/release-please.yml`)
+### Migration validation
 
-触发条件: push 到 `main`。
+Migration CI has two intentionally different paths:
 
-使用 `googleapis/release-please-action@v4` 的 manifest 模式:
-- 自动收集 Conventional Commits 类型的变更
-- 维护一个 release PR，自动更新 CHANGELOG.md 和版本号
-- release PR 合并后，自动创建 git tag (如 `v0.1.0`) 和 GitHub Release
+- PostgreSQL / pgvector 18 rebuilds the current migration history, stops at the published baseline `29`, then validates `29 -> latest` and latest `down -> up`.
+- PostgreSQL / pgvector 16 restores the schema-only `production-pg16-v29.sql` fixture captured from the real production-v29 schema, then validates `29 -> latest` and domain semantics. This avoids pretending the modern PostgreSQL-18 migration history can recreate an old PG16 database from version 1.
 
-配置文件:
-- `release-please-config.json`: 发布策略配置
-- `.release-please-manifest.json`: 当前版本号
+This exists because production was found at migration 29 while migration 29 had been deleted from the repository; that deletion caused the v0.4.0 API container to restart-loop. Published migrations are now treated as immutable release artifacts.
 
-### 3. Docker 镜像构建与推送 (`.github/workflows/docker-deploy.yml`)
+## Release management
 
-触发条件: tag 推送 (`v*`) 或手动触发。
+`release-please` owns application versions and GitHub releases. Conventional commits update the release PR; merging that PR creates a `vX.Y.Z` tag and GitHub Release.
 
-流程:
-1. Checkout 代码
-2. 安装 Node.js + pnpm
-3. 安装依赖 (`pnpm install --frozen-lockfile`)
-4. 构建 web 应用 (`pnpm nx run web:build`)
-5. 生成镜像标签 (`v{VERSION}-prod.{TIMESTAMP}-{SHA}` + `prod-latest`)
-6. 登录阿里云 ACR
-7. 构建并推送三个镜像 (web, api, ai-service)
-8. 使用 GitHub Actions cache 加速构建
+`.github/workflows/docker-deploy.yml` consumes the release tag.
 
-需要的 GitHub Secrets:
-- `ACR_REGISTRY`: ACR 注册地址
-- `ACR_USERNAME`: ACR 用户名
-- `ACR_PASSWORD`: ACR 密码
-- `ACR_NAMESPACE`: ACR 命名空间
+### Immutable build first
 
-### 4. 自动部署 (Watchtower)
+Web, API and AI Service are built in parallel as Linux/amd64 images and pushed only with the immutable release tag first:
 
-服务器上运行 Watchtower 容器:
-- 每 300 秒轮询 ACR 检查 `prod-latest` 镜像更新
-- 检测到新镜像后自动 pull 并滚动重启容器
-- 仅更新带有 `com.centurylinklabs.watchtower.enable=true` 标签的容器
-
-## Docker 镜像构建策略
-
-### Web (React/Vite → nginx)
-
-多阶段构建:
-1. Builder: `node:24-slim` + pnpm@11，安装依赖并执行 `vite build`
-2. Runtime: `nginx:1.27-alpine`，复制静态文件 + nginx.conf
-
-nginx 配置:
-- 静态文件服务 + SPA 路由回退
-- `/api/` 反向代理到 `api:8080`
-- 静态资源缓存 30 天
-- Gzip 压缩
-
-### API (Go)
-
-多阶段构建 (已有生产 Dockerfile):
-1. Builder: `golang:1.26-alpine`，`go mod download` + `CGO_ENABLED=0 go build`
-2. Runtime: `alpine:3.20`，复制二进制 + migrations
-
-### AI Service (Python/FastAPI)
-
-多阶段构建 (已有生产 Dockerfile):
-1. Builder: `python:3.13-slim` + uv，`uv sync --no-dev --extra ocr`
-2. Runtime: `python:3.13-slim` + tesseract-ocr，复制 .venv + 源码
-
-## 环境变量管理
-
-### 文件层级
-
-| 文件 | 用途 | 是否提交 Git |
-|------|------|-------------|
-| `.env` | 本地开发基础配置 | 否 (gitignored) |
-| `.env.example` | 配置模板 | 是 |
-| `.env.production` | 生产非敏感配置 | 是 |
-| `.env.production.local` | 生产敏感信息 (密码、密钥) | 否 (gitignored) |
-
-### 敏感变量 (必须在 .env.production.local 中设置)
-
-- `DB_PASSWORD` - PostgreSQL 密码
-- `REDIS_PASSWORD` - Redis 密码
-- `JWT_SECRET_KEY` - JWT 签名密钥
-- `LITELLM_MASTER_KEY` - AI Service → LiteLLM 内部网关认证密钥
-- `MIMO_API_KEY` - MiMo provider API 密钥（仅 LiteLLM gateway 使用）
-- `MIMO_API_KEY` / `OPENROUTER_API_KEY` - physical LLM provider keys, consumed only by LiteLLM gateway
-- `EMBEDDING_API_KEY` - Embedding API 密钥（独立于 LLM gateway）
-
-### 非敏感变量 (.env.production)
-
-- 端口号、主机名、服务名
-- 数据库名、用户名 (非密码)
-- CORS 配置
-- 日志级别
-- Docker 镜像标签
-
-## 服务器初始化
-
-### 首次部署 (`scripts/setup-server.sh`)
-
-1. 安装 Docker Engine + Docker Compose
-2. 登录阿里云 ACR
-3. 创建部署目录 `/opt/bodysense`
-4. 复制 `docker-compose.prod.yml`、`Caddyfile`、`nginx.conf`
-5. 生成 `.env.production.local` (提示用户输入或自动生成密码)
-6. `docker compose up -d` 启动全部服务
-
-### 后续更新 (自动)
-
-Watchtower 自动检测 `prod-latest` 镜像更新 → 自动 pull → 滚动重启。无需手动操作。
-
-## HTTPS 配置 (有域名时)
-
-当有域名时，修改 `.env.production.local`:
-
-```
-APP_DOMAIN=your-domain.com
-ACME_EMAIL=your-email@example.com
+```text
+bodysense-web:vX.Y.Z
+bodysense-api:vX.Y.Z
+bodysense-ai-service:vX.Y.Z
 ```
 
-并修改 `docker/Caddyfile`，移除 `http://` 前缀，Caddy 将自动申请 Let's Encrypt 证书。
+Each image records `org.opencontainers.image.revision=<git SHA>`.
 
-## 分支策略与发布流程
+ACR does not accept the Buildx provenance manifest class used by default, so the workflow explicitly uses `provenance: false`.
 
+### Promotion second
+
+Only after all three immutable builds succeed does the promotion job move:
+
+```text
+bodysense-web:prod-latest
+bodysense-api:prod-latest
+bodysense-ai-service:prod-latest
 ```
-feature/xxx → dev (PR) → main (PR) → release-please → tag → docker-deploy → auto-deploy
+
+to the new immutable artifacts. If one build fails, **none** of the production pointers are promoted.
+
+## Production deploy watcher
+
+The previous `containrrr/watchtower` deployment path is retired. It updated containers independently and had no knowledge of application release identity, migration safety or runtime-file compatibility.
+
+The production host now uses:
+
+- `scripts/production-deploy-watch.sh`
+- `deploy/systemd/bodysense-deploy-watch.service`
+- `deploy/systemd/bodysense-deploy-watch.timer`
+
+The timer polls every ~2 minutes. The script uses `flock`, so overlapping deployment attempts cannot race.
+
+### Eligibility
+
+Before touching running containers it:
+
+1. pulls Web/API/AI `prod-latest`;
+2. reads each image OCI revision label;
+3. refuses deployment unless all three revisions are non-empty and identical;
+4. fetches that exact Git revision from the public BodySense repository;
+5. stages `.env.production`, production Compose, Caddy and deployment scripts from the same revision;
+6. validates `docker compose config` with the server's untracked `.env.production.local`.
+
+Secrets are never fetched from Git and are never overwritten.
+
+### Deployment
+
+For an eligible release it:
+
+1. creates a PostgreSQL custom-format backup plus SHA-256;
+2. updates AI Service and waits for health;
+3. updates API and waits for health (API applies pending migrations on startup);
+4. updates Web and waits for health;
+5. reloads Caddy configuration;
+6. checks `https://body.bakersean.top/api/health`;
+7. records the deployed Git revision in `/opt/bodysense/.deploy-state`.
+
+Production backups generated by the watcher are retained for 14 days by default.
+
+## Production database
+
+Current production is PostgreSQL 16 + pgvector. Do **not** replace the production database container with PostgreSQL 18 by changing the image tag in place; a major-version upgrade requires a separate pg_dump/restore or pg_upgrade plan.
+
+Development/validator environments may use PostgreSQL 18, which is why CI validates both versions.
+
+## Production Compose and model gateway
+
+`docker/docker-compose.prod.yml` preserves the North-Star model boundary: AI Service receives only `LITELLM_BASE_URL` / `LITELLM_API_KEY`; physical provider credentials are injected only into the standalone LiteLLM gateway.
+
+The CI/CD repair does **not** reintroduce direct provider routing. The production reconciliation is limited to real infrastructure facts (PostgreSQL 16, Alibaba ACR mirrors) and the safer deploy watcher. `LITELLM_MASTER_KEY` is an internal gateway credential stored only in `.env.production.local`; `MIMO_API_KEY` may be empty while an available OpenRouter fallback is configured.
+
+## Secret boundaries
+
+Tracked:
+
+- `.env.production` — non-sensitive production settings
+- `docker/docker-compose.prod.yml`
+- `docker/Caddyfile`
+- deployment watcher/systemd definitions
+
+Untracked on production:
+
+- `.env.production.local` — database/password/API keys
+
+Untracked on Oracle2:
+
+- `.secrets/` — production SSH material
+
+`.secrets/`, private key formats and common SSH private-key names are gitignored.
+
+## Operational commands
+
+Production watcher status:
+
+```bash
+systemctl status bodysense-deploy-watch.timer
+systemctl status bodysense-deploy-watch.service
+journalctl -u bodysense-deploy-watch.service -n 100
 ```
 
-1. 功能分支从 `dev` 切出
-2. 功能分支通过 PR 合并到 `dev`
-3. `dev` 通过 PR 合并到 `main`
-4. push 到 `main` 触发 release-please 创建/更新 release PR
-5. release PR 合并后自动创建 tag 和 GitHub Release
-6. tag 触发 docker-deploy 构建并推送镜像
-7. Watchtower 自动拉取新镜像并重启
+Manual coherent-release check/deploy:
 
-## 文件清单
+```bash
+/opt/bodysense/scripts/production-deploy-watch.sh --force
+```
 
-| 文件 | 说明 |
-|------|------|
-| `release-please-config.json` | release-please 发布策略 |
-| `.release-please-manifest.json` | release-please 版本号 |
-| `.github/workflows/release-please.yml` | release-please 工作流 |
-| `.github/workflows/docker-deploy.yml` | 镜像构建与推送工作流 |
-| `docker/Dockerfile.web` | Web 生产镜像 (多阶段) |
-| `docker/nginx.conf` | Nginx 配置 (静态服务 + API 代理) |
-| `docker/Caddyfile` | Caddy 反向代理配置 |
-| `docker/docker-compose.prod.yml` | 生产 Docker Compose 编排 |
-| `.env.production` | 生产环境非敏感配置 |
-| `scripts/setup-server.sh` | 服务器初始化脚本 |
+Production stack:
+
+```bash
+cd /opt/bodysense
+docker compose -p docker -f docker/docker-compose.prod.yml \
+  --env-file .env.production \
+  --env-file .env.production.local ps
+```

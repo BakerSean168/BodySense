@@ -1,5 +1,8 @@
 # DigitalOcean 云原生练习环境
 
+> **Retired 2026-08-22:** DigitalOcean is no longer an active BodySense environment. The implementation artifacts were moved to `docs/archive/deployment/digitalocean/`. This document is historical only.
+
+
 > 状态: 当前执行方案 · 2026-07-05 · v2
 
 本文记录 BodySense 在 DigitalOcean 上的一月期云原生练习环境。阿里云生产环境是长期环境，继续使用现有 ACR、`docker-deploy.yml`、`docker-compose.prod.yml` 和 `body.bakersean.top`，本方案不修改其部署链路。
