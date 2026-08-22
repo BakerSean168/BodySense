@@ -96,7 +96,7 @@ ACR does not accept the Buildx provenance manifest class used by default, so the
 
 ### Promotion second
 
-Only after all three immutable builds succeed does the promotion job move:
+The promotion job is attached to the GitHub `production` Environment, which gives production pointer changes a dedicated deployment history and a place for repository-admin protection rules. Only after all three immutable builds succeed does the promotion job move:
 
 ```text
 bodysense-web:prod-latest

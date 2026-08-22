@@ -160,6 +160,9 @@ jobs:
   promote:
     name: Promote coherent production pointers
     needs: [metadata, build]
+    environment:
+      name: production
+      url: https://body.bakersean.top
     if: github.ref_type == 'tag' || inputs.promote == true
     runs-on: ubuntu-latest
     steps:
