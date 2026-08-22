@@ -309,7 +309,16 @@ backup="$BACKUP_DIR/bodysense-pre-${desired_revision:0:12}-$(date -u +%Y%m%d-%H%
 compose exec -T postgres pg_dump -U "$DB_USER" -d "$DB_NAME" -Fc > "$backup"
 [ -s "$backup" ] || fail 'database backup is empty'
 sha256sum "$backup" > "$backup.sha256"
-log "database backup created: $(basename "$backup") schema=$PREVIOUS_SCHEMA_STATE"
+postgres_container=$(compose ps -q postgres)
+[ -n "$postgres_container" ] || fail 'postgres container is not running for backup validation'
+backup_container_path="/tmp/$(basename "$backup")"
+docker cp "$backup" "$postgres_container:$backup_container_path" >/dev/null
+if ! compose exec -T postgres pg_restore --list "$backup_container_path" >/dev/null; then
+  compose exec -T postgres rm -f "$backup_container_path" >/dev/null 2>&1 || true
+  fail 'database backup failed pg_restore archive validation'
+fi
+compose exec -T postgres rm -f "$backup_container_path" >/dev/null
+log "database backup created and validated: $(basename "$backup") schema=$PREVIOUS_SCHEMA_STATE"
 
 deploy_started=true
 on_exit() {
