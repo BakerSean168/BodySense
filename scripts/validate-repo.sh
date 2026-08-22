@@ -4,6 +4,7 @@ cd "$(git rev-parse --show-toplevel)"
 pnpm lint
 pnpm typecheck
 pnpm test
+bash scripts/validate-migration-history.sh
 pnpm nx run ai-service:eval:diagnosis
 pnpm nx run ai-service:eval:diagnosis-evidence-policy
 pnpm nx run ai-service:eval:diagnosis-promotion
