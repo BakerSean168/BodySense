@@ -123,11 +123,11 @@ sync_runtime() {
   cp -f "$COMPOSE" "$archive/docker/docker-compose.prod.yml" 2>/dev/null || true
   cp -f "$ROOT/docker/Caddyfile" "$archive/docker/Caddyfile" 2>/dev/null || true
 
+  install -d -m 0755 "$ROOT/docker/litellm" "$ROOT/scripts"
   install -m 0644 "$stage/.env.production" "$PUBLIC_ENV"
   install -m 0644 "$stage/docker/docker-compose.prod.yml" "$COMPOSE"
   install -m 0644 "$stage/docker/Caddyfile" "$ROOT/docker/Caddyfile"
   [ -f "$stage/docker/litellm/config.yaml" ] && install -m 0644 "$stage/docker/litellm/config.yaml" "$ROOT/docker/litellm/config.yaml"
-  mkdir -p "$ROOT/scripts"
   install -m 0755 "$stage/scripts/production-deploy-watch.sh" "$ROOT/scripts/production-deploy-watch.sh"
 }
 
@@ -169,6 +169,9 @@ if ! $FORCE && [ "$desired_revision" = "$current_web" ] && [ "$desired_revision"
 fi
 
 log "deploying coherent revision $desired_revision"
+# Legacy Watchtower updated containers independently and can race this coherent
+# release transaction. Remove it before the managed cutover on upgraded hosts.
+docker rm -f docker-watchtower-1 >/dev/null 2>&1 || true
 deploy_started=true
 on_exit() {
   status=$?
