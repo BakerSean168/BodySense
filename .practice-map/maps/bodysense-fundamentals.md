@@ -5,7 +5,7 @@ status: active
 level: intermediate
 language: go, python, javascript, typescript, react
 created_at: 2026-07-13
-updated_at: 2026-08-18
+updated_at: 2026-08-22
 ---
 
 # Goal
@@ -18,54 +18,78 @@ updated_at: 2026-08-18
 
 # Current Checkpoint
 
-**L1 · Diagnosis Typed Agent，约 80% 完成。**
+**L1 · Diagnosis Production Agent 已完成（100%）。当前下一阶段：L2 · Treatment Typed Vertical Slice。**
 
-已经实际理解、实施并验证：
+L1 已经不再只是“会用 PydanticAI 写一个 Diagnosis Agent”，而是完成了从模型调用到 production governance / runtime authority 的整条学习链：
 
-- Go handler/service/repository 分层与 constructor DI。
-- Dependency Inversion / composition root。
-- Python `Protocol` / structural typing。
-- typed Diagnosis models 与 `0..N candidates` 业务规则。
-- `DiagnosisDependencies` 与 run-scoped context。
-- PydanticAI `Agent[Deps, Output]`、`deps_type`、`output_type`。
-- `RunContext[DiagnosisDependencies]`。
-- `@agent.tool search_evidence`。
-- Function Tool 与 structured-output output tool 的区别。
-- `capture_run_messages()`、ToolCall/ToolReturn 与 `tool_call_id`。
-- `EvidenceSearcher` capability 与模型 Tool 入口的分层。
-- run-scoped `retrieved_evidence` trail。
-- Python 对象引用语义、`default_factory=list`、dict access、append/extend。
-- 按稳定 `evidence_id` 去重与 set comprehension。
-- Ruff vs Pyright/Pylance。
+```text
+Typed Agent
+  -> LiteLLM logical routing
+  -> Immutable AgentConfiguration
+  -> Qualification / Non-Inferiority
+  -> EvidenceGap / Acquisition / Admissibility
+  -> SafetyEnvelope / DecisionAuthority
+  -> Durable Diagnosis Domain
+  -> DecisionTrace / Provenance
+  -> Historical / Counterfactual Replay
+  -> Behavioral Contract / Failure Attribution
+  -> Shadow / Canary / Promotion
+```
+
+已经实际理解并完成知识沉淀：
+
+- Go handler/service/repository 分层、constructor DI、DIP / composition root。
+- Python `Protocol`、Pydantic models/dataclass、PydanticAI `Agent[Deps, Output]` 与 `RunContext`。
+- ToolCall/ToolReturn、structured output、run-scoped evidence trail。
+- logical model 与 physical provider 分层；LiteLLM 独占 provider/retry/fallback mechanism。
+- immutable Agent Configuration 是 qualification/promotion unit。
+- Capability Policy：`REQUIRED / PREFERRED / OPTIONAL`。
+- Pydantic Evals dataset/slices、deterministic evaluators、paired non-inferiority、interaction effect。
+- Decision-Relevant EvidenceGap：user information / external knowledge / conflict / safety。
+- Evidence Acquisition Policy、EvidenceBudget、typed EvidenceAttempt 与 stopping reason。
+- Evidence Admissibility：`retrieved != admissible != resolved`。
+- `LLM = proposer/reasoner`、`Runtime = recorder/verifier`、`Policy = authority`。
+- SafetyEnvelope 与 deterministic Go DecisionAuthority；deny-overrides；fail closed。
+- immutable `DiagnosisAnalysis`、Candidate vs longitudinal Hypothesis、durable Evidence/Gap/Attempt。
+- `Past knowledge != current knowledge`；旧 Analysis 不被未来 BodyState 改写。
+- Observability Trace vs DecisionTrace。
+- Configuration Provenance vs Execution Provenance。
+- Historical Replay vs Counterfactual Replay vs Current Re-analysis。
+- Behavioral Contract：hard invariants / bounded semantic variation / presentation variation。
+- Production failure attribution：沿链寻找第一个 contract violation，而不是默认怪模型。
+
+统一知识入口已经整理到 Thought Forest：`BodySense Diagnosis Agent Architecture`。
 
 # Verified State on Oracle Two
 
-2026-08-18 已在 `/home/ubuntu/projects/bodysense` 重建 AI Service 开发环境：
+当前主仓库：`/home/ubuntu/projects/bodysense`。
+
+Diagnosis Agent Platform 的 North-Star 治理计划已完成并归档：
 
 ```text
-Python 3.13.15
-pytest 9.1.1
-ruff 0.16.0
-pyright 1.1.411
+docs/plan/archive/2026-08-diagnosis-agent-platform/
+  diagnosis-agent-governance-eval-plan-2026-08-19.md
 ```
 
-环境由项目内：
+已落地并可从归档计划/代码验证的关键 checkpoint：
+
+- Diagnosis general qualification：**7/7**。
+- EvidenceGap policy suite：**5/5**。
+- v1 -> v2 -> v3 paired non-inferiority：零 critical regression。
+- typed/bounded EvidenceGap acquisition 与 `EvidenceAttempt`。
+- deterministic Go `DiagnosisDecisionPolicy` / SafetyEnvelope。
+- durable DecisionTrace、configuration/execution provenance、evidence acquisition trace。
+- frozen-input Historical Replay 与 side-effect-free Counterfactual Replay。
+- Champion -> Shadow -> Canary(5% -> 25% -> 50%) -> Promoted / Rollback governance state machine。
+- application-owned provider routing stack repository-wide retired；Diagnosis / Treatment / Assessment / Consultation 等统一进入 LiteLLM logical routing boundary。
+
+2026-08-18 建立的 AI Service 开发环境仍位于：
 
 ```text
 apps/ai-service/.venv
 ```
 
-承载。
-
-Diagnosis 学习/回归测试已从旧 learning snapshot 迁入 main，且保留 main 中更成熟的 production Agent 实现，没有用旧快照覆盖新代码。
-
-当前 focused validation：
-
-```text
-14 passed
-Ruff: clean
-Pyright: 0 errors
-```
+L1 当前完成标准已经从早期的“14 条 focused tests 通过”升级为：**能够解释并验证一个 Diagnosis Configuration 为什么有资格上线、一个具体 case 为什么有/没有资格 AUTO，以及怎样从 DecisionTrace/Replay 定位生产失败。**
 
 # Current Routing Boundary
 
@@ -93,17 +117,39 @@ Diagnosis 阶段继续保护：
 
 # Remaining Estimate
 
-完整统一路线剩余有效学习时间：**24~38 小时**。
-
-如果目标是优先达到“能够独立继续推进 BodySense”的实战水平，先完成：
+从 2026-08-22 checkpoint 计算，L1 Diagnosis 已完成；剩余统一路线预计：**20~32 小时**。
 
 ```text
-L1 Diagnosis -> L2 Treatment -> L5 独立纵向交付
+L2 Treatment                 5~8 h
+L3 Streaming + React/TS/Go   6~10 h
+L4 Async / RAG               4~6 h
+L5 Independent Delivery      5~8 h
 ```
 
-预计约：**14~22 小时**。
+优先达到“能够独立继续推进 BodySense”的最短路径：
+
+```text
+L2 Treatment -> L5 独立纵向交付
+```
+
+预计约：**10~16 小时**。
+
+下一学习任务不是重新实现 Treatment Agent；当前仓库已经存在 typed Treatment Agent、immutable configurations、EvidenceGap challenger、qualification/evidence/promotion evals。L2 应从**阅读并验证现有 production-shaped Treatment vertical slice**开始，重点学习 proposal/action authority、contraindication/human review、durable Treatment identity 与 outcome ownership。
 
 # Session Log
+
+## 2026-08-22 · Diagnosis 学习阶段完成与知识体系收口
+
+- 将 L1 从旧 checkpoint 的 80% 更新为 **100% 完成**。
+- 复核 Diagnosis Agent Platform 归档计划，确认 configuration qualification、EvidenceGap runtime、DecisionAuthority、DecisionTrace/provenance、Replay、Shadow/Canary/Promotion 与统一 LiteLLM routing 已形成完整 production-shaped 闭环。
+- 完成 EvidenceGap / Evidence Acquisition 深层 ownership 学习：模型负责 proposal/semantic reasoning，runtime 负责事实记录/验证，policy 负责 authority。
+- 完成 Evidence Admissibility 学习：`retrieved != admissible != gap resolved`。
+- 完成 Durable Diagnosis Domain Model：immutable Analysis、Candidate vs Hypothesis、Evidence/Gap/Attempt durable boundary、historical truth vs current applicability。
+- 完成 SafetyEnvelope / deterministic DecisionAuthority：confidence/Judge 不能覆盖 hard blocker；unknown/malformed facts fail closed。
+- 完成 DecisionTrace、Configuration/Execution Provenance、Historical/Counterfactual Replay 与 Behavioral Contract。
+- 完成 production failure attribution：从 Input/Context 到 Delivery 查找第一个 contract violation。
+- Thought Forest 已按原子知识 + 综合 MOC 重新整理；统一入口为 `BodySense Diagnosis Agent Architecture`。
+- 下一阶段切换到 **L2 Treatment Typed Vertical Slice**；由于当前代码已经有 production-shaped Treatment Agent 基础，学习目标改为理解/验证 Treatment 的 domain、safety、proposal/action authority 与 durable outcome ownership，而不是从 legacy migration 重新开始。
 
 ## 2026-08-18 · Oracle Two 统一学习工作区
 
