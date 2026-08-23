@@ -54,6 +54,8 @@ type runRepo interface {
 	CancelRun(ctx context.Context, id, userID uuid.UUID, reason any) (bool, error)
 	FailRun(ctx context.Context, id, userID uuid.UUID, errJSON any) error
 	UpdateAgentConfiguration(ctx context.Context, id uuid.UUID, configurationID string, configuration datatypes.JSON, provenance datatypes.JSON) error
+	RenewLease(ctx context.Context, id, userID uuid.UUID, owner string, expiresAt, heartbeatAt time.Time) (bool, error)
+	ReclaimExpiredRuns(ctx context.Context, now time.Time, limit int) ([]model.Run, error)
 }
 
 type shareRepo interface {
