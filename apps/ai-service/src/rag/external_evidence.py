@@ -69,11 +69,10 @@ class ExternalEvidenceReviewManifest(BaseModel):
 
 def _payload(reference: Mapping[str, Any] | Any) -> dict[str, Any]:
     if isinstance(reference, Mapping):
-        return dict(reference)
-    model_dump = getattr(reference, "model_dump", None)
-    if callable(model_dump):
-        return dict(model_dump())
-    raise TypeError("external reference must be a mapping or Pydantic-style model")
+        return {str(key): value for key, value in reference.items()}
+    if isinstance(reference, BaseModel):
+        return {str(key): value for key, value in reference.model_dump().items()}
+    raise TypeError("external reference must be a mapping or Pydantic model")
 
 
 def _strip_www(host: str) -> str:
