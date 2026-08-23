@@ -26,6 +26,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  forgetSession: () => void;
   verifySession: () => Promise<boolean>;
   refreshAccessToken: () => Promise<boolean>;
   fetchUser: () => Promise<void>;
@@ -195,6 +196,11 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       clearAuthState(set);
       set({ hasHydrated: true, error: null });
     }
+  },
+
+  forgetSession: () => {
+    clearAuthState(set);
+    set({ hasHydrated: true, error: null });
   },
 
   verifySession: async () => {

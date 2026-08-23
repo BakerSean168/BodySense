@@ -148,10 +148,8 @@ func (s *AuthService) RefreshToken(ctx context.Context, req dto.RefreshRequest) 
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// User was deleted — clear stale session cache (no session id to revoke
-			// individually, so clear by user against the family index).
-			_ = s.sessionCache.DeleteAllForUser(ctx, userID)
-			return nil, errors.New("user no longer exists")
+			_ = s.RevokeUser(ctx, userID)
+			return nil, ErrInvalidRefresh
 		}
 		return nil, fmt.Errorf("failed to find user: %w", err)
 	}
@@ -178,7 +176,11 @@ func (s *AuthService) RefreshToken(ctx context.Context, req dto.RefreshRequest) 
 		return nil, ErrInvalidRefresh
 	}
 	if err := s.sessionCache.Set(ctx, user.ID, sessionID); err != nil {
-		return nil, fmt.Errorf("failed to re-arm session: %w", err)
+		_ = s.revokeRefreshFamilyOnly(ctx, sessionID)
+		if errors.Is(err, cache.ErrUserSessionRevoked) {
+			return nil, ErrInvalidRefresh
+		}
+		return nil, fmt.Errorf("%w: failed to re-arm session: %v", ErrAuthUnavailable, err)
 	}
 	return &dto.AuthResponse{AccessToken: accessToken, RefreshToken: newRefreshToken, ExpiresIn: int64(s.jwtConfig.AccessTokenTTL.Seconds())}, nil
 }
@@ -210,19 +212,32 @@ func (s *AuthService) Logout(ctx context.Context, refreshToken string) error {
 	return s.revokeSessionFamily(ctx, userID, sessionID)
 }
 
-// DeleteUser deletes a user from the DB and invalidates all their sessions.
-// Any future request with the user's JWT will be rejected by the middleware.
+// RevokeUser permanently closes the user's current authentication window. The
+// Redis tombstone blocks a login/refresh racing with revocation from creating a
+// new session, and every known refresh family is removed.
+func (s *AuthService) RevokeUser(ctx context.Context, userID uuid.UUID) error {
+	sessionIDs, err := s.sessionCache.RevokeAllForUser(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("revoke user session authority: %w", err)
+	}
+	for _, sessionID := range sessionIDs {
+		if err := s.revokeRefreshFamilyOnly(ctx, sessionID); err != nil {
+			return fmt.Errorf("revoke refresh family %s: %w", sessionID, err)
+		}
+	}
+	return nil
+}
+
+// DeleteUser is the low-level account deletion path. Privacy erasure uses a
+// durable orchestration service around this operation so uploads and audit state
+// are handled before the user row cascades.
 func (s *AuthService) DeleteUser(ctx context.Context, userID uuid.UUID) error {
-	// Delete from DB first
+	if err := s.RevokeUser(ctx, userID); err != nil {
+		return err
+	}
 	if err := s.userRepo.DeleteByID(ctx, userID); err != nil {
 		return fmt.Errorf("failed to delete user: %w", err)
 	}
-
-	// Revoke every session — middleware will now reject this user's tokens.
-	if err := s.sessionCache.DeleteAllForUser(ctx, userID); err != nil {
-		log.Printf("[AuthService] Failed to delete session cache for deleted user %s: %v", userID, err)
-	}
-
 	return nil
 }
 
@@ -270,7 +285,10 @@ func (s *AuthService) generateTokens(ctx context.Context, user *model.User, sess
 	if err := s.sessionCache.Set(ctx, user.ID, sessionID); err != nil {
 		_ = redisClient.SRem(ctx, familyKey, key).Err()
 		_ = redisClient.Del(ctx, key).Err()
-		return nil, fmt.Errorf("failed to establish session authority: %w", err)
+		if errors.Is(err, cache.ErrUserSessionRevoked) {
+			return nil, ErrInvalidCredentials
+		}
+		return nil, fmt.Errorf("%w: failed to establish session authority: %v", ErrAuthUnavailable, err)
 	}
 
 	return &dto.AuthResponse{
@@ -333,12 +351,19 @@ func (s *AuthService) rotateRefreshToken(ctx context.Context, oldToken, expected
 	return result, nil
 }
 
-func (s *AuthService) revokeSessionFamily(ctx context.Context, userID, sessionID uuid.UUID) error {
+func (s *AuthService) revokeRefreshFamilyOnly(ctx context.Context, sessionID uuid.UUID) error {
 	if s.redisClient == nil {
 		return ErrAuthUnavailable
 	}
 	if _, err := revokeRefreshFamilyScript.Run(ctx, s.redisClient, []string{refreshFamilyKey(sessionID)}).Int64(); err != nil {
 		return fmt.Errorf("revoke refresh family: %w", err)
+	}
+	return nil
+}
+
+func (s *AuthService) revokeSessionFamily(ctx context.Context, userID, sessionID uuid.UUID) error {
+	if err := s.revokeRefreshFamilyOnly(ctx, sessionID); err != nil {
+		return err
 	}
 	if err := s.sessionCache.Delete(ctx, userID, sessionID); err != nil {
 		return fmt.Errorf("revoke session authority: %w", err)

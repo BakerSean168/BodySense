@@ -2,139 +2,26 @@ package cache
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
 
-// fakeRedis is an in-memory redisOp that tracks string keys and set members,
-// with a failure flag to simulate Redis outages.
-type fakeRedis struct {
-	strings map[string]string
-	sets    map[string]map[string]struct{}
-	fail    bool
-}
-
-func newFakeRedis() *fakeRedis {
-	return &fakeRedis{
-		strings: map[string]string{},
-		sets:    map[string]map[string]struct{}{},
-	}
-}
-
-func (f *fakeRedis) Set(_ context.Context, key string, value any, _ time.Duration) *redis.StatusCmd {
-	cmd := redis.NewStatusCmd(context.Background())
-	if f.fail {
-		cmd.SetErr(redis.ErrClosed)
-		return cmd
-	}
-	f.strings[key] = value.(string)
-	cmd.SetVal("OK")
-	return cmd
-}
-
-func (f *fakeRedis) Del(_ context.Context, keys ...string) *redis.IntCmd {
-	cmd := redis.NewIntCmd(context.Background())
-	if f.fail {
-		cmd.SetErr(redis.ErrClosed)
-		return cmd
-	}
-	var n int64
-	for _, key := range keys {
-		if _, ok := f.strings[key]; ok {
-			delete(f.strings, key)
-			n++
-		}
-		if members, ok := f.sets[key]; ok {
-			delete(f.sets, key)
-			n += int64(len(members))
-		}
-	}
-	cmd.SetVal(n)
-	return cmd
-}
-
-func (f *fakeRedis) Exists(_ context.Context, keys ...string) *redis.IntCmd {
-	cmd := redis.NewIntCmd(context.Background())
-	if f.fail {
-		cmd.SetErr(redis.ErrClosed)
-		return cmd
-	}
-	var n int64
-	for _, key := range keys {
-		if _, ok := f.strings[key]; ok {
-			n++
-		}
-		if members, ok := f.sets[key]; ok {
-			n += int64(len(members))
-		}
-	}
-	cmd.SetVal(n)
-	return cmd
-}
-
-func (f *fakeRedis) SAdd(_ context.Context, key string, members ...any) *redis.IntCmd {
-	cmd := redis.NewIntCmd(context.Background())
-	if f.fail {
-		cmd.SetErr(redis.ErrClosed)
-		return cmd
-	}
-	if f.sets[key] == nil {
-		f.sets[key] = map[string]struct{}{}
-	}
-	var added int64
-	for _, m := range members {
-		member := m.(string)
-		if _, ok := f.sets[key][member]; !ok {
-			f.sets[key][member] = struct{}{}
-			added++
-		}
-	}
-	cmd.SetVal(added)
-	return cmd
-}
-
-func (f *fakeRedis) SRem(_ context.Context, key string, members ...any) *redis.IntCmd {
-	cmd := redis.NewIntCmd(context.Background())
-	if f.fail {
-		cmd.SetErr(redis.ErrClosed)
-		return cmd
-	}
-	var removed int64
-	for _, m := range members {
-		member := m.(string)
-		if _, ok := f.sets[key][member]; ok {
-			delete(f.sets[key], member)
-			removed++
-		}
-	}
-	cmd.SetVal(removed)
-	return cmd
-}
-
-func (f *fakeRedis) SMembers(_ context.Context, key string) *redis.StringSliceCmd {
-	cmd := redis.NewStringSliceCmd(context.Background())
-	if f.fail {
-		cmd.SetErr(redis.ErrClosed)
-		return cmd
-	}
-	var out []string
-	for member := range f.sets[key] {
-		out = append(out, member)
-	}
-	cmd.SetVal(out)
-	return cmd
-}
-
-func newTestCache(f *fakeRedis) *UserSessionCache {
-	return &UserSessionCache{redis: f, ttl: 30 * 24 * time.Hour}
+func newTestSessionCache(t *testing.T) (*UserSessionCache, *miniredis.Miniredis, *redis.Client) {
+	t.Helper()
+	mini := miniredis.RunT(t)
+	client := redis.NewClient(&redis.Options{Addr: mini.Addr()})
+	t.Cleanup(func() { _ = client.Close() })
+	return NewUserSessionCache(client, 30*24*time.Hour), mini, client
 }
 
 func TestUserSessionCacheSetExistsDelete(t *testing.T) {
 	ctx := context.Background()
-	cache := newTestCache(newFakeRedis())
+	cache, _, _ := newTestSessionCache(t)
 	userID := uuid.New()
 	sessionID := uuid.New()
 
@@ -142,92 +29,84 @@ func TestUserSessionCacheSetExistsDelete(t *testing.T) {
 		t.Fatalf("Set: %v", err)
 	}
 	exists, err := cache.Exists(ctx, sessionID)
-	if err != nil {
-		t.Fatalf("Exists: %v", err)
+	if err != nil || !exists {
+		t.Fatalf("Exists after Set = %v,%v", exists, err)
 	}
-	if !exists {
-		t.Fatal("session should exist after Set")
-	}
-
 	if err := cache.Delete(ctx, userID, sessionID); err != nil {
 		t.Fatalf("Delete: %v", err)
 	}
 	exists, err = cache.Exists(ctx, sessionID)
-	if err != nil {
-		t.Fatalf("Exists: %v", err)
-	}
-	if exists {
-		t.Fatal("session should be gone after Delete")
+	if err != nil || exists {
+		t.Fatalf("Exists after Delete = %v,%v", exists, err)
 	}
 }
 
-func TestUserSessionCacheDeleteAllForUser(t *testing.T) {
+func TestUserSessionCacheRevokeAllReturnsSessionsAndBlocksRearm(t *testing.T) {
 	ctx := context.Background()
-	cache := newTestCache(newFakeRedis())
+	cache, mini, _ := newTestSessionCache(t)
 	userID := uuid.New()
 	sessionA := uuid.New()
 	sessionB := uuid.New()
-
-	if err := cache.Set(ctx, userID, sessionA); err != nil {
-		t.Fatalf("Set A: %v", err)
-	}
-	if err := cache.Set(ctx, userID, sessionB); err != nil {
-		t.Fatalf("Set B: %v", err)
+	for _, sid := range []uuid.UUID{sessionA, sessionB} {
+		if err := cache.Set(ctx, userID, sid); err != nil {
+			t.Fatalf("Set %s: %v", sid, err)
+		}
 	}
 
-	if err := cache.DeleteAllForUser(ctx, userID); err != nil {
-		t.Fatalf("DeleteAllForUser: %v", err)
+	revoked, err := cache.RevokeAllForUser(ctx, userID)
+	if err != nil {
+		t.Fatalf("RevokeAllForUser: %v", err)
+	}
+	if len(revoked) != 2 {
+		t.Fatalf("revoked=%v, want 2 sessions", revoked)
 	}
 	for _, sid := range []uuid.UUID{sessionA, sessionB} {
 		exists, err := cache.Exists(ctx, sid)
-		if err != nil {
-			t.Fatalf("Exists: %v", err)
+		if err != nil || exists {
+			t.Fatalf("session %s remains live: exists=%v err=%v", sid, exists, err)
 		}
-		if exists {
-			t.Fatalf("session %v should be revoked", sid)
-		}
+	}
+	if !mini.Exists(userRevokedKey(userID)) {
+		t.Fatal("user revocation tombstone missing")
+	}
+	if err := cache.Set(ctx, userID, uuid.New()); !errors.Is(err, ErrUserSessionRevoked) {
+		t.Fatalf("Set after user revocation = %v, want ErrUserSessionRevoked", err)
 	}
 }
 
-func TestUserSessionCacheSessionIsolatedPerUser(t *testing.T) {
+func TestUserSessionCacheRevokingOtherUserIsIsolated(t *testing.T) {
 	ctx := context.Background()
-	cache := newTestCache(newFakeRedis())
+	cache, _, _ := newTestSessionCache(t)
 	userA := uuid.New()
 	userB := uuid.New()
 	sessionA := uuid.New()
-
 	if err := cache.Set(ctx, userA, sessionA); err != nil {
 		t.Fatalf("Set: %v", err)
 	}
-	// Deleting all of user B's sessions must not touch user A's session.
-	if err := cache.DeleteAllForUser(ctx, userB); err != nil {
-		t.Fatalf("DeleteAllForUser B: %v", err)
+	if _, err := cache.RevokeAllForUser(ctx, userB); err != nil {
+		t.Fatalf("RevokeAllForUser B: %v", err)
 	}
 	exists, err := cache.Exists(ctx, sessionA)
-	if err != nil {
-		t.Fatalf("Exists: %v", err)
-	}
-	if !exists {
-		t.Fatal("user A session must survive revoking user B")
+	if err != nil || !exists {
+		t.Fatalf("user A session affected by user B revocation: exists=%v err=%v", exists, err)
 	}
 }
 
 func TestUserSessionCacheRedisDownSurfacesError(t *testing.T) {
 	ctx := context.Background()
-	f := newFakeRedis()
-	f.fail = true
-	cache := newTestCache(f)
+	cache, mini, _ := newTestSessionCache(t)
+	mini.Close()
 
 	if _, err := cache.Exists(ctx, uuid.New()); err == nil {
-		t.Fatal("expected error when Redis is down")
+		t.Fatal("expected Exists error when Redis is down")
 	}
 	if err := cache.Set(ctx, uuid.New(), uuid.New()); err == nil {
-		t.Fatal("expected error when Redis is down")
+		t.Fatal("expected Set error when Redis is down")
 	}
 	if err := cache.Delete(ctx, uuid.New(), uuid.New()); err == nil {
-		t.Fatal("expected error when Redis is down")
+		t.Fatal("expected Delete error when Redis is down")
 	}
-	if err := cache.DeleteAllForUser(ctx, uuid.New()); err == nil {
-		t.Fatal("expected error when Redis is down")
+	if _, err := cache.RevokeAllForUser(ctx, uuid.New()); err == nil {
+		t.Fatal("expected RevokeAllForUser error when Redis is down")
 	}
 }

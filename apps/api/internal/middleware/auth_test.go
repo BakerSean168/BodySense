@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -34,7 +35,9 @@ func (f *fakeSessionCache) Set(_ context.Context, _, _ uuid.UUID) error { return
 
 func (f *fakeSessionCache) Delete(_ context.Context, _, _ uuid.UUID) error { return nil }
 
-func (f *fakeSessionCache) DeleteAllForUser(_ context.Context, _ uuid.UUID) error { return nil }
+func (f *fakeSessionCache) RevokeAllForUser(_ context.Context, _ uuid.UUID) ([]uuid.UUID, error) {
+	return nil, nil
+}
 
 func newMiddlewareTestDB(t *testing.T) (*repository.UserRepository, sqlmock.Sqlmock, func()) {
 	t.Helper()
@@ -130,6 +133,52 @@ func TestAuthMiddlewareLegacyTokenNoSessionCacheHitForcesDB(t *testing.T) {
 	mw := AuthMiddleware(cfg, userRepo, sessionCache)
 	if rec := performRequest(mw, token); rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200 (body=%s)", rec.Code, rec.Body.String())
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet expectations: %v", err)
+	}
+}
+
+func TestAuthMiddlewareLegacyTokenMissingUserRejects(t *testing.T) {
+	userRepo, mock, cleanup := newMiddlewareTestDB(t)
+	defer cleanup()
+
+	cfg := auth.JWTConfig{SecretKey: "test-secret", AccessTokenTTL: 15 * time.Minute}
+	userID := uuid.New()
+	token, err := auth.GenerateAccessToken(cfg, userID, uuid.Nil, "test@example.com")
+	if err != nil {
+		t.Fatalf("GenerateAccessToken: %v", err)
+	}
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE id = $1 ORDER BY "users"."id" LIMIT $2`)).
+		WithArgs(userID, 1).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}))
+
+	mw := AuthMiddleware(cfg, userRepo, &fakeSessionCache{})
+	if rec := performRequest(mw, token); rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401 (body=%s)", rec.Code, rec.Body.String())
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet expectations: %v", err)
+	}
+}
+
+func TestAuthMiddlewareLegacyTokenDBFailureFailsClosed(t *testing.T) {
+	userRepo, mock, cleanup := newMiddlewareTestDB(t)
+	defer cleanup()
+
+	cfg := auth.JWTConfig{SecretKey: "test-secret", AccessTokenTTL: 15 * time.Minute}
+	userID := uuid.New()
+	token, err := auth.GenerateAccessToken(cfg, userID, uuid.Nil, "test@example.com")
+	if err != nil {
+		t.Fatalf("GenerateAccessToken: %v", err)
+	}
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE id = $1 ORDER BY "users"."id" LIMIT $2`)).
+		WithArgs(userID, 1).
+		WillReturnError(errors.New("database unavailable"))
+
+	mw := AuthMiddleware(cfg, userRepo, &fakeSessionCache{})
+	if rec := performRequest(mw, token); rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want 503 (body=%s)", rec.Code, rec.Body.String())
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("unmet expectations: %v", err)

@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"errors"
-	"log"
 	"net/http"
 	"strings"
 
@@ -77,12 +76,21 @@ func AuthMiddleware(jwtConfig auth.JWTConfig, userRepo *repository.UserRepositor
 
 		if claims.SessionID == uuid.Nil {
 			// Legacy token minted before session tracking: only check the user
-			// still exists. Never write it back into the session cache.
+			// still exists. Never write it back into the session cache. Legacy
+			// verification also fails closed: a DB outage is not proof that the
+			// account remains authorized.
 			if err := verifyUserExistsNoCache(c, userID, userRepo); err != nil {
-				c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
-					Error:   "unauthorized",
-					Message: "User no longer exists",
-				})
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
+						Error:   "unauthorized",
+						Message: "User no longer exists",
+					})
+				} else {
+					c.JSON(http.StatusServiceUnavailable, dto.ErrorResponse{
+						Error:   "authentication_unavailable",
+						Message: "Authentication service is temporarily unavailable",
+					})
+				}
 				c.Abort()
 				return
 			}
@@ -120,18 +128,9 @@ func AuthMiddleware(jwtConfig auth.JWTConfig, userRepo *repository.UserRepositor
 // never writes back to the session cache, so a revoked session cannot be revived
 // by a legacy token or a Redis outage.
 func verifyUserExistsNoCache(c *gin.Context, userID uuid.UUID, userRepo *repository.UserRepository) error {
-	ctx := c.Request.Context()
-
-	_, err := userRepo.FindByID(ctx, userID)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// User definitively doesn't exist
-			return err
-		}
-		// DB error (connection issue, etc.) — log but don't block the request
-		// This prevents a DB blip from logging out all users
-		log.Printf("[AuthMiddleware] DB lookup failed for user %s: %v", userID, err)
-		return nil
+	if userRepo == nil {
+		return errors.New("user repository unavailable")
 	}
-	return nil
+	_, err := userRepo.FindByID(c.Request.Context(), userID)
+	return err
 }

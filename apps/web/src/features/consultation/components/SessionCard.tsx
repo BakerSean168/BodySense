@@ -147,7 +147,7 @@ export function SessionCard({
           <DialogHeader>
             <DialogTitle>确认删除</DialogTitle>
             <DialogDescription>
-              确定要删除会话 &quot;{displayTitle}&quot; 吗？此操作不可恢复。
+              确定要删除会话 &quot;{displayTitle}&quot; 吗？此操作只删除该会话历史和对应分享，不会删除纵向健康数据。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

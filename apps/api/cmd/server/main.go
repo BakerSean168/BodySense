@@ -80,6 +80,15 @@ func main() {
 	sessionCache := cache.NewUserSessionCache(database.RedisClient, jwtConfig.RefreshTokenTTL)
 
 	authService := service.NewAuthService(userRepo, jwtConfig, sessionCache)
+	privacyErasureRepo := repository.NewPrivacyErasureRepository(database.DB)
+	privacyErasureService := service.NewPrivacyErasureService(
+		privacyErasureRepo,
+		userRepo,
+		authService,
+		service.NewLocalUserObjectCleaner(service.UploadDir),
+		database.NewTransactionManager(database.DB),
+	)
+	privacyErasureService.StartWorker(context.Background(), time.Minute)
 	profileService := service.NewProfileService(profileRepo)
 	jobRepo := repository.NewJobRepository(database.DB)
 	jobRuntime := service.NewJobRuntime(jobRepo)
@@ -124,6 +133,7 @@ func main() {
 	).WithAssessmentDeployment(agentDeploymentPolicy).
 		WithAssessmentRollout(assessmentRolloutService)
 	authHandler := handler.NewAuthHandler(authService, authSecurity)
+	privacyHandler := handler.NewPrivacyHandler(privacyErasureService, authHandler)
 	profileHandler := handler.NewProfileHandler(profileService)
 	agentToolRepo := repository.NewAgentToolCallRepository(database.DB)
 	agentToolService := service.NewAgentToolService(agentToolRepo)
@@ -300,6 +310,8 @@ func main() {
 	protected.Use(middleware.AuthMiddleware(jwtConfig, userRepo, sessionCache))
 	{
 		protected.GET("/me", authHandler.Me)
+		protected.GET("/privacy/erasure-plan", privacyHandler.PlanErasure)
+		protected.POST("/privacy/erasure", privacyHandler.RequestErasure)
 		protected.GET("/profile", profileHandler.GetProfile)
 		protected.PUT("/profile", profileHandler.CreateOrUpdateProfile)
 

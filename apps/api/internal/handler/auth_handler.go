@@ -208,6 +208,10 @@ func (h *AuthHandler) setRefreshCookie(c *gin.Context, token string) {
 	})
 }
 
+func (h *AuthHandler) ClearRefreshCookie(c *gin.Context) {
+	h.clearRefreshCookie(c)
+}
+
 func (h *AuthHandler) clearRefreshCookie(c *gin.Context) {
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     h.security.RefreshCookieName,

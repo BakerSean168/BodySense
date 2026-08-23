@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -10,68 +11,78 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// SessionCache bounds the Redis operations AuthService and AuthMiddleware depend
-// on so tests can substitute a fake without a real Redis instance.
+var ErrUserSessionRevoked = errors.New("user session authority revoked")
+
+// SessionCache is the revocation authority for short-lived access credentials.
 type SessionCache interface {
-	// Exists reports whether the session is still valid.
-	// (true, nil) active, (false, nil) definitively revoked/unknown, (false, err) Redis unavailable.
 	Exists(ctx context.Context, sessionID uuid.UUID) (bool, error)
-	// Set registers a new session under the user and adds sessionID to the user's family index.
 	Set(ctx context.Context, userID, sessionID uuid.UUID) error
-	// Delete ends one session: removes it from the user's index and drops the session key.
 	Delete(ctx context.Context, userID, sessionID uuid.UUID) error
-	// DeleteAllForUser ends every session for a user (used on account deletion).
-	DeleteAllForUser(ctx context.Context, userID uuid.UUID) error
+	// RevokeAllForUser atomically prevents new sessions and removes every
+	// current session. The returned IDs let AuthService delete refresh families.
+	RevokeAllForUser(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error)
 }
 
 // UserSessionCache is a Redis-backed SessionCache.
 //
 // Keys:
 //
-//	session:<sid>                       redis string, value "1", TTL = refresh TTL
-//	user_sessions:<userID>             redis set of live session ids
+//	session:<sid>            string, TTL = refresh TTL
+//	user_sessions:<userID>   set of live session ids, TTL = refresh TTL
+//	user_auth_revoked:<uid>  tombstone, TTL = refresh TTL
 //
-// Design:
-//   - Access tokens are short-lived and carry the session id. The middleware
-//     rejects tokens whose session was revoked (logout / global sign-out).
-//   - TTL is the refresh-token TTL because the session family lives exactly as
-//     long as its refresh token (refresh re-arms both).
-//   - Redis unavailable => set/membership errors surface to the caller, which
-//     degrades to a DB user check with no write-back.
+// The tombstone closes the account-erasure race: session creation and user
+// revocation are both Lua-atomic in Redis, so a login that started just before
+// erasure cannot re-arm a session after revocation wins.
 type UserSessionCache struct {
-	redis redisOp
+	redis *redis.Client
 	ttl   time.Duration
 }
 
-// redisOp narrows the go-redis surface to the commands this cache uses. The
-// concrete redis.Client satisfies it; tests can provide a fake.
-type redisOp interface {
-	Set(ctx context.Context, key string, value any, expiration time.Duration) *redis.StatusCmd
-	Del(ctx context.Context, keys ...string) *redis.IntCmd
-	Exists(ctx context.Context, keys ...string) *redis.IntCmd
-	SAdd(ctx context.Context, key string, members ...any) *redis.IntCmd
-	SRem(ctx context.Context, key string, members ...any) *redis.IntCmd
-	SMembers(ctx context.Context, key string) *redis.StringSliceCmd
-}
-
-// NewUserSessionCache creates a Redis-backed SessionCache.
-// ttl is the refresh-token TTL, which bounds how long a session stays live.
 func NewUserSessionCache(client *redis.Client, ttl time.Duration) *UserSessionCache {
 	return &UserSessionCache{redis: client, ttl: ttl}
 }
 
-func sessionIDKey(sessionID uuid.UUID) string {
-	return fmt.Sprintf("session:%s", sessionID.String())
+func sessionIDKey(sessionID uuid.UUID) string { return fmt.Sprintf("session:%s", sessionID) }
+func userSessionsKey(userID uuid.UUID) string { return fmt.Sprintf("user_sessions:%s", userID) }
+func userRevokedKey(userID uuid.UUID) string  { return fmt.Sprintf("user_auth_revoked:%s", userID) }
+
+func sessionTTLSeconds(ttl time.Duration) int64 {
+	seconds := int64(ttl.Seconds())
+	if seconds < 1 {
+		return 1
+	}
+	return seconds
 }
 
-func userSessionsKey(userID uuid.UUID) string {
-	return fmt.Sprintf("user_sessions:%s", userID.String())
-}
+var setSessionScript = redis.NewScript(`
+if redis.call('EXISTS', KEYS[3]) == 1 then
+  return 0
+end
+redis.call('SET', KEYS[1], '1', 'EX', ARGV[2])
+redis.call('SADD', KEYS[2], ARGV[1])
+redis.call('EXPIRE', KEYS[2], ARGV[2])
+return 1
+`)
 
-// Exists reports whether the session key is present in Redis.
+var deleteSessionScript = redis.NewScript(`
+redis.call('SREM', KEYS[2], ARGV[1])
+redis.call('DEL', KEYS[1])
+return 1
+`)
+
+var revokeUserSessionsScript = redis.NewScript(`
+redis.call('SET', KEYS[2], '1', 'EX', ARGV[1])
+local members = redis.call('SMEMBERS', KEYS[1])
+for _, sid in ipairs(members) do
+  redis.call('DEL', 'session:' .. sid)
+end
+redis.call('DEL', KEYS[1])
+return members
+`)
+
 func (c *UserSessionCache) Exists(ctx context.Context, sessionID uuid.UUID) (bool, error) {
-	key := sessionIDKey(sessionID)
-	val, err := c.redis.Exists(ctx, key).Result()
+	val, err := c.redis.Exists(ctx, sessionIDKey(sessionID)).Result()
 	if err != nil {
 		log.Printf("[UserSessionCache] Redis EXISTS failed for %s: %v", sessionID, err)
 		return false, err
@@ -79,49 +90,52 @@ func (c *UserSessionCache) Exists(ctx context.Context, sessionID uuid.UUID) (boo
 	return val > 0, nil
 }
 
-// Set writes the session key with the refresh TTL and records the session id
-// in the user's family index.
 func (c *UserSessionCache) Set(ctx context.Context, userID, sessionID uuid.UUID) error {
-	if err := c.redis.Set(ctx, sessionIDKey(sessionID), "1", c.ttl).Err(); err != nil {
-		log.Printf("[UserSessionCache] Redis SET failed for %s: %v", sessionID, err)
-		return fmt.Errorf("set session cache: %w", err)
-	}
-	if err := c.redis.SAdd(ctx, userSessionsKey(userID), sessionID.String()).Err(); err != nil {
-		log.Printf("[UserSessionCache] Redis SADD failed for user %s: %v", userID, err)
-		return fmt.Errorf("failed to index user session: %w", err)
-	}
-	return nil
-}
-
-// Delete removes the session key and drops the session id from the user's index.
-func (c *UserSessionCache) Delete(ctx context.Context, userID, sessionID uuid.UUID) error {
-	if err := c.redis.SRem(ctx, userSessionsKey(userID), sessionID.String()).Err(); err != nil {
-		log.Printf("[UserSessionCache] Redis SREM failed for user %s: %v", userID, err)
-		return fmt.Errorf("failed to deindex user session: %w", err)
-	}
-	if err := c.redis.Del(ctx, sessionIDKey(sessionID)).Err(); err != nil {
-		log.Printf("[UserSessionCache] Redis DEL failed for %s: %v", sessionID, err)
-		return fmt.Errorf("failed to delete session cache: %w", err)
-	}
-	return nil
-}
-
-// DeleteAllForUser revokes every live session belonging to the user (account deletion).
-func (c *UserSessionCache) DeleteAllForUser(ctx context.Context, userID uuid.UUID) error {
-	indexKey := userSessionsKey(userID)
-	sessionIDs, err := c.redis.SMembers(ctx, indexKey).Result()
+	result, err := setSessionScript.Run(
+		ctx,
+		c.redis,
+		[]string{sessionIDKey(sessionID), userSessionsKey(userID), userRevokedKey(userID)},
+		sessionID.String(), sessionTTLSeconds(c.ttl),
+	).Int64()
 	if err != nil {
-		log.Printf("[UserSessionCache] Redis SMEMBERS failed for user %s: %v", userID, err)
-		return fmt.Errorf("failed to list user sessions: %w", err)
+		return fmt.Errorf("set session authority: %w", err)
 	}
-	keys := make([]string, 0, len(sessionIDs)+1)
-	for _, sid := range sessionIDs {
-		keys = append(keys, fmt.Sprintf("session:%s", sid))
-	}
-	keys = append(keys, indexKey)
-	if err := c.redis.Del(ctx, keys...).Err(); err != nil {
-		log.Printf("[UserSessionCache] Redis DEL failed for user %s: %v", userID, err)
-		return fmt.Errorf("failed to delete user sessions: %w", err)
+	if result != 1 {
+		return ErrUserSessionRevoked
 	}
 	return nil
+}
+
+func (c *UserSessionCache) Delete(ctx context.Context, userID, sessionID uuid.UUID) error {
+	if _, err := deleteSessionScript.Run(
+		ctx,
+		c.redis,
+		[]string{sessionIDKey(sessionID), userSessionsKey(userID)},
+		sessionID.String(),
+	).Result(); err != nil {
+		return fmt.Errorf("delete session authority: %w", err)
+	}
+	return nil
+}
+
+func (c *UserSessionCache) RevokeAllForUser(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error) {
+	values, err := revokeUserSessionsScript.Run(
+		ctx,
+		c.redis,
+		[]string{userSessionsKey(userID), userRevokedKey(userID)},
+		sessionTTLSeconds(c.ttl),
+	).StringSlice()
+	if err != nil {
+		return nil, fmt.Errorf("revoke user session authority: %w", err)
+	}
+
+	sessionIDs := make([]uuid.UUID, 0, len(values))
+	for _, value := range values {
+		sessionID, parseErr := uuid.Parse(value)
+		if parseErr != nil {
+			return nil, fmt.Errorf("parse revoked session id %q: %w", value, parseErr)
+		}
+		sessionIDs = append(sessionIDs, sessionID)
+	}
+	return sessionIDs, nil
 }

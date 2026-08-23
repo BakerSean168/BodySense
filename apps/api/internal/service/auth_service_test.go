@@ -56,14 +56,18 @@ func (f *recordingSessionCache) Delete(_ context.Context, _ uuid.UUID, sessionID
 	return nil
 }
 
-func (f *recordingSessionCache) DeleteAllForUser(_ context.Context, _ uuid.UUID) error {
+func (f *recordingSessionCache) RevokeAllForUser(_ context.Context, _ uuid.UUID) ([]uuid.UUID, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.deleteAllErr != nil {
-		return f.deleteAllErr
+		return nil, f.deleteAllErr
+	}
+	revoked := make([]uuid.UUID, 0, len(f.live))
+	for sessionID := range f.live {
+		revoked = append(revoked, sessionID)
 	}
 	f.live = map[uuid.UUID]bool{}
-	return nil
+	return revoked, nil
 }
 
 func newAuthRedisTestService(t *testing.T) (*AuthService, *miniredis.Miniredis, *redis.Client, *recordingSessionCache) {
