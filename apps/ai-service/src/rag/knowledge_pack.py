@@ -72,6 +72,9 @@ class KnowledgeUnitCandidate:
     tags: list[str] = field(default_factory=list)
     transcript_excerpt: str = ""
     review_status: str = "generated"
+    lifecycle_status: str = "generated"
+    quality_score: float = 0.0
+    content_hash: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
     @property

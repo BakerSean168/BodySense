@@ -5,6 +5,7 @@ There are currently **no unfinished Thought Forest ingestion, evidence-normaliza
 - [`../archive/thought-forest-knowledge-ingestion-2026-08-23.md`](../archive/thought-forest-knowledge-ingestion-2026-08-23.md) — completed 2026-08-23; explicit allowlist export, Git/line provenance, BodySense adapter, generated-only dev ingestion and retrieval-safety verification.
 - [`../archive/thought-forest-evidence-normalization-2026-08-23.md`](../archive/thought-forest-evidence-normalization-2026-08-23.md) — completed 2026-08-23; Tier-C claim candidates, stable Markdown evidence identity, typed reranking and unpublished retrieval eval.
 - [`../archive/thought-forest-external-evidence-admissibility-2026-08-23.md`](../archive/thought-forest-external-evidence-admissibility-2026-08-23.md) — completed 2026-08-23; scoped external references, canonical identity, explicit review manifest and conservative evidence readiness.
+- [`../archive/thought-forest-claim-review-publication-2026-08-23.md`](../archive/thought-forest-claim-review-publication-2026-08-23.md) — completed 2026-08-23; exact claim review, reviewed snapshot, transactional publication/rollback, hard visibility gate and overwrite protection.
 
 The Agent-platform migration remains closed, and the bounded Consultation Runtime / Async-RAG hardening audit also remains archived.
 

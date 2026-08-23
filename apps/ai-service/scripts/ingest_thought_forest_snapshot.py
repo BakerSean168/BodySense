@@ -26,6 +26,7 @@ if load_dotenv:
             load_dotenv(_env, override=False)
             break
 
+from src.rag.claim_review import load_claim_review  # noqa: E402
 from src.rag.external_evidence import load_external_evidence_review  # noqa: E402
 from src.rag.knowledge_library import KnowledgeLibrary  # noqa: E402
 from src.rag.thought_forest_snapshot import (  # noqa: E402
@@ -47,6 +48,10 @@ def parse_args() -> argparse.Namespace:
         help="Optional explicit bodysense.external-evidence-review.v1 manifest",
     )
     parser.add_argument(
+        "--claim-review-manifest",
+        help="Optional explicit bodysense.claim-review.v1 manifest",
+    )
+    parser.add_argument(
         "--overwrite-source",
         action="store_true",
         help="Replace existing Thought Forest sources with the same source_key",
@@ -62,13 +67,26 @@ async def main() -> int:
         if args.evidence_review_manifest
         else None
     )
-    packs = build_generated_packs(snapshot, review_manifest=review_manifest)
+    claim_review_manifest = (
+        load_claim_review(args.claim_review_manifest)
+        if args.claim_review_manifest
+        else None
+    )
+    packs = build_generated_packs(
+        snapshot,
+        review_manifest=review_manifest,
+        claim_review_manifest=claim_review_manifest,
+    )
     unit_count = sum(len(pack.units) for pack in packs)
     print(f"Snapshot: {snapshot.snapshot_id}")
     print(f"Git commit: {snapshot.repository.git_commit}")
     print(f"Notes: {len(packs)}")
     print(f"Units: {unit_count}")
-    print("Publication state: generated/unpublished")
+    reviewed_units = sum(
+        1 for pack in packs for unit in pack.units if unit.review_status == "reviewed"
+    )
+    print(f"Reviewed units: {reviewed_units}")
+    print("Publication state: unpublished")
 
     if args.dry_run:
         return 0
@@ -76,6 +94,10 @@ async def main() -> int:
     library = KnowledgeLibrary()
     await library.initialize()
     try:
+        if args.overwrite_source:
+            await library.assert_sources_overwritable(
+                [pack.source.source_key for pack in packs]
+            )
         for pack in packs:
             result = await library.ingest_generated_pack(
                 pack, overwrite_source=args.overwrite_source

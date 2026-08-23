@@ -156,3 +156,110 @@ async def test_ingest_transaction_rolls_back_on_write_failure() -> None:
     # The injected pool is test-owned and is not implicitly closed by the library.
     await library.close()
     assert pool.closed is False
+
+
+class PublishedSourceCursor:
+    def __init__(self) -> None:
+        self.query_index = 0
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        return False
+
+    async def execute(self, query, params=None) -> None:
+        self.query_index += 1
+
+    async def fetchone(self):
+        if self.query_index == 1:
+            return (77,)
+        if self.query_index == 2:
+            return (1,)
+        return None
+
+
+class PublishedSourceConnection:
+    def __init__(self) -> None:
+        self.tx = FakeTransaction()
+        self.cursor_instance = PublishedSourceCursor()
+
+    def transaction(self):
+        return self.tx
+
+    def cursor(self):
+        return self.cursor_instance
+
+
+@pytest.mark.asyncio
+async def test_overwrite_rejects_source_with_published_or_publication_linked_units() -> None:
+    conn = PublishedSourceConnection()
+    pool = InjectedPool(conn)  # type: ignore[arg-type]
+    embedder = AsyncMock()
+    embedder.generate_batch.return_value = []
+    library = KnowledgeLibrary(
+        database_url="postgresql://test",
+        embedding_generator=embedder,
+        pool=pool,  # type: ignore[arg-type]
+        owns_pool=False,
+    )
+    pack = GeneratedKnowledgePack(
+        source=SourceVideoMetadata(
+            source_key="source-published",
+            source_type="thought_forest_note",
+            title="Published source",
+            author="Thought Forest",
+            problem_slug="pain",
+            problem_display_name="Pain",
+            original_file_path="z/pain.md",
+        ),
+        artifact_dir="thought-forest://published",
+        transcript_segments=[],
+        units=[],
+        clips=[],
+    )
+
+    with pytest.raises(RuntimeError, match="cannot overwrite a knowledge source"):
+        await library.ingest_generated_pack(pack, overwrite_source=True)
+
+    assert conn.tx.exit_exception_type is RuntimeError
+
+
+class BatchPreflightCursor:
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        return False
+
+    async def execute(self, query, params=None) -> None:
+        return None
+
+    async def fetchall(self):
+        return [("thought-forest:z/pain.md",)]
+
+
+class BatchPreflightConnection:
+    def cursor(self):
+        return BatchPreflightCursor()
+
+
+class BatchPreflightPool:
+    @asynccontextmanager
+    async def connection(self):
+        yield BatchPreflightConnection()
+
+
+@pytest.mark.asyncio
+async def test_batch_overwrite_preflight_fails_before_any_source_write() -> None:
+    library = KnowledgeLibrary(
+        database_url="postgresql://test",
+        embedding_generator=AsyncMock(),
+        pool=BatchPreflightPool(),  # type: ignore[arg-type]
+        owns_pool=False,
+    )
+
+    with pytest.raises(RuntimeError, match="thought-forest:z/pain.md"):
+        await library.assert_sources_overwritable(
+            ["thought-forest:z/glute.md", "thought-forest:z/pain.md"]
+        )
