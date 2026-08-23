@@ -1,8 +1,10 @@
 # Active Plans
 
-There are currently **no unfinished AI Service Agent-platform or post-closeout hardening plans**. The Agent-platform migration remains closed, and the bounded Consultation Runtime / Async-RAG hardening audit has also completed its release gate and moved to archive:
+There are currently **no unfinished AI Service Agent-platform, post-closeout hardening, or Thought Forest ingestion plans**. The Thought Forest → BodySense ingestion MVP completed its vertical gate and moved to archive:
 
-- [`../archive/consultation-runtime-rag-hardening-plan-2026-08-22.md`](../archive/consultation-runtime-rag-hardening-plan-2026-08-22.md) — completed 2026-08-23; run identity, stream contracts, cancellation, event ordering, async RAG and Grounding Eval v2 diagnostic hardening.
+- [`../archive/thought-forest-knowledge-ingestion-2026-08-23.md`](../archive/thought-forest-knowledge-ingestion-2026-08-23.md) — completed 2026-08-23; explicit allowlist export, Git/line provenance, BodySense adapter, generated-only dev ingestion and retrieval-safety verification.
+
+The Agent-platform migration remains closed, and the bounded Consultation Runtime / Async-RAG hardening audit also remains archived.
 
 The North-Star convergence program completed its final cross-role closeout on 2026-08-21. Historical
 implementation plans are preserved under `../archive/` rather than left active after their code has
