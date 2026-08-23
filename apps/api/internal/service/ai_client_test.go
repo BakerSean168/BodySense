@@ -183,3 +183,63 @@ func TestValidateConsultationInternalEventRejectsMalformedRedFlag(t *testing.T) 
 		t.Fatal("malformed authority payload must be rejected")
 	}
 }
+
+func TestValidateConsultationInternalEventRequiresPublishedThoughtForestCitationIdentity(t *testing.T) {
+	validCitation := map[string]any{
+		"source_type":           "thought_forest_note",
+		"unit_key":              "tfu-pain",
+		"source_key":            "thought-forest:z/pain.md",
+		"lifecycle_status":      "published",
+		"publication_id":        "11111111-1111-1111-1111-111111111111",
+		"published_version":     3,
+		"publication_key":       "pain-v3",
+		"publication_batch_key": "pain-batch",
+		"claim_id":              "claim-pain",
+		"claim_review_id":       "review-pain",
+		"source_locator": map[string]any{
+			"locator_type": "markdown_lines",
+			"git_commit":   "abc123",
+			"path":         "z/pain.md",
+			"line_start":   20,
+			"line_end":     23,
+		},
+	}
+	event, _ := dto.NewStreamEvent(
+		1,
+		"source",
+		"source.citation.added",
+		dto.StreamEventIDs{},
+		map[string]any{"citation": validCitation},
+	)
+	if err := validateConsultationInternalEvent(event); err != nil {
+		t.Fatalf("valid published Thought Forest citation rejected: %v", err)
+	}
+
+	delete(validCitation, "publication_id")
+	invalid, _ := dto.NewStreamEvent(
+		1,
+		"source",
+		"source.citation.added",
+		dto.StreamEventIDs{},
+		map[string]any{"citation": validCitation},
+	)
+	if err := validateConsultationInternalEvent(invalid); err == nil {
+		t.Fatal("published Thought Forest citation without publication identity must be rejected")
+	}
+}
+
+func TestValidateConsultationInternalEventKeepsLegacyVideoCitationCompatible(t *testing.T) {
+	event, _ := dto.NewStreamEvent(
+		1,
+		"source",
+		"source.citation.added",
+		dto.StreamEventIDs{},
+		map[string]any{"citation": map[string]any{
+			"title":       "Legacy video citation",
+			"source_type": "video",
+		}},
+	)
+	if err := validateConsultationInternalEvent(event); err != nil {
+		t.Fatalf("legacy video citation must remain compatible: %v", err)
+	}
+}

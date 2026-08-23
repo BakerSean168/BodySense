@@ -1,0 +1,6 @@
+{"case_id":"pain-definition","query":"什么是疼痛？","expect":"hit","expected_unit_key":"tfu-18d2dc2e4effd2c62097d44794f76e29","expected_claim_id":"tfc-a0ffebe00c719febbe6b7a3cd3f7e70b","expected_evidence_terms":["不愉快感觉","情绪体验"]}
+{"case_id":"nociception-definition","query":"nociception 伤害感受是什么？","expect":"hit","expected_unit_key":"tfu-18d2dc2e4effd2c62097d44794f76e29","expected_claim_id":"tfc-a0ffebe00c719febbe6b7a3cd3f7e70b","expected_evidence_terms":["神经系统","有害刺激","编码"]}
+{"case_id":"pain-nociception-distinction","query":"疼痛和伤害感受是一回事吗？","expect":"hit","expected_unit_key":"tfu-18d2dc2e4effd2c62097d44794f76e29","expected_claim_id":"tfc-a0ffebe00c719febbe6b7a3cd3f7e70b","expected_evidence_terms":["不是同一现象"]}
+{"case_id":"negative-ankle-sprain","query":"脚踝扭伤怎么处理？","expect":"no_result"}
+{"case_id":"negative-anterior-pelvic-tilt","query":"骨盆前倾是什么？","expect":"no_result"}
+{"case_id":"negative-postgres-index","query":"怎么设置 PostgreSQL 索引？","expect":"no_result"}

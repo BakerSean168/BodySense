@@ -118,6 +118,14 @@ def normalize_evidence(user_id: str, result: Any) -> dict[str, Any]:
         published_version = getattr(result, "published_version", None)
         if published_version is not None:
             evidence["published_version"] = int(published_version)
+        publication_key = str(getattr(result, "publication_key", "") or "")
+        if publication_key:
+            evidence["publication_key"] = publication_key
+        publication_batch_key = str(
+            getattr(result, "publication_batch_key", "") or ""
+        )
+        if publication_batch_key:
+            evidence["publication_batch_key"] = publication_batch_key
     if claim_candidate:
         evidence["claim_candidate"] = claim_candidate
         for key in (

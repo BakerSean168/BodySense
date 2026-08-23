@@ -242,6 +242,47 @@ func sendConsultationProtocolError(ctx context.Context, events chan<- dto.Stream
 	}
 }
 
+func validateCitationPayload(raw json.RawMessage) error {
+	var citation struct {
+		SourceType          string `json:"source_type"`
+		UnitKey             string `json:"unit_key"`
+		SourceKey           string `json:"source_key"`
+		LifecycleStatus     string `json:"lifecycle_status"`
+		PublicationID       string `json:"publication_id"`
+		PublicationKey      string `json:"publication_key"`
+		PublicationBatchKey string `json:"publication_batch_key"`
+		PublishedVersion    int    `json:"published_version"`
+		ClaimID             string `json:"claim_id"`
+		ClaimReviewID       string `json:"claim_review_id"`
+		SourceLocator       struct {
+			LocatorType string `json:"locator_type"`
+			GitCommit   string `json:"git_commit"`
+			Path        string `json:"path"`
+			LineStart   int    `json:"line_start"`
+			LineEnd     int    `json:"line_end"`
+		} `json:"source_locator"`
+	}
+	if err := json.Unmarshal(raw, &citation); err != nil {
+		return fmt.Errorf("citation payload is malformed")
+	}
+	if citation.SourceType != "thought_forest_note" {
+		return nil
+	}
+	if strings.TrimSpace(citation.UnitKey) == "" || strings.TrimSpace(citation.SourceKey) == "" ||
+		citation.LifecycleStatus != "published" || strings.TrimSpace(citation.PublicationID) == "" ||
+		citation.PublishedVersion <= 0 || strings.TrimSpace(citation.PublicationKey) == "" ||
+		strings.TrimSpace(citation.PublicationBatchKey) == "" || strings.TrimSpace(citation.ClaimID) == "" ||
+		strings.TrimSpace(citation.ClaimReviewID) == "" {
+		return fmt.Errorf("published Thought Forest citation identity is incomplete")
+	}
+	locator := citation.SourceLocator
+	if locator.LocatorType != "markdown_lines" || strings.TrimSpace(locator.GitCommit) == "" ||
+		strings.TrimSpace(locator.Path) == "" || locator.LineStart <= 0 || locator.LineEnd < locator.LineStart {
+		return fmt.Errorf("published Thought Forest citation provenance is incomplete")
+	}
+	return nil
+}
+
 func validateConsultationInternalEvent(event dto.StreamEvent) error {
 	if event.Version != 1 {
 		return fmt.Errorf("unsupported version %d", event.Version)
@@ -321,6 +362,9 @@ func validateConsultationInternalEvent(event dto.StreamEvent) error {
 		}
 		if err := event.PayloadAs(&payload); err != nil || len(payload.Citation) == 0 {
 			return fmt.Errorf("citation payload is malformed")
+		}
+		if err := validateCitationPayload(payload.Citation); err != nil {
+			return err
 		}
 	case "source.knowledge_gap":
 		var payload struct {
