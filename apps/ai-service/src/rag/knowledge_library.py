@@ -250,7 +250,7 @@ class KnowledgeLibrary:
                                 segment.text,
                                 segment.text,
                                 segment.confidence,
-                                Jsonb({}),
+                                Jsonb(segment.metadata),
                             ),
                         )
 
@@ -286,7 +286,12 @@ class KnowledgeLibrary:
                                 unit.transcript_excerpt,
                                 unit.review_status,
                                 embedding,
-                                Jsonb({"problem_display_name": unit.problem_display_name}),
+                                Jsonb(
+                                    {
+                                        **unit.metadata,
+                                        "problem_display_name": unit.problem_display_name,
+                                    }
+                                ),
                             ),
                         )
                         row = await cur.fetchone()

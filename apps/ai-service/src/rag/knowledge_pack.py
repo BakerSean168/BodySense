@@ -47,6 +47,7 @@ class TranscriptSegment:
     end_sec: float
     text: str
     confidence: float | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     @property
     def timestamp(self) -> str:
@@ -71,6 +72,7 @@ class KnowledgeUnitCandidate:
     tags: list[str] = field(default_factory=list)
     transcript_excerpt: str = ""
     review_status: str = "generated"
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     @property
     def source_timestamp(self) -> str:
