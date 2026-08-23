@@ -69,6 +69,7 @@ MIMO_API_KEY=
 SECRET
   )
   echo "Created $DEPLOY_DIR/.env.production.local; configure provider keys before serving AI traffic."
+  echo "On a shared :80/:443 host, also set BODYSENSE_EDGE_MODE=external in that file."
 fi
 chmod 600 "$DEPLOY_DIR/.env.production.local"
 

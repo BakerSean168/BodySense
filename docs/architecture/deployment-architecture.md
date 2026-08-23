@@ -200,6 +200,10 @@ Untracked on production:
 
 The bootstrap repository checkout is kept separately at `/opt/bodysense-source` by default. `scripts/setup-server.sh` may reset that disposable checkout, but it never removes `/opt/bodysense`, so rerunning bootstrap cannot erase secrets, backups or deployment state.
 
+### Shared-host edge mode
+
+The production runtime also supports an Oracle/shared-host topology where another host-level Caddy already owns TCP/UDP 80/443. Set `BODYSENSE_EDGE_MODE=external` only in that host's `.env.production.local`. In this mode the deploy watcher never starts the bundled BodySense Caddy and validates the application through the host-only Web binding (`WEB_HOST_BIND`, `WEB_HOST_PORT`, default `127.0.0.1:18080`). A host-process edge may proxy that endpoint directly; a containerized edge should instead join `docker_bodysense-network` and proxy `web:80`, leaving the host-only binding as a deployment health/fallback endpoint. The default remains `dedicated`, so dedicated production hosts continue to run the bundled Caddy unchanged.
+
 Untracked on Oracle2:
 
 - `.secrets/` — production SSH material
