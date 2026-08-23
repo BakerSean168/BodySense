@@ -197,6 +197,11 @@ services:
   web:
     image: ${REGISTRY:?set REGISTRY}/${ACR_NAMESPACE:-bodysense}/bodysense-web:${WEB_TAG:-prod-latest}
     restart: unless-stopped
+    # Keep the application reachable from a host-level reverse proxy without
+    # exposing the container publicly. Dedicated hosts still use the bundled
+    # Caddy below; shared hosts set BODYSENSE_EDGE_MODE=external locally.
+    ports:
+      - '${WEB_HOST_BIND:-127.0.0.1}:${WEB_HOST_PORT:-18080}:80'
     depends_on:
       api:
         condition: service_healthy
