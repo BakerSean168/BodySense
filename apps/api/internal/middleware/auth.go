@@ -22,7 +22,7 @@ import (
 //  2. Tokens carrying a session id are checked against the session cache:
 //     - present → allow (hot path)
 //     - absent → 401 (session was revoked on logout / global sign-out)
-//     - Redis unavailable → degrade to a DB user-exists check (no write-back)
+//     - Redis unavailable → fail closed with 503; revocation authority is unavailable
 //  3. Legacy tokens without a session id fall back to a DB user-exists check,
 //     but are never written back into the session cache (a token minted before
 //     session tracking must not re-arm a revoked session).
@@ -89,15 +89,14 @@ func AuthMiddleware(jwtConfig auth.JWTConfig, userRepo *repository.UserRepositor
 		} else {
 			exists, cacheErr := sessionCache.Exists(c.Request.Context(), claims.SessionID)
 			if cacheErr != nil {
-				// Redis unavailable — degrade to DB-only, no write-back.
-				if err := verifyUserExistsNoCache(c, userID, userRepo); err != nil {
-					c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
-						Error:   "unauthorized",
-						Message: "User no longer exists",
-					})
-					c.Abort()
-					return
-				}
+				// Session authority is the revocation boundary. Failing open here would
+				// let a previously revoked bearer token through during a Redis outage.
+				c.JSON(http.StatusServiceUnavailable, dto.ErrorResponse{
+					Error:   "authentication_unavailable",
+					Message: "Authentication service is temporarily unavailable",
+				})
+				c.Abort()
+				return
 			} else if !exists {
 				// Definitive miss: the session was revoked (logout / global sign-out).
 				c.JSON(http.StatusUnauthorized, dto.ErrorResponse{

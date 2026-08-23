@@ -97,30 +97,16 @@ func TestAuthMiddlewareSessionRevokedRejects(t *testing.T) {
 	}
 }
 
-func TestAuthMiddlewareRedisDownFallsBackToDBNoWriteBack(t *testing.T) {
-	userRepo, mock, cleanup := newMiddlewareTestDB(t)
-	defer cleanup()
-
+func TestAuthMiddlewareRedisDownFailsClosed(t *testing.T) {
 	cfg := auth.JWTConfig{SecretKey: "test-secret", AccessTokenTTL: 15 * time.Minute}
-	userID := uuid.New()
-	sessionID := uuid.New()
-	token, err := auth.GenerateAccessToken(cfg, userID, sessionID, "test@example.com")
+	token, err := auth.GenerateAccessToken(cfg, uuid.New(), uuid.New(), "test@example.com")
 	if err != nil {
 		t.Fatalf("GenerateAccessToken: %v", err)
 	}
 
-	// Redis is down → middleware must query the user table, so the user exists.
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE id = $1 ORDER BY "users"."id" LIMIT $2`)).
-		WithArgs(userID, 1).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(userID))
-
-	sessionCache := &fakeSessionCache{down: true}
-	mw := AuthMiddleware(cfg, userRepo, sessionCache)
-	if rec := performRequest(mw, token); rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200 (body=%s)", rec.Code, rec.Body.String())
-	}
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Fatalf("unmet expectations: %v", err)
+	mw := AuthMiddleware(cfg, nil, &fakeSessionCache{down: true})
+	if rec := performRequest(mw, token); rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want 503 (body=%s)", rec.Code, rec.Body.String())
 	}
 }
 
