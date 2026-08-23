@@ -71,3 +71,62 @@ def test_generic_movement_word_does_not_trigger_intervention_claim_boost():
     )
 
     assert library._intent_boost("视频动作角度能不能判断关节力矩", intervention) < 0.10
+
+
+def test_hashing_published_relevance_gate_requires_meaningful_lexical_anchor():
+    from src.rag.knowledge_library import SearchResult
+
+    result = SearchResult(
+        id=10,
+        unit_key="tfu-pain-definition",
+        problem_slug="pain-science",
+        category="pain-science",
+        unit_type="reference",
+        title="疼痛与伤害感受 · 一句话定义",
+        summary="疼痛与伤害感受不是同一现象。",
+        body_markdown=(
+            "IASP 将 pain 定义为与实际或潜在组织损伤相关的不愉快感觉与情绪体验；"
+            "nociception 是神经系统对有害刺激进行编码的过程。"
+        ),
+        similarity=0.05,
+        source_key="thought-forest:z/pain-and-nociception.md",
+        source_type="thought_forest_note",
+        source_title="疼痛与伤害感受",
+        source_author="Thought Forest",
+        source_start_sec=0.0,
+        source_end_sec=0.0,
+    )
+
+    assert KnowledgeLibrary._has_meaningful_lexical_anchor("什么是疼痛？", result) is True
+    assert KnowledgeLibrary._has_meaningful_lexical_anchor(
+        "疼痛是不是等于组织损伤程度？", result
+    ) is True
+    assert KnowledgeLibrary._has_meaningful_lexical_anchor("脚踝扭伤怎么处理？", result) is False
+    assert (
+        KnowledgeLibrary._has_meaningful_lexical_anchor("怎么设置 PostgreSQL 索引？", result)
+        is False
+    )
+    assert KnowledgeLibrary._has_meaningful_lexical_anchor("组织架构怎么设计？", result) is False
+
+
+def test_published_hashing_gate_only_targets_thought_forest_results():
+    from src.rag.knowledge_library import SearchResult
+
+    video = SearchResult(
+        id=11,
+        problem_slug="shoulder",
+        category="exercise",
+        unit_type="exercise",
+        title="Video exercise",
+        summary="summary",
+        body_markdown="body",
+        similarity=0.01,
+        source_type="video",
+        source_title="Video",
+        source_author="Author",
+        source_start_sec=0.0,
+        source_end_sec=1.0,
+    )
+    assert KnowledgeLibrary._passes_published_relevance_gate(
+        "unrelated query", video, embedding_provider="hashing"
+    ) is True

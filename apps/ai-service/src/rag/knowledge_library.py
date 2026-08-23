@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from typing import Any, AsyncIterator, LiteralString, Optional, cast
@@ -66,6 +67,8 @@ class SearchResult:
     quality_score: float = 0.0
     publication_id: str = ""
     published_version: int | None = None
+    publication_key: str = ""
+    publication_batch_key: str = ""
 
     @property
     def source_timestamp(self) -> str:
@@ -92,6 +95,36 @@ INTENT_KEYWORDS = {
     "muscle_imbalance": ["肌肉", "肌群", "紧张", "薄弱", "失衡"],
     "impact": ["影响", "表现", "风险", "麻木", "不适"],
     "habit": ["日常", "习惯", "工位", "办公", "学生党", "坐姿", "低头", "手机"],
+}
+
+
+_LEXICAL_QUERY_NOISE = (
+    "什么是",
+    "是什么意思",
+    "是不是",
+    "能不能",
+    "为什么",
+    "怎么样",
+    "怎么",
+    "如何",
+    "应该",
+    "需要",
+    "可以",
+    "哪些",
+    "什么",
+)
+_LEXICAL_GENERIC_ANCHORS = {
+    "处理",
+    "训练",
+    "评估",
+    "测量",
+    "定义",
+    "问题",
+    "情况",
+    "方法",
+    "建议",
+    "症状",
+    "风险",
 }
 
 
@@ -430,9 +463,11 @@ class KnowledgeLibrary:
                 ku.unit_key, ku.metadata, ks.source_key, ks.source_type, ks.metadata,
                 ku.lifecycle_status, ku.review_status, COALESCE(ku.quality_score, 0.0),
                 COALESCE(ku.publication_id::text, ''), ku.published_version,
+                COALESCE(kp.publication_key, ''), COALESCE(kp.publication_batch_key, ''),
                 1 - (ku.embedding <=> %s::vector) AS similarity
             FROM knowledge_units ku
             JOIN knowledge_sources ks ON ks.id = ku.source_id
+            LEFT JOIN knowledge_publications kp ON kp.id = ku.publication_id
             WHERE ku.embedding IS NOT NULL
         """
         params: list[Any] = [embedding]
@@ -513,17 +548,84 @@ class KnowledgeLibrary:
                 quality_score=float(row[19] or 0.0),
                 publication_id=row[20] or "",
                 published_version=row[21],
-                similarity=float(row[22]),
+                publication_key=row[22] or "",
+                publication_batch_key=row[23] or "",
+                similarity=float(row[24]),
                 clips=clips_by_unit.get(row[0], []),
             )
             for row in rows
         ]
+        if not include_unpublished:
+            embedding_provider = str(getattr(self.embedding_generator, "provider", "") or "")
+            results = [
+                result
+                for result in results
+                if self._passes_published_relevance_gate(
+                    query, result, embedding_provider=embedding_provider
+                )
+            ]
         reranked = sorted(
             results,
             key=lambda result: result.similarity + self._intent_boost(query, result),
             reverse=True,
         )
         return reranked[:top_k]
+
+    @staticmethod
+    def _meaningful_query_anchors(query: str) -> set[str]:
+        normalized = query.strip().lower()
+        for phrase in _LEXICAL_QUERY_NOISE:
+            normalized = normalized.replace(phrase, "")
+        anchors: set[str] = set()
+        for token in re.findall(r"[a-z0-9][a-z0-9._+-]{2,}", normalized):
+            anchors.add(token)
+        for run in re.findall(r"[\u4e00-\u9fff]+", normalized):
+            if len(run) == 1:
+                continue
+            max_n = min(4, len(run))
+            for n in range(2, max_n + 1):
+                for index in range(len(run) - n + 1):
+                    gram = run[index : index + n]
+                    if gram not in _LEXICAL_GENERIC_ANCHORS:
+                        anchors.add(gram)
+        return anchors
+
+    @classmethod
+    def _has_meaningful_lexical_anchor(cls, query: str, result: SearchResult) -> bool:
+        anchors = cls._meaningful_query_anchors(query)
+        if not anchors:
+            return False
+        primary_haystack = " ".join(
+            [
+                result.title.lower(),
+                result.summary.lower(),
+                " ".join(tag.lower() for tag in result.tags),
+            ]
+        )
+        body_haystack = result.body_markdown.lower()
+        return any(
+            anchor in primary_haystack or (len(anchor) >= 3 and anchor in body_haystack)
+            for anchor in anchors
+        )
+
+    @classmethod
+    def _passes_published_relevance_gate(
+        cls,
+        query: str,
+        result: SearchResult,
+        *,
+        embedding_provider: str,
+    ) -> bool:
+        """Deny hash-only Thought Forest matches without a lexical topic anchor.
+
+        Hashing embeddings are deterministic development/search embeddings, not a
+        calibrated semantic model. A high cosine score can be a hash collision,
+        so published Thought Forest citations require an independent lexical anchor.
+        Other source types and semantic embedding providers keep their existing behavior.
+        """
+        if embedding_provider != "hashing" or result.source_type != "thought_forest_note":
+            return True
+        return cls._has_meaningful_lexical_anchor(query, result)
 
     @staticmethod
     def _published_visibility_filter() -> str:

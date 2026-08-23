@@ -2,14 +2,14 @@
 
 **文档版本**：v1.0
 **更新日期**：2026-08-23
-**状态**：设计稿
+**状态**：核心生命周期与首轮 Published Governance 已实现
 **适用范围**：视频知识入库、RAG、知识精修、向量索引、引用、知识质量管理
 
 ---
 
 ## Implementation Status
 
-**当前状态**：核心生命周期已实现（约 65%；管理 UI 与 published retrieval/grounding eval 尚未完成）
+**当前状态**：核心生命周期与首轮 Published Retrieval / Citation / Grounding Governance 已实现（管理 UI 与自动生产观测仍未实现）
 
 | 模块 | 状态 | 说明 |
 |---|---|---|
@@ -21,7 +21,8 @@
 | KnowledgeSourceRegistry | 未实现 | 知识源注册和管理。 |
 | 发布批次工作流 | ✅ 核心已完成 | Go `KnowledgePublicationService` 事务化执行 reviewed → published 与显式 rollback；当前通过 operator CLI 驱动，管理 UI 未实现。 |
 | 质量阈值门控 | ✅ 核心已完成 | 发布前强制 review/lifecycle、quality ≥ 0.90、content hash、external support、claim review、license 与 provenance gate。 |
-| 检索质量评估 | 🟡 部分完成 | Thought Forest unpublished retrieval pilot 已建立；published citation/grounding regression 仍属下一阶段。 |
+| 检索质量评估 | ✅ 首轮完成 | unpublished retrieval + published positive/negative retrieval、citation identity/provenance、claim grounding pilot 已建立。 |
+| Publication observations / gate | ✅ 首轮完成 | migration 51 + Go observation service/CLI；按 immutable publication identity 汇总并输出 continue / hold / rollback。 |
 
 **相关 Phase**：07a → 归档于 `docs/plan/archive/implementation/`
 
@@ -451,6 +452,84 @@ top3 recall
 citation completeness
 knowledge_gap accuracy
 ```
+
+### 11.3 Published Knowledge regression
+
+Stage 6 增加 `bodysense.published-knowledge-eval.v1`，只走默认 published retrieval，
+不使用 `include_unpublished`。首批 pilot 同时包含：
+
+```txt
+positive query
+→ exact published unit
+→ exact publication id / key / version
+→ claim review identity
+→ Markdown provenance
+→ expected claim terms grounded
+
+negative query
+→ no result
+→ no citation
+```
+
+当前 hashing embedding 是确定性本地开发检索，不是经过校准的 semantic model。Stage 6 实测中，
+完全无关的 `PostgreSQL 索引` query cosine 一度高于 `什么是疼痛`，因此禁止用一个拍脑袋的
+固定 cosine threshold 作为安全边界。当前策略是：
+
+```txt
+source_type = thought_forest_note
+AND lifecycle = published
+AND embedding_provider = hashing
+→ semantic candidate 必须再满足 meaningful lexical anchor
+→ 才能成为 citation candidate
+```
+
+此规则只约束 hashing + published Thought Forest；视频知识与未来经校准的 semantic embedding
+保持各自策略，避免把临时本地 embedding 的行为误当成通用检索定律。
+
+### 11.4 Citation trust boundary
+
+`source.citation.added` 对 Thought Forest published citation 现在必须包含：
+
+```txt
+unit_key
+source_key / source_type
+lifecycle_status = published
+publication_id
+publication_key / publication_batch_key
+published_version
+claim_id / claim_review_id
+source_locator(repository/git/path/line range)
+```
+
+Python citation emitter 保留这些字段，Go AIClient 在协议 trust boundary 再验证一次。Legacy video
+citation 继续兼容旧 contract。
+
+### 11.5 Publication observations and deny-first gate
+
+`knowledge_publication_observations` 按 immutable `publication_id` 记录 retrieval / citation / grounding /
+identity / provenance 结果。当前 gate：
+
+```txt
+identity mismatch
+OR provenance invalid
+OR citation invalid
+OR grounding rejected
+OR negative query returned published result
+→ rollback
+
+retrieval miss
+OR grounding degraded
+OR execution error
+→ hold
+
+clean window + >= 5 observations + positive hit exists
+→ continue
+```
+
+Gate 只给 operator recommendation，不自动执行 rollback。真正状态变更仍由 Go
+`KnowledgePublicationService.RollbackBatch` 显式完成。当前 Stage 6 vertical slice 使用
+`predeploy_eval` observation；表和 service 已保留 `observation_kind`，自动生产 runtime observation
+仍需要未来把最终回答 claim ↔ evidence attribution 契约接入，不能仅凭“出现 citation”假装完成 grounding。
 
 ---
 

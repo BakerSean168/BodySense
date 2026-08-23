@@ -55,27 +55,60 @@ def build_fallback_reply(
     return "\n".join(lines)
 
 
+def build_citation_payload(result: Any) -> dict[str, Any]:
+    """Build an additive citation payload with stable publication provenance."""
+    body = getattr(result, "body_markdown", "") or ""
+    citation: dict[str, Any] = {
+        "title": getattr(result, "title", ""),
+        "summary": getattr(result, "summary", ""),
+        "body_markdown": body[:500] if len(body) > 500 else body,
+        "source_title": getattr(result, "source_title", ""),
+        "source_author": getattr(result, "source_author", ""),
+        "category": getattr(result, "category", ""),
+        "problem_slug": getattr(result, "problem_slug", ""),
+        "unit_type": getattr(result, "unit_type", ""),
+        "tags": getattr(result, "tags", []) or [],
+        "clips": getattr(result, "clips", []) or [],
+    }
+    for key in (
+        "unit_key",
+        "source_key",
+        "source_type",
+        "lifecycle_status",
+        "review_status",
+        "publication_id",
+        "publication_key",
+        "publication_batch_key",
+    ):
+        value = getattr(result, key, None)
+        if value not in (None, ""):
+            citation[key] = value
+    quality_score = getattr(result, "quality_score", None)
+    if quality_score is not None:
+        citation["quality_score"] = float(quality_score)
+    published_version = getattr(result, "published_version", None)
+    if published_version is not None:
+        citation["published_version"] = int(published_version)
+
+    metadata = dict(getattr(result, "unit_metadata", {}) or {})
+    locator = dict(metadata.get("source_locator") or {})
+    claim = dict(metadata.get("claim_candidate") or {})
+    claim_review = dict(metadata.get("claim_review") or {})
+    if locator:
+        citation["source_locator"] = locator
+    if claim.get("claim_id"):
+        citation["claim_id"] = str(claim["claim_id"])
+    if claim.get("claim_kind"):
+        citation["claim_kind"] = str(claim["claim_kind"])
+    if claim_review.get("review_id"):
+        citation["claim_review_id"] = str(claim_review["review_id"])
+    return citation
+
+
 def emit_citation_events(search_results: list[Any], writer: Callable[[Any], None]) -> None:
     """Emit NDJSON citation events for knowledge search results."""
     for result in search_results:
-        body = getattr(result, "body_markdown", "") or ""
-        writer(
-            {
-                "type": "citation",
-                "citation": {
-                    "title": getattr(result, "title", ""),
-                    "summary": getattr(result, "summary", ""),
-                    "body_markdown": body[:500] if len(body) > 500 else body,
-                    "source_title": getattr(result, "source_title", ""),
-                    "source_author": getattr(result, "source_author", ""),
-                    "category": getattr(result, "category", ""),
-                    "problem_slug": getattr(result, "problem_slug", ""),
-                    "unit_type": getattr(result, "unit_type", ""),
-                    "tags": getattr(result, "tags", []) or [],
-                    "clips": getattr(result, "clips", []) or [],
-                },
-            }
-        )
+        writer({"type": "citation", "citation": build_citation_payload(result)})
 
 
 def _markdown_to_text(content: str) -> str:

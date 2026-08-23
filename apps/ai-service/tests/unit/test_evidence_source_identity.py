@@ -122,6 +122,8 @@ def test_published_thought_forest_evidence_carries_review_and_publication_proven
             "quality_score": 0.95,
             "publication_id": "11111111-1111-1111-1111-111111111111",
             "published_version": 2,
+            "publication_key": "pain-v2",
+            "publication_batch_key": "pain-batch",
             "unit_metadata": {
                 **result.unit_metadata,
                 "claim_review": {
@@ -138,6 +140,8 @@ def test_published_thought_forest_evidence_carries_review_and_publication_proven
     assert evidence["claim_review"]["decision"] == "approved"
     assert evidence["lifecycle_status"] == "published"
     assert evidence["review_status"] == "reviewed"
+    assert evidence["publication_key"] == "pain-v2"
+    assert evidence["publication_batch_key"] == "pain-batch"
     assert evidence["quality_score"] == 0.95
     assert evidence["publication_id"] == "11111111-1111-1111-1111-111111111111"
     assert evidence["published_version"] == 2

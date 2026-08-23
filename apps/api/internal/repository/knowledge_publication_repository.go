@@ -37,6 +37,22 @@ func (r *KnowledgePublicationRepository) GetByID(ctx context.Context, id uuid.UU
 	return &pub, nil
 }
 
+// GetByKey retrieves a publication by immutable publication key.
+func (r *KnowledgePublicationRepository) GetByKey(
+	ctx context.Context,
+	publicationKey string,
+) (*model.KnowledgePublication, error) {
+	var pub model.KnowledgePublication
+	err := r.db.WithContext(ctx).Where("publication_key = ?", publicationKey).First(&pub).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &pub, nil
+}
+
 // ListByStatus retrieves publications by status.
 func (r *KnowledgePublicationRepository) ListByStatus(ctx context.Context, status string) ([]model.KnowledgePublication, error) {
 	var pubs []model.KnowledgePublication
