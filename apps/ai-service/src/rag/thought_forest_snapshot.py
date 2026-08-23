@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -15,12 +16,38 @@ from .knowledge_pack import (
     TranscriptSegment,
 )
 
-SNAPSHOT_SCHEMA_VERSION = "bodysense.health.snapshot.v1"
+SNAPSHOT_SCHEMA_VERSION_V1 = "bodysense.health.snapshot.v1"
+SNAPSHOT_SCHEMA_VERSION_V2 = "bodysense.health.snapshot.v2"
+SUPPORTED_SNAPSHOT_SCHEMA_VERSIONS = frozenset(
+    {SNAPSHOT_SCHEMA_VERSION_V1, SNAPSHOT_SCHEMA_VERSION_V2}
+)
 
 
 class ThoughtForestRepository(BaseModel):
     name: str
     git_commit: str = Field(min_length=1)
+
+
+class ThoughtForestClaimCandidate(BaseModel):
+    claim_id: str = Field(min_length=1, max_length=200)
+    claim_kind: Literal[
+        "definition",
+        "measurement_guidance",
+        "interpretation_boundary",
+        "association",
+        "mechanism_hypothesis",
+        "safety_guidance",
+        "intervention_option",
+        "dosage_guidance",
+        "outcome_reassessment",
+        "general_reference",
+    ]
+    candidate_scope: Literal["section"]
+    authority_tier: Literal["C"]
+    certainty: Literal["unreviewed"]
+    evidence_level: Literal["unresolved"]
+    external_evidence_status: Literal["unresolved"]
+    population: Literal["unspecified"]
 
 
 class ThoughtForestSection(BaseModel):
@@ -31,6 +58,7 @@ class ThoughtForestSection(BaseModel):
     line_end: int = Field(ge=1)
     markdown: str = Field(min_length=1)
     content_hash: str = Field(min_length=16)
+    claim_candidate: ThoughtForestClaimCandidate | None = None
 
     @model_validator(mode="after")
     def validate_line_range(self) -> "ThoughtForestSection":
@@ -74,10 +102,19 @@ class ThoughtForestHealthSnapshot(BaseModel):
 
     @model_validator(mode="after")
     def validate_schema(self) -> "ThoughtForestHealthSnapshot":
-        if self.schema_version != SNAPSHOT_SCHEMA_VERSION:
+        if self.schema_version not in SUPPORTED_SNAPSHOT_SCHEMA_VERSIONS:
             raise ValueError(f"unsupported Thought Forest snapshot schema: {self.schema_version}")
         if self.repository.name != "thought-forest":
             raise ValueError(f"unexpected snapshot repository: {self.repository.name}")
+        if self.schema_version == SNAPSHOT_SCHEMA_VERSION_V2:
+            missing = [
+                section.section_key
+                for note in self.notes
+                for section in note.sections
+                if section.claim_candidate is None
+            ]
+            if missing:
+                raise ValueError(f"claim_candidate is required for snapshot v2 sections: {missing}")
         return self
 
 
@@ -167,6 +204,11 @@ def build_generated_packs(snapshot: ThoughtForestHealthSnapshot) -> list[Generat
                         "note_status": note.status,
                         "note_content_hash": note.content_hash,
                         "section_content_hash": section.content_hash,
+                        **(
+                            {"claim_candidate": section.claim_candidate.model_dump()}
+                            if section.claim_candidate is not None
+                            else {}
+                        ),
                     },
                 )
             )

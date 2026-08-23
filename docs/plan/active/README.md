@@ -1,8 +1,9 @@
 # Active Plans
 
-There are currently **no unfinished AI Service Agent-platform, post-closeout hardening, or Thought Forest ingestion plans**. The Thought Forest → BodySense ingestion MVP completed its vertical gate and moved to archive:
+There are currently **no unfinished Thought Forest ingestion or evidence-normalization plans**. Previous Agent-platform plans also remain closed. The Thought Forest → BodySense ingestion MVP completed its vertical gate and moved to archive:
 
 - [`../archive/thought-forest-knowledge-ingestion-2026-08-23.md`](../archive/thought-forest-knowledge-ingestion-2026-08-23.md) — completed 2026-08-23; explicit allowlist export, Git/line provenance, BodySense adapter, generated-only dev ingestion and retrieval-safety verification.
+- [`../archive/thought-forest-evidence-normalization-2026-08-23.md`](../archive/thought-forest-evidence-normalization-2026-08-23.md) — completed 2026-08-23; Tier-C claim candidates, stable Markdown evidence identity, typed reranking and unpublished retrieval eval.
 
 The Agent-platform migration remains closed, and the bounded Consultation Runtime / Async-RAG hardening audit also remains archived.
 

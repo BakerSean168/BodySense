@@ -1,0 +1,12 @@
+{"query":"骨盆前倾是什么？","expected_problem_slug":"anterior-pelvic-tilt","expected_claim_kinds":["definition"]}
+{"query":"骨盆前倾一定会导致腰痛吗？","expected_problem_slug":"anterior-pelvic-tilt","expected_claim_kinds":["interpretation_boundary","association"]}
+{"query":"关节活动度 ROM 应该怎么测？","expected_problem_slug":"range-of-motion-assessment","expected_claim_kinds":["measurement_guidance"]}
+{"query":"肌骨红旗出现时什么时候需要升级就医？","expected_problem_slug":"musculoskeletal-safety","expected_claim_kinds":["safety_guidance"]}
+{"query":"疼痛就是组织损伤程度的仪表盘吗？","expected_problem_slug":"pain-science","expected_claim_kinds":["interpretation_boundary","general_reference"]}
+{"query":"膝内侧疼痛需要鉴别哪些情况？","expected_problem_slug":"medial-knee-pain","expected_claim_kinds":["measurement_guidance"]}
+{"query":"髂胫束综合征是不是髂胫束摩擦造成的？","expected_problem_slug":"iliotibial-band-syndrome","expected_claim_kinds":["measurement_guidance","mechanism_hypothesis","interpretation_boundary"]}
+{"query":"臀部力量训练应该怎么进阶？","expected_problem_slug":"glute-training","expected_claim_kinds":["dosage_guidance","intervention_option"]}
+{"query":"抗阻训练的训练量、强度和频率怎么安排？","expected_problem_slug":"resistance-training-dose","expected_claim_kinds":["dosage_guidance"]}
+{"query":"臀中肌主要有什么功能？","expected_problem_slug":"gluteus-medius","expected_claim_kinds":["definition","general_reference"]}
+{"query":"动作变异性是不是越少越好？","expected_problem_slug":"movement-variability","expected_claim_kinds":["interpretation_boundary","general_reference"]}
+{"query":"视频看到动作角度能不能直接判断关节力矩和内部负荷？","expected_problem_slug":"human-movement-biomechanics","expected_claim_kinds":["interpretation_boundary","general_reference"]}
