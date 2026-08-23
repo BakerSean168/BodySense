@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
@@ -70,6 +71,7 @@ type ConversationService struct {
 	runRepo          runRepo
 	shareRepo        shareRepo
 	aiClient         *AIClient
+	txManager        *database.TransactionManager
 	deployment       *AgentDeploymentPolicy
 }
 
@@ -80,6 +82,7 @@ func NewConversationService(
 	runRepo runRepo,
 	shareRepo shareRepo,
 	aiClient *AIClient,
+	txManager *database.TransactionManager,
 ) *ConversationService {
 	return &ConversationService{
 		conversationRepo: conversationRepo,
@@ -87,6 +90,7 @@ func NewConversationService(
 		runRepo:          runRepo,
 		shareRepo:        shareRepo,
 		aiClient:         aiClient,
+		txManager:        txManager,
 	}
 }
 
@@ -154,21 +158,34 @@ func (s *ConversationService) ListConversations(ctx context.Context, userID uuid
 	return conversations, hasMore, nil
 }
 
-// DeleteConversation soft-deletes a conversation with ownership check.
+// DeleteConversation soft-deletes a conversation and revokes any shares in one
+// transaction. The conversation_shares FK cascade never fires for soft deletes,
+// so revocation must be explicit and atomic with the delete: a failure to revoke
+// rolls the whole operation back instead of leaving share tokens live.
 func (s *ConversationService) DeleteConversation(ctx context.Context, id, userID uuid.UUID) error {
-	// Verify ownership
-	conversation, err := s.conversationRepo.GetByID(ctx, id, userID)
-	if err != nil {
-		return fmt.Errorf("get conversation for delete: %w", err)
+	if s.txManager == nil {
+		return fmt.Errorf("delete conversation: transaction manager is not configured")
 	}
-	if conversation == nil {
-		return fmt.Errorf("conversation not found: %s", id)
-	}
+	return s.txManager.WithinTransaction(ctx, func(txCtx context.Context) error {
+		// Verify ownership
+		conversation, err := s.conversationRepo.GetByID(txCtx, id, userID)
+		if err != nil {
+			return fmt.Errorf("get conversation for delete: %w", err)
+		}
+		if conversation == nil {
+			return fmt.Errorf("conversation not found: %s", id)
+		}
 
-	if err := s.conversationRepo.SoftDelete(ctx, id, userID); err != nil {
-		return fmt.Errorf("delete conversation: %w", err)
-	}
-	return nil
+		// Revoke shares so shared tokens stop resolving after deletion.
+		if err := s.shareRepo.DeleteByConversationID(txCtx, id); err != nil {
+			return fmt.Errorf("revoke conversation shares: %w", err)
+		}
+
+		if err := s.conversationRepo.SoftDelete(txCtx, id, userID); err != nil {
+			return fmt.Errorf("delete conversation: %w", err)
+		}
+		return nil
+	})
 }
 
 // PinConversation pins or unpins a conversation with ownership check.

@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 
+	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -62,7 +63,7 @@ func (r *ConversationShareRepository) Delete(ctx context.Context, id uuid.UUID) 
 
 // DeleteByConversationID deletes a share by conversation ID.
 func (r *ConversationShareRepository) DeleteByConversationID(ctx context.Context, conversationID uuid.UUID) error {
-	return r.db.WithContext(ctx).
+	return database.FromContext(ctx, r.db).
 		Where("conversation_id = ?", conversationID).
 		Delete(&model.ConversationShare{}).Error
 }

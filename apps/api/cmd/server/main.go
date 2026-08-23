@@ -82,7 +82,7 @@ func main() {
 	contextRetrievalService := service.NewContextRetrievalService(messageContextRepo)
 	runService := service.NewRunService(runRepo)
 	runtimeEventService := service.NewRuntimeEventService(runtimeEventRepo)
-	conversationService := service.NewConversationService(conversationRepo, messageRepo, runRepo, shareRepo, aiClient).WithAgentDeployment(agentDeploymentPolicy)
+	conversationService := service.NewConversationService(conversationRepo, messageRepo, runRepo, shareRepo, aiClient, database.NewTransactionManager(database.DB)).WithAgentDeployment(agentDeploymentPolicy)
 	shareService := service.NewShareService(conversationRepo, messageRepo, shareRepo)
 	consultationService := service.NewConsultationService(consultationRepo, conversationRepo)
 	bodyStateService := service.NewBodyStateService(bodyStateRepo)
