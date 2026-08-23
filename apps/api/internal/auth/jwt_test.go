@@ -17,7 +17,7 @@ func TestGenerateAccessToken(t *testing.T) {
 	userID := uuid.New()
 	email := "test@example.com"
 
-	token, err := GenerateAccessToken(cfg, userID, email)
+	token, err := GenerateAccessToken(cfg, userID, uuid.New(), email)
 	if err != nil {
 		t.Fatalf("GenerateAccessToken failed: %v", err)
 	}
@@ -37,10 +37,11 @@ func TestValidateAccessToken(t *testing.T) {
 	}
 
 	userID := uuid.New()
+	sessionID := uuid.New()
 	email := "test@example.com"
 
 	// Generate token
-	token, err := GenerateAccessToken(cfg, userID, email)
+	token, err := GenerateAccessToken(cfg, userID, sessionID, email)
 	if err != nil {
 		t.Fatalf("GenerateAccessToken failed: %v", err)
 	}
@@ -57,6 +58,46 @@ func TestValidateAccessToken(t *testing.T) {
 	}
 	if claims.Email != email {
 		t.Errorf("Expected Email %s, got %s", email, claims.Email)
+	}
+	if claims.SessionID != sessionID {
+		t.Errorf("Expected SessionID %v, got %v", sessionID, claims.SessionID)
+	}
+}
+
+func TestGenerateAccessTokenCarriesSessionID(t *testing.T) {
+	cfg := JWTConfig{
+		SecretKey:      "test-secret-key",
+		AccessTokenTTL: 15 * time.Minute,
+	}
+	userID := uuid.New()
+	sessionID := uuid.New()
+
+	token, err := GenerateAccessToken(cfg, userID, sessionID, "test@example.com")
+	if err != nil {
+		t.Fatalf("GenerateAccessToken failed: %v", err)
+	}
+	claims, err := ValidateAccessToken(cfg, token)
+	if err != nil {
+		t.Fatalf("ValidateAccessToken failed: %v", err)
+	}
+	if claims.SessionID != sessionID {
+		t.Fatalf("SessionID = %v, want %v", claims.SessionID, sessionID)
+	}
+}
+
+func TestGetEnvAsDurationParsesFractionalHours(t *testing.T) {
+	t.Setenv("JWT_ACCESS_TTL_HOURS", "0.25")
+	ttl := getEnvAsDuration("JWT_ACCESS_TTL_HOURS", 2)
+	if want := 15 * time.Minute; ttl != want {
+		t.Fatalf("ttl = %v, want %v", ttl, want)
+	}
+}
+
+func TestGetEnvAsDurationDefaultIsQuarterHour(t *testing.T) {
+	t.Setenv("JWT_ACCESS_TTL_HOURS", "")
+	ttl := getEnvAsDuration("JWT_ACCESS_TTL_HOURS", 0.25)
+	if want := 15 * time.Minute; ttl != want {
+		t.Fatalf("ttl = %v, want %v", ttl, want)
 	}
 }
 
@@ -92,7 +133,7 @@ func TestValidateAccessToken_WrongSecret(t *testing.T) {
 	email := "test@example.com"
 
 	// Generate with key 1
-	token, err := GenerateAccessToken(cfg1, userID, email)
+	token, err := GenerateAccessToken(cfg1, userID, uuid.New(), email)
 	if err != nil {
 		t.Fatalf("GenerateAccessToken failed: %v", err)
 	}

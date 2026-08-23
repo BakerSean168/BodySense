@@ -66,8 +66,10 @@ func main() {
 	threadProjectionRepo := repository.NewThreadProjectionRepository(database.DB)
 	shareRepo := repository.NewConversationShareRepository(database.DB)
 
-	// User session cache (Redis-backed, TTL = 2x access token TTL)
-	sessionCache := cache.NewUserSessionCache(database.RedisClient, jwtConfig.AccessTokenTTL*2)
+	// User session cache (Redis-backed). Sessions live as long as their refresh
+	// token, so the session TTL matches the refresh-token TTL and outlives the
+	// short-lived access token.
+	sessionCache := cache.NewUserSessionCache(database.RedisClient, jwtConfig.RefreshTokenTTL)
 
 	authService := service.NewAuthService(userRepo, jwtConfig, sessionCache)
 	profileService := service.NewProfileService(profileRepo)
