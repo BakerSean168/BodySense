@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
@@ -11,6 +12,11 @@ import (
 )
 
 var ErrRunTerminal = errors.New("run is already terminal")
+
+// runLeaseDuration bounds how long a run may sit in the running state before
+// the runtime is assumed dead and the run is reclaimed. It is comfortably
+// larger than the SSE timeout so live runs never expire their lease.
+const runLeaseDuration = 30 * time.Minute
 
 // RunService handles run business logic.
 type RunService struct {
@@ -40,6 +46,7 @@ func (s *RunService) CreateRun(
 		Status:         "running",
 		Model:          modelStr,
 	}
+	run.LeaseExpiresAt = leaseExpiry()
 	if err := s.runRepo.Create(ctx, run); err != nil {
 		return nil, fmt.Errorf("create run: %w", err)
 	}
@@ -66,6 +73,7 @@ func (s *RunService) CreateRunWithIdempotency(
 		Status:         "running",
 		Model:          modelStr,
 	}
+	run.LeaseExpiresAt = leaseExpiry()
 	result, existed, err := s.runRepo.CreateWithIdempotency(ctx, run)
 	if err != nil {
 		return nil, false, fmt.Errorf("create run: %w", err)
@@ -194,4 +202,13 @@ func (s *RunService) UpdateAgentConfiguration(
 		return fmt.Errorf("update run agent configuration: %w", err)
 	}
 	return nil
+}
+
+// leaseExpiry returns the timestamp at which a newly-created run's lease
+// expires. The runtime extends the lease as long as the run is actively
+// streaming; an un-renewed expiry means the owning process died and the run
+// may be reclaimed.
+func leaseExpiry() *time.Time {
+	expires := time.Now().Add(runLeaseDuration)
+	return &expires
 }
