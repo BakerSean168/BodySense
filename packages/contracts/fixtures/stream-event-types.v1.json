@@ -19,6 +19,7 @@
     "safety.output_rejected",
     "safety.output_reviewed",
     "safety.red_flag.detected",
+    "source.answer_attribution.added",
     "source.citation.added",
     "source.knowledge_gap",
     "state.extracted_info.upsert",

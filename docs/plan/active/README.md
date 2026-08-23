@@ -7,6 +7,7 @@ There are currently **no unfinished Thought Forest ingestion, evidence-normaliza
 - [`../archive/thought-forest-external-evidence-admissibility-2026-08-23.md`](../archive/thought-forest-external-evidence-admissibility-2026-08-23.md) — completed 2026-08-23; scoped external references, canonical identity, explicit review manifest and conservative evidence readiness.
 - [`../archive/thought-forest-claim-review-publication-2026-08-23.md`](../archive/thought-forest-claim-review-publication-2026-08-23.md) — completed 2026-08-23; exact claim review, reviewed snapshot, transactional publication/rollback, hard visibility gate and overwrite protection.
 - [`../archive/published-knowledge-retrieval-grounding-governance-2026-08-23.md`](../archive/published-knowledge-retrieval-grounding-governance-2026-08-23.md) — completed 2026-08-23; published positive/negative retrieval eval, stable citation identity, hashing relevance guard, publication observations and deny-first continue/hold/rollback gate.
+- [`../archive/production-runtime-knowledge-observation-2026-08-24.md`](../archive/production-runtime-knowledge-observation-2026-08-24.md) — completed 2026-08-24; current-turn Published Evidence Ref, explicit answer attribution tool, cross-runtime attribution event and final-message `runtime_answer` publication observations.
 
 The Agent-platform migration remains closed, and the bounded Consultation Runtime / Async-RAG hardening audit also remains archived.
 

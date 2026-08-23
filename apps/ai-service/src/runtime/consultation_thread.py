@@ -24,6 +24,10 @@ from ..configuration.consultation_agent_config import (
 )
 from ..models.stream_event import StreamEvent, StreamEventFactory, StreamEventIds
 from ..prompts.consultation import format_profile_context, get_system_prompt
+from ..services.agent.answer_attribution import (
+    build_published_evidence_binding,
+    validate_and_evaluate_attribution,
+)
 from ..services.agent.consultation_tools import (
     get_consultation_executor,
     get_consultation_registry,
@@ -93,6 +97,8 @@ class ConsultationThreadState(TypedDict, total=False):
     posture_analysis: dict[str, Any] | None
     # North-Star: resolved immutable Agent configuration for this turn.
     consultation_manifest: ConsultationAgentManifest
+    retrieved_published_evidence: dict[str, dict[str, Any]]
+    answer_attributions: list[dict[str, Any]]
 
 
 _ai_service_instance: AIService | None = None
@@ -336,6 +342,8 @@ async def prepare_turn(state: ConsultationThreadState) -> dict[str, Any]:
         "pending_tool_calls": [],
         "accumulated_text": "",
         "tool_rounds": 0,
+        "retrieved_published_evidence": {},
+        "answer_attributions": [],
     }
 
 
@@ -490,6 +498,7 @@ async def execute_tool(state: ConsultationThreadState, *, writer: StreamWriter) 
     if tool_name == "search_knowledge":
         result = await executor.execute(tool_call_id, tool_name, arguments)
         has_results = False
+        retrieved = dict(state.get("retrieved_published_evidence", {}) or {})
         result_text = result.error or "搜索失败"
         if result.status == ToolStatus.SUCCESS:
             content = result.content if isinstance(result.content, dict) else {}
@@ -498,6 +507,10 @@ async def execute_tool(state: ConsultationThreadState, *, writer: StreamWriter) 
             raw_results = content.get("raw_results", [])
             if has_results:
                 emit_citation_events(raw_results, writer)
+                for raw_result in raw_results:
+                    binding = build_published_evidence_binding(raw_result)
+                    if binding is not None:
+                        retrieved[str(binding["evidence_ref"])] = binding
             else:
                 writer(
                     {
@@ -520,6 +533,84 @@ async def execute_tool(state: ConsultationThreadState, *, writer: StreamWriter) 
         return {
             "runtime_messages": runtime_messages,
             "pending_tool_calls": remaining,
+            "retrieved_published_evidence": retrieved,
+        }
+
+    if tool_name == "record_answer_attribution":
+        result = await executor.execute(tool_call_id, tool_name, arguments)
+        if result.status != ToolStatus.SUCCESS:
+            writer(
+                {
+                    "type": "tool_result",
+                    "id": tool_call_id,
+                    "tool": tool_name,
+                    "result": {"status": "error", "error": result.error or "invalid attribution"},
+                }
+            )
+            runtime_messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": tool_call_id,
+                    "content": result.error or "归因参数无效，请修正后重试。",
+                }
+            )
+            return {"runtime_messages": runtime_messages, "pending_tool_calls": remaining}
+
+        try:
+            evaluated = validate_and_evaluate_attribution(
+                list(arguments.get("claims") or []),
+                dict(state.get("retrieved_published_evidence", {}) or {}),
+            )
+        except ValueError as exc:
+            error_text = str(exc)
+            writer(
+                {
+                    "type": "tool_result",
+                    "id": tool_call_id,
+                    "tool": tool_name,
+                    "result": {"status": "error", "error": error_text},
+                }
+            )
+            runtime_messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": tool_call_id,
+                    "content": (
+                        f"归因校验失败：{error_text}。"
+                        "只能使用本轮搜索返回的 Published Evidence Ref。"
+                    ),
+                }
+            )
+            return {"runtime_messages": runtime_messages, "pending_tool_calls": remaining}
+
+        existing_attributions = list(state.get("answer_attributions", []) or [])
+        emitted: list[dict[str, Any]] = []
+        for index, attribution in enumerate(evaluated):
+            payload = {
+                **attribution,
+                "attribution_id": f"{tool_call_id}:{index}",
+            }
+            writer({"type": "answer_attribution", "attribution": payload})
+            emitted.append(payload)
+        writer(
+            {
+                "type": "tool_result",
+                "id": tool_call_id,
+                "tool": tool_name,
+                "result": {"status": "ok", "recorded_claims": len(emitted)},
+            }
+        )
+        runtime_messages.append(
+            {
+                "role": "tool",
+                "tool_call_id": tool_call_id,
+                "content": "回答证据归因已记录。现在直接给出自然语言回答，不要展示 Evidence Ref。",
+            }
+        )
+        return {
+            "runtime_messages": runtime_messages,
+            "pending_tool_calls": remaining,
+            "answer_attributions": existing_attributions + emitted,
         }
 
     if tool_name == "get_posture_analysis":
@@ -724,6 +815,12 @@ def _map_internal_event(
             channel="source",
             event_type="source.citation.added",
             payload={"citation": event_data.get("citation", {})},
+        )
+    if event_type == "answer_attribution":
+        return factory.next(
+            channel="source",
+            event_type="source.answer_attribution.added",
+            payload={"attribution": event_data.get("attribution", {})},
         )
     if event_type == "knowledge_gap":
         return factory.next(

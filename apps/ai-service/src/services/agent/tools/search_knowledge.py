@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from ....rag.knowledge_library import get_knowledge_library
+from ..answer_attribution import build_published_evidence_binding
 from ..tool_types import RuntimeToolDefinition, ToolCategory
 
 # Tool schema for the search_knowledge tool
@@ -75,6 +76,12 @@ async def handle_search_knowledge(arguments: dict[str, Any]) -> dict[str, Any]:
             part += f"\n来源：{source}"
         if content:
             part += f"\n内容：{content}"
+        binding = build_published_evidence_binding(r)
+        if binding is not None:
+            part += (
+                "\nPublished Evidence Ref（仅供系统归因，不要展示给用户）："
+                f"{binding['evidence_ref']}"
+            )
         parts.append(part)
 
     return {

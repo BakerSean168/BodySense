@@ -108,6 +108,7 @@ const EVENT_SPECS = {
   "state.extracted_info.upsert": { channel: "state", validate: (p) => { if (!("info" in p)) throw new StreamEventParseError("payload.info is required"); } },
   "state.phase.changed": { channel: "state", validate: (p) => { requiredString(p, "to"); requiredString(p, "reason"); } },
   "source.citation.added": { channel: "source", validate: (p) => { if (!("citation" in p)) throw new StreamEventParseError("payload.citation is required"); } },
+  "source.answer_attribution.added": { channel: "source", validate: (p) => { requiredObject(p, "attribution"); } },
   "source.knowledge_gap": { channel: "source", validate: (p) => { requiredString(p, "query"); requiredString(p, "message"); } },
   "safety.red_flag.detected": { channel: "safety", validate: (p) => { requiredBoolean(p, "has_red_flags"); requiredArray(p, "flags"); } },
   "safety.output_reviewed": { channel: "safety", validate: (p) => { requiredString(p, "kind"); const verdict = requiredString(p, "verdict"); if (!["accepted", "degraded", "rejected"].includes(verdict)) throw new StreamEventParseError("payload.verdict is invalid"); optionalStringArray(p, "reasons"); } },

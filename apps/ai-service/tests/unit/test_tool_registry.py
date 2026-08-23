@@ -61,3 +61,13 @@ def test_has():
     assert not registry.has("test_tool")
     registry.register(_make_tool())
     assert registry.has("test_tool")
+
+
+def test_default_consultation_registry_includes_answer_attribution_tool():
+    from src.services.agent.consultation_tools import get_consultation_registry
+
+    registry = get_consultation_registry()
+    assert registry.has("record_answer_attribution")
+    tool = registry.get("record_answer_attribution")
+    assert tool.category == ToolCategory.QUERY
+    assert tool.required_params == ["claims"]
