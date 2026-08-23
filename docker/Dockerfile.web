@@ -20,8 +20,15 @@ COPY packages/utils/package.json packages/utils/
 # Install dependencies (no frozen lockfile — platform-specific bindings differ)
 RUN pnpm install --no-frozen-lockfile
 
-# Install Linux native bindings that may be missing from Windows-generated lock file
-RUN pnpm add -w @rolldown/binding-linux-x64-gnu @esbuild/linux-x64 lightningcss-linux-x64-gnu --no-save || true
+# Install the Linux native bindings for the target image architecture. The
+# workspace lockfile is also used on Windows, so make the production target
+# explicit instead of accidentally baking x64-only bindings into ARM images.
+ARG TARGETARCH
+RUN case "$TARGETARCH" in \
+      amd64) pnpm add -w @rolldown/binding-linux-x64-gnu @esbuild/linux-x64 lightningcss-linux-x64-gnu --no-save ;; \
+      arm64) pnpm add -w @rolldown/binding-linux-arm64-gnu @esbuild/linux-arm64 lightningcss-linux-arm64-gnu --no-save ;; \
+      *) echo "unsupported TARGETARCH=$TARGETARCH" >&2; exit 1 ;; \
+    esac
 
 # Copy full source
 COPY . .
