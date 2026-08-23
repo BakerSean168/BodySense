@@ -110,3 +110,34 @@ def test_video_evidence_identity_remains_backward_compatible() -> None:
     assert evidence["source_key"] == "knowledge-unit:42"
     assert evidence["source_version"] == "00:12-00:15"
     assert "source_locator" not in evidence
+
+
+def test_published_thought_forest_evidence_carries_review_and_publication_provenance() -> None:
+    result = _thought_forest_result(row_id=10)
+    result = SearchResult(
+        **{
+            **result.__dict__,
+            "lifecycle_status": "published",
+            "review_status": "reviewed",
+            "quality_score": 0.95,
+            "publication_id": "11111111-1111-1111-1111-111111111111",
+            "published_version": 2,
+            "unit_metadata": {
+                **result.unit_metadata,
+                "claim_review": {
+                    "review_id": "claim-review-pilot",
+                    "decision": "approved",
+                    "review_status": "reviewed",
+                },
+            },
+        }
+    )
+
+    evidence = normalize_evidence("user-1", result)
+
+    assert evidence["claim_review"]["decision"] == "approved"
+    assert evidence["lifecycle_status"] == "published"
+    assert evidence["review_status"] == "reviewed"
+    assert evidence["quality_score"] == 0.95
+    assert evidence["publication_id"] == "11111111-1111-1111-1111-111111111111"
+    assert evidence["published_version"] == 2

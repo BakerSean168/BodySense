@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 
+	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -20,13 +21,13 @@ func NewKnowledgePublicationRepository(db *gorm.DB) *KnowledgePublicationReposit
 
 // Create creates a new publication record.
 func (r *KnowledgePublicationRepository) Create(ctx context.Context, pub *model.KnowledgePublication) error {
-	return r.db.WithContext(ctx).Create(pub).Error
+	return database.FromContext(ctx, r.db).Create(pub).Error
 }
 
 // GetByID retrieves a publication by ID.
 func (r *KnowledgePublicationRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.KnowledgePublication, error) {
 	var pub model.KnowledgePublication
-	err := r.db.WithContext(ctx).Where("id = ?", id).First(&pub).Error
+	err := database.FromContext(ctx, r.db).Where("id = ?", id).First(&pub).Error
 	if err == gorm.ErrRecordNotFound {
 		return nil, nil
 	}
@@ -39,7 +40,7 @@ func (r *KnowledgePublicationRepository) GetByID(ctx context.Context, id uuid.UU
 // ListByStatus retrieves publications by status.
 func (r *KnowledgePublicationRepository) ListByStatus(ctx context.Context, status string) ([]model.KnowledgePublication, error) {
 	var pubs []model.KnowledgePublication
-	err := r.db.WithContext(ctx).
+	err := database.FromContext(ctx, r.db).
 		Where("status = ?", status).
 		Order("created_at DESC").
 		Find(&pubs).Error

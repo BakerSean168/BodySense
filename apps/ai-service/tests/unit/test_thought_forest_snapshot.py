@@ -206,3 +206,82 @@ def test_v3_review_manifest_must_match_snapshot_commit(tmp_path) -> None:
 
     with pytest.raises(ValueError, match="snapshot_git_commit"):
         build_generated_packs(snapshot, review_manifest=review)
+
+
+def test_v3_claim_review_marks_only_exact_reviewed_unit_as_reviewed(tmp_path) -> None:
+    from src.rag.claim_review import ClaimReviewManifest
+    from src.rag.external_evidence import ExternalEvidenceReviewManifest
+
+    snapshot_path = tmp_path / "snapshot-v3.json"
+    snapshot_path.write_text(
+        json.dumps(_snapshot_payload(version="bodysense.health.snapshot.v3")),
+        encoding="utf-8",
+    )
+    snapshot = load_thought_forest_snapshot(snapshot_path)
+    canonical_key = "url:7091fe4bcd8c558fd8b4ae51682725bf"
+    evidence_review = ExternalEvidenceReviewManifest.model_validate(
+        {
+            "schema_version": "bodysense.external-evidence-review.v1",
+            "review_id": "external-review",
+            "snapshot_git_commit": "abc123",
+            "reviewed_at": "2026-08-23T13:00:00Z",
+            "sources": [
+                {
+                    "canonical_key": canonical_key,
+                    "canonical_url": "https://www.iasp-pain.org/resources/terminology/",
+                    "authority_tier": "B",
+                    "evidence_level": "professional_definition",
+                    "license_status": "citation_only",
+                    "review_status": "reviewed",
+                    "reviewed_by": "maintainer",
+                    "review_basis": "Official professional definition.",
+                }
+            ],
+            "relations": [
+                {
+                    "claim_id": _claim_candidate()["claim_id"],
+                    "claim_content_hash": "b" * 64,
+                    "canonical_key": canonical_key,
+                    "support_status": "reviewed_support",
+                    "support_scope": "direct",
+                    "review_status": "reviewed",
+                }
+            ],
+        }
+    )
+    claim_review = ClaimReviewManifest.model_validate(
+        {
+            "schema_version": "bodysense.claim-review.v1",
+            "review_id": "claim-review",
+            "snapshot_git_commit": "abc123",
+            "external_evidence_review_id": "external-review",
+            "reviewed_at": "2026-08-23T13:10:00Z",
+            "decisions": [
+                {
+                    "unit_key": "tfu-12345678901234567890123456789012",
+                    "claim_id": _claim_candidate()["claim_id"],
+                    "claim_content_hash": "b" * 64,
+                    "decision": "approved",
+                    "review_status": "reviewed",
+                    "reviewed_by": "maintainer",
+                    "review_basis": "Claim wording reviewed against the admitted source.",
+                    "quality_score": 0.95,
+                    "certainty": "high",
+                    "population": "general",
+                }
+            ],
+        }
+    )
+
+    unit = build_generated_packs(
+        snapshot,
+        review_manifest=evidence_review,
+        claim_review_manifest=claim_review,
+    )[0].units[0]
+
+    assert unit.review_status == "reviewed"
+    assert unit.lifecycle_status == "reviewed"
+    assert unit.quality_score == 0.95
+    assert unit.content_hash == "b" * 64
+    assert unit.metadata["claim_review"]["decision"] == "approved"
+    assert unit.metadata["claim_admissibility"]["publication_eligible"] is True

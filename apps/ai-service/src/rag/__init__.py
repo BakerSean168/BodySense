@@ -2,6 +2,11 @@
 
 from .ai_curator import AICurator
 from .asr import ASRProvider, get_asr_provider
+from .claim_review import (
+    ClaimReviewManifest,
+    ReviewedKnowledgeSnapshot,
+    load_claim_review,
+)
 from .curated_source import (
     build_curated_pack,
     collect_evidence_segment_indices,
@@ -46,6 +51,10 @@ from .video_pipeline import VideoIngestionPipeline, VideoIngestionRequest
 __all__ = [
     # AI Curator
     "AICurator",
+    # Claim review
+    "ClaimReviewManifest",
+    "ReviewedKnowledgeSnapshot",
+    "load_claim_review",
     # ASR
     "ASRProvider",
     "get_asr_provider",

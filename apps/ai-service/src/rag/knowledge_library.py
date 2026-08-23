@@ -61,6 +61,11 @@ class SearchResult:
     source_type: str = "video"
     unit_metadata: dict[str, Any] = field(default_factory=dict)
     source_metadata: dict[str, Any] = field(default_factory=dict)
+    lifecycle_status: str = "generated"
+    review_status: str = "generated"
+    quality_score: float = 0.0
+    publication_id: str = ""
+    published_version: int | None = None
 
     @property
     def source_timestamp(self) -> str:
@@ -184,6 +189,40 @@ class KnowledgeLibrary:
             )
         return self._pool
 
+    async def assert_sources_overwritable(self, source_keys: list[str]) -> None:
+        """Fail before batch writes if any source is protected by publication state."""
+        normalized = sorted({key for key in source_keys if key})
+        if not normalized:
+            return
+        pool = self._require_pool()
+        async with pool.connection() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    """
+                    SELECT ks.source_key
+                    FROM knowledge_sources ks
+                    WHERE ks.source_key = ANY(%s)
+                      AND EXISTS (
+                          SELECT 1
+                          FROM knowledge_units ku
+                          WHERE ku.source_id = ks.id
+                            AND (
+                                ku.lifecycle_status = 'published'
+                                OR ku.publication_id IS NOT NULL
+                            )
+                      )
+                    ORDER BY ks.source_key
+                    """,
+                    (normalized,),
+                )
+                rows = await cur.fetchall()
+        if rows:
+            protected = ", ".join(str(row[0]) for row in rows)
+            raise RuntimeError(
+                "cannot overwrite knowledge batch; published/publication-linked sources: "
+                f"{protected}"
+            )
+
     async def ingest_generated_pack(
         self,
         pack: GeneratedKnowledgePack,
@@ -213,6 +252,23 @@ class KnowledgeLibrary:
                             "status": "already_exists",
                         }
                     if existing_source_id is not None:
+                        await cur.execute(
+                            """
+                            SELECT COUNT(*)
+                            FROM knowledge_units
+                            WHERE source_id = %s
+                              AND (lifecycle_status = 'published' OR publication_id IS NOT NULL)
+                            """,
+                            (existing_source_id,),
+                        )
+                        protected_row = await cur.fetchone()
+                        protected_count = int(protected_row[0]) if protected_row is not None else 0
+                        if protected_count > 0:
+                            raise RuntimeError(
+                                "cannot overwrite a knowledge source with published/"
+                                "publication-linked units; rollback or create a new "
+                                "immutable source version first"
+                            )
                         await cur.execute(
                             "DELETE FROM knowledge_sources WHERE id = %s",
                             (existing_source_id,),
@@ -280,11 +336,12 @@ class KnowledgeLibrary:
                                 source_id, unit_key, problem_slug, category, unit_type,
                                 title, summary, body_markdown, source_start_sec,
                                 source_end_sec, evidence_segment_indices, tags,
-                                transcript_excerpt, review_status, embedding, metadata
+                                transcript_excerpt, review_status, lifecycle_status,
+                                quality_score, content_hash, embedding, metadata
                             )
                             VALUES (
                                 %s, %s, %s, %s, %s, %s, %s, %s,
-                                %s, %s, %s, %s, %s, %s, %s::vector, %s
+                                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::vector, %s
                             )
                             RETURNING id
                             """,
@@ -303,6 +360,9 @@ class KnowledgeLibrary:
                                 unit.tags,
                                 unit.transcript_excerpt,
                                 unit.review_status,
+                                unit.lifecycle_status,
+                                unit.quality_score,
+                                unit.content_hash,
                                 embedding,
                                 Jsonb(
                                     {
@@ -368,6 +428,8 @@ class KnowledgeLibrary:
                 ku.summary, ku.body_markdown, ku.source_start_sec, ku.source_end_sec,
                 ku.tags, ks.title AS source_title, ks.author AS source_author,
                 ku.unit_key, ku.metadata, ks.source_key, ks.source_type, ks.metadata,
+                ku.lifecycle_status, ku.review_status, COALESCE(ku.quality_score, 0.0),
+                COALESCE(ku.publication_id::text, ''), ku.published_version,
                 1 - (ku.embedding <=> %s::vector) AS similarity
             FROM knowledge_units ku
             JOIN knowledge_sources ks ON ks.id = ku.source_id
@@ -446,7 +508,12 @@ class KnowledgeLibrary:
                 source_key=row[14] or "",
                 source_type=row[15] or "video",
                 source_metadata=row[16] or {},
-                similarity=float(row[17]),
+                lifecycle_status=row[17] or "generated",
+                review_status=row[18] or "generated",
+                quality_score=float(row[19] or 0.0),
+                publication_id=row[20] or "",
+                published_version=row[21],
+                similarity=float(row[22]),
                 clips=clips_by_unit.get(row[0], []),
             )
             for row in rows
@@ -462,10 +529,10 @@ class KnowledgeLibrary:
     def _published_visibility_filter() -> str:
         """SQL predicate for knowledge safe to surface in user-facing search."""
         return """
-            AND (
-                ku.lifecycle_status IN ('published', 'reviewed')
-                OR ku.review_status IN ('reviewed', 'approved', 'curated')
-            )
+            AND ku.lifecycle_status = 'published'
+            AND ku.publication_id IS NOT NULL
+            AND ku.published_version IS NOT NULL
+            AND ku.review_status IN ('reviewed', 'approved', 'curated')
             AND COALESCE(ku.quality_score, 0.0) >= %s
         """
 

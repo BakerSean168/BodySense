@@ -9,7 +9,7 @@
 
 ## Implementation Status
 
-**当前状态**：部分实现（~25%）
+**当前状态**：核心生命周期已实现（约 65%；管理 UI 与 published retrieval/grounding eval 尚未完成）
 
 | 模块 | 状态 | 说明 |
 |---|---|---|
@@ -19,9 +19,9 @@
 | knowledge_publications 表 | ✅ 已完成 | 发布批次管理表。Phase 07a 完成。 |
 | KnowledgePublication Repository | ✅ 已完成 | Go 侧 repository 实现。 |
 | KnowledgeSourceRegistry | 未实现 | 知识源注册和管理。 |
-| 发布批次工作流 | 未实现 | 从 reviewed → embedded → published 的自动化流程。 |
-| 质量阈值门控 | 未实现 | 基于 quality_score 的自动发布/拒绝。 |
-| 检索质量评估 | 未实现 | published 知识的检索效果评估。 |
+| 发布批次工作流 | ✅ 核心已完成 | Go `KnowledgePublicationService` 事务化执行 reviewed → published 与显式 rollback；当前通过 operator CLI 驱动，管理 UI 未实现。 |
+| 质量阈值门控 | ✅ 核心已完成 | 发布前强制 review/lifecycle、quality ≥ 0.90、content hash、external support、claim review、license 与 provenance gate。 |
+| 检索质量评估 | 🟡 部分完成 | Thought Forest unpublished retrieval pilot 已建立；published citation/grounding regression 仍属下一阶段。 |
 
 **相关 Phase**：07a → 归档于 `docs/plan/archive/implementation/`
 
@@ -66,7 +66,7 @@ source -> generated -> curated -> reviewed -> embedded -> published -> deprecate
    RAG 默认只检索已发布版本。
 
 3. **来源可追溯**
-   每条知识必须能追溯 source video、timestamp、evidence excerpt。
+   视频知识必须能追溯 source/timestamp/evidence excerpt；文本知识必须能追溯 repository/Git commit/path/heading/line range。
 
 4. **发布可回滚**
    知识发布按 batch/version 管理。
@@ -306,19 +306,25 @@ CREATE TABLE knowledge_publications (
 
 ```txt
 lifecycle_status = published
-review_status in (reviewed, curated)
+publication_id exists
+published_version exists
+review_status in (reviewed, approved, curated)
 quality_score >= threshold
-source timestamp exists
+content_hash matches current body
 evidence excerpt exists
-content_hash matches embedded text
-license_status != rejected
+source provenance exists (video timestamp or Markdown locator)
+source/external-evidence license is not rejected
+claim_admissibility.publication_eligible = true (for governed Thought Forest claims)
+claim_review.decision = approved (for governed Thought Forest claims)
 ```
 
 `search_knowledge` 工具默认过滤：
 
 ```sql
 WHERE lifecycle_status = 'published'
-  AND review_status IN ('reviewed', 'curated')
+  AND publication_id IS NOT NULL
+  AND published_version IS NOT NULL
+  AND review_status IN ('reviewed', 'approved', 'curated')
 ```
 
 开发环境可以开启 `include_generated=true`，但必须在 context_trace 中标记。

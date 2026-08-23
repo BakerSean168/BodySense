@@ -97,10 +97,27 @@ def normalize_evidence(user_id: str, result: Any) -> dict[str, Any]:
         if result_source_type == "thought_forest_note"
         else {}
     )
+    claim_review = (
+        dict(unit_metadata.get("claim_review") or {})
+        if result_source_type == "thought_forest_note"
+        else {}
+    )
     if external_evidence_candidates:
         evidence["external_evidence_candidates"] = external_evidence_candidates
     if claim_admissibility:
         evidence["claim_admissibility"] = claim_admissibility
+    if claim_review:
+        evidence["claim_review"] = claim_review
+    if result_source_type == "thought_forest_note":
+        evidence["lifecycle_status"] = str(getattr(result, "lifecycle_status", "") or "")
+        evidence["review_status"] = str(getattr(result, "review_status", "") or "")
+        evidence["quality_score"] = float(getattr(result, "quality_score", 0.0) or 0.0)
+        publication_id = str(getattr(result, "publication_id", "") or "")
+        if publication_id:
+            evidence["publication_id"] = publication_id
+        published_version = getattr(result, "published_version", None)
+        if published_version is not None:
+            evidence["published_version"] = int(published_version)
     if claim_candidate:
         evidence["claim_candidate"] = claim_candidate
         for key in (

@@ -1,0 +1,44 @@
+{
+  "schema_version": "bodysense.reviewed-knowledge-snapshot.v1",
+  "reviewed_snapshot_id": "reviewed-knowledge:f7a8e04fa84b104b366136f3",
+  "source_snapshot_id": "thought-forest:4990c5844392ec7c36ff217e3e66ac3ceff1ac9a:bb88ac2fc4b6",
+  "source_git_commit": "4990c5844392ec7c36ff217e3e66ac3ceff1ac9a",
+  "external_evidence_review_id": "iasp-pain-definition-pilot-2026-08-23",
+  "claim_review_id": "pain-definition-claim-review-pilot-2026-08-23",
+  "units": [
+    {
+      "unit_key": "tfu-18d2dc2e4effd2c62097d44794f76e29",
+      "claim_id": "tfc-a0ffebe00c719febbe6b7a3cd3f7e70b",
+      "claim_content_hash": "4f4461f35c99a38530d620873970ce75fc0bdcd67705c56e0e5e6b12b247ea26",
+      "review_status": "reviewed",
+      "lifecycle_status": "reviewed",
+      "quality_score": 0.95,
+      "publication_eligible": true,
+      "source_locator": {
+        "locator_type": "markdown_lines",
+        "repository": "thought-forest",
+        "git_commit": "4990c5844392ec7c36ff217e3e66ac3ceff1ac9a",
+        "path": "z/pain-and-nociception.md",
+        "line_start": 20,
+        "line_end": 23,
+        "heading_path": [
+          "疼痛与伤害感受",
+          "一句话定义"
+        ],
+        "source_time_applicable": false
+      },
+      "claim_review": {
+        "review_id": "pain-definition-claim-review-pilot-2026-08-23",
+        "decision": "approved",
+        "review_status": "reviewed",
+        "reviewed_at": "2026-08-23T21:55:00+08:00",
+        "reviewed_by": "maintainer-claim-review-pilot",
+        "review_basis": "The claim wording is limited to the IASP pain/nociception definition supported by the admitted direct citation and does not infer diagnosis, tissue damage severity, or a patient-specific mechanism.",
+        "quality_score": 0.95,
+        "certainty": "high",
+        "population": "general",
+        "external_evidence_review_id": "iasp-pain-definition-pilot-2026-08-23"
+      }
+    }
+  ]
+}

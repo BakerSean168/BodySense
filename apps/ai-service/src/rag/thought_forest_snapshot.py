@@ -9,6 +9,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from .claim_review import ClaimReviewManifest, apply_claim_review
 from .external_evidence import (
     ExternalEvidenceReviewManifest,
     apply_external_evidence_review,
@@ -198,6 +199,7 @@ def _plain_summary(markdown: str, fallback: str) -> str:
 def build_generated_packs(
     snapshot: ThoughtForestHealthSnapshot,
     review_manifest: ExternalEvidenceReviewManifest | None = None,
+    claim_review_manifest: ClaimReviewManifest | None = None,
 ) -> list[GeneratedKnowledgePack]:
     if (
         review_manifest is not None
@@ -206,6 +208,17 @@ def build_generated_packs(
         raise ValueError(
             "external evidence review snapshot_git_commit does not match Thought Forest snapshot"
         )
+    if claim_review_manifest is not None:
+        if claim_review_manifest.snapshot_git_commit != snapshot.repository.git_commit:
+            raise ValueError(
+                "claim review snapshot_git_commit does not match Thought Forest snapshot"
+            )
+        if review_manifest is None:
+            raise ValueError("claim review requires an external evidence review manifest")
+        if claim_review_manifest.external_evidence_review_id != review_manifest.review_id:
+            raise ValueError(
+                "claim review external_evidence_review_id does not match evidence review"
+            )
     packs: list[GeneratedKnowledgePack] = []
     for note in snapshot.notes:
         segments: list[TranscriptSegment] = []
@@ -234,6 +247,24 @@ def build_generated_packs(
                     review_manifest=review_manifest,
                 )
             claim_admissibility = build_claim_admissibility(direct_external_references)
+            applied_claim_review = None
+            unit_review_status = "generated"
+            unit_lifecycle_status = "generated"
+            unit_quality_score = 0.0
+            if section.claim_candidate is not None:
+                (
+                    claim_admissibility,
+                    applied_claim_review,
+                    unit_review_status,
+                    unit_lifecycle_status,
+                    unit_quality_score,
+                ) = apply_claim_review(
+                    unit_key=section.section_key,
+                    claim_id=section.claim_candidate.claim_id,
+                    claim_content_hash=section.content_hash,
+                    claim_admissibility=claim_admissibility,
+                    review_manifest=claim_review_manifest,
+                )
             segments.append(
                 TranscriptSegment(
                     segment_index=index,
@@ -258,7 +289,10 @@ def build_generated_packs(
                     evidence_segment_indices=[index],
                     tags=note.tags,
                     transcript_excerpt=section.markdown,
-                    review_status="generated",
+                    review_status=unit_review_status,
+                    lifecycle_status=unit_lifecycle_status,
+                    quality_score=unit_quality_score,
+                    content_hash=section.content_hash,
                     metadata={
                         "source_locator": locator,
                         "snapshot_id": snapshot.snapshot_id,
@@ -280,6 +314,11 @@ def build_generated_packs(
                                 "claim_admissibility": claim_admissibility,
                             }
                             if snapshot.schema_version == SNAPSHOT_SCHEMA_VERSION_V3
+                            else {}
+                        ),
+                        **(
+                            {"claim_review": applied_claim_review.model_dump()}
+                            if applied_claim_review is not None
                             else {}
                         ),
                     },
