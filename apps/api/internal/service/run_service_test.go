@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
@@ -117,6 +118,14 @@ func (m *mockRunRepo) UpdateAgentConfiguration(
 		run.ExecutionProvenance = provenance
 	}
 	return nil
+}
+
+func (m *mockRunRepo) RenewLease(context.Context, uuid.UUID, uuid.UUID, string, time.Time, time.Time) (bool, error) {
+	return true, nil
+}
+
+func (m *mockRunRepo) ReclaimExpiredRuns(context.Context, time.Time, int) ([]model.Run, error) {
+	return nil, nil
 }
 
 func TestMarkWaitingUser(t *testing.T) {

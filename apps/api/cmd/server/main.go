@@ -19,6 +19,7 @@ import (
 	"github.com/bodysense/api/internal/repository"
 	"github.com/bodysense/api/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 )
 
@@ -53,7 +54,8 @@ func main() {
 	userRepo := repository.NewUserRepository(database.DB)
 	profileRepo := repository.NewProfileRepository(database.DB)
 	uploadRepo := repository.NewUploadRepository(database.DB)
-	consultationRepo := repository.NewConsultationRepository(database.DB)
+	leaseOwner := uuid.NewString()
+	consultationRepo := repository.NewConsultationRepository(database.DB, leaseOwner)
 	bodyStateRepo := repository.NewBodyStateRepository(database.DB)
 	diagnosisAnalysisRepo := repository.NewDiagnosisAnalysisRepository(database.DB)
 	diagnosisFreshnessRepo := repository.NewDiagnosisFreshnessRepository(database.DB)
@@ -82,7 +84,7 @@ func main() {
 	}
 	messageService := service.NewMessageService(messageRepo)
 	contextRetrievalService := service.NewContextRetrievalService(messageContextRepo)
-	runService := service.NewRunService(runRepo)
+	runService := service.NewRunService(runRepo, leaseOwner)
 	runtimeEventService := service.NewRuntimeEventService(runtimeEventRepo)
 	conversationService := service.NewConversationService(conversationRepo, messageRepo, runRepo, shareRepo, aiClient, database.NewTransactionManager(database.DB)).WithAgentDeployment(agentDeploymentPolicy)
 	shareService := service.NewShareService(conversationRepo, messageRepo, shareRepo)
@@ -163,6 +165,7 @@ func main() {
 	consultationRuntime.AttachRolloutService(
 		service.NewConsultationRolloutService(consultationRolloutRepo),
 	)
+	startRunLeaseReconciler(runService, conversationService, runtimeEventService)
 	convHandler := handler.NewConversationHandler(conversationService, shareService)
 	runtimeEventHandler := handler.NewRuntimeEventHandler(runtimeEventService, conversationService)
 	threadProjectionHandler := handler.NewThreadProjectionHandler(threadProjectionService, bodyStateService)
@@ -394,6 +397,40 @@ func main() {
 	if err := r.Run(fmt.Sprintf(":%s", port)); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func startRunLeaseReconciler(
+	runService *service.RunService,
+	conversationService *service.ConversationService,
+	runtimeEventService *service.RuntimeEventService,
+) {
+	reconcile := func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		runs, err := runService.ReconcileExpiredRuns(ctx, 100)
+		if err != nil {
+			log.Printf("run lease reconciliation failed: %v", err)
+			return
+		}
+		for i := range runs {
+			run := &runs[i]
+			if err := runtimeEventService.RecordRunExecutionLost(ctx, run); err != nil {
+				log.Printf("record execution-lost event for run %s: %v", run.ID, err)
+			}
+			if err := conversationService.UpdateActiveRunID(ctx, run.ConversationID, run.UserID, nil, ""); err != nil {
+				log.Printf("clear stale active run %s: %v", run.ID, err)
+			}
+		}
+	}
+
+	go func() {
+		reconcile()
+		ticker := time.NewTicker(time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			reconcile()
+		}
+	}()
 }
 
 func parseCORSOrigins() []string {

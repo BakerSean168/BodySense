@@ -19,7 +19,9 @@ type Run struct {
 	Provider           string         `gorm:"type:text" json:"provider,omitempty"`
 	ProviderResponseID string         `gorm:"type:text" json:"provider_response_id,omitempty"`
 	StartedAt          time.Time      `gorm:"not null;default:now()" json:"started_at"`
+	LeaseOwner         string         `gorm:"type:varchar(120);not null;default:''" json:"-"`
 	LeaseExpiresAt     *time.Time     `gorm:"type:timestamptz" json:"lease_expires_at,omitempty"`
+	LeaseHeartbeatAt   *time.Time     `gorm:"type:timestamptz" json:"-"`
 	CompletedAt        *time.Time     `json:"completed_at,omitempty"`
 	Error              datatypes.JSON `gorm:"type:jsonb" json:"error,omitempty"`
 	Usage              datatypes.JSON `gorm:"type:jsonb" json:"usage,omitempty"`

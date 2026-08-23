@@ -341,3 +341,26 @@ func (s *RuntimeEventService) RecordRunCancelled(ctx context.Context, run *model
 		map[string]any{"status": "cancelled", "reason": reason},
 	)
 }
+
+// RecordRunExecutionLost persists the terminal event produced by stale-run
+// reconciliation when no live StreamWriter owns the run sequence.
+func (s *RuntimeEventService) RecordRunExecutionLost(ctx context.Context, run *model.Run) error {
+	if run == nil {
+		return nil
+	}
+	turnID := run.TurnID
+	return s.RecordOutOfBandPublicEvent(
+		ctx,
+		run.ConversationID,
+		run.ID,
+		&turnID,
+		"run",
+		"run.failed",
+		dto.StreamEventIDs{
+			ConversationID: run.ConversationID.String(),
+			RunID:          run.ID.String(),
+			TurnID:         run.TurnID.String(),
+		},
+		map[string]any{"status": "failed", "reason": "execution_lost"},
+	)
+}

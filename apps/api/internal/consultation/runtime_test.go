@@ -77,6 +77,14 @@ func (r *fakeConsultationRunRepo) UpdateAgentConfiguration(
 	return nil
 }
 
+func (r *fakeConsultationRunRepo) RenewLease(context.Context, uuid.UUID, uuid.UUID, string, time.Time, time.Time) (bool, error) {
+	return true, nil
+}
+
+func (r *fakeConsultationRunRepo) ReclaimExpiredRuns(context.Context, time.Time, int) ([]model.Run, error) {
+	return nil, nil
+}
+
 func (r *fakeRuntimeEventRepo) Create(ctx context.Context, event *model.RuntimeEvent) error {
 	r.events = append(r.events, *event)
 	return nil

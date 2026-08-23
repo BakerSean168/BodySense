@@ -14,12 +14,17 @@ import (
 
 // ConsultationRepository handles database operations for consultation sessions.
 type ConsultationRepository struct {
-	db *gorm.DB
+	db         *gorm.DB
+	leaseOwner string
 }
 
 // NewConsultationRepository creates a new ConsultationRepository.
-func NewConsultationRepository(db *gorm.DB) *ConsultationRepository {
-	return &ConsultationRepository{db: db}
+func NewConsultationRepository(db *gorm.DB, leaseOwners ...string) *ConsultationRepository {
+	owner := uuid.NewString()
+	if len(leaseOwners) > 0 && leaseOwners[0] != "" {
+		owner = leaseOwners[0]
+	}
+	return &ConsultationRepository{db: db, leaseOwner: owner}
 }
 
 // Create creates a new consultation session.
@@ -164,6 +169,7 @@ func (r *ConsultationRepository) CreateRunEnvelope(
 			UserID:         userID,
 			Status:         "running",
 			Model:          modelName,
+			LeaseOwner:     r.leaseOwner,
 			LeaseExpiresAt: runLeaseExpiry(),
 		}
 

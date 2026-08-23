@@ -16,6 +16,8 @@ type RunRepository struct {
 	db *gorm.DB
 }
 
+const runLeaseErrorJSON = `{"message":"run execution lost; lease expired"}`
+
 // NewRunRepository creates a new RunRepository.
 func NewRunRepository(db *gorm.DB) *RunRepository {
 	return &RunRepository{db: db}
@@ -109,6 +111,60 @@ func (r *RunRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status s
 		Update("status", status).Error
 }
 
+// RenewLease extends only the lease owned by this API process. A false result
+// means another terminal transition or reconciler already won the race.
+func (r *RunRepository) RenewLease(ctx context.Context, id, userID uuid.UUID, owner string, expiresAt, heartbeatAt time.Time) (bool, error) {
+	result := r.db.WithContext(ctx).
+		Model(&model.Run{}).
+		Where("id = ? AND user_id = ? AND status = ? AND lease_owner = ?", id, userID, "running", owner).
+		Updates(map[string]any{"lease_expires_at": expiresAt, "lease_heartbeat_at": heartbeatAt})
+	return result.RowsAffected == 1, result.Error
+}
+
+// ReclaimExpiredRuns atomically claims and fails expired running executions.
+// SKIP LOCKED lets multiple API instances reconcile concurrently without
+// producing duplicate terminal transitions.
+func (r *RunRepository) ReclaimExpiredRuns(ctx context.Context, now time.Time, limit int) ([]model.Run, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	var reclaimed []model.Run
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var candidates []model.Run
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE", Options: "SKIP LOCKED"}).
+			Where("status = ? AND lease_expires_at IS NOT NULL AND lease_expires_at <= ?", "running", now).
+			Order("lease_expires_at ASC").Limit(limit).Find(&candidates).Error; err != nil {
+			return err
+		}
+		for _, candidate := range candidates {
+			result := tx.Model(&model.Run{}).
+				Where("id = ? AND status = ? AND lease_expires_at <= ?", candidate.ID, "running", now).
+				Updates(map[string]any{
+					"status":             "failed",
+					"error":              datatypes.JSON([]byte(runLeaseErrorJSON)),
+					"completed_at":       now,
+					"lease_owner":        "",
+					"lease_expires_at":   nil,
+					"lease_heartbeat_at": nil,
+				})
+			if result.Error != nil {
+				return result.Error
+			}
+			if result.RowsAffected == 1 {
+				candidate.Status = "failed"
+				candidate.Error = datatypes.JSON([]byte(runLeaseErrorJSON))
+				candidate.CompletedAt = &now
+				candidate.LeaseOwner = ""
+				candidate.LeaseExpiresAt = nil
+				candidate.LeaseHeartbeatAt = nil
+				reclaimed = append(reclaimed, candidate)
+			}
+		}
+		return nil
+	})
+	return reclaimed, err
+}
+
 // CompleteRun marks a run as completed only from an active lifecycle state.
 func (r *RunRepository) CompleteRun(ctx context.Context, id, userID uuid.UUID, usage any, providerResponseID string) error {
 	_, err := r.TryCompleteRun(ctx, id, userID, usage, providerResponseID)
@@ -127,6 +183,9 @@ func (r *RunRepository) TryCompleteRun(ctx context.Context, id, userID uuid.UUID
 			"usage":                usage,
 			"provider_response_id": providerResponseID,
 			"completed_at":         now,
+			"lease_owner":          "",
+			"lease_expires_at":     nil,
+			"lease_heartbeat_at":   nil,
 		})
 	return result.RowsAffected == 1, result.Error
 }
@@ -138,9 +197,12 @@ func (r *RunRepository) CancelRun(ctx context.Context, id, userID uuid.UUID, rea
 		Model(&model.Run{}).
 		Where("id = ? AND user_id = ? AND status IN ?", id, userID, []string{"running", "waiting_user"}).
 		Updates(map[string]any{
-			"status":       "cancelled",
-			"error":        reason,
-			"completed_at": now,
+			"status":             "cancelled",
+			"error":              reason,
+			"completed_at":       now,
+			"lease_owner":        "",
+			"lease_expires_at":   nil,
+			"lease_heartbeat_at": nil,
 		})
 	return result.RowsAffected == 1, result.Error
 }
@@ -152,9 +214,12 @@ func (r *RunRepository) FailRun(ctx context.Context, id, userID uuid.UUID, errJS
 		Model(&model.Run{}).
 		Where("id = ? AND user_id = ? AND status IN ?", id, userID, []string{"running", "waiting_user"}).
 		Updates(map[string]any{
-			"status":       "failed",
-			"error":        errJSON,
-			"completed_at": now,
+			"status":             "failed",
+			"error":              errJSON,
+			"completed_at":       now,
+			"lease_owner":        "",
+			"lease_expires_at":   nil,
+			"lease_heartbeat_at": nil,
 		}).Error
 }
 
