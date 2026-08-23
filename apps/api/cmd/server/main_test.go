@@ -24,9 +24,24 @@ func TestResolveCORSOriginMatchesRequestOrigin(t *testing.T) {
 	}
 }
 
-func TestResolveCORSOriginWildcard(t *testing.T) {
+func TestResolveCORSOriginWildcardReflectsRequestForCredentialedCORS(t *testing.T) {
 	got := resolveCORSOrigin("https://app.example.com", []string{"*"})
-	if got != "*" {
-		t.Fatalf("origin = %q, want wildcard", got)
+	if got != "https://app.example.com" {
+		t.Fatalf("origin = %q, want reflected request origin", got)
+	}
+}
+
+func TestResolveCORSOriginRejectsUnlistedOrigin(t *testing.T) {
+	got := resolveCORSOrigin("https://evil.example.com", []string{"https://app.example.com"})
+	if got != "" {
+		t.Fatalf("origin = %q, want empty for unlisted origin", got)
+	}
+}
+
+func TestParseTrustedProxies(t *testing.T) {
+	t.Setenv("TRUSTED_PROXIES", "127.0.0.1, 172.16.0.0/12")
+	got := parseTrustedProxies()
+	if len(got) != 2 || got[0] != "127.0.0.1" || got[1] != "172.16.0.0/12" {
+		t.Fatalf("trusted proxies = %#v", got)
 	}
 }

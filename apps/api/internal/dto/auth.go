@@ -20,7 +20,7 @@ type RefreshRequest struct {
 // AuthResponse is the response body for authentication endpoints.
 type AuthResponse struct {
 	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+	RefreshToken string `json:"-"`
 	ExpiresIn    int64  `json:"expires_in"` // Access token expiry in seconds
 }
 

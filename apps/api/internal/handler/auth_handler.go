@@ -1,99 +1,167 @@
 package handler
 
 import (
+	"errors"
+	"fmt"
+	"math"
 	"net/http"
+	"strconv"
+	"strings"
+	"time"
 
+	"github.com/bodysense/api/internal/auth"
 	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
+const defaultRefreshCookieName = "bodysense_refresh"
+
+// AuthSecurityConfig owns the browser/session edge policy. Keeping it explicit
+// prevents cookie, origin and abuse-control behavior from drifting across handlers.
+type AuthSecurityConfig struct {
+	RefreshCookieName string
+	RefreshTTL        time.Duration
+	CookieSecure      bool
+	RequireOrigin     bool
+	TrustedOrigins    []string
+	RateLimiter       auth.RateLimiter
+	LoginPolicy       auth.RateLimitPolicy
+	RegisterPolicy    auth.RateLimitPolicy
+	RefreshPolicy     auth.RateLimitPolicy
+}
+
+func DefaultAuthSecurityConfig(refreshTTL time.Duration) AuthSecurityConfig {
+	return AuthSecurityConfig{
+		RefreshCookieName: defaultRefreshCookieName,
+		RefreshTTL:        refreshTTL,
+		LoginPolicy:       auth.RateLimitPolicy{Limit: 10, Window: 5 * time.Minute},
+		RegisterPolicy:    auth.RateLimitPolicy{Limit: 5, Window: 15 * time.Minute},
+		RefreshPolicy:     auth.RateLimitPolicy{Limit: 60, Window: 5 * time.Minute},
+	}
+}
+
 // AuthHandler handles authentication HTTP requests.
 type AuthHandler struct {
 	authService *service.AuthService
+	security    AuthSecurityConfig
 }
 
-// NewAuthHandler creates a new AuthHandler.
-func NewAuthHandler(authService *service.AuthService) *AuthHandler {
-	return &AuthHandler{authService: authService}
+// NewAuthHandler creates a new AuthHandler. The variadic config preserves a
+// narrow compatibility path for focused tests while production passes an
+// explicit security policy from main.
+func NewAuthHandler(authService *service.AuthService, security ...AuthSecurityConfig) *AuthHandler {
+	cfg := DefaultAuthSecurityConfig(30 * 24 * time.Hour)
+	if len(security) > 0 {
+		cfg = security[0]
+	}
+	if cfg.RefreshCookieName == "" {
+		cfg.RefreshCookieName = defaultRefreshCookieName
+	}
+	if cfg.RefreshTTL <= 0 {
+		cfg.RefreshTTL = 30 * 24 * time.Hour
+	}
+	return &AuthHandler{authService: authService, security: cfg}
 }
 
 // Register handles user registration.
 func (h *AuthHandler) Register(c *gin.Context) {
+	if !h.requireTrustedOrigin(c) {
+		return
+	}
 	var req dto.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		respondError(c, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
 		return
 	}
-
-	resp, err := h.authService.Register(c.Request.Context(), req)
-	if err != nil {
-		status := http.StatusInternalServerError
-		code := "REGISTRATION_FAILED"
-
-		if err.Error() == "registration failed" {
-			status = http.StatusConflict
-		}
-
-		respondError(c, status, code, "registration failed")
+	if !h.allowAuthAttempt(c, "register", normalizeAccount(req.Email), h.security.RegisterPolicy) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, resp)
+	resp, err := h.authService.Register(c.Request.Context(), req)
+	if err != nil {
+		if errors.Is(err, service.ErrRegistrationFailed) {
+			respondError(c, http.StatusConflict, "REGISTRATION_FAILED", "registration failed")
+			return
+		}
+		respondError(c, http.StatusServiceUnavailable, "AUTH_SERVICE_UNAVAILABLE", "registration is temporarily unavailable")
+		return
+	}
+
+	h.writeAuthResponse(c, http.StatusCreated, resp)
 }
 
 // Login handles user login.
 func (h *AuthHandler) Login(c *gin.Context) {
-	// 定义的变量，用于存储后续的业务请求数据
+	if !h.requireTrustedOrigin(c) {
+		return
+	}
 	var req dto.LoginRequest
-	// 绑定请求体中的 JSON 数据到 req 结构体中，如果绑定失败则返回错误响应
 	if err := c.ShouldBindJSON(&req); err != nil {
-		// 如果请求体中的 JSON 数据无法绑定到 req 结构体中，返回 400 Bad Request 错误响应，提示验证错误
 		respondError(c, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
 		return
 	}
+	if !h.allowAuthAttempt(c, "login", normalizeAccount(req.Email), h.security.LoginPolicy) {
+		return
+	}
 
-	// 调用对应的业务服务方法进行登录操作，并获取响应数据和错误信息。这个本身只是一个 handle 处理层，它就是要把请求进来的数据（也就是对应的 HTTP 请求中的数据）提取出来，然后调用相关的业务方法进行业务上的处理。比如说，这个 authService.Login 就是进行登录的业务处理。这本质上体现了 Go 的一个分层思想，把 handle 和对应的业务分开了，然后通过函数来调用，进行一个解耦。后续如果 handle 的内容需要修改，只需要修改这里，业务的修改也和它分离开了。
-	// c.Request.Context() 是获取当前请求的上下文信息，传入 context 能够让 go 实现对流程的一个控制，后续可以用于超时控制等，不传下去go就不能进行控制，也会失去横切的一些必要数据。req 是前面绑定的请求数据结构体。这个方法会返回一个响应数据结构体和一个错误信息。
 	resp, err := h.authService.Login(c.Request.Context(), req)
 	if err != nil {
-		// 如果登录失败，返回 401 Unauthorized 错误响应，提示用户邮箱或密码无效
-		// 避免给攻击者提供过多信息，通常不建议在错误消息中透露具体的失败原因（例如“邮箱不存在”或“密码错误”），以防止潜在的暴力破解攻击。
-		respondError(c, http.StatusUnauthorized, "AUTHENTICATION_FAILED", "invalid email or password")
+		if errors.Is(err, service.ErrInvalidCredentials) {
+			respondError(c, http.StatusUnauthorized, "AUTHENTICATION_FAILED", "invalid email or password")
+			return
+		}
+		respondError(c, http.StatusServiceUnavailable, "AUTH_SERVICE_UNAVAILABLE", "authentication is temporarily unavailable")
 		return
 	}
 
-	// 返回成功的 JSON 响应，包含登录成功后的数据
-	c.JSON(http.StatusOK, resp)
+	h.writeAuthResponse(c, http.StatusOK, resp)
 }
 
-// RefreshToken handles token refresh.
+// RefreshToken rotates the HttpOnly refresh credential and returns only the
+// short-lived access credential in JSON.
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
-	var req dto.RefreshRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		respondError(c, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+	if !h.requireTrustedOrigin(c) {
+		return
+	}
+	refreshToken, err := c.Cookie(h.security.RefreshCookieName)
+	if err != nil || refreshToken == "" {
+		respondError(c, http.StatusUnauthorized, "REFRESH_FAILED", "refresh session is missing or expired")
+		return
+	}
+	if !h.allowAuthAttempt(c, "refresh", refreshToken, h.security.RefreshPolicy) {
 		return
 	}
 
-	resp, err := h.authService.RefreshToken(c.Request.Context(), req)
+	resp, err := h.authService.RefreshToken(c.Request.Context(), dto.RefreshRequest{RefreshToken: refreshToken})
 	if err != nil {
-		respondError(c, http.StatusUnauthorized, "REFRESH_FAILED", "invalid or expired refresh token")
+		if errors.Is(err, service.ErrInvalidRefresh) || errors.Is(err, service.ErrRefreshReuse) {
+			h.clearRefreshCookie(c)
+			respondError(c, http.StatusUnauthorized, "REFRESH_FAILED", "invalid or expired refresh session")
+			return
+		}
+		respondError(c, http.StatusServiceUnavailable, "AUTH_SERVICE_UNAVAILABLE", "authentication is temporarily unavailable")
 		return
 	}
 
-	c.JSON(http.StatusOK, resp)
+	h.writeAuthResponse(c, http.StatusOK, resp)
 }
 
-// Logout handles user logout (invalidates refresh token + session cache).
+// Logout revokes the current refresh/session family and clears the browser
+// credential even when the server-side revocation path is temporarily degraded.
 func (h *AuthHandler) Logout(c *gin.Context) {
-	var req dto.RefreshRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		respondError(c, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+	if !h.requireTrustedOrigin(c) {
+		return
+	}
+	refreshToken, _ := c.Cookie(h.security.RefreshCookieName)
+	defer h.clearRefreshCookie(c)
+	if refreshToken == "" {
+		c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 		return
 	}
 
-	if err := h.authService.Logout(c.Request.Context(), req.RefreshToken); err != nil {
-		respondError(c, http.StatusInternalServerError, "LOGOUT_FAILED", "failed to logout")
+	if err := h.authService.Logout(c.Request.Context(), refreshToken); err != nil {
+		respondError(c, http.StatusServiceUnavailable, "LOGOUT_FAILED", "logout revocation is temporarily unavailable")
 		return
 	}
 
@@ -116,9 +184,83 @@ func (h *AuthHandler) Me(c *gin.Context) {
 
 	email, _ := c.Get("email")
 	emailStr, _ := email.(string)
+	c.JSON(http.StatusOK, dto.UserResponse{ID: uid, Email: emailStr})
+}
 
-	c.JSON(http.StatusOK, dto.UserResponse{
-		ID:    uid,
-		Email: emailStr,
+func (h *AuthHandler) writeAuthResponse(c *gin.Context, status int, resp *dto.AuthResponse) {
+	h.setRefreshCookie(c, resp.RefreshToken)
+	c.Header("Cache-Control", "no-store")
+	c.Header("Pragma", "no-cache")
+	c.JSON(status, resp)
+}
+
+func (h *AuthHandler) setRefreshCookie(c *gin.Context, token string) {
+	maxAge := int(h.security.RefreshTTL.Seconds())
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     h.security.RefreshCookieName,
+		Value:    token,
+		Path:     "/api/v1/auth",
+		MaxAge:   maxAge,
+		Expires:  time.Now().Add(h.security.RefreshTTL),
+		HttpOnly: true,
+		Secure:   h.security.CookieSecure,
+		SameSite: http.SameSiteStrictMode,
 	})
+}
+
+func (h *AuthHandler) clearRefreshCookie(c *gin.Context) {
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     h.security.RefreshCookieName,
+		Value:    "",
+		Path:     "/api/v1/auth",
+		MaxAge:   -1,
+		Expires:  time.Unix(1, 0),
+		HttpOnly: true,
+		Secure:   h.security.CookieSecure,
+		SameSite: http.SameSiteStrictMode,
+	})
+}
+
+func (h *AuthHandler) requireTrustedOrigin(c *gin.Context) bool {
+	if !h.security.RequireOrigin {
+		return true
+	}
+	origin := strings.TrimSpace(c.GetHeader("Origin"))
+	if origin == "" {
+		respondError(c, http.StatusForbidden, "ORIGIN_REQUIRED", "trusted browser origin required")
+		return false
+	}
+	for _, allowed := range h.security.TrustedOrigins {
+		if origin == strings.TrimSpace(allowed) {
+			return true
+		}
+	}
+	respondError(c, http.StatusForbidden, "ORIGIN_FORBIDDEN", "request origin is not allowed")
+	return false
+}
+
+func (h *AuthHandler) allowAuthAttempt(c *gin.Context, action, dimension string, policy auth.RateLimitPolicy) bool {
+	if h.security.RateLimiter == nil {
+		return true
+	}
+	key := fmt.Sprintf("%s|ip=%s|dimension=%s", action, c.ClientIP(), dimension)
+	decision, err := h.security.RateLimiter.Allow(c.Request.Context(), key, policy)
+	if err != nil {
+		respondError(c, http.StatusServiceUnavailable, "AUTH_SERVICE_UNAVAILABLE", "authentication is temporarily unavailable")
+		return false
+	}
+	if decision.Allowed {
+		return true
+	}
+	retrySeconds := int(math.Ceil(decision.RetryAfter.Seconds()))
+	if retrySeconds < 1 {
+		retrySeconds = 1
+	}
+	c.Header("Retry-After", strconv.Itoa(retrySeconds))
+	respondError(c, http.StatusTooManyRequests, "RATE_LIMITED", "too many authentication attempts")
+	return false
+}
+
+func normalizeAccount(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
 }

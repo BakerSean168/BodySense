@@ -47,8 +47,14 @@ func main() {
 		log.Fatalf("Redis connection failed: %v", err)
 	}
 
-	// JWT config
+	// JWT + browser auth security configuration.
 	jwtConfig := auth.JWTConfigFromEnv()
+	corsOrigins := parseCORSOrigins()
+	authSecurity := handler.DefaultAuthSecurityConfig(jwtConfig.RefreshTokenTTL)
+	authSecurity.CookieSecure = strings.EqualFold(os.Getenv("APP_ENV"), "production")
+	authSecurity.RequireOrigin = authSecurity.CookieSecure
+	authSecurity.TrustedOrigins = corsOrigins
+	authSecurity.RateLimiter = auth.NewRedisRateLimiter(database.RedisClient, "bodysense:auth:rate")
 
 	// Initialize dependencies
 	userRepo := repository.NewUserRepository(database.DB)
@@ -117,7 +123,7 @@ func main() {
 		database.NewTransactionManager(database.DB),
 	).WithAssessmentDeployment(agentDeploymentPolicy).
 		WithAssessmentRollout(assessmentRolloutService)
-	authHandler := handler.NewAuthHandler(authService)
+	authHandler := handler.NewAuthHandler(authService, authSecurity)
 	profileHandler := handler.NewProfileHandler(profileService)
 	agentToolRepo := repository.NewAgentToolCallRepository(database.DB)
 	agentToolService := service.NewAgentToolService(agentToolRepo)
@@ -227,11 +233,19 @@ func main() {
 	}
 
 	r := gin.Default()
+	if err := r.SetTrustedProxies(parseTrustedProxies()); err != nil {
+		log.Fatalf("invalid TRUSTED_PROXIES configuration: %v", err)
+	}
 
-	// CORS middleware
-	corsOrigins := parseCORSOrigins()
+	// CORS middleware. Production is same-origin, but explicit credentialed
+	// CORS remains available for bounded development/test topologies.
 	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", resolveCORSOrigin(c.Request.Header.Get("Origin"), corsOrigins))
+		origin := resolveCORSOrigin(c.Request.Header.Get("Origin"), corsOrigins)
+		if origin != "" {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+			c.Writer.Header().Add("Vary", "Origin")
+		}
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
@@ -459,11 +473,28 @@ func parseCORSOrigins() []string {
 func resolveCORSOrigin(requestOrigin string, allowed []string) string {
 	for _, origin := range allowed {
 		if origin == "*" {
-			return "*"
+			// Credentialed CORS cannot use a wildcard response. Reflect the
+			// requesting origin only in explicitly wildcard development mode.
+			return requestOrigin
 		}
 		if requestOrigin != "" && origin == requestOrigin {
 			return requestOrigin
 		}
 	}
-	return allowed[0]
+	return ""
+}
+
+func parseTrustedProxies() []string {
+	raw := strings.TrimSpace(os.Getenv("TRUSTED_PROXIES"))
+	if raw == "" {
+		return []string{"127.0.0.1", "::1"}
+	}
+	parts := strings.Split(raw, ",")
+	proxies := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if proxy := strings.TrimSpace(part); proxy != "" {
+			proxies = append(proxies, proxy)
+		}
+	}
+	return proxies
 }

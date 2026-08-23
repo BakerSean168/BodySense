@@ -21,6 +21,14 @@ import (
 	"gorm.io/gorm"
 )
 
+var (
+	ErrInvalidCredentials = errors.New("invalid email or password")
+	ErrRegistrationFailed = errors.New("registration failed")
+	ErrInvalidRefresh     = errors.New("invalid or expired refresh token")
+	ErrRefreshReuse       = errors.New("refresh token reuse detected")
+	ErrAuthUnavailable    = errors.New("authentication service unavailable")
+)
+
 // AuthService handles authentication business logic.
 type AuthService struct {
 	userRepo     *repository.UserRepository
@@ -52,7 +60,7 @@ func (s *AuthService) Register(ctx context.Context, req dto.RegisterRequest) (*d
 		return nil, fmt.Errorf("failed to check email existence: %w", err)
 	}
 	if exists {
-		return nil, errors.New("registration failed")
+		return nil, ErrRegistrationFailed
 	}
 
 	// Hash password with bcrypt (cost >= 12)
@@ -82,14 +90,14 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest) (*dto.Aut
 	user, err := s.userRepo.FindByEmail(ctx, req.Email)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("invalid email or password")
+			return nil, ErrInvalidCredentials
 		}
 		return nil, fmt.Errorf("failed to find user: %w", err)
 	}
 
 	// Verify password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
-		return nil, errors.New("invalid email or password")
+		return nil, ErrInvalidCredentials
 	}
 
 	// Update last login time
@@ -107,13 +115,13 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest) (*dto.Aut
 // same session alive, re-arms its TTL, and issues a new access token for it.
 func (s *AuthService) RefreshToken(ctx context.Context, req dto.RefreshRequest) (*dto.AuthResponse, error) {
 	if s.redisClient == nil {
-		return nil, errors.New("refresh service unavailable")
+		return nil, ErrAuthUnavailable
 	}
 	key := refreshTokenKey(req.RefreshToken)
 	stored, err := s.redisClient.Get(ctx, key).Result()
 	if err != nil {
 		if !errors.Is(err, redis.Nil) {
-			return nil, fmt.Errorf("refresh service unavailable: %w", err)
+			return nil, fmt.Errorf("%w: %v", ErrAuthUnavailable, err)
 		}
 		replayValue, replayErr := s.redisClient.Get(ctx, refreshReplayKey(req.RefreshToken)).Result()
 		if replayErr == nil {
@@ -122,18 +130,18 @@ func (s *AuthService) RefreshToken(ctx context.Context, req dto.RefreshRequest) 
 					return nil, fmt.Errorf("revoke replayed refresh family: %w", revokeErr)
 				}
 			}
-			return nil, errors.New("refresh token reuse detected")
+			return nil, ErrRefreshReuse
 		}
 		if !errors.Is(replayErr, redis.Nil) {
-			return nil, fmt.Errorf("refresh service unavailable: %w", replayErr)
+			return nil, fmt.Errorf("%w: %v", ErrAuthUnavailable, replayErr)
 		}
-		return nil, errors.New("invalid or expired refresh token")
+		return nil, ErrInvalidRefresh
 	}
 
 	// Parse "userID:sessionID"
 	userID, sessionID, err := parseRefreshValue(stored)
 	if err != nil {
-		return nil, errors.New("invalid refresh token")
+		return nil, ErrInvalidRefresh
 	}
 
 	// Find user — if user no longer exists, clean up and reject
@@ -164,10 +172,10 @@ func (s *AuthService) RefreshToken(ctx context.Context, req dto.RefreshRequest) 
 	}
 	if result == 2 {
 		_ = s.revokeSessionFamily(ctx, userID, sessionID)
-		return nil, errors.New("refresh token reuse detected")
+		return nil, ErrRefreshReuse
 	}
 	if result != 1 {
-		return nil, errors.New("invalid or expired refresh token")
+		return nil, ErrInvalidRefresh
 	}
 	if err := s.sessionCache.Set(ctx, user.ID, sessionID); err != nil {
 		return nil, fmt.Errorf("failed to re-arm session: %w", err)
@@ -179,7 +187,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, req dto.RefreshRequest) 
 // Looks up the user ID and session ID from the refresh token in Redis first.
 func (s *AuthService) Logout(ctx context.Context, refreshToken string) error {
 	if s.redisClient == nil {
-		return errors.New("refresh service unavailable")
+		return ErrAuthUnavailable
 	}
 	refreshKey := refreshTokenKey(refreshToken)
 
@@ -235,7 +243,7 @@ func (s *AuthService) generateTokens(ctx context.Context, user *model.User, sess
 	}
 
 	if s.redisClient == nil {
-		return nil, errors.New("refresh service unavailable")
+		return nil, ErrAuthUnavailable
 	}
 
 	// Store only a digest-derived Redis key for the opaque refresh credential.
@@ -327,7 +335,7 @@ func (s *AuthService) rotateRefreshToken(ctx context.Context, oldToken, expected
 
 func (s *AuthService) revokeSessionFamily(ctx context.Context, userID, sessionID uuid.UUID) error {
 	if s.redisClient == nil {
-		return errors.New("refresh service unavailable")
+		return ErrAuthUnavailable
 	}
 	if _, err := revokeRefreshFamilyScript.Run(ctx, s.redisClient, []string{refreshFamilyKey(sessionID)}).Int64(); err != nil {
 		return fmt.Errorf("revoke refresh family: %w", err)
