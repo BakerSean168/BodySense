@@ -43,17 +43,15 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
-      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
-      - name: Mirror pinned multi-architecture manifest
+      - name: Pull pinned linux/amd64 source
+        run: docker pull --platform linux/amd64 "${{ matrix.source }}"
+      - name: Push pinned mirror
         shell: bash
         run: |
           set -euo pipefail
-          source="${{ matrix.source }}"
           target="${REGISTRY}/${NAMESPACE}/${{ matrix.target }}"
-          docker buildx imagetools create --tag "$target" "$source"
-          manifest="$(docker buildx imagetools inspect "$target")"
-          grep -q 'Platform:[[:space:]]*linux/amd64' <<<"$manifest"
-          grep -Eq 'Platform:[[:space:]]*linux/arm64(/v8)?' <<<"$manifest"
+          docker tag "${{ matrix.source }}" "$target"
+          docker push "$target"
       - name: Summary
         shell: bash
         run: |
