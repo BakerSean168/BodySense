@@ -26,3 +26,11 @@ def test_build_rag_context_prefers_body_markdown_and_includes_clip_metadata():
     assert "## 定义\n肘外翻是..." in result
     assert "摘要：肘外翻是肘关节外偏过大。" in result
     assert "动作演示：肘外翻基础观察演示（00:00-00:18）" in result
+
+
+def test_consultation_prompt_requires_explicit_published_answer_attribution():
+    from src.prompts.consultation import SYSTEM_PROMPT
+
+    assert "record_answer_attribution" in SYSTEM_PROMPT
+    assert "Published Evidence Ref" in SYSTEM_PROMPT
+    assert "不要猜测" in SYSTEM_PROMPT

@@ -527,9 +527,69 @@ clean window + >= 5 observations + positive hit exists
 ```
 
 Gate 只给 operator recommendation，不自动执行 rollback。真正状态变更仍由 Go
-`KnowledgePublicationService.RollbackBatch` 显式完成。当前 Stage 6 vertical slice 使用
-`predeploy_eval` observation；表和 service 已保留 `observation_kind`，自动生产 runtime observation
-仍需要未来把最终回答 claim ↔ evidence attribution 契约接入，不能仅凭“出现 citation”假装完成 grounding。
+`KnowledgePublicationService.RollbackBatch` 显式完成。Stage 6 使用 `predeploy_eval` observation；
+Stage 7 已在 Consultation 完成第一条 `runtime_answer` vertical slice，不再把“出现 citation”当成
+最终回答 grounded 的替代信号。
+
+### 11.6 Production Runtime answer attribution
+
+Stage 7 在保持 `message.text.delta` 自然语言流式输出的前提下，引入显式回答归因：
+
+```txt
+search_knowledge
+→ Published Evidence Ref
+→ record_answer_attribution(claim_text, evidence_refs)
+→ current-turn evidence identity validation
+→ conservative deterministic grounding
+→ source.answer_attribution.added
+→ final persisted AssistantParts
+→ runtime_answer publication observation
+```
+
+`Published Evidence Ref` 是本轮模型可用的 opaque runtime reference：
+
+```txt
+published:<publication_id>:v<published_version>:<unit_key>
+```
+
+只有同时满足 published Thought Forest identity、claim review identity 与 Markdown locator 的结果
+才能生成该 ref；每一轮 Consultation 开始时 ref 集合清空，所以模型不能复用历史轮次的 ref。
+
+`record_answer_attribution` 是 query-only runtime tool。它不修改业务状态，也不替代 citation UI；
+它只声明“最终回答中的这条事实性健康结论使用了哪些本轮 Published Evidence Ref”。Runtime 对
+未知、伪造或陈旧 ref fail closed，并把校验失败作为 tool error 返回给模型修正。
+
+当前 grounding evaluator 是**保守的确定性词汇支持检查**，不是 semantic medical judge：
+
+```txt
+strong lexical support → supported
+partial lexical support → degraded
+no meaningful support → rejected
+```
+
+因此 `supported` 只代表通过当前 deterministic policy，不代表医学事实已由通用语义 judge 再验证。
+未来若引入 semantic judge，应作为异步/评估层增强，不能绕过 publication/provenance hard gates。
+
+Go 在 `message.completed` 后扫描最终已持久化 message parts，再写 `runtime_answer` observation：
+
+```txt
+attribution + matching persisted citation
+→ citation=valid + binding grounding result
+
+published citation + no attribution
+→ grounding=degraded
+→ reason=missing_answer_attribution
+→ gate=hold
+
+attribution + final citation missing
+→ citation=invalid
+→ reason=attribution_without_persisted_citation
+→ gate=rollback
+```
+
+多 evidence claim 按每个 publication binding 单独记录 grounding status，避免一条支持证据给另一条
+publication “借分”。Observation 继续复用 migration 51 的 immutable publication id/version gate，
+Stage 7 不新增 migration，也不自动执行 rollback。
 
 ---
 

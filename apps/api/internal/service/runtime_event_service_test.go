@@ -72,6 +72,9 @@ func TestShouldPersistEvent(t *testing.T) {
 	if !ShouldPersistEvent("source.citation.added") {
 		t.Fatal("expected source.citation.added to be persisted")
 	}
+	if !ShouldPersistEvent("source.answer_attribution.added") {
+		t.Fatal("expected source.answer_attribution.added to be persisted")
+	}
 	if !ShouldPersistEvent("source.knowledge_gap") {
 		t.Fatal("expected source.knowledge_gap to be persisted")
 	}

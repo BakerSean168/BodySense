@@ -211,21 +211,22 @@ func (c *AIClient) streamNDJSON(
 }
 
 var consultationInternalEventChannels = map[string]string{
-	"runtime.agent_configuration": "runtime",
-	"message.text.delta":          "message",
-	"tool.call":                   "tool",
-	"tool.result":                 "tool",
-	"state.extracted_info.upsert": "state",
-	"state.interaction.required":  "state",
-	"state.phase.changed":         "state",
-	"source.citation.added":       "source",
-	"source.knowledge_gap":        "source",
-	"safety.red_flag.detected":    "safety",
-	"safety.output_reviewed":      "safety",
-	"safety.output_rejected":      "safety",
-	"usage.reported":              "usage",
-	"stream.done":                 "stream",
-	"stream.error":                "stream",
+	"runtime.agent_configuration":     "runtime",
+	"message.text.delta":              "message",
+	"tool.call":                       "tool",
+	"tool.result":                     "tool",
+	"state.extracted_info.upsert":     "state",
+	"state.interaction.required":      "state",
+	"state.phase.changed":             "state",
+	"source.citation.added":           "source",
+	"source.answer_attribution.added": "source",
+	"source.knowledge_gap":            "source",
+	"safety.red_flag.detected":        "safety",
+	"safety.output_reviewed":          "safety",
+	"safety.output_rejected":          "safety",
+	"usage.reported":                  "usage",
+	"stream.done":                     "stream",
+	"stream.error":                    "stream",
 }
 
 func sendConsultationProtocolError(ctx context.Context, events chan<- dto.StreamEvent, message string) {
@@ -364,6 +365,10 @@ func validateConsultationInternalEvent(event dto.StreamEvent) error {
 			return fmt.Errorf("citation payload is malformed")
 		}
 		if err := validateCitationPayload(payload.Citation); err != nil {
+			return err
+		}
+	case "source.answer_attribution.added":
+		if _, err := ParseConsultationAnswerAttributionPayload(event.Payload); err != nil {
 			return err
 		}
 	case "source.knowledge_gap":

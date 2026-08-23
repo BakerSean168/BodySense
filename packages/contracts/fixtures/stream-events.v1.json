@@ -699,5 +699,55 @@
       "status": "cancelled",
       "reason": "cancelled_by_user"
     }
+  },
+  {
+    "version": 1,
+    "seq": 37,
+    "channel": "source",
+    "type": "source.answer_attribution.added",
+    "ids": {
+      "conversation_id": "conv-1",
+      "run_id": "run-1",
+      "turn_id": "turn-1",
+      "message_id": "msg-1",
+      "tool_call_id": "tool-attribution-1",
+      "interaction_id": null,
+      "job_id": null
+    },
+    "payload": {
+      "attribution": {
+        "attribution_id": "tool-attribution-1:0",
+        "policy_revision": "consultation-answer-attribution-v1",
+        "claim_text": "疼痛与伤害感受不是同一现象",
+        "evidence_refs": [
+          "published:11111111-1111-1111-1111-111111111111:v3:tfu-example"
+        ],
+        "grounding_status": "supported",
+        "reason_codes": [
+          "lexical_support_sufficient"
+        ],
+        "bindings": [
+          {
+            "evidence_ref": "published:11111111-1111-1111-1111-111111111111:v3:tfu-example",
+            "publication_id": "11111111-1111-1111-1111-111111111111",
+            "publication_key": "pain-definition-v3",
+            "publication_batch_key": "thought-forest-reviewed-health-pilot",
+            "published_version": 3,
+            "unit_key": "tfu-example",
+            "claim_id": "tfc-example",
+            "claim_review_id": "claim-review-example",
+            "claim_kind": "definition",
+            "source_locator": {
+              "locator_type": "markdown_lines",
+              "repository": "thought-forest",
+              "git_commit": "abc123",
+              "path": "z/pain-and-nociception.md",
+              "line_start": 20,
+              "line_end": 23
+            }
+          }
+        ]
+      }
+    }
   }
 ]
