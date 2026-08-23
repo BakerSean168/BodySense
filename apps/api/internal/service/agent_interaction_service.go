@@ -18,6 +18,7 @@ var (
 	ErrInteractionConflict = errors.New("interaction answer conflicts with existing answer")
 	ErrInteractionClosed   = errors.New("interaction is not pending")
 	ErrInteractionExpired  = errors.New("interaction has expired")
+	ErrConversationNotFound = errors.New("conversation not found or access denied")
 )
 
 // DefaultInteractionTTL is how long a pending ask_user waits before auto-expiry.
@@ -25,8 +26,9 @@ const DefaultInteractionTTL = 24 * time.Hour
 
 // AgentInteractionService handles user interaction persistence and resume.
 type AgentInteractionService struct {
-	repo    agentInteractionRepo
-	runRepo runStatusRepo
+	repo            agentInteractionRepo
+	runRepo         runStatusRepo
+	conversationRepo conversationOwnershipChecker
 }
 
 type agentInteractionRepo interface {
@@ -38,6 +40,7 @@ type agentInteractionRepo interface {
 	ExpirePending(ctx context.Context, id uuid.UUID) (bool, error)
 	ListPendingByConversation(ctx context.Context, conversationID uuid.UUID) ([]model.AgentInteraction, error)
 	ListExpiredPending(ctx context.Context, now time.Time, limit int) ([]model.AgentInteraction, error)
+	AggregateInteractionMetrics(ctx context.Context, userID uuid.UUID, conversationID *uuid.UUID) (answered, expired, pending int, avgWaitSeconds float64, err error)
 }
 
 type runStatusRepo interface {
@@ -45,13 +48,17 @@ type runStatusRepo interface {
 }
 
 // NewAgentInteractionService creates a new AgentInteractionService.
+// conversationOwnershipChecker proves that a conversation belongs to a user before
+// interaction data (including metrics) is exposed.
 func NewAgentInteractionService(
 	repo agentInteractionRepo,
 	runRepo runStatusRepo,
+	conversationRepo conversationOwnershipChecker,
 ) *AgentInteractionService {
 	return &AgentInteractionService{
-		repo:    repo,
-		runRepo: runRepo,
+		repo:            repo,
+		runRepo:         runRepo,
+		conversationRepo: conversationRepo,
 	}
 }
 
@@ -274,25 +281,24 @@ type InteractionMetrics struct {
 	AvgWaitSeconds float64 `json:"avg_wait_seconds"`
 }
 
-// InteractionMetricsSource is satisfied by repositories that can aggregate metrics.
-type interactionMetricsRepo interface {
-	AggregateInteractionMetrics(ctx context.Context, conversationID *uuid.UUID) (answered, expired, pending int, avgWaitSeconds float64, err error)
-}
-
 // GetInteractionMetrics returns answer/expire rates and average wait time.
-// conversationID nil => global; otherwise scoped to one conversation.
+// conversationID nil => all of the user's conversations; otherwise scoped to one
+// conversation. Ownership of the conversation is proven before any data is read.
 func (s *AgentInteractionService) GetInteractionMetrics(
 	ctx context.Context,
+	userID uuid.UUID,
 	conversationID *uuid.UUID,
 ) (InteractionMetrics, error) {
-	type metricsCapable interface {
-		AggregateInteractionMetrics(ctx context.Context, conversationID *uuid.UUID) (int, int, int, float64, error)
+	if conversationID != nil && *conversationID != uuid.Nil {
+		conversation, err := s.conversationRepo.GetByID(ctx, *conversationID, userID)
+		if err != nil {
+			return InteractionMetrics{}, fmt.Errorf("verify interaction metrics ownership: %w", err)
+		}
+		if conversation == nil {
+			return InteractionMetrics{}, ErrConversationNotFound
+		}
 	}
-	repo, ok := s.repo.(metricsCapable)
-	if !ok {
-		return InteractionMetrics{}, fmt.Errorf("interaction metrics not supported by repository")
-	}
-	answered, expired, pending, avgWait, err := repo.AggregateInteractionMetrics(ctx, conversationID)
+	answered, expired, pending, avgWait, err := s.repo.AggregateInteractionMetrics(ctx, userID, conversationID)
 	if err != nil {
 		return InteractionMetrics{}, err
 	}
