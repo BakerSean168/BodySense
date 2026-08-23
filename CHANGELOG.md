@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.1](https://github.com/BakerSean168/BodySense/compare/v0.5.0...v0.5.1) (2026-08-23)
+
+
+### Bug Fixes
+
+* **docker:** support shared edge production hosts ([d6fbff4](https://github.com/BakerSean168/BodySense/commit/d6fbff4b61f8f52ef9ac3d42910f8ac13f9b909f))
+* **docker:** support shared edge production hosts ([1a84679](https://github.com/BakerSean168/BodySense/commit/1a84679e659d36f38cb7a777a1a58d8450a3c391))
+
 ## [0.5.0](https://github.com/BakerSean168/BodySense/compare/v0.4.3...v0.5.0) (2026-08-22)
 
 
