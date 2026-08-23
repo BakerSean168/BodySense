@@ -1,7 +1,7 @@
 # Privacy Erasure & Retention Boundary
 
-Status: **production contract**  
-Owner: Go durable domain/runtime boundary  
+Status: **production contract**
+Owner: Go durable domain/runtime boundary
 Primary implementation: `PrivacyErasureService` + migration `000054`
 
 ## 1. Two deletion semantics

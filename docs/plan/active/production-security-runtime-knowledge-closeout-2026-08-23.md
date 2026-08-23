@@ -604,6 +604,8 @@ pnpm --filter web test
 
 ## BS-PROD-003 — Replace token-cache semantics with real session-family authority
 
+**Implementation status (2026-08-23): VALIDATED.** Atomic single-winner refresh rotation, replay-family revocation, logout-family revocation, short-lived access TTL, session-authority fail-closed behavior, legacy-token DB fail-closed behavior, and concurrent/race tests are implemented. Focused `-race` and Go full-suite gates pass.
+
 **Goal:** Logout/revocation invalidates the active session; refresh rotation is atomic and replay-safe; access credentials are short-lived.
 
 **Why now:** current `UserSessionCache` verifies user existence rather than session validity, so deleting it on logout does not revoke a valid 7-day access JWT.
@@ -649,6 +651,8 @@ go test -race ./apps/api/internal/service ./apps/api/internal/middleware -count=
 ---
 
 ## BS-PROD-004 — Move browser auth to secure cookie + in-memory access and add abuse/browser hardening
+
+**Implementation status (2026-08-23): IMPLEMENTED / LOCAL GATES GREEN.** Refresh is `Secure`/`HttpOnly`/`SameSite=Strict` in production, access credentials are memory-only, auth responses are `no-store`, Origin checks and Redis abuse limits are active, trusted proxies/Gin release mode/CSP are configured, and Web unit/type/lint/build plus Go gates pass. Production-shaped browser E2E remains part of BS-PROD-033/034 before release.
 
 **Goal:** long-lived bearer credentials are not persisted in JavaScript-readable localStorage, and public auth endpoints have bounded abuse controls.
 
@@ -696,6 +700,8 @@ pnpm e2e
 ---
 
 ## BS-PROD-005 — Define privacy erasure and retention semantics
+
+**Implementation status (2026-08-23): VALIDATED FOR CURRENT LOCAL OBJECT BACKEND.** A dry-run + explicit-confirmation durable erasure workflow, authentication tombstone, retry leases, transaction/cascade boundary, retention matrix, UI distinction, and synthetic PostgreSQL erasure test are implemented. `scripts/validate-privacy-erasure.sh` replays migrations including `000054 down/up` and proves synthetic user/session/share/BodyState/Diagnosis/Treatment/Outcome/upload erasure. BS-PROD-013 will replace the local object cleaner behind the same deletion port.
 
 **Goal:** Product, API and persistence distinguish chat-history deletion from longitudinal health-data erasure.
 
