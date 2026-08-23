@@ -740,6 +740,8 @@ pnpm e2e
 
 ## BS-PROD-010 — Add durable Consultation execution leases and stale-run reconciliation
 
+**Implementation status (2026-08-23): VALIDATED.** Migrations `000052/000053`, owner-bound lease heartbeat, startup/periodic stale-run reconciliation, `execution_lost` durable terminal events, active-run clearing, and `waiting_user` separation are implemented. `scripts/validate-run-leases.sh` replays the full schema on PostgreSQL and proves double-reconciler single ownership, completion-vs-reconciler single terminal winner, and no reclamation of `waiting_user`; focused and `-race` Consultation/Service/Repository suites pass.
+
 **Goal:** process death can never leave a conversation permanently blocked by a Run that no process owns.
 
 **Why now:** detached HTTP context protects against transport loss, not API/AI process loss.
