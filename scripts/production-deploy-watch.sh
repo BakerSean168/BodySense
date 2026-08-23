@@ -46,18 +46,6 @@ read_public_env() {
   printf '%s' "${value:-$default}"
 }
 
-# Runtime/deployment coordinates may be overridden per host without putting
-# host topology in Git. The secret env is already the server-local override
-# layer used by Compose, so prefer it when a key is present there.
-read_deploy_env() {
-  local key="$1" default="${2:-}" value
-  value=$(sed -n "s/^${key}=//p" "$SECRET_ENV" | tail -1)
-  if [ -z "$value" ]; then
-    value=$(read_public_env "$key" "$default")
-  fi
-  printf '%s' "${value:-$default}"
-}
-
 REGISTRY=$(read_public_env REGISTRY)
 NAMESPACE=$(read_public_env ACR_NAMESPACE bodysense)
 WEB_TAG=$(read_public_env WEB_TAG prod-latest)
@@ -66,18 +54,10 @@ AI_TAG=$(read_public_env AI_TAG prod-latest)
 RUNTIME_TAG=$(read_public_env RUNTIME_TAG prod-latest)
 APP_DOMAIN=$(read_public_env APP_DOMAIN body.bakersean.top)
 AUTO_DEPLOY=$(read_public_env AUTO_DEPLOY_ENABLED true)
-EDGE_MODE=$(read_deploy_env BODYSENSE_EDGE_MODE dedicated)
-WEB_HOST_BIND=$(read_deploy_env WEB_HOST_BIND 127.0.0.1)
-WEB_HOST_PORT=$(read_deploy_env WEB_HOST_PORT 18080)
 DB_USER=$(read_public_env DB_USER bodysense)
 DB_NAME=$(read_public_env DB_NAME bodysense)
 
 [ -n "$REGISTRY" ] || fail 'REGISTRY is empty'
-case "$EDGE_MODE" in
-  dedicated|external) ;;
-  *) fail "unsupported BODYSENSE_EDGE_MODE=$EDGE_MODE (expected dedicated or external)" ;;
-esac
-[[ "$WEB_HOST_PORT" =~ ^[0-9]+$ ]] || fail "invalid WEB_HOST_PORT=$WEB_HOST_PORT"
 
 web_ref="$REGISTRY/$NAMESPACE/bodysense-web:$WEB_TAG"
 api_ref="$REGISTRY/$NAMESPACE/bodysense-api:$API_TAG"
@@ -200,8 +180,9 @@ rollback_deployment() {
   LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" wait_healthy api 150 || return 1
   LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" compose up -d --no-deps web
   LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" wait_healthy web 90 || return 1
-  configure_edge || return 1
-  deployment_health_check || return 1
+  LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" compose up -d --no-deps caddy
+  LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1 || true
+  curl -fsS --max-time 15 "https://${APP_DOMAIN}/api/health" >/dev/null || return 1
   log "automatic rollback restored managed revision ${managed_revision:-unknown}"
   return 0
 }
@@ -243,28 +224,6 @@ wait_healthy() {
     fi
     sleep 2
   done
-}
-
-configure_edge() {
-  if [ "$EDGE_MODE" = external ]; then
-    # A shared host already owns :80/:443. Ensure the bundled Caddy cannot
-    # contend for those ports; the host edge proxies to WEB_HOST_BIND:PORT.
-    compose stop caddy >/dev/null 2>&1 || true
-    compose rm -f caddy >/dev/null 2>&1 || true
-    log "external edge mode active; bundled Caddy disabled, upstream=${WEB_HOST_BIND}:${WEB_HOST_PORT}"
-    return 0
-  fi
-
-  compose up -d --no-deps caddy
-  compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1 || true
-}
-
-deployment_health_check() {
-  if [ "$EDGE_MODE" = external ]; then
-    curl -fsS --max-time 15 "http://${WEB_HOST_BIND}:${WEB_HOST_PORT}/api/health" >/dev/null
-    return
-  fi
-  curl -fsS --max-time 15 "https://${APP_DOMAIN}/api/health" >/dev/null
 }
 
 sync_runtime() {
@@ -409,9 +368,6 @@ checked_web_tag="$WEB_TAG"
 checked_api_tag="$API_TAG"
 checked_ai_tag="$AI_TAG"
 checked_runtime_tag="$RUNTIME_TAG"
-checked_edge_mode="$EDGE_MODE"
-checked_web_host_bind="$WEB_HOST_BIND"
-checked_web_host_port="$WEB_HOST_PORT"
 checked_db_user="$DB_USER"
 checked_db_name="$DB_NAME"
 sync_runtime "$desired_revision"
@@ -425,9 +381,6 @@ WEB_TAG=$(read_public_env WEB_TAG prod-latest)
 API_TAG=$(read_public_env API_TAG prod-latest)
 AI_TAG=$(read_public_env AI_TAG prod-latest)
 RUNTIME_TAG=$(read_public_env RUNTIME_TAG prod-latest)
-EDGE_MODE=$(read_deploy_env BODYSENSE_EDGE_MODE dedicated)
-WEB_HOST_BIND=$(read_deploy_env WEB_HOST_BIND 127.0.0.1)
-WEB_HOST_PORT=$(read_deploy_env WEB_HOST_PORT 18080)
 DB_USER=$(read_public_env DB_USER bodysense)
 DB_NAME=$(read_public_env DB_NAME bodysense)
 [ "$REGISTRY" = "$checked_registry" ] || fail 'runtime bundle changed REGISTRY during deployment'
@@ -436,9 +389,6 @@ DB_NAME=$(read_public_env DB_NAME bodysense)
 [ "$API_TAG" = "$checked_api_tag" ] || fail 'runtime bundle changed API_TAG during deployment'
 [ "$AI_TAG" = "$checked_ai_tag" ] || fail 'runtime bundle changed AI_TAG during deployment'
 [ "$RUNTIME_TAG" = "$checked_runtime_tag" ] || fail 'runtime bundle changed RUNTIME_TAG during deployment'
-[ "$EDGE_MODE" = "$checked_edge_mode" ] || fail 'runtime bundle changed BODYSENSE_EDGE_MODE during deployment'
-[ "$WEB_HOST_BIND" = "$checked_web_host_bind" ] || fail 'runtime bundle changed WEB_HOST_BIND during deployment'
-[ "$WEB_HOST_PORT" = "$checked_web_host_port" ] || fail 'runtime bundle changed WEB_HOST_PORT during deployment'
 [ "$DB_USER" = "$checked_db_user" ] || fail 'runtime bundle changed DB_USER during deployment'
 [ "$DB_NAME" = "$checked_db_name" ] || fail 'runtime bundle changed DB_NAME during deployment'
 APP_DOMAIN=$(read_public_env APP_DOMAIN body.bakersean.top)
@@ -459,10 +409,11 @@ compose up -d --no-deps web
 wait_healthy web 90 || fail 'web deployment failed'
 assert_container_revision web "$desired_revision" || fail 'web revision verification failed'
 
-# Dedicated hosts use the bundled Caddy. Shared hosts keep :80/:443 owned by
-# their host-level edge and expose only the loopback Web upstream.
-configure_edge || fail 'edge configuration failed'
-deployment_health_check || fail 'application health check failed'
+# Caddy is infrastructure, but reload its config if the runtime bundle changed.
+compose up -d --no-deps caddy
+compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1 || true
+
+curl -fsS --max-time 15 "https://${APP_DOMAIN}/api/health" >/dev/null || fail 'external API health check failed'
 
 cat > "$STATE_FILE" <<STATE
 revision=$desired_revision
