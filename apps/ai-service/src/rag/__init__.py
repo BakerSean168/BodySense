@@ -9,6 +9,12 @@ from .curated_source import (
     load_generated_pack,
 )
 from .embedding import EmbeddingGenerator, get_embedding_generator
+from .external_evidence import (
+    apply_external_evidence_review,
+    build_claim_admissibility,
+    load_external_evidence_review,
+    resolve_external_reference,
+)
 from .knowledge_library import KnowledgeLibrary, SearchResult, get_knowledge_library
 from .knowledge_pack import (
     GeneratedKnowledgePack,
@@ -51,6 +57,11 @@ __all__ = [
     # Embedding
     "EmbeddingGenerator",
     "get_embedding_generator",
+    # External evidence
+    "apply_external_evidence_review",
+    "build_claim_admissibility",
+    "load_external_evidence_review",
+    "resolve_external_reference",
     # Knowledge Library (unified RAG system)
     "KnowledgeLibrary",
     "SearchResult",

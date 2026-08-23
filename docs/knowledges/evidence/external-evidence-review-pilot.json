@@ -1,0 +1,28 @@
+{
+  "schema_version": "bodysense.external-evidence-review.v1",
+  "review_id": "iasp-pain-definition-pilot-2026-08-23",
+  "snapshot_git_commit": "4990c5844392ec7c36ff217e3e66ac3ceff1ac9a",
+  "reviewed_at": "2026-08-23T21:23:00+08:00",
+  "sources": [
+    {
+      "canonical_key": "url:7091fe4bcd8c558fd8b4ae51682725bf",
+      "canonical_url": "https://www.iasp-pain.org/resources/terminology/",
+      "authority_tier": "B",
+      "evidence_level": "professional_definition",
+      "license_status": "citation_only",
+      "review_status": "reviewed",
+      "reviewed_by": "maintainer-review-pilot",
+      "review_basis": "Official IASP Terminology page supports the pain definition and pain/nociception distinction. IASP requires permission for reuse/reprint, so this record authorizes citation linkage only, not content redistribution."
+    }
+  ],
+  "relations": [
+    {
+      "claim_id": "tfc-a0ffebe00c719febbe6b7a3cd3f7e70b",
+      "claim_content_hash": "4f4461f35c99a38530d620873970ce75fc0bdcd67705c56e0e5e6b12b247ea26",
+      "canonical_key": "url:7091fe4bcd8c558fd8b4ae51682725bf",
+      "support_status": "reviewed_support",
+      "support_scope": "direct",
+      "review_status": "reviewed"
+    }
+  ]
+}
