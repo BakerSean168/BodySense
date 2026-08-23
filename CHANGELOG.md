@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.2](https://github.com/BakerSean168/BodySense/compare/v0.5.1...v0.5.2) (2026-08-23)
+
+
+### Bug Fixes
+
+* **docker:** publish multiarch production images ([71eee75](https://github.com/BakerSean168/BodySense/commit/71eee758f37e9cb987c2dabdbbac892caf6250b4))
+* **docker:** publish multiarch production images ([07d7169](https://github.com/BakerSean168/BodySense/commit/07d7169b3c64d98e57f0812c066df9d85bd2b3f6))
+
 ## [0.5.1](https://github.com/BakerSean168/BodySense/compare/v0.5.0...v0.5.1) (2026-08-23)
 
 
