@@ -56,6 +56,11 @@ class SearchResult:
     source_end_sec: float
     tags: list[str] = field(default_factory=list)
     clips: list[ClipResult] = field(default_factory=list)
+    unit_key: str = ""
+    source_key: str = ""
+    source_type: str = "video"
+    unit_metadata: dict[str, Any] = field(default_factory=dict)
+    source_metadata: dict[str, Any] = field(default_factory=dict)
 
     @property
     def source_timestamp(self) -> str:
@@ -82,6 +87,19 @@ INTENT_KEYWORDS = {
     "muscle_imbalance": ["肌肉", "肌群", "紧张", "薄弱", "失衡"],
     "impact": ["影响", "表现", "风险", "麻木", "不适"],
     "habit": ["日常", "习惯", "工位", "办公", "学生党", "坐姿", "低头", "手机"],
+}
+
+
+CLAIM_KIND_INTENT_KEYWORDS = {
+    "definition": ["什么是", "定义", "是什么意思"],
+    "measurement_guidance": ["评估", "测量", "怎么测", "检查", "鉴别", "自测", "筛查"],
+    "interpretation_boundary": ["一定", "是不是", "能不能", "直接", "等于", "不等于", "误解"],
+    "association": ["相关", "关系", "关联", "会导致", "风险"],
+    "mechanism_hypothesis": ["原因", "为什么", "机制", "导致", "病因"],
+    "safety_guidance": ["风险", "红旗", "就医", "升级", "紧急", "安全", "不要自己练"],
+    "intervention_option": ["练什么", "训练", "拉伸", "放松", "改善", "怎么练", "治疗"],
+    "dosage_guidance": ["训练量", "强度", "频率", "剂量", "次数", "组数", "进阶", "progression"],
+    "outcome_reassessment": ["复测", "重新评估", "效果", "结果", "进展", "验证"],
 }
 
 
@@ -338,6 +356,7 @@ class KnowledgeLibrary:
         top_k: int = 5,
         problem_slug: str | None = None,
         unit_type: str | None = None,
+        source_type: str | None = None,
         include_unpublished: bool = False,
         min_quality_score: float = 0.0,
     ) -> list[SearchResult]:
@@ -348,6 +367,7 @@ class KnowledgeLibrary:
                 ku.id, ku.problem_slug, ku.category, ku.unit_type, ku.title,
                 ku.summary, ku.body_markdown, ku.source_start_sec, ku.source_end_sec,
                 ku.tags, ks.title AS source_title, ks.author AS source_author,
+                ku.unit_key, ku.metadata, ks.source_key, ks.source_type, ks.metadata,
                 1 - (ku.embedding <=> %s::vector) AS similarity
             FROM knowledge_units ku
             JOIN knowledge_sources ks ON ks.id = ku.source_id
@@ -363,6 +383,9 @@ class KnowledgeLibrary:
         if unit_type:
             query_sql += " AND ku.unit_type = %s"
             params.append(unit_type)
+        if source_type:
+            query_sql += " AND ks.source_type = %s"
+            params.append(source_type)
         candidate_limit = min(max(top_k * 6, top_k), 50)
         query_sql += " ORDER BY ku.embedding <=> %s::vector LIMIT %s"
         params.extend([embedding, candidate_limit])
@@ -418,7 +441,12 @@ class KnowledgeLibrary:
                 tags=row[9] or [],
                 source_title=row[10],
                 source_author=row[11],
-                similarity=float(row[12]),
+                unit_key=row[12] or "",
+                unit_metadata=row[13] or {},
+                source_key=row[14] or "",
+                source_type=row[15] or "video",
+                source_metadata=row[16] or {},
+                similarity=float(row[17]),
                 clips=clips_by_unit.get(row[0], []),
             )
             for row in rows
@@ -500,6 +528,16 @@ class KnowledgeLibrary:
             ]
         )
         boost = 0.0
+        claim_candidate = dict(result.unit_metadata.get("claim_candidate") or {})
+        claim_kind = str(claim_candidate.get("claim_kind") or "")
+        claim_keywords = CLAIM_KIND_INTENT_KEYWORDS.get(claim_kind, [])
+        matched_claim_keywords = [
+            keyword for keyword in claim_keywords if keyword in normalized_query
+        ]
+        if matched_claim_keywords and any(
+            keyword in haystack for keyword in matched_claim_keywords
+        ):
+            boost += 0.10
         for unit_type, keywords in INTENT_KEYWORDS.items():
             if (
                 any(keyword in normalized_query for keyword in keywords)

@@ -37,12 +37,38 @@ class KnowledgeEvidenceSearcher:
 
 
 def normalize_evidence(user_id: str, result: Any) -> dict[str, Any]:
-    source_type = "knowledge_unit"
-    source_key = f"knowledge-unit:{result.id}"
-    source_version = str(getattr(result, "source_timestamp", "") or "")
+    result_source_type = str(getattr(result, "source_type", "") or "")
+    if result_source_type == "thought_forest_note":
+        unit_metadata = dict(getattr(result, "unit_metadata", {}) or {})
+        source_metadata = dict(getattr(result, "source_metadata", {}) or {})
+        locator = dict(unit_metadata.get("source_locator") or {})
+        claim_candidate = dict(unit_metadata.get("claim_candidate") or {})
+        repository = dict(source_metadata.get("repository") or {})
+        git_commit = str(locator.get("git_commit") or repository.get("git_commit") or "")
+        section_hash = str(unit_metadata.get("section_content_hash") or "")
+        stable_source_key = str(getattr(result, "source_key", "") or "")
+        unit_key = str(getattr(result, "unit_key", "") or "")
+        if stable_source_key and unit_key:
+            source_key = f"{stable_source_key}#{unit_key}"
+        else:
+            source_key = stable_source_key or f"knowledge-unit:{result.id}"
+        if git_commit and section_hash:
+            source_version = f"{git_commit}:{section_hash}"
+        else:
+            source_version = git_commit or section_hash or str(
+                getattr(result, "source_timestamp", "") or ""
+            )
+        source_type = "thought_forest_note"
+    else:
+        source_type = "knowledge_unit"
+        source_key = f"knowledge-unit:{result.id}"
+        source_version = str(getattr(result, "source_timestamp", "") or "")
+        locator = {}
+        claim_candidate = {}
+
     identity = ":".join(["bodysense:evidence", user_id, source_type, source_key, source_version])
     evidence_id = str(uuid.uuid5(uuid.NAMESPACE_URL, identity))
-    return {
+    evidence = {
         "evidence_id": evidence_id,
         "source_type": source_type,
         "source_key": source_key,
@@ -59,6 +85,22 @@ def normalize_evidence(user_id: str, result: Any) -> dict[str, Any]:
         "source_timestamp": result.source_timestamp,
         "tags": result.tags,
     }
+    if locator:
+        evidence["source_locator"] = locator
+    if claim_candidate:
+        evidence["claim_candidate"] = claim_candidate
+        for key in (
+            "claim_id",
+            "claim_kind",
+            "authority_tier",
+            "certainty",
+            "evidence_level",
+            "external_evidence_status",
+            "population",
+        ):
+            if key in claim_candidate:
+                evidence[key] = claim_candidate[key]
+    return evidence
 
 
 DIAGNOSIS_EVIDENCE_POLICY_V2 = "diagnosis-evidence-gap-v2"
