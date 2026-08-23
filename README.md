@@ -1,6 +1,10 @@
-# 体悟 BodySense
+# BodySense
 
-> **AI-native longitudinal body-health workspace** — 把长期对话、身体状态、诊断分析、干预计划与训练反馈连接成一个可追踪的闭环。
+> **AI-native longitudinal body-health workspace** — connecting long-running conversations, durable body state, evidence-aware diagnosis, treatment plans, and training feedback into one traceable loop.
+
+<p align="left">
+  <strong>Language:</strong> English · <a href="./docs/zh-CN/README.md">Simplified Chinese</a>
+</p>
 
 <p align="left">
   <a href="https://body.bakersean.top"><strong>Live App</strong></a> ·
@@ -9,35 +13,35 @@
   <a href="./docs/architecture/deployment-architecture.md"><strong>Architecture</strong></a>
 </p>
 
-BodySense 不是一次性生成报告的“AI 问诊 Demo”。它围绕一个长期存在的健康工作区设计：用户可以持续描述身体状态、补充观察、纠正信息、查看诊断变化，并把训练与干预反馈重新写回后续分析上下文。
+BodySense is not a one-shot AI consultation demo. It is designed around a long-lived health workspace where people can continuously describe changes, add observations, correct facts, review how analysis evolves, and feed treatment or training outcomes back into future reasoning.
 
 > [!IMPORTANT]
-> BodySense 是个人健康信息与体态分析辅助项目，不是医疗器械，也不能替代医生、物理治疗师或其他专业人员的诊断与治疗。
+> BodySense is a personal health-information and posture-analysis assistant project. It is not a medical device and does not replace diagnosis or treatment from physicians, physical therapists, or other qualified professionals.
 
 ## Product loop
 
 ```mermaid
 flowchart LR
-    A[长期健康对话] --> B[Durable BodyState]
-    B --> C[Diagnosis Analysis]
-    C --> D[Treatment / Training]
-    D --> E[Feedback & Outcomes]
+    A[Long-running health conversation] --> B[Durable BodyState]
+    B --> C[Diagnosis analysis]
+    C --> D[Treatment / training]
+    D --> E[Feedback & outcomes]
     E --> B
-    B --> F[Trends & Safety]
+    B --> F[Trends & safety]
     F --> A
 ```
 
-核心体验由五部分组成：
+The core experience has five parts:
 
-- **Long-lived conversation**：用户不需要为每个身体问题反复新建“问诊单”。
-- **Live BodyState**：结构化事实、观察、变化、AI 假设与安全状态持续更新，并允许用户直接纠正。
-- **Evidence-aware diagnosis**：诊断绑定精确的 BodyState revision、时间上下文、观察和检索证据，而不是只依赖聊天记录。
-- **Revisioned treatment**：当前干预方案有明确版本与复审生命周期，不会因为一次新消息被静默覆盖。
-- **Closed feedback loop**：训练执行、依从性、症状变化和自测结果会重新进入长期状态与后续复审。
+- **Long-lived conversation** — users do not need to create a new consultation for every body issue.
+- **Live BodyState** — structured facts, observations, changes, AI hypotheses, and safety state evolve over time and remain user-correctable.
+- **Evidence-aware diagnosis** — diagnosis is bound to an exact BodyState revision, temporal context, observations, and retrieved evidence instead of relying only on chat history.
+- **Revisioned treatment** — the current intervention plan has an explicit version and review lifecycle rather than being silently overwritten by a new message.
+- **Closed feedback loop** — adherence, training execution, symptom changes, and self-assessment results feed back into durable state and later review.
 
 ## Why it is interesting
 
-BodySense 重点解决的不是“如何调用一个模型”，而是 **AI 输出如何成为可持久、可追踪、可复审的产品状态**。
+BodySense focuses less on “how to call a model” and more on **how AI output becomes durable, traceable, reviewable product state**.
 
 | Engineering concern | BodySense approach |
 | --- | --- |
@@ -146,7 +150,7 @@ The production path is intentionally separated from the GitHub Pages project pag
 - **GitHub Pages** explains the project and its engineering story.
 - **Alibaba Cloud ECS** runs the actual product.
 - **Alibaba Cloud ACR** stores production OCI artifacts.
-- **GitHub Actions** owns CI, release creation and immutable image publication.
+- **GitHub Actions** owns CI, release creation, and immutable image publication.
 
 See [`docs/architecture/deployment-architecture.md`](./docs/architecture/deployment-architecture.md) for the current deployment contract.
 
@@ -157,8 +161,8 @@ Start here if you want to understand the product rather than only the code:
 - [`Longitudinal Body Health Workspace`](./docs/feature_spec_longitudinal_body_health.md) — current product model and user experience.
 - [`Deployment Architecture`](./docs/architecture/deployment-architecture.md) — current production topology and release flow.
 - [`AGENT.md`](./AGENT.md) — repository conventions and AI-assisted engineering workflow.
-- [`docs/`](./docs/) — architecture, ADRs, feature specs, evals and implementation history.
+- [`docs/`](./docs/) — architecture, ADRs, feature specs, evals, and implementation history.
 
 ## Repository status & license
 
-BodySense is a **public source repository**, but this repository currently does **not** include an open-source license. Public visibility alone does not grant permission to copy, modify, or redistribute the code; copyright remains with the repository owner unless a license is added later.
+BodySense is a **public source repository**, but it currently does **not** include an open-source license. Public visibility alone does not grant permission to copy, modify, or redistribute the code; copyright remains with the repository owner unless a license is added later.
