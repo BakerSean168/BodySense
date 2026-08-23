@@ -31,8 +31,20 @@ def _snapshot_payload(*, version: str = "bodysense.health.snapshot.v2") -> dict:
         "markdown": "## Definition\n\nThis is the evidence paragraph.",
         "content_hash": "b" * 64,
     }
-    if version == "bodysense.health.snapshot.v2":
+    if version in {"bodysense.health.snapshot.v2", "bodysense.health.snapshot.v3"}:
         section["claim_candidate"] = _claim_candidate()
+    if version == "bodysense.health.snapshot.v3":
+        section["evidence_reference_candidates"] = [
+            {
+                "reference_id": "tfr-12345678901234567890123456789012",
+                "label": "IASP",
+                "url": "https://www.iasp-pain.org/resources/terminology/",
+                "scope": "section_direct",
+                "line": 24,
+                "source_resolution_status": "unresolved",
+                "support_status": "unreviewed",
+            }
+        ]
     return {
         "schema_version": version,
         "snapshot_id": "thought-forest:abc123:deadbeef0000",
@@ -54,6 +66,23 @@ def _snapshot_payload(*, version: str = "bodysense.health.snapshot.v2") -> dict:
                 "problem_slug": "sample",
                 "knowledge_kinds": ["assessment"],
                 "content_hash": "a" * 64,
+                **(
+                    {
+                        "bibliography_reference_candidates": [
+                            {
+                                "reference_id": "tfr-bibliography-12345678901234567890",
+                                "label": "PubMed",
+                                "url": "https://pubmed.ncbi.nlm.nih.gov/12345678/",
+                                "scope": "note_bibliography",
+                                "line": 120,
+                                "source_resolution_status": "unresolved",
+                                "support_status": "unreviewed",
+                            }
+                        ]
+                    }
+                    if version == "bodysense.health.snapshot.v3"
+                    else {}
+                ),
                 "sections": [section],
             }
         ],
@@ -116,3 +145,64 @@ def test_snapshot_rejects_invalid_markdown_line_range(tmp_path) -> None:
 
     with pytest.raises(ValidationError, match="line_end"):
         load_thought_forest_snapshot(path)
+
+
+def test_v3_snapshot_resolves_direct_references_without_spraying_bibliography(tmp_path) -> None:
+    path = tmp_path / "snapshot-v3.json"
+    path.write_text(
+        json.dumps(_snapshot_payload(version="bodysense.health.snapshot.v3")),
+        encoding="utf-8",
+    )
+
+    snapshot = load_thought_forest_snapshot(path)
+    pack = build_generated_packs(snapshot)[0]
+    unit_metadata = pack.units[0].metadata
+
+    assert snapshot.schema_version == "bodysense.health.snapshot.v3"
+    assert len(unit_metadata["external_evidence_candidates"]) == 1
+    direct = unit_metadata["external_evidence_candidates"][0]
+    assert direct["source_type"] == "professional_organization_page"
+    assert direct["relation_scope"] == "section_direct"
+    assert direct["support_status"] == "unreviewed"
+    assert unit_metadata["claim_admissibility"]["publication_eligible"] is False
+    assert len(pack.source.metadata["bibliography_reference_candidates"]) == 1
+    bibliography = pack.source.metadata["bibliography_reference_candidates"]
+    assert bibliography[0]["canonical_key"] == "pmid:12345678"
+    assert all(
+        item["canonical_key"] != "pmid:12345678"
+        for item in unit_metadata["external_evidence_candidates"]
+    )
+
+
+def test_v3_snapshot_requires_scoped_reference_fields(tmp_path) -> None:
+    payload = _snapshot_payload(version="bodysense.health.snapshot.v3")
+    del payload["notes"][0]["sections"][0]["evidence_reference_candidates"]
+    path = tmp_path / "snapshot-v3-invalid.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValidationError, match="evidence_reference_candidates"):
+        load_thought_forest_snapshot(path)
+
+
+def test_v3_review_manifest_must_match_snapshot_commit(tmp_path) -> None:
+    from src.rag.external_evidence import ExternalEvidenceReviewManifest
+
+    snapshot_path = tmp_path / "snapshot-v3.json"
+    snapshot_path.write_text(
+        json.dumps(_snapshot_payload(version="bodysense.health.snapshot.v3")),
+        encoding="utf-8",
+    )
+    snapshot = load_thought_forest_snapshot(snapshot_path)
+    review = ExternalEvidenceReviewManifest.model_validate(
+        {
+            "schema_version": "bodysense.external-evidence-review.v1",
+            "review_id": "stale-review",
+            "snapshot_git_commit": "different-commit",
+            "reviewed_at": "2026-08-23T13:00:00Z",
+            "sources": [],
+            "relations": [],
+        }
+    )
+
+    with pytest.raises(ValueError, match="snapshot_git_commit"):
+        build_generated_packs(snapshot, review_manifest=review)

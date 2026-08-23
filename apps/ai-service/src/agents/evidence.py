@@ -87,6 +87,20 @@ def normalize_evidence(user_id: str, result: Any) -> dict[str, Any]:
     }
     if locator:
         evidence["source_locator"] = locator
+    external_evidence_candidates = (
+        list(unit_metadata.get("external_evidence_candidates") or [])
+        if result_source_type == "thought_forest_note"
+        else []
+    )
+    claim_admissibility = (
+        dict(unit_metadata.get("claim_admissibility") or {})
+        if result_source_type == "thought_forest_note"
+        else {}
+    )
+    if external_evidence_candidates:
+        evidence["external_evidence_candidates"] = external_evidence_candidates
+    if claim_admissibility:
+        evidence["claim_admissibility"] = claim_admissibility
     if claim_candidate:
         evidence["claim_candidate"] = claim_candidate
         for key in (

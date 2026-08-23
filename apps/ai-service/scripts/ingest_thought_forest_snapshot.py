@@ -26,6 +26,7 @@ if load_dotenv:
             load_dotenv(_env, override=False)
             break
 
+from src.rag.external_evidence import load_external_evidence_review  # noqa: E402
 from src.rag.knowledge_library import KnowledgeLibrary  # noqa: E402
 from src.rag.thought_forest_snapshot import (  # noqa: E402
     build_generated_packs,
@@ -35,11 +36,15 @@ from src.rag.thought_forest_snapshot import (  # noqa: E402
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("snapshot", help="Path to bodysense.health.snapshot.v1 JSON")
+    parser.add_argument("snapshot", help="Path to bodysense.health.snapshot.v1/v2/v3 JSON")
     parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Validate and convert without DB writes",
+    )
+    parser.add_argument(
+        "--evidence-review-manifest",
+        help="Optional explicit bodysense.external-evidence-review.v1 manifest",
     )
     parser.add_argument(
         "--overwrite-source",
@@ -52,7 +57,12 @@ def parse_args() -> argparse.Namespace:
 async def main() -> int:
     args = parse_args()
     snapshot = load_thought_forest_snapshot(args.snapshot)
-    packs = build_generated_packs(snapshot)
+    review_manifest = (
+        load_external_evidence_review(args.evidence_review_manifest)
+        if args.evidence_review_manifest
+        else None
+    )
+    packs = build_generated_packs(snapshot, review_manifest=review_manifest)
     unit_count = sum(len(pack.units) for pack in packs)
     print(f"Snapshot: {snapshot.snapshot_id}")
     print(f"Git commit: {snapshot.repository.git_commit}")

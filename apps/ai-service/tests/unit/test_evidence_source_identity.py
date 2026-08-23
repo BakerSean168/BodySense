@@ -44,6 +44,22 @@ def _thought_forest_result(*, row_id: int) -> SearchResult:
                 "external_evidence_status": "unresolved",
                 "population": "unspecified",
             },
+            "external_evidence_candidates": [
+                {
+                    "reference_id": "tfr-12345678901234567890123456789012",
+                    "canonical_key": "url:iasp",
+                    "canonical_url": "https://www.iasp-pain.org/resources/terminology/",
+                    "relation_scope": "section_direct",
+                    "support_status": "unreviewed",
+                    "admissibility_status": "blocked",
+                }
+            ],
+            "claim_admissibility": {
+                "status": "blocked",
+                "publication_eligible": False,
+                "blocking_reasons": ["support_unreviewed"],
+                "direct_reference_count": 1,
+            },
         },
         source_metadata={"repository": {"name": "thought-forest", "git_commit": "abc123"}},
     )
@@ -65,6 +81,8 @@ def test_thought_forest_evidence_identity_uses_git_and_content_not_db_row_id() -
     assert first["evidence_level"] == "unresolved"
     assert first["certainty"] == "unreviewed"
     assert first["external_evidence_status"] == "unresolved"
+    assert first["external_evidence_candidates"][0]["relation_scope"] == "section_direct"
+    assert first["claim_admissibility"]["publication_eligible"] is False
 
 
 def test_video_evidence_identity_remains_backward_compatible() -> None:
