@@ -32,6 +32,7 @@ import { buildAssistantMessagePartsViewModel } from "../runtime/assistantMessage
 import { selectIsComposerLocked } from "../runtime/activeTurnSelectors";
 import { useUploadStore } from "@/stores/uploadStore";
 import { consultationAttachmentBuffer } from "../hooks/useAssistantChatRuntime";
+import { consultationApi } from "../services/consultationService";
 import { StreamingAssistantTurn } from "./StreamingAssistantTurn";
 import { StreamingTurnToolCalls } from "./StreamingTurnToolCalls";
 import { RedFlagBanner } from "./RedFlagBanner";
@@ -354,13 +355,16 @@ function ChatContent({
     }
   }, [conversationId, draftMessage]);
 
-  const { markInteractionAnswered } = useActiveTurnActions();
+  const { markInteractionAnswered, hydrateTurn } = useActiveTurnActions();
   const activeTurn = useActiveTurnState();
   const isComposerLocked = selectIsComposerLocked(activeTurn);
 
   // AskUserCard States
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [interactionError, setInteractionError] = useState<string | null>(null);
+
+  const [isCancellingRun, setIsCancellingRun] = useState(false);
+  const [cancelRunError, setCancelRunError] = useState<string | null>(null);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -490,6 +494,36 @@ function ChatContent({
     activeTurn.pendingInteraction &&
     activeTurn.pendingInteraction.status === "pending";
 
+  const canCancelRun =
+    Boolean(activeTurn.runId) &&
+    (activeTurn.status === "streaming" || activeTurn.status === "interrupted");
+
+  const handleCancelRun = useCallback(async () => {
+    if (!activeTurn.runId || !canCancelRun || isCancellingRun) return;
+    setIsCancellingRun(true);
+    setCancelRunError(null);
+    try {
+      await consultationApi.cancelRun(activeTurn.runId);
+      hydrateTurn({
+        ...activeTurn,
+        status: "cancelled",
+        pendingInteraction: null,
+        error: "cancelled_by_user",
+      });
+    } catch (err) {
+      setCancelRunError(
+        err instanceof Error ? err.message : "取消失败，请稍后重试",
+      );
+    } finally {
+      setIsCancellingRun(false);
+    }
+  }, [
+    activeTurn,
+    canCancelRun,
+    hydrateTurn,
+    isCancellingRun,
+  ]);
+
   // Determine if the conversation has no user or assistant messages
   const isEmptyConversation =
     threadMessages.filter(
@@ -585,6 +619,26 @@ function ChatContent({
 
       {/* Input area */}
       <div className="p-4 border-t border-[#E5E3DF] bg-[#FBFBFA]">
+        {canCancelRun && (
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
+            <p className="text-xs leading-5 text-slate-600">
+              {activeTurn.status === "interrupted"
+                ? "当前运行正在等待你的补充信息；你也可以显式取消这次运行。"
+                : "当前 AI 运行会在页面断开后继续；只有点击取消才会终止它。"}
+            </p>
+            <button
+              type="button"
+              onClick={() => void handleCancelRun()}
+              disabled={isCancellingRun}
+              className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isCancellingRun ? "取消中…" : "取消本次执行"}
+            </button>
+          </div>
+        )}
+        {cancelRunError && (
+          <p className="mb-3 text-xs font-medium text-red-600">{cancelRunError}</p>
+        )}
         {hasPendingInteraction && (
           <p className="mb-3 text-xs font-medium text-[#5F6F86]">
             正在等待你完成上方追问，当前输入框暂时锁定。

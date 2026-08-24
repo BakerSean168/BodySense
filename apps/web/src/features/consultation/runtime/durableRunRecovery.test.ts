@@ -75,6 +75,72 @@ describe("recoverDurableRunEvents", () => {
     expect(result).toEqual({ maxSeq: 5, terminalType: "stream.done" });
   });
 
+  it("retries transient event-log failures during an API restart", async () => {
+    let now = 0;
+    let attempts = 0;
+    const onRunFailed = vi.fn();
+    const result = await recoverDurableRunEvents({
+      fetchPage: async () => {
+        attempts += 1;
+        if (attempts < 3) {
+          throw new Error("connection refused");
+        }
+        return {
+          events: [
+            event(4, "run.failed", {
+              status: "failed",
+              reason: "execution_lost",
+            }),
+          ],
+          hasMore: false,
+          nextAfterSeq: 4,
+        };
+      },
+      handlers: { onRunFailed },
+      timeoutMs: 1_000,
+      pollIntervalMs: 100,
+      now: () => now,
+      sleep: async (ms) => {
+        now += ms;
+      },
+    });
+
+    expect(attempts).toBe(3);
+    expect(result.terminalType).toBe("run.failed");
+    expect(onRunFailed).toHaveBeenCalledTimes(1);
+  });
+
+  it("treats execution_lost run.failed as a durable terminal event", async () => {
+    let now = 0;
+    const onRunFailed = vi.fn();
+    const result = await recoverDurableRunEvents({
+      fetchPage: async () => ({
+        events: [
+          event(6, "run.failed", {
+            status: "failed",
+            reason: "execution_lost",
+          }),
+        ],
+        hasMore: false,
+        nextAfterSeq: 6,
+      }),
+      handlers: { onRunFailed },
+      timeoutMs: 100,
+      now: () => now,
+      sleep: async (ms) => {
+        now += ms;
+      },
+    });
+
+    expect(onRunFailed).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "run.failed",
+        payload: { status: "failed", reason: "execution_lost" },
+      }),
+    );
+    expect(result).toEqual({ maxSeq: 6, terminalType: "run.failed" });
+  });
+
   it("treats persisted run.cancelled as a durable terminal event", async () => {
     let now = 0;
     const result = await recoverDurableRunEvents({
@@ -114,7 +180,7 @@ describe("recoverDurableRunEvents", () => {
         },
       }),
     ).rejects.toThrow(
-      "Timed out while recovering the durable consultation run",
+      "恢复本次执行超时",
     );
   });
 });

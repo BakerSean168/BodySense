@@ -5,6 +5,7 @@ import {
   type APIResponse,
   type Page,
 } from "@playwright/test";
+import { refreshBrowserAccessToken } from "./support/auth";
 
 const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
 
@@ -31,13 +32,7 @@ async function registerAndProfile(
   await page.getByRole("button", { name: "创建账号" }).click();
   await page.waitForURL(/\/(dashboard|onboarding)/);
 
-  const accessToken = await page.evaluate(() => {
-    const raw = localStorage.getItem("auth-storage");
-    if (!raw) return "";
-    const parsed = JSON.parse(raw) as { state?: { accessToken?: string } };
-    return parsed.state?.accessToken || "";
-  });
-  expect(accessToken).not.toBe("");
+  const accessToken = await refreshBrowserAccessToken(page, apiBase);
 
   const profileResponse = await request.put(`${apiBase}/api/v1/profile`, {
     headers: { Authorization: `Bearer ${accessToken}` },

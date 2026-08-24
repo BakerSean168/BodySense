@@ -686,4 +686,37 @@ describe("ActiveTurnReducer deterministic replay", () => {
     const done = reduceActiveTurnEvent(cancelled, makeEvent("stream.done", {}, { run_id: "run-c" }, "stream")).state;
     expect(done.status).toBe("cancelled");
   });
+  it("surfaces execution_lost as a recoverable failed state", () => {
+    const started = reduceActiveTurnEvent(INITIAL_ACTIVE_TURN_STATE, {
+      version: 1,
+      seq: 1,
+      channel: "run",
+      type: "run.started",
+      ids: {
+        conversation_id: "conversation-1",
+        run_id: "run-lost",
+        turn_id: "turn-1",
+      },
+      payload: { status: "running" },
+    } as never).state;
+
+    const result = reduceActiveTurnEvent(started, {
+      version: 1,
+      seq: 2,
+      channel: "run",
+      type: "run.failed",
+      ids: {
+        conversation_id: "conversation-1",
+        run_id: "run-lost",
+        turn_id: "turn-1",
+      },
+      payload: { status: "failed", reason: "execution_lost" },
+    } as never);
+
+    expect(result.state.status).toBe("failed");
+    expect(result.state.runId).toBe("run-lost");
+    expect(result.state.error).toContain("安全回收");
+    expect(result.state.pendingInteraction).toBeNull();
+  });
+
 });

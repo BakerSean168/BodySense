@@ -193,11 +193,19 @@ export function reduceActiveTurnEvent(
 
     case "run.failed": {
       processed = true;
-      const payload = event.payload as { error?: { message?: string } };
+      const payload = event.payload as {
+        reason?: string;
+        error?: { message?: string };
+      };
+      const executionLost = payload.reason === "execution_lost";
       next = {
         ...current,
+        runId: event.ids.run_id || current.runId,
         status: "failed",
-        error: payload.error?.message || current.error || "run failed",
+        pendingInteraction: null,
+        error: executionLost
+          ? "本次执行因服务实例中断而停止，系统已安全回收。你可以继续输入，发起一次新的执行。"
+          : payload.error?.message || current.error || "本次执行未能完成，请继续输入后重试。",
       };
       break;
     }

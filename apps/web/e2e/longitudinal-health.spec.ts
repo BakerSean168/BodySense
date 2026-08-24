@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { refreshBrowserAccessToken } from "./support/auth";
 
 const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
 
@@ -16,13 +17,7 @@ test("register -> profile -> durable BodyState fact survives reload", async ({
   await page.getByRole("button", { name: "创建账号" }).click();
   await page.waitForURL(/\/(dashboard|onboarding)/);
 
-  const accessToken = await page.evaluate(() => {
-    const raw = localStorage.getItem("auth-storage");
-    if (!raw) return "";
-    const parsed = JSON.parse(raw) as { state?: { accessToken?: string } };
-    return parsed.state?.accessToken || "";
-  });
-  expect(accessToken).not.toBe("");
+  const accessToken = await refreshBrowserAccessToken(page, apiBase);
 
   const profile = await request.put(`${apiBase}/api/v1/profile`, {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -115,15 +110,7 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   await page.getByRole("button", { name: "创建账号" }).click();
   await page.waitForURL(/\/(dashboard|onboarding)/);
 
-  const token = await page.evaluate(() => {
-    const raw = localStorage.getItem("auth-storage");
-    if (!raw) return "";
-    return (
-      (JSON.parse(raw) as { state?: { accessToken?: string } }).state
-        ?.accessToken || ""
-    );
-  });
-  expect(token).not.toBe("");
+  const token = await refreshBrowserAccessToken(page, apiBase);
   const headers = { Authorization: `Bearer ${token}` };
 
   expect(

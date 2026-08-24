@@ -52,6 +52,15 @@ export const consultationApi = {
     });
   },
 
+  /** Explicitly cancel a running or waiting consultation run. */
+  async cancelRun(runId: string): Promise<{ status: string; run_id: string }> {
+    return authFetch(`${API_BASE}/consultation-runs/${runId}/cancel`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: "cancelled_by_user" }),
+    }).then((res) => parseJson<{ status: string; run_id: string }>(res));
+  },
+
   // ===== General Conversation API =====
 
   /**

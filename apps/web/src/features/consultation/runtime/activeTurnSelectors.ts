@@ -26,6 +26,9 @@ export interface ActiveTurnViewModel {
   pendingInteraction: PendingInteraction | null;
   isRunning: boolean;
   isInterrupted: boolean;
+  isFailed: boolean;
+  isCancelled: boolean;
+  error: string | undefined;
   hasVisibleContent: boolean;
   hasRenderableContent: boolean;
 }
@@ -46,6 +49,9 @@ export function selectActiveTurnViewModel(
     pendingInteraction: state.pendingInteraction,
     isRunning: state.status === "streaming",
     isInterrupted: state.status === "interrupted",
+    isFailed: state.status === "failed",
+    isCancelled: state.status === "cancelled",
+    error: state.error,
     hasVisibleContent: selectHasVisibleContent(state),
     hasRenderableContent: selectHasRenderableContent(state),
   };

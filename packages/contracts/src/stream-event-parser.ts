@@ -96,7 +96,16 @@ const EVENT_SPECS = {
   "run.resumed": { channel: "run", validate: (p) => { literal(p, "status", "running"); requiredString(p, "interaction_id"); } },
   "run.interrupted": { channel: "run", validate: (p) => { literal(p, "status", "waiting_user"); requiredString(p, "interaction_id"); } },
   "run.completed": { channel: "run", validate: (p) => literal(p, "status", "completed") },
-  "run.failed": { channel: "run", validate: (p) => { literal(p, "status", "failed"); requiredString(requiredObject(p, "error"), "message", "payload.error"); } },
+  "run.failed": { channel: "run", validate: (p) => {
+    literal(p, "status", "failed");
+    const reason = p.reason;
+    const error = p.error;
+    if (reason === undefined && error === undefined) {
+      throw new StreamEventParseError("payload.run.failed requires reason or error");
+    }
+    if (reason !== undefined) requiredString(p, "reason");
+    if (error !== undefined) requiredString(requiredObject(p, "error"), "message", "payload.error");
+  } },
   "run.cancelled": { channel: "run", validate: (p) => { literal(p, "status", "cancelled"); requiredString(p, "reason"); } },
   "message.persisted": { channel: "message", validate: (p) => { requiredString(p, "client_message_id"); requiredString(p, "role"); } },
   "message.created": { channel: "message", validate: (p) => { requiredString(p, "role"); requiredString(p, "status"); } },

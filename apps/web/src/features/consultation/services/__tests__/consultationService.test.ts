@@ -32,6 +32,26 @@ describe("consultationApi", () => {
 
   // ===== General Conversation API =====
 
+  describe("cancelRun", () => {
+    it("POSTs an explicit user cancellation command", async () => {
+      mockAuthFetch.mockResolvedValue(
+        mockResponse({ status: "cancelled", run_id: "run-1" }),
+      );
+
+      const result = await consultationApi.cancelRun("run-1");
+
+      expect(mockAuthFetch).toHaveBeenCalledWith(
+        "/api/v1/consultation-runs/run-1/cancel",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason: "cancelled_by_user" }),
+        },
+      );
+      expect(result).toEqual({ status: "cancelled", run_id: "run-1" });
+    });
+  });
+
   describe("resumeInteractionStream", () => {
     it("POSTs to the consultation interrupt answer endpoint and returns raw Response", async () => {
       const raw = new Response("stream");

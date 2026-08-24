@@ -12,6 +12,8 @@ BACKUP_DIR="$ROOT/backups"
 RUNTIME_BACKUP_DIR="$ROOT/runtime-backups"
 FORCE=false
 CHECK_ONLY=false
+PREFLIGHT_ONLY=false
+COMPOSE_PROJECT="${BODYSENSE_COMPOSE_PROJECT:-docker}"
 ROLLBACK_READY=false
 ROLLBACK_TAG=""
 ROLLBACK_WEB_REF=""
@@ -25,6 +27,7 @@ for arg in "$@"; do
   case "$arg" in
     --force) FORCE=true ;;
     --check-only) CHECK_ONLY=true ;;
+    --preflight-only) PREFLIGHT_ONLY=true ;;
     *) echo "unknown argument: $arg" >&2; exit 2 ;;
   esac
 done
@@ -57,15 +60,13 @@ AUTO_DEPLOY=$(read_public_env AUTO_DEPLOY_ENABLED true)
 DB_USER=$(read_public_env DB_USER bodysense)
 DB_NAME=$(read_public_env DB_NAME bodysense)
 
-[ -n "$REGISTRY" ] || fail 'REGISTRY is empty'
-
 web_ref="$REGISTRY/$NAMESPACE/bodysense-web:$WEB_TAG"
 api_ref="$REGISTRY/$NAMESPACE/bodysense-api:$API_TAG"
 ai_ref="$REGISTRY/$NAMESPACE/bodysense-ai-service:$AI_TAG"
 runtime_ref="$REGISTRY/$NAMESPACE/bodysense-runtime:$RUNTIME_TAG"
 
 compose() {
-  docker compose -p docker -f "$COMPOSE" --env-file "$PUBLIC_ENV" --env-file "$SECRET_ENV" "$@"
+  docker compose -p "$COMPOSE_PROJECT" -f "$COMPOSE" --env-file "$PUBLIC_ENV" --env-file "$SECRET_ENV" "$@"
 }
 
 image_revision() {
@@ -87,6 +88,68 @@ container_revision() {
     docker image inspect "$image_id" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' 2>/dev/null || true
   fi
 }
+
+active_execution_count() {
+  local table_exists lease_columns count
+  if ! table_exists=$(compose exec -T postgres psql -U "$DB_USER" -d "$DB_NAME" -Atc \
+    "SELECT to_regclass('public.runs') IS NOT NULL;" 2>/dev/null); then
+    printf '%s' unknown
+    return 0
+  fi
+  if [ "$table_exists" != t ]; then
+    printf '%s' 0
+    return 0
+  fi
+
+  if ! lease_columns=$(compose exec -T postgres psql -U "$DB_USER" -d "$DB_NAME" -Atc \
+    "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='runs' AND column_name IN ('lease_owner','lease_expires_at');" 2>/dev/null); then
+    printf '%s' unknown
+    return 0
+  fi
+
+  if [ "$lease_columns" = 2 ]; then
+    if ! count=$(compose exec -T postgres psql -U "$DB_USER" -d "$DB_NAME" -Atc \
+      "SELECT count(*) FROM runs WHERE status='running' AND lease_owner IS NOT NULL AND btrim(lease_owner) <> '' AND lease_expires_at > now();" 2>/dev/null); then
+      printf '%s' unknown
+      return 0
+    fi
+  else
+    # Bootstrap compatibility for the first release that introduces leases. On
+    # a pre-lease schema every running row is conservatively treated as active.
+    if ! count=$(compose exec -T postgres psql -U "$DB_USER" -d "$DB_NAME" -Atc \
+      "SELECT count(*) FROM runs WHERE status='running';" 2>/dev/null); then
+      printf '%s' unknown
+      return 0
+    fi
+  fi
+  printf '%s' "${count:-unknown}"
+}
+
+deploy_run_preflight() {
+  local active_count
+  active_count=$(active_execution_count)
+  case "$active_count" in
+    ''|*[!0-9]*)
+      log 'deploy preflight DEFER: unable to verify active Consultation executions; automated deploy will retry later'
+      return 1
+      ;;
+  esac
+  if [ "$active_count" -gt 0 ]; then
+    log "deploy preflight DEFER: active_running=$active_count with valid execution lease; waiting_user does not block deploy"
+    return 1
+  fi
+  log 'deploy preflight READY: active_running=0 (waiting_user is intentionally ignored)'
+  return 0
+}
+
+if $PREFLIGHT_ONLY; then
+  if deploy_run_preflight; then
+    log 'DEPLOY_PREFLIGHT=READY'
+  else
+    log 'DEPLOY_PREFLIGHT=DEFER'
+  fi
+  exit 0
+fi
 
 db_schema_state() {
   local exists value
@@ -244,7 +307,7 @@ sync_runtime() {
   [ -s "$stage/scripts/production-deploy-watch.sh" ] || fail 'runtime bundle missing deploy watcher'
   [ "$(image_revision "$runtime_ref")" = "$revision" ] || fail 'runtime bundle revision mismatch'
 
-  docker compose -p docker -f "$stage/docker/docker-compose.prod.yml" \
+  docker compose -p "$COMPOSE_PROJECT" -f "$stage/docker/docker-compose.prod.yml" \
     --env-file "$stage/.env.production" --env-file "$SECRET_ENV" config -q
 
   old_runtime_revision=$(sed -n 's/^runtime_revision=//p' "$STATE_FILE" 2>/dev/null | tail -1 || true)
@@ -265,6 +328,8 @@ sync_runtime() {
   [ -f "$stage/docker/litellm/config.yaml" ] && install -m 0644 "$stage/docker/litellm/config.yaml" "$ROOT/docker/litellm/config.yaml"
   install -m 0755 "$stage/scripts/production-deploy-watch.sh" "$ROOT/scripts/production-deploy-watch.sh"
 }
+
+[ -n "$REGISTRY" ] || fail 'REGISTRY is empty'
 
 log 'checking ACR production pointers'
 docker pull "$web_ref" >/dev/null
@@ -294,7 +359,9 @@ current_ai=$(container_revision ai-service)
 managed_revision=$(sed -n 's/^revision=//p' "$STATE_FILE" 2>/dev/null | tail -1 || true)
 
 if $CHECK_ONLY; then
-  log "coherent candidate revision=$desired_revision runtime=$runtime_revision current_web=${current_web:-none} current_api=${current_api:-none} current_ai=${current_ai:-none} managed=${managed_revision:-none}"
+  preflight=READY
+  deploy_run_preflight || preflight=DEFER
+  log "coherent candidate revision=$desired_revision runtime=$runtime_revision current_web=${current_web:-none} current_api=${current_api:-none} current_ai=${current_ai:-none} managed=${managed_revision:-none} run_preflight=$preflight"
   exit 0
 fi
 
@@ -304,6 +371,11 @@ if ! $FORCE && [ "$AUTO_DEPLOY" != true ]; then
 fi
 if ! $FORCE && [ "$desired_revision" = "$current_web" ] && [ "$desired_revision" = "$current_api" ] && [ "$desired_revision" = "$current_ai" ] && [ "$desired_revision" = "$managed_revision" ]; then
   log "already deployed revision $desired_revision"
+  exit 0
+fi
+
+if ! deploy_run_preflight; then
+  log "deployment deferred revision=$desired_revision; watcher will retry on its next schedule"
   exit 0
 fi
 

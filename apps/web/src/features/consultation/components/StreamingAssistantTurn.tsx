@@ -36,7 +36,13 @@ export function StreamingAssistantTurn({
   const { dismissRedFlag } = useActiveTurnActions();
 
   // Don't render if there's nothing to show
-  if (!vm.hasVisibleContent && !vm.isRunning && !vm.isInterrupted) {
+  if (
+    !vm.hasVisibleContent &&
+    !vm.isRunning &&
+    !vm.isInterrupted &&
+    !vm.isFailed &&
+    !vm.isCancelled
+  ) {
     return null;
   }
 
@@ -45,7 +51,9 @@ export function StreamingAssistantTurn({
     (vm.pendingInteraction !== null &&
       vm.pendingInteraction.status === "answered") ||
     (vm.isInterrupted && vm.pendingInteraction !== null) ||
-    (vm.isRunning && !vm.streamingMarkdown && vm.toolCalls.length === 0);
+    (vm.isRunning && !vm.streamingMarkdown && vm.toolCalls.length === 0) ||
+    vm.isFailed ||
+    vm.isCancelled;
 
   if (!shouldRenderTimelineShell) {
     return null;
@@ -55,6 +63,26 @@ export function StreamingAssistantTurn({
     <div className="flex flex-col gap-3">
       {vm.pendingInteraction && (
         <AskUserStatusCard interaction={vm.pendingInteraction} />
+      )}
+
+      {vm.isFailed && (
+        <div className="flex justify-start" role="status">
+          <div className="max-w-[80%] rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <p className="font-semibold">本次执行已安全停止</p>
+            <p className="mt-1 leading-5">
+              {vm.error || "本次执行未完成。你可以继续输入，发起一次新的执行。"}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {vm.isCancelled && (
+        <div className="flex justify-start" role="status">
+          <div className="max-w-[80%] rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            <p className="font-semibold">本次执行已取消</p>
+            <p className="mt-1 leading-5">已停止当前运行；你可以修改或补充信息后继续咨询。</p>
+          </div>
+        </div>
       )}
 
       {vm.pendingInteraction?.status === "pending" && onInteractionSubmit && (

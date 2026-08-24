@@ -133,7 +133,9 @@ async def start_turn(thread_id: str, request: StartTurnRequest):
     if _e2e_stub_enabled():
 
         async def e2e_generator():
-            if "E2E_HOLD_RUN" in request.input.text:
+            if "E2E_HOLD_RUN_LONG" in request.input.text:
+                await asyncio.sleep(15)
+            elif "E2E_HOLD_RUN" in request.input.text:
                 await asyncio.sleep(0.75)
             trigger_safety = "E2E_TRIGGER_SAFETY" in request.input.text
             seq = 1

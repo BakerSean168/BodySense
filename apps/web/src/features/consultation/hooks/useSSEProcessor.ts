@@ -62,6 +62,7 @@ export interface SSEHandlers {
   onRunInterrupted?: (data: StreamEvent) => void; // run 被中断时触发
   onRunCompleted?: (data: StreamEvent) => void; // run 完成时触发
   onRunFailed?: (data: StreamEvent) => void; // run 失败时触发
+  onRunCancelled?: (data: StreamEvent) => void; // 用户显式取消 run 时触发
   onMessagePersisted?: (data: SSEMessagePersisted) => void; // 用户消息持久化完成时触发
   onMessageCreated?: (data: SSEMessageCreated) => void; // AI 回复消息（空占位）创建时触发
   onTextDelta?: (data: SSETextDelta) => void; // AI 输出一个文字片段时触发（高频，用于打字机效果）
@@ -99,6 +100,7 @@ const EVENT_MAP: Record<string, keyof SSEHandlers> = {
   "run.interrupted": "onRunInterrupted", // run 中断
   "run.completed": "onRunCompleted", // run 完成
   "run.failed": "onRunFailed", // run 失败
+  "run.cancelled": "onRunCancelled", // run 显式取消
   "message.persisted": "onMessagePersisted", // 用户消息已持久化
   "message.created": "onMessageCreated", // AI 消息占位已创建
   "message.text.delta": "onTextDelta", // AI 文字片段（高频）
@@ -259,6 +261,7 @@ export function processSSELine(
 export async function consumeSSEStream(
   response: Response,
   handlers: SSEHandlers,
+  signal?: AbortSignal,
 ): Promise<number> {
   // 从 Response 的 body 中获取 ReadableStream 的 reader。
   // reader 是逐块读取流数据的工具。
@@ -273,6 +276,15 @@ export async function consumeSSEStream(
 
   // TextDecoder 用于把二进制数据（Uint8Array）解码成字符串。
   // 流中读到的每一块数据都是 Uint8Array，需要解码才能当文本处理。
+  const abortReader = () => {
+    void reader.cancel().catch(() => undefined);
+  };
+  if (signal?.aborted) {
+    abortReader();
+  } else {
+    signal?.addEventListener("abort", abortReader, { once: true });
+  }
+
   const decoder = new TextDecoder();
 
   // state 对象：在多行解析之间保持状态（记住当前事件类型）
@@ -328,9 +340,13 @@ export async function consumeSSEStream(
       processSSELine(buffer, state, handlers);
     }
   } catch (err) {
-    // 捕获所有异常（网络断开、流读取错误等），触发 onError 回调。
-    // 确保 err 是 Error 类型，如果不是则用 String() 转换后包装成 Error。
-    handlers.onError?.(err instanceof Error ? err : new Error(String(err)));
+    // A durable terminal watcher may intentionally cancel the live reader.
+    // That is convergence, not a transport failure.
+    if (!signal?.aborted) {
+      handlers.onError?.(err instanceof Error ? err : new Error(String(err)));
+    }
+  } finally {
+    signal?.removeEventListener("abort", abortReader);
   }
   return state.maxSeq;
 }
