@@ -1177,9 +1177,11 @@ domain validator PASS
 
 ## BS-PROD-031 — Triage dependency advisories and establish a bounded supply-chain gate
 
+**Implementation status (2026-08-25): VALIDATED LOCALLY.** The original `pnpm audit --prod` finding of 26 advisories (14 high / 12 moderate) was traced rather than allowlisted. Nearly the entire high/moderate tree came from the `shadcn` CLI being misclassified as a Web runtime dependency even though it participates only in Vite/build-time CSS/tooling; it is now a `devDependency`. The remaining runtime high advisory was `nanoid 5.1.15` through `@assistant-ui/react → assistant-stream`; pnpm v11 now applies an exact workspace override to `5.1.16` from `pnpm-workspace.yaml`. No audit exception/allowlist is required: `pnpm audit --prod` reports zero advisories / zero high / zero critical. `scripts/validate-supply-chain.sh` fails closed on malformed audit output and on any high/critical production advisory, and is part of `scripts/validate-repo.sh` / normal repository quality validation. Both Web Dockerfiles also had a stale `pnpm add ... --no-save || true` workaround that pnpm 11 no longer accepts and silently ignored; the workaround was removed so Linux native bindings must resolve from the committed lockfile or the image build fails. Validation: supply-chain gate PASS, full `REPO_QUALITY=PASS`, production-shaped 5/5 Playwright + migration/Knowledge/shadow gates PASS with `LOCAL_DEPLOY_VALIDATION=PASS`, and both the development Web image and final nginx production Web image build successfully without post-install dependency mutation.
+
 **Goal:** remove runtime-relevant known advisories and make remaining advisory debt explicit/reviewable without treating every build-tool advisory as a production exploit.
 
-**Why now:** `pnpm audit --prod` currently returns 26 advisories / 14 high, while GitHub Actions are already correctly SHA-pinned.
+**Why now:** the original audit returned 26 advisories / 14 high; GitHub Actions were already correctly SHA-pinned, so dependency classification/runtime reachability was the remaining supply-chain gap.
 
 **Scope:**
 
