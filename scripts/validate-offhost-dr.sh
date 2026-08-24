@@ -6,9 +6,10 @@
 # binaries, while keeping the object store fake (scripts/test_offhost_s3.py's
 # signature-verified in-process server).  It exercises the same scripts that the
 # systemd units run, including the `docker compose exec`-style postgres seam,
-# and restores into a second, disposable PostgreSQL container (
-# `restore-pg`) that is provably independent from the production `postgres`
-# container.
+# and restores into a second, disposable PostgreSQL container (`restore-pg`)
+# that the restore operator proves isolated from the production `postgres`
+# container: dedicated drill network (never attached to the production network),
+# disposable labels, running state and distinct container identity.
 #
 # Requires docker and outbound registry/module access (golang build).
 set -euo pipefail
@@ -18,8 +19,9 @@ PG_IMAGE="${OFFHOST_DR_PG_IMAGE:-pgvector/pgvector:pg18}"
 GO_IMAGE="${OFFHOST_DR_GO_IMAGE:-golang:1.26-alpine}"
 ALPINE_IMAGE="${OFFHOST_DR_ALPINE_IMAGE:-alpine:3.20}"
 NET="bodysense-dr-net-$$"
-PG_NAME="postgres"          # production postgres (source)
-RESTORE_PG_NAME="restore-pg" # disposable, explicitly isolated restore postgres
+DRILL_NET="bodysense-dr-drill-net-$$"
+PG_NAME="postgres"          # production postgres (source), on NET only
+RESTORE_PG_NAME="restore-pg" # disposable, explicitly isolated restore postgres, NET2 only
 # The api validator container uses Compose's default naming ("<project>-api-1")
 # — production does NOT set container_name, so the running container is
 # "docker-api-1", never a literal "api". Naming this one "bodysense-dr-api-1"
@@ -37,6 +39,7 @@ export TMP ROOT CORRUPT_FILE
 
 cleanup() {
   docker rm -f "$API_NAME" "$BUILDER_NAME" "$RESTORE_PG_NAME" "$PG_NAME" >/dev/null 2>&1 || true
+  docker network rm "$DRILL_NET" >/dev/null 2>&1 || true
   docker network rm "$NET" >/dev/null 2>&1 || true
   if [ -n "${SERVER_PID:-}" ] && kill -0 "$SERVER_PID" 2>/dev/null; then
     kill "$SERVER_PID" 2>/dev/null || true
@@ -132,7 +135,13 @@ done
 [ "$ready" = 1 ] || { echo "PostgreSQL did not become ready" >&2; exit 1; }
 
 # Disposable restore PostgreSQL: explicitly isolated from the production server.
-docker run -d --name "$RESTORE_PG_NAME" --network "$NET" \
+# It lives ONLY on its own drill network (it must never share a Docker network
+# with the production `postgres` container — the restore operator refuses that),
+# and it declares the labels that prove it is a disposable drill target for
+# --target-project drill.
+docker run -d --name "$RESTORE_PG_NAME" --network "$DRILL_NET" \
+  --label bodysense.restore-project=drill \
+  --label bodysense.disposable-restore=yes \
   -e "POSTGRES_USER=$DB_USER" -e "POSTGRES_PASSWORD=$DB_PASSWORD" -e "POSTGRES_DB=postgres" \
   "$PG_IMAGE" >/dev/null
 ready=0
@@ -158,13 +167,17 @@ docker exec -w /build "$BUILDER_NAME" sh -c \
 # The validator container name is deliberately not "api": restore-production-backup.sh
 # must resolve it (here via OFFHOST_API_CONTAINER, mirroring production's default
 # "<compose-project>-api-1" naming) or the docker-runner validation would fail on
-# the real Compose deployment.
+# the real Compose deployment.  The api container hangs off BOTH networks so it
+# can reach the production postgres (migration baseline) AND the disposable
+# restore postgres (drill validation) — but the production postgres and the
+# restore postgres are never attached to the same network.
 mkdir -p "$TMP/validators"
 docker cp "$BUILDER_NAME":/out/. "$TMP/validators/" >/dev/null
 docker run -d --name "$API_NAME" --network "$NET" \
   -v "$TMP/validators:/app/validators:ro" \
   -v "$PWD/apps/api/migrations:/app/migrations:ro" \
   "$ALPINE_IMAGE" tail -f /dev/null >/dev/null
+docker network connect "$DRILL_NET" "$API_NAME" >/dev/null
 export OFFHOST_PGCONTAINER_ID OFFHOST_API_CONTAINER
 OFFHOST_PGCONTAINER_ID=$(docker inspect -f '{{.Id}}' "$PG_NAME")
 OFFHOST_API_CONTAINER="$API_NAME"

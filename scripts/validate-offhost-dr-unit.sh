@@ -92,24 +92,71 @@ exit 0
 PGSTUB
 chmod +x "$BIN/fake-pg"
 
-# --- fake docker stub (validators + docker cp + compose ps) ------------------
+# --- fake docker stub (validators via --env-file + docker cp + compose ps +
+#     docker inspect for the restore isolation proof) ------------------------
+# FAKEDOCKER_INSPECT_DIR/<container>.json overrides the default per-container
+# inspect JSON; the default treats every container as a running, disposable
+# restore candidate on its own network (Id = container name).  Tests write a
+# file to force a refusal scenario (shared network, missing label, non-running,
+# production Compose membership, equal IDs).
 cat > "$BIN/docker" <<'DOCKSTUB'
 #!/usr/bin/env bash
-# Record every invocation so tests can prove exactly what docker command the
-# restore path runs (e.g. the resolved api container name, never a hard-coded
-# literal).
 {
   printf '%s\n' "$*"
 } >> "${DOCKER_LOG:-/dev/null}"
 case "$1" in
   cp) exit 0 ;;
-  exec) exit "${FAKEPG_VALIDATOR_EXIT:-0}" ;;
+  exec)
+    # Emulate `docker exec --env-file <file> ...`: the real CLI reads the file
+    # and sends its variables to the daemon, so the secret value must not appear
+    # in argv. Record the file contents for the argv-leak proof.
+    while [ "$#" -gt 0 ]; do
+      if [ "$1" = "--env-file" ]; then
+        shift
+        if [ -n "${1:-}" ] && [ -f "$1" ]; then
+          {
+            printf 'ENV_FILE %s\n' "$1"
+            sed 's/^/  /' "$1"
+          } >> "${DOCKER_ENVLOG:-/dev/null}"
+        fi
+        shift
+        continue
+      fi
+      shift
+    done
+    exit "${FAKEPG_VALIDATOR_EXIT:-0}" ;;
+  inspect)
+    name="${2:-}"
+    if [ -n "${FAKEDOCKER_INSPECT_DIR:-}" ]; then
+      if [ -f "$FAKEDOCKER_INSPECT_DIR/$name.json" ]; then
+        cat "$FAKEDOCKER_INSPECT_DIR/$name.json"
+      else
+        printf '[{"Id":"%s","State":{"Running":true},"Config":{"Labels":{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes"}},"NetworkSettings":{"Networks":{"%s-net":{}}}}]' \
+          "$name" "$name"
+      fi
+      exit 0
+    fi
+    echo '[]'
+    exit 0 ;;
   compose) exit 0 ;;
   *) exit 0 ;;
 esac
 DOCKSTUB
 chmod +x "$BIN/docker"
 export PATH="$BIN:$PATH"
+FAKEDOCKER_INSPECT_DIR="$TMP/docker-inspect"
+mkdir -p "$FAKEDOCKER_INSPECT_DIR"
+DOCKER_LOG="$TMP/docker.log"
+DOCKER_ENVLOG="$TMP/docker-env.log"
+export FAKEDOCKER_INSPECT_DIR DOCKER_LOG DOCKER_ENVLOG
+
+# write_inspect <container> <running> <labels-as-json> <networks-as-json>
+write_inspect() {
+  local name="$1" running="$2" labels="$3" networks="$4"
+  cat > "$FAKEDOCKER_INSPECT_DIR/$name.json" <<JSON
+[{"Id":"$name","State":{"Running":$running},"Config":{"Labels":$labels},"NetworkSettings":{"Networks":$networks}}]
+JSON
+}
 
 # --- fake S3 server lifecycle -------------------------------------------------
 start_server() {
@@ -447,14 +494,53 @@ run_restore_guard "refusing to restore into the live production postgres contain
   --target-db drill_db --target-project drill --restore-pg container:pg1 \
   --confirm-target-isolated=yes
 
+# 5b. the isolation proof (docker inspect) must refuse any target that is not a
+#     provably disposable drill container:
+#     right network set, labels, running state, exclusivity from the production
+#     container/endpoint and from the production Compose project.
+write_inspect restore-shared-net true \
+  '{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes"}' \
+  '{"pg1-net":{}}'
+run_restore_guard "attached to the production postgres network" \
+  --object-key "$OBJKEY" --target-db drill_net --target-project drill \
+  --restore-pg container:restore-shared-net --confirm-target-isolated=yes
+write_inspect restore-wrong-project true \
+  '{"bodysense.restore-project":"staging","bodysense.disposable-restore":"yes"}' \
+  '{"restore-wrong-project-net":{}}'
+run_restore_guard "does not declare bodysense.restore-project=drill" \
+  --object-key "$OBJKEY" --target-db drill_proj --target-project drill \
+  --restore-pg container:restore-wrong-project --confirm-target-isolated=yes
+write_inspect restore-not-disposable true \
+  '{"bodysense.restore-project":"drill","bodysense.disposable-restore":"no"}' \
+  '{"restore-not-disposable-net":{}}'
+run_restore_guard "refusing a non-disposable target" \
+  --object-key "$OBJKEY" --target-db drill_disp --target-project drill \
+  --restore-pg container:restore-not-disposable --confirm-target-isolated=yes
+write_inspect restore-stopped false \
+  '{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes"}' \
+  '{"restore-stopped-net":{}}'
+run_restore_guard "is not running" \
+  --object-key "$OBJKEY" --target-db drill_run --target-project drill \
+  --restore-pg container:restore-stopped --confirm-target-isolated=yes
+write_inspect pg1 true \
+  '{"com.docker.compose.project":"docker"}' \
+  '{"pg1-net":{}}'
+write_inspect restore-prod-compose true \
+  '{"com.docker.compose.project":"docker","bodysense.restore-project":"drill","bodysense.disposable-restore":"yes"}' \
+  '{"restore-prod-compose-net":{}}'
+run_restore_guard "belongs to the production compose project 'docker'" \
+  --object-key "$OBJKEY" --target-db drill_compose --target-project drill \
+  --restore-pg container:restore-prod-compose --confirm-target-isolated=yes
+rm -f "$FAKEDOCKER_INSPECT_DIR/pg1.json"
+
 # ==============================================================================
 # 6. restore happy path with validator invocations
 # ==============================================================================
 FAKEPG_DB_EXISTS="" FAKEPG_SCHEMA="49:false"
-DOCKER_LOG="$TMP/docker.log"
 : > "$DOCKER_LOG"
+: > "$DOCKER_ENVLOG"
 out=$(BODYSENSE_DEPLOY_ROOT="$ROOT" OFFHOST_PG_PREFIX="$BIN/fake-pg" OFFHOST_PGCONTAINER_ID=pg1 \
-  OFFHOST_API_CONTAINER=fake-api-1 DOCKER_LOG="$DOCKER_LOG" \
+  OFFHOST_API_CONTAINER=fake-api-1 DOCKER_LOG="$DOCKER_LOG" DOCKER_ENVLOG="$DOCKER_ENVLOG" \
   bash "$RESTORE" --object-key "$OBJKEY" --target-db drill_db --target-project drill \
   --restore-pg container:restore-pg --confirm-target-isolated=yes --validator-runner docker 2>&1) && rc=0 || rc=$?
 if [ $rc -eq 0 ] && [[ "$out" == *RESTORE_RESULT=PASS* ]] \
@@ -466,22 +552,35 @@ fi
 # Production Compose names the api container "<project>-api-1" (docker-api-1),
 # never a literal "api"; the restore path must exec validators on the resolved
 # container, and the OFFHOST_API_CONTAINER seam must win over any lookup.
-if grep -q '^exec fake-api-1 /app/validators/migration-validator ' "$DOCKER_LOG" \
-  && grep -q '^exec fake-api-1 /app/validators/domain-validator ' "$DOCKER_LOG" \
-  && ! grep -q '^exec api ' "$DOCKER_LOG"; then
+if grep -q '^exec --env-file [^ ]* fake-api-1 /app/validators/migration-validator ' "$DOCKER_LOG" \
+  && grep -q '^exec --env-file [^ ]* fake-api-1 /app/validators/domain-validator ' "$DOCKER_LOG" \
+  && ! grep -q '^exec --env-file [^ ]* api /app/validators/' "$DOCKER_LOG"; then
   report 0 "validators exec via the resolved api container (fake-api-1), never a literal 'api'"
 else
   report 1 "validators exec via the resolved api container (fake-api-1), never a literal 'api'" "docker_log=$(tr '\n' '|' < "$DOCKER_LOG")"
+fi
+# The database password (fixed test secret 0123456789abcdef) must never appear
+# on any recorded docker argv (host side) or psql/fake-pg argv; it may only be
+# present in the --env-file the stub read on behalf of the daemon.  The DSN in
+# -database-url must carry no password at all.
+if ! grep -q '0123456789abcdef' "$DOCKER_LOG" \
+  && grep -q 'postgres://bodysense@restore-pg:5432/drill_db?sslmode=disable' "$DOCKER_LOG" \
+  && grep -q 'PGPASSWORD=0123456789abcdef' "$DOCKER_ENVLOG"; then
+  report 0 "database password never appears in argv; delivered only via PGPASSWORD in an --env-file"
+else
+  report 1 "database password never appears in argv; delivered only via PGPASSWORD in an --env-file" \
+    "docker_log=$(tr '\n' '|' < "$DOCKER_LOG") env_log=$(tr '\n' '|' < "$DOCKER_ENVLOG")"
 fi
 # Without an explicit OFFHOST_API_CONTAINER the restore path must fall back to
 # Compose's default "<project>-api-1" naming (docker-api-1 for project "docker"),
 # which is exactly what production runs — the original P1 blocker.
 : > "$DOCKER_LOG"
+: > "$DOCKER_ENVLOG"
 out=$(BODYSENSE_DEPLOY_ROOT="$ROOT" OFFHOST_PG_PREFIX="$BIN/fake-pg" OFFHOST_PGCONTAINER_ID=pg1 \
-  DOCKER_LOG="$DOCKER_LOG" \
+  DOCKER_LOG="$DOCKER_LOG" DOCKER_ENVLOG="$DOCKER_ENVLOG" \
   bash "$RESTORE" --object-key "$OBJKEY" --target-db drill_db_b --target-project drill \
   --restore-pg container:restore-pg --confirm-target-isolated=yes --validator-runner docker 2>&1) && rc=0 || rc=$?
-if [ $rc -eq 0 ] && grep -q '^exec docker-api-1 /app/validators/migration-validator ' "$DOCKER_LOG"; then
+if [ $rc -eq 0 ] && grep -q '^exec --env-file [^ ]* docker-api-1 /app/validators/migration-validator ' "$DOCKER_LOG"; then
   report 0 "without OFFHOST_API_CONTAINER the restore uses Compose's '<project>-api-1' naming (docker-api-1)"
 else
   report 1 "without OFFHOST_API_CONTAINER the restore uses Compose's '<project>-api-1' naming (docker-api-1)" \
@@ -580,6 +679,40 @@ if grep -nE 'docker[[:space:]]+exec[[:space:]]+api([[:space:]]|$)' "$RESTORE" >/
     "found a hard-coded 'docker exec api' in scripts/restore-production-backup.sh"
 else
   report 0 "restore runs validators on the resolved api container, never a literal 'api'"
+fi
+
+# ==============================================================================
+# 14. systemd timers pin the timezone inside OnCalendar (a bare Timezone= line in
+#     [Timer] is non-standard and is ignored/overridden by the system); every
+#     off-host timer must carry the timezone embedded in its schedule expression
+# ==============================================================================
+tz_ok=0
+tz_fail=""
+for timer in deploy/systemd/bodysense-offhost-backup.timer deploy/systemd/bodysense-offhost-freshness.timer; do
+  if [ ! -f "$timer" ]; then
+    tz_fail="$tz_fail missing $timer;"
+    continue
+  fi
+  if grep -Eq '^[[:space:]]*Timezone=' "$timer"; then
+    tz_fail="$tz_fail $timer uses non-standard [Timer] Timezone=;"
+  fi
+  schedules=$(sed -n '/^\[Timer\]/,/^\[/p' "$timer" | sed -nE 's/^[[:space:]]*OnCalendar=//p')
+  if [ -z "$schedules" ]; then
+    tz_fail="$tz_fail $timer has no OnCalendar=;"
+  fi
+  while IFS= read -r sched; do
+    case "$sched" in
+      *"Asia/Shanghai"|*"UTC"|*"Etc/UTC") ;;
+      *) tz_fail="$tz_fail $timer OnCalendar='$sched' has no explicit timezone;"
+    esac
+  done <<EOF
+$schedules
+EOF
+done
+if [ -n "$tz_fail" ]; then
+  report 1 "systemd timers pin the timezone inside OnCalendar expressions" "$tz_fail"
+else
+  report 0 "systemd timers pin the timezone inside OnCalendar expressions"
 fi
 
 echo
