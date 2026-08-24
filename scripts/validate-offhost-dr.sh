@@ -5,7 +5,10 @@
 # PostgreSQL and the REAL pg_dump/pg_restore tooling and the REAL validator
 # binaries, while keeping the object store fake (scripts/test_offhost_s3.py's
 # signature-verified in-process server).  It exercises the same scripts that the
-# systemd units run, including the `docker compose exec`-style postgres seam.
+# systemd units run, including the `docker compose exec`-style postgres seam,
+# and restores into a second, disposable PostgreSQL container (
+# `restore-pg`) that is provably independent from the production `postgres`
+# container.
 #
 # Requires docker and outbound registry/module access (golang build).
 set -euo pipefail
@@ -15,7 +18,8 @@ PG_IMAGE="${OFFHOST_DR_PG_IMAGE:-pgvector/pgvector:pg18}"
 GO_IMAGE="${OFFHOST_DR_GO_IMAGE:-golang:1.26-alpine}"
 ALPINE_IMAGE="${OFFHOST_DR_ALPINE_IMAGE:-alpine:3.20}"
 NET="bodysense-dr-net-$$"
-PG_NAME="postgres"     # restore validators reach the DB at the hostname `postgres`
+PG_NAME="postgres"          # production postgres (source)
+RESTORE_PG_NAME="restore-pg" # disposable, explicitly isolated restore postgres
 API_NAME="api"
 BUILDER_NAME="bodysense-dr-builder-$$"
 export DB_USER=bodysense DB_NAME=bodysense DB_PASSWORD=0123456789abcdef
@@ -27,7 +31,7 @@ CORRUPT_FILE="$TMP/corrupt.on"
 export TMP ROOT CORRUPT_FILE
 
 cleanup() {
-  docker rm -f "$API_NAME" "$BUILDER_NAME" "$PG_NAME" >/dev/null 2>&1 || true
+  docker rm -f "$API_NAME" "$BUILDER_NAME" "$RESTORE_PG_NAME" "$PG_NAME" >/dev/null 2>&1 || true
   docker network rm "$NET" >/dev/null 2>&1 || true
   if [ -n "${SERVER_PID:-}" ] && kill -0 "$SERVER_PID" 2>/dev/null; then
     kill "$SERVER_PID" 2>/dev/null || true
@@ -96,12 +100,15 @@ chmod 644 "$ROOT/.env.production"
 umask 022
 
 # --- postgres peer through the same docker-exec seam production uses -----------
+# OFFHOST_PG_RESTORE_CONTAINER is set by restore-production-backup.sh when it
+# routes each psql/pg_restore call at the disposable restore container, so the
+# seam forwards to the correct endpoint depending on phase (backup vs restore).
 cat > "$TMP/fake-pg" <<PGSTUB
 #!/usr/bin/env bash
-exec docker exec -i $PG_NAME "\$@"
+exec docker exec -i "\${OFFHOST_PG_RESTORE_CONTAINER:-\$PG_NAME}" "\$@"
 PGSTUB
 chmod +x "$TMP/fake-pg"
-export OFFHOST_PG_PREFIX="$TMP/fake-pg"
+export OFFHOST_PG_PREFIX="$TMP/fake-pg" PG_NAME
 
 # --- real PostgreSQL ------------------------------------------------------------
 docker network create "$NET" >/dev/null
@@ -118,6 +125,20 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 [ "$ready" = 1 ] || { echo "PostgreSQL did not become ready" >&2; exit 1; }
+
+# Disposable restore PostgreSQL: explicitly isolated from the production server.
+docker run -d --name "$RESTORE_PG_NAME" --network "$NET" \
+  -e "POSTGRES_USER=$DB_USER" -e "POSTGRES_PASSWORD=$DB_PASSWORD" -e "POSTGRES_DB=postgres" \
+  "$PG_IMAGE" >/dev/null
+ready=0
+for _ in $(seq 1 60); do
+  if docker exec "$RESTORE_PG_NAME" pg_isready -U "$DB_USER" -d postgres >/dev/null 2>&1; then
+    ready=1
+    break
+  fi
+  sleep 1
+done
+[ "$ready" = 1 ] || { echo "restore PostgreSQL did not become ready" >&2; exit 1; }
 
 # --- build the real validator binaries with the repo toolchain -------------------
 docker run -d --name "$BUILDER_NAME" "$GO_IMAGE" sleep 99999 >/dev/null
@@ -152,8 +173,9 @@ docker exec "$PG_NAME" psql -U "$DB_USER" -d "$DB_NAME" -Atc \
 BODYSENSE_DEPLOY_ROOT="$ROOT" bash scripts/production-offhost-backup.sh --backup > "$TMP/backup.out"
 grep -q OFFHOST_BACKUP_OBJECT= "$TMP/backup.out" || { echo "backup did not report an object key" >&2; exit 1; }
 object_key=$(sed -n 's/^OFFHOST_BACKUP_OBJECT=//p' "$TMP/backup.out" | tail -1)
-n=$(python3 "$S3CLI" list --endpoint "$ENDPOINT" --bucket "$BUCKET" --region "$REGION" \
-  --access-key "$ACCESS" --secret-key "$SECRET" --prefix "$PREFIX/" \
+n=$(OFFHOST_BACKUP_ACCESS_KEY="$ACCESS" OFFHOST_BACKUP_SECRET_KEY="$SECRET" \
+  python3 "$S3CLI" list --endpoint "$ENDPOINT" --bucket "$BUCKET" --region "$REGION" \
+  --prefix "$PREFIX/" \
   | awk -F'\t' 'NF { n++ } END { print n+0 }')
 [ "$n" -eq 3 ] || { echo "expected 3 objects, got $n" >&2; exit 1; }
 echo "DR_INTEGRATION_BACKUP=PASS objects=$n object_key=$object_key"
@@ -164,24 +186,25 @@ BODYSENSE_DEPLOY_ROOT="$ROOT" bash scripts/production-offhost-backup.sh --check-
   || { echo "freshness check failed" >&2; exit 1; }
 echo "DR_INTEGRATION_FRESHNESS=PASS"
 
-# --- full restore drill into a disposable database ------------------------------------
+# --- full restore drill into a disposable database on the disposable server --------
 target_db="drill_restore_$$"
 BODYSENSE_DEPLOY_ROOT="$ROOT" bash scripts/restore-production-backup.sh \
   --object-key "$object_key" --target-db "$target_db" --target-project drill \
+  --restore-pg "container:$RESTORE_PG_NAME" \
   --confirm-target-isolated=yes --validator-runner docker \
   > "$TMP/restore.out" 2>&1
 grep -q "RESTORE_RESULT=PASS" "$TMP/restore.out" \
   || { echo "restore did not reach PASS" >&2; cat "$TMP/restore.out" >&2; exit 1; }
-restored_rev=$(docker exec "$PG_NAME" psql -U "$DB_USER" -d "$target_db" -Atc \
+restored_rev=$(docker exec "$RESTORE_PG_NAME" psql -U "$DB_USER" -d "$target_db" -Atc \
   "SELECT version::text || ':' || dirty::text FROM schema_migrations ORDER BY version DESC LIMIT 1;")
 backup_rev=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["schema_revision"])' \
   "$ROOT/.offhost-state/last-success.json")
 [ "$restored_rev" = "$backup_rev" ] \
   || { echo "schema revision mismatch: restored=$restored_rev metadata=$backup_rev" >&2; exit 1; }
-probe_rows=$(docker exec "$PG_NAME" psql -U "$DB_USER" -d "$target_db" -Atc \
+probe_rows=$(docker exec "$RESTORE_PG_NAME" psql -U "$DB_USER" -d "$target_db" -Atc \
   "SELECT count(*) FROM users WHERE email='dr-probe@example.com';")
 [ "$probe_rows" = 1 ] \
   || { echo "dr-probe row missing from restored database (count=$probe_rows)" >&2; exit 1; }
-echo "DR_INTEGRATION_RESTORE=PASS database=$target_db schema=$restored_rev data_round_trip=verified"
+echo "DR_INTEGRATION_RESTORE=PASS database=$target_db restore_pg=$RESTORE_PG_NAME schema=$restored_rev data_round_trip=verified"
 
 echo "OFFHOST_DR_INTEGRATION=PASS"

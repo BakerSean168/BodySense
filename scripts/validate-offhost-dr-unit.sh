@@ -10,9 +10,11 @@
 #   - the api container validators are stubbed with a fake `docker` on PATH.
 #
 # This proves the off-host pipeline logic (schedule artifact layout, metadata,
-# retention scoping, freshness alerting and the restore safety guards) against
-# a real, signature-verified S3 wire client. The docker-backed integration test
-# (validate-offhost-dr.sh) re-proves the flow against real PostgreSQL.
+# retention scoping, freshness alerting, env-only credential handling, the
+# restore isolation/enforcement guards and the SHA-256 sidecar verification)
+# against a real, signature-verified S3 wire client. The docker-backed
+# integration test (validate-offhost-dr.sh) re-proves the flow against real
+# PostgreSQL.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
@@ -187,8 +189,9 @@ fake_dump() {
 }
 
 s3put() {
-  python3 "$S3CLI" put --endpoint "$ENDPOINT" --bucket "$BUCKET" --region "$REGION" \
-    --access-key "$ACCESS" --secret-key "$SECRET" --key "$1" --file "$2"
+  OFFHOST_BACKUP_ACCESS_KEY="$ACCESS" OFFHOST_BACKUP_SECRET_KEY="$SECRET" \
+    python3 "$S3CLI" put --endpoint "$ENDPOINT" --bucket "$BUCKET" --region "$REGION" \
+      --key "$1" --file "$2"
 }
 
 last_key() {
@@ -196,9 +199,38 @@ last_key() {
 }
 
 count_objects() {
-  python3 "$S3CLI" list --endpoint "$ENDPOINT" --bucket "$BUCKET" --region "$REGION" \
-    --access-key "$ACCESS" --secret-key "$SECRET" --prefix "$1" 2>/dev/null \
-    | awk -F'\t' 'NF { n++ } END { print n+0 }'
+  OFFHOST_BACKUP_ACCESS_KEY="$ACCESS" OFFHOST_BACKUP_SECRET_KEY="$SECRET" \
+    python3 "$S3CLI" list --endpoint "$ENDPOINT" --bucket "$BUCKET" --region "$REGION" \
+      --prefix "$1" 2>/dev/null \
+      | awk -F'\t' 'NF { n++ } END { print n+0 }'
+}
+
+meta_get() {
+  OFFHOST_BACKUP_ACCESS_KEY="$ACCESS" OFFHOST_BACKUP_SECRET_KEY="$SECRET" \
+    python3 "$S3CLI" get --endpoint "$ENDPOINT" --bucket "$BUCKET" --region "$REGION" \
+      --key "$1" --file "$2"
+}
+
+sha256sidecar_rewrite() {
+  # Rewrite the .sha256 sidecar object for $OBJKEY using a sed expression.
+  local key="$1" expression="$2" f="$TMP/sidecar-work"
+  OFFHOST_BACKUP_ACCESS_KEY="$ACCESS" OFFHOST_BACKUP_SECRET_KEY="$SECRET" \
+    python3 "$S3CLI" get --endpoint "$ENDPOINT" --bucket "$BUCKET" --region "$REGION" \
+      --key "$key.sha256" --file "$f" >/dev/null
+  sed -e "$expression" "$f" > "$f.new"
+  s3put "$key.sha256" "$f.new" >/dev/null
+  rm -f "$f" "$f.new"
+}
+
+sidecar_restore() {
+  # Put the correct sidecar back: <metadata checksum> + two spaces + the object
+  # basename, which is exactly what production-offhost-backup.sh writes.
+  local key="$1" chk f="$TMP/sidecar-fix"
+  meta_get "$key.meta.json" "$TMP/s1.json"
+  chk=$(python3 -c 'import json;print(json.load(open("'"$TMP"'/s1.json"))["checksum_sha256"])')
+  printf '%s  %s\n' "$chk" "${key##*/}" > "$f"
+  s3put "$key.sha256" "$f" >/dev/null
+  rm -f "$f" "$TMP/s1.json"
 }
 
 # ==============================================================================
@@ -211,8 +243,7 @@ run_backup > "$TMP/backup1.out"
 OBJKEY=$(last_key)
 n=$(count_objects "$PREFIX/")
 meta_ok=bad
-python3 "$S3CLI" get --endpoint "$ENDPOINT" --bucket "$BUCKET" --region "$REGION" \
-  --access-key "$ACCESS" --secret-key "$SECRET" --key "$OBJKEY.meta.json" --file "$TMP/m1.json"
+meta_get "$OBJKEY.meta.json" "$TMP/m1.json"
 meta_ok=$(python3 -c 'import json;d=json.load(open("'"$TMP"'/m1.json"));print("ok" if d["schema_revision"]=="49:false" and d["backup_kind"]=="offhost-postgres" and d["archive_format"]=="custom" else "bad")')
 if [ "$n" -eq 3 ] && [ "$meta_ok" = ok ]; then
   report 0 "backup uploads exactly 3 verified objects with correct metadata"
@@ -313,16 +344,30 @@ run_restore_guard() {
 }
 run_restore_guard "refusing to restore into the production database" \
   --object-key "$PREFIX/20260824T000000Z/bodysense-postgres-20260824T000000Z.dump" \
-  --target-db bodysense --target-project drill --confirm-target-isolated=yes
+  --target-db bodysense --target-project drill --restore-pg container:restore-pg \
+  --confirm-target-isolated=yes
 run_restore_guard 'must not be "bodysense"' \
   --object-key "$PREFIX/20260824T000000Z/bodysense-postgres-20260824T000000Z.dump" \
-  --target-db drill_db --target-project bodysense --confirm-target-isolated=yes
+  --target-db drill_db --target-project bodysense --restore-pg container:restore-pg \
+  --confirm-target-isolated=yes
 run_restore_guard "--confirm-target-isolated=yes" \
   --object-key "$PREFIX/20260824T000000Z/bodysense-postgres-20260824T000000Z.dump" \
-  --target-db drill_db --target-project drill
+  --target-db drill_db --target-project drill --restore-pg container:restore-pg
 run_restore_guard "outside the configured" \
   --object-key "other/prefix/20260824T000000Z/x.dump" \
+  --target-db drill_db --target-project drill --restore-pg container:restore-pg \
+  --confirm-target-isolated=yes
+run_restore_guard '--restore-pg container:<id|name> is required' \
+  --object-key "$PREFIX/20260824T000000Z/bodysense-postgres-20260824T000000Z.dump" \
   --target-db drill_db --target-project drill --confirm-target-isolated=yes
+run_restore_guard 'must be container:<id|name>' \
+  --object-key "$PREFIX/20260824T000000Z/bodysense-postgres-20260824T000000Z.dump" \
+  --target-db drill_db --target-project drill \
+  --restore-pg tcp:127.0.0.1:5433 --confirm-target-isolated=yes
+run_restore_guard "refusing to restore into the live production postgres container/endpoint" \
+  --object-key "$PREFIX/20260824T000000Z/bodysense-postgres-20260824T000000Z.dump" \
+  --target-db drill_db --target-project drill --restore-pg container:pg1 \
+  --confirm-target-isolated=yes
 
 # ==============================================================================
 # 6. restore happy path with validator invocations
@@ -330,7 +375,7 @@ run_restore_guard "outside the configured" \
 FAKEPG_DB_EXISTS="" FAKEPG_SCHEMA="49:false"
 out=$(BODYSENSE_DEPLOY_ROOT="$ROOT" OFFHOST_PG_PREFIX="$BIN/fake-pg" OFFHOST_PGCONTAINER_ID=pg1 \
   bash "$RESTORE" --object-key "$OBJKEY" --target-db drill_db --target-project drill \
-  --confirm-target-isolated=yes --validator-runner docker 2>&1) && rc=0 || rc=$?
+  --restore-pg container:restore-pg --confirm-target-isolated=yes --validator-runner docker 2>&1) && rc=0 || rc=$?
 if [ $rc -eq 0 ] && [[ "$out" == *RESTORE_RESULT=PASS* ]] \
   && [[ "$out" == *"restored schema revision matches backup metadata"* ]]; then
   report 0 "restore drill restores the verified archive and runs validators"
@@ -344,7 +389,7 @@ fi
 out=$(FAKEPG_DB_EXISTS=1 BODYSENSE_DEPLOY_ROOT="$ROOT" OFFHOST_PG_PREFIX="$BIN/fake-pg" \
   OFFHOST_PGCONTAINER_ID=pg1 \
   bash "$RESTORE" --object-key "$OBJKEY" --target-db used_db --target-project drill \
-  --confirm-target-isolated=yes --validator-runner docker 2>&1) && rc=0 || rc=$?
+  --restore-pg container:restore-pg --confirm-target-isolated=yes --validator-runner docker 2>&1) && rc=0 || rc=$?
 if [ $rc -ne 0 ] && [[ "$out" == *"already exists"* ]]; then
   report 0 "restore refuses an existing target database"
 else
@@ -358,12 +403,68 @@ set_corrupt
 out=$(FAKEPG_DB_EXISTS="" BODYSENSE_DEPLOY_ROOT="$ROOT" OFFHOST_PG_PREFIX="$BIN/fake-pg" \
   OFFHOST_PGCONTAINER_ID=pg1 \
   bash "$RESTORE" --object-key "$OBJKEY" --target-db drill_db2 --target-project drill \
-  --confirm-target-isolated=yes --validator-runner docker 2>&1) && rc=0 || rc=$?
+  --restore-pg container:restore-pg --confirm-target-isolated=yes --validator-runner docker 2>&1) && rc=0 || rc=$?
 unset_corrupt
-if [ $rc -ne 0 ] && [[ "$out" == *"SHA-256 mismatch"* ]]; then
+if [ $rc -ne 0 ] && [[ "$out" == *"does not match the checksum sidecar"* ]]; then
   report 0 "restore fails when the downloaded archive checksum mismatches"
 else
   report 1 "restore fails when the downloaded archive checksum mismatches" "rc=$rc out=$out"
+fi
+
+# ==============================================================================
+# 9. restore refuses checksum sidecars that are syntactically invalid
+# ==============================================================================
+sha256sidecar_rewrite "$OBJKEY" 's/.*/not-a-sha256-sidecar!/
+s/^[a-z0-9-]*$/garbage/'
+out=$(FAKEPG_DB_EXISTS="" BODYSENSE_DEPLOY_ROOT="$ROOT" OFFHOST_PG_PREFIX="$BIN/fake-pg" \
+  OFFHOST_PGCONTAINER_ID=pg1 \
+  bash "$RESTORE" --object-key "$OBJKEY" --target-db drill_db3 --target-project drill \
+  --restore-pg container:restore-pg --confirm-target-isolated=yes --validator-runner docker 2>&1) && rc=0 || rc=$?
+if [ $rc -ne 0 ] && [[ "$out" == *"not in '<sha256>  <filename>' format"* ]]; then
+  report 0 "restore refuses a checksum sidecar that is not in '<sha256>  <filename>' format"
+else
+  report 1 "restore refuses a checksum sidecar that is not in '<sha256>  <filename>' format" "rc=$rc out=$out"
+fi
+sidecar_restore "$OBJKEY"
+
+# ==============================================================================
+# 10. restore refuses a checksum sidecar whose attested filename is wrong
+# ==============================================================================
+sha256sidecar_rewrite "$OBJKEY" 's/  .*/  wrong-object-name.dump/'
+out=$(FAKEPG_DB_EXISTS="" BODYSENSE_DEPLOY_ROOT="$ROOT" OFFHOST_PG_PREFIX="$BIN/fake-pg" \
+  OFFHOST_PGCONTAINER_ID=pg1 \
+  bash "$RESTORE" --object-key "$OBJKEY" --target-db drill_db4 --target-project drill \
+  --restore-pg container:restore-pg --confirm-target-isolated=yes --validator-runner docker 2>&1) && rc=0 || rc=$?
+if [ $rc -ne 0 ] && [[ "$out" == *"does not match object key basename"* ]]; then
+  report 0 "restore refuses a checksum sidecar attesting the wrong object name"
+else
+  report 1 "restore refuses a checksum sidecar attesting the wrong object name" "rc=$rc out=$out"
+fi
+sidecar_restore "$OBJKEY"
+
+# ==============================================================================
+# 11. restore refuses a checksum sidecar whose digest disagrees with metadata
+# ==============================================================================
+sha256sidecar_rewrite "$OBJKEY" 's/^[0-9a-f]\{64\}/ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff/'
+out=$(FAKEPG_DB_EXISTS="" BODYSENSE_DEPLOY_ROOT="$ROOT" OFFHOST_PG_PREFIX="$BIN/fake-pg" \
+  OFFHOST_PGCONTAINER_ID=pg1 \
+  bash "$RESTORE" --object-key "$OBJKEY" --target-db drill_db5 --target-project drill \
+  --restore-pg container:restore-pg --confirm-target-isolated=yes --validator-runner docker 2>&1) && rc=0 || rc=$?
+if [ $rc -ne 0 ] && [[ "$out" == *"does not match metadata checksum_sha256"* ]]; then
+  report 0 "restore refuses a checksum sidecar whose digest disagrees with backup metadata"
+else
+  report 1 "restore refuses a checksum sidecar whose digest disagrees with backup metadata" "rc=$rc out=$out"
+fi
+
+# ==============================================================================
+# 12. offhost credentials are env-only: no operator script passes them as CLI args
+# ==============================================================================
+if grep -lE -- '--(access-key|secret-key)' scripts/*.sh >/dev/null 2>&1; then
+  report 1 "offhost credentials are never passed through process argv (argv-leak guard)"
+elif [ "$(grep -cE 'OFFHOST_BACKUP_ACCESS_KEY=' scripts/production-offhost-backup.sh scripts/restore-production-backup.sh 2>/dev/null | awk -F: '{s+=$2} END {print s+0}')" -lt 2 ]; then
+  report 1 "offhost credentials are never passed through process argv (argv-leak guard)" "missing env-based credential wiring"
+else
+  report 0 "offhost credentials are never passed through process argv (argv-leak guard)"
 fi
 
 echo

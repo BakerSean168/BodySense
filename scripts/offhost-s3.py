@@ -8,17 +8,21 @@ the production host never needs an extra SDK, `aws` CLI or container to upload
 or retrieve backups. Alibaba OSS and MinIO both accept this signing scheme.
 
 Security contract (BS-PROD-012):
-  - credentials are read from the environment/CLI only and never logged;
-  - the client never writes credentials into request bodies or metadata;
-  - the destination bucket is assumed private; the client never sets a public
+  -   credentials are read from the environment ONLY (OFFHOST_BACKUP_ACCESS_KEY /
+      OFFHOST_BACKUP_SECRET_KEY) and never logged; the client refuses
+      command-line credentials so secrets can never be observed through the host
+      process table or /proc/<pid>/cmdline;
+  -   the client never writes credentials into request bodies or metadata;
+  -   the destination bucket is assumed private; the client never sets a public
     ACL and refuses to do so.
 
-Usage (options may appear before or after the command):
-  offhost-s3.py put    --endpoint URL --bucket B --key K --file PATH [--region R] [--url-style path|virtual] [--access-key A] [--secret-key S]
-  offhost-s3.py get    --endpoint URL --bucket B --key K --file PATH [--region R] [--url-style path|virtual] [--access-key A] [--secret-key S]
-  offhost-s3.py delete --endpoint URL --bucket B --key K [--region R] [--url-style path|virtual] [--access-key A] [--secret-key S]
-  offhost-s3.py list   --endpoint URL --bucket B [--prefix P] [--region R] [--url-style path|virtual] [--access-key A] [--secret-key S]
-  offhost-s3.py head   --endpoint URL --bucket B --key K [--region R] [--url-style path|virtual] [--access-key A] [--secret-key S]
+Usage (options may appear before or after the command; credentials come from the
+environment, never from the command line):
+  offhost-s3.py put    --endpoint URL --bucket B --key K --file PATH [--region R] [--url-style path|virtual]
+  offhost-s3.py get    --endpoint URL --bucket B --key K --file PATH [--region R] [--url-style path|virtual]
+  offhost-s3.py delete --endpoint URL --bucket B --key K [--region R] [--url-style path|virtual]
+  offhost-s3.py list   --endpoint URL --bucket B [--prefix P] [--region R] [--url-style path|virtual]
+  offhost-s3.py head   --endpoint URL --bucket B --key K [--region R] [--url-style path|virtual]
 """
 
 import argparse
@@ -322,8 +326,14 @@ def _parse_args(argv):
     parser.add_argument("--bucket", required=True, help="private bucket name")
     parser.add_argument("--region", default="us-east-1", help="signing region")
     parser.add_argument("--url-style", choices=("path", "virtual"), default="path")
-    parser.add_argument("--access-key", help="least-privilege access key (env OFFHOST_BACKUP_ACCESS_KEY)")
-    parser.add_argument("--secret-key", help="least-privilege secret key (env OFFHOST_BACKUP_SECRET_KEY)")
+    parser.add_argument(
+        "--access-key",
+        help="DEPRECATED: refused for security; credentials are env-only",
+    )
+    parser.add_argument(
+        "--secret-key",
+        help="DEPRECATED: refused for security; credentials are env-only",
+    )
     parser.add_argument("--key", help="object key (required for put/get/delete/head)")
     parser.add_argument("--file", help="local file path (required for put/get)")
     parser.add_argument("--prefix", default="", help="object key prefix for list")
@@ -332,8 +342,15 @@ def _parse_args(argv):
 
 def main(argv=None):
     args = _parse_args(argv if argv is not None else sys.argv[1:])
-    access_key = args.access_key or _env_or_empty("OFFHOST_BACKUP_ACCESS_KEY")
-    secret_key = args.secret_key or _env_or_empty("OFFHOST_BACKUP_SECRET_KEY")
+    if args.access_key or args.secret_key:
+        print(
+            "OFFHOST_S3_ERROR status=0 code=CliCredentialsRefused "
+            "message=credentials must come from the environment, not the command line",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    access_key = _env_or_empty("OFFHOST_BACKUP_ACCESS_KEY")
+    secret_key = _env_or_empty("OFFHOST_BACKUP_SECRET_KEY")
     client = S3Client(args.endpoint, args.bucket, region=args.region, url_style=args.url_style)
 
     if args.command == "put":

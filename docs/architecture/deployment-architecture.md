@@ -200,19 +200,28 @@ OSS/S3-compatible destination (Alibaba Cloud OSS `cn-hangzhou`):
   `OFFHOST_BACKUP_FRESH=FAIL reason=...` and optionally runs the configured
   `OFFHOST_BACKUP_ALERT_CMD`.
 - `scripts/restore-production-backup.sh` is the operator-only restore drill. It
-  never restores into the production database: the target must differ from
-  `DB_NAME`, the project must differ from `bodysense`, the target database must
-  not already exist, and `--confirm-target-isolated=yes` is mandatory. It
-  verifies the downloaded archive's SHA-256 against the metadata, validates the
-  archive with `pg_restore --list`, restores into the fresh disposable database
-  with `--no-owner --no-privileges`, verifies the restored schema revision equals
-  the backup metadata, and runs the `domain-validator` and `migration-validator`
-  binaries (built into the API image at `/app/validators/`) against the restored
-  database.
+  never restores into the production database or production postgres server:
+  `--restore-pg container:<id|name>` is required and must resolve (via `docker
+  inspect` to the container ID) to a disposable PostgreSQL server that is not the
+  live production postgres container; all `psql`/`pg_restore` and `docker cp`
+  operations target that disposable server exclusively. The target must differ
+  from `DB_NAME`, the project must differ from `bodysense`, the target database
+  must not already exist, and `--confirm-target-isolated=yes` is mandatory. It
+  verifies the SHA-256 sidecar strictly (syntax, attested filename, digest
+  equality with the metadata `checksum_sha256`) and proves the downloaded
+  archive matches the sidecar and the metadata, validates the archive with
+  `pg_restore --list`, restores into the fresh disposable database on the
+  disposable server with `--no-owner --no-privileges`, verifies the restored
+  schema revision equals the backup metadata, and runs the `domain-validator`
+  and `migration-validator` binaries (built into the API image at
+  `/app/validators/`) against the restored database.
 - Object-store credentials are host-only least-privilege keys in
   `.env.production.local` (`OFFHOST_BACKUP_ACCESS_KEY` /
   `OFFHOST_BACKUP_SECRET_KEY`, limited to GetObject/PutObject/DeleteObject/ListBucket
-  on the backup bucket). They are never written into artifacts or Git.
+  on the backup bucket). They are never written into artifacts or Git and are
+  supplied to `scripts/offhost-s3.py` only through the process environment —
+  the client refuses command-line credential arguments so secrets cannot leak
+  through `/proc/*/cmdline` or process listings.
 - Off-host backups are retained 30 days by default (independent of the watcher's
   same-host 14-day retention).
 

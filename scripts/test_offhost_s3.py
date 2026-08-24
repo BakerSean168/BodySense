@@ -561,6 +561,22 @@ class CliTests(unittest.TestCase):
         )
         self.assertNotEqual(listing.returncode, 0)
         self.assertIn("OFFHOST_S3_ERROR", listing.stderr)
+        self.assertIn("MissingCredentials", listing.stderr)
+
+    def test_cli_refuses_argv_credentials(self):
+        env = {"OFFHOST_BACKUP_ACCESS_KEY": _KNOWN_ACCESS_KEY, "OFFHOST_BACKUP_SECRET_KEY": _KNOWN_SECRET_KEY}
+        listing = self.run_cli(
+            [
+                "list", "--endpoint", self.server.url, "--bucket", "testbucket",
+                "--region", "cn-hangzhou", "--access-key", _KNOWN_ACCESS_KEY,
+                "--secret-key", _KNOWN_SECRET_KEY,
+            ],
+            env=env,
+        )
+        self.assertNotEqual(listing.returncode, 0)
+        self.assertIn("CliCredentialsRefused", listing.stderr)
+        combined = listing.stdout + listing.stderr
+        self.assertNotIn(_KNOWN_SECRET_KEY, combined)
 
 
 def suite():
