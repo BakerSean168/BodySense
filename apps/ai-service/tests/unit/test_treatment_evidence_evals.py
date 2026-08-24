@@ -13,10 +13,10 @@ from src.evals.treatment_qualification import (
 )
 
 
-def test_treatment_evidence_gap_policy_is_five_of_five() -> None:
+def test_treatment_evidence_gap_policy_is_nine_of_nine() -> None:
     summary = treatment_evidence_policy_summary(run_treatment_evidence_policy_qualification())
-    assert summary["passed"] == 5
-    assert summary["total"] == 5
+    assert summary["passed"] == 9
+    assert summary["total"] == 9
     assert summary["failed"] == 0
 
 

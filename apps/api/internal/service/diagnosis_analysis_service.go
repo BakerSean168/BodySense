@@ -113,6 +113,9 @@ func (s *DiagnosisAnalysisService) PersistAIResultWithReplayInput(
 
 	now := time.Now().UTC()
 	configurationID, configuration := diagnosisConfigurationProvenance(payload.AgentConfiguration)
+	if _, err := validateEvidenceAvailabilityForConfiguration(configurationID, payload.EvidenceAcquisition); err != nil {
+		return nil, err
+	}
 	execution := diagnosisJSON(payload.ExecutionProvenance, `{}`)
 	evidenceTrace := diagnosisJSON(payload.EvidenceAcquisition, `{}`)
 	decisionTrace := buildDiagnosisDecisionTrace(

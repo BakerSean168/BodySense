@@ -10,11 +10,12 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from typing import Any, AsyncIterator, LiteralString, Optional, cast
 
+from openai import OpenAIError
 from pgvector.psycopg import register_vector_async
-from psycopg import AsyncConnection, sql
+from psycopg import AsyncConnection, InterfaceError, OperationalError, sql
 from psycopg.rows import TupleRow
 from psycopg.types.json import Jsonb
-from psycopg_pool import AsyncConnectionPool
+from psycopg_pool import AsyncConnectionPool, PoolTimeout
 
 from .embedding import EmbeddingGenerator, get_embedding_generator
 from .knowledge_pack import GeneratedKnowledgePack, format_timestamp_range
@@ -533,7 +534,12 @@ class KnowledgeLibrary:
         min_quality_score: float = 0.0,
     ) -> list[SearchResult]:
         """Search normalized knowledge units without blocking the event loop."""
-        embedding = await self.embedding_generator.generate(query)
+        try:
+            embedding = await self.embedding_generator.generate(query)
+        except (OpenAIError, TimeoutError, ConnectionError, OSError) as exc:
+            raise KnowledgeLibraryUnavailableError(
+                "Knowledge embedding search dependency is unavailable"
+            ) from exc
         query_sql = """
             SELECT
                 ku.id, ku.problem_slug, ku.category, ku.unit_type, ku.title,
@@ -567,28 +573,33 @@ class KnowledgeLibrary:
         params.extend([embedding, candidate_limit])
 
         pool = self._require_pool()
-        async with pool.connection() as conn:
-            async with conn.cursor() as cur:
-                await cur.execute(cast("LiteralString", query_sql), params)
-                rows = await cur.fetchall()
-                if not rows:
-                    return []
+        try:
+            async with pool.connection() as conn:
+                async with conn.cursor() as cur:
+                    await cur.execute(cast("LiteralString", query_sql), params)
+                    rows = await cur.fetchall()
+                    if not rows:
+                        return []
 
-                result_ids = [row[0] for row in rows]
-                clips_by_unit: dict[int, list[ClipResult]] = {
-                    result_id: [] for result_id in result_ids
-                }
-                await cur.execute(
-                    """
-                    SELECT id, source_unit_id, clip_key, clip_type, title,
-                           file_path, start_sec, end_sec
-                    FROM knowledge_clips
-                    WHERE source_unit_id = ANY(%s)
-                    ORDER BY id ASC
-                    """,
-                    (result_ids,),
-                )
-                clip_rows = await cur.fetchall()
+                    result_ids = [row[0] for row in rows]
+                    clips_by_unit: dict[int, list[ClipResult]] = {
+                        result_id: [] for result_id in result_ids
+                    }
+                    await cur.execute(
+                        """
+                        SELECT id, source_unit_id, clip_key, clip_type, title,
+                               file_path, start_sec, end_sec
+                        FROM knowledge_clips
+                        WHERE source_unit_id = ANY(%s)
+                        ORDER BY id ASC
+                        """,
+                        (result_ids,),
+                    )
+                    clip_rows = await cur.fetchall()
+        except (OperationalError, InterfaceError, PoolTimeout, TimeoutError, OSError) as exc:
+            raise KnowledgeLibraryUnavailableError(
+                "Knowledge search database is unavailable"
+            ) from exc
 
         for clip_row in clip_rows:
             clips_by_unit[clip_row[1]].append(
@@ -792,6 +803,38 @@ class KnowledgeLibrary:
         if embedding_provider != "hashing" or result.source_type != "thought_forest_note":
             return True
         return cls._has_meaningful_lexical_anchor(query, result)
+
+    async def published_corpus_count(self, min_quality_score: float = 0.0) -> int:
+        """Count online-visible published units without invoking embeddings.
+
+        This lets evidence acquisition distinguish an actually empty published
+        corpus from a non-empty corpus where one targeted query has no relevant
+        result.
+        """
+        pool = self._require_pool()
+        try:
+            async with pool.connection() as conn:
+                async with conn.cursor() as cur:
+                    await cur.execute(
+                        """
+                        SELECT COUNT(*)
+                        FROM knowledge_units ku
+                        WHERE ku.lifecycle_status = 'published'
+                          AND ku.publication_id IS NOT NULL
+                          AND ku.published_version IS NOT NULL
+                          AND ku.review_status IN ('reviewed', 'approved', 'curated')
+                          AND COALESCE(ku.quality_score, 0.0) >= %s
+                        """,
+                        (min_quality_score,),
+                    )
+                    row = await cur.fetchone()
+        except KnowledgeLibraryUnavailableError:
+            raise
+        except Exception as exc:
+            raise KnowledgeLibraryUnavailableError(
+                "published Knowledge corpus state is unavailable"
+            ) from exc
+        return int(row[0]) if row is not None else 0
 
     @staticmethod
     def _published_visibility_filter() -> str:
