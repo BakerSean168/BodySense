@@ -705,6 +705,32 @@
         {
           "properties": {
             "type": {
+              "const": "source.answer_attribution.added"
+            },
+            "channel": {
+              "const": "source"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "attribution"
+              ],
+              "properties": {
+                "attribution": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
               "const": "source.knowledge_gap"
             },
             "channel": {

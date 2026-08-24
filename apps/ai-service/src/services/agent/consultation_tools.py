@@ -7,6 +7,7 @@ from .tool_registry import ToolRegistry
 from .tools.ask_user import make_ask_user_tool
 from .tools.extract_symptom_info import make_extract_symptom_info_tool
 from .tools.get_posture_analysis import make_get_posture_analysis_tool
+from .tools.record_answer_attribution import make_record_answer_attribution_tool
 from .tools.search_knowledge import make_search_knowledge_tool
 
 _default_registry: ToolRegistry | None = None
@@ -21,6 +22,7 @@ def get_consultation_registry() -> ToolRegistry:
         _default_registry.register(make_search_knowledge_tool())
         _default_registry.register(make_extract_symptom_info_tool())
         _default_registry.register(make_get_posture_analysis_tool())
+        _default_registry.register(make_record_answer_attribution_tool())
         _default_registry.register(make_ask_user_tool())
     return _default_registry
 

@@ -630,3 +630,184 @@ func TestStreamAIEventsPrefersExplicitCancellationOverReadySemanticEvent(t *test
 		t.Fatalf("semantic event leaked after cancellation: %s", recorder.Body.String())
 	}
 }
+
+type fakeKnowledgeObservationService struct {
+	inputs []service.RecordKnowledgePublicationObservationInput
+}
+
+func (f *fakeKnowledgeObservationService) Record(
+	_ context.Context,
+	input service.RecordKnowledgePublicationObservationInput,
+) error {
+	f.inputs = append(f.inputs, input)
+	return nil
+}
+
+func publishedCitationPartForRuntimeObservation() map[string]any {
+	return map[string]any{
+		"type":       "source",
+		"title":      "疼痛与伤害感受 · 一句话定义",
+		"sourceType": "document",
+		"providerMetadata": map[string]any{
+			"bodysense": map[string]any{
+				"source_type":           "thought_forest_note",
+				"lifecycle_status":      "published",
+				"publication_id":        "11111111-1111-1111-1111-111111111111",
+				"publication_key":       "pain-definition-v3",
+				"publication_batch_key": "thought-forest-reviewed-health-pilot",
+				"published_version":     3,
+				"unit_key":              "tfu-example",
+				"claim_id":              "tfc-example",
+				"claim_review_id":       "claim-review-example",
+				"source_locator": map[string]any{
+					"locator_type": "markdown_lines",
+					"repository":   "thought-forest",
+					"git_commit":   "abc123",
+					"path":         "z/pain-and-nociception.md",
+					"line_start":   20,
+					"line_end":     23,
+				},
+			},
+		},
+	}
+}
+
+func answerAttributionPartForRuntimeObservation() map[string]any {
+	ref := "published:11111111-1111-1111-1111-111111111111:v3:tfu-example"
+	return map[string]any{
+		"type": "data",
+		"name": "answer_attribution",
+		"data": map[string]any{
+			"attribution": map[string]any{
+				"attribution_id":   "tool-1:0",
+				"policy_revision":  service.ConsultationAnswerAttributionPolicyV1,
+				"claim_text":       "疼痛与伤害感受不是同一现象",
+				"evidence_refs":    []string{ref},
+				"grounding_status": "supported",
+				"reason_codes":     []string{"lexical_support_sufficient"},
+				"bindings": []map[string]any{{
+					"evidence_ref":          ref,
+					"publication_id":        "11111111-1111-1111-1111-111111111111",
+					"publication_key":       "pain-definition-v3",
+					"publication_batch_key": "thought-forest-reviewed-health-pilot",
+					"published_version":     3,
+					"unit_key":              "tfu-example",
+					"claim_id":              "tfc-example",
+					"claim_review_id":       "claim-review-example",
+					"claim_kind":            "definition",
+					"grounding_status":      "supported",
+					"reason_codes":          []string{"lexical_support_sufficient"},
+					"source_locator": map[string]any{
+						"locator_type": "markdown_lines",
+						"repository":   "thought-forest",
+						"git_commit":   "abc123",
+						"path":         "z/pain-and-nociception.md",
+						"line_start":   20,
+						"line_end":     23,
+					},
+				}},
+			},
+		},
+	}
+}
+
+func TestRecordKnowledgeRuntimeObservationsStoresExactAttributedPublication(t *testing.T) {
+	observer := &fakeKnowledgeObservationService{}
+	runtime := &Runtime{knowledgeObservationService: observer}
+	runID := uuid.New()
+	messageID := uuid.New()
+
+	runtime.recordKnowledgeRuntimeObservations(
+		context.Background(),
+		runID,
+		messageID,
+		[]map[string]any{
+			publishedCitationPartForRuntimeObservation(),
+			answerAttributionPartForRuntimeObservation(),
+		},
+	)
+
+	if len(observer.inputs) != 1 {
+		t.Fatalf("recorded %d observations, want 1", len(observer.inputs))
+	}
+	input := observer.inputs[0]
+	if input.ObservationKind != "runtime_answer" || input.GroundingStatus != "supported" {
+		t.Fatalf("unexpected runtime observation: %+v", input)
+	}
+	if input.PublicationKey != "pain-definition-v3" || input.ExpectedPublishedVersion != 3 {
+		t.Fatalf("publication identity not pinned: %+v", input)
+	}
+}
+
+func TestRecordKnowledgeRuntimeObservationsHoldsWhenPublishedCitationHasNoAttribution(t *testing.T) {
+	observer := &fakeKnowledgeObservationService{}
+	runtime := &Runtime{knowledgeObservationService: observer}
+
+	runtime.recordKnowledgeRuntimeObservations(
+		context.Background(),
+		uuid.New(),
+		uuid.New(),
+		[]map[string]any{publishedCitationPartForRuntimeObservation()},
+	)
+
+	if len(observer.inputs) != 1 {
+		t.Fatalf("recorded %d observations, want 1", len(observer.inputs))
+	}
+	input := observer.inputs[0]
+	if input.GroundingStatus != "degraded" {
+		t.Fatalf("grounding status = %q, want degraded", input.GroundingStatus)
+	}
+	if !strings.Contains(string(input.Metadata), "missing_answer_attribution") {
+		t.Fatalf("missing attribution reason not preserved: %s", input.Metadata)
+	}
+}
+
+func TestRecordKnowledgeRuntimeObservationsRejectsAttributionWithoutPersistedCitation(t *testing.T) {
+	observer := &fakeKnowledgeObservationService{}
+	runtime := &Runtime{knowledgeObservationService: observer}
+
+	runtime.recordKnowledgeRuntimeObservations(
+		context.Background(),
+		uuid.New(),
+		uuid.New(),
+		[]map[string]any{answerAttributionPartForRuntimeObservation()},
+	)
+
+	if len(observer.inputs) != 1 {
+		t.Fatalf("recorded %d observations, want 1", len(observer.inputs))
+	}
+	input := observer.inputs[0]
+	if input.CitationStatus != "invalid" {
+		t.Fatalf("citation status = %q, want invalid", input.CitationStatus)
+	}
+	if !strings.Contains(string(input.Metadata), "attribution_without_persisted_citation") {
+		t.Fatalf("citation loss reason not preserved: %s", input.Metadata)
+	}
+}
+
+func TestRecordKnowledgeRuntimeObservationsRejectsCitationAttributionIdentityDrift(t *testing.T) {
+	observer := &fakeKnowledgeObservationService{}
+	runtime := &Runtime{knowledgeObservationService: observer}
+	citation := publishedCitationPartForRuntimeObservation()
+	provider := citation["providerMetadata"].(map[string]any)
+	metadata := provider["bodysense"].(map[string]any)
+	metadata["claim_review_id"] = "different-review"
+
+	runtime.recordKnowledgeRuntimeObservations(
+		context.Background(),
+		uuid.New(),
+		uuid.New(),
+		[]map[string]any{citation, answerAttributionPartForRuntimeObservation()},
+	)
+
+	if len(observer.inputs) != 1 {
+		t.Fatalf("recorded %d observations, want 1", len(observer.inputs))
+	}
+	input := observer.inputs[0]
+	if input.CitationStatus != "invalid" {
+		t.Fatalf("citation status = %q, want invalid", input.CitationStatus)
+	}
+	if !strings.Contains(string(input.Metadata), "citation_attribution_identity_mismatch") {
+		t.Fatalf("identity drift reason not preserved: %s", input.Metadata)
+	}
+}

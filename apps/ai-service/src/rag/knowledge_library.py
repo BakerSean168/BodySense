@@ -128,6 +128,21 @@ _LEXICAL_GENERIC_ANCHORS = {
 }
 
 
+_PUBLISHED_HASHING_INTERPRETATION_MARKERS = (
+    "同一",
+    "一样",
+    "等于",
+    "不等于",
+    "一定",
+    "只看",
+    "仅凭",
+    "能判断",
+    "代表",
+    "没有明确",
+    "是不是",
+)
+
+
 CLAIM_KIND_INTENT_KEYWORDS = {
     "definition": ["什么是", "定义", "是什么意思"],
     "measurement_guidance": ["评估", "测量", "怎么测", "检查", "鉴别", "自测", "筛查"],
@@ -564,11 +579,22 @@ class KnowledgeLibrary:
                     query, result, embedding_provider=embedding_provider
                 )
             ]
-        reranked = sorted(
-            results,
-            key=lambda result: result.similarity + self._intent_boost(query, result),
-            reverse=True,
-        )
+        if not include_unpublished and embedding_provider == "hashing":
+            reranked = sorted(
+                results,
+                key=lambda result: (
+                    self._published_hashing_rerank_score(query, result)
+                    if result.source_type == "thought_forest_note"
+                    else result.similarity + self._intent_boost(query, result)
+                ),
+                reverse=True,
+            )
+        else:
+            reranked = sorted(
+                results,
+                key=lambda result: result.similarity + self._intent_boost(query, result),
+                reverse=True,
+            )
         return reranked[:top_k]
 
     @staticmethod
@@ -606,6 +632,82 @@ class KnowledgeLibrary:
         return any(
             anchor in primary_haystack or (len(anchor) >= 3 and anchor in body_haystack)
             for anchor in anchors
+        )
+
+    @staticmethod
+    def _lexical_units(value: str) -> set[str]:
+        normalized = value.strip().lower()
+        units = {
+            token
+            for token in re.findall(r"[a-z0-9][a-z0-9._+-]{2,}", normalized)
+            if token not in _LEXICAL_GENERIC_ANCHORS
+        }
+        for run in re.findall(r"[\u4e00-\u9fff]+", normalized):
+            if len(run) == 1:
+                continue
+            if len(run) == 2:
+                units.add(run)
+                continue
+            for index in range(len(run) - 1):
+                gram = run[index : index + 2]
+                if gram not in _LEXICAL_GENERIC_ANCHORS:
+                    units.add(gram)
+        return units
+
+    @classmethod
+    def _lexical_coverage(cls, query: str, text: str) -> float:
+        query_units = cls._lexical_units(query)
+        if not query_units:
+            return 0.0
+        text_units = cls._lexical_units(text)
+        return len(query_units & text_units) / len(query_units)
+
+    @staticmethod
+    def _section_heading(result: SearchResult) -> str:
+        locator = dict(result.unit_metadata.get("source_locator") or {})
+        heading_path = locator.get("heading_path") or []
+        if isinstance(heading_path, list) and heading_path:
+            return str(heading_path[-1])
+        if " · " in result.title:
+            return result.title.rsplit(" · ", 1)[-1]
+        return result.title
+
+    @staticmethod
+    def _published_hashing_claim_intent_bonus(query: str, result: SearchResult) -> float:
+        normalized = query.strip().lower()
+        claim = dict(result.unit_metadata.get("claim_candidate") or {})
+        claim_kind = str(claim.get("claim_kind") or "")
+        if claim_kind == "definition" and any(
+            marker in normalized for marker in ("什么是", "定义", "是什么意思")
+        ):
+            return 0.18
+        if claim_kind == "interpretation_boundary" and any(
+            marker in normalized for marker in _PUBLISHED_HASHING_INTERPRETATION_MARKERS
+        ):
+            return 0.10
+        return 0.0
+
+    def _published_hashing_rerank_score(self, query: str, result: SearchResult) -> float:
+        """Rerank admitted hashing candidates using section-local lexical evidence.
+
+        The hashing embedding is intentionally not treated as a calibrated semantic
+        score. Once the deny-first lexical gate admits a published Thought Forest
+        candidate, the section-specific heading, reviewed claim body, and claim kind
+        decide which nearby unit is the best match. This only orders candidates; it
+        never makes an otherwise irrelevant result eligible.
+        """
+        heading = self._section_heading(result)
+        heading_coverage = self._lexical_coverage(query, heading)
+        body_coverage = self._lexical_coverage(
+            query,
+            " ".join([result.summary, result.body_markdown]),
+        )
+        return (
+            result.similarity
+            + self._intent_boost(query, result)
+            + self._published_hashing_claim_intent_bonus(query, result)
+            + (0.45 * heading_coverage)
+            + (0.40 * body_coverage)
         )
 
     @classmethod

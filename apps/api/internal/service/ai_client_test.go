@@ -243,3 +243,34 @@ func TestValidateConsultationInternalEventKeepsLegacyVideoCitationCompatible(t *
 		t.Fatalf("legacy video citation must remain compatible: %v", err)
 	}
 }
+
+func TestValidateConsultationInternalEventAcceptsValidatedAnswerAttribution(t *testing.T) {
+	var payload map[string]any
+	if err := json.Unmarshal(validAnswerAttributionPayload(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	event, _ := dto.NewStreamEvent(
+		1,
+		"source",
+		"source.answer_attribution.added",
+		dto.StreamEventIDs{},
+		payload,
+	)
+	if err := validateConsultationInternalEvent(event); err != nil {
+		t.Fatalf("valid answer attribution rejected: %v", err)
+	}
+
+	attribution := payload["attribution"].(map[string]any)
+	bindings := attribution["bindings"].([]any)
+	bindings[0].(map[string]any)["publication_id"] = "not-a-uuid"
+	invalid, _ := dto.NewStreamEvent(
+		1,
+		"source",
+		"source.answer_attribution.added",
+		dto.StreamEventIDs{},
+		payload,
+	)
+	if err := validateConsultationInternalEvent(invalid); err == nil {
+		t.Fatal("invalid answer attribution publication identity must be rejected")
+	}
+}

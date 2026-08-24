@@ -78,6 +78,7 @@ func ShouldPersistEvent(eventType string) bool {
 		"state.extracted_info.upsert",
 		"state.phase.changed",
 		"source.citation.added",
+		"source.answer_attribution.added",
 		"source.knowledge_gap",
 		"safety.red_flag.detected",
 		"safety.output_reviewed",

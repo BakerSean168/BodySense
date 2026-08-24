@@ -162,6 +162,12 @@ export type CitationAddedEvent = StreamEventBase<
   { citation: unknown }
 >;
 
+export type AnswerAttributionAddedEvent = StreamEventBase<
+  "source",
+  "source.answer_attribution.added",
+  { attribution: unknown }
+>;
+
 export type KnowledgeGapEvent = StreamEventBase<
   "source",
   "source.knowledge_gap",
@@ -310,6 +316,7 @@ export type StreamEvent =
   | ExtractedInfoUpsertEvent
   | PhaseChangedEvent
   | CitationAddedEvent
+  | AnswerAttributionAddedEvent
   | KnowledgeGapEvent
   | RedFlagDetectedEvent
   | OutputReviewedEvent

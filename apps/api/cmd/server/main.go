@@ -182,6 +182,14 @@ func main() {
 		service.NewConsultationRolloutService(consultationRolloutRepo),
 	)
 	startRunLeaseReconciler(runService, conversationService, runtimeEventService)
+	knowledgePublicationRepo := repository.NewKnowledgePublicationRepository(database.DB)
+	knowledgeObservationRepo := repository.NewKnowledgePublicationObservationRepository(database.DB)
+	consultationRuntime.AttachKnowledgeObservationService(
+		service.NewKnowledgePublicationObservationService(
+			knowledgePublicationRepo,
+			knowledgeObservationRepo,
+		),
+	)
 	convHandler := handler.NewConversationHandler(conversationService, shareService)
 	runtimeEventHandler := handler.NewRuntimeEventHandler(runtimeEventService, conversationService)
 	threadProjectionHandler := handler.NewThreadProjectionHandler(threadProjectionService, bodyStateService)

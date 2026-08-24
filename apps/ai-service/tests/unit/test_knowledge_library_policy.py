@@ -98,9 +98,10 @@ def test_hashing_published_relevance_gate_requires_meaningful_lexical_anchor():
     )
 
     assert KnowledgeLibrary._has_meaningful_lexical_anchor("什么是疼痛？", result) is True
-    assert KnowledgeLibrary._has_meaningful_lexical_anchor(
-        "疼痛是不是等于组织损伤程度？", result
-    ) is True
+    assert (
+        KnowledgeLibrary._has_meaningful_lexical_anchor("疼痛是不是等于组织损伤程度？", result)
+        is True
+    )
     assert KnowledgeLibrary._has_meaningful_lexical_anchor("脚踝扭伤怎么处理？", result) is False
     assert (
         KnowledgeLibrary._has_meaningful_lexical_anchor("怎么设置 PostgreSQL 索引？", result)
@@ -127,6 +128,171 @@ def test_published_hashing_gate_only_targets_thought_forest_results():
         source_start_sec=0.0,
         source_end_sec=1.0,
     )
-    assert KnowledgeLibrary._passes_published_relevance_gate(
-        "unrelated query", video, embedding_provider="hashing"
-    ) is True
+    assert (
+        KnowledgeLibrary._passes_published_relevance_gate(
+            "unrelated query", video, embedding_provider="hashing"
+        )
+        is True
+    )
+
+
+def _published_pain_result(
+    *,
+    unit_key: str,
+    heading: str,
+    claim_kind: str,
+    body: str,
+    similarity: float,
+):
+    from src.rag.knowledge_library import SearchResult
+
+    return SearchResult(
+        id=100,
+        unit_key=unit_key,
+        problem_slug="pain-and-nociception",
+        category="pain_science",
+        unit_type="reference",
+        title=f"疼痛与伤害感受 · {heading}",
+        summary=body[:120],
+        body_markdown=body,
+        similarity=similarity,
+        source_key="thought-forest:z/pain-and-nociception.md",
+        source_type="thought_forest_note",
+        source_title="疼痛与伤害感受",
+        source_author="Thought Forest",
+        source_start_sec=0.0,
+        source_end_sec=0.0,
+        lifecycle_status="published",
+        review_status="reviewed",
+        quality_score=0.96,
+        unit_metadata={
+            "claim_candidate": {"claim_kind": claim_kind},
+            "source_locator": {
+                "heading_path": ["疼痛与伤害感受", heading],
+            },
+        },
+    )
+
+
+def test_published_hashing_rerank_prefers_section_specific_definition_heading():
+    library = KnowledgeLibrary(database_url="postgresql://test")
+    pain_definition = _published_pain_result(
+        unit_key="pain-definition",
+        heading="疼痛（Pain）是什么",
+        claim_kind="definition",
+        body="IASP 将 pain 定义为不愉快感觉与情绪体验。",
+        similarity=0.0515,
+    )
+    nociception_definition = _published_pain_result(
+        unit_key="nociception-definition",
+        heading="伤害感受（Nociception）是什么",
+        claim_kind="definition",
+        body="Nociception 是神经系统编码 noxious stimulus 的过程。",
+        similarity=0.0579,
+    )
+
+    query = "什么是疼痛？"
+    assert library._published_hashing_rerank_score(
+        query, pain_definition
+    ) > library._published_hashing_rerank_score(query, nociception_definition)
+
+
+def test_published_hashing_rerank_prefers_interpretation_boundary_for_relation_query():
+    library = KnowledgeLibrary(database_url="postgresql://test")
+    boundary = _published_pain_result(
+        unit_key="boundary",
+        heading="疼痛（Pain）与伤害感受（Nociception）的核心解释边界",
+        claim_kind="interpretation_boundary",
+        body="Pain ≠ Nociception。不能只根据感觉神经元活动推断一个人是否疼痛。",
+        similarity=0.5752,
+    )
+    nociception_definition = _published_pain_result(
+        unit_key="nociception-definition",
+        heading="伤害感受（Nociception）是什么",
+        claim_kind="definition",
+        body="Nociception 是神经系统编码 noxious stimulus 的过程。",
+        similarity=0.6249,
+    )
+
+    query = "疼痛和 nociception 是同一现象吗？"
+    assert library._published_hashing_rerank_score(
+        query, boundary
+    ) > library._published_hashing_rerank_score(query, nociception_definition)
+
+
+def test_published_hashing_rerank_prefers_boundary_for_inference_and_damage_questions():
+    library = KnowledgeLibrary(database_url="postgresql://test")
+    boundary = _published_pain_result(
+        unit_key="boundary",
+        heading="疼痛（Pain）与伤害感受（Nociception）的核心解释边界",
+        claim_kind="interpretation_boundary",
+        body=(
+            "不能只根据感觉神经元活动推断一个人是否疼痛。"
+            "没有明确实际或威胁性组织损伤证据时也可能存在 pain。"
+        ),
+        similarity=0.04,
+    )
+    pain_definition = _published_pain_result(
+        unit_key="pain-definition",
+        heading="疼痛（Pain）是什么",
+        claim_kind="definition",
+        body="IASP 将 pain 定义为不愉快感觉与情绪体验。",
+        similarity=0.11,
+    )
+
+    for query in [
+        "只看感觉神经元活动能判断一个人疼不疼吗？",
+        "没有明确组织损伤证据还可能有疼痛吗？",
+    ]:
+        assert library._published_hashing_rerank_score(
+            query, boundary
+        ) > library._published_hashing_rerank_score(query, pain_definition)
+
+
+def test_published_hashing_rerank_keeps_nociception_definition_specific():
+    library = KnowledgeLibrary(database_url="postgresql://test")
+    boundary = _published_pain_result(
+        unit_key="boundary",
+        heading="疼痛（Pain）与伤害感受（Nociception）的核心解释边界",
+        claim_kind="interpretation_boundary",
+        body="Pain 与 Nociception 是不同现象。",
+        similarity=0.63,
+    )
+    nociception_definition = _published_pain_result(
+        unit_key="nociception-definition",
+        heading="伤害感受（Nociception）是什么",
+        claim_kind="definition",
+        body="Nociception 是神经系统编码 noxious stimulus 的过程。",
+        similarity=0.70,
+    )
+
+    query = "nociception 是什么？"
+    assert library._published_hashing_rerank_score(
+        query, nociception_definition
+    ) > library._published_hashing_rerank_score(query, boundary)
+
+
+def test_published_hashing_rerank_specific_body_evidence_beats_generic_boundary_intent():
+    library = KnowledgeLibrary(database_url="postgresql://test")
+    boundary = _published_pain_result(
+        unit_key="boundary",
+        heading="疼痛（Pain）与伤害感受（Nociception）的核心解释边界",
+        claim_kind="interpretation_boundary",
+        body="Pain 与 Nociception 是不同现象。",
+        similarity=0.43,
+    )
+    nociception = _published_pain_result(
+        unit_key="nociception-definition",
+        heading="伤害感受（Nociception）是什么",
+        claim_kind="definition",
+        body=(
+            "Nociception 可能伴随 withdrawal reflex 和 autonomic response，"
+            "但并不意味着主观 pain experience 一定存在。"
+        ),
+        similarity=0.45,
+    )
+
+    query = "withdrawal reflex 一定代表主观疼痛吗？"
+    assert library._published_hashing_rerank_score(
+        query, nociception
+    ) > library._published_hashing_rerank_score(query, boundary)
