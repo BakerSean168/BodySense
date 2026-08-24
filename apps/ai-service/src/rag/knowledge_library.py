@@ -296,7 +296,7 @@ class KnowledgeLibrary:
                         """
                         SELECT id, ingest_status, source_type, title, author, problem_slug,
                                problem_display_name, language, license_status, content_hash,
-                               provenance, registered_by, registered_at
+                               source_version, provenance, registered_by, registered_at
                         FROM knowledge_sources
                         WHERE source_key = %s
                         """,
@@ -326,12 +326,39 @@ class KnowledgeLibrary:
                         or not row[9]
                         or not row[10]
                         or not row[11]
-                        or row[12] is None
+                        or not row[12]
+                        or row[13] is None
                     ):
                         raise RuntimeError(
                             "registered knowledge source is missing "
                             "license/content/provenance authority"
                         )
+
+                    if pack.source.source_type == "thought_forest_note":
+                        snapshot_id = str(pack.source.metadata.get("snapshot_id") or "")
+                        note_content_hash = str(
+                            pack.source.metadata.get("note_content_hash") or ""
+                        ).lower()
+                        repository = pack.source.metadata.get("repository")
+                        repository_git_commit = (
+                            str(repository.get("git_commit") or "")
+                            if isinstance(repository, dict)
+                            else ""
+                        )
+                        provenance = row[11] if isinstance(row[11], dict) else {}
+                        if (
+                            not snapshot_id
+                            or not note_content_hash
+                            or row[9].lower() != note_content_hash
+                            or row[10] != snapshot_id
+                            or provenance.get("snapshot_id") != snapshot_id
+                            or provenance.get("git_commit") != repository_git_commit
+                            or provenance.get("path") != pack.source.original_file_path
+                            or provenance.get("note_content_hash") != note_content_hash
+                        ):
+                            raise RuntimeError(
+                                "Thought Forest pack does not match registered snapshot identity"
+                            )
 
                     if ingest_status != "registered" and not overwrite_source:
                         return {

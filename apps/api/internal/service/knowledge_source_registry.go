@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -18,6 +19,7 @@ var (
 	ErrKnowledgeSourceExists       = errors.New("knowledge source already exists")
 	ErrKnowledgeSourceNotReady     = errors.New("knowledge source is not registered for ingestion")
 	ErrKnowledgeSourceInputInvalid = errors.New("knowledge source registration is invalid")
+	ErrKnowledgeSourceConflict     = errors.New("knowledge source registration conflicts with existing identity")
 )
 
 type knowledgeSourceStore interface {
@@ -67,10 +69,7 @@ func normalizeSHA256(value string) (string, bool) {
 	return value, err == nil
 }
 
-func (r *KnowledgeSourceRegistry) Register(ctx context.Context, actorID uuid.UUID, input RegisterKnowledgeSourceInput) (*model.KnowledgeSource, error) {
-	if r == nil || r.store == nil || actorID == uuid.Nil {
-		return nil, fmt.Errorf("%w: registry unavailable", ErrKnowledgeSourceInputInvalid)
-	}
+func normalizeKnowledgeSourceRegistration(input RegisterKnowledgeSourceInput) (RegisterKnowledgeSourceInput, string, datatypes.JSON, datatypes.JSON, error) {
 	input.SourceKey = strings.TrimSpace(input.SourceKey)
 	input.SourceType = strings.TrimSpace(input.SourceType)
 	input.Title = strings.TrimSpace(input.Title)
@@ -89,26 +88,31 @@ func (r *KnowledgeSourceRegistry) Register(ctx context.Context, actorID uuid.UUI
 		input.SourceVersion = "v1"
 	}
 	if input.SourceKey == "" || len(input.SourceKey) > 200 || input.SourceType == "" || input.Title == "" || input.Author == "" || input.ProblemSlug == "" || input.ProblemDisplayName == "" || input.OriginalFilePath == "" {
-		return nil, fmt.Errorf("%w: source identity fields are required", ErrKnowledgeSourceInputInvalid)
+		return input, "", nil, nil, fmt.Errorf("%w: source identity fields are required", ErrKnowledgeSourceInputInvalid)
 	}
 	if _, ok := allowedKnowledgeLicenseStatuses[input.LicenseStatus]; !ok {
-		return nil, fmt.Errorf("%w: license_status must be an explicitly reviewed value", ErrKnowledgeSourceInputInvalid)
+		return input, "", nil, nil, fmt.Errorf("%w: license_status must be an explicitly reviewed value", ErrKnowledgeSourceInputInvalid)
 	}
 	contentHash, ok := normalizeSHA256(input.ContentHash)
 	if !ok {
-		return nil, fmt.Errorf("%w: content_hash must be a SHA-256 hex digest", ErrKnowledgeSourceInputInvalid)
+		return input, "", nil, nil, fmt.Errorf("%w: content_hash must be a SHA-256 hex digest", ErrKnowledgeSourceInputInvalid)
 	}
 	if len(input.Provenance) == 0 {
-		return nil, fmt.Errorf("%w: provenance is required", ErrKnowledgeSourceInputInvalid)
+		return input, "", nil, nil, fmt.Errorf("%w: provenance is required", ErrKnowledgeSourceInputInvalid)
 	}
 	provenance, err := json.Marshal(input.Provenance)
 	if err != nil {
-		return nil, fmt.Errorf("%w: encode provenance: %v", ErrKnowledgeSourceInputInvalid, err)
+		return input, "", nil, nil, fmt.Errorf("%w: encode provenance: %v", ErrKnowledgeSourceInputInvalid, err)
 	}
 	metadata, err := json.Marshal(input.Metadata)
 	if err != nil {
-		return nil, fmt.Errorf("%w: encode metadata: %v", ErrKnowledgeSourceInputInvalid, err)
+		return input, "", nil, nil, fmt.Errorf("%w: encode metadata: %v", ErrKnowledgeSourceInputInvalid, err)
 	}
+	input.ContentHash = contentHash
+	return input, contentHash, datatypes.JSON(provenance), datatypes.JSON(metadata), nil
+}
+
+func knowledgeSourceFromRegistration(actorID uuid.UUID, input RegisterKnowledgeSourceInput, contentHash string, provenance, metadata datatypes.JSON) *model.KnowledgeSource {
 	now := time.Now().UTC()
 	source := &model.KnowledgeSource{
 		SourceKey:          input.SourceKey,
@@ -120,18 +124,48 @@ func (r *KnowledgeSourceRegistry) Register(ctx context.Context, actorID uuid.UUI
 		OriginalFilePath:   input.OriginalFilePath,
 		Language:           input.Language,
 		IngestStatus:       "registered",
-		Metadata:           datatypes.JSON(metadata),
+		Metadata:           metadata,
 		LicenseStatus:      input.LicenseStatus,
 		ContentHash:        &contentHash,
 		SourceVersion:      input.SourceVersion,
-		Provenance:         datatypes.JSON(provenance),
+		Provenance:         provenance,
 		RegisteredBy:       &actorID,
 		RegisteredAt:       &now,
 	}
 	if input.CanonicalURL != "" {
 		source.CanonicalURL = &input.CanonicalURL
 	}
+	return source
+}
+
+func (r *KnowledgeSourceRegistry) register(ctx context.Context, actorID uuid.UUID, input RegisterKnowledgeSourceInput) (*model.KnowledgeSource, bool, error) {
+	if r == nil || r.store == nil || actorID == uuid.Nil {
+		return nil, false, fmt.Errorf("%w: registry unavailable", ErrKnowledgeSourceInputInvalid)
+	}
+	normalized, contentHash, provenance, metadata, err := normalizeKnowledgeSourceRegistration(input)
+	if err != nil {
+		return nil, false, err
+	}
+	source := knowledgeSourceFromRegistration(actorID, normalized, contentHash, provenance, metadata)
 	created, err := r.store.Register(ctx, source)
+	if err != nil {
+		return nil, false, err
+	}
+	if created {
+		return source, true, nil
+	}
+	existing, err := r.store.FindByKey(ctx, normalized.SourceKey)
+	if err != nil {
+		return nil, false, err
+	}
+	if !sameKnowledgeSourceRegistration(existing, source) {
+		return nil, false, fmt.Errorf("%w: source_key=%s", ErrKnowledgeSourceConflict, normalized.SourceKey)
+	}
+	return existing, false, nil
+}
+
+func (r *KnowledgeSourceRegistry) Register(ctx context.Context, actorID uuid.UUID, input RegisterKnowledgeSourceInput) (*model.KnowledgeSource, error) {
+	source, created, err := r.register(ctx, actorID, input)
 	if err != nil {
 		return nil, err
 	}
@@ -139,6 +173,41 @@ func (r *KnowledgeSourceRegistry) Register(ctx context.Context, actorID uuid.UUI
 		return nil, ErrKnowledgeSourceExists
 	}
 	return source, nil
+}
+
+// RegisterOrValidate is the idempotent operator/import path. The same immutable
+// source identity is a no-op; reusing a source_key for a different hash/version/
+// provenance fails closed instead of mutating the registered source.
+func (r *KnowledgeSourceRegistry) RegisterOrValidate(ctx context.Context, actorID uuid.UUID, input RegisterKnowledgeSourceInput) (*model.KnowledgeSource, bool, error) {
+	return r.register(ctx, actorID, input)
+}
+
+func sameKnowledgeSourceRegistration(existing, candidate *model.KnowledgeSource) bool {
+	if existing == nil || candidate == nil || existing.ContentHash == nil || candidate.ContentHash == nil {
+		return false
+	}
+	if existing.SourceKey != candidate.SourceKey || existing.SourceType != candidate.SourceType || existing.Title != candidate.Title || existing.Author != candidate.Author || existing.ProblemSlug != candidate.ProblemSlug || existing.ProblemDisplayName != candidate.ProblemDisplayName || existing.OriginalFilePath != candidate.OriginalFilePath || existing.Language != candidate.Language || existing.LicenseStatus != candidate.LicenseStatus || !strings.EqualFold(*existing.ContentHash, *candidate.ContentHash) || existing.SourceVersion != candidate.SourceVersion {
+		return false
+	}
+	if stringPtrValue(existing.CanonicalURL) != stringPtrValue(candidate.CanonicalURL) {
+		return false
+	}
+	return semanticJSONEqual(existing.Provenance, candidate.Provenance)
+}
+
+func stringPtrValue(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
+}
+
+func semanticJSONEqual(left, right []byte) bool {
+	var l, r any
+	if json.Unmarshal(left, &l) != nil || json.Unmarshal(right, &r) != nil {
+		return false
+	}
+	return reflect.DeepEqual(l, r)
 }
 
 func (r *KnowledgeSourceRegistry) FindIngestible(ctx context.Context, sourceKey string) (*model.KnowledgeSource, error) {
