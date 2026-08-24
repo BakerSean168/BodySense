@@ -76,8 +76,12 @@ case "$tool" in
     ;;
   psql)
     case "$*" in
-      *"SELECT to_regclass('public.schema_migrations') IS NOT NULL"*) echo "${FAKEPG_HAS_MIGRATIONS:-t}" ;;
-      *"FROM schema_migrations ORDER BY version DESC LIMIT 1"*) echo "${FAKEPG_SCHEMA:-49:false}" ;;
+      *"SELECT to_regclass('public.schema_migrations') IS NOT NULL"*)
+        [ "${FAKEPG_TOREGCLASS_FAIL:-0}" = 1 ] && exit 1
+        echo "${FAKEPG_HAS_MIGRATIONS:-t}" ;;
+      *"FROM schema_migrations ORDER BY version DESC LIMIT 1"*)
+        [ "${FAKEPG_SCHEMA_FAIL:-0}" = 1 ] && exit 1
+        echo "${FAKEPG_SCHEMA:-49:false}" ;;
       *"SELECT 1 FROM pg_database WHERE datname"*) echo "${FAKEPG_DB_EXISTS:-}" ;;
       *) : ;;
     esac
@@ -131,8 +135,8 @@ case "$1" in
       if [ -f "$FAKEDOCKER_INSPECT_DIR/$name.json" ]; then
         cat "$FAKEDOCKER_INSPECT_DIR/$name.json"
       else
-        printf '[{"Id":"%s","State":{"Running":true},"Config":{"Labels":{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes"}},"NetworkSettings":{"Networks":{"%s-net":{}}}}]' \
-          "$name" "$name"
+        printf '[{"Id":"%s","State":{"Running":true},"HostConfig":{"NetworkMode":"%s-net"},"Config":{"Labels":{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes","bodysense.restore-network":"%s-net"}},"NetworkSettings":{"Networks":{"%s-net":{}}}}]' \
+          "$name" "$name" "$name" "$name"
       fi
       exit 0
     fi
@@ -150,11 +154,15 @@ DOCKER_LOG="$TMP/docker.log"
 DOCKER_ENVLOG="$TMP/docker-env.log"
 export FAKEDOCKER_INSPECT_DIR DOCKER_LOG DOCKER_ENVLOG
 
-# write_inspect <container> <running> <labels-as-json> <networks-as-json>
+# write_inspect <container> <running> <labels-as-json> <networks-as-json> [netmode]
+# The default netmode is the first key of <networks-as-json> (or "none" if empty).
 write_inspect() {
-  local name="$1" running="$2" labels="$3" networks="$4"
+  local name="$1" running="$2" labels="$3" networks="$4" netmode="${5:-}"
+  if [ -z "$netmode" ]; then
+    netmode=$(printf '%s' "$networks" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(iter(d or {}), "none"))')
+  fi
   cat > "$FAKEDOCKER_INSPECT_DIR/$name.json" <<JSON
-[{"Id":"$name","State":{"Running":$running},"Config":{"Labels":$labels},"NetworkSettings":{"Networks":$networks}}]
+[{"Id":"$name","State":{"Running":$running},"HostConfig":{"NetworkMode":"$netmode"},"Config":{"Labels":$labels},"NetworkSettings":{"Networks":$networks}}]
 JSON
 }
 
@@ -453,6 +461,33 @@ else
 fi
 
 # ==============================================================================
+# 4c. the schema-revision gate is fail-closed on the backup side: a backup whose
+#     revision cannot be verified (no schema_migrations table, a failed
+#     existence probe, or a failed query) must abort before any object is
+#     uploaded and before last-success.json is written, so no backup is ever
+#     recorded as successful while carrying an unverified revision
+# ==============================================================================
+BEFORE_KEY=$(last_key)
+out=$(FAKEPG_HAS_MIGRATIONS=f run_backup 2>&1) && rc=0 || rc=$?
+if [ $rc -ne 0 ] && [[ "$out" == *"no schema_migrations table"* ]] && [ "$(last_key)" = "$BEFORE_KEY" ]; then
+  report 0 "backup aborts when the source has no schema_migrations table"
+else
+  report 1 "backup aborts when the source has no schema_migrations table" "rc=$rc out=$out"
+fi
+out=$(FAKEPG_TOREGCLASS_FAIL=1 run_backup 2>&1) && rc=0 || rc=$?
+if [ $rc -ne 0 ] && [[ "$out" == *"to_regclass query failed"* ]] && [ "$(last_key)" = "$BEFORE_KEY" ]; then
+  report 0 "backup aborts when the schema_migrations existence probe fails"
+else
+  report 1 "backup aborts when the schema_migrations existence probe fails" "rc=$rc out=$out"
+fi
+out=$(FAKEPG_SCHEMA_FAIL=1 run_backup 2>&1) && rc=0 || rc=$?
+if [ $rc -ne 0 ] && [[ "$out" == *"schema_migrations query failed"* ]] && [ "$(last_key)" = "$BEFORE_KEY" ]; then
+  report 0 "backup aborts when the schema_migrations query fails"
+else
+  report 1 "backup aborts when the schema_migrations query fails" "rc=$rc out=$out"
+fi
+
+# ==============================================================================
 # 5. restore safety guards
 # ==============================================================================
 RESTORE="scripts/restore-production-backup.sh"
@@ -496,28 +531,31 @@ run_restore_guard "refusing to restore into the live production postgres contain
 
 # 5b. the isolation proof (docker inspect) must refuse any target that is not a
 #     provably disposable drill container:
-#     right network set, labels, running state, exclusivity from the production
-#     container/endpoint and from the production Compose project.
+#     right network set, non-host dedicated drill network declaration, labels,
+#     running state, exclusivity from the production container/endpoint and from
+#     the production Compose project.  Network enumeration is fail-closed: an
+#     inspection/parse failure is refused, never treated as an empty "isolated"
+#     result.
 write_inspect restore-shared-net true \
-  '{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes"}' \
+  '{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes","bodysense.restore-network":"pg1-net"}' \
   '{"pg1-net":{}}'
 run_restore_guard "attached to the production postgres network" \
   --object-key "$OBJKEY" --target-db drill_net --target-project drill \
   --restore-pg container:restore-shared-net --confirm-target-isolated=yes
 write_inspect restore-wrong-project true \
-  '{"bodysense.restore-project":"staging","bodysense.disposable-restore":"yes"}' \
+  '{"bodysense.restore-project":"staging","bodysense.disposable-restore":"yes","bodysense.restore-network":"restore-wrong-project-net"}' \
   '{"restore-wrong-project-net":{}}'
 run_restore_guard "does not declare bodysense.restore-project=drill" \
   --object-key "$OBJKEY" --target-db drill_proj --target-project drill \
   --restore-pg container:restore-wrong-project --confirm-target-isolated=yes
 write_inspect restore-not-disposable true \
-  '{"bodysense.restore-project":"drill","bodysense.disposable-restore":"no"}' \
+  '{"bodysense.restore-project":"drill","bodysense.disposable-restore":"no","bodysense.restore-network":"restore-not-disposable-net"}' \
   '{"restore-not-disposable-net":{}}'
 run_restore_guard "refusing a non-disposable target" \
   --object-key "$OBJKEY" --target-db drill_disp --target-project drill \
   --restore-pg container:restore-not-disposable --confirm-target-isolated=yes
 write_inspect restore-stopped false \
-  '{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes"}' \
+  '{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes","bodysense.restore-network":"restore-stopped-net"}' \
   '{"restore-stopped-net":{}}'
 run_restore_guard "is not running" \
   --object-key "$OBJKEY" --target-db drill_run --target-project drill \
@@ -526,12 +564,74 @@ write_inspect pg1 true \
   '{"com.docker.compose.project":"docker"}' \
   '{"pg1-net":{}}'
 write_inspect restore-prod-compose true \
-  '{"com.docker.compose.project":"docker","bodysense.restore-project":"drill","bodysense.disposable-restore":"yes"}' \
+  '{"com.docker.compose.project":"docker","bodysense.restore-project":"drill","bodysense.disposable-restore":"yes","bodysense.restore-network":"restore-prod-compose-net"}' \
   '{"restore-prod-compose-net":{}}'
 run_restore_guard "belongs to the production compose project 'docker'" \
   --object-key "$OBJKEY" --target-db drill_compose --target-project drill \
   --restore-pg container:restore-prod-compose --confirm-target-isolated=yes
 rm -f "$FAKEDOCKER_INSPECT_DIR/pg1.json"
+
+# 5c. host networking and an undeclared/undetached drill network are refused:
+#     a host-network target retains reachability to host-published production
+#     endpoints even with zero common Docker networks, so it is not provably
+#     isolated regardless of its labels.
+write_inspect restore-host-net true \
+  '{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes","bodysense.restore-network":"host"}' \
+  '{"host":{}}' host
+run_restore_guard "refusing a restore container using host networking" \
+  --object-key "$OBJKEY" --target-db drill_host --target-project drill \
+  --restore-pg container:restore-host-net --confirm-target-isolated=yes
+write_inspect restore-none-mode true \
+  '{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes","bodysense.restore-network":"none"}' \
+  '{"none":{}}' none
+run_restore_guard "with no networking (NetworkMode=none)" \
+  --object-key "$OBJKEY" --target-db drill_none --target-project drill \
+  --restore-pg container:restore-none-mode --confirm-target-isolated=yes
+write_inspect restore-no-network-label true \
+  '{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes"}' \
+  '{"restore-no-network-label-net":{}}'
+run_restore_guard "does not declare bodysense.restore-network" \
+  --object-key "$OBJKEY" --target-db drill_nolabel --target-project drill \
+  --restore-pg container:restore-no-network-label --confirm-target-isolated=yes
+write_inspect restore-attach-mismatch true \
+  '{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes","bodysense.restore-network":"declared-drill-net"}' \
+  '{"actual-net":{}}'
+run_restore_guard "is not attached to its declared bodysense.restore-network" \
+  --object-key "$OBJKEY" --target-db drill_attach --target-project drill \
+  --restore-pg container:restore-attach-mismatch --confirm-target-isolated=yes
+
+# 5d. network enumeration failures are fail-closed on BOTH sides: an inspect
+#     output whose Networks set cannot be read is refused instead of being
+#     treated as an empty "shares no network with production" result.
+write_inspect restore-net-null true \
+  '{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes","bodysense.restore-network":"restore-net-null-net"}' \
+  null restore-net-null-net
+run_restore_guard "unable to inspect the restore postgres container network(s)" \
+  --object-key "$OBJKEY" --target-db drill_netnull --target-project drill \
+  --restore-pg container:restore-net-null --confirm-target-isolated=yes
+write_inspect pg1 true '{}' null
+run_restore_guard "unable to inspect the production postgres container network(s)" \
+  --object-key "$OBJKEY" --target-db drill_prodnet --target-project drill \
+  --restore-pg container:restore-pg --confirm-target-isolated=yes
+rm -f "$FAKEDOCKER_INSPECT_DIR/pg1.json"
+
+# 5e. an unverifiable schema revision in the backup metadata never passes the
+#     restore gate: `unknown`/`uninitialized`/empty metadata is refused before
+#     any archive download, never accepted and never skipped.
+meta_get "$OBJKEY.meta.json" "$TMP/meta-ok.json"
+cp "$TMP/meta-ok.json" "$TMP/meta-tampered.json"
+python3 - "$TMP/meta-tampered.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+d["schema_revision"] = "unknown"
+json.dump(d, open(sys.argv[1], "w"))
+PY
+s3put "$OBJKEY.meta.json" "$TMP/meta-tampered.json" >/dev/null
+run_restore_guard "declares an unverifiable schema revision 'unknown'" \
+  --object-key "$OBJKEY" --target-db drill_meta --target-project drill \
+  --restore-pg container:restore-meta --confirm-target-isolated=yes
+s3put "$OBJKEY.meta.json" "$TMP/meta-ok.json" >/dev/null
+rm -f "$TMP/meta-ok.json" "$TMP/meta-tampered.json"
 
 # ==============================================================================
 # 6. restore happy path with validator invocations

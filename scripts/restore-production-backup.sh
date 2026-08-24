@@ -29,10 +29,14 @@
 #      disposable PostgreSQL container that is provably isolated from the live
 #      production PostgreSQL container/endpoint.  The proof (via docker inspect)
 #      is: different container ID; NOT a member of the production Compose
-#      project; attached to NO Docker network shared with the production
-#      postgres container; and operator-declared labels
+#      project; NOT using host or `none` networking; attached to NO Docker
+#      network shared with the production postgres container; actually attached
+#      to an operator-declared dedicated non-host drill network
+#      `bodysense.restore-network=<network>`; and operator-declared labels
 #      `bodysense.restore-project=<--target-project>` and
-#      `bodysense.disposable-restore=yes` on the container itself.
+#      `bodysense.disposable-restore=yes` on the container itself.  Any docker
+#      inspect / network enumeration failure is fail-closed (refused), never
+#      treated as an empty "proves isolation" result.
 #   3. --target-db must differ from the production DB_NAME and must not already
 #      exist on the disposable restore server; it is created fresh there and
 #      never dropped or reused by this script.
@@ -43,6 +47,10 @@
 #   7. the database password reaches the validators only via PGPASSWORD in the
 #      process environment (docker: injected through an --env-file, never on a
 #      command line; golang: inherited), and is never packed into -database-url.
+#   8. backup metadata must carry an exact, verifiable schema revision
+#      (<version>:<dirty>); `unknown`/`uninitialized` metadata is refused
+#      (fail-closed), and the restored database revision must equal the metadata
+#      revision — the gate is never skipped.
 set -Eeuo pipefail
 
 ROOT="${BODYSENSE_DEPLOY_ROOT:-/opt/bodysense}"
@@ -53,7 +61,7 @@ STATE_DIR="$ROOT/.offhost-state"
 WORK_DIR="$ROOT/.offhost-work"
 LOCK_FILE="$STATE_DIR/offhost-restore.lock"
 S3_CLIENT="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)/offhost-s3.py"
-TOOL_VERSION="1.3.0"
+TOOL_VERSION="1.4.0"
 
 TARGET_DB=""
 TARGET_PROJECT=""
@@ -219,8 +227,11 @@ except Exception:
 ' "_" "$@" || true
 }
 
-# container_networks prints the (space-separated) Docker network names the
-# container is attached to; empty on error/absent networks.
+# container_networks prints the (newline-separated) Docker network names the
+# container is attached to.  FAIL-CLOSED: any docker inspect or JSON parsing
+# error returns non-zero (with no output), never an empty "proof of isolation".
+# An unprovable network claim is treated as an unsafe/shared target, not as
+# evidence that the target and production share nothing.
 container_networks() {
   local container="$1"
   docker inspect "$container" 2>/dev/null | python3 -c '
@@ -230,8 +241,8 @@ try:
     for name in d.get("NetworkSettings", {}).get("Networks", {}):
         print(name)
 except Exception:
-    pass
-' || true
+    sys.exit(1)
+'
 }
 
 production_container=$(postgres_container_id)
@@ -255,11 +266,64 @@ if [ -n "$prod_compose" ] && [ "$restore_compose" = "$prod_compose" ]; then
   fail "refusing a restore container that belongs to the production compose project '$prod_compose'"
 fi
 
-# The drill target must not share any Docker network with the production
-# postgres container, so it can neither reach production services nor be
-# reached by them.
-shared_networks=$(printf '%s\n%s\n' "$(container_networks "$production_container")" "$(container_networks "$RESTORE_TARGET")" \
-  | awk 'NF' | sort | uniq -d | tr '\n' ' ')
+# Host networking (the `host` driver) or `none` cannot be proven isolated from
+# the production host: a host-network container shares the host network stack
+# and can reach host-published production endpoints even when it has no Docker
+# network name in common with the production postgres container.  Such a target
+# is never an acceptable drill server.
+restore_mode=$(inspect_str "$RESTORE_TARGET" HostConfig NetworkMode)
+case "$restore_mode" in
+  host)
+    fail "refusing a restore container using host networking ($RESTORE_TARGET): a host-network target is not provably isolated from the production host"
+    ;;
+  none)
+    fail "refusing a restore container with no networking (NetworkMode=none): a dedicated non-host drill network is required"
+    ;;
+esac
+
+# A dedicated drill network must be declared on the container itself.  This is
+# part of the operator proof: the drill server runs on its OWN non-host network,
+# never merely "not attached to a network the production postgres happens to be
+# on" — an incidental non-overlap provides no isolation guarantee.
+restore_network=$(inspect_str "$RESTORE_TARGET" Config Labels bodysense.restore-network)
+[ -n "$restore_network" ] \
+  || fail "restore postgres container $RESTORE_TARGET does not declare bodysense.restore-network=<dedicated drill network name>; refusing a target that is not provably on a dedicated drill network"
+case "$restore_network" in
+  host|none)
+    fail "refusing declared restore network '$restore_network': host/none networking is not an isolated drill network"
+    ;;
+esac
+
+# Network enumeration is fail-closed: if either side's network set cannot be
+# inspected, the shared-network isolation claim cannot be proven and the restore
+# is refused (an inspection failure is never treated as an empty result).
+prod_networks=$(container_networks "$production_container") \
+  || fail "unable to inspect the production postgres container network(s) ($production_container); refusing the restore because isolation cannot be proven"
+restore_networks=$(container_networks "$RESTORE_TARGET") \
+  || fail "unable to inspect the restore postgres container network(s) ($RESTORE_TARGET); refusing the restore because isolation cannot be proven"
+
+# The declared drill network must actually be a network the restore container is
+# attached to, and the container must not sit on the host/`none` pseudo
+# networks.
+if ! printf '%s\n' "$restore_networks" | awk 'NF' | grep -Fxq "$restore_network"; then
+  fail "restore postgres container $RESTORE_TARGET is not attached to its declared bodysense.restore-network '$restore_network'; refusing the restore"
+fi
+while IFS= read -r n; do
+  [ -n "$n" ] || continue
+  case "$n" in
+    host|none)
+      fail "refusing a restore container attached to the $n network driver: a dedicated non-host drill network is required"
+      ;;
+  esac
+done <<<"$restore_networks"
+
+# The drill target must not be attached to ANY network shared with the
+# production postgres container, so it can neither reach production services nor
+# be reached by them.  An empty result from the intersection is only accepted
+# because both sides were enumerated above without error.
+shared_networks=$(comm -12 \
+  <(printf '%s\n' "$prod_networks" | awk 'NF' | sort -u) \
+  <(printf '%s\n' "$restore_networks" | awk 'NF' | sort -u) | tr '\n' ' ')
 [ -z "$shared_networks" ] \
   || fail "refusing a restore container attached to the production postgres network(s): $shared_networks"
 
@@ -312,6 +376,16 @@ meta_checksum=$(python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); pri
 [ "$meta_object_key" = "$OBJECT_KEY" ] \
   || fail "metadata object_key ($meta_object_key) does not match the requested key ($OBJECT_KEY)"
 [ "$meta_kind" = offhost-postgres ] || fail "metadata backup_kind is $meta_kind, expected offhost-postgres"
+# The schema-revision gate is fail-closed from the start: a backup whose
+# metadata does not carry an exact, verifiable `<version>:<dirty>` revision is
+# refused outright (no archive download/restore happens), and after the restore
+# the restored revision is required to equal it.  `unknown`/`uninitialized`
+# metadata is never accepted and never skips the gate.
+case "$meta_revision" in
+  unknown|uninitialized|"")
+    fail "backup metadata declares an unverifiable schema revision '$meta_revision'; refusing a restore drill without an exact verifiable revision"
+    ;;
+esac
 
 s3 get --key "$OBJECT_KEY.sha256" --file "$shafile"
 s3 get --key "$OBJECT_KEY" --file "$dump"
@@ -368,20 +442,16 @@ pg rm -f "$container_tmp" >/dev/null 2>&1 || true
 log "restored archive into disposable database $TARGET_DB on $RESTORE_TARGET"
 
 # --- Verify restored schema revision vs backup metadata ---------------------------
+# The gate is never skipped: backup metadata always carries an exact revision
+# (any `unknown`/`uninitialized` backup was refused above), and the restored
+# database must match it exactly.
 restored_revision=$(pg psql -U "$DB_USER" -d "$TARGET_DB" -Atc \
   "SELECT version::text || ':' || dirty::text FROM schema_migrations ORDER BY version DESC LIMIT 1;" \
   2>/dev/null || true)
 [ -n "$restored_revision" ] || fail 'restored database has no schema_migrations state'
-case "$meta_revision" in
-  unknown|uninitialized)
-    log "backup metadata schema_revision=$meta_revision; restored state is $restored_revision (equality not enforced)"
-    ;;
-  *)
-    [ "$restored_revision" = "$meta_revision" ] \
-      || fail "restored schema revision $restored_revision does not match backup metadata $meta_revision"
-    log "restored schema revision matches backup metadata ($restored_revision)"
-    ;;
-esac
+[ "$restored_revision" = "$meta_revision" ] \
+  || fail "restored schema revision $restored_revision does not match backup metadata $meta_revision"
+log "restored schema revision matches backup metadata ($restored_revision)"
 
 # --- Run validation binaries against the disposable database ----------------------
 VALIDATE_RESULT=FAIL

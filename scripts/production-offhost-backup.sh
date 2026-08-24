@@ -40,7 +40,7 @@ STATE_DIR="$ROOT/.offhost-state"
 WORK_DIR="$ROOT/.offhost-work"
 LOCK_FILE="$STATE_DIR/offhost.lock"
 S3_CLIENT="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)/offhost-s3.py"
-TOOL_VERSION="1.0.0"
+TOOL_VERSION="1.1.0"
 
 MODE=""
 for arg in "$@"; do
@@ -146,24 +146,31 @@ s3() {
       --url-style "$URL_STYLE" "$@"
 }
 
+# Resolve the exact, verifiable schema state `<version>:<dirty>` of the source
+# database.  FAIL-CLOSED: a backup is only ever recorded as a success with a
+# revision that was actually verified from schema_migrations.  Any psql/query
+# failure, a missing schema_migrations table, or an empty table aborts the
+# backup before any object is uploaded or last-success.json is written, so a
+# dump can never be marked successful while carrying an unverified revision.
 db_schema_state() {
   local exists value
   if ! exists=$(pg psql -U "$DB_USER" -d "$DB_NAME" -Atc \
     "SELECT to_regclass('public.schema_migrations') IS NOT NULL;" 2>/dev/null); then
-    printf '%s' unknown
-    return 0
+    fail 'unable to verify the source schema state (psql to_regclass query failed); refusing to write an off-host backup'
   fi
-  if [ "$exists" != t ]; then
-    printf '%s' uninitialized
-    return 0
+  [ "$exists" = t ] || [ "$exists" = f ] \
+    || fail "unexpected schema_migrations existence probe '$exists'; refusing to write an off-host backup"
+  if [ "$exists" = f ]; then
+    fail 'source database has no schema_migrations table (uninitialized); refusing to write an off-host backup without a verified schema revision'
   fi
   if ! value=$(pg psql -U "$DB_USER" -d "$DB_NAME" -Atc \
     "SELECT version::text || ':' || dirty::text FROM schema_migrations ORDER BY version DESC LIMIT 1;" \
     2>/dev/null); then
-    printf '%s' unknown
-    return 0
+    fail 'unable to verify the source schema revision (schema_migrations query failed); refusing to write an off-host backup'
   fi
-  printf '%s' "${value:-uninitialized}"
+  [ -n "$value" ] \
+    || fail 'schema_migrations exists but has no rows; refusing to write an off-host backup without a verified schema revision'
+  printf '%s' "$value"
 }
 
 fail_freshness() {
@@ -192,6 +199,12 @@ run_backup() {
   dump="$WORK_DIR/bodysense-postgres-$ts.dump"
 
   schema=$(db_schema_state)
+  case "$schema" in
+    unknown|uninitialized|"")
+      rm -f "$dump"
+      fail "refusing to write an off-host backup without a verified schema revision (got: '$schema')"
+      ;;
+  esac
   log "creating off-host custom-format dump schema=$schema"
   if ! pg pg_dump -U "$DB_USER" -d "$DB_NAME" -Fc > "$dump" 2>/dev/null; then
     rm -f "$dump"
