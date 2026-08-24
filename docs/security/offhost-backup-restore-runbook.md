@@ -62,6 +62,13 @@ one-off check without editing files.
   `last-success.json` is **not** updated — a silent retention skip can never
   leave the freshness check reporting OK while sensitive backups accumulate
   without a proven retention bound.
+- **The schema revision is verified fail-closed on both sides.** The backup
+  reads `<version>:<dirty>` from `schema_migrations` and refuses to record a
+  success if the table is missing/uninitialized, empty, or the query fails —
+  a dump is never marked successful while carrying an unverified revision. The
+  restore refuses archive `meta.json` objects whose `schema_revision` is
+  `unknown`/`uninitialized`/empty up front, and requires the restored database's
+  revision to equal the metadata revision exactly before reporting PASS.
 - **Freshness is compared in whole seconds.** A backup is stale when
   `now - last_success_at_utc` exceeds `OFFHOST_BACKUP_FRESHNESS_HOURS * 3600`
   seconds (no whole-hour truncation: with a 30h policy, a 30h59m-old backup
@@ -142,12 +149,16 @@ The restore script is deliberately strict and interactive-gated:
 
 ```bash
 # run a disposable PostgreSQL container dedicated to the drill on its OWN
-# drill network (never attached to the production postgres network), and
-# declare that it is a disposable drill target for --target-project drill
+# dedicated non-host drill network (never attached to the production postgres
+# network), and declare that it is a disposable drill target for
+# --target-project drill: the drill network itself must be declared on the
+# container (bodysense.restore-network) so the isolation proof is not just a
+# fortuitous lack of overlap with production
 docker network create bodysense-drill-net
 docker run -d --name restore-pg --network bodysense-drill-net \
   --label bodysense.restore-project=drill \
   --label bodysense.disposable-restore=yes \
+  --label bodysense.restore-network=bodysense-drill-net \
   -e POSTGRES_USER=bodysense -e POSTGRES_PASSWORD=<...> -e POSTGRES_DB=postgres \
   pgvector/pgvector:pg18
 /opt/bodysense/scripts/restore-production-backup.sh \
@@ -164,14 +175,26 @@ Requirements enforced by the script:
 2. `--restore-pg container:<id|name>` is required and must identify a **running,
    disposable** PostgreSQL container that is provably isolated from the live
    production postgres container/endpoint. The proof is fail-closed via `docker
-   inspect` and refuses when:
+   inspect` — an inspection/parsing failure is a refusal, never an empty
+   "isolated" result — and refuses when:
    - the restore container resolves to the same Docker ID as the production
      postgres container;
    - the restore container belongs to the production Compose project
      (`com.docker.compose.project` label equal);
+   - the restore container uses host networking (`HostConfig.NetworkMode=host`)
+     or no networking (`none`): a host-network target still reaches
+     host-published production endpoints, so it is not provably isolated
+     regardless of its Docker-network set;
    - the restore container is attached to any Docker network the production
      postgres container is attached to (so drill servers run on their own
      network, never on the production postgres network);
+   - the container does not declare `bodysense.restore-network=<network>` —
+     the dedicated drill network must be declared on the container itself, never
+     merely left to a fortuitous absence of overlap with production;
+   - the declared `bodysense.restore-network` is `host`/`none`, or is not
+     actually a network the container is attached to;
+   - either side's network set cannot be inspected/parsed (refused as
+     unprovable, not treated as empty);
    - the restore container is not running;
    - the restore container does not declare labels
      `bodysense.restore-project=<--target-project>` and
@@ -198,7 +221,10 @@ What the drill does:
 5. creates the disposable target database on that container;
 6. restores with `pg_restore --no-owner --no-privileges -j 2`;
 7. verifies `schema_revision` in the restored database equals the backup
-   metadata (`unknown`/`uninitialized` metadata is logged but not enforced);
+   metadata exactly — the metadata gate is fail-closed: `meta.json` declaring a
+   `schema_revision` of `unknown`/`uninitialized`/empty is refused up front,
+   before any archive download, and the post-restore equality check is always
+   enforced;
 8. runs the API's own `migration-validator` and `domain-validator` binaries
    against the restored database (default `--validator-runner docker`, or
    `--validator-runner golang` from a source checkout) by execing into the **api
@@ -228,10 +254,14 @@ The restored database is disposable and is never connected to traffic. It is
 created on the explicitly supplied disposable restore container/server
 (`--restore-pg container:<id|name>`), never on the production postgres
 container, and the script refuses to run unless `docker inspect` proves that
-container is running, unattached to any production Docker network, outside the
-production Compose project, distinct from the production postgres container,
-and labelled `bodysense.restore-project=<target>`+`bodysense.disposable-restore=yes`.
-Any restored environment that later serves traffic must run the
+container is running, attached only to its declared dedicated non-host drill
+network (never to any Docker network the production postgres is on, never to
+the `host`/`none` drivers), outside the production Compose project, distinct
+from the production postgres container, and labelled
+`bodysense.restore-project=<target>` + `bodysense.disposable-restore=yes` +
+`bodysense.restore-network=<drill network>`. Network inspection is fail-closed:
+an inspection/parsing error is a refusal, never an empty "shares no network"
+result. Any restored environment that later serves traffic must run the
 erasure recovery/tombstone reconciliation first (see
 `docs/security/privacy-erasure-retention.md`). Production drills restore the
 most recent backup and run the full validation; escalating the restored database
@@ -243,13 +273,16 @@ script.
 - **Hermetic (no docker/PostgreSQL needed):** `scripts/test_offhost_s3.py`
   (specific SigV4 vectors plus a signature-verified fake S3 server, including
   refusal of command-line credentials) and `scripts/validate-offhost-dr-unit.sh`
-  (34 checks: backup/retention/freshness, the restore isolation guards — ID
-  equality, running state, production-Compose-project membership, shared-network
-  refusal, disposable-label declaration — the `--restore-pg` guards, the SHA-256
-  sidecar syntax/name/digest verification, the DB password argv-leak guard
-  (env-only `PGPASSWORD`, never in `-database-url`/argv), the resolved
-  api-container validation path, and the systemd timers' timezone-in-`OnCalendar`
-  contract) against stubbed PostgreSQL and the fake S3 server.
+  (44 checks: backup/retention/freshness, the fail-closed schema-revision gates
+  on both the backup and restore sides, the restore isolation guards — ID
+  equality, running state, production-Compose-project membership, host/none
+  networking refusal, declared-drill-network enforcement, fail-closed shared-
+  network and network-enumeration refusal, disposable-label declaration — the
+  `--restore-pg` guards, the SHA-256 sidecar syntax/name/digest verification,
+  the DB password argv-leak guard (env-only `PGPASSWORD`, never in
+  `-database-url`/argv), the resolved api-container validation path, and the
+  systemd timers' timezone-in-`OnCalendar` contract) against stubbed PostgreSQL
+  and the fake S3 server.
 - **Docker integration:** `scripts/validate-offhost-dr.sh` runs real PostgreSQL
   18 + real `pg_dump`/`pg_restore` + the real validator binaries end to end,
   restoring into a second, disposable `restore-pg` container, including a data
@@ -267,11 +300,16 @@ script.
 | `reason=credentials-missing-for-object-probe` | object probing without keys | add keys to `.env.production.local` |
 | backup fails with `remote checksum round-trip mismatch` | upload/re-download integrity issue | rerun `--backup`; treat failure as real: do not rely on the archive |
 | backup fails with `off-host retention listing failed; refusing to record last success` | object-store listing failed (endpoint, ListBucket permission, network) during pruning | verify ListBucket access/endpoint; rerun `--backup`; `last-success.json` was **not** advanced, so retention stayed bounded by the previous proof |
-| backup fails with `re-downloaded archive checksum does not match` | corrupted remote copy | rerun; if persistent, investigate the object store (see §7.1) |
+| backup fails with `no schema_migrations table` / `schema_migrations query failed` / `schema_migrations exists but has no rows` | migration state is missing/unreadable/empty | fix migrations and migration state on the source DB, then rerun `--backup`; no backup is recorded without a verified `<version>:<dirty>` revision |
+| restore fails with `declares an unverifiable schema revision` | `meta.json` `schema_revision` is `unknown`/`uninitialized`/empty (tampered or foreign metadata) | verify the metadata object (§7.1); pick a valid datedir — an unverifiable revision never passes the restore gate |
+| restore fails with `re-downloaded archive checksum does not match` | corrupted remote copy | rerun; if persistent, investigate the object store (see §7.1) |
 | restore fails with `does not match the checksum sidecar` / `does not match metadata checksum_sha256` | archive or sidecar corrupted in transit or by retention | fetch the object, sidecar and metadata manually and verify (§7.1); pick a different datedir |
 | restore fails with `checksum sidecar is not in '<sha256>  <filename>' format` or `does not match object key basename` | tampered or foreign sidecar paired with the archive | investigate the object store; the archive is not trusted without a valid, matching sidecar |
 | restore fails `refusing to restore into the live production postgres container/endpoint` | `--restore-pg` resolved to the production postgres | supply a distinct disposable restore container/server (see §5) |
 | restore fails with `attached to the production postgres network` | the drill container is attached to a network the production postgres is also on | re-run the drill container on its own dedicated drill network (see §5) |
+| restore fails with `using host networking` / `NetworkMode=none` / `attached to the ... network driver` | the drill container uses the host/none network drivers, or a declared `host`/`none` restore-network | re-run the drill container on a dedicated non-host docker network (see §5); a host-network target is never provably isolated |
+| restore fails with `does not declare bodysense.restore-network` / `not attached to its declared bodysense.restore-network` | the dedicated drill network is not declared on the container or not actually attached | declare `--label bodysense.restore-network=<drill network>` at creation and attach the container to that network (see §5) |
+| restore fails with `unable to inspect the ... container network(s)` | docker inspect of the production or restore container's network set failed/parsed incompletely | check the docker daemon and container state; the restore is refused because isolation cannot be proven — never treated as isolated |
 | restore fails with `does not declare bodysense.restore-project=...` or `refusing a non-disposable target` | the drill container lacks the disposable labels | re-create it with `--label bodysense.restore-project=<target-project>` and `--label bodysense.disposable-restore=yes` |
 | restore fails with `is not running` | the drill container is stopped | start/restart the drill container |
 | restore fails at validators | restored schema/domain inconsistent | compare metadata `schema_revision`; check migrations manifest; escalate |

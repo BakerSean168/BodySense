@@ -135,13 +135,16 @@ done
 [ "$ready" = 1 ] || { echo "PostgreSQL did not become ready" >&2; exit 1; }
 
 # Disposable restore PostgreSQL: explicitly isolated from the production server.
-# It lives ONLY on its own drill network (it must never share a Docker network
-# with the production `postgres` container — the restore operator refuses that),
-# and it declares the labels that prove it is a disposable drill target for
-# --target-project drill.
+# It lives ONLY on its own dedicated drill network (it must never share a Docker
+# network with the production `postgres` container — the restore operator
+# refuses that), and it declares the labels that prove it is a disposable drill
+# target for --target-project drill: a genuinely isolated, non-host drill
+# network is declared and enforced (bodysense.restore-network), alongside the
+# disposability and project-ownership labels.
 docker run -d --name "$RESTORE_PG_NAME" --network "$DRILL_NET" \
   --label bodysense.restore-project=drill \
   --label bodysense.disposable-restore=yes \
+  --label bodysense.restore-network="$DRILL_NET" \
   -e "POSTGRES_USER=$DB_USER" -e "POSTGRES_PASSWORD=$DB_PASSWORD" -e "POSTGRES_DB=postgres" \
   "$PG_IMAGE" >/dev/null
 ready=0
