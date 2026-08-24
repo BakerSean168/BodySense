@@ -1,5 +1,6 @@
 # Active Plans
 
+
 There are currently **no unfinished Thought Forest ingestion, evidence-normalization, or external-evidence admissibility plans**. Previous Agent-platform plans also remain closed. The Thought Forest → BodySense ingestion MVP completed its vertical gate and moved to archive:
 
 - [`../archive/thought-forest-knowledge-ingestion-2026-08-23.md`](../archive/thought-forest-knowledge-ingestion-2026-08-23.md) — completed 2026-08-23; explicit allowlist export, Git/line provenance, BodySense adapter, generated-only dev ingestion and retrieval-safety verification.
@@ -8,6 +9,7 @@ There are currently **no unfinished Thought Forest ingestion, evidence-normaliza
 - [`../archive/thought-forest-claim-review-publication-2026-08-23.md`](../archive/thought-forest-claim-review-publication-2026-08-23.md) — completed 2026-08-23; exact claim review, reviewed snapshot, transactional publication/rollback, hard visibility gate and overwrite protection.
 - [`../archive/published-knowledge-retrieval-grounding-governance-2026-08-23.md`](../archive/published-knowledge-retrieval-grounding-governance-2026-08-23.md) — completed 2026-08-23; published positive/negative retrieval eval, stable citation identity, hashing relevance guard, publication observations and deny-first continue/hold/rollback gate.
 - [`../archive/production-runtime-knowledge-observation-2026-08-24.md`](../archive/production-runtime-knowledge-observation-2026-08-24.md) — completed 2026-08-24; current-turn Published Evidence Ref, explicit answer attribution tool, cross-runtime attribution event and final-message `runtime_answer` publication observations.
+- [`../archive/reviewed-knowledge-cohort-rollout-2026-08-24.md`](../archive/reviewed-knowledge-cohort-rollout-2026-08-24.md) — completed 2026-08-24; three-claim IASP Pain/Nociception cohort, artifact-bound publication, cohort reranking, 9/9 published regression, observation gates and rollback verification.
 
 The Agent-platform migration remains closed, and the bounded Consultation Runtime / Async-RAG hardening audit also remains archived.
 

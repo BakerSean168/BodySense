@@ -1,15 +1,15 @@
 # Knowledge Lifecycle 架构设计
 
 **文档版本**：v1.0
-**更新日期**：2026-08-23
-**状态**：核心生命周期与首轮 Published Governance 已实现
+**更新日期**：2026-08-24
+**状态**：核心生命周期、Published Governance 与首个 Reviewed Cohort Rollout 已实现
 **适用范围**：视频知识入库、RAG、知识精修、向量索引、引用、知识质量管理
 
 ---
 
 ## Implementation Status
 
-**当前状态**：核心生命周期与首轮 Published Retrieval / Citation / Grounding Governance 已实现（管理 UI 与自动生产观测仍未实现）
+**当前状态**：核心生命周期、Published Retrieval / Citation / Grounding、Runtime Answer Attribution 与首个 artifact-bound Reviewed Cohort 已实现；管理 UI 与真实生产 observation window 仍待运行数据形成。
 
 | 模块 | 状态 | 说明 |
 |---|---|---|
@@ -23,6 +23,8 @@
 | 质量阈值门控 | ✅ 核心已完成 | 发布前强制 review/lifecycle、quality ≥ 0.90、content hash、external support、claim review、license 与 provenance gate。 |
 | 检索质量评估 | ✅ 首轮完成 | unpublished retrieval + published positive/negative retrieval、citation identity/provenance、claim grounding pilot 已建立。 |
 | Publication observations / gate | ✅ 首轮完成 | migration 51 + Go observation service/CLI；按 immutable publication identity 汇总并输出 continue / hold / rollback。 |
+| Reviewed cohort artifact-bound publish | ✅ 首轮完成 | Stage 8 `publish-reviewed` 从 immutable reviewed snapshot 派生精确 unit set，并在 publication transaction 内交叉验证 content/claim/review/evidence/provenance identity。 |
+| Runtime answer attribution | ✅ 首轮完成 | Stage 7 `source.answer_attribution.added` + `runtime_answer` observation；真实 production window 尚需上线后采样。 |
 
 **相关 Phase**：07a → 归档于 `docs/plan/archive/implementation/`
 
@@ -590,6 +592,87 @@ attribution + final citation missing
 多 evidence claim 按每个 publication binding 单独记录 grounding status，避免一条支持证据给另一条
 publication “借分”。Observation 继续复用 migration 51 的 immutable publication id/version gate，
 Stage 7 不新增 migration，也不自动执行 rollback。
+
+### 11.7 Reviewed cohort 与 artifact-bound rollout
+
+Stage 8 把单条 Pain Definition pilot 扩展为首个受控三单元 cohort，但没有扩大到整个
+Thought Forest。当前 cohort 只包含官方 IASP 直接支持的低风险定义/解释边界：
+
+```txt
+疼痛（Pain）是什么
+疼痛（Pain）与伤害感受（Nociception）的核心解释边界
+伤害感受（Nociception）是什么
+```
+
+新的 source snapshot 固定到 Thought Forest Git commit
+`8dbe766899da073727336a6f93cb142e34eeb4e8`。旧 pilot 的 review 不跨 commit 继承；Stage 8
+重新建立 exact external-evidence review、claim review 与 reviewed snapshot：
+
+```txt
+reviewed-knowledge:d8262c9800714cb23e928ecf
+```
+
+正式 cohort 发布入口为：
+
+```txt
+knowledge-publication-manager publish-reviewed
+  --reviewed-snapshot <bodysense.reviewed-knowledge-snapshot.v1>
+```
+
+它不接受 operator 临时手写 unit set，而是从 reviewed snapshot 读取精确 unit keys，并在同一
+Go publication transaction 内逐条验证：
+
+```txt
+DB content_hash == artifact claim_content_hash
+DB snapshot_id == artifact source_snapshot_id
+DB claim_id == artifact claim_id
+DB claim_review_id == artifact claim_review_id
+DB external_review_id == artifact external_evidence_review_id
+DB Markdown locator == artifact locator
+DB review/lifecycle/quality == reviewed artifact
+```
+
+任一 identity drift 都在创建 publication 前 fail closed。Publication JSONB 同时保存
+`reviewed_snapshot_id / source_snapshot_id / source_git_commit / external_evidence_review_id / claim_review_id`，
+所以发布批次可以追溯到完整 review artifact，而不只是 unit key 列表。旧 `publish` CLI 继续保留
+用于兼容/测试，controlled rollout 使用 `publish-reviewed`。
+
+Stage 8 同时发现了一个只在 cohort 扩容后出现的检索问题：hashing embedding 对同一篇 Pain note
+中的相邻 claim 区分度不足。修复没有增加 Pain-specific 特判，而是在原有 deny-first lexical gate
+之后增加通用 section-local rerank：
+
+```txt
+vector similarity
++ existing intent boost
++ bounded claim-kind intent
++ section-specific heading lexical coverage
++ reviewed body lexical coverage
+```
+
+该 rerank 只作用于 `published + hashing + thought_forest_note`。它只重新排序已经通过 relevance gate
+的候选，不能让无关结果进入候选集；video 与未来 calibrated semantic embedding 不受影响。
+
+隔离 GCP-dev PostgreSQL 18 vertical slice 的最终结果：
+
+```txt
+source snapshot: 11 notes / 115 units
+reviewed before publish: 3
+published before explicit publish: 0
+artifact-bound publication: 3 units / version 1
+published cohort regression: 9/9 PASS
+  positive exact-unit hits: 6
+  negative expected-empty: 3
+predeploy_eval gate: continue
+runtime_answer gate before real traffic: hold (0 samples)
+published-source overwrite: rejected before writes
+rollback: all 3 restored to reviewed/unpublished
+post-rollback default retrieval: 0
+reviewed-artifact content drift: rejected, no publication row created
+```
+
+因此 Stage 8 的开发/预发布证据只允许进入“可部署、可显式发布”的状态，**不等于生产自动
+promotion**。生产发布后仍必须等待 Stage 7 `runtime_answer` observations 形成合格窗口；没有真实
+runtime samples 时 gate 保持 `hold`。
 
 ---
 
