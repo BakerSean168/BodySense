@@ -74,14 +74,16 @@ one-off check without editing files.
 The deploy watcher installs and enables these units from the runtime bundle:
 
 - `bodysense-offhost-backup.timer` — daily 02:10 Asia/Shanghai
-  (`OnCalendar=*-*-* 02:10:00`, `Timezone=Asia/Shanghai`), runs
+  (`OnCalendar=*-*-* 02:10:00 Asia/Shanghai`), runs
   `production-offhost-backup.sh --backup`.
-- `bodysense-offhost-freshness.timer` — hourly (`OnCalendar=*:00:00`,
-  `Timezone=Asia/Shanghai`), runs `--check-freshness`.
+- `bodysense-offhost-freshness.timer` — hourly
+  (`OnCalendar=*-*-* *:00:00 Asia/Shanghai`), runs `--check-freshness`.
 
-The `Timezone=Asia/Shanghai` directive pins the calendar trigger to
-Asia/Shanghai regardless of the host's configured timezone, so the documented
-02:10 Asia/Shanghai schedule is guaranteed rather than host-TZ-dependent.
+The timezone is **embedded in the `OnCalendar=` expression** (systemd syntax
+`<calendar> <timezone>`); there is no bare `Timezone=` directive, which is
+non-standard in `[Timer]` and ignored/overridden by systemd. The documented
+02:10 Asia/Shanghai schedule is therefore guaranteed regardless of the host's
+configured timezone.
 
 Inspection:
 
@@ -139,8 +141,13 @@ set -a; . /opt/bodysense/.env.production.local; set +a
 The restore script is deliberately strict and interactive-gated:
 
 ```bash
-# run a disposable PostgreSQL container dedicated to the drill (e.g.)
-docker run -d --name restore-pg --network <bodysense_net> \
+# run a disposable PostgreSQL container dedicated to the drill on its OWN
+# drill network (never attached to the production postgres network), and
+# declare that it is a disposable drill target for --target-project drill
+docker network create bodysense-drill-net
+docker run -d --name restore-pg --network bodysense-drill-net \
+  --label bodysense.restore-project=drill \
+  --label bodysense.disposable-restore=yes \
   -e POSTGRES_USER=bodysense -e POSTGRES_PASSWORD=<...> -e POSTGRES_DB=postgres \
   pgvector/pgvector:pg18
 /opt/bodysense/scripts/restore-production-backup.sh \
@@ -154,10 +161,22 @@ docker run -d --name restore-pg --network <bodysense_net> \
 Requirements enforced by the script:
 
 1. `--confirm-target-isolated=yes` must be supplied.
-2. `--restore-pg container:<id|name>` is required and must identify a
-   **disposable** PostgreSQL server/container that is provably not the live
-   production postgres container/endpoint; the script resolves both to Docker
-   IDs and refuses equality. All `psql`/`pg_restore` calls and `docker cp`
+2. `--restore-pg container:<id|name>` is required and must identify a **running,
+   disposable** PostgreSQL container that is provably isolated from the live
+   production postgres container/endpoint. The proof is fail-closed via `docker
+   inspect` and refuses when:
+   - the restore container resolves to the same Docker ID as the production
+     postgres container;
+   - the restore container belongs to the production Compose project
+     (`com.docker.compose.project` label equal);
+   - the restore container is attached to any Docker network the production
+     postgres container is attached to (so drill servers run on their own
+     network, never on the production postgres network);
+   - the restore container is not running;
+   - the restore container does not declare labels
+     `bodysense.restore-project=<--target-project>` and
+     `bodysense.disposable-restore=yes`.
+   All `psql`/`pg_restore` calls and `docker cp`
    operations then target that container exclusively.
 3. `--target-db` must differ from production `DB_NAME` (`bodysense`).
 4. `--target-project` must differ from `bodysense`.
@@ -187,9 +206,17 @@ What the drill does:
    resolved from the running Compose project — production does not set
    `container_name`, so Compose's default naming is used (`<project>-api-1`,
    e.g. `docker-api-1`); operators can pin it explicitly with
-   `OFFHOST_API_CONTAINER`. The api container resolves the disposable restore
-   container by its Docker network name;
+   `OFFHOST_API_CONTAINER`. The api container must be attached to the drill
+   network as well as the production network so it can reach the disposable
+   restore container by its Docker network name (never the other way around: the
+   restore container stays off the production network);
 9. prints `RESTORE_RESULT=PASS database=... project=... restore_pg=... object_key=...` on success.
+
+The database password never appears on a process command line: validators
+receive it only via `PGPASSWORD` in their environment — inherited directly by
+the golang runner, or injected through a mode-0600 `--env-file` on the `docker
+exec` path (which also keeps it out of the `docker` CLI argv). The
+`-database-url` passed to the validators contains no password at all.
 
 Optional: `--baseline-version N` migrates through the published production
 baseline before validation. Use `--workdir /path` to keep all artifacts
@@ -200,8 +227,11 @@ baseline before validation. Use `--workdir /path` to keep all artifacts
 The restored database is disposable and is never connected to traffic. It is
 created on the explicitly supplied disposable restore container/server
 (`--restore-pg container:<id|name>`), never on the production postgres
-container, and the script refuses to run when the two resolve to the same
-endpoint. Any restored environment that later serves traffic must run the
+container, and the script refuses to run unless `docker inspect` proves that
+container is running, unattached to any production Docker network, outside the
+production Compose project, distinct from the production postgres container,
+and labelled `bodysense.restore-project=<target>`+`bodysense.disposable-restore=yes`.
+Any restored environment that later serves traffic must run the
 erasure recovery/tombstone reconciliation first (see
 `docs/security/privacy-erasure-retention.md`). Production drills restore the
 most recent backup and run the full validation; escalating the restored database
@@ -213,10 +243,13 @@ script.
 - **Hermetic (no docker/PostgreSQL needed):** `scripts/test_offhost_s3.py`
   (specific SigV4 vectors plus a signature-verified fake S3 server, including
   refusal of command-line credentials) and `scripts/validate-offhost-dr-unit.sh`
-  (23 checks: backup/retention/freshness, the restore isolation and
-  `--restore-pg` guards, the SHA-256 sidecar syntax/name/digest verification,
-  the env-only credential argv-leak guard, and the resolved api-container
-  validation path) against stubbed PostgreSQL and the fake S3 server.
+  (34 checks: backup/retention/freshness, the restore isolation guards — ID
+  equality, running state, production-Compose-project membership, shared-network
+  refusal, disposable-label declaration — the `--restore-pg` guards, the SHA-256
+  sidecar syntax/name/digest verification, the DB password argv-leak guard
+  (env-only `PGPASSWORD`, never in `-database-url`/argv), the resolved
+  api-container validation path, and the systemd timers' timezone-in-`OnCalendar`
+  contract) against stubbed PostgreSQL and the fake S3 server.
 - **Docker integration:** `scripts/validate-offhost-dr.sh` runs real PostgreSQL
   18 + real `pg_dump`/`pg_restore` + the real validator binaries end to end,
   restoring into a second, disposable `restore-pg` container, including a data
@@ -238,6 +271,9 @@ script.
 | restore fails with `does not match the checksum sidecar` / `does not match metadata checksum_sha256` | archive or sidecar corrupted in transit or by retention | fetch the object, sidecar and metadata manually and verify (§7.1); pick a different datedir |
 | restore fails with `checksum sidecar is not in '<sha256>  <filename>' format` or `does not match object key basename` | tampered or foreign sidecar paired with the archive | investigate the object store; the archive is not trusted without a valid, matching sidecar |
 | restore fails `refusing to restore into the live production postgres container/endpoint` | `--restore-pg` resolved to the production postgres | supply a distinct disposable restore container/server (see §5) |
+| restore fails with `attached to the production postgres network` | the drill container is attached to a network the production postgres is also on | re-run the drill container on its own dedicated drill network (see §5) |
+| restore fails with `does not declare bodysense.restore-project=...` or `refusing a non-disposable target` | the drill container lacks the disposable labels | re-create it with `--label bodysense.restore-project=<target-project>` and `--label bodysense.disposable-restore=yes` |
+| restore fails with `is not running` | the drill container is stopped | start/restart the drill container |
 | restore fails at validators | restored schema/domain inconsistent | compare metadata `schema_revision`; check migrations manifest; escalate |
 
 ### 7.1 Verifying a specific object independently

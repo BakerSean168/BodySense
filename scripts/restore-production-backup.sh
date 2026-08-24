@@ -25,9 +25,14 @@
 #
 # Safety guards (all must pass):
 #   1. --confirm-target-isolated=yes is required.
-#   2. --restore-pg container:<id|name> is required and must identify a
-#      disposable PostgreSQL container/server that is provably NOT the live
-#      production PostgreSQL container/endpoint; equality is refused.
+#   2. --restore-pg container:<id|name> is required and must identify a running
+#      disposable PostgreSQL container that is provably isolated from the live
+#      production PostgreSQL container/endpoint.  The proof (via docker inspect)
+#      is: different container ID; NOT a member of the production Compose
+#      project; attached to NO Docker network shared with the production
+#      postgres container; and operator-declared labels
+#      `bodysense.restore-project=<--target-project>` and
+#      `bodysense.disposable-restore=yes` on the container itself.
 #   3. --target-db must differ from the production DB_NAME and must not already
 #      exist on the disposable restore server; it is created fresh there and
 #      never dropped or reused by this script.
@@ -35,6 +40,9 @@
 #   5. the object key must be under the configured OFFHOST_BACKUP_PREFIX.
 #   6. credentials are supplied to the S3 client only through the environment,
 #      never via the process command line.
+#   7. the database password reaches the validators only via PGPASSWORD in the
+#      process environment (docker: injected through an --env-file, never on a
+#      command line; golang: inherited), and is never packed into -database-url.
 set -Eeuo pipefail
 
 ROOT="${BODYSENSE_DEPLOY_ROOT:-/opt/bodysense}"
@@ -45,7 +53,7 @@ STATE_DIR="$ROOT/.offhost-state"
 WORK_DIR="$ROOT/.offhost-work"
 LOCK_FILE="$STATE_DIR/offhost-restore.lock"
 S3_CLIENT="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)/offhost-s3.py"
-TOOL_VERSION="1.1.0"
+TOOL_VERSION="1.3.0"
 
 TARGET_DB=""
 TARGET_PROJECT=""
@@ -156,7 +164,7 @@ case "$OBJECT_KEY" in
   *) fail "--object-key is outside the configured OFFHOST_BACKUP_PREFIX ($PREFIX)" ;;
 esac
 
-# --- Prove the restore target is NOT the production PostgreSQL endpoint -----
+# --- Prove the restore target is an isolated, disposable container ----------
 postgres_container_id() {
   if [ -n "${OFFHOST_PGCONTAINER_ID:-}" ]; then
     printf '%s' "$OFFHOST_PGCONTAINER_ID"
@@ -189,28 +197,81 @@ api_container_name() {
   # Compose default container naming when container_name is unset.
   printf '%s' "$COMPOSE_PROJECT-api-1"
 }
-resolve_container_id() {
-  # Canonicalise to the Docker long ID so `container:postgres` (the production
-  # service name) and an id/name aliasing the same container are both caught.
-  if [ -z "${OFFHOST_PG_PREFIX:-}" ]; then
-    docker inspect -f '{{.Id}}' "$1" 2>/dev/null || printf '%s' "$1"
-  else
-    # Hermetic/test seam: identities are opaque tokens compared literally.
-    printf '%s' "$1"
-  fi
+
+# inspect_str prints the value at <key...> inside `docker inspect <container>[0]`.
+# Fail-closed: on any daemon/parse error or missing key it prints nothing and
+# the caller treats that as a refusal.  Works against the real Docker daemon and
+# the hermetic fake `docker` used by the unit tests alike.
+inspect_str() {
+  local container="$1"; shift
+  docker inspect "$container" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)[0]
+    for key in sys.argv[2:]:
+        d = d[key]
+    if isinstance(d, (dict, list)):
+        print(json.dumps(d))
+    else:
+        print(d)
+except Exception:
+    pass
+' "_" "$@" || true
+}
+
+# container_networks prints the (space-separated) Docker network names the
+# container is attached to; empty on error/absent networks.
+container_networks() {
+  local container="$1"
+  docker inspect "$container" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)[0]
+    for name in d.get("NetworkSettings", {}).get("Networks", {}):
+        print(name)
+except Exception:
+    pass
+' || true
 }
 
 production_container=$(postgres_container_id)
 [ -n "$production_container" ] || fail 'unable to identify the production postgres container (is the stack running? or set OFFHOST_PGCONTAINER_ID)'
-prod_full=$(resolve_container_id "$production_container")
-restore_full=$(resolve_container_id "$RESTORE_TARGET")
-[ -n "$restore_full" ] || fail "unable to resolve the restore postgres container $RESTORE_TARGET"
-[ "$restore_full" != "$prod_full" ] \
+prod_id=$(inspect_str "$production_container" Id)
+[ -n "$prod_id" ] || fail "unable to inspect the production postgres container $production_container (is the stack running? or set OFFHOST_PGCONTAINER_ID)"
+restore_id=$(inspect_str "$RESTORE_TARGET" Id)
+[ -n "$restore_id" ] || fail "unable to resolve the restore postgres container $RESTORE_TARGET"
+[ "$restore_id" != "$prod_id" ] \
   || fail "refusing to restore into the live production postgres container/endpoint (--restore-pg ${RESTORE_PG} resolves to the production postgres ${production_container})"
-if [ -z "${OFFHOST_PG_PREFIX:-}" ]; then
-  restore_state=$(docker inspect -f '{{.State.Running}}' "$RESTORE_TARGET" 2>/dev/null || true)
-  [ "$restore_state" = true ] || fail "restore postgres container $RESTORE_TARGET is not running"
+
+restore_running=$(inspect_str "$RESTORE_TARGET" State Running)
+[ "$restore_running" = True ] || fail "restore postgres container $RESTORE_TARGET is not running"
+
+# The drill target must not be part of the production Compose project: a
+# container owned by the production project is traffic-reachable from
+# production regardless of its name.
+prod_compose=$(inspect_str "$production_container" Config Labels com.docker.compose.project)
+restore_compose=$(inspect_str "$RESTORE_TARGET" Config Labels com.docker.compose.project)
+if [ -n "$prod_compose" ] && [ "$restore_compose" = "$prod_compose" ]; then
+  fail "refusing a restore container that belongs to the production compose project '$prod_compose'"
 fi
+
+# The drill target must not share any Docker network with the production
+# postgres container, so it can neither reach production services nor be
+# reached by them.
+shared_networks=$(printf '%s\n%s\n' "$(container_networks "$production_container")" "$(container_networks "$RESTORE_TARGET")" \
+  | awk 'NF' | sort | uniq -d | tr '\n' ' ')
+[ -z "$shared_networks" ] \
+  || fail "refusing a restore container attached to the production postgres network(s): $shared_networks"
+
+# Disposability and drill-project ownership are declared on the container itself
+# at creation time and must match --target-project.  A plain running PostgreSQL
+# container (staging, or any other non-disposable database) is refused here.
+restore_project=$(inspect_str "$RESTORE_TARGET" Config Labels bodysense.restore-project)
+restore_disposable=$(inspect_str "$RESTORE_TARGET" Config Labels bodysense.disposable-restore)
+[ "$restore_project" = "$TARGET_PROJECT" ] \
+  || fail "restore postgres container $RESTORE_TARGET does not declare bodysense.restore-project=$TARGET_PROJECT; refusing a target that is not provably disposable for --target-project=$TARGET_PROJECT"
+[ "$restore_disposable" = yes ] \
+  || fail "restore postgres container $RESTORE_TARGET does not declare bodysense.disposable-restore=yes; refusing a non-disposable target"
 
 # Postgres tooling always runs against the disposable restore container (or the
 # hermetic OFFHOST_PG_PREFIX seam in tests), never against production.
@@ -332,11 +393,28 @@ if [ "$VALIDATOR_RUNNER" = docker ]; then
   [ -n "$api_container" ] || fail 'unable to resolve the api container that hosts the validators (set OFFHOST_API_CONTAINER)'
   log "running validators via api container $api_container"
 fi
+# The database password reaches the validators ONLY through the process
+# environment (PGPASSWORD), never through the -database-url argument or any
+# process command line, so the secret cannot appear in /proc/*/cmdline.
+# docker exec does not inherit host env vars, so the secret is injected with an
+# --env-file (mode 0600) rather than `-e PGPASSWORD=...` which would leak it
+# through the docker CLI process argv.  The golang runner inherits the exported
+# PGPASSWORD directly.
+VALIDATOR_ENV_FILE="$WORK_DIR/validator-pgpw.env"
+umask 077
+printf 'PGPASSWORD=%s\n' "$DB_PASSWORD" > "$VALIDATOR_ENV_FILE"
+chmod 600 "$VALIDATOR_ENV_FILE"
+umask 022
+cleanup_on_exit() {
+  cleanup_container_copy
+  rm -f "$VALIDATOR_ENV_FILE"
+}
+trap cleanup_on_exit EXIT
 run_validator() {
   local bin="$1"; shift
   case "$VALIDATOR_RUNNER" in
     docker)
-      docker exec "$api_container" "/app/validators/$bin" "$@" || return 1
+      docker exec --env-file "$VALIDATOR_ENV_FILE" "$api_container" "/app/validators/$bin" "$@" || return 1
       ;;
     golang)
       # Development/hermetic runner; requires a source checkout at the repo root.
@@ -350,13 +428,17 @@ run_validator() {
 
 if [ "$VALIDATOR_RUNNER" = docker ]; then
   # The api container resolves the disposable restore container by its Docker
-  # network name/id; operators must run the restore container on the same
-  # user-defined network as the api container.
+  # network name/id; operators must run the restore container on a drill network
+  # the api container is also attached to (but never on the production postgres
+  # network — that is refused above).
   dsn_host="$RESTORE_TARGET"
 else
   dsn_host=127.0.0.1
 fi
-dsn="postgres://$DB_USER:$DB_PASSWORD@$dsn_host:5432/$TARGET_DB?sslmode=disable"
+# No password in the URL: lib/pq (migration-validator) and pgx (domain-validator)
+# both read PGPASSWORD from the process environment, keeping DB_PASSWORD out of
+# every command line (host and container).
+dsn="postgres://$DB_USER@$dsn_host:5432/$TARGET_DB?sslmode=disable"
 migration_args=("-database-url" "$dsn" "-migrations" "file://migrations")
 [ -z "$BASELINE_VERSION" ] || migration_args+=("-baseline-version" "$BASELINE_VERSION")
 if run_validator migration-validator "${migration_args[@]}"; then

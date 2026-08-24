@@ -185,9 +185,9 @@ In addition to the deploy watcher's same-host backups, production keeps an
 OSS/S3-compatible destination (Alibaba Cloud OSS `cn-hangzhou`):
 
 - `scripts/production-offhost-backup.sh --backup` runs daily via
-  `bodysense-offhost-backup.timer` (02:10 Asia/Shanghai, enforced by the unit's
-  `Timezone=Asia/Shanghai` so the schedule does not depend on the host
-  timezone). It produces a
+  `bodysense-offhost-backup.timer` (`OnCalendar=*-*-* 02:10:00 Asia/Shanghai` —
+  the timezone is embedded in the calendar expression so the schedule does not
+  depend on the host timezone). It produces a
   custom-format dump through the normal network protocol
   (`docker compose exec postgres pg_dump -Fc`), records its SHA-256 as a sidecar
   object and a metadata object (schema revision, checksum, source, retention),
@@ -199,7 +199,8 @@ OSS/S3-compatible destination (Alibaba Cloud OSS `cn-hangzhou`):
   not recorded, so an unbounded retention window can never coexist with a
   healthy freshness state.
 - `scripts/production-offhost-backup.sh --check-freshness` runs hourly via
-  `bodysense-offhost-freshness.timer` (also pinned to `Timezone=Asia/Shanghai`).
+  `bodysense-offhost-freshness.timer` (`OnCalendar=*-*-* *:00:00 Asia/Shanghai`,
+  also embedded in the expression).
   It reads the local `last-success.json`
   state and, when `OFFHOST_BACKUP_FRESHNESS_PROBE=object`, confirms the latest
   archive still exists remotely. Freshness is compared in whole seconds (a
@@ -209,10 +210,17 @@ OSS/S3-compatible destination (Alibaba Cloud OSS `cn-hangzhou`):
   `OFFHOST_BACKUP_FRESH=FAIL reason=...` and optionally runs the configured
   `OFFHOST_BACKUP_ALERT_CMD`.
 - `scripts/restore-production-backup.sh` is the operator-only restore drill. It
-  never restores into the production database or production postgres server:
-  `--restore-pg container:<id|name>` is required and must resolve (via `docker
-  inspect` to the container ID) to a disposable PostgreSQL server that is not the
-  live production postgres container; all `psql`/`pg_restore` and `docker cp`
+  never restores into the production database or production postgres server.
+  The restore target must be an explicitly supplied disposable PostgreSQL
+  container (`--restore-pg container:<id|name>`), and before anything else the
+  operator proves that container is isolated from production via `docker
+  inspect` — fail-closed, refusing on: container-ID equality with the production
+  postgres container, membership in the production Compose project, ANY Docker
+  network shared with the production postgres container, a non-running state, or
+  a missing/incorrect declaration of `bodysense.restore-project=<target-project>`
+  and `bodysense.disposable-restore=yes` (drill containers must therefore run on
+  their own dedicated drill network, never on the production postgres network).
+  All `psql`/`pg_restore` and `docker cp`
   operations target that disposable server exclusively. The target must differ
   from `DB_NAME`, the project must differ from `bodysense`, the target database
   must not already exist, and `--confirm-target-isolated=yes` is mandatory. It
@@ -223,7 +231,10 @@ OSS/S3-compatible destination (Alibaba Cloud OSS `cn-hangzhou`):
   disposable server with `--no-owner --no-privileges`, verifies the restored
   schema revision equals the backup metadata, and runs the `domain-validator`
   and `migration-validator` binaries (built into the API image at
-  `/app/validators/`) against the restored database.
+  `/app/validators/`) against the restored database. The database password
+  reaches the validators only through `PGPASSWORD` in the process environment
+  (injected via an `--env-file` on the `docker exec` path), never through
+  `-database-url` or any process command line.
 - Object-store credentials are host-only least-privilege keys in
   `.env.production.local` (`OFFHOST_BACKUP_ACCESS_KEY` /
   `OFFHOST_BACKUP_SECRET_KEY`, limited to GetObject/PutObject/DeleteObject/ListBucket
