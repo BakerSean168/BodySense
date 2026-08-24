@@ -11,10 +11,10 @@
 #
 # This proves the off-host pipeline logic (schedule artifact layout, metadata,
 # retention scoping, freshness alerting, env-only credential handling, the
-# restore isolation/enforcement guards and the SHA-256 sidecar verification)
-# against a real, signature-verified S3 wire client. The docker-backed
-# integration test (validate-offhost-dr.sh) re-proves the flow against real
-# PostgreSQL.
+# restore isolation/enforcement guards, the SHA-256 sidecar verification and the
+# resolved api-container validation path) against a real, signature-verified S3
+# wire client. The docker-backed integration test (validate-offhost-dr.sh)
+# re-proves the flow against real PostgreSQL.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
@@ -94,6 +94,12 @@ chmod +x "$BIN/fake-pg"
 # --- fake docker stub (validators + docker cp + compose ps) ------------------
 cat > "$BIN/docker" <<'DOCKSTUB'
 #!/usr/bin/env bash
+# Record every invocation so tests can prove exactly what docker command the
+# restore path runs (e.g. the resolved api container name, never a hard-coded
+# literal).
+{
+  printf '%s\n' "$*"
+} >> "${DOCKER_LOG:-/dev/null}"
 case "$1" in
   cp) exit 0 ;;
   exec) exit "${FAKEPG_VALIDATOR_EXIT:-0}" ;;
@@ -373,7 +379,10 @@ run_restore_guard "refusing to restore into the live production postgres contain
 # 6. restore happy path with validator invocations
 # ==============================================================================
 FAKEPG_DB_EXISTS="" FAKEPG_SCHEMA="49:false"
+DOCKER_LOG="$TMP/docker.log"
+: > "$DOCKER_LOG"
 out=$(BODYSENSE_DEPLOY_ROOT="$ROOT" OFFHOST_PG_PREFIX="$BIN/fake-pg" OFFHOST_PGCONTAINER_ID=pg1 \
+  OFFHOST_API_CONTAINER=fake-api-1 DOCKER_LOG="$DOCKER_LOG" \
   bash "$RESTORE" --object-key "$OBJKEY" --target-db drill_db --target-project drill \
   --restore-pg container:restore-pg --confirm-target-isolated=yes --validator-runner docker 2>&1) && rc=0 || rc=$?
 if [ $rc -eq 0 ] && [[ "$out" == *RESTORE_RESULT=PASS* ]] \
@@ -381,6 +390,30 @@ if [ $rc -eq 0 ] && [[ "$out" == *RESTORE_RESULT=PASS* ]] \
   report 0 "restore drill restores the verified archive and runs validators"
 else
   report 1 "restore drill restores the verified archive and runs validators" "rc=$rc out=$out"
+fi
+# Production Compose names the api container "<project>-api-1" (docker-api-1),
+# never a literal "api"; the restore path must exec validators on the resolved
+# container, and the OFFHOST_API_CONTAINER seam must win over any lookup.
+if grep -q '^exec fake-api-1 /app/validators/migration-validator ' "$DOCKER_LOG" \
+  && grep -q '^exec fake-api-1 /app/validators/domain-validator ' "$DOCKER_LOG" \
+  && ! grep -q '^exec api ' "$DOCKER_LOG"; then
+  report 0 "validators exec via the resolved api container (fake-api-1), never a literal 'api'"
+else
+  report 1 "validators exec via the resolved api container (fake-api-1), never a literal 'api'" "docker_log=$(tr '\n' '|' < "$DOCKER_LOG")"
+fi
+# Without an explicit OFFHOST_API_CONTAINER the restore path must fall back to
+# Compose's default "<project>-api-1" naming (docker-api-1 for project "docker"),
+# which is exactly what production runs — the original P1 blocker.
+: > "$DOCKER_LOG"
+out=$(BODYSENSE_DEPLOY_ROOT="$ROOT" OFFHOST_PG_PREFIX="$BIN/fake-pg" OFFHOST_PGCONTAINER_ID=pg1 \
+  DOCKER_LOG="$DOCKER_LOG" \
+  bash "$RESTORE" --object-key "$OBJKEY" --target-db drill_db_b --target-project drill \
+  --restore-pg container:restore-pg --confirm-target-isolated=yes --validator-runner docker 2>&1) && rc=0 || rc=$?
+if [ $rc -eq 0 ] && grep -q '^exec docker-api-1 /app/validators/migration-validator ' "$DOCKER_LOG"; then
+  report 0 "without OFFHOST_API_CONTAINER the restore uses Compose's '<project>-api-1' naming (docker-api-1)"
+else
+  report 1 "without OFFHOST_API_CONTAINER the restore uses Compose's '<project>-api-1' naming (docker-api-1)" \
+    "rc=$rc docker_log=$(tr '\n' '|' < "$DOCKER_LOG")"
 fi
 
 # ==============================================================================
@@ -465,6 +498,16 @@ elif [ "$(grep -cE 'OFFHOST_BACKUP_ACCESS_KEY=' scripts/production-offhost-backu
   report 1 "offhost credentials are never passed through process argv (argv-leak guard)" "missing env-based credential wiring"
 else
   report 0 "offhost credentials are never passed through process argv (argv-leak guard)"
+fi
+
+# ==============================================================================
+# 13. restore never hard-codes a literal 'api' container name for the validators
+# ==============================================================================
+if grep -nE 'docker[[:space:]]+exec[[:space:]]+api([[:space:]]|$)' "$RESTORE" >/dev/null 2>&1; then
+  report 1 "restore runs validators on the resolved api container, never a literal 'api'" \
+    "found a hard-coded 'docker exec api' in scripts/restore-production-backup.sh"
+else
+  report 0 "restore runs validators on the resolved api container, never a literal 'api'"
 fi
 
 echo

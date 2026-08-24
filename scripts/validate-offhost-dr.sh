@@ -20,7 +20,12 @@ ALPINE_IMAGE="${OFFHOST_DR_ALPINE_IMAGE:-alpine:3.20}"
 NET="bodysense-dr-net-$$"
 PG_NAME="postgres"          # production postgres (source)
 RESTORE_PG_NAME="restore-pg" # disposable, explicitly isolated restore postgres
-API_NAME="api"
+# The api validator container uses Compose's default naming ("<project>-api-1")
+# — production does NOT set container_name, so the running container is
+# "docker-api-1", never a literal "api". Naming this one "bodysense-dr-api-1"
+# (and pinning it via OFFHOST_API_CONTAINER) proves the restore path resolves
+# the validator container instead of assuming "api".
+API_NAME="bodysense-dr-api-1"
 BUILDER_NAME="bodysense-dr-builder-$$"
 export DB_USER=bodysense DB_NAME=bodysense DB_PASSWORD=0123456789abcdef
 
@@ -150,14 +155,19 @@ docker exec -w /build "$BUILDER_NAME" sh -c \
   || { echo "validator build failed" >&2; exit 1; }
 
 # --- api container: hosts the validator binaries + migrations (drill-only) -------
+# The validator container name is deliberately not "api": restore-production-backup.sh
+# must resolve it (here via OFFHOST_API_CONTAINER, mirroring production's default
+# "<compose-project>-api-1" naming) or the docker-runner validation would fail on
+# the real Compose deployment.
 mkdir -p "$TMP/validators"
 docker cp "$BUILDER_NAME":/out/. "$TMP/validators/" >/dev/null
 docker run -d --name "$API_NAME" --network "$NET" \
   -v "$TMP/validators:/app/validators:ro" \
   -v "$PWD/apps/api/migrations:/app/migrations:ro" \
   "$ALPINE_IMAGE" tail -f /dev/null >/dev/null
-export OFFHOST_PGCONTAINER_ID
+export OFFHOST_PGCONTAINER_ID OFFHOST_API_CONTAINER
 OFFHOST_PGCONTAINER_ID=$(docker inspect -f '{{.Id}}' "$PG_NAME")
+OFFHOST_API_CONTAINER="$API_NAME"
 
 # --- bring the database to the latest published migrations -------------------------
 docker exec "$API_NAME" /app/validators/migration-validator \
