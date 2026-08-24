@@ -37,9 +37,15 @@ test("user can explicitly cancel a live Consultation run", async ({ page }) => {
   await page.getByRole("button", { name: "取消本次执行" }).click();
 
   await expect(page.getByText("本次执行已取消")).toBeVisible();
+  await expect(page.getByRole("button", { name: "取消本次执行" })).toHaveCount(
+    0,
+  );
   await expect(
-    page.getByRole("button", { name: "取消本次执行" }),
-  ).toHaveCount(0);
+    page.getByPlaceholder("描述您的症状、体态问题或身体感受，也可附上照片..."),
+  ).toBeEnabled();
+
+  await page.reload();
+  await expect(page.getByText("本次执行已取消")).toBeVisible();
   await expect(
     page.getByPlaceholder("描述您的症状、体态问题或身体感受，也可附上照片..."),
   ).toBeEnabled();

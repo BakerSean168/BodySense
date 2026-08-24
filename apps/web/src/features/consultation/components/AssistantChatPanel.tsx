@@ -41,6 +41,7 @@ import { consultationAttachmentBuffer } from "../hooks/useAssistantChatRuntime";
 import { consultationApi } from "../services/consultationService";
 import { StreamingAssistantTurn } from "./StreamingAssistantTurn";
 import { FailedRunStatusCard } from "./FailedRunStatusCard";
+import { CancelledRunStatusCard } from "./CancelledRunStatusCard";
 import { StreamingTurnToolCalls } from "./StreamingTurnToolCalls";
 import { RedFlagBanner } from "./RedFlagBanner";
 import { AskUserStatusCard } from "./AskUserStatusCard";
@@ -742,6 +743,10 @@ function CustomAssistantMessage() {
     metadata.custom.consultation_error?.code === "execution_lost"
   ) {
     return <FailedRunStatusCard message={EXECUTION_LOST_USER_MESSAGE} />;
+  }
+
+  if (metadata?.custom?.consultation_status === "aborted") {
+    return <CancelledRunStatusCard />;
   }
 
   if (!viewModel.hasRenderableContent) {
