@@ -10,7 +10,8 @@
 #   - the source database is read through the ordinary postgres network protocol
 #     (docker compose exec postgres pg_dump), never by reading the DB volume;
 #   - least-privilege OSS credentials live only in .env.production.local and are
-#     passed to offhost-s3.py on the command line, never written into artifacts;
+#     passed to offhost-s3.py via the process environment (OFFHOST_BACKUP_*),
+#     never on the command line and never written into artifacts;
 #   - pruning is strictly scoped under the configured object prefix.
 #
 # Usage:
@@ -134,8 +135,9 @@ pg() {
 }
 
 s3() {
-  python3 "$S3_CLIENT" --endpoint "$ENDPOINT" --bucket "$BUCKET" --region "$REGION" \
-    --url-style "$URL_STYLE" --access-key "$ACCESS_KEY" --secret-key "$SECRET_KEY" "$@"
+  OFFHOST_BACKUP_ACCESS_KEY="$ACCESS_KEY" OFFHOST_BACKUP_SECRET_KEY="$SECRET_KEY" \
+    python3 "$S3_CLIENT" --endpoint "$ENDPOINT" --bucket "$BUCKET" --region "$REGION" \
+      --url-style "$URL_STYLE" "$@"
 }
 
 db_schema_state() {
