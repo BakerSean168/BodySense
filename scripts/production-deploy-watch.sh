@@ -49,6 +49,15 @@ read_public_env() {
   printf '%s' "${value:-$default}"
 }
 
+read_merged_env() {
+  local key="$1" default="${2:-}" value
+  value=$(sed -n "s/^${key}=//p" "$SECRET_ENV" | tail -1)
+  if [ -z "$value" ]; then
+    value=$(read_public_env "$key" "$default")
+  fi
+  printf '%s' "${value:-$default}"
+}
+
 REGISTRY=$(read_public_env REGISTRY)
 NAMESPACE=$(read_public_env ACR_NAMESPACE bodysense)
 WEB_TAG=$(read_public_env WEB_TAG prod-latest)
@@ -213,6 +222,21 @@ restore_runtime() {
   else
     rm -f "$ROOT/docker/litellm/config.yaml"
   fi
+  install -d -m 0755 "$ROOT/scripts" "$ROOT/deploy/systemd"
+  for script in production-postgres-dr.sh install-production-dr.sh; do
+    if [ -f "$ROLLBACK_RUNTIME_DIR/scripts/$script" ]; then
+      install -m 0755 "$ROLLBACK_RUNTIME_DIR/scripts/$script" "$ROOT/scripts/$script"
+    else
+      rm -f "$ROOT/scripts/$script"
+    fi
+  done
+  for unit in bodysense-postgres-dr-backup.service bodysense-postgres-dr-backup.timer bodysense-postgres-dr-restore.service bodysense-postgres-dr-restore.timer bodysense-postgres-dr-status.service bodysense-postgres-dr-status.timer; do
+    if [ -f "$ROLLBACK_RUNTIME_DIR/deploy/systemd/$unit" ]; then
+      install -m 0644 "$ROLLBACK_RUNTIME_DIR/deploy/systemd/$unit" "$ROOT/deploy/systemd/$unit"
+    else
+      rm -f "$ROOT/deploy/systemd/$unit"
+    fi
+  done
 }
 
 rollback_deployment() {
@@ -305,6 +329,11 @@ sync_runtime() {
   [ -s "$stage/docker/docker-compose.prod.yml" ] || fail 'runtime bundle missing production Compose'
   [ -s "$stage/docker/Caddyfile" ] || fail 'runtime bundle missing Caddyfile'
   [ -s "$stage/scripts/production-deploy-watch.sh" ] || fail 'runtime bundle missing deploy watcher'
+  [ -s "$stage/scripts/production-postgres-dr.sh" ] || fail 'runtime bundle missing PostgreSQL DR runner'
+  [ -s "$stage/scripts/install-production-dr.sh" ] || fail 'runtime bundle missing PostgreSQL DR installer'
+  for unit in bodysense-postgres-dr-backup.service bodysense-postgres-dr-backup.timer bodysense-postgres-dr-restore.service bodysense-postgres-dr-restore.timer bodysense-postgres-dr-status.service bodysense-postgres-dr-status.timer; do
+    [ -s "$stage/deploy/systemd/$unit" ] || fail "runtime bundle missing $unit"
+  done
   [ "$(image_revision "$runtime_ref")" = "$revision" ] || fail 'runtime bundle revision mismatch'
 
   docker compose -p "$COMPOSE_PROJECT" -f "$stage/docker/docker-compose.prod.yml" \
@@ -313,20 +342,30 @@ sync_runtime() {
   old_runtime_revision=$(sed -n 's/^runtime_revision=//p' "$STATE_FILE" 2>/dev/null | tail -1 || true)
   [ -n "$old_runtime_revision" ] || old_runtime_revision=pre-managed
   archive="$RUNTIME_BACKUP_DIR/${old_runtime_revision}-$(date -u +%Y%m%d-%H%M%S)"
-  mkdir -p "$archive/docker/litellm"
+  mkdir -p "$archive/docker/litellm" "$archive/scripts" "$archive/deploy/systemd"
   cp -f "$PUBLIC_ENV" "$archive/.env.production" 2>/dev/null || true
   cp -f "$COMPOSE" "$archive/docker/docker-compose.prod.yml" 2>/dev/null || true
   cp -f "$ROOT/docker/Caddyfile" "$archive/docker/Caddyfile" 2>/dev/null || true
   cp -f "$ROOT/docker/litellm/config.yaml" "$archive/docker/litellm/config.yaml" 2>/dev/null || true
+  cp -f "$ROOT/scripts/production-postgres-dr.sh" "$archive/scripts/production-postgres-dr.sh" 2>/dev/null || true
+  cp -f "$ROOT/scripts/install-production-dr.sh" "$archive/scripts/install-production-dr.sh" 2>/dev/null || true
+  for unit in bodysense-postgres-dr-backup.service bodysense-postgres-dr-backup.timer bodysense-postgres-dr-restore.service bodysense-postgres-dr-restore.timer bodysense-postgres-dr-status.service bodysense-postgres-dr-status.timer; do
+    cp -f "$ROOT/deploy/systemd/$unit" "$archive/deploy/systemd/$unit" 2>/dev/null || true
+  done
   ROLLBACK_RUNTIME_DIR="$archive"
 
-  install -d -m 0755 "$ROOT/docker/litellm" "$ROOT/scripts"
+  install -d -m 0755 "$ROOT/docker/litellm" "$ROOT/scripts" "$ROOT/deploy/systemd"
   RUNTIME_CHANGED=true
   install -m 0644 "$stage/.env.production" "$PUBLIC_ENV"
   install -m 0644 "$stage/docker/docker-compose.prod.yml" "$COMPOSE"
   install -m 0644 "$stage/docker/Caddyfile" "$ROOT/docker/Caddyfile"
   [ -f "$stage/docker/litellm/config.yaml" ] && install -m 0644 "$stage/docker/litellm/config.yaml" "$ROOT/docker/litellm/config.yaml"
   install -m 0755 "$stage/scripts/production-deploy-watch.sh" "$ROOT/scripts/production-deploy-watch.sh"
+  install -m 0755 "$stage/scripts/production-postgres-dr.sh" "$ROOT/scripts/production-postgres-dr.sh"
+  install -m 0755 "$stage/scripts/install-production-dr.sh" "$ROOT/scripts/install-production-dr.sh"
+  for unit in bodysense-postgres-dr-backup.service bodysense-postgres-dr-backup.timer bodysense-postgres-dr-restore.service bodysense-postgres-dr-restore.timer bodysense-postgres-dr-status.service bodysense-postgres-dr-status.timer; do
+    install -m 0644 "$stage/deploy/systemd/$unit" "$ROOT/deploy/systemd/$unit"
+  done
 }
 
 [ -n "$REGISTRY" ] || fail 'REGISTRY is empty'
@@ -465,6 +504,11 @@ DB_NAME=$(read_public_env DB_NAME bodysense)
 [ "$DB_NAME" = "$checked_db_name" ] || fail 'runtime bundle changed DB_NAME during deployment'
 APP_DOMAIN=$(read_public_env APP_DOMAIN body.bakersean.top)
 
+if [ "$(read_merged_env DR_ENABLED false)" = true ]; then
+  log 'off-host DR gate enabled; creating a verified OSS backup before production service/schema changes'
+  "$ROOT/scripts/production-postgres-dr.sh" backup >/dev/null || fail 'off-host PostgreSQL backup gate failed'
+fi
+
 compose pull litellm-gateway >/dev/null
 compose up -d --no-deps litellm-gateway
 wait_healthy litellm-gateway 120 || fail 'litellm-gateway deployment failed'
@@ -493,6 +537,10 @@ runtime_revision=$desired_revision
 runtime_source=acr
 deployed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 STATE
+
+if systemctl list-unit-files bodysense-postgres-dr-backup.timer --no-legend 2>/dev/null | grep -q bodysense-postgres-dr-backup.timer; then
+  "$ROOT/scripts/install-production-dr.sh" >/dev/null
+fi
 chmod 0644 "$STATE_FILE"
 rm -f "$BLOCK_FILE"
 deploy_started=false

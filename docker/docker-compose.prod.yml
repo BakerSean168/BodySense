@@ -196,6 +196,47 @@ services:
       retries: 3
       start_period: 30s
 
+  # One-shot disaster-recovery runner. It intentionally uses host networking so
+  # it can reach the localhost-bound PostgreSQL service and the ECS metadata
+  # endpoint for short-lived RAM-role credentials. It is never started by the
+  # normal production service set; systemd invokes it through the `ops` profile.
+  dr:
+    profiles: [ops]
+    image: ${REGISTRY:?set REGISTRY}/${ACR_NAMESPACE:-bodysense}/bodysense-api:${API_TAG:-prod-latest}
+    init: true
+    network_mode: host
+    entrypoint: ['/app/production-dr-manager']
+    environment:
+      APP_ENV: production
+      DB_HOST: 127.0.0.1
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-bodysense}
+      DB_USER: ${DB_USER:-bodysense}
+      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+      DB_SSLMODE: ${DB_SSLMODE:-disable}
+      DR_OBJECT_STORE_DRIVER: ${DR_OBJECT_STORE_DRIVER:-oss}
+      DR_OSS_REGION: ${DR_OSS_REGION:-cn-hangzhou}
+      DR_OSS_BUCKET: ${DR_OSS_BUCKET:-}
+      DR_OSS_ENDPOINT: ${DR_OSS_ENDPOINT:-}
+      DR_OSS_USE_INTERNAL_ENDPOINT: ${DR_OSS_USE_INTERNAL_ENDPOINT:-true}
+      DR_OSS_CREDENTIAL_TYPE: ${DR_OSS_CREDENTIAL_TYPE:-ecs_ram_role}
+      DR_OSS_ECS_RAM_ROLE: ${DR_OSS_ECS_RAM_ROLE:-}
+      DR_OSS_PREFIX: ${DR_OSS_PREFIX:-bodysense/production/postgres}
+      DR_OSS_SERVER_SIDE_ENCRYPTION: ${DR_OSS_SERVER_SIDE_ENCRYPTION:-AES256}
+      DR_MAX_BACKUP_AGE_HOURS: ${DR_MAX_BACKUP_AGE_HOURS:-30}
+      ALIBABA_CLOUD_ACCESS_KEY_ID: ${ALIBABA_CLOUD_ACCESS_KEY_ID:-}
+      ALIBABA_CLOUD_ACCESS_KEY_SECRET: ${ALIBABA_CLOUD_ACCESS_KEY_SECRET:-}
+      ALIBABA_CLOUD_SECURITY_TOKEN: ${ALIBABA_CLOUD_SECURITY_TOKEN:-}
+      DR_DOMAIN_VALIDATOR_PATH: /app/domain-validator
+    read_only: true
+    tmpfs:
+      - /tmp:size=2g,mode=0700
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    mem_limit: 768m
+
   web:
     image: ${REGISTRY:?set REGISTRY}/${ACR_NAMESPACE:-bodysense}/bodysense-web:${WEB_TAG:-prod-latest}
     restart: unless-stopped

@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily BodySense off-host PostgreSQL backup
+
+[Timer]
+OnCalendar=*-*-* 03:20:00
+RandomizedDelaySec=20m
+Persistent=true
+Unit=bodysense-postgres-dr-backup.service
+
+[Install]
+WantedBy=timers.target

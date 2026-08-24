@@ -832,6 +832,8 @@ bash scripts/production-deploy-watch.sh --check-only
 
 ## BS-PROD-012 — Establish off-host PostgreSQL disaster recovery and restore drill
 
+**Implementation status (2026-08-24): IMPLEMENTED / RELEASE GATES PASS / REAL ALIBABA OSS PROVISIONING PENDING.** The repository now has an ops-only `production-dr-manager`, ECS-RAM-role-only production OSS authentication, multipart-capable dump upload, immutable SHA-256/manifest commit semantics, freshness checks, daily backup + weekly restore-drill + six-hour status timers, a deployment-time pre-mutation backup gate, and a documented RAM/OSS provisioning runbook. A production-v29 PostgreSQL 16 fixture upgraded to schema `54:false` completed `backup → status → restore-drill` with exact migration equality, `DOMAIN_SEMANTICS=PASS`, and zero leftover `bodysense_dr_*` databases; the production wrapper also resolved the running API OCI revision and persisted DR state correctly. **This ticket is not complete yet:** the real Alibaba ECS currently has no RAM role and no configured private DR OSS bucket, so no real off-host backup object/restore evidence exists yet. Do not check the acceptance gate until cloud-side bucket/RAM-role provisioning and a real backup/status/restore-drill succeed. Final local evidence also includes `LOCAL_DEPLOY_VALIDATION=PASS`, `REPO_QUALITY=PASS`, strict remote SHA metadata + checksum-content verification, and a post-hardening PG16 restore vertical with `migration_state=54:false`.
+
 **Goal:** production database can be restored after complete loss of the Alibaba ECS disk.
 
 **Why now:** current pre-deploy `pg_dump` protects releases but shares the same failure domain as PostgreSQL.
