@@ -7,11 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/bodysense/api/internal/model"
+	"github.com/bodysense/api/internal/uploadstorage"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 )
@@ -47,6 +47,7 @@ type AssessmentService struct {
 	unitOfWork     treatmentUnitOfWork
 	deployment     *AgentDeploymentPolicy
 	rollout        *AssessmentRolloutService
+	storage        *uploadstorage.Registry
 }
 
 func NewAssessmentService(
@@ -56,6 +57,7 @@ func NewAssessmentService(
 	bodyState assessmentBodyStateSource,
 	reasoner assessmentReasoner,
 	unitOfWork treatmentUnitOfWork,
+	storage *uploadstorage.Registry,
 ) *AssessmentService {
 	return &AssessmentService{
 		assessmentRepo: assessmentRepo,
@@ -64,6 +66,7 @@ func NewAssessmentService(
 		bodyState:      bodyState,
 		reasoner:       reasoner,
 		unitOfWork:     unitOfWork,
+		storage:        storage,
 	}
 }
 
@@ -127,7 +130,7 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 	if err != nil {
 		return nil, fmt.Errorf("load assessment uploads: %w", err)
 	}
-	images, reportIndicators, completedPosture, err := assessmentInputsFromUploads(uploads)
+	images, reportIndicators, completedPosture, err := assessmentInputsFromUploads(ctx, s.storage, uploads)
 	if err != nil {
 		return nil, err
 	}
@@ -302,7 +305,7 @@ func parseAssessmentAgentPayload(raw json.RawMessage) (*assessmentAgentPayload, 
 	return &payload, nil
 }
 
-func assessmentInputsFromUploads(uploads []model.UserUpload) ([]string, []any, []model.UserUpload, error) {
+func assessmentInputsFromUploads(ctx context.Context, storage *uploadstorage.Registry, uploads []model.UserUpload) ([]string, []any, []model.UserUpload, error) {
 	images := make([]string, 0, 3)
 	reportIndicators := make([]any, 0)
 	completedPosture := make([]model.UserUpload, 0, 3)
@@ -313,7 +316,7 @@ func assessmentInputsFromUploads(uploads []model.UserUpload) ([]string, []any, [
 				completedPosture = append(completedPosture, upload)
 				continue
 			}
-			imageBytes, err := os.ReadFile(upload.FilePath)
+			imageBytes, err := readUploadObject(ctx, storage, &upload, MaxFileSize)
 			if err != nil {
 				return nil, nil, nil, fmt.Errorf("read assessment image %s: %w", upload.ID, err)
 			}

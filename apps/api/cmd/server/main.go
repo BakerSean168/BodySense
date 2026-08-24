@@ -18,6 +18,7 @@ import (
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/repository"
 	"github.com/bodysense/api/internal/service"
+	"github.com/bodysense/api/internal/uploadstorage"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
@@ -60,6 +61,15 @@ func main() {
 	userRepo := repository.NewUserRepository(database.DB)
 	profileRepo := repository.NewProfileRepository(database.DB)
 	uploadRepo := repository.NewUploadRepository(database.DB)
+	uploadStorage, err := uploadstorage.NewRegistryFromEnv()
+	if err != nil {
+		log.Fatalf("Upload storage configuration failed: %v", err)
+	}
+	uploadStorageCtx, uploadStorageCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer uploadStorageCancel()
+	if err := uploadStorage.Validate(uploadStorageCtx); err != nil {
+		log.Fatalf("Upload storage validation failed: %v", err)
+	}
 	leaseOwner := uuid.NewString()
 	consultationRepo := repository.NewConsultationRepository(database.DB, leaseOwner)
 	bodyStateRepo := repository.NewBodyStateRepository(database.DB)
@@ -85,7 +95,7 @@ func main() {
 		privacyErasureRepo,
 		userRepo,
 		authService,
-		service.NewLocalUserObjectCleaner(service.UploadDir),
+		uploadStorage,
 		database.NewTransactionManager(database.DB),
 	)
 	privacyErasureService.StartWorker(context.Background(), time.Minute)
@@ -130,6 +140,7 @@ func main() {
 		bodyStateService,
 		aiClient,
 		database.NewTransactionManager(database.DB),
+		uploadStorage,
 	).WithAssessmentDeployment(agentDeploymentPolicy).
 		WithAssessmentRollout(assessmentRolloutService)
 	authHandler := handler.NewAuthHandler(authService, authSecurity)
@@ -151,7 +162,7 @@ func main() {
 	threadProjectionService := service.NewThreadProjectionService(conversationRepo, consultationRepo, messageRepo, interactionRepo, runtimeEventService, threadProjectionRepo)
 	outputReviewRepo := repository.NewAIOutputReviewRepository(database.DB)
 	outputReviewService := service.NewOutputReviewService(outputReviewRepo)
-	uploadService := service.NewUploadService(uploadRepo, jobRuntime, outputReviewService).
+	uploadService := service.NewUploadService(uploadRepo, jobRuntime, outputReviewService, uploadStorage).
 		WithDeployment(agentDeploymentPolicy)
 	uploadService.StartUploadWorker(context.Background(), 10*time.Second, 10*time.Minute)
 	uploadHandler := handler.NewUploadHandler(uploadService)
