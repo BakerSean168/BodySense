@@ -140,6 +140,15 @@ jobs:
 
           go run ./cmd/domain-validator \
             -database-url "postgres://bodysense:bodysense123@127.0.0.1:5432/${restore_db}?sslmode=disable"
+      - name: Validate production off-host DR algorithm
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: "5432"
+          DB_NAME: bodysense_migration_validator
+          DB_USER: bodysense
+          DB_PASSWORD: bodysense123
+          DB_SSLMODE: disable
+        run: bash scripts/validate-production-dr.sh
 
   e2e:
     env:

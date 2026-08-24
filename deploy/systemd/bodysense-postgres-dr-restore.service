@@ -1,0 +1,14 @@
+[Unit]
+Description=BodySense off-host PostgreSQL restore drill
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+Environment=BODYSENSE_DEPLOY_ROOT=/opt/bodysense
+ExecStart=/opt/bodysense/scripts/production-postgres-dr.sh restore-drill
+TimeoutStartSec=5400
+Nice=15
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

@@ -47,7 +47,7 @@ else
   git -C "$SOURCE_DIR" reset --hard origin/main
 fi
 
-mkdir -p "$DEPLOY_DIR/docker/litellm" "$DEPLOY_DIR/scripts"
+mkdir -p "$DEPLOY_DIR/docker/litellm" "$DEPLOY_DIR/scripts" "$DEPLOY_DIR/deploy/systemd"
 
 if [ ! -f "$DEPLOY_DIR/.env.production.local" ]; then
   DB_PASSWORD=$(openssl rand -hex 24)
@@ -80,6 +80,11 @@ if [ -f "$SOURCE_DIR/docker/litellm/config.yaml" ]; then
   install -m 0644 "$SOURCE_DIR/docker/litellm/config.yaml" "$DEPLOY_DIR/docker/litellm/config.yaml"
 fi
 install -m 0755 "$SOURCE_DIR/scripts/production-deploy-watch.sh" "$DEPLOY_DIR/scripts/production-deploy-watch.sh"
+install -m 0755 "$SOURCE_DIR/scripts/production-postgres-dr.sh" "$DEPLOY_DIR/scripts/production-postgres-dr.sh"
+install -m 0755 "$SOURCE_DIR/scripts/install-production-dr.sh" "$DEPLOY_DIR/scripts/install-production-dr.sh"
+for unit in bodysense-postgres-dr-backup.service bodysense-postgres-dr-backup.timer bodysense-postgres-dr-restore.service bodysense-postgres-dr-restore.timer bodysense-postgres-dr-status.service bodysense-postgres-dr-status.timer; do
+  install -m 0644 "$SOURCE_DIR/deploy/systemd/$unit" "$DEPLOY_DIR/deploy/systemd/$unit"
+done
 
 # Retire any legacy Watchtower container from older installations.
 docker rm -f docker-watchtower-1 >/dev/null 2>&1 || true
@@ -101,6 +106,7 @@ systemctl daemon-reload
 # First deployment uses the exact same safety gates as subsequent polling deployments.
 "$DEPLOY_DIR/scripts/production-deploy-watch.sh" --force
 systemctl enable --now bodysense-deploy-watch.timer
+"$DEPLOY_DIR/scripts/install-production-dr.sh"
 
 echo "BodySense production bootstrap complete."
 systemctl status bodysense-deploy-watch.timer --no-pager || true

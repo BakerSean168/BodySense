@@ -14,3 +14,11 @@ COPY docker/docker-compose.prod.yml /runtime/docker/docker-compose.prod.yml
 COPY docker/Caddyfile /runtime/docker/Caddyfile
 COPY docker/litellm/config.yaml /runtime/docker/litellm/config.yaml
 COPY scripts/production-deploy-watch.sh /runtime/scripts/production-deploy-watch.sh
+COPY scripts/production-postgres-dr.sh /runtime/scripts/production-postgres-dr.sh
+COPY scripts/install-production-dr.sh /runtime/scripts/install-production-dr.sh
+COPY deploy/systemd/bodysense-postgres-dr-backup.service /runtime/deploy/systemd/bodysense-postgres-dr-backup.service
+COPY deploy/systemd/bodysense-postgres-dr-backup.timer /runtime/deploy/systemd/bodysense-postgres-dr-backup.timer
+COPY deploy/systemd/bodysense-postgres-dr-restore.service /runtime/deploy/systemd/bodysense-postgres-dr-restore.service
+COPY deploy/systemd/bodysense-postgres-dr-restore.timer /runtime/deploy/systemd/bodysense-postgres-dr-restore.timer
+COPY deploy/systemd/bodysense-postgres-dr-status.service /runtime/deploy/systemd/bodysense-postgres-dr-status.service
+COPY deploy/systemd/bodysense-postgres-dr-status.timer /runtime/deploy/systemd/bodysense-postgres-dr-status.timer

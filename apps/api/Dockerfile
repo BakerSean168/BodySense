@@ -13,7 +13,9 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 COPY . .
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 go build -o /server ./cmd/server
+    CGO_ENABLED=0 go build -o /server ./cmd/server && \
+    CGO_ENABLED=0 go build -o /production-dr-manager ./cmd/production-dr-manager && \
+    CGO_ENABLED=0 go build -o /domain-validator ./cmd/domain-validator
 
 # ── Runtime stage ──────────────────────────────────────
 FROM alpine:3.20
@@ -25,9 +27,11 @@ LABEL org.opencontainers.image.title="bodysense-api" \
       org.opencontainers.image.created="${BUILD_DATE}" \
       org.opencontainers.image.revision="${VCS_REF}"
 
-RUN apk add --no-cache ca-certificates tzdata curl
+RUN apk add --no-cache ca-certificates tzdata curl postgresql16-client
 WORKDIR /app
 COPY --from=builder /server /app/server
+COPY --from=builder /production-dr-manager /app/production-dr-manager
+COPY --from=builder /domain-validator /app/domain-validator
 COPY --from=builder /app/migrations /app/migrations
 EXPOSE 8080
 HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
