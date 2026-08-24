@@ -216,10 +216,14 @@ OSS/S3-compatible destination (Alibaba Cloud OSS `cn-hangzhou`):
   operator proves that container is isolated from production via `docker
   inspect` — fail-closed, refusing on: container-ID equality with the production
   postgres container, membership in the production Compose project, ANY Docker
-  network shared with the production postgres container, a non-running state, or
-  a missing/incorrect declaration of `bodysense.restore-project=<target-project>`
+  network shared with the production postgres container, attachment to any
+  network beyond the container's declared `bodysense.restore-network` (the drill
+  network must be the container's sole network), any published host port
+  (`HostConfig.PortBindings`), a non-running state, or a missing/incorrect
+  declaration of `bodysense.restore-project=<target-project>`
   and `bodysense.disposable-restore=yes` (drill containers must therefore run on
-  their own dedicated drill network, never on the production postgres network).
+  their own dedicated drill network, never on the production postgres network,
+  publishing no host ports).
   All `psql`/`pg_restore` and `docker cp`
   operations target that disposable server exclusively. The target must differ
   from `DB_NAME`, the project must differ from `bodysense`, the target database

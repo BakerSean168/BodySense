@@ -154,18 +154,36 @@ The restore script is deliberately strict and interactive-gated:
 # --target-project drill: the drill network itself must be declared on the
 # container (bodysense.restore-network) so the isolation proof is not just a
 # fortuitous lack of overlap with production
-docker network create bodysense-drill-net
-docker run -d --name restore-pg --network bodysense-drill-net \
+# give the drill resources names unique to this run (never reuse a box name),
+# and put the disposable restore server on its own dedicated non-host drill
+# network; use a name like restore-pg-<suffix> to avoid colliding with any
+# existing container
+suffix="$(date +%s)"
+drill_net="bodysense-drill-net"
+restore_pg="restore-pg-$suffix"
+docker network create "$drill_net"
+docker run -d --name "$restore_pg" --network "$drill_net" \
   --label bodysense.restore-project=drill \
   --label bodysense.disposable-restore=yes \
-  --label bodysense.restore-network=bodysense-drill-net \
+  --label bodysense.restore-network="$drill_net" \
   -e POSTGRES_USER=bodysense -e POSTGRES_PASSWORD=<...> -e POSTGRES_DB=postgres \
   pgvector/pgvector:pg18
+
+# the api container hosts the validator binaries; the script execs into it to
+# run them against the disposable restore database, so it must be attached to
+# the drill network as well (reachability is one-way: the restore container
+# stays off the production network). Pin it, and detach it when the drill
+# finishes — even on failure.
+OFFHOST_API_CONTAINER=docker-api-1
+docker network connect "$drill_net" "$OFFHOST_API_CONTAINER"
+cleanup() { docker network disconnect "$drill_net" "$OFFHOST_API_CONTAINER" || true; }
+trap cleanup EXIT
+
 /opt/bodysense/scripts/restore-production-backup.sh \
   --object-key bodysense/postgres/20260824/bodysense-postgres-20260824-021000Z.dump \
   --target-db drill_restore_20260824 \
   --target-project drill \
-  --restore-pg container:restore-pg \
+  --restore-pg "container:$restore_pg" \
   --confirm-target-isolated=yes
 ```
 
@@ -185,9 +203,15 @@ Requirements enforced by the script:
      or no networking (`none`): a host-network target still reaches
      host-published production endpoints, so it is not provably isolated
      regardless of its Docker-network set;
-   - the restore container is attached to any Docker network the production
+- the restore container is attached to any Docker network the production
      postgres container is attached to (so drill servers run on their own
-     network, never on the production postgres network);
+     network, never on the production postgres network), or is attached to
+     any network beyond its declared `bodysense.restore-network` (the
+     only-network rule: the declared drill network must be the container's
+     sole network);
+   - the restore container publishes any host port (`HostConfig.PortBindings`
+     non-empty): a host-published target is reachable from the host and not
+     provably isolated regardless of its Docker-network set;
    - the container does not declare `bodysense.restore-network=<network>` —
      the dedicated drill network must be declared on the container itself, never
      merely left to a fortuitous absence of overlap with production;
@@ -254,12 +278,14 @@ The restored database is disposable and is never connected to traffic. It is
 created on the explicitly supplied disposable restore container/server
 (`--restore-pg container:<id|name>`), never on the production postgres
 container, and the script refuses to run unless `docker inspect` proves that
-container is running, attached only to its declared dedicated non-host drill
-network (never to any Docker network the production postgres is on, never to
-the `host`/`none` drivers), outside the production Compose project, distinct
+container is running, attached **only** to its declared dedicated non-host drill
+network (never to any Docker network the production postgres is on, never
+beyond its declared drill network, never to the `host`/`none` drivers, and
+publishing no host ports), outside the production Compose project, distinct
 from the production postgres container, and labelled
 `bodysense.restore-project=<target>` + `bodysense.disposable-restore=yes` +
-`bodysense.restore-network=<drill network>`. Network inspection is fail-closed:
+`bodysense.restore-network=<drill network>`. Network and port inspection is
+fail-closed:
 an inspection/parsing error is a refusal, never an empty "shares no network"
 result. Any restored environment that later serves traffic must run the
 erasure recovery/tombstone reconciliation first (see
@@ -273,11 +299,13 @@ script.
 - **Hermetic (no docker/PostgreSQL needed):** `scripts/test_offhost_s3.py`
   (specific SigV4 vectors plus a signature-verified fake S3 server, including
   refusal of command-line credentials) and `scripts/validate-offhost-dr-unit.sh`
-  (44 checks: backup/retention/freshness, the fail-closed schema-revision gates
+  (46 checks: backup/retention/freshness, the fail-closed schema-revision gates
   on both the backup and restore sides, the restore isolation guards — ID
   equality, running state, production-Compose-project membership, host/none
-  networking refusal, declared-drill-network enforcement, fail-closed shared-
-  network and network-enumeration refusal, disposable-label declaration — the
+  networking refusal, declared-drill-network enforcement, the only-network rule
+  (no networks beyond the declared drill network), the no-published-host-ports
+  rule, fail-closed shared-network and network-enumeration refusal,
+  disposable-label declaration — the
   `--restore-pg` guards, the SHA-256 sidecar syntax/name/digest verification,
   the DB password argv-leak guard (env-only `PGPASSWORD`, never in
   `-database-url`/argv), the resolved api-container validation path, and the
@@ -309,6 +337,8 @@ script.
 | restore fails with `attached to the production postgres network` | the drill container is attached to a network the production postgres is also on | re-run the drill container on its own dedicated drill network (see §5) |
 | restore fails with `using host networking` / `NetworkMode=none` / `attached to the ... network driver` | the drill container uses the host/none network drivers, or a declared `host`/`none` restore-network | re-run the drill container on a dedicated non-host docker network (see §5); a host-network target is never provably isolated |
 | restore fails with `does not declare bodysense.restore-network` / `not attached to its declared bodysense.restore-network` | the dedicated drill network is not declared on the container or not actually attached | declare `--label bodysense.restore-network=<drill network>` at creation and attach the container to that network (see §5) |
+| restore fails with `attached to networks beyond its declared drill network` | the drill container is on another network (e.g. a bridge network that also exists on the host) besides its declared drill network and the production network | re-create the drill container attached to its declared drill network only (one `--network`, no additional `docker network connect`) (see §5) |
+| restore fails with `publishes host ports` | the drill container maps a host port (`-p 5432:5432`), making it reachable from the host | re-create it without any `-p`/`--publish` (see §5); an internode-only drill needs no host port |
 | restore fails with `unable to inspect the ... container network(s)` | docker inspect of the production or restore container's network set failed/parsed incompletely | check the docker daemon and container state; the restore is refused because isolation cannot be proven — never treated as isolated |
 | restore fails with `does not declare bodysense.restore-project=...` or `refusing a non-disposable target` | the drill container lacks the disposable labels | re-create it with `--label bodysense.restore-project=<target-project>` and `--label bodysense.disposable-restore=yes` |
 | restore fails with `is not running` | the drill container is stopped | start/restart the drill container |

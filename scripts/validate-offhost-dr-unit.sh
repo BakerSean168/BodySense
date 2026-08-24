@@ -135,7 +135,7 @@ case "$1" in
       if [ -f "$FAKEDOCKER_INSPECT_DIR/$name.json" ]; then
         cat "$FAKEDOCKER_INSPECT_DIR/$name.json"
       else
-        printf '[{"Id":"%s","State":{"Running":true},"HostConfig":{"NetworkMode":"%s-net"},"Config":{"Labels":{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes","bodysense.restore-network":"%s-net"}},"NetworkSettings":{"Networks":{"%s-net":{}}}}]' \
+        printf '[{"Id":"%s","State":{"Running":true},"HostConfig":{"NetworkMode":"%s-net","PortBindings":{}},"Config":{"Labels":{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes","bodysense.restore-network":"%s-net"}},"NetworkSettings":{"Networks":{"%s-net":{}}}}]' \
           "$name" "$name" "$name" "$name"
       fi
       exit 0
@@ -154,15 +154,17 @@ DOCKER_LOG="$TMP/docker.log"
 DOCKER_ENVLOG="$TMP/docker-env.log"
 export FAKEDOCKER_INSPECT_DIR DOCKER_LOG DOCKER_ENVLOG
 
-# write_inspect <container> <running> <labels-as-json> <networks-as-json> [netmode]
+# write_inspect <container> <running> <labels-as-json> <networks-as-json> [netmode] [portbindings]
 # The default netmode is the first key of <networks-as-json> (or "none" if empty).
+# The default portbindings is an empty {} object (no host ports published).
 write_inspect() {
-  local name="$1" running="$2" labels="$3" networks="$4" netmode="${5:-}"
+  local name="$1" running="$2" labels="$3" networks="$4" netmode="${5:-}" ports="${6:-}"
+  [ -n "$ports" ] || ports='{}'
   if [ -z "$netmode" ]; then
     netmode=$(printf '%s' "$networks" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(iter(d or {}), "none"))')
   fi
   cat > "$FAKEDOCKER_INSPECT_DIR/$name.json" <<JSON
-[{"Id":"$name","State":{"Running":$running},"HostConfig":{"NetworkMode":"$netmode"},"Config":{"Labels":$labels},"NetworkSettings":{"Networks":$networks}}]
+[{"Id":"$name","State":{"Running":$running},"HostConfig":{"NetworkMode":"$netmode","PortBindings":$ports},"Config":{"Labels":$labels},"NetworkSettings":{"Networks":$networks}}]
 JSON
 }
 
@@ -614,6 +616,30 @@ run_restore_guard "unable to inspect the production postgres container network(s
   --object-key "$OBJKEY" --target-db drill_prodnet --target-project drill \
   --restore-pg container:restore-pg --confirm-target-isolated=yes
 rm -f "$FAKEDOCKER_INSPECT_DIR/pg1.json"
+
+# 5d2. the declared dedicated drill network must be the container's ONLY
+#      network: a target attached to the drill network plus an additional
+#      ingress/application network is traffic-reachable from that second network
+#      even when it shares nothing with the production postgres container, so it
+#      is refused despite zero network overlap with production.
+write_inspect restore-extra-net true \
+  '{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes","bodysense.restore-network":"drill-only-net"}' \
+  '{"drill-only-net":{},"ingress-net":{}}'
+run_restore_guard "attached to networks beyond its declared drill network" \
+  --object-key "$OBJKEY" --target-db drill_extra --target-project drill \
+  --restore-pg container:restore-extra-net --confirm-target-isolated=yes
+
+# 5d3. published host ports make the target reachable from the host/ingress even
+#      on a dedicated Docker network, so a drill server that publishes any host
+#      port is refused (never "isolated merely because it is not attached to a
+#      production Docker network").
+write_inspect restore-published-ports true \
+  '{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes","bodysense.restore-network":"restore-published-ports-net"}' \
+  '{"restore-published-ports-net":{}}' restore-published-ports-net \
+  '{"5432/tcp":[{"HostIp":"0.0.0.0","HostPort":"5432"}]}'
+run_restore_guard "publishes host ports" \
+  --object-key "$OBJKEY" --target-db drill_ports --target-project drill \
+  --restore-pg container:restore-published-ports --confirm-target-isolated=yes
 
 # 5e. an unverifiable schema revision in the backup metadata never passes the
 #     restore gate: `unknown`/`uninitialized`/empty metadata is refused before

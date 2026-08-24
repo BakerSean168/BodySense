@@ -32,7 +32,8 @@
 #      project; NOT using host or `none` networking; attached to NO Docker
 #      network shared with the production postgres container; actually attached
 #      to an operator-declared dedicated non-host drill network
-#      `bodysense.restore-network=<network>`; and operator-declared labels
+#      `bodysense.restore-network=<network>` that is the container's ONLY
+#      network; publishing NO host ports; and operator-declared labels
 #      `bodysense.restore-project=<--target-project>` and
 #      `bodysense.disposable-restore=yes` on the container itself.  Any docker
 #      inspect / network enumeration failure is fail-closed (refused), never
@@ -326,6 +327,32 @@ shared_networks=$(comm -12 \
   <(printf '%s\n' "$restore_networks" | awk 'NF' | sort -u) | tr '\n' ' ')
 [ -z "$shared_networks" ] \
   || fail "refusing a restore container attached to the production postgres network(s): $shared_networks"
+
+# The declared dedicated drill network must be the container's ONLY network: an
+# incidental "declared + not shared with production" proof is not enough, because
+# a target attached to a second ingress/application network is traffic-reachable
+# from that network even when it has nothing in common with the production
+# postgres container.  The isolation contract is only proven when the network
+# set is exactly {bodysense.restore-network}.  (Both sides were enumerated
+# without error above, so an empty "no other networks" result is a real proof.)
+other_networks=$(printf '%s\n' "$restore_networks" | awk 'NF' | grep -Fvx "$restore_network" || true)
+if [ -n "$other_networks" ]; then
+  other_list=$(printf '%s' "$other_networks" | tr '\n' ' ')
+  fail "refusing a restore container attached to networks beyond its declared drill network '$restore_network': $other_list"
+fi
+
+# Published host ports make the target reachable from the host (and any host
+# ingress) even though it is on a dedicated Docker network: a drill server must
+# be attached ONLY to its drill network and publish NO host ports, otherwise it
+# is not provably isolated from traffic.  Docker reports no bindings as an empty
+# object; an absent key (hermetic fakes) is also treated as no bindings.
+restore_port_bindings=$(inspect_str "$RESTORE_TARGET" HostConfig PortBindings)
+case "$restore_port_bindings" in
+  ""|"{}"|null) ;;
+  *)
+    fail "refusing a restore container that publishes host ports ($RESTORE_TARGET): a host-published target is not provably isolated from traffic"
+    ;;
+esac
 
 # Disposability and drill-project ownership are declared on the container itself
 # at creation time and must match --target-project.  A plain running PostgreSQL
