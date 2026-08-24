@@ -740,7 +740,7 @@ pnpm e2e
 
 ## BS-PROD-010 — Add durable Consultation execution leases and stale-run reconciliation
 
-**Implementation status (2026-08-23): VALIDATED.** Migrations `000052/000053`, owner-bound lease heartbeat, startup/periodic stale-run reconciliation, `execution_lost` durable terminal events, active-run clearing, and `waiting_user` separation are implemented. `scripts/validate-run-leases.sh` replays the full schema on PostgreSQL and proves double-reconciler single ownership, completion-vs-reconciler single terminal winner, and no reclamation of `waiting_user`; focused and `-race` Consultation/Service/Repository suites pass.
+**Implementation status (2026-08-24): VALIDATED INCLUDING PROCESS-RESTART PROJECTION RECOVERY.** Migrations `000052/000053`, owner-bound lease heartbeat, startup/periodic stale-run reconciliation, `execution_lost` durable terminal events, active-run clearing, and `waiting_user` separation are implemented. Reconciliation now also terminalizes the matching persisted assistant message (`status=failed`, `error.code=execution_lost`) before clearing `active_run_id`, then appends both `run.failed` and `message.failed`. `scripts/validate-run-leases.sh` proves double-reconciler single ownership, completion-vs-reconciler single terminal winner, and no reclamation of `waiting_user`; the production-shaped API-container restart E2E additionally proves the terminal projection survives thread refetch and browser reconstruction.
 
 **Goal:** process death can never leave a conversation permanently blocked by a Run that no process owns.
 
@@ -786,6 +786,8 @@ go test -race ./apps/api/internal/consultation ./apps/api/internal/service ./app
 ---
 
 ## BS-PROD-011 — Add user recovery controls and deploy-aware Run drain/defer
+
+**Implementation status (2026-08-24): VALIDATED / LOCAL PRODUCTION-SHAPED GATES GREEN.** Web exposes explicit cancel and durable recovery, stale/null thread seeds cannot erase a newer local terminal event, and a provisional `new` assistant runtime promotes to the server-authoritative conversation runtime only after the refetched thread proves the latest assistant message is terminal. A real Docker API-process restart now yields durable `run.failed` + `message.failed`, `message.status=failed`, `error.code=execution_lost`, a visible “本次执行已安全停止 / 系统已安全回收” state, and an unlocked composer. `scripts/local-deploy-validate.sh` passes all 5 browser flows and reports `LOCAL_DEPLOY_VALIDATION=PASS`. `scripts/validate-deploy-run-preflight.sh` proves valid live leases defer deploy, `waiting_user` and expired leases do not block, and an unverifiable database fails closed to `DEFER`.
 
 **Goal:** users and the production deployer interact cleanly with active Runs instead of relying on hidden five-minute polling timeouts.
 
@@ -1486,7 +1488,7 @@ This plan may be archived only when all of the following are true:
 - [ ] No open P0/P1 remains from the final batch review.
 - [ ] ordinary users cannot administer global Knowledge.
 - [ ] delete/revoke/session semantics match user-visible language.
-- [ ] stale Run/process loss cannot permanently lock a conversation.
+- [x] stale Run/process loss cannot permanently lock a conversation.
 - [ ] PostgreSQL has an independently restorable off-host backup.
 - [ ] user uploads no longer depend on one ECS filesystem for durability.
 - [ ] production has a reviewed/qualified/published Knowledge corpus or the plan records a deliberate no-publication decision because qualification failed; it must never bypass governance merely to become non-empty.
@@ -1494,7 +1496,7 @@ This plan may be archived only when all of the following are true:
 - [ ] dependency high/critical runtime findings are repaired or time-bounded with documented justification.
 - [ ] Gin/proxy/CSP/resource production baseline is explicit and validated.
 - [ ] `pnpm verify:release` passes.
-- [ ] `pnpm validate:local-deploy` passes.
+- [x] `pnpm validate:local-deploy` passes.
 - [ ] required GitHub PR/CI checks pass.
 - [ ] Alibaba production deploy is healthy on one coherent immutable revision.
 - [ ] authoritative docs name GCP-dev as development/ops, Alibaba as sole production, and Oracle2 as detached.

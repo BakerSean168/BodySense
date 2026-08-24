@@ -145,6 +145,33 @@ describe("threadMessageMapping", () => {
     });
   });
 
+  it("preserves execution_lost metadata on failed historical assistant messages", () => {
+    const mapped = toInitialThreadMessage(
+      makeMessage({
+        status: "failed",
+        error: {
+          code: "execution_lost",
+          message: "run execution lost; lease expired",
+        },
+      }),
+    );
+
+    expect(mapped.status).toMatchObject({
+      type: "incomplete",
+      reason: "error",
+      error: { code: "execution_lost" },
+    });
+    expect(mapped.metadata).toMatchObject({
+      custom: {
+        consultation_status: "failed",
+        consultation_error: {
+          code: "execution_lost",
+          message: "run execution lost; lease expired",
+        },
+      },
+    });
+  });
+
   it("rebuilds an interrupted active turn from runtime events", () => {
     const pendingInteraction: PendingInteraction = {
       id: "int-1",

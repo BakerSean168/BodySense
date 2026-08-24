@@ -448,11 +448,15 @@ func startRunLeaseReconciler(
 		}
 		for i := range runs {
 			run := &runs[i]
+			failedMessage, err := conversationService.FinalizeExecutionLostProjection(ctx, run)
+			if err != nil {
+				log.Printf("finalize execution-lost projection for run %s: %v", run.ID, err)
+			}
 			if err := runtimeEventService.RecordRunExecutionLost(ctx, run); err != nil {
 				log.Printf("record execution-lost event for run %s: %v", run.ID, err)
 			}
-			if err := conversationService.UpdateActiveRunID(ctx, run.ConversationID, run.UserID, nil, ""); err != nil {
-				log.Printf("clear stale active run %s: %v", run.ID, err)
+			if err := runtimeEventService.RecordMessageExecutionLost(ctx, run, failedMessage); err != nil {
+				log.Printf("record execution-lost message event for run %s: %v", run.ID, err)
 			}
 		}
 	}

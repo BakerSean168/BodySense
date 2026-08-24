@@ -506,6 +506,41 @@ describe("ActiveTurnReducer", () => {
       expect(state.status).toBe("failed");
       expect(state.error).toBe("generation failed");
     });
+
+    it("keeps execution_lost user copy when message.failed follows run.failed", () => {
+      const started = reduceActiveTurnEvent(
+        INITIAL_ACTIVE_TURN_STATE,
+        makeEvent("run.started", { status: "running" }, { run_id: "run-lost-message" }, "run"),
+      ).state;
+      const runFailed = reduceActiveTurnEvent(
+        started,
+        makeEvent(
+          "run.failed",
+          { status: "failed", reason: "execution_lost" },
+          { run_id: "run-lost-message" },
+          "run",
+        ),
+      ).state;
+      const messageFailed = reduceActiveTurnEvent(
+        runFailed,
+        makeEvent(
+          "message.failed",
+          {
+            status: "failed",
+            error: {
+              code: "execution_lost",
+              message: "run execution lost; lease expired",
+            },
+          },
+          { run_id: "run-lost-message", message_id: "msg-lost" },
+          "message",
+        ),
+      ).state;
+
+      expect(messageFailed.status).toBe("failed");
+      expect(messageFailed.error).toContain("系统已安全回收");
+      expect(messageFailed.error).not.toContain("lease expired");
+    });
   });
 
   describe("interrupt/resume lifecycle", () => {

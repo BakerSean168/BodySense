@@ -37,13 +37,11 @@ import type { ThreadAssistantMessagePart } from "@assistant-ui/react";
 // State
 // ---------------------------------------------------------------------------
 
+export const EXECUTION_LOST_USER_MESSAGE =
+  "本次执行因服务实例中断而停止，系统已安全回收。你可以继续输入，发起一次新的执行。";
+
 export type StreamStatus =
-  | "idle"
-  | "streaming"
-  | "interrupted"
-  | "completed"
-  | "failed"
-  | "cancelled";
+  "idle" | "streaming" | "interrupted" | "completed" | "failed" | "cancelled";
 
 export interface ActiveTurnState {
   runId: string | null;
@@ -204,8 +202,10 @@ export function reduceActiveTurnEvent(
         status: "failed",
         pendingInteraction: null,
         error: executionLost
-          ? "本次执行因服务实例中断而停止，系统已安全回收。你可以继续输入，发起一次新的执行。"
-          : payload.error?.message || current.error || "本次执行未能完成，请继续输入后重试。",
+          ? EXECUTION_LOST_USER_MESSAGE
+          : payload.error?.message ||
+            current.error ||
+            "本次执行未能完成，请继续输入后重试。",
       };
       break;
     }
@@ -342,12 +342,15 @@ export function reduceActiveTurnEvent(
       processed = true;
       const payload = event.payload as {
         status: "failed";
-        error: { message: string };
+        error: { code?: string; message: string };
       };
       next = {
         ...current,
         status: "failed",
-        error: payload.error?.message || "stream failed",
+        error:
+          payload.error?.code === "execution_lost"
+            ? EXECUTION_LOST_USER_MESSAGE
+            : payload.error?.message || "stream failed",
       };
       break;
     }

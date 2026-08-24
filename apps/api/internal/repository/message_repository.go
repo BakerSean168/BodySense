@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // MessageRepository handles database operations for messages.
@@ -51,6 +54,51 @@ func (r *MessageRepository) ListByConversationID(ctx context.Context, conversati
 		Order("seq ASC").
 		Find(&messages).Error
 	return messages, err
+}
+
+// FailStreamingAssistantByRunID terminalizes the persisted assistant projection
+// for a reclaimed run. The row is locked and updated inside the caller's
+// transaction so a thread refresh can never observe a cleared active_run_id
+// while the assistant message is still marked streaming.
+func (r *MessageRepository) FailStreamingAssistantByRunID(
+	ctx context.Context,
+	runID, conversationID uuid.UUID,
+	errorPayload any,
+) (*model.Message, error) {
+	encodedError, err := json.Marshal(errorPayload)
+	if err != nil {
+		return nil, err
+	}
+
+	db := database.FromContext(ctx, r.db)
+	var message model.Message
+	err = db.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where(
+			"run_id = ? AND conversation_id = ? AND role = ? AND status IN ?",
+			runID, conversationID, "assistant", []string{"submitted", "streaming"},
+		).
+		Order("seq DESC").
+		First(&message).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	errorJSON := datatypes.JSON(encodedError)
+	result := db.Model(&model.Message{}).
+		Where("id = ? AND conversation_id = ? AND status IN ?", message.ID, conversationID, []string{"submitted", "streaming"}).
+		Updates(map[string]any{"status": "failed", "error": errorJSON})
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if result.RowsAffected != 1 {
+		return nil, nil
+	}
+	message.Status = "failed"
+	message.Error = errorJSON
+	return &message, nil
 }
 
 // UpdateStatus updates the status of a message with conversation ownership check.

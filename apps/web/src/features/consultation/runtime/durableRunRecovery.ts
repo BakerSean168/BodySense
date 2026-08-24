@@ -76,7 +76,7 @@ export async function recoverDurableRunEvents({
         error instanceof Error ? error : new Error(String(error));
       await sleep(pollIntervalMs);
       if (signal?.aborted) {
-        throw new Error("durable run recovery cancelled");
+        throw new Error("durable run recovery cancelled", { cause: error });
       }
       continue;
     }

@@ -27,13 +27,20 @@ import type {
   ConsultationPhase,
   ExtractedInfo,
 } from "../types/consultation";
-import type { ActiveTurnState } from "../runtime/activeTurnReducer";
+import {
+  EXECUTION_LOST_USER_MESSAGE,
+  type ActiveTurnState,
+} from "../runtime/activeTurnReducer";
 import { buildAssistantMessagePartsViewModel } from "../runtime/assistantMessagePartsViewModel";
-import { selectIsComposerLocked } from "../runtime/activeTurnSelectors";
+import {
+  selectIsComposerLocked,
+  shouldApplyInitialActiveTurn,
+} from "../runtime/activeTurnSelectors";
 import { useUploadStore } from "@/stores/uploadStore";
 import { consultationAttachmentBuffer } from "../hooks/useAssistantChatRuntime";
 import { consultationApi } from "../services/consultationService";
 import { StreamingAssistantTurn } from "./StreamingAssistantTurn";
+import { FailedRunStatusCard } from "./FailedRunStatusCard";
 import { StreamingTurnToolCalls } from "./StreamingTurnToolCalls";
 import { RedFlagBanner } from "./RedFlagBanner";
 import { AskUserStatusCard } from "./AskUserStatusCard";
@@ -173,8 +180,15 @@ function InitialActiveTurnHydrator({
   initialActiveTurn: ActiveTurnState | null;
 }) {
   const { hydrateTurn, resetTurn } = useActiveTurnActions();
+  const currentTurn = useActiveTurnState();
+  const currentTurnRef = useRef(currentTurn);
+  currentTurnRef.current = currentTurn;
 
   useEffect(() => {
+    const current = currentTurnRef.current;
+    if (!shouldApplyInitialActiveTurn(current, initialActiveTurn)) {
+      return;
+    }
     if (initialActiveTurn) {
       hydrateTurn(initialActiveTurn);
       return;
@@ -517,12 +531,7 @@ function ChatContent({
     } finally {
       setIsCancellingRun(false);
     }
-  }, [
-    activeTurn,
-    canCancelRun,
-    hydrateTurn,
-    isCancellingRun,
-  ]);
+  }, [activeTurn, canCancelRun, hydrateTurn, isCancellingRun]);
 
   // Determine if the conversation has no user or assistant messages
   const isEmptyConversation =
@@ -637,7 +646,9 @@ function ChatContent({
           </div>
         )}
         {cancelRunError && (
-          <p className="mb-3 text-xs font-medium text-red-600">{cancelRunError}</p>
+          <p className="mb-3 text-xs font-medium text-red-600">
+            {cancelRunError}
+          </p>
         )}
         {hasPendingInteraction && (
           <p className="mb-3 text-xs font-medium text-[#5F6F86]">
@@ -696,6 +707,8 @@ function CustomAssistantMessage() {
         custom?: {
           interaction_history?: boolean;
           interaction?: import("../types/consultation").InteractionHistoryItem;
+          consultation_status?: string;
+          consultation_error?: { code?: string; message?: string } | null;
         };
       }
     | undefined;
@@ -722,6 +735,13 @@ function CustomAssistantMessage() {
   const historicalInteraction = metadata?.custom?.interaction;
   if (metadata?.custom?.interaction_history && historicalInteraction) {
     return <AskUserStatusCard interaction={historicalInteraction} />;
+  }
+
+  if (
+    metadata?.custom?.consultation_status === "failed" &&
+    metadata.custom.consultation_error?.code === "execution_lost"
+  ) {
+    return <FailedRunStatusCard message={EXECUTION_LOST_USER_MESSAGE} />;
   }
 
   if (!viewModel.hasRenderableContent) {

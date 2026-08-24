@@ -202,6 +202,7 @@ export function toInitialThreadMessage(message: Message): ThreadMessageLike {
         custom: {
           message_id: message.id,
           consultation_status: message.status,
+          consultation_error: message.error ?? undefined,
           ...sourceMetadata,
         },
       },

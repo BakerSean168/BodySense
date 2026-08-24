@@ -11,6 +11,7 @@ import {
   selectIsComposerLocked,
   selectHasVisibleContent,
   selectHasRenderableContent,
+  shouldApplyInitialActiveTurn,
 } from "./activeTurnSelectors";
 import {
   INITIAL_ACTIVE_TURN_STATE,
@@ -211,6 +212,60 @@ describe("activeTurnSelectors", () => {
           }),
         ),
       ).toBe(false);
+    });
+  });
+
+  describe("shouldApplyInitialActiveTurn", () => {
+    it("keeps a locally recovered failed terminal when the server active seed disappears", () => {
+      const current = stateWith({
+        runId: "run-1",
+        sequenceRunId: "run-1",
+        lastSeq: 5,
+        status: "failed",
+      });
+
+      expect(shouldApplyInitialActiveTurn(current, null)).toBe(false);
+    });
+
+    it("rejects an older server seed for the same run", () => {
+      const current = stateWith({
+        runId: "run-1",
+        sequenceRunId: "run-1",
+        lastSeq: 5,
+        status: "failed",
+      });
+      const stale = stateWith({
+        runId: "run-1",
+        sequenceRunId: "run-1",
+        lastSeq: 4,
+        status: "streaming",
+      });
+
+      expect(shouldApplyInitialActiveTurn(current, stale)).toBe(false);
+    });
+
+    it("accepts a newer seed or a different run", () => {
+      const current = stateWith({
+        runId: "run-1",
+        sequenceRunId: "run-1",
+        lastSeq: 5,
+        status: "failed",
+      });
+      const newer = stateWith({
+        runId: "run-1",
+        sequenceRunId: "run-1",
+        lastSeq: 6,
+        status: "streaming",
+      });
+      const otherRun = stateWith({
+        runId: "run-2",
+        sequenceRunId: "run-2",
+        lastSeq: 1,
+        status: "streaming",
+      });
+
+      expect(shouldApplyInitialActiveTurn(current, newer)).toBe(true);
+      expect(shouldApplyInitialActiveTurn(current, otherRun)).toBe(true);
     });
   });
 

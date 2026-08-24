@@ -116,3 +116,26 @@ export function selectHasRenderableContent(state: ActiveTurnState): boolean {
     state.redFlag !== null
   );
 }
+
+/**
+ * Server thread hydration is eventually consistent with the live durable-event
+ * watcher. Never let an older server seed (or a temporary null seed after the
+ * server clears active_run_id) erase a newer terminal state already observed
+ * by this browser.
+ */
+export function shouldApplyInitialActiveTurn(
+  current: ActiveTurnState,
+  incoming: ActiveTurnState | null,
+): boolean {
+  if (incoming === null) {
+    return current.status !== "failed" && current.status !== "cancelled";
+  }
+  if (
+    current.runId &&
+    current.runId === incoming.runId &&
+    current.lastSeq > incoming.lastSeq
+  ) {
+    return false;
+  }
+  return true;
+}

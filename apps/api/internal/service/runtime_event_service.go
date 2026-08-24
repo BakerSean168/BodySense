@@ -343,6 +343,40 @@ func (s *RuntimeEventService) RecordRunCancelled(ctx context.Context, run *model
 	)
 }
 
+// RecordMessageExecutionLost persists the assistant-message terminal event for
+// a reclaimed run after the durable message row has been marked failed.
+func (s *RuntimeEventService) RecordMessageExecutionLost(
+	ctx context.Context,
+	run *model.Run,
+	message *model.Message,
+) error {
+	if run == nil || message == nil {
+		return nil
+	}
+	turnID := run.TurnID
+	return s.RecordOutOfBandPublicEvent(
+		ctx,
+		run.ConversationID,
+		run.ID,
+		&turnID,
+		"message",
+		"message.failed",
+		dto.StreamEventIDs{
+			ConversationID: run.ConversationID.String(),
+			RunID:          run.ID.String(),
+			TurnID:         run.TurnID.String(),
+			MessageID:      message.ID.String(),
+		},
+		map[string]any{
+			"status": "failed",
+			"error": map[string]any{
+				"code":    "execution_lost",
+				"message": "run execution lost; lease expired",
+			},
+		},
+	)
+}
+
 // RecordRunExecutionLost persists the terminal event produced by stale-run
 // reconciliation when no live StreamWriter owns the run sequence.
 func (s *RuntimeEventService) RecordRunExecutionLost(ctx context.Context, run *model.Run) error {

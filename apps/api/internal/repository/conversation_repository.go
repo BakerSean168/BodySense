@@ -167,7 +167,7 @@ func (r *ConversationRepository) UpdateLastMessageAt(ctx context.Context, id, us
 
 // UpdateActiveRunID sets or clears the active_run_id and active_stream_id on a conversation.
 func (r *ConversationRepository) UpdateActiveRunID(ctx context.Context, id, userID uuid.UUID, runID *uuid.UUID, streamID string) error {
-	return r.db.WithContext(ctx).
+	return database.FromContext(ctx, r.db).
 		Model(&model.Conversation{}).
 		Where("id = ? AND user_id = ? AND deleted_at IS NULL", id, userID).
 		Updates(map[string]any{

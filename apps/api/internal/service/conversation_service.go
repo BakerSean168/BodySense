@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -36,6 +37,7 @@ type messageRepo interface {
 	GetByID(ctx context.Context, id, conversationID uuid.UUID) (*model.Message, error)
 	ListByConversationID(ctx context.Context, conversationID uuid.UUID) ([]model.Message, error)
 	UpdateStatus(ctx context.Context, id, conversationID uuid.UUID, status string) error
+	FailStreamingAssistantByRunID(ctx context.Context, runID, conversationID uuid.UUID, errorPayload any) (*model.Message, error)
 	UpdateParts(ctx context.Context, id, conversationID uuid.UUID, parts any) error
 	UpdateCompleted(ctx context.Context, id, conversationID uuid.UUID, parts any, usage map[string]any, providerInfo map[string]any) error
 	UpdateCompletedWithStatus(ctx context.Context, id, conversationID uuid.UUID, parts any, status string) error
@@ -188,6 +190,51 @@ func (s *ConversationService) DeleteConversation(ctx context.Context, id, userID
 		}
 		return nil
 	})
+}
+
+// FinalizeExecutionLostProjection atomically converts the durable conversation
+// projection for a reclaimed run from "active/streaming" to "failed/inactive".
+// ReclaimExpiredRuns decides the terminal winner first; this method makes the
+// persisted assistant message and conversation pointer agree before the public
+// run.failed event becomes observable to recovering browsers.
+func (s *ConversationService) FinalizeExecutionLostProjection(
+	ctx context.Context,
+	run *model.Run,
+) (*model.Message, error) {
+	if run == nil {
+		return nil, nil
+	}
+	if s.txManager == nil {
+		return nil, errors.New("finalize execution lost: transaction manager is not configured")
+	}
+	if s.messageRepo == nil || s.conversationRepo == nil {
+		return nil, errors.New("finalize execution lost: conversation/message repository is not configured")
+	}
+
+	errorPayload := map[string]any{
+		"code":    "execution_lost",
+		"message": "run execution lost; lease expired",
+	}
+	var failedMessage *model.Message
+	err := s.txManager.WithinTransaction(ctx, func(txCtx context.Context) error {
+		message, err := s.messageRepo.FailStreamingAssistantByRunID(
+			txCtx, run.ID, run.ConversationID, errorPayload,
+		)
+		if err != nil {
+			return fmt.Errorf("fail reclaimed assistant message: %w", err)
+		}
+		failedMessage = message
+		if err := s.conversationRepo.UpdateActiveRunID(
+			txCtx, run.ConversationID, run.UserID, nil, "",
+		); err != nil {
+			return fmt.Errorf("clear reclaimed active run: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return failedMessage, nil
 }
 
 // PinConversation pins or unpins a conversation with ownership check.
