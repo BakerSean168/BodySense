@@ -305,6 +305,10 @@ sync_runtime() {
   [ -s "$stage/docker/docker-compose.prod.yml" ] || fail 'runtime bundle missing production Compose'
   [ -s "$stage/docker/Caddyfile" ] || fail 'runtime bundle missing Caddyfile'
   [ -s "$stage/scripts/production-deploy-watch.sh" ] || fail 'runtime bundle missing deploy watcher'
+  [ -s "$stage/scripts/offhost-s3.py" ] || fail 'runtime bundle missing off-host S3 client'
+  [ -s "$stage/scripts/production-offhost-backup.sh" ] || fail 'runtime bundle missing off-host backup script'
+  [ -s "$stage/scripts/restore-production-backup.sh" ] || fail 'runtime bundle missing off-host restore script'
+  [ -s "$stage/deploy/systemd/bodysense-offhost-backup.timer" ] || fail 'runtime bundle missing off-host backup timer'
   [ "$(image_revision "$runtime_ref")" = "$revision" ] || fail 'runtime bundle revision mismatch'
 
   docker compose -p "$COMPOSE_PROJECT" -f "$stage/docker/docker-compose.prod.yml" \
@@ -327,6 +331,27 @@ sync_runtime() {
   install -m 0644 "$stage/docker/Caddyfile" "$ROOT/docker/Caddyfile"
   [ -f "$stage/docker/litellm/config.yaml" ] && install -m 0644 "$stage/docker/litellm/config.yaml" "$ROOT/docker/litellm/config.yaml"
   install -m 0755 "$stage/scripts/production-deploy-watch.sh" "$ROOT/scripts/production-deploy-watch.sh"
+  install -m 0755 "$stage/scripts/offhost-s3.py" "$ROOT/scripts/offhost-s3.py"
+  install -m 0755 "$stage/scripts/production-offhost-backup.sh" "$ROOT/scripts/production-offhost-backup.sh"
+  install -m 0755 "$stage/scripts/restore-production-backup.sh" "$ROOT/scripts/restore-production-backup.sh"
+  callout() {
+    install -d -m 0755 "$ROOT/deploy/systemd"
+    install -m 0644 "$stage/deploy/systemd/bodysense-offhost-backup.service" "$ROOT/deploy/systemd/bodysense-offhost-backup.service"
+    install -m 0644 "$stage/deploy/systemd/bodysense-offhost-backup.timer" "$ROOT/deploy/systemd/bodysense-offhost-backup.timer"
+    install -m 0644 "$stage/deploy/systemd/bodysense-offhost-freshness.service" "$ROOT/deploy/systemd/bodysense-offhost-freshness.service"
+    install -m 0644 "$stage/deploy/systemd/bodysense-offhost-freshness.timer" "$ROOT/deploy/systemd/bodysense-offhost-freshness.timer"
+  }
+  if command -v systemctl >/dev/null 2>&1; then
+    callout
+    ln -sf "$ROOT/deploy/systemd/bodysense-offhost-backup.service" /etc/systemd/system/bodysense-offhost-backup.service
+    ln -sf "$ROOT/deploy/systemd/bodysense-offhost-backup.timer" /etc/systemd/system/bodysense-offhost-backup.timer
+    ln -sf "$ROOT/deploy/systemd/bodysense-offhost-freshness.service" /etc/systemd/system/bodysense-offhost-freshness.service
+    ln -sf "$ROOT/deploy/systemd/bodysense-offhost-freshness.timer" /etc/systemd/system/bodysense-offhost-freshness.timer
+    systemctl daemon-reload
+    systemctl enable --now bodysense-offhost-backup.timer bodysense-offhost-freshness.timer
+  else
+    callout
+  fi
 }
 
 [ -n "$REGISTRY" ] || fail 'REGISTRY is empty'

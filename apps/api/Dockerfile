@@ -13,7 +13,9 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 COPY . .
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 go build -o /server ./cmd/server
+    CGO_ENABLED=0 go build -o /server ./cmd/server && \
+    CGO_ENABLED=0 go build -o /validators/domain-validator ./cmd/domain-validator && \
+    CGO_ENABLED=0 go build -o /validators/migration-validator ./cmd/migration-validator
 
 # ── Runtime stage ──────────────────────────────────────
 FROM alpine:3.20
@@ -29,6 +31,7 @@ RUN apk add --no-cache ca-certificates tzdata curl
 WORKDIR /app
 COPY --from=builder /server /app/server
 COPY --from=builder /app/migrations /app/migrations
+COPY --from=builder /validators /app/validators
 EXPOSE 8080
 HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
   CMD curl -f http://localhost:8080/api/health || exit 1
