@@ -22,3 +22,9 @@ COPY deploy/systemd/bodysense-postgres-dr-restore.service /runtime/deploy/system
 COPY deploy/systemd/bodysense-postgres-dr-restore.timer /runtime/deploy/systemd/bodysense-postgres-dr-restore.timer
 COPY deploy/systemd/bodysense-postgres-dr-status.service /runtime/deploy/systemd/bodysense-postgres-dr-status.service
 COPY deploy/systemd/bodysense-postgres-dr-status.timer /runtime/deploy/systemd/bodysense-postgres-dr-status.timer
+COPY scripts/production-capacity-status.sh /runtime/scripts/production-capacity-status.sh
+COPY scripts/install-production-capacity.sh /runtime/scripts/install-production-capacity.sh
+COPY deploy/systemd/bodysense-capacity-status.service /runtime/deploy/systemd/bodysense-capacity-status.service
+COPY deploy/systemd/bodysense-capacity-status.timer /runtime/deploy/systemd/bodysense-capacity-status.timer
+COPY deploy/systemd/bodysense-capacity-cleanup.service /runtime/deploy/systemd/bodysense-capacity-cleanup.service
+COPY deploy/systemd/bodysense-capacity-cleanup.timer /runtime/deploy/systemd/bodysense-capacity-cleanup.timer

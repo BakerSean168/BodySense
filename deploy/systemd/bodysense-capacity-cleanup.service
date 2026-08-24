@@ -1,0 +1,11 @@
+[Unit]
+Description=BodySense conservative production artifact cleanup
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+Environment=BODYSENSE_DEPLOY_ROOT=/opt/bodysense
+ExecStart=/opt/bodysense/scripts/production-capacity-status.sh cleanup
+Nice=19
+IOSchedulingClass=idle
