@@ -6,6 +6,12 @@
 # prunes objects older than the independent off-host retention window, and keeps
 # a freshness state file that the separate freshness check consumes.
 #
+# Safety invariants:
+#   - retention is apply-or-fail: if the object listing that drives pruning
+#     cannot be fetched, the backup aborts and last-success.json is NOT recorded;
+#   - freshness policy is compared in whole seconds (no whole-hour truncation)
+#     and a future-dated last-success is rejected, never treated as fresh.
+#
 # Security contract:
 #   - the source database is read through the ordinary postgres network protocol
 #     (docker compose exec postgres pg_dump), never by reading the DB volume;
@@ -285,7 +291,13 @@ prune_old_objects() {
   boundary=$(date -u -d "$RETENTION_DAYS days ago" +%Y%m%d)
   newest_dir=""
   to_delete=""
-  s3 list --prefix "$PREFIX/" > "$WORK_DIR/prune-$ts.list" 2>/dev/null || true
+  # Retention must be applied-or-failed loudly, never silently skipped: a list
+  # failure here means we cannot prove the independent off-host retention bound,
+  # so the backup aborts before last-success.json is recorded.
+  if ! s3 list --prefix "$PREFIX/" > "$WORK_DIR/prune-$ts.list"; then
+    rm -f "$WORK_DIR/prune-$ts.list"
+    fail 'off-host retention listing failed; refusing to record last success'
+  fi
   keys=$(awk -F'\t' '{print $1}' "$WORK_DIR/prune-$ts.list")
   rm -f "$WORK_DIR/prune-$ts.list"
   # Collect unique date directories under the prefix.
@@ -330,7 +342,7 @@ prune_old_objects() {
 }
 
 run_freshness() {
-  local state_file last_at object_key last_checksum now_epoch last_epoch age_hours head_out
+  local state_file last_at object_key last_checksum now_epoch last_epoch age_seconds age_hours head_out
   state_file="$STATE_DIR/last-success.json"
   LAST_OBJECT_KEY=""
   if [ ! -s "$state_file" ]; then
@@ -355,7 +367,15 @@ run_freshness() {
     fail_freshness unparseable-last-success-timestamp "$last_at"
   fi
   now_epoch=$(date -u +%s)
-  age_hours=$(((now_epoch - last_epoch) / 3600))
+  age_seconds=$((now_epoch - last_epoch))
+  # A future-dated last-success (clock skew, tamper or a broken state write)
+  # must never be accepted as fresh.
+  if [ "$age_seconds" -lt 0 ]; then
+    fail_freshness future-dated-last-success "$last_at"
+  fi
+  # Fractional hours: a 30h59m-old backup reports 30.983h instead of being
+  # truncated to a "healthy" 30h.
+  age_hours=$(python3 -c 'import sys; print("%.3f" % (int(sys.argv[1]) / 3600.0))' "$age_seconds")
 
   if [ "$FRESHNESS_PROBE" = object ]; then
     if [ -z "$ACCESS_KEY" ] || [ -z "$SECRET_KEY" ]; then
@@ -371,7 +391,8 @@ run_freshness() {
     fi
   fi
 
-  if [ "$age_hours" -gt "$FRESHNESS_HOURS" ]; then
+  # Policy is "exceeds": a backup exactly at FRESHNESS_HOURS is still acceptable.
+  if [ "$age_seconds" -gt $((FRESHNESS_HOURS * 3600)) ]; then
     fail_freshness stale "$last_at" "$age_hours"
   fi
 
