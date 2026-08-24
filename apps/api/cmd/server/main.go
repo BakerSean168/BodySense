@@ -243,7 +243,16 @@ func main() {
 	reassessmentHandler := handler.NewReassessmentHandler(trainingService)
 	assessmentHandler := handler.NewAssessmentHandler(assessmentService).
 		WithAssessmentReplay(assessmentReplayService)
-	knowledgeHandler := handler.NewKnowledgeHandler(agentDeploymentPolicy).WithSourceRegistry(knowledgeSourceRegistry)
+	knowledgeIngestionService := service.NewKnowledgeIngestionService(
+		knowledgeSourceRegistry,
+		jobRuntime,
+		agentDeploymentPolicy,
+		os.Getenv("AI_SERVICE_URL"),
+	)
+	knowledgeIngestionService.StartWorker(context.Background(), 10*time.Second, 15*time.Minute)
+	knowledgeHandler := handler.NewKnowledgeHandler(agentDeploymentPolicy).
+		WithSourceRegistry(knowledgeSourceRegistry).
+		WithIngestionService(knowledgeIngestionService)
 
 	// Continuous health workspace is the single capability/read model for the product loop.
 	healthWorkspaceService := service.NewHealthWorkspaceService(
@@ -440,6 +449,7 @@ func main() {
 		knowledgeGroup.POST("/sources", knowledgeHandler.RegisterSource)
 		knowledgeGroup.GET("/sources", knowledgeHandler.ListSources)
 		knowledgeGroup.POST("/ingestions/video", knowledgeHandler.IngestVideo)
+		knowledgeGroup.GET("/ingestions/:jobID", knowledgeHandler.GetIngestionJob)
 		knowledgeGroup.POST("/search", knowledgeHandler.SearchKnowledge)
 		knowledgeGroup.GET("/stats", knowledgeHandler.GetStats)
 	}

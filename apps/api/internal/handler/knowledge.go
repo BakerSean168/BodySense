@@ -31,6 +31,7 @@ type KnowledgeHandler struct {
 	aiServiceURL string
 	deployment   knowledgeAgentDeployment
 	registry     *service.KnowledgeSourceRegistry
+	ingestion    *service.KnowledgeIngestionService
 }
 
 // NewKnowledgeHandler creates a new KnowledgeHandler.
@@ -44,6 +45,11 @@ func NewKnowledgeHandler(deployment knowledgeAgentDeployment) *KnowledgeHandler 
 
 func (h *KnowledgeHandler) WithSourceRegistry(registry *service.KnowledgeSourceRegistry) *KnowledgeHandler {
 	h.registry = registry
+	return h
+}
+
+func (h *KnowledgeHandler) WithIngestionService(ingestion *service.KnowledgeIngestionService) *KnowledgeHandler {
+	h.ingestion = ingestion
 	return h
 }
 
@@ -128,7 +134,7 @@ type IngestVideoRequest struct {
 	Language                string `json:"language,omitempty"`
 	WhisperModel            string `json:"whisper_model,omitempty"`
 	ForceTranscribe         bool   `json:"force_transcribe,omitempty"`
-	ExportClips             bool   `json:"export_clips,omitempty"`
+	ExportClips             *bool  `json:"export_clips,omitempty"`
 	OverwriteSource         bool   `json:"overwrite_source,omitempty"`
 	SplitterProvider        string `json:"splitter_provider,omitempty"`
 	AIRefine                bool   `json:"ai_refine,omitempty"`
@@ -203,169 +209,83 @@ func (h *KnowledgeHandler) SearchKnowledge(c *gin.Context) {
 	c.Data(status, "application/json", sanitized)
 }
 
-// IngestVideo handles POST /api/knowledge/ingestions/video
+// IngestVideo handles POST /api/knowledge/ingestions/video by enqueueing a
+// durable JobRuntime job. The HTTP request never owns the long-running ASR/LLM
+// execution lifecycle.
 func (h *KnowledgeHandler) IngestVideo(c *gin.Context) {
+	if h.ingestion == nil {
+		respondError(c, http.StatusServiceUnavailable, "KNOWLEDGE_INGESTION_UNAVAILABLE", "knowledge ingestion service is unavailable")
+		return
+	}
 	var req IngestVideoRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		respondError(c, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
 	}
-
-	// Validate video path to prevent path traversal
 	if !validateVideoPath(req.VideoPath) {
-		respondError(c, http.StatusBadRequest, "INVALID_VIDEO_PATH", "video_path must be relative to the knowledge data root without traversal sequences")
+		respondError(c, http.StatusBadRequest, "INVALID_VIDEO_PATH", "video_path must be a safe relative path under the knowledge source directory")
 		return
 	}
-	if h.registry == nil {
-		respondError(c, http.StatusServiceUnavailable, "KNOWLEDGE_REGISTRY_UNAVAILABLE", "knowledge source registry is unavailable")
+	rawActor, ok := c.Get("knowledge_operator_id")
+	if !ok {
+		respondError(c, http.StatusForbidden, "FORBIDDEN", "knowledge operator permission is required")
 		return
 	}
-	source, err := h.registry.FindIngestible(c.Request.Context(), req.SourceKey)
+	actorID, err := uuid.Parse(fmt.Sprint(rawActor))
+	if err != nil {
+		respondError(c, http.StatusUnauthorized, "UNAUTHORIZED", "invalid operator identity")
+		return
+	}
+	exportClips := true
+	if req.ExportClips != nil {
+		exportClips = *req.ExportClips
+	}
+	job, existed, err := h.ingestion.EnqueueVideo(c.Request.Context(), actorID, service.KnowledgeVideoIngestionRequest{
+		SourceKey:        req.SourceKey,
+		VideoPath:        req.VideoPath,
+		WhisperModel:     req.WhisperModel,
+		ForceTranscribe:  req.ForceTranscribe,
+		ExportClips:      exportClips,
+		SplitterProvider: req.SplitterProvider,
+		AIRefine:         req.AIRefine,
+	})
 	if err != nil {
 		switch {
 		case errors.Is(err, gorm.ErrRecordNotFound):
 			respondError(c, http.StatusConflict, "KNOWLEDGE_SOURCE_NOT_REGISTERED", "knowledge source must be registered before ingestion")
 		case errors.Is(err, service.ErrKnowledgeSourceNotReady):
 			respondError(c, http.StatusConflict, "KNOWLEDGE_SOURCE_NOT_READY", "knowledge source is not eligible for ingestion")
+		case errors.Is(err, service.ErrKnowledgeIngestionSourceMismatch):
+			respondError(c, http.StatusConflict, "KNOWLEDGE_SOURCE_MISMATCH", err.Error())
 		default:
-			respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to resolve knowledge source")
+			respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to enqueue knowledge ingestion")
 		}
 		return
 	}
-	if source.SourceType != "video" {
-		respondError(c, http.StatusBadRequest, "KNOWLEDGE_SOURCE_TYPE_MISMATCH", "video ingestion requires a registered video source")
-		return
-	}
-	if filepath.Clean(strings.ReplaceAll(source.OriginalFilePath, "\\", "/")) != filepath.Clean(strings.ReplaceAll(req.VideoPath, "\\", "/")) {
-		respondError(c, http.StatusConflict, "KNOWLEDGE_SOURCE_PATH_MISMATCH", "video_path does not match the registered source")
-		return
-	}
-	req.ProblemSlug = source.ProblemSlug
-	req.ProblemDisplayName = source.ProblemDisplayName
-	req.Author = source.Author
-	req.SourceTitle = source.Title
-	req.Language = source.Language
-	req.ExpectedContentHash = *source.ContentHash
-
-	if req.Language == "" {
-		req.Language = "zh"
-	}
-	if req.WhisperModel == "" {
-		req.WhisperModel = "ggml-base.bin"
-	}
-	if req.SplitterProvider == "" {
-		req.SplitterProvider = "heuristic"
-	}
-	if req.SplitterProvider != "heuristic" && req.SplitterProvider != "llm" {
-		respondError(c, http.StatusBadRequest, "INVALID_SPLITTER_PROVIDER", "splitter_provider must be heuristic or llm")
-		return
-	}
-	// North-Star: callers choose the capability, never an immutable Agent id.
-	req.SplitterConfigurationID = ""
-	req.CuratorConfigurationID = ""
-	if req.SplitterProvider == "llm" {
-		if h.deployment == nil {
-			respondError(c, http.StatusServiceUnavailable, "AGENT_DEPLOYMENT_UNAVAILABLE", "knowledge Agent deployment policy is unavailable")
-			return
-		}
-		req.SplitterConfigurationID = h.deployment.KnowledgeSplitterConfigurationID()
-	}
-	if req.AIRefine {
-		if h.deployment == nil {
-			respondError(c, http.StatusServiceUnavailable, "AGENT_DEPLOYMENT_UNAVAILABLE", "knowledge Agent deployment policy is unavailable")
-			return
-		}
-		req.CuratorConfigurationID = h.deployment.KnowledgeCuratorConfigurationID()
-	}
-
-	body, err := json.Marshal(req)
-	if err != nil {
-		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to marshal request")
-		return
-	}
-
-	resp, err := http.Post(
-		h.aiServiceURL+"/api/knowledge/ingestions/video",
-		"application/json",
-		bytes.NewBuffer(body),
-	)
-	if err != nil {
-		respondError(c, http.StatusBadGateway, "AI_SERVICE_UNAVAILABLE", "failed to connect to AI service")
-		return
-	}
-	defer resp.Body.Close()
-
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to read response")
-		return
-	}
-
-	status, sanitized := sanitizeProxyResponse(resp.StatusCode, respBody)
-	if status >= 200 && status < 300 {
-		if err := h.validateKnowledgeAgentExecution(respBody, req); err != nil {
-			respondError(c, http.StatusBadGateway, "AGENT_IDENTITY_MISMATCH", "knowledge Agent execution identity validation failed")
-			return
-		}
-	}
-	c.Data(status, "application/json", sanitized)
+	c.JSON(http.StatusAccepted, gin.H{"job": job, "idempotent_hit": existed})
 }
 
-func (h *KnowledgeHandler) validateKnowledgeAgentExecution(body []byte, req IngestVideoRequest) error {
-	if req.SplitterProvider != "llm" && !req.AIRefine {
-		return nil
+// GetIngestionJob returns the durable lifecycle state of a Knowledge ingestion.
+func (h *KnowledgeHandler) GetIngestionJob(c *gin.Context) {
+	if h.ingestion == nil {
+		respondError(c, http.StatusServiceUnavailable, "KNOWLEDGE_INGESTION_UNAVAILABLE", "knowledge ingestion service is unavailable")
+		return
 	}
-	var response struct {
-		AgentExecution map[string]struct {
-			AgentConfiguration  map[string]any `json:"agent_configuration"`
-			ExecutionProvenance map[string]any `json:"execution_provenance"`
-		} `json:"agent_execution"`
+	jobID, err := uuid.Parse(c.Param("jobID"))
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "INVALID_JOB_ID", "invalid knowledge ingestion job id")
+		return
 	}
-	if err := json.Unmarshal(body, &response); err != nil {
-		return err
-	}
-	check := func(key, expectedID, expectedRole, expectedPolicy, expectedModel string) error {
-		record, ok := response.AgentExecution[key]
-		if !ok {
-			return fmt.Errorf("missing %s execution record", key)
+	job, err := h.ingestion.GetJob(c.Request.Context(), jobID)
+	if err != nil {
+		if errors.Is(err, service.ErrKnowledgeIngestionNotFound) {
+			respondError(c, http.StatusNotFound, "KNOWLEDGE_INGESTION_NOT_FOUND", "knowledge ingestion job not found")
+			return
 		}
-		id, _ := record.AgentConfiguration["id"].(string)
-		role, _ := record.AgentConfiguration["role"].(string)
-		policy, _ := record.AgentConfiguration["decision_policy_revision"].(string)
-		logicalModel, _ := record.AgentConfiguration["logical_model"].(string)
-		if id != expectedID || role != expectedRole || policy != expectedPolicy || logicalModel != expectedModel {
-			return fmt.Errorf("%s immutable configuration mismatch", key)
-		}
-		executionStatus, _ := record.ExecutionProvenance["status"].(string)
-		executionModel, _ := record.ExecutionProvenance["logical_model"].(string)
-		if (executionStatus != "executed" && executionStatus != "degraded") || executionModel != expectedModel {
-			return fmt.Errorf("%s execution provenance mismatch", key)
-		}
-		return nil
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load knowledge ingestion job")
+		return
 	}
-	if req.SplitterProvider == "llm" {
-		if err := check(
-			"knowledge_splitter",
-			req.SplitterConfigurationID,
-			"knowledge_splitter",
-			h.deployment.KnowledgeSplitterDecisionPolicyRevision(),
-			h.deployment.KnowledgeSplitterLogicalModel(),
-		); err != nil {
-			return err
-		}
-	}
-	if req.AIRefine {
-		if err := check(
-			"knowledge_curator",
-			req.CuratorConfigurationID,
-			"knowledge_curator",
-			h.deployment.KnowledgeCuratorDecisionPolicyRevision(),
-			h.deployment.KnowledgeCuratorLogicalModel(),
-		); err != nil {
-			return err
-		}
-	}
-	return nil
+	c.JSON(http.StatusOK, job)
 }
 
 // ListSources handles GET /api/knowledge/sources.

@@ -13,6 +13,7 @@ import (
 	"github.com/bodysense/api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -72,6 +73,32 @@ func (d fakeKnowledgeDeployment) KnowledgeSplitterLogicalModel() string {
 	return "bodysense-structured"
 }
 
+type fakeKnowledgeJobRuntime struct {
+	captured json.RawMessage
+	job      *model.Job
+}
+
+func (f *fakeKnowledgeJobRuntime) CreateJobWithIdempotencyAttempts(_ context.Context, userID uuid.UUID, jobType string, input datatypes.JSON, _ string, maxAttempts int, _, _ *uuid.UUID) (*model.Job, bool, error) {
+	f.captured = append(json.RawMessage(nil), input...)
+	if f.job == nil {
+		f.job = &model.Job{ID: uuid.New(), UserID: userID, JobType: jobType, Status: "pending", MaxAttempts: maxAttempts}
+	}
+	return f.job, false, nil
+}
+func (f *fakeKnowledgeJobRuntime) GetJob(_ context.Context, _ uuid.UUID) (*model.Job, error) {
+	return f.job, nil
+}
+func (f *fakeKnowledgeJobRuntime) ListRecoverable(context.Context, string, time.Duration, int) ([]model.Job, error) {
+	return nil, nil
+}
+func (f *fakeKnowledgeJobRuntime) ClaimPending(context.Context, uuid.UUID) (*model.Job, bool, error) {
+	return nil, false, nil
+}
+func (f *fakeKnowledgeJobRuntime) UpdateProgress(context.Context, uuid.UUID, any) error { return nil }
+func (f *fakeKnowledgeJobRuntime) TransitionTo(context.Context, uuid.UUID, string, any, any) error {
+	return nil
+}
+
 func TestValidateVideoPathUsesSharedRelativeDataRootContract(t *testing.T) {
 	for _, path := range []string{"sources/video.mp4", "nested/source/video.mp4"} {
 		if !validateVideoPath(path) {
@@ -85,56 +112,25 @@ func TestValidateVideoPathUsesSharedRelativeDataRootContract(t *testing.T) {
 	}
 }
 
-func TestKnowledgeIngestPinsGoSelectedAgentConfigurations(t *testing.T) {
+func TestKnowledgeIngestEnqueuesPinnedAgentConfigurations(t *testing.T) {
 	const splitterID = "knowledge-splitter-config-test"
 	const curatorID = "knowledge-curator-config-test"
+	deployment := fakeKnowledgeDeployment{curator: curatorID, splitter: splitterID}
+	registry := readyVideoRegistry("source-test", "sources/video.mp4")
+	jobs := &fakeKnowledgeJobRuntime{}
+	ingestion := service.NewKnowledgeIngestionService(registry, jobs, deployment, "http://unused")
+	h := NewKnowledgeHandler(deployment).WithSourceRegistry(registry).WithIngestionService(ingestion)
 
-	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/knowledge/ingestions/video" {
-			http.NotFound(w, r)
-			return
-		}
-		var req IngestVideoRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			t.Fatal(err)
-		}
-		if req.SplitterConfigurationID != splitterID || req.CuratorConfigurationID != curatorID {
-			t.Fatalf("Go did not pin knowledge configs: %#v", req)
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
-			"agent_execution": map[string]any{
-				"knowledge_splitter": map[string]any{
-					"agent_configuration": map[string]any{
-						"id": splitterID, "role": "knowledge_splitter",
-						"decision_policy_revision": "knowledge-splitter-go-v1", "logical_model": "bodysense-structured",
-					},
-					"execution_provenance": map[string]any{"status": "executed", "logical_model": "bodysense-structured"},
-				},
-				"knowledge_curator": map[string]any{
-					"agent_configuration": map[string]any{
-						"id": curatorID, "role": "knowledge_curator",
-						"decision_policy_revision": "knowledge-curator-go-v1", "logical_model": "bodysense-structured",
-					},
-					"execution_provenance": map[string]any{"status": "executed", "logical_model": "bodysense-structured"},
-				},
-			},
-		})
-	}))
-	defer upstream.Close()
-
-	h := NewKnowledgeHandler(fakeKnowledgeDeployment{curator: curatorID, splitter: splitterID}).WithSourceRegistry(readyVideoRegistry("source-test", "sources/video.mp4"))
-	h.aiServiceURL = upstream.URL
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	r.POST("/knowledge/ingestions/video", h.IngestVideo)
+	r.POST("/knowledge/ingestions/video", func(c *gin.Context) {
+		c.Set("knowledge_operator_id", uuid.New().String())
+		c.Next()
+	}, h.IngestVideo)
 
 	body := []byte(`{
 		"source_key":"source-test",
 		"video_path":"sources/video.mp4",
-		"problem_slug":"forward-head",
-		"problem_display_name":"头前移",
-		"author":"tester",
 		"splitter_provider":"llm",
 		"ai_refine":true,
 		"splitter_configuration_id":"caller-must-not-control-this",
@@ -144,21 +140,20 @@ func TestKnowledgeIngestPinsGoSelectedAgentConfigurations(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	resp := httptest.NewRecorder()
 	r.ServeHTTP(resp, req)
-	if resp.Code != http.StatusOK {
+	if resp.Code != http.StatusAccepted {
 		t.Fatalf("status=%d body=%s", resp.Code, resp.Body.String())
 	}
-}
-
-func TestValidateKnowledgeAgentExecutionRejectsMismatchedLineage(t *testing.T) {
-	req := IngestVideoRequest{
-		SplitterProvider:        "llm",
-		AIRefine:                true,
-		SplitterConfigurationID: "splitter-good",
-		CuratorConfigurationID:  "curator-good",
+	var input map[string]any
+	if err := json.Unmarshal(jobs.captured, &input); err != nil {
+		t.Fatal(err)
 	}
-	body := []byte(`{"agent_execution":{"knowledge_splitter":{"agent_configuration":{"id":"wrong","role":"knowledge_splitter","decision_policy_revision":"knowledge-splitter-go-v1","logical_model":"bodysense-structured"},"execution_provenance":{"status":"executed","logical_model":"bodysense-structured"}},"knowledge_curator":{"agent_configuration":{"id":"curator-good","role":"knowledge_curator","decision_policy_revision":"knowledge-curator-go-v1","logical_model":"bodysense-structured"},"execution_provenance":{"status":"executed","logical_model":"bodysense-structured"}}}}`)
-	h := NewKnowledgeHandler(fakeKnowledgeDeployment{curator: "curator-good", splitter: "splitter-good"})
-	if err := h.validateKnowledgeAgentExecution(body, req); err == nil {
-		t.Fatal("expected lineage mismatch")
+	if input["splitter_configuration_id"] != splitterID || input["curator_configuration_id"] != curatorID {
+		t.Fatalf("Go did not pin immutable Knowledge Agent configs: %#v", input)
+	}
+	if input["source_key"] != "source-test" || input["content_hash"] == "" || input["operator_id"] == "" {
+		t.Fatalf("durable job input is missing source/operator identity: %#v", input)
+	}
+	if input["export_clips"] != true {
+		t.Fatalf("omitted export_clips must preserve the historical default=true: %#v", input)
 	}
 }

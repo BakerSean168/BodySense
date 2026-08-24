@@ -158,6 +158,13 @@ func (r *KnowledgeSourceRegistry) FindIngestible(ctx context.Context, sourceKey 
 	return source, nil
 }
 
+func (r *KnowledgeSourceRegistry) FindByKey(ctx context.Context, sourceKey string) (*model.KnowledgeSource, error) {
+	if r == nil || r.store == nil {
+		return nil, ErrKnowledgeSourceNotReady
+	}
+	return r.store.FindByKey(ctx, strings.TrimSpace(sourceKey))
+}
+
 func (r *KnowledgeSourceRegistry) List(ctx context.Context, limit int) ([]model.KnowledgeSource, error) {
 	return r.store.List(ctx, limit)
 }
