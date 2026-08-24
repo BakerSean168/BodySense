@@ -3,17 +3,13 @@ import { useAuthStore } from "@/stores/authStore";
 
 export function AuthBootstrap() {
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const isAuthResolved = useAuthStore((state) => state.isAuthResolved);
-  const verifySession = useAuthStore((state) => state.verifySession);
+  const bootstrapSession = useAuthStore((state) => state.bootstrapSession);
 
   useEffect(() => {
-    if (!hasHydrated || !isAuthenticated || isAuthResolved) {
-      return;
+    if (!hasHydrated) {
+      void bootstrapSession();
     }
-
-    void verifySession();
-  }, [hasHydrated, isAuthenticated, isAuthResolved, verifySession]);
+  }, [hasHydrated, bootstrapSession]);
 
   return null;
 }

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"log"
 	"net/http"
 
@@ -166,7 +167,8 @@ func (h *ConsultationHandler) ResumeInteraction(c *gin.Context) {
 // GetInteractionMetrics handles GET /api/v1/consultations/:id/interaction-metrics
 // T0-1 Phase C: lightweight projection over agent_interactions for this conversation.
 func (h *ConsultationHandler) GetInteractionMetrics(c *gin.Context) {
-	if _, ok := getUserUUID(c); !ok {
+	uid, ok := getUserUUID(c)
+	if !ok {
 		return
 	}
 	conversationID, err := uuid.Parse(c.Param("id"))
@@ -174,8 +176,12 @@ func (h *ConsultationHandler) GetInteractionMetrics(c *gin.Context) {
 		respondError(c, http.StatusBadRequest, "INVALID_ID", "invalid consultation id")
 		return
 	}
-	metrics, err := h.interactionService.GetInteractionMetrics(c.Request.Context(), &conversationID)
+	metrics, err := h.interactionService.GetInteractionMetrics(c.Request.Context(), uid, &conversationID)
 	if err != nil {
+		if errors.Is(err, service.ErrConversationNotFound) {
+			respondError(c, http.StatusNotFound, "NOT_FOUND", "consultation not found or access denied")
+			return
+		}
 		log.Printf("interaction metrics for %s: %v", conversationID, err)
 		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to compute interaction metrics")
 		return

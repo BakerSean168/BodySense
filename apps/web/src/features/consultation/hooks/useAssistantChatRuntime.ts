@@ -89,6 +89,13 @@ export function useAssistantChatRuntime(
     let lastYieldSignature: string | null = null;
     const pendingResults: ChatModelRunResult[] = [];
     let reducerState: ActiveTurnState = INITIAL_ACTIVE_TURN_STATE;
+    let maxSeq = 0;
+    let sawStreamDone = false;
+    let networkError: Error | null = null;
+    let startDurableWatcher: (() => void) | null = null;
+    let durableWatcherController: AbortController | null = null;
+    let liveReaderController: AbortController | null = null;
+    let durableWatcherPromise: Promise<void> | null = null;
 
     function notifyQueueConsumer() {
       const wake = wakeQueueConsumer;
@@ -180,6 +187,9 @@ export function useAssistantChatRuntime(
     }
 
     function dispatch(event: StreamEvent) {
+      if (typeof event.seq === "number") {
+        maxSeq = Math.max(maxSeq, event.seq);
+      }
       const result = reduceActiveTurnEvent(reducerState, event);
       reducerState = result.state;
       // 🔍 追踪关键事件的 effect 产生情况
@@ -199,6 +209,7 @@ export function useAssistantChatRuntime(
       }
       applyEffects(result.effects);
       optionsRef.current.onActiveTurnUpdate?.(reducerState);
+      startDurableWatcher?.();
 
       switch (event.type) {
         case "message.text.delta":
@@ -219,10 +230,6 @@ export function useAssistantChatRuntime(
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
-
-      let maxSeq = 0;
-      let sawStreamDone = false;
-      let networkError: Error | null = null;
 
       const handlers = {
         onConversationCreated: (data: StreamEvent) => {
@@ -251,6 +258,7 @@ export function useAssistantChatRuntime(
         onRunInterrupted: (data: StreamEvent) => dispatch(data as StreamEvent),
         onRunCompleted: (data: StreamEvent) => dispatch(data as StreamEvent),
         onRunFailed: (data: StreamEvent) => dispatch(data as StreamEvent),
+        onRunCancelled: (data: StreamEvent) => dispatch(data as StreamEvent),
         onMessageCreated: (data: StreamEvent) => dispatch(data as StreamEvent),
         onTextDelta: (data: StreamEvent) => dispatch(data as StreamEvent),
         onToolCall: (data: StreamEvent) => dispatch(data as StreamEvent),
@@ -287,7 +295,53 @@ export function useAssistantChatRuntime(
         },
       };
 
-      const streamPromise = consumeSSEStream(response, handlers)
+      durableWatcherController = new AbortController();
+      liveReaderController = new AbortController();
+
+      startDurableWatcher = () => {
+        if (durableWatcherPromise) return;
+        const convId =
+          reducerState.conversationId ||
+          (conversationId !== "new" ? conversationId : null);
+        const runId = reducerState.runId;
+        if (!convId || !runId || !durableWatcherController) return;
+
+        const watcherSignal = durableWatcherController.signal;
+        durableWatcherPromise = recoverDurableRunEvents({
+          afterSeq: maxSeq,
+          fetchPage: (afterSeq) =>
+            consultationApi.listRunEvents(convId, runId, {
+              afterSeq,
+              limit: 200,
+            }),
+          handlers,
+          signal: watcherSignal,
+        })
+          .then((recovered) => {
+            maxSeq = Math.max(maxSeq, recovered.maxSeq);
+            // The durable event log is the terminal authority. Once it has a
+            // terminal event, stop waiting for a proxy/SSE socket to notice.
+            liveReaderController?.abort();
+            streamFinished = true;
+            notifyQueueConsumer();
+          })
+          .catch((error) => {
+            if (watcherSignal.aborted) return;
+            streamError =
+              error instanceof Error
+                ? error
+                : new Error("durable run recovery failed");
+            liveReaderController?.abort();
+            streamFinished = true;
+            notifyQueueConsumer();
+          });
+      };
+
+      const streamPromise = consumeSSEStream(
+        response,
+        handlers,
+        liveReaderController.signal,
+      )
         .then((seq) => {
           maxSeq = Math.max(maxSeq, seq);
         })
@@ -310,45 +364,33 @@ export function useAssistantChatRuntime(
 
       await streamPromise;
 
-      // T0-2: if the live SSE dropped without stream.done, catch up from the
-      // durable event log using after_seq = maxSeq (backend already supports it).
-      if (!sawStreamDone && !streamError && networkError) {
-        const convId =
-          reducerState.conversationId ||
-          (conversationId !== "new" ? conversationId : null);
-        const runId = reducerState.runId;
-        if (convId && runId) {
-          try {
-            const recovered = await recoverDurableRunEvents({
-              afterSeq: maxSeq,
-              fetchPage: (afterSeq) =>
-                consultationApi.listRunEvents(convId, runId, {
-                  afterSeq,
-                  limit: 200,
-                }),
-              handlers,
-            });
-            maxSeq = Math.max(maxSeq, recovered.maxSeq);
-            networkError = null;
-          } catch (resumeErr) {
-            streamError = resumeErr instanceof Error ? resumeErr : networkError;
-          }
-        } else {
+      // A clean EOF without stream.done is not success. Cancellation and some
+      // reverse proxies close the live response before their durable terminal
+      // reaches the browser, so wait for the already-running authority watcher.
+      if (!sawStreamDone && !streamError) {
+        if (durableWatcherPromise) {
+          await durableWatcherPromise;
+          networkError = null;
+        } else if (networkError) {
           streamError = networkError;
+        } else {
+          streamError = new Error(
+            "实时连接在终态确认前结束，且没有可恢复的运行标识",
+          );
         }
-      } else if (networkError && !streamError) {
-        streamError = networkError;
       }
 
       if (streamError) {
         throw streamError;
       }
     } finally {
+      startDurableWatcher = null;
+      durableWatcherController?.abort();
+      liveReaderController?.abort();
       setIsStreaming(false);
       optionsRef.current.onStreamFinished?.();
       if (
         reducerState.status === "completed" ||
-        reducerState.status === "failed" ||
         reducerState.status === "idle"
       ) {
         optionsRef.current.onActiveTurnUpdate?.(resetActiveTurnState());

@@ -32,6 +32,7 @@ import { ConsultationWorkbenchShell } from "../components/workbench/Consultation
 import { ConversationHistoryDrawer } from "../components/workbench/ConversationHistoryDrawer";
 import { WorkspaceViewport } from "../components/workbench/WorkspaceViewport";
 import { parseWorkspaceView, type WorkspaceView } from "../model/workbenchView";
+import { shouldPromoteProvisionalChatSession } from "../runtime/chatSessionIdentity";
 import {
   BodyStateWorkbench,
   OutcomeTrendsPanel,
@@ -87,6 +88,9 @@ export function ConsultationPage() {
   );
 
   const [chatSessionKey, setChatSessionKey] = useState<string>("new");
+  const [pendingTerminalRemountId, setPendingTerminalRemountId] = useState<
+    string | null
+  >(null);
   const justCreatedRef = useRef<string | null>(null);
   // Tracks the active conversation ID synchronously, updated before navigate().
   // Needed because SSE callbacks in the same event batch fire before React re-renders
@@ -168,6 +172,34 @@ export function ConsultationPage() {
     activeConversationIdRef.current = null;
     setChatSessionKey(`conversation:${displayedConversationId}`);
   }, [displayedConversationId, routeConversationId]);
+
+  const latestAssistantStatus =
+    [...messages].reverse().find((message) => message.role === "assistant")
+      ?.status ?? null;
+
+  useEffect(() => {
+    if (
+      !shouldPromoteProvisionalChatSession({
+        chatSessionKey,
+        pendingConversationId: pendingTerminalRemountId,
+        displayedConversationId,
+        activeTurnRunId: displayedThread?.active_turn_run_id,
+        latestAssistantStatus,
+      })
+    ) {
+      return;
+    }
+
+    setChatSessionKey(`conversation:${displayedConversationId}`);
+    setPendingTerminalRemountId(null);
+    activeConversationIdRef.current = null;
+  }, [
+    chatSessionKey,
+    displayedConversationId,
+    displayedThread?.active_turn_run_id,
+    latestAssistantStatus,
+    pendingTerminalRemountId,
+  ]);
 
   // Client-only presentation state. The active workspace mode is URL-addressable.
   const workspaceView = parseWorkspaceView(searchParams.get("view"));
@@ -339,7 +371,16 @@ export function ConsultationPage() {
                 onPhaseChange={threadActions.updatePhase}
                 onTitleGenerated={threadActions.updateTitle}
                 onMessagePersisted={threadActions.reconcileMessageId}
-                onStreamFinished={threadActions.finishStream}
+                onStreamFinished={() => {
+                  const terminalConversationId =
+                    activeConversationIdRef.current ??
+                    routeConversationId ??
+                    displayedConversationId;
+                  if (chatSessionKey === "new" && terminalConversationId) {
+                    setPendingTerminalRemountId(terminalConversationId);
+                  }
+                  threadActions.finishStream();
+                }}
               />
             </Suspense>
             {isThreadSwitching ? (

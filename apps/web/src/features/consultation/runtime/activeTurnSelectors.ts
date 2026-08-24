@@ -26,6 +26,9 @@ export interface ActiveTurnViewModel {
   pendingInteraction: PendingInteraction | null;
   isRunning: boolean;
   isInterrupted: boolean;
+  isFailed: boolean;
+  isCancelled: boolean;
+  error: string | undefined;
   hasVisibleContent: boolean;
   hasRenderableContent: boolean;
 }
@@ -46,6 +49,9 @@ export function selectActiveTurnViewModel(
     pendingInteraction: state.pendingInteraction,
     isRunning: state.status === "streaming",
     isInterrupted: state.status === "interrupted",
+    isFailed: state.status === "failed",
+    isCancelled: state.status === "cancelled",
+    error: state.error,
     hasVisibleContent: selectHasVisibleContent(state),
     hasRenderableContent: selectHasRenderableContent(state),
   };
@@ -109,4 +115,27 @@ export function selectHasRenderableContent(state: ActiveTurnState): boolean {
     Object.keys(state.knowledgeGapsByKey).length > 0 ||
     state.redFlag !== null
   );
+}
+
+/**
+ * Server thread hydration is eventually consistent with the live durable-event
+ * watcher. Never let an older server seed (or a temporary null seed after the
+ * server clears active_run_id) erase a newer terminal state already observed
+ * by this browser.
+ */
+export function shouldApplyInitialActiveTurn(
+  current: ActiveTurnState,
+  incoming: ActiveTurnState | null,
+): boolean {
+  if (incoming === null) {
+    return current.status !== "failed" && current.status !== "cancelled";
+  }
+  if (
+    current.runId &&
+    current.runId === incoming.runId &&
+    current.lastSeq > incoming.lastSeq
+  ) {
+    return false;
+  }
+  return true;
 }

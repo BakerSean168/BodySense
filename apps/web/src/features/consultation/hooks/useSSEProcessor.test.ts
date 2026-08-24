@@ -62,6 +62,30 @@ describe("seq tracking and replay", () => {
     expect(state.maxSeq).toBe(5);
   });
 
+  it("dispatches run.cancelled through the live/replay handler map", () => {
+    const onRunCancelled = vi.fn();
+    const state = dispatchReplayEvents(
+      [
+        {
+          version: 1,
+          seq: 9,
+          channel: "run",
+          type: "run.cancelled",
+          ids: {
+            conversation_id: "conversation-1",
+            run_id: "run-1",
+            turn_id: "turn-1",
+          },
+          payload: { status: "cancelled", reason: "cancelled_by_user" },
+        } as never,
+      ],
+      { onRunCancelled },
+    );
+
+    expect(onRunCancelled).toHaveBeenCalledTimes(1);
+    expect(state.maxSeq).toBe(9);
+  });
+
   it("dispatchReplayEvents skips already-seen seq and advances maxSeq", () => {
     const onTextDelta = vi.fn();
     const handlers: SSEHandlers = { onTextDelta };

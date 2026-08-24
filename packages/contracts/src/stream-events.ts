@@ -93,7 +93,7 @@ export type RunCompletedEvent = StreamEventBase<
 export type RunFailedEvent = StreamEventBase<
   "run",
   "run.failed",
-  { status: "failed"; error: { message: string } }
+  { status: "failed"; error?: { message: string }; reason?: string }
 >;
 
 export type RunCancelledEvent = StreamEventBase<

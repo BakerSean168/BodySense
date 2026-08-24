@@ -17,6 +17,8 @@ import { StreamingTurnToolCalls } from "./StreamingTurnToolCalls";
 import { RedFlagBanner } from "./RedFlagBanner";
 import { AskUserStatusCard } from "./AskUserStatusCard";
 import { AskUserCard } from "./AskUserCard";
+import { FailedRunStatusCard } from "./FailedRunStatusCard";
+import { CancelledRunStatusCard } from "./CancelledRunStatusCard";
 
 interface StreamingAssistantTurnProps {
   onInteractionSubmit?: (answer: unknown) => void;
@@ -36,7 +38,13 @@ export function StreamingAssistantTurn({
   const { dismissRedFlag } = useActiveTurnActions();
 
   // Don't render if there's nothing to show
-  if (!vm.hasVisibleContent && !vm.isRunning && !vm.isInterrupted) {
+  if (
+    !vm.hasVisibleContent &&
+    !vm.isRunning &&
+    !vm.isInterrupted &&
+    !vm.isFailed &&
+    !vm.isCancelled
+  ) {
     return null;
   }
 
@@ -45,7 +53,9 @@ export function StreamingAssistantTurn({
     (vm.pendingInteraction !== null &&
       vm.pendingInteraction.status === "answered") ||
     (vm.isInterrupted && vm.pendingInteraction !== null) ||
-    (vm.isRunning && !vm.streamingMarkdown && vm.toolCalls.length === 0);
+    (vm.isRunning && !vm.streamingMarkdown && vm.toolCalls.length === 0) ||
+    vm.isFailed ||
+    vm.isCancelled;
 
   if (!shouldRenderTimelineShell) {
     return null;
@@ -56,6 +66,10 @@ export function StreamingAssistantTurn({
       {vm.pendingInteraction && (
         <AskUserStatusCard interaction={vm.pendingInteraction} />
       )}
+
+      {vm.isFailed && <FailedRunStatusCard message={vm.error} />}
+
+      {vm.isCancelled && <CancelledRunStatusCard />}
 
       {vm.pendingInteraction?.status === "pending" && onInteractionSubmit && (
         <div className="flex justify-start">

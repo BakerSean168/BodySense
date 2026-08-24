@@ -112,7 +112,7 @@ export function SessionHistorySidebar({
           <DialogHeader>
             <DialogTitle>确认清空</DialogTitle>
             <DialogDescription>
-              此操作将删除所有会话记录，且不可恢复。确定要继续吗？
+              此操作只删除全部会话历史和对应分享，且不可恢复；不会删除 BodyState、诊断、治疗、训练、结果或上传文件。完整数据删除请前往“身体档案 → 数据与隐私”。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

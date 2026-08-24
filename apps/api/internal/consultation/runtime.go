@@ -267,6 +267,8 @@ func (r *Runtime) StartRun(
 	defer cancelExecution()
 	unregisterCancellation := r.registerRunCancellation(run.ID, cancelExecution)
 	defer unregisterCancellation()
+	stopLeaseHeartbeat := r.runService.StartLeaseHeartbeat(executionCtx, run.ID, uid)
+	defer stopLeaseHeartbeat()
 
 	sw := r.streamRuntime.NewWriter(w, baseIDs)
 	r.sendNewEvent(
@@ -709,6 +711,8 @@ func (r *Runtime) ResumeInteraction(
 	defer cancelExecution()
 	unregisterCancellation := r.registerRunCancellation(run.ID, cancelExecution)
 	defer unregisterCancellation()
+	stopLeaseHeartbeat := r.runService.StartLeaseHeartbeat(executionCtx, run.ID, uid)
+	defer stopLeaseHeartbeat()
 
 	profileJSON, profileErr := r.loadProfileJSON(executionCtx, uid)
 	if profileErr != nil {

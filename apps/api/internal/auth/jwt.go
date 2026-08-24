@@ -23,7 +23,7 @@ type JWTConfig struct {
 // JWTConfigFromEnv reads JWT config from environment variables.
 // Panics if JWT_SECRET_KEY is not set, to prevent running with a publicly known key.
 func JWTConfigFromEnv() JWTConfig {
-	accessTTL := getEnvAsDuration("JWT_ACCESS_TTL_HOURS", 2)       // 2 hours default for health app
+	accessTTL := getEnvAsDuration("JWT_ACCESS_TTL_HOURS", 0.25) // 15 minutes default for a health app
 	refreshTTL := getEnvAsDuration("JWT_REFRESH_TTL_HOURS", 30*24) // 30 days
 
 	secret := os.Getenv("JWT_SECRET_KEY")
@@ -40,16 +40,20 @@ func JWTConfigFromEnv() JWTConfig {
 
 // Claims represents the JWT claims.
 type Claims struct {
-	UserID uuid.UUID `json:"user_id"`
-	Email  string    `json:"email"`
+	UserID    uuid.UUID `json:"user_id"`
+	Email     string    `json:"email"`
+	SessionID uuid.UUID `json:"session_id,omitempty"`
 	jwt.RegisteredClaims
 }
 
 // GenerateAccessToken creates a new access token for the user.
-func GenerateAccessToken(cfg JWTConfig, userID uuid.UUID, email string) (string, error) {
+// sessionID ties the token to a single login session so logout (or account
+// deletion) can revoke the whole session family via the session cache.
+func GenerateAccessToken(cfg JWTConfig, userID, sessionID uuid.UUID, email string) (string, error) {
 	claims := Claims{
-		UserID: userID,
-		Email:  email,
+		UserID:    userID,
+		Email:     email,
+		SessionID: sessionID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(cfg.AccessTokenTTL)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -103,11 +107,11 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
-func getEnvAsDuration(key string, defaultHours int) time.Duration {
+func getEnvAsDuration(key string, defaultHours float64) time.Duration {
 	if v := os.Getenv(key); v != "" {
-		if hours, err := strconv.Atoi(v); err == nil {
-			return time.Duration(hours) * time.Hour
+		if hours, err := strconv.ParseFloat(v, 64); err == nil {
+			return time.Duration(hours * float64(time.Hour))
 		}
 	}
-	return time.Duration(defaultHours) * time.Hour
+	return time.Duration(defaultHours * float64(time.Hour))
 }

@@ -3,11 +3,13 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
 	"time"
 
+	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
@@ -35,6 +37,7 @@ type messageRepo interface {
 	GetByID(ctx context.Context, id, conversationID uuid.UUID) (*model.Message, error)
 	ListByConversationID(ctx context.Context, conversationID uuid.UUID) ([]model.Message, error)
 	UpdateStatus(ctx context.Context, id, conversationID uuid.UUID, status string) error
+	FailStreamingAssistantByRunID(ctx context.Context, runID, conversationID uuid.UUID, errorPayload any) (*model.Message, error)
 	UpdateParts(ctx context.Context, id, conversationID uuid.UUID, parts any) error
 	UpdateCompleted(ctx context.Context, id, conversationID uuid.UUID, parts any, usage map[string]any, providerInfo map[string]any) error
 	UpdateCompletedWithStatus(ctx context.Context, id, conversationID uuid.UUID, parts any, status string) error
@@ -53,6 +56,8 @@ type runRepo interface {
 	CancelRun(ctx context.Context, id, userID uuid.UUID, reason any) (bool, error)
 	FailRun(ctx context.Context, id, userID uuid.UUID, errJSON any) error
 	UpdateAgentConfiguration(ctx context.Context, id uuid.UUID, configurationID string, configuration datatypes.JSON, provenance datatypes.JSON) error
+	RenewLease(ctx context.Context, id, userID uuid.UUID, owner string, expiresAt, heartbeatAt time.Time) (bool, error)
+	ReclaimExpiredRuns(ctx context.Context, now time.Time, limit int) ([]model.Run, error)
 }
 
 type shareRepo interface {
@@ -70,6 +75,7 @@ type ConversationService struct {
 	runRepo          runRepo
 	shareRepo        shareRepo
 	aiClient         *AIClient
+	txManager        *database.TransactionManager
 	deployment       *AgentDeploymentPolicy
 }
 
@@ -80,6 +86,7 @@ func NewConversationService(
 	runRepo runRepo,
 	shareRepo shareRepo,
 	aiClient *AIClient,
+	txManager *database.TransactionManager,
 ) *ConversationService {
 	return &ConversationService{
 		conversationRepo: conversationRepo,
@@ -87,6 +94,7 @@ func NewConversationService(
 		runRepo:          runRepo,
 		shareRepo:        shareRepo,
 		aiClient:         aiClient,
+		txManager:        txManager,
 	}
 }
 
@@ -154,21 +162,79 @@ func (s *ConversationService) ListConversations(ctx context.Context, userID uuid
 	return conversations, hasMore, nil
 }
 
-// DeleteConversation soft-deletes a conversation with ownership check.
+// DeleteConversation soft-deletes a conversation and revokes any shares in one
+// transaction. The conversation_shares FK cascade never fires for soft deletes,
+// so revocation must be explicit and atomic with the delete: a failure to revoke
+// rolls the whole operation back instead of leaving share tokens live.
 func (s *ConversationService) DeleteConversation(ctx context.Context, id, userID uuid.UUID) error {
-	// Verify ownership
-	conversation, err := s.conversationRepo.GetByID(ctx, id, userID)
-	if err != nil {
-		return fmt.Errorf("get conversation for delete: %w", err)
+	if s.txManager == nil {
+		return fmt.Errorf("delete conversation: transaction manager is not configured")
 	}
-	if conversation == nil {
-		return fmt.Errorf("conversation not found: %s", id)
+	return s.txManager.WithinTransaction(ctx, func(txCtx context.Context) error {
+		// Verify ownership
+		conversation, err := s.conversationRepo.GetByID(txCtx, id, userID)
+		if err != nil {
+			return fmt.Errorf("get conversation for delete: %w", err)
+		}
+		if conversation == nil {
+			return fmt.Errorf("conversation not found: %s", id)
+		}
+
+		// Revoke shares so shared tokens stop resolving after deletion.
+		if err := s.shareRepo.DeleteByConversationID(txCtx, id); err != nil {
+			return fmt.Errorf("revoke conversation shares: %w", err)
+		}
+
+		if err := s.conversationRepo.SoftDelete(txCtx, id, userID); err != nil {
+			return fmt.Errorf("delete conversation: %w", err)
+		}
+		return nil
+	})
+}
+
+// FinalizeExecutionLostProjection atomically converts the durable conversation
+// projection for a reclaimed run from "active/streaming" to "failed/inactive".
+// ReclaimExpiredRuns decides the terminal winner first; this method makes the
+// persisted assistant message and conversation pointer agree before the public
+// run.failed event becomes observable to recovering browsers.
+func (s *ConversationService) FinalizeExecutionLostProjection(
+	ctx context.Context,
+	run *model.Run,
+) (*model.Message, error) {
+	if run == nil {
+		return nil, nil
+	}
+	if s.txManager == nil {
+		return nil, errors.New("finalize execution lost: transaction manager is not configured")
+	}
+	if s.messageRepo == nil || s.conversationRepo == nil {
+		return nil, errors.New("finalize execution lost: conversation/message repository is not configured")
 	}
 
-	if err := s.conversationRepo.SoftDelete(ctx, id, userID); err != nil {
-		return fmt.Errorf("delete conversation: %w", err)
+	errorPayload := map[string]any{
+		"code":    "execution_lost",
+		"message": "run execution lost; lease expired",
 	}
-	return nil
+	var failedMessage *model.Message
+	err := s.txManager.WithinTransaction(ctx, func(txCtx context.Context) error {
+		message, err := s.messageRepo.FailStreamingAssistantByRunID(
+			txCtx, run.ID, run.ConversationID, errorPayload,
+		)
+		if err != nil {
+			return fmt.Errorf("fail reclaimed assistant message: %w", err)
+		}
+		failedMessage = message
+		if err := s.conversationRepo.UpdateActiveRunID(
+			txCtx, run.ConversationID, run.UserID, nil, "",
+		); err != nil {
+			return fmt.Errorf("clear reclaimed active run: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return failedMessage, nil
 }
 
 // PinConversation pins or unpins a conversation with ownership check.

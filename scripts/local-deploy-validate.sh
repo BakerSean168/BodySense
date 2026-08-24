@@ -109,6 +109,7 @@ migration_db="bodysense_migration_validator"
 
 E2E_BASE_URL="http://127.0.0.1:${WEB_PORT}" \
 E2E_API_BASE_URL="http://127.0.0.1:${API_PORT}" \
+E2E_RESTART_API_COMMAND="$repo_root/scripts/e2e-expire-run-and-restart-api.sh" \
 pnpm e2e
 
 shadow_observations="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM diagnosis_rollout_observations WHERE stage='shadow' AND champion_configuration_id='diag-config-f492eb1c0c6676ae' AND challenger_configuration_id='diag-config-5a4a13627e14b4cf';")"

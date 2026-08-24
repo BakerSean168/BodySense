@@ -506,6 +506,41 @@ describe("ActiveTurnReducer", () => {
       expect(state.status).toBe("failed");
       expect(state.error).toBe("generation failed");
     });
+
+    it("keeps execution_lost user copy when message.failed follows run.failed", () => {
+      const started = reduceActiveTurnEvent(
+        INITIAL_ACTIVE_TURN_STATE,
+        makeEvent("run.started", { status: "running" }, { run_id: "run-lost-message" }, "run"),
+      ).state;
+      const runFailed = reduceActiveTurnEvent(
+        started,
+        makeEvent(
+          "run.failed",
+          { status: "failed", reason: "execution_lost" },
+          { run_id: "run-lost-message" },
+          "run",
+        ),
+      ).state;
+      const messageFailed = reduceActiveTurnEvent(
+        runFailed,
+        makeEvent(
+          "message.failed",
+          {
+            status: "failed",
+            error: {
+              code: "execution_lost",
+              message: "run execution lost; lease expired",
+            },
+          },
+          { run_id: "run-lost-message", message_id: "msg-lost" },
+          "message",
+        ),
+      ).state;
+
+      expect(messageFailed.status).toBe("failed");
+      expect(messageFailed.error).toContain("系统已安全回收");
+      expect(messageFailed.error).not.toContain("lease expired");
+    });
   });
 
   describe("interrupt/resume lifecycle", () => {
@@ -686,4 +721,37 @@ describe("ActiveTurnReducer deterministic replay", () => {
     const done = reduceActiveTurnEvent(cancelled, makeEvent("stream.done", {}, { run_id: "run-c" }, "stream")).state;
     expect(done.status).toBe("cancelled");
   });
+  it("surfaces execution_lost as a recoverable failed state", () => {
+    const started = reduceActiveTurnEvent(INITIAL_ACTIVE_TURN_STATE, {
+      version: 1,
+      seq: 1,
+      channel: "run",
+      type: "run.started",
+      ids: {
+        conversation_id: "conversation-1",
+        run_id: "run-lost",
+        turn_id: "turn-1",
+      },
+      payload: { status: "running" },
+    } as never).state;
+
+    const result = reduceActiveTurnEvent(started, {
+      version: 1,
+      seq: 2,
+      channel: "run",
+      type: "run.failed",
+      ids: {
+        conversation_id: "conversation-1",
+        run_id: "run-lost",
+        turn_id: "turn-1",
+      },
+      payload: { status: "failed", reason: "execution_lost" },
+    } as never);
+
+    expect(result.state.status).toBe("failed");
+    expect(result.state.runId).toBe("run-lost");
+    expect(result.state.error).toContain("安全回收");
+    expect(result.state.pendingInteraction).toBeNull();
+  });
+
 });

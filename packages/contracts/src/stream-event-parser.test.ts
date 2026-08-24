@@ -29,6 +29,27 @@ describe("parseStreamEvent", () => {
     expect(() => parseStreamEvent(input)).toThrow(message as string);
   });
 
+  it("accepts execution_lost as a durable run.failed reason", () => {
+    const event = {
+      ...valid,
+      channel: "run",
+      type: "run.failed",
+      payload: { status: "failed", reason: "execution_lost" },
+    };
+    expect(parseStreamEvent(event)).toEqual(event);
+  });
+
+  it("rejects run.failed without either a reason or structured error", () => {
+    expect(() =>
+      parseStreamEvent({
+        ...valid,
+        channel: "run",
+        type: "run.failed",
+        payload: { status: "failed" },
+      }),
+    ).toThrow("requires reason or error");
+  });
+
   it("validates authority-relevant safety payload", () => {
     expect(() =>
       parseStreamEvent({

@@ -22,6 +22,7 @@ export async function authFetch(
   }
 
   // Make the request
+  fetchOptions.credentials ??= "same-origin";
   let response = await fetch(apiUrl(url), fetchOptions);
 
   // If 401 and not skipped, try to refresh token
@@ -74,11 +75,11 @@ export const authApi = {
     return safeJson(response);
   },
 
-  logout: async (refreshToken: string) => {
+  logout: async () => {
     const response = await authFetch("/api/v1/auth/logout", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refresh_token: refreshToken }),
+      skipAuth: true,
+      credentials: "include",
     });
 
     return safeJson(response);

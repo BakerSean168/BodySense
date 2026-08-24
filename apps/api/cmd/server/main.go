@@ -19,6 +19,7 @@ import (
 	"github.com/bodysense/api/internal/repository"
 	"github.com/bodysense/api/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 )
 
@@ -46,14 +47,21 @@ func main() {
 		log.Fatalf("Redis connection failed: %v", err)
 	}
 
-	// JWT config
+	// JWT + browser auth security configuration.
 	jwtConfig := auth.JWTConfigFromEnv()
+	corsOrigins := parseCORSOrigins()
+	authSecurity := handler.DefaultAuthSecurityConfig(jwtConfig.RefreshTokenTTL)
+	authSecurity.CookieSecure = strings.EqualFold(os.Getenv("APP_ENV"), "production")
+	authSecurity.RequireOrigin = authSecurity.CookieSecure
+	authSecurity.TrustedOrigins = corsOrigins
+	authSecurity.RateLimiter = auth.NewRedisRateLimiter(database.RedisClient, "bodysense:auth:rate")
 
 	// Initialize dependencies
 	userRepo := repository.NewUserRepository(database.DB)
 	profileRepo := repository.NewProfileRepository(database.DB)
 	uploadRepo := repository.NewUploadRepository(database.DB)
-	consultationRepo := repository.NewConsultationRepository(database.DB)
+	leaseOwner := uuid.NewString()
+	consultationRepo := repository.NewConsultationRepository(database.DB, leaseOwner)
 	bodyStateRepo := repository.NewBodyStateRepository(database.DB)
 	diagnosisAnalysisRepo := repository.NewDiagnosisAnalysisRepository(database.DB)
 	diagnosisFreshnessRepo := repository.NewDiagnosisFreshnessRepository(database.DB)
@@ -66,10 +74,21 @@ func main() {
 	threadProjectionRepo := repository.NewThreadProjectionRepository(database.DB)
 	shareRepo := repository.NewConversationShareRepository(database.DB)
 
-	// User session cache (Redis-backed, TTL = 2x access token TTL)
-	sessionCache := cache.NewUserSessionCache(database.RedisClient, jwtConfig.AccessTokenTTL*2)
+	// User session cache (Redis-backed). Sessions live as long as their refresh
+	// token, so the session TTL matches the refresh-token TTL and outlives the
+	// short-lived access token.
+	sessionCache := cache.NewUserSessionCache(database.RedisClient, jwtConfig.RefreshTokenTTL)
 
 	authService := service.NewAuthService(userRepo, jwtConfig, sessionCache)
+	privacyErasureRepo := repository.NewPrivacyErasureRepository(database.DB)
+	privacyErasureService := service.NewPrivacyErasureService(
+		privacyErasureRepo,
+		userRepo,
+		authService,
+		service.NewLocalUserObjectCleaner(service.UploadDir),
+		database.NewTransactionManager(database.DB),
+	)
+	privacyErasureService.StartWorker(context.Background(), time.Minute)
 	profileService := service.NewProfileService(profileRepo)
 	jobRepo := repository.NewJobRepository(database.DB)
 	jobRuntime := service.NewJobRuntime(jobRepo)
@@ -80,9 +99,9 @@ func main() {
 	}
 	messageService := service.NewMessageService(messageRepo)
 	contextRetrievalService := service.NewContextRetrievalService(messageContextRepo)
-	runService := service.NewRunService(runRepo)
+	runService := service.NewRunService(runRepo, leaseOwner)
 	runtimeEventService := service.NewRuntimeEventService(runtimeEventRepo)
-	conversationService := service.NewConversationService(conversationRepo, messageRepo, runRepo, shareRepo, aiClient).WithAgentDeployment(agentDeploymentPolicy)
+	conversationService := service.NewConversationService(conversationRepo, messageRepo, runRepo, shareRepo, aiClient, database.NewTransactionManager(database.DB)).WithAgentDeployment(agentDeploymentPolicy)
 	shareService := service.NewShareService(conversationRepo, messageRepo, shareRepo)
 	consultationService := service.NewConsultationService(consultationRepo, conversationRepo)
 	bodyStateService := service.NewBodyStateService(bodyStateRepo)
@@ -113,12 +132,13 @@ func main() {
 		database.NewTransactionManager(database.DB),
 	).WithAssessmentDeployment(agentDeploymentPolicy).
 		WithAssessmentRollout(assessmentRolloutService)
-	authHandler := handler.NewAuthHandler(authService)
+	authHandler := handler.NewAuthHandler(authService, authSecurity)
+	privacyHandler := handler.NewPrivacyHandler(privacyErasureService, authHandler)
 	profileHandler := handler.NewProfileHandler(profileService)
 	agentToolRepo := repository.NewAgentToolCallRepository(database.DB)
 	agentToolService := service.NewAgentToolService(agentToolRepo)
 	interactionRepo := repository.NewAgentInteractionRepository(database.DB)
-	interactionService := service.NewAgentInteractionService(interactionRepo, runRepo)
+	interactionService := service.NewAgentInteractionService(interactionRepo, runRepo, conversationRepo)
 	interactionService.StartInteractionExpiryWorker(
 		context.Background(),
 		time.Minute,
@@ -161,6 +181,7 @@ func main() {
 	consultationRuntime.AttachRolloutService(
 		service.NewConsultationRolloutService(consultationRolloutRepo),
 	)
+	startRunLeaseReconciler(runService, conversationService, runtimeEventService)
 	knowledgePublicationRepo := repository.NewKnowledgePublicationRepository(database.DB)
 	knowledgeObservationRepo := repository.NewKnowledgePublicationObservationRepository(database.DB)
 	consultationRuntime.AttachKnowledgeObservationService(
@@ -230,11 +251,19 @@ func main() {
 	}
 
 	r := gin.Default()
+	if err := r.SetTrustedProxies(parseTrustedProxies()); err != nil {
+		log.Fatalf("invalid TRUSTED_PROXIES configuration: %v", err)
+	}
 
-	// CORS middleware
-	corsOrigins := parseCORSOrigins()
+	// CORS middleware. Production is same-origin, but explicit credentialed
+	// CORS remains available for bounded development/test topologies.
 	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", resolveCORSOrigin(c.Request.Header.Get("Origin"), corsOrigins))
+		origin := resolveCORSOrigin(c.Request.Header.Get("Origin"), corsOrigins)
+		if origin != "" {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+			c.Writer.Header().Add("Vary", "Origin")
+		}
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
@@ -289,6 +318,8 @@ func main() {
 	protected.Use(middleware.AuthMiddleware(jwtConfig, userRepo, sessionCache))
 	{
 		protected.GET("/me", authHandler.Me)
+		protected.GET("/privacy/erasure-plan", privacyHandler.PlanErasure)
+		protected.POST("/privacy/erasure", privacyHandler.RequestErasure)
 		protected.GET("/profile", profileHandler.GetProfile)
 		protected.PUT("/profile", profileHandler.CreateOrUpdateProfile)
 
@@ -402,6 +433,44 @@ func main() {
 	}
 }
 
+func startRunLeaseReconciler(
+	runService *service.RunService,
+	conversationService *service.ConversationService,
+	runtimeEventService *service.RuntimeEventService,
+) {
+	reconcile := func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		runs, err := runService.ReconcileExpiredRuns(ctx, 100)
+		if err != nil {
+			log.Printf("run lease reconciliation failed: %v", err)
+			return
+		}
+		for i := range runs {
+			run := &runs[i]
+			failedMessage, err := conversationService.FinalizeExecutionLostProjection(ctx, run)
+			if err != nil {
+				log.Printf("finalize execution-lost projection for run %s: %v", run.ID, err)
+			}
+			if err := runtimeEventService.RecordRunExecutionLost(ctx, run); err != nil {
+				log.Printf("record execution-lost event for run %s: %v", run.ID, err)
+			}
+			if err := runtimeEventService.RecordMessageExecutionLost(ctx, run, failedMessage); err != nil {
+				log.Printf("record execution-lost message event for run %s: %v", run.ID, err)
+			}
+		}
+	}
+
+	go func() {
+		reconcile()
+		ticker := time.NewTicker(time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			reconcile()
+		}
+	}()
+}
+
 func parseCORSOrigins() []string {
 	raw := os.Getenv("CORS_ORIGINS")
 	if raw == "" {
@@ -428,11 +497,28 @@ func parseCORSOrigins() []string {
 func resolveCORSOrigin(requestOrigin string, allowed []string) string {
 	for _, origin := range allowed {
 		if origin == "*" {
-			return "*"
+			// Credentialed CORS cannot use a wildcard response. Reflect the
+			// requesting origin only in explicitly wildcard development mode.
+			return requestOrigin
 		}
 		if requestOrigin != "" && origin == requestOrigin {
 			return requestOrigin
 		}
 	}
-	return allowed[0]
+	return ""
+}
+
+func parseTrustedProxies() []string {
+	raw := strings.TrimSpace(os.Getenv("TRUSTED_PROXIES"))
+	if raw == "" {
+		return []string{"127.0.0.1", "::1"}
+	}
+	parts := strings.Split(raw, ",")
+	proxies := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if proxy := strings.TrimSpace(part); proxy != "" {
+			proxies = append(proxies, proxy)
+		}
+	}
+	return proxies
 }

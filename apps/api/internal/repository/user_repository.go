@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -65,5 +66,5 @@ func (r *UserRepository) EmailExists(ctx context.Context, email string) (bool, e
 // DeleteByID deletes a user by ID.
 // WARNING: Callers must also invalidate the user's session cache.
 func (r *UserRepository) DeleteByID(ctx context.Context, id uuid.UUID) error {
-	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&model.User{}).Error
+	return database.FromContext(ctx, r.db).Where("id = ?", id).Delete(&model.User{}).Error
 }

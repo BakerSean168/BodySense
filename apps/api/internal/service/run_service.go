@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
@@ -12,14 +13,24 @@ import (
 
 var ErrRunTerminal = errors.New("run is already terminal")
 
+// runLeaseDuration bounds how long a run may sit in the running state before
+// the runtime is assumed dead and the run is reclaimed. It is comfortably
+// larger than the SSE timeout so live runs never expire their lease.
+const runLeaseDuration = 30 * time.Minute
+
 // RunService handles run business logic.
 type RunService struct {
-	runRepo runRepo
+	runRepo    runRepo
+	leaseOwner string
 }
 
 // NewRunService creates a new RunService.
-func NewRunService(runRepo runRepo) *RunService {
-	return &RunService{runRepo: runRepo}
+func NewRunService(runRepo runRepo, leaseOwners ...string) *RunService {
+	owner := uuid.NewString()
+	if len(leaseOwners) > 0 && leaseOwners[0] != "" {
+		owner = leaseOwners[0]
+	}
+	return &RunService{runRepo: runRepo, leaseOwner: owner}
 }
 
 // CreateRun creates a new LLM inference run.
@@ -39,7 +50,9 @@ func (s *RunService) CreateRun(
 		UserID:         userID,
 		Status:         "running",
 		Model:          modelStr,
+		LeaseOwner:     s.leaseOwner,
 	}
+	run.LeaseExpiresAt = leaseExpiry()
 	if err := s.runRepo.Create(ctx, run); err != nil {
 		return nil, fmt.Errorf("create run: %w", err)
 	}
@@ -65,7 +78,9 @@ func (s *RunService) CreateRunWithIdempotency(
 		UserID:         userID,
 		Status:         "running",
 		Model:          modelStr,
+		LeaseOwner:     s.leaseOwner,
 	}
+	run.LeaseExpiresAt = leaseExpiry()
 	result, existed, err := s.runRepo.CreateWithIdempotency(ctx, run)
 	if err != nil {
 		return nil, false, fmt.Errorf("create run: %w", err)
@@ -181,6 +196,36 @@ func (s *RunService) ResumeRunning(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+const runLeaseHeartbeatInterval = 1 * time.Minute
+
+// StartLeaseHeartbeat renews a running execution until the context ends. The
+// owner-bound update makes a stale process unable to resurrect a reclaimed run.
+func (s *RunService) StartLeaseHeartbeat(ctx context.Context, id, userID uuid.UUID) func() {
+	heartbeatCtx, cancel := context.WithCancel(ctx)
+	go func() {
+		ticker := time.NewTicker(runLeaseHeartbeatInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-heartbeatCtx.Done():
+				return
+			case now := <-ticker.C:
+				expires := now.Add(runLeaseDuration)
+				alive, err := s.runRepo.RenewLease(heartbeatCtx, id, userID, s.leaseOwner, expires, now)
+				if err != nil || !alive {
+					return
+				}
+			}
+		}
+	}()
+	return cancel
+}
+
+// ReconcileExpiredRuns reclaims process-dead running executions.
+func (s *RunService) ReconcileExpiredRuns(ctx context.Context, limit int) ([]model.Run, error) {
+	return s.runRepo.ReclaimExpiredRuns(ctx, time.Now(), limit)
+}
+
 // UpdateAgentConfiguration persists the immutable Agent configuration +
 // execution provenance captured from the runtime.agent_configuration event.
 func (s *RunService) UpdateAgentConfiguration(
@@ -194,4 +239,13 @@ func (s *RunService) UpdateAgentConfiguration(
 		return fmt.Errorf("update run agent configuration: %w", err)
 	}
 	return nil
+}
+
+// leaseExpiry returns the timestamp at which a newly-created run's lease
+// expires. The runtime extends the lease as long as the run is actively
+// streaming; an un-renewed expiry means the owning process died and the run
+// may be reclaimed.
+func leaseExpiry() *time.Time {
+	expires := time.Now().Add(runLeaseDuration)
+	return &expires
 }

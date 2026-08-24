@@ -9,6 +9,8 @@ import { FileUploader, UploadList } from "../components/uploads";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { PrivacyPanel } from "../components/privacy/PrivacyPanel";
+import { useAuthStore } from "@/stores/authStore";
 
 export function ProfilePage() {
   const navigate = useNavigate();
@@ -16,7 +18,8 @@ export function ProfilePage() {
     useProfileStore();
   const { uploads, fetchUploads } = useUploadStore();
   const [isEditing, setIsEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState<"profile" | "uploads">("profile");
+  const forgetSession = useAuthStore((state) => state.forgetSession);
+  const [activeTab, setActiveTab] = useState<"profile" | "uploads" | "privacy">("profile");
 
   useEffect(() => {
     fetchProfile();
@@ -110,6 +113,17 @@ export function ProfilePage() {
                   {uploads.length}
                 </span>
               )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("privacy")}
+              className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === "privacy"
+                  ? "border-primary-500 text-primary-600"
+                  : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+              }`}
+            >
+              数据与隐私
             </button>
           </nav>
         </div>
@@ -211,6 +225,15 @@ export function ProfilePage() {
                 <UploadList />
               </Card>
             </div>
+          )}
+
+          {activeTab === "privacy" && (
+            <PrivacyPanel
+              onErasureAccepted={() => {
+                forgetSession();
+                navigate("/login", { replace: true });
+              }}
+            />
           )}
         </div>
       </div>

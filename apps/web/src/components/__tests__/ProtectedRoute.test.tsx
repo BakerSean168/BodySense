@@ -36,7 +36,6 @@ describe("ProtectedRoute", () => {
       useAuthStore.setState({
         user: null,
         accessToken: null,
-        refreshToken: null,
         isAuthenticated: false,
         hasHydrated: false,
         isAuthResolved: false,

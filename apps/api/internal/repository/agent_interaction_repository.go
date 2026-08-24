@@ -133,9 +133,12 @@ func (r *AgentInteractionRepository) ListExpiredPending(ctx context.Context, now
 }
 
 // AggregateInteractionMetrics projects answer/expire/pending counts and average wait.
-// conversationID nil => global aggregate.
+// Always scoped to the owning user via the conversations join, so a caller can
+// never read another user's interaction metrics. conversationID nil => all of the
+// user's conversations.
 func (r *AgentInteractionRepository) AggregateInteractionMetrics(
 	ctx context.Context,
+	userID uuid.UUID,
 	conversationID *uuid.UUID,
 ) (answered, expired, pending int, avgWaitSeconds float64, err error) {
 	type row struct {
@@ -143,10 +146,12 @@ func (r *AgentInteractionRepository) AggregateInteractionMetrics(
 		Count  int
 	}
 	q := r.db.WithContext(ctx).Model(&model.AgentInteraction{}).
-		Select("status, count(*) as count").
-		Group("status")
+		Joins("JOIN conversations ON conversations.id = agent_interactions.conversation_id").
+		Select("agent_interactions.status, count(*) as count").
+		Where("conversations.user_id = ? AND conversations.deleted_at IS NULL", userID).
+		Group("agent_interactions.status")
 	if conversationID != nil {
-		q = q.Where("conversation_id = ?", *conversationID)
+		q = q.Where("agent_interactions.conversation_id = ?", *conversationID)
 	}
 	var rows []row
 	if err = q.Scan(&rows).Error; err != nil {
@@ -169,10 +174,12 @@ func (r *AgentInteractionRepository) AggregateInteractionMetrics(
 	}
 	var wait waitRow
 	wq := r.db.WithContext(ctx).Model(&model.AgentInteraction{}).
-		Select("COALESCE(AVG(EXTRACT(EPOCH FROM (answered_at - created_at))), 0) as avg").
-		Where("status = ? AND answered_at IS NOT NULL", "answered")
+		Joins("JOIN conversations ON conversations.id = agent_interactions.conversation_id").
+		Select("COALESCE(AVG(EXTRACT(EPOCH FROM (agent_interactions.answered_at - agent_interactions.created_at))), 0) as avg").
+		Where("conversations.user_id = ? AND conversations.deleted_at IS NULL", userID).
+		Where("agent_interactions.status = ? AND agent_interactions.answered_at IS NOT NULL", "answered")
 	if conversationID != nil {
-		wq = wq.Where("conversation_id = ?", *conversationID)
+		wq = wq.Where("agent_interactions.conversation_id = ?", *conversationID)
 	}
 	if err = wq.Scan(&wait).Error; err != nil {
 		return

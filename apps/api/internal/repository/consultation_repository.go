@@ -14,12 +14,17 @@ import (
 
 // ConsultationRepository handles database operations for consultation sessions.
 type ConsultationRepository struct {
-	db *gorm.DB
+	db         *gorm.DB
+	leaseOwner string
 }
 
 // NewConsultationRepository creates a new ConsultationRepository.
-func NewConsultationRepository(db *gorm.DB) *ConsultationRepository {
-	return &ConsultationRepository{db: db}
+func NewConsultationRepository(db *gorm.DB, leaseOwners ...string) *ConsultationRepository {
+	owner := uuid.NewString()
+	if len(leaseOwners) > 0 && leaseOwners[0] != "" {
+		owner = leaseOwners[0]
+	}
+	return &ConsultationRepository{db: db, leaseOwner: owner}
 }
 
 // Create creates a new consultation session.
@@ -141,17 +146,7 @@ func (r *ConsultationRepository) CreateRunEnvelope(
 			return err
 		}
 		if lockedConversation.ActiveRunID != nil {
-			var active model.Run
-			activeErr := tx.WithContext(ctx).Where("id = ?", *lockedConversation.ActiveRunID).First(&active).Error
-			if activeErr == nil && (active.Status == "running" || active.Status == "waiting_user") {
-				return model.ErrConversationRunInProgress
-			}
-			if activeErr != nil && !errors.Is(activeErr, gorm.ErrRecordNotFound) {
-				return activeErr
-			}
-			if err := tx.WithContext(ctx).Model(&model.Conversation{}).
-				Where("id = ? AND user_id = ?", resolvedConversationID, userID).
-				Updates(map[string]any{"active_run_id": nil, "active_stream_id": ""}).Error; err != nil {
+			if err := r.handleActiveRun(ctx, tx, resolvedConversationID, *lockedConversation.ActiveRunID); err != nil {
 				return err
 			}
 		}
@@ -174,6 +169,8 @@ func (r *ConsultationRepository) CreateRunEnvelope(
 			UserID:         userID,
 			Status:         "running",
 			Model:          modelName,
+			LeaseOwner:     r.leaseOwner,
+			LeaseExpiresAt: runLeaseExpiry(),
 		}
 
 		result := tx.WithContext(ctx).Clauses(clause.OnConflict{
@@ -238,29 +235,88 @@ func (r *ConsultationRepository) CreateRunEnvelope(
 	return session, run, userMsg, assistantMsg, turnID, existed, nil
 }
 
+// runLeaseDuration bounds how long a running run may sit before it is
+// reclaimed. Runtime heartbeats renew the lease via the SSE loop, whose
+// timeout is well below this so live runs never expire their lease.
+const runLeaseDuration = 30 * time.Minute
+
+// runLeaseExpiry returns the lease deadline for a newly-created run.
+func runLeaseExpiry() *time.Time {
+	expires := time.Now().Add(runLeaseDuration)
+	return &expires
+}
+
+// handleActiveRun inspects the conversation's active run and decides whether a
+// new run may proceed. It returns nil when the pointer may be cleared and the
+// caller may proceed (terminal run, or a stale running run whose lease has
+// expired and is reclaimed as failed), or model.ErrConversationRunInProgress
+// when a live run or a run blocked on user input is still in progress.
+func (r *ConsultationRepository) handleActiveRun(
+	ctx context.Context,
+	tx *gorm.DB,
+	conversationID uuid.UUID,
+	activeRunID uuid.UUID,
+) error {
+	var active model.Run
+	err := tx.WithContext(ctx).
+		Where("id = ? AND conversation_id = ?", activeRunID, conversationID).
+		First(&active).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		// Orphaned pointer: clear and proceed.
+		return r.clearActiveRun(ctx, tx, conversationID)
+	}
+
+	switch active.Status {
+	case "waiting_user":
+		// Blocked on user input is not lease-bound; keep it in progress.
+		return model.ErrConversationRunInProgress
+	case "running":
+		if active.LeaseExpiresAt == nil || time.Now().Before(*active.LeaseExpiresAt) {
+			// Live run (or legacy run without a lease): keep it in progress.
+			return model.ErrConversationRunInProgress
+		}
+		// Lease expired: assume the owning process died and reclaim the run.
+		now := time.Now()
+		if err := tx.WithContext(ctx).Model(&model.Run{}).
+			Where("id = ?", activeRunID).
+			Updates(map[string]any{
+				"status":       "failed",
+				"error":        datatypes.JSON(`{"message":"run lease expired; execution reclaimed"}`),
+				"completed_at": now,
+			}).Error; err != nil {
+			return err
+		}
+		return r.clearActiveRun(ctx, tx, conversationID)
+	default:
+		// Terminal state: clear the pointer and proceed.
+		return r.clearActiveRun(ctx, tx, conversationID)
+	}
+}
+
+func (r *ConsultationRepository) clearActiveRun(
+	ctx context.Context,
+	tx *gorm.DB,
+	conversationID uuid.UUID,
+) error {
+	return tx.WithContext(ctx).Model(&model.Conversation{}).
+		Where("id = ?", conversationID).
+		Updates(map[string]any{"active_run_id": nil, "active_stream_id": ""}).Error
+}
+
 func (r *ConsultationRepository) ensureConversationRunAvailable(
 	ctx context.Context,
 	tx *gorm.DB,
 	conversation *model.Conversation,
 ) error {
 	if conversation.ActiveRunID != nil {
-		var active model.Run
-		err := tx.WithContext(ctx).
-			Where("id = ? AND conversation_id = ?", *conversation.ActiveRunID, conversation.ID).
-			First(&active).Error
-		if err != nil && err != gorm.ErrRecordNotFound {
+		if err := r.handleActiveRun(ctx, tx, conversation.ID, *conversation.ActiveRunID); err != nil {
 			return err
-		}
-		if err == nil && (active.Status == "running" || active.Status == "waiting_user") {
-			return model.ErrConversationRunInProgress
 		}
 		conversation.ActiveRunID = nil
 		conversation.ActiveStreamID = ""
-		if err := tx.WithContext(ctx).Model(&model.Conversation{}).
-			Where("id = ?", conversation.ID).
-			Updates(map[string]any{"active_run_id": nil, "active_stream_id": ""}).Error; err != nil {
-			return err
-		}
 	}
 
 	var pendingInteractions int64

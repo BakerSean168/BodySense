@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -26,8 +27,9 @@ func (r *ConversationRepository) Create(ctx context.Context, conversation *model
 
 // GetByID retrieves a conversation by ID with ownership check.
 func (r *ConversationRepository) GetByID(ctx context.Context, id, userID uuid.UUID) (*model.Conversation, error) {
+	db := database.FromContext(ctx, r.db)
 	var conversation model.Conversation
-	err := r.db.WithContext(ctx).
+	err := db.
 		Where("id = ? AND user_id = ? AND deleted_at IS NULL", id, userID).
 		First(&conversation).Error
 	if err == gorm.ErrRecordNotFound {
@@ -92,7 +94,7 @@ func (r *ConversationRepository) Update(ctx context.Context, conversation *model
 // SoftDelete soft-deletes a conversation by ID with ownership check.
 func (r *ConversationRepository) SoftDelete(ctx context.Context, id, userID uuid.UUID) error {
 	now := time.Now()
-	return r.db.WithContext(ctx).
+	return database.FromContext(ctx, r.db).
 		Model(&model.Conversation{}).
 		Where("id = ? AND user_id = ? AND deleted_at IS NULL", id, userID).
 		Update("deleted_at", now).Error
@@ -165,7 +167,7 @@ func (r *ConversationRepository) UpdateLastMessageAt(ctx context.Context, id, us
 
 // UpdateActiveRunID sets or clears the active_run_id and active_stream_id on a conversation.
 func (r *ConversationRepository) UpdateActiveRunID(ctx context.Context, id, userID uuid.UUID, runID *uuid.UUID, streamID string) error {
-	return r.db.WithContext(ctx).
+	return database.FromContext(ctx, r.db).
 		Model(&model.Conversation{}).
 		Where("id = ? AND user_id = ? AND deleted_at IS NULL", id, userID).
 		Updates(map[string]any{
