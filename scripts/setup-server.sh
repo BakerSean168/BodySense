@@ -88,9 +88,17 @@ fi
 install -m 0755 "$SOURCE_DIR/scripts/production-deploy-watch.sh" "$DEPLOY_DIR/scripts/production-deploy-watch.sh"
 install -m 0755 "$SOURCE_DIR/scripts/production-postgres-dr.sh" "$DEPLOY_DIR/scripts/production-postgres-dr.sh"
 install -m 0755 "$SOURCE_DIR/scripts/install-production-dr.sh" "$DEPLOY_DIR/scripts/install-production-dr.sh"
+install -m 0755 "$SOURCE_DIR/scripts/production-capacity-status.sh" "$DEPLOY_DIR/scripts/production-capacity-status.sh"
+install -m 0755 "$SOURCE_DIR/scripts/install-production-capacity.sh" "$DEPLOY_DIR/scripts/install-production-capacity.sh"
 for unit in bodysense-postgres-dr-backup.service bodysense-postgres-dr-backup.timer bodysense-postgres-dr-restore.service bodysense-postgres-dr-restore.timer bodysense-postgres-dr-status.service bodysense-postgres-dr-status.timer; do
   install -m 0644 "$SOURCE_DIR/deploy/systemd/$unit" "$DEPLOY_DIR/deploy/systemd/$unit"
 done
+for unit in bodysense-capacity-status.service bodysense-capacity-status.timer bodysense-capacity-cleanup.service bodysense-capacity-cleanup.timer; do
+  install -m 0644 "$SOURCE_DIR/deploy/systemd/$unit" "$DEPLOY_DIR/deploy/systemd/$unit"
+done
+
+# Establish bounded host swap before starting/restarting memory-capped services.
+"$DEPLOY_DIR/scripts/install-production-capacity.sh" --swap-only
 
 # Retire any legacy Watchtower container from older installations.
 docker rm -f docker-watchtower-1 >/dev/null 2>&1 || true
@@ -113,6 +121,7 @@ systemctl daemon-reload
 "$DEPLOY_DIR/scripts/production-deploy-watch.sh" --force
 systemctl enable --now bodysense-deploy-watch.timer
 "$DEPLOY_DIR/scripts/install-production-dr.sh"
+"$DEPLOY_DIR/scripts/install-production-capacity.sh"
 
 echo "BodySense production bootstrap complete."
 systemctl status bodysense-deploy-watch.timer --no-pager || true
