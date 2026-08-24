@@ -93,6 +93,22 @@ class FailingCursor:
             raise RuntimeError("insert exploded")
 
     async def fetchone(self):
+        if self.execute_calls == 1:
+            return (
+                41,
+                "registered",
+                "video",
+                "Source",
+                "Author",
+                "posture",
+                "Posture",
+                "zh",
+                "owned",
+                "a" * 64,
+                {"origin": "test"},
+                "00000000-0000-0000-0000-000000000001",
+                object(),
+            )
         return None
 
 
@@ -173,7 +189,21 @@ class PublishedSourceCursor:
 
     async def fetchone(self):
         if self.query_index == 1:
-            return (77,)
+            return (
+                77,
+                "ingested",
+                "thought_forest_note",
+                "Published source",
+                "Thought Forest",
+                "pain",
+                "Pain",
+                "zh",
+                "citation_only",
+                "b" * 64,
+                {"origin": "test"},
+                "00000000-0000-0000-0000-000000000001",
+                object(),
+            )
         if self.query_index == 2:
             return (1,)
         return None

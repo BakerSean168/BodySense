@@ -287,19 +287,53 @@ class KnowledgeLibrary:
             async with conn.transaction():
                 async with conn.cursor() as cur:
                     await cur.execute(
-                        "SELECT id FROM knowledge_sources WHERE source_key = %s",
+                        """
+                        SELECT id, ingest_status, source_type, title, author, problem_slug,
+                               problem_display_name, language, license_status, content_hash,
+                               provenance, registered_by, registered_at
+                        FROM knowledge_sources
+                        WHERE source_key = %s
+                        """,
                         (pack.source.source_key,),
                     )
                     row = await cur.fetchone()
-                    existing_source_id = row[0] if row is not None else None
+                    if row is None:
+                        raise RuntimeError("knowledge source must be registered before ingestion")
 
-                    if existing_source_id is not None and not overwrite_source:
+                    source_id = row[0]
+                    ingest_status = row[1]
+                    registered_identity = (row[2], row[3], row[4], row[5], row[6], row[7])
+                    pack_identity = (
+                        pack.source.source_type,
+                        pack.source.title,
+                        pack.source.author,
+                        pack.source.problem_slug,
+                        pack.source.problem_display_name,
+                        pack.source.language,
+                    )
+                    if registered_identity != pack_identity:
+                        raise RuntimeError(
+                            "generated pack identity does not match registered knowledge source"
+                        )
+                    if (
+                        row[8] not in {"verified_reuse", "citation_only", "owned", "public_domain"}
+                        or not row[9]
+                        or not row[10]
+                        or not row[11]
+                        or row[12] is None
+                    ):
+                        raise RuntimeError(
+                            "registered knowledge source is missing "
+                            "license/content/provenance authority"
+                        )
+
+                    if ingest_status != "registered" and not overwrite_source:
                         return {
-                            "source_id": existing_source_id,
+                            "source_id": source_id,
                             "source_key": pack.source.source_key,
                             "status": "already_exists",
                         }
-                    if existing_source_id is not None:
+                    if ingest_status != "registered":
                         await cur.execute(
                             """
                             SELECT COUNT(*)
@@ -307,7 +341,7 @@ class KnowledgeLibrary:
                             WHERE source_id = %s
                               AND (lifecycle_status = 'published' OR publication_id IS NOT NULL)
                             """,
-                            (existing_source_id,),
+                            (source_id,),
                         )
                         protected_row = await cur.fetchone()
                         protected_count = int(protected_row[0]) if protected_row is not None else 0
@@ -318,42 +352,38 @@ class KnowledgeLibrary:
                                 "immutable source version first"
                             )
                         await cur.execute(
-                            "DELETE FROM knowledge_sources WHERE id = %s",
-                            (existing_source_id,),
+                            "DELETE FROM knowledge_clips WHERE source_id = %s",
+                            (source_id,),
+                        )
+                        await cur.execute(
+                            "DELETE FROM knowledge_segments WHERE source_id = %s",
+                            (source_id,),
+                        )
+                        await cur.execute(
+                            "DELETE FROM knowledge_units WHERE source_id = %s",
+                            (source_id,),
                         )
 
                     await cur.execute(
                         """
-                        INSERT INTO knowledge_sources (
-                            source_key, source_type, title, author, problem_slug,
-                            problem_display_name, original_file_path, language,
-                            duration_sec, transcript_provider, transcript_model,
-                            transcript_file_path, ingest_status, metadata
-                        )
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        RETURNING id
+                        UPDATE knowledge_sources
+                        SET duration_sec = %s,
+                            transcript_provider = %s,
+                            transcript_model = %s,
+                            transcript_file_path = %s,
+                            ingest_status = 'ingested',
+                            metadata = COALESCE(metadata, '{}'::jsonb) || %s
+                        WHERE id = %s
                         """,
                         (
-                            pack.source.source_key,
-                            pack.source.source_type,
-                            pack.source.title,
-                            pack.source.author,
-                            pack.source.problem_slug,
-                            pack.source.problem_display_name,
-                            pack.source.original_file_path,
-                            pack.source.language,
                             pack.source.duration_sec,
                             pack.source.transcript_provider,
                             pack.source.transcript_model,
                             pack.source.transcript_file_path,
-                            "ingested",
                             Jsonb(pack.source.metadata),
+                            source_id,
                         ),
                     )
-                    row = await cur.fetchone()
-                    if row is None:
-                        raise RuntimeError("Failed to persist knowledge source row")
-                    source_id = row[0]
 
                     for segment in pack.transcript_segments:
                         await cur.execute(

@@ -2,13 +2,57 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/bodysense/api/internal/model"
+	"github.com/bodysense/api/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
+
+type fakeKnowledgeSourceStore struct {
+	source *model.KnowledgeSource
+}
+
+func (f *fakeKnowledgeSourceStore) Register(_ context.Context, source *model.KnowledgeSource) (bool, error) {
+	if f.source != nil {
+		return false, nil
+	}
+	f.source = source
+	return true, nil
+}
+
+func (f *fakeKnowledgeSourceStore) FindByKey(_ context.Context, sourceKey string) (*model.KnowledgeSource, error) {
+	if f.source == nil || f.source.SourceKey != sourceKey {
+		return nil, gorm.ErrRecordNotFound
+	}
+	return f.source, nil
+}
+
+func (f *fakeKnowledgeSourceStore) List(_ context.Context, _ int) ([]model.KnowledgeSource, error) {
+	if f.source == nil {
+		return nil, nil
+	}
+	return []model.KnowledgeSource{*f.source}, nil
+}
+
+func readyVideoRegistry(sourceKey, videoPath string) *service.KnowledgeSourceRegistry {
+	now := time.Now().UTC()
+	actor := uuid.New()
+	hash := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	return service.NewKnowledgeSourceRegistry(&fakeKnowledgeSourceStore{source: &model.KnowledgeSource{
+		SourceKey: sourceKey, SourceType: "video", Title: "Source", Author: "tester",
+		ProblemSlug: "forward-head", ProblemDisplayName: "头前移", OriginalFilePath: videoPath,
+		Language: "zh", IngestStatus: "registered", LicenseStatus: "owned", ContentHash: &hash,
+		Provenance: []byte(`{"origin":"operator"}`), RegisteredBy: &actor, RegisteredAt: &now,
+	}})
+}
 
 type fakeKnowledgeDeployment struct {
 	curator  string
@@ -79,13 +123,14 @@ func TestKnowledgeIngestPinsGoSelectedAgentConfigurations(t *testing.T) {
 	}))
 	defer upstream.Close()
 
-	h := NewKnowledgeHandler(fakeKnowledgeDeployment{curator: curatorID, splitter: splitterID})
+	h := NewKnowledgeHandler(fakeKnowledgeDeployment{curator: curatorID, splitter: splitterID}).WithSourceRegistry(readyVideoRegistry("source-test", "sources/video.mp4"))
 	h.aiServiceURL = upstream.URL
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	r.POST("/knowledge/ingestions/video", h.IngestVideo)
 
 	body := []byte(`{
+		"source_key":"source-test",
 		"video_path":"sources/video.mp4",
 		"problem_slug":"forward-head",
 		"problem_display_name":"头前移",

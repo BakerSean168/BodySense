@@ -59,6 +59,8 @@ func main() {
 
 	// Initialize dependencies
 	userRepo := repository.NewUserRepository(database.DB)
+	knowledgeSourceRepo := repository.NewKnowledgeSourceRepository(database.DB)
+	knowledgeSourceRegistry := service.NewKnowledgeSourceRegistry(knowledgeSourceRepo)
 	profileRepo := repository.NewProfileRepository(database.DB)
 	uploadRepo := repository.NewUploadRepository(database.DB)
 	uploadStorage, err := uploadstorage.NewRegistryFromEnv()
@@ -241,7 +243,7 @@ func main() {
 	reassessmentHandler := handler.NewReassessmentHandler(trainingService)
 	assessmentHandler := handler.NewAssessmentHandler(assessmentService).
 		WithAssessmentReplay(assessmentReplayService)
-	knowledgeHandler := handler.NewKnowledgeHandler(agentDeploymentPolicy)
+	knowledgeHandler := handler.NewKnowledgeHandler(agentDeploymentPolicy).WithSourceRegistry(knowledgeSourceRegistry)
 
 	// Continuous health workspace is the single capability/read model for the product loop.
 	healthWorkspaceService := service.NewHealthWorkspaceService(
@@ -429,12 +431,16 @@ func main() {
 	public := r.Group("/api/v1")
 	public.GET("/conversations/share/:token", convHandler.GetSharedConversation)
 
-	// Knowledge base routes (proxy to AI service, require auth)
+	// Global Knowledge administration is an explicit operator capability.
+	// Product Agents retrieve published Knowledge through the internal AI path;
+	// these HTTP surfaces are for governed operator workflows only.
 	knowledgeGroup := protected.Group("/knowledge")
+	knowledgeGroup.Use(middleware.RequireKnowledgeOperator(userRepo))
 	{
+		knowledgeGroup.POST("/sources", knowledgeHandler.RegisterSource)
+		knowledgeGroup.GET("/sources", knowledgeHandler.ListSources)
 		knowledgeGroup.POST("/ingestions/video", knowledgeHandler.IngestVideo)
 		knowledgeGroup.POST("/search", knowledgeHandler.SearchKnowledge)
-		knowledgeGroup.GET("/sources", knowledgeHandler.ListSources)
 		knowledgeGroup.GET("/stats", knowledgeHandler.GetStats)
 	}
 
