@@ -28,9 +28,10 @@ PUBLIC_ACL_FILE="$TMP/public-acl.on"
 ACL_UNREADABLE_FILE="$TMP/acl-unreadable.on"
 POLICY_PUBLIC_FILE="$TMP/policy-public.on"
 POLICY_UNAVAILABLE_FILE="$TMP/policy-unavailable.on"
+POLICY_UNSUPPORTED_FILE="$TMP/policy-unsupported.on"
 PUT_LOG_FILE="$TMP/put.log"
 export TMP ROOT BIN CORRUPT_FILE PUBLIC_ACL_FILE ACL_UNREADABLE_FILE
-export POLICY_PUBLIC_FILE POLICY_UNAVAILABLE_FILE PUT_LOG_FILE
+export POLICY_PUBLIC_FILE POLICY_UNAVAILABLE_FILE POLICY_UNSUPPORTED_FILE PUT_LOG_FILE
 
 PASS=0
 FAIL=0
@@ -177,7 +178,7 @@ JSON
 # --- fake S3 server lifecycle -------------------------------------------------
 start_server() {
   rm -f "$PORT_FILE" "$CORRUPT_FILE" "$LIST_FAIL_FILE" "$PUT_LOG_FILE"
-  rm -f "$PUBLIC_ACL_FILE" "$ACL_UNREADABLE_FILE" "$POLICY_PUBLIC_FILE" "$POLICY_UNAVAILABLE_FILE"
+  rm -f "$PUBLIC_ACL_FILE" "$ACL_UNREADABLE_FILE" "$POLICY_PUBLIC_FILE" "$POLICY_UNAVAILABLE_FILE" "$POLICY_UNSUPPORTED_FILE"
   python3 - "$PORT_FILE" "$CORRUPT_FILE" "$LIST_FAIL_FILE" <<'PY' &
 import importlib.util, os, sys
 spec = importlib.util.spec_from_file_location("test_offhost_s3", os.environ["S3LIBS"])
@@ -204,6 +205,7 @@ _acl_unreadable = os.environ.get("ACL_UNREADABLE_FILE", "")
 _public_acl = os.environ.get("PUBLIC_ACL_FILE", "")
 _policy_unavailable = os.environ.get("POLICY_UNAVAILABLE_FILE", "")
 _policy_public = os.environ.get("POLICY_PUBLIC_FILE", "")
+_policy_unsupported = os.environ.get("POLICY_UNSUPPORTED_FILE", "")
 def _flag(path):
     return bool(path) and os.path.exists(path)
 _orig_acl_reply = T.FakeS3Handler._acl_reply
@@ -215,6 +217,7 @@ _orig_policy_reply = T.FakeS3Handler._policy_status_reply
 def _guarded_policy_reply(self):
     self.policy_unavailable = _flag(_policy_unavailable)
     self.policy_public = _flag(_policy_public)
+    self.policy_unsupported = _flag(_policy_unsupported)
     return _orig_policy_reply(self)
 _orig_put = T.FakeS3Handler.do_PUT
 def _guarded_put(self):
@@ -510,9 +513,12 @@ exec 8>&-
 # 3d. the private-destination preflight is fail-closed (review finding: privacy
 #     used to be assumed, never proven): a backup must abort BEFORE any upload
 #     when the bucket ACL is public, unreadable, or the bucket policy status is
-#     public, and must never record last-success.json in those cases.  A store
-#     that merely does not implement GetBucketPolicyStatus is still accepted
-#     (the ACL remains the privacy proof) but warns.
+#     public, and must never record last-success.json in those cases.  By default
+#     the acl+policy proof is fail-closed even when a store cannot answer
+#     GetBucketPolicyStatus (BucketPolicyStatusUnsupported refuses the backup);
+#     OFFHOST_BACKUP_PRIVACY_PROOF=acl explicitly opts into ACL-only proof for
+#     stores like Alibaba OSS that do not implement policy status, prints a
+#     warning, and still succeeds.
 # ==============================================================================
 BEFORE_KEY=$(last_key)
 : > "$PUBLIC_ACL_FILE"
@@ -542,14 +548,67 @@ if [ $rc -ne 0 ] && [[ "$out" == *"private-destination preflight failed"* ]] \
 else
   report 1 "backup fails closed when the destination bucket policy status is public" "rc=$rc out=$out"
 fi
-: > "$POLICY_UNAVAILABLE_FILE"
+: > "$POLICY_UNSUPPORTED_FILE"
 out=$(run_backup 2>&1) && rc=0 || rc=$?
-rm -f "$POLICY_UNAVAILABLE_FILE"
-if [ $rc -eq 0 ] && [[ "$out" == *"policyStatus unavailable"* ]]; then
-  report 0 "policy-status unavailability is a warning, not a failure (bucket ACL remains the privacy proof)"
+rm -f "$POLICY_UNSUPPORTED_FILE"
+if [ $rc -ne 0 ] && [[ "$out" == *"private-destination preflight failed"* ]] \
+  && [[ "$out" == *BucketPolicyStatusUnsupported* ]] && [ "$(last_key)" = "$BEFORE_KEY" ]; then
+  report 0 "policy status that cannot be answered is a FAILURE in the default acl+policy mode"
 else
-  report 1 "policy-status unavailability is a warning, not a failure (bucket ACL remains the privacy proof)" "rc=$rc out=$out"
+  report 1 "policy status that cannot be answered is a FAILURE in the default acl+policy mode" "rc=$rc out=$out"
 fi
+: > "$POLICY_UNSUPPORTED_FILE"
+out=$(OFFHOST_BACKUP_PRIVACY_PROOF=acl run_backup 2>&1) && rc=0 || rc=$?
+rm -f "$POLICY_UNSUPPORTED_FILE"
+if [ $rc -eq 0 ] && [[ "$out" == *"PRIVATE_PREFLIGHT=PASS proof=acl"* ]] \
+  && [[ "$out" == *OFFHOST_S3_WARNING* ]]; then
+  report 0 "acl-only proof passes with a warning when the store has no policy status"
+else
+  report 1 "acl-only proof passes with a warning when the store has no policy status" "rc=$rc out=$out"
+fi
+out=$(OFFHOST_BACKUP_PRIVACY_PROOF=bogus run_backup 2>&1) && rc=0 || rc=$?
+if [ $rc -ne 0 ] && [[ "$out" == *"OFFHOST_BACKUP_PRIVACY_PROOF must be 'acl+policy' or 'acl'"* ]]; then
+  report 0 "OFFHOST_BACKUP_PRIVACY_PROOF refuses any value other than 'acl+policy' or 'acl'"
+else
+  report 1 "OFFHOST_BACKUP_PRIVACY_PROOF refuses any value other than 'acl+policy' or 'acl'" "rc=$rc out=$out"
+fi
+
+# ==============================================================================
+# 3f. a disabled backup pipeline is fail-closed on the freshness side (review
+#     finding: a disabled pipeline used to exit 0 for --check-freshness, letting
+#     a STOPPED backup pipeline masquerade as protected).  The scheduled
+#     freshness check must exit non-zero with reason=backups-disabled so the
+#     alert path fires; only OFFHOST_BACKUP_MAINTENANCE_SUPPRESS=true
+#     acknowledges an intentional maintenance window with a clean exit.  A
+#     disabled pipeline in --backup mode skips cleanly.
+# ==============================================================================
+rm -f "$ROOT/.offhost-state/last-success.json"
+out=$(OFFHOST_BACKUP_ENABLED=false run_freshness 2>&1) && rc=0 || rc=$?
+if [ $rc -ne 0 ] && [[ "$out" == *OFFHOST_BACKUP_FRESH=FAIL* ]] \
+  && [[ "$out" == *reason=backups-disabled* ]]; then
+  report 0 "disabled backups fail the freshness check with reason=backups-disabled"
+else
+  report 1 "disabled backups fail the freshness check with reason=backups-disabled" "rc=$rc out=$out"
+fi
+out=$(OFFHOST_BACKUP_ENABLED=false OFFHOST_BACKUP_MAINTENANCE_SUPPRESS=true run_freshness 2>&1) && rc=0 || rc=$?
+if [ $rc -eq 0 ] && [[ "$out" == *"intentionally suppressed"* ]]; then
+  report 0 "explicit maintenance suppression acknowledges the disabled pipeline with a clean exit"
+else
+  report 1 "explicit maintenance suppression acknowledges the disabled pipeline with a clean exit" "rc=$rc out=$out"
+fi
+out=$(OFFHOST_BACKUP_ENABLED=false run_backup 2>&1) && rc=0 || rc=$?
+if [ $rc -eq 0 ] && [[ "$out" == *"off-host backups disabled"* ]]; then
+  report 0 "a disabled pipeline in backup mode skips cleanly"
+else
+  report 1 "a disabled pipeline in backup mode skips cleanly" "rc=$rc out=$out"
+fi
+out=$(OFFHOST_BACKUP_ENABLED=false OFFHOST_BACKUP_MAINTENANCE_SUPPRESS=maybe run_freshness 2>&1) && rc=0 || rc=$?
+if [ $rc -ne 0 ] && [[ "$out" == *"OFFHOST_BACKUP_MAINTENANCE_SUPPRESS must be true or false"* ]]; then
+  report 0 "OFFHOST_BACKUP_MAINTENANCE_SUPPRESS refuses any value other than true or false"
+else
+  report 1 "OFFHOST_BACKUP_MAINTENANCE_SUPPRESS refuses any value other than true or false" "rc=$rc out=$out"
+fi
+run_backup > /dev/null   # restore a valid last-success state for later sections
 
 # ==============================================================================
 # 3e. object ACL/SSE configuration is fail-closed: public object ACLs are never
@@ -645,6 +704,13 @@ if [ $rc -ne 0 ] && [[ "$out" == *"schema_migrations query failed"* ]] && [ "$(l
   report 0 "backup aborts when the schema_migrations query fails"
 else
   report 1 "backup aborts when the schema_migrations query fails" "rc=$rc out=$out"
+fi
+out=$(FAKEPG_SCHEMA="54:true" run_backup 2>&1) && rc=0 || rc=$?
+if [ $rc -ne 0 ] && [[ "$out" == *"is not an exact clean <version>:false revision"* ]] \
+  && [ "$(last_key)" = "$BEFORE_KEY" ]; then
+  report 0 "backup aborts when the source schema revision is dirty (54:true, not an exact clean revision)"
+else
+  report 1 "backup aborts when the source schema revision is dirty (54:true, not an exact clean revision)" "rc=$rc out=$out"
 fi
 
 # ==============================================================================
@@ -816,6 +882,37 @@ run_restore_guard "declares an unverifiable schema revision 'unknown'" \
   --restore-pg container:restore-meta --confirm-target-isolated=yes
 s3put "$OBJKEY.meta.json" "$TMP/meta-ok.json" >/dev/null
 rm -f "$TMP/meta-ok.json" "$TMP/meta-tampered.json"
+
+# 5e-bis. the restore-side schema gate is an EXACT clean `<version>:false` value
+#     (review finding: a dirty or structurally malformed revision used to be
+#     accepted).  Metadata declaring a dirty revision (54:true) is refused before
+#     download, and a restore whose target database fails to return a proven
+#     clean revision is refused at the certification gate.
+meta_get "$OBJKEY.meta.json" "$TMP/meta-ok.json"
+cp "$TMP/meta-ok.json" "$TMP/meta-dirty.json"
+python3 - "$TMP/meta-dirty.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+d["schema_revision"] = "54:true"
+json.dump(d, open(sys.argv[1], "w"))
+PY
+s3put "$OBJKEY.meta.json" "$TMP/meta-dirty.json" >/dev/null
+run_restore_guard "declares an unverifiable schema revision '54:true'" \
+  --object-key "$OBJKEY" --target-db drill_meta_dirty --target-project drill \
+  --restore-pg container:restore-meta-dirty --confirm-target-isolated=yes
+s3put "$OBJKEY.meta.json" "$TMP/meta-ok.json" >/dev/null
+rm -f "$TMP/meta-ok.json" "$TMP/meta-dirty.json"
+out=$(FAKEPG_SCHEMA="49:true" BODYSENSE_DEPLOY_ROOT="$ROOT" OFFHOST_PG_PREFIX="$BIN/fake-pg" \
+  OFFHOST_PGCONTAINER_ID=pg1 \
+  bash "$RESTORE" --object-key "$OBJKEY" --target-db drill_restored_dirty --target-project drill \
+  --restore-pg container:restore-dirty --confirm-target-isolated=yes --validator-runner docker 2>&1) && rc=0 || rc=$?
+if [ $rc -ne 0 ] && [[ "$out" == *"restored schema revision '49:true' is not an exact clean"* ]] \
+  && [[ "$out" == *"refusing to certify a dirty or unverifiable restore"* ]]; then
+  report 0 "restore refuses to certify a restored database whose revision is not proven clean (49:true)"
+else
+  report 1 "restore refuses to certify a restored database whose revision is not proven clean (49:true)" "rc=$rc out=$out"
+fi
+FAKEPG_SCHEMA="49:false"
 
 # ==============================================================================
 # 5f. recovery mode (--recovery-mode=yes / OFFHOST_RECOVERY_MODE=true) lets a
@@ -1082,6 +1179,202 @@ if [ -n "$tz_fail" ]; then
   report 1 "systemd timers pin the timezone inside OnCalendar expressions" "$tz_fail"
 else
   report 0 "systemd timers pin the timezone inside OnCalendar expressions"
+fi
+
+# ==============================================================================
+# 15. deploy-watch rollback restores the WHOLE managed runtime, not just the
+#     stack files (review finding: a failed deployment used to roll back only
+#     .env.production / compose / Caddyfile / litellm, leaving the new revision's
+#     DR operator scripts and systemd units installed).  Backing up and rolling
+#     back a deployment that replaces scripts/ and deploy/systemd/ must return
+#     those artifacts to their exact previous state: restored scripts, REMOVED
+#     scripts the old runtime did not have, restored/removed systemd units, and
+#     host symlinks re-pointed + daemon-reload under BODYSENSE_SYSTEMD_DIR.
+# ==============================================================================
+DLW_ROOT="$TMP/dlw-root"
+DLW_SYSD="$TMP/systemd-etc"
+mkdir -p "$DLW_ROOT/docker/litellm" "$DLW_ROOT/scripts" "$DLW_ROOT/deploy/systemd"
+cat > "$DLW_ROOT/.env.production" <<ENV
+APP_DOMAIN=invalid.invalid
+AUTO_DEPLOY_ENABLED=true
+REGISTRY=registry.example.test
+ACR_NAMESPACE=bodysense
+WEB_TAG=prod-latest
+API_TAG=prod-latest
+AI_TAG=prod-latest
+RUNTIME_TAG=prod-latest
+DB_USER=bodysense
+DB_NAME=bodysense
+#OLD-ENV-MARKER
+ENV
+cat > "$DLW_ROOT/.env.production.local" <<ENV
+DB_PASSWORD=0123456789abcdef
+ENV
+printf 'old-compose\n' > "$DLW_ROOT/docker/docker-compose.prod.yml"
+printf 'old-caddyfile\n' > "$DLW_ROOT/docker/Caddyfile"
+printf 'old-litellm-config\n' > "$DLW_ROOT/docker/litellm/config.yaml"
+printf '#!/usr/bin/env bash\necho OLD-DEPLOY-WATCH\n' > "$DLW_ROOT/scripts/production-deploy-watch.sh"
+printf 'old-offhost-s3\n' > "$DLW_ROOT/scripts/offhost-s3.py"
+printf 'old-offhost-backup\n' > "$DLW_ROOT/scripts/production-offhost-backup.sh"
+printf 'old-backup-unit\n' > "$DLW_ROOT/deploy/systemd/bodysense-offhost-backup.service"
+printf 'old-backup-timer\n' > "$DLW_ROOT/deploy/systemd/bodysense-offhost-backup.timer"
+cat > "$DLW_ROOT/.deploy-state" <<STATE
+revision=r1
+runtime_revision=r1
+runtime_source=acr
+deployed_at=2026-08-23T00:00:00Z
+STATE
+DLW_BUNDLE="$TMP/new-runtime-bundle"
+mkdir -p "$DLW_BUNDLE/docker/litellm" "$DLW_BUNDLE/scripts" "$DLW_BUNDLE/deploy/systemd"
+cat > "$DLW_BUNDLE/.env.production" <<ENV
+APP_DOMAIN=invalid.invalid
+AUTO_DEPLOY_ENABLED=true
+REGISTRY=registry.example.test
+ACR_NAMESPACE=bodysense
+WEB_TAG=prod-latest
+API_TAG=prod-latest
+AI_TAG=prod-latest
+RUNTIME_TAG=prod-latest
+DB_USER=bodysense
+DB_NAME=bodysense
+#NEW-ENV-MARKER
+ENV
+printf 'new-compose\n' > "$DLW_BUNDLE/docker/docker-compose.prod.yml"
+printf 'new-caddyfile\n' > "$DLW_BUNDLE/docker/Caddyfile"
+printf 'new-litellm-config\n' > "$DLW_BUNDLE/docker/litellm/config.yaml"
+printf '#!/usr/bin/env bash\necho NEW-DEPLOY-WATCH\n' > "$DLW_BUNDLE/scripts/production-deploy-watch.sh"
+printf 'new-offhost-s3\n' > "$DLW_BUNDLE/scripts/offhost-s3.py"
+printf 'new-offhost-backup\n' > "$DLW_BUNDLE/scripts/production-offhost-backup.sh"
+printf 'new-offhost-restore\n' > "$DLW_BUNDLE/scripts/restore-production-backup.sh"
+for u in bodysense-offhost-backup.service bodysense-offhost-backup.timer bodysense-offhost-freshness.service bodysense-offhost-freshness.timer; do
+  printf 'new-%s\n' "$u" > "$DLW_BUNDLE/deploy/systemd/$u"
+done
+
+# Deploy-capable fake docker: compose ps/exec/pull/up/config, image inspect for
+# revision labels, container inspect for image-id/health, docker cp of the
+# ACR runtime bundle.  Replaces the restore-only stub; section 15 is the last
+# section, so no earlier test depends on the previous stub afterwards.
+cat > "$BIN/docker" <<'DLWDOCKSTUB'
+#!/usr/bin/env bash
+{
+  printf '%s\n' "$*"
+} >> "${FAKEDOCKER_LOG:-/dev/null}"
+case "$1" in
+  compose)
+    case "$*" in
+      *pg_dump*) printf 'pre-deploy postgres dump fixture\n'; exit 0 ;;
+    esac
+    case "$*" in
+      *" ps -q "*) printf 'faectr-%s\n' "${!#}"; exit 0 ;;
+    esac
+    exit 0 ;;
+  image) printf '%s\n' "${FAKEDOCKER_IMAGE_REV:-r2}"; exit 0 ;;
+  inspect)
+    case "$*" in
+      *'{{.Image}}'*) printf 'img-%s\n' "${2:-unknown}"; exit 0 ;;
+      *State.Health*) printf 'healthy\n'; exit 0 ;;
+      *) printf 'running\n'; exit 0 ;;
+    esac
+    ;;
+  create) printf 'faectr-runtime\n'; exit 0 ;;
+  cp)
+    if [[ "$2" == *":/runtime/." ]] && [ -n "${FAKEDOCKER_RUNTIME_BUNDLE:-}" ]; then
+      cp -R "$FAKEDOCKER_RUNTIME_BUNDLE/." "$3"
+      exit 0
+    fi
+    exit 0 ;;
+  *) exit 0 ;;
+esac
+exit 0
+DLWDOCKSTUB
+chmod +x "$BIN/docker"
+cat > "$BIN/systemctl" <<'SYSCTLSTUB'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "${SYSTEMCTL_LOG:-/dev/null}"
+exit 0
+SYSCTLSTUB
+chmod +x "$BIN/systemctl"
+cat > "$BIN/curl" <<'CURLSTUB'
+#!/usr/bin/env bash
+printf 'curl %s\n' "$*" >> "${FAKE_CURL_LOG:-/dev/null}"
+n=$(cat "${FAKE_CURL_COUNT:-/dev/null}" 2>/dev/null || printf 0)
+n=$((n + 1))
+printf '%s' "$n" > "${FAKE_CURL_COUNT:-/dev/null}"
+# The FIRST external health probe fails (deploy fails -> rollback); the health
+# probe inside the rollback (after the old runtime is restored) succeeds, so the
+# rollback itself is certified restored.  Hermetic-only; production uses systemd,
+# docker health and a reachable APP_DOMAIN.
+if [ "$n" -eq 1 ]; then
+  printf 'curl: (7) Failed to connect to invalid.invalid\n' >&2
+  exit 7
+fi
+exit 0
+CURLSTUB
+chmod +x "$BIN/curl"
+
+mkdir -p "$DLW_SYSD"
+run_deploy_watch() {
+  FAKEDOCKER_LOG="$TMP/deploy-docker.log" SYSTEMCTL_LOG="$TMP/systemctl.log" \
+  FAKE_CURL_LOG="$TMP/curl.log" FAKE_CURL_COUNT="$TMP/curl-count" \
+  FAKEDOCKER_RUNTIME_BUNDLE="$DLW_BUNDLE" FAKEDOCKER_IMAGE_REV=r2 \
+  BODYSENSE_SYSTEMD_DIR="$DLW_SYSD" BODYSENSE_DEPLOY_ROOT="$DLW_ROOT" \
+  bash "$PWD/scripts/production-deploy-watch.sh" --force 2>&1
+}
+out=$(run_deploy_watch) && rc=0 || rc=$?
+if [ $rc -ne 0 ] && [ -f "$DLW_ROOT/.deploy-blocked" ]; then
+  report 0 "deploy-watch failed deployment marks the revision blocked"
+else
+  report 1 "deploy-watch failed deployment marks the revision blocked" "rc=$rc blocked=$([ -f "$DLW_ROOT/.deploy-blocked" ] && echo yes || echo no)"
+fi
+if [ $rc -ne 0 ] && grep -q '^rollback=restored$' "$DLW_ROOT/.deploy-blocked" \
+  && grep -q "^revision=r2$" "$DLW_ROOT/.deploy-blocked"; then
+  report 0 "deploy-watch rollback restores the previous runtime and is certified restored"
+else
+  report 1 "deploy-watch rollback restores the previous runtime and is certified restored" "rc=$rc $(tr '\n' '|' < "$DLW_ROOT/.deploy-blocked" 2>/dev/null)"
+fi
+if [ $rc -ne 0 ] && grep -q 'OLD-ENV-MARKER' "$DLW_ROOT/.env.production" \
+  && ! grep -q 'NEW-ENV-MARKER' "$DLW_ROOT/.env.production" \
+  && grep -q '^old-compose$' "$DLW_ROOT/docker/docker-compose.prod.yml" \
+  && grep -q '^old-caddyfile$' "$DLW_ROOT/docker/Caddyfile" \
+  && grep -q '^old-litellm-config$' "$DLW_ROOT/docker/litellm/config.yaml"; then
+  report 0 "rollback restores .env.production, compose, Caddyfile and litellm config from the pre-deploy archive"
+else
+  report 1 "rollback restores .env.production, compose, Caddyfile and litellm config from the pre-deploy archive" "rc=$rc"
+fi
+if [ $rc -ne 0 ] \
+  && grep -q 'OLD-DEPLOY-WATCH' "$DLW_ROOT/scripts/production-deploy-watch.sh" \
+  && grep -q '^old-offhost-s3$' "$DLW_ROOT/scripts/offhost-s3.py" \
+  && grep -q '^old-offhost-backup$' "$DLW_ROOT/scripts/production-offhost-backup.sh" \
+  && [ ! -e "$DLW_ROOT/scripts/restore-production-backup.sh" ]; then
+  report 0 "rollback restores the DR scripts and REMOVES scripts the old runtime did not have"
+else
+  report 1 "rollback restores the DR scripts and REMOVES scripts the old runtime did not have" "rc=$rc scripts_dir=$(ls "$DLW_ROOT/scripts" 2>/dev/null | tr '\n' '|')"
+fi
+if [ $rc -ne 0 ] && grep -q '^old-backup-unit$' "$DLW_ROOT/deploy/systemd/bodysense-offhost-backup.service" \
+  && grep -q '^old-backup-timer$' "$DLW_ROOT/deploy/systemd/bodysense-offhost-backup.timer" \
+  && [ ! -e "$DLW_ROOT/deploy/systemd/bodysense-offhost-freshness.service" ] \
+  && [ ! -e "$DLW_ROOT/deploy/systemd/bodysense-offhost-freshness.timer" ]; then
+  report 0 "rollback restores the previous systemd units and removes units it did not have"
+else
+  report 1 "rollback restores the previous systemd units and removes units it did not have" "rc=$rc $(ls "$DLW_ROOT/deploy/systemd" 2>/dev/null | tr '\n' '|')"
+fi
+if [ $rc -ne 0 ] \
+  && [ -L "$DLW_SYSD/bodysense-offhost-backup.service" ] \
+  && [ "$(readlink "$DLW_SYSD/bodysense-offhost-backup.service")" = "$DLW_ROOT/deploy/systemd/bodysense-offhost-backup.service" ] \
+  && [ -L "$DLW_SYSD/bodysense-offhost-backup.timer" ] \
+  && [ ! -e "$DLW_SYSD/bodysense-offhost-freshness.service" ] \
+  && [ ! -e "$DLW_SYSD/bodysense-offhost-freshness.timer" ] \
+  && grep -q 'daemon-reload' "$TMP/systemctl.log" \
+  && grep -q 'disable bodysense-offhost-freshness.timer' "$TMP/systemctl.log"; then
+  report 0 "rollback re-points host systemd symlinks, removes absent units, disables them and daemon-reloads"
+else
+  report 1 "rollback re-points host systemd symlinks, removes absent units, disables them and daemon-reloads" "rc=$rc symds_dir=$(ls "$DLW_SYSD" 2>/dev/null | tr '\n' '|') sysctl=$(tr '\n' '|' < "$TMP/systemctl.log" 2>/dev/null)"
+fi
+if [ $rc -ne 0 ] && ls "$DLW_ROOT/runtime-backups"/r1-*/scripts/production-deploy-watch.sh >/dev/null 2>&1 \
+  && [ "$(find "$DLW_ROOT/runtime-backups" -mindepth 1 -maxdepth 1 -type d | wc -l)" -ge 1 ]; then
+  report 0 "the pre-deploy archive snapshots the DR scripts and systemd units for rollback"
+else
+  report 1 "the pre-deploy archive snapshots the DR scripts and systemd units for rollback" "rc=$rc archives=$(ls "$DLW_ROOT/runtime-backups" 2>/dev/null | tr '\n' '|')"
 fi
 
 echo

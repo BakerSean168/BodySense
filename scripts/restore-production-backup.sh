@@ -63,7 +63,8 @@
 #      process environment (docker: injected through an --env-file, never on a
 #      command line; golang: inherited), and is never packed into -database-url.
 #   8. backup metadata must carry an exact, verifiable schema revision
-#      (<version>:<dirty>); `unknown`/`uninitialized` metadata is refused
+#      (<version>:false, i.e. a proven-clean revision); `unknown`
+#      `uninitialized`, empty, or dirty/malformed metadata is refused
 #      (fail-closed), and the restored database revision must equal the metadata
 #      revision — the gate is never skipped.
 #   9. recovery mode (--recovery-mode=yes, or OFFHOST_RECOVERY_MODE=true) is ONLY
@@ -500,15 +501,13 @@ meta_checksum=$(python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); pri
   || fail "metadata object_key ($meta_object_key) does not match the requested key ($OBJECT_KEY)"
 [ "$meta_kind" = offhost-postgres ] || fail "metadata backup_kind is $meta_kind, expected offhost-postgres"
 # The schema-revision gate is fail-closed from the start: a backup whose
-# metadata does not carry an exact, verifiable `<version>:<dirty>` revision is
-# refused outright (no archive download/restore happens), and after the restore
-# the restored revision is required to equal it.  `unknown`/`uninitialized`
-# metadata is never accepted and never skips the gate.
-case "$meta_revision" in
-  unknown|uninitialized|"")
-    fail "backup metadata declares an unverifiable schema revision '$meta_revision'; refusing a restore drill without an exact verifiable revision"
-    ;;
-esac
+# metadata does not carry an exact clean `<version>:false` revision (including
+# `unknown`/`uninitialized`, empty, or a dirty/malformed value) is refused
+# outright (no archive download/restore happens), and after the restore the
+# restored revision is required to equal it.  Unverifiable metadata is never
+# accepted and never skips the gate.
+[[ "$meta_revision" =~ ^[0-9]+:false$ ]] \
+  || fail "backup metadata declares an unverifiable schema revision '$meta_revision'; refusing a restore drill without an exact clean <version>:false revision"
 
 s3 get --key "$OBJECT_KEY.sha256" --file "$shafile"
 s3 get --key "$OBJECT_KEY" --file "$dump"
@@ -565,13 +564,16 @@ pg rm -f "$container_tmp" >/dev/null 2>&1 || true
 log "restored archive into disposable database $TARGET_DB on $RESTORE_TARGET"
 
 # --- Verify restored schema revision vs backup metadata ---------------------------
-# The gate is never skipped: backup metadata always carries an exact revision
-# (any `unknown`/`uninitialized` backup was refused above), and the restored
-# database must match it exactly.
+# The gate is never skipped: backup metadata always carries an exact clean
+# revision (any unverifiable `unknown`/`uninitialized`/empty/dirty backup was
+# refused above), and the restored database must carry an exact clean revision
+# that matches it exactly.
 restored_revision=$(pg psql -U "$DB_USER" -d "$TARGET_DB" -Atc \
   "SELECT version::text || ':' || dirty::text FROM schema_migrations ORDER BY version DESC LIMIT 1;" \
   2>/dev/null || true)
 [ -n "$restored_revision" ] || fail 'restored database has no schema_migrations state'
+[[ "$restored_revision" =~ ^[0-9]+:false$ ]] \
+  || fail "restored schema revision '$restored_revision' is not an exact clean <version>:false revision; refusing to certify a dirty or unverifiable restore"
 [ "$restored_revision" = "$meta_revision" ] \
   || fail "restored schema revision $restored_revision does not match backup metadata $meta_revision"
 log "restored schema revision matches backup metadata ($restored_revision)"

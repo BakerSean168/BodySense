@@ -39,6 +39,8 @@ Non-secret settings in `.env.production` (tracked):
 | `OFFHOST_RECOVERY_MODE` | `false` | let a restore proceed when production is down (skips only the production-side isolation proofs; see §5) |
 | `OFFHOST_RECOVERY_PRODUCTION_PROJECT` | `bodysense` | production compose project name used in recovery mode |
 | `OFFHOST_BACKUP_ALERT_CMD` | (empty) | command run on freshness failure |
+| `OFFHOST_BACKUP_PRIVACY_PROOF` | `acl+policy` | destination-privacy proof mode: `acl+policy` (default, strongest) verifies the bucket ACL **and** `GetBucketPolicyStatus` fail-closed; `acl` opts into ACL-only proof for stores such as Alibaba OSS that do not implement policy status |
+| `OFFHOST_BACKUP_MAINTENANCE_SUPPRESS` | `false` | `true` makes the scheduled freshness check exit 0 with an "intentionally suppressed" log only while `OFFHOST_BACKUP_ENABLED!=true` (explicit acknowledgement of a maintenance window); any other value is refused |
 
 Secrets in `.env.production.local` (untracked, host-only):
 
@@ -47,8 +49,11 @@ OFFHOST_BACKUP_ACCESS_KEY=...
 OFFHOST_BACKUP_SECRET_KEY=...
 ```
 
-The keys must be least-privilege (only GetObject / PutObject / DeleteObject /
-ListBucket on the backup bucket). They are passed to `scripts/offhost-s3.py`
+The keys must be least-privilege on the backup bucket:
+`GetObject` / `PutObject` / `DeleteObject` / `ListBucket`, plus
+`GetBucketAcl` (always required for the privacy preflight) and
+`GetBucketPolicyStatus` (required when `OFFHOST_BACKUP_PRIVACY_PROOF=acl+policy`,
+the default). They are passed to `scripts/offhost-s3.py`
 only through the process environment (`OFFHOST_BACKUP_ACCESS_KEY` /
 `OFFHOST_BACKUP_SECRET_KEY`), never on the command line and never written into
 artifacts. The client **refuses** `--access-key` / `--secret-key` arguments as
@@ -66,22 +71,38 @@ one-off check without editing files.
   `last-success.json` is **not** updated — a silent retention skip can never
   leave the freshness check reporting OK while sensitive backups accumulate
   without a proven retention bound.
-- **The schema revision is verified fail-closed on both sides.** The backup
-  reads `<version>:<dirty>` from `schema_migrations` and refuses to record a
-  success if the table is missing/uninitialized, empty, or the query fails —
-  a dump is never marked successful while carrying an unverified revision. The
-  restore refuses archive `meta.json` objects whose `schema_revision` is
-  `unknown`/`uninitialized`/empty up front, and requires the restored database's
-  revision to equal the metadata revision exactly before reporting PASS.
+- **The schema revision is an exact clean `<version>:false` value, verified
+  fail-closed on both sides.** The backup reads `<version>:<dirty>` from
+  `schema_migrations` and refuses to record a success when the table is
+  missing/uninitialized, empty, the query fails, or the value is not an exact
+  clean `<version>:false` revision (a dirty schema never produces a
+  "successful" backup). The restore refuses archive `meta.json` objects whose
+  `schema_revision` is not an exact clean `<version>:false` value
+  (`unknown`/`uninitialized`/empty/`<version>:true`) up front, requires the
+  restored database to report a proven clean `<version>:false` revision, and
+  requires it to equal the metadata revision exactly before reporting PASS.
 - **Destination privacy is proven, never assumed.** Every backup first runs a
   fail-closed private-destination preflight: the bucket ACL must be readable and
-  provably private (a public or unreadable ACL, or a `GetBucketPolicyStatus`
-  result of `IsPublic=true`, aborts the backup before any object is uploaded and
-  after a failed run the previous `last-success.json` is left untouched). Every
-  uploaded object then carries `x-amz-acl=private` — the client refuses any other
-  object ACL — and `x-amz-server-side-encryption` (`AES256` by default).
-  A store that does not implement `GetBucketPolicyStatus` is accepted with a
-  warning: the provably-private ACL remains the privacy proof.
+  provably private. In the default `acl+policy` mode the bucket policy status is
+  also verified fail-closed: a public or unreadable ACL, an `IsPublic=true`
+  policy result, an answer the store cannot give (`BucketPolicyStatusUnsupported`
+  / `BucketPolicyStatusFailed` / `BucketPolicyStatusDenied`), or a malformed
+  response all abort the backup **before any object is uploaded**, and after a
+  failed run the previous `last-success.json` is left untouched. A store that
+  does not implement `GetBucketPolicyStatus` (such as Alibaba OSS) must be
+  configured with `OFFHOST_BACKUP_PRIVACY_PROOF=acl` to opt into ACL-only proof;
+  that mode warns
+  (`OFFHOST_S3_WARNING policy status is NOT verified (acl-only proof)`) but
+  succeeds with the provably-private ACL as the machine-verified privacy proof.
+  Every uploaded object then carries `x-amz-acl=private` — the client refuses
+  any other object ACL — and `x-amz-server-side-encryption` (`AES256` by
+  default).
+- **A disabled pipeline never masquerades as protected.** With
+  `OFFHOST_BACKUP_ENABLED!=true`, the scheduled freshness check exits **non-zero**
+  with `OFFHOST_BACKUP_FRESH=FAIL reason=backups-disabled` so the alert path
+  fires. Only an explicit `OFFHOST_BACKUP_MAINTENANCE_SUPPRESS=true`
+  acknowledges an intentional maintenance window with a clean exit; `--backup`
+  on a disabled pipeline skips cleanly.
 - **Freshness is compared in whole seconds.** A backup is stale when
   `now - last_success_at_utc` exceeds `OFFHOST_BACKUP_FRESHNESS_HOURS * 3600`
   seconds (no whole-hour truncation: with a 30h policy, a 30h59m-old backup
@@ -117,6 +138,18 @@ journalctl -u bodysense-offhost-freshness.service -n 100
 Until `OFFHOST_BACKUP_ACCESS_KEY` / `OFFHOST_BACKUP_SECRET_KEY` are configured,
 the freshness check fails hourly (there is no `last-success.json`), so an
 unconfigured host alarms instead of masquerading as protected.
+
+The deploy watcher treats the DR operator scripts (`production-deploy-watch.sh`,
+`offhost-s3.py`, `production-offhost-backup.sh`,
+`restore-production-backup.sh`) and these four systemd units as part of the
+**managed runtime**: before a deployment it archives them (with `.env.production`,
+Compose and Caddyfile) under `$ROOT/runtime-backups/<revision>-<stamp>/`, and if
+the deployment fails it restores the whole runtime — scripts are restored to the
+exact archived version (and scripts the previous runtime did not have are
+removed), the units are restored/removed accordingly, host symlinks are
+re-pointed and `systemctl daemon-reload` is re-run. A failed deployment never
+leaves the new revision's DR scripts or systemd units installed. The hermetic
+tests exercise this path via `BODYSENSE_SYSTEMD_DIR`.
 
 ## 4. Manual operations
 
@@ -354,14 +387,18 @@ compare both logs before the recovered environment is put back into service.
 - **Hermetic (no docker/PostgreSQL needed):** `scripts/test_offhost_s3.py`
   (specific SigV4 vectors plus a signature-verified fake S3 server, including
   refusal of command-line credentials, the fail-closed private-destination
-  preflight against public/unreadable ACLs and public policy-status, and the
-  `x-amz-acl=private` + SSE wire headers) — 30 checks — and
-  `scripts/validate-offhost-dr-unit.sh`
-  (64 checks: backup/retention/freshness, per-mode lock independence (backup and
-  freshness can no longer mask each other), the fail-closed schema-revision gates
-  on both the backup and restore sides, the private-destination preflight
-  aborting before any upload on a public/unreadable bucket ACL or public policy
-  status, the object ACL/SSE upload headers, the restore isolation guards — ID
+  preflight against public/unreadable ACLs and public/denied/unsupported/
+  malformed policy-status, the `--policy-proof acl-only` opt-in with its
+  `OFFHOST_S3_WARNING`, and the `x-amz-acl=private` + SSE wire headers) — 37
+  checks — and `scripts/validate-offhost-dr-unit.sh`
+  (80 checks: backup/retention/freshness, per-mode lock independence (backup and
+  freshness can no longer mask each other), the fail-closed exact
+  clean-`<version>:false` schema-revision gates on both the backup and restore
+  sides, the private-destination preflight aborting before any upload on a
+  public/unreadable bucket ACL, public/unsupported policy status and invalid
+  proof modes, the `acl` opt-in warning path, the disabled-pipeline freshness
+  contract (`reason=backups-disabled` + maintenance suppression), the object
+  ACL/SSE upload headers, the restore isolation guards — ID
   equality, running state, production-Compose-project membership, host/none
   networking refusal, declared-drill-network enforcement, the only-network rule
   (no networks beyond the declared drill network), the no-published-host-ports
@@ -371,8 +408,11 @@ compare both logs before the recovered environment is put back into service.
   the DB password argv-leak guard (env-only `PGPASSWORD`, never in
   `-database-url`/argv), the resolved api-container validation path, recovery
   mode (restore with production down) with its refusals for a target equal to or
-  labelled with the production project, and the
-  systemd timers' timezone-in-`OnCalendar` contract) against stubbed PostgreSQL
+  labelled with the production project, the
+  systemd timers' timezone-in-`OnCalendar` contract, and the deploy-watch
+  rollback that restores the whole managed runtime (DR scripts + systemd units,
+  including removal of artifacts the previous runtime did not have, re-pointed
+  symlinks and `daemon-reload`)) against stubbed PostgreSQL
   and the fake S3 server.
 - **Docker integration:** `scripts/validate-offhost-dr.sh` runs real PostgreSQL
   18 + real `pg_dump`/`pg_restore` + the real validator binaries end to end,
@@ -389,10 +429,15 @@ compare both logs before the recovered environment is put back into service.
 | `reason=future-dated-last-success` | host clock skew or tampered state, or a broken state write | check host clock (`date -u`); fix or replace `last-success.json`; a future-dated success is never trusted as fresh |
 | `reason=object-probe-unreachable` / `object-probe-head-failed` | OSS key rotation or bucket/permission change | verify credentials against the bucket; check endpoint/bucket in `.env.production` |
 | `reason=credentials-missing-for-object-probe` | object probing without keys | add keys to `.env.production.local` |
+| `reason=backups-disabled` with `OFFHOST_BACKUP_ENABLED!=true` | the backup pipeline is disabled, so protection cannot be proven | re-enable backups; for an intentional maintenance window set `OFFHOST_BACKUP_MAINTENANCE_SUPPRESS=true` (clean exit, "intentionally suppressed") |
+| backup fails with `private-destination preflight failed ... BucketPolicyStatusUnsupported` | the store cannot answer `GetBucketPolicyStatus` (e.g. Alibaba OSS) while the default `acl+policy` proof is active | verify the bucket is private via ACL, then set `OFFHOST_BACKUP_PRIVACY_PROOF=acl` to opt into ACL-only proof — never assume an unanswered policy status means private |
+| backup fails with `private-destination preflight failed ... BucketPolicyStatusDenied` / `BucketPolicyStatusFailed` / `BucketPolicyStatusMalformed` | policy-status request failed / returned a non-200 / malformed response | verify the store implements policy status and the credentials carry `GetBucketPolicyStatus`; use `acl` proof mode only for stores that provably cannot answer |
+| backup fails with `source schema revision '<v>' is not an exact clean <version>:false revision` | the source schema revision is dirty (`<version>:true`) or unparseable | fix migrations / migration state so the source reports an exact clean `version:false`, then rerun `--backup` |
+| restore fails with `declares an unverifiable schema revision '<v>'` | `meta.json` `schema_revision` is `unknown`/`uninitialized`/empty or dirty (`<version>:true`) (tampered or foreign metadata) | verify the metadata object (§7.1); pick a valid datedir — only an exact clean `<version>:false` revision passes the restore gate |
+| restore fails with `restored schema revision '<v>' is not an exact clean <version>:false revision` | the restored database's revision could not be proven clean (`<version>:true`) or is unparseable | investigate the archive/restore; a dirty or unverifiable restored database is never certified |
 | backup fails with `remote checksum round-trip mismatch` | upload/re-download integrity issue | rerun `--backup`; treat failure as real: do not rely on the archive |
 | backup fails with `off-host retention listing failed; refusing to record last success` | object-store listing failed (endpoint, ListBucket permission, network) during pruning | verify ListBucket access/endpoint; rerun `--backup`; `last-success.json` was **not** advanced, so retention stayed bounded by the previous proof |
-| backup fails with `no schema_migrations table` / `schema_migrations query failed` / `schema_migrations exists but has no rows` | migration state is missing/unreadable/empty | fix migrations and migration state on the source DB, then rerun `--backup`; no backup is recorded without a verified `<version>:<dirty>` revision |
-| restore fails with `declares an unverifiable schema revision` | `meta.json` `schema_revision` is `unknown`/`uninitialized`/empty (tampered or foreign metadata) | verify the metadata object (§7.1); pick a valid datedir — an unverifiable revision never passes the restore gate |
+| backup fails with `no schema_migrations table` / `schema_migrations query failed` / `schema_migrations exists but has no rows` | migration state is missing/unreadable/empty | fix migrations and migration state on the source DB, then rerun `--backup`; no backup is recorded without a verified exact clean `<version>:false` revision |
 | restore fails with `re-downloaded archive checksum does not match` | corrupted remote copy | rerun; if persistent, investigate the object store (see §7.1) |
 | restore fails with `does not match the checksum sidecar` / `does not match metadata checksum_sha256` | archive or sidecar corrupted in transit or by retention | fetch the object, sidecar and metadata manually and verify (§7.1); pick a different datedir |
 | restore fails with `checksum sidecar is not in '<sha256>  <filename>' format` or `does not match object key basename` | tampered or foreign sidecar paired with the archive | investigate the object store; the archive is not trusted without a valid, matching sidecar |
