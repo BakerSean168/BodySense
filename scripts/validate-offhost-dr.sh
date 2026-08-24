@@ -11,6 +11,13 @@
 # container: dedicated drill network (never attached to the production network),
 # disposable labels, running state and distinct container identity.
 #
+# All container and network names are suffixed with the shell PID so the test
+# can never collide with (or clean up) unrelated containers/networks: the EXIT
+# cleanup only touches resources this run created.  The production postgres is
+# additionally given the network alias `postgres` so the validator container can
+# reach it by the same DNS name production uses (mirroring the Compose service
+# name) while its actual container name stays unique to this run.
+#
 # Requires docker and outbound registry/module access (golang build).
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -20,14 +27,17 @@ GO_IMAGE="${OFFHOST_DR_GO_IMAGE:-golang:1.26-alpine}"
 ALPINE_IMAGE="${OFFHOST_DR_ALPINE_IMAGE:-alpine:3.20}"
 NET="bodysense-dr-net-$$"
 DRILL_NET="bodysense-dr-drill-net-$$"
-PG_NAME="postgres"          # production postgres (source), on NET only
-RESTORE_PG_NAME="restore-pg" # disposable, explicitly isolated restore postgres, NET2 only
+# Unique per-run names: a fixed name (e.g. "postgres", "restore-pg") could
+# collide with an unrelated container on a shared CI host, and the EXIT cleanup
+# must never delete a container this test did not create.
+PG_NAME="bodysense-dr-pg-$$"             # production postgres (source), on NET only
+RESTORE_PG_NAME="bodysense-dr-restore-pg-$$" # disposable, explicitly isolated restore postgres, DRILL_NET only
 # The api validator container uses Compose's default naming ("<project>-api-1")
 # — production does NOT set container_name, so the running container is
-# "docker-api-1", never a literal "api". Naming this one "bodysense-dr-api-1"
+# "docker-api-1", never a literal "api". Naming this one "bodysense-dr-api-<pid>"
 # (and pinning it via OFFHOST_API_CONTAINER) proves the restore path resolves
 # the validator container instead of assuming "api".
-API_NAME="bodysense-dr-api-1"
+API_NAME="bodysense-dr-api-$$"
 BUILDER_NAME="bodysense-dr-builder-$$"
 export DB_USER=bodysense DB_NAME=bodysense DB_PASSWORD=0123456789abcdef
 
@@ -120,7 +130,8 @@ export OFFHOST_PG_PREFIX="$TMP/fake-pg" PG_NAME
 
 # --- real PostgreSQL ------------------------------------------------------------
 docker network create "$NET" >/dev/null
-docker run -d --name "$PG_NAME" --network "$NET" \
+docker network create "$DRILL_NET" >/dev/null
+docker run -d --name "$PG_NAME" --network "$NET" --network-alias postgres \
   -e "POSTGRES_USER=$DB_USER" -e "POSTGRES_PASSWORD=$DB_PASSWORD" -e "POSTGRES_DB=$DB_NAME" \
   "$PG_IMAGE" >/dev/null
 
