@@ -3,6 +3,7 @@ Description=Run BodySense off-host backup freshness check hourly (BS-PROD-012)
 
 [Timer]
 OnCalendar=*:00:00
+Timezone=Asia/Shanghai
 Persistent=true
 Unit=bodysense-offhost-freshness.service
 

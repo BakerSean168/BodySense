@@ -52,14 +52,36 @@ a security guard, so the keys can never appear in `/proc/*/cmdline` or process
 listings. Process env overrides the env files so an operator can authenticate a
 one-off check without editing files.
 
+### Policy invariants
+
+- **Retention is apply-or-fail.** Before recording a success, the backup lists
+  every object under `OFFHOST_BACKUP_PREFIX` and prunes objects older than
+  `OFFHOST_BACKUP_RETENTION_DAYS` (the newest day directory is never pruned).
+  If that object listing cannot be fetched, the backup aborts with
+  `off-host retention listing failed; refusing to record last success` and
+  `last-success.json` is **not** updated — a silent retention skip can never
+  leave the freshness check reporting OK while sensitive backups accumulate
+  without a proven retention bound.
+- **Freshness is compared in whole seconds.** A backup is stale when
+  `now - last_success_at_utc` exceeds `OFFHOST_BACKUP_FRESHNESS_HOURS * 3600`
+  seconds (no whole-hour truncation: with a 30h policy, a 30h59m-old backup
+  reports `age_hours=30.983` and is stale). A future-dated
+  `last_success_at_utc` (host clock skew or tampered state) is rejected as
+  `reason=future-dated-last-success` and never treated as fresh.
+
 ## 3. Scheduling
 
 The deploy watcher installs and enables these units from the runtime bundle:
 
-- `bodysense-offhost-backup.timer` — daily 02:10 (`OnCalendar=*-*-* 02:10:00`),
-  runs `production-offhost-backup.sh --backup`.
-- `bodysense-offhost-freshness.timer` — hourly
-  (`OnCalendar=*:00:00`), runs `--check-freshness`.
+- `bodysense-offhost-backup.timer` — daily 02:10 Asia/Shanghai
+  (`OnCalendar=*-*-* 02:10:00`, `Timezone=Asia/Shanghai`), runs
+  `production-offhost-backup.sh --backup`.
+- `bodysense-offhost-freshness.timer` — hourly (`OnCalendar=*:00:00`,
+  `Timezone=Asia/Shanghai`), runs `--check-freshness`.
+
+The `Timezone=Asia/Shanghai` directive pins the calendar trigger to
+Asia/Shanghai regardless of the host's configured timezone, so the documented
+02:10 Asia/Shanghai schedule is guaranteed rather than host-TZ-dependent.
 
 Inspection:
 
@@ -206,10 +228,12 @@ script.
 | Symptom | Likely cause | Action |
 |---|---|---|
 | `OFFHOST_BACKUP_FRESH=FAIL reason=no-last-success-state` | no successful backup ever recorded | run `--backup`; check credentials and bucket access |
-| `reason=stale` | last backup older than `OFFHOST_BACKUP_FRESHNESS_HOURS` | inspect `journalctl -u bodysense-offhost-backup.service -n 100`; run `--backup` |
+| `reason=stale` | last backup older than `OFFHOST_BACKUP_FRESHNESS_HOURS` (compared in whole seconds; no whole-hour truncation) | inspect `journalctl -u bodysense-offhost-backup.service -n 100`; run `--backup` |
+| `reason=future-dated-last-success` | host clock skew or tampered state, or a broken state write | check host clock (`date -u`); fix or replace `last-success.json`; a future-dated success is never trusted as fresh |
 | `reason=object-probe-unreachable` / `object-probe-head-failed` | OSS key rotation or bucket/permission change | verify credentials against the bucket; check endpoint/bucket in `.env.production` |
 | `reason=credentials-missing-for-object-probe` | object probing without keys | add keys to `.env.production.local` |
 | backup fails with `remote checksum round-trip mismatch` | upload/re-download integrity issue | rerun `--backup`; treat failure as real: do not rely on the archive |
+| backup fails with `off-host retention listing failed; refusing to record last success` | object-store listing failed (endpoint, ListBucket permission, network) during pruning | verify ListBucket access/endpoint; rerun `--backup`; `last-success.json` was **not** advanced, so retention stayed bounded by the previous proof |
 | backup fails with `re-downloaded archive checksum does not match` | corrupted remote copy | rerun; if persistent, investigate the object store (see §7.1) |
 | restore fails with `does not match the checksum sidecar` / `does not match metadata checksum_sha256` | archive or sidecar corrupted in transit or by retention | fetch the object, sidecar and metadata manually and verify (§7.1); pick a different datedir |
 | restore fails with `checksum sidecar is not in '<sha256>  <filename>' format` or `does not match object key basename` | tampered or foreign sidecar paired with the archive | investigate the object store; the archive is not trusted without a valid, matching sidecar |

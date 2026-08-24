@@ -22,6 +22,7 @@ TMP="$(mktemp -d)"
 ROOT="$TMP/root"
 BIN="$TMP/bin"
 CORRUPT_FILE="$TMP/corrupt.on"
+LIST_FAIL_FILE="$TMP/listfail.on"
 PORT_FILE="$TMP/server.port"
 export TMP ROOT BIN CORRUPT_FILE
 
@@ -112,17 +113,31 @@ export PATH="$BIN:$PATH"
 
 # --- fake S3 server lifecycle -------------------------------------------------
 start_server() {
-  rm -f "$PORT_FILE" "$CORRUPT_FILE"
-  python3 - "$PORT_FILE" "$CORRUPT_FILE" <<'PY' &
+  rm -f "$PORT_FILE" "$CORRUPT_FILE" "$LIST_FAIL_FILE"
+  python3 - "$PORT_FILE" "$CORRUPT_FILE" "$LIST_FAIL_FILE" <<'PY' &
 import importlib.util, os, sys
 spec = importlib.util.spec_from_file_location("test_offhost_s3", os.environ["S3LIBS"])
 T = importlib.util.module_from_spec(spec)
 sys.modules["test_offhost_s3"] = T
 spec.loader.exec_module(T)
 T.FakeS3Handler.store = {}
+_orig_list = T.FakeS3Handler._list
+def _guarded_list(self, query_raw):
+    # A list-failure control file: when it holds a prefix, any ListObjectsV2
+    # request for exactly that prefix fails with a 500 so tests can prove the
+    # retention listing path fails loudly instead of being swallowed.
+    lff = getattr(self, "list_fail_file", None)
+    if lff and os.path.exists(lff):
+        params = dict(T.urllib.parse.parse_qsl(query_raw))
+        if params.get("prefix", "") == open(lff).read().strip():
+            self._reject(500, "ListObjectsFailed", "simulated list failure")
+            return
+    return _orig_list(self, query_raw)
 Handler = type("CorruptibleHandler", (T.FakeS3Handler,), {
     "corrupt_file": sys.argv[2],
     "corrupt_suffix": ".dump",
+    "list_fail_file": sys.argv[3],
+    "_list": _guarded_list,
 })
 srv = T.FakeServer(handler=Handler)
 host, port = srv.server.server_address
@@ -186,6 +201,19 @@ run_backup() {
 run_freshness() {
   FAKEPG_DUMP="$(fake_dump)" BODYSENSE_DEPLOY_ROOT="$ROOT" OFFHOST_PG_PREFIX="$BIN/fake-pg" \
     bash scripts/production-offhost-backup.sh --check-freshness
+}
+
+rewrite_state_age() {
+  # Rewrite last_success_at_utc to now - $1 seconds (negative = future-dated).
+  local seconds="$1"
+  python3 - "$ROOT/.offhost-state/last-success.json" "$seconds" <<'PY'
+import json, sys, datetime
+path, seconds = sys.argv[1], int(sys.argv[2])
+d = json.load(open(path))
+t = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=seconds)
+d["last_success_at_utc"] = t.strftime("%Y-%m-%dT%H:%M:%SZ")
+json.dump(d, open(path, "w"))
+PY
 }
 
 fake_dump() {
@@ -311,11 +339,40 @@ else
 fi
 
 # ==============================================================================
+# 3b. freshness policy is enforced in whole seconds and rejects future dates
+#     (a 30h59m-old backup used to truncate to a healthy "30h"; future-dated
+#     state used to produce a negative age that was accepted as fresh)
+# ==============================================================================
+run_backup > /dev/null   # restore a valid last-success state
+rewrite_state_age 106200              # 29h30m: below the 30h policy
+out=$(run_freshness 2>&1) && rc=0 || rc=$?
+if [ $rc -eq 0 ] && [[ "$out" == *OFFHOST_BACKUP_FRESH=OK* ]]; then
+  report 0 "freshness below the threshold is OK"
+else
+  report 1 "freshness below the threshold is OK" "rc=$rc out=$out"
+fi
+rewrite_state_age 111540              # 30h59m: truncates to 30h but exceeds policy
+out=$(run_freshness 2>&1) && rc=0 || rc=$?
+if [ $rc -ne 0 ] && [[ "$out" == *reason=stale* ]]; then
+  report 0 "freshness fails when age exceeds policy even below the next whole hour (no truncation)"
+else
+  report 1 "freshness fails when age exceeds policy even below the next whole hour (no truncation)" "rc=$rc out=$out"
+fi
+rewrite_state_age -3600               # future-dated last-success
+out=$(run_freshness 2>&1) && rc=0 || rc=$?
+if [ $rc -ne 0 ] && [[ "$out" == *reason=future-dated-last-success* ]]; then
+  report 0 "future-dated last-success is rejected, never treated as fresh"
+else
+  report 1 "future-dated last-success is rejected, never treated as fresh" "rc=$rc out=$out"
+fi
+
+# ==============================================================================
 # 4. corrupted remote archive is detected during backup verification
 # ==============================================================================
 stop_server
 start_server          # clean store
 write_env
+rm -f "$ROOT/.offhost-state/last-success.json"
 set_corrupt
 out=$(run_backup 2>&1) && rc=0 || rc=$?
 unset_corrupt
@@ -332,6 +389,21 @@ start_server
 write_env
 run_backup > /dev/null
 OBJKEY=$(last_key)
+
+# ==============================================================================
+# 4b. a retention-listing failure must abort the backup (apply-or-fail) and must
+#     never record last-success.json, otherwise unbounded sensitive retention is
+#     possible while freshness keeps reporting OK
+# ==============================================================================
+BEFORE_KEY=$(last_key)
+printf '%s' "$PREFIX/" > "$LIST_FAIL_FILE"
+out=$(run_backup 2>&1) && rc=0 || rc=$?
+rm -f "$LIST_FAIL_FILE"
+if [ $rc -ne 0 ] && [[ "$out" == *"retention listing failed"* ]] && [ "$(last_key)" = "$BEFORE_KEY" ]; then
+  report 0 "retention-listing failure aborts the backup and keeps the previous last-success"
+else
+  report 1 "retention-listing failure aborts the backup and keeps the previous last-success" "rc=$rc out=$out"
+fi
 
 # ==============================================================================
 # 5. restore safety guards

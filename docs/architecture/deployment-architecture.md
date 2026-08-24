@@ -185,18 +185,27 @@ In addition to the deploy watcher's same-host backups, production keeps an
 OSS/S3-compatible destination (Alibaba Cloud OSS `cn-hangzhou`):
 
 - `scripts/production-offhost-backup.sh --backup` runs daily via
-  `bodysense-offhost-backup.timer` (02:10 Asia/Shanghai). It produces a
+  `bodysense-offhost-backup.timer` (02:10 Asia/Shanghai, enforced by the unit's
+  `Timezone=Asia/Shanghai` so the schedule does not depend on the host
+  timezone). It produces a
   custom-format dump through the normal network protocol
   (`docker compose exec postgres pg_dump -Fc`), records its SHA-256 as a sidecar
   object and a metadata object (schema revision, checksum, source, retention),
   uploads the trio to `OFFHOST_BACKUP_BUCKET` under `OFFHOST_BACKUP_PREFIX`,
   re-downloads the checksum object for an end-to-end round-trip, and prunes
   objects older than `OFFHOST_BACKUP_RETENTION_DAYS` (the newest day directory is
-  never pruned).
+  never pruned). Retention is apply-or-fail: if the off-host object listing that
+  drives pruning cannot be fetched, the backup aborts and `last-success.json` is
+  not recorded, so an unbounded retention window can never coexist with a
+  healthy freshness state.
 - `scripts/production-offhost-backup.sh --check-freshness` runs hourly via
-  `bodysense-offhost-freshness.timer`. It reads the local `last-success.json`
+  `bodysense-offhost-freshness.timer` (also pinned to `Timezone=Asia/Shanghai`).
+  It reads the local `last-success.json`
   state and, when `OFFHOST_BACKUP_FRESHNESS_PROBE=object`, confirms the latest
-  archive still exists remotely. A missing/stale state file exits non-zero, emits
+  archive still exists remotely. Freshness is compared in whole seconds (a
+  backup is stale once `now - last_success` exceeds the threshold, with no
+  whole-hour truncation) and a future-dated last-success is rejected, never
+  treated as fresh. A missing/stale state file exits non-zero, emits
   `OFFHOST_BACKUP_FRESH=FAIL reason=...` and optionally runs the configured
   `OFFHOST_BACKUP_ALERT_CMD`.
 - `scripts/restore-production-backup.sh` is the operator-only restore drill. It
