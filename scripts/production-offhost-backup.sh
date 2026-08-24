@@ -10,7 +10,15 @@
 #   - retention is apply-or-fail: if the object listing that drives pruning
 #     cannot be fetched, the backup aborts and last-success.json is NOT recorded;
 #   - freshness policy is compared in whole seconds (no whole-hour truncation)
-#     and a future-dated last-success is rejected, never treated as fresh.
+#     and a future-dated last-success is rejected, never treated as fresh;
+#   - backup and freshness use SEPARATE lock domains: a long-running or hung
+#     backup can never suppress the freshness alert path, and a freshness run
+#     that loses ITS OWN lock exits non-zero (never silently exit 0);
+#   - the destination bucket must PROVABLY be private before any upload: every
+#     backup runs a fail-closed private-destination preflight (GetBucketAcl must
+#     show no public group grants and be readable; a bucket policy status of
+#     IsPublic=true is refused) and objects are uploaded with a private ACL and
+#     server-side encryption by default.
 #
 # Security contract:
 #   - the source database is read through the ordinary postgres network protocol
@@ -29,6 +37,7 @@
 #               OFFHOST_BACKUP_REGION OFFHOST_BACKUP_PREFIX OFFHOST_BACKUP_URL_STYLE
 #               OFFHOST_BACKUP_RETENTION_DAYS OFFHOST_BACKUP_FRESHNESS_HOURS
 #               OFFHOST_BACKUP_FRESHNESS_PROBE OFFHOST_BACKUP_ALERT_CMD
+#               OFFHOST_BACKUP_OBJECT_ACL (private by default) OFFHOST_BACKUP_SSE (AES256 by default)
 #   secret:     OFFHOST_BACKUP_ACCESS_KEY OFFHOST_BACKUP_SECRET_KEY (.env.production.local)
 set -Eeuo pipefail
 
@@ -38,9 +47,10 @@ SECRET_ENV="$ROOT/.env.production.local"
 COMPOSE="$ROOT/docker/docker-compose.prod.yml"
 STATE_DIR="$ROOT/.offhost-state"
 WORK_DIR="$ROOT/.offhost-work"
-LOCK_FILE="$STATE_DIR/offhost.lock"
+BACKUP_LOCK_FILE="$STATE_DIR/offhost-backup.lock"
+FRESHNESS_LOCK_FILE="$STATE_DIR/offhost-freshness.lock"
 S3_CLIENT="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)/offhost-s3.py"
-TOOL_VERSION="1.1.0"
+TOOL_VERSION="1.2.0"
 
 MODE=""
 for arg in "$@"; do
@@ -64,8 +74,22 @@ fail() { log "ERROR: $*" >&2; exit 1; }
 
 mkdir -p "$ROOT" "$STATE_DIR" "$WORK_DIR"
 chmod 700 "$STATE_DIR" "$WORK_DIR"
-exec 9>"$LOCK_FILE"
-flock -n 9 || { log 'another off-host backup operation is already running'; exit 0; }
+# Backup and freshness use SEPARATE lock domains so a long-running or hung
+# backup can never suppress the freshness alerting path: the freshness check
+# reads the atomically-written last-success.json and probes the object store
+# independently of any in-flight backup.  A freshness run that loses its OWN
+# lock exits non-zero (a "cannot prove freshness right now" condition must never
+# masquerade as "everything is fine" with a clean exit 0).
+case "$MODE" in
+  backup)
+    exec 9>"$BACKUP_LOCK_FILE"
+    flock -n 9 || { log 'another off-host backup operation is already running; skipping this run'; exit 0; }
+    ;;
+  freshness)
+    exec 9>"$FRESHNESS_LOCK_FILE"
+    flock -n 9 || { log 'ERROR: another off-host freshness check is already running (freshness lock held); exiting non-zero so a stale backup can never be silently masked'; exit 1; }
+    ;;
+esac
 
 [ -f "$S3_CLIENT" ] || fail "missing $S3_CLIENT"
 [ -s "$PUBLIC_ENV" ] || fail "missing $PUBLIC_ENV"
@@ -115,6 +139,8 @@ RETENTION_DAYS=$(cfg OFFHOST_BACKUP_RETENTION_DAYS 30)
 FRESHNESS_HOURS=$(cfg OFFHOST_BACKUP_FRESHNESS_HOURS 30)
 FRESHNESS_PROBE=$(cfg OFFHOST_BACKUP_FRESHNESS_PROBE object)
 ALERT_CMD=$(cfg OFFHOST_BACKUP_ALERT_CMD)
+OBJ_ACL=$(cfg OFFHOST_BACKUP_OBJECT_ACL private)
+SSE=$(cfg OFFHOST_BACKUP_SSE AES256)
 ACCESS_KEY=$(secret_cfg OFFHOST_BACKUP_ACCESS_KEY)
 SECRET_KEY=$(secret_cfg OFFHOST_BACKUP_SECRET_KEY)
 DB_USER=$(cfg DB_USER bodysense)
@@ -127,6 +153,14 @@ COMPOSE_PROJECT="${BODYSENSE_COMPOSE_PROJECT:-docker}"
 case "$FRESHNESS_PROBE" in object|state) ;; *) fail "OFFHOST_BACKUP_FRESHNESS_PROBE must be object or state (got: $FRESHNESS_PROBE)" ;; esac
 if [ "${RETENTION_DAYS:-0}" -lt 1 ] 2>/dev/null; then fail "OFFHOST_BACKUP_RETENTION_DAYS must be >= 1 (got: $RETENTION_DAYS)"; fi
 if [ "${FRESHNESS_HOURS:-0}" -lt 1 ] 2>/dev/null; then fail "OFFHOST_BACKUP_FRESHNESS_HOURS must be >= 1 (got: $FRESHNESS_HOURS)"; fi
+case "$OBJ_ACL" in
+  private|"") ;;
+  *) fail "OFFHOST_BACKUP_OBJECT_ACL must be 'private' or empty (got: $OBJ_ACL); the client refuses any public object ACL" ;;
+esac
+case "$SSE" in
+  AES256|aws:kms|"") ;;
+  *) fail "OFFHOST_BACKUP_SSE must be AES256, aws:kms or empty (got: $SSE)" ;;
+esac
 
 # Host-side postgres access.  Everything goes through this one seam so hermetic
 # tests can stub it with OFFHOST_PG_PREFIX (e.g. a fake pg_dump/psql/pg_restore).
@@ -187,10 +221,19 @@ fail_freshness() {
 
 run_backup() {
   local ts datedir object_key dump checksum size schema pg_dump_version listing \
-    verify_dump verification remote_sha verify_sha
+    verify_dump verification remote_sha verify_sha put_extra
 
   if [ -z "$ACCESS_KEY" ] || [ -z "$SECRET_KEY" ]; then
     fail 'OFFHOST_BACKUP_ACCESS_KEY and OFFHOST_BACKUP_SECRET_KEY must be set in .env.production.local'
+  fi
+
+  # Fail-closed private-destination preflight BEFORE any upload: the bucket must
+  # be PROVABLY private (GetBucketAcl readable and free of public group grants;
+  # a GetBucketPolicyStatus of IsPublic=true is also refused).  A store that
+  # cannot prove the bucket is private fails the backup — "assumed private" is
+  # never accepted as a destination for health data.
+  if ! s3 check-private; then
+    fail 'private-destination preflight failed (bucket not provably private); refusing to upload off-host backup objects'
   fi
 
   ts=$(date -u +%Y%m%d-%H%M%SZ)
@@ -243,9 +286,12 @@ META
     || { rm -f "$dump" "$dump.sha256" "$dump.meta.json"; fail 'metadata object is not valid JSON'; }
 
   log "uploading off-host backup $object_key"
-  s3 put --key "$object_key" --file "$dump"
-  s3 put --key "$object_key.sha256" --file "$dump.sha256"
-  s3 put --key "$object_key.meta.json" --file "$dump.meta.json"
+  put_extra=()
+  [ -z "$OBJ_ACL" ] || put_extra+=(--acl "$OBJ_ACL")
+  [ -z "$SSE" ] || put_extra+=(--sse "$SSE")
+  s3 put "${put_extra[@]}" --key "$object_key" --file "$dump"
+  s3 put "${put_extra[@]}" --key "$object_key.sha256" --file "$dump.sha256"
+  s3 put "${put_extra[@]}" --key "$object_key.meta.json" --file "$dump.meta.json"
 
   # Re-fetch checksum + archive and recompute locally so the upload is proven
   # end-to-end, not just accepted.  Operators may skip the (bandwidth-heavy)

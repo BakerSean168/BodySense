@@ -24,7 +24,13 @@ BIN="$TMP/bin"
 CORRUPT_FILE="$TMP/corrupt.on"
 LIST_FAIL_FILE="$TMP/listfail.on"
 PORT_FILE="$TMP/server.port"
-export TMP ROOT BIN CORRUPT_FILE
+PUBLIC_ACL_FILE="$TMP/public-acl.on"
+ACL_UNREADABLE_FILE="$TMP/acl-unreadable.on"
+POLICY_PUBLIC_FILE="$TMP/policy-public.on"
+POLICY_UNAVAILABLE_FILE="$TMP/policy-unavailable.on"
+PUT_LOG_FILE="$TMP/put.log"
+export TMP ROOT BIN CORRUPT_FILE PUBLIC_ACL_FILE ACL_UNREADABLE_FILE
+export POLICY_PUBLIC_FILE POLICY_UNAVAILABLE_FILE PUT_LOG_FILE
 
 PASS=0
 FAIL=0
@@ -170,7 +176,8 @@ JSON
 
 # --- fake S3 server lifecycle -------------------------------------------------
 start_server() {
-  rm -f "$PORT_FILE" "$CORRUPT_FILE" "$LIST_FAIL_FILE"
+  rm -f "$PORT_FILE" "$CORRUPT_FILE" "$LIST_FAIL_FILE" "$PUT_LOG_FILE"
+  rm -f "$PUBLIC_ACL_FILE" "$ACL_UNREADABLE_FILE" "$POLICY_PUBLIC_FILE" "$POLICY_UNAVAILABLE_FILE"
   python3 - "$PORT_FILE" "$CORRUPT_FILE" "$LIST_FAIL_FILE" <<'PY' &
 import importlib.util, os, sys
 spec = importlib.util.spec_from_file_location("test_offhost_s3", os.environ["S3LIBS"])
@@ -190,11 +197,46 @@ def _guarded_list(self, query_raw):
             self._reject(500, "ListObjectsFailed", "simulated list failure")
             return
     return _orig_list(self, query_raw)
+# ACL / policy-status control files so the private-destination preflight can be
+# made to fail (public or unreadable ACL / public policy) without editing the
+# fake server.
+_acl_unreadable = os.environ.get("ACL_UNREADABLE_FILE", "")
+_public_acl = os.environ.get("PUBLIC_ACL_FILE", "")
+_policy_unavailable = os.environ.get("POLICY_UNAVAILABLE_FILE", "")
+_policy_public = os.environ.get("POLICY_PUBLIC_FILE", "")
+def _flag(path):
+    return bool(path) and os.path.exists(path)
+_orig_acl_reply = T.FakeS3Handler._acl_reply
+def _guarded_acl_reply(self):
+    self.acl_unreadable = _flag(_acl_unreadable)
+    self.public_acl = _flag(_public_acl)
+    return _orig_acl_reply(self)
+_orig_policy_reply = T.FakeS3Handler._policy_status_reply
+def _guarded_policy_reply(self):
+    self.policy_unavailable = _flag(_policy_unavailable)
+    self.policy_public = _flag(_policy_public)
+    return _orig_policy_reply(self)
+_orig_put = T.FakeS3Handler.do_PUT
+def _guarded_put(self):
+    _orig_put(self)
+    # Record every PUT's wire ACL/SSE headers so tests can prove the backup
+    # script uploads objects with x-amz-acl=private and
+    # x-amz-server-side-encryption=AES256.
+    rec = "%s acl=%s sse=%s" % (
+        self._key_from_path(),
+        self.headers.get("x-amz-acl", "-"),
+        self.headers.get("x-amz-server-side-encryption", "-"),
+    )
+    with open(os.environ.get("PUT_LOG_FILE", "/dev/null"), "a") as fh:
+        fh.write(rec + "\n")
 Handler = type("CorruptibleHandler", (T.FakeS3Handler,), {
     "corrupt_file": sys.argv[2],
     "corrupt_suffix": ".dump",
     "list_fail_file": sys.argv[3],
     "_list": _guarded_list,
+    "_acl_reply": _guarded_acl_reply,
+    "_policy_status_reply": _guarded_policy_reply,
+    "do_PUT": _guarded_put,
 })
 srv = T.FakeServer(handler=Handler)
 host, port = srv.server.server_address
@@ -424,6 +466,122 @@ else
 fi
 
 # ==============================================================================
+# 3c. backup and freshness use SEPARATE lock domains (review finding: the old
+#     single lock let a running/hung backup suppress the freshness alert path).
+#     A backup that loses the backup lock must still skip cleanly (exit 0, no
+#     duplicate upload), while a freshness run that loses its OWN lock must exit
+#     non-zero (never silently 0), and neither domain may block the other.
+# ==============================================================================
+run_backup > /dev/null            # valid last-success state first
+LOCKDIR="$ROOT/.offhost-state"
+exec 9>"$LOCKDIR/offhost-backup.lock"
+flock -n 9 || { echo "test harness could not hold the backup lock"; exit 1; }
+out=$(run_backup 2>&1) && rc=0 || rc=$?
+if [ $rc -eq 0 ] && [[ "$out" == *"backup operation is already running; skipping this run"* ]]; then
+  report 0 "a backup that loses the backup lock skips cleanly (exit 0), never duplicate-runs"
+else
+  report 1 "a backup that loses the backup lock skips cleanly (exit 0), never duplicate-runs" "rc=$rc out=$out"
+fi
+out=$(run_freshness 2>&1) && rc=0 || rc=$?
+if [ $rc -eq 0 ] && [[ "$out" == *OFFHOST_BACKUP_FRESH=OK* ]]; then
+  report 0 "freshness alerting is NOT suppressed while a backup holds the backup lock"
+else
+  report 1 "freshness alerting is NOT suppressed while a backup holds the backup lock" "rc=$rc out=$out"
+fi
+exec 9>&-
+
+exec 8>"$LOCKDIR/offhost-freshness.lock"
+flock -n 8 || { echo "test harness could not hold the freshness lock"; exit 1; }
+out=$(run_freshness 2>&1) && rc=0 || rc=$?
+if [ $rc -ne 0 ] && [[ "$out" == *"freshness lock held"* ]]; then
+  report 0 "a freshness run that loses the freshness lock fails loudly, never exits 0"
+else
+  report 1 "a freshness run that loses the freshness lock fails loudly, never exits 0" "rc=$rc out=$out"
+fi
+out=$(run_backup 2>&1) && rc=0 || rc=$?
+if [ $rc -eq 0 ] && [[ "$out" == *"uploading off-host backup"* ]]; then
+  report 0 "a backup is NOT blocked while a freshness check holds the freshness lock"
+else
+  report 1 "a backup is NOT blocked while a freshness check holds the freshness lock" "rc=$rc out=$out"
+fi
+exec 8>&-
+
+# ==============================================================================
+# 3d. the private-destination preflight is fail-closed (review finding: privacy
+#     used to be assumed, never proven): a backup must abort BEFORE any upload
+#     when the bucket ACL is public, unreadable, or the bucket policy status is
+#     public, and must never record last-success.json in those cases.  A store
+#     that merely does not implement GetBucketPolicyStatus is still accepted
+#     (the ACL remains the privacy proof) but warns.
+# ==============================================================================
+BEFORE_KEY=$(last_key)
+: > "$PUBLIC_ACL_FILE"
+out=$(run_backup 2>&1) && rc=0 || rc=$?
+rm -f "$PUBLIC_ACL_FILE"
+if [ $rc -ne 0 ] && [[ "$out" == *"private-destination preflight failed"* ]] \
+  && [[ "$out" == *BucketPublicAcl* ]] && [ "$(last_key)" = "$BEFORE_KEY" ]; then
+  report 0 "backup fails closed when the destination bucket ACL is public"
+else
+  report 1 "backup fails closed when the destination bucket ACL is public" "rc=$rc out=$out"
+fi
+: > "$ACL_UNREADABLE_FILE"
+out=$(run_backup 2>&1) && rc=0 || rc=$?
+rm -f "$ACL_UNREADABLE_FILE"
+if [ $rc -ne 0 ] && [[ "$out" == *"private-destination preflight failed"* ]] \
+  && [[ "$out" == *BucketAclUnreadable* ]] && [ "$(last_key)" = "$BEFORE_KEY" ]; then
+  report 0 "backup fails closed when the destination bucket ACL is unreadable"
+else
+  report 1 "backup fails closed when the destination bucket ACL is unreadable" "rc=$rc out=$out"
+fi
+: > "$POLICY_PUBLIC_FILE"
+out=$(run_backup 2>&1) && rc=0 || rc=$?
+rm -f "$POLICY_PUBLIC_FILE"
+if [ $rc -ne 0 ] && [[ "$out" == *"private-destination preflight failed"* ]] \
+  && [[ "$out" == *BucketPublicPolicy* ]] && [ "$(last_key)" = "$BEFORE_KEY" ]; then
+  report 0 "backup fails closed when the destination bucket policy status is public"
+else
+  report 1 "backup fails closed when the destination bucket policy status is public" "rc=$rc out=$out"
+fi
+: > "$POLICY_UNAVAILABLE_FILE"
+out=$(run_backup 2>&1) && rc=0 || rc=$?
+rm -f "$POLICY_UNAVAILABLE_FILE"
+if [ $rc -eq 0 ] && [[ "$out" == *"policyStatus unavailable"* ]]; then
+  report 0 "policy-status unavailability is a warning, not a failure (bucket ACL remains the privacy proof)"
+else
+  report 1 "policy-status unavailability is a warning, not a failure (bucket ACL remains the privacy proof)" "rc=$rc out=$out"
+fi
+
+# ==============================================================================
+# 3e. object ACL/SSE configuration is fail-closed: public object ACLs are never
+#     accepted, unknown SSE modes are refused, and successful backups upload
+#     every object with x-amz-acl=private and x-amz-server-side-encryption=
+#     AES256 on the real signed wire request.
+# ==============================================================================
+out=$(OFFHOST_BACKUP_OBJECT_ACL=public-read run_backup 2>&1) && rc=0 || rc=$?
+if [ $rc -ne 0 ] && [[ "$out" == *"must be 'private' or empty"* ]]; then
+  report 0 "OFFHOST_BACKUP_OBJECT_ACL refuses any non-private value"
+else
+  report 1 "OFFHOST_BACKUP_OBJECT_ACL refuses any non-private value" "rc=$rc out=$out"
+fi
+out=$(OFFHOST_BACKUP_SSE=magic run_backup 2>&1) && rc=0 || rc=$?
+if [ $rc -ne 0 ] && [[ "$out" == *"must be AES256, aws:kms or empty"* ]]; then
+  report 0 "OFFHOST_BACKUP_SSE refuses unknown encryption modes"
+else
+  report 1 "OFFHOST_BACKUP_SSE refuses unknown encryption modes" "rc=$rc out=$out"
+fi
+: > "$PUT_LOG_FILE"
+run_backup > /dev/null
+OBJKEY_LATEST=$(last_key)
+if grep -q "^$OBJKEY_LATEST acl=private sse=AES256$" "$PUT_LOG_FILE" \
+  && grep -q "^$OBJKEY_LATEST.sha256 acl=private sse=AES256$" "$PUT_LOG_FILE" \
+  && grep -q "^$OBJKEY_LATEST.meta.json acl=private sse=AES256$" "$PUT_LOG_FILE" \
+  && ! grep -q "acl=public-read" "$PUT_LOG_FILE"; then
+  report 0 "backup uploads every object with x-amz-acl=private and x-amz-server-side-encryption=AES256"
+else
+  report 1 "backup uploads every object with x-amz-acl=private and x-amz-server-side-encryption=AES256" "put_log=$(tr '\n' '|' < "$PUT_LOG_FILE")"
+fi
+
+# ==============================================================================
 # 4. corrupted remote archive is detected during backup verification
 # ==============================================================================
 stop_server
@@ -508,7 +666,7 @@ run_restore_guard "refusing to restore into the production database" \
   --object-key "$PREFIX/20260824T000000Z/bodysense-postgres-20260824T000000Z.dump" \
   --target-db bodysense --target-project drill --restore-pg container:restore-pg \
   --confirm-target-isolated=yes
-run_restore_guard 'must not be "bodysense"' \
+run_restore_guard 'must differ from the production project "bodysense"' \
   --object-key "$PREFIX/20260824T000000Z/bodysense-postgres-20260824T000000Z.dump" \
   --target-db drill_db --target-project bodysense --restore-pg container:restore-pg \
   --confirm-target-isolated=yes
@@ -658,6 +816,91 @@ run_restore_guard "declares an unverifiable schema revision 'unknown'" \
   --restore-pg container:restore-meta --confirm-target-isolated=yes
 s3put "$OBJKEY.meta.json" "$TMP/meta-ok.json" >/dev/null
 rm -f "$TMP/meta-ok.json" "$TMP/meta-tampered.json"
+
+# ==============================================================================
+# 5f. recovery mode (--recovery-mode=yes / OFFHOST_RECOVERY_MODE=true) lets a
+#     restore proceed when the production Postgres container cannot be inspected
+#     because production is down (review finding).  The production-side proofs
+#     (container-ID difference, shared-network intersection, discovered compose
+#     project) are NOT claimed in recovery mode; the target's own declarations
+#     plus the operator-declared production project name remain the isolation
+#     proof.  Without --recovery-mode a missing/uninspectable production
+#     container still refuses.
+# ==============================================================================
+rm -f "$FAKEDOCKER_INSPECT_DIR/pg1.json"
+FAKEPG_DB_EXISTS="" FAKEPG_SCHEMA="49:false"
+write_inspect restore-recovery true \
+  '{"com.docker.compose.project":"recovery-drill","bodysense.restore-project":"recovery","bodysense.disposable-restore":"yes","bodysense.restore-network":"recovery-net"}' \
+  '{"recovery-net":{}}'
+out=$(BODYSENSE_DEPLOY_ROOT="$ROOT" OFFHOST_PG_PREFIX="$BIN/fake-pg" \
+  OFFHOST_API_CONTAINER=fake-api-1 \
+  bash "$RESTORE" --object-key "$OBJKEY" --target-db recovery_db --target-project recovery \
+  --restore-pg container:restore-recovery --confirm-target-isolated=yes \
+  --recovery-mode=yes --validator-runner docker 2>&1) && rc=0 || rc=$?
+if [ $rc -eq 0 ] && [[ "$out" == *RESTORE_RESULT=PASS* ]] \
+  && [[ "$out" == *"RECOVERY MODE: production postgres container inspection is skipped"* ]]; then
+  report 0 "recovery mode restores and validates without inspecting a live production container"
+else
+  report 1 "recovery mode restores and validates without inspecting a live production container" "rc=$rc out=$out"
+fi
+out=$(OFFHOST_RECOVERY_MODE=true BODYSENSE_DEPLOY_ROOT="$ROOT" OFFHOST_PG_PREFIX="$BIN/fake-pg" \
+  OFFHOST_API_CONTAINER=fake-api-1 \
+  bash "$RESTORE" --object-key "$OBJKEY" --target-db recovery_env_db --target-project recovery \
+  --restore-pg container:restore-recovery --confirm-target-isolated=yes --validator-runner docker 2>&1) && rc=0 || rc=$?
+if [ $rc -eq 0 ] && [[ "$out" == *RESTORE_RESULT=PASS* ]] \
+  && [[ "$out" == *"RECOVERY MODE"* ]]; then
+  report 0 "OFFHOST_RECOVERY_MODE=true enables recovery mode through the environment"
+else
+  report 1 "OFFHOST_RECOVERY_MODE=true enables recovery mode through the environment" "rc=$rc out=$out"
+fi
+rm -f "$FAKEDOCKER_INSPECT_DIR/restore-recovery.json"
+out=$(BODYSENSE_DEPLOY_ROOT="$ROOT" OFFHOST_PG_PREFIX="$BIN/fake-pg" \
+  bash "$RESTORE" --object-key "$OBJKEY" --target-db recov_solo --target-project recovery \
+  --restore-pg container:restore-pg --confirm-target-isolated=yes --validator-runner docker 2>&1) && rc=0 || rc=$?
+if [ $rc -ne 0 ] && [[ "$out" == *"unable to identify the production postgres container"* ]]; then
+  report 0 "without --recovery-mode a restore still refuses when no production container is resolvable"
+else
+  report 1 "without --recovery-mode a restore still refuses when no production container is resolvable" "rc=$rc out=$out"
+fi
+out=$(BODYSENSE_DEPLOY_ROOT="$ROOT" OFFHOST_PG_PREFIX="$BIN/fake-pg" \
+  bash "$RESTORE" --object-key "$OBJKEY" --target-db recov_proj --target-project bodysense \
+  --restore-pg container:restore-pg --confirm-target-isolated=yes \
+  --recovery-mode=yes --validator-runner docker 2>&1) && rc=0 || rc=$?
+if [ $rc -ne 0 ] && [[ "$out" == *'must differ from the production project "bodysense"'* ]]; then
+  report 0 "recovery mode refuses --target-project equal to the production project"
+else
+  report 1 "recovery mode refuses --target-project equal to the production project" "rc=$rc out=$out"
+fi
+write_inspect restore-prod-labeled true \
+  '{"com.docker.compose.project":"bodysense","bodysense.restore-project":"drill","bodysense.disposable-restore":"yes","bodysense.restore-network":"restore-prod-labeled-net"}' \
+  '{"restore-prod-labeled-net":{}}'
+out=$(BODYSENSE_DEPLOY_ROOT="$ROOT" OFFHOST_PG_PREFIX="$BIN/fake-pg" \
+  bash "$RESTORE" --object-key "$OBJKEY" --target-db recov_compose --target-project drill \
+  --restore-pg container:restore-prod-labeled --confirm-target-isolated=yes \
+  --recovery-mode=yes --validator-runner docker 2>&1) && rc=0 || rc=$?
+if [ $rc -ne 0 ] && [[ "$out" == *"labeled with the production compose/project name 'bodysense'"* ]]; then
+  report 0 "recovery mode refuses a target labeled with the production compose/project name"
+else
+  report 1 "recovery mode refuses a target labeled with the production compose/project name" "rc=$rc out=$out"
+fi
+rm -f "$FAKEDOCKER_INSPECT_DIR/restore-prod-labeled.json"
+out=$(OFFHOST_RECOVERY_MODE=garbage BODYSENSE_DEPLOY_ROOT="$ROOT" OFFHOST_PG_PREFIX="$BIN/fake-pg" \
+  bash "$RESTORE" --object-key "$OBJKEY" --target-db recov_badenv --target-project recovery \
+  --restore-pg container:restore-pg --confirm-target-isolated=yes --validator-runner docker 2>&1) && rc=0 || rc=$?
+if [ $rc -ne 0 ] && [[ "$out" == *"OFFHOST_RECOVERY_MODE must be true or false"* ]]; then
+  report 0 "OFFHOST_RECOVERY_MODE rejects invalid values"
+else
+  report 1 "OFFHOST_RECOVERY_MODE rejects invalid values" "rc=$rc out=$out"
+fi
+out=$(BODYSENSE_DEPLOY_ROOT="$ROOT" OFFHOST_PG_PREFIX="$BIN/fake-pg" \
+  bash "$RESTORE" --object-key "$OBJKEY" --target-db recov_badflag --target-project recovery \
+  --restore-pg container:restore-pg --confirm-target-isolated=yes \
+  --recovery-mode=maybe --validator-runner docker 2>&1) && rc=0 || rc=$?
+if [ $rc -ne 0 ] && [[ "$out" == *"--recovery-mode must be yes or no"* ]]; then
+  report 0 "--recovery-mode rejects invalid values"
+else
+  report 1 "--recovery-mode rejects invalid values" "rc=$rc out=$out"
+fi
 
 # ==============================================================================
 # 6. restore happy path with validator invocations

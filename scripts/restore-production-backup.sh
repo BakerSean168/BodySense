@@ -13,13 +13,26 @@
 #   - confirms the restored schema revision matches the backup metadata;
 #   - runs the domain + migration validators against the disposable target.
 #
-# Usage:
+# Usage (normal drill):
 #   restore-production-backup.sh \
 #     --object-key <PREFIX>/<yyyyMMdd>/bodysense-postgres-<ts>.dump \
 #     --target-db <disposable_restore_db> \
 #     --target-project <drill|staging|...> \
 #     --restore-pg container:<disposable_restore_container> \
 #     --confirm-target-isolated=yes \
+#     [--validator-runner docker|golang] \
+#     [--baseline-version N]
+#
+# Usage (recovery, when the production Postgres container cannot be inspected
+# because production is down):
+#   restore-production-backup.sh \
+#     --object-key <PREFIX>/<yyyyMMdd>/bodysense-postgres-<ts>.dump \
+#     --target-db <recovery_db> \
+#     --target-project <recovery_project> \
+#     --restore-pg container:<recovery_postgres_container> \
+#     --confirm-target-isolated=yes \
+#     --recovery-mode=yes \
+#     [--recovery-production-project bodysense] \
 #     [--validator-runner docker|golang] \
 #     [--baseline-version N]
 #
@@ -41,7 +54,8 @@
 #   3. --target-db must differ from the production DB_NAME and must not already
 #      exist on the disposable restore server; it is created fresh there and
 #      never dropped or reused by this script.
-#   4. --target-project must differ from the production project "bodysense".
+#   4. --target-project must differ from the production project ("bodysense", or
+#      --recovery-production-project in recovery mode).
 #   5. the object key must be under the configured OFFHOST_BACKUP_PREFIX.
 #   6. credentials are supplied to the S3 client only through the environment,
 #      never via the process command line.
@@ -52,6 +66,16 @@
 #      (<version>:<dirty>); `unknown`/`uninitialized` metadata is refused
 #      (fail-closed), and the restored database revision must equal the metadata
 #      revision — the gate is never skipped.
+#   9. recovery mode (--recovery-mode=yes, or OFFHOST_RECOVERY_MODE=true) is ONLY
+#      for actual recovery from a production outage, when the production
+#      Postgres container cannot be inspected.  In recovery mode the proof that
+#      production and the target cannot share a container/network is NOT claimed
+#      (production is down and cannot be enumerated): isolation rests entirely on
+#      the target's own provable declarations (its dedicated non-host drill
+#      network as its ONLY network, no published host ports, the disposable
+#      labels, and a compose-project label distinct from the named production
+#      project).  The operator-declared production project name defaults to
+#      "bodysense".
 set -Eeuo pipefail
 
 ROOT="${BODYSENSE_DEPLOY_ROOT:-/opt/bodysense}"
@@ -62,7 +86,7 @@ STATE_DIR="$ROOT/.offhost-state"
 WORK_DIR="$ROOT/.offhost-work"
 LOCK_FILE="$STATE_DIR/offhost-restore.lock"
 S3_CLIENT="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)/offhost-s3.py"
-TOOL_VERSION="1.4.0"
+TOOL_VERSION="1.5.0"
 
 TARGET_DB=""
 TARGET_PROJECT=""
@@ -72,9 +96,11 @@ CONFIRM_ISOLATED=""
 VALIDATOR_RUNNER="docker"
 BASELINE_VERSION=""
 WORK_DIR_OVERRIDE=""
+RECOVERY_MODE_FLAG=""
+RECOVERY_PRODUCTION_PROJECT_FLAG=""
 
 usage() {
-  echo "usage: restore-production-backup.sh --object-key KEY --target-db DB --target-project PROJECT --restore-pg container:<id|name> --confirm-target-isolated=yes [--validator-runner docker|golang] [--baseline-version N]" >&2
+  echo "usage: restore-production-backup.sh --object-key KEY --target-db DB --target-project PROJECT --restore-pg container:<id|name> --confirm-target-isolated=yes [--recovery-mode=yes] [--recovery-production-project PROJECT] [--validator-runner docker|golang] [--baseline-version N]" >&2
 }
 
 while [ "$#" -gt 0 ]; do
@@ -88,6 +114,11 @@ while [ "$#" -gt 0 ]; do
     --validator-runner) VALIDATOR_RUNNER="${2:-}"; shift 2 ;;
     --baseline-version) BASELINE_VERSION="${2:-}"; shift 2 ;;
     --workdir) WORK_DIR_OVERRIDE="${2:-}"; shift 2 ;;
+    --recovery-mode) RECOVERY_MODE_FLAG="${2:-}"; shift 2 ;;
+    --recovery-mode=yes) RECOVERY_MODE_FLAG=yes; shift ;;
+    --recovery-mode=no) RECOVERY_MODE_FLAG=no; shift ;;
+    --recovery-mode=*) echo "--recovery-mode must be yes or no (got: ${1#*=})" >&2; usage; exit 2 ;;
+    --recovery-production-project) RECOVERY_PRODUCTION_PROJECT_FLAG="${2:-}"; shift 2 ;;
     --help|-h) usage; exit 0 ;;
     *) echo "unknown argument: $1" >&2; usage; exit 2 ;;
   esac
@@ -155,6 +186,32 @@ DB_PASSWORD=$(secret_cfg DB_PASSWORD)
 COMPOSE_FILE="${BODYSENSE_COMPOSE_FILE:-$COMPOSE}"
 COMPOSE_PROJECT="${BODYSENSE_COMPOSE_PROJECT:-docker}"
 
+# Recovery mode is opt-in, only for actual recovery from a production outage.
+# CLI: --recovery-mode=yes | --recovery-mode no; env: OFFHOST_RECOVERY_MODE=true.
+RECOVERY_MODE=no
+if [ -n "${OFFHOST_RECOVERY_MODE:-}" ]; then
+  case "${OFFHOST_RECOVERY_MODE,,}" in
+    true|yes|1) RECOVERY_MODE=yes ;;
+    false|no|0|"") ;;
+    *) fail "OFFHOST_RECOVERY_MODE must be true or false (got: $OFFHOST_RECOVERY_MODE)" ;;
+  esac
+fi
+if [ -n "$RECOVERY_MODE_FLAG" ]; then
+  case "$RECOVERY_MODE_FLAG" in
+    yes) RECOVERY_MODE=yes ;;
+    no) RECOVERY_MODE=no ;;
+    *) fail "--recovery-mode must be yes or no (got: $RECOVERY_MODE_FLAG)" ;;
+  esac
+fi
+if [ -n "$RECOVERY_PRODUCTION_PROJECT_FLAG" ]; then
+  RECOVERY_PRODUCTION_PROJECT="$RECOVERY_PRODUCTION_PROJECT_FLAG"
+else
+  # The operator-declared name of the production Compose/app project.  Defaults
+  # to "bodysense" (the production project name used by the safety guards).
+  RECOVERY_PRODUCTION_PROJECT=$(cfg OFFHOST_RECOVERY_PRODUCTION_PROJECT bodysense)
+fi
+[ -n "$RECOVERY_PRODUCTION_PROJECT" ] || fail 'the production project name (--recovery-production-project / OFFHOST_RECOVERY_PRODUCTION_PROJECT) cannot be empty'
+
 [ -n "$BUCKET" ] || fail 'OFFHOST_BACKUP_BUCKET is empty'
 [ "$URL_STYLE" = path ] || [ "$URL_STYLE" = virtual ] || fail "OFFHOST_BACKUP_URL_STYLE must be path or virtual (got: $URL_STYLE)"
 if [ -z "$ACCESS_KEY" ] || [ -z "$SECRET_KEY" ]; then
@@ -165,8 +222,8 @@ fi
 if [ "$TARGET_DB" = "$DB_NAME" ]; then
   fail "refusing to restore into the production database (--target-db equals DB_NAME=$DB_NAME)"
 fi
-if [ "$TARGET_PROJECT" = bodysense ]; then
-  fail 'refusing a restore into the production project (--target-project must not be "bodysense")'
+if [ "$TARGET_PROJECT" = "$RECOVERY_PRODUCTION_PROJECT" ]; then
+  fail "refusing a restore into the production project (--target-project must differ from the production project \"$RECOVERY_PRODUCTION_PROJECT\")"
 fi
 case "$OBJECT_KEY" in
   "$PREFIX/"*) ;;
@@ -246,14 +303,31 @@ except Exception:
 '
 }
 
-production_container=$(postgres_container_id)
-[ -n "$production_container" ] || fail 'unable to identify the production postgres container (is the stack running? or set OFFHOST_PGCONTAINER_ID)'
-prod_id=$(inspect_str "$production_container" Id)
-[ -n "$prod_id" ] || fail "unable to inspect the production postgres container $production_container (is the stack running? or set OFFHOST_PGCONTAINER_ID)"
+production_proof_skipped=no
+if [ "$RECOVERY_MODE" = yes ]; then
+  # Recovery mode: production is expected to be down, so NOTHING on the
+  # production side is inspected or claimed (no container-ID comparison, no
+  # shared-network intersection).  Isolation is proven entirely by the restore
+  # target's own declarations below plus the operator-declared production
+  # project name.  The recovery-mode proof is strictly weaker than the live
+  # drill proof and is only used when production cannot be inspected.
+  production_proof_skipped=yes
+  production_container="<recovery-mode: production inspection skipped>"
+  log "RECOVERY MODE: production postgres container inspection is skipped; target isolation is proven by the restore container's own declarations and the declared production project \"$RECOVERY_PRODUCTION_PROJECT\""
+else
+  production_container=$(postgres_container_id)
+  [ -n "$production_container" ] || fail 'unable to identify the production postgres container (is the stack running? or set OFFHOST_PGCONTAINER_ID)'
+  prod_id=$(inspect_str "$production_container" Id)
+  [ -n "$prod_id" ] || fail "unable to inspect the production postgres container $production_container (is the stack running? or set OFFHOST_PGCONTAINER_ID)"
+fi
 restore_id=$(inspect_str "$RESTORE_TARGET" Id)
 [ -n "$restore_id" ] || fail "unable to resolve the restore postgres container $RESTORE_TARGET"
-[ "$restore_id" != "$prod_id" ] \
-  || fail "refusing to restore into the live production postgres container/endpoint (--restore-pg ${RESTORE_PG} resolves to the production postgres ${production_container})"
+if [ "$production_proof_skipped" != yes ]; then
+  [ "$restore_id" != "$prod_id" ] \
+    || fail "refusing to restore into the live production postgres container/endpoint (--restore-pg ${RESTORE_PG} resolves to the production postgres ${production_container})"
+else
+  log "RECOVERY MODE: the container-ID-difference proof against production is skipped (production is down and cannot be inspected)"
+fi
 
 restore_running=$(inspect_str "$RESTORE_TARGET" State Running)
 [ "$restore_running" = True ] || fail "restore postgres container $RESTORE_TARGET is not running"
@@ -261,10 +335,18 @@ restore_running=$(inspect_str "$RESTORE_TARGET" State Running)
 # The drill target must not be part of the production Compose project: a
 # container owned by the production project is traffic-reachable from
 # production regardless of its name.
-prod_compose=$(inspect_str "$production_container" Config Labels com.docker.compose.project)
 restore_compose=$(inspect_str "$RESTORE_TARGET" Config Labels com.docker.compose.project)
-if [ -n "$prod_compose" ] && [ "$restore_compose" = "$prod_compose" ]; then
-  fail "refusing a restore container that belongs to the production compose project '$prod_compose'"
+if [ "$production_proof_skipped" = yes ]; then
+  # Recovery mode: the operator-declared production project name is the only
+  # production-side fact available, and the drill target must not claim it.
+  [ "$restore_compose" != "$RECOVERY_PRODUCTION_PROJECT" ] \
+    || fail "refusing a restore container labeled with the production compose/project name '$RECOVERY_PRODUCTION_PROJECT'"
+  log "RECOVERY MODE: target compose-project '$restore_compose' differs from the declared production project '$RECOVERY_PRODUCTION_PROJECT'"
+else
+  prod_compose=$(inspect_str "$production_container" Config Labels com.docker.compose.project)
+  if [ -n "$prod_compose" ] && [ "$restore_compose" = "$prod_compose" ]; then
+    fail "refusing a restore container that belongs to the production compose project '$prod_compose'"
+  fi
 fi
 
 # Host networking (the `host` driver) or `none` cannot be proven isolated from
@@ -297,9 +379,15 @@ esac
 
 # Network enumeration is fail-closed: if either side's network set cannot be
 # inspected, the shared-network isolation claim cannot be proven and the restore
-# is refused (an inspection failure is never treated as an empty result).
-prod_networks=$(container_networks "$production_container") \
-  || fail "unable to inspect the production postgres container network(s) ($production_container); refusing the restore because isolation cannot be proven"
+# is refused (an inspection failure is never treated as an empty result).  In
+# recovery mode the production side cannot be enumerated; that comparison is
+# skipped and the target's OWN network proof below remains authoritative.
+if [ "$production_proof_skipped" = yes ]; then
+  log "RECOVERY MODE: the shared-network intersection with production is skipped (production is down and cannot be enumerated); the restore target still proves its own dedicated-network isolation below"
+else
+  prod_networks=$(container_networks "$production_container") \
+    || fail "unable to inspect the production postgres container network(s) ($production_container); refusing the restore because isolation cannot be proven"
+fi
 restore_networks=$(container_networks "$RESTORE_TARGET") \
   || fail "unable to inspect the restore postgres container network(s) ($RESTORE_TARGET); refusing the restore because isolation cannot be proven"
 
@@ -321,12 +409,16 @@ done <<<"$restore_networks"
 # The drill target must not be attached to ANY network shared with the
 # production postgres container, so it can neither reach production services nor
 # be reached by them.  An empty result from the intersection is only accepted
-# because both sides were enumerated above without error.
-shared_networks=$(comm -12 \
-  <(printf '%s\n' "$prod_networks" | awk 'NF' | sort -u) \
-  <(printf '%s\n' "$restore_networks" | awk 'NF' | sort -u) | tr '\n' ' ')
-[ -z "$shared_networks" ] \
-  || fail "refusing a restore container attached to the production postgres network(s): $shared_networks"
+# because both sides were enumerated above without error.  (In recovery mode the
+# production side is down and cannot be enumerated; the intersection is skipped
+# and the sole-network proof below is the target's isolation claim.)
+if [ "$production_proof_skipped" != yes ]; then
+  shared_networks=$(comm -12 \
+    <(printf '%s\n' "$prod_networks" | awk 'NF' | sort -u) \
+    <(printf '%s\n' "$restore_networks" | awk 'NF' | sort -u) | tr '\n' ' ')
+  [ -z "$shared_networks" ] \
+    || fail "refusing a restore container attached to the production postgres network(s): $shared_networks"
+fi
 
 # The declared dedicated drill network must be the container's ONLY network: an
 # incidental "declared + not shared with production" proof is not enough, because
@@ -391,7 +483,11 @@ shafile="$workdir/$base.dump.sha256"
 metafile="$workdir/$base.dump.meta.json"
 container_tmp="/tmp/$(basename "$dump")"
 
-log "restore drill target: database=$TARGET_DB project=$TARGET_PROJECT restore_pg=$RESTORE_PG (production is db=$DB_NAME project=bodysense postgres=$production_container)"
+if [ "$production_proof_skipped" = yes ]; then
+  log "restore drill target: database=$TARGET_DB project=$TARGET_PROJECT restore_pg=$RESTORE_PG (RECOVERY MODE: production db=$DB_NAME project=$RECOVERY_PRODUCTION_PROJECT, assumed down)"
+else
+  log "restore drill target: database=$TARGET_DB project=$TARGET_PROJECT restore_pg=$RESTORE_PG (production is db=$DB_NAME project=bodysense postgres=$production_container)"
+fi
 
 # --- Retrieve -----------------------------------------------------------------
 s3 get --key "$OBJECT_KEY.meta.json" --file "$metafile"

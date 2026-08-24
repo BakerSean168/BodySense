@@ -229,6 +229,11 @@ class FakeS3Handler(http.server.BaseHTTPRequestHandler):
     corrupt_suffix = None
     page_size = 2
     bucket = "testbucket"
+    acl_unreadable = False
+    public_acl = False
+    policy_public = False
+    policy_unavailable = False
+    puts = []  # [{key, headers}] in upload order, for header assertions
 
     def log_message(self, *args):
         return
@@ -275,17 +280,60 @@ class FakeS3Handler(http.server.BaseHTTPRequestHandler):
             return self._reject(403, "AccessDenied", "signature or credentials invalid")
         key = self._key_from_path()
         self.store[key] = body
+        FakeS3Handler.puts.append(
+            {"key": key, "headers": {k.lower(): v for k, v in self.headers.items()}}
+        )
         self.send_response(200)
         self.send_header("Content-Length", "0")
         self.end_headers()
+
+    def _acl_reply(self):
+        if self.acl_unreadable:
+            return self._reject(403, "AccessDenied", "acl subresource requires permission")
+        ns = "http://s3.amazonaws.com/doc/2006-03-01/"
+        root = ET.Element("{%s}AccessControlPolicy" % ns)
+        owner = ET.SubElement(root, "{%s}Owner" % ns)
+        owner_id = ET.SubElement(owner, "{%s}ID" % ns)
+        owner_id.text = "owner-id"
+        acl = ET.SubElement(root, "{%s}AccessControlList" % ns)
+        grant = ET.SubElement(acl, "{%s}Grant" % ns)
+        grantee = ET.SubElement(grant, "{%s}Grantee" % ns)
+        grantee.set("{http://www.w3.org/2001/XMLSchema-instance}type", "CanonicalUser")
+        gid = ET.SubElement(grantee, "{%s}ID" % ns)
+        gid.text = "owner-id"
+        perm = ET.SubElement(grant, "{%s}Permission" % ns)
+        perm.text = "FULL_CONTROL"
+        if self.public_acl:
+            pgrant = ET.SubElement(acl, "{%s}Grant" % ns)
+            pgrantee = ET.SubElement(pgrant, "{%s}Grantee" % ns)
+            pgrantee.set("{http://www.w3.org/2001/XMLSchema-instance}type", "Group")
+            puri = ET.SubElement(pgrantee, "{%s}URI" % ns)
+            puri.text = "http://acs.amazonaws.com/groups/global/AllUsers"
+            pperm = ET.SubElement(pgrant, "{%s}Permission" % ns)
+            pperm.text = "READ"
+        self._respond_xml(200, root)
+
+    def _policy_status_reply(self):
+        if self.policy_unavailable:
+            return self._reject(403, "AccessDenied", "GetBucketPolicyStatus requires permission")
+        ns = "http://s3.amazonaws.com/doc/2006-03-01/"
+        root = ET.Element("{%s}PolicyStatus" % ns)
+        child = ET.SubElement(root, "{%s}IsPublic" % ns)
+        child.text = "true" if self.policy_public else "false"
+        self._respond_xml(200, root)
 
     def do_GET(self):
         path, _, query_raw = self.path.partition("?")
         body = b""
         if not self._authorized(body):
             return self._reject(403, "AccessDenied", "signature or credentials invalid")
+        params = dict(urllib.parse.parse_qsl(query_raw, keep_blank_values=True))
         if "list-type=2" in query_raw:
             return self._list(query_raw)
+        if "acl" in params:
+            return self._acl_reply()
+        if "policyStatus" in params:
+            return self._policy_status_reply()
         key = self._key_from_path()
         if key not in self.store:
             return self._reject(404, "NoSuchKey", "The specified key does not exist.")
@@ -374,6 +422,11 @@ class FakeS3IntegrationTests(unittest.TestCase):
     def setUp(self):
         FakeS3Handler.store = {}
         FakeS3Handler.forbidden = False
+        FakeS3Handler.acl_unreadable = False
+        FakeS3Handler.public_acl = False
+        FakeS3Handler.policy_public = False
+        FakeS3Handler.policy_unavailable = False
+        FakeS3Handler.puts = []
         self.server = FakeServer().start()
         self.client = offhost_s3.S3Client(
             self.server.url, "testbucket", region="cn-hangzhou", url_style="path"
@@ -479,11 +532,117 @@ class FakeS3IntegrationTests(unittest.TestCase):
             self.client.get_object("k/absent.dump", out, _KNOWN_ACCESS_KEY, _KNOWN_SECRET_KEY)
         self.assertEqual(ctx.exception.code, "NoSuchKey")
 
+    def test_check_private_passes_on_private_bucket(self):
+        self.assertTrue(
+            self.client.check_private(_KNOWN_ACCESS_KEY, _KNOWN_SECRET_KEY)
+        )
+
+    def test_check_private_fails_on_public_acl(self):
+        FakeS3Handler.public_acl = True
+        with self.assertRaises(offhost_s3.S3Error) as ctx:
+            self.client.check_private(_KNOWN_ACCESS_KEY, _KNOWN_SECRET_KEY)
+        self.assertEqual(ctx.exception.code, "BucketPublicAcl")
+        self.assertEqual(ctx.exception.status, 403)
+
+    def test_check_private_fails_when_acl_unreadable(self):
+        FakeS3Handler.acl_unreadable = True
+        with self.assertRaises(offhost_s3.S3Error) as ctx:
+            self.client.check_private(_KNOWN_ACCESS_KEY, _KNOWN_SECRET_KEY)
+        self.assertEqual(ctx.exception.code, "BucketAclUnreadable")
+        self.assertEqual(ctx.exception.status, 403)
+
+    def test_check_private_fails_on_public_policy(self):
+        FakeS3Handler.policy_public = True
+        with self.assertRaises(offhost_s3.S3Error) as ctx:
+            self.client.check_private(_KNOWN_ACCESS_KEY, _KNOWN_SECRET_KEY)
+        self.assertEqual(ctx.exception.code, "BucketPublicPolicy")
+
+    def test_check_private_passes_when_policy_status_unavailable(self):
+        FakeS3Handler.policy_unavailable = True
+        self.assertTrue(
+            self.client.check_private(_KNOWN_ACCESS_KEY, _KNOWN_SECRET_KEY)
+        )
+
+    def test_acl_is_private_rejects_malformed_and_public(self):
+        ns = "http://s3.amazonaws.com/doc/2006-03-01/"
+        private_acl = (
+            '<ns:AccessControlPolicy xmlns:ns="%s">'
+            "<ns:Owner><ns:ID>owner</ns:ID></ns:Owner>"
+            "<ns:AccessControlList>"
+            '<ns:Grant><ns:Grantee xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CanonicalUser">'
+            "<ns:ID>owner</ns:ID></ns:Grantee><ns:Permission>FULL_CONTROL</ns:Permission></ns:Grant>"
+            "</ns:AccessControlList></ns:AccessControlPolicy>" % ns
+        )
+        self.assertTrue(offhost_s3.acl_is_private(private_acl.encode()))
+        with self.assertRaises(offhost_s3.S3Error):
+            offhost_s3.acl_is_private(b"not xml at all")
+        with self.assertRaises(offhost_s3.S3Error):
+            offhost_s3.acl_is_private(b"<Root/>")
+        public_all_users = private_acl.replace(
+            "</ns:AccessControlList>",
+            '<ns:Grant><ns:Grantee xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="Group">'
+            "<ns:URI>http://acs.amazonaws.com/groups/global/AllUsers</ns:URI>"
+            "</ns:Grantee><ns:Permission>READ</ns:Permission></ns:Grant></ns:AccessControlList>",
+        )
+        with self.assertRaises(offhost_s3.S3Error) as ctx:
+            offhost_s3.acl_is_private(public_all_users.encode())
+        self.assertEqual(ctx.exception.code, "BucketPublicAcl")
+        public_auth_users = public_all_users.replace(
+            "groups/global/AllUsers", "groups/global/AuthenticatedUsers"
+        )
+        with self.assertRaises(offhost_s3.S3Error):
+            offhost_s3.acl_is_private(public_auth_users.encode())
+
+    def test_put_sends_private_acl_and_sse_headers(self):
+        path = os.path.join("/tmp", "offhost-acl-sse.bin")
+        with open(path, "wb") as f:
+            f.write(b"acls")
+        try:
+            self.client.put_object(
+                "k/enc.dump", path, _KNOWN_ACCESS_KEY, _KNOWN_SECRET_KEY,
+                acl="private", sse="AES256",
+            )
+            put = FakeS3Handler.puts[-1]
+            self.assertEqual(put["headers"]["x-amz-acl"], "private")
+            self.assertEqual(put["headers"]["x-amz-server-side-encryption"], "AES256")
+        finally:
+            os.unlink(path)
+
+    def test_put_refuses_non_private_acl(self):
+        path = os.path.join("/tmp", "offhost-public-acl.bin")
+        with open(path, "wb") as f:
+            f.write(b"x")
+        try:
+            with self.assertRaises(offhost_s3.S3Error) as ctx:
+                self.client.put_object(
+                    "k/pub.dump", path, _KNOWN_ACCESS_KEY, _KNOWN_SECRET_KEY, acl="public-read"
+                )
+            self.assertEqual(ctx.exception.code, "InvalidObjectAcl")
+        finally:
+            os.unlink(path)
+
+    def test_put_without_sse_sends_no_acl_sse_headers(self):
+        path = os.path.join("/tmp", "offhost-plain.bin")
+        with open(path, "wb") as f:
+            f.write(b"plain")
+        try:
+            self.client.put_object("k/plain.dump", path, _KNOWN_ACCESS_KEY, _KNOWN_SECRET_KEY)
+            put = FakeS3Handler.puts[-1]
+            self.assertNotIn("x-amz-acl", put["headers"])
+            self.assertNotIn("x-amz-server-side-encryption", put["headers"])
+        finally:
+            os.unlink(path)
+
 
 class CliTests(unittest.TestCase):
     def setUp(self):
         FakeS3Handler.store = {}
         FakeS3Handler.forbidden = False
+        FakeS3Handler.acl_unreadable = False
+        FakeS3Handler.public_acl = False
+        FakeS3Handler.policy_public = False
+        FakeS3Handler.policy_unavailable = False
+        FakeS3Handler.puts = []
         self.server = FakeServer().start()
 
     def tearDown(self):
@@ -577,6 +736,55 @@ class CliTests(unittest.TestCase):
         self.assertIn("CliCredentialsRefused", listing.stderr)
         combined = listing.stdout + listing.stderr
         self.assertNotIn(_KNOWN_SECRET_KEY, combined)
+
+    def test_cli_check_private_passes(self):
+        env = {"OFFHOST_BACKUP_ACCESS_KEY": _KNOWN_ACCESS_KEY, "OFFHOST_BACKUP_SECRET_KEY": _KNOWN_SECRET_KEY}
+        probe = self.run_cli(
+            ["check-private", "--endpoint", self.server.url, "--bucket", "testbucket", "--region", "cn-hangzhou"],
+            env=env,
+        )
+        self.assertEqual(probe.returncode, 0, probe.stderr)
+        self.assertIn("PRIVATE_PREFLIGHT=PASS", probe.stdout)
+
+    def test_cli_check_private_fails_closed_on_public_bucket(self):
+        FakeS3Handler.public_acl = True
+        env = {"OFFHOST_BACKUP_ACCESS_KEY": _KNOWN_ACCESS_KEY, "OFFHOST_BACKUP_SECRET_KEY": _KNOWN_SECRET_KEY}
+        probe = self.run_cli(
+            ["check-private", "--endpoint", self.server.url, "--bucket", "testbucket", "--region", "cn-hangzhou"],
+            env=env,
+        )
+        self.assertNotEqual(probe.returncode, 0)
+        self.assertIn("BucketPublicAcl", probe.stderr)
+
+    def test_cli_check_private_fails_closed_on_unreadable_acl(self):
+        FakeS3Handler.acl_unreadable = True
+        env = {"OFFHOST_BACKUP_ACCESS_KEY": _KNOWN_ACCESS_KEY, "OFFHOST_BACKUP_SECRET_KEY": _KNOWN_SECRET_KEY}
+        probe = self.run_cli(
+            ["check-private", "--endpoint", self.server.url, "--bucket", "testbucket", "--region", "cn-hangzhou"],
+            env=env,
+        )
+        self.assertNotEqual(probe.returncode, 0)
+        self.assertIn("BucketAclUnreadable", probe.stderr)
+
+    def test_cli_put_refuses_public_acl_argument(self):
+        src = os.path.join("/tmp", "offhost-cli-public.bin")
+        with open(src, "wb") as f:
+            f.write(b"x")
+        env = {"OFFHOST_BACKUP_ACCESS_KEY": _KNOWN_ACCESS_KEY, "OFFHOST_BACKUP_SECRET_KEY": _KNOWN_SECRET_KEY}
+        try:
+            put = self.run_cli(
+                [
+                    "put", "--endpoint", self.server.url, "--bucket", "testbucket",
+                    "--key", "c/pub.dump", "--file", src, "--region", "cn-hangzhou",
+                    "--acl", "public-read",
+                ],
+                env=env,
+            )
+            self.assertNotEqual(put.returncode, 0)
+            self.assertIn("InvalidObjectAcl", put.stderr)
+            self.assertNotIn("c/pub.dump", FakeS3Handler.store)
+        finally:
+            os.unlink(src)
 
 
 def suite():
