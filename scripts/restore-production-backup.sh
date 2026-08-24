@@ -165,6 +165,30 @@ postgres_container_id() {
       --env-file "$PUBLIC_ENV" --env-file "$SECRET_ENV" ps -q postgres
   fi
 }
+
+# The api service container hosts the validator binaries (/app/validators) and
+# the migrations. docker-compose.prod.yml does NOT set container_name, so with
+# the configured Compose project the running container is normally
+# "<project>-api-1" (e.g. "docker-api-1"), never a literal "api". Resolve it the
+# same way production postgres is found; operators/tests can pin it explicitly
+# with OFFHOST_API_CONTAINER.
+api_container_name() {
+  if [ -n "${OFFHOST_API_CONTAINER:-}" ]; then
+    printf '%s' "$OFFHOST_API_CONTAINER"
+    return 0
+  fi
+  local cid name
+  cid=$(docker compose -p "$COMPOSE_PROJECT" -f "$COMPOSE_FILE" \
+    --env-file "$PUBLIC_ENV" --env-file "$SECRET_ENV" ps -q api 2>/dev/null || true)
+  if [ -n "$cid" ]; then
+    name=$(docker inspect -f '{{.Name}}' "$cid" 2>/dev/null || true)
+    [ -n "$name" ] || name=""
+    printf '%s' "${name#/}"
+    return 0
+  fi
+  # Compose default container naming when container_name is unset.
+  printf '%s' "$COMPOSE_PROJECT-api-1"
+}
 resolve_container_id() {
   # Canonicalise to the Docker long ID so `container:postgres` (the production
   # service name) and an id/name aliasing the same container are both caught.
@@ -302,11 +326,17 @@ esac
 VALIDATE_RESULT=FAIL
 # shellcheck disable=SC2155
 export PGPASSWORD="$DB_PASSWORD"
+api_container=""
+if [ "$VALIDATOR_RUNNER" = docker ]; then
+  api_container=$(api_container_name)
+  [ -n "$api_container" ] || fail 'unable to resolve the api container that hosts the validators (set OFFHOST_API_CONTAINER)'
+  log "running validators via api container $api_container"
+fi
 run_validator() {
   local bin="$1"; shift
   case "$VALIDATOR_RUNNER" in
     docker)
-      docker exec api "/app/validators/$bin" "$@" || return 1
+      docker exec "$api_container" "/app/validators/$bin" "$@" || return 1
       ;;
     golang)
       # Development/hermetic runner; requires a source checkout at the repo root.

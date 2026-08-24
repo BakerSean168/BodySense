@@ -159,9 +159,14 @@ What the drill does:
 7. verifies `schema_revision` in the restored database equals the backup
    metadata (`unknown`/`uninitialized` metadata is logged but not enforced);
 8. runs the API's own `migration-validator` and `domain-validator` binaries
-   against the restored database (`docker exec api /app/validators/...`, or
-   `--validator-runner golang` from a source checkout); the `api` container
-   resolves the disposable restore container by its Docker network name;
+   against the restored database (default `--validator-runner docker`, or
+   `--validator-runner golang` from a source checkout) by execing into the **api
+   service container** that hosts `/app/validators`. The container name is
+   resolved from the running Compose project — production does not set
+   `container_name`, so Compose's default naming is used (`<project>-api-1`,
+   e.g. `docker-api-1`); operators can pin it explicitly with
+   `OFFHOST_API_CONTAINER`. The api container resolves the disposable restore
+   container by its Docker network name;
 9. prints `RESTORE_RESULT=PASS database=... project=... restore_pg=... object_key=...` on success.
 
 Optional: `--baseline-version N` migrates through the published production
@@ -186,10 +191,10 @@ script.
 - **Hermetic (no docker/PostgreSQL needed):** `scripts/test_offhost_s3.py`
   (specific SigV4 vectors plus a signature-verified fake S3 server, including
   refusal of command-line credentials) and `scripts/validate-offhost-dr-unit.sh`
-  (20 checks: backup/retention/freshness, the restore isolation and
+  (23 checks: backup/retention/freshness, the restore isolation and
   `--restore-pg` guards, the SHA-256 sidecar syntax/name/digest verification,
-  and the env-only credential argv-leak guard) against stubbed PostgreSQL and
-  the fake S3 server.
+  the env-only credential argv-leak guard, and the resolved api-container
+  validation path) against stubbed PostgreSQL and the fake S3 server.
 - **Docker integration:** `scripts/validate-offhost-dr.sh` runs real PostgreSQL
   18 + real `pg_dump`/`pg_restore` + the real validator binaries end to end,
   restoring into a second, disposable `restore-pg` container, including a data
