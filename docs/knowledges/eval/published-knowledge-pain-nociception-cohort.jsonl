@@ -1,0 +1,9 @@
+{"case_id":"pain-definition","query":"什么是疼痛？","expect":"hit","expected_unit_key":"tfu-2734a1d1f824b92c071bc7512afc79d4","expected_claim_id":"tfc-91e4738243c6041bbae332eb8ca83034","expected_evidence_terms":["不愉快感觉","情绪体验"]}
+{"case_id":"pain-nociception-distinction","query":"疼痛和 nociception 是同一现象吗？","expect":"hit","expected_unit_key":"tfu-32697d184e2abe936598d38772d6eb53","expected_claim_id":"tfc-d2579e312523e41adfa3a85787f776aa","expected_evidence_terms":["Pain ≠ Nociception","不同现象"]}
+{"case_id":"pain-neuron-inference","query":"只看感觉神经元活动能判断一个人疼不疼吗？","expect":"hit","expected_unit_key":"tfu-32697d184e2abe936598d38772d6eb53","expected_claim_id":"tfc-d2579e312523e41adfa3a85787f776aa","expected_evidence_terms":["不能只根据感觉神经元活动","推断"]}
+{"case_id":"pain-without-clear-damage","query":"没有明确组织损伤证据还可能有疼痛吗？","expect":"hit","expected_unit_key":"tfu-32697d184e2abe936598d38772d6eb53","expected_claim_id":"tfc-d2579e312523e41adfa3a85787f776aa","expected_evidence_terms":["没有明确实际或威胁性组织损伤证据","pain"]}
+{"case_id":"nociception-definition","query":"nociception 是什么？","expect":"hit","expected_unit_key":"tfu-3709d2dcc197f6a7b49e62fa9924b34c","expected_claim_id":"tfc-0e4c7dfe53ea1d9fd4428c833da0cfb2","expected_evidence_terms":["神经系统编码","noxious stimulus"]}
+{"case_id":"nociception-response-boundary","query":"withdrawal reflex 一定代表主观疼痛吗？","expect":"hit","expected_unit_key":"tfu-3709d2dcc197f6a7b49e62fa9924b34c","expected_claim_id":"tfc-0e4c7dfe53ea1d9fd4428c833da0cfb2","expected_evidence_terms":["withdrawal reflex","主观 pain experience"]}
+{"case_id":"negative-ankle-sprain","query":"脚踝扭伤怎么处理？","expect":"no_result"}
+{"case_id":"negative-anterior-pelvic-tilt","query":"骨盆前倾是什么？","expect":"no_result"}
+{"case_id":"negative-postgres-index","query":"怎么设置 PostgreSQL 索引？","expect":"no_result"}

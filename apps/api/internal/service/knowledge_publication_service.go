@@ -28,6 +28,14 @@ type PublishKnowledgeBatchInput struct {
 	Summary        string
 }
 
+type PublishReviewedKnowledgeBatchInput struct {
+	PublicationKey   string
+	BatchKey         string
+	PublishedBy      string
+	Summary          string
+	ReviewedSnapshot ReviewedKnowledgeSnapshotArtifact
+}
+
 type RollbackKnowledgeBatchInput struct {
 	PublicationKey         string
 	RollbackPublicationKey string
@@ -47,8 +55,13 @@ type knowledgeUnitPreState struct {
 }
 
 type knowledgePublicationMetadata struct {
-	UnitKeys  []string                `json:"unit_keys"`
-	PreStates []knowledgeUnitPreState `json:"pre_states"`
+	UnitKeys                 []string                `json:"unit_keys"`
+	PreStates                []knowledgeUnitPreState `json:"pre_states"`
+	ReviewedSnapshotID       string                  `json:"reviewed_snapshot_id,omitempty"`
+	SourceSnapshotID         string                  `json:"source_snapshot_id,omitempty"`
+	SourceGitCommit          string                  `json:"source_git_commit,omitempty"`
+	ExternalEvidenceReviewID string                  `json:"external_evidence_review_id,omitempty"`
+	ClaimReviewID            string                  `json:"claim_review_id,omitempty"`
 }
 
 type KnowledgePublicationService struct {
@@ -176,12 +189,43 @@ func (s *KnowledgePublicationService) PublishBatch(
 	ctx context.Context,
 	input PublishKnowledgeBatchInput,
 ) (*model.KnowledgePublication, error) {
+	return s.publishBatch(ctx, input, nil)
+}
+
+func (s *KnowledgePublicationService) PublishReviewedBatch(
+	ctx context.Context,
+	input PublishReviewedKnowledgeBatchInput,
+) (*model.KnowledgePublication, error) {
+	if err := ValidateReviewedKnowledgeSnapshotArtifact(&input.ReviewedSnapshot); err != nil {
+		return nil, err
+	}
+	return s.publishBatch(ctx, PublishKnowledgeBatchInput{
+		PublicationKey: input.PublicationKey,
+		BatchKey:       input.BatchKey,
+		UnitKeys:       input.ReviewedSnapshot.UnitKeys(),
+		PublishedBy:    input.PublishedBy,
+		Summary:        input.Summary,
+	}, &input.ReviewedSnapshot)
+}
+
+func (s *KnowledgePublicationService) publishBatch(
+	ctx context.Context,
+	input PublishKnowledgeBatchInput,
+	reviewedSnapshot *ReviewedKnowledgeSnapshotArtifact,
+) (*model.KnowledgePublication, error) {
 	if input.PublicationKey == "" || input.BatchKey == "" || input.PublishedBy == "" {
 		return nil, errors.New("publication_key, batch_key and published_by are required")
 	}
 	unitKeys, err := uniqueSortedUnitKeys(input.UnitKeys)
 	if err != nil {
 		return nil, err
+	}
+	var artifactUnits map[string]ReviewedKnowledgeSnapshotUnit
+	if reviewedSnapshot != nil {
+		artifactUnits = reviewedSnapshotUnitMap(reviewedSnapshot)
+		if len(artifactUnits) != len(unitKeys) {
+			return nil, errors.New("reviewed snapshot unit set does not match publication unit set")
+		}
 	}
 
 	var publication model.KnowledgePublication
@@ -198,6 +242,15 @@ func (s *KnowledgePublicationService) PublishBatch(
 			if err := ValidateKnowledgeUnitForPublication(unit, s.minQuality); err != nil {
 				return err
 			}
+			if reviewedSnapshot != nil {
+				artifactUnit, ok := artifactUnits[unit.UnitKey]
+				if !ok {
+					return fmt.Errorf("unit %s is absent from reviewed snapshot", unit.UnitKey)
+				}
+				if err := ValidateKnowledgeUnitAgainstReviewedSnapshot(unit, artifactUnit, reviewedSnapshot); err != nil {
+					return err
+				}
+			}
 			preStates = append(preStates, knowledgeUnitPreState{
 				UnitID: unit.ID, UnitKey: unit.UnitKey,
 				LifecycleStatus: unit.LifecycleStatus, ReviewStatus: unit.ReviewStatus,
@@ -209,9 +262,15 @@ func (s *KnowledgePublicationService) PublishBatch(
 		if err != nil {
 			return err
 		}
-		metadataBytes, err := json.Marshal(knowledgePublicationMetadata{
-			UnitKeys: unitKeys, PreStates: preStates,
-		})
+		metadata := knowledgePublicationMetadata{UnitKeys: unitKeys, PreStates: preStates}
+		if reviewedSnapshot != nil {
+			metadata.ReviewedSnapshotID = reviewedSnapshot.ReviewedSnapshotID
+			metadata.SourceSnapshotID = reviewedSnapshot.SourceSnapshotID
+			metadata.SourceGitCommit = reviewedSnapshot.SourceGitCommit
+			metadata.ExternalEvidenceReviewID = reviewedSnapshot.ExternalEvidenceReviewID
+			metadata.ClaimReviewID = reviewedSnapshot.ClaimReviewID
+		}
+		metadataBytes, err := json.Marshal(metadata)
 		if err != nil {
 			return err
 		}

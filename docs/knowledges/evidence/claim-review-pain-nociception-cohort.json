@@ -1,0 +1,45 @@
+{
+  "schema_version": "bodysense.claim-review.v1",
+  "review_id": "pain-nociception-cohort-claim-review-2026-08-24",
+  "snapshot_git_commit": "8dbe766899da073727336a6f93cb142e34eeb4e8",
+  "external_evidence_review_id": "iasp-pain-nociception-cohort-2026-08-24",
+  "reviewed_at": "2026-08-24T10:05:00+08:00",
+  "decisions": [
+    {
+      "unit_key": "tfu-2734a1d1f824b92c071bc7512afc79d4",
+      "claim_id": "tfc-91e4738243c6041bbae332eb8ca83034",
+      "claim_content_hash": "d1370d544c2e23526a9571d0a000df425b9838235a3f13625e6cb5590b4db157",
+      "decision": "approved",
+      "review_status": "reviewed",
+      "reviewed_by": "maintainer-claim-review",
+      "review_basis": "The section is limited to the official IASP pain definition, the official nociception definition, and the explicit distinction between the two. It does not infer diagnosis, tissue source, damage severity, or a patient-specific mechanism.",
+      "quality_score": 0.97,
+      "certainty": "high",
+      "population": "general"
+    },
+    {
+      "unit_key": "tfu-32697d184e2abe936598d38772d6eb53",
+      "claim_id": "tfc-d2579e312523e41adfa3a85787f776aa",
+      "claim_content_hash": "3d954be5c841f6fe09d6a4891a67a45b939bcca560d9e13739d94bbe56fbd1a7",
+      "decision": "approved",
+      "review_status": "reviewed",
+      "reviewed_by": "maintainer-claim-review",
+      "review_basis": "The section now limits itself to four interpretation boundaries directly supported by official IASP material: pain differs from nociception, pain cannot be inferred solely from sensory-neuron activity, clear tissue-damage evidence is not required for pain to exist, and a person's pain report should be respected. It makes no pain-intensity-to-damage or patient-specific diagnostic inference.",
+      "quality_score": 0.96,
+      "certainty": "high",
+      "population": "general"
+    },
+    {
+      "unit_key": "tfu-3709d2dcc197f6a7b49e62fa9924b34c",
+      "claim_id": "tfc-0e4c7dfe53ea1d9fd4428c833da0cfb2",
+      "claim_content_hash": "d8e38b90676285288bea610468e9f4510e9e16a9ab617a168aee4cc8e4bc0b0b",
+      "decision": "approved",
+      "review_status": "reviewed",
+      "reviewed_by": "maintainer-claim-review",
+      "review_basis": "The section is limited to IASP's nociception definition and the bounded implication that autonomic/withdrawal/protective responses do not by themselves establish a subjective pain experience. It does not infer an individual patient's mechanism.",
+      "quality_score": 0.97,
+      "certainty": "high",
+      "population": "general"
+    }
+  ]
+}
