@@ -13,16 +13,22 @@ Security contract (BS-PROD-012):
       command-line credentials so secrets can never be observed through the host
       process table or /proc/<pid>/cmdline;
   -   the client never writes credentials into request bodies or metadata;
-  -   the destination bucket is assumed private; the client never sets a public
-    ACL and refuses to do so.
+  -   privacy is PROVEN, not assumed: `check-private` is a fail-closed preflight
+      that reads the destination bucket ACL (and, where the store supports it,
+      bucket policy status) and refuses any bucket granting public groups; the
+      client never sets a public ACL and rejects any requested object ACL other
+      than `private`;
+  -   health-data objects are uploaded with server-side encryption by default
+      (`--sse AES256`).
 
 Usage (options may appear before or after the command; credentials come from the
 environment, never from the command line):
-  offhost-s3.py put    --endpoint URL --bucket B --key K --file PATH [--region R] [--url-style path|virtual]
-  offhost-s3.py get    --endpoint URL --bucket B --key K --file PATH [--region R] [--url-style path|virtual]
-  offhost-s3.py delete --endpoint URL --bucket B --key K [--region R] [--url-style path|virtual]
-  offhost-s3.py list   --endpoint URL --bucket B [--prefix P] [--region R] [--url-style path|virtual]
-  offhost-s3.py head   --endpoint URL --bucket B --key K [--region R] [--url-style path|virtual]
+  offhost-s3.py put            --endpoint URL --bucket B --key K --file PATH [--region R] [--url-style path|virtual] [--acl private] [--sse AES256]
+  offhost-s3.py get            --endpoint URL --bucket B --key K --file PATH [--region R] [--url-style path|virtual]
+  offhost-s3.py delete         --endpoint URL --bucket B --key K [--region R] [--url-style path|virtual]
+  offhost-s3.py list           --endpoint URL --bucket B [--prefix P] [--region R] [--url-style path|virtual]
+  offhost-s3.py head           --endpoint URL --bucket B --key K [--region R] [--url-style path|virtual]
+  offhost-s3.py check-private  --endpoint URL --bucket B [--region R] [--url-style path|virtual]
 """
 
 import argparse
@@ -46,6 +52,7 @@ _ALGORITHM = "AWS4-HMAC-SHA256"
 _UNRESERVED = frozenset(
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
 )
+_S3_XML_NS = "{http://s3.amazonaws.com/doc/2006-03-01/}"
 
 
 class S3Error(Exception):
@@ -156,6 +163,8 @@ class S3Client:
         access_key,
         secret_key,
         content_type=None,
+        acl=None,
+        sse=None,
     ):
         if not access_key or not secret_key:
             raise S3Error(0, "MissingCredentials", "access key and secret key are required")
@@ -174,6 +183,10 @@ class S3Client:
         }
         if content_type:
             headers["content-type"] = content_type
+        if acl:
+            headers["x-amz-acl"] = acl
+        if sse:
+            headers["x-amz-server-side-encryption"] = sse
         signed_headers_list = sorted(headers)
         signed_headers = ";".join(signed_headers_list)
         canonical_headers = "".join(
@@ -203,6 +216,10 @@ class S3Client:
         request.add_header("x-amz-date", amz_date)
         if content_type:
             request.add_header("content-type", content_type)
+        if acl:
+            request.add_header("x-amz-acl", acl)
+        if sse:
+            request.add_header("x-amz-server-side-encryption", sse)
         request.add_header("Authorization", authorization)
         return request, authorization
 
@@ -217,11 +234,14 @@ class S3Client:
         except urllib.error.URLError as error:
             raise S3Error(0, "ConnectionError", str(error)) from None
 
-    def put_object(self, key, local_path, access_key, secret_key, content_type="application/octet-stream"):
+    def put_object(self, key, local_path, access_key, secret_key, content_type="application/octet-stream", acl=None, sse=None):
+        if acl not in (None, "", "private"):
+            raise S3Error(0, "InvalidObjectAcl", "only an object ACL of 'private' is allowed")
         with open(local_path, "rb") as handle:
             body = handle.read()
         request, _ = self._signed_request(
-            "PUT", key, body, None, access_key, secret_key, content_type=content_type
+            "PUT", key, body, None, access_key, secret_key,
+            content_type=content_type, acl=acl or None, sse=sse or None,
         )
         status, _ = self._send(request)
         if status != 200:
@@ -299,6 +319,45 @@ class S3Client:
                 break
         return result
 
+    def check_private(self, access_key, secret_key):
+        """Fail-closed private-destination preflight for the backup bucket.
+
+        Returns True only when the bucket ACL can be fetched, parsed and proven
+        to grant nothing to public groups.  Where the store implements
+        GetBucketPolicyStatus, an IsPublic=true result is also refused.  Any
+        store that cannot PROVE the bucket is private fails the check (raises)
+        rather than passing on an assumption.
+        """
+        if not access_key or not secret_key:
+            raise S3Error(0, "MissingCredentials", "access key and secret key are required")
+        try:
+            request, _ = self._signed_request("GET", "", b"", {"acl": ""}, access_key, secret_key)
+            status, body = self._send(request)
+        except S3Error as error:
+            raise S3Error(
+                error.status or 0,
+                "BucketAclUnreadable",
+                "cannot read bucket ACL: %s" % error,
+            ) from None
+        if status != 200:
+            raise S3Error(status, "BucketAclUnreadable", "bucket ACL returned HTTP %d" % status)
+        acl_is_private(body.decode("utf-8", "replace"))
+
+        try:
+            request, _ = self._signed_request("GET", "", b"", {"policyStatus": ""}, access_key, secret_key)
+            policy_status, policy_body = self._send(request)
+        except S3Error as error:
+            print(
+                "OFFHOST_S3_WARNING policyStatus unavailable (status=%s code=%s); "
+                "the bucket ACL remains the privacy proof for this store"
+                % (error.status, error.code),
+                file=sys.stderr,
+            )
+            return True
+        if policy_status == 200 and policy_status_is_public(policy_body):
+            raise S3Error(403, "BucketPublicPolicy", "bucket policy status IsPublic=true")
+        return True
+
 
 def _extract_error_code(body):
     try:
@@ -314,6 +373,52 @@ def _extract_error_code(body):
     return "Unknown"
 
 
+_PUBLIC_ACL_URI_MARKERS = ("AllUsers", "AuthenticatedUsers", "groups/global/")
+
+
+def acl_is_private(acl_body):
+    """Fail-closed check of a bucket ACL: True only when the ACL is readable,
+    well-formed and grants nothing to any public group.
+
+    Any of the following is a FAILURE (raises), never a pass:
+      - the body is not XML (BucketAclMalformed);
+      - the ACL structure contains no grants at all (BucketAclMalformed);
+      - any grantee grants a public group (AllUsers / AuthenticatedUsers, or any
+        group URI under groups/global/) regardless of the stated type
+        (BucketPublicAcl).
+    """
+    try:
+        root = ET.fromstring(acl_body)
+    except ET.ParseError:
+        raise S3Error(0, "BucketAclMalformed", "bucket ACL is not valid XML") from None
+    grants = root.findall(".//%sGrant" % _S3_XML_NS)
+    if not grants:
+        raise S3Error(0, "BucketAclMalformed", "bucket ACL contains no readable grants")
+    for grant in grants:
+        grantee = grant.find("%sGrantee" % _S3_XML_NS)
+        if grantee is None:
+            continue
+        uri_node = grantee.find("%sURI" % _S3_XML_NS)
+        uri = (uri_node.text or "") if uri_node is not None else ""
+        if uri:
+            for marker in _PUBLIC_ACL_URI_MARKERS:
+                if marker in uri:
+                    raise S3Error(403, "BucketPublicAcl", "bucket ACL grants public access to %s" % uri)
+    return True
+
+
+def policy_status_is_public(body):
+    """Parse a GetBucketPolicyStatus reply; True means IsPublic == 'true'."""
+    try:
+        root = ET.fromstring(body)
+    except ET.ParseError:
+        raise S3Error(0, "BucketPolicyStatusMalformed", "bucket policy status is not valid XML") from None
+    node = root.find(".//{http://s3.amazonaws.com/doc/2006-03-01/}IsPublic")
+    if node is not None and isinstance(node.text, str) and node.text.strip().lower() == "true":
+        return True
+    return False
+
+
 def _open_output_for_list(objects):
     for obj in objects:
         print("%s\t%s\t%s" % (obj.key, obj.size, obj.last_modified or ""))
@@ -321,7 +426,10 @@ def _open_output_for_list(objects):
 
 def _parse_args(argv):
     parser = argparse.ArgumentParser(description="BodySense off-host S3 client")
-    parser.add_argument("command", choices=("put", "get", "delete", "head", "list"))
+    parser.add_argument(
+        "command",
+        choices=("put", "get", "delete", "head", "list", "check-private"),
+    )
     parser.add_argument("--endpoint", required=True, help="object store endpoint URL")
     parser.add_argument("--bucket", required=True, help="private bucket name")
     parser.add_argument("--region", default="us-east-1", help="signing region")
@@ -337,6 +445,19 @@ def _parse_args(argv):
     parser.add_argument("--key", help="object key (required for put/get/delete/head)")
     parser.add_argument("--file", help="local file path (required for put/get)")
     parser.add_argument("--prefix", default="", help="object key prefix for list")
+    parser.add_argument(
+        "--acl",
+        default="",
+        help="object ACL for put; only 'private' or empty is accepted "
+        "(the backup script always sends 'private' by default; empty means the "
+        "x-amz-acl header is not sent)",
+    )
+    parser.add_argument(
+        "--sse",
+        default="",
+        help="server-side encryption algorithm for put: AES256 or aws:kms; empty means "
+        "the header is not sent (the backup script defaults to AES256)",
+    )
     return parser.parse_args(argv)
 
 
@@ -356,7 +477,16 @@ def main(argv=None):
     if args.command == "put":
         if not args.key or not args.file:
             raise S3Error(0, "MissingArgument", "put requires --key and --file")
-        client.put_object(args.key, args.file, access_key, secret_key)
+        if args.acl and args.acl != "private":
+            raise S3Error(0, "InvalidObjectAcl", "only an object ACL of 'private' is allowed")
+        client.put_object(
+            args.key,
+            args.file,
+            access_key,
+            secret_key,
+            acl=args.acl or None,
+            sse=args.sse or None,
+        )
         print("PUT OK %s" % args.key)
     elif args.command == "get":
         if not args.key or not args.file:
@@ -377,6 +507,9 @@ def main(argv=None):
             return 1
     elif args.command == "list":
         _open_output_for_list(client.list_objects(args.prefix, access_key, secret_key))
+    elif args.command == "check-private":
+        client.check_private(access_key, secret_key)
+        print("PRIVATE_PREFLIGHT=PASS bucket=%s" % args.bucket)
     return 0
 
 

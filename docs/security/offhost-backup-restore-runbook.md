@@ -34,6 +34,10 @@ Non-secret settings in `.env.production` (tracked):
 | `OFFHOST_BACKUP_RETENTION_DAYS` | `30` | prune objects older than this |
 | `OFFHOST_BACKUP_FRESHNESS_HOURS` | `30` | alert when the last backup is older |
 | `OFFHOST_BACKUP_FRESHNESS_PROBE` | `object` | `object` (remote HEAD) or `state` (local only) |
+| `OFFHOST_BACKUP_OBJECT_ACL` | `private` | object ACL on uploaded backup objects; the client refuses any value other than `private` or empty |
+| `OFFHOST_BACKUP_SSE` | `AES256` | PutObject server-side encryption (`AES256` or `aws:kms`); empty sends no SSE header (only for buckets with default SSE) |
+| `OFFHOST_RECOVERY_MODE` | `false` | let a restore proceed when production is down (skips only the production-side isolation proofs; see §5) |
+| `OFFHOST_RECOVERY_PRODUCTION_PROJECT` | `bodysense` | production compose project name used in recovery mode |
 | `OFFHOST_BACKUP_ALERT_CMD` | (empty) | command run on freshness failure |
 
 Secrets in `.env.production.local` (untracked, host-only):
@@ -69,6 +73,15 @@ one-off check without editing files.
   restore refuses archive `meta.json` objects whose `schema_revision` is
   `unknown`/`uninitialized`/empty up front, and requires the restored database's
   revision to equal the metadata revision exactly before reporting PASS.
+- **Destination privacy is proven, never assumed.** Every backup first runs a
+  fail-closed private-destination preflight: the bucket ACL must be readable and
+  provably private (a public or unreadable ACL, or a `GetBucketPolicyStatus`
+  result of `IsPublic=true`, aborts the backup before any object is uploaded and
+  after a failed run the previous `last-success.json` is left untouched). Every
+  uploaded object then carries `x-amz-acl=private` — the client refuses any other
+  object ACL — and `x-amz-server-side-encryption` (`AES256` by default).
+  A store that does not implement `GetBucketPolicyStatus` is accepted with a
+  warning: the provably-private ACL remains the privacy proof.
 - **Freshness is compared in whole seconds.** A backup is stale when
   `now - last_success_at_utc` exceeds `OFFHOST_BACKUP_FRESHNESS_HOURS * 3600`
   seconds (no whole-hour truncation: with a 30h policy, a 30h59m-old backup
@@ -172,19 +185,29 @@ docker run -d --name "$restore_pg" --network "$drill_net" \
 # the api container hosts the validator binaries; the script execs into it to
 # run them against the disposable restore database, so it must be attached to
 # the drill network as well (reachability is one-way: the restore container
-# stays off the production network). Pin it, and detach it when the drill
-# finishes — even on failure.
+# stays off the production network).
 OFFHOST_API_CONTAINER=docker-api-1
 docker network connect "$drill_net" "$OFFHOST_API_CONTAINER"
-cleanup() { docker network disconnect "$drill_net" "$OFFHOST_API_CONTAINER" || true; }
+# Evidence is captured BEFORE teardown, then the drill is fully dismantled even
+# on failure: disconnect the api container, remove the disposable restore
+# container and its dedicated drill network, so nothing disposable survives the
+# drill (a leftover restore-pg box or network would be a future isolation risk).
+evidence_dir="$HOME/bodysense-drills/$(date +%Y%m%d-%H%M%S)"
+mkdir -p "$evidence_dir"
+cleanup() {
+  docker network disconnect "$drill_net" "$OFFHOST_API_CONTAINER" || true
+  docker rm -f "$restore_pg" || true
+  docker network rm "$drill_net" 2>/dev/null || true
+}
 trap cleanup EXIT
 
+set -o pipefail
 /opt/bodysense/scripts/restore-production-backup.sh \
   --object-key bodysense/postgres/20260824/bodysense-postgres-20260824-021000Z.dump \
   --target-db drill_restore_20260824 \
   --target-project drill \
   --restore-pg "container:$restore_pg" \
-  --confirm-target-isolated=yes
+  --confirm-target-isolated=yes 2>&1 | tee "$evidence_dir/restore.log"
 ```
 
 Requirements enforced by the script:
@@ -294,13 +317,51 @@ most recent backup and run the full validation; escalating the restored database
 into service is a separate, documented operator step outside the scope of this
 script.
 
+### 5.2 Recovery mode (production is down)
+
+When production is down there is no live production postgres container to
+compare against, so the production-side proofs (container-ID difference,
+shared-network intersection, discovered Compose project) **cannot be made**.
+Recovery mode — `--recovery-mode=yes` (or `OFFHOST_RECOVERY_MODE=true`) —
+skips exactly those proofs and is therefore **strictly weaker isolation
+evidence** than a normal drill. It is opt-in and refused by default; the
+production project name is taken from `--recovery-production-project` /
+`OFFHOST_RECOVERY_PRODUCTION_PROJECT` (default `bodysense`) so the target-side
+proofs still compare against the real production project. Every target-side
+proof still applies unchanged: running, non-host/non-none network mode,
+attached only to the declared dedicated drill network, no published host ports,
+`bodysense.restore-project=<target>`/`bodysense.disposable-restore=yes`/
+`bodysense.restore-network` labels, and a `com.docker.compose.project` label
+that differs from the declared production project. Run it exactly like §5 (the
+recovery-mode example restore container must declare
+`bodysense.restore-project=<target-project>`):
+
+```bash
+/opt/bodysense/scripts/restore-production-backup.sh \
+  --object-key bodysense/postgres/20260824/bodysense-postgres-20260824-021000Z.dump \
+  --target-db recovery_restore_20260824 \
+  --target-project drill \
+  --restore-pg "container:$restore_pg" \
+  --confirm-target-isolated=yes \
+  --recovery-mode=yes
+```
+
+Afterwards, run a normal drill again (the production-side proofs restored) and
+compare both logs before the recovered environment is put back into service.
+
 ## 6. Verification
 
 - **Hermetic (no docker/PostgreSQL needed):** `scripts/test_offhost_s3.py`
   (specific SigV4 vectors plus a signature-verified fake S3 server, including
-  refusal of command-line credentials) and `scripts/validate-offhost-dr-unit.sh`
-  (46 checks: backup/retention/freshness, the fail-closed schema-revision gates
-  on both the backup and restore sides, the restore isolation guards — ID
+  refusal of command-line credentials, the fail-closed private-destination
+  preflight against public/unreadable ACLs and public policy-status, and the
+  `x-amz-acl=private` + SSE wire headers) — 30 checks — and
+  `scripts/validate-offhost-dr-unit.sh`
+  (64 checks: backup/retention/freshness, per-mode lock independence (backup and
+  freshness can no longer mask each other), the fail-closed schema-revision gates
+  on both the backup and restore sides, the private-destination preflight
+  aborting before any upload on a public/unreadable bucket ACL or public policy
+  status, the object ACL/SSE upload headers, the restore isolation guards — ID
   equality, running state, production-Compose-project membership, host/none
   networking refusal, declared-drill-network enforcement, the only-network rule
   (no networks beyond the declared drill network), the no-published-host-ports
@@ -308,7 +369,9 @@ script.
   disposable-label declaration — the
   `--restore-pg` guards, the SHA-256 sidecar syntax/name/digest verification,
   the DB password argv-leak guard (env-only `PGPASSWORD`, never in
-  `-database-url`/argv), the resolved api-container validation path, and the
+  `-database-url`/argv), the resolved api-container validation path, recovery
+  mode (restore with production down) with its refusals for a target equal to or
+  labelled with the production project, and the
   systemd timers' timezone-in-`OnCalendar` contract) against stubbed PostgreSQL
   and the fake S3 server.
 - **Docker integration:** `scripts/validate-offhost-dr.sh` runs real PostgreSQL
