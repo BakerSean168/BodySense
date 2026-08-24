@@ -16,9 +16,18 @@
 #     that loses ITS OWN lock exits non-zero (never silently exit 0);
 #   - the destination bucket must PROVABLY be private before any upload: every
 #     backup runs a fail-closed private-destination preflight (GetBucketAcl must
-#     show no public group grants and be readable; a bucket policy status of
-#     IsPublic=true is refused) and objects are uploaded with a private ACL and
-#     server-side encryption by default.
+#     show no public group grants and be readable).  In the default acl+policy
+#     mode GetBucketPolicyStatus is additionally required fail-closed, and a
+#     store that does not implement it is refused; stores like Alibaba OSS that
+#     cannot answer policy status are configured with OFFHOST_BACKUP_PRIVACY_PROOF=acl
+#     (acl-only, no policy query).  Objects are uploaded with a private ACL and
+#     server-side encryption by default;
+#   - when backups are disabled (OFFHOST_BACKUP_ENABLED != true), the scheduled
+#     freshness check exits non-zero (reason=backups-disabled) so a paused
+#     pipeline can never masquerade as protected, unless the operator has set
+#     OFFHOST_BACKUP_MAINTENANCE_SUPPRESS=true to acknowledge an intentional
+#     maintenance window (then the freshness check exits 0 with an explicit
+#     "intentionally suppressed" notice).
 #
 # Security contract:
 #   - the source database is read through the ordinary postgres network protocol
@@ -37,6 +46,9 @@
 #               OFFHOST_BACKUP_REGION OFFHOST_BACKUP_PREFIX OFFHOST_BACKUP_URL_STYLE
 #               OFFHOST_BACKUP_RETENTION_DAYS OFFHOST_BACKUP_FRESHNESS_HOURS
 #               OFFHOST_BACKUP_FRESHNESS_PROBE OFFHOST_BACKUP_ALERT_CMD
+#               OFFHOST_BACKUP_PRIVACY_PROOF (acl+policy by default; acl opt-in for
+#               stores such as Alibaba OSS that do not implement policy status)
+#               OFFHOST_BACKUP_MAINTENANCE_SUPPRESS (false by default)
 #               OFFHOST_BACKUP_OBJECT_ACL (private by default) OFFHOST_BACKUP_SSE (AES256 by default)
 #   secret:     OFFHOST_BACKUP_ACCESS_KEY OFFHOST_BACKUP_SECRET_KEY (.env.production.local)
 set -Eeuo pipefail
@@ -71,6 +83,22 @@ fi
 
 log() { printf '[%s] %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"; }
 fail() { log "ERROR: $*" >&2; exit 1; }
+
+# Defined before the disabled-backups branch below because the freshness path
+# can fail through it even when the backup pipeline is disabled.  FRESHNESS_HOURS
+# and ALERT_CMD are read from the environment before the call in that branch; in
+# run_freshness they are already set at module scope.
+fail_freshness() {
+  local reason="$1" last_at="${2:-}" age_h="${3:-}"
+  printf 'OFFHOST_BACKUP_FRESH=FAIL reason=%s last_success_at=%s age_hours=%s threshold_hours=%s object_key=%s\n' \
+    "$reason" "$last_at" "$age_h" "$FRESHNESS_HOURS" "${LAST_OBJECT_KEY:-}"
+  log "ERROR: off-host backup freshness check failed ($reason)"
+  if [ -n "$ALERT_CMD" ]; then
+    OFFHOST_BACKUP_FRESH=FAIL reason="$reason" last_success_at="$last_at" \
+      age_hours="$age_h" threshold_hours="$FRESHNESS_HOURS" bash -c "$ALERT_CMD" || true
+  fi
+  exit 1
+}
 
 mkdir -p "$ROOT" "$STATE_DIR" "$WORK_DIR"
 chmod 700 "$STATE_DIR" "$WORK_DIR"
@@ -125,9 +153,31 @@ secret_cfg() {
 }
 
 OFFHOST_BACKUP_ENABLED=$(cfg OFFHOST_BACKUP_ENABLED true)
+MAINTENANCE_SUPPRESS=$(cfg OFFHOST_BACKUP_MAINTENANCE_SUPPRESS false)
+case "$MAINTENANCE_SUPPRESS" in
+  true|false) ;;
+  *) fail "OFFHOST_BACKUP_MAINTENANCE_SUPPRESS must be true or false (got: $MAINTENANCE_SUPPRESS)" ;;
+esac
 if [ "$OFFHOST_BACKUP_ENABLED" != true ]; then
-  log "off-host backups disabled (OFFHOST_BACKUP_ENABLED=$OFFHOST_BACKUP_ENABLED)"
-  exit 0
+  case "$MODE" in
+    freshness)
+      # A disabled backup pipeline must never masquerade as protected: the
+      # scheduled freshness check exits non-zero (backups-disabled) so the alert
+      # path fires.  Only an explicit OFFHOST_BACKUP_MAINTENANCE_SUPPRESS=true
+      # acknowledges an intentional maintenance window with a clean exit.
+      if [ "$MAINTENANCE_SUPPRESS" = true ]; then
+        log "off-host backups disabled and OFFHOST_BACKUP_MAINTENANCE_SUPPRESS=true; freshness check intentionally suppressed (OFFHOST_BACKUP_ENABLED=$OFFHOST_BACKUP_ENABLED)"
+        exit 0
+      fi
+      FRESHNESS_HOURS=$(cfg OFFHOST_BACKUP_FRESHNESS_HOURS 30)
+      ALERT_CMD=$(cfg OFFHOST_BACKUP_ALERT_CMD)
+      fail_freshness backups-disabled
+      ;;
+    backup)
+      log "off-host backups disabled (OFFHOST_BACKUP_ENABLED=$OFFHOST_BACKUP_ENABLED)"
+      exit 0
+      ;;
+  esac
 fi
 
 BUCKET=$(cfg OFFHOST_BACKUP_BUCKET)
@@ -141,6 +191,7 @@ FRESHNESS_PROBE=$(cfg OFFHOST_BACKUP_FRESHNESS_PROBE object)
 ALERT_CMD=$(cfg OFFHOST_BACKUP_ALERT_CMD)
 OBJ_ACL=$(cfg OFFHOST_BACKUP_OBJECT_ACL private)
 SSE=$(cfg OFFHOST_BACKUP_SSE AES256)
+PRIVACY_PROOF=$(cfg OFFHOST_BACKUP_PRIVACY_PROOF acl+policy)
 ACCESS_KEY=$(secret_cfg OFFHOST_BACKUP_ACCESS_KEY)
 SECRET_KEY=$(secret_cfg OFFHOST_BACKUP_SECRET_KEY)
 DB_USER=$(cfg DB_USER bodysense)
@@ -160,6 +211,10 @@ esac
 case "$SSE" in
   AES256|aws:kms|"") ;;
   *) fail "OFFHOST_BACKUP_SSE must be AES256, aws:kms or empty (got: $SSE)" ;;
+esac
+case "$PRIVACY_PROOF" in
+  acl+policy|acl) ;;
+  *) fail "OFFHOST_BACKUP_PRIVACY_PROOF must be 'acl+policy' or 'acl' (got: $PRIVACY_PROOF)" ;;
 esac
 
 # Host-side postgres access.  Everything goes through this one seam so hermetic
@@ -182,10 +237,12 @@ s3() {
 
 # Resolve the exact, verifiable schema state `<version>:<dirty>` of the source
 # database.  FAIL-CLOSED: a backup is only ever recorded as a success with a
-# revision that was actually verified from schema_migrations.  Any psql/query
-# failure, a missing schema_migrations table, or an empty table aborts the
-# backup before any object is uploaded or last-success.json is written, so a
-# dump can never be marked successful while carrying an unverified revision.
+# revision that was actually verified from schema_migrations AND proven to be an
+# exact clean `<version>:false` value.  Any psql/query failure, a missing
+# schema_migrations table, an empty table, an `unknown`/`uninitialized`/empty
+# state, or a dirty (or otherwise malformed) revision aborts the backup before
+# any object is uploaded or last-success.json is written, so a dump can never be
+# marked successful while carrying an unverified schema state.
 db_schema_state() {
   local exists value
   if ! exists=$(pg psql -U "$DB_USER" -d "$DB_NAME" -Atc \
@@ -204,19 +261,13 @@ db_schema_state() {
   fi
   [ -n "$value" ] \
     || fail 'schema_migrations exists but has no rows; refusing to write an off-host backup without a verified schema revision'
+  # The gate is an exact `<version>:false` value: `unknown`/`uninitialized`,
+  # empty, or a dirty (>=12 schema_migrations dirty=true) revision are all
+  # refused.  A backup is only ever recorded as successful with a proven clean
+  # revision, matching the restore side's exact-revision requirement.
+  [[ "$value" =~ ^[0-9]+:false$ ]] \
+    || fail "source schema revision '$value' is not an exact clean <version>:false revision; refusing to write an off-host backup without a verified clean schema state"
   printf '%s' "$value"
-}
-
-fail_freshness() {
-  local reason="$1" last_at="${2:-}" age_h="${3:-}"
-  printf 'OFFHOST_BACKUP_FRESH=FAIL reason=%s last_success_at=%s age_hours=%s threshold_hours=%s object_key=%s\n' \
-    "$reason" "$last_at" "$age_h" "$FRESHNESS_HOURS" "${LAST_OBJECT_KEY:-}"
-  log "ERROR: off-host backup freshness check failed ($reason)"
-  if [ -n "$ALERT_CMD" ]; then
-    OFFHOST_BACKUP_FRESH=FAIL reason="$reason" last_success_at="$last_at" \
-      age_hours="$age_h" threshold_hours="$FRESHNESS_HOURS" bash -c "$ALERT_CMD" || true
-  fi
-  exit 1
 }
 
 run_backup() {
@@ -228,11 +279,15 @@ run_backup() {
   fi
 
   # Fail-closed private-destination preflight BEFORE any upload: the bucket must
-  # be PROVABLY private (GetBucketAcl readable and free of public group grants;
-  # a GetBucketPolicyStatus of IsPublic=true is also refused).  A store that
-  # cannot prove the bucket is private fails the backup — "assumed private" is
-  # never accepted as a destination for health data.
-  if ! s3 check-private; then
+  # be PROVABLY private.  The default acl+policy proof verifies the bucket ACL
+  # AND GetBucketPolicyStatus fail-closed (a store that cannot answer policy
+  # status is refused, never assumed passing); OFFHOST_BACKUP_PRIVACY_PROOF=acl
+  # opts into ACL-only machine proof for stores like Alibaba OSS that do not
+  # implement policy status.  "Assumed private" is never accepted as a
+  # destination for health data.
+  policy_proof_flags=()
+  [ "$PRIVACY_PROOF" = acl ] && policy_proof_flags=(--policy-proof acl-only)
+  if ! s3 check-private "${policy_proof_flags[@]}"; then
     fail 'private-destination preflight failed (bucket not provably private); refusing to upload off-host backup objects'
   fi
 
@@ -242,12 +297,6 @@ run_backup() {
   dump="$WORK_DIR/bodysense-postgres-$ts.dump"
 
   schema=$(db_schema_state)
-  case "$schema" in
-    unknown|uninitialized|"")
-      rm -f "$dump"
-      fail "refusing to write an off-host backup without a verified schema revision (got: '$schema')"
-      ;;
-  esac
   log "creating off-host custom-format dump schema=$schema"
   if ! pg pg_dump -U "$DB_USER" -d "$DB_NAME" -Fc > "$dump" 2>/dev/null; then
     rm -f "$dump"

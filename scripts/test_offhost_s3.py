@@ -233,6 +233,7 @@ class FakeS3Handler(http.server.BaseHTTPRequestHandler):
     public_acl = False
     policy_public = False
     policy_unavailable = False
+    policy_unsupported = False
     puts = []  # [{key, headers}] in upload order, for header assertions
 
     def log_message(self, *args):
@@ -314,6 +315,8 @@ class FakeS3Handler(http.server.BaseHTTPRequestHandler):
         self._respond_xml(200, root)
 
     def _policy_status_reply(self):
+        if self.policy_unsupported:
+            return self._reject(501, "NotImplemented", "GetBucketPolicyStatus is not implemented by this store")
         if self.policy_unavailable:
             return self._reject(403, "AccessDenied", "GetBucketPolicyStatus requires permission")
         ns = "http://s3.amazonaws.com/doc/2006-03-01/"
@@ -426,6 +429,7 @@ class FakeS3IntegrationTests(unittest.TestCase):
         FakeS3Handler.public_acl = False
         FakeS3Handler.policy_public = False
         FakeS3Handler.policy_unavailable = False
+        FakeS3Handler.policy_unsupported = False
         FakeS3Handler.puts = []
         self.server = FakeServer().start()
         self.client = offhost_s3.S3Client(
@@ -557,11 +561,45 @@ class FakeS3IntegrationTests(unittest.TestCase):
             self.client.check_private(_KNOWN_ACCESS_KEY, _KNOWN_SECRET_KEY)
         self.assertEqual(ctx.exception.code, "BucketPublicPolicy")
 
-    def test_check_private_passes_when_policy_status_unavailable(self):
+    def test_check_private_passes_when_policy_status_unavailable_acl_mode(self):
         FakeS3Handler.policy_unavailable = True
+        FakeS3Handler.policy_unsupported = True
         self.assertTrue(
-            self.client.check_private(_KNOWN_ACCESS_KEY, _KNOWN_SECRET_KEY)
+            self.client.check_private(_KNOWN_ACCESS_KEY, _KNOWN_SECRET_KEY, policy_proof=False)
         )
+
+    def test_check_private_fails_when_policy_status_denied(self):
+        FakeS3Handler.policy_unavailable = True
+        with self.assertRaises(offhost_s3.S3Error) as ctx:
+            self.client.check_private(_KNOWN_ACCESS_KEY, _KNOWN_SECRET_KEY)
+        self.assertEqual(ctx.exception.code, "BucketPolicyStatusDenied")
+        self.assertEqual(ctx.exception.status, 403)
+
+    def test_check_private_fails_when_policy_status_unsupported(self):
+        FakeS3Handler.policy_unsupported = True
+        with self.assertRaises(offhost_s3.S3Error) as ctx:
+            self.client.check_private(_KNOWN_ACCESS_KEY, _KNOWN_SECRET_KEY)
+        self.assertEqual(ctx.exception.code, "BucketPolicyStatusUnsupported")
+        self.assertEqual(ctx.exception.status, 501)
+
+    def test_check_private_fails_when_policy_status_malformed(self):
+        malformed = b"this is not a policy status document"
+        with self.assertRaises(offhost_s3.S3Error) as ctx:
+            offhost_s3.policy_status_is_public(malformed)
+        self.assertEqual(ctx.exception.code, "BucketPolicyStatusMalformed")
+        ns = "http://s3.amazonaws.com/doc/2006-03-01/"
+        no_ispublic = (
+            '<ns:PolicyStatus xmlns:ns="%s"><ns:SomeOtherField>x</ns:SomeOtherField></ns:PolicyStatus>' % ns
+        )
+        with self.assertRaises(offhost_s3.S3Error):
+            offhost_s3.policy_status_is_public(no_ispublic.encode())
+
+    def test_check_private_acl_only_mode_skips_policy_query(self):
+        puts_before = len(FakeS3Handler.puts)
+        self.assertTrue(
+            self.client.check_private(_KNOWN_ACCESS_KEY, _KNOWN_SECRET_KEY, policy_proof=False)
+        )
+        self.assertEqual(len(FakeS3Handler.puts), puts_before)
 
     def test_acl_is_private_rejects_malformed_and_public(self):
         ns = "http://s3.amazonaws.com/doc/2006-03-01/"
@@ -642,6 +680,7 @@ class CliTests(unittest.TestCase):
         FakeS3Handler.public_acl = False
         FakeS3Handler.policy_public = False
         FakeS3Handler.policy_unavailable = False
+        FakeS3Handler.policy_unsupported = False
         FakeS3Handler.puts = []
         self.server = FakeServer().start()
 
@@ -745,6 +784,7 @@ class CliTests(unittest.TestCase):
         )
         self.assertEqual(probe.returncode, 0, probe.stderr)
         self.assertIn("PRIVATE_PREFLIGHT=PASS", probe.stdout)
+        self.assertIn("proof=acl+policy", probe.stdout)
 
     def test_cli_check_private_fails_closed_on_public_bucket(self):
         FakeS3Handler.public_acl = True
@@ -765,6 +805,38 @@ class CliTests(unittest.TestCase):
         )
         self.assertNotEqual(probe.returncode, 0)
         self.assertIn("BucketAclUnreadable", probe.stderr)
+
+    def test_cli_check_private_fails_closed_when_policy_status_denied(self):
+        FakeS3Handler.policy_unavailable = True
+        env = {"OFFHOST_BACKUP_ACCESS_KEY": _KNOWN_ACCESS_KEY, "OFFHOST_BACKUP_SECRET_KEY": _KNOWN_SECRET_KEY}
+        probe = self.run_cli(
+            ["check-private", "--endpoint", self.server.url, "--bucket", "testbucket", "--region", "cn-hangzhou"],
+            env=env,
+        )
+        self.assertNotEqual(probe.returncode, 0)
+        self.assertIn("BucketPolicyStatusDenied", probe.stderr)
+
+    def test_cli_check_private_fails_closed_when_policy_status_unsupported(self):
+        FakeS3Handler.policy_unsupported = True
+        env = {"OFFHOST_BACKUP_ACCESS_KEY": _KNOWN_ACCESS_KEY, "OFFHOST_BACKUP_SECRET_KEY": _KNOWN_SECRET_KEY}
+        probe = self.run_cli(
+            ["check-private", "--endpoint", self.server.url, "--bucket", "testbucket", "--region", "cn-hangzhou"],
+            env=env,
+        )
+        self.assertNotEqual(probe.returncode, 0)
+        self.assertIn("BucketPolicyStatusUnsupported", probe.stderr)
+
+    def test_cli_check_private_acl_only_passes_with_warning(self):
+        FakeS3Handler.policy_unsupported = True
+        env = {"OFFHOST_BACKUP_ACCESS_KEY": _KNOWN_ACCESS_KEY, "OFFHOST_BACKUP_SECRET_KEY": _KNOWN_SECRET_KEY}
+        probe = self.run_cli(
+            ["check-private", "--endpoint", self.server.url, "--bucket", "testbucket", "--region", "cn-hangzhou",
+             "--policy-proof", "acl-only"],
+            env=env,
+        )
+        self.assertEqual(probe.returncode, 0, probe.stderr)
+        self.assertIn("PRIVATE_PREFLIGHT=PASS proof=acl", probe.stdout)
+        self.assertIn("OFFHOST_S3_WARNING", probe.stderr)
 
     def test_cli_put_refuses_public_acl_argument(self):
         src = os.path.join("/tmp", "offhost-cli-public.bin")

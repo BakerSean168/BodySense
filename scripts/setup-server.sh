@@ -69,7 +69,15 @@ MIMO_API_KEY=
 
 # Off-host backup (BS-PROD-012): least-privilege object-store credentials for
 # the operator-owned off-host PostgreSQL backups.  Generate an access key/secret
-# with PutObject/GetObject/DeleteObject/ListBucket rights on the backup bucket.
+# that has PutObject/GetObject/DeleteObject/ListBucket on the backup bucket and
+# ALWAYS GetBucketAcl (the privacy preflight reads the ACL).  GetBucketPolicyStatus
+# is additionally required ONLY when the tracked .env.production sets
+# OFFHOST_BACKUP_PRIVACY_PROOF=acl+policy (the default); stores such as Alibaba
+# OSS do not implement policy status at all, so .env.production ships with
+# OFFHOST_BACKUP_PRIVACY_PROOF=acl (ACL-only proof, no GetBucketPolicyStatus).
+# Mirror the proof-mode permission contract in .env.production, or backups will
+# abort at the fail-closed private-destination preflight (the client refuses "I
+# could not prove private" as anything except a failure).
 OFFHOST_BACKUP_ACCESS_KEY=
 OFFHOST_BACKUP_SECRET_KEY=
 SECRET

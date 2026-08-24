@@ -14,10 +14,15 @@ Security contract (BS-PROD-012):
       process table or /proc/<pid>/cmdline;
   -   the client never writes credentials into request bodies or metadata;
   -   privacy is PROVEN, not assumed: `check-private` is a fail-closed preflight
-      that reads the destination bucket ACL (and, where the store supports it,
-      bucket policy status) and refuses any bucket granting public groups; the
-      client never sets a public ACL and rejects any requested object ACL other
-      than `private`;
+      that reads the destination bucket ACL and, in `--policy-proof required`
+      mode (the default), also reads bucket policy status; any bucket granting
+      public groups is refused.  A store that cannot answer policy status is
+      refused in required mode (its policy status cannot be verified); stores
+      that do not implement the operation (e.g. Alibaba OSS) must be explicitly
+      configured with `--policy-proof acl-only`, where the ACL is the only
+      machine-verified proof and an OFFHOST_S3_WARNING is printed.  The client
+      never sets a public ACL and rejects any requested object ACL other than
+      `private`;
   -   health-data objects are uploaded with server-side encryption by default
       (`--sse AES256`).
 
@@ -28,7 +33,7 @@ environment, never from the command line):
   offhost-s3.py delete         --endpoint URL --bucket B --key K [--region R] [--url-style path|virtual]
   offhost-s3.py list           --endpoint URL --bucket B [--prefix P] [--region R] [--url-style path|virtual]
   offhost-s3.py head           --endpoint URL --bucket B --key K [--region R] [--url-style path|virtual]
-  offhost-s3.py check-private  --endpoint URL --bucket B [--region R] [--url-style path|virtual]
+  offhost-s3.py check-private  --endpoint URL --bucket B [--region R] [--url-style path|virtual] [--policy-proof required|acl-only]
 """
 
 import argparse
@@ -319,14 +324,26 @@ class S3Client:
                 break
         return result
 
-    def check_private(self, access_key, secret_key):
+    def check_private(self, access_key, secret_key, policy_proof=True):
         """Fail-closed private-destination preflight for the backup bucket.
 
         Returns True only when the bucket ACL can be fetched, parsed and proven
-        to grant nothing to public groups.  Where the store implements
-        GetBucketPolicyStatus, an IsPublic=true result is also refused.  Any
-        store that cannot PROVE the bucket is private fails the check (raises)
-        rather than passing on an assumption.
+        to grant nothing to public groups.  With policy_proof=True (the default,
+        `acl+policy` mode) a GetBucketPolicyStatus result is additionally
+        required and is fail-closed:
+          - IsPublic=true is refused (BucketPublicPolicy);
+          - an error answering the request is refused (BucketPolicyStatusDenied
+            for a real authorization failure, BucketPolicyStatusFailed for any
+            other non-200) — including a store that does NOT implement the
+            operation (BucketPolicyStatusUnsupported), because an absent policy
+            status cannot be read and therefore cannot be proven private;
+          - a 200 reply without a parseable IsPublic is refused
+            (BucketPolicyStatusMalformed).
+        With policy_proof=False (`acl` mode) the bucket ACL is the only
+        machine-verified privacy proof, the policy status is NOT queried, and an
+        OFFHOST_S3_WARNING line is printed so callers' logs record that the
+        weaker proof was used.  Either way, a store that cannot PROVE the bucket
+        is private never passes on an assumption.
         """
         if not access_key or not secret_key:
             raise S3Error(0, "MissingCredentials", "access key and secret key are required")
@@ -343,18 +360,36 @@ class S3Client:
             raise S3Error(status, "BucketAclUnreadable", "bucket ACL returned HTTP %d" % status)
         acl_is_private(body.decode("utf-8", "replace"))
 
+        if not policy_proof:
+            print(
+                "OFFHOST_S3_WARNING policy status is NOT verified (acl-only proof); "
+                "the bucket ACL is the only machine-verified privacy proof",
+                file=sys.stderr,
+            )
+            return True
+
         try:
             request, _ = self._signed_request("GET", "", b"", {"policyStatus": ""}, access_key, secret_key)
             policy_status, policy_body = self._send(request)
         except S3Error as error:
-            print(
-                "OFFHOST_S3_WARNING policyStatus unavailable (status=%s code=%s); "
-                "the bucket ACL remains the privacy proof for this store"
-                % (error.status, error.code),
-                file=sys.stderr,
+            if _is_operation_unsupported(error.status, error.code):
+                raise S3Error(
+                    error.status or 0,
+                    "BucketPolicyStatusUnsupported",
+                    "bucket policy status is not implemented by this store and cannot be verified: %s" % error,
+                ) from None
+            raise S3Error(
+                error.status or 0,
+                "BucketPolicyStatusDenied",
+                "cannot read bucket policy status: %s" % error,
+            ) from None
+        if policy_status != 200:
+            raise S3Error(
+                policy_status,
+                "BucketPolicyStatusFailed",
+                "bucket policy status returned HTTP %d" % policy_status,
             )
-            return True
-        if policy_status == 200 and policy_status_is_public(policy_body):
+        if policy_status_is_public(policy_body):
             raise S3Error(403, "BucketPublicPolicy", "bucket policy status IsPublic=true")
         return True
 
@@ -371,6 +406,18 @@ def _extract_error_code(body):
     except ET.ParseError:
         pass
     return "Unknown"
+
+
+# Stores that do not implement the GetBucketPolicyStatus operation answer it
+# with one of these machine-readable signals.  A store that cannot answer policy
+# status cannot have its bucket policy machine-verified.
+_UNSUPPORTED_POLICY_STATUS_ERROR_CODES = ("NotImplemented", "MethodNotAllowed", "UnknownOperation")
+
+
+def _is_operation_unsupported(status, code):
+    if status == 501:
+        return True
+    return bool(code) and code in _UNSUPPORTED_POLICY_STATUS_ERROR_CODES
 
 
 _PUBLIC_ACL_URI_MARKERS = ("AllUsers", "AuthenticatedUsers", "groups/global/")
@@ -408,15 +455,24 @@ def acl_is_private(acl_body):
 
 
 def policy_status_is_public(body):
-    """Parse a GetBucketPolicyStatus reply; True means IsPublic == 'true'."""
+    """Parse a GetBucketPolicyStatus reply; True means IsPublic == 'true'.
+
+    FAIL-CLOSED: a 200 reply that is not valid XML, or that carries no parseable
+    IsPublic element, raises BucketPolicyStatusMalformed rather than being
+    treated as "not public".  A malformed policy status can never be a pass.
+    """
     try:
         root = ET.fromstring(body)
     except ET.ParseError:
         raise S3Error(0, "BucketPolicyStatusMalformed", "bucket policy status is not valid XML") from None
     node = root.find(".//{http://s3.amazonaws.com/doc/2006-03-01/}IsPublic")
-    if node is not None and isinstance(node.text, str) and node.text.strip().lower() == "true":
-        return True
-    return False
+    if node is None or not isinstance(node.text, str) or not node.text.strip():
+        raise S3Error(
+            0,
+            "BucketPolicyStatusMalformed",
+            "bucket policy status reply is missing a parseable IsPublic value",
+        )
+    return node.text.strip().lower() == "true"
 
 
 def _open_output_for_list(objects):
@@ -457,6 +513,15 @@ def _parse_args(argv):
         default="",
         help="server-side encryption algorithm for put: AES256 or aws:kms; empty means "
         "the header is not sent (the backup script defaults to AES256)",
+    )
+    parser.add_argument(
+        "--policy-proof",
+        choices=("required", "acl-only"),
+        default="required",
+        help="check-private privacy proof: 'required' (default) verifies the ACL AND "
+        "GetBucketPolicyStatus fail-closed; 'acl-only' verifies only the bucket ACL "
+        "and prints an OFFHOST_S3_WARNING (for stores that do not implement policy "
+        "status, e.g. Alibaba OSS)",
     )
     return parser.parse_args(argv)
 
@@ -508,8 +573,12 @@ def main(argv=None):
     elif args.command == "list":
         _open_output_for_list(client.list_objects(args.prefix, access_key, secret_key))
     elif args.command == "check-private":
-        client.check_private(access_key, secret_key)
-        print("PRIVATE_PREFLIGHT=PASS bucket=%s" % args.bucket)
+        policy_proof = args.policy_proof != "acl-only"
+        client.check_private(access_key, secret_key, policy_proof=policy_proof)
+        print(
+            "PRIVATE_PREFLIGHT=PASS proof=%s bucket=%s"
+            % ("acl+policy" if policy_proof else "acl", args.bucket)
+        )
     return 0
 
 
