@@ -281,6 +281,12 @@ class KnowledgeLibrary:
             "\n".join([unit.title, unit.summary, unit.body_markdown]) for unit in pack.units
         ]
         embeddings = await self.embedding_generator.generate_batch(embedding_inputs)
+        if len(embeddings) != len(pack.units):
+            raise RuntimeError("embedding count does not match generated knowledge unit count")
+        embedding_identity = self.embedding_generator.identity()
+        expected_dimension = int(embedding_identity["dimension"])
+        if any(len(embedding) != expected_dimension for embedding in embeddings):
+            raise RuntimeError("embedding dimension does not match embedding identity")
         pool = self._require_pool()
 
         async with pool.connection() as conn:
@@ -446,6 +452,7 @@ class KnowledgeLibrary:
                                     {
                                         **unit.metadata,
                                         "problem_display_name": unit.problem_display_name,
+                                        "embedding_identity": embedding_identity,
                                     }
                                 ),
                             ),

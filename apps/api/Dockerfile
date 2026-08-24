@@ -16,7 +16,8 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 go build -o /server ./cmd/server && \
     CGO_ENABLED=0 go build -o /production-dr-manager ./cmd/production-dr-manager && \
     CGO_ENABLED=0 go build -o /domain-validator ./cmd/domain-validator && \
-    CGO_ENABLED=0 go build -o /upload-storage-migrator ./cmd/upload-storage-migrator
+    CGO_ENABLED=0 go build -o /upload-storage-migrator ./cmd/upload-storage-migrator && \
+    CGO_ENABLED=0 go build -o /knowledge-publication-manager ./cmd/knowledge-publication-manager
 
 # ── Runtime stage ──────────────────────────────────────
 FROM alpine:3.20
@@ -34,6 +35,7 @@ COPY --from=builder /server /app/server
 COPY --from=builder /production-dr-manager /app/production-dr-manager
 COPY --from=builder /domain-validator /app/domain-validator
 COPY --from=builder /upload-storage-migrator /app/upload-storage-migrator
+COPY --from=builder /knowledge-publication-manager /app/knowledge-publication-manager
 COPY --from=builder /app/migrations /app/migrations
 EXPOSE 8080
 HEALTHCHECK --interval=10s --timeout=5s --retries=3 \

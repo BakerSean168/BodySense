@@ -108,6 +108,8 @@ migration_db="bodysense_migration_validator"
     -database-url "postgres://${DB_USER}:${DB_PASSWORD}@127.0.0.1:${DB_PORT}/${migration_db}?sslmode=disable"
 )
 
+bash scripts/validate-knowledge-publication.sh
+
 E2E_BASE_URL="http://127.0.0.1:${WEB_PORT}" \
 E2E_API_BASE_URL="http://127.0.0.1:${API_PORT}" \
 E2E_RESTART_API_COMMAND="$repo_root/scripts/e2e-expire-run-and-restart-api.sh" \

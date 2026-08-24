@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -141,8 +141,15 @@ class InjectedPool:
 async def test_ingest_transaction_rolls_back_on_write_failure() -> None:
     conn = FailingConnection()
     pool = InjectedPool(conn)
-    embedder = AsyncMock()
-    embedder.generate_batch.return_value = []
+    embedder = MagicMock()
+    embedder.generate_batch = AsyncMock(return_value=[])
+    embedder.identity.return_value = {
+        "provider": "hashing",
+        "model": "bodysense-hashing-ngram",
+        "dimension": 1536,
+        "revision": "sha256-char-word-ngram-v1",
+        "fingerprint": "a" * 64,
+    }
     library = KnowledgeLibrary(
         database_url="postgresql://test",
         embedding_generator=embedder,
@@ -225,8 +232,15 @@ class PublishedSourceConnection:
 async def test_overwrite_rejects_source_with_published_or_publication_linked_units() -> None:
     conn = PublishedSourceConnection()
     pool = InjectedPool(conn)  # type: ignore[arg-type]
-    embedder = AsyncMock()
-    embedder.generate_batch.return_value = []
+    embedder = MagicMock()
+    embedder.generate_batch = AsyncMock(return_value=[])
+    embedder.identity.return_value = {
+        "provider": "hashing",
+        "model": "bodysense-hashing-ngram",
+        "dimension": 1536,
+        "revision": "sha256-char-word-ngram-v1",
+        "fingerprint": "a" * 64,
+    }
     library = KnowledgeLibrary(
         database_url="postgresql://test",
         embedding_generator=embedder,
