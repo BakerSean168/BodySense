@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/bodysense/api/internal/model"
@@ -85,14 +84,8 @@ func TestExecuteOCRCall_Success(t *testing.T) {
 	}))
 	defer server.Close()
 
-	tmpDir := t.TempDir()
-	tmpFile := filepath.Join(tmpDir, "test.pdf")
-	if err := os.WriteFile(tmpFile, []byte("fake pdf"), 0644); err != nil {
-		t.Fatalf("create temp file: %v", err)
-	}
-
 	svc := &UploadService{aiServiceURL: server.URL}
-	respBody, err := svc.executeOCRCall(tmpFile, "application/pdf")
+	respBody, err := svc.executeOCRCall(strings.NewReader("fake pdf"), "application/pdf")
 	if err != nil {
 		t.Fatalf("executeOCRCall: %v", err)
 	}
@@ -113,32 +106,16 @@ func TestExecuteOCRCall_ServerError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	tmpDir := t.TempDir()
-	tmpFile := filepath.Join(tmpDir, "test.pdf")
-	os.WriteFile(tmpFile, []byte("content"), 0644)
-
 	svc := &UploadService{aiServiceURL: server.URL}
-	_, err := svc.executeOCRCall(tmpFile, "application/pdf")
+	_, err := svc.executeOCRCall(strings.NewReader("content"), "application/pdf")
 	if err == nil {
 		t.Error("expected error for 500, got nil")
 	}
 }
 
-func TestExecuteOCRCall_FileNotFound(t *testing.T) {
-	svc := &UploadService{aiServiceURL: "http://localhost:1"}
-	_, err := svc.executeOCRCall("/nonexistent.pdf", "application/pdf")
-	if err == nil {
-		t.Error("expected error for missing file")
-	}
-}
-
 func TestExecuteOCRCall_ConnectionRefused(t *testing.T) {
-	tmpDir := t.TempDir()
-	tmpFile := filepath.Join(tmpDir, "test.pdf")
-	os.WriteFile(tmpFile, []byte("content"), 0644)
-
 	svc := &UploadService{aiServiceURL: "http://127.0.0.1:1"}
-	_, err := svc.executeOCRCall(tmpFile, "application/pdf")
+	_, err := svc.executeOCRCall(strings.NewReader("content"), "application/pdf")
 	if err == nil {
 		t.Error("expected error for connection refused")
 	}
@@ -161,13 +138,13 @@ func TestParseOCRJobInput(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parseOCRJobInput: %v", err)
 	}
-	if input.UploadID != "upload-1" || input.FilePath == "" || input.MimeType != "application/pdf" {
+	if input.UploadID != "upload-1" {
 		t.Fatalf("unexpected input: %+v", input)
 	}
 }
 
 func TestParseOCRJobInputMissingFields(t *testing.T) {
-	job := model.Job{Input: datatypes.JSON(`{"upload_id":"upload-1"}`)}
+	job := model.Job{Input: datatypes.JSON(`{}`)}
 	if _, err := parseOCRJobInput(job); err == nil {
 		t.Fatal("expected missing field error")
 	}
@@ -250,12 +227,8 @@ func TestExecutePostureCallPinsConfiguration(t *testing.T) {
 	}))
 	defer server.Close()
 
-	file := filepath.Join(t.TempDir(), "side.jpg")
-	if err := os.WriteFile(file, []byte("fake-image"), 0644); err != nil {
-		t.Fatal(err)
-	}
 	svc := &UploadService{aiServiceURL: server.URL}
-	body, err := svc.executePostureCall(file, "image/jpeg", "side", defaultPostureConfigurationID)
+	body, err := svc.executePostureCall(strings.NewReader("fake-image"), "image/jpeg", "side", defaultPostureConfigurationID)
 	if err != nil {
 		t.Fatalf("executePostureCall: %v", err)
 	}
@@ -287,5 +260,24 @@ func TestValidatePostureAgentResponseUnwrapsAndAddsDecisionTrace(t *testing.T) {
 	trace, ok := parsed["generation_decision_trace"].(map[string]any)
 	if !ok || trace["authority"] != "go" || trace["decision"] != "persist" {
 		t.Fatalf("missing Go decision trace: %#v", parsed["generation_decision_trace"])
+	}
+}
+
+func TestUploadJobInputsDoNotPersistStorageCoordinates(t *testing.T) {
+	ocrPayload, err := json.Marshal(ocrJobInput{UploadID: "upload-1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	posturePayload, err := json.Marshal(postureJobInput{
+		UploadID: "upload-2", View: "front", ConfigurationID: defaultPostureConfigurationID,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, payload := range [][]byte{ocrPayload, posturePayload} {
+		text := string(payload)
+		if strings.Contains(text, "file_path") || strings.Contains(text, "storage_key") || strings.Contains(text, "storage_backend") {
+			t.Fatalf("durable job captured storage coordinate: %s", text)
+		}
 	}
 }

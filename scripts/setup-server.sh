@@ -66,6 +66,12 @@ OPENROUTER_API_KEY=
 EMBEDDING_API_KEY=
 LITELLM_MASTER_KEY=$LITELLM_MASTER_KEY
 MIMO_API_KEY=
+
+# Private upload OSS cutover is explicit. Leave blank until the bucket and ECS
+# RAM role have been provisioned and validated.
+UPLOAD_OSS_BUCKET=
+UPLOAD_OSS_ECS_RAM_ROLE=
+UPLOAD_OSS_ENDPOINT=
 SECRET
   )
   echo "Created $DEPLOY_DIR/.env.production.local; configure provider keys before serving AI traffic."
