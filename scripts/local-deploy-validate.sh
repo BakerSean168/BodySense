@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
-export BODYSENSE_E2E_STUB_AI=1
 # Exercise the real Phase-9 shadow path in the hermetic validator. Production
 # Compose defaults to champion until operators explicitly advance the rollout.
 export DIAGNOSIS_ROLLOUT_STAGE="shadow"
@@ -54,9 +53,6 @@ export DB_PASSWORD="bodysense123"
 export DB_NAME="bodysense"
 export REDIS_PASSWORD="bodysense123"
 export JWT_SECRET_KEY="bodysense-local-validator-secret"
-# The validator must be hermetic: exercise real Agent/runtime contracts without
-# relying on external model availability or credentials.
-export BODYSENSE_DETERMINISTIC_AI="true"
 compose=(docker compose -f docker/docker-compose.yml --profile dev)
 
 cleanup() {
@@ -84,6 +80,11 @@ if [[ "${SKIP_QUALITY:-0}" != "1" ]]; then
   bash scripts/validate-repo.sh
 fi
 
+# Only the production-shaped runtime/E2E phase is stubbed/deterministic. Quality
+# tests above must observe their normal model/gateway contracts and own their mocks.
+export BODYSENSE_E2E_STUB_AI=1
+export BODYSENSE_DETERMINISTIC_AI="true"
+
 "${compose[@]}" down -v --remove-orphans >/dev/null 2>&1 || true
 "${compose[@]}" build api ai-service web
 "${compose[@]}" up -d postgres-dev redis-dev ai-service api web
@@ -106,6 +107,8 @@ migration_db="bodysense_migration_validator"
   go run ./cmd/domain-validator \
     -database-url "postgres://${DB_USER}:${DB_PASSWORD}@127.0.0.1:${DB_PORT}/${migration_db}?sslmode=disable"
 )
+
+bash scripts/validate-knowledge-publication.sh
 
 E2E_BASE_URL="http://127.0.0.1:${WEB_PORT}" \
 E2E_API_BASE_URL="http://127.0.0.1:${API_PORT}" \

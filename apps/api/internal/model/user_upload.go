@@ -9,15 +9,16 @@ import (
 
 // UserUpload represents a user's uploaded file (photo or health report).
 type UserUpload struct {
-	ID           uuid.UUID       `gorm:"type:uuid;primaryKey;default:uuid_generate_v4()" json:"id"`
-	UserID       uuid.UUID       `gorm:"type:uuid;not null" json:"user_id"`
-	FileType     string          `gorm:"type:varchar(50);not null" json:"file_type"`
-	OriginalName string          `gorm:"type:varchar(255);not null" json:"original_name"`
-	FilePath     string          `gorm:"type:varchar(500);not null" json:"file_path"`
-	FileSize     int64           `gorm:"not null" json:"file_size"`
-	MimeType     string          `gorm:"type:varchar(100);not null" json:"mime_type"`
-	OCRResult    json.RawMessage `gorm:"type:jsonb" json:"ocr_result,omitempty"`
-	OCRStatus    string          `gorm:"type:varchar(20);not null;default:'pending'" json:"ocr_status"`
+	ID             uuid.UUID       `gorm:"type:uuid;primaryKey;default:uuid_generate_v4()" json:"id"`
+	UserID         uuid.UUID       `gorm:"type:uuid;not null" json:"user_id"`
+	FileType       string          `gorm:"type:varchar(50);not null" json:"file_type"`
+	OriginalName   string          `gorm:"type:varchar(255);not null" json:"original_name"`
+	StorageBackend string          `gorm:"type:varchar(20);not null" json:"-"`
+	StorageKey     string          `gorm:"type:varchar(500);not null" json:"-"`
+	FileSize       int64           `gorm:"not null" json:"file_size"`
+	MimeType       string          `gorm:"type:varchar(100);not null" json:"mime_type"`
+	OCRResult      json.RawMessage `gorm:"type:jsonb" json:"ocr_result,omitempty"`
+	OCRStatus      string          `gorm:"type:varchar(20);not null;default:'pending'" json:"ocr_status"`
 	// AnalysisResult holds the structured posture-analysis payload for photo
 	// uploads (see docs/plan/active/posture-photo-analysis-plan.md §3). It is
 	// deliberately separate from OCRResult, which is report-specific.

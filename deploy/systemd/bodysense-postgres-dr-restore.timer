@@ -1,0 +1,11 @@
+[Unit]
+Description=Weekly BodySense off-host PostgreSQL restore drill
+
+[Timer]
+OnCalendar=Sun *-*-* 04:30:00
+RandomizedDelaySec=30m
+Persistent=true
+Unit=bodysense-postgres-dr-restore.service
+
+[Install]
+WantedBy=timers.target

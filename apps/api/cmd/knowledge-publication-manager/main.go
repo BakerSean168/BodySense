@@ -18,7 +18,7 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		log.Fatal("usage: knowledge-publication-manager <publish|publish-reviewed|rollback|observe-eval|status> [flags]")
+		log.Fatal("usage: knowledge-publication-manager <publish-reviewed|rollback|observe-eval|status> [flags]")
 	}
 
 	db, err := database.Connect(database.ConfigFromEnv())
@@ -26,6 +26,7 @@ func main() {
 		log.Fatalf("connect database: %v", err)
 	}
 	publicationRepo := repository.NewKnowledgePublicationRepository(db)
+	operatorAuthority := service.NewKnowledgeOperatorAuthority(repository.NewUserRepository(db))
 	publicationService := service.NewKnowledgePublicationService(
 		publicationRepo,
 		database.NewTransactionManager(db),
@@ -37,12 +38,10 @@ func main() {
 
 	ctx := context.Background()
 	switch os.Args[1] {
-	case "publish":
-		publish(ctx, publicationService, os.Args[2:])
 	case "publish-reviewed":
-		publishReviewed(ctx, publicationService, os.Args[2:])
+		publishReviewed(ctx, publicationService, operatorAuthority, os.Args[2:])
 	case "rollback":
-		rollback(ctx, publicationService, os.Args[2:])
+		rollback(ctx, publicationService, operatorAuthority, os.Args[2:])
 	case "observe-eval":
 		observeEval(ctx, observationService, os.Args[2:])
 	case "status":
@@ -52,46 +51,25 @@ func main() {
 	}
 }
 
-func publish(
-	ctx context.Context,
-	publicationService *service.KnowledgePublicationService,
-	args []string,
-) {
-	flags := flag.NewFlagSet("publish", flag.ExitOnError)
-	publicationKey := flags.String("publication-key", "", "Immutable publication key")
-	batchKey := flags.String("batch-key", "", "Publication batch family key")
-	unitKeysCSV := flags.String("unit-keys", "", "Comma-separated knowledge unit keys")
-	publishedBy := flags.String("published-by", "", "Operator identity")
-	summary := flags.String("summary", "", "Publication summary")
-	_ = flags.Parse(args)
-
-	publication, err := publicationService.PublishBatch(ctx, service.PublishKnowledgeBatchInput{
-		PublicationKey: *publicationKey,
-		BatchKey:       *batchKey,
-		UnitKeys:       splitCSV(*unitKeysCSV),
-		PublishedBy:    *publishedBy,
-		Summary:        *summary,
-	})
-	if err != nil {
-		log.Fatalf("publish knowledge batch: %v", err)
-	}
-	printJSON(publication)
-}
-
 func publishReviewed(
 	ctx context.Context,
 	publicationService *service.KnowledgePublicationService,
+	operatorAuthority *service.KnowledgeOperatorAuthority,
 	args []string,
 ) {
 	flags := flag.NewFlagSet("publish-reviewed", flag.ExitOnError)
 	publicationKey := flags.String("publication-key", "", "Immutable publication key")
 	batchKey := flags.String("batch-key", "", "Publication batch family key")
 	reviewedSnapshotPath := flags.String("reviewed-snapshot", "", "reviewed-knowledge-snapshot.v1 JSON artifact")
-	publishedBy := flags.String("published-by", "", "Operator identity")
+	publishedBy := flags.String("published-by", "", "Durable operator user UUID")
 	summary := flags.String("summary", "", "Publication summary")
 	_ = flags.Parse(args)
 	if *reviewedSnapshotPath == "" {
 		log.Fatal("reviewed-snapshot is required")
+	}
+	operatorID, err := operatorAuthority.Require(ctx, *publishedBy)
+	if err != nil {
+		log.Fatalf("authorize knowledge publication operator: %v", err)
 	}
 	payload, err := os.ReadFile(*reviewedSnapshotPath)
 	if err != nil {
@@ -104,7 +82,7 @@ func publishReviewed(
 	publication, err := publicationService.PublishReviewedBatch(ctx, service.PublishReviewedKnowledgeBatchInput{
 		PublicationKey:   *publicationKey,
 		BatchKey:         *batchKey,
-		PublishedBy:      *publishedBy,
+		PublishedBy:      operatorID.String(),
 		Summary:          *summary,
 		ReviewedSnapshot: *artifact,
 	})
@@ -117,19 +95,24 @@ func publishReviewed(
 func rollback(
 	ctx context.Context,
 	publicationService *service.KnowledgePublicationService,
+	operatorAuthority *service.KnowledgeOperatorAuthority,
 	args []string,
 ) {
 	flags := flag.NewFlagSet("rollback", flag.ExitOnError)
 	publicationKey := flags.String("publication-key", "", "Published batch key to rollback")
 	rollbackKey := flags.String("rollback-key", "", "Immutable rollback publication key")
-	rolledBackBy := flags.String("rolled-back-by", "", "Operator identity")
+	rolledBackBy := flags.String("rolled-back-by", "", "Durable operator user UUID")
 	reason := flags.String("reason", "", "Rollback reason")
 	_ = flags.Parse(args)
 
+	operatorID, err := operatorAuthority.Require(ctx, *rolledBackBy)
+	if err != nil {
+		log.Fatalf("authorize knowledge rollback operator: %v", err)
+	}
 	publication, err := publicationService.RollbackBatch(ctx, service.RollbackKnowledgeBatchInput{
 		PublicationKey:         *publicationKey,
 		RollbackPublicationKey: *rollbackKey,
-		RolledBackBy:           *rolledBackBy,
+		RolledBackBy:           operatorID.String(),
 		Reason:                 *reason,
 	})
 	if err != nil {

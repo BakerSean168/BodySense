@@ -13,8 +13,8 @@ COPY packages/utils/package.json packages/utils/
 
 RUN pnpm install --no-frozen-lockfile
 
-# Install Linux native bindings that may be missing from Windows-generated lock file
-RUN pnpm add -w @rolldown/binding-linux-x64-gnu @esbuild/linux-x64 lightningcss-linux-x64-gnu --no-save || true
+# Linux native bindings are resolved from the committed lockfile.
+# Do not hide missing optional bindings behind a best-effort post-install mutation.
 
 # Copy source
 COPY . .

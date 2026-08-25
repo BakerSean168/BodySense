@@ -22,6 +22,8 @@ from src.models.evidence import (
     EvidenceBudget,
     EvidenceGap,
     EvidenceGapKind,
+    EvidenceRetrievalStatus,
+    EvidenceSearchOutcome,
     EvidenceStopReason,
 )
 from src.models.treatment import TreatmentDependencies
@@ -32,9 +34,13 @@ class FakeEvidenceSearcher:
     def __init__(self) -> None:
         self.calls: list[tuple[str, int]] = []
 
-    async def search(self, query: str, *, top_k: int = 5) -> list[dict[str, Any]]:
+    async def search(self, query: str, *, top_k: int = 5) -> EvidenceSearchOutcome:
         self.calls.append((query, top_k))
-        return [{"evidence_id": f"evidence-{len(self.calls)}", "summary": query}]
+        return EvidenceSearchOutcome(
+            retrieval_status=EvidenceRetrievalStatus.RESULTS_RETURNED,
+            evidence=[{"evidence_id": f"evidence-{len(self.calls)}", "summary": query}],
+            published_corpus_count=1,
+        )
 
 
 def _gap(
@@ -91,6 +97,7 @@ async def test_treatment_user_fact_gap_never_calls_external_search() -> None:
     assert result.attempt.search_performed is False
     assert result.attempt.stop_reason == EvidenceStopReason.USER_INPUT_REQUIRED
     assert result.budget["used_searches"] == 0
+    assert acquirer.trace().external_evidence_status.value == "not_required"
 
 
 @pytest.mark.asyncio
@@ -107,6 +114,7 @@ async def test_treatment_external_gap_is_bounded_and_audited() -> None:
     assert first.attempt.evidence_ids == ["evidence-1"]
     assert second.attempt.stop_reason == EvidenceStopReason.BUDGET_EXHAUSTED
     assert acquirer.trace().unresolved_critical_gaps == [second_gap]
+    assert acquirer.trace().external_evidence_status.value == "partially_available"
 
 
 @pytest.mark.asyncio
@@ -196,3 +204,4 @@ async def test_treatment_service_records_budget_exhaustion_trace() -> None:
     assert len(trace["attempts"]) == 3
     assert trace["attempts"][2]["stop_reason"] == "budget_exhausted"
     assert trace["unresolved_critical_gaps"][0]["gap_id"] == "3"
+    assert trace["external_evidence_status"] == "partially_available"

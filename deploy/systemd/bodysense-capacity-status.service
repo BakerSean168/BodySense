@@ -1,0 +1,14 @@
+[Unit]
+Description=BodySense production capacity and liveness status
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+Environment=BODYSENSE_DEPLOY_ROOT=/opt/bodysense
+ExecStart=/opt/bodysense/scripts/production-capacity-status.sh status
+SuccessExitStatus=1
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6

@@ -99,6 +99,7 @@ func TestAssessmentPersistsReportAndUnverifiedBodyStateObservationsAtomically(t 
 		bodyState,
 		fakeAssessmentReasoner{raw: assessmentOutput()},
 		testTreatmentUnitOfWork{called: &transactionCalled},
+		nil,
 	)
 
 	report, err := svc.GenerateAssessment(context.Background(), userID)
@@ -140,6 +141,7 @@ func TestAssessmentRejectsTreatmentLikeLegacyPayload(t *testing.T) {
 			"observations":[],"summary":{"exercise":"do squats"}
 		}`)},
 		testTreatmentUnitOfWork{},
+		nil,
 	)
 	if _, err := svc.GenerateAssessment(context.Background(), userID); err == nil {
 		t.Fatal("legacy issue/advice payload must not cross the assessment contract")
@@ -156,6 +158,7 @@ func TestAssessmentProjectionFailurePreventsReportPersistence(t *testing.T) {
 		&fakeAssessmentBodyState{fail: true},
 		fakeAssessmentReasoner{raw: assessmentOutput()},
 		testTreatmentUnitOfWork{},
+		nil,
 	)
 	if _, err := svc.GenerateAssessment(context.Background(), userID); err == nil {
 		t.Fatal("BodyState projection failure must fail the assessment write")
@@ -196,6 +199,7 @@ func TestAssessmentPersistsAgentProvenanceAndDecisionTrace(t *testing.T) {
 		&fakeAssessmentBodyState{},
 		fakeAssessmentReasoner{raw: assessmentOutputWithProvenance()},
 		testTreatmentUnitOfWork{},
+		nil,
 	).WithAssessmentDeployment(policy)
 
 	report, err := svc.GenerateAssessment(context.Background(), userID)
@@ -233,9 +237,52 @@ func TestAssessmentRejectsIdentityMismatch(t *testing.T) {
 		&fakeAssessmentBodyState{},
 		fakeAssessmentReasoner{raw: wrong},
 		testTreatmentUnitOfWork{},
+		nil,
 	).WithAssessmentDeployment(policy)
 
 	if _, err := svc.GenerateAssessment(context.Background(), userID); err == nil {
 		t.Fatal("identity mismatch must fail closed")
+	}
+}
+
+type capturingAssessmentReasoner struct {
+	raw     json.RawMessage
+	request AssessmentGenerationRequest
+}
+
+func (r *capturingAssessmentReasoner) GenerateAssessment(_ context.Context, request AssessmentGenerationRequest) (json.RawMessage, error) {
+	r.request = request
+	return r.raw, nil
+}
+
+func TestAssessmentReadsPendingPostureImageThroughUploadStorage(t *testing.T) {
+	ctx := context.Background()
+	registry, _ := testUploadRegistry(t)
+	userID := uuid.New()
+	uploadID := uuid.New()
+	key := userID.String() + "/" + uploadID.String() + "/original.png"
+	payload := append([]byte("\x89PNG\r\n\x1a\n"), []byte("assessment-image")...)
+	if err := registry.DefaultStore().Put(ctx, key, strings.NewReader(string(payload)), int64(len(payload)), "image/png"); err != nil {
+		t.Fatal(err)
+	}
+	reasoner := &capturingAssessmentReasoner{raw: assessmentOutput()}
+	svc := NewAssessmentService(
+		&fakeAssessmentRepository{},
+		fakeAssessmentProfileSource{profile: &model.UserProfile{UserID: userID}},
+		fakeAssessmentUploadSource{uploads: []model.UserUpload{{
+			ID: uploadID, UserID: userID, FileType: "photo_front", OriginalName: "front.png",
+			StorageBackend: "local", StorageKey: key, FileSize: int64(len(payload)), MimeType: "image/png",
+			OCRStatus: "pending", AnalysisStatus: "pending",
+		}}},
+		&fakeAssessmentBodyState{},
+		reasoner,
+		testTreatmentUnitOfWork{},
+		registry,
+	)
+	if _, err := svc.GenerateAssessment(ctx, userID); err != nil {
+		t.Fatalf("GenerateAssessment: %v", err)
+	}
+	if len(reasoner.request.Images) != 1 || !strings.HasPrefix(reasoner.request.Images[0], "data:image/png;base64,") {
+		t.Fatalf("assessment did not receive storage-backed image: %#v", reasoner.request.Images)
 	}
 }

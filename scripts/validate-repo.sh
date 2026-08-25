@@ -4,6 +4,8 @@ cd "$(git rev-parse --show-toplevel)"
 bash -n scripts/setup-server.sh scripts/production-deploy-watch.sh \
   scripts/production-offhost-backup.sh scripts/restore-production-backup.sh \
   scripts/validate-offhost-dr-unit.sh scripts/validate-offhost-dr.sh
+bash scripts/validate-production-capacity.sh
+bash scripts/validate-supply-chain.sh
 pnpm lint
 pnpm typecheck
 pnpm test

@@ -104,7 +104,8 @@ def create_diagnosis_agent(
             searcher = ctx.deps.evidence_searcher
             if searcher is None:
                 return []
-            results = await searcher.search(query, top_k=top_k)
+            outcome = await searcher.search(query, top_k=top_k)
+            results = [dict(item) for item in outcome.evidence]
             _append_evidence(ctx.deps.retrieved_evidence, results)
             return results
 
