@@ -62,6 +62,7 @@ type knowledgePublicationMetadata struct {
 	SourceGitCommit          string                  `json:"source_git_commit,omitempty"`
 	ExternalEvidenceReviewID string                  `json:"external_evidence_review_id,omitempty"`
 	ClaimReviewID            string                  `json:"claim_review_id,omitempty"`
+	EmbeddingFingerprints    []string                `json:"embedding_fingerprints,omitempty"`
 }
 
 type KnowledgePublicationService struct {
@@ -117,6 +118,24 @@ func publicationMapValue(value any) map[string]any {
 	return mapped
 }
 
+func embeddingFingerprintFromMetadata(metadata map[string]any) (string, error) {
+	identity := publicationMapValue(metadata["embedding_identity"])
+	provider, _ := identity["provider"].(string)
+	modelName, _ := identity["model"].(string)
+	revision, _ := identity["revision"].(string)
+	fingerprint, _ := identity["fingerprint"].(string)
+	dimension := metadataInt(identity["dimension"])
+	if provider == "" || modelName == "" || revision == "" || dimension <= 0 || len(fingerprint) != 64 {
+		return "", errors.New("embedding identity is incomplete")
+	}
+	digest := sha256.Sum256([]byte(fmt.Sprintf("%s\n%s\n%d\n%s", provider, modelName, dimension, revision)))
+	expected := hex.EncodeToString(digest[:])
+	if fingerprint != expected {
+		return "", errors.New("embedding identity fingerprint mismatch")
+	}
+	return fingerprint, nil
+}
+
 func reviewedExternalSupportExists(value any) bool {
 	items, ok := value.([]any)
 	if !ok {
@@ -158,9 +177,15 @@ func ValidateKnowledgeUnitForPublication(
 	if unit.SourceLicenseStatus == "rejected" {
 		return fmt.Errorf("unit %s source license is rejected", unit.UnitKey)
 	}
+	if !unit.HasEmbedding {
+		return fmt.Errorf("unit %s has no embedding", unit.UnitKey)
+	}
 	metadata, err := decodeKnowledgeMetadata(unit.Metadata)
 	if err != nil {
 		return err
+	}
+	if _, err := embeddingFingerprintFromMetadata(metadata); err != nil {
+		return fmt.Errorf("unit %s %w", unit.UnitKey, err)
 	}
 	admissibility := publicationMapValue(metadata["claim_admissibility"])
 	if admissibility["publication_eligible"] != true || admissibility["status"] != "claim_reviewed" {
@@ -238,10 +263,20 @@ func (s *KnowledgePublicationService) publishBatch(
 			return fmt.Errorf("publication requested %d units but locked %d", len(unitKeys), len(units))
 		}
 		preStates := make([]knowledgeUnitPreState, 0, len(units))
+		embeddingFingerprintSet := make(map[string]struct{})
 		for _, unit := range units {
 			if err := ValidateKnowledgeUnitForPublication(unit, s.minQuality); err != nil {
 				return err
 			}
+			unitMetadata, err := decodeKnowledgeMetadata(unit.Metadata)
+			if err != nil {
+				return err
+			}
+			embeddingFingerprint, err := embeddingFingerprintFromMetadata(unitMetadata)
+			if err != nil {
+				return fmt.Errorf("unit %s %w", unit.UnitKey, err)
+			}
+			embeddingFingerprintSet[embeddingFingerprint] = struct{}{}
 			if reviewedSnapshot != nil {
 				artifactUnit, ok := artifactUnits[unit.UnitKey]
 				if !ok {
@@ -262,7 +297,14 @@ func (s *KnowledgePublicationService) publishBatch(
 		if err != nil {
 			return err
 		}
-		metadata := knowledgePublicationMetadata{UnitKeys: unitKeys, PreStates: preStates}
+		embeddingFingerprints := make([]string, 0, len(embeddingFingerprintSet))
+		for fingerprint := range embeddingFingerprintSet {
+			embeddingFingerprints = append(embeddingFingerprints, fingerprint)
+		}
+		sort.Strings(embeddingFingerprints)
+		metadata := knowledgePublicationMetadata{
+			UnitKeys: unitKeys, PreStates: preStates, EmbeddingFingerprints: embeddingFingerprints,
+		}
 		if reviewedSnapshot != nil {
 			metadata.ReviewedSnapshotID = reviewedSnapshot.ReviewedSnapshotID
 			metadata.SourceSnapshotID = reviewedSnapshot.SourceSnapshotID

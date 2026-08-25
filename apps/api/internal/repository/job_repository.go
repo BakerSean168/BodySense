@@ -62,6 +62,22 @@ func (r *JobRepository) CreateWithIdempotency(ctx context.Context, job *model.Jo
 	return job, existed, nil
 }
 
+// ClaimPending atomically claims one pending job for execution and increments
+// its durable attempt counter. This avoids two workers executing the same job.
+func (r *JobRepository) ClaimPending(ctx context.Context, id uuid.UUID) (bool, error) {
+	now := time.Now()
+	result := r.db.WithContext(ctx).
+		Model(&model.Job{}).
+		Where("id = ? AND status = ? AND attempts < max_attempts", id, "pending").
+		Updates(map[string]any{
+			"status":     "running",
+			"attempts":   gorm.Expr("attempts + 1"),
+			"started_at": now,
+			"updated_at": now,
+		})
+	return result.RowsAffected == 1, result.Error
+}
+
 // GetByID retrieves a job by ID.
 func (r *JobRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.Job, error) {
 	var job model.Job

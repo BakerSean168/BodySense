@@ -223,14 +223,14 @@ restore_runtime() {
     rm -f "$ROOT/docker/litellm/config.yaml"
   fi
   install -d -m 0755 "$ROOT/scripts" "$ROOT/deploy/systemd"
-  for script in production-postgres-dr.sh install-production-dr.sh; do
+  for script in production-postgres-dr.sh install-production-dr.sh production-capacity-status.sh install-production-capacity.sh; do
     if [ -f "$ROLLBACK_RUNTIME_DIR/scripts/$script" ]; then
       install -m 0755 "$ROLLBACK_RUNTIME_DIR/scripts/$script" "$ROOT/scripts/$script"
     else
       rm -f "$ROOT/scripts/$script"
     fi
   done
-  for unit in bodysense-postgres-dr-backup.service bodysense-postgres-dr-backup.timer bodysense-postgres-dr-restore.service bodysense-postgres-dr-restore.timer bodysense-postgres-dr-status.service bodysense-postgres-dr-status.timer; do
+  for unit in bodysense-postgres-dr-backup.service bodysense-postgres-dr-backup.timer bodysense-postgres-dr-restore.service bodysense-postgres-dr-restore.timer bodysense-postgres-dr-status.service bodysense-postgres-dr-status.timer bodysense-capacity-status.service bodysense-capacity-status.timer bodysense-capacity-cleanup.service bodysense-capacity-cleanup.timer; do
     if [ -f "$ROLLBACK_RUNTIME_DIR/deploy/systemd/$unit" ]; then
       install -m 0644 "$ROLLBACK_RUNTIME_DIR/deploy/systemd/$unit" "$ROOT/deploy/systemd/$unit"
     else
@@ -331,7 +331,9 @@ sync_runtime() {
   [ -s "$stage/scripts/production-deploy-watch.sh" ] || fail 'runtime bundle missing deploy watcher'
   [ -s "$stage/scripts/production-postgres-dr.sh" ] || fail 'runtime bundle missing PostgreSQL DR runner'
   [ -s "$stage/scripts/install-production-dr.sh" ] || fail 'runtime bundle missing PostgreSQL DR installer'
-  for unit in bodysense-postgres-dr-backup.service bodysense-postgres-dr-backup.timer bodysense-postgres-dr-restore.service bodysense-postgres-dr-restore.timer bodysense-postgres-dr-status.service bodysense-postgres-dr-status.timer; do
+  [ -s "$stage/scripts/production-capacity-status.sh" ] || fail 'runtime bundle missing capacity status runner'
+  [ -s "$stage/scripts/install-production-capacity.sh" ] || fail 'runtime bundle missing capacity installer'
+  for unit in bodysense-postgres-dr-backup.service bodysense-postgres-dr-backup.timer bodysense-postgres-dr-restore.service bodysense-postgres-dr-restore.timer bodysense-postgres-dr-status.service bodysense-postgres-dr-status.timer bodysense-capacity-status.service bodysense-capacity-status.timer bodysense-capacity-cleanup.service bodysense-capacity-cleanup.timer; do
     [ -s "$stage/deploy/systemd/$unit" ] || fail "runtime bundle missing $unit"
   done
   [ "$(image_revision "$runtime_ref")" = "$revision" ] || fail 'runtime bundle revision mismatch'
@@ -349,7 +351,9 @@ sync_runtime() {
   cp -f "$ROOT/docker/litellm/config.yaml" "$archive/docker/litellm/config.yaml" 2>/dev/null || true
   cp -f "$ROOT/scripts/production-postgres-dr.sh" "$archive/scripts/production-postgres-dr.sh" 2>/dev/null || true
   cp -f "$ROOT/scripts/install-production-dr.sh" "$archive/scripts/install-production-dr.sh" 2>/dev/null || true
-  for unit in bodysense-postgres-dr-backup.service bodysense-postgres-dr-backup.timer bodysense-postgres-dr-restore.service bodysense-postgres-dr-restore.timer bodysense-postgres-dr-status.service bodysense-postgres-dr-status.timer; do
+  cp -f "$ROOT/scripts/production-capacity-status.sh" "$archive/scripts/production-capacity-status.sh" 2>/dev/null || true
+  cp -f "$ROOT/scripts/install-production-capacity.sh" "$archive/scripts/install-production-capacity.sh" 2>/dev/null || true
+  for unit in bodysense-postgres-dr-backup.service bodysense-postgres-dr-backup.timer bodysense-postgres-dr-restore.service bodysense-postgres-dr-restore.timer bodysense-postgres-dr-status.service bodysense-postgres-dr-status.timer bodysense-capacity-status.service bodysense-capacity-status.timer bodysense-capacity-cleanup.service bodysense-capacity-cleanup.timer; do
     cp -f "$ROOT/deploy/systemd/$unit" "$archive/deploy/systemd/$unit" 2>/dev/null || true
   done
   ROLLBACK_RUNTIME_DIR="$archive"
@@ -363,7 +367,9 @@ sync_runtime() {
   install -m 0755 "$stage/scripts/production-deploy-watch.sh" "$ROOT/scripts/production-deploy-watch.sh"
   install -m 0755 "$stage/scripts/production-postgres-dr.sh" "$ROOT/scripts/production-postgres-dr.sh"
   install -m 0755 "$stage/scripts/install-production-dr.sh" "$ROOT/scripts/install-production-dr.sh"
-  for unit in bodysense-postgres-dr-backup.service bodysense-postgres-dr-backup.timer bodysense-postgres-dr-restore.service bodysense-postgres-dr-restore.timer bodysense-postgres-dr-status.service bodysense-postgres-dr-status.timer; do
+  install -m 0755 "$stage/scripts/production-capacity-status.sh" "$ROOT/scripts/production-capacity-status.sh"
+  install -m 0755 "$stage/scripts/install-production-capacity.sh" "$ROOT/scripts/install-production-capacity.sh"
+  for unit in bodysense-postgres-dr-backup.service bodysense-postgres-dr-backup.timer bodysense-postgres-dr-restore.service bodysense-postgres-dr-restore.timer bodysense-postgres-dr-status.service bodysense-postgres-dr-status.timer bodysense-capacity-status.service bodysense-capacity-status.timer bodysense-capacity-cleanup.service bodysense-capacity-cleanup.timer; do
     install -m 0644 "$stage/deploy/systemd/$unit" "$ROOT/deploy/systemd/$unit"
   done
 }
@@ -504,6 +510,10 @@ DB_NAME=$(read_public_env DB_NAME bodysense)
 [ "$DB_NAME" = "$checked_db_name" ] || fail 'runtime bundle changed DB_NAME during deployment'
 APP_DOMAIN=$(read_public_env APP_DOMAIN body.bakersean.top)
 
+[ -x "$ROOT/scripts/install-production-capacity.sh" ] || fail 'capacity installer missing after runtime sync'
+log 'ensuring bounded host swap exists before memory-capped service changes'
+"$ROOT/scripts/install-production-capacity.sh" --swap-only >/dev/null || fail 'capacity swap preflight failed'
+
 if [ "$(read_merged_env DR_ENABLED false)" = true ]; then
   log 'off-host DR gate enabled; creating a verified OSS backup before production service/schema changes'
   "$ROOT/scripts/production-postgres-dr.sh" backup >/dev/null || fail 'off-host PostgreSQL backup gate failed'
@@ -541,6 +551,7 @@ STATE
 if systemctl list-unit-files bodysense-postgres-dr-backup.timer --no-legend 2>/dev/null | grep -q bodysense-postgres-dr-backup.timer; then
   "$ROOT/scripts/install-production-dr.sh" >/dev/null
 fi
+"$ROOT/scripts/install-production-capacity.sh" >/dev/null
 chmod 0644 "$STATE_FILE"
 rm -f "$BLOCK_FILE"
 deploy_started=false

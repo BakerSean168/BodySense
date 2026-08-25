@@ -8,6 +8,9 @@ from typing import Optional
 
 from openai import AsyncOpenAI
 
+HASHING_EMBEDDING_MODEL = "bodysense-hashing-ngram"
+HASHING_EMBEDDING_REVISION = "sha256-char-word-ngram-v1"
+
 
 class EmbeddingGenerator:
     """Generate text embeddings using OpenAI-compatible API or local models."""
@@ -92,6 +95,32 @@ class EmbeddingGenerator:
         if norm == 0:
             return vector
         return [value / norm for value in vector]
+
+    def identity(self) -> dict[str, str | int]:
+        """Return the immutable configuration identity persisted with each embedding.
+
+        `EMBEDDING_REVISION` must identify the concrete deployed revision for
+        remote/local semantic models when their model name is not immutable.
+        Hashing uses an explicit algorithm revision owned by this repository.
+        """
+        provider = str(self.provider or "").strip()
+        if provider == "hashing":
+            model = HASHING_EMBEDDING_MODEL
+            revision = HASHING_EMBEDDING_REVISION
+        else:
+            model = str(self.model or "").strip()
+            revision = os.getenv("EMBEDDING_REVISION", "").strip() or model
+        if not provider or not model or not revision or self.dimension <= 0:
+            raise ValueError("embedding identity is incomplete")
+        identity_text = f"{provider}\n{model}\n{self.dimension}\n{revision}"
+        fingerprint = hashlib.sha256(identity_text.encode("utf-8")).hexdigest()
+        return {
+            "provider": provider,
+            "model": model,
+            "dimension": self.dimension,
+            "revision": revision,
+            "fingerprint": fingerprint,
+        }
 
     @property
     def client(self) -> AsyncOpenAI:

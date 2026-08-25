@@ -4,8 +4,6 @@ These tests intentionally encode the new ADR 0004 rules rather than preserving
 old ``1..3`` candidate assumptions.
 """
 
-from typing import Any
-
 import pytest
 from pydantic import ValidationError
 
@@ -17,6 +15,7 @@ from src.models.diagnosis import (
     DiagnosisDependencies,
     DiagnosisSeverity,
 )
+from src.models.evidence import EvidenceRetrievalStatus, EvidenceSearchOutcome
 
 
 def candidate(index: int = 1) -> DiagnosisCandidateDraft:
@@ -85,12 +84,15 @@ def test_dependencies_slots_prevent_arbitrary_runtime_bag() -> None:
 
 
 class FakeEvidenceSearcher:
-    async def search(self, query: str, *, top_k: int = 5) -> list[dict[str, Any]]:
-
-        return [
-            {"id": f"evidence-{i}", "content": f"Evidence content {i} for query '{query}'"}
-            for i in range(1, top_k + 1)
-        ]
+    async def search(self, query: str, *, top_k: int = 5) -> EvidenceSearchOutcome:
+        return EvidenceSearchOutcome(
+            retrieval_status=EvidenceRetrievalStatus.RESULTS_RETURNED,
+            evidence=[
+                {"id": f"evidence-{i}", "content": f"Evidence content {i} for query '{query}'"}
+                for i in range(1, top_k + 1)
+            ],
+            published_corpus_count=top_k,
+        )
 
 
 def test_dependencies_can_include_evidence_searcher() -> None:

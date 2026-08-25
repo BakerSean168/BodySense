@@ -275,6 +275,9 @@ func (s *TreatmentService) GenerateProposal(
 	if err := validateTreatmentAgentIdentity(payload, configurationID); err != nil {
 		return nil, err
 	}
+	if _, err := validateEvidenceAvailabilityForConfiguration(configurationID, payload.EvidenceAcquisition); err != nil {
+		return nil, err
+	}
 	plan := model.TreatmentPlanContent{
 		Summary: payload.Summary, Goal: payload.Goal, DurationWeeks: payload.DurationWeeks,
 		Interventions: payload.Interventions, DailyHabits: payload.DailyHabits,

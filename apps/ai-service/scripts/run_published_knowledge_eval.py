@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import json
 import sys
 from dataclasses import asdict, dataclass
@@ -11,7 +12,10 @@ from pathlib import Path
 from typing import Literal
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-REPO_ROOT = PROJECT_ROOT.parents[1]
+# Host layout is <repo>/apps/ai-service; the production image uses /app.
+# `.parent.parent` is total (unlike parents[1]) and keeps explicit --cases
+# usable in both layouts even when the image intentionally does not contain docs/.
+REPO_ROOT = PROJECT_ROOT.parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -19,7 +23,8 @@ from src.rag.knowledge_library import KnowledgeLibrary, SearchResult  # noqa: E4
 from src.services.agent.reply_fallback import build_citation_payload  # noqa: E402
 
 SCHEMA_VERSION = "bodysense.published-knowledge-eval.v1"
-EVALUATOR_REVISION = "published-knowledge-eval-v1"
+EVALUATOR_REVISION = "published-knowledge-eval-v2"
+THRESHOLD_SCHEMA_VERSION = "bodysense.published-knowledge-qualification-thresholds.v1"
 DEFAULT_CASES = REPO_ROOT / "docs/knowledges/eval/published-knowledge-pilot.jsonl"
 
 
@@ -46,6 +51,77 @@ class PublishedEvalObservation:
     top_similarity: float | None = None
     returned_unit_key: str = ""
     reasons: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class PublishedQualificationThresholds:
+    dataset_sha256: str
+    expected_cases: int
+    min_pass_rate: float
+    min_positive_hits: int
+    min_negative_rejections: int
+    min_citation_valid: int
+    min_grounding_supported: int
+    require_publication_identity: bool
+
+
+def load_thresholds(path: Path, cases_path: Path) -> PublishedQualificationThresholds:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if payload.get("schema_version") != THRESHOLD_SCHEMA_VERSION:
+        raise ValueError(f"unsupported qualification thresholds schema at {path}")
+    expected_hash = str(payload.get("dataset_sha256") or "").strip().lower()
+    actual_hash = hashlib.sha256(cases_path.read_bytes()).hexdigest()
+    if expected_hash != actual_hash:
+        raise ValueError(
+            f"qualification dataset hash mismatch: expected={expected_hash} actual={actual_hash}"
+        )
+    thresholds = PublishedQualificationThresholds(
+        dataset_sha256=expected_hash,
+        expected_cases=int(payload.get("expected_cases") or 0),
+        min_pass_rate=float(payload.get("min_pass_rate") or 0.0),
+        min_positive_hits=int(payload.get("min_positive_hits") or 0),
+        min_negative_rejections=int(payload.get("min_negative_rejections") or 0),
+        min_citation_valid=int(payload.get("min_citation_valid") or 0),
+        min_grounding_supported=int(payload.get("min_grounding_supported") or 0),
+        require_publication_identity=bool(payload.get("require_publication_identity", True)),
+    )
+    if thresholds.expected_cases <= 0 or not (0.0 <= thresholds.min_pass_rate <= 1.0):
+        raise ValueError(f"invalid qualification thresholds at {path}")
+    return thresholds
+
+
+def evaluate_thresholds(
+    thresholds: PublishedQualificationThresholds,
+    report: dict[str, object],
+) -> tuple[bool, tuple[str, ...]]:
+    summary = report.get("summary")
+    publication = report.get("publication")
+    if not isinstance(summary, dict) or not isinstance(publication, dict):
+        return False, ("qualification_report_shape_invalid",)
+    reasons: list[str] = []
+    checks = (
+        ("cases", thresholds.expected_cases, "exact"),
+        ("pass_rate", thresholds.min_pass_rate, "min"),
+        ("positive_hits", thresholds.min_positive_hits, "min"),
+        ("negative_rejections", thresholds.min_negative_rejections, "min"),
+        ("citation_valid", thresholds.min_citation_valid, "min"),
+        ("grounding_supported", thresholds.min_grounding_supported, "min"),
+    )
+    for key, threshold, mode in checks:
+        value = summary.get(key)
+        if not isinstance(value, (int, float)):
+            reasons.append(f"{key}_missing")
+        elif mode == "exact" and value != threshold:
+            reasons.append(f"{key}_expected_{threshold}_got_{value}")
+        elif mode == "min" and value < threshold:
+            reasons.append(f"{key}_below_{threshold}_got_{value}")
+    if thresholds.require_publication_identity:
+        for key in ("publication_id", "publication_key", "publication_batch_key"):
+            if not str(publication.get(key) or "").strip():
+                reasons.append(f"{key}_missing")
+        if publication.get("published_version") is None:
+            reasons.append("published_version_missing")
+    return not reasons, tuple(reasons)
 
 
 def load_cases(path: Path) -> list[PublishedEvalCase]:
@@ -197,12 +273,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--publication-key", required=True)
     parser.add_argument("--top-k", type=int, default=3)
     parser.add_argument("--json-report", type=Path)
+    parser.add_argument("--thresholds", type=Path)
     return parser.parse_args()
 
 
 async def main() -> int:
     args = parse_args()
-    cases = load_cases(args.cases.resolve())
+    cases_path = args.cases.resolve()
+    cases = load_cases(cases_path)
+    thresholds = load_thresholds(args.thresholds.resolve(), cases_path) if args.thresholds else None
     library = KnowledgeLibrary()
     await library.initialize()
     observations: list[PublishedEvalObservation] = []
@@ -225,9 +304,7 @@ async def main() -> int:
             observations.append(observation)
             if results and results[0].publication_key == args.publication_key:
                 publication_id = publication_id or results[0].publication_id
-                publication_batch_key = (
-                    publication_batch_key or results[0].publication_batch_key
-                )
+                publication_batch_key = publication_batch_key or results[0].publication_batch_key
                 published_version = published_version or results[0].published_version
             print(json.dumps(asdict(observation), ensure_ascii=False))
     finally:
@@ -258,13 +335,25 @@ async def main() -> int:
         },
         "observations": [asdict(item) for item in observations],
     }
+    qualification_passed = passed == len(observations)
+    qualification_reasons: tuple[str, ...] = ()
+    if thresholds is not None:
+        qualification_passed, qualification_reasons = evaluate_thresholds(thresholds, report)
+        report["qualification"] = {
+            "threshold_schema_version": THRESHOLD_SCHEMA_VERSION,
+            "dataset_sha256": thresholds.dataset_sha256,
+            "passed": qualification_passed,
+            "reasons": list(qualification_reasons),
+        }
     if args.json_report:
         args.json_report.parent.mkdir(parents=True, exist_ok=True)
         args.json_report.write_text(
             json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
         )
     print(json.dumps(report["summary"], ensure_ascii=False))
-    return 0 if passed == len(observations) else 1
+    if thresholds is not None:
+        print(json.dumps(report["qualification"], ensure_ascii=False))
+    return 0 if qualification_passed else 1
 
 
 if __name__ == "__main__":

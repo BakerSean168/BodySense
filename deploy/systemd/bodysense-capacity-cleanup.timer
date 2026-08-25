@@ -1,0 +1,11 @@
+[Unit]
+Description=Clean safe BodySense production artifacts daily
+
+[Timer]
+OnCalendar=*-*-* 04:40:00
+RandomizedDelaySec=20min
+Persistent=true
+Unit=bodysense-capacity-cleanup.service
+
+[Install]
+WantedBy=timers.target

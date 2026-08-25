@@ -8,14 +8,23 @@
 # systemd deploy watcher 只部署三镜像 revision 一致的 coherent release。
 # =============================================================================
 
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '3'
+
 services:
   # ---------------------------------------------------------------------------
   # 基础设施
   # ---------------------------------------------------------------------------
 
   postgres:
+    logging: *default-logging
     image: ${REGISTRY:?set REGISTRY}/${ACR_NAMESPACE:-bodysense}/pgvector:pg16
     restart: unless-stopped
+    mem_limit: ${POSTGRES_MEMORY_LIMIT:-384m}
+    mem_reservation: ${POSTGRES_MEMORY_RESERVATION:-128m}
     environment:
       POSTGRES_DB: ${DB_NAME:-bodysense}
       POSTGRES_USER: ${DB_USER:-bodysense}
@@ -36,8 +45,11 @@ services:
       start_period: 10s
 
   redis:
+    logging: *default-logging
     image: ${REGISTRY:?set REGISTRY}/${ACR_NAMESPACE:-bodysense}/redis:7-alpine
     restart: unless-stopped
+    mem_limit: ${REDIS_MEMORY_LIMIT:-96m}
+    mem_reservation: ${REDIS_MEMORY_RESERVATION:-16m}
     command:
       - redis-server
       - --appendonly
@@ -73,8 +85,11 @@ services:
 
   # Standalone model gateway. ai-service depends on its health before serving requests.
   litellm-gateway:
+    logging: *default-logging
     image: ${LITELLM_IMAGE:-docker.litellm.ai/berriai/litellm:v1.97.0}
     restart: unless-stopped
+    mem_limit: ${LITELLM_MEMORY_LIMIT:-1152m}
+    mem_reservation: ${LITELLM_MEMORY_RESERVATION:-640m}
     init: true
     command: ['--config', '/app/config.yaml', '--port', '4000']
     environment:
@@ -101,8 +116,11 @@ services:
       start_period: 20s
 
   ai-service:
+    logging: *default-logging
     image: ${REGISTRY:?set REGISTRY}/${ACR_NAMESPACE:-bodysense}/bodysense-ai-service:${AI_TAG:-prod-latest}
     restart: unless-stopped
+    mem_limit: ${AI_SERVICE_MEMORY_LIMIT:-384m}
+    mem_reservation: ${AI_SERVICE_MEMORY_RESERVATION:-160m}
     init: true
     environment:
       AI_SERVICE_PORT: ${AI_SERVICE_PORT:-8100}
@@ -138,8 +156,11 @@ services:
       start_period: 20s
 
   api:
+    logging: *default-logging
     image: ${REGISTRY:?set REGISTRY}/${ACR_NAMESPACE:-bodysense}/bodysense-api:${API_TAG:-prod-latest}
     restart: unless-stopped
+    mem_limit: ${API_MEMORY_LIMIT:-192m}
+    mem_reservation: ${API_MEMORY_RESERVATION:-48m}
     init: true
     depends_on:
       postgres:
@@ -211,6 +232,7 @@ services:
   # endpoint for short-lived RAM-role credentials. It is never started by the
   # normal production service set; systemd invokes it through the `ops` profile.
   dr:
+    logging: *default-logging
     profiles: [ops]
     image: ${REGISTRY:?set REGISTRY}/${ACR_NAMESPACE:-bodysense}/bodysense-api:${API_TAG:-prod-latest}
     init: true
@@ -248,8 +270,11 @@ services:
     mem_limit: 768m
 
   web:
+    logging: *default-logging
     image: ${REGISTRY:?set REGISTRY}/${ACR_NAMESPACE:-bodysense}/bodysense-web:${WEB_TAG:-prod-latest}
     restart: unless-stopped
+    mem_limit: ${WEB_MEMORY_LIMIT:-96m}
+    mem_reservation: ${WEB_MEMORY_RESERVATION:-16m}
     depends_on:
       api:
         condition: service_healthy
@@ -267,8 +292,11 @@ services:
   # ---------------------------------------------------------------------------
 
   caddy:
+    logging: *default-logging
     image: ${REGISTRY:?set REGISTRY}/${ACR_NAMESPACE:-bodysense}/caddy:2-alpine
     restart: unless-stopped
+    mem_limit: ${CADDY_MEMORY_LIMIT:-128m}
+    mem_reservation: ${CADDY_MEMORY_RESERVATION:-32m}
     depends_on:
       web:
         condition: service_healthy

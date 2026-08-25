@@ -11,7 +11,14 @@ from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 
 from src.agents.evidence import TreatmentEvidenceAcquirer
-from src.models.evidence import EvidenceAttempt, EvidenceBudget, EvidenceGap
+from src.models.evidence import (
+    EvidenceAttempt,
+    EvidenceBudget,
+    EvidenceGap,
+    EvidenceRetrievalStatus,
+    EvidenceSearchOutcome,
+    ExternalEvidenceStatus,
+)
 
 SERVICE_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_TREATMENT_EVIDENCE_POLICY_DATASET_PATH = (
@@ -26,6 +33,7 @@ class TreatmentEvidencePolicyInputs(BaseModel):
     max_searches: int = Field(ge=0)
     max_results_per_search: int = Field(default=5, ge=1, le=10)
     search_results: dict[str, list[dict[str, Any]]] = Field(default_factory=dict)
+    search_outcomes: dict[str, EvidenceRetrievalStatus] = Field(default_factory=dict)
 
 
 class TreatmentEvidencePolicyMetadata(BaseModel):
@@ -35,6 +43,8 @@ class TreatmentEvidencePolicyMetadata(BaseModel):
     expected_stop_reasons: list[str]
     expected_used_searches: int = Field(ge=0)
     expected_unresolved_critical_gap_ids: list[str]
+    expected_external_evidence_status: ExternalEvidenceStatus
+    expected_returned_evidence_relations: list[str] = Field(default_factory=list)
 
 
 class TreatmentEvidencePolicyOutput(BaseModel):
@@ -44,16 +54,43 @@ class TreatmentEvidencePolicyOutput(BaseModel):
     attempts: list[EvidenceAttempt]
     budget: dict[str, int]
     unresolved_critical_gap_ids: list[str]
+    external_evidence_status: ExternalEvidenceStatus
+    returned_evidence_relations: list[str]
 
 
 class _DeterministicSearcher:
-    def __init__(self, results: dict[str, list[dict[str, Any]]]) -> None:
+    def __init__(
+        self,
+        results: dict[str, list[dict[str, Any]]],
+        outcomes: dict[str, EvidenceRetrievalStatus],
+    ) -> None:
         self.results = results
+        self.outcomes = outcomes
         self.calls: list[dict[str, Any]] = []
 
-    async def search(self, query: str, *, top_k: int = 5) -> list[dict[str, Any]]:
+    async def search(self, query: str, *, top_k: int = 5) -> EvidenceSearchOutcome:
         self.calls.append({"query": query, "top_k": top_k})
-        return list(self.results.get(query, []))[:top_k]
+        results = list(self.results.get(query, []))[:top_k]
+        forced = self.outcomes.get(query)
+        if results:
+            if forced not in (None, EvidenceRetrievalStatus.RESULTS_RETURNED):
+                raise ValueError("forced non-result retrieval status cannot contain evidence")
+            return EvidenceSearchOutcome(
+                retrieval_status=EvidenceRetrievalStatus.RESULTS_RETURNED,
+                evidence=results,
+                published_corpus_count=max(1, len(results)),
+            )
+        if forced == EvidenceRetrievalStatus.PUBLISHED_CORPUS_EMPTY:
+            return EvidenceSearchOutcome(
+                retrieval_status=forced,
+                published_corpus_count=0,
+            )
+        if forced == EvidenceRetrievalStatus.SEARCH_UNAVAILABLE:
+            return EvidenceSearchOutcome(retrieval_status=forced)
+        return EvidenceSearchOutcome(
+            retrieval_status=EvidenceRetrievalStatus.NO_RELEVANT_RESULTS,
+            published_corpus_count=1,
+        )
 
 
 EvalContext = EvaluatorContext[
@@ -82,6 +119,9 @@ class TreatmentEvidencePolicyBehavior(
             and ctx.output.budget.get("used_searches") == metadata.expected_used_searches
             and ctx.output.unresolved_critical_gap_ids
             == metadata.expected_unresolved_critical_gap_ids
+            and ctx.output.external_evidence_status == metadata.expected_external_evidence_status
+            and ctx.output.returned_evidence_relations
+            == metadata.expected_returned_evidence_relations
         )
 
 
@@ -113,7 +153,7 @@ def load_treatment_evidence_policy_dataset(
 
 def build_treatment_evidence_policy_task() -> Any:
     async def task(inputs: TreatmentEvidencePolicyInputs) -> TreatmentEvidencePolicyOutput:
-        searcher = _DeterministicSearcher(inputs.search_results)
+        searcher = _DeterministicSearcher(inputs.search_results, inputs.search_outcomes)
         acquirer = TreatmentEvidenceAcquirer(
             searcher=searcher,
             budget=EvidenceBudget(
@@ -121,14 +161,22 @@ def build_treatment_evidence_policy_task() -> Any:
                 max_results_per_search=inputs.max_results_per_search,
             ),
         )
+        returned_evidence_relations: list[str] = []
         for gap in inputs.gaps:
-            await acquirer.acquire(gap)
+            result = await acquirer.acquire(gap)
+            returned_evidence_relations.extend(
+                str(item.get("relation_to_hypothesis"))
+                for item in result.evidence
+                if item.get("relation_to_hypothesis")
+            )
         trace = acquirer.trace()
         return TreatmentEvidencePolicyOutput(
             search_calls=searcher.calls,
             attempts=trace.attempts,
             budget=trace.budget,
             unresolved_critical_gap_ids=[gap.gap_id for gap in trace.unresolved_critical_gaps],
+            external_evidence_status=trace.external_evidence_status,
+            returned_evidence_relations=returned_evidence_relations,
         )
 
     return task

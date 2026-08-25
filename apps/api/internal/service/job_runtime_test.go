@@ -17,7 +17,7 @@ func TestValidateTransition(t *testing.T) {
 		{"running", "failed", true},
 		{"running", "cancelled", true},
 		{"running", "timed_out", true},
-		{"running", "pending", false},
+		{"running", "pending", true},
 		{"completed", "running", false},
 		{"failed", "running", false},
 		{"cancelled", "running", false},

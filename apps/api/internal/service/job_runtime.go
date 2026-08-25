@@ -16,7 +16,7 @@ import (
 // Legal job status transitions.
 var jobTransitions = map[string][]string{
 	"pending":      {"running", "cancelled"},
-	"running":      {"completed", "failed", "cancelled", "waiting_user", "timed_out"},
+	"running":      {"pending", "completed", "failed", "cancelled", "waiting_user", "timed_out"},
 	"waiting_user": {"running", "cancelled"},
 	"completed":    {},
 	"succeeded":    {},
@@ -138,6 +138,23 @@ func (r *JobRuntime) CreateJobWithIdempotency(
 	idempotencyKey string,
 	runID, conversationID *uuid.UUID,
 ) (*model.Job, bool, error) {
+	return r.CreateJobWithIdempotencyAttempts(ctx, userID, jobType, input, idempotencyKey, 1, runID, conversationID)
+}
+
+// CreateJobWithIdempotencyAttempts creates a durable job with an explicit,
+// finite attempt budget. Existing jobs keep their original immutable budget.
+func (r *JobRuntime) CreateJobWithIdempotencyAttempts(
+	ctx context.Context,
+	userID uuid.UUID,
+	jobType string,
+	input datatypes.JSON,
+	idempotencyKey string,
+	maxAttempts int,
+	runID, conversationID *uuid.UUID,
+) (*model.Job, bool, error) {
+	if maxAttempts <= 0 {
+		maxAttempts = 1
+	}
 	job := &model.Job{
 		RunID:          runID,
 		ConversationID: conversationID,
@@ -146,6 +163,7 @@ func (r *JobRuntime) CreateJobWithIdempotency(
 		Status:         "pending",
 		Input:          input,
 		IdempotencyKey: &idempotencyKey,
+		MaxAttempts:    maxAttempts,
 	}
 	job, existed, err := r.repo.CreateWithIdempotency(ctx, job)
 	if err != nil {
@@ -157,6 +175,31 @@ func (r *JobRuntime) CreateJobWithIdempotency(
 
 	r.appendEvent(ctx, job.ID, "job.created", map[string]any{"job_type": jobType})
 	return job, false, nil
+}
+
+// ClaimPending atomically transitions a pending job to running. The returned
+// job reflects the incremented attempt count.
+func (r *JobRuntime) ClaimPending(ctx context.Context, jobID uuid.UUID) (*model.Job, bool, error) {
+	claimed, err := r.repo.ClaimPending(ctx, jobID)
+	if err != nil {
+		return nil, false, fmt.Errorf("claim pending job: %w", err)
+	}
+	if !claimed {
+		return nil, false, nil
+	}
+	job, err := r.repo.GetByID(ctx, jobID)
+	if err != nil {
+		return nil, false, fmt.Errorf("reload claimed job: %w", err)
+	}
+	if job == nil {
+		return nil, false, fmt.Errorf("claimed job disappeared: %s", jobID)
+	}
+	r.appendEvent(ctx, jobID, "job.running", map[string]any{
+		"from":    "pending",
+		"to":      "running",
+		"attempt": job.Attempts,
+	})
+	return job, true, nil
 }
 
 func (r *JobRuntime) appendEvent(ctx context.Context, jobID uuid.UUID, eventType string, payload any) {
