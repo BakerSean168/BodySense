@@ -10,6 +10,7 @@ cases:
       expected_stop_reasons: []
       expected_used_searches: 0
       expected_unresolved_critical_gap_ids: []
+      expected_external_evidence_status: not_required
 
   - name: user-fact-never-rag
     inputs:
@@ -26,8 +27,9 @@ cases:
       expected_stop_reasons: [user_input_required]
       expected_used_searches: 0
       expected_unresolved_critical_gap_ids: [user-trigger]
+      expected_external_evidence_status: not_required
 
-  - name: external-gap-targeted-search
+  - name: external-gap-sufficient-result
     inputs:
       gaps:
         - gap_id: mechanism
@@ -40,11 +42,91 @@ cases:
         targeted mechanism evidence:
           - evidence_id: evidence-mechanism
             content: targeted result
+            relation_to_hypothesis: supports
     metadata:
       expected_search_calls: 1
       expected_stop_reasons: [evidence_returned]
       expected_used_searches: 1
       expected_unresolved_critical_gap_ids: []
+      expected_external_evidence_status: available
+      expected_returned_evidence_relations: [supports]
+
+  - name: external-gap-contradictory-result
+    inputs:
+      gaps:
+        - gap_id: contradiction
+          kind: external_knowledge
+          description: 需要检查反向证据
+          rationale: 反向证据会降低候选支持强度
+          query: contradictory evidence
+      max_searches: 2
+      search_results:
+        contradictory evidence:
+          - evidence_id: evidence-contradiction
+            content: evidence contradicts the candidate
+            relation_to_hypothesis: contradicts
+    metadata:
+      expected_search_calls: 1
+      expected_stop_reasons: [evidence_returned]
+      expected_used_searches: 1
+      expected_unresolved_critical_gap_ids: []
+      expected_external_evidence_status: available
+      expected_returned_evidence_relations: [contradicts]
+
+  - name: external-gap-empty-published-corpus
+    inputs:
+      gaps:
+        - gap_id: empty-corpus
+          kind: external_knowledge
+          description: 需要外部证据但当前发布语料为空
+          rationale: 不能把空语料伪装成无证据需求
+          query: empty corpus query
+      max_searches: 2
+      search_results: {}
+      search_outcomes:
+        empty corpus query: published_corpus_empty
+    metadata:
+      expected_search_calls: 1
+      expected_stop_reasons: [published_corpus_empty]
+      expected_used_searches: 1
+      expected_unresolved_critical_gap_ids: []
+      expected_external_evidence_status: unresolved
+
+  - name: external-gap-search-unavailable
+    inputs:
+      gaps:
+        - gap_id: unavailable
+          kind: external_knowledge
+          description: 需要外部证据但检索后端不可用
+          rationale: 检索故障必须显式降级
+          query: unavailable query
+      max_searches: 2
+      search_results: {}
+      search_outcomes:
+        unavailable query: search_unavailable
+    metadata:
+      expected_search_calls: 1
+      expected_stop_reasons: [search_unavailable]
+      expected_used_searches: 1
+      expected_unresolved_critical_gap_ids: []
+      expected_external_evidence_status: unresolved
+
+  - name: external-gap-irrelevant-results
+    inputs:
+      gaps:
+        - gap_id: irrelevant
+          kind: external_knowledge
+          description: 发布语料存在但没有相关证据
+          rationale: 无相关结果不能伪装成语料为空
+          query: irrelevant query
+      max_searches: 2
+      search_results: {}
+    metadata:
+      expected_search_calls: 1
+      expected_stop_reasons: [no_relevant_results]
+      expected_used_searches: 1
+      expected_unresolved_critical_gap_ids: []
+      expected_external_evidence_status: unresolved
 
   - name: critical-gap-zero-budget
     inputs:
@@ -62,6 +144,7 @@ cases:
       expected_stop_reasons: [budget_exhausted]
       expected_used_searches: 0
       expected_unresolved_critical_gap_ids: [critical-zero-budget]
+      expected_external_evidence_status: unresolved
 
   - name: second-critical-gap-stops-at-budget
     inputs:
@@ -82,11 +165,15 @@ cases:
         first evidence query:
           - evidence_id: evidence-first
             content: first result
+            relation_to_hypothesis: supports
         second evidence query:
           - evidence_id: evidence-second
             content: second result
+            relation_to_hypothesis: supports
     metadata:
       expected_search_calls: 1
       expected_stop_reasons: [evidence_returned, budget_exhausted]
       expected_used_searches: 1
       expected_unresolved_critical_gap_ids: [second-critical]
+      expected_external_evidence_status: partially_available
+      expected_returned_evidence_relations: [supports]

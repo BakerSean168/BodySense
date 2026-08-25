@@ -27,7 +27,7 @@ jobs:
         with:
           go-version: "1.26"
           cache-dependency-path: apps/api/go.sum
-      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           version: "0.12"
       - run: pnpm install --frozen-lockfile
@@ -120,6 +120,13 @@ jobs:
         run: >-
           go run ./cmd/domain-validator
           -database-url 'postgres://bodysense:bodysense123@127.0.0.1:5432/bodysense_migration_validator?sslmode=disable'
+      - name: Validate durable upload storage migration semantics
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: "5432"
+          DB_USER: bodysense
+          DB_PASSWORD: bodysense123
+        run: bash scripts/validate-upload-storage-migration.sh
       - name: Validate pg_dump / pg_restore recovery path
         working-directory: apps/api
         env:
@@ -140,6 +147,15 @@ jobs:
 
           go run ./cmd/domain-validator \
             -database-url "postgres://bodysense:bodysense123@127.0.0.1:5432/${restore_db}?sslmode=disable"
+      - name: Validate production off-host DR algorithm
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: "5432"
+          DB_NAME: bodysense_migration_validator
+          DB_USER: bodysense
+          DB_PASSWORD: bodysense123
+          DB_SSLMODE: disable
+        run: bash scripts/validate-production-dr.sh
 
   e2e:
     env:
@@ -181,7 +197,7 @@ jobs:
         with:
           go-version: "1.26"
           cache-dependency-path: apps/api/go.sum
-      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           version: "0.12"
       - run: pnpm install --frozen-lockfile
@@ -247,7 +263,7 @@ jobs:
           cat /tmp/bodysense-ai.log || true
       - name: Upload Playwright report
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: playwright-report
           path: playwright-report/

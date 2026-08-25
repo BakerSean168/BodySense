@@ -136,3 +136,33 @@ func (r *UploadRepository) GetLatestPostureAnalyses(ctx context.Context, userID 
 	}
 	return uploads, nil
 }
+
+// ListByStorageBackend returns a stable batch for one upload storage backend.
+func (r *UploadRepository) ListByStorageBackend(ctx context.Context, backend string, after *uuid.UUID, limit int) ([]model.UserUpload, error) {
+	if limit <= 0 || limit > 500 {
+		limit = 100
+	}
+	query := r.db.WithContext(ctx).Where("storage_backend = ?", backend)
+	if after != nil {
+		query = query.Where("id > ?", *after)
+	}
+	var uploads []model.UserUpload
+	if err := query.Order("id ASC").Limit(limit).Find(&uploads).Error; err != nil {
+		return nil, err
+	}
+	return uploads, nil
+}
+
+// CompareAndSwapStorageBackend advances one manifest only when its source
+// identity still matches the object that was copied and verified.
+func (r *UploadRepository) CompareAndSwapStorageBackend(
+	ctx context.Context, id, userID uuid.UUID, fromBackend, storageKey, toBackend string,
+) (bool, error) {
+	result := r.db.WithContext(ctx).Model(&model.UserUpload{}).
+		Where("id = ? AND user_id = ? AND storage_backend = ? AND storage_key = ?", id, userID, fromBackend, storageKey).
+		Updates(map[string]any{"storage_backend": toBackend, "updated_at": gorm.Expr("NOW()")})
+	if result.Error != nil {
+		return false, result.Error
+	}
+	return result.RowsAffected == 1, nil
+}

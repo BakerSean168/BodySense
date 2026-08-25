@@ -10,11 +10,12 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from typing import Any, AsyncIterator, LiteralString, Optional, cast
 
+from openai import OpenAIError
 from pgvector.psycopg import register_vector_async
-from psycopg import AsyncConnection, sql
+from psycopg import AsyncConnection, InterfaceError, OperationalError, sql
 from psycopg.rows import TupleRow
 from psycopg.types.json import Jsonb
-from psycopg_pool import AsyncConnectionPool
+from psycopg_pool import AsyncConnectionPool, PoolTimeout
 
 from .embedding import EmbeddingGenerator, get_embedding_generator
 from .knowledge_pack import GeneratedKnowledgePack, format_timestamp_range
@@ -281,25 +282,92 @@ class KnowledgeLibrary:
             "\n".join([unit.title, unit.summary, unit.body_markdown]) for unit in pack.units
         ]
         embeddings = await self.embedding_generator.generate_batch(embedding_inputs)
+        if len(embeddings) != len(pack.units):
+            raise RuntimeError("embedding count does not match generated knowledge unit count")
+        embedding_identity = self.embedding_generator.identity()
+        expected_dimension = int(embedding_identity["dimension"])
+        if any(len(embedding) != expected_dimension for embedding in embeddings):
+            raise RuntimeError("embedding dimension does not match embedding identity")
         pool = self._require_pool()
 
         async with pool.connection() as conn:
             async with conn.transaction():
                 async with conn.cursor() as cur:
                     await cur.execute(
-                        "SELECT id FROM knowledge_sources WHERE source_key = %s",
+                        """
+                        SELECT id, ingest_status, source_type, title, author, problem_slug,
+                               problem_display_name, language, license_status, content_hash,
+                               source_version, provenance, registered_by, registered_at
+                        FROM knowledge_sources
+                        WHERE source_key = %s
+                        """,
                         (pack.source.source_key,),
                     )
                     row = await cur.fetchone()
-                    existing_source_id = row[0] if row is not None else None
+                    if row is None:
+                        raise RuntimeError("knowledge source must be registered before ingestion")
 
-                    if existing_source_id is not None and not overwrite_source:
+                    source_id = row[0]
+                    ingest_status = row[1]
+                    registered_identity = (row[2], row[3], row[4], row[5], row[6], row[7])
+                    pack_identity = (
+                        pack.source.source_type,
+                        pack.source.title,
+                        pack.source.author,
+                        pack.source.problem_slug,
+                        pack.source.problem_display_name,
+                        pack.source.language,
+                    )
+                    if registered_identity != pack_identity:
+                        raise RuntimeError(
+                            "generated pack identity does not match registered knowledge source"
+                        )
+                    if (
+                        row[8] not in {"verified_reuse", "citation_only", "owned", "public_domain"}
+                        or not row[9]
+                        or not row[10]
+                        or not row[11]
+                        or not row[12]
+                        or row[13] is None
+                    ):
+                        raise RuntimeError(
+                            "registered knowledge source is missing "
+                            "license/content/provenance authority"
+                        )
+
+                    if pack.source.source_type == "thought_forest_note":
+                        snapshot_id = str(pack.source.metadata.get("snapshot_id") or "")
+                        note_content_hash = str(
+                            pack.source.metadata.get("note_content_hash") or ""
+                        ).lower()
+                        repository = pack.source.metadata.get("repository")
+                        repository_git_commit = (
+                            str(repository.get("git_commit") or "")
+                            if isinstance(repository, dict)
+                            else ""
+                        )
+                        provenance = row[11] if isinstance(row[11], dict) else {}
+                        if (
+                            not snapshot_id
+                            or not note_content_hash
+                            or row[9].lower() != note_content_hash
+                            or row[10] != snapshot_id
+                            or provenance.get("snapshot_id") != snapshot_id
+                            or provenance.get("git_commit") != repository_git_commit
+                            or provenance.get("path") != pack.source.original_file_path
+                            or provenance.get("note_content_hash") != note_content_hash
+                        ):
+                            raise RuntimeError(
+                                "Thought Forest pack does not match registered snapshot identity"
+                            )
+
+                    if ingest_status != "registered" and not overwrite_source:
                         return {
-                            "source_id": existing_source_id,
+                            "source_id": source_id,
                             "source_key": pack.source.source_key,
                             "status": "already_exists",
                         }
-                    if existing_source_id is not None:
+                    if ingest_status != "registered":
                         await cur.execute(
                             """
                             SELECT COUNT(*)
@@ -307,7 +375,7 @@ class KnowledgeLibrary:
                             WHERE source_id = %s
                               AND (lifecycle_status = 'published' OR publication_id IS NOT NULL)
                             """,
-                            (existing_source_id,),
+                            (source_id,),
                         )
                         protected_row = await cur.fetchone()
                         protected_count = int(protected_row[0]) if protected_row is not None else 0
@@ -318,42 +386,38 @@ class KnowledgeLibrary:
                                 "immutable source version first"
                             )
                         await cur.execute(
-                            "DELETE FROM knowledge_sources WHERE id = %s",
-                            (existing_source_id,),
+                            "DELETE FROM knowledge_clips WHERE source_id = %s",
+                            (source_id,),
+                        )
+                        await cur.execute(
+                            "DELETE FROM knowledge_segments WHERE source_id = %s",
+                            (source_id,),
+                        )
+                        await cur.execute(
+                            "DELETE FROM knowledge_units WHERE source_id = %s",
+                            (source_id,),
                         )
 
                     await cur.execute(
                         """
-                        INSERT INTO knowledge_sources (
-                            source_key, source_type, title, author, problem_slug,
-                            problem_display_name, original_file_path, language,
-                            duration_sec, transcript_provider, transcript_model,
-                            transcript_file_path, ingest_status, metadata
-                        )
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        RETURNING id
+                        UPDATE knowledge_sources
+                        SET duration_sec = %s,
+                            transcript_provider = %s,
+                            transcript_model = %s,
+                            transcript_file_path = %s,
+                            ingest_status = 'ingested',
+                            metadata = COALESCE(metadata, '{}'::jsonb) || %s
+                        WHERE id = %s
                         """,
                         (
-                            pack.source.source_key,
-                            pack.source.source_type,
-                            pack.source.title,
-                            pack.source.author,
-                            pack.source.problem_slug,
-                            pack.source.problem_display_name,
-                            pack.source.original_file_path,
-                            pack.source.language,
                             pack.source.duration_sec,
                             pack.source.transcript_provider,
                             pack.source.transcript_model,
                             pack.source.transcript_file_path,
-                            "ingested",
                             Jsonb(pack.source.metadata),
+                            source_id,
                         ),
                     )
-                    row = await cur.fetchone()
-                    if row is None:
-                        raise RuntimeError("Failed to persist knowledge source row")
-                    source_id = row[0]
 
                     for segment in pack.transcript_segments:
                         await cur.execute(
@@ -416,6 +480,7 @@ class KnowledgeLibrary:
                                     {
                                         **unit.metadata,
                                         "problem_display_name": unit.problem_display_name,
+                                        "embedding_identity": embedding_identity,
                                     }
                                 ),
                             ),
@@ -469,7 +534,12 @@ class KnowledgeLibrary:
         min_quality_score: float = 0.0,
     ) -> list[SearchResult]:
         """Search normalized knowledge units without blocking the event loop."""
-        embedding = await self.embedding_generator.generate(query)
+        try:
+            embedding = await self.embedding_generator.generate(query)
+        except (OpenAIError, TimeoutError, ConnectionError, OSError) as exc:
+            raise KnowledgeLibraryUnavailableError(
+                "Knowledge embedding search dependency is unavailable"
+            ) from exc
         query_sql = """
             SELECT
                 ku.id, ku.problem_slug, ku.category, ku.unit_type, ku.title,
@@ -503,28 +573,33 @@ class KnowledgeLibrary:
         params.extend([embedding, candidate_limit])
 
         pool = self._require_pool()
-        async with pool.connection() as conn:
-            async with conn.cursor() as cur:
-                await cur.execute(cast("LiteralString", query_sql), params)
-                rows = await cur.fetchall()
-                if not rows:
-                    return []
+        try:
+            async with pool.connection() as conn:
+                async with conn.cursor() as cur:
+                    await cur.execute(cast("LiteralString", query_sql), params)
+                    rows = await cur.fetchall()
+                    if not rows:
+                        return []
 
-                result_ids = [row[0] for row in rows]
-                clips_by_unit: dict[int, list[ClipResult]] = {
-                    result_id: [] for result_id in result_ids
-                }
-                await cur.execute(
-                    """
-                    SELECT id, source_unit_id, clip_key, clip_type, title,
-                           file_path, start_sec, end_sec
-                    FROM knowledge_clips
-                    WHERE source_unit_id = ANY(%s)
-                    ORDER BY id ASC
-                    """,
-                    (result_ids,),
-                )
-                clip_rows = await cur.fetchall()
+                    result_ids = [row[0] for row in rows]
+                    clips_by_unit: dict[int, list[ClipResult]] = {
+                        result_id: [] for result_id in result_ids
+                    }
+                    await cur.execute(
+                        """
+                        SELECT id, source_unit_id, clip_key, clip_type, title,
+                               file_path, start_sec, end_sec
+                        FROM knowledge_clips
+                        WHERE source_unit_id = ANY(%s)
+                        ORDER BY id ASC
+                        """,
+                        (result_ids,),
+                    )
+                    clip_rows = await cur.fetchall()
+        except (OperationalError, InterfaceError, PoolTimeout, TimeoutError, OSError) as exc:
+            raise KnowledgeLibraryUnavailableError(
+                "Knowledge search database is unavailable"
+            ) from exc
 
         for clip_row in clip_rows:
             clips_by_unit[clip_row[1]].append(
@@ -728,6 +803,38 @@ class KnowledgeLibrary:
         if embedding_provider != "hashing" or result.source_type != "thought_forest_note":
             return True
         return cls._has_meaningful_lexical_anchor(query, result)
+
+    async def published_corpus_count(self, min_quality_score: float = 0.0) -> int:
+        """Count online-visible published units without invoking embeddings.
+
+        This lets evidence acquisition distinguish an actually empty published
+        corpus from a non-empty corpus where one targeted query has no relevant
+        result.
+        """
+        pool = self._require_pool()
+        try:
+            async with pool.connection() as conn:
+                async with conn.cursor() as cur:
+                    await cur.execute(
+                        """
+                        SELECT COUNT(*)
+                        FROM knowledge_units ku
+                        WHERE ku.lifecycle_status = 'published'
+                          AND ku.publication_id IS NOT NULL
+                          AND ku.published_version IS NOT NULL
+                          AND ku.review_status IN ('reviewed', 'approved', 'curated')
+                          AND COALESCE(ku.quality_score, 0.0) >= %s
+                        """,
+                        (min_quality_score,),
+                    )
+                    row = await cur.fetchone()
+        except KnowledgeLibraryUnavailableError:
+            raise
+        except Exception as exc:
+            raise KnowledgeLibraryUnavailableError(
+                "published Knowledge corpus state is unavailable"
+            ) from exc
+        return int(row[0]) if row is not None else 0
 
     @staticmethod
     def _published_visibility_filter() -> str:
