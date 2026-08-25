@@ -143,6 +143,27 @@ class TestEmbeddingGenerator:
         assert gen._client.embeddings.create.call_count == 2
 
 
+def test_embedding_identity_is_stable_and_revision_bound(monkeypatch):
+    monkeypatch.setenv("EMBEDDING_PROVIDER", "hashing")
+    gen = EmbeddingGenerator(dimension=1536)
+    identity = gen.identity()
+    assert identity["provider"] == "hashing"
+    assert identity["model"] == "bodysense-hashing-ngram"
+    assert identity["revision"] == "sha256-char-word-ngram-v1"
+    assert identity["dimension"] == 1536
+    assert len(str(identity["fingerprint"])) == 64
+
+
+def test_semantic_embedding_identity_uses_explicit_revision(monkeypatch):
+    monkeypatch.setenv("EMBEDDING_PROVIDER", "openai")
+    monkeypatch.setenv("EMBEDDING_MODEL", "text-embedding-model")
+    monkeypatch.setenv("EMBEDDING_REVISION", "2026-08-25")
+    gen = EmbeddingGenerator(api_key="test-key", dimension=1536)
+    identity = gen.identity()
+    assert identity["revision"] == "2026-08-25"
+    assert identity["model"] == "text-embedding-model"
+
+
 @pytest.mark.asyncio
 async def test_local_transformer_encode_does_not_block_event_loop():
     """A sleeping stand-in for CPU-heavy encode must run on a worker thread."""

@@ -1,7 +1,5 @@
 """Focused learning tests for the PydanticAI Diagnosis execution boundary."""
 
-from typing import Any
-
 import pytest
 from pydantic_ai import (
     ToolCallPart,
@@ -13,6 +11,7 @@ from pydantic_ai.models.test import TestModel
 from src.agents.diagnosis_agent import create_diagnosis_agent
 from src.models.dependencies import EvidenceSearcher
 from src.models.diagnosis import DiagnosisAgentOutput, DiagnosisDependencies
+from src.models.evidence import EvidenceRetrievalStatus, EvidenceSearchOutcome
 
 
 def _deps(evidence_searcher: EvidenceSearcher | None = None) -> DiagnosisDependencies:
@@ -97,9 +96,13 @@ class FakeEvidenceSearcher:
     def __init__(self) -> None:
         self.calls: list[tuple[str, int]] = []
 
-    async def search(self, query: str, *, top_k: int = 5) -> list[dict[str, Any]]:
+    async def search(self, query: str, *, top_k: int = 5) -> EvidenceSearchOutcome:
         self.calls.append((query, top_k))
-        return [{"evidence_id": "evidence-1", "content": "This is a piece of evidence."}]
+        return EvidenceSearchOutcome(
+            retrieval_status=EvidenceRetrievalStatus.RESULTS_RETURNED,
+            evidence=[{"evidence_id": "evidence-1", "content": "This is a piece of evidence."}],
+            published_corpus_count=1,
+        )
 
 
 @pytest.mark.asyncio

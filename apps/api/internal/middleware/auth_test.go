@@ -192,3 +192,52 @@ func TestAuthMiddlewareMissingHeaderRejects(t *testing.T) {
 		t.Fatalf("status = %d, want 401", rec.Code)
 	}
 }
+
+func performKnowledgeOperatorRequest(userRepo *repository.UserRepository, userID uuid.UUID) *httptest.ResponseRecorder {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.GET("/knowledge", func(c *gin.Context) {
+		c.Set("user_id", userID.String())
+		c.Next()
+	}, RequireKnowledgeOperator(userRepo), func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+	})
+	req := httptest.NewRequest(http.MethodGet, "/knowledge", nil)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	return rec
+}
+
+func TestRequireKnowledgeOperatorAllowsOperator(t *testing.T) {
+	userRepo, mock, cleanup := newMiddlewareTestDB(t)
+	defer cleanup()
+	userID := uuid.New()
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE id = $1 ORDER BY "users"."id" LIMIT $2`)).
+		WithArgs(userID, 1).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "role"}).AddRow(userID, "operator"))
+
+	rec := performKnowledgeOperatorRequest(userRepo, userID)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRequireKnowledgeOperatorRejectsMember(t *testing.T) {
+	userRepo, mock, cleanup := newMiddlewareTestDB(t)
+	defer cleanup()
+	userID := uuid.New()
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE id = $1 ORDER BY "users"."id" LIMIT $2`)).
+		WithArgs(userID, 1).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "role"}).AddRow(userID, "member"))
+
+	rec := performKnowledgeOperatorRequest(userRepo, userID)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status=%d want=403 body=%s", rec.Code, rec.Body.String())
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
