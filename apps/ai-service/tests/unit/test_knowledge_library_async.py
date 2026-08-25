@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -93,6 +93,23 @@ class FailingCursor:
             raise RuntimeError("insert exploded")
 
     async def fetchone(self):
+        if self.execute_calls == 1:
+            return (
+                41,
+                "registered",
+                "video",
+                "Source",
+                "Author",
+                "posture",
+                "Posture",
+                "zh",
+                "owned",
+                "a" * 64,
+                "v1",
+                {"origin": "test"},
+                "00000000-0000-0000-0000-000000000001",
+                object(),
+            )
         return None
 
 
@@ -125,8 +142,15 @@ class InjectedPool:
 async def test_ingest_transaction_rolls_back_on_write_failure() -> None:
     conn = FailingConnection()
     pool = InjectedPool(conn)
-    embedder = AsyncMock()
-    embedder.generate_batch.return_value = []
+    embedder = MagicMock()
+    embedder.generate_batch = AsyncMock(return_value=[])
+    embedder.identity.return_value = {
+        "provider": "hashing",
+        "model": "bodysense-hashing-ngram",
+        "dimension": 1536,
+        "revision": "sha256-char-word-ngram-v1",
+        "fingerprint": "a" * 64,
+    }
     library = KnowledgeLibrary(
         database_url="postgresql://test",
         embedding_generator=embedder,
@@ -173,7 +197,28 @@ class PublishedSourceCursor:
 
     async def fetchone(self):
         if self.query_index == 1:
-            return (77,)
+            return (
+                77,
+                "ingested",
+                "thought_forest_note",
+                "Published source",
+                "Thought Forest",
+                "pain",
+                "Pain",
+                "zh",
+                "citation_only",
+                "b" * 64,
+                "thought-forest:test:snapshot",
+                {
+                    "origin": "test",
+                    "snapshot_id": "thought-forest:test:snapshot",
+                    "git_commit": "abc123",
+                    "path": "z/pain.md",
+                    "note_content_hash": "b" * 64,
+                },
+                "00000000-0000-0000-0000-000000000001",
+                object(),
+            )
         if self.query_index == 2:
             return (1,)
         return None
@@ -195,8 +240,15 @@ class PublishedSourceConnection:
 async def test_overwrite_rejects_source_with_published_or_publication_linked_units() -> None:
     conn = PublishedSourceConnection()
     pool = InjectedPool(conn)  # type: ignore[arg-type]
-    embedder = AsyncMock()
-    embedder.generate_batch.return_value = []
+    embedder = MagicMock()
+    embedder.generate_batch = AsyncMock(return_value=[])
+    embedder.identity.return_value = {
+        "provider": "hashing",
+        "model": "bodysense-hashing-ngram",
+        "dimension": 1536,
+        "revision": "sha256-char-word-ngram-v1",
+        "fingerprint": "a" * 64,
+    }
     library = KnowledgeLibrary(
         database_url="postgresql://test",
         embedding_generator=embedder,
@@ -212,6 +264,11 @@ async def test_overwrite_rejects_source_with_published_or_publication_linked_uni
             problem_slug="pain",
             problem_display_name="Pain",
             original_file_path="z/pain.md",
+            metadata={
+                "snapshot_id": "thought-forest:test:snapshot",
+                "note_content_hash": "b" * 64,
+                "repository": {"git_commit": "abc123"},
+            },
         ),
         artifact_dir="thought-forest://published",
         transcript_segments=[],

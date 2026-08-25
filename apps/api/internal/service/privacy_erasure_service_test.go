@@ -3,8 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -87,14 +85,18 @@ type fakePrivacyAuth struct {
 func (f *fakePrivacyAuth) RevokeUser(_ context.Context, _ uuid.UUID) error { f.calls++; return f.err }
 
 type fakePrivacyObjects struct {
-	calls    int
-	failOnce bool
+	calls      int
+	failOnce   bool
+	failOnCall int
 }
 
 func (f *fakePrivacyObjects) EraseUserObjects(_ context.Context, _ uuid.UUID) error {
 	f.calls++
 	if f.failOnce {
 		f.failOnce = false
+		return errors.New("object store unavailable")
+	}
+	if f.failOnCall > 0 && f.calls == f.failOnCall {
 		return errors.New("object store unavailable")
 	}
 	return nil
@@ -138,7 +140,7 @@ func TestPrivacyErasureRequestCompletesAndAnonymizesAudit(t *testing.T) {
 	if request.Status != "completed" || request.SubjectUserID != nil || request.CompletedAt == nil {
 		t.Fatalf("completed request=%+v", request)
 	}
-	if auth.calls != 1 || objects.calls != 1 || users.calls != 1 || tx.calls != 1 {
+	if auth.calls != 1 || objects.calls != 2 || users.calls != 1 || tx.calls != 1 {
 		t.Fatalf("calls auth=%d objects=%d users=%d tx=%d", auth.calls, objects.calls, users.calls, tx.calls)
 	}
 	if request.SubjectDigest == "" || request.SubjectDigest == userID.String() {
@@ -170,34 +172,30 @@ func TestPrivacyErasurePartialFailureBecomesRetryableAndRecovers(t *testing.T) {
 	if processed != 1 || store.request.Status != "completed" {
 		t.Fatalf("processed=%d status=%s", processed, store.request.Status)
 	}
-	if auth.calls != 2 || objects.calls != 2 || users.calls != 1 || tx.calls != 1 {
+	if auth.calls != 2 || objects.calls != 3 || users.calls != 1 || tx.calls != 1 {
 		t.Fatalf("retry calls auth=%d objects=%d users=%d tx=%d", auth.calls, objects.calls, users.calls, tx.calls)
 	}
 }
 
-func TestLocalUserObjectCleanerDeletesOnlyUserPrefix(t *testing.T) {
-	root := t.TempDir()
-	userA := uuid.New()
-	userB := uuid.New()
-	pathA := filepath.Join(root, userA.String(), "photo.jpg")
-	pathB := filepath.Join(root, userB.String(), "photo.jpg")
-	for _, path := range []string{pathA, pathB} {
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(path, []byte("private"), 0o600); err != nil {
-			t.Fatal(err)
-		}
+func TestPrivacyErasurePostDeleteObjectSweepIsRetryable(t *testing.T) {
+	store := &fakePrivacyStore{counts: []repository.PrivacyDataCount{{Name: "account", Count: 1}}}
+	objects := &fakePrivacyObjects{failOnCall: 2}
+	service, auth, users, tx := newFakePrivacyService(store, objects)
+	request, err := service.Request(context.Background(), uuid.New(), PrivacyErasureConfirmationPhrase)
+	if err != nil {
+		t.Fatalf("Request: %v", err)
 	}
-
-	cleaner := NewLocalUserObjectCleaner(root)
-	if err := cleaner.EraseUserObjects(context.Background(), userA); err != nil {
-		t.Fatalf("EraseUserObjects: %v", err)
+	if request.Status != "retryable" || users.calls != 1 || tx.calls != 1 || objects.calls != 2 {
+		t.Fatalf("request=%+v objects=%d users=%d tx=%d", request, objects.calls, users.calls, tx.calls)
 	}
-	if _, err := os.Stat(pathA); !os.IsNotExist(err) {
-		t.Fatalf("user A object still exists or unexpected error: %v", err)
+	processed, err := service.Recover(context.Background(), 10)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if _, err := os.Stat(pathB); err != nil {
-		t.Fatalf("user B object was affected: %v", err)
+	if processed != 1 || store.request.Status != "completed" {
+		t.Fatalf("processed=%d status=%s", processed, store.request.Status)
+	}
+	if auth.calls != 2 || objects.calls != 4 || users.calls != 2 || tx.calls != 2 {
+		t.Fatalf("retry calls auth=%d objects=%d users=%d tx=%d", auth.calls, objects.calls, users.calls, tx.calls)
 	}
 }

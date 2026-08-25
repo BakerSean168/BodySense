@@ -12,19 +12,17 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/bodysense/api/internal/model"
-	"github.com/bodysense/api/internal/repository"
+	"github.com/bodysense/api/internal/uploadstorage"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 )
 
 const (
 	MaxFileSize    = 10 << 20 // 10MB
-	UploadDir      = "uploads"
 	ocrJobType     = "upload.ocr_extract"
 	postureJobType = "upload.posture_analyze"
 )
@@ -46,20 +44,35 @@ var allowedFileTypes = map[string]bool{
 	"report":             true,
 }
 
+type uploadRepository interface {
+	Create(ctx context.Context, upload *model.UserUpload) error
+	GetByID(ctx context.Context, id uuid.UUID) (*model.UserUpload, error)
+	GetByUserID(ctx context.Context, userID uuid.UUID) ([]model.UserUpload, error)
+	Delete(ctx context.Context, id, userID uuid.UUID) error
+	UpdateOCRResult(ctx context.Context, id, userID uuid.UUID, status string, result json.RawMessage) error
+	UpdateOCRStatus(ctx context.Context, id, userID uuid.UUID, status string) error
+	UpdateAnalysisStatus(ctx context.Context, id, userID uuid.UUID, status string) error
+	UpdateAnalysisResult(ctx context.Context, id, userID uuid.UUID, status string, result json.RawMessage) error
+	UpdateAgentConfiguration(ctx context.Context, id uuid.UUID, configurationID string) error
+	GetLatestPostureAnalyses(ctx context.Context, userID uuid.UUID) ([]model.UserUpload, error)
+}
+
 // UploadService handles upload business logic.
 type UploadService struct {
-	uploadRepo          *repository.UploadRepository
+	uploadRepo          uploadRepository
 	jobRuntime          *JobRuntime
 	outputReviewService *OutputReviewService
 	aiServiceURL        string
 	deployment          *AgentDeploymentPolicy
+	storage             *uploadstorage.Registry
 }
 
 // NewUploadService creates a new UploadService.
 func NewUploadService(
-	uploadRepo *repository.UploadRepository,
+	uploadRepo uploadRepository,
 	jobRuntime *JobRuntime,
 	outputReviewService *OutputReviewService,
+	storage *uploadstorage.Registry,
 ) *UploadService {
 	aiServiceURL := os.Getenv("AI_SERVICE_URL")
 	if aiServiceURL == "" {
@@ -70,6 +83,7 @@ func NewUploadService(
 		jobRuntime:          jobRuntime,
 		outputReviewService: outputReviewService,
 		aiServiceURL:        aiServiceURL,
+		storage:             storage,
 	}
 }
 
@@ -80,122 +94,94 @@ func (s *UploadService) WithDeployment(deployment *AgentDeploymentPolicy) *Uploa
 	return s
 }
 
-// UploadFile handles file upload: validates, saves to disk, creates DB record, and triggers OCR.
+// UploadFile validates an owned upload, commits the immutable storage object,
+// creates its DB manifest, and only then enqueues derived AI work. Storage is
+// written before the row so the database never points at an object that was not
+// durably committed; a DB failure attempts an idempotent object rollback.
 func (s *UploadService) UploadFile(ctx context.Context, userID uuid.UUID, file *multipart.FileHeader, fileType string) (*model.UserUpload, error) {
-	// Validate file type
+	if s.storage == nil {
+		return nil, errors.New("upload storage is not configured")
+	}
 	if !allowedFileTypes[fileType] {
 		return nil, errors.New("invalid file type: must be consultation_photo, photo_front, photo_side, photo_back, or report")
 	}
-
-	// Validate file size
 	if file.Size > MaxFileSize {
 		return nil, errors.New("file size exceeds 10MB limit")
 	}
-
-	// Validate MIME type from header
 	mimeType := file.Header.Get("Content-Type")
 	if !allowedMimeTypes[mimeType] {
 		return nil, errors.New("invalid file type: only JPEG, PNG, WebP, and PDF are allowed")
 	}
 
-	// Create upload directory for user
-	userDir := filepath.Join(UploadDir, userID.String())
-	if err := os.MkdirAll(userDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create upload directory: %w", err)
-	}
-
-	// Generate unique filename
-	ext := filepath.Ext(file.Filename)
-	fileName := uuid.New().String() + ext
-	filePath := filepath.Join(userDir, fileName)
-
-	// Save file to disk and verify content type
 	src, err := file.Open()
 	if err != nil {
 		return nil, fmt.Errorf("failed to open uploaded file: %w", err)
 	}
 	defer src.Close()
-
-	// Read first 512 bytes to detect actual content type
 	buf := make([]byte, 512)
 	n, err := src.Read(buf)
 	if err != nil && err != io.EOF {
 		return nil, fmt.Errorf("failed to read file header: %w", err)
 	}
 	detectedType := http.DetectContentType(buf[:n])
-	// Normalize: http.DetectContentType may return "image/jpeg; charset=utf-8" etc.
-	if idx := len(detectedType); idx > 0 {
-		for i, c := range detectedType {
-			if c == ';' {
-				detectedType = detectedType[:i]
-				break
-			}
-		}
+	if separator := strings.IndexByte(detectedType, ';'); separator >= 0 {
+		detectedType = detectedType[:separator]
 	}
 	if !allowedMimeTypes[detectedType] {
 		return nil, errors.New("file content does not match an allowed type")
 	}
-
-	// Seek back to beginning for the copy
-	if seeker, ok := src.(io.Seeker); ok {
-		if _, err := seeker.Seek(0, io.SeekStart); err != nil {
-			return nil, fmt.Errorf("failed to seek file: %w", err)
-		}
+	if mimeType != detectedType {
+		return nil, fmt.Errorf("declared MIME type %s does not match detected content %s", mimeType, detectedType)
 	}
 
-	dst, err := os.Create(filePath)
+	uploadID := uuid.New()
+	storageKey, err := uploadstorage.BuildObjectKey(userID, uploadID, detectedType)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create file: %w", err)
+		return nil, err
 	}
-	defer dst.Close()
-
-	if _, err = io.Copy(dst, src); err != nil {
-		return nil, fmt.Errorf("failed to save file: %w", err)
+	store := s.storage.DefaultStore()
+	body := io.MultiReader(bytes.NewReader(buf[:n]), src)
+	if err := store.Put(ctx, storageKey, body, file.Size, detectedType); err != nil {
+		return nil, fmt.Errorf("failed to store upload object: %w", err)
 	}
 
-	// Create database record. Photo uploads start their posture analysis in a
-	// 'pending' state (an async job will pick it up); reports/other types keep
-	// the default 'none'.
 	analysisStatus := "none"
 	switch fileType {
 	case "photo_front", "photo_side", "photo_back":
 		analysisStatus = "pending"
 	}
-
+	now := time.Now()
 	upload := &model.UserUpload{
-		ID:             uuid.New(),
+		ID:             uploadID,
 		UserID:         userID,
 		FileType:       fileType,
 		OriginalName:   file.Filename,
-		FilePath:       filePath,
+		StorageBackend: store.Backend(),
+		StorageKey:     storageKey,
 		FileSize:       file.Size,
 		MimeType:       mimeType,
 		OCRStatus:      "pending",
 		AnalysisStatus: analysisStatus,
-		CreatedAt:      time.Now(),
-		UpdatedAt:      time.Now(),
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}
-
 	if err := s.uploadRepo.Create(ctx, upload); err != nil {
-		// Clean up file on DB error
-		os.Remove(filePath)
+		if cleanupErr := store.Delete(ctx, storageKey); cleanupErr != nil {
+			return nil, fmt.Errorf("failed to save upload record: %w; rollback upload object: %v", err, cleanupErr)
+		}
 		return nil, fmt.Errorf("failed to save upload record: %w", err)
 	}
 
-	// Trigger async AI processing based on file type. Reports go through OCR;
-	// posture photos go through the vision analysis pipeline. Both reuse the
-	// recoverable, idempotent JobRuntime pattern.
 	switch fileType {
 	case "report":
-		if _, _, err := s.enqueueOCRJob(ctx, upload.ID, userID, filePath, mimeType); err != nil {
+		if _, _, err := s.enqueueOCRJob(ctx, upload.ID, userID); err != nil {
 			log.Printf("failed to enqueue OCR job for upload %s: %v", upload.ID, err)
 		}
 	case "photo_front", "photo_side", "photo_back":
-		if _, _, err := s.enqueuePostureJob(ctx, upload.ID, userID, filePath, mimeType, fileType); err != nil {
+		if _, _, err := s.enqueuePostureJob(ctx, upload.ID, userID, fileType); err != nil {
 			log.Printf("failed to enqueue posture job for upload %s: %v", upload.ID, err)
 		}
 	}
-
 	return upload, nil
 }
 
@@ -219,17 +205,13 @@ func (s *UploadService) GetUpload(ctx context.Context, userID uuid.UUID, uploadI
 	return upload, nil
 }
 
-// DeleteUpload deletes an upload and its file from disk.
-// ReadImageDataURL loads an image upload owned by userID and returns a
-// data-URL suitable for multimodal LLM input. Rejects non-image mime types
-// and enforces a size cap so chat turns cannot smuggle huge payloads.
+// ReadImageDataURL loads an owned image through UploadStorage and returns a
+// data URL suitable for multimodal LLM input. The object manifest size is
+// checked before any bytes cross the model boundary.
 func (s *UploadService) ReadImageDataURL(ctx context.Context, userID, uploadID uuid.UUID) (string, string, error) {
 	upload, err := s.GetUpload(ctx, userID, uploadID)
 	if err != nil {
 		return "", "", err
-	}
-	if upload == nil {
-		return "", "", errors.New("upload not found")
 	}
 	mime := upload.MimeType
 	if !strings.HasPrefix(mime, "image/") {
@@ -239,18 +221,16 @@ func (s *UploadService) ReadImageDataURL(ctx context.Context, userID, uploadID u
 	if upload.FileSize > maxBytes {
 		return "", "", errors.New("image too large for consultation multimodal input")
 	}
-	data, err := os.ReadFile(upload.FilePath)
+	data, err := readUploadObject(ctx, s.storage, upload, maxBytes)
 	if err != nil {
-		return "", "", fmt.Errorf("read upload file: %w", err)
-	}
-	if len(data) > maxBytes {
-		return "", "", errors.New("image too large for consultation multimodal input")
+		return "", "", fmt.Errorf("read upload object: %w", err)
 	}
 	encoded := base64.StdEncoding.EncodeToString(data)
-	dataURL := fmt.Sprintf("data:%s;base64,%s", mime, encoded)
-	return dataURL, mime, nil
+	return fmt.Sprintf("data:%s;base64,%s", mime, encoded), mime, nil
 }
 
+// DeleteUpload removes the private storage object before deleting its DB
+// manifest. Storage deletion is idempotent, so a DB failure remains retryable.
 func (s *UploadService) DeleteUpload(ctx context.Context, userID uuid.UUID, uploadID uuid.UUID) error {
 	upload, err := s.uploadRepo.GetByID(ctx, uploadID)
 	if err != nil {
@@ -262,67 +242,56 @@ func (s *UploadService) DeleteUpload(ctx context.Context, userID uuid.UUID, uplo
 	if upload.UserID != userID {
 		return errors.New("unauthorized")
 	}
-
-	// Delete file from disk
-	if err := os.Remove(upload.FilePath); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("failed to delete file: %w", err)
+	if s.storage == nil {
+		return errors.New("upload storage is not configured")
 	}
-
-	// Delete database record
+	store, err := s.storage.Store(upload.StorageBackend)
+	if err != nil {
+		return err
+	}
+	if err := store.Delete(ctx, upload.StorageKey); err != nil {
+		return fmt.Errorf("failed to delete upload object: %w", err)
+	}
 	return s.uploadRepo.Delete(ctx, uploadID, userID)
 }
 
-// executeOCRCall sends a file to the AI service OCR endpoint and returns the response body.
-// This is the shared implementation used by both processOCR and processOCRWithJob.
-func (s *UploadService) executeOCRCall(filePath, mimeType string) ([]byte, error) {
+// executeOCRCall streams an already-authorized upload to the AI service. Go
+// remains the blob authority; Python receives only the request body, never OSS
+// credentials or an object-store location.
+func (s *UploadService) executeOCRCall(reader io.Reader, mimeType string) ([]byte, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open file: %w", err)
-	}
-	defer file.Close()
-
 	part, err := writer.CreatePart(map[string][]string{
-		"Content-Disposition": {fmt.Sprintf(`form-data; name="file"; filename="%s"`, filepath.Base(filePath))},
+		"Content-Disposition": {`form-data; name="file"; filename="upload"`},
 		"Content-Type":        {mimeType},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create form part: %w", err)
 	}
-
-	if _, err = io.Copy(part, file); err != nil {
+	if _, err = io.Copy(part, reader); err != nil {
 		return nil, fmt.Errorf("failed to copy file content: %w", err)
 	}
-	writer.Close()
+	if err := writer.Close(); err != nil {
+		return nil, fmt.Errorf("failed to finalize OCR multipart body: %w", err)
+	}
 
-	resp, err := http.Post(
-		s.aiServiceURL+"/api/ocr/extract",
-		writer.FormDataContentType(),
-		body,
-	)
+	resp, err := http.Post(s.aiServiceURL+"/api/ocr/extract", writer.FormDataContentType(), body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to AI service: %w", err)
 	}
 	defer resp.Body.Close()
-
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read OCR response: %w", err)
 	}
-
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("OCR service returned status %d", resp.StatusCode)
 	}
-
 	return respBody, nil
 }
 
 type ocrJobInput struct {
 	UploadID string `json:"upload_id"`
-	FilePath string `json:"file_path"`
-	MimeType string `json:"mime_type"`
 }
 
 // StartUploadWorker starts a background worker that recovers and processes
@@ -394,14 +363,9 @@ func (s *UploadService) RecoverUploadJobs(ctx context.Context, limit int, staleR
 	return processed, nil
 }
 
-func (s *UploadService) enqueueOCRJob(ctx context.Context, uploadID, userID uuid.UUID, filePath string, mimeType string) (*model.Job, bool, error) {
+func (s *UploadService) enqueueOCRJob(ctx context.Context, uploadID, userID uuid.UUID) (*model.Job, bool, error) {
 	idempotencyKey := fmt.Sprintf("upload_ocr:%s", uploadID.String())
-	inputJSON, _ := json.Marshal(ocrJobInput{
-		UploadID: uploadID.String(),
-		FilePath: filePath,
-		MimeType: mimeType,
-	})
-
+	inputJSON, _ := json.Marshal(ocrJobInput{UploadID: uploadID.String()})
 	job, existed, err := s.jobRuntime.CreateJobWithIdempotency(ctx, userID, ocrJobType, inputJSON, idempotencyKey, nil, nil)
 	if err != nil {
 		return nil, false, err
@@ -415,11 +379,19 @@ func (s *UploadService) processOCRJob(ctx context.Context, job model.Job) error 
 		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": err.Error()})
 		return err
 	}
-
 	uploadID, err := uuid.Parse(input.UploadID)
 	if err != nil {
 		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": "invalid upload_id"})
 		return fmt.Errorf("invalid upload_id: %w", err)
+	}
+	upload, err := s.uploadRepo.GetByID(ctx, uploadID)
+	if err != nil {
+		return fmt.Errorf("load OCR upload: %w", err)
+	}
+	if upload == nil || upload.UserID != job.UserID {
+		err := errors.New("OCR upload is missing or not owned by job user")
+		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": err.Error()})
+		return err
 	}
 
 	if err := s.jobRuntime.TransitionTo(ctx, job.ID, "running", nil, nil); err != nil {
@@ -428,12 +400,22 @@ func (s *UploadService) processOCRJob(ctx context.Context, job model.Job) error 
 	_ = s.jobRuntime.UpdateProgress(ctx, job.ID, map[string]any{"stage": "ocr_processing", "percent": 10})
 	_ = s.uploadRepo.UpdateOCRStatus(ctx, uploadID, job.UserID, "processing")
 
-	respBody, err := s.executeOCRCall(input.FilePath, input.MimeType)
+	reader, _, err := openUploadObject(ctx, s.storage, upload)
 	if err != nil {
 		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": err.Error()})
-		_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, job.UserID, "failed",
-			json.RawMessage(fmt.Sprintf(`{"error": "%s"}`, err.Error())))
+		_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, job.UserID, "failed", json.RawMessage(`{"error":"upload object unavailable"}`))
 		return err
+	}
+	respBody, callErr := s.executeOCRCall(reader, upload.MimeType)
+	closeErr := reader.Close()
+	if callErr == nil && closeErr != nil {
+		callErr = closeErr
+	}
+	if callErr != nil {
+		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": callErr.Error()})
+		errPayload, _ := json.Marshal(map[string]string{"error": callErr.Error()})
+		_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, job.UserID, "failed", errPayload)
+		return callErr
 	}
 
 	_ = s.jobRuntime.UpdateProgress(ctx, job.ID, map[string]any{"stage": "ocr_completed", "percent": 100})
@@ -461,8 +443,8 @@ func parseOCRJobInput(job model.Job) (ocrJobInput, error) {
 	if err := json.Unmarshal(job.Input, &input); err != nil {
 		return input, fmt.Errorf("parse OCR job input: %w", err)
 	}
-	if input.UploadID == "" || input.FilePath == "" || input.MimeType == "" {
-		return input, fmt.Errorf("OCR job input missing required fields")
+	if input.UploadID == "" {
+		return input, fmt.Errorf("OCR job input missing upload_id")
 	}
 	return input, nil
 }
@@ -473,8 +455,6 @@ func parseOCRJobInput(job model.Job) (ocrJobInput, error) {
 
 type postureJobInput struct {
 	UploadID        string `json:"upload_id"`
-	FilePath        string `json:"file_path"`
-	MimeType        string `json:"mime_type"`
 	View            string `json:"view"` // "front" | "side" | "back"
 	ConfigurationID string `json:"configuration_id,omitempty"`
 }
@@ -489,10 +469,9 @@ var photoTypeToView = map[string]string{
 
 // executePostureCall sends a photo to the AI service posture endpoint together
 // with its view and returns the raw response body.
-func (s *UploadService) executePostureCall(filePath, mimeType, view, configurationID string) ([]byte, error) {
+func (s *UploadService) executePostureCall(reader io.Reader, mimeType, view, configurationID string) ([]byte, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-
 	if err := writer.WriteField("view", view); err != nil {
 		return nil, fmt.Errorf("failed to write view field: %w", err)
 	}
@@ -502,63 +481,48 @@ func (s *UploadService) executePostureCall(filePath, mimeType, view, configurati
 	if err := writer.WriteField("configuration_id", configurationID); err != nil {
 		return nil, fmt.Errorf("failed to write configuration_id field: %w", err)
 	}
-
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open file: %w", err)
-	}
-	defer file.Close()
-
 	part, err := writer.CreatePart(map[string][]string{
-		"Content-Disposition": {fmt.Sprintf(`form-data; name="file"; filename="%s"`, filepath.Base(filePath))},
+		"Content-Disposition": {`form-data; name="file"; filename="upload"`},
 		"Content-Type":        {mimeType},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create form part: %w", err)
 	}
-
-	if _, err = io.Copy(part, file); err != nil {
+	if _, err = io.Copy(part, reader); err != nil {
 		return nil, fmt.Errorf("failed to copy file content: %w", err)
 	}
-	writer.Close()
-
-	resp, err := http.Post(
-		s.aiServiceURL+"/api/posture/analyze",
-		writer.FormDataContentType(),
-		body,
-	)
+	if err := writer.Close(); err != nil {
+		return nil, fmt.Errorf("failed to finalize posture multipart body: %w", err)
+	}
+	resp, err := http.Post(s.aiServiceURL+"/api/posture/analyze", writer.FormDataContentType(), body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to AI service: %w", err)
 	}
 	defer resp.Body.Close()
-
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read posture response: %w", err)
 	}
-
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("posture service returned status %d", resp.StatusCode)
 	}
-
 	return respBody, nil
 }
 
-func (s *UploadService) enqueuePostureJob(ctx context.Context, uploadID, userID uuid.UUID, filePath, mimeType, fileType string) (*model.Job, bool, error) {
+func (s *UploadService) enqueuePostureJob(ctx context.Context, uploadID, userID uuid.UUID, fileType string) (*model.Job, bool, error) {
 	view, ok := photoTypeToView[fileType]
 	if !ok {
 		return nil, false, fmt.Errorf("unsupported photo file_type: %s", fileType)
 	}
-
+	if s.deployment == nil {
+		return nil, false, errors.New("posture deployment policy is not configured")
+	}
 	idempotencyKey := fmt.Sprintf("posture_analyze:%s", uploadID.String())
 	inputJSON, _ := json.Marshal(postureJobInput{
 		UploadID:        uploadID.String(),
-		FilePath:        filePath,
-		MimeType:        mimeType,
 		View:            view,
 		ConfigurationID: s.deployment.PostureConfigurationID(),
 	})
-
 	job, existed, err := s.jobRuntime.CreateJobWithIdempotency(ctx, userID, postureJobType, inputJSON, idempotencyKey, nil, nil)
 	if err != nil {
 		return nil, false, err
@@ -572,25 +536,43 @@ func (s *UploadService) processPostureJob(ctx context.Context, job model.Job) er
 		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": err.Error()})
 		return err
 	}
-
 	uploadID, err := uuid.Parse(input.UploadID)
 	if err != nil {
 		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": "invalid upload_id"})
 		return fmt.Errorf("invalid upload_id: %w", err)
 	}
-
+	upload, err := s.uploadRepo.GetByID(ctx, uploadID)
+	if err != nil {
+		return fmt.Errorf("load posture upload: %w", err)
+	}
+	if upload == nil || upload.UserID != job.UserID {
+		err := errors.New("posture upload is missing or not owned by job user")
+		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": err.Error()})
+		return err
+	}
 	if err := s.jobRuntime.TransitionTo(ctx, job.ID, "running", nil, nil); err != nil {
 		return fmt.Errorf("start posture job: %w", err)
 	}
 	_ = s.jobRuntime.UpdateProgress(ctx, job.ID, map[string]any{"stage": "posture_analyzing", "percent": 10})
 	_ = s.uploadRepo.UpdateAnalysisStatus(ctx, uploadID, job.UserID, "processing")
 
-	respBody, err := s.executePostureCall(input.FilePath, input.MimeType, input.View, input.ConfigurationID)
+	reader, _, err := openUploadObject(ctx, s.storage, upload)
 	if err != nil {
 		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": err.Error()})
-		errPayload, _ := json.Marshal(map[string]string{"error": err.Error()})
+		errPayload, _ := json.Marshal(map[string]string{"error": "upload object unavailable"})
 		_ = s.uploadRepo.UpdateAnalysisResult(ctx, uploadID, job.UserID, "failed", errPayload)
 		return err
+	}
+	respBody, callErr := s.executePostureCall(reader, upload.MimeType, input.View, input.ConfigurationID)
+	closeErr := reader.Close()
+	if callErr == nil && closeErr != nil {
+		callErr = closeErr
+	}
+	if callErr != nil {
+		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": callErr.Error()})
+		errPayload, _ := json.Marshal(map[string]string{"error": callErr.Error()})
+		_ = s.uploadRepo.UpdateAnalysisResult(ctx, uploadID, job.UserID, "failed", errPayload)
+		return callErr
 	}
 
 	analysisPayload, err := validatePostureAgentResponse(respBody, input.ConfigurationID)
@@ -600,13 +582,10 @@ func (s *UploadService) processPostureJob(ctx context.Context, job model.Job) er
 		_ = s.uploadRepo.UpdateAnalysisResult(ctx, uploadID, job.UserID, "failed", errPayload)
 		return err
 	}
-
 	s.recordPostureGovernance(ctx, job, analysisPayload)
-
 	_ = s.jobRuntime.UpdateProgress(ctx, job.ID, map[string]any{"stage": "posture_completed", "percent": 100})
 	_ = s.jobRuntime.TransitionTo(ctx, job.ID, "completed", json.RawMessage(respBody), nil)
 	_ = s.uploadRepo.UpdateAnalysisResult(ctx, uploadID, job.UserID, "completed", analysisPayload)
-	// North-Star: persist the exact immutable Agent configuration used.
 	if input.ConfigurationID != "" {
 		_ = s.uploadRepo.UpdateAgentConfiguration(ctx, uploadID, input.ConfigurationID)
 	}
@@ -735,7 +714,7 @@ func parsePostureJobInput(job model.Job) (postureJobInput, error) {
 	if err := json.Unmarshal(job.Input, &input); err != nil {
 		return input, fmt.Errorf("parse posture job input: %w", err)
 	}
-	if input.UploadID == "" || input.FilePath == "" || input.MimeType == "" || input.View == "" {
+	if input.UploadID == "" || input.View == "" || input.ConfigurationID == "" {
 		return input, fmt.Errorf("posture job input missing required fields")
 	}
 	return input, nil

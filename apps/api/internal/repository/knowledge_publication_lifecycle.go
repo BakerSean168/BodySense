@@ -26,6 +26,7 @@ type KnowledgePublicationUnit struct {
 	Metadata            datatypes.JSON `gorm:"column:metadata"`
 	SourceType          string         `gorm:"column:source_type"`
 	SourceLicenseStatus string         `gorm:"column:source_license_status"`
+	HasEmbedding        bool           `gorm:"column:has_embedding"`
 }
 
 func (r *KnowledgePublicationRepository) LockUnitsByKeys(
@@ -38,7 +39,8 @@ func (r *KnowledgePublicationRepository) LockUnitsByKeys(
 		Select(`ku.id, ku.unit_key, ku.title, ku.body_markdown, ku.transcript_excerpt,
 			ku.lifecycle_status, ku.review_status, COALESCE(ku.quality_score, 0) AS quality_score,
 			ku.content_hash, ku.publication_id, ku.published_version, ku.metadata,
-			ks.source_type, ks.license_status AS source_license_status`).
+			ks.source_type, ks.license_status AS source_license_status,
+			(ku.embedding IS NOT NULL) AS has_embedding`).
 		Joins("JOIN knowledge_sources ks ON ks.id = ku.source_id").
 		Where("ku.unit_key IN ?", unitKeys).
 		Order("ku.unit_key ASC").

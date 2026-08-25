@@ -79,6 +79,7 @@ func publicationUnitForReviewedArtifact(t *testing.T, artifact ReviewedKnowledge
 	artifact.Units[0].ClaimContentHash = hash
 	artifactUnit := artifact.Units[0]
 	metadata := map[string]any{
+		"embedding_identity":  testEmbeddingIdentity(),
 		"snapshot_id":         artifact.SourceSnapshotID,
 		"claim_candidate":     map[string]any{"claim_id": artifactUnit.ClaimID},
 		"claim_admissibility": map[string]any{"status": "claim_reviewed", "publication_eligible": true},
@@ -102,6 +103,7 @@ func publicationUnitForReviewedArtifact(t *testing.T, artifact ReviewedKnowledge
 		ID: 1, UnitKey: artifactUnit.UnitKey, BodyMarkdown: body, TranscriptExcerpt: body,
 		LifecycleStatus: "reviewed", ReviewStatus: "reviewed", QualityScore: artifactUnit.QualityScore,
 		ContentHash: &hash, Metadata: datatypes.JSON(raw), SourceType: "thought_forest_note",
+		SourceLicenseStatus: "citation_only", HasEmbedding: true,
 	}
 }
 

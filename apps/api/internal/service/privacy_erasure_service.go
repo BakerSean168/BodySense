@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/bodysense/api/internal/database"
@@ -56,33 +55,6 @@ type UserObjectCleaner interface {
 
 type privacyTransactionManager interface {
 	WithinTransaction(ctx context.Context, fn func(context.Context) error) error
-}
-
-// LocalUserObjectCleaner removes the entire per-user upload prefix. Removing
-// the prefix rather than only DB-listed files also cleans abandoned blobs from
-// earlier partial upload failures.
-type LocalUserObjectCleaner struct {
-	root string
-}
-
-func NewLocalUserObjectCleaner(root string) *LocalUserObjectCleaner {
-	return &LocalUserObjectCleaner{root: root}
-}
-
-func (c *LocalUserObjectCleaner) EraseUserObjects(_ context.Context, userID uuid.UUID) error {
-	rootAbs, err := filepath.Abs(c.root)
-	if err != nil {
-		return fmt.Errorf("resolve upload root: %w", err)
-	}
-	userRoot := filepath.Join(rootAbs, userID.String())
-	rel, err := filepath.Rel(rootAbs, userRoot)
-	if err != nil || rel == "." || rel == ".." || filepath.IsAbs(rel) {
-		return fmt.Errorf("refuse unsafe user upload prefix %q", userRoot)
-	}
-	if err := os.RemoveAll(userRoot); err != nil {
-		return fmt.Errorf("erase user upload prefix: %w", err)
-	}
-	return nil
 }
 
 // PrivacyErasureService is the only service-level operation allowed to perform
@@ -209,6 +181,12 @@ func (s *PrivacyErasureService) ProcessRequest(ctx context.Context, id uuid.UUID
 		return s.users.DeleteByID(txCtx, userID)
 	}); err != nil {
 		return fail("delete database subject", err)
+	}
+	// Sweep once more after the subject row is gone. This catches an upload
+	// request that authenticated before revocation and committed a blob after
+	// the pre-delete sweep. The operation is idempotent and retryable.
+	if err := s.objects.EraseUserObjects(ctx, userID); err != nil {
+		return fail("erase upload objects after subject deletion", err)
 	}
 	if err := s.requests.MarkCompleted(ctx, id); err != nil {
 		return fmt.Errorf("mark privacy erasure completed: %w", err)

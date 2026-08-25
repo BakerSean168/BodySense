@@ -878,9 +878,11 @@ func TestTreatmentEvidenceGapChallengerPersistsAcquisitionTrace(t *testing.T) {
 	}
 	repo := &fakeTreatmentRepo{}
 	trace := `{
+		"trace_revision":"evidence-acquisition-trace-v2",
 		"policy_revision":"treatment-evidence-gap-v2",
+		"external_evidence_status":"available",
 		"budget":{"max_searches":2,"max_results_per_search":5,"used_searches":1,"remaining_searches":1},
-		"attempts":[{"gap":{"gap_id":"dose","kind":"external_knowledge","description":"dose evidence","rationale":"changes dose","critical":false,"query":"dose evidence"},"status":"evidence_returned","stop_reason":"evidence_returned","search_performed":true,"query":"dose evidence","requested_top_k":5,"evidence_ids":["evidence-dose"]}],
+		"attempts":[{"gap":{"gap_id":"dose","kind":"external_knowledge","description":"dose evidence","rationale":"changes dose","critical":false,"query":"dose evidence"},"status":"evidence_returned","stop_reason":"evidence_returned","search_performed":true,"retrieval_status":"results_returned","query":"dose evidence","requested_top_k":5,"evidence_ids":["evidence-dose"]}],
 		"unresolved_critical_gaps":[]
 	}`
 	svc := NewTreatmentService(

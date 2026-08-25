@@ -9,6 +9,26 @@ import (
 	"github.com/google/uuid"
 )
 
+// uploadResponse preserves the existing v1 JSON shape while storage_backend and
+// storage_key remain server-private authority. file_path is now a deprecated
+// compatibility projection of the opaque storage key, not a host filesystem path.
+type uploadResponse struct {
+	model.UserUpload
+	FilePath string `json:"file_path"`
+}
+
+func newUploadResponse(upload model.UserUpload) uploadResponse {
+	return uploadResponse{UserUpload: upload, FilePath: upload.StorageKey}
+}
+
+func newUploadResponses(uploads []model.UserUpload) []uploadResponse {
+	responses := make([]uploadResponse, 0, len(uploads))
+	for _, upload := range uploads {
+		responses = append(responses, newUploadResponse(upload))
+	}
+	return responses
+}
+
 // UploadHandler handles upload HTTP requests.
 type UploadHandler struct {
 	uploadService *service.UploadService
@@ -54,7 +74,7 @@ func (h *UploadHandler) Upload(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, upload)
+	c.JSON(http.StatusCreated, newUploadResponse(*upload))
 }
 
 // GetUploads handles GET /api/v1/uploads
@@ -78,12 +98,8 @@ func (h *UploadHandler) GetUploads(c *gin.Context) {
 		return
 	}
 
-	// Return empty array instead of null
-	if uploads == nil {
-		uploads = []model.UserUpload{}
-	}
-
-	c.JSON(http.StatusOK, uploads)
+	// Return empty array instead of null.
+	c.JSON(http.StatusOK, newUploadResponses(uploads))
 }
 
 // GetUpload handles GET /api/v1/uploads/:id
@@ -121,7 +137,7 @@ func (h *UploadHandler) GetUpload(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, upload)
+	c.JSON(http.StatusOK, newUploadResponse(*upload))
 }
 
 // GetPostureAnalysis handles GET /api/v1/uploads/posture-analysis
@@ -151,7 +167,7 @@ func (h *UploadHandler) GetPostureAnalysis(c *gin.Context) {
 }
 
 // DeleteUpload handles DELETE /api/v1/uploads/:id
-// Deletes an upload and its file from disk.
+// Deletes an upload and its private storage object.
 func (h *UploadHandler) DeleteUpload(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
