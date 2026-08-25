@@ -1,5 +1,56 @@
 # Changelog
 
+## [0.6.0](https://github.com/BakerSean168/BodySense/compare/v0.5.2...v0.6.0) (2026-08-25)
+
+
+### Features
+
+* add durable user upload storage ([5443db2](https://github.com/BakerSean168/BodySense/commit/5443db29de363502156866318b939bd53d6af0d9))
+* add durable user upload storage ([b703de4](https://github.com/BakerSean168/BodySense/commit/b703de4a84602c8fefe5ecbf17519cafa6f26bb9))
+* add off-host postgres disaster recovery ([941261d](https://github.com/BakerSean168/BodySense/commit/941261d4e331b8416c4bf2f04f1664c03600cec5))
+* add off-host postgres disaster recovery ([de8f712](https://github.com/BakerSean168/BodySense/commit/de8f712654d08bee56ef8267e69d56fc3914cda6))
+* **ai:** govern external evidence admissibility ([aacbd08](https://github.com/BakerSean168/BodySense/commit/aacbd08ef505901f45421c6ef3ddc1984710c77f))
+* **ai:** govern external evidence admissibility ([4295e10](https://github.com/BakerSean168/BodySense/commit/4295e10f3f143b7fca4450a1f52f042e4217e4ed))
+* **ai:** ingest Thought Forest health snapshots ([45804a0](https://github.com/BakerSean168/BodySense/commit/45804a004a0a930c05e93a4a967acc5521c7f69b))
+* **ai:** ingest Thought Forest health snapshots ([791f5fd](https://github.com/BakerSean168/BodySense/commit/791f5fdc2e52b2d870a93deb7ef630ef2fa2da6d))
+* **ai:** normalize Thought Forest evidence identity ([a56317f](https://github.com/BakerSean168/BodySense/commit/a56317f4ba6e6b57220f8a68d617934f8a5e0d14))
+* **ai:** normalize Thought Forest evidence identity ([6da11f5](https://github.com/BakerSean168/BodySense/commit/6da11f5dad9102d30ee8b99c623bbb3ffb6b1cb9))
+* **api:** add durable knowledge ingestion jobs ([3c240bf](https://github.com/BakerSean168/BodySense/commit/3c240bf352e1df20ee60d59d3c954c47afbdc304))
+* **api:** govern knowledge operator registration ([3d86c8a](https://github.com/BakerSean168/BodySense/commit/3d86c8aab4a8636ec4092d379647be8b4cedec31))
+* **api:** harden knowledge publication governance ([6ac68ff](https://github.com/BakerSean168/BodySense/commit/6ac68ff74274e5f4403356cce263c22f13e50794))
+* **api:** make evidence availability explicit ([7235db8](https://github.com/BakerSean168/BodySense/commit/7235db8a7fc03b0e760cafaf00f5fe00048c8c89))
+* close out knowledge governance and split durability plan ([0bd5170](https://github.com/BakerSean168/BodySense/commit/0bd517022968e0a478e43a08545991324530ba57))
+* govern claim publication and rollback ([62d3e73](https://github.com/BakerSean168/BodySense/commit/62d3e73ea4753beab8ff53d050a36bbd3343b68a))
+* govern claim publication and rollback ([0630f4f](https://github.com/BakerSean168/BodySense/commit/0630f4fd469a629d76dc3f81bfbe9adfe04c7a2a))
+* govern published knowledge quality ([07cefd1](https://github.com/BakerSean168/BodySense/commit/07cefd107a6c35a8c9a29c1fad0e6315e1db006d))
+* govern published knowledge quality ([3d13f58](https://github.com/BakerSean168/BodySense/commit/3d13f587551de115289cfee5dfe2bcc20aa3ddc6))
+* harden production capacity baseline ([7c915fd](https://github.com/BakerSean168/BodySense/commit/7c915fd5cb7de1f2aa1f872239f72aaf58f632a9))
+* harden production capacity baseline ([696d00d](https://github.com/BakerSean168/BodySense/commit/696d00d4c4a732426a66a8740f513be07f1ed8df))
+* observe published knowledge at runtime ([92be7dd](https://github.com/BakerSean168/BodySense/commit/92be7dd590c02a2c76aa9c3f51fe69a9de0a94b2))
+* observe published knowledge at runtime ([ba4d7ff](https://github.com/BakerSean168/BodySense/commit/ba4d7ffc6bb78ed985140587539e523db34a869d))
+* redesign project showcase ([802e27c](https://github.com/BakerSean168/BodySense/commit/802e27c77b3608927b28c4d757466fad396a73fb))
+* redesign project showcase ([0ac8174](https://github.com/BakerSean168/BodySense/commit/0ac817418ab11fa8b9c69b1bb119e3829285c2f2))
+* rollout reviewed knowledge cohorts ([e8b3775](https://github.com/BakerSean168/BodySense/commit/e8b37750bc0a45930fa6b68ff06a79fd0ac438e9))
+* rollout reviewed knowledge cohorts ([3986501](https://github.com/BakerSean168/BodySense/commit/398650177fdf0d5b72cfd02b6e1ac45b29457f95))
+* **web:** implement durable run recovery, cancel, and deploy preflight ([80de45c](https://github.com/BakerSean168/BodySense/commit/80de45cbb734de2ab4ffd248527e07e0606435c0))
+
+
+### Bug Fixes
+
+* **ai:** satisfy external evidence typecheck ([c05569c](https://github.com/BakerSean168/BodySense/commit/c05569c816c0f9da20e17605f7616143cd893f18))
+* **api:** atomically revoke shares when deleting a conversation ([5770a44](https://github.com/BakerSean168/BodySense/commit/5770a44b2f7e5f38b5f6a43bbb283502161f073a))
+* **api:** complete consultation run lease lifecycle ([5b0f8e0](https://github.com/BakerSean168/BodySense/commit/5b0f8e03d42cb280e9486b3eeb9c0ce3e77f87c4))
+* **api:** enforce conversation ownership for interaction metrics ([efdc72f](https://github.com/BakerSean168/BodySense/commit/efdc72feb09b04221e67c8197a740f688760c4e4))
+* **api:** expose run lease repository capabilities ([f825fd9](https://github.com/BakerSean168/BodySense/commit/f825fd9ad1d41426c7d91b02f2ce74cab2ef1b05))
+* **api:** lease runs and reclaim stale executions on process death ([a12735e](https://github.com/BakerSean168/BodySense/commit/a12735eb313d52ccc191e2e8d58cdbc2d5574781))
+* **api:** make refresh rotation replay-safe ([81f5be3](https://github.com/BakerSean168/BodySense/commit/81f5be308739d628fdc9b4ec968c5fe2a7bd02d9))
+* **api:** short-lived access tokens and session-family revocation ([cbf1606](https://github.com/BakerSean168/BodySense/commit/cbf1606d1c77b35bdce0e1db54ddf5557f7c8bf7))
+* harden production security and runtime recovery ([3fc911e](https://github.com/BakerSean168/BodySense/commit/3fc911e1d606bbbd9b19a52b8960abbc775f40cb))
+* **main:** add durable privacy erasure boundary ([423c910](https://github.com/BakerSean168/BodySense/commit/423c91015522e7a84f46a099e2ebe5966f059314))
+* **main:** harden browser session boundary ([ccbe067](https://github.com/BakerSean168/BodySense/commit/ccbe067fe30e7f5758f4d6d0f61bf8e0aad5fc11))
+* preserve cancelled consultation state ([04377c9](https://github.com/BakerSean168/BodySense/commit/04377c9c0548e44997658ec25203a24b146eb64f))
+* recover consultation runs after api restart ([1d0586e](https://github.com/BakerSean168/BodySense/commit/1d0586ec0d76343a8a7a36536e35cc290ffa084f))
+
 ## [0.5.2](https://github.com/BakerSean168/BodySense/compare/v0.5.1...v0.5.2) (2026-08-23)
 
 
