@@ -201,15 +201,28 @@ The restore script is deliberately strict and interactive-gated:
 # network), and declare that it is a disposable drill target for
 # --target-project drill: the drill network itself must be declared on the
 # container (bodysense.restore-network) so the isolation proof is not just a
-# fortuitous lack of overlap with production
+# fortuitous lack of overlap with production.  The drill network must then
+# contain EXACTLY the disposable restore container: the restore refuses any
+# member other than that container — the production postgres, a
+# production-project member, OR an unrelated/compromised unlabelled container —
+# and also refuses if the restore container is not provably a member.
 # give the drill resources names unique to this run (never reuse a box name),
 # and put the disposable restore server on its own dedicated non-host drill
 # network; use a name like restore-pg-<suffix> to avoid colliding with any
 # existing container
 suffix="$(date +%s)"
-drill_net="bodysense-drill-net"
+drill_net="bodysense-drill-net-$suffix"
 restore_pg="restore-pg-$suffix"
-docker network create "$drill_net"
+# the drill network is run-unique (never a fixed/reused name) and MUST be a
+# fresh network: if creation fails (e.g. it already exists, or a name collides
+# with a leftover network whose membership is unknown), fail closed rather than
+# attach the disposable restore database to a pre-existing network that may
+# already contain other containers.  The restore refuses unless the drill
+# network contains EXACTLY the disposable restore container and nothing else.
+if ! docker network create "$drill_net"; then
+  echo "drill network '$drill_net' could not be created fresh; refusing to reuse any pre-existing network" >&2
+  exit 1
+fi
 docker run -d --name "$restore_pg" --network "$drill_net" \
   --label bodysense.restore-project=drill \
   --label bodysense.disposable-restore=yes \
@@ -220,9 +233,11 @@ docker run -d --name "$restore_pg" --network "$drill_net" \
 # the validators run inside SEPARATE disposable validator containers derived from
 # the api image and attached ONLY to the drill network: never inside the
 # production api container, and never by joining the production api container to
-# the drill network (Docker bridge connectivity is bidirectional, so such a
-# container could reach the disposable restore database — the membership guard
-# would refuse it anyway).  The validator image is taken from the resolved api
+# the drill network (Docker bridge connectivity is bidirectional, so any such
+# container — production or not — could reach the disposable restore database;
+# the drill-network membership guard would refuse it anyway, since it requires
+# the drill network to contain exactly the disposable restore container).  The
+# validator image is taken from the resolved api
 # container's Config.Image unless pinned explicitly with OFFHOST_VALIDATOR_IMAGE.
 OFFHOST_API_CONTAINER=docker-api-1
 # optional, to pin the drill validator image explicitly:

@@ -18,11 +18,13 @@
 # /app, the api container is created from that same image on the production
 # network only, and the restore path derives its disposable validator image from
 # the resolved api container's Config.Image (OFFHOST_VALIDATOR_IMAGE is NOT
-# pinned so the derivation path is exercised).  As a regression for the review
-# finding, the test first joins a production-Compose-project-labeled rogue
+# pinned so the derivation path is exercised).  As regressions for the review
+# findings, the test first joins a production-Compose-project-labeled rogue
 # container to the drill network and proves the restore REFUSES it (Docker
-# bridge connectivity is bidirectional), then removes it and runs a PASSing
-# drill.
+# bridge connectivity is bidirectional), then repeats with an UNRELATED,
+# UNLABELLED rogue container (no production label) and proves the restore REFUSES
+# it too — the drill network must contain exactly the disposable restore postgres
+# and nothing else — then removes both and runs a PASSing drill.
 #
 # All container and network names are suffixed with the shell PID so the test
 # can never collide with (or clean up) unrelated containers/networks: the EXIT
@@ -55,6 +57,7 @@ RESTORE_PG_NAME="bodysense-dr-restore-pg-$$" # disposable, explicitly isolated r
 # deliberately NOT pinned so the derivation path is exercised end-to-end).
 API_NAME="bodysense-dr-api-$$"
 ROGUE_NAME="bodysense-dr-rogue-api-$$"
+ROGUE_UNRELATED_NAME="bodysense-dr-rogue-unrelated-$$"
 BUILDER_NAME="bodysense-dr-builder-$$"
 VALIDATOR_IMG="bodysense-dr-validator-img-$$"
 # The production postgres declares a Compose project so the drill-network
@@ -70,7 +73,7 @@ CORRUPT_FILE="$TMP/corrupt.on"
 export TMP ROOT CORRUPT_FILE
 
 cleanup() {
-  docker rm -f "$ROGUE_NAME" "$API_NAME" "$BUILDER_NAME" "$RESTORE_PG_NAME" "$PG_NAME" >/dev/null 2>&1 || true
+  docker rm -f "$ROGUE_NAME" "$ROGUE_UNRELATED_NAME" "$API_NAME" "$BUILDER_NAME" "$RESTORE_PG_NAME" "$PG_NAME" >/dev/null 2>&1 || true
   docker rmi "$VALIDATOR_IMG" >/dev/null 2>&1 || true
   docker network rm "$DRILL_NET" >/dev/null 2>&1 || true
   docker network rm "$NET" >/dev/null 2>&1 || true
@@ -261,11 +264,12 @@ target_db="drill_restore_$$"
 
 # --- regression: a production-project member on the drill network is REFUSED ------
 # Docker bridge connectivity is bidirectional, so the disposable restore database
-# on the drill network must never share that network with a production container —
-# this is the unsafe topology that used to be produced by running the validators
-# on the production api container joined to the drill network.  Join a rogue
-# container carrying the production Compose project to the drill network and
-# prove the restore refuses it before touching anything.
+# on the drill network must never share that network with any container other
+# than the restore postgres itself — this is the unsafe topology that used to be
+# produced by running the validators on the production api container joined to
+# the drill network.  Join a rogue container carrying the production Compose
+# project to the drill network and prove the restore refuses it before touching
+# anything.
 docker run -d --name "$ROGUE_NAME" --network "$DRILL_NET" \
   --label "com.docker.compose.project=$COMPOSE_PROJECT_LABEL" \
   "$VALIDATOR_IMG" tail -f /dev/null >/dev/null
@@ -282,6 +286,29 @@ grep -q "production-project member" "$TMP/rogue.out" \
   || { echo "restore refused for the wrong reason" >&2; cat "$TMP/rogue.out" >&2; exit 1; }
 echo "DR_INTEGRATION_ROGUE_MEMBER=REFUSED"
 docker rm -f "$ROGUE_NAME" >/dev/null
+
+# --- NEW regression: an UNRELATED, UNLABELLED rogue container on the drill -----
+# --- network is ALSO refused (review finding) --------------------------------
+# A compromised or mistakenly attached non-production container — with no
+# production Compose project label and not the production postgres — can reach
+# the disposable restore database just as a production one can.  The restore
+# must refuse ANY drill-network member other than the disposable restore
+# postgres itself.
+docker run -d --name "$ROGUE_UNRELATED_NAME" --network "$DRILL_NET" \
+  "$VALIDATOR_IMG" tail -f /dev/null >/dev/null
+if BODYSENSE_DEPLOY_ROOT="$ROOT" bash scripts/restore-production-backup.sh \
+  --object-key "$object_key" --target-db "$target_db" --target-project drill \
+  --restore-pg "container:$RESTORE_PG_NAME" \
+  --confirm-target-isolated=yes --validator-runner docker \
+  > "$TMP/rogue-unrelated.out" 2>&1; then
+  echo "restore unexpectedly PASSED with an unrelated member on the drill network" >&2
+  cat "$TMP/rogue-unrelated.out" >&2
+  exit 1
+fi
+grep -q "unrelated container" "$TMP/rogue-unrelated.out" \
+  || { echo "restore refused for the wrong reason" >&2; cat "$TMP/rogue-unrelated.out" >&2; exit 1; }
+echo "DR_INTEGRATION_ROGUE_UNRELATED=REFUSED"
+docker rm -f "$ROGUE_UNRELATED_NAME" >/dev/null
 
 BODYSENSE_DEPLOY_ROOT="$ROOT" bash scripts/restore-production-backup.sh \
   --object-key "$object_key" --target-db "$target_db" --target-project drill \

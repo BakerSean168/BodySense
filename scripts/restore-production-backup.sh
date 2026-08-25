@@ -52,14 +52,16 @@
 #      network; publishing NO host ports; and operator-declared labels
 #      `bodysense.restore-project=<--target-project>` and
 #      `bodysense.disposable-restore=yes` on the container itself.  The declared
-#      drill network must then also contain NO production-member container: every
-#      container attached to the drill network is enumerated and any member that
-#      is the production postgres container itself or belongs to the production
-#      Compose project is a refusal — Docker bridge connectivity is bidirectional,
-#      so a production container joined to the drill network could reach the
-#      disposable restore database.  Any docker inspect / network enumeration
-#      failure is fail-closed (refused), never treated as an empty "proves
-#      isolation" result.
+#      drill network must then also contain ONLY the disposable restore
+#      container: every container attached to the drill network is enumerated and
+#      the restore is refused unless the membership is exactly the restore
+#      container itself — any member that is the production postgres container,
+#      carries the production Compose project, or is an unrelated/compromised
+#      container is a refusal.  Docker bridge connectivity is bidirectional, so
+#      any container joined to the drill network could reach the disposable
+#      restore database.  Any docker inspect / network enumeration failure, an
+#      empty member set, or a member set that does not include the restore
+#      container itself is fail-closed (refused), never treated as an isolated
 #   3. --target-db must differ from the production DB_NAME and must not already
 #      exist on the disposable restore server; it is created fresh there and
 #      never dropped or reused by this script.
@@ -452,19 +454,26 @@ if [ -n "$other_networks" ]; then
   fail "refusing a restore container attached to networks beyond its declared drill network '$restore_network': $other_list"
 fi
 
-# --- Refuse any production-project member on the drill network -------------------
-# Docker bridge connectivity is bidirectional: a production container joined to
-# the drill network could reach the disposable restore database and be reached
-# by it.  The restore container's own network/port/label proofs above do not
-# cover OTHER containers on that network, so every member of the declared drill
-# network is enumerated and any member that is the production postgres container
-# itself or belongs to the production Compose project is a refusal (this is what
-# rejects joining the production api container to the drill network for the
-# validator binaries).  A member set that cannot be inspected is a refusal,
-# never treated as empty.
+# --- Require the drill network to contain EXACTLY the restore container -----------
+# Docker bridge connectivity is bidirectional: a container joined to the drill
+# network could reach the disposable restore database and be reached by it.  The
+# restore container's own network/port/label proofs above do not cover OTHER
+# containers on that network, so every member of the declared drill network is
+# enumerated and the restore is refused unless the membership is EXACTLY the
+# disposable restore container itself.  This is strictly stronger than refusing
+# only production-labelled members: it also refuses an unrelated, compromised or
+# mistakenly-attached non-production container, and it refuses the unsafe
+# topology of running validators on the production api container joined to the
+# drill network.  The restore container must itself be present among the members
+# (it is attached to its declared network), and:
+#   - any member that is the production postgres container,
+#   - any member that carries the production Compose project, or
+#   - any member that is not the disposable restore container at all (whether
+#     labelled or unlabelled, production or unrelated)
+# is a refusal.  An un-inspectable or empty membership set is refused too, never
+# treated as an empty "no stray member" proof.
 # Applicable in recovery mode too: the membership of the drill network is a
-# target-side fact that is always inspectable, and members claiming the
-# operator-declared production project are refused.
+# target-side fact that is always inspectable and must equal the restore target.
 drill_members=$(docker network inspect "$restore_network" | python3 -c '
 import json, sys
 try:
@@ -475,23 +484,30 @@ try:
 except Exception:
     sys.exit(1)
 ') || fail "unable to inspect the drill network $restore_network container membership; refusing the restore because isolation cannot be proven"
-if [ "$production_proof_skipped" = yes ]; then
-  drill_project_guard="$RECOVERY_PRODUCTION_PROJECT"
-else
-  drill_project_guard="$prod_compose"
-fi
+drill_seen_restore=no
+drill_issues=""
 while IFS= read -r member; do
   [ -n "$member" ] || continue
   member_id=$(inspect_str "$member" Id)
   [ -n "$member_id" ] || fail "unable to inspect drill network member $member on '$restore_network'; refusing the restore because isolation cannot be proven"
-  if [ "$production_proof_skipped" != yes ] && [ "$member_id" = "$prod_id" ]; then
-    fail "refusing a restore whose drill network '$restore_network' contains the production postgres container ($member): a production container on the drill network can reach the disposable restore database"
+  if [ "$member_id" = "$restore_id" ]; then
+    drill_seen_restore=yes
+    continue
   fi
   member_compose=$(inspect_str "$member" Config Labels com.docker.compose.project)
-  if [ -n "$member_compose" ] && [ -n "$drill_project_guard" ] && [ "$member_compose" = "$drill_project_guard" ]; then
-    fail "refusing a restore whose drill network '$restore_network' contains a production-project member ($member, compose project '$member_compose'): a production container on the drill network can reach the disposable restore database (Docker bridge connectivity is bidirectional)"
+  if [ "$production_proof_skipped" != yes ] && [ "$member_id" = "$prod_id" ]; then
+    drill_issues="$drill_issues the production postgres container (${member_id}):${member_compose:-}"
+  elif [ -n "$member_compose" ]; then
+    drill_issues="$drill_issues a production-project member (${member_id}, compose project '$member_compose'):"
+  else
+    drill_issues="$drill_issues an unrelated container ($member):"
   fi
 done <<<"$drill_members"
+if [ -n "$drill_issues" ]; then
+  fail "refusing a restore whose drill network '$restore_network' is NOT the disposable restore container's exclusive network; it also contains $drill_issues a non-restore container on the drill network can reach the disposable restore database (Docker bridge connectivity is bidirectional)"
+fi
+[ "$drill_seen_restore" = yes ] \
+  || fail "refusing a restore whose drill network '$restore_network' does not contain the disposable restore container itself; isolation cannot be proven unless the drill network is the restore container's exclusive network"
 
 # Published host ports make the target reachable from the host (and any host
 # ingress) even though it is on a dedicated Docker network: a drill server must

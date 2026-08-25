@@ -166,6 +166,34 @@ case "$1" in
       name="${3:-}"
       if [ -n "${FAKEDOCKER_NETWORK_DIR:-}" ] && [ -n "$name" ] && [ -f "$FAKEDOCKER_NETWORK_DIR/$name.json" ]; then
         cat "$FAKEDOCKER_NETWORK_DIR/$name.json"
+      elif [ -n "${FAKEDOCKER_INSPECT_DIR:-}" ]; then
+        # NO explicit membership override: model the REAL docker network by
+        # scanning the inspect store for every container whose
+        # NetworkSettings.Networks declares this network and emit those
+        # containers as members.  This reflects reality (the disposable restore
+        # container is attached to its declared drill network, so it appears as
+        # a member) and lets the stricter "membership must equal exactly the
+        # restore container" guard be exercised hermetically.
+        RESTORE_MEMBERS="$(python3 - "$FAKEDOCKER_INSPECT_DIR" "$name" <<'PYINFER'
+import json, os, sys
+d, net = sys.argv[1], sys.argv[2]
+members = {}
+if d:
+    for f in os.listdir(d):
+        if not f.endswith(".json"):
+            continue
+        try:
+            c = json.load(open(os.path.join(d, f)))[0]
+        except Exception:
+            continue
+        ns = (c.get("NetworkSettings", {}) or {}).get("Networks", {}) or {}
+        if net in ns:
+            cid = c.get("Id", f[:-5])
+            members[cid] = {"Name": c.get("Name", cid)}
+print(json.dumps([{"Name": net, "Containers": members}]))
+PYINFER
+)"
+        printf '%s' "$RESTORE_MEMBERS"
       else
         printf '[{"Name":"%s","Containers":{}}]' "$name"
       fi
@@ -177,8 +205,12 @@ case "$1" in
       if [ -f "$FAKEDOCKER_INSPECT_DIR/$name.json" ]; then
         cat "$FAKEDOCKER_INSPECT_DIR/$name.json"
       else
-        printf '[{"Id":"%s","State":{"Running":true},"HostConfig":{"NetworkMode":"%s-net","PortBindings":{}},"Config":{"Image":"example-registry/bodysense-api:test","Labels":{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes","bodysense.restore-network":"%s-net"}},"NetworkSettings":{"Networks":{"%s-net":{}}}}]' \
-          "$name" "$name" "$name" "$name"
+        # Persist the default inspect so the network-membership inference above
+        # can later find this container attached to its `<name>-net` network.
+        printf '[{"Id":"%s","State":{"Running":true},"HostConfig":{"NetworkMode":"%s-net","PortBindings":{}},"Config":{"Image":"example-registry/bodysense-api:test","Name":"%s","Labels":{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes","bodysense.restore-network":"%s-net"}},"NetworkSettings":{"Networks":{"%s-net":{}}}}]' \
+          "$name" "$name" "$name" "$name" "$name" \
+          > "$FAKEDOCKER_INSPECT_DIR/$name.json"
+        cat "$FAKEDOCKER_INSPECT_DIR/$name.json"
       fi
       exit 0
     fi
@@ -909,26 +941,40 @@ run_restore_guard "publishes host ports" \
   --object-key "$OBJKEY" --target-db drill_ports --target-project drill \
   --restore-pg container:restore-published-ports --confirm-target-isolated=yes
 
-# 5d4. THE DRILL NETWORK ITSELF MUST CONTAIN NO PRODUCTION MEMBER (review
-#      finding): Docker bridge connectivity is bidirectional, so a production
-#      container joined to the drill network could reach the disposable restore
-#      database.  The restore container's own labels/ports/network proofs do not
-#      cover OTHER containers on the drill network, so the restore refuses the
-#      moment any member of the declared drill network is the production postgres
-#      container itself or carries the production Compose project — this is what
-#      rejects running the validators on the production api container.
+# 5d4. THE DRILL NETWORK MUST CONTAIN EXACTLY THE DISPOSABLE RESTORE CONTAINER
+#      (review finding): Docker bridge connectivity is bidirectional, so ANY
+#      container joined to the drill network — production or not, labelled or
+#      unlabelled — could reach the disposable restore database.  The restore
+#      container's own labels/ports/network proofs do not cover OTHER containers
+#      on the drill network, so the restore refuses the moment any member of the
+#      declared drill network is anything other than the disposable restore
+#      container itself: the production postgres container, a production-project
+#      member, or an unrelated/compromised container is equally refused.  This is
+#      what rejects running the validators on the production api container.
 write_inspect pg1 true \
   '{"com.docker.compose.project":"docker"}' \
   '{"pg1-net":{}}'
 write_inspect docker-api-1 true \
   '{"com.docker.compose.project":"docker"}' \
   '{"default":{}}' default '{}' '"docker-api-image:1.0"'
+write_inspect drill-mem-empty true \
+  '{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes","bodysense.restore-network":"empty-member-net"}' \
+  '{"empty-member-net":{}}'
+# A drill network whose membership does NOT include the disposable restore
+# container itself (here the empty inferred/fake membership) is refused: the
+# drill network must be the restore container's exclusive network.
+printf '[{"Name":"empty-member-net","Containers":{}}]' \
+  > "$FAKEDOCKER_NETWORK_DIR/empty-member-net.json"
+run_restore_guard "does not contain the disposable restore container itself" \
+  --object-key "$OBJKEY" --target-db drill_memempty --target-project drill \
+  --restore-pg container:drill-mem-empty --confirm-target-isolated=yes
+rm -f "$FAKEDOCKER_NETWORK_DIR/empty-member-net.json"
 write_inspect drill-prod-member true \
   '{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes","bodysense.restore-network":"prod-member-net"}' \
   '{"prod-member-net":{}}'
 printf '[{"Name":"prod-member-net","Containers":{"docker-api-1":{"Name":"docker-api-1"}}}]' \
   > "$FAKEDOCKER_NETWORK_DIR/prod-member-net.json"
-run_restore_guard "drill network 'prod-member-net' contains a production-project member" \
+run_restore_guard "a production-project member" \
   --object-key "$OBJKEY" --target-db drill_member --target-project drill \
   --restore-pg container:drill-prod-member --confirm-target-isolated=yes
 rm -f "$FAKEDOCKER_NETWORK_DIR/prod-member-net.json"
@@ -937,10 +983,29 @@ write_inspect drill-prod-pg true \
   '{"prod-pg-net":{}}'
 printf '[{"Name":"prod-pg-net","Containers":{"pg1":{"Name":"pg2"}}}]' \
   > "$FAKEDOCKER_NETWORK_DIR/prod-pg-net.json"
-run_restore_guard "drill network 'prod-pg-net' contains the production postgres container (pg1)" \
+run_restore_guard "the production postgres container" \
   --object-key "$OBJKEY" --target-db drill_prodpg --target-project drill \
   --restore-pg container:drill-prod-pg --confirm-target-isolated=yes
 rm -f "$FAKEDOCKER_NETWORK_DIR/prod-pg-net.json"
+# NEW REGRESSION (review finding): an UNRELATED, UNLABELLED rogue container on
+# the drill network — with no production Compose project label and not the
+# production postgres — must still be refused.  A compromised or mistakenly
+# attached non-production container on the drill network can reach the
+# disposable restore database just as a production one can, so the membership
+# guard must fail on it, never accept it merely because it is not labelled
+# "production".
+write_inspect rogue-1 true \
+  '{}' \
+  '{"rogue-1-net":{}}'
+write_inspect drill-rogue-member true \
+  '{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes","bodysense.restore-network":"rogue-member-net"}' \
+  '{"rogue-member-net":{}}'
+printf '[{"Name":"rogue-member-net","Containers":{"rogue-1":{"Name":"rogue-1"}}}]' \
+  > "$FAKEDOCKER_NETWORK_DIR/rogue-member-net.json"
+run_restore_guard "an unrelated container" \
+  --object-key "$OBJKEY" --target-db drill_rogue --target-project drill \
+  --restore-pg container:drill-rogue-member --confirm-target-isolated=yes
+rm -f "$FAKEDOCKER_NETWORK_DIR/rogue-member-net.json"
 # A drill-network membership that cannot be enumerated (uninspectable) is a
 # refusal too: never treated as an empty "no production member" proof.
 write_inspect drill-mem-garbage true \
