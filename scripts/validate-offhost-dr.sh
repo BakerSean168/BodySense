@@ -11,10 +11,23 @@
 # container: dedicated drill network (never attached to the production network),
 # disposable labels, running state and distinct container identity.
 #
+# The validators run in SEPARATE disposable validator containers derived from
+# the api image and attached ONLY to the drill network (never inside an api
+# container, never on a network shared with a production container): a
+# validator-image Dockerfile bakes the real validator binaries + migrations at
+# /app, the api container is created from that same image on the production
+# network only, and the restore path derives its disposable validator image from
+# the resolved api container's Config.Image (OFFHOST_VALIDATOR_IMAGE is NOT
+# pinned so the derivation path is exercised).  As a regression for the review
+# finding, the test first joins a production-Compose-project-labeled rogue
+# container to the drill network and proves the restore REFUSES it (Docker
+# bridge connectivity is bidirectional), then removes it and runs a PASSing
+# drill.
+#
 # All container and network names are suffixed with the shell PID so the test
 # can never collide with (or clean up) unrelated containers/networks: the EXIT
 # cleanup only touches resources this run created.  The production postgres is
-# additionally given the network alias `postgres` so the validator container can
+# additionally given the network alias `postgres` so a validator container can
 # reach it by the same DNS name production uses (mirroring the Compose service
 # name) while its actual container name stays unique to this run.
 #
@@ -36,9 +49,18 @@ RESTORE_PG_NAME="bodysense-dr-restore-pg-$$" # disposable, explicitly isolated r
 # — production does NOT set container_name, so the running container is
 # "docker-api-1", never a literal "api". Naming this one "bodysense-dr-api-<pid>"
 # (and pinning it via OFFHOST_API_CONTAINER) proves the restore path resolves
-# the validator container instead of assuming "api".
+# the validator container instead of assuming "api".  The api container is
+# attached to the production network only; its Config.Image is the disposable
+# validator image the restore derives for the drill (OFFHOST_VALIDATOR_IMAGE is
+# deliberately NOT pinned so the derivation path is exercised end-to-end).
 API_NAME="bodysense-dr-api-$$"
+ROGUE_NAME="bodysense-dr-rogue-api-$$"
 BUILDER_NAME="bodysense-dr-builder-$$"
+VALIDATOR_IMG="bodysense-dr-validator-img-$$"
+# The production postgres declares a Compose project so the drill-network
+# membership guard can recognize production-project members (and the rogue
+# regression below joins one to the drill network to prove a refusal).
+COMPOSE_PROJECT_LABEL="bodysense-dr-prod-$$"
 export DB_USER=bodysense DB_NAME=bodysense DB_PASSWORD=0123456789abcdef
 
 TMP="$(mktemp -d)"
@@ -48,7 +70,8 @@ CORRUPT_FILE="$TMP/corrupt.on"
 export TMP ROOT CORRUPT_FILE
 
 cleanup() {
-  docker rm -f "$API_NAME" "$BUILDER_NAME" "$RESTORE_PG_NAME" "$PG_NAME" >/dev/null 2>&1 || true
+  docker rm -f "$ROGUE_NAME" "$API_NAME" "$BUILDER_NAME" "$RESTORE_PG_NAME" "$PG_NAME" >/dev/null 2>&1 || true
+  docker rmi "$VALIDATOR_IMG" >/dev/null 2>&1 || true
   docker network rm "$DRILL_NET" >/dev/null 2>&1 || true
   docker network rm "$NET" >/dev/null 2>&1 || true
   if [ -n "${SERVER_PID:-}" ] && kill -0 "$SERVER_PID" 2>/dev/null; then
@@ -132,6 +155,7 @@ export OFFHOST_PG_PREFIX="$TMP/fake-pg" PG_NAME
 docker network create "$NET" >/dev/null
 docker network create "$DRILL_NET" >/dev/null
 docker run -d --name "$PG_NAME" --network "$NET" --network-alias postgres \
+  --label "com.docker.compose.project=$COMPOSE_PROJECT_LABEL" \
   -e "POSTGRES_USER=$DB_USER" -e "POSTGRES_PASSWORD=$DB_PASSWORD" -e "POSTGRES_DB=$DB_NAME" \
   "$PG_IMAGE" >/dev/null
 
@@ -177,21 +201,30 @@ docker exec -w /build "$BUILDER_NAME" sh -c \
    CGO_ENABLED=0 go build -o /out/migration-validator ./cmd/migration-validator' \
   || { echo "validator build failed" >&2; exit 1; }
 
-# --- api container: hosts the validator binaries + migrations (drill-only) -------
-# The validator container name is deliberately not "api": restore-production-backup.sh
-# must resolve it (here via OFFHOST_API_CONTAINER, mirroring production's default
-# "<compose-project>-api-1" naming) or the docker-runner validation would fail on
-# the real Compose deployment.  The api container hangs off BOTH networks so it
-# can reach the production postgres (migration baseline) AND the disposable
-# restore postgres (drill validation) — but the production postgres and the
-# restore postgres are never attached to the same network.
-mkdir -p "$TMP/validators"
-docker cp "$BUILDER_NAME":/out/. "$TMP/validators/" >/dev/null
+# --- validator image: bakes the real binaries + migrations at /app --------------
+# The disposable validator containers the restore drill runs derive from the api
+# container's Config.Image, so an image with /app/validators + /app/migrations
+# (exactly what the api image carries post-build) is built from the same repo
+# toolchain.  The api container is created from this SAME image so the restore's
+# image-derivation path (OFFHOST_API_CONTAINER -> Config.Image) is exercised
+# end-to-end; OFFHOST_VALIDATOR_IMAGE is deliberately NOT pinned.
+mkdir -p "$TMP/validator-image/validators"
+docker cp "$BUILDER_NAME":/out/. "$TMP/validator-image/validators/" >/dev/null
+cp -R "$PWD/apps/api/migrations" "$TMP/validator-image/migrations"
+printf 'FROM %s\nWORKDIR /app\nCOPY validators/ /app/validators/\nCOPY migrations/ /app/migrations/\n' \
+  "$ALPINE_IMAGE" > "$TMP/validator-image/Dockerfile"
+docker build -t "$VALIDATOR_IMG" "$TMP/validator-image" >/dev/null
+
+# --- api container: the production api container stand-in, on the production
+# --- network ONLY (never joined to the drill network) --------------------------
+# The container name is deliberately not "api": restore-production-backup.sh must
+# resolve it (here via OFFHOST_API_CONTAINER, mirroring production's default
+# "<compose-project>-api-1" naming) and read its Config.Image for the disposable
+# validator image.  It hangs off the production network only so it can run the
+# migration baseline against production postgres; joining it to the drill network
+# is precisely the unsafe topology the membership guard refuses.
 docker run -d --name "$API_NAME" --network "$NET" \
-  -v "$TMP/validators:/app/validators:ro" \
-  -v "$PWD/apps/api/migrations:/app/migrations:ro" \
-  "$ALPINE_IMAGE" tail -f /dev/null >/dev/null
-docker network connect "$DRILL_NET" "$API_NAME" >/dev/null
+  "$VALIDATOR_IMG" tail -f /dev/null >/dev/null
 export OFFHOST_PGCONTAINER_ID OFFHOST_API_CONTAINER
 OFFHOST_PGCONTAINER_ID=$(docker inspect -f '{{.Id}}' "$PG_NAME")
 OFFHOST_API_CONTAINER="$API_NAME"
@@ -225,6 +258,31 @@ echo "DR_INTEGRATION_FRESHNESS=PASS"
 
 # --- full restore drill into a disposable database on the disposable server --------
 target_db="drill_restore_$$"
+
+# --- regression: a production-project member on the drill network is REFUSED ------
+# Docker bridge connectivity is bidirectional, so the disposable restore database
+# on the drill network must never share that network with a production container —
+# this is the unsafe topology that used to be produced by running the validators
+# on the production api container joined to the drill network.  Join a rogue
+# container carrying the production Compose project to the drill network and
+# prove the restore refuses it before touching anything.
+docker run -d --name "$ROGUE_NAME" --network "$DRILL_NET" \
+  --label "com.docker.compose.project=$COMPOSE_PROJECT_LABEL" \
+  "$VALIDATOR_IMG" tail -f /dev/null >/dev/null
+if BODYSENSE_DEPLOY_ROOT="$ROOT" bash scripts/restore-production-backup.sh \
+  --object-key "$object_key" --target-db "$target_db" --target-project drill \
+  --restore-pg "container:$RESTORE_PG_NAME" \
+  --confirm-target-isolated=yes --validator-runner docker \
+  > "$TMP/rogue.out" 2>&1; then
+  echo "restore unexpectedly PASSED with a production-project member on the drill network" >&2
+  cat "$TMP/rogue.out" >&2
+  exit 1
+fi
+grep -q "production-project member" "$TMP/rogue.out" \
+  || { echo "restore refused for the wrong reason" >&2; cat "$TMP/rogue.out" >&2; exit 1; }
+echo "DR_INTEGRATION_ROGUE_MEMBER=REFUSED"
+docker rm -f "$ROGUE_NAME" >/dev/null
+
 BODYSENSE_DEPLOY_ROOT="$ROOT" bash scripts/restore-production-backup.sh \
   --object-key "$object_key" --target-db "$target_db" --target-project drill \
   --restore-pg "container:$RESTORE_PG_NAME" \

@@ -223,7 +223,13 @@ OSS/S3-compatible destination (Alibaba Cloud OSS `cn-hangzhou`):
   declaration of `bodysense.restore-project=<target-project>`
   and `bodysense.disposable-restore=yes` (drill containers must therefore run on
   their own dedicated drill network, never on the production postgres network,
-  publishing no host ports).
+  publishing no host ports). The declared drill network itself must contain no
+  production container: every member of `bodysense.restore-network` is
+  enumerated and any member that is the production postgres container or carries
+  the production `com.docker.compose.project` label refuses the drill (Docker
+  bridge connectivity is bidirectional, so nowhere — including an api container
+  joined to the drill network to host validators — may a production container
+  share the drill network with the disposable restore database).
   All `psql`/`pg_restore` and `docker cp`
   operations target that disposable server exclusively. The target must differ
   from `DB_NAME`, the project must differ from `bodysense`, the target database
@@ -235,9 +241,13 @@ OSS/S3-compatible destination (Alibaba Cloud OSS `cn-hangzhou`):
   disposable server with `--no-owner --no-privileges`, verifies the restored
   schema revision equals the backup metadata, and runs the `domain-validator`
   and `migration-validator` binaries (built into the API image at
-  `/app/validators/`) against the restored database. The database password
+  `/app/validators/`) against the restored database inside a **separate
+  disposable validator container** (`docker run --rm`) taken from the api
+  container's `Config.Image` (or the pinned `OFFHOST_VALIDATOR_IMAGE`) and
+  attached only to the drill network — the production api container is never
+  joined to the drill network. The database password
   reaches the validators only through `PGPASSWORD` in the process environment
-  (injected via an `--env-file` on the `docker exec` path), never through
+  (injected via an `--env-file` on the `docker run` path), never through
   `-database-url` or any process command line.
 - Object-store credentials are host-only least-privilege keys in
   `.env.production.local` (`OFFHOST_BACKUP_ACCESS_KEY` /
