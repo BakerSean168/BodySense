@@ -11,7 +11,10 @@
 #   - validates the archive with pg_restore --list;
 #   - restores with --no-owner/--no-privileges;
 #   - confirms the restored schema revision matches the backup metadata;
-#   - runs the domain + migration validators against the disposable target.
+#   - runs the domain + migration validators against the disposable target in a
+#     SEPARATE disposable validator container derived from the API image and
+#     attached ONLY to the declared drill network (never on the production api
+#     container, never on any network that also carries production traffic).
 #
 # Usage (normal drill):
 #   restore-production-backup.sh \
@@ -48,9 +51,15 @@
 #      `bodysense.restore-network=<network>` that is the container's ONLY
 #      network; publishing NO host ports; and operator-declared labels
 #      `bodysense.restore-project=<--target-project>` and
-#      `bodysense.disposable-restore=yes` on the container itself.  Any docker
-#      inspect / network enumeration failure is fail-closed (refused), never
-#      treated as an empty "proves isolation" result.
+#      `bodysense.disposable-restore=yes` on the container itself.  The declared
+#      drill network must then also contain NO production-member container: every
+#      container attached to the drill network is enumerated and any member that
+#      is the production postgres container itself or belongs to the production
+#      Compose project is a refusal — Docker bridge connectivity is bidirectional,
+#      so a production container joined to the drill network could reach the
+#      disposable restore database.  Any docker inspect / network enumeration
+#      failure is fail-closed (refused), never treated as an empty "proves
+#      isolation" result.
 #   3. --target-db must differ from the production DB_NAME and must not already
 #      exist on the disposable restore server; it is created fresh there and
 #      never dropped or reused by this script.
@@ -62,12 +71,18 @@
 #   7. the database password reaches the validators only via PGPASSWORD in the
 #      process environment (docker: injected through an --env-file, never on a
 #      command line; golang: inherited), and is never packed into -database-url.
-#   8. backup metadata must carry an exact, verifiable schema revision
+#   8. the validators run (docker runner) inside a SEPARATE disposable validator
+#      container derived from the API image — taken from OFFHOST_VALIDATOR_IMAGE
+#      or read off the resolved api container's Config.Image — attached ONLY to
+#      the declared drill network and removed when it exits.  The production api
+#      container is never joined to the drill network (a production container on
+#      the drill network is refused by guard 2's membership proof).
+#   9. backup metadata must carry an exact, verifiable schema revision
 #      (<version>:false, i.e. a proven-clean revision); `unknown`
 #      `uninitialized`, empty, or dirty/malformed metadata is refused
 #      (fail-closed), and the restored database revision must equal the metadata
 #      revision — the gate is never skipped.
-#   9. recovery mode (--recovery-mode=yes, or OFFHOST_RECOVERY_MODE=true) is ONLY
+#   10. recovery mode (--recovery-mode=yes, or OFFHOST_RECOVERY_MODE=true) is ONLY
 #      for actual recovery from a production outage, when the production
 #      Postgres container cannot be inspected.  In recovery mode the proof that
 #      production and the target cannot share a container/network is NOT claimed
@@ -241,8 +256,11 @@ postgres_container_id() {
   fi
 }
 
-# The api service container hosts the validator binaries (/app/validators) and
-# the migrations. docker-compose.prod.yml does NOT set container_name, so with
+# The api service container's image hosts the validator binaries
+# (/app/validators) and the migrations at the same revision; the drill derives
+# its disposable validator container image from it (see validator_image below) —
+# the api container itself is read-only input and is NEVER joined to the drill
+# network. docker-compose.prod.yml does NOT set container_name, so with
 # the configured Compose project the running container is normally
 # "<project>-api-1" (e.g. "docker-api-1"), never a literal "api". Resolve it the
 # same way production postgres is found; operators/tests can pin it explicitly
@@ -434,6 +452,47 @@ if [ -n "$other_networks" ]; then
   fail "refusing a restore container attached to networks beyond its declared drill network '$restore_network': $other_list"
 fi
 
+# --- Refuse any production-project member on the drill network -------------------
+# Docker bridge connectivity is bidirectional: a production container joined to
+# the drill network could reach the disposable restore database and be reached
+# by it.  The restore container's own network/port/label proofs above do not
+# cover OTHER containers on that network, so every member of the declared drill
+# network is enumerated and any member that is the production postgres container
+# itself or belongs to the production Compose project is a refusal (this is what
+# rejects joining the production api container to the drill network for the
+# validator binaries).  A member set that cannot be inspected is a refusal,
+# never treated as empty.
+# Applicable in recovery mode too: the membership of the drill network is a
+# target-side fact that is always inspectable, and members claiming the
+# operator-declared production project are refused.
+drill_members=$(docker network inspect "$restore_network" | python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)[0]
+    containers = d.get("Containers") or {}
+    for cid in containers:
+        print(cid)
+except Exception:
+    sys.exit(1)
+') || fail "unable to inspect the drill network $restore_network container membership; refusing the restore because isolation cannot be proven"
+if [ "$production_proof_skipped" = yes ]; then
+  drill_project_guard="$RECOVERY_PRODUCTION_PROJECT"
+else
+  drill_project_guard="$prod_compose"
+fi
+while IFS= read -r member; do
+  [ -n "$member" ] || continue
+  member_id=$(inspect_str "$member" Id)
+  [ -n "$member_id" ] || fail "unable to inspect drill network member $member on '$restore_network'; refusing the restore because isolation cannot be proven"
+  if [ "$production_proof_skipped" != yes ] && [ "$member_id" = "$prod_id" ]; then
+    fail "refusing a restore whose drill network '$restore_network' contains the production postgres container ($member): a production container on the drill network can reach the disposable restore database"
+  fi
+  member_compose=$(inspect_str "$member" Config Labels com.docker.compose.project)
+  if [ -n "$member_compose" ] && [ -n "$drill_project_guard" ] && [ "$member_compose" = "$drill_project_guard" ]; then
+    fail "refusing a restore whose drill network '$restore_network' contains a production-project member ($member, compose project '$member_compose'): a production container on the drill network can reach the disposable restore database (Docker bridge connectivity is bidirectional)"
+  fi
+done <<<"$drill_members"
+
 # Published host ports make the target reachable from the host (and any host
 # ingress) even though it is on a dedicated Docker network: a drill server must
 # be attached ONLY to its drill network and publish NO host ports, otherwise it
@@ -582,19 +641,13 @@ log "restored schema revision matches backup metadata ($restored_revision)"
 VALIDATE_RESULT=FAIL
 # shellcheck disable=SC2155
 export PGPASSWORD="$DB_PASSWORD"
-api_container=""
-if [ "$VALIDATOR_RUNNER" = docker ]; then
-  api_container=$(api_container_name)
-  [ -n "$api_container" ] || fail 'unable to resolve the api container that hosts the validators (set OFFHOST_API_CONTAINER)'
-  log "running validators via api container $api_container"
-fi
 # The database password reaches the validators ONLY through the process
 # environment (PGPASSWORD), never through the -database-url argument or any
 # process command line, so the secret cannot appear in /proc/*/cmdline.
-# docker exec does not inherit host env vars, so the secret is injected with an
-# --env-file (mode 0600) rather than `-e PGPASSWORD=...` which would leak it
-# through the docker CLI process argv.  The golang runner inherits the exported
-# PGPASSWORD directly.
+# `docker run --env-file`/`docker exec --env-file` does not inherit host env
+# vars, so the secret is injected with an --env-file (mode 0600) rather than
+# `-e PGPASSWORD=...` which would leak it through the docker CLI process argv.
+# The golang runner inherits the exported PGPASSWORD directly.
 VALIDATOR_ENV_FILE="$WORK_DIR/validator-pgpw.env"
 umask 077
 printf 'PGPASSWORD=%s\n' "$DB_PASSWORD" > "$VALIDATOR_ENV_FILE"
@@ -605,11 +658,46 @@ cleanup_on_exit() {
   rm -f "$VALIDATOR_ENV_FILE"
 }
 trap cleanup_on_exit EXIT
+
+# The validators run inside SEPARATE disposable validator containers derived
+# from the API image and attached ONLY to the restore target's declared drill
+# network — never on the production api container and never on a network that
+# also carries production traffic.  Docker bridge networking is bidirectional,
+# so joining the production api container to the drill network would let the
+# disposable restore database reach production (and vice versa); the
+# drill-network-membership guard above already refuses that topology.  The api
+# container is read-only input here (its image is taken as the validator image);
+# it is never joined to the drill network.
+validator_image() {
+  if [ -n "${OFFHOST_VALIDATOR_IMAGE:-}" ]; then
+    printf '%s' "$OFFHOST_VALIDATOR_IMAGE"
+    return 0
+  fi
+  local c img
+  c=$(api_container_name)
+  [ -n "$c" ] || fail 'unable to resolve the api container whose image hosts the validators (set OFFHOST_API_CONTAINER or OFFHOST_VALIDATOR_IMAGE)'
+  img=$(inspect_str "$c" Config Image)
+  [ -n "$img" ] || fail "unable to read the api container $c image (the source of the validator image); set OFFHOST_VALIDATOR_IMAGE explicitly"
+  printf '%s' "$img"
+}
+
+VALIDATOR_IMAGE=""
+if [ "$VALIDATOR_RUNNER" = docker ]; then
+  VALIDATOR_IMAGE=$(validator_image)
+  log "running validators in disposable containers derived from the api image $VALIDATOR_IMAGE, attached only to the drill network $restore_network"
+fi
 run_validator() {
   local bin="$1"; shift
   case "$VALIDATOR_RUNNER" in
     docker)
-      docker exec --env-file "$VALIDATOR_ENV_FILE" "$api_container" "/app/validators/$bin" "$@" || return 1
+      # A fresh disposable container derived from the API image, attached only
+      # to the drill network (the image's WORKDIR /app carries /app/migrations),
+      # running the validator binary, and removed when it exits.
+      docker run --rm --network "$restore_network" \
+        -l bodysense.disposable-restore=yes \
+        --env-file "$VALIDATOR_ENV_FILE" \
+        --entrypoint "/app/validators/$bin" \
+        "$VALIDATOR_IMAGE" "$@" || return 1
       ;;
     golang)
       # Development/hermetic runner; requires a source checkout at the repo root.
@@ -622,10 +710,8 @@ run_validator() {
 }
 
 if [ "$VALIDATOR_RUNNER" = docker ]; then
-  # The api container resolves the disposable restore container by its Docker
-  # network name/id; operators must run the restore container on a drill network
-  # the api container is also attached to (but never on the production postgres
-  # network — that is refused above).
+  # The validator container resolves the disposable restore container by its
+  # Docker network name on the shared drill network.
   dsn_host="$RESTORE_TARGET"
 else
   dsn_host=127.0.0.1

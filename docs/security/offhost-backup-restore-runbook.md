@@ -38,6 +38,8 @@ Non-secret settings in `.env.production` (tracked):
 | `OFFHOST_BACKUP_SSE` | `AES256` | PutObject server-side encryption (`AES256` or `aws:kms`); empty sends no SSE header (only for buckets with default SSE) |
 | `OFFHOST_RECOVERY_MODE` | `false` | let a restore proceed when production is down (skips only the production-side isolation proofs; see §5) |
 | `OFFHOST_RECOVERY_PRODUCTION_PROJECT` | `bodysense` | production compose project name used in recovery mode |
+| `OFFHOST_API_CONTAINER` | (Compose `<project>-api-1`) | resolve the api container whose `Config.Image` is the disposable validator image (also for the migration baseline) |
+| `OFFHOST_VALIDATOR_IMAGE` | (derived from `Config.Image`) | pin the disposable validator image the drill runs validators from |
 | `OFFHOST_BACKUP_ALERT_CMD` | (empty) | command run on freshness failure |
 | `OFFHOST_BACKUP_PRIVACY_PROOF` | `acl+policy` | destination-privacy proof mode: `acl+policy` (default, strongest) verifies the bucket ACL **and** `GetBucketPolicyStatus` fail-closed; `acl` opts into ACL-only proof for stores such as Alibaba OSS that do not implement policy status |
 | `OFFHOST_BACKUP_MAINTENANCE_SUPPRESS` | `false` | `true` makes the scheduled freshness check exit 0 with an "intentionally suppressed" log only while `OFFHOST_BACKUP_ENABLED!=true` (explicit acknowledgement of a maintenance window); any other value is refused |
@@ -215,20 +217,23 @@ docker run -d --name "$restore_pg" --network "$drill_net" \
   -e POSTGRES_USER=bodysense -e POSTGRES_PASSWORD=<...> -e POSTGRES_DB=postgres \
   pgvector/pgvector:pg18
 
-# the api container hosts the validator binaries; the script execs into it to
-# run them against the disposable restore database, so it must be attached to
-# the drill network as well (reachability is one-way: the restore container
-# stays off the production network).
+# the validators run inside SEPARATE disposable validator containers derived from
+# the api image and attached ONLY to the drill network: never inside the
+# production api container, and never by joining the production api container to
+# the drill network (Docker bridge connectivity is bidirectional, so such a
+# container could reach the disposable restore database — the membership guard
+# would refuse it anyway).  The validator image is taken from the resolved api
+# container's Config.Image unless pinned explicitly with OFFHOST_VALIDATOR_IMAGE.
 OFFHOST_API_CONTAINER=docker-api-1
-docker network connect "$drill_net" "$OFFHOST_API_CONTAINER"
+# optional, to pin the drill validator image explicitly:
+#   OFFHOST_VALIDATOR_IMAGE=registry.example.com/bodysense-api:<tag>
 # Evidence is captured BEFORE teardown, then the drill is fully dismantled even
-# on failure: disconnect the api container, remove the disposable restore
-# container and its dedicated drill network, so nothing disposable survives the
-# drill (a leftover restore-pg box or network would be a future isolation risk).
+# on failure: remove the disposable restore container and its dedicated drill
+# network, so nothing disposable survives the drill (a leftover restore-pg box
+# or network would be a future isolation risk).
 evidence_dir="$HOME/bodysense-drills/$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$evidence_dir"
 cleanup() {
-  docker network disconnect "$drill_net" "$OFFHOST_API_CONTAINER" || true
   docker rm -f "$restore_pg" || true
   docker network rm "$drill_net" 2>/dev/null || true
 }
@@ -259,12 +264,19 @@ Requirements enforced by the script:
      or no networking (`none`): a host-network target still reaches
      host-published production endpoints, so it is not provably isolated
      regardless of its Docker-network set;
-- the restore container is attached to any Docker network the production
+   - the restore container is attached to any Docker network the production
      postgres container is attached to (so drill servers run on their own
-     network, never on the production postgres network), or is attached to
-     any network beyond its declared `bodysense.restore-network` (the
-     only-network rule: the declared drill network must be the container's
-     sole network);
+     network, never on the production postgres network), or is attached to any
+     network beyond its declared `bodysense.restore-network` (the only-network
+     rule: the declared drill network must be the container's sole network);
+   - the **drill network itself contains a production container**: every member
+     of the declared `bodysense.restore-network` is enumerated and the restore
+     is refused if any member is the production postgres container or carries
+     the production `com.docker.compose.project` label — Docker bridge
+     connectivity is bidirectional, so a production container (e.g. the api
+     container) joined to the drill network could reach the disposable restore
+     database.  An un-inspectable membership set is refused too, never treated
+     as an empty "no production member" result;
    - the restore container publishes any host port (`HostConfig.PortBindings`
      non-empty): a host-published target is reachable from the host and not
      provably isolated regardless of its Docker-network set;
@@ -307,22 +319,27 @@ What the drill does:
    enforced;
 8. runs the API's own `migration-validator` and `domain-validator` binaries
    against the restored database (default `--validator-runner docker`, or
-   `--validator-runner golang` from a source checkout) by execing into the **api
-   service container** that hosts `/app/validators`. The container name is
-   resolved from the running Compose project — production does not set
-   `container_name`, so Compose's default naming is used (`<project>-api-1`,
-   e.g. `docker-api-1`); operators can pin it explicitly with
-   `OFFHOST_API_CONTAINER`. The api container must be attached to the drill
-   network as well as the production network so it can reach the disposable
-   restore container by its Docker network name (never the other way around: the
-   restore container stays off the production network);
+   `--validator-runner golang` from a source checkout) inside a **fresh
+   disposable validator container** run from the api image (`docker run --rm
+   --network <drill network>`), attached ONLY to the drill network and removed
+   when it exits. The validator image is the resolved api container's
+   `Config.Image` (the api container itself is read-only input and is never
+   joined to the drill network) unless pinned with `OFFHOST_VALIDATOR_IMAGE`.
+   The container name is resolved from the running Compose project — production
+   does not set `container_name`, so Compose's default naming is used
+   (`<project>-api-1`, e.g. `docker-api-1`); operators can pin it explicitly
+   with `OFFHOST_API_CONTAINER`. The disposable validator container reaches the
+   disposable restore container by its Docker network name on the shared drill
+   network; the password reaches it only via `PGPASSWORD` in a mode-0600
+   `--env-file`, never on a command line;
 9. prints `RESTORE_RESULT=PASS database=... project=... restore_pg=... object_key=...` on success.
 
 The database password never appears on a process command line: validators
 receive it only via `PGPASSWORD` in their environment — inherited directly by
 the golang runner, or injected through a mode-0600 `--env-file` on the `docker
-exec` path (which also keeps it out of the `docker` CLI argv). The
-`-database-url` passed to the validators contains no password at all.
+run` path into the disposable validator container (which also keeps it out of
+the `docker` CLI argv). The `-database-url` passed to the validators contains
+no password at all.
 
 Optional: `--baseline-version N` migrates through the published production
 baseline before validation. Use `--workdir /path` to keep all artifacts
@@ -340,8 +357,13 @@ beyond its declared drill network, never to the `host`/`none` drivers, and
 publishing no host ports), outside the production Compose project, distinct
 from the production postgres container, and labelled
 `bodysense.restore-project=<target>` + `bodysense.disposable-restore=yes` +
-`bodysense.restore-network=<drill network>`. Network and port inspection is
-fail-closed:
+`bodysense.restore-network=<drill network>`. The declared drill network must
+also contain **no production container**: each member is enumerated and any
+member that is the production postgres container or carries the production
+`com.docker.compose.project` label refuses the drill (Docker bridge
+connectivity is bidirectional; a production container on the drill network —
+e.g. the api container joined to run validators — could reach the disposable
+restore database). Network and port inspection is fail-closed:
 an inspection/parsing error is a refusal, never an empty "shares no network"
 result. Any restored environment that later serves traffic must run the
 erasure recovery/tombstone reconciliation first (see
@@ -364,8 +386,12 @@ proofs still compare against the real production project. Every target-side
 proof still applies unchanged: running, non-host/non-none network mode,
 attached only to the declared dedicated drill network, no published host ports,
 `bodysense.restore-project=<target>`/`bodysense.disposable-restore=yes`/
-`bodysense.restore-network` labels, and a `com.docker.compose.project` label
-that differs from the declared production project. Run it exactly like §5 (the
+`bodysense.restore-network` labels, a `com.docker.compose.project` label
+that differs from the declared production project, and — as a target-side fact
+that is always inspectable — **no member of the declared drill network carrying
+the declared production project** (production itself is down, but a
+production-labelled container joined to the drill network is still refused).
+Run it exactly like §5 (the
 recovery-mode example restore container must declare
 `bodysense.restore-project=<target-project>`):
 
@@ -391,7 +417,7 @@ compare both logs before the recovered environment is put back into service.
   malformed policy-status, the `--policy-proof acl-only` opt-in with its
   `OFFHOST_S3_WARNING`, and the `x-amz-acl=private` + SSE wire headers) — 37
   checks — and `scripts/validate-offhost-dr-unit.sh`
-  (80 checks: backup/retention/freshness, per-mode lock independence (backup and
+  (84 checks: backup/retention/freshness, per-mode lock independence (backup and
   freshness can no longer mask each other), the fail-closed exact
   clean-`<version>:false` schema-revision gates on both the backup and restore
   sides, the private-destination preflight aborting before any upload on a
@@ -402,11 +428,17 @@ compare both logs before the recovered environment is put back into service.
   equality, running state, production-Compose-project membership, host/none
   networking refusal, declared-drill-network enforcement, the only-network rule
   (no networks beyond the declared drill network), the no-published-host-ports
-  rule, fail-closed shared-network and network-enumeration refusal,
+  rule, fail-closed shared-network and network-enumeration refusal, the
+  **drill-network membership guard** (a production-project member or the
+  production postgres container on the drill network is refused; an
+  un-inspectable membership set is refused too), and the
   disposable-label declaration — the
   `--restore-pg` guards, the SHA-256 sidecar syntax/name/digest verification,
   the DB password argv-leak guard (env-only `PGPASSWORD`, never in
-  `-database-url`/argv), the resolved api-container validation path, recovery
+  `-database-url`/argv), the **disposable validator-container path** (validators
+  `docker run --rm` from the resolved api container's `Config.Image`
+  / `OFFHOST_VALIDATOR_IMAGE` on the drill network only, never via the api
+  container itself), recovery
   mode (restore with production down) with its refusals for a target equal to or
   labelled with the production project, the
   systemd timers' timezone-in-`OnCalendar` contract, and the deploy-watch
@@ -417,7 +449,11 @@ compare both logs before the recovered environment is put back into service.
 - **Docker integration:** `scripts/validate-offhost-dr.sh` runs real PostgreSQL
   18 + real `pg_dump`/`pg_restore` + the real validator binaries end to end,
   restoring into a second, disposable `restore-pg` container, including a data
-  round-trip probe (`dr-probe@example.com`).
+  round-trip probe (`dr-probe@example.com`). It builds a validator image
+  (validators + migrations at `/app`), runs the api-container stand-in on the
+  production network only, derives the drill's disposable validator containers
+  from that image, first proves that a production-Compose-project member joined
+  to the drill network is REFUSED, then removes it and runs a PASSing drill.
 - Both are invoked from `scripts/validate-repo.sh`.
 
 ## 7. Failure playbook

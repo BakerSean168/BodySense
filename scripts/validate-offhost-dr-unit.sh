@@ -103,13 +103,19 @@ exit 0
 PGSTUB
 chmod +x "$BIN/fake-pg"
 
-# --- fake docker stub (validators via --env-file + docker cp + compose ps +
-#     docker inspect for the restore isolation proof) ------------------------
+# --- fake docker stub (validators via `docker run --rm` disposable containers +
+#     docker network inspect membership + docker cp + compose ps + docker inspect
+#     for the restore isolation proof) ------------------------------------------
 # FAKEDOCKER_INSPECT_DIR/<container>.json overrides the default per-container
 # inspect JSON; the default treats every container as a running, disposable
-# restore candidate on its own network (Id = container name).  Tests write a
-# file to force a refusal scenario (shared network, missing label, non-running,
-# production Compose membership, equal IDs).
+# restore candidate on its own network (Id = container name, Image =
+# example-registry/bodysense-api:test).  Tests write a file to force a refusal
+# scenario (shared network, missing label, non-running, production Compose
+# membership, equal IDs, an api container whose Config.Image is the validator
+# image source).  FAKEDOCKER_NETWORK_DIR/<network>.json overrides the
+# `docker network inspect <network>` Containers membership; the default is an
+# empty membership set, and a file can add a "production container on the drill
+# network" member the membership guard must refuse.
 cat > "$BIN/docker" <<'DOCKSTUB'
 #!/usr/bin/env bash
 {
@@ -136,13 +142,42 @@ case "$1" in
       shift
     done
     exit "${FAKEPG_VALIDATOR_EXIT:-0}" ;;
+  run)
+    # Emulate `docker run --rm --network <net> -l ... --env-file <file>
+    # --entrypoint <bin> <image> <args>`: same --env-file recording as `exec`
+    # (secret never in argv), and the container just "runs the validator".
+    while [ "$#" -gt 0 ]; do
+      if [ "$1" = "--env-file" ]; then
+        shift
+        if [ -n "${1:-}" ] && [ -f "$1" ]; then
+          {
+            printf 'ENV_FILE %s\n' "$1"
+            sed 's/^/  /' "$1"
+          } >> "${DOCKER_ENVLOG:-/dev/null}"
+        fi
+        shift
+        continue
+      fi
+      shift
+    done
+    exit "${FAKEPG_VALIDATOR_EXIT:-0}" ;;
+  network)
+    if [ "${2:-}" = inspect ]; then
+      name="${3:-}"
+      if [ -n "${FAKEDOCKER_NETWORK_DIR:-}" ] && [ -n "$name" ] && [ -f "$FAKEDOCKER_NETWORK_DIR/$name.json" ]; then
+        cat "$FAKEDOCKER_NETWORK_DIR/$name.json"
+      else
+        printf '[{"Name":"%s","Containers":{}}]' "$name"
+      fi
+    fi
+    exit 0 ;;
   inspect)
     name="${2:-}"
     if [ -n "${FAKEDOCKER_INSPECT_DIR:-}" ]; then
       if [ -f "$FAKEDOCKER_INSPECT_DIR/$name.json" ]; then
         cat "$FAKEDOCKER_INSPECT_DIR/$name.json"
       else
-        printf '[{"Id":"%s","State":{"Running":true},"HostConfig":{"NetworkMode":"%s-net","PortBindings":{}},"Config":{"Labels":{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes","bodysense.restore-network":"%s-net"}},"NetworkSettings":{"Networks":{"%s-net":{}}}}]' \
+        printf '[{"Id":"%s","State":{"Running":true},"HostConfig":{"NetworkMode":"%s-net","PortBindings":{}},"Config":{"Image":"example-registry/bodysense-api:test","Labels":{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes","bodysense.restore-network":"%s-net"}},"NetworkSettings":{"Networks":{"%s-net":{}}}}]' \
           "$name" "$name" "$name" "$name"
       fi
       exit 0
@@ -157,22 +192,31 @@ chmod +x "$BIN/docker"
 export PATH="$BIN:$PATH"
 FAKEDOCKER_INSPECT_DIR="$TMP/docker-inspect"
 mkdir -p "$FAKEDOCKER_INSPECT_DIR"
+FAKEDOCKER_NETWORK_DIR="$TMP/docker-networks"
+mkdir -p "$FAKEDOCKER_NETWORK_DIR"
 DOCKER_LOG="$TMP/docker.log"
 DOCKER_ENVLOG="$TMP/docker-env.log"
-export FAKEDOCKER_INSPECT_DIR DOCKER_LOG DOCKER_ENVLOG
+export FAKEDOCKER_INSPECT_DIR FAKEDOCKER_NETWORK_DIR DOCKER_LOG DOCKER_ENVLOG
 
-# write_inspect <container> <running> <labels-as-json> <networks-as-json> [netmode] [portbindings]
+# write_inspect <container> <running> <labels-as-json> <networks-as-json> [netmode] [portbindings] [image]
 # The default netmode is the first key of <networks-as-json> (or "none" if empty).
-# The default portbindings is an empty {} object (no host ports published).
+# The default portbindings is an empty {} object (no host ports published).  An
+# image (a JSON string like "registry/bodysense-api:v1") is only added when given.
 write_inspect() {
-  local name="$1" running="$2" labels="$3" networks="$4" netmode="${5:-}" ports="${6:-}"
+  local name="$1" running="$2" labels="$3" networks="$4" netmode="${5:-}" ports="${6:-}" image="${7:-}"
   [ -n "$ports" ] || ports='{}'
   if [ -z "$netmode" ]; then
     netmode=$(printf '%s' "$networks" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(iter(d or {}), "none"))')
   fi
-  cat > "$FAKEDOCKER_INSPECT_DIR/$name.json" <<JSON
+  if [ -n "$image" ]; then
+    cat > "$FAKEDOCKER_INSPECT_DIR/$name.json" <<JSON
+[{"Id":"$name","State":{"Running":$running},"HostConfig":{"NetworkMode":"$netmode","PortBindings":$ports},"Config":{"Image":$image,"Labels":$labels},"NetworkSettings":{"Networks":$networks}}]
+JSON
+  else
+    cat > "$FAKEDOCKER_INSPECT_DIR/$name.json" <<JSON
 [{"Id":"$name","State":{"Running":$running},"HostConfig":{"NetworkMode":"$netmode","PortBindings":$ports},"Config":{"Labels":$labels},"NetworkSettings":{"Networks":$networks}}]
 JSON
+  fi
 }
 
 # --- fake S3 server lifecycle -------------------------------------------------
@@ -865,6 +909,50 @@ run_restore_guard "publishes host ports" \
   --object-key "$OBJKEY" --target-db drill_ports --target-project drill \
   --restore-pg container:restore-published-ports --confirm-target-isolated=yes
 
+# 5d4. THE DRILL NETWORK ITSELF MUST CONTAIN NO PRODUCTION MEMBER (review
+#      finding): Docker bridge connectivity is bidirectional, so a production
+#      container joined to the drill network could reach the disposable restore
+#      database.  The restore container's own labels/ports/network proofs do not
+#      cover OTHER containers on the drill network, so the restore refuses the
+#      moment any member of the declared drill network is the production postgres
+#      container itself or carries the production Compose project — this is what
+#      rejects running the validators on the production api container.
+write_inspect pg1 true \
+  '{"com.docker.compose.project":"docker"}' \
+  '{"pg1-net":{}}'
+write_inspect docker-api-1 true \
+  '{"com.docker.compose.project":"docker"}' \
+  '{"default":{}}' default '{}' '"docker-api-image:1.0"'
+write_inspect drill-prod-member true \
+  '{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes","bodysense.restore-network":"prod-member-net"}' \
+  '{"prod-member-net":{}}'
+printf '[{"Name":"prod-member-net","Containers":{"docker-api-1":{"Name":"docker-api-1"}}}]' \
+  > "$FAKEDOCKER_NETWORK_DIR/prod-member-net.json"
+run_restore_guard "drill network 'prod-member-net' contains a production-project member" \
+  --object-key "$OBJKEY" --target-db drill_member --target-project drill \
+  --restore-pg container:drill-prod-member --confirm-target-isolated=yes
+rm -f "$FAKEDOCKER_NETWORK_DIR/prod-member-net.json"
+write_inspect drill-prod-pg true \
+  '{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes","bodysense.restore-network":"prod-pg-net"}' \
+  '{"prod-pg-net":{}}'
+printf '[{"Name":"prod-pg-net","Containers":{"pg1":{"Name":"pg2"}}}]' \
+  > "$FAKEDOCKER_NETWORK_DIR/prod-pg-net.json"
+run_restore_guard "drill network 'prod-pg-net' contains the production postgres container (pg1)" \
+  --object-key "$OBJKEY" --target-db drill_prodpg --target-project drill \
+  --restore-pg container:drill-prod-pg --confirm-target-isolated=yes
+rm -f "$FAKEDOCKER_NETWORK_DIR/prod-pg-net.json"
+# A drill-network membership that cannot be enumerated (uninspectable) is a
+# refusal too: never treated as an empty "no production member" proof.
+write_inspect drill-mem-garbage true \
+  '{"bodysense.restore-project":"drill","bodysense.disposable-restore":"yes","bodysense.restore-network":"garbage-net"}' \
+  '{"garbage-net":{}}'
+printf 'not-json' > "$FAKEDOCKER_NETWORK_DIR/garbage-net.json"
+run_restore_guard "unable to inspect the drill network garbage-net container membership" \
+  --object-key "$OBJKEY" --target-db drill_memgarbage --target-project drill \
+  --restore-pg container:drill-mem-garbage --confirm-target-isolated=yes
+rm -f "$FAKEDOCKER_NETWORK_DIR/garbage-net.json"
+rm -f "$FAKEDOCKER_INSPECT_DIR/pg1.json" "$FAKEDOCKER_INSPECT_DIR/docker-api-1.json"
+
 # 5e. an unverifiable schema revision in the backup metadata never passes the
 #     restore gate: `unknown`/`uninitialized`/empty metadata is refused before
 #     any archive download, never accepted and never skipped.
@@ -1003,6 +1091,18 @@ fi
 # 6. restore happy path with validator invocations
 # ==============================================================================
 FAKEPG_DB_EXISTS="" FAKEPG_SCHEMA="49:false"
+# The validators run in SEPARATE disposable containers derived from the resolved
+# api container's Config.Image (never inside the api container itself), so the
+# api containers must be inspectable to the image that hosts the validators.
+write_inspect pg1 true \
+  '{"com.docker.compose.project":"docker"}' \
+  '{"pg1-net":{}}'
+write_inspect fake-api-1 true \
+  '{"com.docker.compose.project":"docker"}' \
+  '{"default":{}}' default '{}' '"fake-api-image:2.0"'
+write_inspect docker-api-1 true \
+  '{"com.docker.compose.project":"docker"}' \
+  '{"default":{}}' default '{}' '"docker-api-image:1.0"'
 : > "$DOCKER_LOG"
 : > "$DOCKER_ENVLOG"
 out=$(BODYSENSE_DEPLOY_ROOT="$ROOT" OFFHOST_PG_PREFIX="$BIN/fake-pg" OFFHOST_PGCONTAINER_ID=pg1 \
@@ -1015,22 +1115,42 @@ if [ $rc -eq 0 ] && [[ "$out" == *RESTORE_RESULT=PASS* ]] \
 else
   report 1 "restore drill restores the verified archive and runs validators" "rc=$rc out=$out"
 fi
-# Production Compose names the api container "<project>-api-1" (docker-api-1),
-# never a literal "api"; the restore path must exec validators on the resolved
-# container, and the OFFHOST_API_CONTAINER seam must win over any lookup.
-if grep -q '^exec --env-file [^ ]* fake-api-1 /app/validators/migration-validator ' "$DOCKER_LOG" \
-  && grep -q '^exec --env-file [^ ]* fake-api-1 /app/validators/domain-validator ' "$DOCKER_LOG" \
-  && ! grep -q '^exec --env-file [^ ]* api /app/validators/' "$DOCKER_LOG"; then
-  report 0 "validators exec via the resolved api container (fake-api-1), never a literal 'api'"
+# Review finding: the validators must run inside a disposable container derived
+# from the api image and attached ONLY to the drill network — never inside the
+# production api container (which the restore must not join to the drill
+# network).  The api image is taken from the resolved api container (the
+# OFFHOST_API_CONTAINER seam wins over any lookup), the container is created
+# with --rm, is labeled disposable, and is attached to the declared drill
+# network; a literal "api" / a host-side `docker exec` is never used.
+if grep -q '^run --rm --network restore-pg-net -l bodysense.disposable-restore=yes --env-file [^ ]* --entrypoint [^ ]* fake-api-image:2.0 ' "$DOCKER_LOG" \
+  && grep -q -- '--entrypoint /app/validators/migration-validator ' "$DOCKER_LOG" \
+  && grep -q -- '--entrypoint /app/validators/domain-validator ' "$DOCKER_LOG" \
+  && ! grep -q 'docker exec' "$DOCKER_LOG" \
+  && ! grep -q '/app/validators/ api ' "$DOCKER_LOG"; then
+  report 0 "validators run in disposable containers derived from the resolved api image (fake-api-image:2.0) on the drill network, never via the production api container"
 else
-  report 1 "validators exec via the resolved api container (fake-api-1), never a literal 'api'" "docker_log=$(tr '\n' '|' < "$DOCKER_LOG")"
+  report 1 "validators run in disposable containers derived from the resolved api image (fake-api-image:2.0) on the drill network, never via the production api container" "docker_log=$(tr '\n' '|' < "$DOCKER_LOG")"
+fi
+# OFFHOST_VALIDATOR_IMAGE, when set, must be used verbatim as the validator
+# image (a deployment may pin the drill validator image explicitly).
+: > "$DOCKER_LOG"
+: > "$DOCKER_ENVLOG"
+out=$(BODYSENSE_DEPLOY_ROOT="$ROOT" OFFHOST_PG_PREFIX="$BIN/fake-pg" OFFHOST_PGCONTAINER_ID=pg1 \
+  OFFHOST_API_CONTAINER=fake-api-1 OFFHOST_VALIDATOR_IMAGE=drill-validator:v9 \
+  DOCKER_LOG="$DOCKER_LOG" DOCKER_ENVLOG="$DOCKER_ENVLOG" \
+  bash "$RESTORE" --object-key "$OBJKEY" --target-db drill_db_img --target-project drill \
+  --restore-pg container:restore-pg --confirm-target-isolated=yes --validator-runner docker 2>&1) && rc=0 || rc=$?
+if [ $rc -eq 0 ] && grep -q '^run --rm --network restore-pg-net -l bodysense.disposable-restore=yes --env-file [^ ]* --entrypoint [^ ]* drill-validator:v9 ' "$DOCKER_LOG"; then
+  report 0 "OFFHOST_VALIDATOR_IMAGE pins the disposable validator image (drill-validator:v9)"
+else
+  report 1 "OFFHOST_VALIDATOR_IMAGE pins the disposable validator image (drill-validator:v9)" "rc=$rc docker_log=$(tr '\n' '|' < "$DOCKER_LOG")"
 fi
 # The database password (fixed test secret 0123456789abcdef) must never appear
 # on any recorded docker argv (host side) or psql/fake-pg argv; it may only be
 # present in the --env-file the stub read on behalf of the daemon.  The DSN in
 # -database-url must carry no password at all.
 if ! grep -q '0123456789abcdef' "$DOCKER_LOG" \
-  && grep -q 'postgres://bodysense@restore-pg:5432/drill_db?sslmode=disable' "$DOCKER_LOG" \
+  && grep -q 'postgres://bodysense@restore-pg:5432/drill_db_img?sslmode=disable' "$DOCKER_LOG" \
   && grep -q 'PGPASSWORD=0123456789abcdef' "$DOCKER_ENVLOG"; then
   report 0 "database password never appears in argv; delivered only via PGPASSWORD in an --env-file"
 else
@@ -1039,19 +1159,21 @@ else
 fi
 # Without an explicit OFFHOST_API_CONTAINER the restore path must fall back to
 # Compose's default "<project>-api-1" naming (docker-api-1 for project "docker"),
-# which is exactly what production runs — the original P1 blocker.
+# which is exactly what production runs — the original P1 blocker — and derive
+# the disposable validator image from that container's Config.Image.
 : > "$DOCKER_LOG"
 : > "$DOCKER_ENVLOG"
 out=$(BODYSENSE_DEPLOY_ROOT="$ROOT" OFFHOST_PG_PREFIX="$BIN/fake-pg" OFFHOST_PGCONTAINER_ID=pg1 \
   DOCKER_LOG="$DOCKER_LOG" DOCKER_ENVLOG="$DOCKER_ENVLOG" \
   bash "$RESTORE" --object-key "$OBJKEY" --target-db drill_db_b --target-project drill \
   --restore-pg container:restore-pg --confirm-target-isolated=yes --validator-runner docker 2>&1) && rc=0 || rc=$?
-if [ $rc -eq 0 ] && grep -q '^exec --env-file [^ ]* docker-api-1 /app/validators/migration-validator ' "$DOCKER_LOG"; then
-  report 0 "without OFFHOST_API_CONTAINER the restore uses Compose's '<project>-api-1' naming (docker-api-1)"
+if [ $rc -eq 0 ] && grep -q '^run --rm --network restore-pg-net -l bodysense.disposable-restore=yes --env-file [^ ]* --entrypoint [^ ]* docker-api-image:1.0 ' "$DOCKER_LOG"; then
+  report 0 "without OFFHOST_API_CONTAINER the restore uses Compose's '<project>-api-1' naming (docker-api-1) for the validator image"
 else
-  report 1 "without OFFHOST_API_CONTAINER the restore uses Compose's '<project>-api-1' naming (docker-api-1)" \
+  report 1 "without OFFHOST_API_CONTAINER the restore uses Compose's '<project>-api-1' naming (docker-api-1) for the validator image" \
     "rc=$rc docker_log=$(tr '\n' '|' < "$DOCKER_LOG")"
 fi
+rm -f "$FAKEDOCKER_INSPECT_DIR/fake-api-1.json" "$FAKEDOCKER_INSPECT_DIR/docker-api-1.json" "$FAKEDOCKER_INSPECT_DIR/pg1.json"
 
 # ==============================================================================
 # 7. restore refuses a target database that already exists
@@ -1138,13 +1260,18 @@ else
 fi
 
 # ==============================================================================
-# 13. restore never hard-codes a literal 'api' container name for the validators
+# 13. restore never hard-codes a literal 'api' container name, and never joins a
+#     production api container to the drill network (validators run in separate
+#     disposable containers derived from the api image; the restore script only
+#     ever docker-runs / docker-execs against the disposable restore database and
+#     the disposable validator containers)
 # ==============================================================================
-if grep -nE 'docker[[:space:]]+exec[[:space:]]+api([[:space:]]|$)' "$RESTORE" >/dev/null 2>&1; then
-  report 1 "restore runs validators on the resolved api container, never a literal 'api'" \
-    "found a hard-coded 'docker exec api' in scripts/restore-production-backup.sh"
+if grep -nE 'docker[[:space:]]+exec[[:space:]]+api([[:space:]]|$)' "$RESTORE" >/dev/null 2>&1 \
+  || grep -nE 'docker[[:space:]]+network[[:space:]]+connect' "$RESTORE" >/dev/null 2>&1; then
+  report 1 "restore runs validators in disposable containers, never on a production api container or a hard-coded 'api'" \
+    "found a hard-coded 'docker exec api' or a docker network connect in scripts/restore-production-backup.sh"
 else
-  report 0 "restore runs validators on the resolved api container, never a literal 'api'"
+  report 0 "restore runs validators in disposable containers, never on a production api container or a hard-coded 'api'"
 fi
 
 # ==============================================================================
