@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/bodysense/api/internal/model"
@@ -241,5 +242,59 @@ func TestPersistDiagnosisAnalysisFreezesReplayInputWithoutExposingItOnNormalRead
 	payload := svc.PublicPayload(analysis)
 	if _, exposed := payload["replay_input"]; exposed {
 		t.Fatal("normal Diagnosis read model must not expose frozen replay input")
+	}
+}
+
+func TestPersistDiagnosisEvidenceGapConfigurationRequiresConsistentAvailabilityTrace(t *testing.T) {
+	repo := &fakeDiagnosisAnalysisRepository{}
+	svc := NewDiagnosisAnalysisService(repo)
+	valid := json.RawMessage(`{
+		"status":"completed",
+		"scope":"full_body",
+		"summary":"evidence-aware analysis",
+		"candidates":[{"name":"candidate","confidence":"中"}],
+		"agent_configuration":{"id":"` + diagnosisEvidenceGapConfigurationID + `","role":"diagnosis"},
+		"evidence_acquisition":{
+			"trace_revision":"evidence-acquisition-trace-v2",
+			"policy_revision":"diagnosis-evidence-gap-v2",
+			"external_evidence_status":"unresolved",
+			"attempts":[{
+				"gap":{"kind":"external_knowledge"},
+				"status":"unresolved",
+				"stop_reason":"published_corpus_empty",
+				"search_performed":true,
+				"retrieval_status":"published_corpus_empty"
+			}]
+		}
+	}`)
+	analysis, err := svc.PersistAIResult(context.Background(), uuid.New(), 17, valid)
+	if err != nil {
+		t.Fatalf("valid evidence availability trace should persist: %v", err)
+	}
+	if analysis.AgentConfigurationID != diagnosisEvidenceGapConfigurationID {
+		t.Fatalf("configuration id=%q", analysis.AgentConfigurationID)
+	}
+
+	invalid := json.RawMessage(`{
+		"status":"completed",
+		"scope":"full_body",
+		"summary":"self-reported drift",
+		"candidates":[{"name":"candidate","confidence":"中"}],
+		"agent_configuration":{"id":"` + diagnosisEvidenceGapConfigurationID + `","role":"diagnosis"},
+		"evidence_acquisition":{
+			"trace_revision":"evidence-acquisition-trace-v2",
+			"policy_revision":"diagnosis-evidence-gap-v2",
+			"external_evidence_status":"available",
+			"attempts":[{
+				"gap":{"kind":"external_knowledge"},
+				"status":"unresolved",
+				"stop_reason":"search_unavailable",
+				"search_performed":true,
+				"retrieval_status":"search_unavailable"
+			}]
+		}
+	}`)
+	if _, err := svc.PersistAIResult(context.Background(), uuid.New(), 18, invalid); !errors.Is(err, ErrEvidenceAvailabilityTraceInvalid) {
+		t.Fatalf("expected Go trust boundary to reject status drift, got %v", err)
 	}
 }

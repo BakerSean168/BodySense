@@ -21,3 +21,17 @@ COPY deploy/systemd/bodysense-offhost-backup.service /runtime/deploy/systemd/bod
 COPY deploy/systemd/bodysense-offhost-backup.timer /runtime/deploy/systemd/bodysense-offhost-backup.timer
 COPY deploy/systemd/bodysense-offhost-freshness.service /runtime/deploy/systemd/bodysense-offhost-freshness.service
 COPY deploy/systemd/bodysense-offhost-freshness.timer /runtime/deploy/systemd/bodysense-offhost-freshness.timer
+COPY scripts/production-postgres-dr.sh /runtime/scripts/production-postgres-dr.sh
+COPY scripts/install-production-dr.sh /runtime/scripts/install-production-dr.sh
+COPY deploy/systemd/bodysense-postgres-dr-backup.service /runtime/deploy/systemd/bodysense-postgres-dr-backup.service
+COPY deploy/systemd/bodysense-postgres-dr-backup.timer /runtime/deploy/systemd/bodysense-postgres-dr-backup.timer
+COPY deploy/systemd/bodysense-postgres-dr-restore.service /runtime/deploy/systemd/bodysense-postgres-dr-restore.service
+COPY deploy/systemd/bodysense-postgres-dr-restore.timer /runtime/deploy/systemd/bodysense-postgres-dr-restore.timer
+COPY deploy/systemd/bodysense-postgres-dr-status.service /runtime/deploy/systemd/bodysense-postgres-dr-status.service
+COPY deploy/systemd/bodysense-postgres-dr-status.timer /runtime/deploy/systemd/bodysense-postgres-dr-status.timer
+COPY scripts/production-capacity-status.sh /runtime/scripts/production-capacity-status.sh
+COPY scripts/install-production-capacity.sh /runtime/scripts/install-production-capacity.sh
+COPY deploy/systemd/bodysense-capacity-status.service /runtime/deploy/systemd/bodysense-capacity-status.service
+COPY deploy/systemd/bodysense-capacity-status.timer /runtime/deploy/systemd/bodysense-capacity-status.timer
+COPY deploy/systemd/bodysense-capacity-cleanup.service /runtime/deploy/systemd/bodysense-capacity-cleanup.service
+COPY deploy/systemd/bodysense-capacity-cleanup.timer /runtime/deploy/systemd/bodysense-capacity-cleanup.timer

@@ -23,6 +23,8 @@ from src.models.evidence import (
     EvidenceBudget,
     EvidenceGap,
     EvidenceGapKind,
+    EvidenceRetrievalStatus,
+    EvidenceSearchOutcome,
     EvidenceStopReason,
 )
 from src.services.diagnosis_service import DiagnosisService
@@ -32,14 +34,18 @@ class FakeEvidenceSearcher:
     def __init__(self) -> None:
         self.calls: list[tuple[str, int]] = []
 
-    async def search(self, query: str, *, top_k: int = 5) -> list[dict[str, Any]]:
+    async def search(self, query: str, *, top_k: int = 5) -> EvidenceSearchOutcome:
         self.calls.append((query, top_k))
-        return [
-            {
-                "evidence_id": f"evidence-{len(self.calls)}",
-                "content": f"evidence for {query}",
-            }
-        ]
+        return EvidenceSearchOutcome(
+            retrieval_status=EvidenceRetrievalStatus.RESULTS_RETURNED,
+            evidence=[
+                {
+                    "evidence_id": f"evidence-{len(self.calls)}",
+                    "content": f"evidence for {query}",
+                }
+            ],
+            published_corpus_count=1,
+        )
 
 
 def _gap(
@@ -103,6 +109,7 @@ async def test_user_fact_gap_never_calls_external_search() -> None:
     assert result.attempt.search_performed is False
     assert result.attempt.stop_reason == EvidenceStopReason.USER_INPUT_REQUIRED
     assert result.budget["used_searches"] == 0
+    assert acquirer.trace().external_evidence_status.value == "not_required"
 
 
 @pytest.mark.asyncio
@@ -118,6 +125,7 @@ async def test_external_gap_records_rationale_query_budget_and_evidence_identity
     assert result.attempt.gap.rationale == "该信息会改变候选的支持强度"
     assert result.attempt.evidence_ids == ["evidence-1"]
     assert result.budget["remaining_searches"] == 1
+    assert acquirer.trace().external_evidence_status.value == "available"
 
 
 @pytest.mark.asyncio
@@ -132,6 +140,7 @@ async def test_critical_gap_survives_budget_exhaustion_without_search() -> None:
     assert searcher.calls == []
     assert result.attempt.stop_reason == EvidenceStopReason.BUDGET_EXHAUSTED
     assert trace.unresolved_critical_gaps == [gap]
+    assert trace.external_evidence_status.value == "unresolved"
 
 
 @pytest.mark.asyncio
@@ -230,5 +239,6 @@ async def test_service_preserves_critical_third_gap_after_two_search_budget_is_e
     assert len(trace["attempts"]) == 3
     assert trace["attempts"][2]["stop_reason"] == "budget_exhausted"
     assert trace["attempts"][2]["search_performed"] is False
+    assert trace["external_evidence_status"] == "partially_available"
     assert result["information_gaps"] == ["缺少关键依据 3"]
     assert result["agent_configuration"]["id"] == config.configuration_id

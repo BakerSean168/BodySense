@@ -15,9 +15,13 @@ from ..models.evidence import (
     EvidenceBudget,
     EvidenceGap,
     EvidenceGapKind,
+    EvidenceRetrievalStatus,
+    EvidenceSearchOutcome,
     EvidenceStopReason,
+    ExternalEvidenceStatus,
 )
 from ..rag import get_knowledge_library
+from ..rag.knowledge_library import KnowledgeLibraryUnavailableError
 
 
 @dataclass(slots=True)
@@ -30,10 +34,31 @@ class KnowledgeEvidenceSearcher:
 
     user_id: str
 
-    async def search(self, query: str, *, top_k: int = 5) -> list[dict[str, Any]]:
+    async def search(self, query: str, *, top_k: int = 5) -> EvidenceSearchOutcome:
         library = get_knowledge_library()
-        results = await library.search(query=query, top_k=max(1, min(top_k, 10)))
-        return [normalize_evidence(self.user_id, result) for result in results]
+        try:
+            published_count = await library.published_corpus_count()
+            if published_count == 0:
+                return EvidenceSearchOutcome(
+                    retrieval_status=EvidenceRetrievalStatus.PUBLISHED_CORPUS_EMPTY,
+                    published_corpus_count=0,
+                )
+            results = await library.search(query=query, top_k=max(1, min(top_k, 10)))
+        except KnowledgeLibraryUnavailableError:
+            return EvidenceSearchOutcome(
+                retrieval_status=EvidenceRetrievalStatus.SEARCH_UNAVAILABLE
+            )
+        normalized = [normalize_evidence(self.user_id, result) for result in results]
+        if not normalized:
+            return EvidenceSearchOutcome(
+                retrieval_status=EvidenceRetrievalStatus.NO_RELEVANT_RESULTS,
+                published_corpus_count=published_count,
+            )
+        return EvidenceSearchOutcome(
+            retrieval_status=EvidenceRetrievalStatus.RESULTS_RETURNED,
+            evidence=normalized,
+            published_corpus_count=published_count,
+        )
 
 
 def normalize_evidence(user_id: str, result: Any) -> dict[str, Any]:
@@ -55,8 +80,8 @@ def normalize_evidence(user_id: str, result: Any) -> dict[str, Any]:
         if git_commit and section_hash:
             source_version = f"{git_commit}:{section_hash}"
         else:
-            source_version = git_commit or section_hash or str(
-                getattr(result, "source_timestamp", "") or ""
+            source_version = (
+                git_commit or section_hash or str(getattr(result, "source_timestamp", "") or "")
             )
         source_type = "thought_forest_note"
     else:
@@ -121,9 +146,7 @@ def normalize_evidence(user_id: str, result: Any) -> dict[str, Any]:
         publication_key = str(getattr(result, "publication_key", "") or "")
         if publication_key:
             evidence["publication_key"] = publication_key
-        publication_batch_key = str(
-            getattr(result, "publication_batch_key", "") or ""
-        )
+        publication_batch_key = str(getattr(result, "publication_batch_key", "") or "")
         if publication_batch_key:
             evidence["publication_batch_key"] = publication_batch_key
     if claim_candidate:
@@ -187,31 +210,47 @@ class _BoundedEvidenceAcquirer:
                 status=EvidenceAcquisitionStatus.UNRESOLVED,
                 stop_reason=EvidenceStopReason.SEARCH_UNAVAILABLE,
                 search_performed=False,
+                retrieval_status=EvidenceRetrievalStatus.SEARCH_UNAVAILABLE,
                 query=query,
                 requested_top_k=bounded_top_k,
             )
             return self._record(attempt)
 
-        results = await self.searcher.search(query, top_k=bounded_top_k)
-        evidence_ids = [
-            str(item.get("evidence_id", "")) for item in results if item.get("evidence_id")
-        ]
+        outcome = await self.searcher.search(query, top_k=bounded_top_k)
+        if outcome.retrieval_status == EvidenceRetrievalStatus.RESULTS_RETURNED:
+            results = [dict(item) for item in outcome.evidence]
+            evidence_ids = [
+                str(item.get("evidence_id", "")) for item in results if item.get("evidence_id")
+            ]
+            attempt = EvidenceAttempt(
+                gap=gap,
+                status=EvidenceAcquisitionStatus.EVIDENCE_RETURNED,
+                stop_reason=EvidenceStopReason.EVIDENCE_RETURNED,
+                search_performed=True,
+                retrieval_status=outcome.retrieval_status,
+                query=query,
+                requested_top_k=bounded_top_k,
+                evidence_ids=evidence_ids,
+            )
+            return self._record(attempt, evidence=results)
+
+        stop_reason = {
+            EvidenceRetrievalStatus.PUBLISHED_CORPUS_EMPTY: (
+                EvidenceStopReason.PUBLISHED_CORPUS_EMPTY
+            ),
+            EvidenceRetrievalStatus.NO_RELEVANT_RESULTS: EvidenceStopReason.NO_RELEVANT_RESULTS,
+            EvidenceRetrievalStatus.SEARCH_UNAVAILABLE: EvidenceStopReason.SEARCH_UNAVAILABLE,
+        }.get(outcome.retrieval_status, EvidenceStopReason.SEARCH_UNAVAILABLE)
         attempt = EvidenceAttempt(
             gap=gap,
-            status=(
-                EvidenceAcquisitionStatus.EVIDENCE_RETURNED
-                if results
-                else EvidenceAcquisitionStatus.UNRESOLVED
-            ),
-            stop_reason=(
-                EvidenceStopReason.EVIDENCE_RETURNED if results else EvidenceStopReason.NO_RESULTS
-            ),
+            status=EvidenceAcquisitionStatus.UNRESOLVED,
+            stop_reason=stop_reason,
             search_performed=True,
+            retrieval_status=outcome.retrieval_status,
             query=query,
             requested_top_k=bounded_top_k,
-            evidence_ids=evidence_ids,
         )
-        return self._record(attempt, evidence=results)
+        return self._record(attempt)
 
     def _record(
         self, attempt: EvidenceAttempt, *, evidence: list[dict[str, Any]] | None = None
@@ -229,8 +268,26 @@ class _BoundedEvidenceAcquirer:
             for attempt in self.attempts
             if attempt.gap.critical and attempt.status == EvidenceAcquisitionStatus.UNRESOLVED
         ]
+        external_attempts = [
+            attempt
+            for attempt in self.attempts
+            if attempt.gap.kind == EvidenceGapKind.EXTERNAL_KNOWLEDGE
+        ]
+        returned = sum(
+            attempt.status == EvidenceAcquisitionStatus.EVIDENCE_RETURNED
+            for attempt in external_attempts
+        )
+        if not external_attempts:
+            external_status = ExternalEvidenceStatus.NOT_REQUIRED
+        elif returned == len(external_attempts):
+            external_status = ExternalEvidenceStatus.AVAILABLE
+        elif returned > 0:
+            external_status = ExternalEvidenceStatus.PARTIALLY_AVAILABLE
+        else:
+            external_status = ExternalEvidenceStatus.UNRESOLVED
         return EvidenceAcquisitionTrace(
             policy_revision=self.policy_revision,
+            external_evidence_status=external_status,
             budget=self.budget.snapshot(),
             attempts=list(self.attempts),
             unresolved_critical_gaps=unresolved,

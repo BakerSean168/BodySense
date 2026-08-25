@@ -1,10 +1,10 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -15,6 +15,7 @@ import (
 	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/repository"
+	"github.com/bodysense/api/internal/uploadstorage"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/postgres"
@@ -63,15 +64,18 @@ func TestPrivacyErasureSyntheticUserPostgres(t *testing.T) {
 	mustExec("INSERT INTO ai_output_reviews(run_id,conversation_id,user_id,output_type,raw_output) VALUES (?,?,?,?,?)", runID, conversationID, userID, "diagnosis", `{"private":"raw model output"}`)
 
 	uploadRoot := t.TempDir()
-	userUploadDir := filepath.Join(uploadRoot, userID.String())
-	if err := os.MkdirAll(userUploadDir, 0o755); err != nil {
+	uploadStorage, err := uploadstorage.NewRegistry(uploadstorage.Config{
+		Environment: "test", Backend: "local", LocalRoot: uploadRoot,
+	})
+	if err != nil {
 		t.Fatal(err)
 	}
-	uploadPath := filepath.Join(userUploadDir, "photo.jpg")
-	if err := os.WriteFile(uploadPath, []byte("private image bytes"), 0o600); err != nil {
+	uploadKey := userID.String() + "/" + uploadID.String() + "/original.jpg"
+	payload := []byte("private image bytes")
+	if err := uploadStorage.DefaultStore().Put(ctx, uploadKey, bytes.NewReader(payload), int64(len(payload)), "image/jpeg"); err != nil {
 		t.Fatal(err)
 	}
-	mustExec("INSERT INTO user_uploads(id,user_id,file_type,original_name,file_path,file_size,mime_type,ocr_result,ocr_status) VALUES (?,?,?,?,?,?,?,?,?)", uploadID, userID, "photo_front", "photo.jpg", uploadPath, 19, "image/jpeg", `{"private":"ocr"}`, "completed")
+	mustExec("INSERT INTO user_uploads(id,user_id,file_type,original_name,storage_backend,storage_key,file_size,mime_type,ocr_result,ocr_status) VALUES (?,?,?,?,?,?,?,?,?,?)", uploadID, userID, "photo_front", "photo.jpg", "local", uploadKey, len(payload), "image/jpeg", `{"private":"ocr"}`, "completed")
 
 	mustExec("INSERT INTO body_states(user_id,current_revision,safety_state) VALUES (?,?,?)", userID, 1, `{"private":"safety"}`)
 	mustExec("INSERT INTO body_state_revisions(user_id,revision,change_type,source,changes) VALUES (?,?,?,?,?)", userID, 1, "synthetic", "integration", `{"private":"state"}`)
@@ -103,7 +107,7 @@ func TestPrivacyErasureSyntheticUserPostgres(t *testing.T) {
 		privacyRepo,
 		userRepo,
 		authService,
-		NewLocalUserObjectCleaner(uploadRoot),
+		uploadStorage,
 		database.NewTransactionManager(db),
 	)
 	request, err := privacyService.Request(ctx, userID, PrivacyErasureConfirmationPhrase)
@@ -147,8 +151,8 @@ func TestPrivacyErasureSyntheticUserPostgres(t *testing.T) {
 			t.Fatalf("table %s retained %d synthetic user rows", check.name, count)
 		}
 	}
-	if _, err := os.Stat(uploadPath); !os.IsNotExist(err) {
-		t.Fatalf("physical upload survived erasure: %v", err)
+	if _, err := uploadStorage.DefaultStore().Stat(ctx, uploadKey); err == nil {
+		t.Fatal("physical upload survived erasure")
 	}
 	var auditCount int64
 	if err := db.Table("privacy_erasure_requests").Where("id = ? AND subject_user_id IS NULL AND status = 'completed'", request.ID).Count(&auditCount).Error; err != nil || auditCount != 1 {

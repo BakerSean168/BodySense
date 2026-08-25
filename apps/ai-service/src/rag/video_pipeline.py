@@ -73,6 +73,7 @@ class VideoIngestionRequest:
     ai_refine: bool = False  # 是否启用 AI 精修
     splitter_configuration_id: str | None = None
     curator_configuration_id: str | None = None
+    source_key: str | None = None
 
 
 class VideoIngestionPipeline:
@@ -113,8 +114,12 @@ class VideoIngestionPipeline:
         if not video_path.exists():
             raise FileNotFoundError(f"Video not found: {video_path}")
 
-        # --- Step 2: Generate unique source_key ---
-        source_key = slugify(f"{request.author}-{request.problem_slug}-{video_path.stem}")
+        # --- Step 2: Resolve the pre-registered source identity ---
+        # The governed HTTP path supplies source_key from Go's SourceRegistry.
+        # Direct/offline tooling may still derive a deterministic key for pack creation.
+        source_key = request.source_key or slugify(
+            f"{request.author}-{request.problem_slug}-{video_path.stem}"
+        )
         artifact_dir = self.sources_root / source_key
         artifact_dir.mkdir(parents=True, exist_ok=True)
 

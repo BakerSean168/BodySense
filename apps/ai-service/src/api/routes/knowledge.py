@@ -1,5 +1,6 @@
 """Knowledge library API routes."""
 
+import hashlib
 import os
 from pathlib import Path
 from typing import Any, Literal, Optional
@@ -21,8 +22,10 @@ router = APIRouter(prefix="/api/knowledge", tags=["knowledge"])
 
 
 class IngestVideoRequestModel(BaseModel):
-    """Request to ingest a local video into the knowledge library."""
+    """Request to ingest a pre-registered local video into the knowledge library."""
 
+    source_key: str = Field(..., min_length=1, max_length=200)
+    expected_content_hash: str = Field(..., min_length=64, max_length=64)
     video_path: str = Field(
         ...,
         min_length=1,
@@ -128,6 +131,17 @@ async def ingest_video(request: IngestVideoRequestModel):
             status_code=400,
             detail="video_path is outside the allowed data directory",
         )
+    if not resolved.is_file():
+        raise HTTPException(status_code=404, detail="registered source file does not exist")
+    digest = hashlib.sha256()
+    with resolved.open("rb") as source_file:
+        for chunk in iter(lambda: source_file.read(1024 * 1024), b""):
+            digest.update(chunk)
+    if digest.hexdigest() != request.expected_content_hash.lower():
+        raise HTTPException(
+            status_code=409,
+            detail="registered source content hash does not match the source file",
+        )
     try:
         pipeline = VideoIngestionPipeline()
         pack = await pipeline.ingest(
@@ -147,6 +161,7 @@ async def ingest_video(request: IngestVideoRequestModel):
                 ai_refine=request.ai_refine,
                 splitter_configuration_id=request.splitter_configuration_id,
                 curator_configuration_id=request.curator_configuration_id,
+                source_key=request.source_key,
             )
         )
 

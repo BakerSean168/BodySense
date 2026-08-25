@@ -18,6 +18,7 @@ import (
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/repository"
 	"github.com/bodysense/api/internal/service"
+	"github.com/bodysense/api/internal/uploadstorage"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
@@ -58,8 +59,19 @@ func main() {
 
 	// Initialize dependencies
 	userRepo := repository.NewUserRepository(database.DB)
+	knowledgeSourceRepo := repository.NewKnowledgeSourceRepository(database.DB)
+	knowledgeSourceRegistry := service.NewKnowledgeSourceRegistry(knowledgeSourceRepo)
 	profileRepo := repository.NewProfileRepository(database.DB)
 	uploadRepo := repository.NewUploadRepository(database.DB)
+	uploadStorage, err := uploadstorage.NewRegistryFromEnv()
+	if err != nil {
+		log.Fatalf("Upload storage configuration failed: %v", err)
+	}
+	uploadStorageCtx, uploadStorageCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer uploadStorageCancel()
+	if err := uploadStorage.Validate(uploadStorageCtx); err != nil {
+		log.Fatalf("Upload storage validation failed: %v", err)
+	}
 	leaseOwner := uuid.NewString()
 	consultationRepo := repository.NewConsultationRepository(database.DB, leaseOwner)
 	bodyStateRepo := repository.NewBodyStateRepository(database.DB)
@@ -85,7 +97,7 @@ func main() {
 		privacyErasureRepo,
 		userRepo,
 		authService,
-		service.NewLocalUserObjectCleaner(service.UploadDir),
+		uploadStorage,
 		database.NewTransactionManager(database.DB),
 	)
 	privacyErasureService.StartWorker(context.Background(), time.Minute)
@@ -130,6 +142,7 @@ func main() {
 		bodyStateService,
 		aiClient,
 		database.NewTransactionManager(database.DB),
+		uploadStorage,
 	).WithAssessmentDeployment(agentDeploymentPolicy).
 		WithAssessmentRollout(assessmentRolloutService)
 	authHandler := handler.NewAuthHandler(authService, authSecurity)
@@ -151,7 +164,7 @@ func main() {
 	threadProjectionService := service.NewThreadProjectionService(conversationRepo, consultationRepo, messageRepo, interactionRepo, runtimeEventService, threadProjectionRepo)
 	outputReviewRepo := repository.NewAIOutputReviewRepository(database.DB)
 	outputReviewService := service.NewOutputReviewService(outputReviewRepo)
-	uploadService := service.NewUploadService(uploadRepo, jobRuntime, outputReviewService).
+	uploadService := service.NewUploadService(uploadRepo, jobRuntime, outputReviewService, uploadStorage).
 		WithDeployment(agentDeploymentPolicy)
 	uploadService.StartUploadWorker(context.Background(), 10*time.Second, 10*time.Minute)
 	uploadHandler := handler.NewUploadHandler(uploadService)
@@ -230,7 +243,16 @@ func main() {
 	reassessmentHandler := handler.NewReassessmentHandler(trainingService)
 	assessmentHandler := handler.NewAssessmentHandler(assessmentService).
 		WithAssessmentReplay(assessmentReplayService)
-	knowledgeHandler := handler.NewKnowledgeHandler(agentDeploymentPolicy)
+	knowledgeIngestionService := service.NewKnowledgeIngestionService(
+		knowledgeSourceRegistry,
+		jobRuntime,
+		agentDeploymentPolicy,
+		os.Getenv("AI_SERVICE_URL"),
+	)
+	knowledgeIngestionService.StartWorker(context.Background(), 10*time.Second, 15*time.Minute)
+	knowledgeHandler := handler.NewKnowledgeHandler(agentDeploymentPolicy).
+		WithSourceRegistry(knowledgeSourceRegistry).
+		WithIngestionService(knowledgeIngestionService)
 
 	// Continuous health workspace is the single capability/read model for the product loop.
 	healthWorkspaceService := service.NewHealthWorkspaceService(
@@ -418,12 +440,17 @@ func main() {
 	public := r.Group("/api/v1")
 	public.GET("/conversations/share/:token", convHandler.GetSharedConversation)
 
-	// Knowledge base routes (proxy to AI service, require auth)
+	// Global Knowledge administration is an explicit operator capability.
+	// Product Agents retrieve published Knowledge through the internal AI path;
+	// these HTTP surfaces are for governed operator workflows only.
 	knowledgeGroup := protected.Group("/knowledge")
+	knowledgeGroup.Use(middleware.RequireKnowledgeOperator(userRepo))
 	{
-		knowledgeGroup.POST("/ingestions/video", knowledgeHandler.IngestVideo)
-		knowledgeGroup.POST("/search", knowledgeHandler.SearchKnowledge)
+		knowledgeGroup.POST("/sources", knowledgeHandler.RegisterSource)
 		knowledgeGroup.GET("/sources", knowledgeHandler.ListSources)
+		knowledgeGroup.POST("/ingestions/video", knowledgeHandler.IngestVideo)
+		knowledgeGroup.GET("/ingestions/:jobID", knowledgeHandler.GetIngestionJob)
+		knowledgeGroup.POST("/search", knowledgeHandler.SearchKnowledge)
 		knowledgeGroup.GET("/stats", knowledgeHandler.GetStats)
 	}
 

@@ -16,6 +16,8 @@ spec.loader.exec_module(module)
 PublishedEvalCase = module.PublishedEvalCase
 evaluate_case = module.evaluate_case
 load_cases = module.load_cases
+load_thresholds = module.load_thresholds
+evaluate_thresholds = module.evaluate_thresholds
 
 
 def _published_result() -> SearchResult:
@@ -93,3 +95,52 @@ def test_committed_published_eval_dataset_is_well_formed() -> None:
     assert len(cases) == 6
     assert sum(case.expect == "hit" for case in cases) == 3
     assert sum(case.expect == "no_result" for case in cases) == 3
+
+
+def test_committed_cohort_thresholds_are_predeclared_and_dataset_bound() -> None:
+    repo_root = Path(__file__).resolve().parents[4]
+    cases_path = (
+        repo_root / "docs/knowledges/eval/published-knowledge-pain-nociception-cohort.jsonl"
+    )
+    thresholds = load_thresholds(
+        repo_root
+        / "docs/knowledges/eval/published-knowledge-pain-nociception-cohort.thresholds.json",
+        cases_path,
+    )
+    assert thresholds.expected_cases == 9
+    assert thresholds.min_pass_rate == 1.0
+    assert thresholds.min_positive_hits == 6
+    assert thresholds.min_negative_rejections == 3
+    assert thresholds.min_citation_valid == 6
+    assert thresholds.min_grounding_supported == 6
+
+
+def test_qualification_thresholds_require_publication_identity() -> None:
+    repo_root = Path(__file__).resolve().parents[4]
+    cases_path = (
+        repo_root / "docs/knowledges/eval/published-knowledge-pain-nociception-cohort.jsonl"
+    )
+    thresholds = load_thresholds(
+        repo_root
+        / "docs/knowledges/eval/published-knowledge-pain-nociception-cohort.thresholds.json",
+        cases_path,
+    )
+    report = {
+        "summary": {
+            "cases": 9,
+            "pass_rate": 1.0,
+            "positive_hits": 6,
+            "negative_rejections": 3,
+            "citation_valid": 6,
+            "grounding_supported": 6,
+        },
+        "publication": {
+            "publication_id": "",
+            "publication_key": "candidate-v1",
+            "publication_batch_key": "candidate",
+            "published_version": 1,
+        },
+    }
+    passed, reasons = evaluate_thresholds(thresholds, report)
+    assert passed is False
+    assert "publication_id_missing" in reasons

@@ -68,6 +68,8 @@ def test_knowledge_manifests_have_stable_repository_identities() -> None:
 
 def test_ingestion_contract_requires_exact_agent_ids_when_llm_capabilities_are_enabled() -> None:
     base = {
+        "source_key": "video-forward-head-test",
+        "expected_content_hash": "a" * 64,
         "video_path": "sources/video.mp4",
         "problem_slug": "forward-head",
         "problem_display_name": "头前移",
