@@ -95,7 +95,7 @@ bodysense-ai-service:vX.Y.Z
 bodysense-runtime:vX.Y.Z
 ```
 
-The runtime image contains only tracked non-secret production runtime files (`.env.production`, Compose, Caddy, LiteLLM config and the deploy watcher). Secrets remain on the production host and are never embedded in the image.
+The runtime image contains only tracked non-secret production runtime files (`.env.production`, Compose, Caddy, LiteLLM config, the deploy watcher, the off-host backup/restore scripts and the off-host systemd units). Secrets remain on the production host and are never embedded in the image.
 
 Each image records `org.opencontainers.image.revision=<git SHA>`.
 
@@ -134,7 +134,7 @@ Before touching running containers it:
 2. reads each image OCI revision label;
 3. refuses deployment unless all three revisions are non-empty and identical;
 4. pulls the `bodysense-runtime:prod-latest` artifact and requires its OCI revision label to match Web/API/AI;
-5. extracts `.env.production`, production Compose, Caddy, LiteLLM config and the deployment watcher from that runtime artifact;
+5. extracts `.env.production`, production Compose, Caddy, LiteLLM config, the deployment watcher, the off-host backup/restore scripts and the off-host systemd units from that runtime artifact;
 6. validates `docker compose config` with the server's untracked `.env.production.local`.
 
 Secrets are never fetched from Git and are never overwritten.
@@ -178,6 +178,89 @@ Current production is PostgreSQL 16 + pgvector. Do **not** replace the productio
 
 Development/validator environments may use PostgreSQL 18, which is why CI validates both versions.
 
+## Off-host PostgreSQL backup and restore (BS-PROD-012)
+
+In addition to the deploy watcher's same-host backups, production keeps an
+**operator-owned off-host** copy of the PostgreSQL database on a private
+OSS/S3-compatible destination (Alibaba Cloud OSS `cn-hangzhou`):
+
+- `scripts/production-offhost-backup.sh --backup` runs daily via
+  `bodysense-offhost-backup.timer` (`OnCalendar=*-*-* 02:10:00 Asia/Shanghai` —
+  the timezone is embedded in the calendar expression so the schedule does not
+  depend on the host timezone). It produces a
+  custom-format dump through the normal network protocol
+  (`docker compose exec postgres pg_dump -Fc`), records its SHA-256 as a sidecar
+  object and a metadata object (schema revision, checksum, source, retention),
+  uploads the trio to `OFFHOST_BACKUP_BUCKET` under `OFFHOST_BACKUP_PREFIX`,
+  re-downloads the checksum object for an end-to-end round-trip, and prunes
+  objects older than `OFFHOST_BACKUP_RETENTION_DAYS` (the newest day directory is
+  never pruned). Retention is apply-or-fail: if the off-host object listing that
+  drives pruning cannot be fetched, the backup aborts and `last-success.json` is
+  not recorded, so an unbounded retention window can never coexist with a
+  healthy freshness state.
+- `scripts/production-offhost-backup.sh --check-freshness` runs hourly via
+  `bodysense-offhost-freshness.timer` (`OnCalendar=*-*-* *:00:00 Asia/Shanghai`,
+  also embedded in the expression).
+  It reads the local `last-success.json`
+  state and, when `OFFHOST_BACKUP_FRESHNESS_PROBE=object`, confirms the latest
+  archive still exists remotely. Freshness is compared in whole seconds (a
+  backup is stale once `now - last_success` exceeds the threshold, with no
+  whole-hour truncation) and a future-dated last-success is rejected, never
+  treated as fresh. A missing/stale state file exits non-zero, emits
+  `OFFHOST_BACKUP_FRESH=FAIL reason=...` and optionally runs the configured
+  `OFFHOST_BACKUP_ALERT_CMD`.
+- `scripts/restore-production-backup.sh` is the operator-only restore drill. It
+  never restores into the production database or production postgres server.
+  The restore target must be an explicitly supplied disposable PostgreSQL
+  container (`--restore-pg container:<id|name>`), and before anything else the
+  operator proves that container is isolated from production via `docker
+  inspect` — fail-closed, refusing on: container-ID equality with the production
+  postgres container, membership in the production Compose project, ANY Docker
+  network shared with the production postgres container, attachment to any
+  network beyond the container's declared `bodysense.restore-network` (the drill
+  network must be the container's sole network), any published host port
+  (`HostConfig.PortBindings`), a non-running state, or a missing/incorrect
+  declaration of `bodysense.restore-project=<target-project>`
+  and `bodysense.disposable-restore=yes` (drill containers must therefore run on
+  their own dedicated drill network, never on the production postgres network,
+  publishing no host ports). The declared drill network itself must contain no
+  production container: every member of `bodysense.restore-network` is
+  enumerated and any member that is the production postgres container or carries
+  the production `com.docker.compose.project` label refuses the drill (Docker
+  bridge connectivity is bidirectional, so nowhere — including an api container
+  joined to the drill network to host validators — may a production container
+  share the drill network with the disposable restore database).
+  All `psql`/`pg_restore` and `docker cp`
+  operations target that disposable server exclusively. The target must differ
+  from `DB_NAME`, the project must differ from `bodysense`, the target database
+  must not already exist, and `--confirm-target-isolated=yes` is mandatory. It
+  verifies the SHA-256 sidecar strictly (syntax, attested filename, digest
+  equality with the metadata `checksum_sha256`) and proves the downloaded
+  archive matches the sidecar and the metadata, validates the archive with
+  `pg_restore --list`, restores into the fresh disposable database on the
+  disposable server with `--no-owner --no-privileges`, verifies the restored
+  schema revision equals the backup metadata, and runs the `domain-validator`
+  and `migration-validator` binaries (built into the API image at
+  `/app/validators/`) against the restored database inside a **separate
+  disposable validator container** (`docker run --rm`) taken from the api
+  container's `Config.Image` (or the pinned `OFFHOST_VALIDATOR_IMAGE`) and
+  attached only to the drill network — the production api container is never
+  joined to the drill network. The database password
+  reaches the validators only through `PGPASSWORD` in the process environment
+  (injected via an `--env-file` on the `docker run` path), never through
+  `-database-url` or any process command line.
+- Object-store credentials are host-only least-privilege keys in
+  `.env.production.local` (`OFFHOST_BACKUP_ACCESS_KEY` /
+  `OFFHOST_BACKUP_SECRET_KEY`, limited to GetObject/PutObject/DeleteObject/ListBucket
+  on the backup bucket). They are never written into artifacts or Git and are
+  supplied to `scripts/offhost-s3.py` only through the process environment —
+  the client refuses command-line credential arguments so secrets cannot leak
+  through `/proc/*/cmdline` or process listings.
+- Off-host backups are retained 30 days by default (independent of the watcher's
+  same-host 14-day retention).
+
+See [docs/security/offhost-backup-restore-runbook.md](../security/offhost-backup-restore-runbook.md).
+
 ## Production Compose and model gateway
 
 `docker/docker-compose.prod.yml` preserves the North-Star model boundary: AI Service receives only `LITELLM_BASE_URL` / `LITELLM_API_KEY`; physical provider credentials are injected only into the standalone LiteLLM gateway.
@@ -192,6 +275,7 @@ Tracked:
 - `docker/docker-compose.prod.yml`
 - `docker/Caddyfile`
 - deployment watcher/systemd definitions
+- off-host backup/restore scripts and their systemd units
 
 Untracked on production:
 
@@ -220,6 +304,16 @@ Manual coherent-release check/deploy:
 
 ```bash
 /opt/bodysense/scripts/production-deploy-watch.sh --force
+```
+
+Off-host backup status:
+
+```bash
+systemctl status bodysense-offhost-backup.timer
+systemctl status bodysense-offhost-freshness.timer
+journalctl -u bodysense-offhost-backup.service -n 100
+journalctl -u bodysense-offhost-freshness.service -n 100
+/opt/bodysense/scripts/production-offhost-backup.sh --check-freshness
 ```
 
 Production stack:

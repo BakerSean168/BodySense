@@ -61,7 +61,7 @@ The privacy boundary depends on `UserObjectCleaner`, not directly on the local f
 
 Full erasure is immediate for the live primary store and user object prefix. Immutable disaster-recovery backups are not rewritten in place because doing so would destroy their integrity. Existing pre-deploy local DB backups are pruned after **14 days** by `production-deploy-watch.sh`.
 
-BS-PROD-012 must give off-host backups an explicit bounded retention policy and access controls. A restore of a backup containing a subject already erased must run the erasure recovery/tombstone reconciliation before the restored environment may serve traffic. This prevents backup restoration from resurrecting an erased account into an active production state.
+Off-host backups (BS-PROD-012) have an explicit bounded retention policy: objects under the configured `OFFHOST_BACKUP_PREFIX` are pruned to `OFFHOST_BACKUP_RETENTION_DAYS` (default **30 days**, keeping the newest day directory), independent of the watcher's local 14-day retention. Access is restricted to host-only least-privilege OSS keys. The off-host restore operator (interactive, operator-only) must run the erasure recovery/tombstone reconciliation before any restored environment may serve traffic; `restore-production-backup.sh` enforces the isolation and validation gates that make this verifiable, and the passed restore is only ever a disposable drill database.
 
 ## 6. Verification contract
 

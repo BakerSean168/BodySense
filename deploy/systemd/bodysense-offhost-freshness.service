@@ -1,0 +1,13 @@
+[Unit]
+Description=BodySense off-host backup freshness alert (BS-PROD-012)
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+Environment=BODYSENSE_DEPLOY_ROOT=/opt/bodysense
+ExecStart=/opt/bodysense/scripts/production-offhost-backup.sh --check-freshness
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6
