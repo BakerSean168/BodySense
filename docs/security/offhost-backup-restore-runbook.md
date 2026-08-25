@@ -223,11 +223,17 @@ if ! docker network create "$drill_net"; then
   echo "drill network '$drill_net' could not be created fresh; refusing to reuse any pre-existing network" >&2
   exit 1
 fi
+# operator-supplied password for the disposable restore database.  Define it in
+# the operator shell exactly once, from a 0600 secret file (never on the command
+# line and never literal in a shared script):
+#   RESTORE_POSTGRES_PASSWORD="$(< /run/secrets/restore_postgres_password)"
+# The value MUST be double-quoted at every use (including in the -e below) so
+# the shell passes it as a single argv word even if it contains shell metacharacters.
 docker run -d --name "$restore_pg" --network "$drill_net" \
   --label bodysense.restore-project=drill \
   --label bodysense.disposable-restore=yes \
   --label bodysense.restore-network="$drill_net" \
-  -e POSTGRES_USER=bodysense -e POSTGRES_PASSWORD=<...> -e POSTGRES_DB=postgres \
+  -e POSTGRES_USER=bodysense -e "POSTGRES_PASSWORD=$RESTORE_POSTGRES_PASSWORD" -e POSTGRES_DB=postgres \
   pgvector/pgvector:pg18
 
 # the validators run inside SEPARATE disposable validator containers derived from
@@ -432,7 +438,7 @@ compare both logs before the recovered environment is put back into service.
   malformed policy-status, the `--policy-proof acl-only` opt-in with its
   `OFFHOST_S3_WARNING`, and the `x-amz-acl=private` + SSE wire headers) — 37
   checks — and `scripts/validate-offhost-dr-unit.sh`
-  (84 checks: backup/retention/freshness, per-mode lock independence (backup and
+  (86 checks: backup/retention/freshness, per-mode lock independence (backup and
   freshness can no longer mask each other), the fail-closed exact
   clean-`<version>:false` schema-revision gates on both the backup and restore
   sides, the private-destination preflight aborting before any upload on a

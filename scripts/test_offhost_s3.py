@@ -234,6 +234,7 @@ class FakeS3Handler(http.server.BaseHTTPRequestHandler):
     policy_public = False
     policy_unavailable = False
     policy_unsupported = False
+    policy_malformed_text = None
     puts = []  # [{key, headers}] in upload order, for header assertions
 
     def log_message(self, *args):
@@ -322,7 +323,10 @@ class FakeS3Handler(http.server.BaseHTTPRequestHandler):
         ns = "http://s3.amazonaws.com/doc/2006-03-01/"
         root = ET.Element("{%s}PolicyStatus" % ns)
         child = ET.SubElement(root, "{%s}IsPublic" % ns)
-        child.text = "true" if self.policy_public else "false"
+        if self.policy_malformed_text is not None:
+            child.text = self.policy_malformed_text
+        else:
+            child.text = "true" if self.policy_public else "false"
         self._respond_xml(200, root)
 
     def do_GET(self):
@@ -430,6 +434,7 @@ class FakeS3IntegrationTests(unittest.TestCase):
         FakeS3Handler.policy_public = False
         FakeS3Handler.policy_unavailable = False
         FakeS3Handler.policy_unsupported = False
+        FakeS3Handler.policy_malformed_text = None
         FakeS3Handler.puts = []
         self.server = FakeServer().start()
         self.client = offhost_s3.S3Client(
@@ -594,6 +599,40 @@ class FakeS3IntegrationTests(unittest.TestCase):
         with self.assertRaises(offhost_s3.S3Error):
             offhost_s3.policy_status_is_public(no_ispublic.encode())
 
+    def test_check_private_fails_closed_on_non_boolean_policy_status(self):
+        FakeS3Handler.policy_public = False
+        FakeS3Handler.policy_malformed_text = "maybe"
+        with self.assertRaises(offhost_s3.S3Error) as ctx:
+            self.client.check_private(_KNOWN_ACCESS_KEY, _KNOWN_SECRET_KEY)
+        self.assertEqual(ctx.exception.code, "BucketPolicyStatusMalformed")
+        FakeS3Handler.policy_malformed_text = "0"
+        with self.assertRaises(offhost_s3.S3Error) as ctx:
+            self.client.check_private(_KNOWN_ACCESS_KEY, _KNOWN_SECRET_KEY)
+        self.assertEqual(ctx.exception.code, "BucketPolicyStatusMalformed")
+
+    def test_policy_status_rejects_invalid_non_boolean_values(self):
+        ns = "http://s3.amazonaws.com/doc/2006-03-01/"
+        for raw in ("maybe", "0", "1", "Yes", ""):
+            body = '<ns:PolicyStatus xmlns:ns="%s"><ns:IsPublic>%s</ns:IsPublic></ns:PolicyStatus>' % (ns, raw)
+            with self.assertRaises(offhost_s3.S3Error) as ctx:
+                offhost_s3.policy_status_is_public(body.encode())
+            self.assertEqual(ctx.exception.code, "BucketPolicyStatusMalformed")
+        self.assertFalse(
+            offhost_s3.policy_status_is_public(
+                '<ns:PolicyStatus xmlns:ns="%s"><ns:IsPublic>false</ns:IsPublic></ns:PolicyStatus>' % ns
+            ).__bool__()
+        )
+        self.assertTrue(
+            offhost_s3.policy_status_is_public(
+                '<ns:PolicyStatus xmlns:ns="%s"><ns:IsPublic>true</ns:IsPublic></ns:PolicyStatus>' % ns
+            ).__bool__()
+        )
+        self.assertTrue(
+            offhost_s3.policy_status_is_public(
+                '<ns:PolicyStatus xmlns:ns="%s"><ns:IsPublic>TRUE</ns:IsPublic></ns:PolicyStatus>' % ns
+            ).__bool__()
+        )
+
     def test_check_private_acl_only_mode_skips_policy_query(self):
         puts_before = len(FakeS3Handler.puts)
         self.assertTrue(
@@ -681,6 +720,7 @@ class CliTests(unittest.TestCase):
         FakeS3Handler.policy_public = False
         FakeS3Handler.policy_unavailable = False
         FakeS3Handler.policy_unsupported = False
+        FakeS3Handler.policy_malformed_text = None
         FakeS3Handler.puts = []
         self.server = FakeServer().start()
 

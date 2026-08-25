@@ -472,7 +472,14 @@ def policy_status_is_public(body):
             "BucketPolicyStatusMalformed",
             "bucket policy status reply is missing a parseable IsPublic value",
         )
-    return node.text.strip().lower() == "true"
+    normalized = node.text.strip().lower()
+    if normalized not in ("true", "false"):
+        raise S3Error(
+            0,
+            "BucketPolicyStatusMalformed",
+            "bucket policy status IsPublic must be exactly 'true' or 'false', got %r" % node.text.strip(),
+        )
+    return normalized == "true"
 
 
 def _open_output_for_list(objects):
