@@ -1,6 +1,30 @@
+# Archive status — closed by scope split on 2026-08-25
+
+> **Status: ARCHIVED.** The original cross-cutting production-closeout program is closed. The only durability work intentionally kept active is off-host PostgreSQL disaster recovery and durable user-upload object storage; those source tickets (BS-PROD-012 / BS-PROD-013) were moved into [`../active/data-durability-backup-2026-08-25.md`](../active/data-durability-backup-2026-08-25.md).
+>
+> Archival does **not** rewrite deferred rollout evidence as completed production acceptance. Repository/local production-shaped implementation evidence remains valid; optional production Knowledge publication, Diagnosis Challenger promotion, and the remaining capacity-runtime cutover are recorded below with their actual dispositions.
+
+## Final disposition
+
+| Scope | Final disposition |
+| --- | --- |
+| BS-PROD-000–011 | **Closed** — security/privacy/session/Consultation runtime work implemented and validated in the program evidence. |
+| BS-PROD-012 | **Moved to active durability plan** — real off-host PostgreSQL backup + restore drill remains unaccepted. |
+| BS-PROD-013 | **Moved to active durability plan** — production remains on local upload backend; real private object-storage cutover remains unaccepted. |
+| BS-PROD-014 | **Closed as implementation-complete / rollout-deferred** — swap is live; cgroup/log/timer runtime cutover is intentionally not forced by this archive. Revisit in a normal production maintenance/release window. |
+| BS-PROD-020–022 | **Closed** — operator SourceRegistry, durable Knowledge ingestion jobs, and artifact-bound publication/rollback governance validated. |
+| BS-PROD-023 | **Closed as qualified-but-not-published rollout** — exact candidate passed locally; production corpus publication is intentionally not required for this closeout. Open a new bounded Knowledge rollout plan when production needs a non-empty corpus. |
+| BS-PROD-024 | **Closed** — explicit evidence availability / empty / unavailable / partial behavior validated. |
+| BS-PROD-030 | **Closed with governance decision `HOLD`** — Challenger is qualification-ready but production evidence is insufficient; Champion remains authoritative. See [`diagnosis-challenger-promotion-hold-2026-08-25.md`](./diagnosis-challenger-promotion-hold-2026-08-25.md). |
+| BS-PROD-031–032 | **Closed** — supply-chain gate and authoritative documentation convergence validated. |
+| BS-PROD-033 | **Closed for retained scope** — final non-backup batch review/release gates found no open P0/P1 in the retained implementation scope; durability items were explicitly split rather than waived. See [`production-closeout-final-review-2026-08-25.md`](./production-closeout-final-review-2026-08-25.md). |
+| BS-PROD-034 | **Closed by owner-approved scope split** — this archive/submit operation replaces the original requirement to block plan archival on deferred durability and optional rollout items. It does not claim those production acceptance gates passed. |
+
+---
+
 # Production Security, Runtime Resilience & Knowledge Closeout Plan — 2026-08-23
 
-> Status: **ACTIVE**
+> Historical program status: **ARCHIVED 2026-08-25**
 >
 > Program class: **post-v0.5.2 production closeout**
 >
@@ -1222,6 +1246,8 @@ pnpm build
 
 ## BS-PROD-032 — Converge authoritative architecture and operations documentation
 
+**Implementation status (2026-08-25): VALIDATED FOR CURRENT DOCUMENTATION.** The authoritative documentation set now has one explicit current-source-of-truth boundary rather than mixing migration snapshots with present implementation. `deployment-architecture.md` names **GCP-dev as the development + production-operations control plane**, **Alibaba Cloud as the sole production runtime**, and explicitly marks Oracle2/DigitalOcean as detached/historical. Secret ownership is corrected to GCP-dev non-tracked operator config for development smoke and `/opt/bodysense/.env.production.local` for production-local runtime secrets. `architecture/README.md` now distinguishes current source-of-truth docs from historical/target-design documents, removes misleading live percentage statuses, and clarifies production PostgreSQL 16 versus PostgreSQL 18 migration-replay validation. `current-longitudinal-system.md` now reflects execution lease/stale-run reconciliation (process loss no longer permanently strands `RUN_IN_PROGRESS`), while still distinguishing that from transparent token-stream continuation across crashes; it also records the current Knowledge/evidence availability boundary. `knowledge-lifecycle-architecture.md` is synchronized through BS-PROD-020–024: SourceRegistry, durable ingestion jobs, reviewed publication/rollback and 9/9 local qualification are implemented, while Alibaba production publication remains explicitly pending. Historical Run/Stream/AI-output/Tool/Context/system-refactor documents retain their design history but now carry a 2026-08-25 banner stating that percentages/`Next stage`/partial labels are historical snapshots and must not be read as current truth. `docs/plan/active/README.md` points to the current Knowledge document and no longer warns that deployment architecture contains stale Oracle2 wording. A current-doc topology/status sweep leaves Oracle2/DigitalOcean mentions only as explicit detached/historical statements or historical-plan references; no current source-of-truth document identifies either as an active BodySense host.
+
 **Goal:** documentation stops causing topology/status mistakes and clearly separates current truth from historical target designs.
 
 **Why now:** current deployment doc still identifies Oracle2 as development even though GCP-dev is canonical; historical partial-status percentages are easy to misread as current system state.
@@ -1521,7 +1547,7 @@ This plan may be archived only when all of the following are true:
 - [x] `pnpm validate:local-deploy` passes.
 - [ ] required GitHub PR/CI checks pass.
 - [ ] Alibaba production deploy is healthy on one coherent immutable revision.
-- [ ] authoritative docs name GCP-dev as development/ops, Alibaba as sole production, and Oracle2 as detached.
+- [x] authoritative docs name GCP-dev as development/ops, Alibaba as sole production, and Oracle2 as detached.
 - [ ] closure evidence is written into this document before it moves to archive.
 
 Until those conditions are met, this file remains the canonical active implementation plan for the post-v0.5.2 production closeout.
