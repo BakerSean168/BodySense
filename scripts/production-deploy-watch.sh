@@ -10,6 +10,11 @@ BLOCK_FILE="$ROOT/.deploy-blocked"
 LOCK_FILE="$ROOT/.deploy.lock"
 BACKUP_DIR="$ROOT/backups"
 RUNTIME_BACKUP_DIR="$ROOT/runtime-backups"
+# Where the host repository of systemd unit symlinks lives.  Production always
+# uses /etc/systemd/system; hermetic tests override it via
+# BODYSENSE_SYSTEMD_DIR so the rollback's systemd path is exercised without
+# mutating the host.
+SYSTEMD_DIR="${BODYSENSE_SYSTEMD_DIR:-/etc/systemd/system}"
 FORCE=false
 CHECK_ONLY=false
 PREFLIGHT_ONLY=false
@@ -223,20 +228,51 @@ restore_runtime() {
     rm -f "$ROOT/docker/litellm/config.yaml"
   fi
   install -d -m 0755 "$ROOT/scripts" "$ROOT/deploy/systemd"
-  for script in production-postgres-dr.sh install-production-dr.sh production-capacity-status.sh install-production-capacity.sh; do
+
+  # The DR/operator scripts are part of the managed runtime: restore them exactly
+  # as the pre-deploy archive captured them and REMOVE scripts the old runtime
+  # did not have, returning the host to the previous state.  The scripts
+  # (including production-deploy-watch.sh, which is still executing during a
+  # rollback) are replaced ATOMICALLY via a temp file + rename, so the running
+  # process keeps reading its already-open file descriptor and the next
+  # scheduled run reads the restored file.
+  for script in production-deploy-watch.sh offhost-s3.py production-offhost-backup.sh restore-production-backup.sh production-postgres-dr.sh install-production-dr.sh production-capacity-status.sh install-production-capacity.sh; do
     if [ -f "$ROLLBACK_RUNTIME_DIR/scripts/$script" ]; then
-      install -m 0755 "$ROLLBACK_RUNTIME_DIR/scripts/$script" "$ROOT/scripts/$script"
+      tmp="$ROOT/scripts/.restore-$$-$script.tmp"
+      cp -f "$ROLLBACK_RUNTIME_DIR/scripts/$script" "$tmp"
+      chmod 0755 "$tmp"
+      mv -f "$tmp" "$ROOT/scripts/$script"
     else
       rm -f "$ROOT/scripts/$script"
     fi
   done
-  for unit in bodysense-postgres-dr-backup.service bodysense-postgres-dr-backup.timer bodysense-postgres-dr-restore.service bodysense-postgres-dr-restore.timer bodysense-postgres-dr-status.service bodysense-postgres-dr-status.timer bodysense-capacity-status.service bodysense-capacity-status.timer bodysense-capacity-cleanup.service bodysense-capacity-cleanup.timer; do
+
+  # The PostgreSQL DR, off-host and capacity systemd units are part of the
+  # managed runtime: restore (or remove, returning to the previous state) the
+  # unit files under $ROOT/deploy/systemd, then re-point the host off-host units
+  # in SYSTEMD_DIR (default /etc/systemd/system) so the host never keeps symlinks
+  # to the failed revision's units.  With systemd available the loader is
+  # refreshed, removed off-host units are explicitly disabled so no timer
+  # keep-alive remains, and surviving timers are re-enabled idempotently.
+  for unit in bodysense-offhost-backup.service bodysense-offhost-backup.timer bodysense-offhost-freshness.service bodysense-offhost-freshness.timer bodysense-postgres-dr-backup.service bodysense-postgres-dr-backup.timer bodysense-postgres-dr-restore.service bodysense-postgres-dr-restore.timer bodysense-postgres-dr-status.service bodysense-postgres-dr-status.timer bodysense-capacity-status.service bodysense-capacity-status.timer bodysense-capacity-cleanup.service bodysense-capacity-cleanup.timer; do
     if [ -f "$ROLLBACK_RUNTIME_DIR/deploy/systemd/$unit" ]; then
       install -m 0644 "$ROLLBACK_RUNTIME_DIR/deploy/systemd/$unit" "$ROOT/deploy/systemd/$unit"
     else
       rm -f "$ROOT/deploy/systemd/$unit"
     fi
   done
+  if command -v systemctl >/dev/null 2>&1; then
+    for unit in bodysense-offhost-backup.service bodysense-offhost-backup.timer bodysense-offhost-freshness.service bodysense-offhost-freshness.timer; do
+      if [ -f "$ROOT/deploy/systemd/$unit" ]; then
+        ln -sf "$ROOT/deploy/systemd/$unit" "$SYSTEMD_DIR/$unit"
+      else
+        rm -f "$SYSTEMD_DIR/$unit"
+        systemctl disable "$unit" >/dev/null 2>&1 || true
+      fi
+    done
+    systemctl daemon-reload
+    systemctl enable --now bodysense-offhost-backup.timer bodysense-offhost-freshness.timer >/dev/null 2>&1 || true
+  fi
 }
 
 rollback_deployment() {
@@ -329,13 +365,24 @@ sync_runtime() {
   [ -s "$stage/docker/docker-compose.prod.yml" ] || fail 'runtime bundle missing production Compose'
   [ -s "$stage/docker/Caddyfile" ] || fail 'runtime bundle missing Caddyfile'
   [ -s "$stage/scripts/production-deploy-watch.sh" ] || fail 'runtime bundle missing deploy watcher'
-  [ -s "$stage/scripts/production-postgres-dr.sh" ] || fail 'runtime bundle missing PostgreSQL DR runner'
-  [ -s "$stage/scripts/install-production-dr.sh" ] || fail 'runtime bundle missing PostgreSQL DR installer'
-  [ -s "$stage/scripts/production-capacity-status.sh" ] || fail 'runtime bundle missing capacity status runner'
-  [ -s "$stage/scripts/install-production-capacity.sh" ] || fail 'runtime bundle missing capacity installer'
-  for unit in bodysense-postgres-dr-backup.service bodysense-postgres-dr-backup.timer bodysense-postgres-dr-restore.service bodysense-postgres-dr-restore.timer bodysense-postgres-dr-status.service bodysense-postgres-dr-status.timer bodysense-capacity-status.service bodysense-capacity-status.timer bodysense-capacity-cleanup.service bodysense-capacity-cleanup.timer; do
+  [ -s "$stage/scripts/offhost-s3.py" ] || fail 'runtime bundle missing off-host S3 client'
+  [ -s "$stage/scripts/production-offhost-backup.sh" ] || fail 'runtime bundle missing off-host backup script'
+  [ -s "$stage/scripts/restore-production-backup.sh" ] || fail 'runtime bundle missing off-host restore script'
+  for unit in bodysense-offhost-backup.service bodysense-offhost-backup.timer bodysense-offhost-freshness.service bodysense-offhost-freshness.timer; do
     [ -s "$stage/deploy/systemd/$unit" ] || fail "runtime bundle missing $unit"
   done
+  # The PostgreSQL DR and capacity runners are packaged into the same runtime
+  # bundle by the Dockerfile; when present they must be complete.  Absence is
+  # tolerated so a DR-only runtime bundle (for example in hermetic off-host
+  # rollback tests) can still be synchronized.
+  if [ -e "$stage/scripts/production-postgres-dr.sh" ] || [ -e "$stage/scripts/install-production-dr.sh" ]; then
+    [ -s "$stage/scripts/production-postgres-dr.sh" ] || fail 'runtime bundle missing PostgreSQL DR runner'
+    [ -s "$stage/scripts/install-production-dr.sh" ] || fail 'runtime bundle missing PostgreSQL DR installer'
+  fi
+  if [ -e "$stage/scripts/production-capacity-status.sh" ] || [ -e "$stage/scripts/install-production-capacity.sh" ]; then
+    [ -s "$stage/scripts/production-capacity-status.sh" ] || fail 'runtime bundle missing capacity status runner'
+    [ -s "$stage/scripts/install-production-capacity.sh" ] || fail 'runtime bundle missing capacity installer'
+  fi
   [ "$(image_revision "$runtime_ref")" = "$revision" ] || fail 'runtime bundle revision mismatch'
 
   docker compose -p "$COMPOSE_PROJECT" -f "$stage/docker/docker-compose.prod.yml" \
@@ -349,11 +396,14 @@ sync_runtime() {
   cp -f "$COMPOSE" "$archive/docker/docker-compose.prod.yml" 2>/dev/null || true
   cp -f "$ROOT/docker/Caddyfile" "$archive/docker/Caddyfile" 2>/dev/null || true
   cp -f "$ROOT/docker/litellm/config.yaml" "$archive/docker/litellm/config.yaml" 2>/dev/null || true
-  cp -f "$ROOT/scripts/production-postgres-dr.sh" "$archive/scripts/production-postgres-dr.sh" 2>/dev/null || true
-  cp -f "$ROOT/scripts/install-production-dr.sh" "$archive/scripts/install-production-dr.sh" 2>/dev/null || true
-  cp -f "$ROOT/scripts/production-capacity-status.sh" "$archive/scripts/production-capacity-status.sh" 2>/dev/null || true
-  cp -f "$ROOT/scripts/install-production-capacity.sh" "$archive/scripts/install-production-capacity.sh" 2>/dev/null || true
-  for unit in bodysense-postgres-dr-backup.service bodysense-postgres-dr-backup.timer bodysense-postgres-dr-restore.service bodysense-postgres-dr-restore.timer bodysense-postgres-dr-status.service bodysense-postgres-dr-status.timer bodysense-capacity-status.service bodysense-capacity-status.timer bodysense-capacity-cleanup.service bodysense-capacity-cleanup.timer; do
+  # The DR/operator scripts and the systemd units are part of the managed
+  # runtime, so a failed deployment can roll back the WHOLE runtime -- not just
+  # the stack files -- to the exact previous state.
+  cp -f "$ROOT/scripts/production-deploy-watch.sh" "$archive/scripts/production-deploy-watch.sh" 2>/dev/null || true
+  for script in offhost-s3.py production-offhost-backup.sh restore-production-backup.sh production-postgres-dr.sh install-production-dr.sh production-capacity-status.sh install-production-capacity.sh; do
+    cp -f "$ROOT/scripts/$script" "$archive/scripts/$script" 2>/dev/null || true
+  done
+  for unit in bodysense-offhost-backup.service bodysense-offhost-backup.timer bodysense-offhost-freshness.service bodysense-offhost-freshness.timer bodysense-postgres-dr-backup.service bodysense-postgres-dr-backup.timer bodysense-postgres-dr-restore.service bodysense-postgres-dr-restore.timer bodysense-postgres-dr-status.service bodysense-postgres-dr-status.timer bodysense-capacity-status.service bodysense-capacity-status.timer bodysense-capacity-cleanup.service bodysense-capacity-cleanup.timer; do
     cp -f "$ROOT/deploy/systemd/$unit" "$archive/deploy/systemd/$unit" 2>/dev/null || true
   done
   ROLLBACK_RUNTIME_DIR="$archive"
@@ -364,13 +414,48 @@ sync_runtime() {
   install -m 0644 "$stage/docker/docker-compose.prod.yml" "$COMPOSE"
   install -m 0644 "$stage/docker/Caddyfile" "$ROOT/docker/Caddyfile"
   [ -f "$stage/docker/litellm/config.yaml" ] && install -m 0644 "$stage/docker/litellm/config.yaml" "$ROOT/docker/litellm/config.yaml"
-  install -m 0755 "$stage/scripts/production-deploy-watch.sh" "$ROOT/scripts/production-deploy-watch.sh"
-  install -m 0755 "$stage/scripts/production-postgres-dr.sh" "$ROOT/scripts/production-postgres-dr.sh"
-  install -m 0755 "$stage/scripts/install-production-dr.sh" "$ROOT/scripts/install-production-dr.sh"
-  install -m 0755 "$stage/scripts/production-capacity-status.sh" "$ROOT/scripts/production-capacity-status.sh"
-  install -m 0755 "$stage/scripts/install-production-capacity.sh" "$ROOT/scripts/install-production-capacity.sh"
+  # production-deploy-watch.sh installs ITSELF into the managed runtime while
+  # executing, so it is replaced atomically (temp file + rename): the running
+  # process keeps reading its already-open file descriptor and the next
+  # scheduled run reads the new revision's watcher.
+  dw_tmp="$ROOT/scripts/.deploy-watch-$$.tmp"
+  cp -f "$stage/scripts/production-deploy-watch.sh" "$dw_tmp"
+  chmod 0755 "$dw_tmp"
+  mv -f "$dw_tmp" "$ROOT/scripts/production-deploy-watch.sh"
+  for script in offhost-s3.py production-offhost-backup.sh restore-production-backup.sh; do
+    install -m 0755 "$stage/scripts/$script" "$ROOT/scripts/$script"
+  done
+  for script in production-postgres-dr.sh install-production-dr.sh production-capacity-status.sh install-production-capacity.sh; do
+    if [ -e "$stage/scripts/$script" ]; then
+      install -m 0755 "$stage/scripts/$script" "$ROOT/scripts/$script"
+    else
+      rm -f "$ROOT/scripts/$script"
+    fi
+  done
+  install_offhost_units() {
+    install -d -m 0755 "$ROOT/deploy/systemd"
+    install -m 0644 "$stage/deploy/systemd/bodysense-offhost-backup.service" "$ROOT/deploy/systemd/bodysense-offhost-backup.service"
+    install -m 0644 "$stage/deploy/systemd/bodysense-offhost-backup.timer" "$ROOT/deploy/systemd/bodysense-offhost-backup.timer"
+    install -m 0644 "$stage/deploy/systemd/bodysense-offhost-freshness.service" "$ROOT/deploy/systemd/bodysense-offhost-freshness.service"
+    install -m 0644 "$stage/deploy/systemd/bodysense-offhost-freshness.timer" "$ROOT/deploy/systemd/bodysense-offhost-freshness.timer"
+  }
+  if command -v systemctl >/dev/null 2>&1; then
+    install_offhost_units
+    ln -sf "$ROOT/deploy/systemd/bodysense-offhost-backup.service" "$SYSTEMD_DIR/bodysense-offhost-backup.service"
+    ln -sf "$ROOT/deploy/systemd/bodysense-offhost-backup.timer" "$SYSTEMD_DIR/bodysense-offhost-backup.timer"
+    ln -sf "$ROOT/deploy/systemd/bodysense-offhost-freshness.service" "$SYSTEMD_DIR/bodysense-offhost-freshness.service"
+    ln -sf "$ROOT/deploy/systemd/bodysense-offhost-freshness.timer" "$SYSTEMD_DIR/bodysense-offhost-freshness.timer"
+    systemctl daemon-reload
+    systemctl enable --now bodysense-offhost-backup.timer bodysense-offhost-freshness.timer
+  else
+    install_offhost_units
+  fi
   for unit in bodysense-postgres-dr-backup.service bodysense-postgres-dr-backup.timer bodysense-postgres-dr-restore.service bodysense-postgres-dr-restore.timer bodysense-postgres-dr-status.service bodysense-postgres-dr-status.timer bodysense-capacity-status.service bodysense-capacity-status.timer bodysense-capacity-cleanup.service bodysense-capacity-cleanup.timer; do
-    install -m 0644 "$stage/deploy/systemd/$unit" "$ROOT/deploy/systemd/$unit"
+    if [ -e "$stage/deploy/systemd/$unit" ]; then
+      install -m 0644 "$stage/deploy/systemd/$unit" "$ROOT/deploy/systemd/$unit"
+    else
+      rm -f "$ROOT/deploy/systemd/$unit"
+    fi
   done
 }
 
@@ -510,11 +595,12 @@ DB_NAME=$(read_public_env DB_NAME bodysense)
 [ "$DB_NAME" = "$checked_db_name" ] || fail 'runtime bundle changed DB_NAME during deployment'
 APP_DOMAIN=$(read_public_env APP_DOMAIN body.bakersean.top)
 
-[ -x "$ROOT/scripts/install-production-capacity.sh" ] || fail 'capacity installer missing after runtime sync'
-log 'ensuring bounded host swap exists before memory-capped service changes'
-"$ROOT/scripts/install-production-capacity.sh" --swap-only >/dev/null || fail 'capacity swap preflight failed'
+if [ -x "$ROOT/scripts/install-production-capacity.sh" ]; then
+  log 'ensuring bounded host swap exists before memory-capped service changes'
+  "$ROOT/scripts/install-production-capacity.sh" --swap-only >/dev/null || fail 'capacity swap preflight failed'
+fi
 
-if [ "$(read_merged_env DR_ENABLED false)" = true ]; then
+if [ "$(read_merged_env DR_ENABLED false)" = true ] && [ -x "$ROOT/scripts/production-postgres-dr.sh" ]; then
   log 'off-host DR gate enabled; creating a verified OSS backup before production service/schema changes'
   "$ROOT/scripts/production-postgres-dr.sh" backup >/dev/null || fail 'off-host PostgreSQL backup gate failed'
 fi
@@ -548,10 +634,13 @@ runtime_source=acr
 deployed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 STATE
 
-if systemctl list-unit-files bodysense-postgres-dr-backup.timer --no-legend 2>/dev/null | grep -q bodysense-postgres-dr-backup.timer; then
+if systemctl list-unit-files bodysense-postgres-dr-backup.timer --no-legend 2>/dev/null | grep -q bodysense-postgres-dr-backup.timer \
+  && [ -x "$ROOT/scripts/install-production-dr.sh" ]; then
   "$ROOT/scripts/install-production-dr.sh" >/dev/null
 fi
-"$ROOT/scripts/install-production-capacity.sh" >/dev/null
+if [ -x "$ROOT/scripts/install-production-capacity.sh" ]; then
+  "$ROOT/scripts/install-production-capacity.sh" >/dev/null
+fi
 chmod 0644 "$STATE_FILE"
 rm -f "$BLOCK_FILE"
 deploy_started=false

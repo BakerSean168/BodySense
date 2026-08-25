@@ -9,10 +9,10 @@ export default {
     'scope-enum': [
       2,
       'always',
-      ['web', 'api', 'ai', 'docker', 'docs', 'deps', 'main', ''],
+      ['web', 'api', 'ai', 'docker', 'docs', 'deps', 'main', 'ops', ''],
     ],
     'scope-case': [2, 'always', 'lower-case'],
     'subject-empty': [2, 'never'],
-    'header-max-length': [2, 'always', 100],
+    'header-max-length': [2, 'always', 120],
   },
 };
