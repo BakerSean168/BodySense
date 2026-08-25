@@ -254,9 +254,17 @@ n=$(OFFHOST_BACKUP_ACCESS_KEY="$ACCESS" OFFHOST_BACKUP_SECRET_KEY="$SECRET" \
 echo "DR_INTEGRATION_BACKUP=PASS objects=$n object_key=$object_key"
 
 # --- freshness check passes ---------------------------------------------------------
-BODYSENSE_DEPLOY_ROOT="$ROOT" bash scripts/production-offhost-backup.sh --check-freshness \
-  | grep -q OFFHOST_BACKUP_FRESH=OK \
-  || { echo "freshness check failed" >&2; exit 1; }
+# Capture the complete output first: a `| grep -q` would close the pipe on the
+# first match, SIGPIPE the producer (which emits a trailing log line) and fail
+# the pipeline under `set -o pipefail`.  Check the freshness command itself
+# failed closed, then assert the OK marker from the completed output.
+if ! freshness_out="$(BODYSENSE_DEPLOY_ROOT="$ROOT" bash scripts/production-offhost-backup.sh --check-freshness 2>&1)"; then
+  printf '%s\n' "$freshness_out" >&2
+  echo "freshness check failed" >&2
+  exit 1
+fi
+grep -q OFFHOST_BACKUP_FRESH=OK <<<"$freshness_out" \
+  || { echo "freshness check failed: OFFHOST_BACKUP_FRESH=OK not reported" >&2; printf '%s\n' "$freshness_out" >&2; exit 1; }
 echo "DR_INTEGRATION_FRESHNESS=PASS"
 
 # --- full restore drill into a disposable database on the disposable server --------
