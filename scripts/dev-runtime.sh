@@ -32,7 +32,7 @@ export REDIS_PASSWORD=${REDIS_PASSWORD:-bodysense123}
 export JWT_SECRET_KEY=${JWT_SECRET_KEY:-bodysense-dev-only-secret}
 export LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:-sk-bodysense-dev-gateway}
 export EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-hashing}
-export CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:${WEB_PORT},http://127.0.0.1:${WEB_PORT},https://gcp-dev-01.taile92a8e.ts.net:${WEB_PORT}}
+export CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:${WEB_PORT},http://127.0.0.1:${WEB_PORT}}
 
 compose=(docker compose -f docker/docker-compose.yml --profile dev)
 
@@ -107,7 +107,7 @@ up() {
   start_process ai "cd '$ROOT/apps/ai-service' && exec env DATABASE_URL='postgresql://${DB_USER}:${DB_PASSWORD}@127.0.0.1:${DB_PORT}/${DB_NAME}' LITELLM_BASE_URL='http://127.0.0.1:${LITELLM_PORT}/v1' LITELLM_API_KEY='${LITELLM_MASTER_KEY}' EMBEDDING_PROVIDER='${EMBEDDING_PROVIDER}' CORS_ORIGINS='${CORS_ORIGINS}' uv run --extra ocr uvicorn src.main:app --host 127.0.0.1 --port '${AI_SERVICE_PORT}' --reload"
   wait_http ai "http://127.0.0.1:${AI_SERVICE_PORT}/health"
 
-  start_process web "cd '$ROOT' && exec env BODYSENSE_WEB_PORT='${WEB_PORT}' VITE_DEV_API_TARGET='http://127.0.0.1:${API_PORT}' pnpm exec vite --config apps/web/vite.config.ts --host 127.0.0.1 --port '${WEB_PORT}' --strictPort"
+  start_process web "cd '$ROOT' && exec env BODYSENSE_WEB_PORT='${WEB_PORT}' BODYSENSE_ALLOWED_HOSTS='${BODYSENSE_ALLOWED_HOSTS:-}' VITE_DEV_API_TARGET='http://127.0.0.1:${API_PORT}' pnpm exec vite --config apps/web/vite.config.ts --host 127.0.0.1 --port '${WEB_PORT}' --strictPort"
   wait_http web "http://127.0.0.1:${WEB_PORT}"
 }
 
