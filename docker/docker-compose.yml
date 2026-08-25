@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-bodysense123}
       POSTGRES_DB: ${DB_NAME:-bodysense}
     ports:
-      - '${DB_PORT:-5432}:5432'
+      - '${DEV_BIND_HOST:-127.0.0.1}:${DB_PORT:-20110}:5432'
     volumes:
       - postgres-dev-data:/var/lib/postgresql
     networks:
@@ -23,7 +23,7 @@ services:
     profiles: [dev]
     image: redis:7-alpine
     ports:
-      - '${REDIS_PORT:-6384}:6379'
+      - '${DEV_BIND_HOST:-127.0.0.1}:${REDIS_PORT:-20111}:6379'
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-bodysense123}
     networks:
       - bodysense-network
@@ -38,7 +38,7 @@ services:
     image: ${LITELLM_IMAGE:-docker.litellm.ai/berriai/litellm:v1.97.0}
     command: ['--config', '/app/config.yaml', '--port', '4000']
     ports:
-      - '${LITELLM_PORT:-4000}:4000'
+      - '${DEV_BIND_HOST:-127.0.0.1}:${LITELLM_PORT:-20112}:4000'
     environment:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-bodysense-dev-gateway}
       MIMO_BASE_URL: ${MIMO_BASE_URL:-https://token-plan-cn.xiaomimimo.com/v1}
@@ -68,7 +68,7 @@ services:
       context: ../apps/api
       dockerfile: Dockerfile
     ports:
-      - '${API_PORT:-8080}:8080'
+      - '${DEV_BIND_HOST:-127.0.0.1}:${API_PORT:-20101}:8080'
     # ── Go API 只拿它需要的变量 ──
     environment:
       APP_ENV: development
@@ -86,7 +86,7 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev-secret-key}
       JWT_ACCESS_TTL_HOURS: ${JWT_ACCESS_TTL_HOURS:-168}
       JWT_REFRESH_TTL_HOURS: ${JWT_REFRESH_TTL_HOURS:-720}
-      CORS_ORIGINS: http://localhost:5173
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:20100,http://127.0.0.1:20100}
       AI_SERVICE_URL: http://ai-service:8100
 
       DIAGNOSIS_CHAMPION_CONFIGURATION_ID: ${DIAGNOSIS_CHAMPION_CONFIGURATION_ID:-diag-config-f492eb1c0c6676ae}
@@ -120,7 +120,7 @@ services:
       context: ../apps/ai-service
       dockerfile: Dockerfile
     ports:
-      - '${AI_SERVICE_PORT:-8100}:8100'
+      - '${DEV_BIND_HOST:-127.0.0.1}:${AI_SERVICE_PORT:-20102}:8100'
     # ── Python AI 只拿它需要的变量 ──
     environment:
       AI_SERVICE_PORT: 8100
@@ -159,10 +159,10 @@ services:
       context: ../
       dockerfile: apps/web/Dockerfile
     ports:
-      - '${WEB_PORT:-5173}:5173'
+      - '${DEV_BIND_HOST:-127.0.0.1}:${WEB_PORT:-20100}:5173'
     # ── 前端只拿公开配置 ──
     environment:
-      VITE_WS_URL: ws://localhost:${WS_PORT:-8080}/ws
+      VITE_WS_URL: ws://localhost:${API_PORT:-20101}/ws
       VITE_DEV_API_TARGET: http://api:8080
     depends_on:
       api:

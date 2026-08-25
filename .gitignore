@@ -91,3 +91,6 @@ test-results/
 
 # MCP config (contains tokens)
 .mcp.json
+
+# Local managed runtime PID/log state
+.runtime/

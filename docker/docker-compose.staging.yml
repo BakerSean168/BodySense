@@ -1,0 +1,148 @@
+# Persistent production-shaped staging for the shared GCP development host.
+# External exposure is loopback-only; Tailscale Serve terminates tailnet HTTPS.
+services:
+  postgres:
+    image: pgvector/pgvector:pg18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-bodysense}
+      POSTGRES_USER: ${DB_USER:-bodysense}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+      POSTGRES_INITDB_ARGS: --encoding=UTF8 --locale=C
+    volumes:
+      - postgres-staging-data:/var/lib/postgresql
+    networks: [bodysense-staging]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-bodysense} -d ${DB_NAME:-bodysense}']
+      interval: 10s
+      timeout: 5s
+      retries: 8
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes', '--requirepass', '${REDIS_PASSWORD:?set REDIS_PASSWORD}']
+    volumes:
+      - redis-staging-data:/data
+    networks: [bodysense-staging]
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD:?set REDIS_PASSWORD}', '--no-auth-warning', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 8
+
+  litellm-gateway:
+    image: ${LITELLM_IMAGE:-docker.litellm.ai/berriai/litellm:v1.97.0}
+    restart: unless-stopped
+    command: ['--config', '/app/config.yaml', '--port', '4000']
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?set LITELLM_MASTER_KEY}
+      MIMO_BASE_URL: ${MIMO_BASE_URL:-https://token-plan-cn.xiaomimimo.com/v1}
+      MIMO_API_KEY: ${MIMO_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+    volumes:
+      - ./litellm/config.yaml:/app/config.yaml:ro
+    networks: [bodysense-staging]
+    healthcheck:
+      test: ['CMD', 'python', '-c', "import urllib.request; urllib.request.urlopen('http://localhost:4000/health/liveliness')"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 15s
+
+  ai-service:
+    build:
+      context: ../apps/ai-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      AI_SERVICE_PORT: 8100
+      ENVIRONMENT: staging
+      DATABASE_URL: postgresql://${DB_USER:-bodysense}:${DB_PASSWORD:?set DB_PASSWORD}@postgres:5432/${DB_NAME:-bodysense}
+      LITELLM_BASE_URL: http://litellm-gateway:4000/v1
+      LITELLM_API_KEY: ${LITELLM_MASTER_KEY:?set LITELLM_MASTER_KEY}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-hashing}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-1536}
+      BODYSENSE_DETERMINISTIC_AI: 'false'
+      BODYSENSE_E2E_STUB_AI: '0'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      litellm-gateway:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    networks: [bodysense-staging]
+    healthcheck:
+      test: ['CMD', 'python', '-c', "import urllib.request; urllib.request.urlopen('http://localhost:8100/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 20s
+
+  api:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      APP_ENV: staging
+      API_HOST: 0.0.0.0
+      API_PORT: 8080
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-bodysense}
+      DB_USER: ${DB_USER:-bodysense}
+      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+      DB_SSLMODE: disable
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?set JWT_SECRET_KEY}
+      AI_SERVICE_URL: http://ai-service:8100
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:20150,http://127.0.0.1:20150,https://gcp-dev-01.taile92a8e.ts.net:20150}
+      UPLOAD_STORAGE_BACKEND: local
+      UPLOAD_STORAGE_LOCAL_ROOT: /app/uploads
+    volumes:
+      - api-staging-uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [bodysense-staging]
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8080/api/health']
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 25s
+
+  web:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.web
+    restart: unless-stopped
+    ports:
+      - '${STAGING_BIND_HOST:-127.0.0.1}:${STAGING_WEB_PORT:-20150}:80'
+    depends_on:
+      api:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
+    networks: [bodysense-staging]
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://127.0.0.1/']
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 10s
+
+networks:
+  bodysense-staging:
+    driver: bridge
+
+volumes:
+  postgres-staging-data:
+  redis-staging-data:
+  api-staging-uploads:

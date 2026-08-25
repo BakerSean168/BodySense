@@ -1,14 +1,30 @@
 # BodySense deployment architecture
 
-> Current production architecture, 2026-08-22.
+> Current deployment architecture, 2026-08-25.
 
 ## Environment roles
 
-- **Oracle2** is development / local deploy validation / temporary product preview. It is not production.
+- **GCP-dev (`gcp-dev-01`)** is the primary development, ephemeral validation, persistent staging and production-operations control host.
+- **Oracle2** is detached from BodySense application development/deployment and must not receive new BodySense runtimes.
 - **GitHub Actions** is the CI and release build plane.
 - **Alibaba Cloud ACR** is the production image registry.
 - **Alibaba Cloud ECS** (`body.bakersean.top`) is the only production runtime.
 - **DigitalOcean** is retired and preserved only under `docs/archive/deployment/digitalocean/`.
+
+### GCP development and staging lanes
+
+GCP uses the canonical project block `20100-20199` from `my-infrastructure/projects/bodysense.yaml`:
+
+| Lane | Runtime | Host ports | Lifecycle |
+| --- | --- | --- | --- |
+| direct dev | host Web/API/AI + Docker-only infra | Web `20100`, API `20101`, AI `20102`, PostgreSQL `20110`, Redis `20111`, LiteLLM `20112` | development session |
+| validator | isolated Docker Compose | dynamically allocated loopback ports | ephemeral, auto-cleaned |
+| staging | production-shaped Docker Compose | only Web/nginx ingress `127.0.0.1:20150` | persistent |
+| production | Alibaba ECS Docker Compose | public `80/443` through Caddy | persistent |
+
+`./scripts/dev-runtime.sh` owns direct-dev startup order: infrastructure health -> Go API migration/schema bootstrap -> Python AI health -> Vite Web. `./scripts/staging-runtime.sh` owns the persistent `bodysense-staging` Compose project. Staging uses PostgreSQL 18 for clean-from-zero migration compatibility; production remains PostgreSQL 16 and its historical-upgrade compatibility is protected separately by the PostgreSQL-16 production fixture/replay gate.
+
+GCP application host ports bind loopback. Human remote access is provided by Tailscale Serve/TLS; database, Redis, LiteLLM and AI internal staging ports are not exposed directly.
 
 ## Production delivery flow
 

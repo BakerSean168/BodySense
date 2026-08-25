@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -266,11 +266,11 @@ func main() {
 	)
 	healthWorkspaceHandler := handler.NewHealthWorkspaceHandler(healthWorkspaceService)
 
-	// HTTP server
+	// HTTP server. Host development defaults to loopback; container runtimes
+	// explicitly set API_HOST=0.0.0.0 so the Docker network can reach it.
+	host := os.Getenv("API_HOST")
 	port := os.Getenv("API_PORT")
-	if port == "" {
-		port = "8080"
-	}
+	listenAddress := resolveAPIListenAddress(host, port)
 
 	r := gin.Default()
 	if err := r.SetTrustedProxies(parseTrustedProxies()); err != nil {
@@ -454,10 +454,22 @@ func main() {
 		knowledgeGroup.GET("/stats", knowledgeHandler.GetStats)
 	}
 
-	log.Printf("BodySense API starting on :%s", port)
-	if err := r.Run(fmt.Sprintf(":%s", port)); err != nil {
+	log.Printf("BodySense API starting on %s", listenAddress)
+	if err := r.Run(listenAddress); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func resolveAPIListenAddress(host, port string) string {
+	host = strings.TrimSpace(host)
+	if host == "" {
+		host = "127.0.0.1"
+	}
+	port = strings.TrimSpace(port)
+	if port == "" {
+		port = "8080"
+	}
+	return net.JoinHostPort(host, port)
 }
 
 func startRunLeaseReconciler(

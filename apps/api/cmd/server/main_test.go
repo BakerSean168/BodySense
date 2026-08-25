@@ -45,3 +45,24 @@ func TestParseTrustedProxies(t *testing.T) {
 		t.Fatalf("trusted proxies = %#v", got)
 	}
 }
+
+func TestResolveAPIListenAddress(t *testing.T) {
+	tests := []struct {
+		name string
+		host string
+		port string
+		want string
+	}{
+		{name: "host dev defaults to loopback", want: "127.0.0.1:8080"},
+		{name: "explicit docker bind", host: "0.0.0.0", port: "8080", want: "0.0.0.0:8080"},
+		{name: "project dev port", host: "127.0.0.1", port: "20101", want: "127.0.0.1:20101"},
+		{name: "ipv6 loopback", host: "::1", port: "20101", want: "[::1]:20101"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := resolveAPIListenAddress(tt.host, tt.port); got != tt.want {
+				t.Fatalf("resolveAPIListenAddress(%q, %q) = %q, want %q", tt.host, tt.port, got, tt.want)
+			}
+		})
+	}
+}

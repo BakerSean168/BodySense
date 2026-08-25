@@ -36,7 +36,7 @@ export default defineConfig({
     noExternal: ['@base-ui/react'],
   },
   server: {
-    port: 5173,
+    port: Number(process.env.BODYSENSE_WEB_PORT || 5173),
     proxy: {
       '/api': {
         target: process.env.VITE_DEV_API_TARGET || 'http://localhost:8080',
