@@ -72,6 +72,20 @@ MIMO_API_KEY=
 UPLOAD_OSS_BUCKET=
 UPLOAD_OSS_ECS_RAM_ROLE=
 UPLOAD_OSS_ENDPOINT=
+
+# Off-host backup (BS-PROD-012): least-privilege object-store credentials for
+# the operator-owned off-host PostgreSQL backups.  Generate an access key/secret
+# that has PutObject/GetObject/DeleteObject/ListBucket on the backup bucket and
+# ALWAYS GetBucketAcl (the privacy preflight reads the ACL).  GetBucketPolicyStatus
+# is additionally required ONLY when the tracked .env.production sets
+# OFFHOST_BACKUP_PRIVACY_PROOF=acl+policy (the default); stores such as Alibaba
+# OSS do not implement policy status at all, so .env.production ships with
+# OFFHOST_BACKUP_PRIVACY_PROOF=acl (ACL-only proof, no GetBucketPolicyStatus).
+# Mirror the proof-mode permission contract in .env.production, or backups will
+# abort at the fail-closed private-destination preflight (the client refuses "I
+# could not prove private" as anything except a failure).
+OFFHOST_BACKUP_ACCESS_KEY=
+OFFHOST_BACKUP_SECRET_KEY=
 SECRET
   )
   echo "Created $DEPLOY_DIR/.env.production.local; configure provider keys before serving AI traffic."
@@ -86,6 +100,9 @@ if [ -f "$SOURCE_DIR/docker/litellm/config.yaml" ]; then
   install -m 0644 "$SOURCE_DIR/docker/litellm/config.yaml" "$DEPLOY_DIR/docker/litellm/config.yaml"
 fi
 install -m 0755 "$SOURCE_DIR/scripts/production-deploy-watch.sh" "$DEPLOY_DIR/scripts/production-deploy-watch.sh"
+install -m 0755 "$SOURCE_DIR/scripts/offhost-s3.py" "$DEPLOY_DIR/scripts/offhost-s3.py"
+install -m 0755 "$SOURCE_DIR/scripts/production-offhost-backup.sh" "$DEPLOY_DIR/scripts/production-offhost-backup.sh"
+install -m 0755 "$SOURCE_DIR/scripts/restore-production-backup.sh" "$DEPLOY_DIR/scripts/restore-production-backup.sh"
 install -m 0755 "$SOURCE_DIR/scripts/production-postgres-dr.sh" "$DEPLOY_DIR/scripts/production-postgres-dr.sh"
 install -m 0755 "$SOURCE_DIR/scripts/install-production-dr.sh" "$DEPLOY_DIR/scripts/install-production-dr.sh"
 install -m 0755 "$SOURCE_DIR/scripts/production-capacity-status.sh" "$DEPLOY_DIR/scripts/production-capacity-status.sh"
@@ -115,6 +132,16 @@ compose=(
 
 install -m 0644 "$SOURCE_DIR/deploy/systemd/bodysense-deploy-watch.service" /etc/systemd/system/bodysense-deploy-watch.service
 install -m 0644 "$SOURCE_DIR/deploy/systemd/bodysense-deploy-watch.timer" /etc/systemd/system/bodysense-deploy-watch.timer
+
+# Off-host backup + freshness scheduling (BS-PROD-012).  The units are always
+# installed; the deploy watcher enables the timers.  Until the operator supplies
+# OFFHOST_BACKUP_* credentials in .env.production.local the freshness check
+# alerts every hour instead of reporting "OK", so an unconfigured host cannot
+# masquerade as being protected.
+install -m 0644 "$SOURCE_DIR/deploy/systemd/bodysense-offhost-backup.service" /etc/systemd/system/bodysense-offhost-backup.service
+install -m 0644 "$SOURCE_DIR/deploy/systemd/bodysense-offhost-backup.timer" /etc/systemd/system/bodysense-offhost-backup.timer
+install -m 0644 "$SOURCE_DIR/deploy/systemd/bodysense-offhost-freshness.service" /etc/systemd/system/bodysense-offhost-freshness.service
+install -m 0644 "$SOURCE_DIR/deploy/systemd/bodysense-offhost-freshness.timer" /etc/systemd/system/bodysense-offhost-freshness.timer
 systemctl daemon-reload
 
 # First deployment uses the exact same safety gates as subsequent polling deployments.

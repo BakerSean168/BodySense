@@ -14,6 +14,13 @@ COPY docker/docker-compose.prod.yml /runtime/docker/docker-compose.prod.yml
 COPY docker/Caddyfile /runtime/docker/Caddyfile
 COPY docker/litellm/config.yaml /runtime/docker/litellm/config.yaml
 COPY scripts/production-deploy-watch.sh /runtime/scripts/production-deploy-watch.sh
+COPY scripts/offhost-s3.py /runtime/scripts/offhost-s3.py
+COPY scripts/production-offhost-backup.sh /runtime/scripts/production-offhost-backup.sh
+COPY scripts/restore-production-backup.sh /runtime/scripts/restore-production-backup.sh
+COPY deploy/systemd/bodysense-offhost-backup.service /runtime/deploy/systemd/bodysense-offhost-backup.service
+COPY deploy/systemd/bodysense-offhost-backup.timer /runtime/deploy/systemd/bodysense-offhost-backup.timer
+COPY deploy/systemd/bodysense-offhost-freshness.service /runtime/deploy/systemd/bodysense-offhost-freshness.service
+COPY deploy/systemd/bodysense-offhost-freshness.timer /runtime/deploy/systemd/bodysense-offhost-freshness.timer
 COPY scripts/production-postgres-dr.sh /runtime/scripts/production-postgres-dr.sh
 COPY scripts/install-production-dr.sh /runtime/scripts/install-production-dr.sh
 COPY deploy/systemd/bodysense-postgres-dr-backup.service /runtime/deploy/systemd/bodysense-postgres-dr-backup.service
