@@ -19,6 +19,10 @@ function stripUseClient(): import('vite').Plugin {
 }
 
 const webRoot = path.resolve(__dirname);
+const allowedHosts = (process.env.BODYSENSE_ALLOWED_HOSTS ?? '')
+  .split(',')
+  .map((host) => host.trim())
+  .filter(Boolean);
 
 export default defineConfig({
   root: webRoot,
@@ -36,6 +40,7 @@ export default defineConfig({
     noExternal: ['@base-ui/react'],
   },
   server: {
+    ...(allowedHosts.length > 0 ? { allowedHosts } : {}),
     port: Number(process.env.BODYSENSE_WEB_PORT || 5173),
     proxy: {
       '/api': {
