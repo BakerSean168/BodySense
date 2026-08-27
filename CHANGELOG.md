@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.2](https://github.com/BakerSean168/BodySense/compare/v0.7.1...v0.7.2) (2026-08-27)
+
+
+### Bug Fixes
+
+* **ops:** harden capacity status collection ([362e02e](https://github.com/BakerSean168/BodySense/commit/362e02e48b3c99c61e14d5a9005cd41f1f44957f))
+* **ops:** harden capacity status collection ([e516b5b](https://github.com/BakerSean168/BodySense/commit/e516b5bf81c4656f232a7e8f68f9aa4945350365))
+
 ## [0.7.1](https://github.com/BakerSean168/BodySense/compare/v0.7.0...v0.7.1) (2026-08-27)
 
 
