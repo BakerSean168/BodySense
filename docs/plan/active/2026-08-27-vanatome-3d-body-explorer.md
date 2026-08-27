@@ -28,24 +28,30 @@ This is one complete implementation. Region mode is simple by default; anatomy c
 
 ## 2. Preconditions
 
-### 2.1 Current worktree safety
+### 2.1 Current worktree safety — RESOLVED 2026-08-27
 
-At plan creation, `feature/workbench-ui-v2` contains a large existing set of uncommitted workbench/staging/provider changes.
+The dirty Workbench/staging/provider batch has been checkpointed into separate commits and the canonical worktree is clean.
 
-Do **not** start broad 3D implementation by mixing dependency, contract, asset, and UI changes into that dirty batch.
-
-Before implementation:
-
-1. review and checkpoint/commit the accepted Workbench UI changes;
-2. identify the exact integration base SHA;
-3. create a dedicated branch/worktree, recommended:
+Checkpoint commits:
 
 ```text
-branch: feature/vanatome-body-explorer
-worktree: /home/dev/projects/bodysense-vanatome-body-explorer
+88173c4c  fix(ops): route staging structured inference through Groq
+e3545ed5  feat(web): converge to the single BodySense workbench
+9218996b  docs: adopt Vanatome 3D body explorer architecture
 ```
 
-If implementation intentionally continues on the current branch, the owner must explicitly accept the mixed scope first.
+The 3D implementation integration branch is `feature/vanatome-body-explorer`. Parallel workers must start from the exact shared base SHA supplied in their worker instructions and must not modify the canonical `/home/dev/projects/bodysense` worktree.
+
+Prepared worker worktrees:
+
+```text
+body3d/viewer           /home/dev/projects/bodysense-body3d-viewer
+body3d/semantics        /home/dev/projects/bodysense-body3d-semantics
+body3d/durable-contract /home/dev/projects/bodysense-body3d-durable-contract
+body3d/distribution     /home/dev/projects/bodysense-body3d-distribution
+```
+
+All four workers share one exact base and own non-overlapping paths/tickets. Integration is performed only after each lane has committed and reported its result.
 
 ### 2.2 Architecture read set
 
