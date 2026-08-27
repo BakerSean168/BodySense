@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.7.0](https://github.com/BakerSean168/BodySense/compare/v0.6.0...v0.7.0) (2026-08-27)
+
+
+### Features
+
+* **main:** integrate longitudinal health and 3d explorer ([4b19db6](https://github.com/BakerSean168/BodySense/commit/4b19db67d16addfedb5bf54a37f3309185743406))
+* **main:** integrate longitudinal health and 3d explorer ([9524e77](https://github.com/BakerSean168/BodySense/commit/9524e7759d64db0b4e0c5219d9f9540abbb507c6))
+
+
+### Bug Fixes
+
+* **docker:** make private-destination preflight fail closed on malformed IsPublic (BS-PROD-012) ([211ea1d](https://github.com/BakerSean168/BodySense/commit/211ea1d05cc00c2754014c498303a37b603bd594))
+* **docker:** require the drill network to contain exactly the restore container (BS-PROD-012) ([93cc5ae](https://github.com/BakerSean168/BodySense/commit/93cc5ae82ccc4c930756cacfd813e01343e064b5))
+* **docker:** restore reviewed off-host DR into combined runtime bundle (BS-PROD-012) ([910b5ce](https://github.com/BakerSean168/BodySense/commit/910b5ce6bd26bfb8f7a43e6515f09cfdc16291e1))
+* **docker:** run restore validators in a disposable container (BS-PROD-012) ([734019a](https://github.com/BakerSean168/BodySense/commit/734019a97f8a08de0eeb4470de403830880b26d1))
+* **ops:** capture off-host DR freshness output before asserting OK marker (BS-PROD-012) ([f3c641f](https://github.com/BakerSean168/BodySense/commit/f3c641ffaa4eb0de7fc2997e6abfffaffc9ac46c))
+* **ops:** make private-destination policy-status preflight fail closed on malformed IsPublic (BS-PROD-012) ([9672d33](https://github.com/BakerSean168/BodySense/commit/9672d335f7be5e8c6ce376def479532daa14ab67))
+* **ops:** reconcile target branch into DR delivery without conflict ([539aca3](https://github.com/BakerSean168/BodySense/commit/539aca3f625e893a39915bab8113dce9775b10ed))
+* **ops:** reconcile target branch into DR delivery without conflict ([6dff1c1](https://github.com/BakerSean168/BodySense/commit/6dff1c169d254123fe37f3a51d134be750651af3))
+* **ops:** require the drill network to contain exactly the restore container, fail on any other member (BS-PROD-012) ([f0c7d34](https://github.com/BakerSean168/BodySense/commit/f0c7d342dc4c5089e1364fdaa15970e78e9ec74b))
+* **ops:** restore reviewed off-host DR into combined runtime bundle (BS-PROD-012) ([b4d811e](https://github.com/BakerSean168/BodySense/commit/b4d811ecef1113ab3b9478b5320d48ca0556eb2b))
+* **ops:** run restore validators in a disposable container, refuse production members on the drill network (BS-PROD-012) ([9fb3f5b](https://github.com/BakerSean168/BodySense/commit/9fb3f5ba02bf76c1261158c5da02b495bd9dec04))
+* **web:** allow configured Tailnet Vite hosts ([af310c9](https://github.com/BakerSean168/BodySense/commit/af310c9dc30d22628f1aa9883388fdd122343429))
+* **web:** allow configured Tailnet Vite hosts ([79faf3f](https://github.com/BakerSean168/BodySense/commit/79faf3f3d64412a626f6f2189bdb7cbac445d1a7))
+
 ## [0.6.0](https://github.com/BakerSean168/BodySense/compare/v0.5.2...v0.6.0) (2026-08-25)
 
 
