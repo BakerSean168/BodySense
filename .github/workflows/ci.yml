@@ -255,6 +255,7 @@ jobs:
           CI: "true"
           E2E_BASE_URL: http://127.0.0.1:5173
           E2E_API_BASE_URL: http://127.0.0.1:8080
+          VITE_BODYSENSE_ANATOMY_CATALOG_URL: https://assets.bakersean.top/anatomy/vanatome/1.4.0/releases/1.4.0/catalog.json
         run: pnpm e2e
       - name: Print service logs on failure
         if: failure()
