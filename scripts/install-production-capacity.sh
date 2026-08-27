@@ -17,6 +17,20 @@ capacity_swap_meets_target() {
   (( current_kb + page_kb >= target_kb ))
 }
 
+# Report whole GiB for observability without flooring a nominal swap target by
+# the single metadata page that mkswap reserves. Values materially below the
+# target keep their ordinary floor so monitoring still detects undersized swap.
+capacity_swap_effective_gib() {
+  local current_kb="$1" target_gib="$2" page_bytes="${3:-}"
+  local whole_gib=$(( current_kb / 1024 / 1024 ))
+  local target_kb=$(( target_gib * 1024 * 1024 ))
+  if (( whole_gib < target_gib )) && capacity_swap_meets_target "$current_kb" "$target_kb" "$page_bytes"; then
+    printf '%s' "$target_gib"
+  else
+    printf '%s' "$whole_gib"
+  fi
+}
+
 # The validator sources this file to exercise the capacity comparison without
 # mutating the host. Normal execution continues below unchanged.
 if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
