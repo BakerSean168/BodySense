@@ -1,4 +1,4 @@
-import { Activity, ShieldAlert } from "lucide-react";
+import { ShieldAlert } from "lucide-react";
 import type { BodyStateSnapshot } from "../../types/consultation";
 import {
   selectBodyZoneSummaries,
@@ -56,48 +56,27 @@ export function BodyOverview({ snapshot, className }: BodyOverviewProps) {
   return (
     <section
       aria-labelledby="body-overview-title"
-      className={cn(
-        "flex min-h-[420px] flex-col rounded-2xl border border-border bg-card p-4 shadow-sm",
-        className,
-      )}
+      className={cn("relative flex min-h-0 flex-col", className)}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-medium text-muted-foreground">
-            BodyState R{snapshot?.current_revision ?? 0}
-          </p>
-          <h2
-            id="body-overview-title"
-            className="mt-1 text-base font-semibold text-card-foreground"
-          >
-            身体状态地图
-          </h2>
-        </div>
-        <span
-          className={cn(
-            "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium",
-            safetyReview
-              ? "border-destructive/30 bg-destructive/10 text-destructive"
-              : "border-primary/20 bg-primary/8 text-primary",
-          )}
-        >
-          {safetyReview ? (
-            <ShieldAlert className="size-3.5" aria-hidden="true" />
-          ) : (
-            <Activity className="size-3.5" aria-hidden="true" />
-          )}
-          {safetyReview ? "优先安全复核" : "当前投影"}
-        </span>
-      </div>
+      <h2 id="body-overview-title" className="sr-only">
+        身体区域状态
+      </h2>
 
-      <div className="relative mx-auto mt-3 w-full max-w-[280px] flex-1">
+      {safetyReview ? (
+        <span className="absolute right-0 top-0 inline-flex items-center gap-1 rounded-full border border-destructive/30 bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive">
+          <ShieldAlert className="size-3.5" aria-hidden="true" />
+          需优先确认
+        </span>
+      ) : null}
+
+      <div className="relative mx-auto mt-2 w-full max-w-[252px]">
         <svg
           role="img"
           aria-labelledby="body-map-svg-title body-map-svg-description"
           viewBox="0 0 260 500"
-          className="h-full min-h-[320px] w-full"
+          className="h-auto w-full"
         >
-          <title id="body-map-svg-title">当前 BodyState 身体区域概览</title>
+          <title id="body-map-svg-title">当前身体区域概览</title>
           <desc id="body-map-svg-description">
             标记仅表示当前状态中存在相关事实或已确认观察，不表示医学诊断。
           </desc>
@@ -166,15 +145,23 @@ export function BodyOverview({ snapshot, className }: BodyOverviewProps) {
       </div>
 
       {summaries.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-border bg-muted/35 px-3 py-3 text-center text-xs leading-5 text-muted-foreground">
-          继续对话或记录事实后，相关身体区域会在这里形成可复核标记。
-        </p>
+        <div className="mx-auto mt-3 w-full max-w-[300px] px-3 pb-2 text-center">
+          <p className="text-[13px] font-medium text-foreground/85">
+            还没有身体记录
+          </p>
+          <p className="mx-auto mt-1 max-w-[240px] text-xs leading-[1.55] text-muted-foreground">
+            和 BodySense 说说最近哪里不舒服，相关区域会逐渐出现在这里。
+          </p>
+        </div>
       ) : (
-        <ul aria-label="身体区域状态摘要" className="mt-2 space-y-1.5">
+        <ul
+          aria-label="身体区域状态摘要"
+          className="mx-auto mt-3 w-full max-w-[340px] divide-y divide-border/50"
+        >
           {summaries.slice(0, 4).map((summary) => (
             <li
               key={summary.zone}
-              className="flex items-center justify-between gap-3 rounded-lg bg-muted/45 px-3 py-2 text-xs"
+              className="flex items-center justify-between gap-3 px-1 py-2.5 text-xs"
             >
               <span className="min-w-0 truncate font-medium text-foreground">
                 {summary.label}
@@ -189,11 +176,6 @@ export function BodyOverview({ snapshot, className }: BodyOverviewProps) {
           ))}
         </ul>
       )}
-
-      <p className="mt-3 text-[11px] leading-5 text-muted-foreground">
-        区域标记来自当前有效 Fact 与已确认
-        Observation，仅用于组织信息，不构成医疗诊断。
-      </p>
     </section>
   );
 }

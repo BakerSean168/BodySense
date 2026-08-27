@@ -8,6 +8,7 @@ import {
   type ThreadMessageLike,
 } from "@assistant-ui/react";
 import { MarkdownTextPrimitive } from "@assistant-ui/react-markdown";
+import { ArrowUp, ImagePlus, Plus, X } from "lucide-react";
 import remarkGfm from "remark-gfm";
 import { useAssistantChatRuntime } from "../hooks/useAssistantChatRuntime";
 import {
@@ -46,6 +47,16 @@ import { StreamingTurnToolCalls } from "./StreamingTurnToolCalls";
 import { RedFlagBanner } from "./RedFlagBanner";
 import { AskUserStatusCard } from "./AskUserStatusCard";
 import { useConsultationStore } from "@/stores/consultationStore";
+import {
+  Message,
+  MessageContent,
+  MessageResponse,
+} from "@/components/ai-elements/message";
+import {
+  Source,
+  SourceList,
+  Sources,
+} from "@/components/ai-elements/sources";
 
 interface AssistantChatPanelProps {
   conversationId: string;
@@ -214,7 +225,6 @@ interface ChatInputAreaProps {
   handleKeyDown: (e: React.KeyboardEvent) => void;
   handleSend: () => void;
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
-  isCentered?: boolean;
   pendingImages: PendingChatImage[];
   onAddImages: (files: FileList | null) => void;
   onRemoveImage: (uploadId: string) => void;
@@ -228,7 +238,6 @@ function ChatInputArea({
   handleKeyDown,
   handleSend,
   textareaRef,
-  isCentered = false,
   pendingImages,
   onAddImages,
   onRemoveImage,
@@ -238,79 +247,88 @@ function ChatInputArea({
   const canSend = Boolean(inputText.trim() || pendingImages.length > 0);
 
   return (
-    <div className="flex w-full flex-col gap-2">
-      {pendingImages.length > 0 && (
-        <div className="flex flex-wrap gap-2 px-1">
-          {pendingImages.map((image) => (
-            <div
-              key={image.uploadId}
-              className="relative h-16 w-16 overflow-hidden rounded-lg border border-[#D6D3CD] bg-white"
-            >
-              <img
-                src={image.previewUrl}
-                alt={image.name}
-                className="h-full w-full object-cover"
-              />
-              <button
-                type="button"
-                onClick={() => onRemoveImage(image.uploadId)}
-                disabled={isComposerLocked}
-                className="absolute right-0.5 top-0.5 rounded-full bg-black/60 px-1.5 text-[10px] text-white"
-                aria-label="移除图片"
+    <div className="w-full">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        multiple
+        className="hidden"
+        onChange={(event) => {
+          onAddImages(event.target.files);
+          event.target.value = "";
+        }}
+      />
+
+      <div className="rounded-[24px] border border-white/[0.08] bg-[#2a2a2a] p-2 shadow-[0_12px_34px_rgba(0,0,0,0.28)] transition-[border-color,background-color,box-shadow] duration-200 focus-within:border-white/[0.14] focus-within:bg-[#2d2d2d] focus-within:shadow-[0_16px_38px_rgba(0,0,0,0.34)]">
+        {pendingImages.length > 0 ? (
+          <div className="flex flex-wrap gap-2 px-1 pb-2 pt-1">
+            {pendingImages.map((image) => (
+              <div
+                key={image.uploadId}
+                className="relative size-16 overflow-hidden rounded-xl border border-white/10 bg-black/20"
               >
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-      <div className="flex items-end gap-2 w-full">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          multiple
-          className="hidden"
-          onChange={(e) => {
-            onAddImages(e.target.files);
-            e.target.value = "";
-          }}
-        />
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={
-            isComposerLocked || isUploadingImage || pendingImages.length >= 3
-          }
-          className="flex-shrink-0 rounded-full border border-[#D6D3CD] bg-white px-3 py-3.5 text-sm text-[#5D6B63]
-                     hover:bg-[#F7F5F0] disabled:cursor-not-allowed disabled:opacity-50"
-          title="上传体态/症状照片"
-        >
-          {isUploadingImage ? "…" : "图片"}
-        </button>
+                <img
+                  src={image.previewUrl}
+                  alt={image.name}
+                  className="h-full w-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => onRemoveImage(image.uploadId)}
+                  disabled={isComposerLocked}
+                  className="absolute right-1 top-1 inline-flex size-5 items-center justify-center rounded-full bg-black/70 text-white/80 transition-colors hover:bg-black hover:text-white disabled:opacity-40"
+                  aria-label="移除图片"
+                >
+                  <X className="size-3" aria-hidden="true" />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
         <textarea
           ref={textareaRef}
           value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
+          onChange={(event) => setInputText(event.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="描述您的症状、体态问题或身体感受，也可附上照片..."
+          placeholder="和 BodySense 说说你的身体感受…"
           disabled={isComposerLocked}
           rows={1}
-          className={`flex-1 resize-none rounded-2xl border border-[#D6D3CD] px-4 py-3.5 text-sm bg-white
-                     focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent
-                     disabled:bg-[#F7F5F0] disabled:text-gray-400
-                     placeholder:text-gray-400 ${isCentered ? "shadow-md" : "shadow-sm"}`}
-          style={{ maxHeight: "150px" }}
+          className="max-h-[140px] min-h-11 w-full resize-none bg-transparent px-3 py-2 text-[14px] leading-6 text-[#f2f2f2] outline-none placeholder:text-white/35 disabled:cursor-not-allowed disabled:text-white/35"
         />
-        <button
-          onClick={handleSend}
-          disabled={isComposerLocked || !canSend || isUploadingImage}
-          className="flex-shrink-0 rounded-full bg-[#CD7B67] px-6 py-3.5 text-sm font-semibold text-white
-                     hover:bg-[#B65E49] focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2
-                     disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-300 shadow-sm shadow-[#CD7B67]/15"
-        >
-          发送
-        </button>
+
+        <div className="flex items-center justify-between gap-2 px-1 pb-0.5">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={
+              isComposerLocked || isUploadingImage || pendingImages.length >= 3
+            }
+            className="inline-flex size-8 items-center justify-center rounded-full text-white/55 transition-colors hover:bg-white/[0.07] hover:text-white/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#75d5a7]/45 disabled:cursor-not-allowed disabled:opacity-35"
+            title="添加图片"
+            aria-label="添加图片"
+          >
+            {isUploadingImage ? (
+              <span className="size-3.5 animate-spin rounded-full border border-white/35 border-t-white/80" />
+            ) : pendingImages.length > 0 ? (
+              <ImagePlus className="size-4" aria-hidden="true" />
+            ) : (
+              <Plus className="size-4" aria-hidden="true" />
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSend}
+            disabled={isComposerLocked || !canSend || isUploadingImage}
+            className="inline-flex size-8 items-center justify-center rounded-full bg-[#f2f2f2] text-[#171717] transition-[transform,background-color,opacity] duration-150 hover:bg-white active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#75d5a7]/50 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/25"
+            aria-label="发送"
+            title="发送"
+          >
+            <ArrowUp className="size-4" strokeWidth={2.3} aria-hidden="true" />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -540,139 +558,110 @@ function ChatContent({
       (message) => message.role === "user" || message.role === "assistant",
     ).length === 0;
 
-  // Render centered Layout for new/empty conversations
-  if (isEmptyConversation && !hasPendingInteraction) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center p-6 bg-white h-full relative overflow-y-auto">
-        <div className="w-full max-w-3xl text-center space-y-6 -translate-y-12">
-          {/* Posture/Health logo/decoration */}
-          <div className="flex justify-center">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary-100 to-primary-50 flex items-center justify-center text-primary-700 shadow-md shadow-primary-700/5 border border-primary-200/50">
-              <svg
-                className="w-8 h-8"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={1.5}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                />
-              </svg>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {/* Title */}
-            <h2 className="text-2xl md:text-3xl font-display font-bold text-[#1A221E] tracking-tight">
-              开始一次新的健康咨询
-            </h2>
-
-            {/* Subtitle */}
-            <p className="text-sm md:text-base text-[#4A554E] max-w-lg mx-auto leading-relaxed font-medium">
-              描述你的问题，我会帮你逐步分析并给出建议。
-            </p>
-          </div>
-
-          {/* Input Box Centered */}
-          <div className="w-full text-left max-w-3xl mx-auto">
-            <ChatInputArea
-              inputText={inputText}
-              setInputText={setInputText}
-              isComposerLocked={isComposerLocked}
-              handleKeyDown={handleKeyDown}
-              handleSend={handleSend}
-              textareaRef={textareaRef}
-              isCentered={true}
-              pendingImages={pendingImages}
-              onAddImages={handleAddImages}
-              onRemoveImage={handleRemoveImage}
-              isUploadingImage={isUploadingImage}
-            />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Render normal Chatting Layout with messages list and bottom input box
   return (
-    <ThreadPrimitive.Root className="flex flex-col h-full bg-white">
-      {/* Messages area */}
+    <ThreadPrimitive.Root className="flex h-full min-h-0 flex-col bg-[#171717] text-[#ececec]">
       <ThreadPrimitive.Viewport
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-4"
+        className="custom-scrollbar min-h-0 flex-1 overflow-y-auto"
       >
-        <ThreadPrimitive.Empty>
-          <div className="hidden" />
-        </ThreadPrimitive.Empty>
+        <div className="mx-auto flex min-h-full w-full max-w-[760px] flex-col gap-6 px-5 py-7 sm:px-6">
+          <ThreadPrimitive.Empty>
+            <div
+              className={
+                isEmptyConversation
+                  ? "flex flex-1 flex-col items-center justify-center px-4 pb-10 text-center"
+                  : "hidden"
+              }
+            >
+              <div className="mb-5 flex size-11 items-center justify-center rounded-[16px] border border-white/[0.08] bg-white/[0.035] text-[#83d4aa] shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
+                <svg
+                  className="size-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1.6}
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M3.75 12h3l1.5-4.5 3 9 2.25-6 1.5 1.5h5.25"
+                  />
+                </svg>
+              </div>
+              <h2 className="text-xl font-medium tracking-[-0.02em] text-white/90">
+                有什么身体变化想告诉我？
+              </h2>
+              <p className="mt-2 max-w-sm text-sm leading-6 text-white/42">
+                描述不适、体态或最近的变化。BodySense 会把对话与右侧身体状态持续关联。
+              </p>
+            </div>
+          </ThreadPrimitive.Empty>
 
-        <ThreadPrimitive.Messages
-          components={{
-            UserMessage: CustomUserMessage,
-            AssistantMessage: CustomAssistantMessage,
-          }}
-        />
+          <ThreadPrimitive.Messages
+            components={{
+              UserMessage: CustomUserMessage,
+              AssistantMessage: CustomAssistantMessage,
+            }}
+          />
 
-        {/* Streaming assistant turn from ActiveTurnState */}
-        <StreamingAssistantTurn
-          onInteractionSubmit={
-            hasPendingInteraction ? handleInteractionAnswer : undefined
-          }
-          isInteractionSubmitting={isSubmitting}
-          interactionError={interactionError}
-          onInteractionRetry={() => setInteractionError(null)}
-        />
+          <StreamingAssistantTurn
+            onInteractionSubmit={
+              hasPendingInteraction ? handleInteractionAnswer : undefined
+            }
+            isInteractionSubmitting={isSubmitting}
+            interactionError={interactionError}
+            onInteractionRetry={() => setInteractionError(null)}
+          />
+        </div>
       </ThreadPrimitive.Viewport>
 
-      {/* Input area */}
-      <div className="p-4 border-t border-[#E5E3DF] bg-[#FBFBFA]">
-        {canCancelRun && (
-          <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
-            <p className="text-xs leading-5 text-slate-600">
-              {activeTurn.status === "interrupted"
-                ? "当前运行正在等待你的补充信息；你也可以显式取消这次运行。"
-                : "当前 AI 运行会在页面断开后继续；只有点击取消才会终止它。"}
+      <div className="shrink-0 bg-[linear-gradient(to_top,#171717_78%,rgba(23,23,23,0))] px-4 pb-4 pt-7 sm:px-5">
+        <div className="mx-auto w-full max-w-[760px]">
+          {canCancelRun ? (
+            <div className="mb-2.5 flex items-center justify-between gap-3 rounded-xl border border-white/[0.07] bg-white/[0.035] px-3 py-2">
+              <p className="text-xs leading-5 text-white/48">
+                {activeTurn.status === "interrupted"
+                  ? "正在等待你的补充信息。"
+                  : "BodySense 正在处理这条消息。"}
+              </p>
+              <button
+                type="button"
+                onClick={() => void handleCancelRun()}
+                disabled={isCancellingRun}
+                className="shrink-0 rounded-lg px-2.5 py-1 text-xs font-medium text-red-300 transition-colors hover:bg-red-400/10 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {isCancellingRun ? "取消中…" : "停止"}
+              </button>
+            </div>
+          ) : null}
+          {cancelRunError ? (
+            <p className="mb-2.5 px-1 text-xs font-medium text-red-300">
+              {cancelRunError}
             </p>
-            <button
-              type="button"
-              onClick={() => void handleCancelRun()}
-              disabled={isCancellingRun}
-              className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isCancellingRun ? "取消中…" : "取消本次执行"}
-            </button>
-          </div>
-        )}
-        {cancelRunError && (
-          <p className="mb-3 text-xs font-medium text-red-600">
-            {cancelRunError}
-          </p>
-        )}
-        {hasPendingInteraction && (
-          <p className="mb-3 text-xs font-medium text-[#5F6F86]">
-            正在等待你完成上方追问，当前输入框暂时锁定。
-          </p>
-        )}
-        <ChatInputArea
-          inputText={inputText}
-          setInputText={setInputText}
-          isComposerLocked={isComposerLocked}
-          handleKeyDown={handleKeyDown}
-          handleSend={handleSend}
-          textareaRef={textareaRef}
-          pendingImages={pendingImages}
-          onAddImages={handleAddImages}
-          onRemoveImage={handleRemoveImage}
-          isUploadingImage={isUploadingImage}
-        />
+          ) : null}
+          {hasPendingInteraction ? (
+            <p className="mb-2.5 px-1 text-xs text-white/42">
+              完成上方追问后可以继续输入。
+            </p>
+          ) : null}
+          <ChatInputArea
+            inputText={inputText}
+            setInputText={setInputText}
+            isComposerLocked={isComposerLocked}
+            handleKeyDown={handleKeyDown}
+            handleSend={handleSend}
+            textareaRef={textareaRef}
+            pendingImages={pendingImages}
+            onAddImages={handleAddImages}
+            onRemoveImage={handleRemoveImage}
+            isUploadingImage={isUploadingImage}
+          />
+        </div>
       </div>
     </ThreadPrimitive.Root>
   );
 }
-
 function CustomUserMessage() {
   const metadata = useAuiState((state) => state.message.metadata) as
     { custom?: { is_interaction_answer?: boolean } } | undefined;
@@ -684,12 +673,14 @@ function CustomUserMessage() {
   }
 
   return (
-    <MessagePrimitive.Root className="flex justify-end">
-      <div className="max-w-[80%] rounded-[20px] px-4 py-3 bg-primary-700 text-[#FBFBFA] rounded-br-[4px] shadow-sm shadow-[#2a4b3a]/10">
-        <div className="whitespace-pre-wrap text-sm leading-relaxed font-medium">
-          <MessagePrimitive.Content />
-        </div>
-      </div>
+    <MessagePrimitive.Root className="w-full">
+      <Message from="user">
+        <MessageContent>
+          <div className="whitespace-pre-wrap">
+            <MessagePrimitive.Content />
+          </div>
+        </MessageContent>
+      </Message>
     </MessagePrimitive.Root>
   );
 }
@@ -754,12 +745,12 @@ function CustomAssistantMessage() {
   }
 
   return (
-    <MessagePrimitive.Root className="flex justify-start">
-      <div className="max-w-[80%] rounded-[20px] px-4 py-3 bg-[#F7F5F0] text-[#1A221E] rounded-bl-[4px] border border-[#E5E3DF]">
-        <div className="flex flex-col gap-3">
+    <MessagePrimitive.Root className="w-full">
+      <Message from="assistant">
+        <MessageContent className="gap-3">
           <StreamingTurnToolCalls toolCalls={viewModel.toolCalls} />
 
-          <div className="text-sm leading-relaxed font-medium prose-markdown">
+          <MessageResponse className="conversation-prose prose-markdown">
             <MessagePrimitive.Content
               components={{
                 Text: () => (
@@ -780,7 +771,7 @@ function CustomAssistantMessage() {
                     <img
                       src={src}
                       alt="用户上传"
-                      className="mt-2 max-h-48 rounded-lg border border-[#E5E3DF] object-contain"
+                      className="mt-2 max-h-48 rounded-xl border border-white/10 object-contain"
                     />
                   );
                 },
@@ -789,67 +780,52 @@ function CustomAssistantMessage() {
                 tools: { Fallback: () => null },
               }}
             />
-          </div>
+          </MessageResponse>
 
-          {viewModel.citations.length > 0 && (
-            <div className="rounded-xl px-3 py-2 bg-[#EEF2EE] border border-[#D4DDD4]">
-              <p className="text-xs font-semibold text-[#5A7A64] mb-1">
-                参考知识
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {viewModel.citations.map((c) => (
-                  <span
-                    key={c.title}
-                    className="inline-block rounded-full bg-white px-2.5 py-0.5 text-xs text-[#3D5A47] border border-[#C8D8CC]"
-                    title={c.summary || c.snippet || c.content || ""}
-                  >
-                    {c.title}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {viewModel.knowledgeGaps.length > 0 && (
-            <div className="rounded-xl px-3 py-2 bg-[#FFF8F0] border border-[#F0D4B0]">
-              <div className="flex items-start gap-2">
-                <svg
-                  className="w-4 h-4 text-[#D4864A] mt-0.5 flex-shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
+          <Sources count={viewModel.citations.length}>
+            <SourceList>
+              {viewModel.citations.map((citation) => (
+                <Source
+                  key={citation.title}
+                  title={
+                    citation.summary ||
+                    citation.snippet ||
+                    citation.content ||
+                    ""
+                  }
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <div>
-                  <p className="text-xs font-semibold text-[#A06030]">
-                    知识库提示
-                  </p>
-                  <p className="text-xs text-[#8B6A4A] mt-0.5">
-                    知识库中暂未收录「
-                    {viewModel.knowledgeGaps
-                      .map((gap) => gap.query)
-                      .join("」「")}
-                    」的专项资料，以下建议仅供参考。
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+                  <p className="font-medium text-white/78">{citation.title}</p>
+                  {citation.summary || citation.snippet ? (
+                    <p className="mt-0.5 line-clamp-2 text-white/42">
+                      {citation.summary || citation.snippet}
+                    </p>
+                  ) : null}
+                </Source>
+              ))}
+            </SourceList>
+          </Sources>
 
-          {viewModel.redFlag?.has_red_flags && !isRedFlagDismissed && (
+          {viewModel.knowledgeGaps.length > 0 ? (
+            <div className="rounded-xl border border-amber-300/10 bg-amber-300/[0.045] px-3 py-2.5">
+              <p className="text-xs font-medium text-amber-200/75">
+                还缺少一些专项资料
+              </p>
+              <p className="mt-1 text-xs leading-5 text-amber-100/48">
+                当前知识库暂未覆盖「
+                {viewModel.knowledgeGaps.map((gap) => gap.query).join("」「")}
+                」，相关建议会保持更谨慎。
+              </p>
+            </div>
+          ) : null}
+
+          {viewModel.redFlag?.has_red_flags && !isRedFlagDismissed ? (
             <RedFlagBanner
               redFlags={viewModel.redFlag.flags}
               onAcknowledge={() => setIsRedFlagDismissed(true)}
             />
-          )}
-        </div>
-      </div>
+          ) : null}
+        </MessageContent>
+      </Message>
     </MessagePrimitive.Root>
   );
 }

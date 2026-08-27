@@ -57,10 +57,10 @@ describe("BodyStateWorkbench observation review", () => {
 
     expect(screen.getByText("高低肩倾向")).toBeInTheDocument();
     expect(
-      screen.getByText(/确认前不会进入 Diagnosis reasoning/),
+      screen.getByText(/需要你确认后才会用于后续分析/),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "确认观察" }));
+    await user.click(screen.getByRole("button", { name: "确认" }));
 
     expect(review).toHaveBeenCalledWith("observation-1", 5, "confirmed");
   });

@@ -145,7 +145,7 @@ describe("ConsultationPage", () => {
 
     renderConsultationPage();
 
-    expect(screen.getByText("智能问诊工作台")).toBeInTheDocument();
+    expect(screen.getByText("BodySense")).toBeInTheDocument();
     expect(screen.getByTestId("chat-panel-skeleton")).toBeInTheDocument();
     expect(screen.getByTestId("info-panel-skeleton")).toBeInTheDocument();
     expect(
@@ -175,9 +175,10 @@ describe("ConsultationPage", () => {
     expect(await screen.findByTestId("assistant-chat-panel")).toHaveTextContent(
       "conv-1",
     );
-    expect(screen.getByText("身体状态地图")).toBeInTheDocument();
-    expect(screen.getAllByText("正在切换会话")).toHaveLength(2);
-    expect(screen.getAllByText("目标会话")).toHaveLength(2);
+    expect(screen.getByText("身体区域状态")).toBeInTheDocument();
+    expect(screen.getAllByText("正在同步 BodySense")).toHaveLength(2);
+    expect(screen.getAllByText("身体信息正在更新")).toHaveLength(2);
+    expect(screen.queryByText("目标会话")).not.toBeInTheDocument();
     expect(screen.queryByTestId("chat-panel-skeleton")).not.toBeInTheDocument();
     expect(screen.queryByTestId("info-panel-skeleton")).not.toBeInTheDocument();
   });

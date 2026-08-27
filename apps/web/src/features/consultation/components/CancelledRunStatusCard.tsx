@@ -1,10 +1,10 @@
 export function CancelledRunStatusCard() {
   return (
     <div className="flex justify-start" role="status">
-      <div className="max-w-[80%] rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-        <p className="font-semibold">本次执行已取消</p>
+      <div className="w-full max-w-[620px] rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-sm text-white/60">
+        <p className="font-semibold text-white/78">本次处理已停止</p>
         <p className="mt-1 leading-5">
-          已停止当前运行；你可以修改或补充信息后继续咨询。
+          你可以修改或补充信息后继续和 BodySense 对话。
         </p>
       </div>
     </div>

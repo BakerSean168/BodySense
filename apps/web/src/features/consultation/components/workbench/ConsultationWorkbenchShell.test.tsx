@@ -8,13 +8,10 @@ function renderShell(onWorkspaceViewChange = vi.fn()) {
   render(
     <MemoryRouter>
       <ConsultationWorkbenchShell
-        title="智能问诊工作台"
-        phaseLabel="问诊收集中"
-        bodyStateRevision={4}
-        bodyStateItemCount={3}
+        title="BodySense"
         workspaceView="state"
         onWorkspaceViewChange={onWorkspaceViewChange}
-        onOpenHistory={vi.fn()}
+        onOpenProfile={vi.fn()}
         chat={<div>chat content</div>}
         workspace={<div>workspace content</div>}
       />
@@ -43,6 +40,15 @@ describe("ConsultationWorkbenchShell", () => {
         name: "调整对话区与健康工作区宽度",
       }),
     ).toBeInTheDocument();
+  });
+
+  it("does not expose multi-conversation controls in the primary shell", () => {
+    renderShell();
+
+    expect(
+      screen.queryByRole("button", { name: "打开咨询历史" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/R\d+/)).not.toBeInTheDocument();
   });
 
   it("collapses chat without changing the selected workspace", () => {

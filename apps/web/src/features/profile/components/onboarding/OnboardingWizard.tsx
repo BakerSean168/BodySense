@@ -133,11 +133,11 @@ export function OnboardingWizard() {
       });
 
       // 2. 生成健康评估报告
-      const report = await assessmentApi.generate();
+      await assessmentApi.generate();
 
-      toast.success("评估报告生成成功！");
-      // 3. 跳转到报告详情页
-      navigate(`/assessment/${report.id}`);
+      toast.success("初始身体状态已建立");
+      // 3. 初始 Observation 已投影进 BodyState，直接进入唯一健康工作台。
+      navigate("/consultation?view=state", { replace: true });
     } catch (err) {
       console.error("Onboarding submission failed:", err);
       setIsGeneratingReport(false);

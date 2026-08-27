@@ -86,7 +86,7 @@ describe("DiagnosisPanel", () => {
       />,
     );
 
-    expect(screen.getByText("BodyState R143")).toBeInTheDocument();
+    expect(screen.queryByText("BodyState R143")).not.toBeInTheDocument();
     expect(screen.getByText("head-neck")).toBeInTheDocument();
     expect(screen.getByText("hip-leg")).toBeInTheDocument();
     expect(screen.getByText("上交叉综合征倾向")).toBeInTheDocument();
@@ -200,8 +200,8 @@ describe("DiagnosisPanel", () => {
     expect(screen.getByText(/常见于久坐低头人群/)).toBeInTheDocument();
   });
 
-  it("renders the non-medical-diagnosis disclaimer", () => {
+  it("does not repeat a generic medical disclaimer in the populated analysis view", () => {
     render(<DiagnosisPanel candidates={[sampleCandidates[0]]} />);
-    expect(screen.getByText(/不构成医疗诊断/)).toBeInTheDocument();
+    expect(screen.queryByText(/不构成医疗诊断/)).not.toBeInTheDocument();
   });
 });

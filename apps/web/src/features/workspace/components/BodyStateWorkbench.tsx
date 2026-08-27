@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import type {
   BodyStateFact,
   BodyStateObservation,
@@ -39,11 +38,35 @@ const factKindLabels: Record<string, string> = {
 };
 
 const trendLabels: Record<string, string> = {
-  unknown: "趋势未知",
+  unknown: "待观察",
   stable: "基本稳定",
   improving: "正在改善",
   worsening: "正在加重",
 };
+
+const hypothesisStateLabels: Record<string, string> = {
+  active: "待验证",
+  strengthened: "更有可能",
+  weakened: "可能性降低",
+  unsupported: "证据不足",
+  retired: "不再考虑",
+};
+
+function observationValueText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (!value || typeof value !== "object") return String(value ?? "");
+  const record = value as Record<string, unknown>;
+  const label = typeof record.label === "string" ? record.label : "";
+  const description =
+    typeof record.description === "string" ? record.description : "";
+  if (label && description) return `${label}：${description}`;
+  if (description) return description;
+  if (label) return label;
+  return Object.values(record)
+    .filter((item) => ["string", "number", "boolean"].includes(typeof item))
+    .map(String)
+    .join(" · ");
+}
 
 function safetyState(snapshot: BodyStateSnapshot) {
   const raw = snapshot.safety_state || {};
@@ -79,7 +102,7 @@ export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
       await bodyStateCommand.mutateAsync(command);
       toast.success(success);
     } catch (error) {
-      toast.error(errorMessage(error, "更新 BodyState 失败"));
+      toast.error(errorMessage(error, "身体记录更新失败"));
     } finally {
       setBusyKey(null);
     }
@@ -87,7 +110,7 @@ export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
 
   const handleAddFact = async () => {
     if (!value.trim()) {
-      toast.error("请填写事实内容");
+      toast.error("请填写记录内容");
       return;
     }
     await mutate(
@@ -109,7 +132,7 @@ export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
           observed_at: new Date().toISOString(),
         },
       },
-      "已作为新的当前事实记录",
+      "身体记录已添加",
     );
     setValue("");
     setBodyRegion("");
@@ -138,7 +161,7 @@ export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
           observed_at: fact.observed_at || new Date().toISOString(),
         },
       },
-      "已保留旧记录，并创建纠正后的事实",
+      "已保留原记录，并保存纠正后的内容",
     );
     setCorrection(null);
   };
@@ -153,27 +176,21 @@ export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
   );
 
   return (
-    <Card className="space-y-4 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <History className="h-4 w-4 text-primary" />
-            <h3 className="font-semibold text-foreground">长期 BodyState</h3>
-            <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
-              R{snapshot.current_revision}
-            </span>
-          </div>
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            事实、观察和假设分开保存。确认、纠正记录、身体后来变化是三种不同操作。
-          </p>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <History className="h-3.5 w-3.5 text-primary" />
+          <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-foreground">
+            身体记录
+          </h3>
         </div>
         <Button
-          size="sm"
+          size="xs"
           variant="outline"
           onClick={() => setShowAdd((open) => !open)}
         >
           <CirclePlus className="h-3.5 w-3.5" />
-          新事实
+          添加记录
         </Button>
       </div>
 
@@ -181,17 +198,16 @@ export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
         <div className="rounded-xl border border-destructive/25 bg-destructive/10 p-3 text-sm text-destructive">
           <div className="flex items-center gap-2 font-medium">
             <AlertTriangle className="h-4 w-4" />
-            当前安全状态需要优先审核
+            有些信息需要优先确认
           </div>
           <p className="mt-1 text-xs leading-5 opacity-90">
-            普通 Diagnosis 和 Treatment
-            已被确定性业务规则阻断。只有明确审核后才能解除。
+            在这些安全信息确认前，BodySense 会暂停生成新的分析和方案。
           </p>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
             <input
               value={safetyNote}
               onChange={(event) => setSafetyNote(event.target.value)}
-              placeholder="记录审核依据（建议填写）"
+              placeholder="补充确认依据（可选）"
               className="min-w-0 flex-1 rounded-lg border border-destructive/25 bg-background px-3 py-2 text-xs text-foreground outline-none focus:border-destructive"
             />
             <Button
@@ -207,12 +223,12 @@ export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
                     resolution: "cleared_by_review",
                     note: safetyNote.trim(),
                   },
-                  "安全状态已通过明确审核更新",
+                  "安全信息已确认",
                 )
               }
             >
               <ShieldCheck className="h-3.5 w-3.5" />
-              审核并解除
+              完成确认
             </Button>
           </div>
         </div>
@@ -240,7 +256,7 @@ export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
           <textarea
             value={value}
             onChange={(event) => setValue(event.target.value)}
-            placeholder="当前事实内容"
+            placeholder="记录内容"
             rows={2}
             className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-2"
           />
@@ -253,7 +269,7 @@ export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
               isLoading={busyKey === "add-fact"}
               onClick={handleAddFact}
             >
-              记录事实
+              保存记录
             </Button>
           </div>
         </div>
@@ -263,10 +279,10 @@ export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
         <section className="space-y-2 rounded-xl border border-warning/35 bg-warning/10 p-3">
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wide text-warning-foreground">
-              待审核 Observation · {pendingObservations.length}
+              待确认观察 · {pendingObservations.length}
             </h4>
             <p className="mt-1 text-xs leading-5 text-warning-foreground/85">
-              来自图片或 AI 评估的观察在确认前不会进入 Diagnosis reasoning。
+              来自图片或 BodySense 分析的观察，需要你确认后才会用于后续分析。
             </p>
           </div>
           {pendingObservations.map((observation: BodyStateObservation) => {
@@ -274,18 +290,14 @@ export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
               typeof observation.value?.label === "string"
                 ? observation.value.label
                 : observation.kind;
-            const description =
-              typeof observation.value?.description === "string"
-                ? observation.value.description
-                : JSON.stringify(observation.value);
+            const description = observationValueText(observation.value);
             return (
               <div
                 key={observation.id}
                 className="rounded-lg border border-warning/35 bg-background p-3"
               >
                 <div className="text-xs text-muted-foreground">
-                  {observation.body_region || "全身"} ·{" "}
-                  {observation.method || "assessment"}
+                  {observation.body_region || "全身"} · BodySense 观察
                 </div>
                 <p className="mt-1 text-sm font-medium text-foreground">
                   {label}
@@ -309,12 +321,12 @@ export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
                           expectedRevision: snapshot.current_revision,
                           reviewState: "confirmed",
                         },
-                        "Observation 已确认并进入长期 BodyState reasoning",
+                        "观察已确认，会用于后续分析",
                       )
                     }
                   >
                     <Check className="h-3 w-3" />
-                    确认观察
+                    确认
                   </Button>
                   <Button
                     size="xs"
@@ -331,7 +343,7 @@ export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
                           expectedRevision: snapshot.current_revision,
                           reviewState: "rejected",
                         },
-                        "Observation 已拒绝，不会进入 reasoning",
+                        "已忽略这条观察",
                       )
                     }
                   >
@@ -346,222 +358,229 @@ export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
       )}
 
       <section className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            当前事实 · {activeFacts.length}
-          </h4>
-        </div>
         {activeFacts.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
-            还没有当前事实。可以继续对话，也可以手动添加。
-          </p>
+          <div className="mx-auto max-w-sm py-5 text-center">
+            <p className="text-[13px] font-medium text-foreground/82">
+              还没有记录
+            </p>
+            <p className="mt-1 text-xs leading-[1.55] text-muted-foreground">
+              继续对话，或手动添加一条身体记录。
+            </p>
+          </div>
         ) : (
-          activeFacts.map((fact) => (
-            <div
-              key={fact.id}
-              className="rounded-xl border border-border bg-background/70 p-3"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                    <span>{factKindLabels[fact.kind] || fact.kind}</span>
-                    {fact.body_region && <span>· {fact.body_region}</span>}
-                    <span>· {trendLabels[fact.trend] || fact.trend}</span>
-                    <span
-                      className={`rounded-full px-1.5 py-0.5 ${
-                        fact.review_state === "confirmed"
-                          ? "bg-success/20 text-success-foreground"
-                          : "bg-warning/20 text-warning-foreground"
-                      }`}
-                    >
-                      {fact.review_state === "confirmed" ? "已确认" : "待确认"}
-                    </span>
-                  </div>
-                  <p className="mt-1 break-words text-sm text-foreground">
-                    {fact.value}
-                  </p>
-                </div>
-              </div>
-
-              {correction?.fact.id === fact.id ? (
-                <div className="mt-3 rounded-lg border border-warning/35 bg-warning/10 p-2">
-                  <p className="mb-2 text-xs text-warning-foreground">
-                    “记录纠正”表示旧记录本身有误；系统会保留旧版本并创建
-                    replacement。
-                  </p>
-                  <textarea
-                    rows={2}
-                    value={correction.value}
-                    onChange={(event) =>
-                      setCorrection({ fact, value: event.target.value })
-                    }
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                  />
-                  <div className="mt-2 flex justify-end gap-2">
-                    <Button
-                      size="xs"
-                      variant="ghost"
-                      onClick={() => setCorrection(null)}
-                    >
-                      取消
-                    </Button>
-                    <Button
-                      size="xs"
-                      isLoading={busyKey === `correct:${fact.id}`}
-                      onClick={handleCorrection}
-                    >
-                      保存纠正
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {fact.review_state === "unverified" && (
-                    <>
-                      <Button
-                        size="xs"
-                        variant="secondary"
-                        isLoading={busyKey === `confirm:${fact.id}`}
-                        onClick={() =>
-                          mutate(
-                            `confirm:${fact.id}`,
-                            {
-                              type: "reviewFact",
-                              factId: fact.id,
-                              expectedRevision: snapshot.current_revision,
-                              reviewState: "confirmed",
-                            },
-                            "已确认这条事实，没有改变其时间语义",
-                          )
-                        }
+          <>
+            <h4 className="text-xs font-semibold tracking-wide text-muted-foreground">
+              当前记录 · {activeFacts.length}
+            </h4>
+            {activeFacts.map((fact) => (
+              <div
+                key={fact.id}
+                className="border-b border-border/50 py-3 last:border-b-0"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <span>{factKindLabels[fact.kind] || fact.kind}</span>
+                      {fact.body_region && <span>· {fact.body_region}</span>}
+                      <span>· {trendLabels[fact.trend] || fact.trend}</span>
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 ${
+                          fact.review_state === "confirmed"
+                            ? "bg-success/20 text-success-foreground"
+                            : "bg-warning/20 text-warning-foreground"
+                        }`}
                       >
-                        <Check className="h-3 w-3" />
-                        确认
-                      </Button>
+                        {fact.review_state === "confirmed"
+                          ? "已确认"
+                          : "待确认"}
+                      </span>
+                    </div>
+                    <p className="mt-1 break-words text-sm text-foreground">
+                      {fact.value}
+                    </p>
+                  </div>
+                </div>
+
+                {correction?.fact.id === fact.id ? (
+                  <div className="mt-3 rounded-lg border border-warning/35 bg-warning/10 p-2">
+                    <p className="mb-2 text-xs text-warning-foreground">
+                      如果原记录本身有误，可以在保留历史的同时保存一条纠正后的记录。
+                    </p>
+                    <textarea
+                      rows={2}
+                      value={correction.value}
+                      onChange={(event) =>
+                        setCorrection({ fact, value: event.target.value })
+                      }
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                    />
+                    <div className="mt-2 flex justify-end gap-2">
                       <Button
                         size="xs"
                         variant="ghost"
-                        isLoading={busyKey === `reject:${fact.id}`}
-                        onClick={() =>
-                          mutate(
-                            `reject:${fact.id}`,
-                            {
-                              type: "reviewFact",
-                              factId: fact.id,
-                              expectedRevision: snapshot.current_revision,
-                              reviewState: "rejected",
-                            },
-                            "已标记为不接受的提取结果",
-                          )
-                        }
+                        onClick={() => setCorrection(null)}
                       >
-                        <X className="h-3 w-3" />
-                        不接受
+                        取消
                       </Button>
-                    </>
-                  )}
-                  <Button
-                    size="xs"
-                    variant="outline"
-                    onClick={() => setCorrection({ fact, value: fact.value })}
-                  >
-                    <PencilLine className="h-3 w-3" />
-                    记录本身错了
-                  </Button>
-                  <Button
-                    size="xs"
-                    variant="ghost"
-                    isLoading={busyKey === `improving:${fact.id}`}
-                    onClick={() =>
-                      mutate(
-                        `improving:${fact.id}`,
-                        {
-                          type: "updateFactTemporal",
-                          factId: fact.id,
-                          expectedRevision: snapshot.current_revision,
-                          input: { trend: "improving" },
-                        },
-                        "已记录为后来正在改善",
-                      )
-                    }
-                  >
-                    <TrendingUp className="h-3 w-3" />
-                    后来改善
-                  </Button>
-                  <Button
-                    size="xs"
-                    variant="ghost"
-                    isLoading={busyKey === `worsening:${fact.id}`}
-                    onClick={() =>
-                      mutate(
-                        `worsening:${fact.id}`,
-                        {
-                          type: "updateFactTemporal",
-                          factId: fact.id,
-                          expectedRevision: snapshot.current_revision,
-                          input: { trend: "worsening" },
-                        },
-                        "已记录为后来加重",
-                      )
-                    }
-                  >
-                    <TrendingDown className="h-3 w-3" />
-                    后来加重
-                  </Button>
-                  <Button
-                    size="xs"
-                    variant="ghost"
-                    isLoading={busyKey === `resolved:${fact.id}`}
-                    onClick={() =>
-                      mutate(
-                        `resolved:${fact.id}`,
-                        {
-                          type: "updateFactTemporal",
-                          factId: fact.id,
-                          expectedRevision: snapshot.current_revision,
-                          input: {
-                            lifecycle_state: "resolved",
-                            trend: "improving",
-                            valid_until: new Date().toISOString(),
+                      <Button
+                        size="xs"
+                        isLoading={busyKey === `correct:${fact.id}`}
+                        onClick={handleCorrection}
+                      >
+                        保存纠正
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-2.5 flex flex-wrap gap-1.5">
+                    {fact.review_state === "unverified" && (
+                      <>
+                        <Button
+                          size="xs"
+                          variant="secondary"
+                          isLoading={busyKey === `confirm:${fact.id}`}
+                          onClick={() =>
+                            mutate(
+                              `confirm:${fact.id}`,
+                              {
+                                type: "reviewFact",
+                                factId: fact.id,
+                                expectedRevision: snapshot.current_revision,
+                                reviewState: "confirmed",
+                              },
+                              "已确认这条事实，没有改变其时间语义",
+                            )
+                          }
+                        >
+                          <Check className="h-3 w-3" />
+                          确认
+                        </Button>
+                        <Button
+                          size="xs"
+                          variant="ghost"
+                          isLoading={busyKey === `reject:${fact.id}`}
+                          onClick={() =>
+                            mutate(
+                              `reject:${fact.id}`,
+                              {
+                                type: "reviewFact",
+                                factId: fact.id,
+                                expectedRevision: snapshot.current_revision,
+                                reviewState: "rejected",
+                              },
+                              "已标记为不接受的提取结果",
+                            )
+                          }
+                        >
+                          <X className="h-3 w-3" />
+                          不接受
+                        </Button>
+                      </>
+                    )}
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      onClick={() => setCorrection({ fact, value: fact.value })}
+                    >
+                      <PencilLine className="h-3 w-3" />
+                      纠正记录
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      isLoading={busyKey === `improving:${fact.id}`}
+                      onClick={() =>
+                        mutate(
+                          `improving:${fact.id}`,
+                          {
+                            type: "updateFactTemporal",
+                            factId: fact.id,
+                            expectedRevision: snapshot.current_revision,
+                            input: { trend: "improving" },
                           },
-                        },
-                        "已记录为后来恢复；旧事实仍保留在历史中",
-                      )
-                    }
-                  >
-                    后来恢复
-                  </Button>
-                </div>
-              )}
-            </div>
-          ))
+                          "已记录为后来正在改善",
+                        )
+                      }
+                    >
+                      <TrendingUp className="h-3 w-3" />
+                      后来改善
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      isLoading={busyKey === `worsening:${fact.id}`}
+                      onClick={() =>
+                        mutate(
+                          `worsening:${fact.id}`,
+                          {
+                            type: "updateFactTemporal",
+                            factId: fact.id,
+                            expectedRevision: snapshot.current_revision,
+                            input: { trend: "worsening" },
+                          },
+                          "已记录为后来加重",
+                        )
+                      }
+                    >
+                      <TrendingDown className="h-3 w-3" />
+                      后来加重
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      isLoading={busyKey === `resolved:${fact.id}`}
+                      onClick={() =>
+                        mutate(
+                          `resolved:${fact.id}`,
+                          {
+                            type: "updateFactTemporal",
+                            factId: fact.id,
+                            expectedRevision: snapshot.current_revision,
+                            input: {
+                              lifecycle_state: "resolved",
+                              trend: "improving",
+                              valid_until: new Date().toISOString(),
+                            },
+                          },
+                          "已记录为后来恢复；旧事实仍保留在历史中",
+                        )
+                      }
+                    >
+                      后来恢复
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </>
         )}
       </section>
 
       {hypotheses.length > 0 && (
-        <details className="rounded-xl border border-border p-3" open>
+        <details className="border-t border-border/55 pt-4" open>
           <summary className="cursor-pointer list-none text-xs font-semibold text-muted-foreground">
             <span className="inline-flex items-center gap-2">
               <Lightbulb className="h-3.5 w-3.5" />
-              推理假设 · {hypotheses.length}
+              可能解释 · {hypotheses.length}
             </span>
           </summary>
           <div className="mt-3 space-y-2">
             {hypotheses.map((hypothesis) => (
               <div
                 key={hypothesis.id}
-                className="rounded-lg bg-muted/40 p-2.5 text-xs"
+                className="border-b border-border/45 py-2.5 text-xs last:border-b-0"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="font-medium text-foreground">
                     {hypothesis.statement}
                   </p>
                   <span className="rounded-full bg-background px-2 py-0.5 text-muted-foreground">
-                    {hypothesis.lifecycle_state}
+                    {hypothesisStateLabels[hypothesis.lifecycle_state] ||
+                      "待验证"}
                   </span>
                 </div>
                 <p className="mt-1 text-muted-foreground">
-                  这是可加强、削弱或退役的解释，不是用户事实。
+                  这只是当前的可能解释，会随着新信息增加或降低可信度。
                 </p>
                 <div className="mt-2 flex flex-wrap gap-1">
                   {(
@@ -588,11 +607,11 @@ export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
                             expectedRevision: snapshot.current_revision,
                             lifecycleState: state,
                           },
-                          `假设已更新为 ${state}`,
+                          `可能解释已更新为${hypothesisStateLabels[state] || state}`,
                         )
                       }
                     >
-                      {state}
+                      {hypothesisStateLabels[state] || state}
                     </Button>
                   ))}
                 </div>
@@ -604,37 +623,40 @@ export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
 
       {((snapshot.observations?.length ?? 0) > 0 ||
         historicalFacts.length > 0) && (
-        <details className="rounded-xl border border-border p-3">
-          <summary className="cursor-pointer text-xs font-semibold text-muted-foreground">
-            观察与历史记录 ·{" "}
+        <details className="border-t border-border/55 pt-4">
+          <summary className="cursor-pointer list-none text-xs font-semibold text-muted-foreground">
+            观察与历史 ·{" "}
             {(snapshot.observations?.length ?? 0) + historicalFacts.length}
           </summary>
           <div className="mt-3 space-y-2 text-xs text-muted-foreground">
             {snapshot.observations.map((observation) => (
-              <div key={observation.id} className="rounded-lg bg-muted/30 p-2">
+              <div
+                key={observation.id}
+                className="border-b border-border/40 py-2 last:border-b-0"
+              >
                 <span className="font-medium text-foreground">
                   {observation.kind}
                 </span>
                 {observation.body_region ? ` · ${observation.body_region}` : ""}
-                <pre className="mt-1 whitespace-pre-wrap font-sans">
-                  {JSON.stringify(observation.value, null, 2)}
-                </pre>
+                <p className="mt-1 leading-5">
+                  {observationValueText(observation.value)}
+                </p>
               </div>
             ))}
             {historicalFacts.map((fact) => (
               <div
                 key={fact.id}
-                className="rounded-lg bg-muted/30 p-2 opacity-75"
+                className="border-b border-border/40 py-2 opacity-75 last:border-b-0"
               >
                 <span className="font-medium text-foreground">
                   {fact.value}
                 </span>
-                <span> · {fact.lifecycle_state}</span>
+                <span> · 历史记录</span>
               </div>
             ))}
           </div>
         </details>
       )}
-    </Card>
+    </div>
   );
 }

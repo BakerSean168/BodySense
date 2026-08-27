@@ -37,10 +37,10 @@ export function ToolCallItem({ toolCall: tc }: ToolCallItemProps) {
   return (
     <div className="flex items-center gap-2 text-xs">
       {isRunning ? (
-        <span className="w-3 h-3 rounded-full border-2 border-[#709a83] border-t-transparent animate-spin flex-shrink-0" />
+        <span className="size-3 shrink-0 animate-spin rounded-full border-2 border-[#83d4aa]/55 border-t-transparent" />
       ) : (
         <svg
-          className="w-3 h-3 text-[#5A7A64] flex-shrink-0"
+          className="size-3 shrink-0 text-[#83d4aa]/75"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -53,9 +53,9 @@ export function ToolCallItem({ toolCall: tc }: ToolCallItemProps) {
           />
         </svg>
       )}
-      <span className="text-[#5A7A64] font-medium">{label}</span>
+      <span className="font-medium text-white/58">{label}</span>
       {summary && (
-        <span className="text-[#8B9E8F] truncate max-w-[200px]" title={summary}>
+        <span className="max-w-[240px] truncate text-white/32" title={summary}>
           「{summary}」
         </span>
       )}

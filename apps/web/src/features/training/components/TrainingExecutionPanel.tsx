@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router";
 import {
   trainingApi,
   type TrainingPlan,
@@ -7,15 +6,16 @@ import {
   type TrainingProgress,
   type TrainingFeedbackResult,
 } from "../services/trainingService";
-import { MainLayout } from "@/components/layout/MainLayout";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { toast } from "sonner";
-import { WorkspaceSoftGuard } from "@/features/workspace";
 
-export function TrainingPage() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+interface TrainingExecutionPanelProps {
+  planId: string;
+}
+
+export function TrainingExecutionPanel({ planId }: TrainingExecutionPanelProps) {
+  const id = planId;
   const [plan, setPlan] = useState<TrainingPlan | null>(null);
   const [todayTask, setTodayTask] = useState<TrainingLog | null>(null);
   const [progress, setProgress] = useState<TrainingProgress | null>(null);
@@ -42,11 +42,6 @@ export function TrainingPage() {
   const [isTimerRunning, setIsTimerRunning] = useState(false);
 
   useEffect(() => {
-    if (!id) {
-      navigate("/dashboard");
-      return;
-    }
-
     const loadData = async () => {
       try {
         const [planData, taskData, progressData] = await Promise.all([
@@ -74,7 +69,7 @@ export function TrainingPage() {
     };
 
     loadData();
-  }, [id, navigate]);
+  }, [id]);
 
   const handleToggleExercise = (name: string) => {
     setExerciseStates((prev) => ({ ...prev, [name]: !prev[name] }));
@@ -154,51 +149,21 @@ export function TrainingPage() {
 
   if (isLoading) {
     return (
-      <MainLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-            <p className="mt-4 text-slate-500 font-medium">
-              加载中 (Loading)...
-            </p>
-          </div>
+      <div className="flex min-h-64 items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-muted border-t-primary" />
+          <p className="mt-3 text-sm text-muted-foreground">正在加载训练计划…</p>
         </div>
-      </MainLayout>
+      </div>
     );
   }
 
   if (!plan) {
     return (
-      <MainLayout>
-        <WorkspaceSoftGuard route="training">
-          <div className="flex items-center justify-center min-h-[60vh]">
-            <Card className="p-8 text-center shadow-xl max-w-sm w-full">
-              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
-                <svg
-                  className="w-8 h-8"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </div>
-              <p className="text-lg font-bold text-slate-900 mb-2">
-                未找到训练计划
-              </p>
-              <p className="text-slate-500 mb-6 text-sm">Plan not found.</p>
-              <Button onClick={() => navigate("/dashboard")} className="w-full">
-                返回首页 (Return to Dashboard)
-              </Button>
-            </Card>
-          </div>
-        </WorkspaceSoftGuard>
-      </MainLayout>
+      <Card className="border-dashed p-6 text-center">
+        <p className="text-sm font-semibold text-foreground">训练计划暂时不可用</p>
+        <p className="mt-1 text-xs text-muted-foreground">请稍后重试或重新审核当前方案。</p>
+      </Card>
     );
   }
 
@@ -207,8 +172,7 @@ export function TrainingPage() {
   const exercises = currentPhase?.exercises || [];
 
   return (
-    <MainLayout>
-      <WorkspaceSoftGuard route="training">
+    <>
         <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 text-white p-8 rounded-3xl shadow-xl relative overflow-hidden">
@@ -216,24 +180,6 @@ export function TrainingPage() {
             <div className="absolute bottom-0 left-1/4 w-48 h-48 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 translate-y-1/2 -translate-x-1/2"></div>
 
             <div className="relative z-10 flex items-center gap-4">
-              <button
-                onClick={() => navigate("/dashboard")}
-                className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center text-white transition-colors backdrop-blur-md"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                  />
-                </svg>
-              </button>
               <div>
                 <h1 className="text-2xl font-bold tracking-tight mb-1">
                   训练计划 (Training Plan)
@@ -663,15 +609,9 @@ export function TrainingPage() {
                         <Button
                           variant="outline"
                           className="w-full"
-                          onClick={() =>
-                            navigate(
-                              plan.consultation_id
-                                ? `/consultation/${plan.consultation_id}`
-                                : "/consultation",
-                            )
-                          }
+                          onClick={() => setShowReassessment(false)}
                         >
-                          回长期健康工作台审核
+                          返回当前方案
                         </Button>
                       </div>
                     ) : (
@@ -744,7 +684,7 @@ export function TrainingPage() {
             </div>
           </div>
         </div>
-      </WorkspaceSoftGuard>
+
 
       {/* Immersive Player Fullscreen Overlay */}
       {isPlayerOpen &&
@@ -1007,6 +947,6 @@ export function TrainingPage() {
             </div>
           );
         })()}
-    </MainLayout>
+    </>
   );
 }

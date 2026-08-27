@@ -10,23 +10,29 @@ export interface DimensionScores {
 }
 
 export interface AssessmentObservation {
-  concern_key?: string;
+  observation_id: string;
+  review_state: string;
   kind: string;
   body_region: string;
-  value: Record<string, unknown>;
-  condition?: Record<string, unknown>;
-  evidence: string;
-  confidence?: string;
+  label: string;
+  description: string;
+  severity: string;
+  confidence: string;
+  method: string;
+  condition: Record<string, unknown>;
 }
 
 export interface AssessmentReport {
   id: string;
   user_id: string;
+  status: "completed" | "insufficient_information";
   health_grade: "A" | "B" | "C" | "D";
   dimension_scores: DimensionScores;
   observations: AssessmentObservation[];
-  summary: { text?: string } | string;
+  summary: string;
   information_gaps: string[];
+  safety_notes: string[];
+  body_state_revision?: number;
   created_at: string;
 }
 

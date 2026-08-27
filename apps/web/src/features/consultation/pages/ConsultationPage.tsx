@@ -5,34 +5,27 @@ import {
   useEffect,
   useCallback,
   useRef,
+  type ReactNode,
 } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
-import { SessionHistorySidebar } from "../components/SessionHistorySidebar";
-import { SessionHistorySidebarSkeleton } from "../components/SessionHistorySidebarSkeleton";
 import { InfoPanelSkeleton } from "../components/InfoPanelSkeleton";
 import { ChatPanelSkeleton } from "../components/ChatPanelSkeleton";
-import { InteractionMetricsPanel } from "../components/InteractionMetricsPanel";
 import { useConversationsQuery } from "../hooks/useConversationsQuery";
 import { useConsultationThreadQuery } from "../hooks/useConsultationThreadQuery";
-import { useConversationActions } from "../hooks/useConversationActions";
 import { useThreadProjectionActions } from "../hooks/useThreadProjectionActions";
 import { useDiagnosisActions } from "../hooks/useDiagnosisActions";
-import type {
-  InteractionHistoryItem,
-  ConsultationPhase,
-} from "../types/consultation";
+import type { InteractionHistoryItem } from "../types/consultation";
 import {
   buildActiveTurnSeedFromRuntimeEvents,
   toInitialThreadTimeline,
 } from "../runtime/threadMessageMapping";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { MainLayout } from "@/components/layout/MainLayout";
 import { ConsultationWorkbenchShell } from "../components/workbench/ConsultationWorkbenchShell";
-import { ConversationHistoryDrawer } from "../components/workbench/ConversationHistoryDrawer";
 import { WorkspaceViewport } from "../components/workbench/WorkspaceViewport";
 import { parseWorkspaceView, type WorkspaceView } from "../model/workbenchView";
 import { shouldPromoteProvisionalChatSession } from "../runtime/chatSessionIdentity";
+import { ProfileDrawer } from "@/features/profile/components/profile/ProfileDrawer";
 import {
   BodyStateWorkbench,
   OutcomeTrendsPanel,
@@ -55,12 +48,6 @@ const DiagnosisHistoryPanel = lazy(() =>
     default: module.DiagnosisHistoryPanel,
   })),
 );
-
-const PHASE_LABELS: Record<ConsultationPhase, string> = {
-  collecting: "问诊收集中",
-  ready_for_analysis: "可生成分析",
-  analysis_ready: "分析已生成",
-};
 
 export function ConsultationPage() {
   const { id } = useParams<{ id: string }>();
@@ -102,10 +89,6 @@ export function ConsultationPage() {
   const conversations = conversationsQuery.data ?? [];
   const threadQuery = useConsultationThreadQuery(routeConversationId);
   const threadData = threadQuery.data;
-  const selectedConversationSummary =
-    conversations.find(
-      (conversation) => conversation.id === routeConversationId,
-    ) ?? null;
   const displayedConversationId = routeConversationId
     ? (threadData?.conversation.id ?? null)
     : null;
@@ -116,12 +99,8 @@ export function ConsultationPage() {
   const isThreadSwitching = isThreadOutOfSync && threadQuery.isFetching;
   const hasThreadSwitchError = isThreadOutOfSync && threadQuery.isError;
   const displayedThread = routeConversationId ? (threadData ?? null) : null;
-  const currentConversation = displayedThread?.conversation ?? null;
   const messages = displayedThread?.messages ?? [];
   const extractedInfo = displayedThread?.extracted_info ?? [];
-  const phase = isThreadSwitching
-    ? null
-    : (displayedThread?.phase ?? "collecting");
   const workspace = workspaceQuery.data;
   const bodyState =
     workspace?.body_state ?? displayedThread?.body_state ?? null;
@@ -129,10 +108,6 @@ export function ConsultationPage() {
     ? workspace.diagnosis
     : null;
   const candidates = diagnosisAnalysis?.candidates ?? [];
-  const bodyStateItemCount =
-    (bodyState?.facts?.length ?? 0) +
-    (bodyState?.observations?.length ?? 0) +
-    (bodyState?.hypotheses?.length ?? 0);
   const pendingInteractions = displayedThread?.pending_interactions ?? [];
   const interactionHistory = displayedThread?.interaction_history ?? [];
 
@@ -203,7 +178,7 @@ export function ConsultationPage() {
 
   // Client-only presentation state. The active workspace mode is URL-addressable.
   const workspaceView = parseWorkspaceView(searchParams.get("view"));
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const handleWorkspaceViewChange = useCallback(
     (view: WorkspaceView) => {
@@ -215,11 +190,6 @@ export function ConsultationPage() {
   );
 
   // Server-state actions are isolated in feature hooks; this page composes them.
-  const conversationActions = useConversationActions({
-    conversations,
-    routeConversationId,
-    navigateTo: navigateToConversation,
-  });
   const threadActions = useThreadProjectionActions({
     routeConversationId,
     activeConversationIdRef,
@@ -230,23 +200,6 @@ export function ConsultationPage() {
     analysis: diagnosisAnalysis,
   });
   const diagnosisHistory = diagnosisActions.history;
-
-  const handleNewConsultation = useCallback(() => {
-    const existingConversationId = conversations[0]?.id;
-    if (existingConversationId) {
-      navigateToConversation(existingConversationId);
-      return;
-    }
-    if (routeConversationId) navigateToConversation();
-  }, [conversations, navigateToConversation, routeConversationId]);
-
-  const handleSelectConversation = useCallback(
-    (conversationId: string) => {
-      setIsHistoryOpen(false);
-      navigateToConversation(conversationId);
-    },
-    [navigateToConversation],
-  );
 
   const handleAnalyzeDiagnosis = useCallback(() => {
     if (
@@ -259,13 +212,10 @@ export function ConsultationPage() {
   }, [diagnosisActions, workspace?.capabilities.can_request_diagnosis]);
 
   // --- Loading / Error States ---
-  const isConversationListLoading =
-    conversationsQuery.isPending && conversations.length === 0;
   const isThreadLoading =
     Boolean(routeConversationId) && threadQuery.isPending && !threadData;
   const hasThreadError =
     Boolean(routeConversationId) && threadQuery.isError && !isThreadOutOfSync;
-  const displayedPhaseLabel = phase ? PHASE_LABELS[phase] : "正在切换会话";
   const chatConversationId = displayedConversationId ?? "new";
 
   // --- Render ---
@@ -281,30 +231,12 @@ export function ConsultationPage() {
       )
     : messages;
 
-  const historyPanel = isConversationListLoading ? (
-    <SessionHistorySidebarSkeleton />
-  ) : (
-    <SessionHistorySidebar
-      conversations={conversations}
-      activeId={routeConversationId}
-      onPrefetch={conversationActions.prefetchConversation}
-      onSelect={handleSelectConversation}
-      onNew={handleNewConsultation}
-      onDelete={conversationActions.deleteConversation}
-      onDeleteAll={conversationActions.deleteAllConversations}
-      onPin={conversationActions.pinConversation}
-      onRename={conversationActions.renameConversation}
-      onShare={conversationActions.shareConversation}
-      onUnshare={conversationActions.unshareConversation}
-    />
-  );
-
   const chatPanel = (
-    <div className="h-full min-h-0 bg-muted/20 p-3 sm:p-4">
-      <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+    <div className="h-full min-h-0 bg-[#171717]">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#171717]">
         {hasThreadError || hasThreadSwitchError ? (
           <div className="flex h-full items-center justify-center p-6">
-            <Card className="max-w-md border border-border bg-card p-8 text-center shadow-none">
+            <Card className="max-w-md border border-white/[0.08] bg-white/[0.035] p-8 text-center text-[#ececec] shadow-none">
               <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full border border-destructive/20 bg-destructive/10 text-destructive">
                 <svg
                   className="size-7"
@@ -321,11 +253,11 @@ export function ConsultationPage() {
                   />
                 </svg>
               </div>
-              <p className="mb-2 text-lg font-semibold text-foreground">
-                加载会话失败
+              <p className="mb-2 text-lg font-semibold text-white/90">
+                暂时无法加载对话
               </p>
-              <p className="mb-6 text-sm text-muted-foreground">
-                当前会话内容暂时无法加载，请稍后重试。
+              <p className="mb-6 text-sm text-white/45">
+                BodySense 的对话内容暂时无法同步，请稍后重试。
               </p>
               <Button onClick={threadActions.retryThread} className="w-full">
                 重新加载
@@ -336,11 +268,6 @@ export function ConsultationPage() {
           <ChatPanelSkeleton />
         ) : (
           <div className="relative flex h-full min-h-0 flex-col">
-            <div className="shrink-0 px-4 pt-3">
-              <InteractionMetricsPanel
-                conversationId={displayedConversationId}
-              />
-            </div>
             <Suspense fallback={<ChatPanelSkeleton />}>
               <AssistantChatPanel
                 key={chatSessionKey}
@@ -384,9 +311,7 @@ export function ConsultationPage() {
               />
             </Suspense>
             {isThreadSwitching ? (
-              <PanelTransitionOverlay
-                label={selectedConversationSummary?.title || "正在切换会话"}
-              />
+              <PanelTransitionOverlay label="身体信息正在更新" />
             ) : null}
           </div>
         )}
@@ -401,52 +326,29 @@ export function ConsultationPage() {
     diagnosisActions.canAnalyze;
 
   const stateWorkspace = workspaceUnavailable ? (
-    <WorkspaceError message="会话详情加载失败，暂时无法展示长期身体状态。" />
+    <WorkspaceError message="身体信息暂时无法同步，请稍后重试。" />
   ) : isThreadLoading || (workspaceQuery.isPending && !bodyState) ? (
     <InfoPanelSkeleton />
   ) : bodyStateReady && bodyState ? (
-    <div className="space-y-4">
-      <WorkspaceHeading
-        eyebrow="Durable state"
-        title="当前身体状态"
-        description="事实、已确认观察与活动中的假设共同组成可追溯的长期 BodyState。"
-      />
-      <BodyStateWorkbench
-        snapshot={{
-          ...bodyState,
-          hypotheses: bodyState.hypotheses ?? [],
-        }}
-      />
-    </div>
+    <BodyStateWorkbench
+      snapshot={{
+        ...bodyState,
+        hypotheses: bodyState.hypotheses ?? [],
+      }}
+    />
   ) : (
     <WorkspaceEmptyState
-      title="BodyState 尚未建立"
-      description="继续对话或记录一项事实后，长期身体状态会在这里形成。"
+      title="还没有身体记录"
+      description="继续对话，确认后的身体信息会出现在这里。"
     />
   );
 
   const diagnosisWorkspace = workspaceUnavailable ? (
-    <WorkspaceError message="会话详情加载失败，暂时无法展示可能性分析。" />
+    <WorkspaceError message="当前分析暂时无法同步，请稍后重试。" />
   ) : isThreadLoading ? (
     <InfoPanelSkeleton />
   ) : (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <WorkspaceHeading
-          eyebrow="Reasoning snapshot"
-          title="可能性分析"
-          description={`${displayedPhaseLabel} · 每次分析固定到明确的 BodyState revision，并保留不确定性。`}
-        />
-        {candidates.length === 0 ? (
-          <Button
-            onClick={handleAnalyzeDiagnosis}
-            disabled={!canRequestDiagnosis || diagnosisActions.isAnalyzing}
-            className="shrink-0"
-          >
-            {diagnosisActions.isAnalyzing ? "分析中..." : "生成当前分析"}
-          </Button>
-        ) : null}
-      </div>
+    <div className="space-y-5">
       {diagnosisActions.error ? (
         <p className="rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
           {diagnosisActions.error}
@@ -457,8 +359,16 @@ export function ConsultationPage() {
         diagnosisAnalysis?.status !== "insufficient_information" &&
         diagnosisAnalysis?.status !== "safety_blocked" ? (
           <WorkspaceEmptyState
-            title="尚无当前分析"
-            description="BodyState 中形成至少一项事实或已确认观察后，可以生成可能性分析。"
+            title="还没有分析结果"
+            description="继续补充身体情况，信息足够后可以生成分析。"
+            action={
+              <Button
+                onClick={handleAnalyzeDiagnosis}
+                disabled={!canRequestDiagnosis || diagnosisActions.isAnalyzing}
+              >
+                {diagnosisActions.isAnalyzing ? "分析中..." : "生成分析"}
+              </Button>
+            }
           />
         ) : (
           <DiagnosisPanel
@@ -484,41 +394,28 @@ export function ConsultationPage() {
   );
 
   const treatmentWorkspace = workspaceUnavailable ? (
-    <WorkspaceError message="会话详情加载失败，暂时无法展示当前方案。" />
+    <WorkspaceError message="当前方案暂时无法同步，请稍后重试。" />
   ) : workspace ? (
-    <div className="space-y-4">
-      <WorkspaceHeading
-        eyebrow="Reviewable strategy"
-        title="当前方案"
-        description="AI 只创建可审核 proposal；接受、暂停与执行均由明确业务边界控制。"
-      />
-      <TreatmentPanel workspace={workspace} />
-    </div>
+    <TreatmentPanel workspace={workspace} />
   ) : (
     <WorkspaceEmptyState
-      title="尚无方案"
-      description="完成并审核可能性分析后，才能生成需要明确接受的方案 proposal。"
+      title="尚无当前方案"
+      description="完成必要的分析与确认后，BodySense 会在这里整理下一步建议。"
     />
   );
 
   const progressWorkspace = workspaceUnavailable ? (
-    <WorkspaceError message="会话详情加载失败，暂时无法展示长期进展。" />
-  ) : workspace ? (
-    <div className="space-y-4">
-      <WorkspaceHeading
-        eyebrow="Outcome loop"
-        title="变化与进展"
-        description="记录干预后的变化，并保持“时间关联”与“已证明因果”之间的边界。"
-      />
-      <OutcomeTrendsPanel
-        trends={workspace.trends}
-        outcomes={workspace.recent_outcomes}
-      />
-    </div>
+    <WorkspaceError message="进展信息暂时无法同步，请稍后重试。" />
+  ) : workspace &&
+    (workspace.trends.length > 0 || workspace.recent_outcomes.length > 0) ? (
+    <OutcomeTrendsPanel
+      trends={workspace.trends}
+      outcomes={workspace.recent_outcomes}
+    />
   ) : (
     <WorkspaceEmptyState
-      title="尚无进展记录"
-      description="接受方案并记录训练或身体变化后，趋势会在这里出现。"
+      title="还没有进展记录"
+      description="记录训练或身体变化后，趋势会出现在这里。"
     />
   );
 
@@ -532,34 +429,24 @@ export function ConsultationPage() {
       progress={progressWorkspace}
       overlay={
         isThreadSwitching ? (
-          <PanelTransitionOverlay
-            label={selectedConversationSummary?.title || "正在切换会话"}
-          />
+          <PanelTransitionOverlay label="身体信息正在更新" />
         ) : null
       }
     />
   );
 
   return (
-    <MainLayout fullHeight chrome="immersive">
+    <div className="h-dvh overflow-hidden bg-[#242624] text-foreground">
       <ConsultationWorkbenchShell
-        title="智能问诊工作台"
-        phaseLabel={`${currentConversation?.title || selectedConversationSummary?.title || (routeConversationId ? "会话已激活" : "准备咨询")} · ${displayedPhaseLabel}`}
-        bodyStateRevision={bodyState?.current_revision ?? 0}
-        bodyStateItemCount={bodyStateItemCount}
+        title="BodySense"
         workspaceView={workspaceView}
         onWorkspaceViewChange={handleWorkspaceViewChange}
-        onOpenHistory={() => setIsHistoryOpen(true)}
+        onOpenProfile={() => setIsProfileOpen(true)}
         chat={chatPanel}
         workspace={workspacePanel}
       />
-      <ConversationHistoryDrawer
-        open={isHistoryOpen}
-        onOpenChange={setIsHistoryOpen}
-      >
-        {historyPanel}
-      </ConversationHistoryDrawer>
-    </MainLayout>
+      <ProfileDrawer open={isProfileOpen} onOpenChange={setIsProfileOpen} />
+    </div>
   );
 }
 
@@ -569,7 +456,7 @@ function PanelTransitionOverlay({ label }: { label: string }) {
       <div className="rounded-2xl border border-border bg-popover/95 px-5 py-4 text-center shadow-sm">
         <div className="mx-auto size-8 animate-spin rounded-full border-2 border-muted border-t-primary" />
         <p className="mt-3 text-sm font-semibold text-foreground">
-          正在切换会话
+          正在同步 BodySense
         </p>
         <p className="mt-1 max-w-[220px] text-xs text-muted-foreground">
           {label}
@@ -579,41 +466,22 @@ function PanelTransitionOverlay({ label }: { label: string }) {
   );
 }
 
-function WorkspaceHeading({
-  eyebrow,
-  title,
-  description,
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-}) {
-  return (
-    <header>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-        {eyebrow}
-      </p>
-      <h2 className="mt-1 text-xl font-semibold text-foreground">{title}</h2>
-      <p className="mt-1.5 max-w-2xl text-sm leading-6 text-muted-foreground">
-        {description}
-      </p>
-    </header>
-  );
-}
-
 function WorkspaceEmptyState({
   title,
   description,
+  action,
 }: {
   title: string;
   description: string;
+  action?: ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-dashed border-border bg-muted/25 px-5 py-10 text-center">
+    <div className="flex min-h-[280px] flex-col items-center justify-center px-6 py-12 text-center">
       <p className="text-sm font-semibold text-foreground">{title}</p>
-      <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-muted-foreground">
+      <p className="mx-auto mt-1.5 max-w-sm text-xs leading-5 text-muted-foreground">
         {description}
       </p>
+      {action ? <div className="mt-5">{action}</div> : null}
     </div>
   );
 }
