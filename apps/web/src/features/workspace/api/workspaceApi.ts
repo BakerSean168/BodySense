@@ -22,6 +22,7 @@ export interface AddFactInput {
   concern_key?: string;
   kind: string;
   body_region?: string;
+  body_region_id?: string | null;
   value: string;
   details?: Record<string, unknown>;
   origin?: string;
