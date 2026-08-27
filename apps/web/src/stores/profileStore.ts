@@ -7,16 +7,25 @@ export interface UserProfile {
   id: string;
   user_id: string;
   gender?: string;
-  age?: number;
+  birth_date?: string;
+  age_years?: number;
   height_cm?: number;
   weight_kg?: number;
   bmi?: number;
-  occupation?: string;
-  sleep_time?: string;
-  wake_time?: string;
+  activity_pattern?: string;
+  sleep_pattern?: string;
   exercise_type?: string;
   exercise_frequency?: string;
   injury_history?: string;
+  /** @deprecated Legacy profile fields kept for API compatibility only. */
+  age?: number;
+  /** @deprecated Use activity_pattern. */
+  occupation?: string;
+  /** @deprecated Use sleep_pattern. */
+  sleep_time?: string;
+  /** @deprecated Use sleep_pattern. */
+  wake_time?: string;
+  /** @deprecated Current concerns belong in BodyState / consultation. */
   self_description?: string;
   created_at: string;
   updated_at: string;

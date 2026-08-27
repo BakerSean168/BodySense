@@ -134,24 +134,31 @@ def format_profile_context(profile: dict) -> str:
     lines = []
     if profile.get("gender"):
         lines.append(f"- 性别：{profile['gender']}")
-    if profile.get("age"):
-        lines.append(f"- 年龄：{profile['age']}岁")
+    if profile.get("birth_date"):
+        birth_line = f"- 出生日期：{profile['birth_date']}"
+        if profile.get("age_years") is not None:
+            birth_line += f"（系统计算年龄：{profile['age_years']}岁）"
+        lines.append(birth_line)
+    elif profile.get("age"):
+        lines.append(f"- 年龄（旧档案字段）：{profile['age']}岁")
     if profile.get("height_cm") and profile.get("weight_kg"):
         lines.append(f"- 身高/体重：{profile['height_cm']}cm / {profile['weight_kg']}kg")
     if profile.get("bmi"):
         lines.append(f"- BMI：{profile['bmi']}")
-    if profile.get("occupation"):
-        lines.append(f"- 职业/日常活动：{profile['occupation']}")
-    if profile.get("sleep_time") and profile.get("wake_time"):
-        lines.append(f"- 作息：{profile['sleep_time']} 入睡，{profile['wake_time']} 起床")
+    if profile.get("activity_pattern"):
+        lines.append(f"- 日常活动与工作习惯：{profile['activity_pattern']}")
+    if profile.get("sleep_pattern"):
+        lines.append(f"- 睡眠与作息：{profile['sleep_pattern']}")
+    elif profile.get("sleep_time") and profile.get("wake_time"):
+        lines.append(
+            f"- 作息（旧档案字段）：{profile['sleep_time']} 入睡，{profile['wake_time']} 起床"
+        )
     if profile.get("exercise_type"):
         lines.append(f"- 运动类型：{profile['exercise_type']}")
     if profile.get("exercise_frequency"):
         lines.append(f"- 运动频率：{profile['exercise_frequency']}")
     if profile.get("injury_history"):
         lines.append(f"- 既往伤病史：{profile['injury_history']}")
-    if profile.get("self_description"):
-        lines.append(f"- 自我描述：{profile['self_description']}")
     return "\n".join(lines) if lines else "（用户尚未填写身体档案）"
 
 

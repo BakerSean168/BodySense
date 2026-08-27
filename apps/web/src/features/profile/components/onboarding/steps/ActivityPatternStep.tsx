@@ -1,18 +1,21 @@
-interface SleepStepProps {
+interface ActivityPatternStepProps {
   value: string;
   onChange: (value: string) => void;
 }
 
-const SLEEP_EXAMPLES = [
-  "作息比较规律",
-  "经常晚睡",
-  "轮班",
-  "入睡时间不固定",
-  "起床时间不固定",
-  "睡眠经常中断",
+const ACTIVITY_EXAMPLES = [
+  "久坐为主",
+  "久站为主",
+  "经常走动",
+  "体力活动较多",
+  "姿势经常变化",
+  "轮班或节奏不规律",
 ];
 
-export function SleepStep({ value, onChange }: SleepStepProps) {
+export function ActivityPatternStep({
+  value,
+  onChange,
+}: ActivityPatternStepProps) {
   const useExample = (example: string) => {
     if (!value.trim()) {
       onChange(example);
@@ -25,13 +28,15 @@ export function SleepStep({ value, onChange }: SleepStepProps) {
 
   return (
     <div>
-      <h2 className="text-lg font-medium text-gray-900 mb-2">睡眠与作息情况</h2>
+      <h2 className="text-lg font-medium text-gray-900 mb-2">
+        日常活动与工作习惯
+      </h2>
       <p className="text-sm text-gray-500 mb-5">
-        不要求填写固定的入睡和起床时间。请描述规律性、轮班情况、通常睡多久，以及是否经常夜醒或明显缺觉。
+        不需要填写职业名称。请描述一天里身体通常怎么活动，例如连续久坐多久、是否久站、走动频率、搬抬负荷或轮班情况。
       </p>
 
-      <div className="mb-4 flex flex-wrap gap-2" aria-label="常见作息描述">
-        {SLEEP_EXAMPLES.map((example) => (
+      <div className="mb-4 flex flex-wrap gap-2" aria-label="常见活动描述">
+        {ACTIVITY_EXAMPLES.map((example) => (
           <button
             key={example}
             type="button"
@@ -43,19 +48,19 @@ export function SleepStep({ value, onChange }: SleepStepProps) {
         ))}
       </div>
 
-      <label htmlFor="sleepPattern" className="sr-only">
-        睡眠与作息描述
+      <label htmlFor="activityPattern" className="sr-only">
+        日常活动与工作习惯描述
       </label>
       <textarea
-        id="sleepPattern"
+        id="activityPattern"
         value={value}
         onChange={(event) => onChange(event.target.value)}
         rows={6}
-        placeholder="例如：白班时通常 23:30 左右睡、7:00 起；每月有几次夜班，夜班后可能下午才起床。平均每天睡 6-7 小时，换班后容易睡不够。"
+        placeholder="例如：工作日大部分时间坐着，每次会连续坐 2-3 小时；通勤每天步行约 40 分钟；偶尔需要搬重物。周末活动量会更大。"
         className="w-full rounded-md border border-gray-300 px-4 py-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
       />
       <p className="mt-2 text-xs text-gray-400">
-        选填。作息不规律本身就是有价值的信息。
+        选填。按真实情况自然描述即可，不必套用固定格式。
       </p>
     </div>
   );

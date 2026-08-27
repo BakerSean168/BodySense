@@ -78,15 +78,18 @@ On first use, BodySense should collect enough stable profile context to make con
 
 Possible onboarding information:
 
-- birth date / age;
+- birth date as the canonical age source; age is derived when needed rather than maintained by the user;
 - sex where relevant and voluntarily provided;
 - height / weight where useful;
-- occupation / typical activity pattern;
-- current exercise habits;
-- major known injury history;
+- a natural-language baseline of daily activity and work habits, without requiring an occupation or job title;
+- a natural-language baseline of sleep / shift-work patterns, including irregular schedules;
+- current exercise type and a lightweight frequency estimate;
+- major known injury or surgery history;
 - optional posture photos or external reports.
 
-Time-varying information such as sitting hours, exercise frequency, and sleep pattern should subsequently be treated as longitudinal BodyState data rather than immutable profile fields.
+The profile is baseline context, not a second symptom intake. Current symptoms, goals, concerns, and free-form "self description" belong in Consultation and the longitudinal BodyState instead of being duplicated as profile fields.
+
+Time-varying information such as sitting hours, exercise frequency, and sleep pattern should subsequently be represented as timestamped BodyState changes. If a user's general baseline changes, the profile can be edited, but it should not replace the longitudinal history.
 
 The user can immediately begin talking even if onboarding is incomplete.
 

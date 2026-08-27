@@ -21,24 +21,34 @@ const EXERCISE_FREQUENCY_OPTIONS = [
   { value: "5+", label: "每周 5 次以上" },
 ];
 
+function localDateString(value: Date) {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export function ProfileEdit({
   profile,
   onSave,
   onCancel,
   isLoading,
 }: ProfileEditProps) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const earliestBirthDate = new Date(today);
+  earliestBirthDate.setFullYear(earliestBirthDate.getFullYear() - 150);
+
   const [formData, setFormData] = useState({
     gender: profile.gender || "",
-    age: profile.age?.toString() || "",
+    birth_date: profile.birth_date || "",
     height_cm: profile.height_cm?.toString() || "",
     weight_kg: profile.weight_kg?.toString() || "",
-    occupation: profile.occupation || "",
+    activity_pattern: profile.activity_pattern || "",
+    sleep_pattern: profile.sleep_pattern || "",
     exercise_frequency: profile.exercise_frequency || "",
-    sleep_time: profile.sleep_time || "",
-    wake_time: profile.wake_time || "",
     exercise_type: profile.exercise_type || "",
     injury_history: profile.injury_history || "",
-    self_description: profile.self_description || "",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -46,10 +56,14 @@ export function ProfileEdit({
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (formData.age) {
-      const age = parseInt(formData.age, 10);
-      if (isNaN(age) || age < 1 || age > 150) {
-        newErrors.age = "年龄必须在 1-150 之间";
+    if (formData.birth_date) {
+      const birthDate = new Date(`${formData.birth_date}T00:00:00`);
+      if (
+        Number.isNaN(birthDate.getTime()) ||
+        birthDate > today ||
+        birthDate < earliestBirthDate
+      ) {
+        newErrors.birth_date = "请选择有效的出生日期";
       }
     }
 
@@ -71,36 +85,32 @@ export function ProfileEdit({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (!validate()) return;
 
     await onSave({
       gender: formData.gender || undefined,
-      age: formData.age ? parseInt(formData.age, 10) : undefined,
+      birth_date: formData.birth_date || undefined,
       height_cm: formData.height_cm
         ? parseFloat(formData.height_cm)
         : undefined,
       weight_kg: formData.weight_kg
         ? parseFloat(formData.weight_kg)
         : undefined,
-      occupation: formData.occupation || undefined,
+      activity_pattern: formData.activity_pattern || undefined,
+      sleep_pattern: formData.sleep_pattern || undefined,
       exercise_frequency: formData.exercise_frequency || undefined,
-      sleep_time: formData.sleep_time || undefined,
-      wake_time: formData.wake_time || undefined,
       exercise_type: formData.exercise_type || undefined,
       injury_history: formData.injury_history || undefined,
-      self_description: formData.self_description || undefined,
     });
   };
 
   const handleChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
+    setFormData((previous) => ({ ...previous, [field]: value }));
     if (errors[field]) {
-      setErrors((prev) => {
-        const next = { ...prev };
+      setErrors((previous) => {
+        const next = { ...previous };
         delete next[field];
         return next;
       });
@@ -110,7 +120,12 @@ export function ProfileEdit({
   return (
     <form onSubmit={handleSubmit}>
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-lg font-medium text-gray-900">编辑身体档案</h2>
+        <div>
+          <h2 className="text-lg font-medium text-gray-900">编辑身体档案</h2>
+          <p className="mt-1 text-xs text-gray-500">
+            只保留对身体健康判断真正有帮助的信息，不需要提供具体职业或重复描述当前症状。
+          </p>
+        </div>
         <div className="flex gap-2">
           <button
             type="button"
@@ -131,7 +146,6 @@ export function ProfileEdit({
       </div>
 
       <div className="space-y-6">
-        {/* Gender */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             性别
@@ -154,30 +168,27 @@ export function ProfileEdit({
           </div>
         </div>
 
-        {/* Age */}
         <div>
           <label
-            htmlFor="edit-age"
+            htmlFor="edit-birth-date"
             className="block text-sm font-medium text-gray-700 mb-1"
           >
-            年龄
+            出生日期
           </label>
           <input
-            id="edit-age"
-            type="number"
-            value={formData.age}
-            onChange={(e) => handleChange("age", e.target.value)}
-            min={1}
-            max={150}
-            placeholder="请输入年龄"
+            id="edit-birth-date"
+            type="date"
+            value={formData.birth_date}
+            onChange={(event) => handleChange("birth_date", event.target.value)}
+            min={localDateString(earliestBirthDate)}
+            max={localDateString(today)}
             className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-primary-600 focus:outline-none focus:ring-1 focus:ring-primary-600"
           />
-          {errors.age && (
-            <p className="mt-1 text-sm text-red-600">{errors.age}</p>
+          {errors.birth_date && (
+            <p className="mt-1 text-sm text-red-600">{errors.birth_date}</p>
           )}
         </div>
 
-        {/* Height & Weight */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label
@@ -190,7 +201,9 @@ export function ProfileEdit({
               id="edit-height"
               type="number"
               value={formData.height_cm}
-              onChange={(e) => handleChange("height_cm", e.target.value)}
+              onChange={(event) =>
+                handleChange("height_cm", event.target.value)
+              }
               min={50}
               max={250}
               step={0.1}
@@ -212,7 +225,9 @@ export function ProfileEdit({
               id="edit-weight"
               type="number"
               value={formData.weight_kg}
-              onChange={(e) => handleChange("weight_kg", e.target.value)}
+              onChange={(event) =>
+                handleChange("weight_kg", event.target.value)
+              }
               min={20}
               max={300}
               step={0.1}
@@ -225,28 +240,72 @@ export function ProfileEdit({
           </div>
         </div>
 
-        {/* Occupation */}
         <div>
           <label
-            htmlFor="edit-occupation"
+            htmlFor="edit-activity-pattern"
             className="block text-sm font-medium text-gray-700 mb-1"
           >
-            职业
+            日常活动与工作习惯
           </label>
-          <input
-            id="edit-occupation"
-            type="text"
-            value={formData.occupation}
-            onChange={(e) => handleChange("occupation", e.target.value)}
-            placeholder="例如：程序员、教师、销售..."
+          <p className="mb-2 text-xs text-gray-500">
+            不需要写职业名称，描述久坐、久站、走动、搬抬、重复动作或轮班等身体使用模式即可。
+          </p>
+          <textarea
+            id="edit-activity-pattern"
+            value={formData.activity_pattern}
+            onChange={(event) =>
+              handleChange("activity_pattern", event.target.value)
+            }
+            rows={4}
+            placeholder="例如：工作日久坐为主，每次连续坐 2-3 小时；每天步行约 40 分钟。"
             className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-primary-600 focus:outline-none focus:ring-1 focus:ring-primary-600"
           />
         </div>
 
-        {/* Exercise Frequency */}
+        <div>
+          <label
+            htmlFor="edit-sleep-pattern"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            睡眠与作息
+          </label>
+          <p className="mb-2 text-xs text-gray-500">
+            可直接描述作息是否规律、轮班、通常睡多久、夜醒或缺觉，不要求固定时间表。
+          </p>
+          <textarea
+            id="edit-sleep-pattern"
+            value={formData.sleep_pattern}
+            onChange={(event) =>
+              handleChange("sleep_pattern", event.target.value)
+            }
+            rows={4}
+            placeholder="例如：白班和夜班交替，起床时间不固定；平均每天睡 6-7 小时。"
+            className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-primary-600 focus:outline-none focus:ring-1 focus:ring-primary-600"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="edit-exercise-type"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            常做的运动
+          </label>
+          <input
+            id="edit-exercise-type"
+            type="text"
+            value={formData.exercise_type}
+            onChange={(event) =>
+              handleChange("exercise_type", event.target.value)
+            }
+            placeholder="例如：跑步、游泳、力量训练、瑜伽..."
+            className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-primary-600 focus:outline-none focus:ring-1 focus:ring-primary-600"
+          />
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            日常活动强度
+            运动频率
           </label>
           <div className="grid grid-cols-2 gap-3">
             {EXERCISE_FREQUENCY_OPTIONS.map((option) => (
@@ -266,90 +325,21 @@ export function ProfileEdit({
           </div>
         </div>
 
-        {/* Sleep Time */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label
-              htmlFor="edit-sleep"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              入睡时间
-            </label>
-            <input
-              id="edit-sleep"
-              type="time"
-              value={formData.sleep_time}
-              onChange={(e) => handleChange("sleep_time", e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-primary-600 focus:outline-none focus:ring-1 focus:ring-primary-600"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="edit-wake"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              起床时间
-            </label>
-            <input
-              id="edit-wake"
-              type="time"
-              value={formData.wake_time}
-              onChange={(e) => handleChange("wake_time", e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-primary-600 focus:outline-none focus:ring-1 focus:ring-primary-600"
-            />
-          </div>
-        </div>
-
-        {/* Exercise Type */}
-        <div>
-          <label
-            htmlFor="edit-exercise-type"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            运动类型
-          </label>
-          <input
-            id="edit-exercise-type"
-            type="text"
-            value={formData.exercise_type}
-            onChange={(e) => handleChange("exercise_type", e.target.value)}
-            placeholder="例如：跑步、游泳、健身、瑜伽..."
-            className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-primary-600 focus:outline-none focus:ring-1 focus:ring-primary-600"
-          />
-        </div>
-
-        {/* Injury History */}
         <div>
           <label
             htmlFor="edit-injury"
             className="block text-sm font-medium text-gray-700 mb-1"
           >
-            伤病史
+            既往伤病与手术史
           </label>
           <textarea
             id="edit-injury"
             value={formData.injury_history}
-            onChange={(e) => handleChange("injury_history", e.target.value)}
-            rows={3}
-            placeholder="例如：膝盖半月板损伤、腰椎间盘突出..."
-            className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-primary-600 focus:outline-none focus:ring-1 focus:ring-primary-600"
-          />
-        </div>
-
-        {/* Self Description */}
-        <div>
-          <label
-            htmlFor="edit-description"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            自我描述
-          </label>
-          <textarea
-            id="edit-description"
-            value={formData.self_description}
-            onChange={(e) => handleChange("self_description", e.target.value)}
-            rows={3}
-            placeholder="简单描述您的身体状况、健身目标等..."
+            onChange={(event) =>
+              handleChange("injury_history", event.target.value)
+            }
+            rows={4}
+            placeholder="例如：2024 年左膝扭伤，未手术，跑步量大时偶尔酸胀。"
             className="w-full rounded-md border border-gray-300 px-4 py-2 shadow-sm focus:border-primary-600 focus:outline-none focus:ring-1 focus:ring-primary-600"
           />
         </div>

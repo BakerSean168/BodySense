@@ -3,9 +3,9 @@ import { useNavigate } from "react-router";
 import { useProfileStore } from "@/stores/profileStore";
 import { OnboardingLayout } from "./OnboardingLayout";
 import { GenderStep } from "./steps/GenderStep";
-import { AgeStep } from "./steps/AgeStep";
+import { BirthDateStep } from "./steps/BirthDateStep";
 import { HeightWeightStep } from "./steps/HeightWeightStep";
-import { OccupationStep } from "./steps/OccupationStep";
+import { ActivityPatternStep } from "./steps/ActivityPatternStep";
 import { SleepStep } from "./steps/SleepStep";
 import { ExerciseStep } from "./steps/ExerciseStep";
 import { InjuryStep } from "./steps/InjuryStep";
@@ -18,30 +18,26 @@ const TOTAL_STEPS = 8;
 
 interface FormData {
   gender: string;
-  age: number | undefined;
+  birth_date: string;
   height_cm: number | undefined;
   weight_kg: number | undefined;
-  occupation: string;
+  activity_pattern: string;
   exercise_type: string;
   exercise_frequency: string;
-  sleep_time: string;
-  wake_time: string;
+  sleep_pattern: string;
   injury_history: string;
-  self_description: string;
 }
 
 const INITIAL_DATA: FormData = {
   gender: "",
-  age: undefined,
+  birth_date: "",
   height_cm: undefined,
   weight_kg: undefined,
-  occupation: "",
+  activity_pattern: "",
   exercise_type: "",
   exercise_frequency: "",
-  sleep_time: "",
-  wake_time: "",
+  sleep_pattern: "",
   injury_history: "",
-  self_description: "",
 };
 
 export function OnboardingWizard() {
@@ -79,16 +75,14 @@ export function OnboardingWizard() {
     switch (currentStep) {
       case 0: // Gender
         return formData.gender !== "";
-      case 1: // Age
-        return (
-          formData.age !== undefined && formData.age >= 1 && formData.age <= 150
-        );
+      case 1: // Birth date
+        return formData.birth_date !== "";
       case 2: // Height/Weight
         return (
           formData.height_cm !== undefined && formData.weight_kg !== undefined
         );
-      case 3: // Occupation
-        return formData.exercise_frequency !== "";
+      case 3: // Daily activity pattern
+        return true; // Optional
       case 4: // Sleep
         return true; // Optional
       case 5: // Exercise
@@ -120,16 +114,14 @@ export function OnboardingWizard() {
       // 1. 保存身体档案信息
       await updateProfile({
         gender: formData.gender || undefined,
-        age: formData.age,
+        birth_date: formData.birth_date || undefined,
         height_cm: formData.height_cm,
         weight_kg: formData.weight_kg,
-        occupation: formData.occupation || undefined,
+        activity_pattern: formData.activity_pattern || undefined,
         exercise_type: formData.exercise_type || undefined,
         exercise_frequency: formData.exercise_frequency || undefined,
-        sleep_time: formData.sleep_time || undefined,
-        wake_time: formData.wake_time || undefined,
+        sleep_pattern: formData.sleep_pattern || undefined,
         injury_history: formData.injury_history || undefined,
-        self_description: formData.self_description || undefined,
       });
 
       // 2. 生成健康评估报告
@@ -158,9 +150,9 @@ export function OnboardingWizard() {
         );
       case 1:
         return (
-          <AgeStep
-            value={formData.age}
-            onChange={(v) => updateField("age", v)}
+          <BirthDateStep
+            value={formData.birth_date}
+            onChange={(v) => updateField("birth_date", v)}
           />
         );
       case 2:
@@ -174,20 +166,16 @@ export function OnboardingWizard() {
         );
       case 3:
         return (
-          <OccupationStep
-            occupation={formData.occupation}
-            activityType={formData.exercise_frequency}
-            onOccupationChange={(v) => updateField("occupation", v)}
-            onActivityTypeChange={(v) => updateField("exercise_frequency", v)}
+          <ActivityPatternStep
+            value={formData.activity_pattern}
+            onChange={(v) => updateField("activity_pattern", v)}
           />
         );
       case 4:
         return (
           <SleepStep
-            sleepTime={formData.sleep_time}
-            wakeTime={formData.wake_time}
-            onSleepTimeChange={(v) => updateField("sleep_time", v)}
-            onWakeTimeChange={(v) => updateField("wake_time", v)}
+            value={formData.sleep_pattern}
+            onChange={(v) => updateField("sleep_pattern", v)}
           />
         );
       case 5:
@@ -204,10 +192,8 @@ export function OnboardingWizard() {
       case 6:
         return (
           <InjuryStep
-            injuryHistory={formData.injury_history}
-            selfDescription={formData.self_description}
-            onInjuryHistoryChange={(v) => updateField("injury_history", v)}
-            onSelfDescriptionChange={(v) => updateField("self_description", v)}
+            value={formData.injury_history}
+            onChange={(v) => updateField("injury_history", v)}
           />
         );
       case 7:
