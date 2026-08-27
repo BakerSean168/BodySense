@@ -105,6 +105,17 @@ Timing-Allow-Origin: *
 
 Without this header, browsers intentionally hide detailed cross-origin Resource Timing fields. BodySense diagnostics already marks those measurements as restricted instead of fabricating TTFB/transfer values.
 
+Validated 2026-08-27 after the Response Header Transform Rule was enabled:
+
+```text
+Timing-Allow-Origin: *
+GLB GET #1: CF-Cache-Status: MISS
+GLB GET #2: CF-Cache-Status: HIT
+Chromium Resource Timing: nextHopProtocol=h2, byte sizes and TTFB visible
+```
+
+Use a **Response Header Transform Rule**, not a Request Header Transform Rule. A request-header rule sends `Timing-Allow-Origin` toward R2 and does not expose timing data to the browser.
+
 ## 6. GitHub production Environment
 
 Add Environment variable:

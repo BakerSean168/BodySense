@@ -1,7 +1,7 @@
 # BodySense Immutable Static Asset CDN
 
 > Date: 2026-08-27
-> Status: STAGING CUTOVER COMPLETE / EDGE CACHE RULE + PRODUCTION RELEASE VALIDATION PENDING
+> Status: STAGING + CLOUDFLARE EDGE COMPLETE / PRODUCTION RELEASE VALIDATION PENDING
 > Scope: Vite hashed assets + Vanatome atlas distribution
 > Privacy boundary: no user-, conversation-, diagnosis-, or BodyState-specific bytes may enter the public asset origin
 
@@ -177,17 +177,17 @@ Rollback never overwrites or deletes an old revision prefix.
 
 ## 11. Implementation checkpoint — 2026-08-27
 
-Repository implementation is complete; external Cloudflare R2 provisioning is the remaining cutover dependency.
+Repository implementation, Cloudflare R2 provisioning, staging cutover, edge caching, and browser Resource Timing exposure are complete. The remaining acceptance item is the first real production release through the fail-closed publication gate.
 
 | Ticket      | Repository status                                                               | External status                                                   |
 | ----------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
 | STATIC-1201 | COMPLETE                                                                        | none                                                              |
 | STATIC-1202 | COMPLETE                                                                        | none                                                              |
-| STATIC-1203 | COMPLETE — AWS SDK S3 PUT/HEAD/idempotency integration-tested                   | R2 credential + bucket pending                                    |
-| STATIC-1204 | COMPLETE — 26 files / 96,981,412 bytes sync+SHA verify+publish dry-run passed   | first R2 atlas publish pending                                    |
-| STATIC-1205 | COMPLETE — assets-before-image + post-image CDN coherence gate                  | Environment variable/secrets intentionally absent until R2 exists |
-| STATIC-1206 | COMPLETE — staging publish/verify/disable commands and public build env overlay | staging R2 cutover pending                                        |
-| STATIC-1207 | COMPLETE for runbook/repository validation                                      | real R2 browser cold/warm measurement pending                     |
+| STATIC-1203 | COMPLETE — AWS SDK S3 PUT/HEAD/idempotency integration-tested                   | COMPLETE — real R2 writes + HEAD/SHA verification passed          |
+| STATIC-1204 | COMPLETE — 26 files / 96,981,412 bytes sync+SHA verify+publish passed           | COMPLETE — 26/26 immutable atlas objects live on R2               |
+| STATIC-1205 | COMPLETE — assets-before-image + post-image CDN coherence gate                  | READY — production Environment variable + four R2 secrets present |
+| STATIC-1206 | COMPLETE — staging publish/verify/disable commands and public build env overlay | COMPLETE — staging uses revision-scoped R2 CDN assets             |
+| STATIC-1207 | COMPLETE for runbook/repository validation                                      | COMPLETE — cache + TAO + browser Resource Timing validated        |
 
 Validated repository behavior:
 
@@ -204,7 +204,7 @@ Atlas verify               26 files / 96,981,412 bytes PASS
 
 A production-style Docker image built with an absolute CDN base emitted CDN entry/modulepreload/CSS URLs while its application JavaScript retained relative `/api/v1/...` requests. This verifies the privacy/network split before external R2 activation.
 
-The production workflow remains safe before provisioning: because `production` currently has no `STATIC_ASSET_CDN_BASE`, the new publication steps stay disabled and Web retains same-origin behavior. Once R2 is provisioned, adding that Environment variable intentionally activates the fail-closed CDN release path.
+The production Environment now has `STATIC_ASSET_CDN_BASE=https://assets.bakersean.top` plus the four R2 publication secrets. The next production release therefore activates the fail-closed assets-first pipeline; runtime hosts still receive no R2 credential.
 
 ## 12. Real R2 cutover checkpoint — 2026-08-27
 
@@ -216,7 +216,7 @@ custom domain          https://assets.bakersean.top
 CORS                    anonymous GET/HEAD validated
 Atlas 1.4.0             26/26 objects uploaded and write-after-HEAD verified
 Atlas bytes             96,981,412
-Web revision            4a65b4c959beb0ad482015c17621688adffbb30d
+Web revision            134d8b470ecf07ff6effed258e3d151e388dfc26
 Web static files        21/21 uploaded and write-after-HEAD verified
 staging index.html      private Tailnet origin
 staging /api + SSE      private application origin
@@ -227,9 +227,12 @@ Body3D CDN-aware E2E    PASS
 
 The staging coherence verifier confirmed every `/assets` file present in the running Web image exists at its exact revision CDN prefix. Production GitHub Environment now contains the four R2 secrets plus the public `STATIC_ASSET_CDN_BASE=https://assets.bakersean.top` variable; no R2 credential is present on the production runtime.
 
-Observed Cloudflare cache behavior before an explicit Cache Rule:
+Cloudflare edge closeout is complete:
 
-- Vite `.js`: first GET `MISS`, second GET `HIT`;
-- anatomy `.glb`: repeated GETs remain `DYNAMIC`.
+- hostname-scoped Cache Rule (`assets.bakersean.top` → Eligible for cache) is active;
+- Vite `.js` GET validation: first `MISS`, second `HIT`;
+- anatomy `.glb` GET validation: first `MISS`, second `HIT`;
+- `Timing-Allow-Origin: *` is present through an HTTP **Response** Header Transform Rule;
+- a cross-origin Chromium probe can read `nextHopProtocol=h2`, transfer/encoded/decoded byte counts, and TTFB instead of receiving TAO-restricted Resource Timing.
 
-This matches Cloudflare's documented default extension-based cache eligibility. External closeout therefore still requires a hostname-scoped Cache Rule (`assets.bakersean.top` → Eligible for cache / Cache Everything) so GLB/JSON are edge-cacheable, plus the already documented `Timing-Allow-Origin: *` response transform for full cross-origin Resource Timing. Production's first real release remains the final release-pipeline acceptance.
+One uncached TAO probe of the 6,288,144-byte regional GLB reported `transferSize=6,288,444`, `encodedBodySize=decodedBodySize=6,288,144`, `nextHopProtocol=h2`, and measurable TTFB. Production's first real release remains the final release-pipeline acceptance.
