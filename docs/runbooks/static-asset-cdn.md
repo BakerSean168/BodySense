@@ -135,7 +135,35 @@ x-amz-meta-sha256: <expected hash>
 
 The publisher uses `HeadObject` to verify byte count + SHA-256 metadata after upload.
 
-## 7. Local publication
+## 7. Staging publisher credential storage
+
+Keep the staging publisher token outside both the repository and `.env.staging.local`:
+
+```text
+~/.config/bodysense/secrets/staging-static-assets.env
+```
+
+Recommended permissions:
+
+```bash
+umask 077
+mkdir -p ~/.config/bodysense/secrets
+chmod 700 ~/.config/bodysense/secrets
+```
+
+The file contains deployment-only values:
+
+```text
+STATIC_ASSET_CDN_BASE=https://assets.bakersean.top
+R2_ENDPOINT=https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+R2_ACCESS_KEY_ID=<staging publisher access key>
+R2_SECRET_ACCESS_KEY=<staging publisher secret key>
+R2_BUCKET=bodysense-static
+```
+
+`scripts/staging-runtime.sh publish-static` loads this file automatically. It never copies these credentials into Docker build args or the generated `.runtime/staging-static-assets.env`; that generated file contains only the two public CDN URLs.
+
+## 8. Local publication
 
 Prepare a production-style Web build:
 
@@ -174,7 +202,7 @@ node scripts/static-assets/publish-atlas-r2.mjs \
 
 Use `--dry-run` on either publisher to inspect the immutable object plan without credentials or writes.
 
-## 8. Production release behavior
+## 9. Production release behavior
 
 `.github/workflows/docker-deploy.yml` now enforces:
 
@@ -190,7 +218,7 @@ verified main revision
 
 This means an `index.html` cannot become production-eligible while its hashed CDN dependencies are absent.
 
-## 9. Staging
+## 10. Staging
 
 Staging Docker builds accept `VITE_ASSET_BASE`.
 
@@ -207,7 +235,7 @@ After R2 is provisioned:
 4. rebuild only the staging Web service;
 5. confirm DevTools shows `assets.bakersean.top` for hashed JS/CSS and atlas files while all `/api/` requests remain on the Tailnet application origin.
 
-## 10. Rollback
+## 11. Rollback
 
 Never delete an old `web/<revision>/` prefix as part of normal deployment.
 

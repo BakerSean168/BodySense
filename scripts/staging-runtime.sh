@@ -5,6 +5,7 @@ ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$ROOT"
 ENV_FILE=${BODYSENSE_STAGING_ENV_FILE:-$ROOT/.env.staging.local}
 STATIC_ENV_FILE=${BODYSENSE_STAGING_STATIC_ENV_FILE:-$ROOT/.runtime/staging-static-assets.env}
+STATIC_SECRET_FILE=${BODYSENSE_STAGING_STATIC_SECRET_FILE:-$HOME/.config/bodysense/secrets/staging-static-assets.env}
 export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-bodysense-staging}
 export STAGING_BIND_HOST=${STAGING_BIND_HOST:-127.0.0.1}
 export STAGING_WEB_PORT=${STAGING_WEB_PORT:-20150}
@@ -46,7 +47,18 @@ require_groq() {
   [[ -n "$value" ]] || { echo "missing GROQ_API_KEY in $ENV_FILE; staging requires real structured inference" >&2; exit 2; }
 }
 
+load_static_publish_env() {
+  if [[ -f "$STATIC_SECRET_FILE" ]]; then
+    # Deployment-only credentials. The file lives outside the repository and
+    # should be mode 0600. shellcheck disable=SC1090
+    set -a
+    source "$STATIC_SECRET_FILE"
+    set +a
+  fi
+}
+
 require_static_publish_env() {
+  load_static_publish_env
   local missing=()
   for name in STATIC_ASSET_CDN_BASE R2_ENDPOINT R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_BUCKET; do
     [[ -n "${!name:-}" ]] || missing+=("$name")
