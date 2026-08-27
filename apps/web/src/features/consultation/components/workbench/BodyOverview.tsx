@@ -49,6 +49,10 @@ function hasSafetyReview(snapshot: BodyStateSnapshot | null): boolean {
   );
 }
 
+/**
+ * Deterministic legacy body projection retained for BodyExplorer 2D/WebGL
+ * fallback only. The primary State path is the lazy Vanatome viewer.
+ */
 export function BodyOverview({ snapshot, className }: BodyOverviewProps) {
   const summaries = selectBodyZoneSummaries(snapshot);
   const safetyReview = hasSafetyReview(snapshot);

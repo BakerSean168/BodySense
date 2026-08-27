@@ -1,7 +1,10 @@
 import type { ReactNode } from "react";
 import type { BodyStateSnapshot } from "../../types/consultation";
 import type { WorkspaceView } from "../../model/workbenchView";
-import { BodyOverview } from "./BodyOverview";
+import {
+  BodyExplorer,
+  type BodyExplorerSemanticBridge,
+} from "@/features/body-explorer";
 import { cn } from "@/lib/utils";
 
 interface WorkspaceViewportProps {
@@ -12,6 +15,7 @@ interface WorkspaceViewportProps {
   treatment: ReactNode;
   progress: ReactNode;
   overlay?: ReactNode;
+  bodyExplorerBridge?: BodyExplorerSemanticBridge;
 }
 
 export function WorkspaceViewport({
@@ -22,6 +26,7 @@ export function WorkspaceViewport({
   treatment,
   progress,
   overlay,
+  bodyExplorerBridge,
 }: WorkspaceViewportProps) {
   const content = {
     state,
@@ -43,8 +48,9 @@ export function WorkspaceViewport({
         )}
       >
         {showBodyOverview ? (
-          <BodyOverview
+          <BodyExplorer
             snapshot={bodyState}
+            semanticBridge={bodyExplorerBridge}
             className="lg:sticky lg:top-6 lg:self-start"
           />
         ) : null}
