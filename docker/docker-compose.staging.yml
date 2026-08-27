@@ -131,6 +131,7 @@ services:
         # keeps the Dockerfile's same-origin BodySense-controlled default unless its own
         # CDN URL is explicitly configured.
         VITE_BODYSENSE_ANATOMY_CATALOG_URL: ${VITE_BODYSENSE_ANATOMY_CATALOG_URL:-https://atlas.vanatome.vixotic.in/releases/1.4.0/catalog.json}
+        VITE_ASSET_BASE: ${VITE_ASSET_BASE:-}
     restart: unless-stopped
     ports:
       - '${STAGING_BIND_HOST:-127.0.0.1}:${STAGING_WEB_PORT:-20150}:80'

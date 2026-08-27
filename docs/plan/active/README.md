@@ -1,8 +1,10 @@
 # Active Plans
 
-BodySense currently has **one implementation-ready product plan**, **one active Workbench visual plan**, and **one parked durability plan**:
+BodySense currently has active 3D/observability/static-distribution work, one Workbench visual plan, and one parked durability plan:
 
 - [`2026-08-27-vanatome-3d-body-explorer.md`](./2026-08-27-vanatome-3d-body-explorer.md) — READY FOR IMPLEMENTATION; adopt Vanatome as the primary 3D anatomy engine, add BodyRegionOntology, BodyState↔3D linking, anatomy drill-down, Chat context, WebGL fallback, and version-pinned/self-host-ready atlas distribution.
+- [`2026-08-27-static-asset-cdn.md`](./2026-08-27-static-asset-cdn.md) — IN IMPLEMENTATION; split public immutable Vite/Vanatome bytes from the private application origin using revision-scoped Cloudflare R2 distribution and an assets-before-HTML release gate.
+- [`2026-08-27-observability-foundation.md`](./2026-08-27-observability-foundation.md) — ACTIVE; converge application/browser diagnostics on structured privacy-bounded logging and an OpenTelemetry-compatible observability path.
 - [`2026-08-26-workbench-ui-v2.md`](./2026-08-26-workbench-ui-v2.md) — ACTIVE / visual acceptance; single continuous Chat + Workbench shell, graphite visual system, progressive-disclosure content cleanup, and visual-density refinement.
 - [`data-durability-backup-2026-08-25.md`](./data-durability-backup-2026-08-25.md) — ACTIVE / PARKED BY OWNER; real off-host PostgreSQL backup + restore drill and durable private user-upload object storage. Repository implementations are preserved, but cloud provisioning/cutover is intentionally postponed.
 
