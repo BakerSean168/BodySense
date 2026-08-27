@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=install-production-capacity.sh
+source "$SCRIPT_DIR/install-production-capacity.sh"
+
 COMMAND="${1:-status}"
 ROOT="${BODYSENSE_DEPLOY_ROOT:-/opt/bodysense}"
 PUBLIC_ENV="$ROOT/.env.production"
@@ -151,7 +155,7 @@ mem_available_kb=$(awk '/^MemAvailable:/ {print $2}' /proc/meminfo)
 mem_available_pct=$(( mem_available_kb * 100 / mem_total_kb ))
 swap_total_kb=$(awk '/^SwapTotal:/ {print $2}' /proc/meminfo)
 swap_free_kb=$(awk '/^SwapFree:/ {print $2}' /proc/meminfo)
-swap_total_gib=$(( swap_total_kb / 1024 / 1024 ))
+swap_total_gib=$(capacity_swap_effective_gib "$swap_total_kb" "$MIN_SWAP_GIB")
 if (( swap_total_kb > 0 )); then swap_used_pct=$(( (swap_total_kb - swap_free_kb) * 100 / swap_total_kb )); else swap_used_pct=0; fi
 disk_used_pct=$(df -P / | awk 'NR==2 {gsub(/%/,"",$5); print $5}')
 
@@ -167,8 +171,8 @@ for service in postgres redis litellm-gateway ai-service api web caddy; do
   health=$(docker inspect "$id" --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' 2>/dev/null || echo unknown)
   [ "$state" = running ] || ((bad_containers+=1))
   case "$health" in healthy|none) ;; *) ((bad_containers+=1)) ;; esac
-  r=$(numeric_or_zero "$(docker inspect "$id" --format '{{.RestartCount}}' 2>/dev/null || true)"); ((restarts+=r))
-  o=$(numeric_or_zero "$(docker inspect "$id" --format '{{if .State.OOMKilled}}1{{else}}0{{end}}' 2>/dev/null || true)"); ((oom+=o))
+  r=$(numeric_or_zero "$(docker inspect "$id" --format '{{.RestartCount}}' 2>/dev/null || true)"); restarts=$((restarts + r))
+  o=$(numeric_or_zero "$(docker inspect "$id" --format '{{if .State.OOMKilled}}1{{else}}0{{end}}' 2>/dev/null || true)"); oom=$((oom + o))
   limit=$(numeric_or_zero "$(docker inspect "$id" --format '{{.HostConfig.Memory}}' 2>/dev/null || true)"); (( limit > 0 )) || ((unbounded+=1))
   pct_raw=$(docker stats --no-stream --format '{{.MemPerc}}' "$id" 2>/dev/null | tr -d '%' | cut -d. -f1 || true)
   pct=$(numeric_or_zero "$pct_raw"); (( pct > container_max_pct )) && container_max_pct=$pct || true

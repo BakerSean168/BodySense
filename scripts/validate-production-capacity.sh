@@ -72,8 +72,6 @@ grep -q 'install-production-capacity.sh" --swap-only' scripts/production-deploy-
 grep -q 'install-production-capacity.sh" --swap-only' scripts/setup-server.sh
 grep -q 'production-capacity-status.sh' docker/Dockerfile.runtime
 
-echo CAPACITY_POLICY_VALIDATION=PASS
-
 # A swapfile formatted by mkswap reserves one kernel page for metadata. A
 # nominal 2 GiB /swapfile therefore appears in /proc/meminfo as 4 KiB below the
 # requested size on the production host. The installer must accept that exact
@@ -85,3 +83,18 @@ if capacity_swap_meets_target $((swap_target_kb - 5)) "$swap_target_kb" 4096; th
   echo 'capacity swap tolerance accepted more than one 4 KiB page of deficit' >&2
   exit 1
 fi
+
+# Live status uses the same one-page mkswap allowance as the installer. The
+# production 2 GiB swapfile reports 2097148 KiB usable, which must normalize to
+# the configured 2 GiB target rather than floor to 1 GiB.
+[ "$(capacity_swap_effective_gib $((swap_target_kb - 4)) 2 4096)" = 2 ]
+[ "$(capacity_swap_effective_gib $((swap_target_kb - 5)) 2 4096)" = 1 ]
+
+# Zero-valued counters must not trip `set -e` while collecting healthy
+# container metrics.
+grep -Fq 'restarts=$((restarts + r))' scripts/production-capacity-status.sh
+grep -Fq 'oom=$((oom + o))' scripts/production-capacity-status.sh
+! grep -Fq '((restarts+=r))' scripts/production-capacity-status.sh
+! grep -Fq '((oom+=o))' scripts/production-capacity-status.sh
+
+echo CAPACITY_POLICY_VALIDATION=PASS

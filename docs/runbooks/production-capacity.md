@@ -66,7 +66,7 @@ Safety behavior:
 `production-capacity-status.sh status` records `/opt/bodysense/.capacity-state` and evaluates:
 
 - host `MemAvailable` percentage;
-- configured swap size and swap-use percentage;
+- configured swap size and swap-use percentage, using the same one-page `mkswap` metadata allowance as the installer;
 - root filesystem usage;
 - maximum container memory use as a percentage of its cgroup limit;
 - container restart count and OOM state;
