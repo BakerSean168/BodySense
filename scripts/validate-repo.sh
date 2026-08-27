@@ -6,6 +6,7 @@ bash -n scripts/setup-server.sh scripts/production-deploy-watch.sh \
   scripts/validate-offhost-dr-unit.sh scripts/validate-offhost-dr.sh
 bash scripts/validate-production-capacity.sh
 bash scripts/validate-supply-chain.sh
+pnpm test:static-assets
 pnpm lint
 pnpm typecheck
 pnpm test

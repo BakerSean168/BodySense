@@ -3,21 +3,15 @@ import { authFetch } from "@/features/auth/services/authService";
 import { useAuthStore } from "./authStore";
 import { safeJson, extractErrorMessage } from "@/lib/api-url";
 
+// UserProfile intentionally contains stable identity context only. Mutable
+// health state lives in BodyState-backed projections such as body metrics and
+// lifestyle.
 export interface UserProfile {
   id: string;
   user_id: string;
   gender?: string;
-  age?: number;
-  height_cm?: number;
-  weight_kg?: number;
-  bmi?: number;
-  occupation?: string;
-  sleep_time?: string;
-  wake_time?: string;
-  exercise_type?: string;
-  exercise_frequency?: string;
-  injury_history?: string;
-  self_description?: string;
+  birth_date?: string;
+  age_years?: number;
   created_at: string;
   updated_at: string;
 }
@@ -26,8 +20,6 @@ interface ProfileState {
   profile: UserProfile | null;
   isLoading: boolean;
   error: string | null;
-
-  // Actions
   fetchProfile: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
   clearError: () => void;
@@ -40,30 +32,18 @@ export const useProfileStore = create<ProfileState>()((set) => ({
 
   fetchProfile: async () => {
     set({ isLoading: true, error: null });
-
     try {
       const { isAuthenticated } = useAuthStore.getState();
-
       if (!isAuthenticated) {
         set({ profile: null, isLoading: false });
         return;
       }
-
-      // Use authFetch for automatic 401 handling (token refresh + logout on failure)
       const response = await authFetch("/api/v1/profile");
-
       if (response.status === 401) {
-        // Token invalid or user doesn't exist — authFetch already tried refresh,
-        // if we still get 401, the user is gone. authFetch handles logout.
         set({ profile: null, isLoading: false });
         return;
       }
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch profile");
-      }
-
-      // Response may be null for new users (no profile yet)
+      if (!response.ok) throw new Error("Failed to fetch profile");
       const profile = await safeJson<UserProfile | null>(response);
       set({ profile: profile || null, isLoading: false });
     } catch (error) {
@@ -71,47 +51,32 @@ export const useProfileStore = create<ProfileState>()((set) => ({
       set({
         profile: null,
         isLoading: false,
-        error:
-          error instanceof Error ? error.message : "Failed to fetch profile",
+        error: error instanceof Error ? error.message : "Failed to fetch profile",
       });
     }
   },
 
   updateProfile: async (data: Partial<UserProfile>) => {
     set({ isLoading: true, error: null });
-
     try {
       const { isAuthenticated } = useAuthStore.getState();
-
-      if (!isAuthenticated) {
-        throw new Error("Not authenticated");
-      }
-
-      // Use authFetch for automatic 401 handling
+      if (!isAuthenticated) throw new Error("Not authenticated");
       const response = await authFetch("/api/v1/profile", {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-
       if (response.status === 401) {
         set({ isLoading: false });
         throw new Error("Session expired, please login again");
       }
-
-      if (!response.ok) {
-        throw new Error(await extractErrorMessage(response));
-      }
-
+      if (!response.ok) throw new Error(await extractErrorMessage(response));
       const profile = await safeJson<UserProfile>(response);
       set({ profile, isLoading: false });
     } catch (error) {
       set({
         isLoading: false,
-        error:
-          error instanceof Error ? error.message : "Failed to update profile",
+        error: error instanceof Error ? error.message : "Failed to update profile",
       });
       throw error;
     }

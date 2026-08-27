@@ -50,6 +50,10 @@ type fakeAssessmentBodyState struct {
 	fail         bool
 }
 
+func (s *fakeAssessmentBodyState) GetSnapshot(_ context.Context, userID uuid.UUID, _ int) (*BodyStateSnapshot, error) {
+	return &BodyStateSnapshot{UserID: userID, SafetyState: json.RawMessage(`{}`), Facts: []model.BodyStateFact{}, Observations: []model.BodyStateObservation{}}, nil
+}
+
 func (s *fakeAssessmentBodyState) AddAssessmentObservation(_ context.Context, userID uuid.UUID, observation model.BodyStateObservation) (*model.BodyStateObservation, *model.BodyStateRevision, error) {
 	if s.fail {
 		return nil, nil, errors.New("projection failed")
@@ -87,14 +91,14 @@ func assessmentOutput() json.RawMessage {
 }
 
 func TestAssessmentPersistsReportAndUnverifiedBodyStateObservationsAtomically(t *testing.T) {
-	age := 30
+	birthDate, _ := model.ParseDateOnly("1996-08-27")
 	userID := uuid.New()
 	repo := &fakeAssessmentRepository{}
 	bodyState := &fakeAssessmentBodyState{}
 	transactionCalled := false
 	svc := NewAssessmentService(
 		repo,
-		fakeAssessmentProfileSource{profile: &model.UserProfile{UserID: userID, Age: &age}},
+		fakeAssessmentProfileSource{profile: &model.UserProfile{UserID: userID, BirthDate: &birthDate}},
 		fakeAssessmentUploadSource{},
 		bodyState,
 		fakeAssessmentReasoner{raw: assessmentOutput()},

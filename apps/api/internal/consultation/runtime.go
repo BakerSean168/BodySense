@@ -39,6 +39,7 @@ type HTTPError struct {
 type runtimeBodyStateService interface {
 	GetSnapshot(ctx context.Context, userID uuid.UUID, historyLimit int) (*service.BodyStateSnapshot, error)
 	UpsertExtractedSymptom(ctx context.Context, userID, runID uuid.UUID, info json.RawMessage) error
+	RecordLifestyleContext(ctx context.Context, userID, runID uuid.UUID, payload json.RawMessage) error
 	RecordSafetyEvent(ctx context.Context, userID uuid.UUID, payload json.RawMessage) error
 	RecordInteractionAnswer(ctx context.Context, userID, interactionID uuid.UUID, question datatypes.JSON, answer json.RawMessage) error
 }
@@ -221,7 +222,12 @@ func (r *Runtime) StartRun(
 	}
 	if found {
 		if existing.Status == "running" || existing.Status == "waiting_user" {
-			return httpErr(http.StatusConflict, "RUN_IN_PROGRESS", "a run with this request ID is already in progress")
+			// Same request_id is an idempotent transport re-attachment, not a
+			// second business command. This is important when a browser/proxy
+			// rebuilds an SSE POST after the original socket disappears.
+			log.Printf("consultation transport reattach request_id=%s run_id=%s conversation_id=%s status=%s", req.RequestID, existing.ID, existing.ConversationID, existing.Status)
+			r.reattachActiveRun(ctx, w, existing)
+			return nil
 		}
 		r.replayCompletedRun(ctx, w, existing)
 		return nil
@@ -252,11 +258,15 @@ func (r *Runtime) StartRun(
 	if err != nil {
 		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to marshal message parts")
 	}
+	userMetadata, spatialContext, metadataErr := normalizeSpatialContextMetadata(req.Message.Metadata)
+	if metadataErr != nil {
+		return httpErr(http.StatusBadRequest, "INVALID_SPATIAL_CONTEXT", "invalid Body Explorer context")
+	}
 
 	// --- 4. Create turn envelope (conversation/session + run + messages) ---
 	session, turn, run, userMsg, assistantMsg, baseIDs, conversationCreated, setupErr := r.createTurnEnvelope(
 		ctx, uid, requestedConversationID, req.RequestID,
-		datatypes.JSON(userPartsJSON), datatypes.JSON("{}"),
+		datatypes.JSON(userPartsJSON), userMetadata,
 	)
 	if setupErr != nil {
 		return setupErr
@@ -311,7 +321,7 @@ func (r *Runtime) StartRun(
 	r.refreshThreadProjection(executionCtx, conversationID, uid)
 
 	// --- 8. Stream AI response ---
-	result, stopped := r.executeRunFlow(executionCtx, sw, uid, conversationID, turn, run, assistantMsg, baseIDs, userText, req.Message.Parts, session)
+	result, stopped := r.executeRunFlow(executionCtx, sw, uid, conversationID, turn, run, assistantMsg, baseIDs, userText, req.Message.Parts, session, spatialContext)
 	if stopped {
 		return nil
 	}
@@ -383,6 +393,7 @@ func (r *Runtime) executeRunFlow(
 	userText string,
 	parts []dto.PartDTO,
 	session *model.ConsultationSession,
+	spatialContext *service.ConsultationSpatialContext,
 ) (streamResult, bool) {
 	profileJSON, profileErr := r.loadProfileJSON(ctx, uid)
 	if profileErr != nil {
@@ -405,7 +416,7 @@ func (r *Runtime) executeRunFlow(
 				Text:   userText,
 				Images: images,
 			},
-			BusinessContext: r.buildBusinessContext(ctx, uid, conversationID, userText, profileJSON, session),
+			BusinessContext: r.buildBusinessContext(ctx, uid, conversationID, userText, profileJSON, session, spatialContext),
 		},
 	)
 	if err != nil {
@@ -730,7 +741,7 @@ func (r *Runtime) ResumeInteraction(
 			ConfigurationID: pinnedConfigurationID,
 			InterruptID:     interactionID.String(),
 			Answer:          json.RawMessage(req.Answer),
-			BusinessContext: r.buildBusinessContext(executionCtx, uid, conversationID, extractAnswerText(req.Answer), profileJSON, session),
+			BusinessContext: r.buildBusinessContext(executionCtx, uid, conversationID, extractAnswerText(req.Answer), profileJSON, session, nil),
 		},
 	)
 	if err != nil {
@@ -883,9 +894,11 @@ func (r *Runtime) buildBusinessContext(
 	queryText string,
 	profileJSON json.RawMessage,
 	session *model.ConsultationSession,
+	spatialContext *service.ConsultationSpatialContext,
 ) service.ConsultationBusinessContext {
 	bc := service.ConsultationBusinessContext{
-		Profile: profileJSON,
+		Profile:        profileJSON,
+		SpatialContext: spatialContext,
 		RuntimeState: service.ConsultationRuntimeState{
 			Phase:         session.Phase,
 			ExtractedInfo: json.RawMessage(session.ExtractedInfo),
@@ -1211,6 +1224,21 @@ func (r *Runtime) handleAIEvent(
 		if err := r.persistExtractedSymptom(ctx, state.UID, state.Run.ID, payload.Info); err != nil {
 			log.Printf("failed to persist extracted symptom in BodyState for run %s: %v", state.Run.ID, err)
 			r.failActiveStream(ctx, sw, state, "failed to persist durable health state")
+			return true
+		}
+		r.sendEvent(ctx, sw, event, state.AssistantMsgID, event.Type)
+
+	case "state.lifestyle_context.upsert":
+		var payload struct {
+			Context json.RawMessage `json:"context"`
+		}
+		if err := event.PayloadAs(&payload); err != nil {
+			r.failActiveStream(ctx, sw, state, "invalid lifestyle-context payload")
+			return true
+		}
+		if err := r.persistLifestyleContext(ctx, state.UID, state.Run.ID, payload.Context); err != nil {
+			log.Printf("failed to persist lifestyle context in BodyState for run %s: %v", state.Run.ID, err)
+			r.failActiveStream(ctx, sw, state, "failed to persist durable lifestyle state")
 			return true
 		}
 		r.sendEvent(ctx, sw, event, state.AssistantMsgID, event.Type)
@@ -1544,6 +1572,86 @@ func (r *Runtime) recordGovernance(
 	)
 }
 
+func (r *Runtime) reattachActiveRun(ctx context.Context, w http.ResponseWriter, run *model.Run) {
+	baseIDs := dto.StreamEventIDs{
+		ConversationID: run.ConversationID.String(),
+		RunID:          run.ID.String(),
+		TurnID:         run.TurnID.String(),
+	}
+	sw := r.streamRuntime.NewWriter(w, baseIDs)
+
+	if r.runtimeEventService == nil {
+		r.sendNewEvent(ctx, sw, "stream", "stream.error", baseIDs, map[string]any{"message": "runtime event log unavailable", "status": run.Status}, "", "stream.error")
+		r.sendNewEvent(ctx, sw, "stream", "stream.done", baseIDs, map[string]any{}, "", "stream.done")
+		return
+	}
+
+	const batchSize = 200
+	const pollInterval = 250 * time.Millisecond
+	afterSeq := 0
+	ticker := time.NewTicker(pollInterval)
+	defer ticker.Stop()
+
+	for {
+		events, hasMore, err := r.runtimeEventService.ListRunEvents(ctx, run.ConversationID, run.ID, afterSeq, batchSize)
+		if err != nil {
+			log.Printf("consultation transport reattach list failed run_id=%s after_seq=%d: %v", run.ID, afterSeq, err)
+			return
+		}
+
+		for _, stored := range events {
+			event, err := storedRuntimeEventToStreamEvent(stored)
+			if err != nil {
+				log.Printf("consultation transport reattach decode failed run_id=%s seq=%d: %v", run.ID, stored.Seq, err)
+				continue
+			}
+			if err := sw.WriteEvent(ctx, event); err != nil {
+				log.Printf("consultation transport reattach disconnected run_id=%s seq=%d: %v", run.ID, stored.Seq, err)
+				return
+			}
+			if stored.Seq > afterSeq {
+				afterSeq = stored.Seq
+			}
+			if stored.Type == "stream.done" {
+				log.Printf("consultation transport reattach completed run_id=%s last_seq=%d", run.ID, afterSeq)
+				return
+			}
+		}
+
+		if hasMore {
+			continue
+		}
+
+		select {
+		case <-ctx.Done():
+			log.Printf("consultation transport reattach request closed run_id=%s last_seq=%d: %v", run.ID, afterSeq, ctx.Err())
+			return
+		case <-ticker.C:
+		}
+	}
+}
+
+func storedRuntimeEventToStreamEvent(stored model.RuntimeEvent) (dto.StreamEvent, error) {
+	var ids dto.StreamEventIDs
+	if len(stored.IDs) > 0 {
+		if err := json.Unmarshal(stored.IDs, &ids); err != nil {
+			return dto.StreamEvent{}, err
+		}
+	}
+	payload := json.RawMessage(stored.Payload)
+	if len(payload) == 0 {
+		payload = json.RawMessage(`{}`)
+	}
+	return dto.StreamEvent{
+		Version: 1,
+		Seq:     stored.Seq,
+		Channel: stored.Channel,
+		Type:    stored.Type,
+		IDs:     ids,
+		Payload: payload,
+	}, nil
+}
+
 func (r *Runtime) replayCompletedRun(ctx context.Context, w http.ResponseWriter, run *model.Run) {
 	baseIDs := dto.StreamEventIDs{
 		ConversationID: run.ConversationID.String(),
@@ -1589,17 +1697,10 @@ func (r *Runtime) replayCompletedRun(ctx context.Context, w http.ResponseWriter,
 	maxSeq := 0
 	sawStreamDone := false
 	for _, stored := range events {
-		var ids dto.StreamEventIDs
-		if len(stored.IDs) > 0 {
-			if err := json.Unmarshal(stored.IDs, &ids); err != nil {
-				log.Printf("failed to decode runtime event ids for run %s seq %d: %v", run.ID, stored.Seq, err)
-				continue
-			}
-		}
-
-		payload := json.RawMessage(stored.Payload)
-		if len(payload) == 0 {
-			payload = json.RawMessage(`{}`)
+		event, err := storedRuntimeEventToStreamEvent(stored)
+		if err != nil {
+			log.Printf("failed to decode runtime event ids for run %s seq %d: %v", run.ID, stored.Seq, err)
+			continue
 		}
 		if stored.Seq > maxSeq {
 			maxSeq = stored.Seq
@@ -1608,14 +1709,7 @@ func (r *Runtime) replayCompletedRun(ctx context.Context, w http.ResponseWriter,
 			sawStreamDone = true
 		}
 
-		if err := sw.WriteEvent(ctx, dto.StreamEvent{
-			Version: 1,
-			Seq:     stored.Seq,
-			Channel: stored.Channel,
-			Type:    stored.Type,
-			IDs:     ids,
-			Payload: payload,
-		}); err != nil {
+		if err := sw.WriteEvent(ctx, event); err != nil {
 			log.Printf("failed to write replayed event for run %s seq %d: %v", run.ID, stored.Seq, err)
 			return
 		}
@@ -1657,6 +1751,17 @@ func (r *Runtime) persistExtractedSymptom(
 		return errors.New("BodyState service is not configured")
 	}
 	return r.bodyStateService.UpsertExtractedSymptom(ctx, userID, runID, info)
+}
+
+func (r *Runtime) persistLifestyleContext(
+	ctx context.Context,
+	userID, runID uuid.UUID,
+	payload json.RawMessage,
+) error {
+	if r.bodyStateService == nil {
+		return errors.New("BodyState service is not configured")
+	}
+	return r.bodyStateService.RecordLifestyleContext(ctx, userID, runID, payload)
 }
 
 func (r *Runtime) persistSafetyEvent(
@@ -1824,7 +1929,10 @@ func (r *Runtime) sendNewEvent(
 	}
 	r.recordPublicEvent(ctx, event)
 	if err := sw.WriteEvent(ctx, event); err != nil {
-		log.Printf("SSE write error (%s): %v", label, err)
+		log.Printf(
+			"SSE write error type=%s run_id=%s conversation_id=%s seq=%d: %v",
+			label, event.IDs.RunID, event.IDs.ConversationID, event.Seq, err,
+		)
 	}
 }
 
@@ -1838,7 +1946,10 @@ func (r *Runtime) sendEvent(
 	enriched := sw.EnrichEvent(event, messageID)
 	r.recordPublicEvent(ctx, enriched)
 	if err := sw.WriteEvent(ctx, enriched); err != nil {
-		log.Printf("SSE write error (%s): %v", label, err)
+		log.Printf(
+			"SSE write error type=%s run_id=%s conversation_id=%s seq=%d: %v",
+			label, enriched.IDs.RunID, enriched.IDs.ConversationID, enriched.Seq, err,
+		)
 	}
 }
 

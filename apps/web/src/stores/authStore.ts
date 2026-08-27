@@ -100,6 +100,14 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       set({ isVerifyingSession: true, isAuthResolved: false, error: null });
       const refreshed = await get().refreshAccessToken();
       if (refreshed) {
+        // Refresh is the authentication boundary. Unblock protected routes as
+        // soon as it succeeds, then hydrate display-only user data in parallel
+        // with route/profile loading instead of paying another serial RTT.
+        set({
+          hasHydrated: true,
+          isAuthResolved: true,
+          isVerifyingSession: false,
+        });
         await get().fetchUser();
       } else {
         clearAuthState(set);

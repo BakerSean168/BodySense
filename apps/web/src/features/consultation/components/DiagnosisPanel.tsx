@@ -25,15 +25,15 @@ interface DiagnosisPanelProps {
 }
 
 const CONFIDENCE_COLORS: Record<string, string> = {
-  高: "bg-green-100 text-green-800",
-  中: "bg-yellow-100 text-yellow-800",
-  低: "bg-gray-100 text-gray-800",
+  高: "bg-emerald-400/10 text-emerald-200",
+  中: "bg-amber-400/10 text-amber-200",
+  低: "bg-white/[0.06] text-muted-foreground",
 };
 
 const SEVERITY_COLORS: Record<string, string> = {
-  轻度: "bg-green-100 text-green-800",
-  中度: "bg-yellow-100 text-yellow-800",
-  重度: "bg-red-100 text-red-800",
+  轻度: "bg-emerald-400/10 text-emerald-200",
+  中度: "bg-amber-400/10 text-amber-200",
+  重度: "bg-red-400/10 text-red-200",
 };
 
 const ASSESSMENT_OPTIONS: Array<{
@@ -46,15 +46,15 @@ const ASSESSMENT_OPTIONS: Array<{
 ];
 
 const FRESHNESS_LABELS: Record<string, string> = {
-  fresh: "与当前 BodyState 一致",
+  fresh: "与当前身体状态一致",
   potentially_stale: "可能需要复核",
   stale: "已过期，需重新分析",
 };
 
 const FRESHNESS_STYLES: Record<string, string> = {
-  fresh: "bg-emerald-100 text-emerald-700",
-  potentially_stale: "bg-amber-100 text-amber-700",
-  stale: "bg-red-100 text-red-700",
+  fresh: "bg-emerald-400/10 text-emerald-200",
+  potentially_stale: "bg-amber-400/10 text-amber-200",
+  stale: "bg-red-400/10 text-red-200",
 };
 
 /**
@@ -68,7 +68,6 @@ const FRESHNESS_STYLES: Record<string, string> = {
  */
 export function DiagnosisPanel({
   analysisId,
-  bodyStateRevision,
   status = "completed",
   summary,
   candidates,
@@ -95,14 +94,14 @@ export function DiagnosisPanel({
 
   if (candidates.length === 0) {
     return (
-      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-        <p className="text-sm font-semibold text-amber-900">
+      <div className="rounded-xl border border-amber-300/12 bg-amber-300/[0.045] p-4">
+        <p className="text-sm font-semibold text-amber-100/90">
           {status === "safety_blocked"
             ? "当前分析受安全状态限制"
             : "当前信息不足以形成可靠候选"}
         </p>
         {summary ? (
-          <p className="mt-1 text-xs text-amber-800">{summary}</p>
+          <p className="mt-1 text-xs text-amber-100/60">{summary}</p>
         ) : null}
       </div>
     );
@@ -116,34 +115,26 @@ export function DiagnosisPanel({
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-gray-700">可能性分析</h3>
+          <h3 className="text-sm font-semibold text-foreground">可能性分析</h3>
           {summary ? (
-            <p className="mt-1 text-xs text-gray-500">{summary}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{summary}</p>
           ) : null}
         </div>
-        {bodyStateRevision != null ? (
-          <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">
-            BodyState R{bodyStateRevision}
-          </span>
-        ) : null}
       </div>
 
-      {freshness ? (
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs">
+      {freshness && freshness.state !== "fresh" ? (
+        <div className="rounded-xl border border-border bg-muted/35 p-3 text-xs">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span
               className={`rounded-full px-2 py-1 font-semibold ${
-                FRESHNESS_STYLES[freshness.state] || "bg-gray-100 text-gray-700"
+                FRESHNESS_STYLES[freshness.state] || "bg-white/[0.06] text-muted-foreground"
               }`}
             >
               {FRESHNESS_LABELS[freshness.state] || freshness.state}
             </span>
-            <span className="text-gray-500">
-              已对照 BodyState R{freshness.evaluated_against_revision}
-            </span>
           </div>
           {freshness.reasons.length > 0 ? (
-            <ul className="mt-2 space-y-1 text-gray-600">
+            <ul className="mt-2 space-y-1 text-muted-foreground">
               {freshness.reasons.map((reason, index) => (
                 <li key={`${reason.code}-${index}`}>• {reason.message}</li>
               ))}
@@ -155,7 +146,7 @@ export function DiagnosisPanel({
       {grouped.map(([concernKey, candidates]) => (
         <section key={concernKey} className="space-y-2">
           {grouped.length > 1 ? (
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-[#709a83]">
+            <h4 className="text-xs font-semibold tracking-wide text-primary">
               {concernKey === "general" ? "综合" : concernKey}
             </h4>
           ) : null}
@@ -165,10 +156,10 @@ export function DiagnosisPanel({
             return (
               <article
                 key={candidateId || `${concernKey}-${index}`}
-                className="rounded-lg border border-gray-200 bg-white p-4"
+                className="rounded-xl border border-border bg-card/70 p-4"
               >
                 <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <h4 className="font-medium text-gray-900">
+                  <h4 className="font-medium text-foreground">
                     {diagnosis.name}
                   </h4>
                   <span
@@ -184,34 +175,34 @@ export function DiagnosisPanel({
                     </span>
                   ) : null}
                   {diagnosis.evidence_strength ? (
-                    <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+                    <span className="rounded-full bg-sky-400/10 px-2 py-0.5 text-xs font-medium text-sky-200">
                       证据：{diagnosis.evidence_strength}
                     </span>
                   ) : null}
                 </div>
 
                 {diagnosis.basis ? (
-                  <p className="mb-2 text-sm text-gray-600">
+                  <p className="mb-2 text-sm text-foreground/78">
                     {diagnosis.basis}
                   </p>
                 ) : null}
                 {diagnosis.reasoning_summary ? (
-                  <p className="mb-2 text-xs text-gray-500">
+                  <p className="mb-2 text-xs text-muted-foreground">
                     分析：{diagnosis.reasoning_summary}
                   </p>
                 ) : null}
                 {diagnosis.typical_symptoms ? (
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     典型表现：{diagnosis.typical_symptoms}
                   </p>
                 ) : null}
                 {diagnosis.differential ? (
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     区别说明：{diagnosis.differential}
                   </p>
                 ) : null}
                 {(diagnosis.counterevidence_ids?.length ?? 0) > 0 ? (
-                  <p className="mt-2 text-xs text-amber-700">
+                  <p className="mt-2 text-xs text-amber-200/70">
                     存在 {diagnosis.counterevidence_ids!.length}{" "}
                     项反向/削弱证据，详情将在历史分析中保留。
                   </p>
@@ -231,8 +222,8 @@ export function DiagnosisPanel({
                         }
                         className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
                           assessments[candidateId] === option.state
-                            ? "border-primary-600 bg-primary-100 text-primary-900"
-                            : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                            ? "border-primary/45 bg-primary/12 text-primary"
+                            : "border-border bg-transparent text-muted-foreground hover:bg-muted/70 hover:text-foreground"
                         }`}
                       >
                         {option.label}
@@ -251,22 +242,22 @@ export function DiagnosisPanel({
           type="button"
           disabled={saveItems.length === 0 || isSavingAssessments}
           onClick={() => onSaveAssessments(saveItems)}
-          className="w-full rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-800 disabled:cursor-not-allowed disabled:bg-gray-300"
+          className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/85 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
         >
           {isSavingAssessments ? "保存中..." : "保存我的判断"}
         </button>
       ) : null}
 
       {citations && citations.length > 0 ? (
-        <div className="border-t pt-4">
-          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+        <div className="border-t border-border pt-4">
+          <h4 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground">
             📚 参考来源
           </h4>
           <div className="space-y-2">
             {citations.map((citation, index) => (
               <div
                 key={`${citation.title}-${index}`}
-                className="overflow-hidden rounded-lg border border-gray-200 bg-white"
+                className="overflow-hidden rounded-xl border border-border bg-card/55"
               >
                 <button
                   type="button"
@@ -275,17 +266,17 @@ export function DiagnosisPanel({
                       expandedCitationIndex === index ? null : index,
                     )
                   }
-                  className="flex w-full items-center justify-between p-3 text-left text-xs hover:bg-gray-50"
+                  className="flex w-full items-center justify-between p-3 text-left text-xs transition-colors hover:bg-muted/60"
                 >
-                  <span className="font-medium text-gray-800">
+                  <span className="font-medium text-foreground">
                     {citation.title}
                   </span>
-                  <span className="text-gray-400">
+                  <span className="text-muted-foreground">
                     {expandedCitationIndex === index ? "收起" : "查看"}
                   </span>
                 </button>
                 {expandedCitationIndex === index ? (
-                  <div className="border-t bg-gray-50 p-3 text-xs leading-relaxed text-gray-600">
+                  <div className="border-t border-border bg-muted/35 p-3 text-xs leading-relaxed text-muted-foreground">
                     {citation.summary ||
                       citation.body_markdown ||
                       citation.content}
@@ -297,9 +288,6 @@ export function DiagnosisPanel({
         </div>
       ) : null}
 
-      <p className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-xs text-yellow-800">
-        可能性分析仅用于辅助理解和跟踪身体状态，不构成医疗诊断。
-      </p>
     </div>
   );
 }

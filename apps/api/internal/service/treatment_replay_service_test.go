@@ -40,7 +40,7 @@ func treatmentReplayFixture(t *testing.T, configurationID string) (*model.Treatm
 	bodyState := json.RawMessage(`{"current_revision":12,"user_id":"private-user","facts":[{"id":"fact-neck","kind":"discomfort","value":"neck load"}]}`)
 	diagnosis := json.RawMessage(`{"analysis_id":"` + analysisID.String() + `","status":"completed","candidates":[{"candidate_id":"candidate-neck","concern_key":"region:neck"}]}`)
 	assessments := json.RawMessage(`[{"candidate_id":"candidate-neck","state":"confirmed"}]`)
-	profile := json.RawMessage(`{"id":"profile-private","email":"private@example.test","name":"Private User","occupation":"developer"}`)
+	profile := json.RawMessage(`{"id":"profile-private","user_id":"private-user","gender":"male","birth_date":"1998-05-20"}`)
 	constraints := json.RawMessage(`{"equipment":"none"}`)
 	evidence := json.RawMessage(`[{"evidence_id":"evidence-neck","summary":"graded activity"}]`)
 	rawInput, err := EncodeTreatmentReplayInput(

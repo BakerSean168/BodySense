@@ -81,6 +81,8 @@ async def test_deterministic_typed_agents_keep_structured_contracts() -> None:
     assessment = AssessmentService(
         model_resolver=lambda _config: deterministic_assessment_model()
     )
-    assessment_result = await assessment.generate_assessment(profile={"age": 30})
+    assessment_result = await assessment.generate_assessment(
+        profile={"gender": "female", "birth_date": "1996-08-27", "age_years": 30}
+    )
     assert assessment_result["observations"][0]["kind"] == "posture_alignment"
     assert "improvement_summary" not in assessment_result

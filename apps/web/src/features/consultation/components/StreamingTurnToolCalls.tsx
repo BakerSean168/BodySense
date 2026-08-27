@@ -18,13 +18,11 @@ export function StreamingTurnToolCalls({
   if (toolCalls.length === 0) return null;
 
   return (
-    <div className="flex justify-start">
-      <div className="max-w-[80%] rounded-xl px-3 py-2 bg-[#F0F4F0] border border-[#D4DDD4]">
-        <div className="flex flex-col gap-1.5">
-          {toolCalls.map((tc) => (
-            <ToolCallItem key={tc.id} toolCall={tc} />
-          ))}
-        </div>
+    <div className="w-full rounded-xl border border-white/[0.07] bg-white/[0.025] px-3 py-2.5">
+      <div className="flex flex-col gap-1.5">
+        {toolCalls.map((toolCall) => (
+          <ToolCallItem key={toolCall.id} toolCall={toolCall} />
+        ))}
       </div>
     </div>
   );

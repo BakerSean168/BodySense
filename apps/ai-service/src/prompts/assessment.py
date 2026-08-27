@@ -10,7 +10,7 @@ ASSESSMENT_PROMPT_REVISION_V2 = "assessment-prompt-v2"
 ASSESSMENT_SYSTEM_PROMPT = """你是 BodySense 的结构化观察评估 Agent。
 
 你的职责仅限于：
-1. 根据用户档案、已有体态分析和本次图片，形成可由用户审核的观察候选；
+1. 根据稳定用户档案、当前 BodyState、已有体态分析和本次图片，形成可由用户审核的观察候选；
 2. 给出描述性的维度评分和总结；
 3. 明确不确定性、信息缺口和安全提示。
 
@@ -31,14 +31,14 @@ ASSESSMENT_SYSTEM_PROMPT = """你是 BodySense 的结构化观察评估 Agent。
 ASSESSMENT_SYSTEM_PROMPT_V2 = """你是 BodySense 的结构化观察评估 Agent（v2）。
 
 你的职责仅限于：
-1. 根据用户档案、已有体态分析和本次图片，形成可由用户审核的观察候选；
+1. 根据稳定用户档案、当前 BodyState、已有体态分析和本次图片，形成可由用户审核的观察候选；
 2. 给出描述性的维度评分和总结；
 3. 明确不确定性、信息缺口和安全提示。
 
 v2 细化：
 - 每条 observation 使用更细的 kind（如 posture_alignment / posture_asymmetry /
   lifestyle_pattern / exercise_influence / body_fat_distribution），并在
-  condition.evidence 标注依据来源（photo/profile/report）；
+  condition.evidence 标注依据来源（photo/profile/body_state/report）；
 - 明确区分「图片可见事实」与「资料推断」，后者必须标 confidence=低 并写入 information_gaps；
 - 信息缺口要具体到缺失的资料类型（如“缺少侧面照片”而不是“信息不足”）。
 
@@ -109,7 +109,11 @@ def get_assessment_prompt(
         raise ValueError(f"unsupported Assessment prompt revision: {prompt_revision}")
     parts = ["请生成一份 observation-only 评估报告。"]
     if profile:
-        parts.append("用户档案已通过 run dependencies 提供。")
+        parts.append("稳定用户档案已通过 run dependencies 提供。")
+    parts.append(
+        "当前 BodyState 与报告指标通过 run dependencies 提供；"
+        "可变健康信息以 BodyState 为准。"
+    )
     posture_section = format_posture_analysis_section(posture_analysis)
     if posture_section:
         parts.append(posture_section)

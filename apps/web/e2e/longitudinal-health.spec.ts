@@ -23,11 +23,7 @@ test("register -> profile -> durable BodyState fact survives reload", async ({
     headers: { Authorization: `Bearer ${accessToken}` },
     data: {
       gender: "male",
-      age: 30,
-      height_cm: 175,
-      weight_kg: 70,
-      occupation: "software engineer",
-      exercise_frequency: "2-3/week",
+      birth_date: "1996-08-27",
     },
   });
   expect(profile.ok()).toBeTruthy();
@@ -61,12 +57,11 @@ test("register -> profile -> durable BodyState fact survives reload", async ({
   expect(conversationData.conversations).toHaveLength(1);
 
   await page.goto(`/consultation/${conversationData.conversations[0].id}`);
-  await expect(
-    page.getByRole("heading", { name: "智能问诊工作台" }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "长期 BodyState" }),
-  ).toBeVisible();
+  await expect(page.getByRole("tablist", { name: "健康工作区" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "状态" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
 
   await page.getByRole("button", { name: "收起对话区" }).click();
   await expect(page.getByRole("button", { name: "展开对话区" })).toBeVisible();
@@ -75,25 +70,35 @@ test("register -> profile -> durable BodyState fact survives reload", async ({
 
   await page.getByRole("tab", { name: "分析" }).click();
   await expect(page).toHaveURL(/view=diagnosis/);
-  await expect(page.getByRole("heading", { name: "可能性分析" })).toBeVisible();
+  await expect(page.getByRole("tabpanel", { name: "分析" })).toBeVisible();
+  await expect(page.getByText("还没有分析结果")).toBeVisible();
   await page.getByRole("tab", { name: /状态/ }).click();
   await expect(page).toHaveURL(/view=state/);
 
-  await page.getByRole("button", { name: "新事实" }).click();
+  await page.getByRole("button", { name: "添加记录" }).click();
   await page.getByPlaceholder("身体区域，例如：颈肩").fill("颈肩");
-  await page.getByPlaceholder("当前事实内容").fill("久坐后颈肩酸胀");
-  await page.getByRole("button", { name: "记录事实" }).click();
+  await page.getByPlaceholder("记录内容").fill("久坐后颈肩酸胀");
+  await page.getByRole("button", { name: "保存记录" }).click();
 
   await expect(page.getByText("久坐后颈肩酸胀")).toBeVisible();
-  await expect(
-    page.getByTestId("workspace").getByText("R1", { exact: true }),
-  ).toBeVisible();
+
+  const bodyStateResponse = await request.get(`${apiBase}/api/v1/body-state`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  expect(bodyStateResponse.ok()).toBeTruthy();
+  const bodyState = (await bodyStateResponse.json()) as {
+    current_revision: number;
+    facts: Array<{ value: string }>;
+  };
+  expect(bodyState.current_revision).toBe(1);
+  expect(bodyState.facts).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ value: "久坐后颈肩酸胀" }),
+    ]),
+  );
 
   await page.reload();
   await expect(page.getByText("久坐后颈肩酸胀")).toBeVisible();
-  await expect(
-    page.getByTestId("workspace").getByText("R1", { exact: true }),
-  ).toBeVisible();
 });
 
 test("full longitudinal loop enforces gates and remains discoverable after reload", async ({
@@ -119,11 +124,7 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
         headers,
         data: {
           gender: "female",
-          age: 32,
-          height_cm: 168,
-          weight_kg: 60,
-          occupation: "designer",
-          exercise_frequency: "2-3/week",
+          birth_date: "1994-08-27",
         },
       })
     ).ok(),
@@ -372,15 +373,16 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   expect(workspace.training_plan?.id).toBe(accepted.training_plan.id);
   const revisionBeforeFeedback = workspace.body_state.current_revision;
 
-  await page.goto("/dashboard");
+  await page.goto(`/training/${accepted.training_plan.id}`);
+  await expect(page).toHaveURL(/\/consultation(?:\/[^?]+)?\?view=treatment$/);
+  const trainingAction = page.getByRole("button", { name: "展开训练执行" });
+  await expect(trainingAction).toBeVisible();
   await page.reload();
+  await expect(trainingAction).toBeVisible();
+  await trainingAction.click();
   await expect(
-    page.getByRole("button", { name: "继续执行训练" }),
+    page.getByRole("heading", { name: "训练计划 (Training Plan)" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "继续执行训练" }).click();
-  await expect(page).toHaveURL(
-    new RegExp(`/training/${accepted.training_plan.id}$`),
-  );
 
   const feedback = await request.put(
     `${apiBase}/api/v1/training/${accepted.training_plan.id}/log`,

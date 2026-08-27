@@ -295,25 +295,27 @@ def create_provider() -> LLMProvider:
 | created_at | TIMESTAMPTZ | 注册时间 |
 | last_login_at | TIMESTAMPTZ | 最后登录时间 |
 
-#### user_profiles — 身体档案表
+#### user_profiles — 稳定身份档案表
+
+> ADR 0007：`user_profiles` 不再承担可变化健康状态。生活方式、身体测量和健康历史由 BodyState 持久化并保留时间语义。
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | id | UUID (PK) | 档案 ID |
 | user_id | UUID (FK → users) | 关联用户 |
-| gender | VARCHAR(10) | 性别 |
-| age | INT | 年龄 |
-| height_cm | FLOAT | 身高 |
-| weight_kg | FLOAT | 体重 |
-| bmi | FLOAT | BMI（自动计算） |
-| occupation | TEXT | 职业/日常活动类型 |
-| sleep_time | TIME | 入睡时间 |
-| wake_time | TIME | 起床时间 |
-| exercise_type | VARCHAR(100) | 运动类型 |
-| exercise_frequency | VARCHAR(50) | 运动频率 |
-| injury_history | TEXT | 既往伤病/手术史 |
-| self_description | TEXT | 用户自我描述 |
+| gender | VARCHAR(20) | 用户提供的性别背景 |
+| birth_date | DATE | 出生日期；年龄按当前日期派生，不持久化 age |
+| created_at | TIMESTAMPTZ | 创建时间 |
 | updated_at | TIMESTAMPTZ | 最后更新时间 |
+
+可变化健康信息的归属：
+
+```text
+height / weight          -> BodyState Observation (anthropometry.*)
+activity / sleep / etc.  -> BodyState Fact (lifestyle.*)
+injury history summary   -> BodyState Fact (history.injury_summary)
+BMI                       -> current height + weight derived projection
+```
 
 #### user_uploads — 上传材料表
 

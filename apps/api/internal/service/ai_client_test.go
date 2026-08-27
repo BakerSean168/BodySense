@@ -44,10 +44,16 @@ func TestChatStreamSendsFlatPythonRequestAndParsesStreamEvent(t *testing.T) {
 				Text: "hello",
 			},
 			BusinessContext: ConsultationBusinessContext{
-				Profile: json.RawMessage(`{"age":30}`),
+				Profile: json.RawMessage(`{"gender":"female","birth_date":"1996-08-27","age_years":30}`),
 				RuntimeState: ConsultationRuntimeState{
 					Phase:         "collecting",
 					ExtractedInfo: json.RawMessage(`[]`),
+				},
+				SpatialContext: &ConsultationSpatialContext{
+					BodyRegionID:    "shoulder.right",
+					BodyRegionLabel: "右肩",
+					AnatomyID:       "appendicular-skeleton-clavicle-right",
+					AnatomyName:     "Right clavicle",
 				},
 			},
 		},
@@ -72,6 +78,14 @@ func TestChatStreamSendsFlatPythonRequestAndParsesStreamEvent(t *testing.T) {
 		if _, ok := captured[key]; !ok {
 			t.Fatalf("missing top-level key %q in request: %#v", key, captured)
 		}
+	}
+	businessContext, ok := captured["business_context"].(map[string]any)
+	if !ok {
+		t.Fatalf("business_context is not an object: %#v", captured["business_context"])
+	}
+	spatialContext, ok := businessContext["spatial_context"].(map[string]any)
+	if !ok || spatialContext["body_region_id"] != "shoulder.right" || spatialContext["anatomy_id"] != "appendicular-skeleton-clavicle-right" {
+		t.Fatalf("unexpected spatial_context payload: %#v", businessContext["spatial_context"])
 	}
 }
 
@@ -104,7 +118,7 @@ func TestAnalyzeDiagnosisSendsPythonContract(t *testing.T) {
 		BodyStateRevision: 12,
 		BodyState:         json.RawMessage(`{"current_revision":12,"facts":[{"id":"fact-1","kind":"discomfort","value":"颈肩酸胀"}],"observations":[]}`),
 		RelevantHistory:   json.RawMessage(`[{"revision":11,"change_type":"fact.temporal_changed"}]`),
-		Profile:           json.RawMessage(`{"age":30,"occupation":"程序员"}`),
+		Profile:           json.RawMessage(`{"gender":"male","birth_date":"1996-08-27","age_years":30}`),
 	})
 	if err != nil {
 		t.Fatalf("AnalyzeDiagnosis returned error: %v", err)

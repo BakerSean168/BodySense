@@ -145,7 +145,7 @@ func (h *BodyStateHandler) AddObservation(c *gin.Context) {
 		return
 	}
 	observation := model.BodyStateObservation{
-		ConcernKey: req.ConcernKey, Kind: req.Kind, BodyRegion: req.BodyRegion, Method: req.Method,
+		ConcernKey: req.ConcernKey, Kind: req.Kind, BodyRegion: req.BodyRegion, BodyRegionID: req.BodyRegionID, Method: req.Method,
 		Value: bodyStateRawJSON(req.Value, `{}`), Condition: bodyStateRawJSON(req.Condition, `{}`),
 		SourceKey: req.SourceKey, Provenance: bodyStateRawJSON(req.Provenance, `{}`),
 		ObservedAt: req.ObservedAt, LifecycleState: req.LifecycleState,
@@ -184,7 +184,7 @@ func (h *BodyStateHandler) ReviewObservation(c *gin.Context) {
 
 func bodyStateFactFromInput(input dto.BodyStateFactInput) model.BodyStateFact {
 	return model.BodyStateFact{
-		ConcernKey: input.ConcernKey, Kind: input.Kind, BodyRegion: input.BodyRegion, Value: input.Value,
+		ConcernKey: input.ConcernKey, Kind: input.Kind, BodyRegion: input.BodyRegion, BodyRegionID: input.BodyRegionID, Value: input.Value,
 		Details: bodyStateRawJSON(input.Details, `{}`), Origin: input.Origin, ReviewState: input.ReviewState,
 		LifecycleState: input.LifecycleState, Trend: input.Trend, SourceKey: input.SourceKey,
 		Provenance: bodyStateRawJSON(input.Provenance, `{}`), ObservedAt: input.ObservedAt,
@@ -206,6 +206,10 @@ func bodyStateHandleMutationError(c *gin.Context, err error) bool {
 	switch {
 	case errors.Is(err, repository.ErrBodyStateRevisionConflict):
 		respondError(c, http.StatusConflict, "BODY_STATE_REVISION_CONFLICT", err.Error())
+	case errors.Is(err, service.ErrUnknownBodyRegionID):
+		respondError(c, http.StatusBadRequest, "INVALID_BODY_REGION_ID", err.Error())
+	case errors.Is(err, service.ErrBodyRegionIDValidationUnavailable):
+		respondError(c, http.StatusServiceUnavailable, "BODY_REGION_VALIDATION_UNAVAILABLE", err.Error())
 	case errors.Is(err, gorm.ErrRecordNotFound):
 		respondError(c, http.StatusNotFound, "NOT_FOUND", "body state item not found")
 	default:

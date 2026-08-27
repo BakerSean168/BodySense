@@ -130,11 +130,11 @@ def test_governance_context_fields():
         output_type="treatment",
         extracted_info=[{"body_part": "肩颈", "symptom_type": "疼痛"}],
         rag_results=[{"title": "test"}],
-        profile={"age": 30},
+        profile={"gender": "female", "birth_date": "1996-08-27", "age_years": 30},
         metadata={"version": 1},
     )
     assert ctx.output_type == "treatment"
     assert len(ctx.extracted_info) == 1
     assert len(ctx.rag_results) == 1
-    assert ctx.profile == {"age": 30}
+    assert ctx.profile == {"gender": "female", "birth_date": "1996-08-27", "age_years": 30}
     assert ctx.metadata == {"version": 1}

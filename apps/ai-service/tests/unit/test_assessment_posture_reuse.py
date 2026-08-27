@@ -40,7 +40,10 @@ def test_format_posture_section_empty_without_analysis():
 
 
 def test_assessment_prompt_is_observation_only():
-    prompt = get_assessment_prompt({"age": 30}, posture_analysis=SAMPLE)
+    prompt = get_assessment_prompt(
+        {"gender": "female", "birth_date": "1996-08-27", "age_years": 30},
+        posture_analysis=SAMPLE,
+    )
     assert "高低肩倾向" in prompt
     assert "不构成医疗诊断、治疗方案或运动处方" in prompt
     assert "改善建议" not in prompt

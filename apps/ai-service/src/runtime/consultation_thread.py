@@ -81,6 +81,7 @@ class ConsultationThreadState(TypedDict, total=False):
     current_diagnosis: dict[str, Any]
     current_treatment: dict[str, Any]
     recent_outcomes: list[dict[str, Any]]
+    spatial_context: dict[str, Any]
     phase: str
     current_user_message: str
     pending_user_images: list[dict[str, Any]]
@@ -236,6 +237,35 @@ def _format_longitudinal_context(state: ConsultationThreadState) -> str:
     return "\n\n".join(sections)
 
 
+def _format_spatial_context(spatial_context: dict[str, Any]) -> str:
+    if not spatial_context:
+        return ""
+    region_id = str(spatial_context.get("body_region_id") or "").strip()
+    region_label = str(spatial_context.get("body_region_label") or "").strip()
+    anatomy_id = str(spatial_context.get("anatomy_id") or "").strip()
+    anatomy_name = str(spatial_context.get("anatomy_name") or "").strip()
+    if not region_id and not anatomy_id:
+        return ""
+
+    lines = ["## 用户当前查看的身体位置（界面导航上下文）"]
+    if region_id or region_label:
+        lines.append(
+            f"- 身体区域：{region_label or region_id} ({region_id or '未提供 canonical ID'})"
+        )
+    if anatomy_id or anatomy_name:
+        lines.append(
+            f"- 解剖结构：{anatomy_name or anatomy_id} ({anatomy_id or '未提供 anatomy ID'})"
+        )
+    lines.append(
+        "- 这只是用户在 3D Body Explorer 中主动选择的查看位置，不是症状事实、病因证据或医学诊断。"
+    )
+    lines.append(
+        "- 回答时应结合 Go 提供的当前 BodyState；若该区域没有已确认记录，"
+        "不得因为用户选中了它就声称那里存在问题。"
+    )
+    return "\n".join(lines)
+
+
 def _runtime_messages_to_chat_messages(state: ConsultationThreadState) -> list[ChatMessage]:
     messages: list[ChatMessage] = []
 
@@ -249,6 +279,10 @@ def _runtime_messages_to_chat_messages(state: ConsultationThreadState) -> list[C
             "\n\n以上 BodyState 是当前持久化健康事实来源。若旧聊天文本与已修正的 BodyState 冲突，"
             "以 BodyState 中用户已确认/修正后的当前信息为准。AI 推测不得当作用户事实。"
         )
+
+    spatial_context = _format_spatial_context(state.get("spatial_context", {}))
+    if spatial_context:
+        system_content += "\n\n" + spatial_context
 
     longitudinal_context = _format_longitudinal_context(state)
     if longitudinal_context:
@@ -493,6 +527,27 @@ async def execute_tool(state: ConsultationThreadState, *, writer: StreamWriter) 
                 state.get("extracted_symptoms", []),
                 [normalized],
             ),
+        }
+
+    if tool_name == "record_lifestyle_context":
+        result = await executor.execute(tool_call_id, tool_name, arguments)
+        normalized = result.content if result.status == ToolStatus.SUCCESS else arguments
+        assert isinstance(normalized, dict), "record_lifestyle_context must return a dict"
+        writer({"type": "lifestyle_context", "context": normalized})
+        writer(
+            {
+                "type": "tool_result",
+                "id": tool_call_id,
+                "tool": tool_name,
+                "result": {"status": "ok"},
+            }
+        )
+        runtime_messages.append(
+            {"role": "tool", "tool_call_id": tool_call_id, "content": "生活方式信息已记录。"}
+        )
+        return {
+            "runtime_messages": runtime_messages,
+            "pending_tool_calls": remaining,
         }
 
     if tool_name == "search_knowledge":
@@ -804,6 +859,12 @@ def _map_internal_event(
             event_type="state.extracted_info.upsert",
             payload={"info": event_data.get("info", {})},
         )
+    if event_type == "lifestyle_context":
+        return factory.next(
+            channel="state",
+            event_type="state.lifestyle_context.upsert",
+            payload={"context": event_data.get("context", {})},
+        )
     if event_type == "phase_change":
         return factory.next(
             channel="state",
@@ -899,6 +960,7 @@ async def stream_thread_turn(
     current_diagnosis: dict[str, Any] | None = None,
     current_treatment: dict[str, Any] | None = None,
     recent_outcomes: list[dict[str, Any]] | None = None,
+    spatial_context: dict[str, Any] | None = None,
     configuration_id: str | None = None,
 ) -> AsyncIterator[StreamEvent]:
     graph = await get_runtime_graph()
@@ -922,6 +984,7 @@ async def stream_thread_turn(
             "current_diagnosis": current_diagnosis or {},
             "current_treatment": current_treatment or {},
             "recent_outcomes": list(recent_outcomes or []),
+            "spatial_context": spatial_context or {},
             "phase": phase,
             "extracted_symptoms": extracted_info,
             "current_user_message": user_message,
@@ -983,6 +1046,7 @@ async def resume_thread_interrupt(
     current_diagnosis: dict[str, Any] | None = None,
     current_treatment: dict[str, Any] | None = None,
     recent_outcomes: list[dict[str, Any]] | None = None,
+    spatial_context: dict[str, Any] | None = None,
 ) -> AsyncIterator[StreamEvent]:
     graph = await get_runtime_graph()
     config = cast(RunnableConfig, {"configurable": {"thread_id": thread_id}})
@@ -1020,6 +1084,7 @@ async def resume_thread_interrupt(
                 "current_diagnosis": current_diagnosis or {},
                 "current_treatment": current_treatment or {},
                 "recent_outcomes": list(recent_outcomes or []),
+                "spatial_context": spatial_context or {},
             },
         ),
         config=config,

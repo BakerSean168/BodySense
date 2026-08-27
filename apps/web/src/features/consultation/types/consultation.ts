@@ -164,6 +164,7 @@ export interface BodyStateFact {
   concern_key?: string;
   kind: string;
   body_region?: string;
+  body_region_id?: string | null;
   value: string;
   details?: Record<string, unknown>;
   origin: string;
@@ -187,6 +188,7 @@ export interface BodyStateObservation {
   concern_key?: string;
   kind: string;
   body_region?: string;
+  body_region_id?: string | null;
   method?: string;
   value: Record<string, unknown>;
   condition?: Record<string, unknown>;
@@ -237,6 +239,13 @@ export interface BodyStateSnapshot {
   pending_observations?: BodyStateObservation[];
   hypotheses?: BodyStateHypothesis[];
   recent_revisions?: BodyStateRevision[];
+}
+
+export interface ConsultationSpatialContext {
+  body_region_id?: string;
+  body_region_label?: string;
+  anatomy_id?: string;
+  anatomy_name?: string;
 }
 
 export type DiagnosisCandidateAssessmentState =

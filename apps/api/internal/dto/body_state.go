@@ -12,6 +12,7 @@ type BodyStateFactInput struct {
 	ConcernKey     string          `json:"concern_key"`
 	Kind           string          `json:"kind" binding:"required"`
 	BodyRegion     string          `json:"body_region"`
+	BodyRegionID   *string         `json:"body_region_id"`
 	Value          string          `json:"value"`
 	Details        json.RawMessage `json:"details"`
 	Origin         string          `json:"origin"`
@@ -52,6 +53,7 @@ type BodyStateObservationInput struct {
 	ConcernKey       string          `json:"concern_key"`
 	Kind             string          `json:"kind" binding:"required"`
 	BodyRegion       string          `json:"body_region"`
+	BodyRegionID     *string         `json:"body_region_id"`
 	Method           string          `json:"method"`
 	Value            json.RawMessage `json:"value" binding:"required"`
 	Condition        json.RawMessage `json:"condition"`

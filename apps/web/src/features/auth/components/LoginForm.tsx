@@ -40,7 +40,7 @@ export function LoginForm() {
 
     try {
       await login(email, password);
-      navigate("/dashboard");
+      navigate("/consultation");
     } catch {
       // Error is handled by the store
     }

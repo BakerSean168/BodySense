@@ -43,6 +43,7 @@ export const consultationApi = {
         mime_type?: string;
         image_url?: string;
       }>;
+      metadata?: Record<string, unknown>;
     };
   }): Promise<Response> {
     return authFetch(`${API_BASE}/consultation-runs`, {

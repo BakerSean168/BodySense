@@ -60,6 +60,11 @@ func main() {
 	}
 	fmt.Println("BODY_STATE_SEMANTICS=PASS")
 
+	if err := v.validateBodyRegionIdentity(ctx); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("BODY_REGION_ID_ROUNDTRIP=PASS")
+
 	analysis, err := v.createDiagnosis(ctx, userID, revision, fact.ID)
 	if err != nil {
 		log.Fatal(err)
@@ -83,7 +88,9 @@ func main() {
 
 func newValidator(db *gorm.DB) *validator {
 	bodyRepo := repository.NewBodyStateRepository(db)
-	bodyService := service.NewBodyStateService(bodyRepo)
+	bodyService := service.NewBodyStateService(bodyRepo).WithBodyRegionIDValidator(
+		service.NewCanonicalBodyRegionIDValidator(),
+	)
 	diagnosisRepo := repository.NewDiagnosisAnalysisRepository(db)
 	diagnosisService := service.NewDiagnosisAnalysisService(diagnosisRepo)
 	freshnessRepo := repository.NewDiagnosisFreshnessRepository(db)
@@ -216,6 +223,123 @@ func (v *validator) validateBodyStateSemantics(
 		return nil, 0, fmt.Errorf("corrected fact remained current: %#v", previous)
 	}
 	return replacement, correctionRevision.Revision, nil
+}
+
+func (v *validator) validateBodyRegionIdentity(ctx context.Context) error {
+	userID, cleanup, err := v.createUser(ctx)
+	if err != nil {
+		return fmt.Errorf("create body-region validator user: %w", err)
+	}
+	defer cleanup()
+
+	expected := int64(0)
+	legacy, legacyRevision, err := v.bodyRepo.UpsertFact(ctx, userID, &expected, model.BodyStateFact{
+		ConcernKey: "region:legacy", Kind: "discomfort", BodyRegion: "肩颈", Value: "tightness",
+		Origin: "user_reported", ReviewState: "confirmed", LifecycleState: "active", Trend: "stable",
+		SourceKey: "domain-validator:body-region:legacy",
+	}, "domain_validator")
+	if err != nil {
+		return fmt.Errorf("persist legacy body region: %w", err)
+	}
+	if legacyRevision == nil || legacyRevision.Revision != 1 || legacy.BodyRegionID != nil {
+		return fmt.Errorf("legacy body region must remain readable with null canonical id: fact=%#v revision=%#v", legacy, legacyRevision)
+	}
+
+	rightID := "shoulder.right"
+	expected = 1
+	right, rightRevision, err := v.bodyRepo.UpsertFact(ctx, userID, &expected, model.BodyStateFact{
+		ConcernKey: "region:shoulder", Kind: "discomfort", BodyRegion: "右肩", BodyRegionID: &rightID,
+		Value: "pain when raising arm", Origin: "user_reported", ReviewState: "confirmed",
+		LifecycleState: "active", Trend: "stable", SourceKey: "domain-validator:body-region:right-shoulder",
+	}, "domain_validator")
+	if err != nil {
+		return fmt.Errorf("persist canonical right shoulder: %w", err)
+	}
+	if rightRevision == nil || rightRevision.Revision != 2 || right.BodyRegionID == nil || *right.BodyRegionID != rightID {
+		return fmt.Errorf("canonical right shoulder did not round-trip: fact=%#v revision=%#v", right, rightRevision)
+	}
+
+	// Simulate an older source-key producer that does not know body_region_id.
+	// The unchanged display region must retain the already-known canonical ID and
+	// must not create a meaningless semantic revision.
+	replayed, replayRevision, err := v.bodyRepo.UpsertFact(ctx, userID, nil, model.BodyStateFact{
+		ConcernKey: "region:shoulder", Kind: "discomfort", BodyRegion: "右肩",
+		Value: "pain when raising arm", Origin: "user_reported", ReviewState: "confirmed",
+		LifecycleState: "active", Trend: "stable", SourceKey: "domain-validator:body-region:right-shoulder",
+	}, "domain_validator")
+	if err != nil {
+		return fmt.Errorf("legacy source-key replay: %w", err)
+	}
+	if replayRevision != nil || replayed.ID != right.ID || replayed.BodyRegionID == nil || *replayed.BodyRegionID != rightID {
+		return fmt.Errorf("legacy replay erased canonical region or changed revision: fact=%#v revision=%#v", replayed, replayRevision)
+	}
+
+	expected = 2
+	temporal, temporalRevision, err := v.bodyRepo.UpdateFactTemporal(
+		ctx, userID, &expected, right.ID, "active", "improving", nil, "domain_validator",
+	)
+	if err != nil {
+		return fmt.Errorf("temporal change with canonical region: %w", err)
+	}
+	if temporalRevision == nil || temporalRevision.Revision != 3 || temporal.ID != right.ID || temporal.BodyRegionID == nil || *temporal.BodyRegionID != rightID {
+		return fmt.Errorf("temporal change lost historical region identity: fact=%#v revision=%#v", temporal, temporalRevision)
+	}
+
+	expected = 3
+	retained, retainedRevision, err := v.bodyRepo.CorrectFact(ctx, userID, &expected, right.ID, model.BodyStateFact{
+		ConcernKey: "region:shoulder", Kind: "discomfort", BodyRegion: "右肩",
+		Value: "pain only above shoulder height", Origin: "user_edited", ReviewState: "confirmed",
+		LifecycleState: "active", Trend: "stable", SourceKey: "domain-validator:body-region:right-shoulder:wording",
+	}, "domain_validator")
+	if err != nil {
+		return fmt.Errorf("correction retaining canonical region: %w", err)
+	}
+	if retainedRevision == nil || retainedRevision.Revision != 4 || retained.BodyRegionID == nil || *retained.BodyRegionID != rightID {
+		return fmt.Errorf("same-region correction did not retain canonical identity: fact=%#v revision=%#v", retained, retainedRevision)
+	}
+
+	leftID := "shoulder.left"
+	expected = 4
+	corrected, correctionRevision, err := v.bodyRepo.CorrectFact(ctx, userID, &expected, retained.ID, model.BodyStateFact{
+		ConcernKey: "region:shoulder", Kind: "discomfort", BodyRegion: "左肩", BodyRegionID: &leftID,
+		Value: "pain only above shoulder height", Origin: "user_edited", ReviewState: "confirmed",
+		LifecycleState: "active", Trend: "stable", SourceKey: "domain-validator:body-region:left-shoulder",
+	}, "domain_validator")
+	if err != nil {
+		return fmt.Errorf("correction replacing canonical region: %w", err)
+	}
+	if correctionRevision == nil || correctionRevision.Revision != 5 || corrected.BodyRegionID == nil || *corrected.BodyRegionID != leftID {
+		return fmt.Errorf("laterality correction did not replace canonical identity: fact=%#v revision=%#v", corrected, correctionRevision)
+	}
+	if corrected.SupersedesFactID == nil || *corrected.SupersedesFactID != retained.ID {
+		return fmt.Errorf("laterality correction lost correction history: %#v", corrected)
+	}
+
+	var previous model.BodyStateFact
+	if err := v.db.WithContext(ctx).Where("id = ?", retained.ID).First(&previous).Error; err != nil {
+		return fmt.Errorf("reload superseded right-shoulder fact: %w", err)
+	}
+	if previous.BodyRegionID == nil || *previous.BodyRegionID != rightID || previous.LifecycleState != "inactive" || previous.ReviewState != "corrected" {
+		return fmt.Errorf("correction rewrote historical right-shoulder identity: %#v", previous)
+	}
+
+	state, err := v.bodyRepo.GetCurrent(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("reload body-region projection: %w", err)
+	}
+	var sawLegacy, sawLeft bool
+	for _, fact := range state.Facts {
+		if fact.ID == legacy.ID {
+			sawLegacy = fact.BodyRegionID == nil && fact.BodyRegion == "肩颈"
+		}
+		if fact.ID == corrected.ID {
+			sawLeft = fact.BodyRegionID != nil && *fact.BodyRegionID == leftID && fact.BodyRegion == "左肩"
+		}
+	}
+	if !sawLegacy || !sawLeft {
+		return fmt.Errorf("current projection lost optional canonical region contract: legacy=%v left=%v state=%#v", sawLegacy, sawLeft, state.Facts)
+	}
+	return nil
 }
 
 func (v *validator) createDiagnosis(

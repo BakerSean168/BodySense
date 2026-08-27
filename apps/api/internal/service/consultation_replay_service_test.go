@@ -17,7 +17,7 @@ func consultationReplayTestRun() *model.Run {
 		ConfigurationID:   defaultConsultationConfigurationID,
 		ConversationID:    uuid.New().String(),
 		UserMessage:       "我最近肩膀疼",
-		Profile:           json.RawMessage(`{"age":30}`),
+		Profile:           json.RawMessage(`{"gender":"female","birth_date":"1996-08-27","age_years":30}`),
 		BodyState:         json.RawMessage(`{"current_revision":3}`),
 		BodyStateRevision: 3,
 		Phase:             "collecting",

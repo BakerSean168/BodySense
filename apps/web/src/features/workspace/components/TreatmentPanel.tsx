@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router";
 import {
   Activity,
   AlertTriangle,
@@ -11,9 +10,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import type { HealthWorkspace, TreatmentRevision } from "../types/workspace";
 import { errorMessage } from "@/lib/api-client";
+import { TrainingExecutionPanel } from "@/features/training/components/TrainingExecutionPanel";
 import {
   useTreatmentCommand,
   type TreatmentCommand,
@@ -45,9 +44,8 @@ function prescriptionText(value: Record<string, unknown>) {
 export function TreatmentPanel({ workspace }: TreatmentPanelProps) {
   const treatmentCommand = useTreatmentCommand();
   const [busyKey, setBusyKey] = useState<string | null>(null);
-  const [acceptedTrainingPlanId, setAcceptedTrainingPlanId] = useState<
-    string | null
-  >(null);
+  const [acceptedTrainingPlanId, setAcceptedTrainingPlanId] = useState<string | null>(null);
+  const [showTrainingExecution, setShowTrainingExecution] = useState(false);
   const [showOutcome, setShowOutcome] = useState(false);
   const [outcomeDescription, setOutcomeDescription] = useState("");
   const [outcomeTrend, setOutcomeTrend] = useState("stable");
@@ -73,7 +71,7 @@ export function TreatmentPanel({ workspace }: TreatmentPanelProps) {
       toast.success(success);
       return result;
     } catch (error) {
-      toast.error(errorMessage(error, "Treatment 操作失败"));
+      toast.error(errorMessage(error, "方案操作失败"));
       return null;
     } finally {
       setBusyKey(null);
@@ -83,13 +81,13 @@ export function TreatmentPanel({ workspace }: TreatmentPanelProps) {
   const generateProposal = async () => {
     const analysisId = workspace.diagnosis?.analysis_id;
     if (!analysisId) {
-      toast.error("当前没有可固定的 DiagnosisAnalysis");
+      toast.error("当前还没有可用于生成方案的分析结果");
       return;
     }
     await mutate(
       "generate",
       { type: "generateProposal", diagnosisAnalysisId: analysisId },
-      "已创建方案 proposal；需要明确接受后才会执行",
+      "新的方案建议已生成，确认采用后才会开始执行",
     );
   };
 
@@ -101,7 +99,7 @@ export function TreatmentPanel({ workspace }: TreatmentPanelProps) {
         revisionId: revision.id,
         consultationId: workspace.conversation_id,
       },
-      `已接受 Treatment R${revision.revision}`,
+      "已采用当前方案",
     );
     const accepted = result as {
       training_plan?: { id?: string } | null;
@@ -113,7 +111,7 @@ export function TreatmentPanel({ workspace }: TreatmentPanelProps) {
 
   const recordOutcome = async () => {
     if (!current || !outcomeDescription.trim()) {
-      toast.error("请填写干预后的变化");
+      toast.error("请填写方案执行后的身体变化");
       return;
     }
     const acceptedRevision = current;
@@ -139,7 +137,7 @@ export function TreatmentPanel({ workspace }: TreatmentPanelProps) {
           notes: outcomeDescription.trim(),
         },
       },
-      "Outcome 已记录，并进入 BodyState / review policy",
+      "身体变化已记录",
     );
     if (result) {
       setOutcomeDescription("");
@@ -148,18 +146,11 @@ export function TreatmentPanel({ workspace }: TreatmentPanelProps) {
   };
 
   return (
-    <Card className="space-y-4 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <ClipboardList className="h-4 w-4 text-primary" />
-            <h3 className="font-semibold text-foreground">
-              Treatment revisions
-            </h3>
-          </div>
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            AI 只能生成 proposal。只有你明确接受的 revision 才会成为当前方案。
-          </p>
+    <div className="space-y-5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <ClipboardList className="h-4 w-4 text-primary" />
+          <h3 className="font-semibold text-foreground">当前方案</h3>
         </div>
         {workspace.capabilities.can_generate_treatment && (
           <Button
@@ -167,7 +158,7 @@ export function TreatmentPanel({ workspace }: TreatmentPanelProps) {
             isLoading={busyKey === "generate"}
             onClick={generateProposal}
           >
-            <Sparkles className="h-3.5 w-3.5" />新 proposal
+            <Sparkles className="h-3.5 w-3.5" />生成方案建议
           </Button>
         )}
       </div>
@@ -197,7 +188,7 @@ export function TreatmentPanel({ workspace }: TreatmentPanelProps) {
             }
           >
             <RefreshCcw className="h-3 w-3" />
-            重新评估状态
+            重新检查
           </Button>
         </div>
       )}
@@ -210,9 +201,7 @@ export function TreatmentPanel({ workspace }: TreatmentPanelProps) {
                 {current.goal}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Treatment R{current.revision} · BodyState R
-                {current.source_body_state_revision} · {current.duration_weeks}{" "}
-                周
+                预计 {current.duration_weeks} 周
               </p>
             </div>
             <span className="rounded-full bg-primary/10 px-2 py-1 text-xs text-primary">
@@ -253,24 +242,27 @@ export function TreatmentPanel({ workspace }: TreatmentPanelProps) {
                 variant="outline"
                 onClick={() => setShowOutcome((open) => !open)}
               >
-                记录 Outcome
+                记录变化
               </Button>
             )}
             {trainingPlanId && (
               <Button
                 size="sm"
                 variant="secondary"
-                render={<Link to={`/training/${trainingPlanId}`} />}
+                onClick={() => setShowTrainingExecution((open) => !open)}
               >
-                打开训练执行页
+                {showTrainingExecution ? "收起训练执行" : "展开训练执行"}
               </Button>
             )}
           </div>
         </div>
       ) : (
-        <p className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
-          还没有被用户接受的当前方案。
-        </p>
+        <div className="py-10 text-center">
+          <p className="text-sm font-medium text-foreground/85">还没有当前方案</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            生成方案建议后，你可以先查看再决定是否采用。
+          </p>
+        </div>
       )}
 
       {showOutcome && current && (
@@ -306,7 +298,7 @@ export function TreatmentPanel({ workspace }: TreatmentPanelProps) {
           <textarea
             value={outcomeDescription}
             onChange={(event) => setOutcomeDescription(event.target.value)}
-            placeholder="干预后发生了什么？"
+            placeholder="执行方案后，身体有什么变化？"
             rows={2}
             className="rounded-lg border border-border bg-background px-3 py-2 text-sm sm:col-span-2"
           />
@@ -326,16 +318,28 @@ export function TreatmentPanel({ workspace }: TreatmentPanelProps) {
               isLoading={busyKey === "outcome"}
               onClick={recordOutcome}
             >
-              保存 Outcome
+              保存变化
             </Button>
           </div>
         </div>
       )}
 
+      {trainingPlanId && showTrainingExecution ? (
+        <section className="space-y-3 border-t border-border pt-4">
+          <div>
+            <h4 className="text-sm font-semibold text-foreground">训练执行</h4>
+            <p className="mt-1 text-xs text-muted-foreground">
+              训练、打卡、日志与复评都在“方案”工作区内完成，不再跳转到独立页面。
+            </p>
+          </div>
+          <TrainingExecutionPanel planId={trainingPlanId} />
+        </section>
+      ) : null}
+
       {proposals.length > 0 && (
         <section className="space-y-2">
           <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            待审核 proposal · {proposals.length}
+            待确认方案 · {proposals.length}
           </h4>
           {proposals.map((revision) => (
             <div
@@ -345,10 +349,6 @@ export function TreatmentPanel({ workspace }: TreatmentPanelProps) {
               <p className="text-sm font-medium text-foreground">
                 {revision.goal}
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Proposal R{revision.revision} · 基于 BodyState R
-                {revision.source_body_state_revision}
-              </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <Button
                   size="sm"
@@ -356,7 +356,7 @@ export function TreatmentPanel({ workspace }: TreatmentPanelProps) {
                   onClick={() => accept(revision)}
                 >
                   <Check className="h-3.5 w-3.5" />
-                  明确接受
+                  采用此方案
                 </Button>
                 <Button
                   size="sm"
@@ -366,18 +366,18 @@ export function TreatmentPanel({ workspace }: TreatmentPanelProps) {
                     mutate(
                       `reject:${revision.id}`,
                       { type: "rejectRevision", revisionId: revision.id },
-                      "已拒绝该 proposal，历史仍保留",
+                      "已暂不采用这份方案，历史仍会保留",
                     )
                   }
                 >
                   <X className="h-3.5 w-3.5" />
-                  拒绝
+                  暂不采用
                 </Button>
               </div>
             </div>
           ))}
         </section>
       )}
-    </Card>
+    </div>
   );
 }

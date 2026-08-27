@@ -71,7 +71,7 @@ export function HeightWeightStep({
         您的身高和体重是？
       </h2>
       <p className="text-sm text-gray-500 mb-6">
-        身高体重用于计算 BMI，帮助我们评估您的身体状况。
+        这两项会作为当前身体测量记录进入 BodyState，用于计算 BMI；以后更新时旧测量仍会保留。
       </p>
 
       <div className="space-y-4">
