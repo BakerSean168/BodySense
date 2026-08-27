@@ -43,7 +43,25 @@ Generate an R2 Object Read & Write credential scoped only to `bodysense-static`.
 
 The bucket is public read-only through the custom domain. Upload/delete permissions exist only through the S3 API credential.
 
-Apply the checked-in policy:
+Cloudflare currently exposes **two different JSON shapes** for the same R2 CORS policy:
+
+- Dashboard **Settings → CORS Policy → JSON** uses the AWS/S3-style array with `AllowedOrigins`, `AllowedMethods`, `ExposeHeaders`, and `MaxAgeSeconds`. Paste `scripts/static-assets/r2-cors-dashboard.json` there.
+- Wrangler CLI uses Cloudflare's API wrapper shape with `rules[].allowed`. Keep using `scripts/static-assets/r2-cors.json` with `wrangler r2 bucket cors set`.
+
+Dashboard JSON:
+
+```json
+[
+  {
+    "AllowedOrigins": ["*"],
+    "AllowedMethods": ["GET", "HEAD"],
+    "ExposeHeaders": ["Content-Length", "Content-Range", "ETag"],
+    "MaxAgeSeconds": 86400
+  }
+]
+```
+
+Wrangler CLI:
 
 ```bash
 npx wrangler r2 bucket cors set bodysense-static \
@@ -52,7 +70,7 @@ npx wrangler r2 bucket cors set bodysense-static \
 npx wrangler r2 bucket cors list bodysense-static
 ```
 
-The public files do not use credentials, so wildcard read CORS is intentional.
+The public files do not use credentials, so wildcard read CORS is intentional. `AllowedHeaders` is intentionally omitted because browsers only perform anonymous `GET`/`HEAD` reads for these assets and do not send application-specific request headers.
 
 After changing CORS on an already cached custom domain, purge that hostname's cache before browser validation.
 
