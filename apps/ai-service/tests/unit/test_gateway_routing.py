@@ -73,6 +73,7 @@ def test_ai_service_compose_receives_gateway_credentials_not_llm_provider_secret
         "OPENROUTER_API_KEY",
         "MIMO_API_KEY",
         "MIMO_BASE_URL",
+        "GROQ_API_KEY",
     }
     for relative in (
         "docker/docker-compose.yml",
@@ -86,6 +87,12 @@ def test_ai_service_compose_receives_gateway_credentials_not_llm_provider_secret
         assert retired_llm_env.isdisjoint(ai_env)
         assert "MIMO_API_KEY" in gateway_env
         assert "OPENROUTER_API_KEY" in gateway_env
+
+    staging = yaml.safe_load((ROOT / "docker/docker-compose.staging.yml").read_text(encoding="utf-8"))
+    staging_ai_env = staging["services"]["ai-service"]["environment"]
+    staging_gateway_env = staging["services"]["litellm-gateway"]["environment"]
+    assert retired_llm_env.isdisjoint(staging_ai_env)
+    assert "GROQ_API_KEY" in staging_gateway_env
 
 
 def test_internal_typed_agent_http_contracts_reject_retired_model_route_intent() -> None:

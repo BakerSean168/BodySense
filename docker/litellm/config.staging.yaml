@@ -1,0 +1,75 @@
+model_list:
+  # Diagnosis: immutable Agent configuration selects this logical group only.
+  - model_name: bodysense-diagnosis
+    litellm_params:
+      model: openai/mimo-v2.5-pro
+      api_base: os.environ/MIMO_BASE_URL
+      api_key: os.environ/MIMO_API_KEY
+      timeout: 45
+  - model_name: bodysense-diagnosis-fallback
+    litellm_params:
+      model: openrouter/deepseek/deepseek-chat
+      api_key: os.environ/OPENROUTER_API_KEY
+      timeout: 45
+
+  # General chat/tool use. Application code never names the physical model.
+  - model_name: bodysense-consultation
+    litellm_params:
+      model: openai/mimo-v2.5-pro
+      api_base: os.environ/MIMO_BASE_URL
+      api_key: os.environ/MIMO_API_KEY
+      timeout: 45
+
+  # Structured typed-Agent / knowledge JSON generation.
+  # Staging uses Groq Qwen because it provides strict JSON-schema output on the free tier.
+  - model_name: bodysense-structured
+    litellm_params:
+      model: groq/qwen/qwen3.8-27b
+      api_key: os.environ/GROQ_API_KEY
+      timeout: 45
+
+  # Small text generation such as conversation titles.
+  - model_name: bodysense-text
+    litellm_params:
+      model: openai/mimo-v2.5-pro
+      api_base: os.environ/MIMO_BASE_URL
+      api_key: os.environ/MIMO_API_KEY
+      timeout: 45
+
+  # Shared operational fallback for non-vision general groups.
+  - model_name: bodysense-general-fallback
+    litellm_params:
+      model: openrouter/deepseek/deepseek-chat
+      api_key: os.environ/OPENROUTER_API_KEY
+      timeout: 45
+
+  # Vision stays a distinct logical capability group.
+  - model_name: bodysense-posture
+    litellm_params:
+      model: openrouter/qwen/qwen2.5-vl-72b-instruct
+      api_key: os.environ/OPENROUTER_API_KEY
+      timeout: 60
+  - model_name: bodysense-posture-fallback
+    litellm_params:
+      model: openrouter/google/gemini-2.0-flash-001
+      api_key: os.environ/OPENROUTER_API_KEY
+      timeout: 60
+
+router_settings:
+  num_retries: 1
+  retry_after: 1
+  fallbacks:
+    - bodysense-diagnosis:
+        - bodysense-diagnosis-fallback
+    - bodysense-consultation:
+        - bodysense-general-fallback
+    - bodysense-structured:
+        - bodysense-general-fallback
+    - bodysense-text:
+        - bodysense-general-fallback
+    - bodysense-posture:
+        - bodysense-posture-fallback
+
+general_settings:
+  # All application LLM traffic authenticates only to this internal gateway.
+  master_key: os.environ/LITELLM_MASTER_KEY

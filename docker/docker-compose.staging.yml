@@ -40,8 +40,9 @@ services:
       MIMO_BASE_URL: ${MIMO_BASE_URL:-https://token-plan-cn.xiaomimimo.com/v1}
       MIMO_API_KEY: ${MIMO_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:?set GROQ_API_KEY}
     volumes:
-      - ./litellm/config.yaml:/app/config.yaml:ro
+      - ./litellm/config.staging.yaml:/app/config.yaml:ro
     networks: [bodysense-staging]
     healthcheck:
       test: ['CMD', 'python', '-c', "import urllib.request; urllib.request.urlopen('http://localhost:4000/health/liveliness')"]

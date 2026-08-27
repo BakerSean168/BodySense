@@ -23,7 +23,9 @@ REDIS_PASSWORD=$(openssl rand -hex 24)
 JWT_SECRET_KEY=$(openssl rand -hex 32)
 LITELLM_MASTER_KEY=sk-$(openssl rand -hex 24)
 EMBEDDING_PROVIDER=hashing
-# Optional real provider credentials for non-stub staging inference:
+# Real provider credentials for non-stub staging inference.
+# GROQ_API_KEY is required because bodysense-structured uses Groq in staging.
+GROQ_API_KEY=
 MIMO_API_KEY=
 OPENROUTER_API_KEY=
 ENV
@@ -34,11 +36,17 @@ require_env() {
   [[ -f "$ENV_FILE" ]] || { echo "missing $ENV_FILE; run: $0 bootstrap" >&2; exit 2; }
 }
 
+require_groq() {
+  local value
+  value=$(grep -E '^GROQ_API_KEY=' "$ENV_FILE" | tail -n 1 | cut -d= -f2- || true)
+  [[ -n "$value" ]] || { echo "missing GROQ_API_KEY in $ENV_FILE; staging requires real structured inference" >&2; exit 2; }
+}
+
 case "${1:-status}" in
   bootstrap) bootstrap ;;
-  up) require_env; "${compose[@]}" up -d --build ;;
+  up) require_env; require_groq; "${compose[@]}" up -d --build ;;
   down) require_env; "${compose[@]}" down ;;
-  restart) require_env; "${compose[@]}" up -d --build --force-recreate ;;
+  restart) require_env; require_groq; "${compose[@]}" up -d --build --force-recreate ;;
   status)
     require_env
     "${compose[@]}" ps
