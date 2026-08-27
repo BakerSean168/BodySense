@@ -32,6 +32,39 @@ describe("consultationApi", () => {
 
   // ===== General Conversation API =====
 
+  describe("startConsultationRun", () => {
+    it("preserves Body Explorer context as user-message metadata", async () => {
+      const raw = new Response("stream");
+      mockAuthFetch.mockResolvedValue(raw);
+      const params = {
+        conversationId: "conv-1",
+        clientMessageId: "client-1",
+        requestId: "req-1",
+        message: {
+          role: "user",
+          parts: [{ type: "text", text: "这里为什么疼？" }],
+          metadata: {
+            body_explorer_context: {
+              body_region_id: "shoulder.right",
+              body_region_label: "右肩",
+              anatomy_id: "appendicular-skeleton-clavicle-right",
+              anatomy_name: "Right clavicle",
+            },
+          },
+        },
+      };
+
+      const result = await consultationApi.startConsultationRun(params);
+
+      expect(mockAuthFetch).toHaveBeenCalledWith("/api/v1/consultation-runs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(params),
+      });
+      expect(result).toBe(raw);
+    });
+  });
+
   describe("cancelRun", () => {
     it("POSTs an explicit user cancellation command", async () => {
       mockAuthFetch.mockResolvedValue(

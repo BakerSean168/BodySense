@@ -125,6 +125,12 @@ services:
       dockerfile: docker/Dockerfile.web
       args:
         BODYSENSE_ANATOMY_ATLAS_VERSION: ${BODYSENSE_ANATOMY_ATLAS_VERSION:-1.4.0}
+        # Staging keeps application/API traffic private on Tailnet, but public immutable
+        # atlas bytes use Vanatome's version-pinned Cloudflare distribution. This avoids
+        # coupling multi-megabyte GLBs to a lossy developer Tailnet path. Production
+        # keeps the Dockerfile's same-origin BodySense-controlled default unless its own
+        # CDN URL is explicitly configured.
+        VITE_BODYSENSE_ANATOMY_CATALOG_URL: ${VITE_BODYSENSE_ANATOMY_CATALOG_URL:-https://atlas.vanatome.vixotic.in/releases/1.4.0/catalog.json}
     restart: unless-stopped
     ports:
       - '${STAGING_BIND_HOST:-127.0.0.1}:${STAGING_WEB_PORT:-20150}:80'

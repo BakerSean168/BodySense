@@ -241,6 +241,13 @@ export interface BodyStateSnapshot {
   recent_revisions?: BodyStateRevision[];
 }
 
+export interface ConsultationSpatialContext {
+  body_region_id?: string;
+  body_region_label?: string;
+  anatomy_id?: string;
+  anatomy_name?: string;
+}
+
 export type DiagnosisCandidateAssessmentState =
   "confirmed" | "unsure" | "not_applicable";
 

@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { AuthBootstrap } from "./components/AuthBootstrap";
@@ -17,11 +17,11 @@ const OnboardingPage = lazy(() =>
     default: module.OnboardingPage,
   })),
 );
-const ConsultationPage = lazy(() =>
+const loadConsultationPage = () =>
   import("./features/consultation/pages/ConsultationPage").then((module) => ({
     default: module.ConsultationPage,
-  })),
-);
+  }));
+const ConsultationPage = lazy(loadConsultationPage);
 const SharePage = lazy(() =>
   import("./features/consultation/components/SharePage").then((module) => ({
     default: module.SharePage,
@@ -55,6 +55,13 @@ function ProtectedRouteElement({
 }
 
 function WorkbenchRouteElement() {
+  // The workbench is the primary product surface. Start its route chunk while
+  // auth/profile bootstrap is still running so high-latency tailnet access does
+  // not turn auth -> profile -> route into a serial download waterfall.
+  useEffect(() => {
+    void loadConsultationPage();
+  }, []);
+
   return (
     <ProtectedRouteElement variant="consultation">
       <WorkbenchProfileGate>

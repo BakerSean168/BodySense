@@ -1,7 +1,7 @@
 # Active Plan: Vanatome 3D Body Explorer
 
 Date: 2026-08-27
-Status: READY FOR IMPLEMENTATION
+Status: IMPLEMENTED / staging validated / final anatomy-boundary visual audit pending
 Owner scope: BodySense Web + additive BodyState region contract + anatomy static assets
 Decision: ADR 0006
 Architecture: `../../architecture/body-explorer-3d-anatomy.md`
@@ -724,3 +724,91 @@ Risks/follow-up:
 - Anatomy conversion/release pipeline: https://github.com/vixotic/Vanatome/blob/main/docs/anatomy-pipeline.md
 - npm viewer package: https://www.npmjs.com/package/@vixotic/vanatome-react
 - npm atlas package: https://www.npmjs.com/package/@vixotic/vanatome-atlas
+
+
+## 13. Runtime loading / staging performance checkpoint — 2026-08-27
+
+### BODY3D-RUNTIME-LOAD — COMPLETE
+
+**Observed incident**
+
+- consultation shell could remain in skeleton state for roughly 20 seconds on the remote staging path;
+- business workspace was visually blocked even though its read-model request was already fast;
+- the 3D body fell back to 2D while Chrome reported `ERR_HTTP2_PING_FAILED 200 (OK)` for the self-hosted atlas model.
+
+**Root cause**
+
+1. API/DB latency was not the bottleneck. Staging logs measured `/health-workspace` at roughly 9–30 ms and `/consultations/:id/thread` at roughly 19–41 ms.
+2. Web bootstrap paid a serial waterfall: auth refresh -> `/me` -> profile -> lazy consultation route -> page queries -> lazy chat panel. Remote tailnet RTT/chunk retries amplified every serial boundary.
+3. `ConsultationPage` incorrectly coupled the independent workspace read model to thread pending/error state, so a slow chat thread kept already-available business data behind `InfoPanelSkeleton`.
+4. The initial Vanatome path loaded the monolithic `full-body` GLB (31,849,556 bytes). Nginx had the file and returned HTTP 200 locally, but the remote HTTP/2 stream ended after only part of the body was transferred. This was a transport interruption, not an asset 404.
+
+**Implemented correction**
+
+- preload the consultation route during auth/profile bootstrap;
+- treat successful refresh as the auth boundary and hydrate display-only `/me` data concurrently with protected-route/profile loading;
+- preload `AssistantChatPanel` immediately when the workbench route mounts;
+- decouple State/Analysis/Plan/Progress workspace rendering from consultation thread loading;
+- redesign app/business/3D skeletons to match final workbench geometry and allow body records to appear while 3D continues loading;
+- use Vanatome native atlas composition: initial `regional-anatomy` body shell, then skeletal/muscular/nervous systems on demand;
+- enable nginx gzip for `model/gltf-binary`;
+- expose a stable `data-viewer-state=ready` signal from the real Vanatome `onReady` event so E2E cannot confuse metadata readiness with rendered-model readiness.
+
+**Measured result on canonical staging**
+
+```text
+real viewer cold ready     2062 ms
+real viewer warm ready     1477 ms
+E2E                        1 passed (92.0 s)
+initial model              regional-anatomy, ~6.3 MB raw / ~3.8 MB gzip
+monolithic full-body GLB   no longer requested on initial path
+full web tests             40 files / 197 tests passed
+typecheck / lint / build   passed
+```
+
+The E2E run also exercised all 35 canonical BodyRegion mappings and progressively fetched only systems reached by the test. Business BodyState records remained visible independently while the 3D viewer hydrated.
+
+## 13. Runtime transport + browser diagnostics checkpoint — 2026-08-27
+
+A real staging incident exposed two browser-only failure modes that unit/API health checks did not cover.
+
+### Consultation SSE transport incident
+
+Observed user run:
+
+- AI service returned successfully and Go persisted the full assistant answer.
+- durable events reached `run.completed`, `message.completed`, and `stream.done`.
+- the browser-facing SSE socket disconnected mid-run (`broken pipe`).
+- the same `request_id` was subsequently replayed while the durable run was still `running` and the old behavior returned `409 RUN_IN_PROGRESS`.
+- no durable `/runs/:runId/events` recovery request was observed from that browser session, leaving the UI in `processing` despite durable completion.
+
+Corrections:
+
+1. Same-`request_id` retries against a running/waiting run are now treated as **transport reattachment**, not a second business command.
+2. The reattached response replays durable runtime events from seq 1 and tails the event log until stored `stream.done`.
+3. The web runtime keeps its eager durable watcher, but now has a guaranteed post-disconnect fallback recovery path if that watcher never attached.
+4. SSE write errors now include `run_id`, `conversation_id`, event type, and seq.
+5. Real staging validation sent two concurrent POSTs with one request ID: both returned 200, the second replayed `run.started`, and both reached one `stream.done`.
+
+### Body Explorer browser failure incident
+
+The affected browser loaded `catalog.json` and `regional-anatomy.metadata.json` successfully but never requested the GLB. A prior reproduction on the same client showed `THREE.WebGLRenderer: Context Lost`, so this failure is before model transfer and belongs to browser/Viewer/WebGL initialization, not atlas distribution.
+
+Corrections:
+
+1. WebGL capability detection now explicitly releases its temporary context using `WEBGL_lose_context` instead of consuming a browser context until GC.
+2. A transient WebGL failure automatically recreates the Viewer once before falling back to 2D.
+3. Added authenticated, privacy-safe `/api/v1/client-diagnostics` telemetry. It records only operational fields (category/event/code/phase/run/request/resource/error message) and never consultation/body-state text.
+4. Body3D emits diagnostic milestones/errors for atlas metadata, model load start, viewer ready, Vanatome errors, render-boundary errors, WebGL unavailable/retry/restored.
+5. Chat transport emits diagnostics for SSE read failure, durable watcher start/terminal/failure, and guaranteed fallback recovery.
+6. Staging/production GORM logging now defaults to Warn rather than Info so interpolated SQL does not routinely place consultation content in shared logs; local development remains Info and `DB_LOG_LEVEL` can override.
+
+Validation:
+
+- Go consultation/handler/database tests pass.
+- Web typecheck + lint pass.
+- Web suite: 40 files / 197 tests pass.
+- Web production build passes.
+- Real HTTPS Body Explorer E2E passes after the change.
+- Client diagnostic ingestion observed `atlas_metadata_ready -> model_load_started -> viewer_ready` from real Chromium.
+- Active-run transport reattach staging probe: first POST 200, same-request retry 200, both streams reached one `stream.done`.

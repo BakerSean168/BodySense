@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"gorm.io/driver/postgres"
@@ -50,7 +51,7 @@ func Connect(cfg Config) (*gorm.DB, error) {
 	)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		Logger: logger.Default.LogMode(databaseLogLevel()),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
@@ -76,4 +77,29 @@ func getEnv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func databaseLogLevel() logger.LogLevel {
+	if configured := strings.ToLower(strings.TrimSpace(os.Getenv("DB_LOG_LEVEL"))); configured != "" {
+		switch configured {
+		case "silent":
+			return logger.Silent
+		case "error":
+			return logger.Error
+		case "warn", "warning":
+			return logger.Warn
+		case "info":
+			return logger.Info
+		}
+	}
+
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV"))) {
+	case "staging", "production":
+		// Avoid writing consultation/body-state payloads through GORM's SQL
+		// interpolation in shared environments. Structured domain diagnostics
+		// remain available separately.
+		return logger.Warn
+	default:
+		return logger.Info
+	}
 }

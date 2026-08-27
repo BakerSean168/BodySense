@@ -17,7 +17,7 @@ RUN node scripts/anatomy/sync.mjs \
 FROM node:24-slim AS builder
 
 ARG BODYSENSE_ANATOMY_ATLAS_VERSION=1.4.0
-ENV VITE_BODYSENSE_ANATOMY_CATALOG_URL=/static/anatomy/vanatome/${BODYSENSE_ANATOMY_ATLAS_VERSION}/releases/${BODYSENSE_ANATOMY_ATLAS_VERSION}/catalog.json
+ARG VITE_BODYSENSE_ANATOMY_CATALOG_URL
 
 # Enable pnpm via corepack
 RUN corepack enable && corepack prepare pnpm@11 --activate
@@ -50,7 +50,9 @@ COPY --from=anatomy-atlas /release/ apps/web/public/static/anatomy/vanatome/
 
 # Build the web app (outputs to apps/web/dist/)
 # Frontend uses apiUrl('/api/v1/...') with empty base — nginx proxies /api to Go backend.
-RUN cd apps/web && npx vite build
+RUN cd apps/web \
+    && VITE_BODYSENSE_ANATOMY_CATALOG_URL="${VITE_BODYSENSE_ANATOMY_CATALOG_URL:-/static/anatomy/vanatome/${BODYSENSE_ANATOMY_ATLAS_VERSION}/releases/${BODYSENSE_ANATOMY_ATLAS_VERSION}/catalog.json}" \
+       npx vite build
 
 # ── Runtime: nginx serves static files ─────────────────────────────────
 FROM nginx:1.27-alpine

@@ -3,6 +3,7 @@ import {
   OFFICIAL_HUMAN_ATLAS,
   createOfficialHumanAtlas,
   type AtlasCatalog,
+  type AtlasLoaderWithProfiles,
   type VanatomeViewerAtlas,
 } from "@vixotic/vanatome-atlas";
 import type {
@@ -25,11 +26,19 @@ import {
 export const VANATOME_ATLAS_RELEASE = "1.4.0" as const;
 export const VANATOME_ATLAS_BUILD_ID = "994e6cc8ffbb212e" as const;
 export const VANATOME_ATLAS_CATALOG_URL = OFFICIAL_HUMAN_ATLAS.catalogUrl;
+export const VANATOME_INITIAL_SYSTEM_ID = "regional-anatomy" as const;
 
 export interface LoadedVanatomeAtlas {
+  /** Initial lightweight body-shell atlas kept for compatibility with callers. */
   atlas: VanatomeViewerAtlas;
+  /** Atlases already prepared for composition. Models remain lazy in VanatomeViewer. */
+  atlases: readonly VanatomeViewerAtlas[];
   catalog: AtlasCatalog;
   catalogUrl: string;
+  loadSystem: (
+    systemId: string,
+    options?: { signal?: AbortSignal },
+  ) => Promise<VanatomeViewerAtlas>;
 }
 
 export function resolveVanatomeCatalogUrl(override?: string): string {
@@ -56,11 +65,32 @@ export async function loadPinnedVanatomeAtlas(options?: {
     );
   }
 
-  const bundle = await loader.loadProfile("full-body", {
+  // Do not make the 31.8 MiB monolithic full-body GLB a first-paint
+  // dependency. Vanatome supports atlas composition, so start with the 6.3 MiB
+  // regional body shell and load anatomy systems only when they are selected.
+  // This also keeps each static request small enough to tolerate high-latency
+  // tailnet/staging links without sacrificing the pinned atlas contract.
+  const initialBundle = await loader.loadSystem(VANATOME_INITIAL_SYSTEM_ID, {
     signal: options?.signal,
   });
 
-  return { atlas: bundle.atlas, catalog, catalogUrl };
+  return {
+    atlas: initialBundle.atlas,
+    atlases: [initialBundle.atlas],
+    catalog,
+    catalogUrl,
+    loadSystem: (systemId, loadOptions) =>
+      loadPinnedSystem(loader, systemId, loadOptions),
+  };
+}
+
+async function loadPinnedSystem(
+  loader: AtlasLoaderWithProfiles,
+  systemId: string,
+  options?: { signal?: AbortSignal },
+): Promise<VanatomeViewerAtlas> {
+  const bundle = await loader.loadSystem(systemId, options);
+  return bundle.atlas;
 }
 
 export function normalizeVanatomeError(

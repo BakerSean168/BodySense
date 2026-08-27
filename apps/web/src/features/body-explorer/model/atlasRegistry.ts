@@ -1,4 +1,20 @@
-import type { AtlasRegistryInventory } from "./anatomyTypes";
+import registryData from "../data/vanatome-1.4.0-registry.generated.json";
+import type {
+  AtlasRegistryInventory,
+  AtlasRegistryStructure,
+} from "./anatomyTypes";
+
+const pinnedRegistry = registryData as unknown as AtlasRegistryInventory;
+const pinnedStructureIndex = new Map(
+  pinnedRegistry.structures.map((structure) => [structure.anatomyId, structure]),
+);
+
+export function getPinnedAtlasStructure(
+  anatomyId: string,
+): AtlasRegistryStructure | null {
+  return pinnedStructureIndex.get(anatomyId) ?? null;
+}
+
 
 export function validateAtlasRegistryInventory(
   registry: AtlasRegistryInventory,

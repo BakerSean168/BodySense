@@ -72,6 +72,13 @@ type ConsultationRuntimeState struct {
 	ExtractedInfo json.RawMessage `json:"extracted_info"`
 }
 
+type ConsultationSpatialContext struct {
+	BodyRegionID    string `json:"body_region_id,omitempty"`
+	BodyRegionLabel string `json:"body_region_label,omitempty"`
+	AnatomyID       string `json:"anatomy_id,omitempty"`
+	AnatomyName     string `json:"anatomy_name,omitempty"`
+}
+
 type ConsultationBusinessContext struct {
 	Profile json.RawMessage `json:"profile"`
 	// BodyState is durable user-level health truth. RuntimeState carries only
@@ -84,6 +91,7 @@ type ConsultationBusinessContext struct {
 	CurrentDiagnosis json.RawMessage                 `json:"current_diagnosis,omitempty"`
 	CurrentTreatment json.RawMessage                 `json:"current_treatment,omitempty"`
 	RecentOutcomes   json.RawMessage                 `json:"recent_outcomes,omitempty"`
+	SpatialContext   *ConsultationSpatialContext     `json:"spatial_context,omitempty"`
 	// PostureAnalysis is the user's completed three-view analysis summary,
 	// prefetched by Go so the consultation Agent tool can read it without a
 	// Python→Go round trip.

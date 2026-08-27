@@ -290,6 +290,34 @@ func TestSendNewEventPersistsBeforeSocketWrite(t *testing.T) {
 	}
 }
 
+func TestReattachActiveRunReplaysDurableEventsThroughStoredStreamDone(t *testing.T) {
+	conversationID := uuid.New()
+	runID := uuid.New()
+	turnID := uuid.New()
+	ids := datatypes.JSON([]byte(`{"conversation_id":"` + conversationID.String() + `","run_id":"` + runID.String() + `","turn_id":"` + turnID.String() + `"}`))
+	runtime := &Runtime{
+		runtimeEventService: service.NewRuntimeEventService(&fakeRuntimeEventRepo{events: []model.RuntimeEvent{
+			{ConversationID: conversationID, RunID: runID, TurnID: &turnID, Seq: 1, Channel: "run", Type: "run.started", IDs: ids, Payload: datatypes.JSON([]byte(`{"status":"running"}`))},
+			{ConversationID: conversationID, RunID: runID, TurnID: &turnID, Seq: 2, Channel: "message", Type: "message.text.delta", IDs: ids, Payload: datatypes.JSON([]byte(`{"delta":"hello"}`))},
+			{ConversationID: conversationID, RunID: runID, TurnID: &turnID, Seq: 3, Channel: "stream", Type: "stream.done", IDs: ids, Payload: datatypes.JSON([]byte(`{}`))},
+		}}),
+		streamRuntime: stream.NewRuntime(),
+	}
+
+	recorder := httptest.NewRecorder()
+	runtime.reattachActiveRun(context.Background(), recorder, &model.Run{
+		ID: runID, ConversationID: conversationID, TurnID: turnID, Status: "running",
+	})
+
+	body := recorder.Body.String()
+	if !strings.Contains(body, "event: run.started") || !strings.Contains(body, "event: message.text.delta") {
+		t.Fatalf("reattach did not replay active durable events: %s", body)
+	}
+	if count := strings.Count(body, "event: stream.done"); count != 1 {
+		t.Fatalf("reattach should stop at one durable stream.done, got %d: %s", count, body)
+	}
+}
+
 func TestReplayCompletedRunReplaysRuntimeEventsWithoutSyntheticError(t *testing.T) {
 	conversationID := uuid.New()
 	runID := uuid.New()

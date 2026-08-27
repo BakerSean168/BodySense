@@ -8,7 +8,7 @@ import {
   type ThreadMessageLike,
 } from "@assistant-ui/react";
 import { MarkdownTextPrimitive } from "@assistant-ui/react-markdown";
-import { ArrowUp, ImagePlus, Plus, X } from "lucide-react";
+import { ArrowUp, ImagePlus, MapPin, Plus, X } from "lucide-react";
 import remarkGfm from "remark-gfm";
 import { useAssistantChatRuntime } from "../hooks/useAssistantChatRuntime";
 import {
@@ -26,6 +26,7 @@ import React, {
 import type {
   Citation,
   ConsultationPhase,
+  ConsultationSpatialContext,
   ExtractedInfo,
 } from "../types/consultation";
 import {
@@ -38,7 +39,10 @@ import {
   shouldApplyInitialActiveTurn,
 } from "../runtime/activeTurnSelectors";
 import { useUploadStore } from "@/stores/uploadStore";
-import { consultationAttachmentBuffer } from "../hooks/useAssistantChatRuntime";
+import {
+  consultationAttachmentBuffer,
+  consultationSpatialContextBuffer,
+} from "../hooks/useAssistantChatRuntime";
 import { consultationApi } from "../services/consultationService";
 import { StreamingAssistantTurn } from "./StreamingAssistantTurn";
 import { FailedRunStatusCard } from "./FailedRunStatusCard";
@@ -52,11 +56,7 @@ import {
   MessageContent,
   MessageResponse,
 } from "@/components/ai-elements/message";
-import {
-  Source,
-  SourceList,
-  Sources,
-} from "@/components/ai-elements/sources";
+import { Source, SourceList, Sources } from "@/components/ai-elements/sources";
 
 interface AssistantChatPanelProps {
   conversationId: string;
@@ -70,6 +70,9 @@ interface AssistantChatPanelProps {
   onTitleGenerated?: (title: string) => void;
   onMessagePersisted?: (clientMessageId: string, messageId: string) => void;
   onStreamFinished?: () => void;
+  spatialContext?: ConsultationSpatialContext | null;
+  onClearSpatialContext?: () => void;
+  composerFocusKey?: number;
 }
 
 /**
@@ -104,6 +107,9 @@ export function AssistantChatPanel({
   onMessagePersisted,
   onConversationCreated,
   onStreamFinished,
+  spatialContext = null,
+  onClearSpatialContext,
+  composerFocusKey = 0,
 }: AssistantChatPanelProps) {
   const extractedInfoRef = useRef<ExtractedInfo[]>(_initialExtractedInfo);
 
@@ -180,6 +186,9 @@ export function AssistantChatPanel({
         <ChatContent
           conversationId={conversationId}
           onResumeInteraction={resumeInteraction}
+          spatialContext={spatialContext}
+          onClearSpatialContext={onClearSpatialContext}
+          composerFocusKey={composerFocusKey}
         />
       </AssistantRuntimeProvider>
     </ActiveTurnProvider>
@@ -229,6 +238,8 @@ interface ChatInputAreaProps {
   onAddImages: (files: FileList | null) => void;
   onRemoveImage: (uploadId: string) => void;
   isUploadingImage: boolean;
+  spatialContext?: ConsultationSpatialContext | null;
+  onClearSpatialContext?: () => void;
 }
 
 function ChatInputArea({
@@ -242,6 +253,8 @@ function ChatInputArea({
   onAddImages,
   onRemoveImage,
   isUploadingImage,
+  spatialContext,
+  onClearSpatialContext,
 }: ChatInputAreaProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const canSend = Boolean(inputText.trim() || pendingImages.length > 0);
@@ -261,6 +274,31 @@ function ChatInputArea({
       />
 
       <div className="rounded-[24px] border border-white/[0.08] bg-[#2a2a2a] p-2 shadow-[0_12px_34px_rgba(0,0,0,0.28)] transition-[border-color,background-color,box-shadow] duration-200 focus-within:border-white/[0.14] focus-within:bg-[#2d2d2d] focus-within:shadow-[0_16px_38px_rgba(0,0,0,0.34)]">
+        {spatialContext ? (
+          <div className="flex items-center gap-2 px-2 pb-1.5 pt-1">
+            <div className="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-[#75d5a7]/20 bg-[#75d5a7]/[0.08] px-2.5 py-1 text-[11px] text-[#a9e7c8]">
+              <MapPin className="size-3 shrink-0" aria-hidden="true" />
+              <span className="truncate">
+                {spatialContext.body_region_label || "当前身体区域"}
+                {spatialContext.anatomy_name
+                  ? ` · ${spatialContext.anatomy_name}`
+                  : ""}
+              </span>
+              {onClearSpatialContext ? (
+                <button
+                  type="button"
+                  onClick={onClearSpatialContext}
+                  disabled={isComposerLocked}
+                  className="-mr-1 inline-flex size-4 shrink-0 items-center justify-center rounded-full text-[#a9e7c8]/65 transition-colors hover:bg-white/10 hover:text-[#a9e7c8] disabled:opacity-40"
+                  aria-label="移除身体区域上下文"
+                >
+                  <X className="size-2.5" aria-hidden="true" />
+                </button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
         {pendingImages.length > 0 ? (
           <div className="flex flex-wrap gap-2 px-1 pb-2 pt-1">
             {pendingImages.map((image) => (
@@ -339,6 +377,9 @@ interface ChatContentProps {
   onResumeInteraction: ReturnType<
     typeof useAssistantChatRuntime
   >["resumeInteraction"];
+  spatialContext?: ConsultationSpatialContext | null;
+  onClearSpatialContext?: () => void;
+  composerFocusKey?: number;
 }
 
 /**
@@ -349,6 +390,9 @@ interface ChatContentProps {
 function ChatContent({
   conversationId,
   onResumeInteraction,
+  spatialContext,
+  onClearSpatialContext,
+  composerFocusKey = 0,
 }: ChatContentProps) {
   const aui = useAui();
   const threadMessages = useAuiState((state) => state.thread.messages);
@@ -398,6 +442,12 @@ function ChatContent({
 
   const [isCancellingRun, setIsCancellingRun] = useState(false);
   const [cancelRunError, setCancelRunError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (composerFocusKey > 0 && !isComposerLocked) {
+      textareaRef.current?.focus({ preventScroll: true });
+    }
+  }, [composerFocusKey, isComposerLocked]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -452,6 +502,7 @@ function ChatContent({
     if (isComposerLocked || isUploadingImage) return;
     if (!inputText.trim() && pendingImages.length === 0) return;
 
+    consultationSpatialContextBuffer.next = spatialContext ?? null;
     consultationAttachmentBuffer.next = pendingImages.map((image) => ({
       uploadId: image.uploadId,
       mimeType: image.mimeType,
@@ -467,6 +518,7 @@ function ChatContent({
         : "");
     composerRuntime.setText(text);
     composerRuntime.send();
+    onClearSpatialContext?.();
     if (conversationId === "new") {
       clearDraftMessage();
     }
@@ -486,6 +538,8 @@ function ChatContent({
     composerRuntime,
     conversationId,
     clearDraftMessage,
+    onClearSpatialContext,
+    spatialContext,
   ]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -593,7 +647,8 @@ function ChatContent({
                 有什么身体变化想告诉我？
               </h2>
               <p className="mt-2 max-w-sm text-sm leading-6 text-white/42">
-                描述不适、体态或最近的变化。BodySense 会把对话与右侧身体状态持续关联。
+                描述不适、体态或最近的变化。BodySense
+                会把对话与右侧身体状态持续关联。
               </p>
             </div>
           </ThreadPrimitive.Empty>
@@ -656,6 +711,8 @@ function ChatContent({
             onAddImages={handleAddImages}
             onRemoveImage={handleRemoveImage}
             isUploadingImage={isUploadingImage}
+            spatialContext={spatialContext}
+            onClearSpatialContext={onClearSpatialContext}
           />
         </div>
       </div>

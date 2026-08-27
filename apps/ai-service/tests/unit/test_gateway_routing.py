@@ -88,7 +88,9 @@ def test_ai_service_compose_receives_gateway_credentials_not_llm_provider_secret
         assert "MIMO_API_KEY" in gateway_env
         assert "OPENROUTER_API_KEY" in gateway_env
 
-    staging = yaml.safe_load((ROOT / "docker/docker-compose.staging.yml").read_text(encoding="utf-8"))
+    staging = yaml.safe_load(
+        (ROOT / "docker/docker-compose.staging.yml").read_text(encoding="utf-8")
+    )
     staging_ai_env = staging["services"]["ai-service"]["environment"]
     staging_gateway_env = staging["services"]["litellm-gateway"]["environment"]
     assert retired_llm_env.isdisjoint(staging_ai_env)

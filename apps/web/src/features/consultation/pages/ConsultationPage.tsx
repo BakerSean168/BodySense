@@ -14,7 +14,10 @@ import { useConversationsQuery } from "../hooks/useConversationsQuery";
 import { useConsultationThreadQuery } from "../hooks/useConsultationThreadQuery";
 import { useThreadProjectionActions } from "../hooks/useThreadProjectionActions";
 import { useDiagnosisActions } from "../hooks/useDiagnosisActions";
-import type { InteractionHistoryItem } from "../types/consultation";
+import type {
+  ConsultationSpatialContext,
+  InteractionHistoryItem,
+} from "../types/consultation";
 import {
   buildActiveTurnSeedFromRuntimeEvents,
   toInitialThreadTimeline,
@@ -24,6 +27,7 @@ import { Card } from "@/components/ui/Card";
 import { ConsultationWorkbenchShell } from "../components/workbench/ConsultationWorkbenchShell";
 import { WorkspaceViewport } from "../components/workbench/WorkspaceViewport";
 import { parseWorkspaceView, type WorkspaceView } from "../model/workbenchView";
+import { useWorkbenchPreferencesStore } from "../model/workbenchPreferencesStore";
 import { shouldPromoteProvisionalChatSession } from "../runtime/chatSessionIdentity";
 import { ProfileDrawer } from "@/features/profile/components/profile/ProfileDrawer";
 import {
@@ -32,12 +36,17 @@ import {
   TreatmentPanel,
   useHealthWorkspaceQuery,
 } from "@/features/workspace";
+import {
+  getBodyRegionDefinition,
+  type BodyRegionId,
+  useBodyExplorerWorkspace,
+} from "@/features/body-explorer";
 
-const AssistantChatPanel = lazy(() =>
+const loadAssistantChatPanel = () =>
   import("../components/AssistantChatPanel").then((module) => ({
     default: module.AssistantChatPanel,
-  })),
-);
+  }));
+const AssistantChatPanel = lazy(loadAssistantChatPanel);
 const DiagnosisPanel = lazy(() =>
   import("../components/DiagnosisPanel").then((module) => ({
     default: module.DiagnosisPanel,
@@ -54,6 +63,21 @@ export function ConsultationPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const workspaceQuery = useHealthWorkspaceQuery();
+  const [chatSpatialContext, setChatSpatialContext] =
+    useState<ConsultationSpatialContext | null>(null);
+  const [composerFocusKey, setComposerFocusKey] = useState(0);
+  const setChatOpen = useWorkbenchPreferencesStore(
+    (state) => state.setChatOpen,
+  );
+  const setMobileSurface = useWorkbenchPreferencesStore(
+    (state) => state.setMobileSurface,
+  );
+
+  // Chat is a persistent primary surface. Discover its lazy chunk immediately
+  // instead of waiting for the thread query to settle before starting download.
+  useEffect(() => {
+    void loadAssistantChatPanel();
+  }, []);
 
   // --- Derived identity: URL is the single source of truth for "which conversation" ---
   const routeConversationId = id && id !== "new" ? id : null;
@@ -104,6 +128,19 @@ export function ConsultationPage() {
   const workspace = workspaceQuery.data;
   const bodyState =
     workspace?.body_state ?? displayedThread?.body_state ?? null;
+  const handleAskSpatialContext = useCallback(
+    (context: ConsultationSpatialContext) => {
+      setChatSpatialContext(context);
+      setChatOpen(true);
+      setMobileSurface("chat");
+      setComposerFocusKey((key) => key + 1);
+    },
+    [setChatOpen, setMobileSurface],
+  );
+  const bodyExplorer = useBodyExplorerWorkspace(
+    bodyState,
+    handleAskSpatialContext,
+  );
   const diagnosisAnalysis = workspace?.diagnosis?.analysis_id
     ? workspace.diagnosis
     : null;
@@ -298,6 +335,9 @@ export function ConsultationPage() {
                 onPhaseChange={threadActions.updatePhase}
                 onTitleGenerated={threadActions.updateTitle}
                 onMessagePersisted={threadActions.reconcileMessageId}
+                spatialContext={chatSpatialContext}
+                onClearSpatialContext={() => setChatSpatialContext(null)}
+                composerFocusKey={composerFocusKey}
                 onStreamFinished={() => {
                   const terminalConversationId =
                     activeConversationIdRef.current ??
@@ -319,7 +359,10 @@ export function ConsultationPage() {
     </div>
   );
 
-  const workspaceUnavailable = hasThreadError || hasThreadSwitchError;
+  // The health workspace is an independent read model. A slow or failed chat
+  // thread must not hold the business surface behind a skeleton when the
+  // workspace endpoint has already returned.
+  const workspaceUnavailable = workspaceQuery.isError && !workspace;
   const bodyStateReady = Boolean(bodyState);
   const canRequestDiagnosis =
     workspace?.capabilities.can_request_diagnosis ??
@@ -327,13 +370,22 @@ export function ConsultationPage() {
 
   const stateWorkspace = workspaceUnavailable ? (
     <WorkspaceError message="身体信息暂时无法同步，请稍后重试。" />
-  ) : isThreadLoading || (workspaceQuery.isPending && !bodyState) ? (
+  ) : workspaceQuery.isPending && !bodyState ? (
     <InfoPanelSkeleton />
   ) : bodyStateReady && bodyState ? (
     <BodyStateWorkbench
       snapshot={{
         ...bodyState,
         hypotheses: bodyState.hypotheses ?? [],
+      }}
+      selectedRegionId={bodyExplorer.selectedRegionId}
+      onSelectRegion={bodyExplorer.selectRegion}
+      onAskRegion={(regionId: BodyRegionId) => {
+        const region = getBodyRegionDefinition(regionId);
+        handleAskSpatialContext({
+          body_region_id: regionId,
+          body_region_label: region.labels["zh-CN"],
+        });
       }}
     />
   ) : (
@@ -345,7 +397,7 @@ export function ConsultationPage() {
 
   const diagnosisWorkspace = workspaceUnavailable ? (
     <WorkspaceError message="当前分析暂时无法同步，请稍后重试。" />
-  ) : isThreadLoading ? (
+  ) : workspaceQuery.isPending && !workspace ? (
     <InfoPanelSkeleton />
   ) : (
     <div className="space-y-5">
@@ -395,6 +447,8 @@ export function ConsultationPage() {
 
   const treatmentWorkspace = workspaceUnavailable ? (
     <WorkspaceError message="当前方案暂时无法同步，请稍后重试。" />
+  ) : workspaceQuery.isPending && !workspace ? (
+    <InfoPanelSkeleton />
   ) : workspace ? (
     <TreatmentPanel workspace={workspace} />
   ) : (
@@ -406,6 +460,8 @@ export function ConsultationPage() {
 
   const progressWorkspace = workspaceUnavailable ? (
     <WorkspaceError message="进展信息暂时无法同步，请稍后重试。" />
+  ) : workspaceQuery.isPending && !workspace ? (
+    <InfoPanelSkeleton />
   ) : workspace &&
     (workspace.trends.length > 0 || workspace.recent_outcomes.length > 0) ? (
     <OutcomeTrendsPanel
@@ -432,6 +488,7 @@ export function ConsultationPage() {
           <PanelTransitionOverlay label="身体信息正在更新" />
         ) : null
       }
+      bodyExplorerBridge={bodyExplorer.semanticBridge}
     />
   );
 

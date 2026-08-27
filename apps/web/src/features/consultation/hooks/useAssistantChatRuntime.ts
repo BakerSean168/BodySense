@@ -17,6 +17,7 @@ export type ConsultationThreadController = {
 import { consultationApi } from "../services/consultationService";
 import { consumeSSEStream } from "./useSSEProcessor";
 import { recoverDurableRunEvents } from "../runtime/durableRunRecovery";
+import { reportClientDiagnostic } from "@/lib/clientDiagnostics";
 import {
   reduceActiveTurnEvent,
   INITIAL_ACTIVE_TURN_STATE,
@@ -31,6 +32,7 @@ import type {
   SSEMessageCompleted,
   StreamEvent,
   PendingInteraction,
+  ConsultationSpatialContext,
 } from "../types/consultation";
 
 /** Ephemeral image attachments for the next user turn (Phase 3-B2).
@@ -47,6 +49,13 @@ export const consultationAttachmentBuffer: {
   next: ConsultationImageAttachment[];
 } = {
   next: [],
+};
+
+/** Ephemeral Body Explorer context for the next user turn only. */
+export const consultationSpatialContextBuffer: {
+  next: ConsultationSpatialContext | null;
+} = {
+  next: null,
 };
 
 export interface ConsultationAdapterOptions {
@@ -290,6 +299,18 @@ export function useAssistantChatRuntime(
         onError: (err: Error) => {
           // Network/read failure — attempt durable after_seq resume below.
           networkError = err;
+          reportClientDiagnostic({
+            category: "chat.transport",
+            event: "sse_read_failed",
+            severity: "warn",
+            code: err.name,
+            message: err.message,
+            phase: "live_stream",
+            conversationId:
+              reducerState.conversationId ||
+              (conversationId !== "new" ? conversationId : null),
+            runId: reducerState.runId,
+          });
           streamFinished = true;
           notifyQueueConsumer();
         },
@@ -307,6 +328,14 @@ export function useAssistantChatRuntime(
         if (!convId || !runId || !durableWatcherController) return;
 
         const watcherSignal = durableWatcherController.signal;
+        reportClientDiagnostic({
+          category: "chat.transport",
+          event: "durable_watcher_started",
+          severity: "info",
+          phase: "live_stream",
+          conversationId: convId,
+          runId,
+        });
         durableWatcherPromise = recoverDurableRunEvents({
           afterSeq: maxSeq,
           fetchPage: (afterSeq) =>
@@ -319,6 +348,15 @@ export function useAssistantChatRuntime(
         })
           .then((recovered) => {
             maxSeq = Math.max(maxSeq, recovered.maxSeq);
+            reportClientDiagnostic({
+              category: "chat.transport",
+              event: "durable_watcher_terminal",
+              severity: "info",
+              code: recovered.terminalType,
+              phase: "live_stream",
+              conversationId: convId,
+              runId,
+            });
             // The durable event log is the terminal authority. Once it has a
             // terminal event, stop waiting for a proxy/SSE socket to notice.
             liveReaderController?.abort();
@@ -327,10 +365,21 @@ export function useAssistantChatRuntime(
           })
           .catch((error) => {
             if (watcherSignal.aborted) return;
-            streamError =
+            const recoveryError =
               error instanceof Error
                 ? error
                 : new Error("durable run recovery failed");
+            reportClientDiagnostic({
+              category: "chat.transport",
+              event: "durable_watcher_failed",
+              severity: "error",
+              code: recoveryError.name,
+              message: recoveryError.message,
+              phase: "live_stream",
+              conversationId: convId,
+              runId,
+            });
+            streamError = recoveryError;
             liveReaderController?.abort();
             streamFinished = true;
             notifyQueueConsumer();
@@ -366,17 +415,96 @@ export function useAssistantChatRuntime(
 
       // A clean EOF without stream.done is not success. Cancellation and some
       // reverse proxies close the live response before their durable terminal
-      // reaches the browser, so wait for the already-running authority watcher.
+      // reaches the browser. The eager watcher is preferred, but a guaranteed
+      // fallback recovery starts here if it never attached for any reason.
       if (!sawStreamDone && !streamError) {
         if (durableWatcherPromise) {
           await durableWatcherPromise;
           networkError = null;
-        } else if (networkError) {
-          streamError = networkError;
         } else {
-          streamError = new Error(
-            "实时连接在终态确认前结束，且没有可恢复的运行标识",
-          );
+          const convId =
+            reducerState.conversationId ||
+            (conversationId !== "new" ? conversationId : null);
+          const runId = reducerState.runId;
+          if (convId && runId) {
+            const fallbackController = new AbortController();
+            durableWatcherController = fallbackController;
+            const disconnectError = networkError as Error | null;
+            reportClientDiagnostic({
+              category: "chat.transport",
+              event: "fallback_recovery_started",
+              severity: "warn",
+              code: disconnectError?.name,
+              message: disconnectError?.message,
+              phase: "post_disconnect",
+              conversationId: convId,
+              runId,
+            });
+
+            // Re-open the queue while durable replay is dispatching so missing
+            // deltas can continue rendering instead of appearing only on reload.
+            streamFinished = false;
+            durableWatcherPromise = recoverDurableRunEvents({
+              afterSeq: maxSeq,
+              fetchPage: (afterSeq) =>
+                consultationApi.listRunEvents(convId, runId, {
+                  afterSeq,
+                  limit: 200,
+                }),
+              handlers,
+              signal: fallbackController.signal,
+            })
+              .then((recovered) => {
+                maxSeq = Math.max(maxSeq, recovered.maxSeq);
+                networkError = null;
+                reportClientDiagnostic({
+                  category: "chat.transport",
+                  event: "fallback_recovery_terminal",
+                  severity: "info",
+                  code: recovered.terminalType,
+                  phase: "post_disconnect",
+                  conversationId: convId,
+                  runId,
+                });
+              })
+              .catch((error) => {
+                const recoveryError =
+                  error instanceof Error
+                    ? error
+                    : new Error("durable run recovery failed");
+                reportClientDiagnostic({
+                  category: "chat.transport",
+                  event: "fallback_recovery_failed",
+                  severity: "error",
+                  code: recoveryError.name,
+                  message: recoveryError.message,
+                  phase: "post_disconnect",
+                  conversationId: convId,
+                  runId,
+                });
+                streamError = recoveryError;
+              })
+              .finally(() => {
+                streamFinished = true;
+                notifyQueueConsumer();
+              });
+
+            while (!streamFinished || pendingResults.length > 0) {
+              if (pendingResults.length === 0) {
+                await waitForQueuedResult();
+                continue;
+              }
+              const nextResult = pendingResults.shift();
+              if (nextResult) yield nextResult;
+            }
+            await durableWatcherPromise;
+          } else if (networkError) {
+            streamError = networkError;
+          } else {
+            streamError = new Error(
+              "实时连接在终态确认前结束，且没有可恢复的运行标识",
+            );
+          }
         }
       }
 
@@ -413,6 +541,8 @@ export function useAssistantChatRuntime(
         0,
         consultationAttachmentBuffer.next.length,
       );
+      const spatialContext = consultationSpatialContextBuffer.next;
+      consultationSpatialContextBuffer.next = null;
       const parts: Array<{
         type: string;
         text?: string;
@@ -451,6 +581,9 @@ export function useAssistantChatRuntime(
           message: {
             role: "user",
             parts,
+            ...(spatialContext
+              ? { metadata: { body_explorer_context: spatialContext } }
+              : {}),
           },
         }),
       );

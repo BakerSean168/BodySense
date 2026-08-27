@@ -10,6 +10,7 @@ import type {
 
 const mockUseConversationsQuery = vi.fn();
 const mockUseConsultationThreadQuery = vi.fn();
+const mockUseHealthWorkspaceQuery = vi.fn();
 
 vi.mock("../../components/AssistantChatPanel", () => ({
   AssistantChatPanel: ({ conversationId }: { conversationId: string }) => (
@@ -48,10 +49,7 @@ vi.mock("../../services/consultationService", () => ({
 }));
 
 vi.mock("@/features/workspace", () => ({
-  useHealthWorkspaceQuery: () => ({
-    data: undefined,
-    isPending: false,
-  }),
+  useHealthWorkspaceQuery: () => mockUseHealthWorkspaceQuery(),
   workspaceKeys: { all: ["workspace"] },
   BodyStateWorkbench: () => (
     <div data-testid="body-state-workbench">body-state-workbench</div>
@@ -129,6 +127,12 @@ describe("ConsultationPage", () => {
   beforeEach(() => {
     mockUseConversationsQuery.mockReset();
     mockUseConsultationThreadQuery.mockReset();
+    mockUseHealthWorkspaceQuery.mockReset();
+    mockUseHealthWorkspaceQuery.mockReturnValue({
+      data: undefined,
+      isPending: false,
+      isError: false,
+    });
   });
 
   it("keeps the workbench shell visible while the target thread is loading", () => {
@@ -147,10 +151,35 @@ describe("ConsultationPage", () => {
 
     expect(screen.getByText("BodySense")).toBeInTheDocument();
     expect(screen.getByTestId("chat-panel-skeleton")).toBeInTheDocument();
-    expect(screen.getByTestId("info-panel-skeleton")).toBeInTheDocument();
+    expect(screen.queryByTestId("info-panel-skeleton")).not.toBeInTheDocument();
+    expect(screen.getAllByText("还没有身体记录").length).toBeGreaterThan(0);
     expect(
       screen.queryByText("正在建立 AI 问诊连接..."),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows a business skeleton only while the workspace read model is pending", async () => {
+    mockUseConversationsQuery.mockReturnValue({
+      data: [makeConversation()],
+      isPending: false,
+    });
+    mockUseConsultationThreadQuery.mockReturnValue({
+      data: makeThread(),
+      isPending: false,
+      isFetching: false,
+      isError: false,
+    });
+    mockUseHealthWorkspaceQuery.mockReturnValue({
+      data: undefined,
+      isPending: true,
+      isError: false,
+    });
+
+    renderConsultationPage();
+
+    expect(screen.getByTestId("info-panel-skeleton")).toBeInTheDocument();
+    expect(await screen.findByTestId("assistant-chat-panel")).toBeInTheDocument();
+    expect(screen.queryByTestId("chat-panel-skeleton")).not.toBeInTheDocument();
   });
 
   it("keeps the previous thread mounted and shows panel overlays while switching conversations", async () => {

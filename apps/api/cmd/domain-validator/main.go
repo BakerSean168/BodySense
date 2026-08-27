@@ -88,7 +88,9 @@ func main() {
 
 func newValidator(db *gorm.DB) *validator {
 	bodyRepo := repository.NewBodyStateRepository(db)
-	bodyService := service.NewBodyStateService(bodyRepo)
+	bodyService := service.NewBodyStateService(bodyRepo).WithBodyRegionIDValidator(
+		service.NewCanonicalBodyRegionIDValidator(),
+	)
 	diagnosisRepo := repository.NewDiagnosisAnalysisRepository(db)
 	diagnosisService := service.NewDiagnosisAnalysisService(diagnosisRepo)
 	freshnessRepo := repository.NewDiagnosisFreshnessRepository(db)

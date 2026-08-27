@@ -1,4 +1,4 @@
-import { ArrowLeft, Microscope } from "lucide-react";
+import { ArrowLeft, MessageCircle, Microscope } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import type { AnatomyStructureId } from "../adapters/anatomyViewerPort";
 
@@ -16,6 +16,7 @@ export function AnatomyInspector({
   regionLabel,
   onEnterAnatomy,
   onReturnToRegion,
+  onAsk,
 }: {
   mode: "region" | "anatomy";
   selected: AnatomyStructureSummary | null;
@@ -23,6 +24,7 @@ export function AnatomyInspector({
   regionLabel?: string | null;
   onEnterAnatomy: () => void;
   onReturnToRegion: () => void;
+  onAsk?: () => void;
 }) {
   if (!selected && !regionLabel) return null;
 
@@ -43,24 +45,35 @@ export function AnatomyInspector({
             </p>
           ) : null}
         </div>
-        {mode === "region" ? (
-          <Button size="xs" variant="outline" onClick={onEnterAnatomy}>
-            <Microscope className="size-3.5" aria-hidden="true" />
-            深入查看
-          </Button>
-        ) : (
-          <Button size="xs" variant="ghost" onClick={onReturnToRegion}>
-            <ArrowLeft className="size-3.5" aria-hidden="true" />
-            返回区域
-          </Button>
-        )}
+        <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+          {onAsk ? (
+            <Button size="xs" variant="ghost" onClick={onAsk}>
+              <MessageCircle className="size-3.5" aria-hidden="true" />
+              询问 BodySense
+            </Button>
+          ) : null}
+          {mode === "region" ? (
+            <Button size="xs" variant="outline" onClick={onEnterAnatomy}>
+              <Microscope className="size-3.5" aria-hidden="true" />
+              深入查看
+            </Button>
+          ) : (
+            <Button size="xs" variant="ghost" onClick={onReturnToRegion}>
+              <ArrowLeft className="size-3.5" aria-hidden="true" />
+              返回区域
+            </Button>
+          )}
+        </div>
       </div>
 
       {mode === "anatomy" && breadcrumb.length > 1 ? (
         <nav aria-label="解剖层级" className="mt-2 overflow-hidden">
           <ol className="flex min-w-0 flex-wrap items-center gap-x-1 text-[11px] text-muted-foreground">
             {breadcrumb.map((item, index) => (
-              <li key={item.id} className="inline-flex min-w-0 items-center gap-1">
+              <li
+                key={item.id}
+                className="inline-flex min-w-0 items-center gap-1"
+              >
                 {index > 0 ? <span aria-hidden="true">/</span> : null}
                 <span className="max-w-[150px] truncate">{item.name}</span>
               </li>

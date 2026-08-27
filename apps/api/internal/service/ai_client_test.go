@@ -49,6 +49,12 @@ func TestChatStreamSendsFlatPythonRequestAndParsesStreamEvent(t *testing.T) {
 					Phase:         "collecting",
 					ExtractedInfo: json.RawMessage(`[]`),
 				},
+				SpatialContext: &ConsultationSpatialContext{
+					BodyRegionID:    "shoulder.right",
+					BodyRegionLabel: "右肩",
+					AnatomyID:       "appendicular-skeleton-clavicle-right",
+					AnatomyName:     "Right clavicle",
+				},
 			},
 		},
 	)
@@ -72,6 +78,14 @@ func TestChatStreamSendsFlatPythonRequestAndParsesStreamEvent(t *testing.T) {
 		if _, ok := captured[key]; !ok {
 			t.Fatalf("missing top-level key %q in request: %#v", key, captured)
 		}
+	}
+	businessContext, ok := captured["business_context"].(map[string]any)
+	if !ok {
+		t.Fatalf("business_context is not an object: %#v", captured["business_context"])
+	}
+	spatialContext, ok := businessContext["spatial_context"].(map[string]any)
+	if !ok || spatialContext["body_region_id"] != "shoulder.right" || spatialContext["anatomy_id"] != "appendicular-skeleton-clavicle-right" {
+		t.Fatalf("unexpected spatial_context payload: %#v", businessContext["spatial_context"])
 	}
 }
 

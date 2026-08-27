@@ -1,4 +1,21 @@
 export { BodyExplorer, detectWebGLSupport } from "./components/BodyExplorer";
+export { BodyRegionNavigator } from "./components/BodyRegionNavigator";
+export { useBodyExplorerWorkspace } from "./hooks/useBodyExplorerWorkspace";
+export {
+  getAnatomyMappingForRegion,
+  getAnatomyIdsForRegion,
+  getBodyRegionForAnatomy,
+  getPreferredAnatomyIdForRegion,
+  resolveBodyRegionForAnatomy,
+} from "./model/anatomyMapping";
+export {
+  bodyRegionDefinitions,
+  getBodyRegionDefinition,
+  isBodyRegionId,
+  resolveBodyRegionInput,
+  type BodyRegionId,
+} from "./model/bodyRegionOntology";
+export { resolveRecordBodyRegion } from "./model/bodyExplorerSelectors";
 export type {
   BodyExplorerProps,
   BodyExplorerSemanticBridge,

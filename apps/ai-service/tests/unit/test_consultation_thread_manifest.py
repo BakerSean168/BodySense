@@ -2,7 +2,27 @@ from unittest.mock import patch
 
 import pytest
 
-from src.runtime.consultation_thread import get_consultation_manifest
+from src.runtime.consultation_thread import _format_spatial_context, get_consultation_manifest
+
+
+def test_spatial_context_is_explicitly_navigation_only() -> None:
+    rendered = _format_spatial_context(
+        {
+            "body_region_id": "shoulder.right",
+            "body_region_label": "右肩",
+            "anatomy_id": "appendicular-skeleton-clavicle-right",
+            "anatomy_name": "Right clavicle",
+        }
+    )
+    assert "右肩" in rendered
+    assert "Right clavicle" in rendered
+    assert "不是症状事实、病因证据或医学诊断" in rendered
+    assert "BodyState" in rendered
+
+
+def test_spatial_context_omits_empty_navigation_context() -> None:
+    assert _format_spatial_context({}) == ""
+    assert _format_spatial_context({"body_region_label": "右肩"}) == ""
 
 
 def test_get_consultation_manifest_defaults_to_default_config() -> None:
@@ -34,9 +54,11 @@ def test_stream_thread_turn_emits_agent_configuration_event() -> None:
             async def astream(self, *args, **kwargs):
                 if False:
                     yield
+
             async def aget_state(self, config):
                 class S:
                     interrupts = []
+
                 return S()
 
         with patch(
@@ -56,12 +78,14 @@ def test_stream_thread_turn_emits_agent_configuration_event() -> None:
                 captured_events.append(event)
 
     import asyncio
+
     asyncio.run(run())
 
     assert captured_events[0].channel == "runtime"
     assert captured_events[0].type == "runtime.agent_configuration"
     config_events = [
-        e for e in captured_events
+        e
+        for e in captured_events
         if e.channel == "runtime" and e.type == "runtime.agent_configuration"
     ]
     assert len(config_events) == 1
@@ -70,7 +94,6 @@ def test_stream_thread_turn_emits_agent_configuration_event() -> None:
     assert payload["agent_configuration"]["id"] == "consult-config-2bd9b46735dd693c"
     assert payload["execution_provenance"]["runtime"] == "langgraph"
     assert payload["execution_provenance"]["logical_model"] == "bodysense-consultation"
-
 
 
 def test_stream_thread_turn_emits_identity_before_interrupt() -> None:

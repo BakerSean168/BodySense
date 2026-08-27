@@ -13,6 +13,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
+import {
+  getBodyRegionDefinition,
+  resolveBodyRegionInput,
+  resolveRecordBodyRegion,
+  type BodyRegionId,
+} from "@/features/body-explorer";
 import type {
   BodyStateFact,
   BodyStateObservation,
@@ -26,6 +32,9 @@ import {
 
 interface BodyStateWorkbenchProps {
   snapshot: BodyStateSnapshot;
+  selectedRegionId?: BodyRegionId | null;
+  onSelectRegion?: (regionId: BodyRegionId | null) => void;
+  onAskRegion?: (regionId: BodyRegionId) => void;
 }
 
 const factKindLabels: Record<string, string> = {
@@ -78,7 +87,12 @@ function safetyState(snapshot: BodyStateSnapshot) {
   };
 }
 
-export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
+export function BodyStateWorkbench({
+  snapshot,
+  selectedRegionId = null,
+  onSelectRegion,
+  onAskRegion,
+}: BodyStateWorkbenchProps) {
   const bodyStateCommand = useBodyStateCommand();
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
@@ -91,6 +105,9 @@ export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
   } | null>(null);
   const [safetyNote, setSafetyNote] = useState("");
   const safety = useMemo(() => safetyState(snapshot), [snapshot]);
+  const selectedRegionLabel = selectedRegionId
+    ? getBodyRegionDefinition(selectedRegionId).labels["zh-CN"]
+    : null;
 
   const mutate = async (
     key: string,
@@ -113,6 +130,13 @@ export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
       toast.error("请填写记录内容");
       return;
     }
+    const effectiveBodyRegion = bodyRegion.trim() || selectedRegionLabel || "";
+    const regionResolution = effectiveBodyRegion
+      ? resolveBodyRegionInput(effectiveBodyRegion)
+      : null;
+    const bodyRegionId =
+      selectedRegionId ??
+      (regionResolution?.status === "resolved" ? regionResolution.id : null);
     await mutate(
       "add-fact",
       {
@@ -120,9 +144,10 @@ export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
         expectedRevision: snapshot.current_revision,
         fact: {
           kind,
-          body_region: bodyRegion.trim(),
-          concern_key: bodyRegion.trim()
-            ? `region:${bodyRegion.trim()}`
+          body_region: effectiveBodyRegion,
+          body_region_id: bodyRegionId,
+          concern_key: effectiveBodyRegion
+            ? `region:${bodyRegionId ?? effectiveBodyRegion}`
             : "general",
           value: value.trim(),
           origin: "user_reported",
@@ -152,6 +177,7 @@ export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
           concern_key: fact.concern_key || "general",
           kind: fact.kind,
           body_region: fact.body_region || "",
+          body_region_id: fact.body_region_id ?? null,
           value: correction.value.trim(),
           details: fact.details || {},
           origin: "user_edited",
@@ -174,6 +200,16 @@ export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
   const historicalFacts = snapshot.facts.filter(
     (fact) => fact.lifecycle_state !== "active",
   );
+  const inSelectedRegion = (record: {
+    body_region_id?: string | null;
+    body_region?: string;
+  }) =>
+    !selectedRegionId || resolveRecordBodyRegion(record) === selectedRegionId;
+  const visibleActiveFacts = activeFacts.filter(inSelectedRegion);
+  const visiblePendingObservations =
+    pendingObservations.filter(inSelectedRegion);
+  const visibleObservations = snapshot.observations.filter(inSelectedRegion);
+  const visibleHistoricalFacts = historicalFacts.filter(inSelectedRegion);
 
   return (
     <div className="space-y-4">
@@ -184,15 +220,43 @@ export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
             身体记录
           </h3>
         </div>
-        <Button
-          size="xs"
-          variant="outline"
-          onClick={() => setShowAdd((open) => !open)}
-        >
-          <CirclePlus className="h-3.5 w-3.5" />
-          添加记录
-        </Button>
+        <div className="flex flex-wrap items-center justify-end gap-1.5">
+          {selectedRegionId && onAskRegion ? (
+            <Button
+              size="xs"
+              variant="ghost"
+              onClick={() => onAskRegion(selectedRegionId)}
+            >
+              询问 BodySense
+            </Button>
+          ) : null}
+          <Button
+            size="xs"
+            variant="outline"
+            onClick={() => setShowAdd((open) => !open)}
+          >
+            <CirclePlus className="h-3.5 w-3.5" />
+            添加记录
+          </Button>
+        </div>
       </div>
+
+      {selectedRegionId ? (
+        <div className="flex items-center justify-between gap-3 border-b border-border/45 pb-2 text-xs">
+          <span className="font-medium text-foreground">
+            {selectedRegionLabel}
+          </span>
+          {onSelectRegion ? (
+            <button
+              type="button"
+              onClick={() => onSelectRegion(null)}
+              className="text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+            >
+              返回全部
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       {safety.active && (
         <div className="rounded-xl border border-destructive/25 bg-destructive/10 p-3 text-sm text-destructive">
@@ -275,93 +339,95 @@ export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
         </div>
       )}
 
-      {pendingObservations.length > 0 && (
+      {visiblePendingObservations.length > 0 && (
         <section className="space-y-2 rounded-xl border border-warning/35 bg-warning/10 p-3">
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wide text-warning-foreground">
-              待确认观察 · {pendingObservations.length}
+              待确认观察 · {visiblePendingObservations.length}
             </h4>
             <p className="mt-1 text-xs leading-5 text-warning-foreground/85">
               来自图片或 BodySense 分析的观察，需要你确认后才会用于后续分析。
             </p>
           </div>
-          {pendingObservations.map((observation: BodyStateObservation) => {
-            const label =
-              typeof observation.value?.label === "string"
-                ? observation.value.label
-                : observation.kind;
-            const description = observationValueText(observation.value);
-            return (
-              <div
-                key={observation.id}
-                className="rounded-lg border border-warning/35 bg-background p-3"
-              >
-                <div className="text-xs text-muted-foreground">
-                  {observation.body_region || "全身"} · BodySense 观察
+          {visiblePendingObservations.map(
+            (observation: BodyStateObservation) => {
+              const label =
+                typeof observation.value?.label === "string"
+                  ? observation.value.label
+                  : observation.kind;
+              const description = observationValueText(observation.value);
+              return (
+                <div
+                  key={observation.id}
+                  className="rounded-lg border border-warning/35 bg-background p-3"
+                >
+                  <div className="text-xs text-muted-foreground">
+                    {observation.body_region || "全身"} · BodySense 观察
+                  </div>
+                  <p className="mt-1 text-sm font-medium text-foreground">
+                    {label}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    {description}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button
+                      size="xs"
+                      variant="secondary"
+                      isLoading={
+                        busyKey === `confirm-observation:${observation.id}`
+                      }
+                      onClick={() =>
+                        mutate(
+                          `confirm-observation:${observation.id}`,
+                          {
+                            type: "reviewObservation",
+                            observationId: observation.id,
+                            expectedRevision: snapshot.current_revision,
+                            reviewState: "confirmed",
+                          },
+                          "观察已确认，会用于后续分析",
+                        )
+                      }
+                    >
+                      <Check className="h-3 w-3" />
+                      确认
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      isLoading={
+                        busyKey === `reject-observation:${observation.id}`
+                      }
+                      onClick={() =>
+                        mutate(
+                          `reject-observation:${observation.id}`,
+                          {
+                            type: "reviewObservation",
+                            observationId: observation.id,
+                            expectedRevision: snapshot.current_revision,
+                            reviewState: "rejected",
+                          },
+                          "已忽略这条观察",
+                        )
+                      }
+                    >
+                      <X className="h-3 w-3" />
+                      不接受
+                    </Button>
+                  </div>
                 </div>
-                <p className="mt-1 text-sm font-medium text-foreground">
-                  {label}
-                </p>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  {description}
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Button
-                    size="xs"
-                    variant="secondary"
-                    isLoading={
-                      busyKey === `confirm-observation:${observation.id}`
-                    }
-                    onClick={() =>
-                      mutate(
-                        `confirm-observation:${observation.id}`,
-                        {
-                          type: "reviewObservation",
-                          observationId: observation.id,
-                          expectedRevision: snapshot.current_revision,
-                          reviewState: "confirmed",
-                        },
-                        "观察已确认，会用于后续分析",
-                      )
-                    }
-                  >
-                    <Check className="h-3 w-3" />
-                    确认
-                  </Button>
-                  <Button
-                    size="xs"
-                    variant="ghost"
-                    isLoading={
-                      busyKey === `reject-observation:${observation.id}`
-                    }
-                    onClick={() =>
-                      mutate(
-                        `reject-observation:${observation.id}`,
-                        {
-                          type: "reviewObservation",
-                          observationId: observation.id,
-                          expectedRevision: snapshot.current_revision,
-                          reviewState: "rejected",
-                        },
-                        "已忽略这条观察",
-                      )
-                    }
-                  >
-                    <X className="h-3 w-3" />
-                    不接受
-                  </Button>
-                </div>
-              </div>
-            );
-          })}
+              );
+            },
+          )}
         </section>
       )}
 
       <section className="space-y-2">
-        {activeFacts.length === 0 ? (
+        {visibleActiveFacts.length === 0 ? (
           <div className="mx-auto max-w-sm py-5 text-center">
             <p className="text-[13px] font-medium text-foreground/82">
-              还没有记录
+              {selectedRegionId ? "这个区域还没有记录" : "还没有记录"}
             </p>
             <p className="mt-1 text-xs leading-[1.55] text-muted-foreground">
               继续对话，或手动添加一条身体记录。
@@ -370,9 +436,9 @@ export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
         ) : (
           <>
             <h4 className="text-xs font-semibold tracking-wide text-muted-foreground">
-              当前记录 · {activeFacts.length}
+              当前记录 · {visibleActiveFacts.length}
             </h4>
-            {activeFacts.map((fact) => (
+            {visibleActiveFacts.map((fact) => (
               <div
                 key={fact.id}
                 className="border-b border-border/50 py-3 last:border-b-0"
@@ -381,7 +447,21 @@ export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
                       <span>{factKindLabels[fact.kind] || fact.kind}</span>
-                      {fact.body_region && <span>· {fact.body_region}</span>}
+                      {fact.body_region ? (
+                        resolveRecordBodyRegion(fact) && onSelectRegion ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onSelectRegion(resolveRecordBodyRegion(fact))
+                            }
+                            className="rounded px-0.5 text-primary/80 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                          >
+                            · {fact.body_region}
+                          </button>
+                        ) : (
+                          <span>· {fact.body_region}</span>
+                        )
+                      ) : null}
                       <span>· {trendLabels[fact.trend] || fact.trend}</span>
                       <span
                         className={`rounded-full px-1.5 py-0.5 ${
@@ -621,15 +701,15 @@ export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
         </details>
       )}
 
-      {((snapshot.observations?.length ?? 0) > 0 ||
-        historicalFacts.length > 0) && (
+      {(visibleObservations.length > 0 ||
+        visibleHistoricalFacts.length > 0) && (
         <details className="border-t border-border/55 pt-4">
           <summary className="cursor-pointer list-none text-xs font-semibold text-muted-foreground">
             观察与历史 ·{" "}
-            {(snapshot.observations?.length ?? 0) + historicalFacts.length}
+            {visibleObservations.length + visibleHistoricalFacts.length}
           </summary>
           <div className="mt-3 space-y-2 text-xs text-muted-foreground">
-            {snapshot.observations.map((observation) => (
+            {visibleObservations.map((observation) => (
               <div
                 key={observation.id}
                 className="border-b border-border/40 py-2 last:border-b-0"
@@ -643,7 +723,7 @@ export function BodyStateWorkbench({ snapshot }: BodyStateWorkbenchProps) {
                 </p>
               </div>
             ))}
-            {historicalFacts.map((fact) => (
+            {visibleHistoricalFacts.map((fact) => (
               <div
                 key={fact.id}
                 className="border-b border-border/40 py-2 opacity-75 last:border-b-0"
