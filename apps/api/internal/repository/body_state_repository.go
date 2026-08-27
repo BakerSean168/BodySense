@@ -119,6 +119,9 @@ func (r *BodyStateRepository) UpsertFact(
 				Where("user_id = ? AND source_key = ?", userID, fact.SourceKey).
 				First(&existing).Error
 			if err == nil {
+				if fact.BodyRegionID == nil && fact.BodyRegion == existing.BodyRegion {
+					fact.BodyRegionID = bodyStateCloneString(existing.BodyRegionID)
+				}
 				bodyStateApplyFactDefaults(&fact)
 				if bodyStateSameFact(existing, fact) {
 					stored = existing
@@ -128,7 +131,7 @@ func (r *BodyStateRepository) UpsertFact(
 				if err := tx.WithContext(ctx).Model(&model.BodyStateFact{}).
 					Where("id = ? AND user_id = ?", existing.ID, userID).
 					Updates(map[string]any{
-						"concern_key": fact.ConcernKey, "kind": fact.Kind, "body_region": fact.BodyRegion,
+						"concern_key": fact.ConcernKey, "kind": fact.Kind, "body_region": fact.BodyRegion, "body_region_id": fact.BodyRegionID,
 						"value": fact.Value, "details": fact.Details, "origin": fact.Origin,
 						"review_state": fact.ReviewState, "lifecycle_state": fact.LifecycleState,
 						"trend": fact.Trend, "provenance": fact.Provenance,
@@ -201,6 +204,13 @@ func (r *BodyStateRepository) CorrectFact(
 			return err
 		}
 
+		// Older clients do not know body_region_id. Preserve the canonical identity
+		// when they correct another field without changing the raw/display region.
+		// If the text region changes and no canonical ID is supplied, leave it null
+		// rather than guessing or carrying a now-wrong laterality forward.
+		if replacement.BodyRegionID == nil && replacement.BodyRegion == previous.BodyRegion {
+			replacement.BodyRegionID = bodyStateCloneString(previous.BodyRegionID)
+		}
 		bodyStateApplyFactDefaults(&replacement)
 		replacement.ID = uuid.New()
 		replacement.UserID = userID
@@ -355,6 +365,9 @@ func (r *BodyStateRepository) UpsertObservation(
 				Where("user_id = ? AND source_key = ?", userID, observation.SourceKey).
 				First(&existing).Error
 			if err == nil {
+				if observation.BodyRegionID == nil && observation.BodyRegion == existing.BodyRegion {
+					observation.BodyRegionID = bodyStateCloneString(existing.BodyRegionID)
+				}
 				bodyStateApplyObservationDefaults(&observation)
 				if bodyStateSameObservation(existing, observation) {
 					stored = existing
@@ -365,7 +378,7 @@ func (r *BodyStateRepository) UpsertObservation(
 					Where("id = ? AND user_id = ?", existing.ID, userID).
 					Updates(map[string]any{
 						"concern_key": observation.ConcernKey, "kind": observation.Kind,
-						"body_region": observation.BodyRegion, "method": observation.Method,
+						"body_region": observation.BodyRegion, "body_region_id": observation.BodyRegionID, "method": observation.Method,
 						"value": observation.Value, "condition": observation.Condition,
 						"provenance": observation.Provenance, "observed_at": observation.ObservedAt,
 						"review_state":            observation.ReviewState,
@@ -551,7 +564,7 @@ func bodyStateApplyObservationDefaults(observation *model.BodyStateObservation) 
 }
 
 func bodyStateSameFact(a, b model.BodyStateFact) bool {
-	return a.ConcernKey == b.ConcernKey && a.Kind == b.Kind && a.BodyRegion == b.BodyRegion &&
+	return a.ConcernKey == b.ConcernKey && a.Kind == b.Kind && a.BodyRegion == b.BodyRegion && bodyStateSameStringPtr(a.BodyRegionID, b.BodyRegionID) &&
 		a.Value == b.Value && bodyStateSameJSON(a.Details, b.Details, `{}`) &&
 		a.Origin == b.Origin && a.ReviewState == b.ReviewState && a.LifecycleState == b.LifecycleState &&
 		a.Trend == b.Trend && bodyStateSameJSON(a.Provenance, b.Provenance, `{}`) &&
@@ -560,7 +573,7 @@ func bodyStateSameFact(a, b model.BodyStateFact) bool {
 }
 
 func bodyStateSameObservation(a, b model.BodyStateObservation) bool {
-	return a.ConcernKey == b.ConcernKey && a.Kind == b.Kind && a.BodyRegion == b.BodyRegion && a.Method == b.Method &&
+	return a.ConcernKey == b.ConcernKey && a.Kind == b.Kind && a.BodyRegion == b.BodyRegion && bodyStateSameStringPtr(a.BodyRegionID, b.BodyRegionID) && a.Method == b.Method &&
 		bodyStateSameJSON(a.Value, b.Value, `{}`) &&
 		bodyStateSameJSON(a.Condition, b.Condition, `{}`) &&
 		bodyStateSameJSON(a.Provenance, b.Provenance, `{}`) &&
@@ -601,4 +614,19 @@ func bodyStateSameTime(a, b *time.Time) bool {
 		return a == nil && b == nil
 	}
 	return a.Equal(*b)
+}
+
+func bodyStateSameStringPtr(a, b *string) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return *a == *b
+}
+
+func bodyStateCloneString(value *string) *string {
+	if value == nil {
+		return nil
+	}
+	cloned := *value
+	return &cloned
 }

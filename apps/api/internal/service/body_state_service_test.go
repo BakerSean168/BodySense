@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
@@ -240,5 +241,95 @@ func TestBodyStateSnapshotNormalizesEmptyCollections(t *testing.T) {
 	}
 	if pending == nil {
 		t.Fatal("pending observations must serialize as an empty array")
+	}
+}
+
+func TestBodyStateCanonicalRegionIDUsesInjectedAuthority(t *testing.T) {
+	repo := &fakeBodyStateRepository{}
+	svc := NewBodyStateService(repo).WithBodyRegionIDValidator(BodyRegionIDValidatorFunc(func(id string) bool {
+		return id == "shoulder.right"
+	}))
+	rawRegionID := "  shoulder.right  "
+	stored, revision, err := svc.UpsertFact(context.Background(), uuid.New(), nil, model.BodyStateFact{
+		Kind:         "discomfort",
+		BodyRegion:   "右肩",
+		BodyRegionID: &rawRegionID,
+		Value:        "抬手疼痛",
+	})
+	if err != nil {
+		t.Fatalf("UpsertFact returned error: %v", err)
+	}
+	if revision == nil || stored.BodyRegionID == nil || *stored.BodyRegionID != "shoulder.right" {
+		t.Fatalf("canonical region id must round-trip after validation: stored=%#v revision=%#v", stored, revision)
+	}
+	if stored.BodyRegion != "右肩" {
+		t.Fatalf("raw/display body_region must be preserved, got %q", stored.BodyRegion)
+	}
+}
+
+func TestBodyStateUnknownCanonicalRegionIDIsRejectedBeforePersistence(t *testing.T) {
+	repo := &fakeBodyStateRepository{}
+	svc := NewBodyStateService(repo).WithBodyRegionIDValidator(BodyRegionIDValidatorFunc(func(id string) bool {
+		return id == "shoulder.right"
+	}))
+	unknown := "shoulder.middle"
+	_, _, err := svc.UpsertFact(context.Background(), uuid.New(), nil, model.BodyStateFact{
+		Kind:         "discomfort",
+		BodyRegion:   "肩部",
+		BodyRegionID: &unknown,
+		Value:        "疼痛",
+	})
+	if !errors.Is(err, ErrUnknownBodyRegionID) {
+		t.Fatalf("unknown canonical region must be rejected, got %v", err)
+	}
+	if len(repo.upsertedFacts) != 0 {
+		t.Fatalf("invalid canonical region must not reach persistence: %#v", repo.upsertedFacts)
+	}
+}
+
+func TestBodyStateCanonicalRegionRequiresAuthorityButLegacyNullRemainsWritable(t *testing.T) {
+	repo := &fakeBodyStateRepository{}
+	svc := NewBodyStateService(repo)
+	canonical := "shoulder.right"
+	_, _, err := svc.UpsertFact(context.Background(), uuid.New(), nil, model.BodyStateFact{
+		Kind:         "discomfort",
+		BodyRegion:   "右肩",
+		BodyRegionID: &canonical,
+		Value:        "疼痛",
+	})
+	if !errors.Is(err, ErrBodyRegionIDValidationUnavailable) {
+		t.Fatalf("canonical region without ontology authority must fail closed, got %v", err)
+	}
+
+	legacy, _, err := svc.UpsertFact(context.Background(), uuid.New(), nil, model.BodyStateFact{
+		Kind:       "discomfort",
+		BodyRegion: "肩颈",
+		Value:      "紧张",
+	})
+	if err != nil {
+		t.Fatalf("legacy free-text fact must remain writable: %v", err)
+	}
+	if legacy.BodyRegionID != nil {
+		t.Fatalf("ambiguous legacy fact must remain unresolved, got %q", *legacy.BodyRegionID)
+	}
+}
+
+func TestBodyStateObservationCanonicalRegionRetainsLaterality(t *testing.T) {
+	repo := &fakeBodyStateRepository{}
+	svc := NewBodyStateService(repo).WithBodyRegionIDValidator(BodyRegionIDValidatorFunc(func(id string) bool {
+		return id == "knee.left" || id == "knee.right"
+	}))
+	left := "knee.left"
+	stored, _, err := svc.AddObservation(context.Background(), uuid.New(), nil, model.BodyStateObservation{
+		Kind:         "self_measurement",
+		BodyRegion:   "左膝",
+		BodyRegionID: &left,
+		Value:        datatypes.JSON(`{"pain":3}`),
+	})
+	if err != nil {
+		t.Fatalf("AddObservation returned error: %v", err)
+	}
+	if stored.BodyRegionID == nil || *stored.BodyRegionID != "knee.left" || stored.BodyRegion != "左膝" {
+		t.Fatalf("observation laterality must round-trip: %#v", stored)
 	}
 }

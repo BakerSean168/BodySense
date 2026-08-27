@@ -36,6 +36,7 @@ type BodyStateFact struct {
 	ConcernKey            string         `gorm:"type:varchar(120);not null;default:''" json:"concern_key,omitempty"`
 	Kind                  string         `gorm:"type:varchar(80);not null" json:"kind"`
 	BodyRegion            string         `gorm:"type:varchar(120);not null;default:''" json:"body_region,omitempty"`
+	BodyRegionID          *string        `gorm:"type:varchar(80)" json:"body_region_id"`
 	Value                 string         `gorm:"type:text;not null;default:''" json:"value"`
 	Details               datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"details"`
 	Origin                string         `gorm:"type:varchar(40);not null" json:"origin"`
@@ -65,6 +66,7 @@ type BodyStateObservation struct {
 	ConcernKey            string         `gorm:"type:varchar(120);not null;default:''" json:"concern_key,omitempty"`
 	Kind                  string         `gorm:"type:varchar(80);not null" json:"kind"`
 	BodyRegion            string         `gorm:"type:varchar(120);not null;default:''" json:"body_region,omitempty"`
+	BodyRegionID          *string        `gorm:"type:varchar(80)" json:"body_region_id"`
 	Method                string         `gorm:"type:varchar(80);not null;default:''" json:"method,omitempty"`
 	Value                 datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"value"`
 	Condition             datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"condition"`
