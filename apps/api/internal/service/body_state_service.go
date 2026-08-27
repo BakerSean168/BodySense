@@ -52,11 +52,21 @@ type BodyStateSnapshot struct {
 // Producers (chat, workbench, posture analysis) call this service; they never own
 // BodyState persistence themselves.
 type BodyStateService struct {
-	repo bodyStateRepository
+	repo                  bodyStateRepository
+	bodyRegionIDValidator BodyRegionIDValidator
 }
 
 func NewBodyStateService(repo bodyStateRepository) *BodyStateService {
 	return &BodyStateService{repo: repo}
+}
+
+// WithBodyRegionIDValidator wires the canonical ontology authority without
+// moving ontology ownership into the durable lane. Until this is configured,
+// existing free-text-only BodyState writes continue to work while new canonical
+// IDs fail closed instead of polluting durable state with unverified identities.
+func (s *BodyStateService) WithBodyRegionIDValidator(validator BodyRegionIDValidator) *BodyStateService {
+	s.bodyRegionIDValidator = validator
+	return s
 }
 
 func (s *BodyStateService) GetSnapshot(ctx context.Context, userID uuid.UUID, historyLimit int) (*BodyStateSnapshot, error) {
@@ -218,10 +228,20 @@ func (s *BodyStateService) RecordInteractionAnswer(
 }
 
 func (s *BodyStateService) UpsertFact(ctx context.Context, userID uuid.UUID, expectedRevision *int64, fact model.BodyStateFact) (*model.BodyStateFact, *model.BodyStateRevision, error) {
+	regionID, err := s.normalizeBodyRegionID(fact.BodyRegionID)
+	if err != nil {
+		return nil, nil, err
+	}
+	fact.BodyRegionID = regionID
 	return s.repo.UpsertFact(ctx, userID, expectedRevision, fact, "user_edit")
 }
 
 func (s *BodyStateService) CorrectFact(ctx context.Context, userID uuid.UUID, expectedRevision *int64, factID uuid.UUID, replacement model.BodyStateFact) (*model.BodyStateFact, *model.BodyStateRevision, error) {
+	regionID, err := s.normalizeBodyRegionID(replacement.BodyRegionID)
+	if err != nil {
+		return nil, nil, err
+	}
+	replacement.BodyRegionID = regionID
 	return s.repo.CorrectFact(ctx, userID, expectedRevision, factID, replacement, "user_edit")
 }
 
@@ -234,6 +254,11 @@ func (s *BodyStateService) ReviewFact(ctx context.Context, userID uuid.UUID, exp
 }
 
 func (s *BodyStateService) AddObservation(ctx context.Context, userID uuid.UUID, expectedRevision *int64, observation model.BodyStateObservation) (*model.BodyStateObservation, *model.BodyStateRevision, error) {
+	regionID, err := s.normalizeBodyRegionID(observation.BodyRegionID)
+	if err != nil {
+		return nil, nil, err
+	}
+	observation.BodyRegionID = regionID
 	observation.ReviewState = "confirmed"
 	observation.ExcludedFromReasoning = false
 	return s.repo.UpsertObservation(ctx, userID, expectedRevision, observation, "user_edit")
@@ -244,6 +269,11 @@ func (s *BodyStateService) AddAssessmentObservation(
 	userID uuid.UUID,
 	observation model.BodyStateObservation,
 ) (*model.BodyStateObservation, *model.BodyStateRevision, error) {
+	regionID, err := s.normalizeBodyRegionID(observation.BodyRegionID)
+	if err != nil {
+		return nil, nil, err
+	}
+	observation.BodyRegionID = regionID
 	observation.ReviewState = "unverified"
 	observation.ExcludedFromReasoning = true
 	return s.repo.UpsertObservation(ctx, userID, nil, observation, "assessment")
