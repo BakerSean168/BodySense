@@ -39,6 +39,7 @@ type HTTPError struct {
 type runtimeBodyStateService interface {
 	GetSnapshot(ctx context.Context, userID uuid.UUID, historyLimit int) (*service.BodyStateSnapshot, error)
 	UpsertExtractedSymptom(ctx context.Context, userID, runID uuid.UUID, info json.RawMessage) error
+	RecordLifestyleContext(ctx context.Context, userID, runID uuid.UUID, payload json.RawMessage) error
 	RecordSafetyEvent(ctx context.Context, userID uuid.UUID, payload json.RawMessage) error
 	RecordInteractionAnswer(ctx context.Context, userID, interactionID uuid.UUID, question datatypes.JSON, answer json.RawMessage) error
 }
@@ -1227,6 +1228,21 @@ func (r *Runtime) handleAIEvent(
 		}
 		r.sendEvent(ctx, sw, event, state.AssistantMsgID, event.Type)
 
+	case "state.lifestyle_context.upsert":
+		var payload struct {
+			Context json.RawMessage `json:"context"`
+		}
+		if err := event.PayloadAs(&payload); err != nil {
+			r.failActiveStream(ctx, sw, state, "invalid lifestyle-context payload")
+			return true
+		}
+		if err := r.persistLifestyleContext(ctx, state.UID, state.Run.ID, payload.Context); err != nil {
+			log.Printf("failed to persist lifestyle context in BodyState for run %s: %v", state.Run.ID, err)
+			r.failActiveStream(ctx, sw, state, "failed to persist durable lifestyle state")
+			return true
+		}
+		r.sendEvent(ctx, sw, event, state.AssistantMsgID, event.Type)
+
 	case "source.citation.added":
 		r.sendEvent(ctx, sw, event, state.AssistantMsgID, event.Type)
 		result.AssistantParts = append(result.AssistantParts, citationPart(event.Payload))
@@ -1735,6 +1751,17 @@ func (r *Runtime) persistExtractedSymptom(
 		return errors.New("BodyState service is not configured")
 	}
 	return r.bodyStateService.UpsertExtractedSymptom(ctx, userID, runID, info)
+}
+
+func (r *Runtime) persistLifestyleContext(
+	ctx context.Context,
+	userID, runID uuid.UUID,
+	payload json.RawMessage,
+) error {
+	if r.bodyStateService == nil {
+		return errors.New("BodyState service is not configured")
+	}
+	return r.bodyStateService.RecordLifestyleContext(ctx, userID, runID, payload)
 }
 
 func (r *Runtime) persistSafetyEvent(

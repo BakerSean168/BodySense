@@ -47,7 +47,13 @@ async def test_assessment_agent_returns_typed_observations_without_advice() -> N
     agent = create_assessment_agent(model)
     result = await agent.run(
         "Create an observation-only report.",
-        deps=AssessmentDependencies(profile={"age": 30}),
+        deps=AssessmentDependencies(
+            profile={"birth_date": "1996-08-27"},
+            body_state={
+                "current_revision": 2,
+                "facts": [{"kind": "lifestyle.sleep", "value": "轮班"}],
+            },
+        ),
     )
 
     assert isinstance(result.output, AssessmentAgentOutput)
@@ -64,7 +70,8 @@ async def test_assessment_service_supports_typed_multimodal_content() -> None:
     image = "data:image/jpeg;base64," + base64.b64encode(b"fake-jpeg").decode()
 
     result = await service.generate_assessment(
-        profile={"age": 30},
+        profile={"birth_date": "1996-08-27"},
+        body_state={"current_revision": 2, "facts": [{"kind": "lifestyle.sleep", "value": "轮班"}]},
         images=[image],
         posture_analysis={"has_analysis": True, "summaries": ["正面观轻微高低肩"]},
     )
@@ -77,6 +84,8 @@ async def test_assessment_service_supports_typed_multimodal_content() -> None:
     assert result["execution_provenance"]["runtime"] == "pydantic-ai"
     request = str(model.last_model_request_parameters)
     assert "正面观轻微高低肩" in request
+    assert "lifestyle.sleep" in request
+    assert "轮班" in request
 
 
 @pytest.mark.asyncio
@@ -88,7 +97,8 @@ async def test_assessment_service_resolves_immutable_configuration() -> None:
     default_config = get_default_assessment_configuration()
 
     result = await service.generate_assessment(
-        profile={"age": 30},
+        profile={"birth_date": "1996-08-27"},
+        body_state={"current_revision": 1, "facts": []},
         configuration_id=default_config.configuration_id,
     )
 

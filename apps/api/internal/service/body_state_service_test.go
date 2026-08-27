@@ -16,13 +16,17 @@ import (
 // SQL/repository transaction details are intentionally separate from service
 // semantics such as projection identity and producer mapping.
 type fakeBodyStateRepository struct {
-	current              *model.BodyState
-	revisions            []model.BodyStateRevision
-	upsertedFacts        []model.BodyStateFact
-	upsertedObservations []model.BodyStateObservation
-	safetyStates         []datatypes.JSON
-	returnExistingFact   bool
-	returnExistingObs    bool
+	current                  *model.BodyState
+	revisions                []model.BodyStateRevision
+	upsertedFacts            []model.BodyStateFact
+	transitionedFacts        []model.BodyStateFact
+	transitionFactTargets    []uuid.UUID
+	upsertedObservations     []model.BodyStateObservation
+	transitionedObservations []model.BodyStateObservation
+	appliedPatches           []model.BodyStateCurrentContextPatch
+	safetyStates             []datatypes.JSON
+	returnExistingFact       bool
+	returnExistingObs        bool
 }
 
 func (r *fakeBodyStateRepository) Ensure(context.Context, uuid.UUID) error { return nil }
@@ -40,6 +44,15 @@ func (r *fakeBodyStateRepository) ListReviewableObservations(context.Context, uu
 	for _, observation := range r.upsertedObservations {
 		if observation.ReviewState == "unverified" {
 			result = append(result, observation)
+		}
+	}
+	return result, nil
+}
+func (r *fakeBodyStateRepository) ListReviewableFacts(context.Context, uuid.UUID, int) ([]model.BodyStateFact, error) {
+	result := make([]model.BodyStateFact, 0)
+	for _, fact := range r.upsertedFacts {
+		if fact.ReviewState == "unverified" {
+			result = append(result, fact)
 		}
 	}
 	return result, nil
@@ -62,6 +75,23 @@ func (r *fakeBodyStateRepository) UpsertFact(_ context.Context, userID uuid.UUID
 func (r *fakeBodyStateRepository) CorrectFact(context.Context, uuid.UUID, *int64, uuid.UUID, model.BodyStateFact, string) (*model.BodyStateFact, *model.BodyStateRevision, error) {
 	return nil, nil, nil
 }
+func (r *fakeBodyStateRepository) TransitionFact(_ context.Context, userID uuid.UUID, _ *int64, target uuid.UUID, replacement model.BodyStateFact, _ time.Time, _ string) (*model.BodyStateFact, *model.BodyStateRevision, error) {
+	replacement.UserID = userID
+	r.transitionFactTargets = append(r.transitionFactTargets, target)
+	r.transitionedFacts = append(r.transitionedFacts, replacement)
+	return &replacement, &model.BodyStateRevision{Revision: 2}, nil
+}
+func (r *fakeBodyStateRepository) AcceptCurrentFactCandidate(_ context.Context, _ uuid.UUID, _ *int64, candidateID uuid.UUID, _ time.Time, _ string) (*model.BodyStateFact, *model.BodyStateRevision, error) {
+	for index := range r.upsertedFacts {
+		if r.upsertedFacts[index].ID == candidateID {
+			r.upsertedFacts[index].ReviewState = "confirmed"
+			r.upsertedFacts[index].ExcludedFromReasoning = false
+			fact := r.upsertedFacts[index]
+			return &fact, &model.BodyStateRevision{Revision: 4}, nil
+		}
+	}
+	return nil, nil, nil
+}
 func (r *fakeBodyStateRepository) UpdateFactTemporal(context.Context, uuid.UUID, *int64, uuid.UUID, string, string, *time.Time, string) (*model.BodyStateFact, *model.BodyStateRevision, error) {
 	return nil, nil, nil
 }
@@ -81,12 +111,70 @@ func (r *fakeBodyStateRepository) UpsertObservation(_ context.Context, userID uu
 	}
 	return &observation, &model.BodyStateRevision{Revision: int64(len(r.upsertedObservations))}, nil
 }
+func (r *fakeBodyStateRepository) TransitionObservation(_ context.Context, userID uuid.UUID, _ *int64, _ uuid.UUID, replacement model.BodyStateObservation, _ string) (*model.BodyStateObservation, *model.BodyStateRevision, error) {
+	replacement.UserID = userID
+	r.transitionedObservations = append(r.transitionedObservations, replacement)
+	return &replacement, &model.BodyStateRevision{Revision: 2}, nil
+}
 func (r *fakeBodyStateRepository) UpdateObservationReviewState(_ context.Context, _ uuid.UUID, _ *int64, observationID uuid.UUID, reviewState, _ string) (*model.BodyStateObservation, *model.BodyStateRevision, error) {
 	return &model.BodyStateObservation{
 		ID: observationID, ReviewState: reviewState,
 		ExcludedFromReasoning: reviewState != "confirmed",
 	}, &model.BodyStateRevision{Revision: 4}, nil
 }
+func (r *fakeBodyStateRepository) ApplyCurrentContextPatch(_ context.Context, userID uuid.UUID, _ *int64, patch model.BodyStateCurrentContextPatch, _ string) (*model.BodyStateRevision, error) {
+	r.appliedPatches = append(r.appliedPatches, patch)
+	if r.current == nil {
+		r.current = &model.BodyState{UserID: userID, SafetyState: datatypes.JSON(`{}`)}
+	}
+	changed := false
+	for _, mutation := range patch.Facts {
+		next := make([]model.BodyStateFact, 0, len(r.current.Facts)+1)
+		for _, fact := range r.current.Facts {
+			if fact.Kind != mutation.Kind {
+				next = append(next, fact)
+			}
+		}
+		if mutation.Replacement != nil && mutation.Replacement.Value != "" {
+			fact := *mutation.Replacement
+			if fact.ID == uuid.Nil {
+				fact.ID = uuid.New()
+			}
+			fact.UserID = userID
+			fact.Kind = mutation.Kind
+			fact.LifecycleState = "active"
+			next = append(next, fact)
+		}
+		r.current.Facts = next
+		changed = true
+	}
+	for _, mutation := range patch.Observations {
+		next := make([]model.BodyStateObservation, 0, len(r.current.Observations)+1)
+		for _, observation := range r.current.Observations {
+			if observation.Kind != mutation.Kind {
+				next = append(next, observation)
+			}
+		}
+		if mutation.Replacement != nil {
+			observation := *mutation.Replacement
+			if observation.ID == uuid.Nil {
+				observation.ID = uuid.New()
+			}
+			observation.UserID = userID
+			observation.Kind = mutation.Kind
+			observation.LifecycleState = "active"
+			next = append(next, observation)
+		}
+		r.current.Observations = next
+		changed = true
+	}
+	if !changed {
+		return nil, nil
+	}
+	r.current.CurrentRevision++
+	return &model.BodyStateRevision{Revision: r.current.CurrentRevision}, nil
+}
+
 func (r *fakeBodyStateRepository) SetSafetyState(_ context.Context, _ uuid.UUID, state datatypes.JSON, _ string) (*model.BodyStateRevision, error) {
 	r.safetyStates = append(r.safetyStates, state)
 	return &model.BodyStateRevision{Revision: int64(len(r.safetyStates))}, nil
@@ -331,5 +419,93 @@ func TestBodyStateObservationCanonicalRegionRetainsLaterality(t *testing.T) {
 	}
 	if stored.BodyRegionID == nil || *stored.BodyRegionID != "knee.left" || stored.BodyRegion != "左膝" {
 		t.Fatalf("observation laterality must round-trip: %#v", stored)
+	}
+}
+
+func TestSetCurrentFactRoutesLifestyleChangeThroughAtomicContextPatch(t *testing.T) {
+	userID := uuid.New()
+	currentID := uuid.New()
+	repo := &fakeBodyStateRepository{current: &model.BodyState{
+		UserID:          userID,
+		CurrentRevision: 7,
+		Facts: []model.BodyStateFact{{
+			ID: currentID, UserID: userID,
+			Kind:           model.BodyStateFactKindLifestyleSleep,
+			Value:          "作息规律，通常睡 7-8 小时",
+			Details:        datatypes.JSON(`{"regularity":"regular"}`),
+			LifecycleState: "active",
+		}},
+	}}
+	svc := NewBodyStateService(repo)
+	expected := int64(7)
+	_, revision, err := svc.SetCurrentFact(
+		context.Background(), userID, &expected,
+		model.BodyStateFactKindLifestyleSleep,
+		&model.BodyStateFact{
+			Value:   "最近换夜班，通常凌晨 5 点睡",
+			Details: datatypes.JSON(`{"shift_work":true}`),
+			Origin:  "user_reported", ReviewState: "confirmed",
+		},
+		time.Date(2026, time.August, 27, 10, 0, 0, 0, time.UTC), "test",
+	)
+	if err != nil {
+		t.Fatalf("SetCurrentFact returned error: %v", err)
+	}
+	if revision == nil || len(repo.appliedPatches) != 1 {
+		t.Fatalf("expected one atomic context patch, revision=%v patches=%d", revision, len(repo.appliedPatches))
+	}
+	patch := repo.appliedPatches[0]
+	if len(patch.Facts) != 1 || patch.Facts[0].Kind != model.BodyStateFactKindLifestyleSleep {
+		t.Fatalf("unexpected patch: %#v", patch)
+	}
+	if patch.Facts[0].Replacement == nil || patch.Facts[0].Replacement.Value != "最近换夜班，通常凌晨 5 点睡" {
+		t.Fatalf("unexpected replacement: %#v", patch.Facts[0].Replacement)
+	}
+}
+
+func TestApplyCurrentContextPatchRejectsDuplicateKinds(t *testing.T) {
+	repo := &fakeBodyStateRepository{}
+	svc := NewBodyStateService(repo)
+	_, err := svc.ApplyCurrentContextPatch(context.Background(), uuid.New(), nil, model.BodyStateCurrentContextPatch{
+		Facts: []model.BodyStateCurrentFactMutation{
+			{Kind: model.BodyStateFactKindLifestyleActivity, Replacement: &model.BodyStateFact{Value: "久坐"}},
+			{Kind: model.BodyStateFactKindLifestyleActivity, Replacement: &model.BodyStateFact{Value: "久站"}},
+		},
+	}, "test")
+	if err == nil {
+		t.Fatal("duplicate singleton kinds must be rejected before repository mutation")
+	}
+	if len(repo.appliedPatches) != 0 {
+		t.Fatal("invalid patch must not reach repository")
+	}
+}
+
+func TestRecordLifestyleContextCreatesReviewableExcludedCandidate(t *testing.T) {
+	repo := &fakeBodyStateRepository{}
+	svc := NewBodyStateService(repo)
+	runID := uuid.New()
+	err := svc.RecordLifestyleContext(
+		context.Background(), uuid.New(), runID,
+		json.RawMessage(`{"section":"substances","summary":"每天喝两杯咖啡，不吸烟","details":{"caffeine_cups":2,"smoking":false}}`),
+	)
+	if err != nil {
+		t.Fatalf("RecordLifestyleContext returned error: %v", err)
+	}
+	if len(repo.upsertedFacts) != 1 {
+		t.Fatalf("expected one durable candidate, got %#v", repo.upsertedFacts)
+	}
+	fact := repo.upsertedFacts[0]
+	if fact.Kind != model.BodyStateFactKindLifestyleSubstances || fact.Value != "每天喝两杯咖啡，不吸烟" {
+		t.Fatalf("unexpected lifestyle candidate: %#v", fact)
+	}
+	if fact.ReviewState != "unverified" || fact.Origin != "ai_extracted" || !fact.ExcludedFromReasoning {
+		t.Fatalf("model-mediated extraction must remain reviewable and excluded: %#v", fact)
+	}
+	if fact.SourceKey != "consultation:"+runID.String()+":lifestyle:substances" {
+		t.Fatalf("unexpected idempotency key: %q", fact.SourceKey)
+	}
+	pending, err := svc.ListReviewableFacts(context.Background(), fact.UserID, 50)
+	if err != nil || len(pending) != 1 {
+		t.Fatalf("pending candidates=%#v err=%v", pending, err)
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/bodysense/api/internal/database"
@@ -80,6 +81,23 @@ func (r *BodyStateRepository) ListReviewableObservations(
 		Limit(limit).
 		Find(&observations).Error
 	return observations, err
+}
+
+func (r *BodyStateRepository) ListReviewableFacts(
+	ctx context.Context,
+	userID uuid.UUID,
+	limit int,
+) ([]model.BodyStateFact, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	var facts []model.BodyStateFact
+	err := database.FromContext(ctx, r.db).
+		Where("user_id = ? AND lifecycle_state = ? AND review_state = ?", userID, "active", "unverified").
+		Order("created_at ASC").
+		Limit(limit).
+		Find(&facts).Error
+	return facts, err
 }
 
 func (r *BodyStateRepository) ListRecentRevisions(ctx context.Context, userID uuid.UUID, limit int) ([]model.BodyStateRevision, error) {
@@ -234,6 +252,194 @@ func (r *BodyStateRepository) CorrectFact(
 	return &stored, committed, nil
 }
 
+// TransitionFact records a real change over time: the previous claim remains
+// durable history, is closed at effectiveAt, and a new active fact supersedes it.
+// Use CorrectFact instead when the previous claim itself was wrong.
+func (r *BodyStateRepository) TransitionFact(
+	ctx context.Context,
+	userID uuid.UUID,
+	expectedRevision *int64,
+	targetFactID uuid.UUID,
+	replacement model.BodyStateFact,
+	effectiveAt time.Time,
+	source string,
+) (*model.BodyStateFact, *model.BodyStateRevision, error) {
+	var stored model.BodyStateFact
+	var committed *model.BodyStateRevision
+	if effectiveAt.IsZero() {
+		effectiveAt = time.Now().UTC()
+	} else {
+		effectiveAt = effectiveAt.UTC()
+	}
+
+	err := database.FromContext(ctx, r.db).Transaction(func(tx *gorm.DB) error {
+		state, next, err := bodyStateLockNextRevision(ctx, tx, userID, expectedRevision)
+		if err != nil {
+			return err
+		}
+		var previous model.BodyStateFact
+		if err := tx.WithContext(ctx).Where("id = ? AND user_id = ?", targetFactID, userID).First(&previous).Error; err != nil {
+			return err
+		}
+		if previous.LifecycleState != "active" {
+			return fmt.Errorf("cannot transition non-active fact %s", targetFactID)
+		}
+		if previous.ValidFrom != nil && effectiveAt.Before(previous.ValidFrom.UTC()) {
+			return fmt.Errorf("fact transition time precedes current fact validity")
+		}
+		if replacement.Kind == "" {
+			replacement.Kind = previous.Kind
+		}
+		if replacement.Kind != previous.Kind {
+			return fmt.Errorf("fact transition must preserve kind %q", previous.Kind)
+		}
+
+		before := previous
+		if err := tx.WithContext(ctx).Model(&model.BodyStateFact{}).
+			Where("id = ? AND user_id = ?", targetFactID, userID).
+			Updates(map[string]any{
+				"lifecycle_state":  "inactive",
+				"valid_until":      effectiveAt,
+				"updated_revision": next,
+				"updated_at":       time.Now().UTC(),
+			}).Error; err != nil {
+			return err
+		}
+
+		bodyStateApplyFactDefaults(&replacement)
+		replacement.ID = uuid.New()
+		replacement.UserID = userID
+		replacement.SupersedesFactID = &targetFactID
+		replacement.ValidFrom = &effectiveAt
+		replacement.ValidUntil = nil
+		replacement.LifecycleState = "active"
+		replacement.CreatedRevision = next
+		replacement.UpdatedRevision = next
+		if err := tx.WithContext(ctx).Create(&replacement).Error; err != nil {
+			return err
+		}
+		stored = replacement
+		committed, err = bodyStatePersistRevision(ctx, tx, state, next, "fact.transitioned", source, map[string]any{
+			"previous":     before,
+			"replacement":  replacement,
+			"effective_at": effectiveAt,
+		})
+		return err
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	return &stored, committed, nil
+}
+
+// AcceptCurrentFactCandidate promotes an unverified AI-extracted candidate to
+// the confirmed singleton current fact for its kind. If a different confirmed
+// value is current, that value is closed at effectiveAt and the candidate
+// supersedes it in the same BodyState revision.
+func (r *BodyStateRepository) AcceptCurrentFactCandidate(
+	ctx context.Context,
+	userID uuid.UUID,
+	expectedRevision *int64,
+	candidateID uuid.UUID,
+	effectiveAt time.Time,
+	source string,
+) (*model.BodyStateFact, *model.BodyStateRevision, error) {
+	if effectiveAt.IsZero() {
+		effectiveAt = time.Now().UTC()
+	} else {
+		effectiveAt = effectiveAt.UTC()
+	}
+	var stored model.BodyStateFact
+	var committed *model.BodyStateRevision
+	err := database.FromContext(ctx, r.db).Transaction(func(tx *gorm.DB) error {
+		state, next, err := bodyStateLockNextRevision(ctx, tx, userID, expectedRevision)
+		if err != nil {
+			return err
+		}
+		var candidate model.BodyStateFact
+		if err := tx.WithContext(ctx).
+			Where("id = ? AND user_id = ?", candidateID, userID).
+			First(&candidate).Error; err != nil {
+			return err
+		}
+		if candidate.ReviewState != "unverified" || candidate.LifecycleState != "active" {
+			return fmt.Errorf("fact %s is not an active unverified candidate", candidateID)
+		}
+		current, err := bodyStateFindSingletonFact(ctx, tx, userID, candidate.Kind)
+		if err != nil {
+			return err
+		}
+		if current != nil && current.ValidFrom != nil && effectiveAt.Before(current.ValidFrom.UTC()) {
+			return fmt.Errorf("candidate acceptance time precedes current fact validity for %q", candidate.Kind)
+		}
+
+		if current != nil && bodyStateSameCurrentFactClaim(*current, candidate) {
+			if err := tx.WithContext(ctx).Model(&model.BodyStateFact{}).
+				Where("id = ? AND user_id = ?", candidate.ID, userID).
+				Updates(map[string]any{
+					"review_state":            "confirmed",
+					"lifecycle_state":         "inactive",
+					"excluded_from_reasoning": true,
+					"valid_until":             effectiveAt,
+					"updated_revision":        next,
+					"updated_at":              time.Now().UTC(),
+				}).Error; err != nil {
+				return err
+			}
+			if err := tx.WithContext(ctx).Where("id = ?", candidate.ID).First(&stored).Error; err != nil {
+				return err
+			}
+			committed, err = bodyStatePersistRevision(ctx, tx, state, next, "fact.candidate_accepted_duplicate", source, map[string]any{
+				"candidate": stored, "current_fact_id": current.ID,
+			})
+			return err
+		}
+
+		var previous *model.BodyStateFact
+		if current != nil {
+			before := *current
+			previous = &before
+			if err := tx.WithContext(ctx).Model(&model.BodyStateFact{}).
+				Where("id = ? AND user_id = ?", current.ID, userID).
+				Updates(map[string]any{
+					"lifecycle_state":  "inactive",
+					"valid_until":      effectiveAt,
+					"updated_revision": next,
+					"updated_at":       time.Now().UTC(),
+				}).Error; err != nil {
+				return err
+			}
+			candidate.SupersedesFactID = &current.ID
+		}
+		updates := map[string]any{
+			"review_state":            "confirmed",
+			"lifecycle_state":         "active",
+			"excluded_from_reasoning": false,
+			"valid_from":              effectiveAt,
+			"valid_until":             nil,
+			"supersedes_fact_id":      candidate.SupersedesFactID,
+			"updated_revision":        next,
+			"updated_at":              time.Now().UTC(),
+		}
+		if err := tx.WithContext(ctx).Model(&model.BodyStateFact{}).
+			Where("id = ? AND user_id = ?", candidate.ID, userID).
+			Updates(updates).Error; err != nil {
+			return err
+		}
+		if err := tx.WithContext(ctx).Where("id = ?", candidate.ID).First(&stored).Error; err != nil {
+			return err
+		}
+		committed, err = bodyStatePersistRevision(ctx, tx, state, next, "fact.candidate_accepted", source, map[string]any{
+			"candidate": stored, "previous": previous, "effective_at": effectiveAt,
+		})
+		return err
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	return &stored, committed, nil
+}
+
 // UpdateFactReviewState records explicit user review without changing origin,
 // value, or temporal truth. Confirming an AI-extracted fact is not a correction.
 func (r *BodyStateRepository) UpdateFactReviewState(
@@ -262,16 +468,18 @@ func (r *BodyStateRepository) UpdateFactReviewState(
 		default:
 			return fmt.Errorf("invalid fact review state %q", reviewState)
 		}
-		if before.ReviewState == reviewState {
+		excluded := reviewState == "rejected"
+		if before.ReviewState == reviewState && before.ExcludedFromReasoning == excluded {
 			stored = before
 			return nil
 		}
 		if err := tx.WithContext(ctx).Model(&model.BodyStateFact{}).
 			Where("id = ? AND user_id = ?", factID, userID).
 			Updates(map[string]any{
-				"review_state":     reviewState,
-				"updated_revision": next,
-				"updated_at":       time.Now().UTC(),
+				"review_state":            reviewState,
+				"excluded_from_reasoning": excluded,
+				"updated_revision":        next,
+				"updated_at":              time.Now().UTC(),
 			}).Error; err != nil {
 			return err
 		}
@@ -419,6 +627,74 @@ func (r *BodyStateRepository) UpsertObservation(
 	return &stored, committed, nil
 }
 
+// TransitionObservation closes the previous current measurement/observation and
+// creates a new one linked through supersedes_observation_id. Point-in-time
+// measurements therefore keep their history without turning UserProfile into a
+// mutable health record.
+func (r *BodyStateRepository) TransitionObservation(
+	ctx context.Context,
+	userID uuid.UUID,
+	expectedRevision *int64,
+	targetObservationID uuid.UUID,
+	replacement model.BodyStateObservation,
+	source string,
+) (*model.BodyStateObservation, *model.BodyStateRevision, error) {
+	var stored model.BodyStateObservation
+	var committed *model.BodyStateRevision
+
+	err := database.FromContext(ctx, r.db).Transaction(func(tx *gorm.DB) error {
+		state, next, err := bodyStateLockNextRevision(ctx, tx, userID, expectedRevision)
+		if err != nil {
+			return err
+		}
+		var previous model.BodyStateObservation
+		if err := tx.WithContext(ctx).Where("id = ? AND user_id = ?", targetObservationID, userID).First(&previous).Error; err != nil {
+			return err
+		}
+		if previous.LifecycleState != "active" {
+			return fmt.Errorf("cannot transition non-active observation %s", targetObservationID)
+		}
+		if replacement.Kind == "" {
+			replacement.Kind = previous.Kind
+		}
+		if replacement.Kind != previous.Kind {
+			return fmt.Errorf("observation transition must preserve kind %q", previous.Kind)
+		}
+
+		before := previous
+		if err := tx.WithContext(ctx).Model(&model.BodyStateObservation{}).
+			Where("id = ? AND user_id = ?", targetObservationID, userID).
+			Updates(map[string]any{
+				"lifecycle_state":  "inactive",
+				"updated_revision": next,
+				"updated_at":       time.Now().UTC(),
+			}).Error; err != nil {
+			return err
+		}
+
+		bodyStateApplyObservationDefaults(&replacement)
+		replacement.ID = uuid.New()
+		replacement.UserID = userID
+		replacement.SupersedesObservationID = &targetObservationID
+		replacement.LifecycleState = "active"
+		replacement.CreatedRevision = next
+		replacement.UpdatedRevision = next
+		if err := tx.WithContext(ctx).Create(&replacement).Error; err != nil {
+			return err
+		}
+		stored = replacement
+		committed, err = bodyStatePersistRevision(ctx, tx, state, next, "observation.transitioned", source, map[string]any{
+			"previous":    before,
+			"replacement": replacement,
+		})
+		return err
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	return &stored, committed, nil
+}
+
 func (r *BodyStateRepository) UpdateObservationReviewState(
 	ctx context.Context,
 	userID uuid.UUID,
@@ -505,6 +781,228 @@ func (r *BodyStateRepository) SetSafetyState(
 		return err
 	})
 	return committed, err
+}
+
+// ApplyCurrentContextPatch applies one semantically coherent user context
+// mutation under one aggregate lock and produces at most one revision. It is the
+// batch primitive behind multi-field Lifestyle/body-metrics saves.
+func (r *BodyStateRepository) ApplyCurrentContextPatch(
+	ctx context.Context,
+	userID uuid.UUID,
+	expectedRevision *int64,
+	patch model.BodyStateCurrentContextPatch,
+	source string,
+) (*model.BodyStateRevision, error) {
+	var committed *model.BodyStateRevision
+	err := database.FromContext(ctx, r.db).Transaction(func(tx *gorm.DB) error {
+		state, next, err := bodyStateLockNextRevision(ctx, tx, userID, expectedRevision)
+		if err != nil {
+			return err
+		}
+		factChanges := make([]map[string]any, 0, len(patch.Facts))
+		observationChanges := make([]map[string]any, 0, len(patch.Observations))
+
+		for _, mutation := range patch.Facts {
+			kind := strings.TrimSpace(mutation.Kind)
+			if kind == "" {
+				return errors.New("current fact mutation kind is required")
+			}
+			current, err := bodyStateFindSingletonFact(ctx, tx, userID, kind)
+			if err != nil {
+				return err
+			}
+			effectiveAt := mutation.EffectiveAt.UTC()
+			if mutation.EffectiveAt.IsZero() {
+				effectiveAt = time.Now().UTC()
+			}
+			if current != nil && current.ValidFrom != nil && effectiveAt.Before(current.ValidFrom.UTC()) {
+				return fmt.Errorf("fact transition time precedes current fact validity for %q", kind)
+			}
+
+			if mutation.Replacement == nil || strings.TrimSpace(mutation.Replacement.Value) == "" {
+				if current == nil {
+					continue
+				}
+				before := *current
+				if err := tx.WithContext(ctx).Model(&model.BodyStateFact{}).
+					Where("id = ? AND user_id = ?", current.ID, userID).
+					Updates(map[string]any{
+						"lifecycle_state":  "inactive",
+						"valid_until":      effectiveAt,
+						"updated_revision": next,
+						"updated_at":       time.Now().UTC(),
+					}).Error; err != nil {
+					return err
+				}
+				factChanges = append(factChanges, map[string]any{
+					"kind": kind, "action": "closed", "previous": before, "effective_at": effectiveAt,
+				})
+				continue
+			}
+
+			candidate := *mutation.Replacement
+			candidate.Kind = kind
+			candidate.Value = strings.TrimSpace(candidate.Value)
+			bodyStateApplyFactDefaults(&candidate)
+			candidate.LifecycleState = "active"
+			candidate.ValidUntil = nil
+			if current != nil && bodyStateSameCurrentFactClaim(*current, candidate) {
+				continue
+			}
+			if current != nil {
+				before := *current
+				if err := tx.WithContext(ctx).Model(&model.BodyStateFact{}).
+					Where("id = ? AND user_id = ?", current.ID, userID).
+					Updates(map[string]any{
+						"lifecycle_state":  "inactive",
+						"valid_until":      effectiveAt,
+						"updated_revision": next,
+						"updated_at":       time.Now().UTC(),
+					}).Error; err != nil {
+					return err
+				}
+				candidate.SupersedesFactID = &current.ID
+				factChanges = append(factChanges, map[string]any{
+					"kind": kind, "action": "transitioned", "previous": before, "replacement": candidate,
+					"effective_at": effectiveAt,
+				})
+			} else {
+				factChanges = append(factChanges, map[string]any{
+					"kind": kind, "action": "added", "replacement": candidate, "effective_at": effectiveAt,
+				})
+			}
+			candidate.ID = uuid.New()
+			candidate.UserID = userID
+			candidate.ValidFrom = &effectiveAt
+			candidate.CreatedRevision = next
+			candidate.UpdatedRevision = next
+			if err := tx.WithContext(ctx).Create(&candidate).Error; err != nil {
+				return err
+			}
+			// Replace the pre-create copy in revision details with durable identity.
+			factChanges[len(factChanges)-1]["replacement"] = candidate
+		}
+
+		for _, mutation := range patch.Observations {
+			kind := strings.TrimSpace(mutation.Kind)
+			if kind == "" {
+				return errors.New("current observation mutation kind is required")
+			}
+			current, err := bodyStateFindSingletonObservation(ctx, tx, userID, kind)
+			if err != nil {
+				return err
+			}
+			if mutation.Replacement == nil {
+				if current == nil {
+					continue
+				}
+				before := *current
+				if err := tx.WithContext(ctx).Model(&model.BodyStateObservation{}).
+					Where("id = ? AND user_id = ?", current.ID, userID).
+					Updates(map[string]any{
+						"lifecycle_state":  "inactive",
+						"updated_revision": next,
+						"updated_at":       time.Now().UTC(),
+					}).Error; err != nil {
+					return err
+				}
+				observationChanges = append(observationChanges, map[string]any{
+					"kind": kind, "action": "closed", "previous": before,
+				})
+				continue
+			}
+
+			candidate := *mutation.Replacement
+			candidate.Kind = kind
+			bodyStateApplyObservationDefaults(&candidate)
+			candidate.LifecycleState = "active"
+			if current != nil && bodyStateSameCurrentObservationClaim(*current, candidate) {
+				continue
+			}
+			if current != nil {
+				before := *current
+				if err := tx.WithContext(ctx).Model(&model.BodyStateObservation{}).
+					Where("id = ? AND user_id = ?", current.ID, userID).
+					Updates(map[string]any{
+						"lifecycle_state":  "inactive",
+						"updated_revision": next,
+						"updated_at":       time.Now().UTC(),
+					}).Error; err != nil {
+					return err
+				}
+				candidate.SupersedesObservationID = &current.ID
+				observationChanges = append(observationChanges, map[string]any{
+					"kind": kind, "action": "transitioned", "previous": before, "replacement": candidate,
+				})
+			} else {
+				observationChanges = append(observationChanges, map[string]any{
+					"kind": kind, "action": "added", "replacement": candidate,
+				})
+			}
+			candidate.ID = uuid.New()
+			candidate.UserID = userID
+			candidate.CreatedRevision = next
+			candidate.UpdatedRevision = next
+			if err := tx.WithContext(ctx).Create(&candidate).Error; err != nil {
+				return err
+			}
+			observationChanges[len(observationChanges)-1]["replacement"] = candidate
+		}
+
+		if len(factChanges) == 0 && len(observationChanges) == 0 {
+			return nil
+		}
+		committed, err = bodyStatePersistRevision(ctx, tx, state, next, "current_context.updated", source, map[string]any{
+			"facts": factChanges, "observations": observationChanges,
+		})
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return committed, nil
+}
+
+func bodyStateFindSingletonFact(ctx context.Context, tx *gorm.DB, userID uuid.UUID, kind string) (*model.BodyStateFact, error) {
+	var items []model.BodyStateFact
+	if err := tx.WithContext(ctx).
+		Where("user_id = ? AND kind = ? AND lifecycle_state = ? AND review_state = ? AND excluded_from_reasoning = FALSE", userID, kind, "active", "confirmed").
+		Limit(2).Find(&items).Error; err != nil {
+		return nil, err
+	}
+	if len(items) > 1 {
+		return nil, fmt.Errorf("multiple active facts exist for singleton kind %q", kind)
+	}
+	if len(items) == 0 {
+		return nil, nil
+	}
+	return &items[0], nil
+}
+
+func bodyStateFindSingletonObservation(ctx context.Context, tx *gorm.DB, userID uuid.UUID, kind string) (*model.BodyStateObservation, error) {
+	var items []model.BodyStateObservation
+	if err := tx.WithContext(ctx).
+		Where("user_id = ? AND kind = ? AND lifecycle_state = ? AND excluded_from_reasoning = FALSE", userID, kind, "active").
+		Limit(2).Find(&items).Error; err != nil {
+		return nil, err
+	}
+	if len(items) > 1 {
+		return nil, fmt.Errorf("multiple active observations exist for singleton kind %q", kind)
+	}
+	if len(items) == 0 {
+		return nil, nil
+	}
+	return &items[0], nil
+}
+
+func bodyStateSameCurrentFactClaim(current, candidate model.BodyStateFact) bool {
+	return strings.TrimSpace(current.Value) == strings.TrimSpace(candidate.Value) &&
+		bodyStateSameJSON(current.Details, candidate.Details, `{}`)
+}
+
+func bodyStateSameCurrentObservationClaim(current, candidate model.BodyStateObservation) bool {
+	return bodyStateSameJSON(current.Value, candidate.Value, `{}`) &&
+		bodyStateSameJSON(current.Condition, candidate.Condition, `{}`)
 }
 
 func bodyStateLockNextRevision(ctx context.Context, tx *gorm.DB, userID uuid.UUID, expected *int64) (*model.BodyState, int64, error) {

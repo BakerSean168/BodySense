@@ -30,7 +30,7 @@ def _deps(evidence_searcher: EvidenceSearcher | None = None) -> DiagnosisDepende
             "observations": [],
         },
         relevant_history=[{"revision": 11, "change_type": "fact.temporal_changed"}],
-        profile={"age": 30},
+        profile={"gender": "female", "birth_date": "1996-08-27", "age_years": 30},
         evidence_searcher=evidence_searcher,
     )
 

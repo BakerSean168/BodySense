@@ -40,11 +40,13 @@ type TreatmentRecommendationRequest struct {
 }
 
 type AssessmentGenerationRequest struct {
-	ConfigurationID string          `json:"configuration_id"`
-	Profile         json.RawMessage `json:"profile"`
-	RAGContext      string          `json:"rag_context,omitempty"`
-	Images          []string        `json:"images,omitempty"`
-	PostureAnalysis json.RawMessage `json:"posture_analysis,omitempty"`
+	ConfigurationID  string          `json:"configuration_id"`
+	Profile          json.RawMessage `json:"profile"`
+	BodyState        json.RawMessage `json:"body_state"`
+	ReportIndicators json.RawMessage `json:"report_indicators,omitempty"`
+	RAGContext       string          `json:"rag_context,omitempty"`
+	Images           []string        `json:"images,omitempty"`
+	PostureAnalysis  json.RawMessage `json:"posture_analysis,omitempty"`
 }
 
 type AIClient struct {
@@ -224,6 +226,7 @@ var consultationInternalEventChannels = map[string]string{
 	"tool.call":                       "tool",
 	"tool.result":                     "tool",
 	"state.extracted_info.upsert":     "state",
+	"state.lifestyle_context.upsert":  "state",
 	"state.interaction.required":      "state",
 	"state.phase.changed":             "state",
 	"source.citation.added":           "source",
@@ -348,6 +351,13 @@ func validateConsultationInternalEvent(event dto.StreamEvent) error {
 		}
 		if err := event.PayloadAs(&payload); err != nil || len(payload.Info) == 0 {
 			return fmt.Errorf("extracted-info payload is malformed")
+		}
+	case "state.lifestyle_context.upsert":
+		var payload struct {
+			Context json.RawMessage `json:"context"`
+		}
+		if err := event.PayloadAs(&payload); err != nil || len(payload.Context) == 0 {
+			return fmt.Errorf("lifestyle-context payload is malformed")
 		}
 	case "state.interaction.required":
 		var payload struct {

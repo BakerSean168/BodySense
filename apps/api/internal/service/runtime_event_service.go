@@ -76,6 +76,7 @@ func ShouldPersistEvent(eventType string) bool {
 		"tool.call",
 		"tool.result",
 		"state.extracted_info.upsert",
+		"state.lifestyle_context.upsert",
 		"state.phase.changed",
 		"source.citation.added",
 		"source.answer_attribution.added",

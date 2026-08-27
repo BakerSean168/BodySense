@@ -79,7 +79,7 @@ async def test_generate_diagnosis_uses_exact_body_state_revision() -> None:
         configuration_id=CONFIG_ID,
         body_state=_body_state(12),
         relevant_history=[{"revision": 11, "change_type": "fact.temporal_changed"}],
-        profile={"age": 30},
+        profile={"gender": "female", "birth_date": "1996-08-27", "age_years": 30},
     )
 
     assert result["status"] == "completed"

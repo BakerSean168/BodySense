@@ -70,7 +70,7 @@ def test_dependencies_pin_exact_body_state_revision() -> None:
         body_state_revision=42,
         body_state={"current_revision": 42, "facts": [], "observations": []},
         relevant_history=[{"revision": 41, "change_type": "fact.temporal_changed"}],
-        profile={"age": 30},
+        profile={"gender": "female", "birth_date": "1996-08-27", "age_years": 30},
     )
     assert deps.body_state_revision == 42
     assert deps.body_state["current_revision"] == 42

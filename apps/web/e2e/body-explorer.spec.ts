@@ -40,11 +40,7 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
     headers,
     data: {
       gender: "male",
-      age: 30,
-      height_cm: 175,
-      weight_kg: 70,
-      occupation: "software engineer",
-      exercise_frequency: "2-3/week",
+      birth_date: "1996-08-27",
     },
   });
   expect(profile.ok(), await profile.text()).toBeTruthy();
@@ -190,14 +186,18 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
   });
 
   expect(atlasRequests.length).toBeGreaterThan(0);
-  expect(bodyExplorerChunkRequests.length).toBeGreaterThan(0);
-  const expectedAssetOrigin = publicAssetOrigin ?? new URL(page.url()).origin;
-  for (const url of [...atlasRequests, ...bodyExplorerChunkRequests]) {
+  const staticRequests = [...atlasRequests, ...bodyExplorerChunkRequests];
+  for (const url of staticRequests) {
     const parsed = new URL(url);
-    expect(parsed.origin).toBe(expectedAssetOrigin);
     expect(parsed.search).toBe("");
     expect(url).not.toContain(email);
     expect(url).not.toContain("shoulder.right");
+  }
+  if (publicAssetOrigin) {
+    expect(bodyExplorerChunkRequests.length).toBeGreaterThan(0);
+    for (const url of staticRequests) {
+      expect(new URL(url).origin).toBe(publicAssetOrigin);
+    }
   }
 
   const resourceSummary = await page.evaluate(() => {

@@ -157,6 +157,7 @@ type fakeRuntimeBodyState struct {
 	extractedErr   error
 	safetyErr      error
 	interactionErr error
+	lifestyleErr   error
 }
 
 func (f *fakeRuntimeBodyState) GetSnapshot(context.Context, uuid.UUID, int) (*service.BodyStateSnapshot, error) {
@@ -165,6 +166,10 @@ func (f *fakeRuntimeBodyState) GetSnapshot(context.Context, uuid.UUID, int) (*se
 
 func (f *fakeRuntimeBodyState) UpsertExtractedSymptom(context.Context, uuid.UUID, uuid.UUID, json.RawMessage) error {
 	return f.extractedErr
+}
+
+func (f *fakeRuntimeBodyState) RecordLifestyleContext(context.Context, uuid.UUID, uuid.UUID, json.RawMessage) error {
+	return f.lifestyleErr
 }
 
 func (f *fakeRuntimeBodyState) RecordSafetyEvent(context.Context, uuid.UUID, json.RawMessage) error {

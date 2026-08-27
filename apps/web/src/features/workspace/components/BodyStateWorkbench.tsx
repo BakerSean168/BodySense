@@ -41,9 +41,21 @@ const factKindLabels: Record<string, string> = {
   discomfort: "不适 / 症状",
   limitation: "活动受限",
   lifestyle: "生活方式",
+  "lifestyle.activity": "生活方式 · 日常活动",
+  "lifestyle.sleep": "生活方式 · 睡眠作息",
+  "lifestyle.exercise": "生活方式 · 运动",
+  "lifestyle.nutrition": "生活方式 · 饮食节律",
+  "lifestyle.substances": "生活方式 · 相关摄入",
+  "lifestyle.recovery": "生活方式 · 恢复压力",
+  "history.injury_summary": "既往伤病摘要",
   negative_finding: "阴性发现",
   red_flags: "安全信号",
   safety_finding: "安全发现",
+};
+
+const observationKindLabels: Record<string, string> = {
+  "anthropometry.height": "身体测量 · 身高",
+  "anthropometry.weight": "身体测量 · 体重",
 };
 
 const trendLabels: Record<string, string> = {
@@ -715,7 +727,7 @@ export function BodyStateWorkbench({
                 className="border-b border-border/40 py-2 last:border-b-0"
               >
                 <span className="font-medium text-foreground">
-                  {observation.kind}
+                  {observationKindLabels[observation.kind] || observation.kind}
                 </span>
                 {observation.body_region ? ` · ${observation.body_region}` : ""}
                 <p className="mt-1 leading-5">

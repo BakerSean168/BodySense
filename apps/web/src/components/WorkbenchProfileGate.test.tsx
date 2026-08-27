@@ -7,7 +7,8 @@ import { useProfileStore, type UserProfile } from "@/stores/profileStore";
 const profile: UserProfile = {
   id: "profile-1",
   user_id: "user-1",
-  age: 30,
+  birth_date: "1996-08-27",
+  age_years: 30,
   created_at: "2026-08-26T00:00:00Z",
   updated_at: "2026-08-26T00:00:00Z",
 };

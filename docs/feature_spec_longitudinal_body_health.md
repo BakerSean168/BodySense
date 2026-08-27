@@ -74,21 +74,55 @@ The implementation may use many Runs, Turns, checkpoints, projections, or intern
 
 ## 3. First-use Experience
 
-On first use, BodySense should collect enough stable profile context to make consultation useful without forcing the user through a large medical intake form.
+Onboarding is a **capture flow**, not the owner of a second health record. It may ask several kinds
+of questions, but submission routes each answer to the domain that owns it.
 
-Possible onboarding information:
+```text
+Stable identity
+  -> UserProfile
+     - birth_date
+     - gender
 
-- birth date / age;
-- sex where relevant and voluntarily provided;
-- height / weight where useful;
-- occupation / typical activity pattern;
-- current exercise habits;
-- major known injury history;
-- optional posture photos or external reports.
+Current body measurements
+  -> BodyState Observations
+     - anthropometry.height
+     - anthropometry.weight
 
-Time-varying information such as sitting hours, exercise frequency, and sleep pattern should subsequently be treated as longitudinal BodyState data rather than immutable profile fields.
+Current lifestyle context
+  -> BodyState Facts
+     - lifestyle.activity
+     - lifestyle.sleep
+     - lifestyle.exercise
+     - lifestyle.nutrition
+     - lifestyle.substances
+     - lifestyle.recovery
 
-The user can immediately begin talking even if onboarding is incomplete.
+Important injury/surgery summary
+  -> BodyState Fact
+     - history.injury_summary
+
+Photos / external reports
+  -> existing upload / observation pipelines
+```
+
+The UI should still feel like one friendly onboarding flow. The user does not need to know these
+storage boundaries. Submission uses one coordinated application command: stable Profile and the
+initial BodyState patch participate in one database transaction, while all mutable baseline fields
+share one BodyState revision.
+
+Lifestyle questions prefer natural language over false precision. Exercise may retain lightweight
+frequency choices; sleep must support shift work and irregular schedules; nutrition captures only
+health-relevant rhythm/context rather than calorie tracking.
+
+Current symptoms, goals, concerns, and generic free-form “self description” remain Consultation /
+BodyState concerns rather than onboarding Profile fields.
+
+After onboarding, the same taxonomy can be updated from the dedicated Lifestyle editor or naturally
+through Consultation. Direct editor updates are confirmed user edits. Consultation-derived lifestyle
+normalization is first persisted as an excluded, unverified candidate and shown in the Lifestyle UI;
+only explicit user acceptance promotes it to current truth. A real accepted later change creates
+temporal history instead of overwriting the old state. The user can begin talking even if optional
+lifestyle sections are incomplete.
 
 ---
 
@@ -104,7 +138,24 @@ Example:
 
 The user should not need to know anatomy or rehabilitation terminology first.
 
-### 4.2 Just-in-time health vocabulary
+### 4.2 Conversational lifestyle capture is reviewable memory
+
+When the user explicitly describes a lifestyle state or change, the Consultation Agent may call
+`record_lifestyle_context`. The normalized result is durable immediately so the information is not
+lost across sessions, but it is stored as:
+
+```text
+ai_extracted
+unverified
+excluded_from_reasoning = true
+```
+
+The “生活方式” UI shows these items as “对话中识别到的待确认更新”. Confirming one promotes it to
+the current confirmed fact and closes any previous confirmed value with temporal supersession.
+Ignoring one marks it rejected and keeps it excluded. The assistant must never silently convert the
+model's normalization into long-term health truth.
+
+### 4.3 Just-in-time health vocabulary
 
 When a description is ambiguous, the AI teaches vocabulary at the moment it becomes useful.
 
@@ -121,7 +172,7 @@ UI may show compact explanation cards for:
 
 Educational content is optional support, not a mandatory prerequisite course.
 
-### 4.3 RAG during consultation
+### 4.4 RAG during consultation
 
 Consultation may use knowledge retrieval to:
 
@@ -134,7 +185,7 @@ Consultation may use knowledge retrieval to:
 
 RAG content is Evidence, not a user Body Fact.
 
-### 4.4 Structured questions / ask_user
+### 4.5 Structured questions / ask_user
 
 Blocking structured questions should be used when the missing answer materially affects safety or reliable next reasoning.
 
@@ -505,7 +556,7 @@ The target user-facing navigation can remain small:
 2. **Diagnosis History** — historical analyses and comparison.
 3. **Treatment / Training** — current plan, execution, adherence, feedback.
 4. **Body Trends** — body-state history, activity/symptom trends, observations.
-5. **Profile / Data** — relatively stable identity/profile, uploads, privacy controls.
+5. **Profile / Data** — stable identity + BodyState-backed body measurements, dedicated Lifestyle projection, uploads, and privacy controls.
 
 These may initially be tabs/subroutes rather than five completely separate product sections.
 

@@ -529,6 +529,27 @@ async def execute_tool(state: ConsultationThreadState, *, writer: StreamWriter) 
             ),
         }
 
+    if tool_name == "record_lifestyle_context":
+        result = await executor.execute(tool_call_id, tool_name, arguments)
+        normalized = result.content if result.status == ToolStatus.SUCCESS else arguments
+        assert isinstance(normalized, dict), "record_lifestyle_context must return a dict"
+        writer({"type": "lifestyle_context", "context": normalized})
+        writer(
+            {
+                "type": "tool_result",
+                "id": tool_call_id,
+                "tool": tool_name,
+                "result": {"status": "ok"},
+            }
+        )
+        runtime_messages.append(
+            {"role": "tool", "tool_call_id": tool_call_id, "content": "生活方式信息已记录。"}
+        )
+        return {
+            "runtime_messages": runtime_messages,
+            "pending_tool_calls": remaining,
+        }
+
     if tool_name == "search_knowledge":
         result = await executor.execute(tool_call_id, tool_name, arguments)
         has_results = False
@@ -837,6 +858,12 @@ def _map_internal_event(
             channel="state",
             event_type="state.extracted_info.upsert",
             payload={"info": event_data.get("info", {})},
+        )
+    if event_type == "lifestyle_context":
+        return factory.next(
+            channel="state",
+            event_type="state.lifestyle_context.upsert",
+            payload={"context": event_data.get("context", {})},
         )
     if event_type == "phase_change":
         return factory.next(

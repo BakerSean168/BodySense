@@ -42,6 +42,8 @@ class AssessmentService:
     async def generate_assessment(
         self,
         profile: dict[str, Any],
+        body_state: dict[str, Any] | None = None,
+        report_indicators: list[Any] | None = None,
         rag_context: str = "",
         images: list[str] | None = None,
         posture_analysis: dict[str, Any] | None = None,
@@ -54,6 +56,8 @@ class AssessmentService:
         )
         deps = AssessmentDependencies(
             profile=profile,
+            body_state=body_state or {},
+            report_indicators=report_indicators or [],
             posture_analysis=posture_analysis or {},
             rag_context=rag_context,
         )
