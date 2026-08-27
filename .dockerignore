@@ -24,3 +24,6 @@ apps/ai-service/**/*.mp4
 apps/ai-service/**/*.wav
 
 !.env.production
+
+# Never send locally generated atlas binaries in the Docker build context.
+apps/web/public/static/anatomy/vanatome/

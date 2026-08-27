@@ -123,6 +123,8 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.web
+      args:
+        BODYSENSE_ANATOMY_ATLAS_VERSION: ${BODYSENSE_ANATOMY_ATLAS_VERSION:-1.4.0}
     restart: unless-stopped
     ports:
       - '${STAGING_BIND_HOST:-127.0.0.1}:${STAGING_WEB_PORT:-20150}:80'
