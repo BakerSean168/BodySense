@@ -1,0 +1,28 @@
+BodySense redistribution notice — Vanatome Human Atlas 1.4.0
+
+Upstream project: https://github.com/vixotic/Vanatome
+Upstream atlas catalog: https://atlas.vanatome.vixotic.in/releases/1.4.0/catalog.json
+Atlas ID/version: vanatome-human / 1.4.0
+Atlas build ID: 994e6cc8ffbb212e
+Source anatomy project: https://github.com/Z-Anatomy/Models
+Atlas license: Creative Commons Attribution-ShareAlike 4.0 International
+License URL: https://creativecommons.org/licenses/by-sa/4.0/
+
+The Vanatome viewer/software and the anatomy atlas are separate licensing surfaces.
+Vanatome software is MIT licensed. The Z-Anatomy-derived atlas material remains
+CC BY-SA 4.0 as described by the upstream attribution/provenance notice.
+
+BodySense modification statement:
+BodySense does not modify the upstream 1.4.0 catalog, metadata, attribution, or
+GLB bytes in this redistributed release. The verified upstream files are mirrored
+byte-for-byte into a BodySense-controlled, version-scoped static directory and
+packaged into the BodySense Web OCI image. BodySense adds only this provenance
+notice and a copy of the CC BY-SA 4.0 legal code. Path names inside the mirrored
+upstream release are preserved so the catalog's relative references continue to
+resolve without rewriting the upstream catalog.
+
+Integrity authority:
+scripts/anatomy/vanatome-1.4.0.manifest.json
+
+No user, BodyState, symptom, diagnosis, treatment, conversation, or other health
+information is part of the atlas release or required by its static asset URLs.

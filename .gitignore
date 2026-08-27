@@ -7,6 +7,8 @@ node_modules/
 # Build output
 dist/
 build/
+# Generated anatomy atlas mirror (~92 MiB for 1.4.0); acquired and verified at build/release time.
+apps/web/public/static/anatomy/vanatome/
 
 # Environment
 .env
