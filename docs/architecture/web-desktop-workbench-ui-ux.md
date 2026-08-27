@@ -75,44 +75,40 @@ Default views show summaries and next actions. Revision history, provenance, evi
 
 ### 2.6 Theme unity
 
-Chat and workspace always share one global theme. A dark chat panel beside a light workspace is prohibited. The current release deliberately forces one coherent light theme while the remaining non-workbench routes are migrated to semantic tokens; the provider and dark-token foundation stay global so theme switching can be enabled later without pane-local themes.
+Chat and workspace share one coherent dark graphite application theme while using distinct surface elevations. The conversation surface is intentionally darker; the business workspace is a slightly lighter neutral graphite. This is one theme hierarchy, not independent pane-local themes. BodySense green remains a semantic accent for selection, positive status and focus rather than the dominant application background.
 
 ## 3. Information architecture
 
 ### 3.1 Global application shell
 
-The non-workbench application uses a compact navigation rail rather than a permanent 256px sidebar.
+The primary BodySense product experience is the immersive single Workbench page. A permanent application sidebar/navigation rail is intentionally not part of the primary shell.
 
 ```text
-ApplicationFrame
-├── NavigationRail
-│   ├── Brand
-│   ├── Dashboard
-│   ├── Profile
-│   ├── Consultation
-│   ├── Assessment
-│   └── History
-├── GlobalTopBar
-│   ├── Current section
-│   └── User menu
-└── Route content
+BodySenseWorkbench
+├── compact top toolbar
+│   ├── chat collapse/expand
+│   ├── State / Diagnosis / Treatment / Progress
+│   └── user menu
+├── collapsible single AI conversation
+└── health workspace
 ```
 
-The workbench route uses an immersive variant with its own domain toolbar.
+Secondary account/profile/configuration surfaces should open as drawers/dialogs or narrowly scoped routes when needed, without reintroducing a dashboard-style navigation shell.
 
 ### 3.2 Workbench toolbar
 
-- left: chat expand/collapse control and conversation/history access;
+- left: chat expand/collapse control;
 - center: route-addressable workspace tabs;
-- right: BodyState revision summary and user menu;
+- right: compact user menu;
 - keyboard: `Cmd/Ctrl+B` toggles chat, number shortcuts may switch workspace tabs later.
+
+The user-facing product exposes one continuous AI relationship, so primary Workbench chrome does not expose New Chat, thread lists, model selectors, or conversation-history management.
 
 ### 3.3 Chat dock
 
 The chat dock contains:
 
-- compact conversation identity/history trigger;
-- active consultation thread;
+- the user's single continuous consultation thread;
 - streaming events, citations and human-in-the-loop cards;
 - composer with attachments;
 - resizable boundary;
@@ -131,12 +127,17 @@ Desktop defaults:
 
 #### State
 
-- body map with concern markers;
+- Vanatome-backed 3D Body Explorer as the target primary spatial surface;
+- BodySense-owned canonical BodyRegion selection and status projection;
+- full-body rotate/zoom/select/focus with anatomy drill-down on demand;
 - safety status;
 - current facts;
 - pending observations;
 - active hypotheses;
-- revision summary and edit actions.
+- edit actions;
+- current SVG body map retained only as the migration/WebGL fallback after ADR 0006 implementation.
+
+The 3D viewer must remain a spatial index over BodyState rather than a second health-truth model. Detailed anatomy is progressively disclosed after region selection; the default State UI remains region-oriented and low cognitive load.
 
 #### Diagnosis
 
@@ -168,12 +169,12 @@ Desktop defaults:
 ### 4.1 Desktop (>= 1100px)
 
 - workbench fills the viewport;
-- toolbar height: 56px;
+- toolbar is compact (current implementation: 48px);
 - chat and workspace are horizontally resizable;
-- workspace content uses a 12-column grid;
-- body map occupies 4–5 columns;
-- detail area occupies 7–8 columns;
-- focused mode may use a 4/4/4 or 5/7 layout depending on tab.
+- State uses a two-column `Body Explorer | BodyState detail` composition rather than a dashboard grid;
+- the Body Explorer column remains substantial enough for accurate 3D picking while the durable record column stays dominant;
+- non-State modes use a constrained reading width rather than stretching content across the full workspace;
+- focused mode expands the same workspace rather than changing information architecture.
 
 ### 4.2 Tablet (768–1099px)
 
@@ -243,15 +244,16 @@ Semantic tokens, not literal colors, drive components:
 
 Research is based on upstream project documentation and repositories current on 2026-08-17.
 
-| Project                          | Useful pattern                                                         | Decision                                                             |
-| -------------------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| `bvaughn/react-resizable-panels` | accessible resizable groups, collapsible panels, persisted layout APIs | Adopt for desktop chat/workspace split                               |
-| `assistant-ui/assistant-ui`      | composable chat primitives, streaming, attachments, accessibility      | Keep; BodySense already uses a custom runtime adapter                |
-| TanStack Query                   | `queryOptions`, colocated keys/functions, query/mutation separation    | Adopt query option factories and feature-owned mutation hooks        |
-| Base UI                          | accessible headless primitives with styling ownership                  | Keep as the low-level interactive primitive layer                    |
-| shadcn/ui                        | copied, composable application shell/sidebar patterns                  | Learn from composition; do not add a second opaque component runtime |
-| Twenty                           | feature/package boundaries, shared UI package, named exports           | Learn from feature ownership and explicit public entry points        |
-| LobeHub/Lobe UI                  | AI workspace visual hierarchy and theme consistency                    | Visual/interaction reference only; no direct dependency              |
+| Project                          | Useful pattern                                                                                                  | Decision                                                                  |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `bvaughn/react-resizable-panels` | accessible resizable groups, collapsible panels, persisted layout APIs                                          | Adopt for desktop chat/workspace split                                    |
+| `assistant-ui/assistant-ui`      | composable chat primitives, streaming, attachments, accessibility                                               | Keep; BodySense already uses a custom runtime adapter                     |
+| TanStack Query                   | `queryOptions`, colocated keys/functions, query/mutation separation                                             | Adopt query option factories and feature-owned mutation hooks             |
+| Base UI                          | accessible headless primitives with styling ownership                                                           | Keep as the low-level interactive primitive layer                         |
+| shadcn/ui                        | copied, composable application shell/sidebar patterns                                                           | Learn from composition; do not add a second opaque component runtime      |
+| Twenty                           | feature/package boundaries, shared UI package, named exports                                                    | Learn from feature ownership and explicit public entry points             |
+| LobeHub/Lobe UI                  | AI workspace visual hierarchy and theme consistency                                                             | Visual/interaction reference only; no direct dependency                   |
+| Vanatome                         | controlled React 3D anatomy viewer, stable anatomy IDs, focus/isolate/layers, versioned Z-Anatomy-derived atlas | Adopt via ADR 0006 behind BodySense BodyRegionOntology + adapter boundary |
 
 Primary references:
 
@@ -262,6 +264,8 @@ Primary references:
 - https://ui.shadcn.com/docs/components/radix/sidebar
 - https://github.com/twentyhq/twenty
 - https://github.com/lobehub/lobe-ui
+- https://github.com/vixotic/Vanatome
+- https://github.com/vixotic/Vanatome/blob/main/docs/atlas-contract.md
 
 ## 8. Non-goals
 
@@ -302,11 +306,10 @@ ConsultationPage
 ├── useThreadProjectionActions
 ├── useDiagnosisActions
 └── ConsultationWorkbenchShell
-    ├── resizable/collapsible chat Panel
-    ├── ConversationHistoryDrawer
+    ├── resizable/collapsible single chat Panel
     └── WorkspaceViewport
-        ├── BodyOverview
-        ├── State: BodyStateWorkbench
+        ├── State: BodyExplorer3D (target, ADR 0006) + BodyStateWorkbench
+        │   └── BodyOverview SVG fallback during migration/WebGL failure
         ├── Diagnosis: DiagnosisPanel + history
         ├── Treatment: TreatmentPanel
         └── Progress: OutcomeTrendsPanel

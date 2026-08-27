@@ -33,6 +33,14 @@ BodySense 当前业务领域的最高层设计以以下文档为准：
   _定义用户看到的长期健康工作台、Diagnosis 历史、当前 Treatment 与趋势交互。_
 - 🖥️ **[Desktop Workbench UI/UX](./web-desktop-workbench-ui-ux.md)**
   _定义 React 桌面工作台的 chat + workspace 布局、视觉语言、响应式行为与可访问性。_
+- 🧍 **[3D Body Explorer Architecture](./body-explorer-3d-anatomy.md)**
+  _采用 Vanatome + versioned anatomy atlas 构建 3D 身体空间界面，定义 viewer adapter、BodyState 双向联动、渐进式 anatomy drill-down、性能/回退/自托管边界。_
+- 🗺️ **[BodyRegionOntology](./body-region-ontology.md)**
+  _BodySense 自有 canonical BodyRegionId 体系；把长期 BodyState 的身体区域语义与 Vanatome anatomyId 解耦并建立版本化 mapping。_
+- 📦 **[3D Body Explorer Feature Spec](../feature_spec_3d_body_explorer.md)**
+  _定义用户可见的 3D region mode、anatomy drill-down、BodyState/Chat 联动、空状态、WebGL fallback 与验收标准。_
+- ⚖️ **[Anatomy Asset Governance](./anatomy-asset-governance.md)**
+  _定义 Vanatome/Z-Anatomy atlas 的 license boundary、immutable release、自托管、mapping 兼容性、升级与回滚。_
 
 如果旧文档与上述领域模型冲突，以 ADR 0004 + Longitudinal BodyState Domain Model 为准。
 
@@ -40,18 +48,18 @@ BodySense 当前业务领域的最高层设计以以下文档为准：
 
 以下文档定义系统各核心子模块的目标架构：
 
-| 文档                                                                      | 子模块         | 状态            | 说明                                                   |
-| ------------------------------------------------------------------------- | -------------- | --------------- | ------------------------------------------------------ |
-| [System Engineering Refactor Plan](./system-engineering-refactor-plan.md) | 总控计划       | 历史/需逐步对齐 | 早期系统级重构方案，遇到业务模型冲突时以新领域模型为准 |
-| [Context Engineering Architecture](./context-engineering-architecture.md) | 上下文工程     | ⚠️ 归档         | ADR 0002 取代了 Go ContextBuilder 方案                 |
-| [Agent Tool Calling Runtime](./agent-tool-calling-runtime.md)             | 工具调用运行时 | ⚠️ 部分归档     | 设计概念仍有效，执行路径已被 ADR 0002 取代             |
-| [AI Run / Job Runtime](./ai-run-job-runtime.md)                           | 任务运行时     | ~50%            | jobs schema、Go JobRuntime、OCR 迁移                   |
-| [Stream Event Contract Runtime](./stream-event-contract-runtime.md)       | 流事件契约     | ~30%            | Go StreamRuntime、StreamEvent v1                       |
-| [AI Output Governance](./ai-output-governance.md)                         | AI 输出治理    | ~35%            | AIOutputGuard 骨架、OutputReviewService                |
-| [Knowledge Lifecycle](./knowledge-lifecycle-architecture.md)              | 知识生命周期   | ~25%            | lifecycle schema、publication repo                     |
-| [Longitudinal Health Loop](./longitudinal-health-loop.md)                 | 长期健康闭环   | Active target   | 替代旧线性 Health Journey；BodyState 为闭环中心        |
-| [Model Gateway Routing](./model-gateway-routing.md)                     | 模型路由       | Current         | LiteLLM 为唯一物理 provider/fallback 边界               |
-| [Treatment Agent Configuration](./treatment-agent-configuration.md)             | Treatment Agent | Current       | Immutable config、Go identity gate、durable provenance、eval baseline |
+| 文档                                                                      | 子模块          | 状态            | 说明                                                                  |
+| ------------------------------------------------------------------------- | --------------- | --------------- | --------------------------------------------------------------------- |
+| [System Engineering Refactor Plan](./system-engineering-refactor-plan.md) | 总控计划        | 历史/需逐步对齐 | 早期系统级重构方案，遇到业务模型冲突时以新领域模型为准                |
+| [Context Engineering Architecture](./context-engineering-architecture.md) | 上下文工程      | ⚠️ 归档         | ADR 0002 取代了 Go ContextBuilder 方案                                |
+| [Agent Tool Calling Runtime](./agent-tool-calling-runtime.md)             | 工具调用运行时  | ⚠️ 部分归档     | 设计概念仍有效，执行路径已被 ADR 0002 取代                            |
+| [AI Run / Job Runtime](./ai-run-job-runtime.md)                           | 任务运行时      | ~50%            | jobs schema、Go JobRuntime、OCR 迁移                                  |
+| [Stream Event Contract Runtime](./stream-event-contract-runtime.md)       | 流事件契约      | ~30%            | Go StreamRuntime、StreamEvent v1                                      |
+| [AI Output Governance](./ai-output-governance.md)                         | AI 输出治理     | ~35%            | AIOutputGuard 骨架、OutputReviewService                               |
+| [Knowledge Lifecycle](./knowledge-lifecycle-architecture.md)              | 知识生命周期    | ~25%            | lifecycle schema、publication repo                                    |
+| [Longitudinal Health Loop](./longitudinal-health-loop.md)                 | 长期健康闭环    | Active target   | 替代旧线性 Health Journey；BodyState 为闭环中心                       |
+| [Model Gateway Routing](./model-gateway-routing.md)                       | 模型路由        | Current         | LiteLLM 为唯一物理 provider/fallback 边界                             |
+| [Treatment Agent Configuration](./treatment-agent-configuration.md)       | Treatment Agent | Current         | Immutable config、Go identity gate、durable provenance、eval baseline |
 
 ---
 
@@ -68,6 +76,9 @@ BodySense 当前业务领域的最高层设计以以下文档为准：
 
 - **[ADR 0005: Adopt a Standalone LiteLLM Model Gateway for Agent Model Execution](../adr/0005-adopt-standalone-litellm-model-gateway.md)** ⭐
   _Diagnosis Agent 通过独立 LiteLLM Gateway 访问逻辑模型组；Gateway 负责 provider 路由/回退/凭据/遥测，Go 继续拥有业务 authority。_
+
+- **[ADR 0006: Adopt Vanatome as the 3D Anatomy Visualization Engine](../adr/0006-adopt-vanatome-3d-anatomy-engine.md)** ⭐
+  _采用 Vanatome 作为默认 3D anatomy engine；BodySense 自有 BodyRegionOntology 保持 durable domain 与 third-party anatomyId 解耦；完整 anatomy 能力一次实现，通过 progressive disclosure 控制用户复杂度。_
 
 ---
 

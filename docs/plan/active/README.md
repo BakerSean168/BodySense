@@ -1,7 +1,9 @@
 # Active Plans
 
-BodySense currently has **one parked active durability plan**:
+BodySense currently has **one implementation-ready product plan**, **one active Workbench visual plan**, and **one parked durability plan**:
 
+- [`2026-08-27-vanatome-3d-body-explorer.md`](./2026-08-27-vanatome-3d-body-explorer.md) — READY FOR IMPLEMENTATION; adopt Vanatome as the primary 3D anatomy engine, add BodyRegionOntology, BodyState↔3D linking, anatomy drill-down, Chat context, WebGL fallback, and version-pinned/self-host-ready atlas distribution.
+- [`2026-08-26-workbench-ui-v2.md`](./2026-08-26-workbench-ui-v2.md) — ACTIVE / visual acceptance; single continuous Chat + Workbench shell, graphite visual system, progressive-disclosure content cleanup, and visual-density refinement.
 - [`data-durability-backup-2026-08-25.md`](./data-durability-backup-2026-08-25.md) — ACTIVE / PARKED BY OWNER; real off-host PostgreSQL backup + restore drill and durable private user-upload object storage. Repository implementations are preserved, but cloud provisioning/cutover is intentionally postponed.
 
 The broad post-`v0.5.2` production security/runtime/Knowledge closeout has been archived after the 2026-08-25 owner-approved scope split:
@@ -24,5 +26,7 @@ The broad post-`v0.5.2` production security/runtime/Knowledge closeout has been 
 - [`../../architecture/agent-platform-role-governance.md`](../../architecture/agent-platform-role-governance.md)
 - [`../../architecture/deployment-architecture.md`](../../architecture/deployment-architecture.md)
 - [`../../architecture/knowledge-lifecycle-architecture.md`](../../architecture/knowledge-lifecycle-architecture.md)
+- [`../../architecture/body-explorer-3d-anatomy.md`](../../architecture/body-explorer-3d-anatomy.md) — target 3D body/anatomy architecture accepted by ADR 0006; implementation pending.
+- [`../../architecture/body-region-ontology.md`](../../architecture/body-region-ontology.md) — target canonical body-region semantic boundary for 3D and durable BodyState integration.
 
 A future model/prompt/tool/schema Challenger, Knowledge production-corpus rollout, or other bounded product change should start its own plan rather than being attached to the parked durability plan.
