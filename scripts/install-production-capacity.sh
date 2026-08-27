@@ -1,6 +1,28 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Linux swap metadata consumes one kernel page. A nominal swapfile created at
+# the configured byte size can therefore be reported by /proc/meminfo as one
+# page smaller than that nominal size. Accept exactly that formatting overhead,
+# but keep rejecting materially undersized or unknown swap layouts.
+capacity_swap_meets_target() {
+  local current_kb="$1" target_kb="$2" page_bytes="${3:-}"
+  if [ -z "$page_bytes" ]; then
+    page_bytes=$(getconf PAGESIZE 2>/dev/null || true)
+  fi
+  case "$page_bytes" in
+    ''|*[!0-9]*|0) page_bytes=4096 ;;
+  esac
+  local page_kb=$(( (page_bytes + 1023) / 1024 ))
+  (( current_kb + page_kb >= target_kb ))
+}
+
+# The validator sources this file to exercise the capacity comparison without
+# mutating the host. Normal execution continues below unchanged.
+if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
+  return 0
+fi
+
 ROOT="${BODYSENSE_DEPLOY_ROOT:-/opt/bodysense}"
 PUBLIC_ENV="$ROOT/.env.production"
 UNIT_SOURCE="$ROOT/deploy/systemd"
@@ -32,8 +54,8 @@ if (( current_kb == 0 )); then
   mkswap "$swapfile" >/dev/null
   swapon "$swapfile"
   grep -qE '^/swapfile[[:space:]]' /etc/fstab || printf '/swapfile none swap sw 0 0\n' >> /etc/fstab
-elif (( current_kb < target_kb )); then
-  echo "existing swap is smaller than ${swap_gib} GiB; refusing to mutate an unknown swap layout" >&2
+elif ! capacity_swap_meets_target "$current_kb" "$target_kb"; then
+  echo "existing swap is smaller than ${swap_gib} GiB after allowing one kernel page of swap metadata; refusing to mutate an unknown swap layout" >&2
   exit 1
 fi
 

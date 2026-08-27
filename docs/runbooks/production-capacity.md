@@ -55,7 +55,8 @@ Swap is an OOM shock absorber. It is not considered normal working capacity.
 Safety behavior:
 
 - an existing inactive `/swapfile` is never overwritten automatically;
-- an existing unknown swap layout smaller than the configured target is not mutated automatically;
+- a nominal swap target may report up to one kernel page less usable capacity because `mkswap` reserves metadata; that formatting overhead is accepted;
+- an existing unknown swap layout materially smaller than the configured target (more than one kernel page below it) is not mutated automatically;
 - configured swap is persisted through `/etc/fstab`;
 - deployment establishes swap before restarting memory-capped services;
 - rollback does not remove swap, because removing emergency headroom during a failed deployment would increase risk.
@@ -148,7 +149,7 @@ docker inspect docker-ai-service-1 --format '{{.HostConfig.Memory}} {{.HostConfi
 docker stats --no-stream
 ```
 
-Acceptance requires the seven long-running services to expose non-zero cgroup memory limits, swap to be at least the configured size, no OOM/restart regression, application health to remain green, and `.capacity-state` to be produced.
+Acceptance requires the seven long-running services to expose non-zero cgroup memory limits, swap to meet the configured nominal size within the one-page `mkswap` metadata allowance, no OOM/restart regression, application health to remain green, and `.capacity-state` to be produced.
 
 ## Host-upgrade trigger
 

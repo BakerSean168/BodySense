@@ -73,3 +73,15 @@ grep -q 'install-production-capacity.sh" --swap-only' scripts/setup-server.sh
 grep -q 'production-capacity-status.sh' docker/Dockerfile.runtime
 
 echo CAPACITY_POLICY_VALIDATION=PASS
+
+# A swapfile formatted by mkswap reserves one kernel page for metadata. A
+# nominal 2 GiB /swapfile therefore appears in /proc/meminfo as 4 KiB below the
+# requested size on the production host. The installer must accept that exact
+# page-sized overhead without accepting materially undersized swap.
+source scripts/install-production-capacity.sh
+swap_target_kb=$((2 * 1024 * 1024))
+capacity_swap_meets_target $((swap_target_kb - 4)) "$swap_target_kb" 4096
+if capacity_swap_meets_target $((swap_target_kb - 5)) "$swap_target_kb" 4096; then
+  echo 'capacity swap tolerance accepted more than one 4 KiB page of deficit' >&2
+  exit 1
+fi
