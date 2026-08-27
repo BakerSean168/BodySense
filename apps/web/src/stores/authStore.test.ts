@@ -62,6 +62,36 @@ describe("authStore secure browser session", () => {
     expect(localStorage.getItem("auth-storage")).toBeNull();
   });
 
+  it("unblocks protected routes after refresh while user hydration is still pending", async () => {
+    let resolveUser: ((response: Response) => void) | undefined;
+    const userPromise = new Promise<Response>((resolve) => {
+      resolveUser = resolve;
+    });
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        jsonResponse({ access_token: "access-fast", expires_in: 900 }),
+      )
+      .mockReturnValueOnce(userPromise);
+
+    const bootstrap = useAuthStore.getState().bootstrapSession();
+    await vi.waitFor(() => {
+      expect(useAuthStore.getState()).toMatchObject({
+        accessToken: "access-fast",
+        isAuthenticated: true,
+        hasHydrated: true,
+        isAuthResolved: true,
+      });
+    });
+    expect(useAuthStore.getState().user).toBeNull();
+
+    resolveUser?.(jsonResponse({ id: "user-fast", email: "fast@example.com" }));
+    await bootstrap;
+    expect(useAuthStore.getState().user).toEqual({
+      id: "user-fast",
+      email: "fast@example.com",
+    });
+  });
+
   it("deduplicates concurrent cookie refreshes", async () => {
     let resolveResponse: ((response: Response) => void) | undefined;
     const responsePromise = new Promise<Response>((resolve) => {

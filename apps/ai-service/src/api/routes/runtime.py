@@ -95,6 +95,13 @@ class ConsultationRuntimeState(BaseModel):
     extracted_info: list[dict[str, Any]] = Field(default_factory=list)
 
 
+class SpatialContext(BaseModel):
+    body_region_id: str | None = None
+    body_region_label: str | None = None
+    anatomy_id: str | None = None
+    anatomy_name: str | None = None
+
+
 class BusinessContext(BaseModel):
     profile: dict[str, Any] = Field(default_factory=dict)
     # Go-owned BodyState is durable health truth. Runtime state is limited to
@@ -105,6 +112,7 @@ class BusinessContext(BaseModel):
     current_diagnosis: dict[str, Any] = Field(default_factory=dict)
     current_treatment: dict[str, Any] = Field(default_factory=dict)
     recent_outcomes: list[dict[str, Any]] = Field(default_factory=list)
+    spatial_context: SpatialContext | None = None
     # Prefetched completed posture analysis from Go (user_uploads.analysis_result).
     posture_analysis: dict[str, Any] | None = None
 
@@ -231,6 +239,11 @@ async def start_turn(thread_id: str, request: StartTurnRequest):
                 current_diagnosis=request.business_context.current_diagnosis,
                 current_treatment=request.business_context.current_treatment,
                 recent_outcomes=request.business_context.recent_outcomes,
+                spatial_context=(
+                    request.business_context.spatial_context.model_dump(exclude_none=True)
+                    if request.business_context.spatial_context
+                    else None
+                ),
                 configuration_id=request.configuration_id,
             ):
                 # NDJSON uses a real newline as the record boundary. Any newline
@@ -284,6 +297,11 @@ async def resume_interrupt(thread_id: str, interrupt_id: str, request: ResumeInt
                 current_diagnosis=request.business_context.current_diagnosis,
                 current_treatment=request.business_context.current_treatment,
                 recent_outcomes=request.business_context.recent_outcomes,
+                spatial_context=(
+                    request.business_context.spatial_context.model_dump(exclude_none=True)
+                    if request.business_context.spatial_context
+                    else None
+                ),
             ):
                 yield json.dumps(event.model_dump(exclude_none=True), ensure_ascii=False) + "\n"
         except Exception:

@@ -1,29 +1,37 @@
 function SkeletonBlock({ className }: { className: string }) {
   return (
-    <div className={`animate-pulse rounded-2xl bg-[#ECE8E1] ${className}`} />
+    <div
+      className={`animate-pulse rounded-2xl bg-white/[0.065] ${className}`}
+    />
   );
 }
 
 export function ChatPanelSkeleton() {
   return (
     <div
-      className="flex h-full flex-col bg-white p-4"
+      className="flex h-full flex-col bg-[#171717] px-5 py-6"
       data-testid="chat-panel-skeleton"
     >
-      <div className="flex-1 space-y-4">
+      <div className="mx-auto w-full max-w-[760px] flex-1 space-y-6">
         <div className="flex justify-start">
-          <SkeletonBlock className="h-20 w-[72%] rounded-[20px] rounded-bl-[4px]" />
-        </div>
-        <div className="flex justify-end">
-          <SkeletonBlock className="h-14 w-[52%] rounded-[20px] rounded-br-[4px]" />
+          <SkeletonBlock className="h-4 w-[68%] rounded-md" />
         </div>
         <div className="flex justify-start">
-          <SkeletonBlock className="h-24 w-[68%] rounded-[20px] rounded-bl-[4px]" />
+          <SkeletonBlock className="h-4 w-[52%] rounded-md" />
+        </div>
+        <div className="flex justify-end pt-2">
+          <SkeletonBlock className="h-12 w-[58%] rounded-[20px]" />
+        </div>
+        <div className="flex justify-start pt-2">
+          <SkeletonBlock className="h-4 w-[72%] rounded-md" />
+        </div>
+        <div className="flex justify-start">
+          <SkeletonBlock className="h-4 w-[44%] rounded-md" />
         </div>
       </div>
 
-      <div className="mt-4 border-t border-[#E5E3DF] pt-4">
-        <SkeletonBlock className="h-14 w-full rounded-[20px]" />
+      <div className="mx-auto mt-5 w-full max-w-[760px]">
+        <SkeletonBlock className="h-20 w-full rounded-[24px]" />
       </div>
     </div>
   );

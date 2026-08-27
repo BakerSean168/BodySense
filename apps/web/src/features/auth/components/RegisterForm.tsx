@@ -54,7 +54,7 @@ export function RegisterForm() {
 
     try {
       await register(email, password);
-      navigate("/dashboard");
+      navigate("/consultation");
     } catch {
       // Error is handled by the store
     }

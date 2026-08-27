@@ -15,16 +15,36 @@
 
 GCP uses the canonical project block `20100-20199` from `my-infrastructure/projects/bodysense.yaml`:
 
-| Lane | Runtime | Host ports | Lifecycle |
-| --- | --- | --- | --- |
-| direct dev | host Web/API/AI + Docker-only infra | Web `20100`, API `20101`, AI `20102`, PostgreSQL `20110`, Redis `20111`, LiteLLM `20112` | development session |
-| validator | isolated Docker Compose | dynamically allocated loopback ports | ephemeral, auto-cleaned |
-| staging | production-shaped Docker Compose | only Web/nginx ingress `127.0.0.1:20150` | persistent |
-| production | Alibaba ECS Docker Compose | public `80/443` through Caddy | persistent |
+| Lane       | Runtime                             | Host ports                                                                               | Lifecycle               |
+| ---------- | ----------------------------------- | ---------------------------------------------------------------------------------------- | ----------------------- |
+| direct dev | host Web/API/AI + Docker-only infra | Web `20100`, API `20101`, AI `20102`, PostgreSQL `20110`, Redis `20111`, LiteLLM `20112` | development session     |
+| validator  | isolated Docker Compose             | dynamically allocated loopback ports                                                     | ephemeral, auto-cleaned |
+| staging    | production-shaped Docker Compose    | only Web/nginx ingress `127.0.0.1:20150`                                                 | persistent              |
+| production | Alibaba ECS Docker Compose          | public `80/443` through Caddy                                                            | persistent              |
 
 `./scripts/dev-runtime.sh` owns direct-dev startup order: infrastructure health -> Go API migration/schema bootstrap -> Python AI health -> Vite Web. `./scripts/staging-runtime.sh` owns the persistent `bodysense-staging` Compose project. Staging uses PostgreSQL 18 for clean-from-zero migration compatibility; production remains PostgreSQL 16 and its historical-upgrade compatibility is protected separately by the PostgreSQL-16 production fixture/replay gate.
 
 GCP application host ports bind loopback. Human remote access is provided by Tailscale Serve/TLS; database, Redis, LiteLLM and AI internal staging ports are not exposed directly.
+
+### Public immutable asset plane
+
+Application traffic and immutable byte delivery intentionally use different network boundaries. Authenticated HTML/API/SSE and all user-varying health data remain on the application origin. Public, user-independent Vite hashes and anatomy assets may be distributed through the BodySense static CDN.
+
+```text
+Browser
+  ├─ application origin
+  │    ├─ index.html
+  │    ├─ /api/*
+  │    ├─ auth
+  │    └─ consultation SSE / health data
+  └─ https://assets.bakersean.top
+       ├─ /web/<git-revision>/assets/*
+       └─ /anatomy/vanatome/1.4.0/*
+```
+
+The CDN namespace is immutable: Web assets are keyed by the full source revision and anatomy assets by the pinned atlas release. The production workflow publishes and verifies CDN bytes before building/promoting the Web artifact that references them, then performs a Web-image-to-CDN coherence gate. No user, conversation, diagnosis or BodyState identifiers may appear in static asset paths.
+
+When `STATIC_ASSET_CDN_BASE` is not configured, the Web image keeps same-origin behavior so local development and emergency rollback do not depend on R2 credentials. See `docs/runbooks/static-asset-cdn.md`.
 
 ## Production delivery flow
 
@@ -230,7 +250,7 @@ OSS/S3-compatible destination (Alibaba Cloud OSS `cn-hangzhou`):
   The restore target must be an explicitly supplied disposable PostgreSQL
   container (`--restore-pg container:<id|name>`), and before anything else the
   operator proves that container is isolated from production via `docker
-  inspect` — fail-closed, refusing on: container-ID equality with the production
+inspect` — fail-closed, refusing on: container-ID equality with the production
   postgres container, membership in the production Compose project, ANY Docker
   network shared with the production postgres container, attachment to any
   network beyond the container's declared `bodysense.restore-network` (the drill

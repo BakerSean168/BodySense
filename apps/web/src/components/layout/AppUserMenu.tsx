@@ -4,6 +4,7 @@ import { useAuthStore } from "@/stores/authStore";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -12,16 +13,17 @@ import {
 
 interface AppUserMenuProps {
   compact?: boolean;
+  onOpenProfile?: () => void;
 }
 
-export function AppUserMenu({ compact = false }: AppUserMenuProps) {
+export function AppUserMenu({ compact = false, onOpenProfile }: AppUserMenuProps) {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const initial = user?.email?.charAt(0).toUpperCase() || "U";
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login", { replace: true });
   };
 
   return (
@@ -46,19 +48,25 @@ export function AppUserMenu({ compact = false }: AppUserMenuProps) {
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" sideOffset={8} className="w-64">
-        <DropdownMenuLabel>
-          <span className="block truncate text-foreground">
-            {user?.email || "普通用户"}
-          </span>
-          <span className="mt-0.5 block font-normal text-muted-foreground">
-            登录账户
-          </span>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => navigate("/profile")}>
-          <UserRound />
-          身体档案
-        </DropdownMenuItem>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>
+            <span className="block truncate text-foreground">
+              {user?.email || "普通用户"}
+            </span>
+            <span className="mt-0.5 block font-normal text-muted-foreground">
+              登录账户
+            </span>
+          </DropdownMenuLabel>
+        </DropdownMenuGroup>
+        {onOpenProfile ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onOpenProfile}>
+              <UserRound />
+              身体档案
+            </DropdownMenuItem>
+          </>
+        ) : null}
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={handleLogout}>
           <LogOut />

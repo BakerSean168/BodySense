@@ -3,50 +3,54 @@ import { useNavigate } from "react-router";
 import { useProfileStore } from "@/stores/profileStore";
 import { OnboardingLayout } from "./OnboardingLayout";
 import { GenderStep } from "./steps/GenderStep";
-import { AgeStep } from "./steps/AgeStep";
+import { BirthDateStep } from "./steps/BirthDateStep";
 import { HeightWeightStep } from "./steps/HeightWeightStep";
-import { OccupationStep } from "./steps/OccupationStep";
+import { ActivityPatternStep } from "./steps/ActivityPatternStep";
 import { SleepStep } from "./steps/SleepStep";
 import { ExerciseStep } from "./steps/ExerciseStep";
 import { InjuryStep } from "./steps/InjuryStep";
+import { OtherLifestyleStep } from "./steps/OtherLifestyleStep";
 import { UploadStep } from "./steps/UploadStep";
 import { assessmentApi } from "@/features/assessment/services/assessmentService";
+import { onboardingContextService } from "../../services/onboardingContextService";
 
 import { toast } from "sonner";
 
-const TOTAL_STEPS = 8;
+const TOTAL_STEPS = 9;
 
 interface FormData {
   gender: string;
-  age: number | undefined;
+  birth_date: string;
   height_cm: number | undefined;
   weight_kg: number | undefined;
-  occupation: string;
+  activity_pattern: string;
   exercise_type: string;
   exercise_frequency: string;
-  sleep_time: string;
-  wake_time: string;
+  sleep_pattern: string;
+  nutrition_pattern: string;
+  substances_pattern: string;
+  recovery_pattern: string;
   injury_history: string;
-  self_description: string;
 }
 
 const INITIAL_DATA: FormData = {
   gender: "",
-  age: undefined,
+  birth_date: "",
   height_cm: undefined,
   weight_kg: undefined,
-  occupation: "",
+  activity_pattern: "",
   exercise_type: "",
   exercise_frequency: "",
-  sleep_time: "",
-  wake_time: "",
+  sleep_pattern: "",
+  nutrition_pattern: "",
+  substances_pattern: "",
+  recovery_pattern: "",
   injury_history: "",
-  self_description: "",
 };
 
 export function OnboardingWizard() {
   const navigate = useNavigate();
-  const { updateProfile, isLoading: isUpdatingProfile } = useProfileStore();
+  const { fetchProfile } = useProfileStore();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<FormData>(INITIAL_DATA);
@@ -79,23 +83,23 @@ export function OnboardingWizard() {
     switch (currentStep) {
       case 0: // Gender
         return formData.gender !== "";
-      case 1: // Age
-        return (
-          formData.age !== undefined && formData.age >= 1 && formData.age <= 150
-        );
+      case 1: // Birth date
+        return formData.birth_date !== "";
       case 2: // Height/Weight
         return (
           formData.height_cm !== undefined && formData.weight_kg !== undefined
         );
-      case 3: // Occupation
-        return formData.exercise_frequency !== "";
+      case 3: // Daily activity pattern
+        return true; // Optional
       case 4: // Sleep
         return true; // Optional
       case 5: // Exercise
         return true; // Optional
-      case 6: // Injury
+      case 6: // Other lifestyle
         return true; // Optional
-      case 7: // Upload
+      case 7: // Injury
+        return true; // Optional
+      case 8: // Upload
         return true; // Optional
       default:
         return false;
@@ -117,27 +121,54 @@ export function OnboardingWizard() {
   const handleSubmit = async () => {
     setIsGeneratingReport(true);
     try {
-      // 1. 保存身体档案信息
-      await updateProfile({
-        gender: formData.gender || undefined,
-        age: formData.age,
-        height_cm: formData.height_cm,
-        weight_kg: formData.weight_kg,
-        occupation: formData.occupation || undefined,
-        exercise_type: formData.exercise_type || undefined,
-        exercise_frequency: formData.exercise_frequency || undefined,
-        sleep_time: formData.sleep_time || undefined,
-        wake_time: formData.wake_time || undefined,
-        injury_history: formData.injury_history || undefined,
-        self_description: formData.self_description || undefined,
+      // 1. Onboarding 是一次 application command：稳定身份 + 整套 BodyState 基线
+      // 在同一数据库事务中提交；BodyState 只产生一个语义 revision。
+      const exerciseSummary = [
+        formData.exercise_type.trim(),
+        formData.exercise_frequency
+          ? `频率：${formData.exercise_frequency}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("；");
+
+      if (formData.height_cm === undefined || formData.weight_kg === undefined) {
+        throw new Error("请先填写身高和体重");
+      }
+
+      await onboardingContextService.submit({
+        profile: {
+          gender: formData.gender,
+          birth_date: formData.birth_date,
+        },
+        body_metrics: {
+          height_cm: formData.height_cm,
+          weight_kg: formData.weight_kg,
+        },
+        lifestyle: {
+          activity: { summary: formData.activity_pattern.trim() },
+          sleep: { summary: formData.sleep_pattern.trim() },
+          exercise: {
+            summary: exerciseSummary,
+            details: {
+              type: formData.exercise_type.trim(),
+              frequency: formData.exercise_frequency,
+            },
+          },
+          nutrition: { summary: formData.nutrition_pattern.trim() },
+          substances: { summary: formData.substances_pattern.trim() },
+          recovery: { summary: formData.recovery_pattern.trim() },
+        },
+        injury_history: formData.injury_history.trim(),
       });
+      await fetchProfile();
 
-      // 2. 生成健康评估报告
-      const report = await assessmentApi.generate();
+      // 2. 基于 stable Profile + 当前 BodyState 生成健康评估报告
+      await assessmentApi.generate();
 
-      toast.success("评估报告生成成功！");
-      // 3. 跳转到报告详情页
-      navigate(`/assessment/${report.id}`);
+      toast.success("初始身体状态已建立");
+      // 3. 初始 Observation 已投影进 BodyState，直接进入唯一健康工作台。
+      navigate("/consultation?view=state", { replace: true });
     } catch (err) {
       console.error("Onboarding submission failed:", err);
       setIsGeneratingReport(false);
@@ -158,9 +189,9 @@ export function OnboardingWizard() {
         );
       case 1:
         return (
-          <AgeStep
-            value={formData.age}
-            onChange={(v) => updateField("age", v)}
+          <BirthDateStep
+            value={formData.birth_date}
+            onChange={(v) => updateField("birth_date", v)}
           />
         );
       case 2:
@@ -174,20 +205,16 @@ export function OnboardingWizard() {
         );
       case 3:
         return (
-          <OccupationStep
-            occupation={formData.occupation}
-            activityType={formData.exercise_frequency}
-            onOccupationChange={(v) => updateField("occupation", v)}
-            onActivityTypeChange={(v) => updateField("exercise_frequency", v)}
+          <ActivityPatternStep
+            value={formData.activity_pattern}
+            onChange={(v) => updateField("activity_pattern", v)}
           />
         );
       case 4:
         return (
           <SleepStep
-            sleepTime={formData.sleep_time}
-            wakeTime={formData.wake_time}
-            onSleepTimeChange={(v) => updateField("sleep_time", v)}
-            onWakeTimeChange={(v) => updateField("wake_time", v)}
+            value={formData.sleep_pattern}
+            onChange={(v) => updateField("sleep_pattern", v)}
           />
         );
       case 5:
@@ -203,14 +230,23 @@ export function OnboardingWizard() {
         );
       case 6:
         return (
-          <InjuryStep
-            injuryHistory={formData.injury_history}
-            selfDescription={formData.self_description}
-            onInjuryHistoryChange={(v) => updateField("injury_history", v)}
-            onSelfDescriptionChange={(v) => updateField("self_description", v)}
+          <OtherLifestyleStep
+            nutrition={formData.nutrition_pattern}
+            substances={formData.substances_pattern}
+            recovery={formData.recovery_pattern}
+            onNutritionChange={(v) => updateField("nutrition_pattern", v)}
+            onSubstancesChange={(v) => updateField("substances_pattern", v)}
+            onRecoveryChange={(v) => updateField("recovery_pattern", v)}
           />
         );
       case 7:
+        return (
+          <InjuryStep
+            value={formData.injury_history}
+            onChange={(v) => updateField("injury_history", v)}
+          />
+        );
+      case 8:
         return <UploadStep />;
       default:
         return null;
@@ -261,7 +297,7 @@ export function OnboardingWizard() {
       onNext={handleNext}
       onBack={handleBack}
       onSubmit={handleSubmit}
-      isLoading={isUpdatingProfile}
+      isLoading={false}
       isLastStep={currentStep === TOTAL_STEPS - 1}
       canProceed={canProceed()}
     >

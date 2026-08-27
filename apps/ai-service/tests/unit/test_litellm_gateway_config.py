@@ -4,6 +4,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[4]
 CONFIG = ROOT / "docker" / "litellm" / "config.yaml"
+STAGING_CONFIG = ROOT / "docker" / "litellm" / "config.staging.yaml"
 SMOKE_CONFIG = ROOT / "docker" / "litellm" / "config.smoke.yaml"
 
 PUBLIC_GROUPS = {
@@ -57,6 +58,20 @@ def test_gateway_owns_llm_physical_provider_credentials() -> None:
     )
     assert config["general_settings"]["master_key"] == "os.environ/LITELLM_MASTER_KEY"
 
+
+
+def test_staging_structured_route_uses_groq_without_changing_other_routes() -> None:
+    production = _load(CONFIG)
+    staging = _load(STAGING_CONFIG)
+    assert set(_groups(staging)) == set(_groups(production))
+    assert staging["router_settings"]["fallbacks"] == production["router_settings"]["fallbacks"]
+
+    prod_groups = {item["model_name"]: item["litellm_params"] for item in production["model_list"]}
+    staging_groups = {item["model_name"]: item["litellm_params"] for item in staging["model_list"]}
+    assert staging_groups["bodysense-structured"]["model"] == "groq/qwen/qwen3.8-27b"
+    assert staging_groups["bodysense-structured"]["api_key"] == "os.environ/GROQ_API_KEY"
+    assert staging_groups["bodysense-diagnosis"] == prod_groups["bodysense-diagnosis"]
+    assert staging_groups["bodysense-posture"] == prod_groups["bodysense-posture"]
 
 def test_smoke_config_preserves_complete_gateway_routing_graph() -> None:
     production = _load(CONFIG)

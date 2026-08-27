@@ -1,6 +1,9 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { expect, test, type Page } from "@playwright/test";
+import { refreshBrowserAccessToken } from "./support/auth";
+
+const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
 
 const execFileAsync = promisify(execFile);
 
@@ -13,20 +16,28 @@ async function registerBrowser(page: Page): Promise<void> {
   await page.getByLabel("确认密码").fill(password);
   await page.getByRole("button", { name: "创建账号" }).click();
   await page.waitForURL(/\/(dashboard|onboarding)/);
+
+  const accessToken = await refreshBrowserAccessToken(page, apiBase);
+  const profile = await page
+    .context()
+    .request.put(`${apiBase}/api/v1/profile`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      data: { gender: "male", birth_date: "1996-08-27" },
+    });
+  expect(profile.ok(), await profile.text()).toBeTruthy();
+
   await page.goto("/consultation");
   await expect(
-    page.getByPlaceholder("描述您的症状、体态问题或身体感受，也可附上照片..."),
+    page.getByPlaceholder("和 BodySense 说说你的身体感受…"),
   ).toBeVisible();
 }
 
 async function startLongRun(page: Page, suffix: string): Promise<void> {
-  const composer = page.getByPlaceholder(
-    "描述您的症状、体态问题或身体感受，也可附上照片...",
-  );
+  const composer = page.getByPlaceholder("和 BodySense 说说你的身体感受…");
   await composer.fill(`E2E_HOLD_RUN_LONG ${suffix}`);
   await page.getByRole("button", { name: "发送" }).click();
   await expect(
-    page.getByRole("button", { name: "取消本次执行" }),
+    page.getByRole("button", { name: "停止", exact: true }),
   ).toBeVisible();
 }
 
@@ -34,20 +45,20 @@ test("user can explicitly cancel a live Consultation run", async ({ page }) => {
   await registerBrowser(page);
   await startLongRun(page, "cancel");
 
-  await page.getByRole("button", { name: "取消本次执行" }).click();
+  await page.getByRole("button", { name: "停止", exact: true }).click();
 
-  await expect(page.getByText("本次执行已取消")).toBeVisible();
-  await expect(page.getByRole("button", { name: "取消本次执行" })).toHaveCount(
-    0,
-  );
+  await expect(page.getByText("本次处理已停止")).toBeVisible();
   await expect(
-    page.getByPlaceholder("描述您的症状、体态问题或身体感受，也可附上照片..."),
+    page.getByRole("button", { name: "停止", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByPlaceholder("和 BodySense 说说你的身体感受…"),
   ).toBeEnabled();
 
   await page.reload();
-  await expect(page.getByText("本次执行已取消")).toBeVisible();
+  await expect(page.getByText("本次处理已停止")).toBeVisible();
   await expect(
-    page.getByPlaceholder("描述您的症状、体态问题或身体感受，也可附上照片..."),
+    page.getByPlaceholder("和 BodySense 说说你的身体感受…"),
   ).toBeEnabled();
 });
 
@@ -55,7 +66,10 @@ test("browser recovers execution_lost across an API process restart", async ({
   page,
 }) => {
   const restartCommand = process.env.E2E_RESTART_API_COMMAND;
-  test.skip(!restartCommand, "local validator restart command is not configured");
+  test.skip(
+    !restartCommand,
+    "local validator restart command is not configured",
+  );
 
   await registerBrowser(page);
   await startLongRun(page, "restart-recovery");
@@ -65,11 +79,11 @@ test("browser recovers execution_lost across an API process restart", async ({
     timeout: 60_000,
   });
 
-  await expect(page.getByText("本次执行已安全停止")).toBeVisible({
+  await expect(page.getByText("本次处理已安全停止")).toBeVisible({
     timeout: 30_000,
   });
   await expect(page.getByText(/系统已安全回收/)).toBeVisible();
   await expect(
-    page.getByPlaceholder("描述您的症状、体态问题或身体感受，也可附上照片..."),
+    page.getByPlaceholder("和 BodySense 说说你的身体感受…"),
   ).toBeEnabled();
 });

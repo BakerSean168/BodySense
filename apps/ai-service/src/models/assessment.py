@@ -58,5 +58,7 @@ def get_assessment_output_type(
 @dataclass(slots=True)
 class AssessmentDependencies:
     profile: dict[str, Any]
+    body_state: dict[str, Any] = field(default_factory=dict)
+    report_indicators: list[Any] = field(default_factory=list)
     posture_analysis: dict[str, Any] = field(default_factory=dict)
     rag_context: str = ""

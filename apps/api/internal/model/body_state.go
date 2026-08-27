@@ -7,6 +7,39 @@ import (
 	"gorm.io/datatypes"
 )
 
+const (
+	BodyStateFactKindLifestyleActivity   = "lifestyle.activity"
+	BodyStateFactKindLifestyleSleep      = "lifestyle.sleep"
+	BodyStateFactKindLifestyleExercise   = "lifestyle.exercise"
+	BodyStateFactKindLifestyleNutrition  = "lifestyle.nutrition"
+	BodyStateFactKindLifestyleSubstances = "lifestyle.substances"
+	BodyStateFactKindLifestyleRecovery   = "lifestyle.recovery"
+	BodyStateFactKindInjuryHistory       = "history.injury_summary"
+
+	BodyStateObservationKindHeight = "anthropometry.height"
+	BodyStateObservationKindWeight = "anthropometry.weight"
+)
+
+// BodyStateCurrentFactMutation and BodyStateCurrentObservationMutation are
+// application-level mutation instructions for a semantically coherent current
+// context update. Repositories apply the whole patch under one aggregate lock
+// and one BodyStateRevision.
+type BodyStateCurrentFactMutation struct {
+	Kind        string
+	Replacement *BodyStateFact
+	EffectiveAt time.Time
+}
+
+type BodyStateCurrentObservationMutation struct {
+	Kind        string
+	Replacement *BodyStateObservation
+}
+
+type BodyStateCurrentContextPatch struct {
+	Facts        []BodyStateCurrentFactMutation
+	Observations []BodyStateCurrentObservationMutation
+}
+
 // BodyState is the user-scoped durable health aggregate introduced by ADR 0004.
 //
 // It intentionally owns only aggregate identity/current revision plus cross-cutting
@@ -36,6 +69,7 @@ type BodyStateFact struct {
 	ConcernKey            string         `gorm:"type:varchar(120);not null;default:''" json:"concern_key,omitempty"`
 	Kind                  string         `gorm:"type:varchar(80);not null" json:"kind"`
 	BodyRegion            string         `gorm:"type:varchar(120);not null;default:''" json:"body_region,omitempty"`
+	BodyRegionID          *string        `gorm:"type:varchar(80)" json:"body_region_id"`
 	Value                 string         `gorm:"type:text;not null;default:''" json:"value"`
 	Details               datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"details"`
 	Origin                string         `gorm:"type:varchar(40);not null" json:"origin"`
@@ -60,24 +94,26 @@ func (BodyStateFact) TableName() string { return "body_state_facts" }
 // BodyStateObservation keeps measured/self-test/posture-analysis information
 // epistemically separate from user-reported facts.
 type BodyStateObservation struct {
-	ID                    uuid.UUID      `gorm:"type:uuid;primaryKey" json:"id"`
-	UserID                uuid.UUID      `gorm:"type:uuid;not null;index" json:"user_id"`
-	ConcernKey            string         `gorm:"type:varchar(120);not null;default:''" json:"concern_key,omitempty"`
-	Kind                  string         `gorm:"type:varchar(80);not null" json:"kind"`
-	BodyRegion            string         `gorm:"type:varchar(120);not null;default:''" json:"body_region,omitempty"`
-	Method                string         `gorm:"type:varchar(80);not null;default:''" json:"method,omitempty"`
-	Value                 datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"value"`
-	Condition             datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"condition"`
-	SourceKey             string         `gorm:"type:text;not null;default:''" json:"source_key,omitempty"`
-	Provenance            datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"provenance"`
-	ObservedAt            *time.Time     `json:"observed_at,omitempty"`
-	ReviewState           string         `gorm:"type:varchar(40);not null;default:'unverified'" json:"review_state"`
-	LifecycleState        string         `gorm:"type:varchar(30);not null;default:'active'" json:"lifecycle_state"`
-	ExcludedFromReasoning bool           `gorm:"not null;default:true" json:"excluded_from_reasoning"`
-	CreatedRevision       int64          `gorm:"not null" json:"created_revision"`
-	UpdatedRevision       int64          `gorm:"not null" json:"updated_revision"`
-	CreatedAt             time.Time      `gorm:"not null;default:now()" json:"created_at"`
-	UpdatedAt             time.Time      `gorm:"not null;default:now()" json:"updated_at"`
+	ID                      uuid.UUID      `gorm:"type:uuid;primaryKey" json:"id"`
+	UserID                  uuid.UUID      `gorm:"type:uuid;not null;index" json:"user_id"`
+	ConcernKey              string         `gorm:"type:varchar(120);not null;default:''" json:"concern_key,omitempty"`
+	Kind                    string         `gorm:"type:varchar(80);not null" json:"kind"`
+	BodyRegion              string         `gorm:"type:varchar(120);not null;default:''" json:"body_region,omitempty"`
+	BodyRegionID            *string        `gorm:"type:varchar(80)" json:"body_region_id"`
+	Method                  string         `gorm:"type:varchar(80);not null;default:''" json:"method,omitempty"`
+	Value                   datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"value"`
+	Condition               datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"condition"`
+	SourceKey               string         `gorm:"type:text;not null;default:''" json:"source_key,omitempty"`
+	Provenance              datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"provenance"`
+	ObservedAt              *time.Time     `json:"observed_at,omitempty"`
+	SupersedesObservationID *uuid.UUID     `gorm:"type:uuid" json:"supersedes_observation_id,omitempty"`
+	ReviewState             string         `gorm:"type:varchar(40);not null;default:'unverified'" json:"review_state"`
+	LifecycleState          string         `gorm:"type:varchar(30);not null;default:'active'" json:"lifecycle_state"`
+	ExcludedFromReasoning   bool           `gorm:"not null" json:"excluded_from_reasoning"`
+	CreatedRevision         int64          `gorm:"not null" json:"created_revision"`
+	UpdatedRevision         int64          `gorm:"not null" json:"updated_revision"`
+	CreatedAt               time.Time      `gorm:"not null;default:now()" json:"created_at"`
+	UpdatedAt               time.Time      `gorm:"not null;default:now()" json:"updated_at"`
 }
 
 func (BodyStateObservation) TableName() string { return "body_state_observations" }

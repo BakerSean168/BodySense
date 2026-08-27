@@ -23,7 +23,7 @@ func replayTestInput(t *testing.T, revision int64) json.RawMessage {
 		payload["current_revision"] = revision
 		bodyState, _ = json.Marshal(payload)
 	}
-	input, err := EncodeDiagnosisReplayInput(revision, bodyState, json.RawMessage(`[{"user_id":"private-user-id","revision":11}]`), json.RawMessage(`{"id":"profile-private","user_id":"private-user-id","email":"private@example.com","age":30}`))
+	input, err := EncodeDiagnosisReplayInput(revision, bodyState, json.RawMessage(`[{"user_id":"private-user-id","revision":11}]`), json.RawMessage(`{"id":"profile-private","user_id":"private-user-id","email":"private@example.com","birth_date":"1996-08-27","age_years":30}`))
 	if err != nil {
 		t.Fatal(err)
 	}

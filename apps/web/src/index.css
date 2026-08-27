@@ -228,6 +228,69 @@
   --sidebar-ring: oklch(0.55 0.07 155);
 }
 
+.bodysense-workbench-theme {
+  --background: #1f1f1f;
+  --foreground: #ededed;
+  --card: #232323;
+  --card-foreground: #ededed;
+  --popover: #292929;
+  --popover-foreground: #ededed;
+  --primary: #73c99c;
+  --primary-foreground: #102019;
+  --secondary: #2c2c2c;
+  --secondary-foreground: #ececec;
+  --muted: #292929;
+  --muted-foreground: #9d9d9d;
+  --accent: #303030;
+  --accent-foreground: #ededed;
+  --border: rgba(255, 255, 255, 0.075);
+  --input: rgba(255, 255, 255, 0.09);
+  --ring: #73c99c;
+  --success: #244a37;
+  --success-foreground: #a7e7c4;
+  color-scheme: dark;
+}
+
+.bodysense-workspace-surface {
+  --background: #292c29;
+  --foreground: #f1f2f0;
+  --card: #2f322f;
+  --card-foreground: #f1f2f0;
+  --popover: #323532;
+  --popover-foreground: #f1f2f0;
+  --secondary: #333633;
+  --secondary-foreground: #eef0ed;
+  --muted: #313431;
+  --muted-foreground: #afb3ad;
+  --accent: #363a36;
+  --accent-foreground: #f1f2f0;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.1);
+}
+
+.bodysense-workbench-theme .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.bodysense-workbench-theme .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.workbench-view-enter {
+  animation: workbench-view-enter 170ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes workbench-view-enter {
+  from {
+    opacity: 0;
+    transform: translateX(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -319,4 +382,40 @@
 .prose-markdown strong {
   font-weight: 700;
   color: var(--color-primary-900);
+}
+
+.conversation-prose,
+.conversation-prose p,
+.conversation-prose li {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.conversation-prose h1,
+.conversation-prose h2,
+.conversation-prose h3,
+.conversation-prose h4,
+.conversation-prose strong {
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.conversation-prose a {
+  color: #91ddb7;
+  text-decoration-color: rgba(145, 221, 183, 0.45);
+}
+
+.conversation-prose table {
+  border-color: rgba(255, 255, 255, 0.09);
+}
+
+.conversation-prose th {
+  border-color: rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.conversation-prose td,
+.conversation-prose tr:nth-child(even) td {
+  border-color: rgba(255, 255, 255, 0.07);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.82);
 }

@@ -18,10 +18,10 @@ function renderProtectedRoute(path = "/consultation") {
           }
         />
         <Route
-          path="/dashboard"
+          path="/onboarding"
           element={
             <ProtectedRoute>
-              <div>控制台内容</div>
+              <div>初始化内容</div>
             </ProtectedRoute>
           }
         />
@@ -55,7 +55,7 @@ describe("ProtectedRoute", () => {
       });
     });
 
-    renderProtectedRoute("/dashboard");
+    renderProtectedRoute("/onboarding");
 
     expect(screen.getByTestId("app-shell-skeleton")).toHaveAttribute(
       "data-variant",
@@ -89,7 +89,7 @@ describe("ProtectedRoute", () => {
       });
     });
 
-    renderProtectedRoute("/dashboard");
+    renderProtectedRoute("/onboarding");
 
     expect(screen.getByText("登录页")).toBeInTheDocument();
   });
@@ -103,8 +103,8 @@ describe("ProtectedRoute", () => {
       });
     });
 
-    renderProtectedRoute("/dashboard");
+    renderProtectedRoute("/onboarding");
 
-    expect(screen.getByText("控制台内容")).toBeInTheDocument();
+    expect(screen.getByText("初始化内容")).toBeInTheDocument();
   });
 });

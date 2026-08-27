@@ -1,5 +1,24 @@
-# ── Builder: Node 24 + pnpm 11, build Vite app ─────────
+# ── Atlas acquisition: immutable Vanatome release ─────────────────────
+# Keep this stage independent from application source so the ~92 MiB verified
+# atlas layer remains cacheable across ordinary Web code changes.
+FROM node:24-slim AS anatomy-atlas
+
+ARG BODYSENSE_ANATOMY_ATLAS_VERSION=1.4.0
+WORKDIR /atlas
+COPY scripts/anatomy ./scripts/anatomy
+RUN node scripts/anatomy/sync.mjs \
+      --version "${BODYSENSE_ANATOMY_ATLAS_VERSION}" \
+      --output "/release/${BODYSENSE_ANATOMY_ATLAS_VERSION}" \
+    && node scripts/anatomy/verify.mjs \
+      --version "${BODYSENSE_ANATOMY_ATLAS_VERSION}" \
+      --root "/release/${BODYSENSE_ANATOMY_ATLAS_VERSION}"
+
+# ── Builder: Node 24 + pnpm 11, build Vite app ────────────────────────
 FROM node:24-slim AS builder
+
+ARG BODYSENSE_ANATOMY_ATLAS_VERSION=1.4.0
+ARG VITE_BODYSENSE_ANATOMY_CATALOG_URL
+ARG VITE_ASSET_BASE
 
 # Enable pnpm via corepack
 RUN corepack enable && corepack prepare pnpm@11 --activate
@@ -26,11 +45,18 @@ RUN pnpm install --no-frozen-lockfile
 # Copy full source
 COPY . .
 
+# Add the byte-for-byte verified atlas mirror under a version-scoped,
+# same-origin public path. Generated binaries never enter ordinary Git.
+COPY --from=anatomy-atlas /release/ apps/web/public/static/anatomy/vanatome/
+
 # Build the web app (outputs to apps/web/dist/)
 # Frontend uses apiUrl('/api/v1/...') with empty base — nginx proxies /api to Go backend.
-RUN cd apps/web && npx vite build
+RUN cd apps/web \
+    && VITE_ASSET_BASE="${VITE_ASSET_BASE:-/}" \
+       VITE_BODYSENSE_ANATOMY_CATALOG_URL="${VITE_BODYSENSE_ANATOMY_CATALOG_URL:-/static/anatomy/vanatome/${BODYSENSE_ANATOMY_ATLAS_VERSION}/releases/${BODYSENSE_ANATOMY_ATLAS_VERSION}/catalog.json}" \
+       npx vite build
 
-# ── Runtime: nginx serves static files ─────────────────
+# ── Runtime: nginx serves static files ─────────────────────────────────
 FROM nginx:1.27-alpine
 
 ARG BUILD_DATE

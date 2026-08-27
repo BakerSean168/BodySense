@@ -1,4 +1,4 @@
-export { TrainingPage } from "./pages/TrainingPage";
+export { TrainingExecutionPanel } from "./components/TrainingExecutionPanel";
 export { trainingApi } from "./services/trainingService";
 export type {
   TrainingPlan,

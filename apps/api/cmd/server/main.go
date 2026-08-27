@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -16,9 +17,12 @@ import (
 	"github.com/bodysense/api/internal/handler"
 	"github.com/bodysense/api/internal/middleware"
 	"github.com/bodysense/api/internal/model"
+	"github.com/bodysense/api/internal/observability"
 	"github.com/bodysense/api/internal/repository"
 	"github.com/bodysense/api/internal/service"
 	"github.com/bodysense/api/internal/uploadstorage"
+	"github.com/gin-contrib/requestid"
+	ginslog "github.com/gin-contrib/slog"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
@@ -27,6 +31,10 @@ import (
 func main() {
 	// Load .env file from project root (ignore error in production where env is injected)
 	_ = godotenv.Load("../../.env")
+
+	// Structured process logger must be installed before service initialization so startup
+	// failures and legacy log.Printf calls share the same JSON log stream.
+	observability.ConfigureLogger()
 
 	// Database connection
 	dbCfg := database.ConfigFromEnv()
@@ -116,7 +124,17 @@ func main() {
 	conversationService := service.NewConversationService(conversationRepo, messageRepo, runRepo, shareRepo, aiClient, database.NewTransactionManager(database.DB)).WithAgentDeployment(agentDeploymentPolicy)
 	shareService := service.NewShareService(conversationRepo, messageRepo, shareRepo)
 	consultationService := service.NewConsultationService(consultationRepo, conversationRepo)
-	bodyStateService := service.NewBodyStateService(bodyStateRepo)
+	bodyStateService := service.NewBodyStateService(bodyStateRepo).WithBodyRegionIDValidator(
+		service.NewCanonicalBodyRegionIDValidator(),
+	)
+	lifestyleService := service.NewLifestyleService(bodyStateService)
+	bodyMetricsService := service.NewBodyMetricsService(bodyStateService)
+	healthHistoryService := service.NewHealthHistoryService(bodyStateService)
+	onboardingContextService := service.NewOnboardingContextService(
+		profileService,
+		bodyStateService,
+		database.NewTransactionManager(database.DB),
+	)
 	diagnosisAnalysisService := service.NewDiagnosisAnalysisService(diagnosisAnalysisRepo)
 	diagnosisFreshnessService := service.NewDiagnosisFreshnessService(diagnosisFreshnessRepo, bodyStateService)
 	treatmentService := service.NewTreatmentService(
@@ -207,6 +225,10 @@ func main() {
 	runtimeEventHandler := handler.NewRuntimeEventHandler(runtimeEventService, conversationService)
 	threadProjectionHandler := handler.NewThreadProjectionHandler(threadProjectionService, bodyStateService)
 	bodyStateHandler := handler.NewBodyStateHandler(bodyStateService)
+	lifestyleHandler := handler.NewLifestyleHandler(lifestyleService)
+	bodyMetricsHandler := handler.NewBodyMetricsHandler(bodyMetricsService)
+	healthHistoryHandler := handler.NewHealthHistoryHandler(healthHistoryService)
+	onboardingContextHandler := handler.NewOnboardingContextHandler(onboardingContextService)
 	consultationHandler := handler.NewConsultationHandler(
 		consultationService,
 		interactionService,
@@ -265,6 +287,7 @@ func main() {
 		trainingService,
 	)
 	healthWorkspaceHandler := handler.NewHealthWorkspaceHandler(healthWorkspaceService)
+	clientDiagnosticHandler := handler.NewClientDiagnosticHandler()
 
 	// HTTP server. Host development defaults to loopback; container runtimes
 	// explicitly set API_HOST=0.0.0.0 so the Docker network can reach it.
@@ -272,7 +295,19 @@ func main() {
 	port := os.Getenv("API_PORT")
 	listenAddress := resolveAPIListenAddress(host, port)
 
-	r := gin.Default()
+	r := gin.New()
+	r.Use(requestid.New())
+	r.Use(ginslog.SetLogger(
+		ginslog.WithLogger(func(c *gin.Context, _ *slog.Logger) *slog.Logger {
+			return slog.Default().With("http_request_id", requestid.Get(c))
+		}),
+		ginslog.WithContext(sanitizeHTTPRequestLogRecord),
+		ginslog.WithSkipPath([]string{"/api/health"}),
+		ginslog.WithMessage("http request"),
+		ginslog.WithUTC(true),
+		ginslog.WithRequestHeader(false),
+	))
+	r.Use(gin.Recovery())
 	if err := r.SetTrustedProxies(parseTrustedProxies()); err != nil {
 		log.Fatalf("invalid TRUSTED_PROXIES configuration: %v", err)
 	}
@@ -287,7 +322,7 @@ func main() {
 			c.Writer.Header().Add("Vary", "Origin")
 		}
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Request-ID")
 		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
 
 		if c.Request.Method == "OPTIONS" {
@@ -340,10 +375,12 @@ func main() {
 	protected.Use(middleware.AuthMiddleware(jwtConfig, userRepo, sessionCache))
 	{
 		protected.GET("/me", authHandler.Me)
+		protected.POST("/client-diagnostics", clientDiagnosticHandler.Record)
 		protected.GET("/privacy/erasure-plan", privacyHandler.PlanErasure)
 		protected.POST("/privacy/erasure", privacyHandler.RequestErasure)
 		protected.GET("/profile", profileHandler.GetProfile)
 		protected.PUT("/profile", profileHandler.CreateOrUpdateProfile)
+		protected.PUT("/onboarding/context", onboardingContextHandler.Submit)
 
 		// Upload routes
 		protected.POST("/uploads", uploadHandler.Upload)
@@ -415,6 +452,16 @@ func main() {
 		protected.PATCH("/body-state/hypotheses/:id/lifecycle", bodyStateHandler.UpdateHypothesisLifecycle)
 		protected.GET("/body-state/evidence", bodyStateHandler.ListEvidence)
 		protected.POST("/body-state/safety/resolve", bodyStateHandler.ResolveSafety)
+
+		// User-facing projections backed exclusively by BodyState.
+		protected.GET("/lifestyle", lifestyleHandler.Get)
+		protected.PUT("/lifestyle", lifestyleHandler.Update)
+		protected.POST("/lifestyle/candidates/:id/accept", lifestyleHandler.AcceptCandidate)
+		protected.POST("/lifestyle/candidates/:id/reject", lifestyleHandler.RejectCandidate)
+		protected.GET("/body-metrics", bodyMetricsHandler.Get)
+		protected.PUT("/body-metrics", bodyMetricsHandler.Update)
+		protected.GET("/health-history/injury", healthHistoryHandler.GetInjuryHistory)
+		protected.PUT("/health-history/injury", healthHistoryHandler.UpdateInjuryHistory)
 
 		// Capability-based continuous health workspace.
 		protected.GET("/health-workspace", healthWorkspaceHandler.Get)
@@ -508,6 +555,24 @@ func startRunLeaseReconciler(
 			reconcile()
 		}
 	}()
+}
+
+// sanitizeHTTPRequestLogRecord keeps gin-contrib/slog's mature request lifecycle
+// handling while removing fields that are not appropriate for a health product's
+// operational logs. Route/status/latency/request-id are enough for correlation;
+// raw query strings, client IPs and referrers are intentionally excluded.
+func sanitizeHTTPRequestLogRecord(_ *gin.Context, record *slog.Record) *slog.Record {
+	clean := slog.NewRecord(record.Time, record.Level, record.Message, record.PC)
+	record.Attrs(func(attr slog.Attr) bool {
+		switch attr.Key {
+		case "query", "ip", "referer":
+			return true
+		default:
+			clean.AddAttrs(attr)
+			return true
+		}
+	})
+	return &clean
 }
 
 func parseCORSOrigins() []string {

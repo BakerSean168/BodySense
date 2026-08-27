@@ -1,0 +1,468 @@
+{
+  "schemaVersion": 1,
+  "mappingVersion": 1,
+  "ontologyVersion": 1,
+  "atlas": {
+    "provider": "vanatome",
+    "release": "1.4.0",
+    "atlasId": "vanatome-human",
+    "catalogBuildId": "994e6cc8ffbb212e",
+    "upstreamCommit": "8185b3fa46a1dbefdd907390918c57954fd9b816"
+  },
+  "verificationPolicy": {
+    "registry": "All anatomyIds and preferred focus IDs must exist in the generated 1.4.0 registry; CI fails on drift.",
+    "visual": "Every v1 region remains visual_review=pending until the real Viewer lane confirms mesh boundaries/focus behavior."
+  },
+  "regions": {
+    "head": {
+      "preferredFocusAnatomyId": "brainstem",
+      "anatomyIds": [
+        "brainstem",
+        "cerebrum",
+        "facial-expression-muscles"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "neck": {
+      "preferredFocusAnatomyId": "skeleton-vertebra-c4",
+      "anatomyIds": [
+        "skeleton-vertebra-c4",
+        "neck-muscles"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "shoulder.left": {
+      "preferredFocusAnatomyId": "deltoid-muscles-acromial-part-of-deltoid-muscle-left",
+      "anatomyIds": [
+        "deltoid-muscles-acromial-part-of-deltoid-muscle-left",
+        "appendicular-skeleton-clavicle-left"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "shoulder.right": {
+      "preferredFocusAnatomyId": "deltoid-muscles-acromial-part-of-deltoid-muscle-right",
+      "anatomyIds": [
+        "deltoid-muscles-acromial-part-of-deltoid-muscle-right",
+        "appendicular-skeleton-clavicle-right"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "scapular.left": {
+      "preferredFocusAnatomyId": "appendicular-skeleton-scapula-left",
+      "anatomyIds": [
+        "appendicular-skeleton-scapula-left",
+        "rotator-cuff-muscles-subscapularis-muscle-left"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "scapular.right": {
+      "preferredFocusAnatomyId": "appendicular-skeleton-scapula-right",
+      "anatomyIds": [
+        "appendicular-skeleton-scapula-right",
+        "rotator-cuff-muscles-subscapularis-muscle-right"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "upper_arm.left": {
+      "preferredFocusAnatomyId": "appendicular-skeleton-humerus-left",
+      "anatomyIds": [
+        "appendicular-skeleton-humerus-left"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "upper_arm.right": {
+      "preferredFocusAnatomyId": "appendicular-skeleton-humerus-right",
+      "anatomyIds": [
+        "appendicular-skeleton-humerus-right"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "elbow.left": {
+      "preferredFocusAnatomyId": "appendicular-skeleton-ulna-left",
+      "anatomyIds": [
+        "appendicular-skeleton-ulna-left"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Atlas 1.4.0 has no dedicated elbow structure; ulna is the registry-verified provisional focus target. Visual boundary review required."
+      }
+    },
+    "elbow.right": {
+      "preferredFocusAnatomyId": "appendicular-skeleton-ulna-right",
+      "anatomyIds": [
+        "appendicular-skeleton-ulna-right"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Atlas 1.4.0 has no dedicated elbow structure; ulna is the registry-verified provisional focus target. Visual boundary review required."
+      }
+    },
+    "forearm.left": {
+      "preferredFocusAnatomyId": "appendicular-skeleton-radius-left",
+      "anatomyIds": [
+        "appendicular-skeleton-radius-left"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Radius is a registry-verified provisional forearm focus target; visual review must confirm practical picking/highlight coverage."
+      }
+    },
+    "forearm.right": {
+      "preferredFocusAnatomyId": "appendicular-skeleton-radius-right",
+      "anatomyIds": [
+        "appendicular-skeleton-radius-right"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Radius is a registry-verified provisional forearm focus target; visual review must confirm practical picking/highlight coverage."
+      }
+    },
+    "wrist.left": {
+      "preferredFocusAnatomyId": "appendicular-skeleton-scaphoid-bone-left",
+      "anatomyIds": [
+        "appendicular-skeleton-scaphoid-bone-left",
+        "appendicular-skeleton-lunate-bone-left"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "wrist.right": {
+      "preferredFocusAnatomyId": "appendicular-skeleton-scaphoid-bone-right",
+      "anatomyIds": [
+        "appendicular-skeleton-scaphoid-bone-right",
+        "appendicular-skeleton-lunate-bone-right"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "hand.left": {
+      "preferredFocusAnatomyId": "appendicular-skeleton-third-metacarpal-bone-left",
+      "anatomyIds": [
+        "appendicular-skeleton-third-metacarpal-bone-left",
+        "hand-muscles-dorsal-interossei-muscles-of-hand-left"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "hand.right": {
+      "preferredFocusAnatomyId": "appendicular-skeleton-third-metacarpal-bone-right",
+      "anatomyIds": [
+        "appendicular-skeleton-third-metacarpal-bone-right",
+        "hand-muscles-dorsal-interossei-muscles-of-hand-right"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "chest": {
+      "preferredFocusAnatomyId": "skeleton-body-of-sternum",
+      "anatomyIds": [
+        "skeleton-body-of-sternum",
+        "skeleton-fifth-rib-left",
+        "skeleton-fifth-rib-right"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "abdomen": {
+      "preferredFocusAnatomyId": "rectus-abdominis-rectus-abdominis-muscle-left",
+      "anatomyIds": [
+        "rectus-abdominis-rectus-abdominis-muscle-left",
+        "rectus-abdominis-rectus-abdominis-muscle-right",
+        "external-abdominal-obliques-external-abdominal-oblique-muscle-left",
+        "external-abdominal-obliques-external-abdominal-oblique-muscle-right"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "upper_back": {
+      "preferredFocusAnatomyId": "skeleton-vertebra-t4",
+      "anatomyIds": [
+        "skeleton-vertebra-t4",
+        "skeleton-vertebra-t7"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "lower_back": {
+      "preferredFocusAnatomyId": "skeleton-vertebra-l3",
+      "anatomyIds": [
+        "skeleton-vertebra-l3",
+        "quadratus-lumborum-quadratus-lumborum-muscle-left",
+        "quadratus-lumborum-quadratus-lumborum-muscle-right"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "pelvis": {
+      "preferredFocusAnatomyId": "skeleton-sacrum",
+      "anatomyIds": [
+        "skeleton-sacrum",
+        "skeleton-coccyx"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "hip.left": {
+      "preferredFocusAnatomyId": "skeleton-hip-bone-left",
+      "anatomyIds": [
+        "skeleton-hip-bone-left"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "hip.right": {
+      "preferredFocusAnatomyId": "skeleton-hip-bone-right",
+      "anatomyIds": [
+        "skeleton-hip-bone-right"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "gluteal.left": {
+      "preferredFocusAnatomyId": "superficial-gluteal-muscles-gluteus-maximus-muscle-left",
+      "anatomyIds": [
+        "superficial-gluteal-muscles-gluteus-maximus-muscle-left",
+        "superficial-gluteal-muscles-gluteus-medius-muscle-left",
+        "deep-gluteal-muscles-piriformis-muscle-left"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "gluteal.right": {
+      "preferredFocusAnatomyId": "superficial-gluteal-muscles-gluteus-maximus-muscle-right",
+      "anatomyIds": [
+        "superficial-gluteal-muscles-gluteus-maximus-muscle-right",
+        "superficial-gluteal-muscles-gluteus-medius-muscle-right",
+        "deep-gluteal-muscles-piriformis-muscle-right"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "thigh.left": {
+      "preferredFocusAnatomyId": "appendicular-skeleton-femur-left",
+      "anatomyIds": [
+        "appendicular-skeleton-femur-left"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "thigh.right": {
+      "preferredFocusAnatomyId": "appendicular-skeleton-femur-right",
+      "anatomyIds": [
+        "appendicular-skeleton-femur-right"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "knee.left": {
+      "preferredFocusAnatomyId": "appendicular-skeleton-patella-left",
+      "anatomyIds": [
+        "appendicular-skeleton-patella-left"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "knee.right": {
+      "preferredFocusAnatomyId": "appendicular-skeleton-patella-right",
+      "anatomyIds": [
+        "appendicular-skeleton-patella-right"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "calf.left": {
+      "preferredFocusAnatomyId": "appendicular-skeleton-tibia-left",
+      "anatomyIds": [
+        "appendicular-skeleton-tibia-left",
+        "appendicular-skeleton-fibula-left"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "calf.right": {
+      "preferredFocusAnatomyId": "appendicular-skeleton-tibia-right",
+      "anatomyIds": [
+        "appendicular-skeleton-tibia-right",
+        "appendicular-skeleton-fibula-right"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "ankle.left": {
+      "preferredFocusAnatomyId": "appendicular-skeleton-talus-left",
+      "anatomyIds": [
+        "appendicular-skeleton-talus-left"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "ankle.right": {
+      "preferredFocusAnatomyId": "appendicular-skeleton-talus-right",
+      "anatomyIds": [
+        "appendicular-skeleton-talus-right"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "foot.left": {
+      "preferredFocusAnatomyId": "appendicular-skeleton-calcaneus-left",
+      "anatomyIds": [
+        "appendicular-skeleton-calcaneus-left",
+        "appendicular-skeleton-first-metatarsal-bone-left",
+        "appendicular-skeleton-fifth-metatarsal-bone-left"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    },
+    "foot.right": {
+      "preferredFocusAnatomyId": "appendicular-skeleton-calcaneus-right",
+      "anatomyIds": [
+        "appendicular-skeleton-calcaneus-right",
+        "appendicular-skeleton-first-metatarsal-bone-right",
+        "appendicular-skeleton-fifth-metatarsal-bone-right"
+      ],
+      "verification": {
+        "registry_verified": true,
+        "visual_review": "pending",
+        "basis": "registry_name_hierarchy_laterality",
+        "note": "Curated from pinned registry name, hierarchy, focus metadata, and laterality; final mesh boundary review is pending Viewer integration."
+      }
+    }
+  }
+}

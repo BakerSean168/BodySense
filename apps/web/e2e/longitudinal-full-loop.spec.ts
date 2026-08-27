@@ -38,11 +38,7 @@ async function registerAndProfile(
     headers: { Authorization: `Bearer ${accessToken}` },
     data: {
       gender: "male",
-      age: 30,
-      height_cm: 175,
-      weight_kg: 70,
-      occupation: "software engineer",
-      exercise_frequency: "2-3/week",
+      birth_date: "1996-08-27",
     },
   });
   expect(profileResponse.ok()).toBeTruthy();
@@ -304,15 +300,13 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
     }),
   );
 
-  await page.goto("/dashboard");
-  const trainingAction = page.getByRole("button", { name: "继续执行训练" });
+  await page.goto(`/training/${acceptance.training_plan.id}`);
+  await expect(page).toHaveURL(/\/consultation(?:\/[^?]+)?\?view=treatment$/);
+  const trainingAction = page.getByRole("button", { name: "展开训练执行" });
   await expect(trainingAction).toBeVisible();
   await page.reload();
   await expect(trainingAction).toBeVisible();
   await trainingAction.click();
-  await expect(page).toHaveURL(
-    new RegExp(`/training/${acceptance.training_plan.id}$`),
-  );
   await expect(
     page.getByRole("heading", { name: "训练计划 (Training Plan)" }),
   ).toBeVisible();

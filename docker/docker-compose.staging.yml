@@ -40,8 +40,9 @@ services:
       MIMO_BASE_URL: ${MIMO_BASE_URL:-https://token-plan-cn.xiaomimimo.com/v1}
       MIMO_API_KEY: ${MIMO_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:?set GROQ_API_KEY}
     volumes:
-      - ./litellm/config.yaml:/app/config.yaml:ro
+      - ./litellm/config.staging.yaml:/app/config.yaml:ro
     networks: [bodysense-staging]
     healthcheck:
       test: ['CMD', 'python', '-c', "import urllib.request; urllib.request.urlopen('http://localhost:4000/health/liveliness')"]
@@ -122,6 +123,15 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.web
+      args:
+        BODYSENSE_ANATOMY_ATLAS_VERSION: ${BODYSENSE_ANATOMY_ATLAS_VERSION:-1.4.0}
+        # Staging keeps application/API traffic private on Tailnet, but public immutable
+        # atlas bytes use Vanatome's version-pinned Cloudflare distribution. This avoids
+        # coupling multi-megabyte GLBs to a lossy developer Tailnet path. Production
+        # keeps the Dockerfile's same-origin BodySense-controlled default unless its own
+        # CDN URL is explicitly configured.
+        VITE_BODYSENSE_ANATOMY_CATALOG_URL: ${VITE_BODYSENSE_ANATOMY_CATALOG_URL:-https://atlas.vanatome.vixotic.in/releases/1.4.0/catalog.json}
+        VITE_ASSET_BASE: ${VITE_ASSET_BASE:-}
     restart: unless-stopped
     ports:
       - '${STAGING_BIND_HOST:-127.0.0.1}:${STAGING_WEB_PORT:-20150}:80'

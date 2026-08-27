@@ -1,0 +1,426 @@
+{
+  "schemaVersion": 1,
+  "provider": "vanatome",
+  "atlas": {
+    "id": "vanatome-human",
+    "name": "Vanatome Human Atlas",
+    "version": "1.4.0",
+    "buildId": "994e6cc8ffbb212e"
+  },
+  "inventoryCapturedAt": "2026-08-27T02:40:14Z",
+  "upstreamCatalogUrl": "https://atlas.vanatome.vixotic.in/releases/1.4.0/catalog.json",
+  "publicRoot": "/static/anatomy/vanatome/1.4.0",
+  "catalogPath": "releases/1.4.0/catalog.json",
+  "catalogPublicUrl": "/static/anatomy/vanatome/1.4.0/releases/1.4.0/catalog.json",
+  "integrityAuthority": "sha256",
+  "inventory": {
+    "fileCount": 26,
+    "totalBytes": 96981412,
+    "modelBytes": 96402980,
+    "metadataBytes": 568574
+  },
+  "provenance": {
+    "sourceName": "Z-Anatomy",
+    "sourceUrl": "https://github.com/Z-Anatomy/Models",
+    "licenseName": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "attribution": "Z-Anatomy contributors; Gauthier Kervyn and Marcin Zielinski, with additional contributors and upstream sources documented by Z-Anatomy.",
+    "modifications": [
+      "Web export",
+      "Stable structure and hierarchy identifiers",
+      "Material adjustments",
+      "Curve-to-mesh conversion",
+      "Geometry optimization",
+      "System bundle partitioning"
+    ],
+    "noticeUrl": "../../ATTRIBUTION.txt"
+  },
+  "files": [
+    {
+      "kind": "attribution",
+      "path": "ATTRIBUTION.txt",
+      "sourceUrl": "https://atlas.vanatome.vixotic.in/ATTRIBUTION.txt",
+      "bytes": 1146,
+      "sha256": "9ab8858ceb3befa38ed69feff64939969db39bdda7bbbe7f8b341035a5c74dc8",
+      "observed": {
+        "contentType": "text/plain; charset=utf-8",
+        "etag": "\"81f38464f87ea4ae18c3d239db198a1f\"",
+        "lastModified": "Mon, 27 Jul 2026 16:45:46 GMT",
+        "contentLength": "1146"
+      }
+    },
+    {
+      "kind": "model",
+      "path": "models/z-anatomy-1.4.0-cardiovascular.glb",
+      "sourceUrl": "https://atlas.vanatome.vixotic.in/models/z-anatomy-1.4.0-cardiovascular.glb",
+      "bytes": 7994524,
+      "sha256": "75aa244f4d54dcf67f499a4d3379cbd55ff331ee2a64c3c167bf53844bd5b5c4",
+      "observed": {
+        "contentType": "model/gltf-binary",
+        "etag": "\"2928506deafa71f4c50ca1232ca20870\"",
+        "lastModified": "Wed, 05 Aug 2026 05:25:36 GMT",
+        "contentLength": "7994524"
+      },
+      "catalogDeclared": {
+        "bytes": 7994524,
+        "sha256": "75aa244f4d54dcf67f499a4d3379cbd55ff331ee2a64c3c167bf53844bd5b5c4"
+      }
+    },
+    {
+      "kind": "model",
+      "path": "models/z-anatomy-1.4.0-digestive.glb",
+      "sourceUrl": "https://atlas.vanatome.vixotic.in/models/z-anatomy-1.4.0-digestive.glb",
+      "bytes": 5757452,
+      "sha256": "de46f799139ac03f8a4d1e343ba81e2ccdfb76a8d0b1756b30209150f04658a9",
+      "observed": {
+        "contentType": "model/gltf-binary",
+        "etag": "\"e558a146bff9ce795e6e1f84e617cfd6\"",
+        "lastModified": "Wed, 05 Aug 2026 05:25:40 GMT",
+        "contentLength": "5757452"
+      },
+      "catalogDeclared": {
+        "bytes": 5757452,
+        "sha256": "de46f799139ac03f8a4d1e343ba81e2ccdfb76a8d0b1756b30209150f04658a9"
+      }
+    },
+    {
+      "kind": "model",
+      "path": "models/z-anatomy-1.4.0-endocrine.glb",
+      "sourceUrl": "https://atlas.vanatome.vixotic.in/models/z-anatomy-1.4.0-endocrine.glb",
+      "bytes": 3505740,
+      "sha256": "6fb60ce164b321eaf05d340319d6f6d7e32afaa1a0e8ab4c301b91055901c908",
+      "observed": {
+        "contentType": "model/gltf-binary",
+        "etag": "\"9064a22408d673a37240c9b84b8fb794\"",
+        "lastModified": "Wed, 05 Aug 2026 05:25:44 GMT",
+        "contentLength": "3505740"
+      },
+      "catalogDeclared": {
+        "bytes": 3505740,
+        "sha256": "6fb60ce164b321eaf05d340319d6f6d7e32afaa1a0e8ab4c301b91055901c908"
+      }
+    },
+    {
+      "kind": "model",
+      "path": "models/z-anatomy-1.4.0-full-body.glb",
+      "sourceUrl": "https://atlas.vanatome.vixotic.in/models/z-anatomy-1.4.0-full-body.glb",
+      "bytes": 31849556,
+      "sha256": "7d70a2a2da6c9d9902c7422fc7565c922931d01b80a6b025c7774a0439fc50b3",
+      "observed": {
+        "contentType": "model/gltf-binary",
+        "etag": "\"1bb14398c90ab9716aac8221acd60d1f\"",
+        "lastModified": "Wed, 05 Aug 2026 05:25:52 GMT",
+        "contentLength": "31849556"
+      },
+      "catalogDeclared": {
+        "bytes": 31849556,
+        "sha256": "7d70a2a2da6c9d9902c7422fc7565c922931d01b80a6b025c7774a0439fc50b3"
+      }
+    },
+    {
+      "kind": "model",
+      "path": "models/z-anatomy-1.4.0-lymphatic.glb",
+      "sourceUrl": "https://atlas.vanatome.vixotic.in/models/z-anatomy-1.4.0-lymphatic.glb",
+      "bytes": 3919332,
+      "sha256": "1fd2d74a946c23281245b4a68cb0918843be58e569e78146eb1a24b36d17b872",
+      "observed": {
+        "contentType": "model/gltf-binary",
+        "etag": "\"b981f2941bc139b7a66d5b62bbd17a6e\"",
+        "lastModified": "Wed, 05 Aug 2026 05:25:56 GMT",
+        "contentLength": "3919332"
+      },
+      "catalogDeclared": {
+        "bytes": 3919332,
+        "sha256": "1fd2d74a946c23281245b4a68cb0918843be58e569e78146eb1a24b36d17b872"
+      }
+    },
+    {
+      "kind": "model",
+      "path": "models/z-anatomy-1.4.0-muscular.glb",
+      "sourceUrl": "https://atlas.vanatome.vixotic.in/models/z-anatomy-1.4.0-muscular.glb",
+      "bytes": 10705668,
+      "sha256": "8a31c34c1ee578714bcd8a9a950aced4aaf0bbbd6047ec3b57836a4df6e8121d",
+      "observed": {
+        "contentType": "model/gltf-binary",
+        "etag": "\"c8782823a2871f123f969fbac629b7ef\"",
+        "lastModified": "Wed, 05 Aug 2026 05:26:00 GMT",
+        "contentLength": "10705668"
+      },
+      "catalogDeclared": {
+        "bytes": 10705668,
+        "sha256": "8a31c34c1ee578714bcd8a9a950aced4aaf0bbbd6047ec3b57836a4df6e8121d"
+      }
+    },
+    {
+      "kind": "model",
+      "path": "models/z-anatomy-1.4.0-nervous.glb",
+      "sourceUrl": "https://atlas.vanatome.vixotic.in/models/z-anatomy-1.4.0-nervous.glb",
+      "bytes": 11301584,
+      "sha256": "8ef35e1dae0901660ea3a8557fb7769f893fde89ca482af11b1dfc989239e57f",
+      "observed": {
+        "contentType": "model/gltf-binary",
+        "etag": "\"4f49618ef71d1df396f18fc1a42d955d\"",
+        "lastModified": "Wed, 05 Aug 2026 05:26:06 GMT",
+        "contentLength": "11301584"
+      },
+      "catalogDeclared": {
+        "bytes": 11301584,
+        "sha256": "8ef35e1dae0901660ea3a8557fb7769f893fde89ca482af11b1dfc989239e57f"
+      }
+    },
+    {
+      "kind": "model",
+      "path": "models/z-anatomy-1.4.0-regional-anatomy.glb",
+      "sourceUrl": "https://atlas.vanatome.vixotic.in/models/z-anatomy-1.4.0-regional-anatomy.glb",
+      "bytes": 6288144,
+      "sha256": "7d550894c3cba255bbed5e2518ec321e3d8ecebbfab76ca2a7c12eaf71402d8e",
+      "observed": {
+        "contentType": "model/gltf-binary",
+        "etag": "\"f112fdd5e8945de7f413e33abfa9289e\"",
+        "lastModified": "Wed, 05 Aug 2026 05:26:11 GMT",
+        "contentLength": "6288144"
+      },
+      "catalogDeclared": {
+        "bytes": 6288144,
+        "sha256": "7d550894c3cba255bbed5e2518ec321e3d8ecebbfab76ca2a7c12eaf71402d8e"
+      }
+    },
+    {
+      "kind": "model",
+      "path": "models/z-anatomy-1.4.0-reproductive.glb",
+      "sourceUrl": "https://atlas.vanatome.vixotic.in/models/z-anatomy-1.4.0-reproductive.glb",
+      "bytes": 3611832,
+      "sha256": "4a43e71dc4158324109349bb72c89c88a587383da0f1c7482e4fc3a7ac1e9c93",
+      "observed": {
+        "contentType": "model/gltf-binary",
+        "etag": "\"60ad886b26354865c331293f91f80d08\"",
+        "lastModified": "Wed, 05 Aug 2026 05:26:22 GMT",
+        "contentLength": "3611832"
+      },
+      "catalogDeclared": {
+        "bytes": 3611832,
+        "sha256": "4a43e71dc4158324109349bb72c89c88a587383da0f1c7482e4fc3a7ac1e9c93"
+      }
+    },
+    {
+      "kind": "model",
+      "path": "models/z-anatomy-1.4.0-respiratory.glb",
+      "sourceUrl": "https://atlas.vanatome.vixotic.in/models/z-anatomy-1.4.0-respiratory.glb",
+      "bytes": 4143248,
+      "sha256": "ba59caf5629179886b40ba8bc158b5a006ff838ac1ddbae1fe23cd4b2e03406a",
+      "observed": {
+        "contentType": "model/gltf-binary",
+        "etag": "\"954a188117583d4f39c4e2b375be7dca\"",
+        "lastModified": "Wed, 05 Aug 2026 05:26:26 GMT",
+        "contentLength": "4143248"
+      },
+      "catalogDeclared": {
+        "bytes": 4143248,
+        "sha256": "ba59caf5629179886b40ba8bc158b5a006ff838ac1ddbae1fe23cd4b2e03406a"
+      }
+    },
+    {
+      "kind": "model",
+      "path": "models/z-anatomy-1.4.0-skeletal.glb",
+      "sourceUrl": "https://atlas.vanatome.vixotic.in/models/z-anatomy-1.4.0-skeletal.glb",
+      "bytes": 3882928,
+      "sha256": "8cbea4cc15fb2063853491634eb2c57b57cf7f104f7160c4eed82cf9e392ab0d",
+      "observed": {
+        "contentType": "model/gltf-binary",
+        "etag": "\"6fd168460a28cc3afce6d7335be92fea\"",
+        "lastModified": "Wed, 05 Aug 2026 05:26:30 GMT",
+        "contentLength": "3882928"
+      },
+      "catalogDeclared": {
+        "bytes": 3882928,
+        "sha256": "8cbea4cc15fb2063853491634eb2c57b57cf7f104f7160c4eed82cf9e392ab0d"
+      }
+    },
+    {
+      "kind": "model",
+      "path": "models/z-anatomy-1.4.0-urinary.glb",
+      "sourceUrl": "https://atlas.vanatome.vixotic.in/models/z-anatomy-1.4.0-urinary.glb",
+      "bytes": 3442972,
+      "sha256": "5a869a4e6e419dba353ae147867606e8983e866a72338952c77df352697ddd8a",
+      "observed": {
+        "contentType": "model/gltf-binary",
+        "etag": "\"291292e0af2f417c090d76e9c967a266\"",
+        "lastModified": "Wed, 05 Aug 2026 05:26:33 GMT",
+        "contentLength": "3442972"
+      },
+      "catalogDeclared": {
+        "bytes": 3442972,
+        "sha256": "5a869a4e6e419dba353ae147867606e8983e866a72338952c77df352697ddd8a"
+      }
+    },
+    {
+      "kind": "metadata",
+      "path": "releases/1.4.0/cardiovascular.metadata.json",
+      "sourceUrl": "https://atlas.vanatome.vixotic.in/releases/1.4.0/cardiovascular.metadata.json",
+      "bytes": 26638,
+      "sha256": "d0a71e3aeee97e93d8f1cd7d779348c04f3d9391a5dae815b9b73c6eed6e730e",
+      "observed": {
+        "contentType": "application/json",
+        "etag": "\"5c81dbda715f89abd05d9e09883e029b\"",
+        "lastModified": "Wed, 05 Aug 2026 05:24:44 GMT",
+        "contentLength": "26638"
+      }
+    },
+    {
+      "kind": "catalog",
+      "path": "releases/1.4.0/catalog.json",
+      "sourceUrl": "https://atlas.vanatome.vixotic.in/releases/1.4.0/catalog.json",
+      "bytes": 8712,
+      "sha256": "d33c4722029c0c238a13a4a9418f7b7bc3a479366e8593c3e58d2f107b722397",
+      "observed": {
+        "contentType": "application/json",
+        "etag": "\"d711eeba7620dd1d65bbc05f3a842717\"",
+        "lastModified": "Wed, 05 Aug 2026 05:24:48 GMT",
+        "contentLength": "8712"
+      }
+    },
+    {
+      "kind": "metadata",
+      "path": "releases/1.4.0/digestive.metadata.json",
+      "sourceUrl": "https://atlas.vanatome.vixotic.in/releases/1.4.0/digestive.metadata.json",
+      "bytes": 4951,
+      "sha256": "b2d314ed3524cf5b7c022d5d526279096e5d34acd3d39a1b92c7dda4b61b61de",
+      "observed": {
+        "contentType": "application/json",
+        "etag": "\"368a84210334681ee58d8c5718a1ceee\"",
+        "lastModified": "Wed, 05 Aug 2026 05:24:52 GMT",
+        "contentLength": "4951"
+      }
+    },
+    {
+      "kind": "metadata",
+      "path": "releases/1.4.0/endocrine.metadata.json",
+      "sourceUrl": "https://atlas.vanatome.vixotic.in/releases/1.4.0/endocrine.metadata.json",
+      "bytes": 4865,
+      "sha256": "ec17b6e4761b4778aabe8266b126e99c4cb8fc80cf53b8eab7f6f47b59ab0937",
+      "observed": {
+        "contentType": "application/json",
+        "etag": "\"aa8a628071b4de2ecdeb7f9a6284d04b\"",
+        "lastModified": "Wed, 05 Aug 2026 05:24:59 GMT",
+        "contentLength": "4865"
+      }
+    },
+    {
+      "kind": "metadata",
+      "path": "releases/1.4.0/full-body.metadata.json",
+      "sourceUrl": "https://atlas.vanatome.vixotic.in/releases/1.4.0/full-body.metadata.json",
+      "bytes": 283365,
+      "sha256": "e4c94950bfeb585dee3fcce90f122912c423c1f533c6357378797d8f024c0d6b",
+      "observed": {
+        "contentType": "application/json",
+        "etag": "\"7f866d80580cf0f6d3892ba1b9369bd9\"",
+        "lastModified": "Wed, 05 Aug 2026 05:25:03 GMT",
+        "contentLength": "283365"
+      }
+    },
+    {
+      "kind": "metadata",
+      "path": "releases/1.4.0/lymphatic.metadata.json",
+      "sourceUrl": "https://atlas.vanatome.vixotic.in/releases/1.4.0/lymphatic.metadata.json",
+      "bytes": 19725,
+      "sha256": "4ca7dae565eca61a0172208d05b4b3b1a0d0a95d4fd7ab6b22c642d798998f9c",
+      "observed": {
+        "contentType": "application/json",
+        "etag": "\"cc6ff4bb933674bf91258c2789ee9574\"",
+        "lastModified": "Wed, 05 Aug 2026 05:25:06 GMT",
+        "contentLength": "19725"
+      }
+    },
+    {
+      "kind": "metadata",
+      "path": "releases/1.4.0/muscular.metadata.json",
+      "sourceUrl": "https://atlas.vanatome.vixotic.in/releases/1.4.0/muscular.metadata.json",
+      "bytes": 67000,
+      "sha256": "dafd68846c581df6ef1bee273e8a8dd82205ac03a95c92f9456ffad22ce104ec",
+      "observed": {
+        "contentType": "application/json",
+        "etag": "\"2ffb245df25e5439d0ff1ec434170369\"",
+        "lastModified": "Wed, 05 Aug 2026 05:25:10 GMT",
+        "contentLength": "67000"
+      }
+    },
+    {
+      "kind": "metadata",
+      "path": "releases/1.4.0/nervous.metadata.json",
+      "sourceUrl": "https://atlas.vanatome.vixotic.in/releases/1.4.0/nervous.metadata.json",
+      "bytes": 84588,
+      "sha256": "21da4c0545924cf3cac2f6620fea3457a0b74dec47bfb2a30e7dc6662cc07a5f",
+      "observed": {
+        "contentType": "application/json",
+        "etag": "\"fb862ebb0afcdd98d89612ed2cbd6076\"",
+        "lastModified": "Wed, 05 Aug 2026 05:25:14 GMT",
+        "contentLength": "84588"
+      }
+    },
+    {
+      "kind": "metadata",
+      "path": "releases/1.4.0/regional-anatomy.metadata.json",
+      "sourceUrl": "https://atlas.vanatome.vixotic.in/releases/1.4.0/regional-anatomy.metadata.json",
+      "bytes": 477,
+      "sha256": "b0fc38810dd41282889b5aedf17b1f5a2f6950e84a6a978cd81155107f8020d0",
+      "observed": {
+        "contentType": "application/json",
+        "etag": "\"8a93a3dfc0ffb5d4d232769bf33aadcf\"",
+        "lastModified": "Wed, 05 Aug 2026 05:25:17 GMT",
+        "contentLength": "477"
+      }
+    },
+    {
+      "kind": "metadata",
+      "path": "releases/1.4.0/reproductive.metadata.json",
+      "sourceUrl": "https://atlas.vanatome.vixotic.in/releases/1.4.0/reproductive.metadata.json",
+      "bytes": 7252,
+      "sha256": "82b8a0587320610024374be9a39324301e83923b9f949809f36fe13993c75076",
+      "observed": {
+        "contentType": "application/json",
+        "etag": "\"7b49e4d1cd69c7985d27aff7b2960052\"",
+        "lastModified": "Wed, 05 Aug 2026 05:25:21 GMT",
+        "contentLength": "7252"
+      }
+    },
+    {
+      "kind": "metadata",
+      "path": "releases/1.4.0/respiratory.metadata.json",
+      "sourceUrl": "https://atlas.vanatome.vixotic.in/releases/1.4.0/respiratory.metadata.json",
+      "bytes": 2794,
+      "sha256": "81ded53d7b3766869c934e48652b77b5d8b7776789854477f42cdf2632c61825",
+      "observed": {
+        "contentType": "application/json",
+        "etag": "\"9c5d1bf3abca73d585e9a7f6e64819d9\"",
+        "lastModified": "Wed, 05 Aug 2026 05:25:24 GMT",
+        "contentLength": "2794"
+      }
+    },
+    {
+      "kind": "metadata",
+      "path": "releases/1.4.0/skeletal.metadata.json",
+      "sourceUrl": "https://atlas.vanatome.vixotic.in/releases/1.4.0/skeletal.metadata.json",
+      "bytes": 65261,
+      "sha256": "ef89ecd834f678d29a0749f8e3f9918384084ad995e4ebbb03d8d41b31ce58be",
+      "observed": {
+        "contentType": "application/json",
+        "etag": "\"dde228d8baa3477e8475504199ba45f2\"",
+        "lastModified": "Wed, 05 Aug 2026 05:25:28 GMT",
+        "contentLength": "65261"
+      }
+    },
+    {
+      "kind": "metadata",
+      "path": "releases/1.4.0/urinary.metadata.json",
+      "sourceUrl": "https://atlas.vanatome.vixotic.in/releases/1.4.0/urinary.metadata.json",
+      "bytes": 1658,
+      "sha256": "3eaf5e87b6053a77ea04360da41fdca71656ca6e1616f249b99bd266ee1a7d24",
+      "observed": {
+        "contentType": "application/json",
+        "etag": "\"0e144a4ae43ef0eb2a5c65c6ad6bc46c\"",
+        "lastModified": "Wed, 05 Aug 2026 05:25:31 GMT",
+        "contentLength": "1658"
+      }
+    }
+  ]
+}

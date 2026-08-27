@@ -9,6 +9,16 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
+  Message,
+  MessageContent,
+  MessageResponse,
+} from "@/components/ai-elements/message";
+import {
+  Source,
+  SourceList,
+  Sources,
+} from "@/components/ai-elements/sources";
+import {
   useActiveTurnState,
   useActiveTurnActions,
 } from "../context/ActiveTurnContext";
@@ -37,7 +47,6 @@ export function StreamingAssistantTurn({
   const vm = selectActiveTurnViewModel(state);
   const { dismissRedFlag } = useActiveTurnActions();
 
-  // Don't render if there's nothing to show
   if (
     !vm.hasVisibleContent &&
     !vm.isRunning &&
@@ -57,126 +66,85 @@ export function StreamingAssistantTurn({
     vm.isFailed ||
     vm.isCancelled;
 
-  if (!shouldRenderTimelineShell) {
-    return null;
-  }
+  if (!shouldRenderTimelineShell) return null;
 
   return (
-    <div className="flex flex-col gap-3">
-      {vm.pendingInteraction && (
+    <div className="flex flex-col gap-4">
+      {vm.pendingInteraction ? (
         <AskUserStatusCard interaction={vm.pendingInteraction} />
-      )}
+      ) : null}
 
-      {vm.isFailed && <FailedRunStatusCard message={vm.error} />}
+      {vm.isFailed ? <FailedRunStatusCard message={vm.error} /> : null}
+      {vm.isCancelled ? <CancelledRunStatusCard /> : null}
 
-      {vm.isCancelled && <CancelledRunStatusCard />}
-
-      {vm.pendingInteraction?.status === "pending" && onInteractionSubmit && (
-        <div className="flex justify-start">
-          <div className="max-w-[80%] w-full">
-            <AskUserCard
-              title="请补充这个信息"
-              question={vm.pendingInteraction.question}
-              onSubmit={onInteractionSubmit}
-              isSubmitting={isInteractionSubmitting}
-              error={interactionError}
-              onRetry={onInteractionRetry}
-            />
-          </div>
+      {vm.pendingInteraction?.status === "pending" && onInteractionSubmit ? (
+        <div className="w-full max-w-[620px]">
+          <AskUserCard
+            title="还需要确认一件事"
+            question={vm.pendingInteraction.question}
+            onSubmit={onInteractionSubmit}
+            isSubmitting={isInteractionSubmitting}
+            error={interactionError}
+            onRetry={onInteractionRetry}
+          />
         </div>
-      )}
+      ) : null}
 
-      {/* Tool calls */}
       <StreamingTurnToolCalls toolCalls={vm.toolCalls} />
 
-      {/* Streaming markdown text */}
-      {vm.streamingMarkdown && (
-        <div className="flex justify-start">
-          <div className="max-w-[80%] rounded-[20px] px-4 py-3 bg-[#F7F5F0] text-[#1A221E] rounded-bl-[4px] border border-[#E5E3DF]">
-            <div className="text-sm leading-relaxed font-medium prose-markdown">
+      {vm.streamingMarkdown ? (
+        <Message from="assistant">
+          <MessageContent>
+            <MessageResponse className="conversation-prose prose-markdown">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {vm.streamingMarkdown}
               </ReactMarkdown>
-            </div>
-          </div>
-        </div>
-      )}
+            </MessageResponse>
+          </MessageContent>
+        </Message>
+      ) : null}
 
-      {/* Loading indicator when running but no text yet */}
-      {vm.isRunning && !vm.streamingMarkdown && vm.toolCalls.length === 0 && (
-        <div className="flex justify-start">
-          <div className="max-w-[80%] rounded-[20px] px-4 py-3 bg-[#F7F5F0] rounded-bl-[4px] border border-[#E5E3DF]">
-            <div className="flex items-center gap-1.5 py-1 px-1">
-              <span className="w-2 h-2 rounded-full bg-[#709a83] animate-bounce [animation-delay:-0.3s]" />
-              <span className="w-2 h-2 rounded-full bg-[#709a83] animate-bounce [animation-delay:-0.15s]" />
-              <span className="w-2 h-2 rounded-full bg-[#709a83] animate-bounce" />
-            </div>
-          </div>
+      {vm.isRunning && !vm.streamingMarkdown && vm.toolCalls.length === 0 ? (
+        <div className="flex h-7 items-center gap-1.5 text-white/40" aria-label="BodySense 正在思考">
+          <span className="size-1.5 animate-pulse rounded-full bg-current [animation-delay:-240ms]" />
+          <span className="size-1.5 animate-pulse rounded-full bg-current [animation-delay:-120ms]" />
+          <span className="size-1.5 animate-pulse rounded-full bg-current" />
         </div>
-      )}
+      ) : null}
 
-      {/* Citations */}
-      {vm.citations.length > 0 && (
-        <div className="flex justify-start">
-          <div className="max-w-[80%] rounded-xl px-3 py-2 bg-[#EEF2EE] border border-[#D4DDD4]">
-            <p className="text-xs font-semibold text-[#5A7A64] mb-1">
-              参考知识
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {vm.citations.map((c) => (
-                <span
-                  key={c.title}
-                  className="inline-block rounded-full bg-white px-2.5 py-0.5 text-xs text-[#3D5A47] border border-[#C8D8CC]"
-                  title={c.summary || c.content || ""}
-                >
-                  {c.title}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Knowledge gaps */}
-      {vm.knowledgeGaps.length > 0 && (
-        <div className="flex justify-start">
-          <div className="max-w-[80%] rounded-xl px-3 py-2 bg-[#FFF8F0] border border-[#F0D4B0]">
-            <div className="flex items-start gap-2">
-              <svg
-                className="w-4 h-4 text-[#D4864A] mt-0.5 flex-shrink-0"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <div>
-                <p className="text-xs font-semibold text-[#A06030]">
-                  知识库提示
+      <Sources count={vm.citations.length}>
+        <SourceList>
+          {vm.citations.map((citation) => (
+            <Source key={citation.title} title={citation.summary || citation.content || ""}>
+              <p className="font-medium text-white/78">{citation.title}</p>
+              {citation.summary ? (
+                <p className="mt-0.5 line-clamp-2 text-white/42">
+                  {citation.summary}
                 </p>
-                <p className="text-xs text-[#8B6A4A] mt-0.5">
-                  知识库中暂未收录「
-                  {vm.knowledgeGaps.map((g) => g.query).join("」「")}
-                  」的专项资料，以下建议仅供参考。
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+              ) : null}
+            </Source>
+          ))}
+        </SourceList>
+      </Sources>
 
-      {/* Red flag */}
-      {vm.redFlag?.has_red_flags && (
+      {vm.knowledgeGaps.length > 0 ? (
+        <div className="rounded-xl border border-amber-300/10 bg-amber-300/[0.045] px-3 py-2.5">
+          <p className="text-xs font-medium text-amber-200/75">
+            还缺少一些专项资料
+          </p>
+          <p className="mt-1 text-xs leading-5 text-amber-100/48">
+            当前知识库暂未覆盖「
+            {vm.knowledgeGaps.map((gap) => gap.query).join("」「")}」，相关建议会保持更谨慎。
+          </p>
+        </div>
+      ) : null}
+
+      {vm.redFlag?.has_red_flags ? (
         <RedFlagBanner
           redFlags={vm.redFlag.flags}
           onAcknowledge={dismissRedFlag}
         />
-      )}
+      ) : null}
     </div>
   );
 }

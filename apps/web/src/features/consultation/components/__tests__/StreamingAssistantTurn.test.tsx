@@ -95,16 +95,15 @@ describe("StreamingAssistantTurn", () => {
         },
       }),
     );
-    expect(screen.getByText("参考知识")).toBeDefined();
+    expect(screen.getByText(/参考知识/)).toBeDefined();
     expect(screen.getByText("Posture Guide")).toBeDefined();
   });
 
-  it("shows loading dots when running but no content", () => {
-    const { container } = renderWithState(
+  it("shows a subtle thinking indicator when running but no content", () => {
+    renderWithState(
       stateWith({ status: "streaming", text: "", toolCallsById: {} }),
     );
-    const dots = container.querySelector(".animate-bounce");
-    expect(dots).not.toBeNull();
+    expect(screen.getByLabelText("BodySense 正在思考")).toBeInTheDocument();
   });
 
   it("renders ask_user status card while interrupted", () => {

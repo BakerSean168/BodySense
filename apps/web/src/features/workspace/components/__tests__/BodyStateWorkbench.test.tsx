@@ -57,11 +57,81 @@ describe("BodyStateWorkbench observation review", () => {
 
     expect(screen.getByText("高低肩倾向")).toBeInTheDocument();
     expect(
-      screen.getByText(/确认前不会进入 Diagnosis reasoning/),
+      screen.getByText(/需要你确认后才会用于后续分析/),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "确认观察" }));
+    await user.click(screen.getByRole("button", { name: "确认" }));
 
     expect(review).toHaveBeenCalledWith("observation-1", 5, "confirmed");
+  });
+
+  it("filters records by selected canonical region and preserves the canonical id when adding", async () => {
+    const addFact = vi.spyOn(workspaceApi, "addFact").mockResolvedValue({
+      fact: {} as never,
+    });
+    const user = userEvent.setup();
+    const queryClient = new QueryClient({
+      defaultOptions: { mutations: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <BodyStateWorkbench
+          selectedRegionId="shoulder.right"
+          snapshot={{
+            user_id: "user-1",
+            current_revision: 7,
+            safety_state: {},
+            facts: [
+              {
+                id: "right-shoulder",
+                kind: "discomfort",
+                body_region: "右肩",
+                body_region_id: "shoulder.right",
+                value: "抬手时右肩疼",
+                origin: "user_reported",
+                review_state: "confirmed",
+                lifecycle_state: "active",
+                trend: "stable",
+                updated_revision: 7,
+              },
+              {
+                id: "left-knee",
+                kind: "discomfort",
+                body_region: "左膝",
+                body_region_id: "knee.left",
+                value: "跑步后左膝酸",
+                origin: "user_reported",
+                review_state: "confirmed",
+                lifecycle_state: "active",
+                trend: "stable",
+                updated_revision: 7,
+              },
+            ],
+            observations: [],
+            pending_observations: [],
+            hypotheses: [],
+            recent_revisions: [],
+          }}
+        />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByText("抬手时右肩疼")).toBeInTheDocument();
+    expect(screen.queryByText("跑步后左膝酸")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "添加记录" }));
+    await user.type(screen.getByPlaceholderText("记录内容"), "右肩今天更轻松");
+    await user.click(screen.getByRole("button", { name: "保存记录" }));
+
+    expect(addFact).toHaveBeenCalledWith(
+      7,
+      expect.objectContaining({
+        body_region: "右肩",
+        body_region_id: "shoulder.right",
+        concern_key: "region:shoulder.right",
+        value: "右肩今天更轻松",
+      }),
+    );
   });
 });

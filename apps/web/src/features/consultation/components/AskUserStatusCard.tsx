@@ -45,36 +45,42 @@ export function AskUserStatusCard({ interaction }: AskUserStatusCardProps) {
     : isAnswered
       ? "问诊追问"
       : "待补充信息";
-  const tone = isExpired
-    ? "bg-[#F7F1EA] border-[#E6D5C4] text-[#6B4F3A]"
-    : "bg-[#EEF4FF] border-[#D7E4FF] text-[#1F3558]";
+
   return (
     <div className="flex justify-start">
-      <div className={`max-w-[80%] rounded-xl px-4 py-3 border ${tone}`}>
+      <div
+        className={`w-full max-w-[620px] rounded-xl border px-4 py-3 ${
+          isExpired
+            ? "border-amber-300/12 bg-amber-300/[0.045] text-amber-100/80"
+            : "border-sky-300/10 bg-sky-300/[0.04] text-white/80"
+        }`}
+      >
         <p
-          className={`text-[11px] font-semibold tracking-wide ${isExpired ? "text-[#A67C52]" : "text-[#4D6FA3]"}`}
+          className={`text-[11px] font-semibold tracking-wide ${
+            isExpired ? "text-amber-200/65" : "text-sky-200/65"
+          }`}
         >
           {title}
         </p>
-        <p className="mt-1 text-sm font-medium leading-relaxed">
+        <p className="mt-1 text-sm font-medium leading-relaxed text-white/85">
           {interaction.question.question}
         </p>
-        {interaction.question.context && (
-          <p className="mt-2 text-xs leading-relaxed text-[#58749C]">
+        {interaction.question.context ? (
+          <p className="mt-2 text-xs leading-relaxed text-white/42">
             {interaction.question.context}
           </p>
-        )}
+        ) : null}
         {isExpired ? (
-          <p className="mt-3 text-xs font-medium text-[#8A5A2B]">
+          <p className="mt-3 text-xs font-medium text-amber-200/65">
             该追问已过期，请在对话中重新说明相关信息以继续。
           </p>
         ) : isAnswered && answerText ? (
-          <p className="mt-3 text-xs font-medium text-[#35527A]">
+          <p className="mt-3 text-xs font-medium text-[#9edbbd]">
             你的回答：{answerText}
           </p>
         ) : (
-          <p className="mt-3 text-xs font-medium text-[#35527A]">
-            请直接在这张追问卡片中完成回答。
+          <p className="mt-3 text-xs text-white/48">
+            请直接在追问卡片中完成回答。
           </p>
         )}
       </div>

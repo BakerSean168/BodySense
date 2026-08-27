@@ -176,7 +176,7 @@ export function AskUserCard({
     return (
       <input
         type={inputType}
-        className="w-full rounded-lg border border-[#C8D8F2] bg-white px-3 py-2 text-sm"
+        className="w-full rounded-lg border border-white/10 bg-white/[0.045] px-3 py-2 text-sm text-white/85 outline-none placeholder:text-white/30 focus:border-[#75d5a7]/45"
         placeholder={field.label}
         value={value}
         onChange={(e) => setValue(e.target.value)}
@@ -186,26 +186,26 @@ export function AskUserCard({
   };
 
   return (
-    <div className="rounded-xl border border-[#D7E4FF] bg-[#EEF4FF] p-4 my-2 text-[#1F3558]">
-      <p className="mb-1 text-[11px] font-semibold tracking-wide text-[#4D6FA3]">
+    <div className="my-2 rounded-xl border border-sky-300/10 bg-sky-300/[0.04] p-4 text-white/80">
+      <p className="mb-1 text-[11px] font-semibold tracking-wide text-sky-200/65">
         {title}
       </p>
-      <p className="text-sm font-medium text-blue-900 mb-3">
+      <p className="mb-3 text-sm font-medium text-white/90">
         {question.question}
       </p>
 
       {question.context && (
-        <p className="text-xs text-[#58749C] mb-3 leading-relaxed">
+        <p className="mb-3 text-xs leading-relaxed text-white/45">
           {question.context}
         </p>
       )}
 
       {error && (
-        <div className="rounded bg-red-50 border border-red-200 p-3 mb-3">
-          <p className="text-sm text-red-700">提交失败：{error}</p>
+        <div className="mb-3 rounded border border-red-300/15 bg-red-300/[0.055] p-3">
+          <p className="text-sm text-red-200/80">提交失败：{error}</p>
           {onRetry && (
             <button
-              className="mt-2 text-sm text-red-600 underline hover:text-red-800"
+              className="mt-2 text-sm text-red-300 underline hover:text-red-200"
               onClick={onRetry}
             >
               重试
@@ -218,7 +218,7 @@ export function AskUserCard({
         <div className="space-y-4 mb-3">
           {multiFields.map((field) => (
             <div key={field.key}>
-              <label className="mb-1 block text-xs font-semibold text-[#4D6FA3]">
+              <label className="mb-1 block text-xs font-semibold text-white/60">
                 {field.label}
                 {field.required !== false ? " *" : ""}
               </label>
@@ -239,7 +239,7 @@ export function AskUserCard({
                     ? "date"
                     : "text"
               }
-              className="mb-3 w-full rounded-lg border border-[#C8D8F2] bg-white px-3 py-2 text-sm"
+              className="mb-3 w-full rounded-lg border border-white/10 bg-white/[0.045] px-3 py-2 text-sm text-white/85 outline-none placeholder:text-white/30 focus:border-[#75d5a7]/45"
               placeholder={
                 question.answer_type === "text"
                   ? "输入你的回答..."
@@ -289,7 +289,7 @@ export function AskUserCard({
               {allowCustomInput && customSingleEnabled && (
                 <input
                   type="text"
-                  className="w-full rounded-lg border border-[#C8D8F2] bg-white px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-white/10 bg-white/[0.045] px-3 py-2 text-sm text-white/85 outline-none placeholder:text-white/30 focus:border-[#75d5a7]/45"
                   placeholder="请输入你的补充回答..."
                   value={customAnswer}
                   onChange={(e) => setCustomAnswer(e.target.value)}
@@ -334,7 +334,7 @@ export function AskUserCard({
               {allowCustomInput && customMultiEnabled && (
                 <input
                   type="text"
-                  className="w-full rounded-lg border border-[#C8D8F2] bg-white px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-white/10 bg-white/[0.045] px-3 py-2 text-sm text-white/85 outline-none placeholder:text-white/30 focus:border-[#75d5a7]/45"
                   placeholder="请输入你的补充回答..."
                   value={customAnswer}
                   onChange={(e) => setCustomAnswer(e.target.value)}
@@ -347,7 +347,7 @@ export function AskUserCard({
       )}
 
       <button
-        className="rounded-full bg-[#4D6FA3] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3E5E8E] disabled:opacity-50"
+        className="rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-[#171717] transition-colors hover:bg-white disabled:opacity-45"
         onClick={handleSubmit}
         disabled={isSubmitting}
       >

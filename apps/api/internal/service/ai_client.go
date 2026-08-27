@@ -40,11 +40,13 @@ type TreatmentRecommendationRequest struct {
 }
 
 type AssessmentGenerationRequest struct {
-	ConfigurationID string          `json:"configuration_id"`
-	Profile         json.RawMessage `json:"profile"`
-	RAGContext      string          `json:"rag_context,omitempty"`
-	Images          []string        `json:"images,omitempty"`
-	PostureAnalysis json.RawMessage `json:"posture_analysis,omitempty"`
+	ConfigurationID  string          `json:"configuration_id"`
+	Profile          json.RawMessage `json:"profile"`
+	BodyState        json.RawMessage `json:"body_state"`
+	ReportIndicators json.RawMessage `json:"report_indicators,omitempty"`
+	RAGContext       string          `json:"rag_context,omitempty"`
+	Images           []string        `json:"images,omitempty"`
+	PostureAnalysis  json.RawMessage `json:"posture_analysis,omitempty"`
 }
 
 type AIClient struct {
@@ -72,6 +74,13 @@ type ConsultationRuntimeState struct {
 	ExtractedInfo json.RawMessage `json:"extracted_info"`
 }
 
+type ConsultationSpatialContext struct {
+	BodyRegionID    string `json:"body_region_id,omitempty"`
+	BodyRegionLabel string `json:"body_region_label,omitempty"`
+	AnatomyID       string `json:"anatomy_id,omitempty"`
+	AnatomyName     string `json:"anatomy_name,omitempty"`
+}
+
 type ConsultationBusinessContext struct {
 	Profile json.RawMessage `json:"profile"`
 	// BodyState is durable user-level health truth. RuntimeState carries only
@@ -84,6 +93,7 @@ type ConsultationBusinessContext struct {
 	CurrentDiagnosis json.RawMessage                 `json:"current_diagnosis,omitempty"`
 	CurrentTreatment json.RawMessage                 `json:"current_treatment,omitempty"`
 	RecentOutcomes   json.RawMessage                 `json:"recent_outcomes,omitempty"`
+	SpatialContext   *ConsultationSpatialContext     `json:"spatial_context,omitempty"`
 	// PostureAnalysis is the user's completed three-view analysis summary,
 	// prefetched by Go so the consultation Agent tool can read it without a
 	// Python→Go round trip.
@@ -216,6 +226,7 @@ var consultationInternalEventChannels = map[string]string{
 	"tool.call":                       "tool",
 	"tool.result":                     "tool",
 	"state.extracted_info.upsert":     "state",
+	"state.lifestyle_context.upsert":  "state",
 	"state.interaction.required":      "state",
 	"state.phase.changed":             "state",
 	"source.citation.added":           "source",
@@ -340,6 +351,13 @@ func validateConsultationInternalEvent(event dto.StreamEvent) error {
 		}
 		if err := event.PayloadAs(&payload); err != nil || len(payload.Info) == 0 {
 			return fmt.Errorf("extracted-info payload is malformed")
+		}
+	case "state.lifestyle_context.upsert":
+		var payload struct {
+			Context json.RawMessage `json:"context"`
+		}
+		if err := event.PayloadAs(&payload); err != nil || len(payload.Context) == 0 {
+			return fmt.Errorf("lifestyle-context payload is malformed")
 		}
 	case "state.interaction.required":
 		var payload struct {
