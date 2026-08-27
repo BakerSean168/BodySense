@@ -53,8 +53,16 @@ def create_assessment_agent(
     def assessment_context(ctx: RunContext[AssessmentDependencies]) -> str:
         deps = ctx.deps
         sections = [
-            "## 用户档案（仅作为观察背景）\n" + json.dumps(deps.profile, ensure_ascii=False),
+            "## 稳定用户档案（身份背景，不承载可变健康状态）\n"
+            + json.dumps(deps.profile, ensure_ascii=False),
+            "## 当前 BodyState（健康事实与观察的唯一当前来源）\n"
+            + json.dumps(deps.body_state, ensure_ascii=False),
         ]
+        if deps.report_indicators:
+            sections.append(
+                "## 上传健康报告指标（本次资料输入）\n"
+                + json.dumps(deps.report_indicators, ensure_ascii=False)
+            )
         if deps.posture_analysis:
             sections.append(
                 "## 已完成的体态图片分析（复用既有 observation evidence）\n"

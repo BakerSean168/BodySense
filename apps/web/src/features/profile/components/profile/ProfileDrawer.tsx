@@ -14,6 +14,9 @@ import {
 } from "@/components/ui/dialog";
 import { ProfileView } from "./ProfileView";
 import { ProfileEdit } from "./ProfileEdit";
+import { BodyMetricsPanel } from "./BodyMetricsPanel";
+import { LifestylePanel } from "./LifestylePanel";
+import { HealthHistoryPanel } from "./HealthHistoryPanel";
 import { FileUploader, UploadList } from "../uploads";
 import { PrivacyPanel } from "../privacy/PrivacyPanel";
 
@@ -22,7 +25,7 @@ interface ProfileDrawerProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type ProfileTab = "profile" | "uploads" | "privacy";
+type ProfileTab = "profile" | "lifestyle" | "history" | "uploads" | "privacy";
 
 export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
   const navigate = useNavigate();
@@ -54,7 +57,7 @@ export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
           <div className="min-w-0">
             <DialogTitle>身体档案</DialogTitle>
             <DialogDescription className="mt-0.5">
-              档案、上传资料与隐私设置都留在健康工作台内完成。
+              稳定身份、身体测量、生活方式、健康历史、上传资料与隐私都在这里管理。
             </DialogDescription>
           </div>
           <Button
@@ -70,7 +73,9 @@ export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
 
         <div className="flex shrink-0 gap-1 border-b border-border px-4 py-2">
           {([
-            ["profile", "个人信息"],
+            ["profile", "基本档案"],
+            ["lifestyle", "生活方式"],
+            ["history", "健康历史"],
             ["uploads", `文件管理${uploads.length ? ` · ${uploads.length}` : ""}`],
             ["privacy", "数据与隐私"],
           ] as const).map(([tab, label]) => (
@@ -112,7 +117,10 @@ export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
                 isLoading={isLoading}
               />
             ) : profile ? (
-              <ProfileView profile={profile} onEdit={() => setIsEditing(true)} />
+              <div className="space-y-6">
+                <ProfileView profile={profile} onEdit={() => setIsEditing(true)} />
+                <BodyMetricsPanel />
+              </div>
             ) : (
               <div className="rounded-2xl border border-dashed border-border p-8 text-center">
                 <p className="text-sm font-semibold">身体档案尚未建立</p>
@@ -128,6 +136,10 @@ export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
               </div>
             )
           ) : null}
+
+          {activeTab === "lifestyle" ? <LifestylePanel /> : null}
+
+          {activeTab === "history" ? <HealthHistoryPanel /> : null}
 
           {activeTab === "uploads" ? (
             <div className="space-y-5">

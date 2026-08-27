@@ -145,10 +145,12 @@ func (s *AssessmentReplayService) CounterfactualReplay(
 	// Images are stored as descriptors; counterfactual replay does not re-attach
 	// raw bytes. The model is invoked with the profile + posture inputs only.
 	result, err := s.ai.GenerateAssessment(ctx, AssessmentGenerationRequest{
-		ConfigurationID: targetConfigurationID,
-		Profile:         input.Profile,
-		PostureAnalysis: input.PostureAnalysis,
-		Images:          images,
+		ConfigurationID:  targetConfigurationID,
+		Profile:          input.Profile,
+		BodyState:        input.BodyState,
+		ReportIndicators: input.ReportIndicators,
+		PostureAnalysis:  input.PostureAnalysis,
+		Images:           images,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("counterfactual Assessment replay: %w", err)
@@ -192,10 +194,12 @@ func (s *AssessmentReplayService) ExportRegressionCase(
 		"case": map[string]any{
 			"name": caseName,
 			"inputs": map[string]any{
-				"user_id":          "historical-regression",
-				"profile":          sanitizeRegressionReplayJSON(input.Profile, true),
-				"posture_analysis": sanitizeRegressionReplayJSON(input.PostureAnalysis, false),
-				"images":           input.Images,
+				"user_id":           "historical-regression",
+				"profile":           sanitizeRegressionReplayJSON(input.Profile, true),
+				"body_state":        sanitizeRegressionReplayJSON(input.BodyState, false),
+				"report_indicators": sanitizeRegressionReplayJSON(input.ReportIndicators, false),
+				"posture_analysis":  sanitizeRegressionReplayJSON(input.PostureAnalysis, false),
+				"images":            input.Images,
 			},
 			"metadata": map[string]any{
 				"scenario_family_id":      "historical-" + report.ID.String(),

@@ -31,6 +31,7 @@ type assessmentUploadSource interface {
 }
 
 type assessmentBodyStateSource interface {
+	GetSnapshot(ctx context.Context, userID uuid.UUID, historyLimit int) (*BodyStateSnapshot, error)
 	AddAssessmentObservation(ctx context.Context, userID uuid.UUID, observation model.BodyStateObservation) (*model.BodyStateObservation, *model.BodyStateRevision, error)
 }
 
@@ -117,13 +118,17 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 	if profile == nil {
 		return nil, errors.New("user profile not found")
 	}
-	profileJSON, err := json.Marshal(profile)
+	profilePayload, err := json.Marshal(profile)
 	if err != nil {
 		return nil, fmt.Errorf("encode assessment profile: %w", err)
 	}
-	var profileMap map[string]any
-	if err := json.Unmarshal(profileJSON, &profileMap); err != nil {
-		return nil, fmt.Errorf("normalize assessment profile: %w", err)
+	bodySnapshot, err := s.bodyState.GetSnapshot(ctx, userID, 20)
+	if err != nil {
+		return nil, fmt.Errorf("get assessment BodyState: %w", err)
+	}
+	bodyStatePayload, err := json.Marshal(bodySnapshot)
+	if err != nil {
+		return nil, fmt.Errorf("encode assessment BodyState: %w", err)
 	}
 
 	uploads, err := s.uploads.GetByUserID(ctx, userID)
@@ -134,8 +139,7 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 	if err != nil {
 		return nil, err
 	}
-	profileMap["health_report_indicators"] = reportIndicators
-	profilePayload, _ := json.Marshal(profileMap)
+	reportIndicatorsPayload, _ := json.Marshal(reportIndicators)
 	posturePayload := json.RawMessage(`{}`)
 	if len(completedPosture) > 0 {
 		posturePayload, _ = json.Marshal(BuildPostureAnalysisSummary(completedPosture))
@@ -155,10 +159,12 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 	}
 
 	raw, err := s.reasoner.GenerateAssessment(ctx, AssessmentGenerationRequest{
-		ConfigurationID: configurationID,
-		Profile:         profilePayload,
-		Images:          images,
-		PostureAnalysis: posturePayload,
+		ConfigurationID:  configurationID,
+		Profile:          profilePayload,
+		BodyState:        bodyStatePayload,
+		ReportIndicators: reportIndicatorsPayload,
+		Images:           images,
+		PostureAnalysis:  posturePayload,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("generate typed assessment: %w", err)
@@ -181,6 +187,8 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 	replayEnvelope, replayErr := encodeAssessmentReplayInput(
 		configurationID,
 		profilePayload,
+		bodyStatePayload,
+		reportIndicatorsPayload,
 		posturePayload,
 		images,
 	)
@@ -432,10 +440,12 @@ func buildAssessmentGenerationTrace(
 // (media-type + count), never raw base64, to keep the replay envelope private
 // and lightweight.
 type AssessmentReplayInput struct {
-	ConfigurationID string            `json:"configuration_id"`
-	Profile         json.RawMessage   `json:"profile"`
-	PostureAnalysis json.RawMessage   `json:"posture_analysis"`
-	Images          []imageDescriptor `json:"images"`
+	ConfigurationID  string            `json:"configuration_id"`
+	Profile          json.RawMessage   `json:"profile"`
+	BodyState        json.RawMessage   `json:"body_state"`
+	ReportIndicators json.RawMessage   `json:"report_indicators"`
+	PostureAnalysis  json.RawMessage   `json:"posture_analysis"`
+	Images           []imageDescriptor `json:"images"`
 }
 
 type imageDescriptor struct {
@@ -445,11 +455,19 @@ type imageDescriptor struct {
 func encodeAssessmentReplayInput(
 	configurationID string,
 	profile json.RawMessage,
+	bodyState json.RawMessage,
+	reportIndicators json.RawMessage,
 	posture json.RawMessage,
 	images []string,
 ) (json.RawMessage, error) {
 	if len(profile) == 0 || !json.Valid(profile) {
 		profile = json.RawMessage(`{}`)
+	}
+	if len(bodyState) == 0 || !json.Valid(bodyState) {
+		bodyState = json.RawMessage(`{}`)
+	}
+	if len(reportIndicators) == 0 || !json.Valid(reportIndicators) {
+		reportIndicators = json.RawMessage(`[]`)
 	}
 	if len(posture) == 0 || !json.Valid(posture) {
 		posture = json.RawMessage(`{}`)
@@ -465,10 +483,12 @@ func encodeAssessmentReplayInput(
 		descriptors = append(descriptors, imageDescriptor{MediaType: mediaType})
 	}
 	return json.Marshal(AssessmentReplayInput{
-		ConfigurationID: configurationID,
-		Profile:         profile,
-		PostureAnalysis: posture,
-		Images:          descriptors,
+		ConfigurationID:  configurationID,
+		Profile:          profile,
+		BodyState:        bodyState,
+		ReportIndicators: reportIndicators,
+		PostureAnalysis:  posture,
+		Images:           descriptors,
 	})
 }
 

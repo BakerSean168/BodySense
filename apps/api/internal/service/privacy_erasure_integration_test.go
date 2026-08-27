@@ -55,7 +55,7 @@ func TestPrivacyErasureSyntheticUserPostgres(t *testing.T) {
 	}
 
 	mustExec("INSERT INTO users(id,email,password_hash) VALUES (?,?,?)", userID, email, "synthetic-hash")
-	mustExec("INSERT INTO user_profiles(user_id,self_description) VALUES (?,?)", userID, "sensitive synthetic profile")
+	mustExec("INSERT INTO user_profiles(user_id,birth_date) VALUES (?,?)", userID, "1998-05-20")
 	mustExec("INSERT INTO conversations(id,user_id,title) VALUES (?,?,?)", conversationID, userID, "private conversation")
 	mustExec("INSERT INTO messages(id,conversation_id,turn_id,role,seq,parts,content_text) VALUES (?,?,?,?,?,?,?)", uuid.New(), conversationID, turnID, "user", 1, `[{"type":"text","text":"private symptom"}]`, "private symptom")
 	mustExec("INSERT INTO runs(id,conversation_id,turn_id,request_id,user_id,model,status) VALUES (?,?,?,?,?,?,?)", runID, conversationID, turnID, "privacy-run-"+userID.String(), userID, "synthetic", "completed")

@@ -49,7 +49,7 @@ def test_stream_thread_turn_emits_agent_configuration_event() -> None:
                 run_id="r1",
                 user_id="u1",
                 user_message="hello",
-                profile={"age": 30},
+                profile={"gender": "female", "birth_date": "1996-08-27", "age_years": 30},
                 extracted_info=[],
                 phase="collecting",
             ):

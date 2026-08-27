@@ -41,16 +41,20 @@ SYSTEM_PROMPT = """你是一位专业的体态健康顾问，名叫"体态助手
 1. **extract_symptom_info**：从对话中提取结构化的症状信息。
    每当用户描述了新的症状信息时，调用此工具提取结构化数据。
 
-2. **search_knowledge**：从体态健康知识库中搜索相关信息。
+2. **record_lifestyle_context**：记录用户明确说出的当前生活方式或生活方式变化。
+   仅在用户自己明确提供久坐/活动、睡眠作息、运动、饮食、酒精/烟草/咖啡因、恢复压力等信息时调用。
+   不得从症状、职业名称或外部知识推断生活方式；summary 必须忠实概括用户原话。
+
+3. **search_knowledge**：从体态健康知识库中搜索相关信息。
    当需要查找专业资料来回答用户问题、验证你的判断、
    或寻找改善动作时主动调用。不要凭记忆编造知识库内容，
    应优先搜索验证。
 
-3. **get_posture_analysis**：读取用户已完成的三视角体态照片分析。
+4. **get_posture_analysis**：读取用户已完成的三视角体态照片分析。
    当用户询问自己的体态、需要结合照片发现做判断、或你想引用已有评估时调用。
    不要要求用户重新上传；若无已完成分析，如实告知并引导去档案页上传。
 
-4. **ask_user**：当你需要向用户确认关键缺失信息、
+5. **ask_user**：当你需要向用户确认关键缺失信息、
    或在没有该信息就无法继续可靠判断时，使用此工具暂停流程并向用户提问。
    不要把 ask_user 当作普通聊天追问的默认手段。
    绝对禁止在回复文本中以列表形式（如 1. 2. 3.）直接追问或罗列多个问题。
@@ -59,7 +63,7 @@ SYSTEM_PROMPT = """你是一位专业的体态健康顾问，名叫"体态助手
    当提供了现成选项时，也要允许用户补充自定义输入。
    每次 ask_user 都必须提供简短 context，解释为什么要确认这一点。
 
-5. **record_answer_attribution**：当 `search_knowledge` 返回了 `Published Evidence Ref`，
+6. **record_answer_attribution**：当 `search_knowledge` 返回了 `Published Evidence Ref`，
    且你准备在最终回答中基于这些资料陈述实质性的健康知识结论时，必须先调用此工具。
    - `claim_text` 写成你准备表达的一条简短、可核验事实性结论；
    - `evidence_refs` 只能逐字复制本轮搜索结果给出的 Published Evidence Ref；
@@ -130,7 +134,7 @@ def get_system_prompt(profile_context: str = "") -> str:
 
 
 def format_profile_context(profile: dict) -> str:
-    """Format user profile into context string."""
+    """Format stable identity context only; mutable health state belongs to BodyState."""
     lines = []
     if profile.get("gender"):
         lines.append(f"- 性别：{profile['gender']}")
@@ -139,27 +143,33 @@ def format_profile_context(profile: dict) -> str:
         if profile.get("age_years") is not None:
             birth_line += f"（系统计算年龄：{profile['age_years']}岁）"
         lines.append(birth_line)
-    elif profile.get("age"):
-        lines.append(f"- 年龄（旧档案字段）：{profile['age']}岁")
-    if profile.get("height_cm") and profile.get("weight_kg"):
-        lines.append(f"- 身高/体重：{profile['height_cm']}cm / {profile['weight_kg']}kg")
-    if profile.get("bmi"):
-        lines.append(f"- BMI：{profile['bmi']}")
-    if profile.get("activity_pattern"):
-        lines.append(f"- 日常活动与工作习惯：{profile['activity_pattern']}")
-    if profile.get("sleep_pattern"):
-        lines.append(f"- 睡眠与作息：{profile['sleep_pattern']}")
-    elif profile.get("sleep_time") and profile.get("wake_time"):
-        lines.append(
-            f"- 作息（旧档案字段）：{profile['sleep_time']} 入睡，{profile['wake_time']} 起床"
-        )
-    if profile.get("exercise_type"):
-        lines.append(f"- 运动类型：{profile['exercise_type']}")
-    if profile.get("exercise_frequency"):
-        lines.append(f"- 运动频率：{profile['exercise_frequency']}")
-    if profile.get("injury_history"):
-        lines.append(f"- 既往伤病史：{profile['injury_history']}")
-    return "\n".join(lines) if lines else "（用户尚未填写身体档案）"
+    return "\n".join(lines) if lines else "（用户尚未填写稳定身份信息）"
+
+
+LIFESTYLE_CONTEXT_TOOL = {
+    "name": "record_lifestyle_context",
+    "description": "记录用户明确陈述的当前生活方式或生活方式变化，供 Go 持久化到 BodyState。",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "section": {
+                "type": "string",
+                "enum": ["activity", "sleep", "exercise", "nutrition", "substances", "recovery"],
+                "description": "生活方式分区。",
+            },
+            "summary": {
+                "type": "string",
+                "description": "忠实概括用户明确陈述的当前状态或变化，不加入推断。",
+            },
+            "details": {
+                "type": "object",
+                "description": "仅保存用户明确给出的可结构化细节；没有则传空对象。",
+                "additionalProperties": True,
+            },
+        },
+        "required": ["section", "summary"],
+    },
+}
 
 
 # Tool definition for symptom extraction

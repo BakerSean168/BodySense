@@ -17,7 +17,9 @@ func assessmentReplayTestReport() *model.AssessmentReport {
 	reportID := uuid.New()
 	env, _ := encodeAssessmentReplayInput(
 		"assess-config-fbff8155337b388d",
-		json.RawMessage(`{"age":30,"occupation":"程序员"}`),
+		json.RawMessage(`{"gender":"male","birth_date":"1996-08-27"}`),
+		json.RawMessage(`{"current_revision":3,"facts":[],"observations":[]}`),
+		json.RawMessage(`[]`),
 		json.RawMessage(`{"has_analysis":true,"summaries":["正面观轻微高低肩"]}`),
 		[]string{"data:image/jpeg;base64,AAAA"},
 	)

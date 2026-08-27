@@ -1,9 +1,18 @@
 # 功能设计文档：用户信息构建与健康评估 (Feature Line 1)
 
 ## 1. 功能概述
-本功能线是用户进入「体悟」(BodySense) 应用的起点。Onboarding 只收集对后续健康判断有价值的**身体档案基线**：基本生理属性、日常活动模式、睡眠/轮班模式、运动习惯、重要伤病史，以及可选的体检报告和体态照片（正/侧/背）。当前症状、目标和主观困扰不在档案里重复填写，而是在进入长期健康工作台后通过自然对话持续进入 BodyState。
+本功能线是用户进入 BodySense 的起点，但 **Onboarding 只是采集入口，不是数据所有者**。一次表单会把不同语义的信息分别交给稳定 Profile、BodyState Fact、BodyState Observation 与上传/评估管线，而不是把所有答案压进 `user_profiles`。
 
-档案采集遵循“少填表、讲真实情况”的原则：出生日期取代需要维护的整数年龄；不要求职业名称；不强迫用户把不规律作息压成固定入睡/起床时间；生活与睡眠模式优先使用带示例提示的自由文本。
+当前 North Star（ADR 0007）：
+
+- `UserProfile`：只保存性别、出生日期等稳定身份背景；年龄按出生日期派生。
+- `BodyState Observation`：身高、体重等身体测量；后续更新保留历史。
+- `BodyState Lifestyle Fact`：日常活动、睡眠、运动、饮食节律、酒精/烟草/咖啡因、恢复压力。
+- `BodyState history Fact`：既往伤病/手术摘要。
+- 上传资料：继续进入现有 Upload / OCR / posture-analysis 流程。
+- 当前症状、目标和主观困扰：进入长期 Consultation + BodyState，而不是静态档案。
+
+采集遵循“少填表、讲真实情况”的原则：不问职业名称；不强迫不规律作息变成固定入睡/起床时间；生活方式优先自然语言，只在运动频率等适合比较的地方做轻量量化。
 
 ---
 
@@ -12,40 +21,45 @@
 ### 2.1 步骤流转流程 (User Wizard Flow)
 ```mermaid
 graph TD
-    Start([用户进入应用]) --> Basic[基础属性: 性别/出生日期/身高体重]
-    Basic --> Activity[日常活动与工作习惯: 自然语言]
-    Activity --> Sleep[睡眠与作息: 自然语言]
+    Start([用户进入应用]) --> Identity[稳定身份: 性别/出生日期]
+    Identity --> Metrics[身体测量: 身高/体重]
+    Metrics --> Activity[日常活动]
+    Activity --> Sleep[睡眠与作息]
     Sleep --> Exercise[运动类型与频率]
-    Exercise --> History[既往伤病与手术史]
+    Exercise --> MoreLifestyle[饮食/相关摄入/恢复压力]
+    MoreLifestyle --> History[既往伤病与手术史]
     History --> Upload[材料上传-可选]
-    Upload --> Submit[提交分析]
-    Submit --> Loading{AI 处理中}
-    Loading -- OCR 失败 --> Toast[Sonner Toast 提示/跳过OCR]
-    Loading -- 多模态分析 --> Report[生成初始观察评估]
-    Report --> End([进入长期健康工作台])
+    Upload --> Persist[分别写入 Profile + BodyState]
+    Persist --> Assessment[生成 observation-only 初始评估]
+    Assessment --> End([进入长期健康工作台])
 ```
 
-1. **基础属性**：输入性别、出生日期、身高/体重。出生日期是年龄的唯一档案来源，需要年龄时由系统按时间计算。
-2. **日常活动与工作习惯**：不询问职业名称。用户用自然语言描述久坐、久站、走动频率、搬抬/重复动作、轮班等身体使用模式；界面可提供快捷示例，但最终保存的是用户可编辑的描述。
-3. **睡眠与作息**：不强制固定入睡/起床时间。用户描述规律性、轮班、通常睡眠时长、夜醒和缺觉等真实模式。
-4. **运动习惯**：运动类型使用简短文本，运动频率保留轻量量化选项，便于比较和后续趋势追踪。
-5. **既往状况**：文本框输入重要的既往伤病或手术史。当前症状和改善目标不在这里重复收集。
-6. **材料上传（可选）**：体态照片与体检报告沿用现有上传流程。
-7. **初始评估**：保存身体档案后生成 observation-only 初始评估，并进入长期健康工作台。
+1. **稳定身份**：性别、出生日期写入 `UserProfile`；出生日期是年龄的唯一来源。
+2. **身体测量**：身高/体重写入 `anthropometry.height/weight` Observation；BMI 只作为当前投影派生。
+3. **日常活动**：自然语言描述久坐、久站、走动、搬抬、重复动作或轮班，写入 `lifestyle.activity`。
+4. **睡眠与作息**：描述规律性、轮班、通常睡眠时长、夜醒和缺觉，写入 `lifestyle.sleep`。
+5. **运动**：类型文本 + 轻量频率选择，形成 `lifestyle.exercise` summary/details。
+6. **其他生活方式**：饮食节律、酒精/烟草/咖啡因、恢复与压力分别进入 nutrition/substances/recovery；全部可选。
+7. **既往状况**：重要伤病/手术摘要写入 `history.injury_summary`，不进入 Profile。
+8. **材料上传（可选）**：体态照片与体检报告沿用现有上传流程。
+9. **初始评估**：Assessment 明确接收 stable Profile 与 current BodyState 两个独立输入，形成待审核 Observation。
+
+后续“生活方式”编辑器与 Consultation 都复用同一 BodyState taxonomy，但写入权限不同：编辑器是直接用户确认，可立即形成 confirmed current；Consultation 的模型归一化先保存为 `ai_extracted / unverified / excluded_from_reasoning` 候选，并在“生活方式”页等待用户确认。确认候选后，若旧事实曾经为真，则使用 temporal transition / supersedes 形成历史；若旧事实本身错误，则使用 correction。
 
 ### 2.2 状态机设计 (User Onboarding State Machine)
 
-| 当前状态 (State) | 触发事件 (Event) | 目标状态 (Target State) | 动作/说明 |
+| 当前状态 | 触发事件 | 目标状态 | 动作/说明 |
 | :--- | :--- | :--- | :--- |
-| `UNINITIALIZED` | 进入页面 | `STEP_BASIC` | 初始化分步表单 |
-| `STEP_BASIC` | 完成基础属性并下一步 | `STEP_HABIT` | 校验身高/体重/出生日期合法性 |
-| `STEP_HABIT` | 完成活动/作息/运动基线并下一步 | `STEP_HISTORY` | 自由文本可为空；运动频率按受控选项保存 |
-| `STEP_HISTORY` | 完成伤病史录入并下一步 | `STEP_UPLOAD` | - |
-| `STEP_UPLOAD` | 点击开始评估（未传报告） | `ANALYZING_MULTIMODAL` | 仅多模态体态分析流程 |
-| `STEP_UPLOAD` | 点击开始评估（上传报告） | `PROCESSING_OCR` | 启动 OCR 节点，提取文本 |
-| `PROCESSING_OCR` | OCR 完成 / 发生异常 | `ANALYZING_MULTIMODAL` | 异常时 Sonner 提示并降级继续 |
-| `ANALYZING_MULTIMODAL` | 报告生成成功 | `REPORT_COMPLETED` | 写入 DB，前端渲染报告 |
-| `ANALYZING_MULTIMODAL` | 生成超时/解析失败 | `STEP_UPLOAD` | 回滚，Sonner 提示错误，并提供降级选项 |
+| `UNINITIALIZED` | 进入页面 | `STEP_IDENTITY` | 初始化分步表单 |
+| `STEP_IDENTITY` | 完成身份 | `STEP_METRICS` | 校验出生日期 |
+| `STEP_METRICS` | 完成测量 | `STEP_LIFESTYLE` | 校验身高/体重范围 |
+| `STEP_LIFESTYLE` | 完成/跳过生活方式 | `STEP_HISTORY` | 自由文本可为空 |
+| `STEP_HISTORY` | 完成/跳过伤病史 | `STEP_UPLOAD` | - |
+| `STEP_UPLOAD` | 点击开始评估 | `PERSISTING_CONTEXT` | 先按领域边界写 stable Profile 与 BodyState |
+| `PERSISTING_CONTEXT` | 写入成功 | `ANALYZING_MULTIMODAL` | Assessment 读取刚写入的 current BodyState |
+| `PERSISTING_CONTEXT` | 写入失败 | `STEP_UPLOAD` | 显式错误；不得只保存一份胖 Profile 作为降级真值 |
+| `ANALYZING_MULTIMODAL` | 报告生成成功 | `REPORT_COMPLETED` | Observation 写入 BodyState；进入工作台 |
+| `ANALYZING_MULTIMODAL` | 生成失败 | `STEP_UPLOAD` | 保留已提交的用户健康上下文，允许重试 Assessment |
 
 ---
 
@@ -83,77 +97,98 @@ graph TD
         如未发现相关指标，请返回空数组：{"metrics": []}。不要添加任何解释说明。
         ```
 
-### 3.2 节点 2：多模态健康评估报告生成节点
-*   **核心意图**：结合用户填写的身体档案基线、体检 OCR 结构化数据，以及上传的体态正/侧/背三视图（Base64），形成首份可审核的身体观察评估。当前症状与目标由长期工作台中的 Consultation / BodyState 持续收集，不作为静态 profile 重复输入。
-*   **输入**：
-    *   `profile_data` (JSON)：含出生日期、性别、BMI、日常活动模式、睡眠/轮班模式、运动习惯、重要伤病史和体检 OCR 提取值。
-    *   `images` (List[Base64])：正、侧、背面照片（最多3张，可选）。
-*   **输出**：`assessment_report` (JSON)
-*   **提示词策略 (Prompt Strategy)**：
-    *   **核心意图**：你是一位资深的运动康复专家与多模态体态评估师。
-    *   **必须包含的约束条件**：
-        1. **视觉分析约束**：如果提供了照片，必须仔细对比正面（高低肩、锁骨倾斜、头歪斜）、侧面（头前伸、圆肩驼背、骨盆前倾/后倾）、背面（骨盆倾斜、脊柱侧弯弯曲迹象），提取明显或疑似的姿态异常趋势。
-        2. **安全与免责声明约束**：在报告中必须说明这是基于多模态 AI 的筛查评估，非临床诊断。
-        3. **逻辑一致性**：各维度的评分（体态健康度、作息习惯度、运动习惯度）必须与输入数据保持绝对的逻辑闭环。若久坐超 8h 且有腰疼史，体态健康度及作息习惯度不得超过 60 分。
-    *   **Prompt 模板**：
-        ```
-        你是一位资深的运动康复专家与多模态体态评估师。请根据用户的身体档案基线、体检异常指标，并结合上传的体态照片进行综合评估。
-        
-        [用户身体档案]
-        {{profile_data}}
-        
-        [分析要求]
-        1. 视觉评估：从正面、侧面、背面体态照片中，提取用户可能的物理体态偏离（如头前伸、圆肩、骨盆前倾等）。
-        2. 关联分析：结合用户描述的日常活动模式、伤病史以及体检报告中偏低/偏高的指标（如维生素D偏低、尿酸偏高），给出综合健康评分与等级。
-        3. 给出 1-3 个最首要、最需要关注的体态或习惯问题，并说明评估依据。
-        
-        [输出格式要求]
-        必须且仅输出以下 JSON 结构：
-        {
-          "health_grade": "S / A / B / C / D",
-          "dimension_scores": {
-            "posture": 80, // 体态健康度 (0-100)
-            "habit": 60,   // 日常作息度 (0-100)
-            "exercise": 45 // 运动能力/习惯 (0-100)
-          },
-          "identified_issues": [
-            {
-              "issue_name": "问题名称(如：圆肩头前伸)",
-              "severity": "mild / moderate / severe", // 轻度/中度/重度
-              "evidence": "评估依据(例如：结合侧面体态照片有明显的耳垂线前移，且自述有久坐肩颈酸胀)"
-            }
-          ],
-          "improvement_summary": "针对性的日常改善方向概述（例如：减少连续久坐，优先进行胸肌拉伸，并在饮食中补充维生素D）"
-        }
-        ```
+### 3.2 节点 2：多模态健康评估节点
+
+**核心意图**：生成 reviewable observation candidates，而不是把 Onboarding 资料直接变成诊断或治疗建议。
+
+**输入边界必须分开**：
+
+```text
+profile
+  stable identity only
+  -> gender / birth_date / derived age_years
+
+body_state
+  current health truth
+  -> lifestyle facts
+  -> injury/history facts
+  -> confirmed anthropometry observations
+  -> other current facts/observations
+
+report_indicators
+  -> 本次外部报告结构化指标
+
+posture_analysis / images
+  -> 本次体态视觉输入
+```
+
+禁止为了 Prompt 方便把 BodyState、OCR 指标或 lifestyle 再嵌回 `profile`。Assessment 需要健康上下文时以 `body_state` 为准。
+
+**输出**：沿用当前 typed `AssessmentAgentOutput`，核心产物是待审核 `observations[]`、summary、information gaps 与 safety notes；不得在这个节点偷偷建立第二套健康真值。
+
+**证据来源**：Observation 的依据应明确区分 `photo / profile / body_state / report`。其中 `profile` 仅代表稳定身份背景。
 
 ---
 
 ## 4. 数据结构与上下文
 
-### 4.1 核心 JSON 结构
-#### Onboarding 提交至后端的 Payload (API Request)
+### 4.1 Onboarding 持久化边界
+
+Onboarding 前端可以维护一个临时 form state，但提交时只发送一个 **application command**：
+
+```text
+PUT /api/v1/onboarding/context
+```
+
+请求按领域语义分组，而不是伪装成一个长期 Profile：
+
 ```json
 {
-  "gender": "male",
-  "birth_date": "1998-05-20",
-  "height_cm": 178.5,
-  "weight_kg": 75.0,
-  "activity_pattern": "工作日久坐为主，每次连续坐 2-3 小时；每天步行通勤约 40 分钟，偶尔需要搬重物",
-  "sleep_pattern": "白班和夜班交替，起床时间不固定；平均每天睡 6-7 小时，换班后容易睡不够",
-  "exercise_type": "健身房抗阻训练",
-  "exercise_frequency": "1-2",
-  "injury_history": "两年前左膝关节十字韧带轻微拉伤，偶有酸痛",
-  "posture_photos": {
-    "front": "data:image/jpeg;base64,...",
-    "side": "data:image/jpeg;base64,...",
-    "back": "data:image/jpeg;base64,..."
+  "profile": {
+    "gender": "male",
+    "birth_date": "1998-05-20"
   },
-  "health_reports": [
-    "data:image/jpeg;base64,..."
-  ]
+  "body_metrics": {
+    "height_cm": 178.5,
+    "weight_kg": 75.0
+  },
+  "lifestyle": {
+    "activity": {"summary": "工作日久坐为主，每次连续坐 2-3 小时"},
+    "sleep": {"summary": "白班和夜班交替，平均每天睡 6-7 小时"},
+    "exercise": {
+      "summary": "健身房抗阻训练；频率：1-2",
+      "details": {"type": "健身房抗阻训练", "frequency": "1-2"}
+    },
+    "nutrition": {"summary": "三餐通常规律"},
+    "substances": {"summary": "每天咖啡 2 杯，不吸烟"},
+    "recovery": {"summary": "工作日压力偏高，周末恢复较好"}
+  },
+  "injury_history": "两年前左膝轻微拉伤，偶有酸痛"
 }
 ```
+
+后端 `OnboardingContextService` 使用现有 `TransactionManager` 协调 ProfileRepository 与 BodyStateRepository：
+
+```text
+one HTTP command
+    |
+    +-- stable identity -> user_profiles
+    |
+    +-- height / weight ------------------+
+    +-- six lifestyle sections -----------+--> one BodyStateCurrentContextPatch
+    +-- injury-history summary ------------+        -> one BodyStateRevision
+
+all writes participate in one database transaction
+```
+
+因此一次 onboarding 基线提交具有两个强约束：
+
+1. **原子性**：Profile 或 BodyState 任一写入失败，整个 onboarding context 提交回滚；不会留下“档案写了一半”的状态。
+2. **语义 revision**：身高、体重、六类生活方式和伤病摘要一起构成一个 BodyState revision，而不是按字段生成多条 revision。
+
+后续的 Lifestyle / Body Metrics / Health History 编辑器仍可分别提供聚焦的 application API；它们写入相同 BodyState 真值，不形成第二套数据。
+
+然后触发 Assessment。Assessment 的 replay input 分别保存 `profile`、`body_state`、`report_indicators` 与 posture input，以保证反事实评测不重新混淆领域边界。
 
 #### 数据库持久化结构 (assessment_reports 表)
 ```json

@@ -9,12 +9,14 @@ import { ActivityPatternStep } from "./steps/ActivityPatternStep";
 import { SleepStep } from "./steps/SleepStep";
 import { ExerciseStep } from "./steps/ExerciseStep";
 import { InjuryStep } from "./steps/InjuryStep";
+import { OtherLifestyleStep } from "./steps/OtherLifestyleStep";
 import { UploadStep } from "./steps/UploadStep";
 import { assessmentApi } from "@/features/assessment/services/assessmentService";
+import { onboardingContextService } from "../../services/onboardingContextService";
 
 import { toast } from "sonner";
 
-const TOTAL_STEPS = 8;
+const TOTAL_STEPS = 9;
 
 interface FormData {
   gender: string;
@@ -25,6 +27,9 @@ interface FormData {
   exercise_type: string;
   exercise_frequency: string;
   sleep_pattern: string;
+  nutrition_pattern: string;
+  substances_pattern: string;
+  recovery_pattern: string;
   injury_history: string;
 }
 
@@ -37,12 +42,15 @@ const INITIAL_DATA: FormData = {
   exercise_type: "",
   exercise_frequency: "",
   sleep_pattern: "",
+  nutrition_pattern: "",
+  substances_pattern: "",
+  recovery_pattern: "",
   injury_history: "",
 };
 
 export function OnboardingWizard() {
   const navigate = useNavigate();
-  const { updateProfile, isLoading: isUpdatingProfile } = useProfileStore();
+  const { fetchProfile } = useProfileStore();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<FormData>(INITIAL_DATA);
@@ -87,9 +95,11 @@ export function OnboardingWizard() {
         return true; // Optional
       case 5: // Exercise
         return true; // Optional
-      case 6: // Injury
+      case 6: // Other lifestyle
         return true; // Optional
-      case 7: // Upload
+      case 7: // Injury
+        return true; // Optional
+      case 8: // Upload
         return true; // Optional
       default:
         return false;
@@ -111,20 +121,49 @@ export function OnboardingWizard() {
   const handleSubmit = async () => {
     setIsGeneratingReport(true);
     try {
-      // 1. 保存身体档案信息
-      await updateProfile({
-        gender: formData.gender || undefined,
-        birth_date: formData.birth_date || undefined,
-        height_cm: formData.height_cm,
-        weight_kg: formData.weight_kg,
-        activity_pattern: formData.activity_pattern || undefined,
-        exercise_type: formData.exercise_type || undefined,
-        exercise_frequency: formData.exercise_frequency || undefined,
-        sleep_pattern: formData.sleep_pattern || undefined,
-        injury_history: formData.injury_history || undefined,
-      });
+      // 1. Onboarding 是一次 application command：稳定身份 + 整套 BodyState 基线
+      // 在同一数据库事务中提交；BodyState 只产生一个语义 revision。
+      const exerciseSummary = [
+        formData.exercise_type.trim(),
+        formData.exercise_frequency
+          ? `频率：${formData.exercise_frequency}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("；");
 
-      // 2. 生成健康评估报告
+      if (formData.height_cm === undefined || formData.weight_kg === undefined) {
+        throw new Error("请先填写身高和体重");
+      }
+
+      await onboardingContextService.submit({
+        profile: {
+          gender: formData.gender,
+          birth_date: formData.birth_date,
+        },
+        body_metrics: {
+          height_cm: formData.height_cm,
+          weight_kg: formData.weight_kg,
+        },
+        lifestyle: {
+          activity: { summary: formData.activity_pattern.trim() },
+          sleep: { summary: formData.sleep_pattern.trim() },
+          exercise: {
+            summary: exerciseSummary,
+            details: {
+              type: formData.exercise_type.trim(),
+              frequency: formData.exercise_frequency,
+            },
+          },
+          nutrition: { summary: formData.nutrition_pattern.trim() },
+          substances: { summary: formData.substances_pattern.trim() },
+          recovery: { summary: formData.recovery_pattern.trim() },
+        },
+        injury_history: formData.injury_history.trim(),
+      });
+      await fetchProfile();
+
+      // 2. 基于 stable Profile + 当前 BodyState 生成健康评估报告
       await assessmentApi.generate();
 
       toast.success("初始身体状态已建立");
@@ -191,12 +230,23 @@ export function OnboardingWizard() {
         );
       case 6:
         return (
+          <OtherLifestyleStep
+            nutrition={formData.nutrition_pattern}
+            substances={formData.substances_pattern}
+            recovery={formData.recovery_pattern}
+            onNutritionChange={(v) => updateField("nutrition_pattern", v)}
+            onSubstancesChange={(v) => updateField("substances_pattern", v)}
+            onRecoveryChange={(v) => updateField("recovery_pattern", v)}
+          />
+        );
+      case 7:
+        return (
           <InjuryStep
             value={formData.injury_history}
             onChange={(v) => updateField("injury_history", v)}
           />
         );
-      case 7:
+      case 8:
         return <UploadStep />;
       default:
         return null;
@@ -247,7 +297,7 @@ export function OnboardingWizard() {
       onNext={handleNext}
       onBack={handleBack}
       onSubmit={handleSubmit}
-      isLoading={isUpdatingProfile}
+      isLoading={false}
       isLastStep={currentStep === TOTAL_STEPS - 1}
       canProceed={canProceed()}
     >

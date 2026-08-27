@@ -21,12 +21,17 @@ type bodyStateRepository interface {
 	GetCurrent(ctx context.Context, userID uuid.UUID) (*model.BodyState, error)
 	ListRecentRevisions(ctx context.Context, userID uuid.UUID, limit int) ([]model.BodyStateRevision, error)
 	ListReviewableObservations(ctx context.Context, userID uuid.UUID, limit int) ([]model.BodyStateObservation, error)
+	ListReviewableFacts(ctx context.Context, userID uuid.UUID, limit int) ([]model.BodyStateFact, error)
 	ListRevisionsAfter(ctx context.Context, userID uuid.UUID, afterRevision int64, limit int) ([]model.BodyStateRevision, error)
 	UpsertFact(ctx context.Context, userID uuid.UUID, expectedRevision *int64, fact model.BodyStateFact, source string) (*model.BodyStateFact, *model.BodyStateRevision, error)
 	CorrectFact(ctx context.Context, userID uuid.UUID, expectedRevision *int64, targetFactID uuid.UUID, replacement model.BodyStateFact, source string) (*model.BodyStateFact, *model.BodyStateRevision, error)
+	TransitionFact(ctx context.Context, userID uuid.UUID, expectedRevision *int64, targetFactID uuid.UUID, replacement model.BodyStateFact, effectiveAt time.Time, source string) (*model.BodyStateFact, *model.BodyStateRevision, error)
+	AcceptCurrentFactCandidate(ctx context.Context, userID uuid.UUID, expectedRevision *int64, candidateID uuid.UUID, effectiveAt time.Time, source string) (*model.BodyStateFact, *model.BodyStateRevision, error)
 	UpdateFactTemporal(ctx context.Context, userID uuid.UUID, expectedRevision *int64, factID uuid.UUID, lifecycleState, trend string, validUntil *time.Time, source string) (*model.BodyStateFact, *model.BodyStateRevision, error)
 	UpdateFactReviewState(ctx context.Context, userID uuid.UUID, expectedRevision *int64, factID uuid.UUID, reviewState, source string) (*model.BodyStateFact, *model.BodyStateRevision, error)
 	UpsertObservation(ctx context.Context, userID uuid.UUID, expectedRevision *int64, observation model.BodyStateObservation, source string) (*model.BodyStateObservation, *model.BodyStateRevision, error)
+	TransitionObservation(ctx context.Context, userID uuid.UUID, expectedRevision *int64, targetObservationID uuid.UUID, replacement model.BodyStateObservation, source string) (*model.BodyStateObservation, *model.BodyStateRevision, error)
+	ApplyCurrentContextPatch(ctx context.Context, userID uuid.UUID, expectedRevision *int64, patch model.BodyStateCurrentContextPatch, source string) (*model.BodyStateRevision, error)
 	UpdateObservationReviewState(ctx context.Context, userID uuid.UUID, expectedRevision *int64, observationID uuid.UUID, reviewState, source string) (*model.BodyStateObservation, *model.BodyStateRevision, error)
 	SetSafetyState(ctx context.Context, userID uuid.UUID, safetyState datatypes.JSON, source string) (*model.BodyStateRevision, error)
 	UpsertEvidence(ctx context.Context, userID uuid.UUID, evidence model.BodyStateEvidence) (*model.BodyStateEvidence, error)
@@ -215,6 +220,209 @@ func (s *BodyStateService) RecordInteractionAnswer(
 		}, "consultation")
 	}
 	return err
+}
+
+// ApplyCurrentContextPatch is the application boundary for a semantically
+// coherent multi-field current-context save. The repository commits it under
+// one aggregate lock and at most one BodyStateRevision.
+func (s *BodyStateService) ApplyCurrentContextPatch(
+	ctx context.Context,
+	userID uuid.UUID,
+	expectedRevision *int64,
+	patch model.BodyStateCurrentContextPatch,
+	source string,
+) (*model.BodyStateRevision, error) {
+	seenFacts := map[string]struct{}{}
+	for index := range patch.Facts {
+		kind := strings.TrimSpace(patch.Facts[index].Kind)
+		if kind == "" {
+			return nil, errors.New("body state fact kind is required")
+		}
+		if _, exists := seenFacts[kind]; exists {
+			return nil, fmt.Errorf("duplicate current fact mutation for kind %q", kind)
+		}
+		seenFacts[kind] = struct{}{}
+		patch.Facts[index].Kind = kind
+		if patch.Facts[index].Replacement != nil {
+			patch.Facts[index].Replacement.Kind = kind
+			patch.Facts[index].Replacement.Value = strings.TrimSpace(patch.Facts[index].Replacement.Value)
+		}
+	}
+	seenObservations := map[string]struct{}{}
+	for index := range patch.Observations {
+		kind := strings.TrimSpace(patch.Observations[index].Kind)
+		if kind == "" {
+			return nil, errors.New("body state observation kind is required")
+		}
+		if _, exists := seenObservations[kind]; exists {
+			return nil, fmt.Errorf("duplicate current observation mutation for kind %q", kind)
+		}
+		seenObservations[kind] = struct{}{}
+		patch.Observations[index].Kind = kind
+		if patch.Observations[index].Replacement != nil {
+			patch.Observations[index].Replacement.Kind = kind
+		}
+	}
+	return s.repo.ApplyCurrentContextPatch(ctx, userID, expectedRevision, patch, source)
+}
+
+func (s *BodyStateService) ListReviewableFacts(ctx context.Context, userID uuid.UUID, limit int) ([]model.BodyStateFact, error) {
+	items, err := s.repo.ListReviewableFacts(ctx, userID, limit)
+	if items == nil {
+		items = []model.BodyStateFact{}
+	}
+	return items, err
+}
+
+func (s *BodyStateService) AcceptCurrentFactCandidate(
+	ctx context.Context,
+	userID uuid.UUID,
+	expectedRevision *int64,
+	candidateID uuid.UUID,
+	effectiveAt time.Time,
+) (*model.BodyStateFact, *model.BodyStateRevision, error) {
+	return s.repo.AcceptCurrentFactCandidate(
+		ctx, userID, expectedRevision, candidateID, effectiveAt, "user_review",
+	)
+}
+
+// SetCurrentFact is the single-item convenience wrapper. Real later changes are
+// temporal transitions; corrections continue to use CorrectFact explicitly.
+func (s *BodyStateService) SetCurrentFact(
+	ctx context.Context,
+	userID uuid.UUID,
+	expectedRevision *int64,
+	kind string,
+	replacement *model.BodyStateFact,
+	effectiveAt time.Time,
+	source string,
+) (*model.BodyStateFact, *model.BodyStateRevision, error) {
+	revision, err := s.ApplyCurrentContextPatch(ctx, userID, expectedRevision, model.BodyStateCurrentContextPatch{
+		Facts: []model.BodyStateCurrentFactMutation{{
+			Kind: kind, Replacement: replacement, EffectiveAt: effectiveAt,
+		}},
+	}, source)
+	if err != nil {
+		return nil, nil, err
+	}
+	if replacement == nil || strings.TrimSpace(replacement.Value) == "" {
+		return nil, revision, nil
+	}
+	state, err := s.repo.GetCurrent(ctx, userID)
+	if err != nil {
+		return nil, nil, err
+	}
+	for index := range state.Facts {
+		if state.Facts[index].Kind == strings.TrimSpace(kind) && state.Facts[index].ReviewState == "confirmed" {
+			fact := state.Facts[index]
+			return &fact, revision, nil
+		}
+	}
+	return nil, revision, nil
+}
+
+// SetCurrentObservation is the single-item convenience wrapper for singleton
+// current measurements/observations.
+func (s *BodyStateService) SetCurrentObservation(
+	ctx context.Context,
+	userID uuid.UUID,
+	expectedRevision *int64,
+	kind string,
+	replacement model.BodyStateObservation,
+	source string,
+) (*model.BodyStateObservation, *model.BodyStateRevision, error) {
+	revision, err := s.ApplyCurrentContextPatch(ctx, userID, expectedRevision, model.BodyStateCurrentContextPatch{
+		Observations: []model.BodyStateCurrentObservationMutation{{
+			Kind: kind, Replacement: &replacement,
+		}},
+	}, source)
+	if err != nil {
+		return nil, nil, err
+	}
+	state, err := s.repo.GetCurrent(ctx, userID)
+	if err != nil {
+		return nil, nil, err
+	}
+	for index := range state.Observations {
+		if state.Observations[index].Kind == strings.TrimSpace(kind) {
+			observation := state.Observations[index]
+			return &observation, revision, nil
+		}
+	}
+	return nil, revision, nil
+}
+
+// RecordLifestyleContext accepts only explicit user-reported lifestyle context
+// normalized by the consultation runtime. It never infers a lifestyle fact from
+// symptoms or external knowledge.
+func (s *BodyStateService) RecordLifestyleContext(
+	ctx context.Context,
+	userID uuid.UUID,
+	runID uuid.UUID,
+	payload json.RawMessage,
+) error {
+	var raw struct {
+		Section string         `json:"section"`
+		Summary string         `json:"summary"`
+		Details map[string]any `json:"details"`
+	}
+	if len(payload) == 0 || json.Unmarshal(payload, &raw) != nil {
+		return nil
+	}
+	section := strings.TrimSpace(raw.Section)
+	kind, ok := lifestyleFactKind(section)
+	if !ok || strings.TrimSpace(raw.Summary) == "" {
+		return nil
+	}
+	details, _ := json.Marshal(raw.Details)
+	provenance, _ := json.Marshal(map[string]any{
+		"source_type": "consultation_lifestyle_extraction",
+		"run_id":      runID,
+		"raw":         json.RawMessage(payload),
+	})
+	// This is model-mediated extraction, not a deterministic structured answer.
+	// Persist it durably but keep it out of current reasoning until the user
+	// accepts it from the Lifestyle projection.
+	_, _, err := s.repo.UpsertFact(ctx, userID, nil, model.BodyStateFact{
+		ConcernKey:            "lifestyle:" + section,
+		Kind:                  kind,
+		Value:                 strings.TrimSpace(raw.Summary),
+		Details:               datatypes.JSON(bodyStateRawOr(details, `{}`)),
+		Origin:                "ai_extracted",
+		ReviewState:           "unverified",
+		LifecycleState:        "active",
+		Trend:                 "unknown",
+		SourceKey:             "consultation:" + runID.String() + ":lifestyle:" + section,
+		Provenance:            datatypes.JSON(provenance),
+		ExcludedFromReasoning: true,
+	}, "consultation")
+	return err
+}
+
+func bodyStateRawOr(value []byte, fallback string) []byte {
+	if len(value) == 0 || string(value) == "null" {
+		return []byte(fallback)
+	}
+	return value
+}
+
+func lifestyleFactKind(section string) (string, bool) {
+	switch section {
+	case "activity":
+		return model.BodyStateFactKindLifestyleActivity, true
+	case "sleep":
+		return model.BodyStateFactKindLifestyleSleep, true
+	case "exercise":
+		return model.BodyStateFactKindLifestyleExercise, true
+	case "nutrition":
+		return model.BodyStateFactKindLifestyleNutrition, true
+	case "substances":
+		return model.BodyStateFactKindLifestyleSubstances, true
+	case "recovery":
+		return model.BodyStateFactKindLifestyleRecovery, true
+	default:
+		return "", false
+	}
 }
 
 func (s *BodyStateService) UpsertFact(ctx context.Context, userID uuid.UUID, expectedRevision *int64, fact model.BodyStateFact) (*model.BodyStateFact, *model.BodyStateRevision, error) {

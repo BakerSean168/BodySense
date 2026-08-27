@@ -1000,35 +1000,84 @@ Domain language and AI prompts must preserve this distinction.
 
 ---
 
-## 26. Profile versus BodyState
+## 26. Stable Profile, Body Metrics, and Lifestyle Projection
 
-Do not place all long-term data into a static user profile.
+ADR 0007 makes the ownership boundary strict: `UserProfile` is not a health-state aggregate.
 
-### 26.1 Relatively stable profile / identity
+### 26.1 Stable Profile / identity
 
-Examples:
+The durable Profile contains only relatively stable identity context:
 
 ```text
 birth date
-sex where relevant and user-provided
-height where treated as relatively stable
-account preferences
+sex / gender where relevant and user-provided
+account identity/preferences outside this health domain
 ```
 
-### 26.2 Time-varying lifestyle belongs in BodyState history
+Age is derived from birth date. Height, weight, injury history, activity, sleep, exercise,
+nutrition, substance use, and recovery state do **not** belong in `user_profiles`.
 
-Examples:
+### 26.2 Measurements are Observations
+
+Height and weight are BodyState Observations:
 
 ```text
-occupation/activity pattern
-sitting hours
-exercise frequency
-sleep pattern
-body weight if tracked longitudinally
-training volume
+anthropometry.height
+anthropometry.weight
 ```
 
-If a value changes and that change can matter to health reasoning, preserving its history is useful.
+Updating the current measurement retains the old Observation and links the replacement through
+`supersedes_observation_id`. BMI is derived from the current projection.
+
+### 26.3 Lifestyle is a taxonomy, not another aggregate
+
+The current lifestyle taxonomy is:
+
+```text
+lifestyle.activity
+lifestyle.sleep
+lifestyle.exercise
+lifestyle.nutrition
+lifestyle.substances
+lifestyle.recovery
+```
+
+A user-facing `LifestyleSnapshot` projects the active facts into a stable “生活方式” UI. There is no
+separate Lifestyle source-of-truth table.
+
+Onboarding, the Lifestyle editor, and Consultation all converge on the same BodyState taxonomy, but
+they do not have the same epistemic authority. Direct onboarding/editor writes are explicit structured
+user edits and may become confirmed current facts immediately. Consultation normalization is model-
+mediated even when based on explicit user language, so `record_lifestyle_context` persists an
+`ai_extracted / unverified / excluded_from_reasoning` candidate. Occupation name or symptoms alone
+must never be used to infer it.
+
+The Lifestyle projection exposes reviewable candidates separately from confirmed current state. User
+acceptance promotes the candidate and temporally closes the previous confirmed fact in one revision;
+rejection keeps the candidate as durable provenance but excluded from reasoning. This preserves both
+AI-native conversational capture and the BodyState governance rule that model extraction is not fact
+acceptance.
+
+### 26.4 Correction is not temporal change
+
+If a previous fact was incorrect, use `CorrectFact`.
+
+If a previous fact was true and later changed, close its validity interval and create a replacement
+linked by `supersedes_fact_id`. This distinction is essential for longitudinal reasoning such as:
+
+```text
+sleep regular -> shift work
+sitting 8h/day -> walking/standing work
+exercise 0 sessions/week -> 4 sessions/week
+```
+
+These transitions can support temporal association analysis but never prove causation by themselves.
+
+### 26.5 Health history also stays out of Profile
+
+The onboarding-level injury summary is represented as `history.injury_summary` in BodyState. More
+granular injury episodes may be modeled as additional health-history facts without expanding the
+Profile schema.
 
 ---
 

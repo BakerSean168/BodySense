@@ -23,11 +23,7 @@ test("register -> profile -> durable BodyState fact survives reload", async ({
     headers: { Authorization: `Bearer ${accessToken}` },
     data: {
       gender: "male",
-      age: 30,
-      height_cm: 175,
-      weight_kg: 70,
-      occupation: "software engineer",
-      exercise_frequency: "2-3/week",
+      birth_date: "1996-08-27",
     },
   });
   expect(profile.ok()).toBeTruthy();
@@ -119,11 +115,7 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
         headers,
         data: {
           gender: "female",
-          age: 32,
-          height_cm: 168,
-          weight_kg: 60,
-          occupation: "designer",
-          exercise_frequency: "2-3/week",
+          birth_date: "1994-08-27",
         },
       })
     ).ok(),

@@ -38,11 +38,7 @@ async function registerAndProfile(
     headers: { Authorization: `Bearer ${accessToken}` },
     data: {
       gender: "male",
-      age: 30,
-      height_cm: 175,
-      weight_kg: 70,
-      occupation: "software engineer",
-      exercise_frequency: "2-3/week",
+      birth_date: "1996-08-27",
     },
   });
   expect(profileResponse.ok()).toBeTruthy();
