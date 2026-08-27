@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.1](https://github.com/BakerSean168/BodySense/compare/v0.7.0...v0.7.1) (2026-08-27)
+
+
+### Bug Fixes
+
+* **ops:** tolerate swap metadata page overhead ([f88413f](https://github.com/BakerSean168/BodySense/commit/f88413fc1774fa0a02cd73a7cc40cc4a7b02c1d6))
+* **ops:** tolerate swap metadata page overhead ([0464abf](https://github.com/BakerSean168/BodySense/commit/0464abf0463d16fee04d431aed0e54732e912a6f))
+
 ## [0.7.0](https://github.com/BakerSean168/BodySense/compare/v0.6.0...v0.7.0) (2026-08-27)
 
 
