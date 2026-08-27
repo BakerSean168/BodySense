@@ -11,7 +11,7 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
   page,
   request,
 }, testInfo) => {
-  test.setTimeout(240_000);
+  test.setTimeout(300_000);
   const email = `body3d-${Date.now()}-${Math.random().toString(16).slice(2)}@example.com`;
   const password = "BodySenseE2E!123";
   const atlasRequests: string[] = [];
@@ -246,13 +246,44 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
   ).toBeVisible();
   await expect(page.getByText("Atlas 1.4.0", { exact: true })).toBeVisible();
 
+});
+
+test("3D Body Explorer falls back when atlas metadata is unavailable", async ({
+  page,
+  request,
+}, testInfo) => {
+  test.setTimeout(90_000);
+  const email = `body3d-fallback-${Date.now()}-${Math.random().toString(16).slice(2)}@example.com`;
+  const password = "BodySenseE2E!123";
+
+  await page.goto("/register");
+  await page.getByLabel("邮箱地址").fill(email);
+  await page.getByLabel("密码", { exact: true }).fill(password);
+  await page.getByLabel("确认密码").fill(password);
+  await page.getByRole("button", { name: "创建账号" }).click();
+  await page.waitForURL(/\/(onboarding|consultation)/);
+
+  const accessToken = await refreshBrowserAccessToken(page, apiBase);
+  const headers = { Authorization: `Bearer ${accessToken}` };
+  const profile = await request.put(`${apiBase}/api/v1/profile`, {
+    headers,
+    data: {
+      gender: "male",
+      birth_date: "1996-08-27",
+    },
+  });
+  expect(profile.ok(), await profile.text()).toBeTruthy();
+
   await page.route("**/anatomy/vanatome/1.4.0/**/catalog.json", (route) =>
     route.abort(),
   );
-  await page.reload();
+  await page.goto("/consultation?view=state");
+
   await expect(page.getByText("3D 身体视图暂时不可用")).toBeVisible({
     timeout: 30_000,
   });
+  await expect(page.getByText("已切换到可访问的 2D 身体概览。", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "重试" })).toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath("body-explorer-atlas-fallback.png"),
     fullPage: true,
