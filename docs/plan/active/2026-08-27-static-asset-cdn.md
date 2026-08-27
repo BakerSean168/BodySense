@@ -1,7 +1,7 @@
 # BodySense Immutable Static Asset CDN
 
 > Date: 2026-08-27
-> Status: IMPLEMENTATION COMPLETE / EXTERNAL R2 PROVISIONING PENDING
+> Status: STAGING CUTOVER COMPLETE / EDGE CACHE RULE + PRODUCTION RELEASE VALIDATION PENDING
 > Scope: Vite hashed assets + Vanatome atlas distribution
 > Privacy boundary: no user-, conversation-, diagnosis-, or BodyState-specific bytes may enter the public asset origin
 
@@ -205,3 +205,31 @@ Atlas verify               26 files / 96,981,412 bytes PASS
 A production-style Docker image built with an absolute CDN base emitted CDN entry/modulepreload/CSS URLs while its application JavaScript retained relative `/api/v1/...` requests. This verifies the privacy/network split before external R2 activation.
 
 The production workflow remains safe before provisioning: because `production` currently has no `STATIC_ASSET_CDN_BASE`, the new publication steps stay disabled and Web retains same-origin behavior. Once R2 is provisioned, adding that Environment variable intentionally activates the fail-closed CDN release path.
+
+## 12. Real R2 cutover checkpoint — 2026-08-27
+
+Cloudflare resources and staging publication are now real, not dry-run:
+
+```text
+R2 bucket              bodysense-static
+custom domain          https://assets.bakersean.top
+CORS                    anonymous GET/HEAD validated
+Atlas 1.4.0             26/26 objects uploaded and write-after-HEAD verified
+Atlas bytes             96,981,412
+Web revision            4a65b4c959beb0ad482015c17621688adffbb30d
+Web static files        21/21 uploaded and write-after-HEAD verified
+staging index.html      private Tailnet origin
+staging /api + SSE      private application origin
+Vite JS/CSS/fonts       assets.bakersean.top/web/<revision>/...
+Vanatome atlas          assets.bakersean.top/anatomy/vanatome/1.4.0/...
+Body3D CDN-aware E2E    PASS
+```
+
+The staging coherence verifier confirmed every `/assets` file present in the running Web image exists at its exact revision CDN prefix. Production GitHub Environment now contains the four R2 secrets plus the public `STATIC_ASSET_CDN_BASE=https://assets.bakersean.top` variable; no R2 credential is present on the production runtime.
+
+Observed Cloudflare cache behavior before an explicit Cache Rule:
+
+- Vite `.js`: first GET `MISS`, second GET `HIT`;
+- anatomy `.glb`: repeated GETs remain `DYNAMIC`.
+
+This matches Cloudflare's documented default extension-based cache eligibility. External closeout therefore still requires a hostname-scoped Cache Rule (`assets.bakersean.top` → Eligible for cache / Cache Everything) so GLB/JSON are edge-cacheable, plus the already documented `Timing-Allow-Origin: *` response transform for full cross-origin Resource Timing. Production's first real release remains the final release-pipeline acceptance.

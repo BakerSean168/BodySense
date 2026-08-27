@@ -74,7 +74,28 @@ The public files do not use credentials, so wildcard read CORS is intentional. `
 
 After changing CORS on an already cached custom domain, purge that hostname's cache before browser validation.
 
-## 4. Resource Timing header
+## 4. Edge cache rule
+
+R2 custom domains use Cloudflare's normal cache eligibility rules. JavaScript/CSS may be cached by default, but anatomy `.glb` and JSON are not guaranteed to be default-cacheable. Create a Cache Rule for the asset hostname:
+
+```text
+Rule name: BodySense immutable public assets
+When: Hostname equals assets.bakersean.top
+Then: Cache eligibility = Eligible for cache
+```
+
+This is intentionally Cache Everything for this hostname: the hostname contains only public immutable revision/version-addressed assets and every publisher object already carries `Cache-Control: public, max-age=31536000, immutable`. Do not apply this rule to `body.bakersean.top` or the private staging application hostname.
+
+Validation:
+
+```bash
+curl -sD - -o /dev/null https://assets.bakersean.top/anatomy/vanatome/1.4.0/models/z-anatomy-1.4.0-regional-anatomy.glb | grep -i cf-cache-status
+curl -sD - -o /dev/null https://assets.bakersean.top/anatomy/vanatome/1.4.0/models/z-anatomy-1.4.0-regional-anatomy.glb | grep -Ei 'cf-cache-status|age'
+```
+
+The first request may be `MISS`; the second should become `HIT`.
+
+## 5. Resource Timing header
 
 For useful browser performance diagnostics on the cross-origin CDN, add a Cloudflare Response Header Transform Rule for `assets.bakersean.top`:
 
@@ -84,7 +105,7 @@ Timing-Allow-Origin: *
 
 Without this header, browsers intentionally hide detailed cross-origin Resource Timing fields. BodySense diagnostics already marks those measurements as restricted instead of fabricating TTFB/transfer values.
 
-## 5. GitHub production Environment
+## 6. GitHub production Environment
 
 Add Environment variable:
 
@@ -105,7 +126,7 @@ Do not place the R2 credential in application `.env` files or Docker images.
 
 Until `STATIC_ASSET_CDN_BASE` exists, the production workflow intentionally retains the current same-origin Web behavior.
 
-## 6. Object layout
+## 7. Object layout
 
 ```text
 bodysense-static/
@@ -135,7 +156,7 @@ x-amz-meta-sha256: <expected hash>
 
 The publisher uses `HeadObject` to verify byte count + SHA-256 metadata after upload.
 
-## 7. Staging publisher credential storage
+## 8. Staging publisher credential storage
 
 Keep the staging publisher token outside both the repository and `.env.staging.local`:
 
@@ -163,7 +184,7 @@ R2_BUCKET=bodysense-static
 
 `scripts/staging-runtime.sh publish-static` loads this file automatically. It never copies these credentials into Docker build args or the generated `.runtime/staging-static-assets.env`; that generated file contains only the two public CDN URLs.
 
-## 8. Local publication
+## 9. Local publication
 
 Prepare a production-style Web build:
 
@@ -202,7 +223,7 @@ node scripts/static-assets/publish-atlas-r2.mjs \
 
 Use `--dry-run` on either publisher to inspect the immutable object plan without credentials or writes.
 
-## 9. Production release behavior
+## 10. Production release behavior
 
 `.github/workflows/docker-deploy.yml` now enforces:
 
@@ -218,7 +239,7 @@ verified main revision
 
 This means an `index.html` cannot become production-eligible while its hashed CDN dependencies are absent.
 
-## 10. Staging
+## 11. Staging
 
 Staging Docker builds accept `VITE_ASSET_BASE`.
 

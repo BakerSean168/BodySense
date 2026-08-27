@@ -2,6 +2,10 @@ import { expect, test } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
 
 const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
+const publicAssetOrigin = process.env.E2E_PUBLIC_ASSET_ORIGIN?.replace(
+  /\/$/,
+  "",
+);
 
 test("3D Body Explorer links canonical BodyState, anatomy focus, and chat context", async ({
   page,
@@ -11,10 +15,15 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
   const email = `body3d-${Date.now()}-${Math.random().toString(16).slice(2)}@example.com`;
   const password = "BodySenseE2E!123";
   const atlasRequests: string[] = [];
+  const bodyExplorerChunkRequests: string[] = [];
 
   page.on("request", (req) => {
-    if (req.url().includes("/static/anatomy/vanatome/1.4.0/")) {
-      atlasRequests.push(req.url());
+    const url = req.url();
+    if (url.includes("/anatomy/vanatome/1.4.0/")) {
+      atlasRequests.push(url);
+    }
+    if (/\/assets\/BodyExplorer3D-[^/]+\.js(?:$|\?)/.test(url)) {
+      bodyExplorerChunkRequests.push(url);
     }
   });
 
@@ -181,9 +190,11 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
   });
 
   expect(atlasRequests.length).toBeGreaterThan(0);
-  for (const url of atlasRequests) {
+  expect(bodyExplorerChunkRequests.length).toBeGreaterThan(0);
+  const expectedAssetOrigin = publicAssetOrigin ?? new URL(page.url()).origin;
+  for (const url of [...atlasRequests, ...bodyExplorerChunkRequests]) {
     const parsed = new URL(url);
-    expect(parsed.origin).toBe(new URL(page.url()).origin);
+    expect(parsed.origin).toBe(expectedAssetOrigin);
     expect(parsed.search).toBe("");
     expect(url).not.toContain(email);
     expect(url).not.toContain("shoulder.right");
@@ -193,7 +204,7 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
     const entries = performance
       .getEntriesByType("resource")
       .filter((entry) =>
-        entry.name.includes("/static/anatomy/vanatome/1.4.0/"),
+        entry.name.includes("/anatomy/vanatome/1.4.0/"),
       ) as PerformanceResourceTiming[];
     return {
       count: entries.length,
@@ -235,9 +246,8 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
   ).toBeVisible();
   await expect(page.getByText("Atlas 1.4.0", { exact: true })).toBeVisible();
 
-  await page.route(
-    "**/static/anatomy/vanatome/1.4.0/**/catalog.json",
-    (route) => route.abort(),
+  await page.route("**/anatomy/vanatome/1.4.0/**/catalog.json", (route) =>
+    route.abort(),
   );
   await page.reload();
   await expect(page.getByText("3D 身体视图暂时不可用")).toBeVisible({
