@@ -25,8 +25,8 @@ jobs:
       matrix:
         include:
           - name: pgvector
-            source: pgvector/pgvector:pg16@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b
-            target: pgvector:pg16
+            source: pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a
+            target: pgvector:pg18
           - name: redis
             source: redis:7-alpine@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf
             target: redis:7-alpine

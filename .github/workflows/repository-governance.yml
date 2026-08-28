@@ -43,7 +43,7 @@ jobs:
               "contexts": [
                 "Repository quality gate",
                 "PostgreSQL 18 current-history replay",
-                "PostgreSQL 16 production-v29 upgrade",
+                "PostgreSQL 18 production-baseline upgrade",
                 "Browser longitudinal health E2E",
                 "commit-lint"
               ]

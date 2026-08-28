@@ -1,6 +1,6 @@
 # BodySense deployment architecture
 
-> Current deployment architecture, 2026-08-25.
+> Current deployment architecture, 2026-08-28.
 
 ## Environment roles
 
@@ -22,7 +22,7 @@ GCP uses the canonical project block `20100-20199` from `my-infrastructure/proje
 | staging    | production-shaped Docker Compose    | only Web/nginx ingress `127.0.0.1:20150`                                                 | persistent              |
 | production | Alibaba ECS Docker Compose          | public `80/443` through Caddy                                                            | persistent              |
 
-`./scripts/dev-runtime.sh` owns direct-dev startup order: infrastructure health -> Go API migration/schema bootstrap -> Python AI health -> Vite Web. `./scripts/staging-runtime.sh` owns the persistent `bodysense-staging` Compose project. Staging uses PostgreSQL 18 for clean-from-zero migration compatibility; production remains PostgreSQL 16 and its historical-upgrade compatibility is protected separately by the PostgreSQL-16 production fixture/replay gate.
+`./scripts/dev-runtime.sh` owns direct-dev startup order: infrastructure health -> Go API migration/schema bootstrap -> Python AI health -> Vite Web. `./scripts/staging-runtime.sh` owns the persistent `bodysense-staging` Compose project. Development, staging, CI and steady-state production use PostgreSQL 18. Historical production schema upgrades are exercised by a PG18 production-baseline scenario rather than by retaining compatibility with the PostgreSQL 16 engine.
 
 GCP application host ports bind loopback. Human remote access is provided by Tailscale Serve/TLS; database, Redis, LiteLLM and AI internal staging ports are not exposed directly.
 
@@ -54,7 +54,7 @@ feature branch
     -> CI
        - repository quality gate
        - migration history immutability
-       - PostgreSQL 16 + 18 baseline/replay validation
+       - PostgreSQL 18 current-history + production-baseline validation
        - browser longitudinal E2E
     -> merge main
     -> full main CI must finish successfully
@@ -71,7 +71,9 @@ feature branch
        - extract runtime files from the coherent ACR runtime image
        - validate Compose against production secrets
        - back up PostgreSQL
+       - when required, perform the guarded PG16 -> PG18 one-time cutover onto an independent PG18 volume
        - deploy AI -> API -> Web with health gates
+       - commit the PG18 database boundary before re-exposing Caddy
        - verify public HTTPS health
 ```
 
@@ -103,12 +105,14 @@ Legacy migration-number gaps `2`, `3`, `5` predate the current production baseli
 
 ### Migration validation
 
-Migration CI has two intentionally different paths:
+Migration CI has two intentionally different **scenarios**, both on the single supported PostgreSQL / pgvector 18 runtime:
 
-- PostgreSQL / pgvector 18 rebuilds the current migration history, stops at the published baseline `29`, then validates `29 -> latest` and latest `down -> up`.
-- PostgreSQL / pgvector 16 restores the schema-only `production-pg16-v29.sql` fixture captured from the real production-v29 schema, then validates `29 -> latest` and domain semantics. It also creates a custom-format `pg_dump`, validates the archive, restores it into a fresh database, checks the migration version and reruns the domain validator against the restored database. This avoids pretending the modern PostgreSQL-18 migration history can recreate an old PG16 database from version 1 while continuously exercising the backup/restore path used by production.
+- `PostgreSQL 18 current-history replay` rebuilds the current migration history, stops at the published baseline `29`, then validates `29 -> latest` and latest `down -> up`.
+- `PostgreSQL 18 production-baseline upgrade` restores the PG18-normalized `production-v29.sql` schema fixture captured from the historical production-v29 shape, then validates `29 -> latest`, domain semantics and the PG18 `pg_dump` / `pg_restore` recovery path.
 
-This exists because production was found at migration 29 while migration 29 had been deleted from the repository; that deletion caused the v0.4.0 API container to restart-loop. Published migrations are now treated as immutable release artifacts.
+The second job protects **old production schema/data upgrade semantics**, not compatibility with an old PostgreSQL engine. Development, staging, CI and steady-state production all use PostgreSQL 18.
+
+This baseline exists because production was found at migration 29 while migration 29 had been deleted from the repository; that deletion caused the v0.4.0 API container to restart-loop. Published migrations are now treated as immutable release artifacts.
 
 ## Repository governance
 
@@ -206,13 +210,13 @@ Runtime bundle archives are also retained for 14 days.
 
 Infrastructure images are mirrored into Alibaba ACR by `.github/workflows/mirror-production-infra.yml`. Every upstream source is pinned by OCI digest, so rerunning the mirror cannot silently consume a newer image behind a mutable upstream tag. Normal production deploys therefore do not depend on Docker Hub or the upstream LiteLLM registry. This workflow is manual because infrastructure versions change deliberately, not on every application release.
 
-Current pinned mirrors: PostgreSQL/pgvector 16, Redis 7 Alpine, Caddy 2 Alpine, and LiteLLM v1.97.0. Their human-readable tags remain stable inside ACR, while the mirror workflow fixes the exact upstream OCI digest in Git.
+Current pinned mirrors: PostgreSQL/pgvector 18, Redis 7 Alpine, Caddy 2 Alpine, and LiteLLM v1.97.0. Their human-readable tags remain stable inside ACR, while the mirror workflow fixes the exact upstream OCI digest in Git.
 
 ## Production database
 
-Current production is PostgreSQL 16 + pgvector. Do **not** replace the production database container with PostgreSQL 18 by changing the image tag in place; a major-version upgrade requires a separate pg_dump/restore or pg_upgrade plan.
+BodySense supports PostgreSQL 18 + pgvector as the single steady-state database runtime. The 2026-08-28 production transition from PostgreSQL 16 is handled by the guarded release-watcher cutover documented in `docs/runbooks/postgresql-18-production-cutover.md`; the old PG16 Docker volume is never reused as a PG18 data directory.
 
-Development/validator environments may use PostgreSQL 18, which is why CI validates both versions.
+CI keeps separate current-history and production-baseline upgrade scenarios, but both run PostgreSQL 18. This preserves schema/data upgrade coverage without carrying PostgreSQL 16 engine compatibility.
 
 ## Off-host PostgreSQL backup and restore (BS-PROD-012)
 
@@ -301,7 +305,7 @@ See [docs/security/offhost-backup-restore-runbook.md](../security/offhost-backup
 
 `docker/docker-compose.prod.yml` preserves the North-Star model boundary: AI Service receives only `LITELLM_BASE_URL` / `LITELLM_API_KEY`; physical provider credentials are injected only into the standalone LiteLLM gateway.
 
-The CI/CD repair does **not** reintroduce direct provider routing. The production reconciliation is limited to real infrastructure facts (PostgreSQL 16, Alibaba ACR mirrors) and the safer deploy watcher. `LITELLM_MASTER_KEY` is an internal gateway credential stored only in `.env.production.local`; `MIMO_API_KEY` may be empty while an available OpenRouter fallback is configured.
+The CI/CD repair does **not** reintroduce direct provider routing. The production reconciliation is limited to real infrastructure facts (PostgreSQL 18, Alibaba ACR mirrors) and the safer deploy watcher. `LITELLM_MASTER_KEY` is an internal gateway credential stored only in `.env.production.local`; `MIMO_API_KEY` may be empty while an available OpenRouter fallback is configured.
 
 ## Secret boundaries
 
