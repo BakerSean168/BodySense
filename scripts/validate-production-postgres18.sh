@@ -48,6 +48,17 @@ reject_path apps/api/migrations/baselines/production-pg16-v29.sql
 grep -q 'production-postgres18-reset.sh /runtime/scripts/production-postgres18-reset.sh' docker/Dockerfile.runtime
 grep -q 'production-postgres18-reset.sh" cutover' scripts/production-deploy-watch.sh
 grep -q 'production-postgres18-reset.sh" commit' scripts/production-deploy-watch.sh
+grep -q 'fresh PostgreSQL 18 detected; bootstrapping API migrations before AI service' scripts/production-deploy-watch.sh
+python3 - <<'PY_ORDER'
+from pathlib import Path
+s = Path('scripts/production-deploy-watch.sh').read_text()
+start = s.index('if [ "$reset_status" = cutover_complete ]; then')
+end = s.index('compose up -d --no-deps web', start)
+block = s[start:end]
+then_block, else_block = block.split('else', 1)
+assert then_block.index('deploy_api_service') < then_block.index('deploy_ai_service'), then_block
+assert else_block.index('deploy_ai_service') < else_block.index('deploy_api_service'), else_block
+PY_ORDER
 grep -q 'production-postgres18-reset.sh' scripts/setup-server.sh
 reject_path scripts/production-postgres-major-upgrade.sh
 reject_path scripts/validate-production-postgres-major-upgrade.sh

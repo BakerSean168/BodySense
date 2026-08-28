@@ -17,7 +17,7 @@ For the release that performs the transition:
 3. Caddy, API and AI are stopped so no writes occur during the database switch;
 4. the existing legacy PostgreSQL container is replaced by `pgvector:pg18` on `bodysense-postgres-pg18`;
 5. PostgreSQL 18 must become healthy and report major `18`;
-6. AI, API and Web are started; API bootstrap runs the canonical migrations on the fresh database;
+6. API starts first and owns the canonical `1 -> latest` schema bootstrap (including `CREATE EXTENSION vector`); only after API health passes are AI and Web started;
 7. after all application health gates pass, the legacy PostgreSQL volume is deleted immediately;
 8. only then is Caddy exposed and the public `/api/health` check executed.
 
