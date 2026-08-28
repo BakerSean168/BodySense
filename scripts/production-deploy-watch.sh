@@ -669,13 +669,32 @@ compose pull litellm-gateway >/dev/null
 compose up -d --no-deps litellm-gateway
 wait_healthy litellm-gateway 120 || fail 'litellm-gateway deployment failed'
 
-compose up -d --no-deps ai-service
-wait_healthy ai-service 120 || fail 'ai-service deployment failed'
-assert_container_revision ai-service "$desired_revision" || fail 'ai-service revision verification failed'
+deploy_ai_service() {
+  compose up -d --no-deps ai-service
+  wait_healthy ai-service 120 || fail 'ai-service deployment failed'
+  assert_container_revision ai-service "$desired_revision" || fail 'ai-service revision verification failed'
+}
 
-compose up -d --no-deps api
-wait_healthy api 150 || fail 'api deployment failed'
-assert_container_revision api "$desired_revision" || fail 'api revision verification failed'
+deploy_api_service() {
+  compose up -d --no-deps api
+  wait_healthy api 150 || fail 'api deployment failed'
+  assert_container_revision api "$desired_revision" || fail 'api revision verification failed'
+}
+
+reset_status=$(postgres_reset_state_status_for_release)
+if [ "$reset_status" = cutover_complete ]; then
+  # A fresh PG18 database has no vector extension yet. The Go API owns schema
+  # migrations (migration 10 creates vector), while AI registers the vector type
+  # during its FastAPI lifespan. Bootstrap schema first, with Caddy still down.
+  log 'fresh PostgreSQL 18 detected; bootstrapping API migrations before AI service'
+  deploy_api_service
+  deploy_ai_service
+else
+  # Existing databases are already migrated, so preserve the established rollout
+  # order that upgrades AI before the externally reachable API.
+  deploy_ai_service
+  deploy_api_service
+fi
 
 compose up -d --no-deps web
 wait_healthy web 90 || fail 'web deployment failed'
