@@ -22,7 +22,7 @@ COPY deploy/systemd/bodysense-offhost-backup.timer /runtime/deploy/systemd/bodys
 COPY deploy/systemd/bodysense-offhost-freshness.service /runtime/deploy/systemd/bodysense-offhost-freshness.service
 COPY deploy/systemd/bodysense-offhost-freshness.timer /runtime/deploy/systemd/bodysense-offhost-freshness.timer
 COPY scripts/production-postgres-dr.sh /runtime/scripts/production-postgres-dr.sh
-COPY scripts/production-postgres-major-upgrade.sh /runtime/scripts/production-postgres-major-upgrade.sh
+COPY scripts/production-postgres18-reset.sh /runtime/scripts/production-postgres18-reset.sh
 COPY scripts/install-production-dr.sh /runtime/scripts/install-production-dr.sh
 COPY deploy/systemd/bodysense-postgres-dr-backup.service /runtime/deploy/systemd/bodysense-postgres-dr-backup.service
 COPY deploy/systemd/bodysense-postgres-dr-backup.timer /runtime/deploy/systemd/bodysense-postgres-dr-backup.timer

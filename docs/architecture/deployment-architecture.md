@@ -71,7 +71,7 @@ feature branch
        - extract runtime files from the coherent ACR runtime image
        - validate Compose against production secrets
        - back up PostgreSQL
-       - when required, perform the guarded PG16 -> PG18 one-time cutover onto an independent PG18 volume
+       - for the one-time production transition, discard the legacy database and start a fresh PG18 volume before application migrations
        - deploy AI -> API -> Web with health gates
        - commit the PG18 database boundary before re-exposing Caddy
        - verify public HTTPS health
@@ -214,7 +214,7 @@ Current pinned mirrors: PostgreSQL/pgvector 18, Redis 7 Alpine, Caddy 2 Alpine, 
 
 ## Production database
 
-BodySense supports PostgreSQL 18 + pgvector as the single steady-state database runtime. The 2026-08-28 production transition from PostgreSQL 16 is handled by the guarded release-watcher cutover documented in `docs/runbooks/postgresql-18-production-cutover.md`; the old PG16 Docker volume is never reused as a PG18 data directory.
+BodySense supports PostgreSQL 18 + pgvector as the single steady-state database runtime. The 2026-08-28 production transition discards the non-authoritative legacy database and starts a fresh PostgreSQL 18 volume through the release watcher. The old data directory is never reused as a PG18 data directory and its legacy volume is deleted after PG18 plus the application stack pass health gates.
 
 CI keeps separate current-history and production-baseline upgrade scenarios, but both run PostgreSQL 18. This preserves schema/data upgrade coverage without carrying PostgreSQL 16 engine compatibility.
 

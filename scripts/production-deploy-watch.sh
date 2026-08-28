@@ -7,7 +7,7 @@ SECRET_ENV="$ROOT/.env.production.local"
 COMPOSE="$ROOT/docker/docker-compose.prod.yml"
 STATE_FILE="$ROOT/.deploy-state"
 BLOCK_FILE="$ROOT/.deploy-blocked"
-POSTGRES_MAJOR_STATE_FILE="$ROOT/.postgres-major-upgrade-state"
+POSTGRES_RESET_STATE_FILE="$ROOT/.postgres18-reset-state"
 LOCK_FILE="$ROOT/.deploy.lock"
 BACKUP_DIR="$ROOT/backups"
 RUNTIME_BACKUP_DIR="$ROOT/runtime-backups"
@@ -237,7 +237,7 @@ restore_runtime() {
   # rollback) are replaced ATOMICALLY via a temp file + rename, so the running
   # process keeps reading its already-open file descriptor and the next
   # scheduled run reads the restored file.
-  for script in production-deploy-watch.sh offhost-s3.py production-offhost-backup.sh restore-production-backup.sh production-postgres-dr.sh install-production-dr.sh production-postgres-major-upgrade.sh production-capacity-status.sh install-production-capacity.sh; do
+  for script in production-deploy-watch.sh offhost-s3.py production-offhost-backup.sh restore-production-backup.sh production-postgres-dr.sh install-production-dr.sh production-postgres18-reset.sh production-capacity-status.sh install-production-capacity.sh; do
     if [ -f "$ROLLBACK_RUNTIME_DIR/scripts/$script" ]; then
       tmp="$ROOT/scripts/.restore-$$-$script.tmp"
       cp -f "$ROLLBACK_RUNTIME_DIR/scripts/$script" "$tmp"
@@ -276,15 +276,15 @@ restore_runtime() {
   fi
 }
 
-postgres_major_state_value() {
+postgres_reset_state_value() {
   local key="$1"
-  sed -n "s/^${key}=//p" "$POSTGRES_MAJOR_STATE_FILE" 2>/dev/null | tail -1 || true
+  sed -n "s/^${key}=//p" "$POSTGRES_RESET_STATE_FILE" 2>/dev/null | tail -1 || true
 }
 
-postgres_major_state_status_for_release() {
+postgres_reset_state_status_for_release() {
   local release status
-  release=$(postgres_major_state_value release_revision)
-  status=$(postgres_major_state_value status)
+  release=$(postgres_reset_state_value release_revision)
+  status=$(postgres_reset_state_value status)
   if [ -n "${desired_revision:-}" ] && [ "$release" = "$desired_revision" ]; then
     printf '%s' "${status:-none}"
   else
@@ -292,36 +292,34 @@ postgres_major_state_status_for_release() {
   fi
 }
 
-rollback_postgres_major_upgrade() {
-  [ -n "$ROLLBACK_RUNTIME_DIR" ] || { log 'PostgreSQL major rollback unavailable: previous runtime archive is missing'; return 1; }
-  [ -x "$ROOT/scripts/production-postgres-major-upgrade.sh" ] || { log 'PostgreSQL major rollback unavailable: operator is missing'; return 1; }
-  POSTGRES_MAJOR_RELEASE_REVISION="$desired_revision" \
-  POSTGRES_MAJOR_ROLLBACK_COMPOSE="$ROLLBACK_RUNTIME_DIR/docker/docker-compose.prod.yml" \
-  POSTGRES_MAJOR_ROLLBACK_ENV="$ROLLBACK_RUNTIME_DIR/.env.production" \
-  POSTGRES_MAJOR_EXPECTED_SCHEMA="$PREVIOUS_SCHEMA_STATE" \
-    "$ROOT/scripts/production-postgres-major-upgrade.sh" rollback
+rollback_postgres18_reset() {
+  [ -n "$ROLLBACK_RUNTIME_DIR" ] || { log 'PostgreSQL reset rollback unavailable: previous runtime archive is missing'; return 1; }
+  [ -x "$ROOT/scripts/production-postgres18-reset.sh" ] || { log 'PostgreSQL reset rollback unavailable: reset operator is missing'; return 1; }
+  POSTGRES18_RESET_RELEASE_REVISION="$desired_revision" \
+  POSTGRES18_RESET_ROLLBACK_COMPOSE="$ROLLBACK_RUNTIME_DIR/docker/docker-compose.prod.yml" \
+  POSTGRES18_RESET_ROLLBACK_ENV="$ROLLBACK_RUNTIME_DIR/.env.production" \
+    "$ROOT/scripts/production-postgres18-reset.sh" rollback
 }
 
 rollback_deployment() {
-  local current_schema major_status preserve_runtime=false
+  local current_schema reset_status preserve_runtime=false
   if [ "$ROLLBACK_READY" != true ]; then
     log 'automatic rollback skipped: no complete previous image set was captured'
     return 2
   fi
 
-  major_status=$(postgres_major_state_status_for_release)
-  case "$major_status" in
+  reset_status=$(postgres_reset_state_status_for_release)
+  case "$reset_status" in
     prepared|cutover_complete)
-      rollback_postgres_major_upgrade || return 1
+      rollback_postgres18_reset || return 1
       current_schema="$PREVIOUS_SCHEMA_STATE"
       ;;
     committed)
-      # Once Caddy can be exposed again, PG18 is the durable database boundary.
-      # Never move back to the old PG16 volume after external writes could have
-      # reached PG18; only application images may roll back from this point.
+      # Once the fresh PG18 reset is committed, the discarded legacy volume is
+      # gone. Application rollback must keep the PG18 runtime/database boundary.
       preserve_runtime=true
       current_schema=$(db_schema_state)
-      log 'PostgreSQL major upgrade is committed; preserving PG18 runtime during application rollback'
+      log 'PostgreSQL 18 reset is committed; preserving PG18 runtime during application rollback'
       ;;
     *)
       current_schema=$(db_schema_state)
@@ -434,10 +432,10 @@ sync_runtime() {
   fi
   stage_postgres_major=$(sed -n 's/^POSTGRES_MAJOR=//p' "$stage/.env.production" | tail -1)
   if [ -n "$stage_postgres_major" ]; then
-    [ -s "$stage/scripts/production-postgres-major-upgrade.sh" ] \
-      || fail 'runtime declares POSTGRES_MAJOR but bundle is missing PostgreSQL major-upgrade operator'
-  elif [ -e "$stage/scripts/production-postgres-major-upgrade.sh" ]; then
-    [ -s "$stage/scripts/production-postgres-major-upgrade.sh" ] || fail 'runtime bundle has an empty PostgreSQL major-upgrade operator'
+    [ -s "$stage/scripts/production-postgres18-reset.sh" ] \
+      || fail 'runtime declares POSTGRES_MAJOR but bundle is missing PostgreSQL 18 reset operator'
+  elif [ -e "$stage/scripts/production-postgres18-reset.sh" ]; then
+    [ -s "$stage/scripts/production-postgres18-reset.sh" ] || fail 'runtime bundle has an empty PostgreSQL 18 reset operator'
   fi
   [ "$(image_revision "$runtime_ref")" = "$revision" ] || fail 'runtime bundle revision mismatch'
 
@@ -456,7 +454,7 @@ sync_runtime() {
   # runtime, so a failed deployment can roll back the WHOLE runtime -- not just
   # the stack files -- to the exact previous state.
   cp -f "$ROOT/scripts/production-deploy-watch.sh" "$archive/scripts/production-deploy-watch.sh" 2>/dev/null || true
-  for script in offhost-s3.py production-offhost-backup.sh restore-production-backup.sh production-postgres-dr.sh install-production-dr.sh production-postgres-major-upgrade.sh production-capacity-status.sh install-production-capacity.sh; do
+  for script in offhost-s3.py production-offhost-backup.sh restore-production-backup.sh production-postgres-dr.sh install-production-dr.sh production-postgres18-reset.sh production-capacity-status.sh install-production-capacity.sh; do
     cp -f "$ROOT/scripts/$script" "$archive/scripts/$script" 2>/dev/null || true
   done
   for unit in bodysense-offhost-backup.service bodysense-offhost-backup.timer bodysense-offhost-freshness.service bodysense-offhost-freshness.timer bodysense-postgres-dr-backup.service bodysense-postgres-dr-backup.timer bodysense-postgres-dr-restore.service bodysense-postgres-dr-restore.timer bodysense-postgres-dr-status.service bodysense-postgres-dr-status.timer bodysense-capacity-status.service bodysense-capacity-status.timer bodysense-capacity-cleanup.service bodysense-capacity-cleanup.timer; do
@@ -481,7 +479,7 @@ sync_runtime() {
   for script in offhost-s3.py production-offhost-backup.sh restore-production-backup.sh; do
     install -m 0755 "$stage/scripts/$script" "$ROOT/scripts/$script"
   done
-  for script in production-postgres-dr.sh install-production-dr.sh production-postgres-major-upgrade.sh production-capacity-status.sh install-production-capacity.sh; do
+  for script in production-postgres-dr.sh install-production-dr.sh production-postgres18-reset.sh production-capacity-status.sh install-production-capacity.sh; do
     if [ -e "$stage/scripts/$script" ]; then
       install -m 0755 "$stage/scripts/$script" "$ROOT/scripts/$script"
     else
@@ -663,8 +661,8 @@ fi
 
 TARGET_POSTGRES_MAJOR=$(read_public_env POSTGRES_MAJOR "")
 if [ -n "$TARGET_POSTGRES_MAJOR" ]; then
-  [ -x "$ROOT/scripts/production-postgres-major-upgrade.sh" ] || fail 'runtime declares POSTGRES_MAJOR but major-upgrade operator is missing'
-  POSTGRES_MAJOR_RELEASE_REVISION="$desired_revision" "$ROOT/scripts/production-postgres-major-upgrade.sh" cutover     || fail 'PostgreSQL major-version cutover failed'
+  [ -x "$ROOT/scripts/production-postgres18-reset.sh" ] || fail 'runtime declares POSTGRES_MAJOR but PostgreSQL 18 reset operator is missing'
+  POSTGRES18_RESET_RELEASE_REVISION="$desired_revision" "$ROOT/scripts/production-postgres18-reset.sh" cutover     || fail 'PostgreSQL 18 reset failed'
 fi
 
 compose pull litellm-gateway >/dev/null
@@ -683,12 +681,12 @@ compose up -d --no-deps web
 wait_healthy web 90 || fail 'web deployment failed'
 assert_container_revision web "$desired_revision" || fail 'web revision verification failed'
 
-if [ "$(postgres_major_state_status_for_release)" = cutover_complete ]; then
-  POSTGRES_MAJOR_RELEASE_REVISION="$desired_revision" "$ROOT/scripts/production-postgres-major-upgrade.sh" commit     || fail 'PostgreSQL major-version commit failed'
+if [ "$(postgres_reset_state_status_for_release)" = cutover_complete ]; then
+  POSTGRES18_RESET_RELEASE_REVISION="$desired_revision" "$ROOT/scripts/production-postgres18-reset.sh" commit     || fail 'PostgreSQL 18 reset commit failed'
 fi
 
-# Caddy is deliberately exposed only after a major database cutover is committed.
-# Before this point PG16 rollback is lossless because external writes were quiesced.
+# Caddy is deliberately exposed only after the fresh PostgreSQL 18 reset is committed.
+# Before this point the legacy database can still be restored if the fresh PG18 service itself fails health checks.
 compose up -d --no-deps caddy
 compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1 || true
 
