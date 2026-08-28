@@ -53,6 +53,12 @@ reject_path scripts/production-postgres-major-upgrade.sh
 reject_path scripts/validate-production-postgres-major-upgrade.sh
 reject_match 'validate-production-postgres-major-upgrade.sh' scripts/validate-repo.sh
 
+# Fresh PG18 must be initialized by the Go API before AI opens its vector-backed
+# knowledge pool. Keep this ordering regression as a cheap static contract.
+bootstrap_line=$(grep -n -m1 'bootstrapping fresh PostgreSQL 18 schema through API migrations before AI startup' scripts/production-deploy-watch.sh | cut -d: -f1)
+ai_line=$(awk -v bootstrap="$bootstrap_line" 'NR > bootstrap && /compose up -d --no-deps ai-service/ { print NR; exit }' scripts/production-deploy-watch.sh)
+[ -n "$bootstrap_line" ] && [ -n "$ai_line" ] && [ "$bootstrap_line" -lt "$ai_line" ]
+
 secret_env=$(mktemp)
 trap 'rm -f "$secret_env"' EXIT
 cat > "$secret_env" <<'ENV'

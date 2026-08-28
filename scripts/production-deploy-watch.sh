@@ -669,6 +669,18 @@ compose pull litellm-gateway >/dev/null
 compose up -d --no-deps litellm-gateway
 wait_healthy litellm-gateway 120 || fail 'litellm-gateway deployment failed'
 
+# A fresh PostgreSQL 18 reset starts with an empty database. The Go API owns
+# schema bootstrap (including CREATE EXTENSION vector), while AI startup opens
+# its knowledge-library pool immediately and therefore requires that schema to
+# exist first. Bootstrap the new API revision before AI only for this one-time
+# reset state; steady-state deployments keep the normal AI -> API order below.
+if [ "$(postgres_reset_state_status_for_release)" = cutover_complete ]; then
+  log 'bootstrapping fresh PostgreSQL 18 schema through API migrations before AI startup'
+  compose up -d --no-deps api
+  wait_healthy api 150 || fail 'API database bootstrap failed after PostgreSQL 18 reset'
+  assert_container_revision api "$desired_revision" || fail 'API bootstrap revision verification failed'
+fi
+
 compose up -d --no-deps ai-service
 wait_healthy ai-service 120 || fail 'ai-service deployment failed'
 assert_container_revision ai-service "$desired_revision" || fail 'ai-service revision verification failed'
