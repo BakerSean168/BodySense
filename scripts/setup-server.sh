@@ -47,10 +47,10 @@ else
   git -C "$SOURCE_DIR" reset --hard origin/main
 fi
 
-# setup-server is a bootstrap/reconciliation path, not a database-major migrator.
+# setup-server is a bootstrap/reconciliation path, not a destructive database reset tool.
 # On an existing production host, refuse before overwriting runtime files when
 # the running PostgreSQL major differs from the tracked target. The coherent
-# release watcher owns the guarded 16 -> 18 cutover and its rollback archive.
+# release watcher owns the one-time legacy-database discard and fresh PG18 cutover.
 existing_postgres=$(docker ps -aq \
   --filter 'label=com.docker.compose.project=docker' \
   --filter 'label=com.docker.compose.service=postgres' | head -1)
@@ -60,7 +60,7 @@ if [ -n "$existing_postgres" ]; then
   if [[ "$current_pg_num" =~ ^[0-9]+$ ]] && [[ "$target_pg_major" =~ ^[0-9]+$ ]]; then
     current_pg_major=$(( current_pg_num / 10000 ))
     if [ "$current_pg_major" != "$target_pg_major" ]; then
-      echo "Existing PostgreSQL major=$current_pg_major differs from target=$target_pg_major; use the release watcher major-upgrade transaction instead of setup-server." >&2
+      echo "Existing PostgreSQL major=$current_pg_major differs from target=$target_pg_major; use the release watcher PostgreSQL 18 reset transaction instead of setup-server." >&2
       exit 1
     fi
   fi
@@ -124,7 +124,7 @@ install -m 0755 "$SOURCE_DIR/scripts/production-offhost-backup.sh" "$DEPLOY_DIR/
 install -m 0755 "$SOURCE_DIR/scripts/restore-production-backup.sh" "$DEPLOY_DIR/scripts/restore-production-backup.sh"
 install -m 0755 "$SOURCE_DIR/scripts/production-postgres-dr.sh" "$DEPLOY_DIR/scripts/production-postgres-dr.sh"
 install -m 0755 "$SOURCE_DIR/scripts/install-production-dr.sh" "$DEPLOY_DIR/scripts/install-production-dr.sh"
-install -m 0755 "$SOURCE_DIR/scripts/production-postgres-major-upgrade.sh" "$DEPLOY_DIR/scripts/production-postgres-major-upgrade.sh"
+install -m 0755 "$SOURCE_DIR/scripts/production-postgres18-reset.sh" "$DEPLOY_DIR/scripts/production-postgres18-reset.sh"
 install -m 0755 "$SOURCE_DIR/scripts/production-capacity-status.sh" "$DEPLOY_DIR/scripts/production-capacity-status.sh"
 install -m 0755 "$SOURCE_DIR/scripts/install-production-capacity.sh" "$DEPLOY_DIR/scripts/install-production-capacity.sh"
 for unit in bodysense-postgres-dr-backup.service bodysense-postgres-dr-backup.timer bodysense-postgres-dr-restore.service bodysense-postgres-dr-restore.timer bodysense-postgres-dr-status.service bodysense-postgres-dr-status.timer; do
