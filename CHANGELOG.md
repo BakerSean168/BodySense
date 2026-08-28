@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.1](https://github.com/BakerSean168/BodySense/compare/v0.8.0...v0.8.1) (2026-08-28)
+
+
+### Bug Fixes
+
+* **ops:** bootstrap schema before ai on fresh pg18 ([bbe9073](https://github.com/BakerSean168/BodySense/commit/bbe9073463b458e74cf231dccc3d9b428fc44dd0))
+* **ops:** bootstrap schema before ai on fresh pg18 ([a105818](https://github.com/BakerSean168/BodySense/commit/a1058189a628717a594b34550b6aa18666fd7c3c))
+
 ## [0.8.0](https://github.com/BakerSean168/BodySense/compare/v0.7.2...v0.8.0) (2026-08-28)
 
 
