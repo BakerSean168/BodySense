@@ -3,18 +3,34 @@ set -Eeuo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-bash -n scripts/production-postgres-major-upgrade.sh scripts/production-deploy-watch.sh scripts/setup-server.sh
+reject_match() {
+  local pattern="$1" file="$2"
+  if grep -q "$pattern" "$file"; then
+    echo "unexpected legacy PostgreSQL reference pattern=$pattern file=$file" >&2
+    exit 1
+  fi
+}
+
+reject_path() {
+  local path="$1"
+  if [ -e "$path" ]; then
+    echo "unexpected legacy PostgreSQL path: $path" >&2
+    exit 1
+  fi
+}
+
+bash -n scripts/production-postgres18-reset.sh scripts/production-deploy-watch.sh scripts/setup-server.sh scripts/setup-postgres18-client-wrappers.sh
 
 grep -q '^POSTGRES_MAJOR=18$' .env.production
 grep -q '^POSTGRES_DATA_VOLUME=bodysense-postgres-pg18$' .env.production
 grep -q 'pgvector:pg18' docker/docker-compose.prod.yml
-! grep -q 'pgvector:pg16' docker/docker-compose.prod.yml
+reject_match 'pgvector:pg16' docker/docker-compose.prod.yml
 grep -q 'postgres-prod-data-pg18:/var/lib/postgresql$' docker/docker-compose.prod.yml
-grep -q 'name: ${POSTGRES_DATA_VOLUME:-bodysense-postgres-pg18}' docker/docker-compose.prod.yml
+grep -Fq "name: \${POSTGRES_DATA_VOLUME:-bodysense-postgres-pg18}" docker/docker-compose.prod.yml
 
 grep -q 'pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a' .github/workflows/mirror-production-infra.yml
 grep -q 'target: pgvector:pg18' .github/workflows/mirror-production-infra.yml
-! grep -q 'source: pgvector/pgvector:pg16' .github/workflows/mirror-production-infra.yml
+reject_match 'source: pgvector/pgvector:pg16' .github/workflows/mirror-production-infra.yml
 
 grep -q 'name: PostgreSQL 18 current-history replay' .github/workflows/ci.yml
 grep -q 'name: PostgreSQL 18 production-baseline upgrade' .github/workflows/ci.yml
@@ -22,21 +38,20 @@ grep -q 'Prepare PostgreSQL 18 client toolchain' .github/workflows/ci.yml
 grep -q 'setup-postgres18-client-wrappers.sh' .github/workflows/ci.yml
 grep -q '^FROM alpine:3.24$' apps/api/Dockerfile
 grep -q 'postgresql18-client' apps/api/Dockerfile
-! grep -q 'postgresql16-client' apps/api/Dockerfile
+reject_match 'postgresql16-client' apps/api/Dockerfile
 [ "$(grep -c 'image: pgvector/pgvector:pg18' .github/workflows/ci.yml)" -ge 3 ]
-! grep -q 'image: pgvector/pgvector:pg16' .github/workflows/ci.yml
+reject_match 'image: pgvector/pgvector:pg16' .github/workflows/ci.yml
 [ -s apps/api/migrations/baselines/production-v29.sql ]
 grep -q 'Dumped from database version 18' apps/api/migrations/baselines/production-v29.sql
-! test -e apps/api/migrations/baselines/production-pg16-v29.sql
+reject_path apps/api/migrations/baselines/production-pg16-v29.sql
 
-grep -q 'production-postgres-major-upgrade.sh /runtime/scripts/production-postgres-major-upgrade.sh' docker/Dockerfile.runtime
-grep -q 'runtime declares POSTGRES_MAJOR but bundle is missing PostgreSQL major-upgrade operator' scripts/production-deploy-watch.sh
-grep -q 'production-postgres-major-upgrade.sh" cutover' scripts/production-deploy-watch.sh
-grep -q 'production-postgres-major-upgrade.sh" commit' scripts/production-deploy-watch.sh
-grep -q 'rollback_postgres_major_upgrade' scripts/production-deploy-watch.sh
-grep -q 'PostgreSQL major upgrade is committed; preserving PG18 runtime' scripts/production-deploy-watch.sh
-grep -q 'validate-production-postgres-major-upgrade.sh' scripts/validate-repo.sh
-grep -q 'use the release watcher major-upgrade transaction instead of setup-server' scripts/setup-server.sh
+grep -q 'production-postgres18-reset.sh /runtime/scripts/production-postgres18-reset.sh' docker/Dockerfile.runtime
+grep -q 'production-postgres18-reset.sh" cutover' scripts/production-deploy-watch.sh
+grep -q 'production-postgres18-reset.sh" commit' scripts/production-deploy-watch.sh
+grep -q 'production-postgres18-reset.sh' scripts/setup-server.sh
+reject_path scripts/production-postgres-major-upgrade.sh
+reject_path scripts/validate-production-postgres-major-upgrade.sh
+reject_match 'validate-production-postgres-major-upgrade.sh' scripts/validate-repo.sh
 
 secret_env=$(mktemp)
 trap 'rm -f "$secret_env"' EXIT
