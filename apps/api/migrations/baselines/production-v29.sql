@@ -2,14 +2,15 @@
 -- PostgreSQL database dump
 --
 
-\restrict bqg8AAoaJFt45rHMleBQ37nfvCnWN6b4kNIs0EipYhwKJPkDE7UWwPu5AuSZQCW
+\restrict zAt1whJjXhbnaAQhDf5eRi52sRtGJTXuXeEabqVUvbgaacIawVvfqwjGKVOQEMs
 
--- Dumped from database version 16.14 (Debian 16.14-1.pgdg12+1)
--- Dumped by pg_dump version 16.14 (Debian 16.14-1.pgdg12+1)
+-- Dumped from database version 18.6 (Debian 18.6-1.pgdg12+2)
+-- Dumped by pg_dump version 18.6 (Debian 18.6-1.pgdg12+2)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -1958,7 +1959,8 @@ ALTER TABLE ONLY public.user_uploads
 -- PostgreSQL database dump complete
 --
 
-\unrestrict bqg8AAoaJFt45rHMleBQ37nfvCnWN6b4kNIs0EipYhwKJPkDE7UWwPu5AuSZQCW
+\unrestrict zAt1whJjXhbnaAQhDf5eRi52sRtGJTXuXeEabqVUvbgaacIawVvfqwjGKVOQEMs
 
--- BodySense production PostgreSQL 16 baseline. Schema only; no user data.
+
+-- Production migration baseline marker.
 INSERT INTO public.schema_migrations (version, dirty) VALUES (29, false);

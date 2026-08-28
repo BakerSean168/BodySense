@@ -21,7 +21,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 go build -o /knowledge-source-manager ./cmd/knowledge-source-manager
 
 # ── Runtime stage ──────────────────────────────────────
-FROM alpine:3.20
+FROM alpine:3.24
 
 ARG BUILD_DATE
 ARG VCS_REF
@@ -30,7 +30,7 @@ LABEL org.opencontainers.image.title="bodysense-api" \
       org.opencontainers.image.created="${BUILD_DATE}" \
       org.opencontainers.image.revision="${VCS_REF}"
 
-RUN apk add --no-cache ca-certificates tzdata curl postgresql16-client
+RUN apk add --no-cache ca-certificates tzdata curl postgresql18-client
 WORKDIR /app
 COPY --from=builder /server /app/server
 COPY --from=builder /production-dr-manager /app/production-dr-manager

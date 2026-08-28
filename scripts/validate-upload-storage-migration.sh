@@ -9,7 +9,7 @@ PASSWORD="${DB_PASSWORD:-bodysense123}"
 ADMIN_DB="${DB_ADMIN_NAME:-postgres}"
 GOOD_DB="bodysense_upload_storage_good_${RANDOM}_$$"
 BAD_DB="bodysense_upload_storage_bad_${RANDOM}_$$"
-BASELINE="$ROOT/apps/api/migrations/baselines/production-pg16-v29.sql"
+BASELINE="$ROOT/apps/api/migrations/baselines/production-v29.sql"
 
 for cmd in psql createdb dropdb go; do
   command -v "$cmd" >/dev/null 2>&1 || { echo "required command not found: $cmd" >&2; exit 2; }

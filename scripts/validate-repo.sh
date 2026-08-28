@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
-bash -n scripts/setup-server.sh scripts/production-deploy-watch.sh \
+bash -n scripts/setup-server.sh scripts/production-deploy-watch.sh scripts/production-postgres-major-upgrade.sh \
+  scripts/setup-postgres18-client-wrappers.sh \
   scripts/production-offhost-backup.sh scripts/restore-production-backup.sh \
   scripts/validate-offhost-dr-unit.sh scripts/validate-offhost-dr.sh
 bash scripts/validate-production-capacity.sh
+bash scripts/validate-production-postgres18.sh
+bash scripts/validate-production-postgres-major-upgrade.sh
 bash scripts/validate-supply-chain.sh
 pnpm test:static-assets
 pnpm lint
