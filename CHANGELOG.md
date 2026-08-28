@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.0](https://github.com/BakerSean168/BodySense/compare/v0.7.2...v0.8.0) (2026-08-28)
+
+
+### Features
+
+* **ops:** standardize production on postgres 18 ([782952d](https://github.com/BakerSean168/BodySense/commit/782952df145a799fca69600ea58f501aa2031f3b))
+* **ops:** standardize production on postgres 18 ([cad8a00](https://github.com/BakerSean168/BodySense/commit/cad8a00f069185ab4c0a2a81b1e2d726dc87d579))
+
 ## [0.7.2](https://github.com/BakerSean168/BodySense/compare/v0.7.1...v0.7.2) (2026-08-27)
 
 
