@@ -1,11 +1,22 @@
 from src.models.consultation_intake import ConsultationIntakeOutput, ConsultationSymptomDraft
-from src.runtime.consultation_thread import _guard_final_assistant_text
+from src.runtime.consultation_thread import _get_conversation_text, _guard_final_assistant_text
 from src.services.consultation_intake_service import deterministic_intake_fallback
 from src.services.consultation_state_acquisition import (
     apply_structured_intake_answer,
     build_symptom_intake_question,
     intake_state_candidates,
 )
+
+
+def test_safety_text_ignores_assistant_and_tool_red_flag_examples() -> None:
+    state = {
+        "runtime_messages": [
+            {"role": "user", "content": "我只是想了解坐骨神经痛是什么"},
+            {"role": "assistant", "content": "如果出现放射痛或会阴麻木需要警惕。"},
+            {"role": "tool", "content": "选项：大小便控制异常或会阴麻木"},
+        ]
+    }
+    assert _get_conversation_text(state) == "我只是想了解坐骨神经痛是什么"
 
 
 def test_runtime_guard_drops_optional_manual_followup_question() -> None:

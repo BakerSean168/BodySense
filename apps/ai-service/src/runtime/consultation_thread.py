@@ -370,8 +370,16 @@ def _runtime_messages_to_chat_messages(state: ConsultationThreadState) -> list[C
 
 
 def _get_conversation_text(state: ConsultationThreadState) -> str:
+    """Return only user-authored text for deterministic safety scanning.
+
+    Assistant prose and tool prompts often mention red-flag examples as education
+    or answer choices. Treating those strings as user symptoms creates false
+    positives that can permanently block downstream health workflows.
+    """
     texts: list[str] = []
     for message in state.get("runtime_messages", [])[-MAX_CONTEXT_TURNS * 4 :]:
+        if message.get("role") != "user":
+            continue
         content = message.get("content", "")
         if isinstance(content, str) and content:
             texts.append(content)
