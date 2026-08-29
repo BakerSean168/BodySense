@@ -169,9 +169,9 @@ Hard constraints:
 
 ### Existing PR #138
 
-Before merging the cutover, explicitly choose and record whether v0.9.0 completes under legacy semantics or is recreated after V3 activation. Do not silently mix lifecycle semantics.
+The cutover decision is option B: do not merge legacy PR #138. After V3 reaches `main` and candidate/staging evidence is green, close #138 as superseded and invoke `Prepare Release` explicitly so 0.9.0 is recreated under V3 semantics. Do not silently mix lifecycle semantics.
 
-Rollback: restore legacy release-please processing while candidate publication remains harmless.
+Rollback before a V3 release is published: restore the legacy release-preparation workflow while candidate publication remains harmless. After a V3 release is Published, immutable tags/manifests are never rewritten; rollback means selecting an earlier compatible Published release.
 
 ## 8. Phase 5 — Explicit Deploy Production
 

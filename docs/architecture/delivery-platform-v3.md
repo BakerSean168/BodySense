@@ -462,4 +462,4 @@ Phase 6 audit/cleanup
 
 Production behavior is unchanged until its dedicated cutover phase.
 
-The current automatic release-please path and existing production image workflow remain rollback references until their replacements have passed shadow/exact-SHA validation.
+During the pilot, the old tag-triggered production build/promotion authority is disabled rather than allowed to race V3. A manual non-release image-build fallback remains available until exact-SHA candidate, release and explicit-deploy runtime evidence is complete. Immutable releases are never rewritten as a rollback mechanism.

@@ -238,11 +238,6 @@ not merely “built from the same source”.
 
 At Delivery Platform V3 pilot start, PR #138 (`chore(main): release 0.9.0`) already exists under the legacy automatic release-please flow.
 
-It is migration state, not evidence that V3 is active.
+It is migration state, not evidence that V3 is active. The pilot records **option B** as the cutover decision: PR #138 is not merged under legacy semantics. After V3 itself reaches `main` and exact-SHA candidate/staging evidence is green, #138 is closed as superseded and `Prepare Release` is invoked explicitly to recreate the 0.9.0 milestone under V3 semantics.
 
-Until V3 release publication is implemented and validated, the migration plan must choose one explicit treatment before cutover:
-
-- finish v0.9.0 under the legacy release path, then enable V3 for the next release; or
-- close/recreate the release milestone under V3 after shadow validation.
-
-The pilot must not silently reinterpret an already prepared release PR under a new release contract.
+This prevents one version from combining a legacy auto-release preparation contract with a V3 Draft/manifest/deploy contract.

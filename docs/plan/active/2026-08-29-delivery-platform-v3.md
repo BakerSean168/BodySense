@@ -223,13 +223,13 @@ Hard rule:
 
 ### DLV-3201 — Split logical quality lanes
 
-Status: IMPLEMENTED — repository; Actions validation pending
+Status: COMPLETE — GitHub CI run 33237118453 passed affected quality + database + experience children and all compatibility contexts
 
 Expose Web/API/AI/contracts as independently selectable logical lanes while preserving repository-level release validation semantics for full runs.
 
 ### DLV-3202 — PR affected execution
 
-Status: IMPLEMENTED — manifest-selected PR quality/database/experience children; Actions validation pending
+Status: COMPLETE — manifest-selected PR quality/database/experience execution validated in GitHub CI run 33237118453
 
 PR jobs consume the manifest instead of recalculating scope.
 
@@ -255,7 +255,7 @@ Prove every `main` push executes all required quality/database/experience lanes 
 
 ### DLV-3204 — Stable Oracle GitHub contexts
 
-Status: IMPLEMENTED — repository; existing protected contexts retained as compatibility Oracles until governance cutover
+Status: COMPLETE — Governance/Quality/Database/Experience Oracles + Delivery Observation all passed GitHub CI run 33237118453; old protected contexts remain temporary compatibility Oracles until governance cutover
 
 Introduce:
 
@@ -343,7 +343,7 @@ Keep current source-build staging command as an explicitly non-canonical emergen
 
 ### DLV-3401 — Manual Prepare Release
 
-Status: TODO
+Status: IMPLEMENTED — release-please is workflow_dispatch-only and `skip-github-release=true`; main cutover pending merge
 
 Change release-please ownership so normal successful main CI does not automatically prepare every release milestone.
 
@@ -356,13 +356,13 @@ workflow_dispatch
 
 ### DLV-3402 — Exact release identity contract
 
-Status: TODO
+Status: COMPLETE — repository release/version/CHANGELOG/merge-shape contract with negative tests
 
 Validate version/tag/release PR/main SHA consistency.
 
 ### DLV-3403 — Draft-first Release Publish
 
-Status: TODO
+Status: IMPLEMENTED — waits for successful exact candidate workflow, promotes candidate digests without rebuild, attaches canonical manifest, publishes only after postflight
 
 Release Publish must:
 
@@ -375,7 +375,7 @@ Release Publish must:
 
 ### DLV-3404 — Existing PR #138 disposition
 
-Status: BLOCKED UNTIL CUTOVER DECISION
+Status: DECISION RECORDED — option B: do not merge legacy #138; after V3 reaches main, close the legacy release PR and explicitly Prepare Release again under V3 semantics
 
 Before Release V3 becomes authoritative, explicitly choose:
 
@@ -391,7 +391,7 @@ No automatic closure/merge of #138 is allowed merely as a side effect of this im
 
 ### DLV-3501 — Deploy Production selector
 
-Status: TODO
+Status: IMPLEMENTED — explicit workflow_dispatch validates Published Release + canonical manifest + tag/main/exact-CI provenance
 
 Add explicit workflow that accepts a Published release tag and validates:
 
@@ -406,7 +406,7 @@ allowed production ref
 
 ### DLV-3502 — Coherent prod-latest promotion
 
-Status: TODO
+Status: IMPLEMENTED — only Deploy Production moves prod-latest; legacy tag-triggered promotion disabled in repository, live proof pending
 
 Only Deploy Production moves the four `prod-latest` pointers.
 
@@ -414,7 +414,7 @@ Release Publish must not move production pointers.
 
 ### DLV-3503 — Production watcher provenance extension
 
-Status: TODO
+Status: DEFERRED OPTIONAL — existing watcher remains revision-authoritative; GitHub deployment history + release manifest carry release identity until a registry-side selector metadata contract is justified
 
 Preserve the current watcher transaction and optionally record:
 
@@ -430,7 +430,7 @@ in `.deploy-state` after successful rollout.
 
 ### DLV-3601 — Delivery Platform audit
 
-Status: TODO
+Status: IMPLEMENTED — deterministic fail-closed matrix + scheduled/manual workflow; live scheduled/manual Actions proof pending merge
 
 Scheduled/manual non-mutating fault matrix covering:
 
@@ -444,7 +444,7 @@ Scheduled/manual non-mutating fault matrix covering:
 
 ### DLV-3602 — Release health observation
 
-Status: TODO
+Status: IMPLEMENTED — scheduled/manual non-blocking release backlog workflow; live Actions proof pending merge
 
 Non-blocking release backlog visibility:
 
@@ -457,7 +457,7 @@ staging ahead of production revision count/age
 
 ### DLV-3603 — Legacy path removal
 
-Status: TODO
+Status: PARTIAL — legacy tag-triggered production build/promotion authority removed; manual non-release build fallback retained until V3 candidate/release/deploy runtime proof is complete
 
 Only after V3 evidence exists:
 
@@ -492,13 +492,13 @@ No test may be removed or weakened to make the platform migration green.
 Prefer reviewable phase commits:
 
 ```text
-docs(delivery): define delivery platform v3
-feat(ci): add shadow delivery control plane
-refactor(ci): adopt affected pr and full main policy
-feat(delivery): publish exact-sha candidates and staging channel
-refactor(release): separate prepare and publish lifecycle
-feat(deploy): separate production release promotion
-chore(delivery): close v3 rollout evidence
+docs(docs): define delivery platform v3
+feat(ops): add shadow delivery control plane
+refactor(ops): adopt affected pr and full main policy
+feat(ops): publish exact-sha candidates and staging channel
+refactor(ops): separate release preparation and publication
+feat(ops): add explicit production release promotion
+chore(ops): close v3 rollout evidence
 ```
 
 Do not combine production pointer cutover with the first control-plane implementation commit.

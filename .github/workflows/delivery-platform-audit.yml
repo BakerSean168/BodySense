@@ -1,0 +1,31 @@
+name: Delivery Platform Audit
+
+on:
+  schedule:
+    - cron: '31 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fault-matrix:
+    name: Delivery fail-closed fault matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+      - name: Run deterministic delivery fault matrix
+        run: node scripts/delivery/platform-audit.mjs reports/delivery/platform-audit-v1.json
+      - name: Run complete delivery contract suite
+        run: node --test scripts/delivery/*.test.mjs
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always()
+        with:
+          name: delivery-platform-audit-${{ github.run_id }}
+          path: reports/delivery/platform-audit-v1.json
+          if-no-files-found: error
+          retention-days: 30
