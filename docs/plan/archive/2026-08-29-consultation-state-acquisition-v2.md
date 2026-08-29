@@ -1,6 +1,6 @@
 # Consultation State Acquisition v2 — Product/Project Closure Plan
 
-Status: ACTIVE
+Status: COMPLETE — validated on staging and archived
 Owner: BodySense Consultation / BodyState vertical slice
 Date: 2026-08-29
 Base: `feature/vanatome-body-explorer@297f8a1b`
@@ -104,3 +104,37 @@ For every consultation turn:
   interruption.
 - Staging containers reference `/home/dev/projects/bodysense`, not a removed
   worktree path.
+
+## Closure evidence — 2026-08-29
+
+All acceptance gates were exercised against the canonical GCP staging runtime.
+
+- Python: `388 passed`; Ruff clean; Pyright `0 errors, 0 warnings, 0 informations`.
+- Go: full `go test ./...` was green during this closure batch.
+- Web: `41` test files / `200` tests green; typecheck and production build green.
+- Contracts: stream-event fixture tests and TypeScript typecheck green.
+- `git diff --check`: clean.
+- Staging services: Web, API, AI service, PostgreSQL 18, Redis, and LiteLLM gateway healthy.
+- Staging Compose labels now resolve to `/home/dev/projects/bodysense/docker`.
+- Historical staging migration drift at revisions 57–59 was repaired after taking
+  `.runtime/backups/staging-before-schema-repair-20260829T030647Z.sql.gz`; the
+  resulting migration state is `59 / dirty=false`.
+- Removed deleted Body3D worktree residue and pruned the merged local
+  `body3d/{viewer,semantics,durable-contract,distribution}` branches.
+
+Final symptom smoke:
+
+1. User report was classified and emitted `state.extracted_info.upsert` before any
+   assistant prose (`start_prose_chars=0`).
+2. Runtime emitted a single structured symptom-intake interaction containing
+   `neurological_signs`, `severity`, and `functional_impact` fields.
+3. Structured answer promoted the same capture to
+   `review_state=confirmed`, `excluded_from_reasoning=false`,
+   `origin=structured_answer`.
+4. Resume completed without a second interaction and without leaking optional
+   manual follow-up questions such as “需要我……吗？” into the chat transcript.
+5. The ephemeral smoke user and its cascaded records were deleted after validation.
+
+A separate general-knowledge smoke (`坐骨神经痛是什么？`) completed without
+BodyState mutation, forced interaction, or an assistant-generated false-positive
+safety event.
