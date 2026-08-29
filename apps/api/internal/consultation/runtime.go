@@ -41,7 +41,7 @@ type runtimeBodyStateService interface {
 	UpsertExtractedSymptom(ctx context.Context, userID, runID uuid.UUID, info json.RawMessage) error
 	RecordLifestyleContext(ctx context.Context, userID, runID uuid.UUID, payload json.RawMessage) error
 	RecordSafetyEvent(ctx context.Context, userID uuid.UUID, payload json.RawMessage) error
-	RecordInteractionAnswer(ctx context.Context, userID, interactionID uuid.UUID, question datatypes.JSON, answer json.RawMessage) error
+	RecordInteractionAnswer(ctx context.Context, userID, interactionID uuid.UUID, toolCallID string, question datatypes.JSON, answer json.RawMessage) error
 }
 
 type runtimeKnowledgeObservationService interface {
@@ -624,7 +624,7 @@ func (r *Runtime) ResumeInteraction(
 	// The interaction answer is a durable health input, not merely a chat message.
 	// Commit it before closing the interaction so a persistence failure remains
 	// retryable and never resumes the Agent from an unrecorded health answer.
-	if err := r.persistInteractionAnswer(ctx, uid, interactionID, interaction.Question, req.Answer); err != nil {
+	if err := r.persistInteractionAnswer(ctx, uid, interactionID, interaction.ToolCallID, interaction.Question, req.Answer); err != nil {
 		return httpErr(http.StatusInternalServerError, "BODY_STATE_PERSISTENCE_FAILED", "failed to persist interaction answer")
 	}
 
@@ -1778,13 +1778,14 @@ func (r *Runtime) persistSafetyEvent(
 func (r *Runtime) persistInteractionAnswer(
 	ctx context.Context,
 	userID, interactionID uuid.UUID,
+	toolCallID string,
 	question datatypes.JSON,
 	answer json.RawMessage,
 ) error {
 	if r.bodyStateService == nil {
 		return errors.New("BodyState service is not configured")
 	}
-	return r.bodyStateService.RecordInteractionAnswer(ctx, userID, interactionID, question, answer)
+	return r.bodyStateService.RecordInteractionAnswer(ctx, userID, interactionID, toolCallID, question, answer)
 }
 
 func (r *Runtime) clearActiveRun(ctx context.Context, conversationID, userID uuid.UUID) {

@@ -13,11 +13,7 @@ import {
   MessageContent,
   MessageResponse,
 } from "@/components/ai-elements/message";
-import {
-  Source,
-  SourceList,
-  Sources,
-} from "@/components/ai-elements/sources";
+import { Source, SourceList, Sources } from "@/components/ai-elements/sources";
 import {
   useActiveTurnState,
   useActiveTurnActions,
@@ -80,7 +76,11 @@ export function StreamingAssistantTurn({
       {vm.pendingInteraction?.status === "pending" && onInteractionSubmit ? (
         <div className="w-full max-w-[620px]">
           <AskUserCard
-            title="还需要确认一件事"
+            title={
+              vm.pendingInteraction.question.purpose === "symptom_intake"
+                ? "补全这条身体记录"
+                : "还需要确认一件事"
+            }
             question={vm.pendingInteraction.question}
             onSubmit={onInteractionSubmit}
             isSubmitting={isInteractionSubmitting}
@@ -105,7 +105,10 @@ export function StreamingAssistantTurn({
       ) : null}
 
       {vm.isRunning && !vm.streamingMarkdown && vm.toolCalls.length === 0 ? (
-        <div className="flex h-7 items-center gap-1.5 text-white/40" aria-label="BodySense 正在思考">
+        <div
+          className="flex h-7 items-center gap-1.5 text-white/40"
+          aria-label="BodySense 正在思考"
+        >
           <span className="size-1.5 animate-pulse rounded-full bg-current [animation-delay:-240ms]" />
           <span className="size-1.5 animate-pulse rounded-full bg-current [animation-delay:-120ms]" />
           <span className="size-1.5 animate-pulse rounded-full bg-current" />
@@ -115,7 +118,10 @@ export function StreamingAssistantTurn({
       <Sources count={vm.citations.length}>
         <SourceList>
           {vm.citations.map((citation) => (
-            <Source key={citation.title} title={citation.summary || citation.content || ""}>
+            <Source
+              key={citation.title}
+              title={citation.summary || citation.content || ""}
+            >
               <p className="font-medium text-white/78">{citation.title}</p>
               {citation.summary ? (
                 <p className="mt-0.5 line-clamp-2 text-white/42">
@@ -134,7 +140,8 @@ export function StreamingAssistantTurn({
           </p>
           <p className="mt-1 text-xs leading-5 text-amber-100/48">
             当前知识库暂未覆盖「
-            {vm.knowledgeGaps.map((gap) => gap.query).join("」「")}」，相关建议会保持更谨慎。
+            {vm.knowledgeGaps.map((gap) => gap.query).join("」「")}
+            」，相关建议会保持更谨慎。
           </p>
         </div>
       ) : null}

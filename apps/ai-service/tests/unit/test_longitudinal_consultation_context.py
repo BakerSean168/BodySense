@@ -12,7 +12,15 @@ def _state() -> ConsultationThreadState:
         "profile": {},
         "body_state": {
             "current_revision": 12,
-            "facts": [{"kind": "discomfort", "body_region": "颈肩", "value": "当前无麻木"}],
+            "facts": [
+                {
+                    "kind": "discomfort",
+                    "body_region": "颈肩",
+                    "value": "当前无麻木",
+                    "review_state": "confirmed",
+                    "excluded_from_reasoning": False,
+                }
+            ],
             "observations": [],
         },
         "relevant_history": [{"sequence": 2, "role": "user", "content": "很早以前说过有麻木"}],

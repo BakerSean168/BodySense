@@ -14,7 +14,7 @@ import (
 func consultationReplayTestRun() *model.Run {
 	now := time.Now().UTC()
 	replay := ConsultationReplayInput{
-		ConfigurationID:   defaultConsultationConfigurationID,
+		ConfigurationID:   consultationV1ConfigurationID,
 		ConversationID:    uuid.New().String(),
 		UserMessage:       "我最近肩膀疼",
 		Profile:           json.RawMessage(`{"gender":"female","birth_date":"1996-08-27","age_years":30}`),
@@ -32,7 +32,7 @@ func consultationReplayTestRun() *model.Run {
 		Status:               "completed",
 		Model:                "bodysense-consultation",
 		StartedAt:            now,
-		AgentConfigurationID: defaultConsultationConfigurationID,
+		AgentConfigurationID: consultationV1ConfigurationID,
 		AgentConfiguration:   datatypes.JSON(`{"id":"consult-config-2bd9b46735dd693c","role":"consultation"}`),
 		ExecutionProvenance:  datatypes.JSON(`{"status":"executed","runtime":"langgraph"}`),
 		ReplayInput:          datatypes.JSON(replayJSON),
@@ -49,7 +49,7 @@ func TestConsultationHistoricalReplayRecomputesDecisionAuthorityWithoutModel(t *
 	if err != nil {
 		t.Fatalf("HistoricalReplay: %v", err)
 	}
-	if decision.SourceConfigurationID != defaultConsultationConfigurationID {
+	if decision.SourceConfigurationID != consultationV1ConfigurationID {
 		t.Fatalf("unexpected source config: %q", decision.SourceConfigurationID)
 	}
 	if decision.DecisionPolicyRevision != ConsultationDecisionPolicyV1 {

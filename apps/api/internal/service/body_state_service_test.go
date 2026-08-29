@@ -222,6 +222,81 @@ func TestBodyStateExtractedSymptomCreatesUnverifiedFact(t *testing.T) {
 	}
 }
 
+func TestStructuredSymptomInteractionPromotesSameCaptureToConfirmedFact(t *testing.T) {
+	repo := &fakeBodyStateRepository{}
+	svc := NewBodyStateService(repo)
+	userID := uuid.New()
+	runID := uuid.New()
+	captureID := "0123456789abcdef01234567"
+	if err := svc.UpsertExtractedSymptom(
+		context.Background(), userID, runID,
+		json.RawMessage(`{"capture_id":"0123456789abcdef01234567","body_part":"右臀","symptom_type":"疼痛","radiation":"小腿"}`),
+	); err != nil {
+		t.Fatalf("UpsertExtractedSymptom returned error: %v", err)
+	}
+	if len(repo.upsertedFacts) != 1 || repo.upsertedFacts[0].ReviewState != "unverified" || !repo.upsertedFacts[0].ExcludedFromReasoning {
+		t.Fatalf("initial capture must remain an excluded candidate: %#v", repo.upsertedFacts)
+	}
+
+	question := datatypes.JSON(`{
+		"question":"请补充症状信息",
+		"purpose":"symptom_intake",
+		"state_binding":{
+			"revision":"symptom-intake-binding-v1",
+			"capture_id":"0123456789abcdef01234567",
+			"seed_info":{"capture_id":"0123456789abcdef01234567","body_part":"右臀","symptom_type":"疼痛","radiation":"小腿"},
+			"field_map":{"duration":"duration","severity":"severity"}
+		}
+	}`)
+	answer := json.RawMessage(`{"fields":{"duration":"1–4周","severity":"中度（5–6/10）"}}`)
+	if err := svc.RecordInteractionAnswer(
+		context.Background(), userID, uuid.New(), "intake-"+captureID, question, answer,
+	); err != nil {
+		t.Fatalf("RecordInteractionAnswer returned error: %v", err)
+	}
+	if len(repo.upsertedFacts) != 2 {
+		t.Fatalf("expected candidate and promotion upsert, got %#v", repo.upsertedFacts)
+	}
+	promoted := repo.upsertedFacts[1]
+	if promoted.SourceKey != "consultation:capture:"+captureID {
+		t.Fatalf("promotion must target the same source key, got %q", promoted.SourceKey)
+	}
+	if promoted.ReviewState != "confirmed" || promoted.ExcludedFromReasoning || promoted.Origin != "structured_answer" {
+		t.Fatalf("structured answer must promote the capture into current truth: %#v", promoted)
+	}
+	var details map[string]any
+	if err := json.Unmarshal(promoted.Details, &details); err != nil {
+		t.Fatalf("decode promoted details: %v", err)
+	}
+	if details["duration"] != "1–4周" || details["severity"] != "中度（5–6/10）" {
+		t.Fatalf("structured fields were not merged: %#v", details)
+	}
+}
+
+func TestModelAuthoredAskUserCannotPromoteSymptomCapture(t *testing.T) {
+	repo := &fakeBodyStateRepository{}
+	svc := NewBodyStateService(repo)
+	question := datatypes.JSON(`{
+		"question":"请补充症状信息",
+		"purpose":"symptom_intake",
+		"state_binding":{
+			"revision":"symptom-intake-binding-v1",
+			"capture_id":"0123456789abcdef01234567",
+			"seed_info":{"body_part":"右臀","symptom_type":"疼痛"},
+			"field_map":{"duration":"duration"}
+		}
+	}`)
+	if err := svc.RecordInteractionAnswer(
+		context.Background(), uuid.New(), uuid.New(), "model-tool-call", question,
+		json.RawMessage(`{"fields":{"duration":"1–4周"},"text":"1–4周"}`),
+	); err != nil {
+		t.Fatalf("legacy/model ask_user fallback should still persist safely: %v", err)
+	}
+	if len(repo.upsertedFacts) != 1 || repo.upsertedFacts[0].Kind != "user_answer" {
+		t.Fatalf("untrusted tool call must not promote bound symptom state: %#v", repo.upsertedFacts)
+	}
+}
+
 func TestBodyStateSafetyOnlyPersistsPositiveSignals(t *testing.T) {
 	repo := &fakeBodyStateRepository{}
 	svc := NewBodyStateService(repo)

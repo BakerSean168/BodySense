@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 from collections.abc import AsyncIterator
 from typing import Annotated, Any, Literal, TypedDict, cast
 
@@ -34,6 +35,12 @@ from ..services.agent.consultation_tools import (
 )
 from ..services.agent.reply_fallback import build_fallback_reply, emit_citation_events
 from ..services.agent.tool_types import ToolStatus
+from ..services.consultation_intake_service import ConsultationIntakeService
+from ..services.consultation_state_acquisition import (
+    apply_structured_intake_answer,
+    build_symptom_intake_question,
+    intake_state_candidates,
+)
 from ..services.red_flag_detector import get_red_flag_detector
 from .checkpointing import get_runtime_checkpointer
 
@@ -41,6 +48,21 @@ logger = logging.getLogger(__name__)
 
 MAX_CONTEXT_TURNS = 10
 MAX_TOOL_ROUNDS = 6
+STREAM_TAIL_HOLD_CHARS = 320
+_QUESTION_SENTENCE_RE = re.compile(r"(?P<question>[^。！？!?\n]{2,220}[？?])")
+_RHETORICAL_HEADING_RE = re.compile(r"^\d+[.、]\s*\*\*[^*]+\*\*[？?]$")
+_NON_INTERACTIVE_QUESTION_MARKERS = ("例如", "比如")
+_OPTIONAL_OFFER_PREFIXES = (
+    "需要我",
+    "要不要我",
+    "是否需要我",
+    "你还需要我",
+    "如果你愿意，我可以",
+    "如果需要，我可以",
+    "或者你有其他问题",
+    "还有其他问题",
+    "你还有其他问题",
+)
 
 
 def get_consultation_manifest(configuration_id: str | None = None):
@@ -72,6 +94,7 @@ def _merge_symptoms(
 
 class ConsultationThreadState(TypedDict, total=False):
     session_id: str
+    run_id: str
     user_id: str
     profile: dict[str, Any]
     # Go-owned durable longitudinal health state. This is business truth;
@@ -84,6 +107,7 @@ class ConsultationThreadState(TypedDict, total=False):
     spatial_context: dict[str, Any]
     phase: str
     current_user_message: str
+    latest_user_message: str
     pending_user_images: list[dict[str, Any]]
     runtime_messages: list[dict[str, Any]]
     extracted_symptoms: Annotated[list[dict[str, Any]], _merge_symptoms]
@@ -100,9 +124,12 @@ class ConsultationThreadState(TypedDict, total=False):
     consultation_manifest: ConsultationAgentManifest
     retrieved_published_evidence: dict[str, dict[str, Any]]
     answer_attributions: list[dict[str, Any]]
+    intake_result: dict[str, Any]
+    intake_question: dict[str, Any] | None
 
 
 _ai_service_instance: AIService | None = None
+_intake_service_instance: ConsultationIntakeService | None = None
 _compiled_graph = None
 
 
@@ -111,6 +138,13 @@ def _get_ai_service() -> AIService:
     if _ai_service_instance is None:
         _ai_service_instance = AIService()
     return _ai_service_instance
+
+
+def _get_intake_service() -> ConsultationIntakeService:
+    global _intake_service_instance
+    if _intake_service_instance is None:
+        _intake_service_instance = ConsultationIntakeService()
+    return _intake_service_instance
 
 
 def _user_content_with_images(
@@ -164,6 +198,8 @@ def _format_body_state_context(body_state: dict[str, Any]) -> str:
     for fact in body_state.get("facts", []) or []:
         if not isinstance(fact, dict):
             continue
+        if fact.get("review_state") != "confirmed" or bool(fact.get("excluded_from_reasoning")):
+            continue
         region = str(fact.get("body_region") or "全身/一般")
         value = str(fact.get("value") or "").strip()
         if not value:
@@ -175,6 +211,10 @@ def _format_body_state_context(body_state: dict[str, Any]) -> str:
 
     for observation in body_state.get("observations", []) or []:
         if not isinstance(observation, dict):
+            continue
+        if observation.get("review_state") != "confirmed" or bool(
+            observation.get("excluded_from_reasoning")
+        ):
             continue
         region = str(observation.get("body_region") or "全身/一般")
         value = observation.get("value") or {}
@@ -270,7 +310,8 @@ def _runtime_messages_to_chat_messages(state: ConsultationThreadState) -> list[C
     messages: list[ChatMessage] = []
 
     profile_context = format_profile_context(state.get("profile", {}))
-    system_content = get_system_prompt(profile_context)
+    manifest = state.get("consultation_manifest") or get_consultation_manifest(None)
+    system_content = get_system_prompt(profile_context, manifest.prompt_revision)
 
     body_state_context = _format_body_state_context(state.get("body_state", {}))
     if body_state_context:
@@ -293,12 +334,13 @@ def _runtime_messages_to_chat_messages(state: ConsultationThreadState) -> list[C
 
     extracted = state.get("extracted_symptoms", [])
     if extracted:
-        info_lines = ["## 已提取的症状信息"]
+        info_lines = ["## 本轮状态采集结果（未标记 confirmed 的候选不得作为确定事实）"]
         for symptom in extracted:
             body_part = symptom.get("body_part", "")
             if not body_part:
                 continue
-            line = f"- {body_part}：{symptom.get('symptom_type', '待补充')}"
+            status = "已由结构化回答确认" if symptom.get("confirmed") else "待用户确认"
+            line = f"- [{status}] {body_part}：{symptom.get('symptom_type', '待补充')}"
             if symptom.get("duration"):
                 line += f"，持续{symptom['duration']}"
             if symptom.get("trigger"):
@@ -335,8 +377,16 @@ def _runtime_messages_to_chat_messages(state: ConsultationThreadState) -> list[C
 
 
 def _get_conversation_text(state: ConsultationThreadState) -> str:
+    """Return only user-authored text for deterministic safety scanning.
+
+    Assistant prose and tool prompts often mention red-flag examples as education
+    or answer choices. Treating those strings as user symptoms creates false
+    positives that can permanently block downstream health workflows.
+    """
     texts: list[str] = []
     for message in state.get("runtime_messages", [])[-MAX_CONTEXT_TURNS * 4 :]:
+        if message.get("role") != "user":
+            continue
         content = message.get("content", "")
         if isinstance(content, str) and content:
             texts.append(content)
@@ -352,10 +402,20 @@ def _determine_phase(extracted_symptoms: list[dict[str, Any]]) -> str:
         body_part = symptom.get("body_part", "")
         if not body_part:
             continue
-        has_detail = any(
-            symptom.get(key) for key in ("symptom_type", "duration", "trigger", "severity")
+        if not symptom.get("symptom_type"):
+            continue
+        detail_count = sum(
+            bool(symptom.get(key))
+            for key in (
+                "duration",
+                "trigger",
+                "severity",
+                "radiation",
+                "functional_impact",
+                "neurological_signs",
+            )
         )
-        if has_detail:
+        if detail_count >= 2:
             return "ready_for_analysis"
     return "collecting"
 
@@ -371,6 +431,7 @@ async def prepare_turn(state: ConsultationThreadState) -> dict[str, Any]:
     runtime_messages.append({"role": "user", "content": content})
     return {
         "runtime_messages": runtime_messages,
+        "latest_user_message": current_user_message,
         "current_user_message": "",
         "pending_user_images": [],
         "pending_tool_calls": [],
@@ -378,6 +439,46 @@ async def prepare_turn(state: ConsultationThreadState) -> dict[str, Any]:
         "tool_rounds": 0,
         "retrieved_published_evidence": {},
         "answer_attributions": [],
+        "intake_result": {},
+        "intake_question": None,
+    }
+
+
+async def acquire_turn_state(
+    state: ConsultationThreadState,
+    *,
+    writer: StreamWriter,
+) -> dict[str, Any]:
+    """Classify the latest turn and emit durable candidates before any prose."""
+    manifest = state.get("consultation_manifest") or get_consultation_manifest(None)
+    latest_user_message = state.get("latest_user_message", "").strip()
+    if manifest.intake is None or not latest_user_message:
+        return {"intake_result": {}, "intake_question": None}
+
+    output = await _get_intake_service().assess(
+        latest_user_message=latest_user_message,
+        profile=state.get("profile", {}),
+        body_state=state.get("body_state", {}),
+        config=manifest,
+    )
+    symptoms, lifestyle = intake_state_candidates(
+        output,
+        run_id=state.get("run_id", ""),
+        latest_user_message=latest_user_message,
+    )
+    for symptom in symptoms:
+        writer({"type": "extracted_info", "info": symptom})
+    for item in lifestyle:
+        writer({"type": "lifestyle_context", "context": item})
+
+    question = build_symptom_intake_question(symptoms[0]) if symptoms else None
+    result = output.model_dump(mode="json")
+    result["symptoms"] = symptoms
+    result["lifestyle"] = lifestyle
+    return {
+        "intake_result": result,
+        "intake_question": question,
+        "extracted_symptoms": symptoms,
     }
 
 
@@ -394,6 +495,136 @@ async def safety_check(state: ConsultationThreadState, *, writer: StreamWriter) 
     return {
         "red_flag_result": red_flag_result.to_dict() if red_flag_result.has_red_flags else None,
     }
+
+
+async def enforce_state_acquisition(
+    state: ConsultationThreadState,
+    *,
+    writer: StreamWriter,
+) -> dict[str, Any]:
+    """Pause on one deterministic structured intake gap before visible advice."""
+    question = state.get("intake_question")
+    if not question or state.get("red_flag_result"):
+        return {"intake_question": None}
+
+    binding = question.get("state_binding")
+    capture_id = str(binding.get("capture_id") if isinstance(binding, dict) else "")
+    tool_call_id = f"intake-{capture_id}"
+    writer(
+        {
+            "type": "tool_call",
+            "id": tool_call_id,
+            "tool": "ask_user",
+            "args": question,
+        }
+    )
+    result = await get_consultation_executor().execute(
+        tool_call_id,
+        "ask_user",
+        question,
+    )
+    if result.status != ToolStatus.INTERRUPTED or not isinstance(result.content, dict):
+        raise RuntimeError(result.error or "state acquisition question could not be normalized")
+
+    normalized_question = result.content
+    answer = interrupt(
+        {
+            "interrupt_type": "ask_user",
+            "tool_call_id": tool_call_id,
+            "tool_name": "ask_user",
+            "question": normalized_question,
+        }
+    )
+    writer(
+        {
+            "type": "tool_result",
+            "id": tool_call_id,
+            "tool": "ask_user",
+            "result": {"answer": answer},
+        }
+    )
+
+    completed = apply_structured_intake_answer(normalized_question, answer)
+    runtime_messages = list(state.get("runtime_messages", []))
+    runtime_messages.append(
+        {
+            "role": "user",
+            "content": "[结构化补充回答] " + json.dumps(answer, ensure_ascii=False),
+        }
+    )
+    update: dict[str, Any] = {
+        "runtime_messages": runtime_messages,
+        "intake_question": None,
+    }
+    if completed is not None:
+        update["extracted_symptoms"] = [completed]
+    return update
+
+
+def _is_non_interactive_question(question: str) -> bool:
+    compact = question.strip()
+    if any(marker in compact for marker in _NON_INTERACTIVE_QUESTION_MARKERS):
+        return True
+    if compact.startswith("#"):
+        return True
+    return bool(_RHETORICAL_HEADING_RE.fullmatch(compact))
+
+
+def _guard_final_assistant_text(text: str) -> tuple[str, str | None]:
+    """Keep manual-input questions out of assistant prose.
+
+    Only the held streaming tail can be rewritten. Optional offer questions are
+    dropped entirely; a real information request is returned so the runtime can
+    synthesize an ``ask_user`` interaction instead. This also catches the common
+    model pattern ``需要进一步确认的信息： ...？ ...`` even when the final byte is a
+    colon rather than a question mark.
+    """
+    stripped = text.rstrip()
+    tail_start = max(0, len(stripped) - STREAM_TAIL_HOLD_CHARS)
+    held_tail = stripped[tail_start:]
+    matches = list(_QUESTION_SENTENCE_RE.finditer(held_tail))
+    interactive_matches = [
+        match for match in matches if not _is_non_interactive_question(match.group("question"))
+    ]
+    if not interactive_matches:
+        return stripped, None
+
+    real_match: re.Match[str] | None = None
+    optional_match: re.Match[str] | None = None
+    for match in interactive_matches:
+        compact = match.group("question").lstrip("-*# ").strip()
+        if compact.startswith(_OPTIONAL_OFFER_PREFIXES):
+            optional_match = optional_match or match
+            continue
+        real_match = match
+        break
+
+    chosen = real_match or optional_match
+    if chosen is None:
+        return stripped, None
+
+    # Once the model starts a manual-question tail, none of those interactive
+    # questions belong in prose. Example questions ("例如/比如") are explanatory
+    # text and stay untouched because they do not ask the user to respond.
+    cut_in_tail = interactive_matches[0].start()
+    prefix = held_tail[:cut_in_tail]
+    for marker in (
+        "需要进一步确认的信息",
+        "还需要确认的信息",
+        "请补充以下信息",
+        "为了更精准",
+        "为了更准确",
+    ):
+        marker_index = prefix.rfind(marker)
+        if marker_index >= 0:
+            cut_in_tail = prefix.rfind("\n", 0, marker_index) + 1
+            break
+
+    body = stripped[: tail_start + cut_in_tail].rstrip()
+    if real_match is None:
+        return body, None
+    question = real_match.group("question").lstrip("-*# ").strip()
+    return body, question
 
 
 async def llm_turn(state: ConsultationThreadState, *, writer: StreamWriter) -> dict[str, Any]:
@@ -428,7 +659,8 @@ async def llm_turn(state: ConsultationThreadState, *, writer: StreamWriter) -> d
         }
 
     provider_tools = get_consultation_registry().to_provider_tools()
-    accumulated_text = ""
+    raw_text = ""
+    emitted_text_length = 0
     completed_tool_calls: list[dict[str, Any]] = []
 
     # North-Star: pin the exact logical model + generation settings from the
@@ -445,9 +677,13 @@ async def llm_turn(state: ConsultationThreadState, *, writer: StreamWriter) -> d
         )
     ):
         if event.type == "text_delta" and event.text:
-            accumulated_text += event.text
-            writer({"type": "text_delta", "delta": event.text})
-            await asyncio.sleep(0)
+            raw_text += event.text
+            safe_end = max(0, len(raw_text) - STREAM_TAIL_HOLD_CHARS)
+            if safe_end > emitted_text_length:
+                delta = raw_text[emitted_text_length:safe_end]
+                emitted_text_length = safe_end
+                writer({"type": "text_delta", "delta": delta})
+                await asyncio.sleep(0)
         elif event.type == "tool_call_done" and event.tool_name:
             tool_call_id = event.tool_call_id or ""
             if not any(existing["id"] == tool_call_id for existing in completed_tool_calls):
@@ -469,6 +705,40 @@ async def llm_turn(state: ConsultationThreadState, *, writer: StreamWriter) -> d
                     },
                 }
             )
+
+    accumulated_text, guarded_question = _guard_final_assistant_text(raw_text)
+    # Do not synthesize a question on an intermediate tool round; the model gets
+    # another turn after tool results and can decide again with the new evidence.
+    if completed_tool_calls:
+        guarded_question = None
+    elif guarded_question:
+        completed_tool_calls.append(
+            {
+                "id": f"guard-ask-{state.get('run_id', 'run')}-{tool_rounds}",
+                "name": "ask_user",
+                "arguments": {
+                    "question": guarded_question,
+                    "reason": "runtime_text_question_guard",
+                    "answer_type": "text",
+                    "allow_custom_input": True,
+                },
+            }
+        )
+
+    if len(accumulated_text) < emitted_text_length:
+        # The guard only owns the held tail. If a provider emits an exceptionally
+        # long final question, never pretend already-streamed bytes were retracted.
+        accumulated_text = raw_text
+        guarded_question = None
+        completed_tool_calls = [
+            call
+            for call in completed_tool_calls
+            if not str(call.get("id", "")).startswith("guard-ask-")
+        ]
+    tail = accumulated_text[emitted_text_length:]
+    if tail:
+        writer({"type": "text_delta", "delta": tail})
+        await asyncio.sleep(0)
 
     runtime_messages = list(state.get("runtime_messages", []))
     assistant_message: dict[str, Any] = {
@@ -798,15 +1068,19 @@ async def emit_done(state: ConsultationThreadState, *, writer: StreamWriter) -> 
 def _build_graph(checkpointer: Any):
     graph = StateGraph(ConsultationThreadState)
     graph.add_node("prepare_turn", prepare_turn)
+    graph.add_node("acquire_turn_state", acquire_turn_state)
     graph.add_node("safety_check", safety_check)
+    graph.add_node("enforce_state_acquisition", enforce_state_acquisition)
     graph.add_node("llm_turn", llm_turn)
     graph.add_node("execute_tool", execute_tool)
     graph.add_node("decide_phase", decide_phase)
     graph.add_node("emit_done", emit_done)
 
     graph.add_edge(START, "prepare_turn")
-    graph.add_edge("prepare_turn", "safety_check")
-    graph.add_edge("safety_check", "llm_turn")
+    graph.add_edge("prepare_turn", "acquire_turn_state")
+    graph.add_edge("acquire_turn_state", "safety_check")
+    graph.add_edge("safety_check", "enforce_state_acquisition")
+    graph.add_edge("enforce_state_acquisition", "llm_turn")
     graph.add_conditional_edges("llm_turn", route_after_model)
     graph.add_conditional_edges("execute_tool", route_after_tool)
     graph.add_edge("decide_phase", "emit_done")
@@ -977,6 +1251,7 @@ async def stream_thread_turn(
     async for chunk in graph.astream(
         {
             "session_id": conversation_id,
+            "run_id": run_id,
             "user_id": user_id,
             "profile": profile,
             "body_state": body_state or {},

@@ -25,10 +25,12 @@ def test_spatial_context_omits_empty_navigation_context() -> None:
     assert _format_spatial_context({"body_region_label": "右肩"}) == ""
 
 
-def test_get_consultation_manifest_defaults_to_default_config() -> None:
+def test_get_consultation_manifest_defaults_to_v2_state_acquisition_config() -> None:
     manifest = get_consultation_manifest(None)
     assert manifest.role == "consultation"
-    assert manifest.configuration_id == "consult-config-2bd9b46735dd693c"
+    assert manifest.configuration_id == "consult-config-7feb8ca2d5bfad5a"
+    assert manifest.prompt_revision == "consultation-prompt-v2"
+    assert manifest.intake is not None
 
 
 def test_get_consultation_manifest_resolves_known_configuration() -> None:
@@ -91,7 +93,7 @@ def test_stream_thread_turn_emits_agent_configuration_event() -> None:
     assert len(config_events) == 1
     payload = config_events[0].payload
     assert payload["agent_configuration"]["role"] == "consultation"
-    assert payload["agent_configuration"]["id"] == "consult-config-2bd9b46735dd693c"
+    assert payload["agent_configuration"]["id"] == "consult-config-7feb8ca2d5bfad5a"
     assert payload["execution_provenance"]["runtime"] == "langgraph"
     assert payload["execution_provenance"]["logical_model"] == "bodysense-consultation"
 

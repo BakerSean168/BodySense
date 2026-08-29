@@ -52,7 +52,8 @@ const (
 	assessmentV2ConfigurationID      = "assess-config-cae55474253e1601"
 	assessmentLogicalModelV1         = "bodysense-structured"
 
-	defaultConsultationConfigurationID = "consult-config-2bd9b46735dd693c"
+	consultationV1ConfigurationID      = "consult-config-2bd9b46735dd693c"
+	defaultConsultationConfigurationID = "consult-config-7feb8ca2d5bfad5a"
 
 	defaultPostureConfigurationID = "posture-config-3a774008db422a31"
 
@@ -124,13 +125,22 @@ var knownAssessmentConfigurations = map[string]assessmentConfigurationRegistrati
 	},
 }
 
-// ConsultationDecisionPolicyV1 is the deterministic fail-closed runtime policy
-// revision for the Consultation role.
-const ConsultationDecisionPolicyV1 = "consultation-go-runtime-v1"
+// Consultation decision policies are immutable runtime contracts. V1 remains
+// registered so interrupted/replayed historical runs keep their original
+// identity; V2 adds the typed state-acquisition preflight and deterministic HITL
+// gate before any visible assistant prose.
+const (
+	ConsultationDecisionPolicyV1 = "consultation-go-runtime-v1"
+	ConsultationDecisionPolicyV2 = "consultation-go-runtime-v2"
+)
 
 var knownConsultationConfigurations = map[string]consultationConfigurationRegistration{
-	defaultConsultationConfigurationID: {
+	consultationV1ConfigurationID: {
 		DecisionPolicyRevision: ConsultationDecisionPolicyV1,
+		LogicalModel:           "bodysense-consultation",
+	},
+	defaultConsultationConfigurationID: {
+		DecisionPolicyRevision: ConsultationDecisionPolicyV2,
 		LogicalModel:           "bodysense-consultation",
 	},
 }

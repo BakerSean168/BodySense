@@ -171,6 +171,44 @@ def _normalize_fields(raw: Any) -> list[dict[str, Any]]:
     return fields
 
 
+def _normalize_state_binding(raw: Any) -> dict[str, Any] | None:
+    """Keep only the deterministic runtime-owned symptom binding envelope."""
+    if not isinstance(raw, dict):
+        return None
+    capture_id = str(raw.get("capture_id") or "").strip().lower()
+    if not re.fullmatch(r"[a-f0-9]{24}", capture_id):
+        return None
+    seed_info = raw.get("seed_info")
+    field_map = raw.get("field_map")
+    if not isinstance(seed_info, dict) or not isinstance(field_map, dict):
+        return None
+    normalized_field_map: dict[str, str] = {}
+    allowed_targets = {
+        "duration",
+        "trigger",
+        "relief",
+        "severity",
+        "radiation",
+        "functional_impact",
+        "neurological_signs",
+        "onset",
+        "additional_notes",
+    }
+    for key, target in field_map.items():
+        source_key = str(key).strip()
+        target_key = str(target).strip()
+        if source_key and target_key in allowed_targets:
+            normalized_field_map[source_key] = target_key
+    if not normalized_field_map:
+        return None
+    return {
+        "revision": "symptom-intake-binding-v1",
+        "capture_id": capture_id,
+        "seed_info": dict(seed_info),
+        "field_map": normalized_field_map,
+    }
+
+
 def _build_default_context(question: str, reason: str) -> str:
     if isinstance(reason, str) and reason.strip():
         return reason.strip()
@@ -217,6 +255,8 @@ async def handle_ask_user(arguments: dict[str, Any]) -> ToolResult:
     reason = str(arguments.get("reason", "")).strip()
     context = str(arguments.get("context", "")).strip() or _build_default_context(question, reason)
     fields = _normalize_fields(arguments.get("fields"))
+    purpose = str(arguments.get("purpose") or "").strip()
+    state_binding = _normalize_state_binding(arguments.get("state_binding"))
 
     content: dict[str, Any] = {
         "question": question,
@@ -229,6 +269,9 @@ async def handle_ask_user(arguments: dict[str, Any]) -> ToolResult:
     }
     if fields:
         content["fields"] = fields
+    if purpose == "symptom_intake" and state_binding is not None:
+        content["purpose"] = purpose
+        content["state_binding"] = state_binding
 
     # Return interrupted — the run should pause here
     return ToolResult(

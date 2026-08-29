@@ -326,3 +326,45 @@ func TestAgentDeploymentPolicyRejectsUnknownUtilityAndKnowledgeConfigurations(t 
 		})
 	}
 }
+
+func TestConsultationDefaultsToStateAcquisitionV2AndKeepsV1Replayable(t *testing.T) {
+	clearDiagnosisRolloutEnv(t)
+	t.Setenv("CONSULTATION_CHAMPION_CONFIGURATION_ID", "")
+	policy, err := NewAgentDeploymentPolicy()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := policy.ConsultationConfigurationID(); got != defaultConsultationConfigurationID {
+		t.Fatalf("unexpected Consultation champion: %q", got)
+	}
+	decision, err := ConsultationDecisionPolicyRevisionForConfiguration(defaultConsultationConfigurationID)
+	if err != nil || decision != ConsultationDecisionPolicyV2 {
+		t.Fatalf("unexpected V2 decision policy: %q err=%v", decision, err)
+	}
+	legacyDecision, err := ConsultationDecisionPolicyRevisionForConfiguration(consultationV1ConfigurationID)
+	if err != nil || legacyDecision != ConsultationDecisionPolicyV1 {
+		t.Fatalf("historical V1 configuration must remain replayable: %q err=%v", legacyDecision, err)
+	}
+}
+
+func TestConsultationCanPinHistoricalV1WithoutChangingDefault(t *testing.T) {
+	clearDiagnosisRolloutEnv(t)
+	t.Setenv("CONSULTATION_CHAMPION_CONFIGURATION_ID", consultationV1ConfigurationID)
+	legacyPolicy, err := NewAgentDeploymentPolicy()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if legacyPolicy.ConsultationConfigurationID() != consultationV1ConfigurationID {
+		t.Fatalf("explicit V1 pin not honored: %q", legacyPolicy.ConsultationConfigurationID())
+	}
+
+	clearDiagnosisRolloutEnv(t)
+	t.Setenv("CONSULTATION_CHAMPION_CONFIGURATION_ID", "")
+	defaultPolicy, err := NewAgentDeploymentPolicy()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if defaultPolicy.ConsultationConfigurationID() != defaultConsultationConfigurationID {
+		t.Fatalf("default Consultation champion changed: %q", defaultPolicy.ConsultationConfigurationID())
+	}
+}

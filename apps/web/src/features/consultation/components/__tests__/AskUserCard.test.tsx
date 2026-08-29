@@ -148,6 +148,46 @@ describe("AskUserCard", () => {
     });
   });
 
+  it("submits structured symptom intake fields without using the ordinary composer", async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <AskUserCard
+        question={{
+          question: "请补全症状信息",
+          answer_type: "text",
+          required: true,
+          fields: [
+            {
+              key: "duration",
+              label: "大约持续多久了？",
+              answer_type: "single_choice",
+              options: ["2–7天", "1–4周"],
+              required: true,
+            },
+            {
+              key: "severity",
+              label: "最明显时有多严重？",
+              answer_type: "single_choice",
+              options: ["轻微", "中度"],
+              required: true,
+            },
+          ],
+        }}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await user.click(screen.getByLabelText("1–4周"));
+    await user.click(screen.getByLabelText("中度"));
+    await user.click(screen.getByText("提交"));
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      text: "大约持续多久了？: 1–4周；最明显时有多严重？: 中度",
+      fields: { duration: "1–4周", severity: "中度" },
+    });
+  });
+
   it("disables submit button when isSubmitting", () => {
     render(
       <AskUserCard
