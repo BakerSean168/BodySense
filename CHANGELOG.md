@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.9.0](https://github.com/BakerSean168/BodySense/compare/v0.8.1...v0.9.0) (2026-08-29)
+
+
+### Features
+
+* **ai:** enforce durable consultation state acquisition ([2ea7c16](https://github.com/BakerSean168/BodySense/commit/2ea7c16d9b1a0a4efbafe05dc4cf58e144d01817))
+* enforce durable consultation state acquisition ([fb8ca26](https://github.com/BakerSean168/BodySense/commit/fb8ca2656145fa955704da403f7cfac949acb8c5))
+
+
+### Bug Fixes
+
+* **ai:** drop optional consultation question tails ([df8dd5a](https://github.com/BakerSean168/BodySense/commit/df8dd5ac37c50232185efd1832cca5ca9b594e90))
+* **ai:** enforce interaction-only followup questions ([e6856a8](https://github.com/BakerSean168/BodySense/commit/e6856a8ce4ea74629e726049d650cd9c923b909a))
+* **ai:** ignore explanatory question examples ([0f0ba43](https://github.com/BakerSean168/BodySense/commit/0f0ba436ce60e6714d66debe9f9f2bf0dc2b208f))
+* **ai:** ignore rhetorical consultation headings ([577af47](https://github.com/BakerSean168/BodySense/commit/577af47481d3dc5b012e46b997da6b44206b6599))
+* **ai:** isolate consultation safety input ([b8e2c0c](https://github.com/BakerSean168/BodySense/commit/b8e2c0c753814c8d653c90e39fb167081f3d3bb0))
+* **ai:** route consultation questions through interactions ([48ab616](https://github.com/BakerSean168/BodySense/commit/48ab6164a2a2bdba4f54711b74778e4041fd9ef9))
+
 ## [0.8.1](https://github.com/BakerSean168/BodySense/compare/v0.8.0...v0.8.1) (2026-08-28)
 
 
