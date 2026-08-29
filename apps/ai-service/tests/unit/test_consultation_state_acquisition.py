@@ -26,6 +26,15 @@ def test_runtime_guard_drops_optional_manual_followup_question() -> None:
     assert question is None
 
 
+def test_runtime_guard_drops_entire_multi_offer_question_tail() -> None:
+    text = (
+        "目前先减少连续久坐。\n\n是否需要我为你搜索一些缓解动作？\n或者你有其他问题想进一步讨论？"
+    )
+    guarded, question = _guard_final_assistant_text(text)
+    assert guarded == "目前先减少连续久坐。"
+    assert question is None
+
+
 def test_runtime_guard_routes_real_trailing_question_to_hitl() -> None:
     text = "这个信息会影响下一步安全判断。\n\n你目前有没有出现明显无力？"
     guarded, question = _guard_final_assistant_text(text)

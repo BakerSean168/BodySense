@@ -57,6 +57,9 @@ _OPTIONAL_OFFER_PREFIXES = (
     "你还需要我",
     "如果你愿意，我可以",
     "如果需要，我可以",
+    "或者你有其他问题",
+    "还有其他问题",
+    "你还有其他问题",
 )
 
 
@@ -586,7 +589,10 @@ def _guard_final_assistant_text(text: str) -> tuple[str, str | None]:
     if chosen is None:
         return stripped, None
 
-    cut_in_tail = chosen.start()
+    # Once the model starts a manual-question tail, none of those questions
+    # belong in prose. Cut from the first question even when a later question is
+    # the one that would otherwise require a real HITL interaction.
+    cut_in_tail = matches[0].start()
     prefix = held_tail[:cut_in_tail]
     for marker in (
         "需要进一步确认的信息",
