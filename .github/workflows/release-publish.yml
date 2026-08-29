@@ -200,11 +200,17 @@ jobs:
           for component in web api aiService runtime; do
             repository="$(jq -r ".images.${component}.repository" "$CANDIDATE_PATH")"
             digest="$(jq -r ".images.${component}.digest" "$CANDIDATE_PATH")"
+            release_ref="${repository}:${RELEASE_TAG}"
             [[ "$repository" == "$REGISTRY/$NAMESPACE/"* ]] || { echo "$component repository is outside configured ACR namespace" >&2; exit 1; }
-            docker buildx imagetools create --tag "${repository}:${RELEASE_TAG}" "${repository}@${digest}"
-            docker pull "${repository}:${RELEASE_TAG}" >/dev/null
-            actual_revision="$(docker image inspect "${repository}:${RELEASE_TAG}" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')"
-            actual_repo_digest="$(docker image inspect "${repository}:${RELEASE_TAG}" --format '{{index .RepoDigests 0}}')"
+            if inspection="$(docker buildx imagetools inspect "$release_ref" 2>/dev/null)"; then
+              existing_digest="$(awk '$1 == "Digest:" { print $2; exit }' <<<"$inspection")"
+              [[ "$existing_digest" == "$digest" ]] || { echo "$component immutable release tag collision: $existing_digest != $digest" >&2; exit 1; }
+            else
+              docker buildx imagetools create --tag "$release_ref" "${repository}@${digest}"
+            fi
+            docker pull "$release_ref" >/dev/null
+            actual_revision="$(docker image inspect "$release_ref" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')"
+            actual_repo_digest="$(docker image inspect "$release_ref" --format '{{index .RepoDigests 0}}')"
             actual_digest="${actual_repo_digest#*@}"
             [[ "$actual_revision" == "$RELEASE_SHA" ]] || { echo "$component release revision mismatch" >&2; exit 1; }
             [[ "$actual_digest" == "$digest" ]] || { echo "$component release digest mismatch: $actual_digest != $digest" >&2; exit 1; }

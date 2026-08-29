@@ -188,7 +188,26 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
+      - id: existing
+        name: Reuse an already-published immutable candidate on workflow rerun
+        env:
+          IMAGE: ${{ matrix.image }}
+          TAG: ${{ needs.resolve.outputs.candidate_tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref="${REGISTRY}/${NAMESPACE}/${IMAGE}:${TAG}"
+          if inspection="$(docker buildx imagetools inspect "$ref" 2>/dev/null)"; then
+            digest="$(awk '$1 == "Digest:" { print $2; exit }' <<<"$inspection")"
+            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "unable to resolve existing immutable digest for $ref" >&2; exit 1; }
+            echo 'exists=true' >> "$GITHUB_OUTPUT"
+            echo "digest=$digest" >> "$GITHUB_OUTPUT"
+            echo "Reusing existing immutable candidate $ref@$digest" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'exists=false' >> "$GITHUB_OUTPUT"
+          fi
       - id: build
+        if: steps.existing.outputs.exists != 'true'
         name: Build and push exact-SHA candidate image once
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
@@ -206,25 +225,34 @@ jobs:
             VITE_BODYSENSE_ANATOMY_CATALOG_URL=${{ needs.static-assets.outputs.atlas_catalog_url }}
           cache-from: type=gha,scope=${{ matrix.cache_scope }}
           cache-to: type=gha,mode=max,scope=${{ matrix.cache_scope }}
-      - name: Verify OCI revision label from the pushed candidate
+      - id: identity
+        name: Verify immutable candidate digest and OCI revision label
         env:
           IMAGE: ${{ matrix.image }}
           TAG: ${{ needs.resolve.outputs.candidate_tag }}
           EXPECTED_REVISION: ${{ needs.resolve.outputs.revision }}
+          EXISTING_DIGEST: ${{ steps.existing.outputs.digest }}
+          BUILD_DIGEST: ${{ steps.build.outputs.digest }}
         shell: bash
         run: |
           set -euo pipefail
           ref="${REGISTRY}/${NAMESPACE}/${IMAGE}:${TAG}"
+          expected_digest="${EXISTING_DIGEST:-$BUILD_DIGEST}"
+          [[ "$expected_digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "candidate digest missing for $ref" >&2; exit 1; }
           docker pull "$ref" >/dev/null
-          actual="$(docker image inspect "$ref" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')"
-          [[ "$actual" == "$EXPECTED_REVISION" ]] || { echo "revision label mismatch: $actual != $EXPECTED_REVISION" >&2; exit 1; }
+          actual_revision="$(docker image inspect "$ref" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')"
+          actual_repo_digest="$(docker image inspect "$ref" --format '{{index .RepoDigests 0}}')"
+          actual_digest="${actual_repo_digest#*@}"
+          [[ "$actual_revision" == "$EXPECTED_REVISION" ]] || { echo "revision label mismatch: $actual_revision != $EXPECTED_REVISION" >&2; exit 1; }
+          [[ "$actual_digest" == "$expected_digest" ]] || { echo "immutable candidate digest mismatch: $actual_digest != $expected_digest" >&2; exit 1; }
+          echo "digest=$expected_digest" >> "$GITHUB_OUTPUT"
       - name: Record component evidence
         env:
           COMPONENT: ${{ matrix.component }}
           IMAGE: ${{ matrix.image }}
           TAG: ${{ needs.resolve.outputs.candidate_tag }}
           REVISION: ${{ needs.resolve.outputs.revision }}
-          DIGEST: ${{ steps.build.outputs.digest }}
+          DIGEST: ${{ steps.identity.outputs.digest }}
         shell: bash
         run: |
           set -euo pipefail
@@ -362,7 +390,23 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
+      - id: freshness
+        name: Recheck main HEAD immediately before staging mutation
+        env:
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          current_main="$(git ls-remote "https://github.com/${REPOSITORY}.git" refs/heads/main | awk '{print $1}')"
+          [[ "$current_main" =~ ^[0-9a-f]{40}$ ]] || { echo 'unable to resolve current main HEAD' >&2; exit 1; }
+          if [[ "$current_main" == "$REVISION" ]]; then
+            echo 'eligible=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'eligible=false' >> "$GITHUB_OUTPUT"
+            echo "Candidate $REVISION is valid but main advanced to $current_main; staging promotion is intentionally skipped." >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Promote all exact-SHA artifacts to staging-latest
+        if: steps.freshness.outputs.eligible == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -372,6 +416,7 @@ jobs:
             docker buildx imagetools create --tag "$dst" "$src"
           done
       - name: Verify staging channel converged to one revision
+        if: steps.freshness.outputs.eligible == 'true'
         shell: bash
         run: |
           set -euo pipefail

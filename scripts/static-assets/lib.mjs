@@ -187,13 +187,17 @@ export async function uploadImmutableFiles({
     }
 
     const existing = await headIfExists(client, bucket, key);
-    if (
-      existing &&
-      Number(existing.ContentLength) === Number(file.bytes) &&
-      existing.Metadata?.sha256 === file.sha256
-    ) {
-      skipped += 1;
-      return;
+    if (existing) {
+      if (
+        Number(existing.ContentLength) === Number(file.bytes) &&
+        existing.Metadata?.sha256 === file.sha256
+      ) {
+        skipped += 1;
+        return;
+      }
+      throw new Error(
+        `immutable object collision for s3://${bucket}/${key}: existing bytes=${existing.ContentLength ?? "unknown"} sha256=${existing.Metadata?.sha256 ?? "missing"}, candidate bytes=${file.bytes} sha256=${file.sha256}`,
+      );
     }
 
     const absolute = path.join(sourceRoot, file.path);
@@ -245,16 +249,29 @@ export async function uploadJsonObject({
 }) {
   const body = `${JSON.stringify(value, null, 2)}\n`;
   const sha256 = createHash("sha256").update(body).digest("hex");
+  const bytes = Buffer.byteLength(body);
   if (dryRun) {
     console.log(`[dry-run] manifest -> s3://${bucket}/${key}`);
-    return { bytes: Buffer.byteLength(body), sha256 };
+    return { bytes, sha256 };
+  }
+  const existing = await headIfExists(client, bucket, key);
+  if (existing) {
+    if (
+      Number(existing.ContentLength) === bytes &&
+      existing.Metadata?.sha256 === sha256
+    ) {
+      return { bytes, sha256 };
+    }
+    throw new Error(
+      `immutable object collision for s3://${bucket}/${key}: existing bytes=${existing.ContentLength ?? "unknown"} sha256=${existing.Metadata?.sha256 ?? "missing"}, candidate bytes=${bytes} sha256=${sha256}`,
+    );
   }
   await client.send(
     new PutObjectCommand({
       Bucket: bucket,
       Key: key,
       Body: body,
-      ContentLength: Buffer.byteLength(body),
+      ContentLength: bytes,
       ContentType: "application/json; charset=utf-8",
       CacheControl: IMMUTABLE_CACHE_CONTROL,
       Metadata: { sha256 },
@@ -266,7 +283,7 @@ export async function uploadJsonObject({
   if (head.Metadata?.sha256 !== sha256) {
     throw new Error(`R2 verification failed for ${key}`);
   }
-  return { bytes: Buffer.byteLength(body), sha256 };
+  return { bytes, sha256 };
 }
 
 export async function verifyPublicUrls(
