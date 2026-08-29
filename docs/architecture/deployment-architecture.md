@@ -133,8 +133,8 @@ Legacy migration-number gaps `2`, `3`, `5` predate the current production baseli
 
 Migration CI has two intentionally different **scenarios**, both on the single supported PostgreSQL / pgvector 18 runtime:
 
-- `PostgreSQL 18 current-history replay` rebuilds the current migration history, stops at the published baseline `29`, then validates `29 -> latest` and latest `down -> up`.
-- `PostgreSQL 18 production-baseline upgrade` restores the PG18-normalized `production-v29.sql` schema fixture captured from the historical production-v29 shape, then validates `29 -> latest`, domain semantics and the PG18 `pg_dump` / `pg_restore` recovery path.
+- the **current-history** child rebuilds the current migration history, stops at the published baseline `29`, then validates `29 -> latest` and latest `down -> up`;
+- the **production-baseline** child restores the PG18-normalized `production-v29.sql` schema fixture captured from the historical production-v29 shape, then validates `29 -> latest`, domain semantics and the PG18 `pg_dump` / `pg_restore` recovery path.
 
 The second job protects **old production schema/data upgrade semantics**, not compatibility with an old PostgreSQL engine. Development, staging, CI and steady-state production all use PostgreSQL 18.
 
@@ -158,8 +158,6 @@ BodySense uses Release Lifecycle V3. `.github/workflows/release-please.yml` is t
 After the Release PR merges, the merge SHA must complete exhaustive main CI and `Publish Main Candidate`. `.github/workflows/release-publish.yml` then detects the release-shaped merge, verifies the exact candidate/source-CI provenance, creates/resumes a Draft Release, promotes the existing candidate digests to immutable `vX.Y.Z` identities without rebuilding source, attaches `release-manifest.json`, and publishes only after postflight succeeds.
 
 `.github/workflows/deploy-production.yml` is the separate explicit production selector. It accepts an already Published `vX.Y.Z`, validates the canonical manifest/tag/main/exact-CI/image-digest contract, and only then moves all four `prod-latest` pointers. The Alibaba host watcher remains the only component that mutates the production runtime.
-
-The former `.github/workflows/docker-deploy.yml` is retained temporarily as a manual non-release build fallback during V3 rollout. It cannot trigger from `v*` tags and cannot move `prod-latest`; it is removed after V3 runtime evidence is complete.
 
 ### Immutable candidate first
 
@@ -254,9 +252,9 @@ CI keeps separate current-history and production-baseline upgrade scenarios, but
 
 ## Off-host PostgreSQL backup and restore (BS-PROD-012)
 
-In addition to the deploy watcher's same-host backups, production keeps an
-**operator-owned off-host** copy of the PostgreSQL database on a private
-OSS/S3-compatible destination (Alibaba Cloud OSS `cn-hangzhou`):
+The repository contains an operator-owned off-host PostgreSQL backup/restore path for a private OSS/S3-compatible destination. Cloud-side provisioning is tracked separately by `docs/plan/active/data-durability-backup-2026-08-25.md`. As of the v0.9.0 Delivery Platform V3 rollout, the production host did **not** have `OFFHOST_BACKUP_ACCESS_KEY` / `OFFHOST_BACKUP_SECRET_KEY`, so the periodic off-host timer correctly failed closed and must not be represented as accepted. The v0.9.0 rollout therefore used both the watcher's mandatory validated same-host pre-deploy dump and a separately validated GCP off-host `pg_dump -Fc` snapshot.
+
+When the parked cloud durability plan is resumed, the intended OSS path is:
 
 - `scripts/production-offhost-backup.sh --backup` runs daily via
   `bodysense-offhost-backup.timer` (`OnCalendar=*-*-* 02:10:00 Asia/Shanghai` —

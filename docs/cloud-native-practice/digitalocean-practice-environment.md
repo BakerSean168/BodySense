@@ -3,9 +3,9 @@
 > **Retired 2026-08-22:** DigitalOcean is no longer an active BodySense environment. The implementation artifacts were moved to `docs/archive/deployment/digitalocean/`. This document is historical only.
 
 
-> 状态: 当前执行方案 · 2026-07-05 · v2
+> 状态: 历史记录 · 原方案 2026-07-05 · 2026-08-22 退役
 
-本文记录 BodySense 在 DigitalOcean 上的一月期云原生练习环境。阿里云生产环境是长期环境，继续使用现有 ACR、`docker-deploy.yml`、`docker-compose.prod.yml` 和 `body.bakersean.top`，本方案不修改其部署链路。
+本文记录 BodySense 曾在 DigitalOcean 上使用的一月期云原生练习环境。该环境现已退役。阿里云仍是唯一生产运行环境，但当前生产发布链已经演进为 Delivery Platform V3：`Prepare Release → Release Publish → Deploy Production → Alibaba coherent deploy watcher`，不再使用旧的单体生产镜像构建 workflow。
 
 ## 目标
 
@@ -124,7 +124,7 @@ VS Code Tasks 已配置好常用命令（`.vscode/tasks.json`），可按 `Ctrl+
 
 触发方式: push 到 `dev` 分支（路径过滤）或手动 `workflow_dispatch`（可选单服务部署）。
 
-阿里云继续使用 `.github/workflows/docker-deploy.yml`，两条流水线互不覆盖。
+该段描述的是 DigitalOcean 练习期的历史 CI/CD。当前阿里云生产不再使用旧的单体生产镜像构建 workflow；生产选择由 `.github/workflows/deploy-production.yml` 显式执行，随后由 Alibaba ECS 上的 coherent deploy watcher 完成实际运行时更新。
 
 ### Docker 镜像优化
 

@@ -128,19 +128,6 @@ jobs:
       - name: Execute manifest-selected quality lanes
         run: node scripts/delivery/run-quality.mjs "$DELIVERY_MANIFEST_PATH"
 
-  quality:
-    name: Repository quality gate
-    needs: [scope, governance-child, quality-child]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - name: Compatibility Oracle for existing protected context
-        env:
-          ORACLE_INPUT: >-
-            {"detector":"${{ needs.scope.result }}","enabled":{"governance":true,"quality":${{ (needs.scope.outputs.lane_web == 'true' || needs.scope.outputs.lane_api == 'true' || needs.scope.outputs.lane_ai == 'true' || needs.scope.outputs.lane_contracts == 'true' || needs.scope.outputs.lane_full == 'true') && 'true' || 'false' }}},"children":{"governance":"${{ needs.governance-child.result }}","quality":"${{ needs.quality-child.result }}"}}
-        run: node scripts/delivery/oracle.mjs
-
   governance-oracle:
     name: Governance Oracle
     needs: [scope, governance-child]
@@ -204,18 +191,6 @@ jobs:
         run: >-
           go run ./cmd/domain-validator
           -database-url 'postgres://bodysense:bodysense123@127.0.0.1:5432/bodysense_migration_validator?sslmode=disable'
-
-  migrations:
-    name: PostgreSQL 18 current-history replay
-    needs: [scope, migrations-child]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - env:
-          ORACLE_INPUT: >-
-            {"detector":"${{ needs.scope.result }}","enabled":{"database-current":${{ (needs.scope.outputs.lane_database == 'true' || needs.scope.outputs.lane_full == 'true') && 'true' || 'false' }}},"children":{"database-current":"${{ needs.migrations-child.result }}"}}
-        run: node scripts/delivery/oracle.mjs
 
   production-migrations-child:
     name: PostgreSQL 18 production-baseline child
@@ -306,18 +281,6 @@ jobs:
           DB_PASSWORD: bodysense123
           DB_SSLMODE: disable
         run: bash scripts/validate-production-dr.sh
-
-  production-migrations:
-    name: PostgreSQL 18 production-baseline upgrade
-    needs: [scope, production-migrations-child]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - env:
-          ORACLE_INPUT: >-
-            {"detector":"${{ needs.scope.result }}","enabled":{"database-production":${{ (needs.scope.outputs.lane_database == 'true' || needs.scope.outputs.lane_full == 'true') && 'true' || 'false' }}},"children":{"database-production":"${{ needs.production-migrations-child.result }}"}}
-        run: node scripts/delivery/oracle.mjs
 
   database-oracle:
     name: Database Oracle
@@ -446,18 +409,6 @@ jobs:
           name: playwright-report
           path: playwright-report/
           if-no-files-found: ignore
-
-  e2e:
-    name: Browser longitudinal health E2E
-    needs: [scope, e2e-child]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - env:
-          ORACLE_INPUT: >-
-            {"detector":"${{ needs.scope.result }}","enabled":{"experience":${{ (needs.scope.outputs.lane_experience == 'true' || needs.scope.outputs.lane_full == 'true') && 'true' || 'false' }}},"children":{"experience":"${{ needs.e2e-child.result }}"}}
-        run: node scripts/delivery/oracle.mjs
 
   experience-oracle:
     name: Experience Oracle

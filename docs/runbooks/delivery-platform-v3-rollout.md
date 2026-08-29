@@ -221,3 +221,20 @@ platform audit result
 ```
 
 No item may be marked complete solely because repository code exists; runtime/external acceptance must be distinguished explicitly.
+
+## 11. Pilot completion record
+
+The BodySense pilot completed on 2026-08-29 with v0.9.0. The authoritative evidence is archived in `docs/plan/archive/2026-08-29-delivery-platform-v3.md`.
+
+Key outcomes:
+
+- branch protection consumes only stable Delivery Oracles + `commit-lint`;
+- exact-SHA candidate publication drives canonical GCP staging;
+- legacy release PR #138 was closed and recreated explicitly as #140;
+- Release Publish failed closed on an OCI wrapper-digest mismatch, was corrected by #141, then published v0.9.0 without rebuilding source;
+- Release Publish was proven not to move `prod-latest`;
+- explicit Deploy Production run 33242163051 selected v0.9.0;
+- Alibaba watcher created/validated its PostgreSQL backup, preserved schema 59:false, health-gated AI/API/Web, and recorded revision `e61326b4`;
+- transitional shadow CI, legacy concrete-context aliases and the manual legacy image-build fallback were removed only after replacement proof.
+
+The parked long-term Alibaba OSS off-host backup provisioning remains owned by `docs/plan/active/data-durability-backup-2026-08-25.md`; it is not part of this pilot's closure claim.

@@ -51,7 +51,7 @@ Acceptance requires PostgreSQL major 18, clean latest migration state, only the 
 
 CI keeps two database scenarios and both use PostgreSQL 18:
 
-- `PostgreSQL 18 current-history replay` — empty database through the current migration history plus replay validation;
-- `PostgreSQL 18 production-baseline upgrade` — historical schema-shape fixture normalized under PG18 through latest migrations, domain semantics and PG18 dump/restore recovery.
+- `PostgreSQL 18 current-history child` — empty database through the current migration history plus replay validation;
+- `PostgreSQL 18 production-baseline child` — historical schema-shape fixture normalized under PG18 through latest migrations, domain semantics and PG18 dump/restore recovery.
 
 Neither job tests or supports the PostgreSQL 16 engine.

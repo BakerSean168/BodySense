@@ -32,8 +32,8 @@ grep -q 'pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3
 grep -q 'target: pgvector:pg18' .github/workflows/mirror-production-infra.yml
 reject_match 'source: pgvector/pgvector:pg16' .github/workflows/mirror-production-infra.yml
 
-grep -q 'name: PostgreSQL 18 current-history replay' .github/workflows/ci.yml
-grep -q 'name: PostgreSQL 18 production-baseline upgrade' .github/workflows/ci.yml
+grep -q 'name: PostgreSQL 18 current-history child' .github/workflows/ci.yml
+grep -q 'name: PostgreSQL 18 production-baseline child' .github/workflows/ci.yml
 grep -q 'Prepare PostgreSQL 18 client toolchain' .github/workflows/ci.yml
 grep -q 'setup-postgres18-client-wrappers.sh' .github/workflows/ci.yml
 grep -q '^FROM alpine:3.24$' apps/api/Dockerfile
