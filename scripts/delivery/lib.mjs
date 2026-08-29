@@ -145,7 +145,6 @@ function classifySinglePath(path) {
       risk: 'database',
       lanes: {
         api: true,
-        contracts: true,
         database: true,
         experience: true,
       },
@@ -156,28 +155,24 @@ function classifySinglePath(path) {
   if (path.startsWith('apps/api/')) {
     return {
       risk: 'api',
-      lanes: { api: true, contracts: true },
+      lanes: { api: true, experience: true },
       reason: 'go-api',
     };
   }
 
   if (path.startsWith('apps/ai-service/')) {
-    const affectsExperience = /\/(agents|runtime|services|tools|prompts|models|configuration)\//.test(
-      path,
-    );
     return {
       risk: 'ai',
-      lanes: { ai: true, contracts: true, experience: affectsExperience },
-      reason: affectsExperience ? 'ai-runtime' : 'ai-service',
+      lanes: { ai: true, experience: true },
+      reason: 'ai-service',
     };
   }
 
   if (path.startsWith('apps/web/')) {
-    const e2e = path.startsWith('apps/web/e2e/') || /(^|\/)e2e(\/|\.|-)/.test(path);
     return {
       risk: 'web',
-      lanes: { web: true, contracts: true, experience: e2e },
-      reason: e2e ? 'web-experience' : 'web',
+      lanes: { web: true, experience: true },
+      reason: 'web',
     };
   }
 
@@ -197,9 +192,9 @@ function classifySinglePath(path) {
 
   if (path.startsWith('packages/utils/')) {
     return {
-      risk: 'contract',
-      lanes: { web: true, contracts: true },
-      reason: 'shared-ts-utility',
+      risk: 'root',
+      lanes: allTrueLanes(),
+      reason: 'shared-utility-fail-safe',
     };
   }
 

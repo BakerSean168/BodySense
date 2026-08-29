@@ -211,7 +211,7 @@ Initial implementation may be local/workflow-artifact based; GitHub runner-minut
 
 ### DLV-3105 — Shadow CI workflow/jobs
 
-Status: IMPLEMENTED — GitHub shadow run validation pending
+Status: COMPLETE — GitHub Actions run 33236292914 passed Scope → Policy Contract → Oracle → Observation
 
 Run detector/validation/Oracle/observation in parallel with current authoritative CI.
 
@@ -223,13 +223,13 @@ Hard rule:
 
 ### DLV-3201 — Split logical quality lanes
 
-Status: TODO
+Status: IMPLEMENTED — repository; Actions validation pending
 
 Expose Web/API/AI/contracts as independently selectable logical lanes while preserving repository-level release validation semantics for full runs.
 
 ### DLV-3202 — PR affected execution
 
-Status: TODO
+Status: IMPLEMENTED — manifest-selected PR quality/database/experience children; Actions validation pending
 
 PR jobs consume the manifest instead of recalculating scope.
 
@@ -249,13 +249,13 @@ release workflow
 
 ### DLV-3203 — Full main override
 
-Status: TODO
+Status: IMPLEMENTED — `push main` forces `full=true` and preserves `scripts/validate-repo.sh`; post-merge proof pending
 
 Prove every `main` push executes all required quality/database/experience lanes regardless of the diff category.
 
 ### DLV-3204 — Stable Oracle GitHub contexts
 
-Status: TODO
+Status: IMPLEMENTED — repository; existing protected contexts retained as compatibility Oracles until governance cutover
 
 Introduce:
 

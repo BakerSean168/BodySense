@@ -47,13 +47,14 @@ test('docs-only changes select governance only', () => {
   });
 });
 
-test('Web changes select Web and contract lanes without forcing full', () => {
+test('Web changes select Web and experience lanes without forcing full', () => {
   const result = classifyPaths(['apps/web/src/features/foo.tsx']);
   assert.equal(result.risk, 'web');
   assertLanes(['apps/web/src/features/foo.tsx'], {
     governance: true,
     web: true,
-    contracts: true,
+    experience: true,
+    contracts: false,
     api: false,
     ai: false,
     database: false,
@@ -61,31 +62,31 @@ test('Web changes select Web and contract lanes without forcing full', () => {
   });
 });
 
-test('Web E2E changes select experience', () => {
+test('Web E2E changes remain in the Web + experience policy', () => {
   assertLanes(['apps/web/e2e/consultation.spec.ts'], {
     web: true,
-    contracts: true,
+    contracts: false,
     experience: true,
   });
 });
 
-test('Go API changes select API and contracts', () => {
+test('Go API changes select API and experience', () => {
   const result = classifyPaths(['apps/api/internal/service/foo.go']);
   assert.equal(result.risk, 'api');
   assertLanes(['apps/api/internal/service/foo.go'], {
     api: true,
-    contracts: true,
+    contracts: false,
     database: false,
-    experience: false,
+    experience: true,
   });
 });
 
-test('Python runtime changes select AI, contracts and experience', () => {
+test('Python runtime changes select AI and experience', () => {
   const result = classifyPaths(['apps/ai-service/src/runtime/foo.py']);
   assert.equal(result.risk, 'ai');
   assertLanes(['apps/ai-service/src/runtime/foo.py'], {
     ai: true,
-    contracts: true,
+    contracts: false,
     experience: true,
     database: false,
   });
@@ -96,7 +97,7 @@ test('migration changes select database safety lanes', () => {
   assert.equal(result.risk, 'database');
   assertLanes(['apps/api/migrations/000060_example.up.sql'], {
     api: true,
-    contracts: true,
+    contracts: false,
     database: true,
     experience: true,
     full: false,
