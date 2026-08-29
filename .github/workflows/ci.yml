@@ -404,7 +404,7 @@ jobs:
           echo $! > /tmp/bodysense-api.pid
       - name: Wait for API
         run: |
-          for i in {1..60}; do
+          for _ in {1..60}; do
             if curl -fsS http://127.0.0.1:8080/api/health; then exit 0; fi
             sleep 2
           done
@@ -421,7 +421,7 @@ jobs:
           echo $! > /tmp/bodysense-ai.pid
       - name: Wait for AI service
         run: |
-          for i in {1..60}; do
+          for _ in {1..60}; do
             if curl -fsS http://127.0.0.1:18100/health; then exit 0; fi
             sleep 2
           done

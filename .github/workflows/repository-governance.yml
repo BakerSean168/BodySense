@@ -98,6 +98,26 @@ jobs:
               -f name='v*' -f type='tag' >/dev/null
           fi
 
+      - name: Configure artifact publication environment
+        id: artifact-publish-environment
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/artifact-publish-environment.json <<'JSON'
+          {
+            "wait_timer": 0,
+            "prevent_self_review": false,
+            "reviewers": [],
+            "deployment_branch_policy": {
+              "protected_branches": true,
+              "custom_branch_policies": false
+            }
+          }
+          JSON
+          gh api --method PUT "repos/${REPOSITORY}/environments/artifact-publish" \
+            --input /tmp/artifact-publish-environment.json >/dev/null
+
       - name: Copy ACR credentials into production environment
         if: inputs.sync_acr_secrets == true && steps.production-environment.outcome == 'success'
         shell: bash
@@ -115,16 +135,24 @@ jobs:
 
       - name: Governance summary
         shell: bash
+        env:
+          PRODUCTION_ENV_OUTCOME: ${{ steps.production-environment.outcome }}
+          ARTIFACT_ENV_OUTCOME: ${{ steps.artifact-publish-environment.outcome }}
         run: |
           set -euo pipefail
           {
             echo '### Repository production governance'
-            echo '- `main` requires PR flow and all five CI checks, including commit lint.'
+            echo '- main requires PR flow and all five CI checks, including commit lint.'
             echo '- Administrators are subject to branch protection.'
             echo '- Force pushes and branch deletion are disabled.'
-            if [[ '${{ steps.production-environment.outcome }}' == success ]]; then
-              echo '- `production` Environment policy reconciled successfully.'
+            if [[ "$PRODUCTION_ENV_OUTCOME" == success ]]; then
+              echo '- production Environment policy reconciled successfully.'
             else
-              echo '- ⚠️ `production` Environment policy was not changed because the PAT lacks Environment administration permission.'
+              echo '- ⚠️ production Environment policy was not changed because the PAT lacks Environment administration permission.'
+            fi
+            if [[ "$ARTIFACT_ENV_OUTCOME" == success ]]; then
+              echo '- artifact-publish is restricted to protected branches and remains separate from production deployment authority.'
+            else
+              echo '- ⚠️ artifact-publish Environment policy was not reconciled.'
             fi
           } >> "$GITHUB_STEP_SUMMARY"

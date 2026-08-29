@@ -1,4 +1,8 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import {
   classifyPaths,
@@ -8,6 +12,7 @@ import {
   evaluateOracle,
   validateManifest,
 } from './lib.mjs';
+import { createCandidate, validateCandidate } from './candidate-manifest.mjs';
 
 const A = 'a'.repeat(40);
 const B = 'b'.repeat(40);
@@ -236,4 +241,113 @@ test('run observation binds manifest digest and reports failing evidence', () =>
   assert.deepEqual(summary.failedLanes, ['web']);
   assert.deepEqual(summary.failedOracles, ['quality']);
   assert.match(summary.digest, /^sha256:[0-9a-f]{64}$/);
+});
+
+test('candidate manifest binds all four image digests to one exact revision', () => {
+  const gitSha = 'c'.repeat(40);
+  const tag = `sha-${gitSha}`;
+  const digest = (char) => `sha256:${char.repeat(64)}`;
+  const candidate = createCandidate({
+    gitSha,
+    ciRunId: '12345',
+    deliveryManifestDigest: digest('d'),
+    migrationHead: 59,
+    images: {
+      web: { repository: 'registry/bodysense-web', tag, digest: digest('1'), revision: gitSha },
+      api: { repository: 'registry/bodysense-api', tag, digest: digest('2'), revision: gitSha },
+      aiService: { repository: 'registry/bodysense-ai-service', tag, digest: digest('3'), revision: gitSha },
+      runtime: { repository: 'registry/bodysense-runtime', tag, digest: digest('4'), revision: gitSha },
+    },
+    staticAssets: {
+      enabled: true,
+      revision: gitSha,
+      assetBase: `https://assets.example/web/${gitSha}/`,
+      atlasCatalogUrl: 'https://assets.example/anatomy/vanatome/1.4.0/releases/1.4.0/catalog.json',
+      atlasVersion: '1.4.0',
+    },
+    generatedAt: '2026-08-29T00:00:00.000Z',
+  });
+  assert.deepEqual(validateCandidate(candidate), []);
+  assert.equal(candidate.candidateTag, tag);
+  assert.match(candidate.digest, /^sha256:[0-9a-f]{64}$/);
+});
+
+test('candidate manifest fails closed on mixed revisions, tags, or tampered digests', () => {
+  const gitSha = 'c'.repeat(40);
+  const tag = `sha-${gitSha}`;
+  const digest = (char) => `sha256:${char.repeat(64)}`;
+  const candidate = createCandidate({
+    gitSha,
+    ciRunId: '12345',
+    deliveryManifestDigest: digest('d'),
+    migrationHead: 59,
+    images: {
+      web: { repository: 'registry/bodysense-web', tag, digest: digest('1'), revision: gitSha },
+      api: { repository: 'registry/bodysense-api', tag, digest: digest('2'), revision: gitSha },
+      aiService: { repository: 'registry/bodysense-ai-service', tag, digest: digest('3'), revision: gitSha },
+      runtime: { repository: 'registry/bodysense-runtime', tag, digest: digest('4'), revision: gitSha },
+    },
+    staticAssets: { enabled: false, revision: gitSha, assetBase: '', atlasCatalogUrl: '', atlasVersion: '1.4.0' },
+  });
+  candidate.images.api.revision = 'e'.repeat(40);
+  candidate.images.runtime.tag = 'staging-latest';
+  candidate.images.web.digest = 'not-a-digest';
+  const errors = validateCandidate(candidate);
+  assert.ok(errors.some((error) => error.includes('api.revision')));
+  assert.ok(errors.some((error) => error.includes('runtime.tag')));
+  assert.ok(errors.some((error) => error.includes('web.digest')));
+  assert.ok(errors.some((error) => error.includes('candidate digest mismatch')));
+});
+
+function runStagingWatcherCheck({ apiRevision } = {}) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bodysense-staging-watch-'));
+  const bin = path.join(root, 'bin');
+  const state = path.join(root, 'state');
+  const runtime = path.join(root, 'runtime');
+  const config = path.join(root, 'staging-channel.env');
+  const secret = path.join(root, 'staging.env');
+  fs.mkdirSync(bin, { recursive: true });
+  fs.writeFileSync(secret, 'DB_PASSWORD=test\nREDIS_PASSWORD=test\nJWT_SECRET_KEY=test\nLITELLM_MASTER_KEY=test\nGROQ_API_KEY=test\n');
+  fs.writeFileSync(
+    config,
+    `STAGING_REGISTRY=registry.example\nSTAGING_NAMESPACE=bodysense\nSTAGING_CHANNEL_TAG=staging-latest\nSTAGING_SECRET_ENV=${secret}\n`,
+  );
+  const revision = 'f'.repeat(40);
+  fs.writeFileSync(
+    path.join(bin, 'docker'),
+    `#!/usr/bin/env bash\nset -euo pipefail\nif [[ \"$1\" == pull ]]; then exit 0; fi\nif [[ \"$1 $2\" == 'image inspect' ]]; then\n  ref=\"$3\"\n  if [[ \"$ref\" == *bodysense-api* ]]; then printf '%s\\n' \"${apiRevision ?? revision}\"; else printf '%s\\n' '${revision}'; fi\n  exit 0\nfi\necho \"unexpected fake docker args: $*\" >&2\nexit 99\n`,
+    { mode: 0o755 },
+  );
+  const result = spawnSync('bash', ['scripts/staging-deploy-watch.sh', '--check-only'], {
+    cwd: process.cwd(),
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      PATH: `${bin}:${process.env.PATH}`,
+      BODYSENSE_STAGING_CHANNEL_CONFIG: config,
+      BODYSENSE_STAGING_STATE_DIR: state,
+      BODYSENSE_STAGING_RUNTIME_ROOT: runtime,
+    },
+  });
+  fs.rmSync(root, { recursive: true, force: true });
+  return { ...result, revision };
+}
+
+test('staging watcher check-only accepts one coherent four-image revision', () => {
+  const result = runStagingWatcherCheck();
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, new RegExp(`STAGING_CANDIDATE=COHERENT revision=${result.revision}`));
+});
+
+test('staging watcher check-only refuses to treat split pointers as deployable', () => {
+  const result = runStagingWatcherCheck({ apiRevision: 'e'.repeat(40) });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /staging channel not coherent yet/);
+  assert.doesNotMatch(result.stdout, /STAGING_CANDIDATE=COHERENT/);
+});
+
+test('staging watcher fails closed when an image revision label is missing', () => {
+  const result = runStagingWatcherCheck({ apiRevision: '' });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /api staging image has no org.opencontainers.image.revision/);
 });

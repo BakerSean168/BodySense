@@ -282,7 +282,7 @@ Only after shadow evidence:
 
 ### DLV-3301 — Candidate release-set manifest
 
-Status: TODO
+Status: COMPLETE — repository schema/validator + mixed-revision negative tests
 
 Define a candidate manifest binding:
 
@@ -296,7 +296,7 @@ migration head
 
 ### DLV-3302 — Build main candidate once
 
-Status: TODO
+Status: IMPLEMENTED — `Publish Main Candidate` exact-SHA workflow; first main Actions evidence pending merge
 
 After full main CI, publish four immutable candidate images with `sha-<revision>` identity.
 
@@ -304,19 +304,19 @@ No production pointer change.
 
 ### DLV-3303 — Preserve static asset ordering
 
-Status: TODO
+Status: IMPLEMENTED — candidate workflow publishes revision CDN bytes before candidate image build and verifies Web↔CDN coherence
 
 Revision-scoped assets must be published/verified before the candidate Web image that references them becomes eligible.
 
 ### DLV-3304 — Promote coherent staging channel
 
-Status: TODO
+Status: IMPLEMENTED — current-main candidates only; registry/runtime proof pending first main candidate
 
 Move all four validated candidate artifacts to `staging-latest` only after complete candidate publication.
 
 ### DLV-3305 — GCP staging deploy watcher
 
-Status: TODO
+Status: IMPLEMENTED — user-systemd watcher + runtime bundle; coherent/split/missing-label check-only tests green, live candidate proof pending
 
 Deliver a fail-closed watcher that:
 
@@ -329,7 +329,7 @@ Deliver a fail-closed watcher that:
 
 ### DLV-3306 — Staging runtime cutover
 
-Status: TODO / RUNTIME CHANGE
+Status: TODO / RUNTIME CHANGE — enable only after first coherent `staging-latest` candidate exists
 
 Acceptance:
 
