@@ -12,7 +12,13 @@
   _项目核心技术选型（React 19, Go 1.26, Python 3.13, PostgreSQL 18）、Monorepo 结构、三端接口契约与安全机制。_
 
 - 🐳 **[部署与运维架构 (Deployment Architecture)](./deployment-architecture.md)**
-  _Docker Compose 容器编排（Caddy、Go API、FastAPI、Redis 7、PostgreSQL 18）、CI/CD 流水线、阿里云部署拓扑。_
+  _Docker Compose 容器编排（Caddy、Go API、FastAPI、Redis 7、PostgreSQL 18）、当前 CI/CD 流水线、阿里云部署拓扑。_
+
+- 🚚 **[Delivery Platform V3](./delivery-platform-v3.md)** ⭐
+  _ADR 0008 接受的目标交付架构：单 `main`、PR affected CI、main full CI、稳定 Oracles、exact-SHA candidate、canonical staging，以及 Prepare Release / Release Publish / Deploy Production 三段解耦。_
+
+- 🏷️ **[Release Lifecycle V3](./release-lifecycle-v3.md)**
+  _定义版本准备、不可变 Release 发布与生产部署选择之间的权限边界、exact-SHA / digest contract 与 rollback 语义。_
 
 - 🧠 **[上下文工程架构 (Context Engineering Architecture)](./context-engineering-architecture.md)** ⚠️ _已归档_
   _原设计的 Go ContextBuilder 方案已被 ADR 0002 取代。当前由 Python LangGraph checkpoint 拥有 Agent Thread 真值。_
@@ -79,6 +85,9 @@ BodySense 当前业务领域的最高层设计以以下文档为准：
 
 - **[ADR 0006: Adopt Vanatome as the 3D Anatomy Visualization Engine](../adr/0006-adopt-vanatome-3d-anatomy-engine.md)** ⭐
   _采用 Vanatome 作为默认 3D anatomy engine；BodySense 自有 BodyRegionOntology 保持 durable domain 与 third-party anatomyId 解耦；完整 anatomy 能力一次实现，通过 progressive disclosure 控制用户复杂度。_
+
+- **[ADR 0008: Adopt Delivery Platform V3](../adr/0008-adopt-delivery-platform-v3.md)** ⭐
+  _融合 MemoFlow 的 delivery control/artifact/observation 思路与 BodySense 的 coherent production watcher：PR 差分、main 全量、build-once/promote-many，以及 Release 与 Deploy 解耦。_
 
 ---
 

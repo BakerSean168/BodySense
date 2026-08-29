@@ -1,0 +1,12 @@
+[Unit]
+Description=Poll BodySense staging candidate channel
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+RandomizedDelaySec=20s
+Persistent=true
+Unit=bodysense-staging-deploy-watch.service
+
+[Install]
+WantedBy=timers.target

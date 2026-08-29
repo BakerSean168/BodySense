@@ -36,3 +36,12 @@ COPY deploy/systemd/bodysense-capacity-status.service /runtime/deploy/systemd/bo
 COPY deploy/systemd/bodysense-capacity-status.timer /runtime/deploy/systemd/bodysense-capacity-status.timer
 COPY deploy/systemd/bodysense-capacity-cleanup.service /runtime/deploy/systemd/bodysense-capacity-cleanup.service
 COPY deploy/systemd/bodysense-capacity-cleanup.timer /runtime/deploy/systemd/bodysense-capacity-cleanup.timer
+
+# Canonical GCP staging is also driven from the exact-SHA runtime artifact. The
+# host-only staging secret env is intentionally NOT included here.
+COPY docker/docker-compose.staging.yml /runtime/staging/docker/docker-compose.staging.yml
+COPY docker/litellm/config.staging.yaml /runtime/staging/docker/litellm/config.staging.yaml
+COPY scripts/staging-deploy-watch.sh /runtime/staging/scripts/staging-deploy-watch.sh
+COPY scripts/install-staging-deploy-watch.sh /runtime/staging/scripts/install-staging-deploy-watch.sh
+COPY deploy/systemd/bodysense-staging-deploy-watch.service /runtime/staging/deploy/systemd/bodysense-staging-deploy-watch.service
+COPY deploy/systemd/bodysense-staging-deploy-watch.timer /runtime/staging/deploy/systemd/bodysense-staging-deploy-watch.timer

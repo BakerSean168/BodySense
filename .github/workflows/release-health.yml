@@ -1,0 +1,65 @@
+name: Release Health
+
+on:
+  schedule:
+    - cron: '47 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+  actions: read
+
+jobs:
+  audit:
+    name: Release backlog and delivery lag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summarize release health without blocking product CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          latest="$(gh api "repos/${REPOSITORY}/releases?per_page=100" --jq '[.[] | select(.draft == false and .prerelease == false)][0]')"
+          if [[ -z "$latest" || "$latest" == null ]]; then
+            echo 'No published release exists yet.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          tag="$(jq -r .tag_name <<<"$latest")"
+          published_at="$(jq -r '.published_at // .created_at' <<<"$latest")"
+          tag_sha="$(gh api "repos/${REPOSITORY}/git/ref/tags/${tag}" --jq .object.sha)"
+          tag_type="$(gh api "repos/${REPOSITORY}/git/ref/tags/${tag}" --jq .object.type)"
+          if [[ "$tag_type" == tag ]]; then
+            tag_sha="$(gh api "repos/${REPOSITORY}/git/tags/${tag_sha}" --jq .object.sha)"
+          fi
+          main_sha="$(gh api "repos/${REPOSITORY}/git/ref/heads/main" --jq .object.sha)"
+          compare="$(gh api "repos/${REPOSITORY}/compare/${tag_sha}...${main_sha}")"
+          ahead="$(jq -r .ahead_by <<<"$compare")"
+          pending="$(gh api "repos/${REPOSITORY}/pulls?state=open&base=main&per_page=100" --jq '[.[] | select(.head.ref | startswith("release-please--branches--main--components--"))]')"
+          pending_count="$(jq length <<<"$pending")"
+          now_epoch="$(date -u +%s)"
+          published_epoch="$(date -u -d "$published_at" +%s)"
+          age_days=$(( (now_epoch - published_epoch) / 86400 ))
+          pending_age_days=0
+          if (( pending_count > 0 )); then
+            oldest="$(jq -r 'map(.created_at) | min' <<<"$pending")"
+            oldest_epoch="$(date -u -d "$oldest" +%s)"
+            pending_age_days=$(( (now_epoch - oldest_epoch) / 86400 ))
+          fi
+          {
+            echo '### Release health'
+            echo ''
+            echo "| Metric | Value |"
+            echo "| --- | ---: |"
+            echo "| Latest published release | $tag |"
+            echo "| Release age (days) | $age_days |"
+            echo "| Commits on main since release | $ahead |"
+            echo "| Pending Prepare Release PRs | $pending_count |"
+            echo "| Oldest pending release PR (days) | $pending_age_days |"
+            echo "| Current main revision | $main_sha |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if (( age_days > 14 || ahead > 150 || pending_age_days > 14 )); then
+            echo "::warning::Release backlog above soft threshold: age=${age_days}d commits=${ahead} pendingAge=${pending_age_days}d"
+          fi

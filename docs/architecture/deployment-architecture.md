@@ -1,6 +1,6 @@
 # BodySense deployment architecture
 
-> Current deployment architecture, 2026-08-28.
+> Current deployment architecture, 2026-08-29. Delivery Platform V3 is governed by ADR 0008.
 
 ## Environment roles
 
@@ -22,7 +22,7 @@ GCP uses the canonical project block `20100-20199` from `my-infrastructure/proje
 | staging    | production-shaped Docker Compose    | only Web/nginx ingress `127.0.0.1:20150`                                                 | persistent              |
 | production | Alibaba ECS Docker Compose          | public `80/443` through Caddy                                                            | persistent              |
 
-`./scripts/dev-runtime.sh` owns direct-dev startup order: infrastructure health -> Go API migration/schema bootstrap -> Python AI health -> Vite Web. `./scripts/staging-runtime.sh` owns the persistent `bodysense-staging` Compose project. Development, staging, CI and steady-state production use PostgreSQL 18. Historical production schema upgrades are exercised by a PG18 production-baseline scenario rather than by retaining compatibility with the PostgreSQL 16 engine.
+`./scripts/dev-runtime.sh` owns direct-dev startup order: infrastructure health -> Go API migration/schema bootstrap -> Python AI health -> Vite Web. Canonical staging is the persistent `bodysense-staging` Compose project driven by the exact-SHA `staging-latest` artifact channel and `scripts/staging-deploy-watch.sh`; `./scripts/staging-runtime.sh` remains an explicitly non-canonical source-build diagnostic/emergency path. Development, staging, CI and steady-state production use PostgreSQL 18. Historical production schema upgrades are exercised by a PG18 production-baseline scenario rather than by retaining compatibility with the PostgreSQL 16 engine.
 
 GCP application host ports bind loopback. Human remote access is provided by Tailscale Serve/TLS; database, Redis, LiteLLM and AI internal staging ports are not exposed directly.
 
@@ -49,47 +49,73 @@ When `STATIC_ASSET_CDN_BASE` is not configured, the Web image keeps same-origin 
 ## Production delivery flow
 
 ```text
-feature branch
-    -> PR
-    -> CI
-       - repository quality gate
-       - migration history immutability
-       - PostgreSQL 18 current-history + production-baseline validation
-       - browser longitudinal E2E
+short-lived feature/fix/refactor branch
+    -> PR to main
+    -> delivery manifest computes one scope/risk policy
+    -> affected PR validation + stable Oracles
     -> merge main
-    -> full main CI must finish successfully
-    -> release-please
-    -> release PR + CI
-    -> vX.Y.Z tag / GitHub Release
-    -> Build & Publish Production Images
-       - build Web/API/AI/runtime artifacts in parallel
-       - push immutable vX.Y.Z images
-       - only after all four succeed: promote all to prod-latest
+    -> exhaustive exact-SHA main CI
+    -> Publish Main Candidate
+       - publish/verify revision-scoped CDN bytes
+       - build Web/API/AI/runtime exactly once as sha-<revision>
+       - emit candidate-set manifest with image digests
+       - promote current main candidate to staging-latest
+    -> GCP staging watcher
+       - require identical Web/API/AI/runtime OCI revisions
+       - deploy production-shaped staging + health gate
+       - record exact staging revision
+
+explicit product release milestone
+    -> Prepare Release (manual)
+    -> Release PR -> main
+    -> exhaustive exact-SHA main CI
+    -> exact-SHA main candidate
+    -> Release Publish
+       - verify Release PR merge contract + candidate/source CI provenance
+       - Draft Release + immutable vX.Y.Z Git tag
+       - retag/promote the existing candidate digests (no source rebuild)
+       - attach canonical release-manifest.json
+       - publish GitHub Release only after postflight
+
+explicit production rollout
+    -> Deploy Production(release=vX.Y.Z)
+       - require Published Release + canonical release manifest
+       - verify tag/main/exact-CI/image digest provenance
+       - promote the four release digests to prod-latest
     -> Alibaba Cloud systemd deploy watcher
-       - pull the three prod-latest pointers
        - require identical OCI revision labels across Web/API/AI/runtime
        - extract runtime files from the coherent ACR runtime image
        - validate Compose against production secrets
        - back up PostgreSQL
-       - for the one-time production transition, discard the legacy database and start a fresh PG18 volume before application migrations
-       - deploy AI -> API -> Web with health gates
-       - commit the PG18 database boundary before re-exposing Caddy
+       - run deploy preflight/migration safety gates
+       - deploy application services with health gates
        - verify public HTTPS health
+       - roll back only when the database contract permits it
 ```
 
-The critical invariant is:
+The critical invariants are:
 
-> `prod-latest` is only a movable pointer. A deployment is eligible only when Web, API, AI Service and the runtime bundle all point to artifacts built from the same immutable Git revision.
+> PR validation may be selective; every `main` push is exhaustive.
+>
+> A release reuses the exact candidate digests already built from the successful main revision; Release Publish does not rebuild source.
+>
+> A Published Release does not imply production deployment. Only `Deploy Production` may move `prod-latest`.
+>
+> `prod-latest` is a mutable selector, never an identity. The host deploys only after Web, API, AI Service and runtime converge on one immutable Git revision.
 
-This prevents a polling deployer from serving a mixed release while ACR promotion is still in progress.
+Registry tag writes are not transactional, so both staging and production watchers deliberately treat any temporary mixed pointer set as ineligible rather than serving a partial release.
 
 ## CI
 
-`.github/workflows/ci.yml` runs for pushes and pull requests to `main` / `dev`.
+`.github/workflows/ci.yml` runs for pushes and pull requests to the single long-lived trunk, `main`. Short-lived feature/fix/refactor branches are validated through PRs targeting `main`; staging is an artifact/runtime channel rather than a permanent Git branch. Delivery Platform V3 target semantics are defined in [`delivery-platform-v3.md`](./delivery-platform-v3.md).
 
-### Repository quality gate
+### Affected PR / exhaustive main policy
 
-The same `scripts/validate-repo.sh` entrypoint is used locally and in CI. It covers lint, typecheck, Go/Python/Web tests, Agent qualification/promotion evals, LiteLLM smoke and production builds.
+`.github/workflows/ci.yml` generates one versioned `bodysense.delivery-manifest/v1` per run. Pull requests execute manifest-selected quality/database/experience children; changes to root/toolchain/CI/Docker/release/runtime coordinates fail safe to the full policy. Every push to `main` forces `full=true` regardless of the diff.
+
+The same `scripts/validate-repo.sh` entrypoint remains the exhaustive repository gate used locally and by the full-main quality child. It covers lint, typecheck, Go/Python/Web tests, Agent qualification/promotion evals, LiteLLM smoke and production builds.
+
+Branch protection consumes stable `Governance Oracle`, `Quality Oracle`, `Database Oracle`, `Experience Oracle`, `Delivery Observation`, and `commit-lint` contexts. Dynamic children may be skipped only when the manifest says they are unaffected; an expected-but-missing/skipped/cancelled child fails closed.
 
 Third-party GitHub Actions are pinned to immutable commit SHAs rather than movable major-version tags. `.github/dependabot.yml` tracks the `github-actions` ecosystem weekly so upgrades arrive as reviewable PRs instead of silently changing the CI/CD execution environment.
 
@@ -116,43 +142,51 @@ This baseline exists because production was found at migration 29 while migratio
 
 ## Repository governance
 
-`main` is intended to be protected by required PR flow and the five CI checks (`Repository quality gate`, both PostgreSQL migration jobs, Browser E2E and `commit-lint`), with administrator bypass disabled. The `production` GitHub Environment is restricted to `main` and `v*` refs and stores the ACR credential set as environment secrets. `.github/workflows/repository-governance.yml` is the idempotent admin workflow that applies these repository settings using the existing `BODYSENSE_WORKFLOW` PAT without exposing its value.
+`main` is protected by required PR flow plus stable Delivery Platform contexts (`Governance Oracle`, `Quality Oracle`, `Database Oracle`, `Experience Oracle`, `Delivery Observation`, `commit-lint`), with administrator bypass disabled. Force pushes and branch deletion remain disabled.
+
+GitHub environments separate artifact publication from production authority:
+
+- `artifact-publish` is restricted to protected branches and owns ACR/R2 publication credentials used for exact-SHA candidates and immutable release retags;
+- `production` is restricted to allowed production refs and owns production-selection credentials/history.
+
+`.github/workflows/repository-governance.yml` is the idempotent admin workflow that reconciles these policies using `BODYSENSE_WORKFLOW` without exposing its value.
 
 ## Release management
 
-`release-please` owns application versions and GitHub releases. It is triggered only by a successful completed `CI` run for `main`, and it first verifies that the tested revision is still the current `main` HEAD. Conventional commits update the release PR; merging that PR causes another full main CI run, and only after that run succeeds can release-please create the `vX.Y.Z` tag and GitHub Release.
+BodySense uses Release Lifecycle V3. `.github/workflows/release-please.yml` is the manually triggered **Prepare Release** step only; `release-please-config.json` has `skip-github-release=true`, so preparing a version never creates a tag or Published Release.
 
-`.github/workflows/docker-deploy.yml` consumes the release tag. Before any ACR login/build, it verifies that the exact tagged revision is reachable from `main` and has a completed successful `CI` push run. Manual production promotion is restricted to `main`.
+After the Release PR merges, the merge SHA must complete exhaustive main CI and `Publish Main Candidate`. `.github/workflows/release-publish.yml` then detects the release-shaped merge, verifies the exact candidate/source-CI provenance, creates/resumes a Draft Release, promotes the existing candidate digests to immutable `vX.Y.Z` identities without rebuilding source, attaches `release-manifest.json`, and publishes only after postflight succeeds.
 
-### Immutable build first
+`.github/workflows/deploy-production.yml` is the separate explicit production selector. It accepts an already Published `vX.Y.Z`, validates the canonical manifest/tag/main/exact-CI/image-digest contract, and only then moves all four `prod-latest` pointers. The Alibaba host watcher remains the only component that mutates the production runtime.
 
-Web, API, AI Service and a small runtime configuration bundle are built in parallel as Linux/amd64-compatible OCI images and pushed only with the immutable release tag first:
+The former `.github/workflows/docker-deploy.yml` is retained temporarily as a manual non-release build fallback during V3 rollout. It cannot trigger from `v*` tags and cannot move `prod-latest`; it is removed after V3 runtime evidence is complete.
 
-```text
-bodysense-web:vX.Y.Z
-bodysense-api:vX.Y.Z
-bodysense-ai-service:vX.Y.Z
-bodysense-runtime:vX.Y.Z
-```
+### Immutable candidate first
 
-The runtime image contains only tracked non-secret production runtime files (`.env.production`, Compose, Caddy, LiteLLM config, the deploy watcher, the off-host backup/restore scripts and the off-host systemd units). Secrets remain on the production host and are never embedded in the image.
-
-Each image records `org.opencontainers.image.revision=<git SHA>`.
-
-ACR does not accept the Buildx provenance manifest class used by default, so the workflow explicitly uses `provenance: false`.
-
-### Promotion second
-
-The promotion job is attached to the GitHub `production` Environment, which gives production pointer changes a dedicated deployment history and a place for repository-admin protection rules. Only after all three immutable builds succeed does the promotion job move:
+Web, API, AI Service and the runtime configuration bundle are built exactly once for each successful main revision that reaches the candidate plane:
 
 ```text
-bodysense-web:prod-latest
-bodysense-api:prod-latest
-bodysense-ai-service:prod-latest
-bodysense-runtime:prod-latest
+bodysense-web:sha-<git-revision>
+bodysense-api:sha-<git-revision>
+bodysense-ai-service:sha-<git-revision>
+bodysense-runtime:sha-<git-revision>
 ```
 
-to the new immutable artifacts. If one build fails, **none** of the production pointers are promoted.
+The runtime image contains tracked non-secret production runtime files plus the canonical staging Compose/watcher bundle. Host secrets remain external and are never embedded in the image. Each image records `org.opencontainers.image.revision=<git SHA>`.
+
+ACR does not accept the Buildx provenance manifest class used by default, so the workflow explicitly uses `provenance: false`; provenance is instead carried by the versioned delivery/candidate/release manifests and GitHub workflow evidence.
+
+### Promote identities, do not rebuild
+
+The same candidate digests move through identities/channels:
+
+```text
+sha-<revision>  -> staging-latest
+sha-<revision>  -> vX.Y.Z
+vX.Y.Z digest   -> prod-latest (only by Deploy Production)
+```
+
+`candidate-set-v1.json` binds the exact source CI, delivery-manifest digest, migration head, static asset revision and all four image digests. `release-manifest.json` binds the Published Release to those same candidate digests. Any digest/revision mismatch fails closed.
 
 ## Production deploy watcher
 

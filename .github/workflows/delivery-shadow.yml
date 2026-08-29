@@ -1,0 +1,147 @@
+name: Delivery Platform Shadow
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: delivery-shadow-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DELIVERY_MANIFEST_PATH: reports/delivery/delivery-manifest-v1.json
+
+jobs:
+  scope:
+    name: Delivery Scope Shadow
+    runs-on: ubuntu-latest
+    outputs:
+      manifest_digest: ${{ steps.manifest.outputs.manifest_digest }}
+      risk: ${{ steps.manifest.outputs.risk }}
+      lane_governance: ${{ steps.manifest.outputs.lane_governance }}
+      lane_web: ${{ steps.manifest.outputs.lane_web }}
+      lane_api: ${{ steps.manifest.outputs.lane_api }}
+      lane_ai: ${{ steps.manifest.outputs.lane_ai }}
+      lane_contracts: ${{ steps.manifest.outputs.lane_contracts }}
+      lane_database: ${{ steps.manifest.outputs.lane_database }}
+      lane_experience: ${{ steps.manifest.outputs.lane_experience }}
+      lane_full: ${{ steps.manifest.outputs.lane_full }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - id: manifest
+        name: Generate one versioned scope/risk manifest
+        env:
+          DELIVERY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || github.sha }}
+          DELIVERY_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          node scripts/delivery/generate-manifest.mjs
+          --event "${{ github.event_name }}"
+          --ref "${{ github.ref }}"
+          --output "$DELIVERY_MANIFEST_PATH"
+      - name: Validate manifest self-digest and policy contract
+        run: node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: delivery-shadow-manifest
+          path: reports/delivery/delivery-manifest-v1.json
+          if-no-files-found: error
+          retention-days: 14
+
+  policy-contract:
+    name: Delivery Policy Contract Shadow
+    needs: scope
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: delivery-shadow-manifest
+          path: reports/delivery
+      - run: node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
+      - name: Run detector, digest and fail-closed Oracle fixtures
+        run: node --test scripts/delivery/*.test.mjs
+      - name: Summarize selected shadow policy
+        env:
+          RISK: ${{ needs.scope.outputs.risk }}
+          MANIFEST_DIGEST: ${{ needs.scope.outputs.manifest_digest }}
+          LANE_WEB: ${{ needs.scope.outputs.lane_web }}
+          LANE_API: ${{ needs.scope.outputs.lane_api }}
+          LANE_AI: ${{ needs.scope.outputs.lane_ai }}
+          LANE_CONTRACTS: ${{ needs.scope.outputs.lane_contracts }}
+          LANE_DATABASE: ${{ needs.scope.outputs.lane_database }}
+          LANE_EXPERIENCE: ${{ needs.scope.outputs.lane_experience }}
+          LANE_FULL: ${{ needs.scope.outputs.lane_full }}
+        run: |
+          {
+            echo '### Delivery Platform V3 shadow policy'
+            echo ''
+            printf '%s\n' "- Risk: \`$RISK\`"
+            printf '%s\n' "- Manifest: \`$MANIFEST_DIGEST\`"
+            printf '%s\n' "- Web: \`$LANE_WEB\`"
+            printf '%s\n' "- API: \`$LANE_API\`"
+            printf '%s\n' "- AI: \`$LANE_AI\`"
+            printf '%s\n' "- Contracts: \`$LANE_CONTRACTS\`"
+            printf '%s\n' "- Database: \`$LANE_DATABASE\`"
+            printf '%s\n' "- Experience: \`$LANE_EXPERIENCE\`"
+            printf '%s\n' "- Full: \`$LANE_FULL\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  policy-oracle:
+    name: Delivery Policy Oracle Shadow
+    needs: [scope, policy-contract]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Fail closed when detector or policy contract is missing/failed
+        env:
+          ORACLE_INPUT: >-
+            {"detector":"${{ needs.scope.result }}","enabled":{"policy-contract":true},"children":{"policy-contract":"${{ needs.policy-contract.result }}"}}
+        run: node scripts/delivery/oracle.mjs
+
+  observation:
+    name: Delivery Observation Shadow
+    needs: [scope, policy-contract, policy-oracle]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: delivery-shadow-manifest
+          path: reports/delivery
+      - name: Materialize shadow lane/oracle outcomes
+        run: |
+          mkdir -p reports/delivery
+          cat > reports/delivery/lane-results.json <<'JSON'
+          {
+            "scope": "${{ needs.scope.result }}",
+            "policy-contract": "${{ needs.policy-contract.result }}"
+          }
+          JSON
+          cat > reports/delivery/oracle-results.json <<'JSON'
+          {
+            "policy": "${{ needs.policy-oracle.result }}"
+          }
+          JSON
+      - name: Build versioned delivery summary
+        run: >-
+          node scripts/delivery/observe-run.mjs
+          --manifest "$DELIVERY_MANIFEST_PATH"
+          --lanes reports/delivery/lane-results.json
+          --oracles reports/delivery/oracle-results.json
+          --output reports/delivery/delivery-run-summary-v1.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: delivery-shadow-summary-${{ github.run_id }}
+          path: reports/delivery/delivery-run-summary-v1.json
+          if-no-files-found: error
+          retention-days: 30

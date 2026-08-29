@@ -43,7 +43,8 @@
     "static:manifest": "node scripts/static-assets/manifest.mjs",
     "static:publish:web": "node scripts/static-assets/publish-web-r2.mjs",
     "static:publish:atlas": "node scripts/static-assets/publish-atlas-r2.mjs",
-    "test:static-assets": "node --test scripts/static-assets/*.test.mjs"
+    "test:static-assets": "node --test scripts/static-assets/*.test.mjs",
+    "test:delivery": "node --test scripts/delivery/*.test.mjs"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.1118.0",

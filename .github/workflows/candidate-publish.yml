@@ -1,0 +1,429 @@
+name: Publish Main Candidate
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: main-candidate-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  ATLAS_VERSION: '1.4.0'
+
+jobs:
+  resolve:
+    name: Resolve exact-SHA main candidate
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    outputs:
+      revision: ${{ steps.meta.outputs.revision }}
+      candidate_tag: ${{ steps.meta.outputs.candidate_tag }}
+      ci_run_id: ${{ steps.meta.outputs.ci_run_id }}
+      migration_head: ${{ steps.meta.outputs.migration_head }}
+      is_current_main: ${{ steps.meta.outputs.is_current_main }}
+      build_date: ${{ steps.meta.outputs.build_date }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+      - id: meta
+        name: Bind candidate to the successful CI revision
+        env:
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+          CI_RUN_ID: ${{ github.event.workflow_run.id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          revision="$(git rev-parse HEAD)"
+          [[ "$revision" == "$TESTED_SHA" ]] || { echo "checkout revision mismatch: $revision != $TESTED_SHA" >&2; exit 1; }
+          [[ "$revision" =~ ^[0-9a-f]{40}$ ]] || { echo 'candidate requires a full Git SHA' >&2; exit 1; }
+          candidate_tag="sha-${revision}"
+          migration_head="$(find apps/api/migrations -maxdepth 1 -type f -name '*.up.sql' -printf '%f\n' | sed -n 's/^0*\([0-9][0-9]*\)_.*/\1/p' | sort -n | tail -1)"
+          [[ "$migration_head" =~ ^[0-9]+$ ]] || { echo 'unable to resolve migration head' >&2; exit 1; }
+          git fetch --quiet origin main
+          current_main="$(git rev-parse origin/main)"
+          is_current_main=false
+          [[ "$current_main" == "$revision" ]] && is_current_main=true
+          {
+            echo "revision=$revision"
+            echo "candidate_tag=$candidate_tag"
+            echo "ci_run_id=$CI_RUN_ID"
+            echo "migration_head=$migration_head"
+            echo "is_current_main=$is_current_main"
+            echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo '### Exact-SHA main candidate'
+            echo ''
+            echo "- Revision: \`$revision\`"
+            echo "- Candidate tag: \`$candidate_tag\`"
+            echo "- Source CI run: \`$CI_RUN_ID\`"
+            echo "- Current main HEAD: \`$is_current_main\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  static-assets:
+    name: Publish candidate immutable public assets
+    needs: resolve
+    runs-on: ubuntu-latest
+    environment:
+      name: artifact-publish
+    outputs:
+      asset_base: ${{ steps.config.outputs.asset_base }}
+      atlas_catalog_url: ${{ steps.config.outputs.atlas_catalog_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.resolve.outputs.revision }}
+      - id: config
+        name: Resolve revision-scoped CDN identity
+        env:
+          STATIC_ASSET_CDN_BASE: ${{ vars.STATIC_ASSET_CDN_BASE }}
+          REVISION: ${{ needs.resolve.outputs.revision }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="${STATIC_ASSET_CDN_BASE%/}"
+          [[ "$root" == https://* ]] || { echo 'artifact-publish STATIC_ASSET_CDN_BASE must use https://' >&2; exit 1; }
+          {
+            echo "asset_base=${root}/web/${REVISION}/"
+            echo "atlas_catalog_url=${root}/anatomy/vanatome/${ATLAS_VERSION}/releases/${ATLAS_VERSION}/catalog.json"
+          } >> "$GITHUB_OUTPUT"
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Acquire and publish pinned anatomy atlas
+        env:
+          STATIC_ASSET_CDN_BASE: ${{ vars.STATIC_ASSET_CDN_BASE }}
+          R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/vanatome-${ATLAS_VERSION}"
+          node scripts/anatomy/sync.mjs --version "$ATLAS_VERSION" --output "$root"
+          node scripts/anatomy/verify.mjs --version "$ATLAS_VERSION" --root "$root"
+          node scripts/static-assets/publish-atlas-r2.mjs \
+            --version "$ATLAS_VERSION" \
+            --root "$root" \
+            --public-base "$STATIC_ASSET_CDN_BASE"
+      - name: Build and publish revision-scoped Vite assets
+        env:
+          REVISION: ${{ needs.resolve.outputs.revision }}
+          VITE_ASSET_BASE: ${{ steps.config.outputs.asset_base }}
+          VITE_BODYSENSE_ANATOMY_CATALOG_URL: ${{ steps.config.outputs.atlas_catalog_url }}
+          STATIC_ASSET_CDN_BASE: ${{ vars.STATIC_ASSET_CDN_BASE }}
+          R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+        run: |
+          set -euo pipefail
+          rm -rf apps/web/dist
+          pnpm --dir apps/web exec vite build
+          node scripts/static-assets/manifest.mjs \
+            --dist apps/web/dist \
+            --revision "$REVISION" \
+            --base-url "$VITE_ASSET_BASE"
+          node scripts/static-assets/publish-web-r2.mjs \
+            --dist apps/web/dist \
+            --public-base "$STATIC_ASSET_CDN_BASE"
+
+  build:
+    name: Build candidate ${{ matrix.component }}
+    needs: [resolve, static-assets]
+    runs-on: ubuntu-latest
+    environment:
+      name: artifact-publish
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: web
+            image: bodysense-web
+            context: .
+            dockerfile: docker/Dockerfile.web
+            cache_scope: candidate-web
+          - component: api
+            image: bodysense-api
+            context: apps/api
+            dockerfile: apps/api/Dockerfile
+            cache_scope: candidate-api
+          - component: aiService
+            image: bodysense-ai-service
+            context: apps/ai-service
+            dockerfile: apps/ai-service/Dockerfile
+            cache_scope: candidate-ai-service
+          - component: runtime
+            image: bodysense-runtime
+            context: .
+            dockerfile: docker/Dockerfile.runtime
+            cache_scope: candidate-runtime
+    env:
+      REGISTRY: ${{ vars.ACR_REGISTRY }}
+      NAMESPACE: ${{ vars.ACR_NAMESPACE }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.resolve.outputs.revision }}
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
+      - name: Login to Alibaba Cloud ACR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      - id: existing
+        name: Reuse an already-published immutable candidate on workflow rerun
+        env:
+          IMAGE: ${{ matrix.image }}
+          TAG: ${{ needs.resolve.outputs.candidate_tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref="${REGISTRY}/${NAMESPACE}/${IMAGE}:${TAG}"
+          if inspection="$(docker buildx imagetools inspect "$ref" 2>/dev/null)"; then
+            digest="$(awk '$1 == "Digest:" { print $2; exit }' <<<"$inspection")"
+            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "unable to resolve existing immutable digest for $ref" >&2; exit 1; }
+            echo 'exists=true' >> "$GITHUB_OUTPUT"
+            echo "digest=$digest" >> "$GITHUB_OUTPUT"
+            echo "Reusing existing immutable candidate $ref@$digest" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'exists=false' >> "$GITHUB_OUTPUT"
+          fi
+      - id: build
+        if: steps.existing.outputs.exists != 'true'
+        name: Build and push exact-SHA candidate image once
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.image }}:${{ needs.resolve.outputs.candidate_tag }}
+          build-args: |
+            BUILD_DATE=${{ needs.resolve.outputs.build_date }}
+            VCS_REF=${{ needs.resolve.outputs.revision }}
+            VERSION=${{ needs.resolve.outputs.candidate_tag }}
+            VITE_ASSET_BASE=${{ needs.static-assets.outputs.asset_base }}
+            VITE_BODYSENSE_ANATOMY_CATALOG_URL=${{ needs.static-assets.outputs.atlas_catalog_url }}
+          cache-from: type=gha,scope=${{ matrix.cache_scope }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.cache_scope }}
+      - id: identity
+        name: Verify immutable candidate digest and OCI revision label
+        env:
+          IMAGE: ${{ matrix.image }}
+          TAG: ${{ needs.resolve.outputs.candidate_tag }}
+          EXPECTED_REVISION: ${{ needs.resolve.outputs.revision }}
+          EXISTING_DIGEST: ${{ steps.existing.outputs.digest }}
+          BUILD_DIGEST: ${{ steps.build.outputs.digest }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref="${REGISTRY}/${NAMESPACE}/${IMAGE}:${TAG}"
+          expected_digest="${EXISTING_DIGEST:-$BUILD_DIGEST}"
+          [[ "$expected_digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "candidate digest missing for $ref" >&2; exit 1; }
+          docker pull "$ref" >/dev/null
+          actual_revision="$(docker image inspect "$ref" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')"
+          actual_repo_digest="$(docker image inspect "$ref" --format '{{index .RepoDigests 0}}')"
+          actual_digest="${actual_repo_digest#*@}"
+          [[ "$actual_revision" == "$EXPECTED_REVISION" ]] || { echo "revision label mismatch: $actual_revision != $EXPECTED_REVISION" >&2; exit 1; }
+          [[ "$actual_digest" == "$expected_digest" ]] || { echo "immutable candidate digest mismatch: $actual_digest != $expected_digest" >&2; exit 1; }
+          echo "digest=$expected_digest" >> "$GITHUB_OUTPUT"
+      - name: Record component evidence
+        env:
+          COMPONENT: ${{ matrix.component }}
+          IMAGE: ${{ matrix.image }}
+          TAG: ${{ needs.resolve.outputs.candidate_tag }}
+          REVISION: ${{ needs.resolve.outputs.revision }}
+          DIGEST: ${{ steps.identity.outputs.digest }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports/candidate/components
+          jq -n \
+            --arg component "$COMPONENT" \
+            --arg repository "${REGISTRY}/${NAMESPACE}/${IMAGE}" \
+            --arg tag "$TAG" \
+            --arg digest "$DIGEST" \
+            --arg revision "$REVISION" \
+            '{component:$component,repository:$repository,tag:$tag,digest:$digest,revision:$revision}' \
+            > "reports/candidate/components/${COMPONENT}.json"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: candidate-component-${{ matrix.component }}
+          path: reports/candidate/components/${{ matrix.component }}.json
+          if-no-files-found: error
+          retention-days: 90
+
+  verify-static-coherence:
+    name: Verify candidate Web image ↔ CDN
+    needs: [resolve, static-assets, build]
+    runs-on: ubuntu-latest
+    environment:
+      name: artifact-publish
+    env:
+      REGISTRY: ${{ vars.ACR_REGISTRY }}
+      NAMESPACE: ${{ vars.ACR_NAMESPACE }}
+      TAG: ${{ needs.resolve.outputs.candidate_tag }}
+      ASSET_BASE: ${{ needs.static-assets.outputs.asset_base }}
+    steps:
+      - name: Login to Alibaba Cloud ACR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      - name: Verify every image asset exists at the exact revision CDN prefix
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="${REGISTRY}/${NAMESPACE}/bodysense-web:${TAG}"
+          docker pull "$image" >/dev/null
+          container="$(docker create "$image")"
+          trap 'docker rm -f "$container" >/dev/null 2>&1 || true; rm -rf "$RUNNER_TEMP/bodysense-web-root"' EXIT
+          mkdir -p "$RUNNER_TEMP/bodysense-web-root"
+          docker cp "$container:/usr/share/nginx/html/." "$RUNNER_TEMP/bodysense-web-root/"
+          grep -Fq "$ASSET_BASE" "$RUNNER_TEMP/bodysense-web-root/index.html" || {
+            echo "candidate Web image does not reference expected CDN base: $ASSET_BASE" >&2
+            exit 1
+          }
+          failures=0
+          while IFS= read -r -d '' file; do
+            relative="${file#"$RUNNER_TEMP/bodysense-web-root/"}"
+            curl --fail --silent --show-error --head --location "${ASSET_BASE}${relative}" >/dev/null || failures=$((failures + 1))
+          done < <(find "$RUNNER_TEMP/bodysense-web-root/assets" -type f -print0)
+          (( failures == 0 )) || { echo "$failures candidate CDN assets are missing" >&2; exit 1; }
+
+  candidate-manifest:
+    name: Build canonical candidate manifest
+    needs: [resolve, static-assets, build, verify-static-coherence]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.resolve.outputs.revision }}
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: delivery-manifest-v1
+          path: reports/candidate/source-ci
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ needs.resolve.outputs.ci_run_id }}
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: candidate-component-*
+          path: reports/candidate/components
+          merge-multiple: true
+      - name: Create candidate-set input
+        env:
+          REVISION: ${{ needs.resolve.outputs.revision }}
+          CI_RUN_ID: ${{ needs.resolve.outputs.ci_run_id }}
+          MIGRATION_HEAD: ${{ needs.resolve.outputs.migration_head }}
+          ASSET_BASE: ${{ needs.static-assets.outputs.asset_base }}
+          ATLAS_CATALOG_URL: ${{ needs.static-assets.outputs.atlas_catalog_url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_manifest="reports/candidate/source-ci/delivery-manifest-v1.json"
+          node scripts/delivery/validate-manifest.mjs "$source_manifest"
+          delivery_digest="$(jq -r .digest "$source_manifest")"
+          jq -n \
+            --arg gitSha "$REVISION" \
+            --arg ciRunId "$CI_RUN_ID" \
+            --arg deliveryManifestDigest "$delivery_digest" \
+            --argjson migrationHead "$MIGRATION_HEAD" \
+            --argjson web "$(cat reports/candidate/components/web.json)" \
+            --argjson api "$(cat reports/candidate/components/api.json)" \
+            --argjson aiService "$(cat reports/candidate/components/aiService.json)" \
+            --argjson runtime "$(cat reports/candidate/components/runtime.json)" \
+            --arg assetBase "$ASSET_BASE" \
+            --arg atlasCatalogUrl "$ATLAS_CATALOG_URL" \
+            --arg atlasVersion "$ATLAS_VERSION" \
+            '{gitSha:$gitSha,ciRunId:$ciRunId,deliveryManifestDigest:$deliveryManifestDigest,migrationHead:$migrationHead,images:{web:$web,api:$api,aiService:$aiService,runtime:$runtime},staticAssets:{enabled:true,revision:$gitSha,assetBase:$assetBase,atlasCatalogUrl:$atlasCatalogUrl,atlasVersion:$atlasVersion}}' \
+            > reports/candidate/candidate-input.json
+          node scripts/delivery/candidate-manifest.mjs \
+            --input reports/candidate/candidate-input.json \
+            --output reports/candidate/candidate-set-v1.json
+          node scripts/delivery/candidate-manifest.mjs --validate reports/candidate/candidate-set-v1.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: candidate-set-${{ needs.resolve.outputs.revision }}
+          path: reports/candidate/candidate-set-v1.json
+          if-no-files-found: error
+          retention-days: 90
+
+  promote-staging:
+    name: Promote coherent staging channel
+    needs: [resolve, candidate-manifest]
+    if: needs.resolve.outputs.is_current_main == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: artifact-publish
+      url: https://gcp-dev-01.taile92a8e.ts.net:20150/
+    env:
+      REGISTRY: ${{ vars.ACR_REGISTRY }}
+      NAMESPACE: ${{ vars.ACR_NAMESPACE }}
+      TAG: ${{ needs.resolve.outputs.candidate_tag }}
+      REVISION: ${{ needs.resolve.outputs.revision }}
+    steps:
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
+      - name: Login to Alibaba Cloud ACR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      - id: freshness
+        name: Recheck main HEAD immediately before staging mutation
+        env:
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          current_main="$(git ls-remote "https://github.com/${REPOSITORY}.git" refs/heads/main | awk '{print $1}')"
+          [[ "$current_main" =~ ^[0-9a-f]{40}$ ]] || { echo 'unable to resolve current main HEAD' >&2; exit 1; }
+          if [[ "$current_main" == "$REVISION" ]]; then
+            echo 'eligible=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'eligible=false' >> "$GITHUB_OUTPUT"
+            echo "Candidate $REVISION is valid but main advanced to $current_main; staging promotion is intentionally skipped." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Promote all exact-SHA artifacts to staging-latest
+        if: steps.freshness.outputs.eligible == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for image in bodysense-runtime bodysense-web bodysense-api bodysense-ai-service; do
+            src="${REGISTRY}/${NAMESPACE}/${image}:${TAG}"
+            dst="${REGISTRY}/${NAMESPACE}/${image}:staging-latest"
+            docker buildx imagetools create --tag "$dst" "$src"
+          done
+      - name: Verify staging channel converged to one revision
+        if: steps.freshness.outputs.eligible == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for image in bodysense-runtime bodysense-web bodysense-api bodysense-ai-service; do
+            ref="${REGISTRY}/${NAMESPACE}/${image}:staging-latest"
+            docker pull "$ref" >/dev/null
+            actual="$(docker image inspect "$ref" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')"
+            [[ "$actual" == "$REVISION" ]] || { echo "$image staging revision mismatch: $actual != $REVISION" >&2; exit 1; }
+          done
+          echo "STAGING_CHANNEL=PASS revision=$REVISION" >> "$GITHUB_STEP_SUMMARY"

@@ -2,17 +2,92 @@ name: CI
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main]
   pull_request:
-    branches: [main, dev]
+    branches: [main]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  actions: read
+
+env:
+  DELIVERY_MANIFEST_PATH: reports/delivery/delivery-manifest-v1.json
+
 jobs:
-  quality:
-    name: Repository quality gate
+  scope:
+    name: Delivery Scope
+    runs-on: ubuntu-latest
+    outputs:
+      manifest_digest: ${{ steps.manifest.outputs.manifest_digest }}
+      risk: ${{ steps.manifest.outputs.risk }}
+      lane_governance: ${{ steps.manifest.outputs.lane_governance }}
+      lane_web: ${{ steps.manifest.outputs.lane_web }}
+      lane_api: ${{ steps.manifest.outputs.lane_api }}
+      lane_ai: ${{ steps.manifest.outputs.lane_ai }}
+      lane_contracts: ${{ steps.manifest.outputs.lane_contracts }}
+      lane_database: ${{ steps.manifest.outputs.lane_database }}
+      lane_experience: ${{ steps.manifest.outputs.lane_experience }}
+      lane_full: ${{ steps.manifest.outputs.lane_full }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+      - id: manifest
+        name: Generate one versioned delivery manifest
+        env:
+          DELIVERY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          DELIVERY_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          node scripts/delivery/generate-manifest.mjs
+          --event "${{ github.event_name }}"
+          --ref "${{ github.ref }}"
+          --output "$DELIVERY_MANIFEST_PATH"
+      - name: Validate manifest self-digest and policy
+        run: node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: delivery-manifest-v1
+          path: reports/delivery/delivery-manifest-v1.json
+          if-no-files-found: error
+          retention-days: 14
+
+  governance-child:
+    name: Governance child
+    needs: scope
+    if: needs.scope.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: delivery-manifest-v1
+          path: reports/delivery
+      - run: node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
+      - name: Validate delivery policy contracts
+        run: node --test scripts/delivery/*.test.mjs
+      - name: Validate repository diff hygiene
+        run: git diff --check
+
+  quality-child:
+    name: Affected quality child
+    needs: scope
+    if: >-
+      needs.scope.result == 'success' &&
+      (needs.scope.outputs.lane_web == 'true' ||
+       needs.scope.outputs.lane_api == 'true' ||
+       needs.scope.outputs.lane_ai == 'true' ||
+       needs.scope.outputs.lane_contracts == 'true' ||
+       needs.scope.outputs.lane_full == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -24,23 +99,79 @@ jobs:
           node-version: 24
           cache: pnpm
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        if: >-
+          needs.scope.outputs.lane_api == 'true' ||
+          needs.scope.outputs.lane_contracts == 'true' ||
+          needs.scope.outputs.lane_full == 'true'
         with:
           go-version: "1.26"
           cache-dependency-path: apps/api/go.sum
       - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        if: >-
+          needs.scope.outputs.lane_ai == 'true' ||
+          needs.scope.outputs.lane_contracts == 'true' ||
+          needs.scope.outputs.lane_full == 'true'
         with:
           version: "0.12"
       - run: pnpm install --frozen-lockfile
-      - name: Sync Python development environment
+      - name: Sync Python environment when selected
+        if: >-
+          needs.scope.outputs.lane_ai == 'true' ||
+          needs.scope.outputs.lane_contracts == 'true' ||
+          needs.scope.outputs.lane_full == 'true'
         working-directory: apps/ai-service
         run: uv sync --frozen --extra dev --extra ocr
-      - name: Run the same release gate used locally
-        run: bash scripts/validate-repo.sh
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: delivery-manifest-v1
+          path: reports/delivery
+      - name: Execute manifest-selected quality lanes
+        run: node scripts/delivery/run-quality.mjs "$DELIVERY_MANIFEST_PATH"
 
-  migrations:
-    name: PostgreSQL 18 current-history replay
+  quality:
+    name: Repository quality gate
+    needs: [scope, governance-child, quality-child]
+    if: always()
     runs-on: ubuntu-latest
-    needs: quality
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Compatibility Oracle for existing protected context
+        env:
+          ORACLE_INPUT: >-
+            {"detector":"${{ needs.scope.result }}","enabled":{"governance":true,"quality":${{ (needs.scope.outputs.lane_web == 'true' || needs.scope.outputs.lane_api == 'true' || needs.scope.outputs.lane_ai == 'true' || needs.scope.outputs.lane_contracts == 'true' || needs.scope.outputs.lane_full == 'true') && 'true' || 'false' }}},"children":{"governance":"${{ needs.governance-child.result }}","quality":"${{ needs.quality-child.result }}"}}
+        run: node scripts/delivery/oracle.mjs
+
+  governance-oracle:
+    name: Governance Oracle
+    needs: [scope, governance-child]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - env:
+          ORACLE_INPUT: >-
+            {"detector":"${{ needs.scope.result }}","enabled":{"governance":true},"children":{"governance":"${{ needs.governance-child.result }}"}}
+        run: node scripts/delivery/oracle.mjs
+
+  quality-oracle:
+    name: Quality Oracle
+    needs: [scope, quality-child]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - env:
+          ORACLE_INPUT: >-
+            {"detector":"${{ needs.scope.result }}","enabled":{"quality":${{ (needs.scope.outputs.lane_web == 'true' || needs.scope.outputs.lane_api == 'true' || needs.scope.outputs.lane_ai == 'true' || needs.scope.outputs.lane_contracts == 'true' || needs.scope.outputs.lane_full == 'true') && 'true' || 'false' }}},"children":{"quality":"${{ needs.quality-child.result }}"}}
+        run: node scripts/delivery/oracle.mjs
+
+  migrations-child:
+    name: PostgreSQL 18 current-history child
+    needs: scope
+    if: >-
+      needs.scope.result == 'success' &&
+      (needs.scope.outputs.lane_database == 'true' || needs.scope.outputs.lane_full == 'true')
+    runs-on: ubuntu-latest
     services:
       postgres:
         image: pgvector/pgvector:pg18
@@ -74,10 +205,25 @@ jobs:
           go run ./cmd/domain-validator
           -database-url 'postgres://bodysense:bodysense123@127.0.0.1:5432/bodysense_migration_validator?sslmode=disable'
 
-  production-migrations:
-    name: PostgreSQL 18 production-baseline upgrade
+  migrations:
+    name: PostgreSQL 18 current-history replay
+    needs: [scope, migrations-child]
+    if: always()
     runs-on: ubuntu-latest
-    needs: quality
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - env:
+          ORACLE_INPUT: >-
+            {"detector":"${{ needs.scope.result }}","enabled":{"database-current":${{ (needs.scope.outputs.lane_database == 'true' || needs.scope.outputs.lane_full == 'true') && 'true' || 'false' }}},"children":{"database-current":"${{ needs.migrations-child.result }}"}}
+        run: node scripts/delivery/oracle.mjs
+
+  production-migrations-child:
+    name: PostgreSQL 18 production-baseline child
+    needs: scope
+    if: >-
+      needs.scope.result == 'success' &&
+      (needs.scope.outputs.lane_database == 'true' || needs.scope.outputs.lane_full == 'true')
+    runs-on: ubuntu-latest
     services:
       postgres:
         image: pgvector/pgvector:pg18
@@ -161,12 +307,39 @@ jobs:
           DB_SSLMODE: disable
         run: bash scripts/validate-production-dr.sh
 
-  e2e:
+  production-migrations:
+    name: PostgreSQL 18 production-baseline upgrade
+    needs: [scope, production-migrations-child]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - env:
+          ORACLE_INPUT: >-
+            {"detector":"${{ needs.scope.result }}","enabled":{"database-production":${{ (needs.scope.outputs.lane_database == 'true' || needs.scope.outputs.lane_full == 'true') && 'true' || 'false' }}},"children":{"database-production":"${{ needs.production-migrations-child.result }}"}}
+        run: node scripts/delivery/oracle.mjs
+
+  database-oracle:
+    name: Database Oracle
+    needs: [scope, migrations-child, production-migrations-child]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - env:
+          ORACLE_INPUT: >-
+            {"detector":"${{ needs.scope.result }}","enabled":{"database-current":${{ (needs.scope.outputs.lane_database == 'true' || needs.scope.outputs.lane_full == 'true') && 'true' || 'false' }},"database-production":${{ (needs.scope.outputs.lane_database == 'true' || needs.scope.outputs.lane_full == 'true') && 'true' || 'false' }}},"children":{"database-current":"${{ needs.migrations-child.result }}","database-production":"${{ needs.production-migrations-child.result }}"}}
+        run: node scripts/delivery/oracle.mjs
+
+  e2e-child:
+    name: Browser longitudinal health E2E child
+    needs: scope
+    if: >-
+      needs.scope.result == 'success' &&
+      (needs.scope.outputs.lane_experience == 'true' || needs.scope.outputs.lane_full == 'true')
     env:
       BODYSENSE_E2E_STUB_AI: "1"
-    name: Browser longitudinal health E2E
     runs-on: ubuntu-latest
-    needs: quality
     services:
       postgres:
         image: pgvector/pgvector:pg18
@@ -231,7 +404,7 @@ jobs:
           echo $! > /tmp/bodysense-api.pid
       - name: Wait for API
         run: |
-          for i in {1..60}; do
+          for _ in {1..60}; do
             if curl -fsS http://127.0.0.1:8080/api/health; then exit 0; fi
             sleep 2
           done
@@ -248,7 +421,7 @@ jobs:
           echo $! > /tmp/bodysense-ai.pid
       - name: Wait for AI service
         run: |
-          for i in {1..60}; do
+          for _ in {1..60}; do
             if curl -fsS http://127.0.0.1:18100/health; then exit 0; fi
             sleep 2
           done
@@ -268,11 +441,90 @@ jobs:
           cat /tmp/bodysense-ai.log || true
       - name: Upload Playwright report
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: playwright-report
           path: playwright-report/
           if-no-files-found: ignore
+
+  e2e:
+    name: Browser longitudinal health E2E
+    needs: [scope, e2e-child]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - env:
+          ORACLE_INPUT: >-
+            {"detector":"${{ needs.scope.result }}","enabled":{"experience":${{ (needs.scope.outputs.lane_experience == 'true' || needs.scope.outputs.lane_full == 'true') && 'true' || 'false' }}},"children":{"experience":"${{ needs.e2e-child.result }}"}}
+        run: node scripts/delivery/oracle.mjs
+
+  experience-oracle:
+    name: Experience Oracle
+    needs: [scope, e2e-child]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - env:
+          ORACLE_INPUT: >-
+            {"detector":"${{ needs.scope.result }}","enabled":{"experience":${{ (needs.scope.outputs.lane_experience == 'true' || needs.scope.outputs.lane_full == 'true') && 'true' || 'false' }}},"children":{"experience":"${{ needs.e2e-child.result }}"}}
+        run: node scripts/delivery/oracle.mjs
+
+  delivery-observation:
+    name: Delivery Observation
+    needs:
+      - scope
+      - governance-child
+      - quality-child
+      - migrations-child
+      - production-migrations-child
+      - e2e-child
+      - governance-oracle
+      - quality-oracle
+      - database-oracle
+      - experience-oracle
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: delivery-manifest-v1
+          path: reports/delivery
+      - name: Materialize execution outcomes
+        run: |
+          mkdir -p reports/delivery
+          cat > reports/delivery/lane-results.json <<'JSON'
+          {
+            "governance": "${{ needs.governance-child.result }}",
+            "quality": "${{ needs.quality-child.result }}",
+            "database-current": "${{ needs.migrations-child.result }}",
+            "database-production": "${{ needs.production-migrations-child.result }}",
+            "experience": "${{ needs.e2e-child.result }}"
+          }
+          JSON
+          cat > reports/delivery/oracle-results.json <<'JSON'
+          {
+            "governance": "${{ needs.governance-oracle.result }}",
+            "quality": "${{ needs.quality-oracle.result }}",
+            "database": "${{ needs.database-oracle.result }}",
+            "experience": "${{ needs.experience-oracle.result }}"
+          }
+          JSON
+      - name: Build versioned delivery observation
+        run: >-
+          node scripts/delivery/observe-run.mjs
+          --manifest "$DELIVERY_MANIFEST_PATH"
+          --lanes reports/delivery/lane-results.json
+          --oracles reports/delivery/oracle-results.json
+          --output reports/delivery/delivery-run-summary-v1.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: delivery-run-summary-${{ github.run_id }}
+          path: reports/delivery/delivery-run-summary-v1.json
+          if-no-files-found: error
+          retention-days: 30
 
   commit-lint:
     runs-on: ubuntu-latest

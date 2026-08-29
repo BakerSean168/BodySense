@@ -103,8 +103,12 @@ test("manifest + dry-run publisher keep revision-scoped immutable paths", async 
 test("R2 uploader performs verified idempotent S3 PUT/HEAD operations", async () => {
   const http = await import("node:http");
   const { once } = await import("node:events");
-  const { createR2Client, describeFile, uploadImmutableFiles } =
-    await import("./lib.mjs");
+  const {
+    createR2Client,
+    describeFile,
+    uploadImmutableFiles,
+    uploadJsonObject,
+  } = await import("./lib.mjs");
   const objects = new Map();
   const server = http.createServer(async (request, response) => {
     const key = new URL(request.url, "http://fake-s3.local").pathname;
@@ -171,6 +175,47 @@ test("R2 uploader performs verified idempotent S3 PUT/HEAD operations", async ()
     });
     assert.deepEqual(second, { uploaded: 0, skipped: 1 });
     assert.ok(objects.has(`/bodysense-static/web/${revision}/assets/x.js`));
+
+    await writeFile(path.join(root, "assets", "x.js"), "export const x = 2;\n");
+    const changedFile = await describeFile(root, "assets/x.js");
+    await assert.rejects(
+      () =>
+        uploadImmutableFiles({
+          client,
+          bucket: "bodysense-static",
+          sourceRoot: root,
+          prefix: `web/${revision}`,
+          files: [changedFile],
+          concurrency: 1,
+        }),
+      /immutable object collision/,
+    );
+
+    const manifestKey = `web/${revision}/manifest.json`;
+    const manifest = { revision, files: [file] };
+    const firstManifest = await uploadJsonObject({
+      client,
+      bucket: "bodysense-static",
+      key: manifestKey,
+      value: manifest,
+    });
+    const secondManifest = await uploadJsonObject({
+      client,
+      bucket: "bodysense-static",
+      key: manifestKey,
+      value: manifest,
+    });
+    assert.deepEqual(secondManifest, firstManifest);
+    await assert.rejects(
+      () =>
+        uploadJsonObject({
+          client,
+          bucket: "bodysense-static",
+          key: manifestKey,
+          value: { revision, files: [changedFile] },
+        }),
+      /immutable object collision/,
+    );
     client.destroy();
   } finally {
     server.close();
