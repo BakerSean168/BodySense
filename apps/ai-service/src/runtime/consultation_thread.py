@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 from collections.abc import AsyncIterator
 from typing import Annotated, Any, Literal, TypedDict, cast
 
@@ -48,6 +49,7 @@ logger = logging.getLogger(__name__)
 MAX_CONTEXT_TURNS = 10
 MAX_TOOL_ROUNDS = 6
 STREAM_TAIL_HOLD_CHARS = 320
+_QUESTION_SENTENCE_RE = re.compile(r"(?P<question>[^。！？!?\n]{2,220}[？?])")
 _OPTIONAL_OFFER_PREFIXES = (
     "需要我",
     "要不要我",
@@ -554,34 +556,54 @@ async def enforce_state_acquisition(
     return update
 
 
-def _split_trailing_question(text: str) -> tuple[str, str | None]:
-    """Separate one short final prose question from the answer body.
+def _guard_final_assistant_text(text: str) -> tuple[str, str | None]:
+    """Keep manual-input questions out of assistant prose.
 
-    Consultation questions belong to the HITL interaction protocol. Holding a
-    small streaming tail lets the runtime prevent a model from leaking a final
-    manual-input question into the chat transcript before that policy is
-    enforced.
+    Only the held streaming tail can be rewritten. Optional offer questions are
+    dropped entirely; a real information request is returned so the runtime can
+    synthesize an ``ask_user`` interaction instead. This also catches the common
+    model pattern ``需要进一步确认的信息： ...？ ...`` even when the final byte is a
+    colon rather than a question mark.
     """
     stripped = text.rstrip()
-    if not stripped.endswith(("?", "？")):
+    tail_start = max(0, len(stripped) - STREAM_TAIL_HOLD_CHARS)
+    held_tail = stripped[tail_start:]
+    matches = list(_QUESTION_SENTENCE_RE.finditer(held_tail))
+    if not matches:
         return stripped, None
 
-    boundary = max(stripped.rfind(mark) for mark in ("。", "！", "!", "\n"))
-    question = stripped[boundary + 1 :].strip()
-    if not question or len(question) > STREAM_TAIL_HOLD_CHARS:
+    real_match: re.Match[str] | None = None
+    optional_match: re.Match[str] | None = None
+    for match in matches:
+        compact = match.group("question").lstrip("-*# ").strip()
+        if compact.startswith(_OPTIONAL_OFFER_PREFIXES):
+            optional_match = optional_match or match
+            continue
+        real_match = match
+        break
+
+    chosen = real_match or optional_match
+    if chosen is None:
         return stripped, None
-    body = stripped[: boundary + 1].rstrip()
-    return body, question
 
+    cut_in_tail = chosen.start()
+    prefix = held_tail[:cut_in_tail]
+    for marker in (
+        "需要进一步确认的信息",
+        "还需要确认的信息",
+        "请补充以下信息",
+        "为了更精准",
+        "为了更准确",
+    ):
+        marker_index = prefix.rfind(marker)
+        if marker_index >= 0:
+            cut_in_tail = prefix.rfind("\n", 0, marker_index) + 1
+            break
 
-def _guard_final_assistant_text(text: str) -> tuple[str, str | None]:
-    """Drop optional sales-like questions and route real questions to ask_user."""
-    body, question = _split_trailing_question(text)
-    if question is None:
-        return text.rstrip(), None
-    compact = question.lstrip("-*# ").strip()
-    if compact.startswith(_OPTIONAL_OFFER_PREFIXES):
+    body = stripped[: tail_start + cut_in_tail].rstrip()
+    if real_match is None:
         return body, None
+    question = real_match.group("question").lstrip("-*# ").strip()
     return body, question
 
 

@@ -33,6 +33,20 @@ def test_runtime_guard_routes_real_trailing_question_to_hitl() -> None:
     assert question == "你目前有没有出现明显无力？"
 
 
+def test_runtime_guard_removes_embedded_manual_question_block() -> None:
+    text = (
+        "可以先减少连续久坐。\n\n"
+        "3. **需要进一步确认的信息**：\n"
+        "- 疼痛是否伴随其他症状（如麻木、刺痛、放射痛）？\n"
+        "- 是否有特定动作会加重或缓解疼痛？\n"
+        "为了更精准地分析，我需要您补充以下信息："
+    )
+    guarded, question = _guard_final_assistant_text(text)
+    assert guarded == "可以先减少连续久坐。"
+    assert question == "疼痛是否伴随其他症状（如麻木、刺痛、放射痛）？"
+    assert "是否有特定动作" not in guarded
+
+
 def test_general_knowledge_question_does_not_create_user_state() -> None:
     output = deterministic_intake_fallback("坐骨神经痛是什么？")
     assert output.turn_kind == "general_question"
@@ -75,6 +89,19 @@ def test_intake_candidate_has_stable_capture_id_and_is_unconfirmed() -> None:
     assert first[0]["capture_id"] == second[0]["capture_id"]
     assert len(first[0]["capture_id"]) == 24
     assert first[0]["confirmed"] is False
+
+
+def test_gluteal_pain_without_radiation_still_requests_neurological_screen() -> None:
+    symptom = {
+        "capture_id": "0123456789abcdef01234567",
+        "body_part": "右臀",
+        "symptom_type": "疼痛",
+        "duration": "两周",
+        "trigger": "久坐",
+    }
+    question = build_symptom_intake_question(symptom)
+    assert question is not None
+    assert question["fields"][0]["key"] == "neurological_signs"
 
 
 def test_gap_policy_builds_at_most_three_typed_fields_and_preserves_binding() -> None:

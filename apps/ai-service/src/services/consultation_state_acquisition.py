@@ -87,7 +87,12 @@ def build_symptom_intake_question(symptom: dict[str, Any]) -> dict[str, Any] | N
     has_neurological_context = bool(str(symptom.get("neurological_signs") or "").strip())
     has_radiation = bool(str(symptom.get("radiation") or "").strip())
     neurological_symptom = any(token in symptom_text for token in ("麻", "无力", "刺痛", "电击"))
-    if (has_radiation or neurological_symptom) and not has_neurological_context:
+    axial_or_gluteal_pain = any(
+        token in body_part for token in ("腰", "背", "臀", "颈", "脖")
+    ) and any(token in symptom_text for token in ("痛", "疼", "酸", "胀"))
+    if (
+        has_radiation or neurological_symptom or axial_or_gluteal_pain
+    ) and not has_neurological_context:
         add_field(
             "neurological_signs",
             "neurological_signs",
