@@ -116,26 +116,28 @@ Chromium Resource Timing: nextHopProtocol=h2, byte sizes and TTFB visible
 
 Use a **Response Header Transform Rule**, not a Request Header Transform Rule. A request-header rule sends `Timing-Allow-Origin` toward R2 and does not expose timing data to the browser.
 
-## 6. GitHub production Environment
+## 6. GitHub artifact publication Environment
 
-Add Environment variable:
+Candidate/release publication uses the protected `artifact-publish` Environment, separate from production-deployment authority. Configure Environment variables:
 
 ```text
 STATIC_ASSET_CDN_BASE=https://assets.bakersean.top
+R2_ENDPOINT=https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+R2_BUCKET=bodysense-static
+ACR_REGISTRY=<BodySense ACR registry>
+ACR_NAMESPACE=bodysense
 ```
 
-Add Environment secrets:
+and Environment secrets:
 
 ```text
-R2_ENDPOINT=https://<ACCOUNT_ID>.r2.cloudflarestorage.com
 R2_ACCESS_KEY_ID=<R2 S3 access key>
 R2_SECRET_ACCESS_KEY=<R2 S3 secret>
-R2_BUCKET=bodysense-static
+ACR_USERNAME=<publisher user>
+ACR_PASSWORD=<publisher credential>
 ```
 
-Do not place the R2 credential in application `.env` files or Docker images.
-
-Until `STATIC_ASSET_CDN_BASE` exists, the production workflow intentionally retains the current same-origin Web behavior.
+Do not place R2/ACR publication credentials in application `.env` files or Docker images. The separate `production` Environment is used by `Deploy Production`, not by ordinary candidate builds.
 
 ## 7. Object layout
 
@@ -234,40 +236,30 @@ node scripts/static-assets/publish-atlas-r2.mjs \
 
 Use `--dry-run` on either publisher to inspect the immutable object plan without credentials or writes.
 
-## 10. Production release behavior
+## 10. Candidate / release behavior
 
-`.github/workflows/docker-deploy.yml` now enforces:
+`.github/workflows/candidate-publish.yml` enforces:
 
 ```text
-verified main revision
+verified full-main revision
   -> publish/verify atlas + revision-scoped Vite assets
-  -> build immutable Web/API/AI/runtime images
+  -> build immutable sha-<revision> Web/API/AI/runtime images once
   -> pull immutable Web image
   -> enumerate its /assets files
   -> HEAD every corresponding CDN object
-  -> only then allow prod-latest promotion
+  -> emit candidate-set-v1.json
+  -> only then allow staging-latest promotion
 ```
 
-This means an `index.html` cannot become production-eligible while its hashed CDN dependencies are absent.
+`Release Publish` later reuses those exact image digests; `Deploy Production` only selects an already Published release. This means an `index.html` cannot become staging/release/production-eligible while its hashed CDN dependencies are absent.
 
 ## 11. Staging
 
-Staging Docker builds accept `VITE_ASSET_BASE`.
+Canonical staging consumes `staging-latest`, which is promoted only from a complete exact-SHA candidate. The candidate Web image is already compiled with `VITE_ASSET_BASE=https://assets.bakersean.top/web/<revision>/` and the pinned BodySense atlas URL. The GCP staging watcher rejects mixed Web/API/AI/runtime revisions before mutating the runtime. `scripts/staging-runtime.sh` remains a non-canonical source-build diagnostic/emergency path.
 
-Before the R2 credential/custom domain is provisioned, staging continues to use:
+Validation should confirm DevTools uses `assets.bakersean.top` for revision-scoped JS/CSS/atlas bytes while all authenticated `/api/` traffic remains on the Tailnet application origin.
 
-- private Tailnet for HTML/API/SSE/Vite chunks;
-- Vanatome's pinned public `1.4.0` Cloudflare endpoint for atlas bytes.
-
-After R2 is provisioned:
-
-1. publish the current revision Web assets;
-2. set `VITE_ASSET_BASE=https://assets.bakersean.top/web/<revision>/` for that staging build;
-3. set the BodySense R2 atlas catalog URL;
-4. rebuild only the staging Web service;
-5. confirm DevTools shows `assets.bakersean.top` for hashed JS/CSS and atlas files while all `/api/` requests remain on the Tailnet application origin.
-
-## 11. Rollback
+## 12. Rollback
 
 Never delete an old `web/<revision>/` prefix as part of normal deployment.
 

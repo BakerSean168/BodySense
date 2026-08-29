@@ -1,6 +1,6 @@
 # BodySense Release Lifecycle V3
 
-> Status: Target release contract accepted by ADR 0008; implementation staged behind Delivery Platform V3 rollout.
+> Status: ADOPTED — v0.9.0 production-proven under ADR 0008.
 > Date: 2026-08-29
 
 ## 1. Purpose

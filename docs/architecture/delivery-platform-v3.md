@@ -1,6 +1,6 @@
 # BodySense Delivery Platform V3
 
-> Status: Target architecture accepted by ADR 0008; BodySense pilot in implementation.
+> Status: ADOPTED — production-proven on v0.9.0; governed by ADR 0008.
 > Date: 2026-08-29
 > Scope: source integration, CI policy, immutable candidates, staging promotion, release publication, production deployment and delivery evidence.
 
@@ -335,7 +335,7 @@ candidate digest
    └─ prod-latest selected release
 ```
 
-Retagging/promotion must preserve digest identity. A release workflow must not silently rebuild source into a different artifact.
+Retagging/promotion must preserve digest identity. A release workflow must not silently rebuild source into a different artifact. Because Buildx defaults `imagetools create` to `--prefer-index=true`, every single-platform channel/release promotion explicitly uses `--prefer-index=false`; otherwise a carbon-copy candidate manifest would be wrapped in a new one-member OCI index with a different outer digest.
 
 ## 8. Staging plane
 
@@ -462,4 +462,4 @@ Phase 6 audit/cleanup
 
 Production behavior is unchanged until its dedicated cutover phase.
 
-During the pilot, the old tag-triggered production build/promotion authority is disabled rather than allowed to race V3. A manual non-release image-build fallback remains available until exact-SHA candidate, release and explicit-deploy runtime evidence is complete. Immutable releases are never rewritten as a rollback mechanism.
+The pilot completed on v0.9.0. Transitional shadow CI, legacy required-context aliases, and the old manual production-image fallback were removed only after exact-SHA candidate, staging, Published Release, and explicit production-deploy evidence were all green. Immutable releases are never rewritten as a rollback mechanism.

@@ -1,8 +1,7 @@
 # Active Plans
 
-BodySense currently has an active Delivery Platform V3 pilot, active 3D/observability/static-distribution work, one Workbench visual plan, and one parked durability plan:
+BodySense currently has active 3D/observability/static-distribution work, one Workbench visual plan, and one parked durability plan:
 
-- [`2026-08-29-delivery-platform-v3.md`](./2026-08-29-delivery-platform-v3.md) — ACTIVE; converge MemoFlow-style scope/risk/Oracle/artifact/observation controls with BodySense's coherent staging/production deployment safety, using affected PR CI, full main CI, exact-SHA candidates, and explicit Prepare Release → Release Publish → Deploy Production boundaries.
 
 - [`2026-08-27-vanatome-3d-body-explorer.md`](./2026-08-27-vanatome-3d-body-explorer.md) — READY FOR IMPLEMENTATION; adopt Vanatome as the primary 3D anatomy engine, add BodyRegionOntology, BodyState↔3D linking, anatomy drill-down, Chat context, WebGL fallback, and version-pinned/self-host-ready atlas distribution.
 - [`2026-08-27-static-asset-cdn.md`](./2026-08-27-static-asset-cdn.md) — IN IMPLEMENTATION; split public immutable Vite/Vanatome bytes from the private application origin using revision-scoped Cloudflare R2 distribution and an assets-before-HTML release gate.
@@ -29,7 +28,7 @@ The broad post-`v0.5.2` production security/runtime/Knowledge closeout has been 
 - [`../../architecture/model-gateway-routing.md`](../../architecture/model-gateway-routing.md)
 - [`../../architecture/agent-platform-role-governance.md`](../../architecture/agent-platform-role-governance.md)
 - [`../../architecture/deployment-architecture.md`](../../architecture/deployment-architecture.md)
-- [`../../architecture/delivery-platform-v3.md`](../../architecture/delivery-platform-v3.md) — accepted target delivery architecture under ADR 0008; rollout is incremental and does not replace the current production watcher until its dedicated cutover phase.
+- [`../../architecture/delivery-platform-v3.md`](../../architecture/delivery-platform-v3.md) — adopted production delivery architecture under ADR 0008; v0.9.0 proved affected PR CI, exhaustive main CI, exact-SHA candidates, canonical staging, Draft-first release publication and explicit production selection.
 - [`../../architecture/release-lifecycle-v3.md`](../../architecture/release-lifecycle-v3.md) — explicit Prepare Release / Release Publish / Deploy Production authority boundaries.
 - [`../../architecture/knowledge-lifecycle-architecture.md`](../../architecture/knowledge-lifecycle-architecture.md)
 - [`../../architecture/body-explorer-3d-anatomy.md`](../../architecture/body-explorer-3d-anatomy.md) — target 3D body/anatomy architecture accepted by ADR 0006; implementation pending.

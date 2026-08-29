@@ -24,11 +24,11 @@ BodySense 当前在阿里云 ECS 上运行着一套稳定的单服务器 Docker 
 
 ---
 
-## 1. 当前架构分析
+## 1. 退役前架构快照
 
-### 1.1 现状概览
+### 1.1 2026-07-05 当时的现状
 
-BodySense 目前部署在阿里云一台 2 vCPU / 1.6 GB 的 ECS 上（IP `115.29.222.2`，域名 `body.bakersean.top`），采用单台服务器 + Docker Compose + Watchtower 的模式，共运行 7 个容器：
+截至这份练习方案编写时，BodySense 部署在阿里云一台 2 vCPU / 1.6 GB 的 ECS 上（IP `115.29.222.2`，域名 `body.bakersean.top`），当时采用单台服务器 + Docker Compose + Watchtower 的模式，共运行 7 个容器。该描述仅用于还原历史背景；当前生产已经切换到 Delivery Platform V3 的 coherent deploy watcher：
 
 | 容器 | 角色 | 镜像来源 |
 |------|------|----------|
@@ -40,7 +40,7 @@ BodySense 目前部署在阿里云一台 2 vCPU / 1.6 GB 的 ECS 上（IP `115.2
 | `caddy` | 反向代理 + TLS 终止 | Docker Hub |
 | `watchtower` | 自动拉取 `prod-latest` 镜像更新 | Docker Hub |
 
-CI/CD 流程：`main` 分支 merge → release-please 生成 tag → `docker-deploy.yml` 构建三服务镜像推送到阿里云 ACR → Watchtower 自动滚动重启。
+当时的 CI/CD 是 `main` merge → release-please/tag → GitHub Actions 构建并推送 ACR → Watchtower。当前生产链已经替换为 `Prepare Release → Release Publish → Deploy Production → Alibaba coherent deploy watcher`，Release Publish 不再直接触发生产部署。
 
 ### 1.2 云原生实践动机
 
@@ -168,13 +168,13 @@ CI/CD 流程：`main` 分支 merge → release-please 生成 tag → `docker-dep
 
 ### Phase 1：CI/CD 管线搭建 (Day 2)
 
-**目标**：新增一个独立的 GitHub Actions workflow `docker-deploy-do.yml`，用于构建镜像并推送到 DO Container Registry。**现有的 `docker-deploy.yml`（阿里云 ACR）完全不动**。
+**历史目标**：当时计划新增一个独立的 GitHub Actions workflow `docker-deploy-do.yml`，用于构建镜像并推送到 DO Container Registry，并与当时的阿里云构建 workflow 相互隔离。该方案已经退役，不代表当前阿里云生产链。
 
 **新增 `.github/workflows/docker-deploy-do.yml`**：
 
 ```yaml
-# 与现有 docker-deploy.yml 并行的独立 workflow
-# 仅推送到 DO Container Registry，不影响阿里云 ACR 部署
+# 历史方案：与当时的阿里云构建 workflow 并行
+# 仅推送到 DO Container Registry，不影响当时的阿里云 ACR 部署
 
 name: Build & Push Docker Images (DO)
 
@@ -597,7 +597,7 @@ DO Managed PostgreSQL 自带每日自动备份（保留 7 天）。额外建议�
 
 ### 4.1 双流水线并行架构
 
-tag 推送时两个 workflow **同时触发**，各自独立构建和推送镜像：
+历史方案中，tag 推送时两个 workflow **同时触发**，各自独立构建和推送镜像：
 
 ```
 feature/* ──PR──▶ dev ──PR──▶ main
@@ -611,7 +611,7 @@ feature/* ──PR──▶ dev ──PR──▶ main
                                 │
                  ┌──────────────┴──────────────┐
                  │                             │
-         docker-deploy.yml            docker-deploy-do.yml
+      旧阿里云构建 workflow          docker-deploy-do.yml
          (阿里云 ACR)                 (DO Container Registry)
                  │                             │
           ┌──────┼──────┐               ┌──────┼──────┐

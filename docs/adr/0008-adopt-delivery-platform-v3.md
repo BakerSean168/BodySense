@@ -210,4 +210,4 @@ Rejected for the pilot because Go/Python/Web contracts, runtime configuration, m
 
 ## Rollout
 
-Implementation follows `docs/plan/active/2026-08-29-delivery-platform-v3.md` and must use shadow-mode migration before any branch-protection or production-promotion cutover.
+The completed pilot evidence is archived at `docs/plan/archive/2026-08-29-delivery-platform-v3.md`. The rollout used shadow-mode migration before branch-protection and production-promotion cutover, then removed the transitional shadow/compatibility paths only after v0.9.0 production proof.

@@ -1,7 +1,7 @@
 # BodySense Delivery Platform V3 Pilot
 
 > Date: 2026-08-29
-> Status: ACTIVE — BodySense pilot
+> Status: COMPLETE — production-proven on v0.9.0; archived after cleanup merge
 > Owner boundary: GitHub CI/release plane + GCP staging + Alibaba production promotion contract
 > ADR: `docs/adr/0008-adopt-delivery-platform-v3.md`
 > Architecture: `docs/architecture/delivery-platform-v3.md`
@@ -129,7 +129,7 @@ Acceptance:
 
 ### DLV-3101 — Versioned manifest generator
 
-Status: COMPLETE — repository; shadow Actions evidence pending
+Status: COMPLETE — repository + shadow Actions run 33236292914
 
 Create deterministic tooling under `scripts/delivery/`.
 
@@ -203,7 +203,7 @@ invalid detector/manifest → FAIL
 
 ### DLV-3104 — Delivery observation summary
 
-Status: COMPLETE — initial v1 repository implementation
+Status: COMPLETE — Delivery Observation proven in authoritative CI (including main run 33238855280)
 
 Produce a versioned run summary from manifest + lane results/evidence.
 
@@ -249,13 +249,13 @@ release workflow
 
 ### DLV-3203 — Full main override
 
-Status: IMPLEMENTED — `push main` forces `full=true` and preserves `scripts/validate-repo.sh`; post-merge proof pending
+Status: COMPLETE — main run 33238855280 emitted `full=true` with every lane enabled and completed the exhaustive safety set
 
 Prove every `main` push executes all required quality/database/experience lanes regardless of the diff category.
 
 ### DLV-3204 — Stable Oracle GitHub contexts
 
-Status: COMPLETE — Governance/Quality/Database/Experience Oracles + Delivery Observation all passed GitHub CI run 33237118453; old protected contexts remain temporary compatibility Oracles until governance cutover
+Status: COMPLETE — Oracles passed CI; migration compatibility contexts were later removed after branch-protection cutover and production proof
 
 Introduce:
 
@@ -269,7 +269,7 @@ Delivery Observation
 
 ### DLV-3205 — Branch protection cutover
 
-Status: TODO / EXTERNAL GOVERNANCE CHANGE
+Status: COMPLETE — Repository Governance run 33239175031 requires Governance/Quality/Database/Experience Oracle + Delivery Observation + commit-lint
 
 Only after shadow evidence:
 
@@ -296,7 +296,7 @@ migration head
 
 ### DLV-3302 — Build main candidate once
 
-Status: IMPLEMENTED — `Publish Main Candidate` exact-SHA workflow; first main Actions evidence pending merge
+Status: COMPLETE — candidate run 33239156530 (397dbd25) and release candidate run 33240373618 (e61326b4) both succeeded
 
 After full main CI, publish four immutable candidate images with `sha-<revision>` identity.
 
@@ -304,19 +304,19 @@ No production pointer change.
 
 ### DLV-3303 — Preserve static asset ordering
 
-Status: IMPLEMENTED — candidate workflow publishes revision CDN bytes before candidate image build and verifies Web↔CDN coherence
+Status: COMPLETE — revision CDN publication and Web↔CDN coherence passed in candidate runs 33239156530 and 33240373618
 
 Revision-scoped assets must be published/verified before the candidate Web image that references them becomes eligible.
 
 ### DLV-3304 — Promote coherent staging channel
 
-Status: IMPLEMENTED — current-main candidates only; registry/runtime proof pending first main candidate
+Status: COMPLETE — `staging-latest` promoted coherent exact-SHA sets; tag-copy now carbon-copies OCI manifests with `--prefer-index=false`
 
 Move all four validated candidate artifacts to `staging-latest` only after complete candidate publication.
 
 ### DLV-3305 — GCP staging deploy watcher
 
-Status: IMPLEMENTED — user-systemd watcher + runtime bundle; coherent/split/missing-label check-only tests green, live candidate proof pending
+Status: COMPLETE — GCP user-systemd watcher rejected split/missing labels in tests and deployed coherent candidates 397dbd25 then e61326b4
 
 Deliver a fail-closed watcher that:
 
@@ -329,7 +329,7 @@ Deliver a fail-closed watcher that:
 
 ### DLV-3306 — Staging runtime cutover
 
-Status: TODO / RUNTIME CHANGE — enable only after first coherent `staging-latest` candidate exists
+Status: COMPLETE — timer enabled; staging reached e61326b4 with Web/API/AI healthy, Tailnet/local API health green, schema 59:false, and subsequent polls idempotent
 
 Acceptance:
 
@@ -343,7 +343,7 @@ Keep current source-build staging command as an explicitly non-canonical emergen
 
 ### DLV-3401 — Manual Prepare Release
 
-Status: IMPLEMENTED — release-please is workflow_dispatch-only and `skip-github-release=true`; main cutover pending merge
+Status: COMPLETE — manual Prepare Release run 33239754662 created replacement PR #140 after legacy #138 was closed
 
 Change release-please ownership so normal successful main CI does not automatically prepare every release milestone.
 
@@ -362,7 +362,7 @@ Validate version/tag/release PR/main SHA consistency.
 
 ### DLV-3403 — Draft-first Release Publish
 
-Status: IMPLEMENTED — waits for successful exact candidate workflow, promotes candidate digests without rebuild, attaches canonical manifest, publishes only after postflight
+Status: COMPLETE — recovery run 33241966081 published v0.9.0 from candidate run 33240373618; release manifest digest `sha256:448b57191020a8a1bf9cc4b94d940e2dbfd203d87891b075b097f1d99e127f0a`
 
 Release Publish must:
 
@@ -375,7 +375,7 @@ Release Publish must:
 
 ### DLV-3404 — Existing PR #138 disposition
 
-Status: DECISION RECORDED — option B: do not merge legacy #138; after V3 reaches main, close the legacy release PR and explicitly Prepare Release again under V3 semantics
+Status: COMPLETE — legacy #138 closed as superseded; explicit Prepare Release created #140, merged as e61326b49237aa7c55b3a1b12c26e6dd977b1095
 
 Before Release V3 becomes authoritative, explicitly choose:
 
@@ -391,7 +391,7 @@ No automatic closure/merge of #138 is allowed merely as a side effect of this im
 
 ### DLV-3501 — Deploy Production selector
 
-Status: IMPLEMENTED — explicit workflow_dispatch validates Published Release + canonical manifest + tag/main/exact-CI provenance
+Status: COMPLETE — Deploy Production run 33242163051 validated Published v0.9.0 + canonical manifest + exact CI/tag/main/image provenance
 
 Add explicit workflow that accepts a Published release tag and validates:
 
@@ -406,7 +406,7 @@ allowed production ref
 
 ### DLV-3502 — Coherent prod-latest promotion
 
-Status: IMPLEMENTED — only Deploy Production moves prod-latest; legacy tag-triggered promotion disabled in repository, live proof pending
+Status: COMPLETE — Release Publish left prod-latest unchanged; Deploy Production run 33242163051 moved all four pointers to the exact v0.9.0 digests
 
 Only Deploy Production moves the four `prod-latest` pointers.
 
@@ -430,7 +430,7 @@ in `.deploy-state` after successful rollout.
 
 ### DLV-3601 — Delivery Platform audit
 
-Status: IMPLEMENTED — deterministic fail-closed matrix + scheduled/manual workflow; live scheduled/manual Actions proof pending merge
+Status: COMPLETE — manual Delivery Platform Audit run 33238888664 passed the deterministic negative-path matrix; scheduled workflow remains enabled
 
 Scheduled/manual non-mutating fault matrix covering:
 
@@ -444,7 +444,7 @@ Scheduled/manual non-mutating fault matrix covering:
 
 ### DLV-3602 — Release health observation
 
-Status: IMPLEMENTED — scheduled/manual non-blocking release backlog workflow; live Actions proof pending merge
+Status: COMPLETE — manual Release Health run 33238889568 succeeded; scheduled non-blocking observation remains enabled
 
 Non-blocking release backlog visibility:
 
@@ -457,7 +457,7 @@ staging ahead of production revision count/age
 
 ### DLV-3603 — Legacy path removal
 
-Status: PARTIAL — legacy tag-triggered production build/promotion authority removed; manual non-release build fallback retained until V3 candidate/release/deploy runtime proof is complete
+Status: COMPLETE — transitional shadow workflow, legacy concrete-context aliases, and manual legacy production-image fallback removed after v0.9.0 production proof
 
 Only after V3 evidence exists:
 
@@ -521,3 +521,109 @@ This plan is COMPLETE only when all are true:
 - delivery observation and audit evidence exist;
 - legacy paths are removed only after replacement validation;
 - plan is moved to `docs/plan/archive/` with final evidence.
+## 15. Closure evidence — 2026-08-29
+
+### Source / CI / governance
+
+```text
+V3 implementation PR       #139
+V3 merge main              397dbd25f6becda424de85fac8ca0e82eb24b8b2
+main exhaustive CI         33238855280 (SUCCESS)
+main manifest              full=true; every lane enabled
+branch protection cutover  33239175031 (SUCCESS)
+required contexts           Governance Oracle / Quality Oracle / Database Oracle / Experience Oracle / Delivery Observation / commit-lint
+platform audit              33238888664 (SUCCESS)
+release health              33238889568 (SUCCESS)
+```
+
+### Candidate / staging
+
+First production-shaped candidate proof:
+
+```text
+revision                    397dbd25f6becda424de85fac8ca0e82eb24b8b2
+candidate run               33239156530 (SUCCESS)
+candidate manifest digest   sha256:617ae46c8c8033fcbca35ff22175a44d9024d41a534d97bdf2f09248fe3e273a
+staging deploy              PASS
+schema                      59:false
+```
+
+Release candidate proof:
+
+```text
+release merge revision      e61326b49237aa7c55b3a1b12c26e6dd977b1095
+full-main CI                33240111227 (SUCCESS)
+candidate run               33240373618 (SUCCESS)
+candidate manifest digest   sha256:200e926b5a782a8631c1dac275b8208ed35d46e8e17241ff81159c6f89df2d73
+staging deploy              PASS @ e61326b4
+local + Tailnet health      PASS
+schema                      59:false
+```
+
+The GCP staging watcher is enabled as a user systemd timer. Repeated polling after deployment reports the revision as already deployed rather than recreating the stack.
+
+### Release lifecycle
+
+Legacy PR #138 was closed rather than mixed into the new lifecycle. Manual Prepare Release run `33239754662` created PR #140, which merged as `e61326b4`.
+
+The first Release Publish run `33240662731` **failed closed** during ACR promotion: Buildx's default `imagetools create --prefer-index=true` wrapped the single-platform Web candidate manifest in a one-member OCI index, changing the outer digest. The candidate config/layers/revision were unchanged, but the release contract correctly rejected the digest mismatch. PR #141 fixed all channel/release promotion paths to carbon-copy single-platform manifests with `--prefer-index=false` and permits recovery only when an existing wrapper index has exactly one child equal to the expected candidate digest.
+
+```text
+registry identity hotfix    PR #141 / merge 5fee232c5274feeb7b7b5664caf481253aebb815
+hotfix main CI              33241602414 (SUCCESS)
+Release Publish recovery    33241966081 (SUCCESS)
+Published Release           v0.9.0
+release revision            e61326b49237aa7c55b3a1b12c26e6dd977b1095
+release manifest digest     sha256:448b57191020a8a1bf9cc4b94d940e2dbfd203d87891b075b097f1d99e127f0a
+```
+
+All four `v0.9.0` ACR refs are OCI image manifests whose top-level digests equal the candidate manifest digests exactly. Release publication was separately proven not to change any `prod-latest` pointer.
+
+### Explicit production rollout
+
+```text
+Deploy Production selector  33242163051 (SUCCESS)
+selected release            v0.9.0
+production revision         e61326b49237aa7c55b3a1b12c26e6dd977b1095
+deploy state source         acr
+production schema           59:false
+public API health           PASS
+blocked revision            none
+```
+
+The Alibaba watcher performed its own transaction:
+
+1. coherent four-pointer verification;
+2. active-run preflight;
+3. custom-format PostgreSQL backup + SHA-256 + `pg_restore --list` validation (`bodysense-pre-e61326b49237-20260829-080536.dump`);
+4. confirmed the PostgreSQL 18 reset boundary was already committed and required no destructive action;
+5. health-gated AI → API → Web rollout;
+6. public HTTPS health validation;
+7. atomic deploy-state update to `e61326b4`.
+
+A subsequent check-only run reported current Web/API/AI/runtime/managed revisions all equal to `e61326b4`, proving the watcher is idempotent after the rollout. `prod-latest` Web/API/AI/runtime digests equal the canonical v0.9.0 release-manifest digests.
+
+### Backup caveat / separate active durability plan
+
+The periodic Alibaba OSS off-host backup timer is **not** accepted by this closeout: the production host currently lacks `OFFHOST_BACKUP_ACCESS_KEY` and `OFFHOST_BACKUP_SECRET_KEY`, so that path fails closed and freshness has no successful state. This is inherited work already tracked by `docs/plan/active/data-durability-backup-2026-08-25.md` (parked by owner), not silently folded into Delivery Platform V3.
+
+For the v0.9.0 production rollout, an independent GCP off-host custom-format snapshot was created and validated before production selection:
+
+```text
+file    .runtime/backups/production-pre-v0.9.0-20260829T074729Z.dump
+sha256  53332400201e78bdb5c7321e5480a447899901b9cfec029d1f05ff67d6ae1858
+size    185391 bytes
+verify  PostgreSQL 18 pg_restore --list PASS
+```
+
+This one-time snapshot does not replace the parked long-term durability work.
+
+### Final cleanup
+
+After replacement proof, the closeout removes:
+
+- `.github/workflows/delivery-shadow.yml`;
+- `.github/workflows/docker-deploy.yml`;
+- old concrete-context compatibility alias jobs from `ci.yml`.
+
+The authoritative delivery surface is now: manifest-selected CI children + stable Oracles, exact-SHA candidate publication, canonical GCP staging watcher, explicit Prepare Release, Draft-first Release Publish, explicit Deploy Production, scheduled Delivery Platform Audit, and Release Health observation.
