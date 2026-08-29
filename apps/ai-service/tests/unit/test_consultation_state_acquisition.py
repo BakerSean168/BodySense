@@ -42,6 +42,13 @@ def test_runtime_guard_routes_real_trailing_question_to_hitl() -> None:
     assert question == "你目前有没有出现明显无力？"
 
 
+def test_runtime_guard_keeps_example_question_as_explanatory_prose() -> None:
+    text = "建议记录触发和缓解因素（例如：站立后是否缓解？）"
+    guarded, question = _guard_final_assistant_text(text)
+    assert guarded == text
+    assert question is None
+
+
 def test_runtime_guard_removes_embedded_manual_question_block() -> None:
     text = (
         "可以先减少连续久坐。\n\n"

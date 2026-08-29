@@ -50,6 +50,7 @@ MAX_CONTEXT_TURNS = 10
 MAX_TOOL_ROUNDS = 6
 STREAM_TAIL_HOLD_CHARS = 320
 _QUESTION_SENTENCE_RE = re.compile(r"(?P<question>[^。！？!?\n]{2,220}[？?])")
+_NON_INTERACTIVE_QUESTION_MARKERS = ("例如", "比如")
 _OPTIONAL_OFFER_PREFIXES = (
     "需要我",
     "要不要我",
@@ -572,12 +573,19 @@ def _guard_final_assistant_text(text: str) -> tuple[str, str | None]:
     tail_start = max(0, len(stripped) - STREAM_TAIL_HOLD_CHARS)
     held_tail = stripped[tail_start:]
     matches = list(_QUESTION_SENTENCE_RE.finditer(held_tail))
-    if not matches:
+    interactive_matches = [
+        match
+        for match in matches
+        if not any(
+            marker in match.group("question") for marker in _NON_INTERACTIVE_QUESTION_MARKERS
+        )
+    ]
+    if not interactive_matches:
         return stripped, None
 
     real_match: re.Match[str] | None = None
     optional_match: re.Match[str] | None = None
-    for match in matches:
+    for match in interactive_matches:
         compact = match.group("question").lstrip("-*# ").strip()
         if compact.startswith(_OPTIONAL_OFFER_PREFIXES):
             optional_match = optional_match or match
@@ -589,10 +597,10 @@ def _guard_final_assistant_text(text: str) -> tuple[str, str | None]:
     if chosen is None:
         return stripped, None
 
-    # Once the model starts a manual-question tail, none of those questions
-    # belong in prose. Cut from the first question even when a later question is
-    # the one that would otherwise require a real HITL interaction.
-    cut_in_tail = matches[0].start()
+    # Once the model starts a manual-question tail, none of those interactive
+    # questions belong in prose. Example questions ("例如/比如") are explanatory
+    # text and stay untouched because they do not ask the user to respond.
+    cut_in_tail = interactive_matches[0].start()
     prefix = held_tail[:cut_in_tail]
     for marker in (
         "需要进一步确认的信息",
