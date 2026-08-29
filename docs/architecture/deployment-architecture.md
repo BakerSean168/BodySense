@@ -85,7 +85,7 @@ This prevents a polling deployer from serving a mixed release while ACR promotio
 
 ## CI
 
-`.github/workflows/ci.yml` runs for pushes and pull requests to `main` / `dev`.
+`.github/workflows/ci.yml` runs for pushes and pull requests to the single long-lived trunk, `main`. Short-lived feature/fix/refactor branches are validated through PRs targeting `main`; staging is an artifact/runtime channel rather than a permanent Git branch. Delivery Platform V3 target semantics are defined in [`delivery-platform-v3.md`](./delivery-platform-v3.md).
 
 ### Repository quality gate
 
