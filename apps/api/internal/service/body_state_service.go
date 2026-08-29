@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -128,8 +129,8 @@ func (s *BodyStateService) ListReviewableObservations(
 	return items, nil
 }
 
-// UpsertExtractedSymptom converts the existing Consultation extraction event into
-// a durable Fact without making ConsultationSession the new truth source.
+// UpsertExtractedSymptom converts the Consultation intake event into a durable
+// review candidate without making ConsultationSession the new truth source.
 func (s *BodyStateService) UpsertExtractedSymptom(
 	ctx context.Context,
 	userID uuid.UUID,
@@ -142,53 +143,85 @@ func (s *BodyStateService) UpsertExtractedSymptom(
 	}
 	bodyRegion := bodyStateString(raw["body_part"])
 	symptom := bodyStateString(raw["symptom_type"])
-	if bodyRegion == "" && symptom == "" {
+	if bodyRegion == "" || symptom == "" {
 		return nil
 	}
 
-	details := map[string]any{}
-	for _, key := range []string{"duration", "trigger", "relief", "severity", "additional_notes"} {
-		if value := bodyStateString(raw[key]); value != "" {
-			details[key] = value
-		}
+	detailsJSON := bodyStateSymptomDetails(raw)
+	captureID := strings.ToLower(bodyStateString(raw["capture_id"]))
+	sourceKey := "consultation:" + runID.String() + ":symptom:" + bodyStateHash(bodyRegion+"|"+symptom)
+	if bodyStateValidCaptureID(captureID) {
+		sourceKey = "consultation:capture:" + captureID
 	}
-	detailsJSON, _ := json.Marshal(details)
 	provenanceJSON, _ := json.Marshal(map[string]any{
-		"source_type": "consultation_extraction",
+		"source_type": "consultation_intake",
 		"run_id":      runID,
+		"capture_id":  captureID,
 		"raw":         raw,
 	})
 
-	// The extraction tool may replay after SSE reconnect/retry. A deterministic
-	// source key makes that replay idempotent while still allowing a later turn to
-	// update the same normalized claim when its content genuinely changes.
-	sourceKey := "consultation:" + runID.String() + ":symptom:" + bodyStateHash(bodyRegion+"|"+symptom)
+	// Model-mediated extraction is durable and visible for review, but cannot
+	// enter current reasoning until an explicit structured answer or review
+	// promotes this exact source-keyed candidate.
 	_, _, err := s.repo.UpsertFact(ctx, userID, nil, model.BodyStateFact{
-		ConcernKey:     bodyStateConcernKey(bodyRegion),
-		Kind:           "discomfort",
-		BodyRegion:     bodyRegion,
-		Value:          symptom,
-		Details:        datatypes.JSON(detailsJSON),
-		Origin:         "ai_extracted",
-		ReviewState:    "unverified",
-		LifecycleState: "active",
-		Trend:          "unknown",
-		SourceKey:      sourceKey,
-		Provenance:     datatypes.JSON(provenanceJSON),
+		ConcernKey:            bodyStateConcernKey(bodyRegion),
+		Kind:                  "discomfort",
+		BodyRegion:            bodyRegion,
+		Value:                 symptom,
+		Details:               detailsJSON,
+		Origin:                "ai_extracted",
+		ReviewState:           "unverified",
+		LifecycleState:        "active",
+		Trend:                 "unknown",
+		SourceKey:             sourceKey,
+		Provenance:            datatypes.JSON(provenanceJSON),
+		ExcludedFromReasoning: true,
 	}, "consultation")
 	return err
 }
 
-// RecordInteractionAnswer preserves the structured user answer independently from
-// the chat transcript. It also creates a negative finding when the question is a
-// simple safety/symptom yes/no question answered negatively.
+// RecordInteractionAnswer preserves the structured user answer independently
+// from chat. Runtime-owned symptom-intake cards promote the exact capture
+// candidate; ordinary legacy ask_user answers keep the generic durable path.
 func (s *BodyStateService) RecordInteractionAnswer(
 	ctx context.Context,
 	userID uuid.UUID,
 	interactionID uuid.UUID,
+	toolCallID string,
 	question datatypes.JSON,
 	answer json.RawMessage,
 ) error {
+	if symptom, captureID, matched, err := bodyStateBoundSymptomAnswer(toolCallID, question, answer); matched {
+		if err != nil {
+			return err
+		}
+		bodyRegion := bodyStateString(symptom["body_part"])
+		symptomType := bodyStateString(symptom["symptom_type"])
+		provenanceJSON, _ := json.Marshal(map[string]any{
+			"source_type":    "structured_symptom_intake",
+			"interaction_id": interactionID,
+			"tool_call_id":   toolCallID,
+			"capture_id":     captureID,
+			"question":       json.RawMessage(question),
+			"answer":         json.RawMessage(answer),
+		})
+		_, _, err = s.repo.UpsertFact(ctx, userID, nil, model.BodyStateFact{
+			ConcernKey:            bodyStateConcernKey(bodyRegion),
+			Kind:                  "discomfort",
+			BodyRegion:            bodyRegion,
+			Value:                 symptomType,
+			Details:               bodyStateSymptomDetails(symptom),
+			Origin:                "structured_answer",
+			ReviewState:           "confirmed",
+			LifecycleState:        "active",
+			Trend:                 "unknown",
+			SourceKey:             "consultation:capture:" + captureID,
+			Provenance:            datatypes.JSON(provenanceJSON),
+			ExcludedFromReasoning: false,
+		}, "consultation")
+		return err
+	}
+
 	questionText, questionContext := bodyStateQuestion(question)
 	answerText := bodyStateAnswerText(answer)
 	if questionText == "" || answerText == "" {
@@ -198,6 +231,7 @@ func (s *BodyStateService) RecordInteractionAnswer(
 	provenanceJSON, _ := json.Marshal(map[string]any{
 		"source_type":    "ask_user",
 		"interaction_id": interactionID,
+		"tool_call_id":   toolCallID,
 		"question":       questionText,
 		"context":        questionContext,
 		"answer":         json.RawMessage(answer),
@@ -665,6 +699,86 @@ func (s *BodyStateService) RecordSafetyEvent(ctx context.Context, userID uuid.UU
 	return err
 }
 
+func bodyStateSymptomDetails(raw map[string]any) datatypes.JSON {
+	details := map[string]any{}
+	for _, key := range []string{
+		"duration", "trigger", "relief", "severity", "radiation",
+		"functional_impact", "neurological_signs", "onset", "additional_notes",
+	} {
+		if value := bodyStateString(raw[key]); value != "" {
+			details[key] = value
+		}
+	}
+	return datatypes.JSON(bodyStateMustJSON(details))
+}
+
+func bodyStateValidCaptureID(value string) bool {
+	if len(value) != 24 || strings.ToLower(value) != value {
+		return false
+	}
+	decoded, err := hex.DecodeString(value)
+	return err == nil && len(decoded) == 12
+}
+
+func bodyStateBoundSymptomAnswer(
+	toolCallID string,
+	question datatypes.JSON,
+	answer json.RawMessage,
+) (map[string]any, string, bool, error) {
+	var envelope struct {
+		Purpose      string `json:"purpose"`
+		StateBinding struct {
+			Revision  string            `json:"revision"`
+			CaptureID string            `json:"capture_id"`
+			SeedInfo  map[string]any    `json:"seed_info"`
+			FieldMap  map[string]string `json:"field_map"`
+		} `json:"state_binding"`
+	}
+	if len(question) == 0 || json.Unmarshal(question, &envelope) != nil || envelope.Purpose != "symptom_intake" {
+		return nil, "", false, nil
+	}
+	captureID := strings.ToLower(strings.TrimSpace(envelope.StateBinding.CaptureID))
+	if envelope.StateBinding.Revision != "symptom-intake-binding-v1" ||
+		!bodyStateValidCaptureID(captureID) ||
+		toolCallID != "intake-"+captureID {
+		// A model-authored ask_user call is not allowed to promote BodyState.
+		return nil, "", false, nil
+	}
+
+	var payload struct {
+		Fields map[string]any `json:"fields"`
+	}
+	if len(answer) == 0 || json.Unmarshal(answer, &payload) != nil || len(payload.Fields) == 0 {
+		return nil, captureID, true, errors.New("structured symptom intake answer has no fields")
+	}
+	allowed := map[string]bool{
+		"duration": true, "trigger": true, "relief": true, "severity": true,
+		"radiation": true, "functional_impact": true, "neurological_signs": true,
+		"onset": true, "additional_notes": true,
+	}
+	symptom := map[string]any{}
+	for _, key := range []string{
+		"body_part", "symptom_type", "duration", "trigger", "relief", "severity",
+		"radiation", "functional_impact", "neurological_signs", "onset", "additional_notes",
+	} {
+		if value := bodyStateString(envelope.StateBinding.SeedInfo[key]); value != "" {
+			symptom[key] = value
+		}
+	}
+	for answerKey, target := range envelope.StateBinding.FieldMap {
+		if !allowed[target] {
+			continue
+		}
+		if value := bodyStateString(payload.Fields[answerKey]); value != "" {
+			symptom[target] = value
+		}
+	}
+	if bodyStateString(symptom["body_part"]) == "" || bodyStateString(symptom["symptom_type"]) == "" {
+		return nil, captureID, true, errors.New("structured symptom intake binding is missing symptom identity")
+	}
+	return symptom, captureID, true, nil
+}
+
 func bodyStateConcernKey(bodyRegion string) string {
 	region := strings.TrimSpace(strings.ToLower(bodyRegion))
 	if region == "" {
@@ -716,7 +830,18 @@ func bodyStateAnswerText(raw json.RawMessage) string {
 			}
 		}
 		if fields, ok := value["fields"].(map[string]any); ok {
-			return bodyStateString(fields)
+			keys := make([]string, 0, len(fields))
+			for key := range fields {
+				keys = append(keys, key)
+			}
+			sort.Strings(keys)
+			parts := make([]string, 0, len(keys))
+			for _, key := range keys {
+				if fieldValue := bodyStateString(fields[key]); fieldValue != "" {
+					parts = append(parts, key+": "+fieldValue)
+				}
+			}
+			return strings.Join(parts, "；")
 		}
 	}
 	return bodyStateString(parsed)

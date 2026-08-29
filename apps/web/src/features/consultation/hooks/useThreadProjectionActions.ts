@@ -126,6 +126,10 @@ export function useThreadProjectionActions({
         consultationKeys.thread(conversationId),
         (old) => (old ? { ...old, extracted_info: info } : old),
       );
+      // Go persists state events before they reach the browser. Refresh the
+      // living BodyState immediately instead of waiting for stream.done; an
+      // intake turn may pause for user input and never emit stream.done yet.
+      void queryClient.invalidateQueries({ queryKey: workspaceKeys.all });
     },
     [queryClient, resolveConversationId],
   );

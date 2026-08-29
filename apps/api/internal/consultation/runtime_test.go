@@ -176,7 +176,7 @@ func (f *fakeRuntimeBodyState) RecordSafetyEvent(context.Context, uuid.UUID, jso
 	return f.safetyErr
 }
 
-func (f *fakeRuntimeBodyState) RecordInteractionAnswer(context.Context, uuid.UUID, uuid.UUID, datatypes.JSON, json.RawMessage) error {
+func (f *fakeRuntimeBodyState) RecordInteractionAnswer(context.Context, uuid.UUID, uuid.UUID, string, datatypes.JSON, json.RawMessage) error {
 	return f.interactionErr
 }
 
@@ -251,7 +251,8 @@ func TestHandleAIEventFailsClosedWhenSafetyWriteFails(t *testing.T) {
 func TestPersistInteractionAnswerPropagatesBodyStateFailure(t *testing.T) {
 	runtime := &Runtime{bodyStateService: &fakeRuntimeBodyState{interactionErr: errors.New("db unavailable")}}
 	err := runtime.persistInteractionAnswer(
-		context.Background(), uuid.New(), uuid.New(), datatypes.JSON(`{"text":"是否麻木"}`), json.RawMessage(`"是"`),
+		context.Background(), uuid.New(), uuid.New(), "tool-call-1",
+		datatypes.JSON(`{"text":"是否麻木"}`), json.RawMessage(`"是"`),
 	)
 	if err == nil {
 		t.Fatal("interaction answer persistence failure must be returned before interaction resume")

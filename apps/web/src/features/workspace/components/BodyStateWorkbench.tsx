@@ -89,6 +89,27 @@ function observationValueText(value: unknown): string {
     .join(" · ");
 }
 
+function factDetailsText(fact: BodyStateFact): string {
+  const details = fact.details ?? {};
+  const labels: Record<string, string> = {
+    duration: "持续时间",
+    trigger: "诱发情境",
+    relief: "缓解方式",
+    severity: "严重程度",
+    radiation: "放射范围",
+    functional_impact: "日常影响",
+    neurological_signs: "神经相关信号",
+    onset: "起始情况",
+    additional_notes: "补充",
+  };
+  return Object.entries(details)
+    .filter(
+      ([, item]) => item !== undefined && item !== null && String(item).trim(),
+    )
+    .map(([key, item]) => `${labels[key] ?? key}：${String(item)}`)
+    .join(" · ");
+}
+
 function safetyState(snapshot: BodyStateSnapshot) {
   const raw = snapshot.safety_state || {};
   return {
@@ -205,6 +226,7 @@ export function BodyStateWorkbench({
   };
 
   const hypotheses = snapshot.hypotheses ?? [];
+  const pendingFacts = snapshot.pending_facts ?? [];
   const pendingObservations = snapshot.pending_observations ?? [];
   const activeFacts = snapshot.facts.filter(
     (fact) => fact.lifecycle_state === "active",
@@ -218,6 +240,7 @@ export function BodyStateWorkbench({
   }) =>
     !selectedRegionId || resolveRecordBodyRegion(record) === selectedRegionId;
   const visibleActiveFacts = activeFacts.filter(inSelectedRegion);
+  const visiblePendingFacts = pendingFacts.filter(inSelectedRegion);
   const visiblePendingObservations =
     pendingObservations.filter(inSelectedRegion);
   const visibleObservations = snapshot.observations.filter(inSelectedRegion);
@@ -349,6 +372,92 @@ export function BodyStateWorkbench({
             </Button>
           </div>
         </div>
+      )}
+
+      {visiblePendingFacts.length > 0 && (
+        <section className="space-y-2 rounded-xl border border-sky-300/20 bg-sky-300/[0.055] p-3">
+          <div>
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-sky-100/85">
+              从对话中识别 · 待你确认 {visiblePendingFacts.length}
+            </h4>
+            <p className="mt-1 text-xs leading-5 text-sky-100/55">
+              BodySense
+              已把你明确说出的信息暂存为候选。确认前不会用于诊断、方案或后续推理。
+            </p>
+          </div>
+          {visiblePendingFacts.map((fact) => {
+            const details = factDetailsText(fact);
+            return (
+              <div
+                key={fact.id}
+                className="rounded-lg border border-sky-300/15 bg-background/80 p-3"
+              >
+                <div className="text-xs text-muted-foreground">
+                  {fact.body_region || "全身"} ·{" "}
+                  {factKindLabels[fact.kind] || fact.kind}
+                </div>
+                <p className="mt-1 text-sm font-medium text-foreground">
+                  {fact.value}
+                </p>
+                {details ? (
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    {details}
+                  </p>
+                ) : null}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button
+                    size="xs"
+                    variant="secondary"
+                    isLoading={busyKey === `confirm:${fact.id}`}
+                    onClick={() =>
+                      mutate(
+                        `confirm:${fact.id}`,
+                        {
+                          type: "reviewFact",
+                          factId: fact.id,
+                          expectedRevision: snapshot.current_revision,
+                          reviewState: "confirmed",
+                        },
+                        "记录已确认，会用于后续分析",
+                      )
+                    }
+                  >
+                    <Check className="h-3 w-3" />
+                    确认记录
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    isLoading={busyKey === `reject:${fact.id}`}
+                    onClick={() =>
+                      mutate(
+                        `reject:${fact.id}`,
+                        {
+                          type: "reviewFact",
+                          factId: fact.id,
+                          expectedRevision: snapshot.current_revision,
+                          reviewState: "rejected",
+                        },
+                        "已忽略这条提取结果",
+                      )
+                    }
+                  >
+                    <X className="h-3 w-3" />
+                    不是这样
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    onClick={() => setCorrection({ fact, value: fact.value })}
+                  >
+                    <PencilLine className="h-3 w-3" />
+                    纠正后保存
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </section>
       )}
 
       {visiblePendingObservations.length > 0 && (

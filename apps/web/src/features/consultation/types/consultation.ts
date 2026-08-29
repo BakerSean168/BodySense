@@ -177,6 +177,7 @@ export interface BodyStateFact {
   valid_from?: string | null;
   valid_until?: string | null;
   supersedes_fact_id?: string | null;
+  excluded_from_reasoning?: boolean;
   created_revision?: number;
   updated_revision: number;
   created_at?: string;
@@ -235,6 +236,7 @@ export interface BodyStateSnapshot {
   current_revision: number;
   safety_state: Record<string, unknown>;
   facts: BodyStateFact[];
+  pending_facts?: BodyStateFact[];
   observations: BodyStateObservation[];
   pending_observations?: BodyStateObservation[];
   hypotheses?: BodyStateHypothesis[];
@@ -392,8 +394,16 @@ export interface AskUserQuestion {
   allow_custom_input?: boolean;
   required?: boolean;
   context?: string;
-  /** Optional multi-field form (T0-1). When present, UI collects all fields once. */
+  /** Optional multi-field form. When present, UI collects all fields once. */
   fields?: AskUserField[];
+  /** Runtime-owned intake metadata. Never authored by ordinary UI input. */
+  purpose?: "symptom_intake" | string;
+  state_binding?: {
+    revision: string;
+    capture_id: string;
+    seed_info: Record<string, unknown>;
+    field_map: Record<string, string>;
+  };
 }
 
 export interface ToolCallInfo {

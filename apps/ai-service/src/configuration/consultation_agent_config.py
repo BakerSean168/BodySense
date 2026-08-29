@@ -13,20 +13,30 @@ import hashlib
 import json
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
 
 SERVICE_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_ROOT = SERVICE_ROOT / "config" / "agents"
-DEFAULT_MANIFEST_PATH = CONFIG_ROOT / "consultation-v1.yaml"
+DEFAULT_MANIFEST_PATH = CONFIG_ROOT / "consultation-v2.yaml"
 
 
 class ConsultationGenerationConfig(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
     temperature: float = Field(ge=0.0, le=2.0)
     max_tokens: int = Field(gt=0)
+
+
+class ConsultationIntakeConfig(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    logical_model: str = Field(min_length=1)
+    model_group_revision: str = Field(min_length=1)
+    prompt_revision: str = Field(min_length=1)
+    output_schema_revision: str = Field(min_length=1)
+    policy_revision: str = Field(min_length=1)
+    generation: ConsultationGenerationConfig
 
 
 class ConsultationAgentManifest(BaseModel):
@@ -40,10 +50,15 @@ class ConsultationAgentManifest(BaseModel):
     governance_policy_revision: str = Field(min_length=1)
     decision_policy_revision: str = Field(min_length=1)
     generation: ConsultationGenerationConfig
+    intake: ConsultationIntakeConfig | None = None
 
     def canonical_behavior_json(self) -> str:
         return json.dumps(
-            self.model_dump(mode="json", exclude={"manifest_revision"}),
+            self.model_dump(
+                mode="json",
+                exclude={"manifest_revision"},
+                exclude_none=True,
+            ),
             ensure_ascii=False,
             sort_keys=True,
             separators=(",", ":"),
@@ -57,9 +72,13 @@ class ConsultationAgentManifest(BaseModel):
     def configuration_id(self) -> str:
         return f"consult-config-{self.fingerprint[:16]}"
 
-    def provenance(self) -> dict[str, str]:
-        fields = self.model_dump(mode="json", exclude={"generation"})
-        return {"id": self.configuration_id, **{key: str(value) for key, value in fields.items()}}
+    def provenance(self) -> dict[str, Any]:
+        fields = self.model_dump(
+            mode="json",
+            exclude={"generation"},
+            exclude_none=True,
+        )
+        return {"id": self.configuration_id, **fields}
 
 
 def _load_yaml(path: Path) -> dict[str, object]:

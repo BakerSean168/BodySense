@@ -40,11 +40,18 @@ export function AskUserStatusCard({ interaction }: AskUserStatusCardProps) {
   const isAnswered = interaction.status === "answered";
   const isExpired = interaction.status === "expired";
 
+  const isSymptomIntake = interaction.question.purpose === "symptom_intake";
   const title = isExpired
-    ? "追问已过期"
+    ? isSymptomIntake
+      ? "身体记录补全已过期"
+      : "追问已过期"
     : isAnswered
-      ? "问诊追问"
-      : "待补充信息";
+      ? isSymptomIntake
+        ? "身体记录已补全"
+        : "问诊追问"
+      : isSymptomIntake
+        ? "补全身体记录"
+        : "待补充信息";
 
   return (
     <div className="flex justify-start">

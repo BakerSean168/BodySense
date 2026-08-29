@@ -112,6 +112,38 @@ def test_make_ask_user_tool():
 
 
 @pytest.mark.asyncio
+async def test_handle_ask_user_preserves_runtime_owned_symptom_binding():
+    capture_id = "0123456789abcdef01234567"
+    result = await handle_ask_user(
+        {
+            "question": "请补充症状信息",
+            "purpose": "symptom_intake",
+            "fields": [
+                {
+                    "key": "duration",
+                    "label": "持续多久",
+                    "answer_type": "single_choice",
+                    "options": ["2–7天", "1–4周"],
+                }
+            ],
+            "state_binding": {
+                "capture_id": capture_id,
+                "seed_info": {
+                    "capture_id": capture_id,
+                    "body_part": "右臀",
+                    "symptom_type": "疼痛",
+                },
+                "field_map": {"duration": "duration"},
+            },
+        }
+    )
+    assert result.status == ToolStatus.INTERRUPTED
+    assert result.content["purpose"] == "symptom_intake"
+    assert result.content["state_binding"]["revision"] == "symptom-intake-binding-v1"
+    assert result.content["state_binding"]["capture_id"] == capture_id
+
+
+@pytest.mark.asyncio
 async def test_handle_ask_user_multi_field_form():
     result = await handle_ask_user(
         {

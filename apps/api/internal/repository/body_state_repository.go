@@ -46,7 +46,7 @@ func (r *BodyStateRepository) GetCurrent(ctx context.Context, userID uuid.UUID) 
 		return nil, err
 	}
 	if err := database.FromContext(ctx, r.db).
-		Where("user_id = ? AND lifecycle_state = ? AND excluded_from_reasoning = FALSE", userID, "active").
+		Where("user_id = ? AND lifecycle_state = ? AND review_state = ? AND excluded_from_reasoning = FALSE", userID, "active", "confirmed").
 		Order("updated_at ASC").
 		Find(&state.Facts).Error; err != nil {
 		return nil, err
@@ -468,7 +468,7 @@ func (r *BodyStateRepository) UpdateFactReviewState(
 		default:
 			return fmt.Errorf("invalid fact review state %q", reviewState)
 		}
-		excluded := reviewState == "rejected"
+		excluded := reviewState != "confirmed"
 		if before.ReviewState == reviewState && before.ExcludedFromReasoning == excluded {
 			stored = before
 			return nil
@@ -1050,6 +1050,9 @@ func bodyStateApplyFactDefaults(fact *model.BodyStateFact) {
 	fact.ReviewState = bodyStateDefaultString(fact.ReviewState, "unverified")
 	fact.LifecycleState = bodyStateDefaultString(fact.LifecycleState, "active")
 	fact.Trend = bodyStateDefaultString(fact.Trend, "unknown")
+	if fact.ReviewState != "confirmed" {
+		fact.ExcludedFromReasoning = true
+	}
 }
 
 func bodyStateApplyObservationDefaults(observation *model.BodyStateObservation) {

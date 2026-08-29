@@ -65,6 +65,54 @@ describe("BodyStateWorkbench observation review", () => {
     expect(review).toHaveBeenCalledWith("observation-1", 5, "confirmed");
   });
 
+  it("shows extracted symptom facts as review candidates instead of current truth", async () => {
+    const review = vi.spyOn(workspaceApi, "reviewFact").mockResolvedValue({
+      fact: {} as never,
+    });
+    const user = userEvent.setup();
+    const queryClient = new QueryClient({
+      defaultOptions: { mutations: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <BodyStateWorkbench
+          snapshot={{
+            user_id: "user-1",
+            current_revision: 9,
+            safety_state: {},
+            facts: [],
+            pending_facts: [
+              {
+                id: "candidate-1",
+                kind: "discomfort",
+                body_region: "右臀",
+                value: "疼痛",
+                origin: "ai_extracted",
+                review_state: "unverified",
+                lifecycle_state: "active",
+                trend: "unknown",
+                updated_revision: 9,
+              },
+            ],
+            observations: [],
+            pending_observations: [],
+            hypotheses: [],
+            recent_revisions: [],
+          }}
+        />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByText(/从对话中识别/)).toBeInTheDocument();
+    expect(screen.getByText("右臀 · 不适 / 症状")).toBeInTheDocument();
+    expect(screen.getByText("疼痛")).toBeInTheDocument();
+    expect(screen.getByText(/确认前不会用于诊断/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "确认记录" }));
+    expect(review).toHaveBeenCalledWith("candidate-1", 9, "confirmed");
+  });
+
   it("filters records by selected canonical region and preserves the canonical id when adding", async () => {
     const addFact = vi.spyOn(workspaceApi, "addFact").mockResolvedValue({
       fact: {} as never,

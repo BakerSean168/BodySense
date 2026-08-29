@@ -23,6 +23,7 @@ type workspaceConsultationSource interface {
 
 type workspaceBodyStateSource interface {
 	GetSnapshot(ctx context.Context, userID uuid.UUID, historyLimit int) (*BodyStateSnapshot, error)
+	ListReviewableFacts(ctx context.Context, userID uuid.UUID, limit int) ([]model.BodyStateFact, error)
 	ListReviewableObservations(ctx context.Context, userID uuid.UUID, limit int) ([]model.BodyStateObservation, error)
 }
 
@@ -108,13 +109,17 @@ func (s *HealthWorkspaceService) Get(
 	if err != nil {
 		return nil, fmt.Errorf("load workspace body state: %w", err)
 	}
+	pendingFacts, err := s.bodyState.ListReviewableFacts(ctx, userID, 50)
+	if err != nil {
+		return nil, fmt.Errorf("load workspace pending facts: %w", err)
+	}
 	pendingObservations, err := s.bodyState.ListReviewableObservations(ctx, userID, 50)
 	if err != nil {
 		return nil, fmt.Errorf("load workspace pending observations: %w", err)
 	}
 	workspace.BodyState = &dto.HealthWorkspaceBodyState{
 		CurrentRevision: snapshot.CurrentRevision, SafetyState: snapshot.SafetyState,
-		Facts: snapshot.Facts, Observations: snapshot.Observations,
+		Facts: snapshot.Facts, PendingFacts: pendingFacts, Observations: snapshot.Observations,
 		PendingObservations: pendingObservations,
 		Hypotheses:          snapshot.Hypotheses, RecentRevisions: snapshot.RecentRevisions,
 	}

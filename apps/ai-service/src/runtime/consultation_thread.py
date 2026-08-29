@@ -34,6 +34,12 @@ from ..services.agent.consultation_tools import (
 )
 from ..services.agent.reply_fallback import build_fallback_reply, emit_citation_events
 from ..services.agent.tool_types import ToolStatus
+from ..services.consultation_intake_service import ConsultationIntakeService
+from ..services.consultation_state_acquisition import (
+    apply_structured_intake_answer,
+    build_symptom_intake_question,
+    intake_state_candidates,
+)
 from ..services.red_flag_detector import get_red_flag_detector
 from .checkpointing import get_runtime_checkpointer
 
@@ -72,6 +78,7 @@ def _merge_symptoms(
 
 class ConsultationThreadState(TypedDict, total=False):
     session_id: str
+    run_id: str
     user_id: str
     profile: dict[str, Any]
     # Go-owned durable longitudinal health state. This is business truth;
@@ -84,6 +91,7 @@ class ConsultationThreadState(TypedDict, total=False):
     spatial_context: dict[str, Any]
     phase: str
     current_user_message: str
+    latest_user_message: str
     pending_user_images: list[dict[str, Any]]
     runtime_messages: list[dict[str, Any]]
     extracted_symptoms: Annotated[list[dict[str, Any]], _merge_symptoms]
@@ -100,9 +108,12 @@ class ConsultationThreadState(TypedDict, total=False):
     consultation_manifest: ConsultationAgentManifest
     retrieved_published_evidence: dict[str, dict[str, Any]]
     answer_attributions: list[dict[str, Any]]
+    intake_result: dict[str, Any]
+    intake_question: dict[str, Any] | None
 
 
 _ai_service_instance: AIService | None = None
+_intake_service_instance: ConsultationIntakeService | None = None
 _compiled_graph = None
 
 
@@ -111,6 +122,13 @@ def _get_ai_service() -> AIService:
     if _ai_service_instance is None:
         _ai_service_instance = AIService()
     return _ai_service_instance
+
+
+def _get_intake_service() -> ConsultationIntakeService:
+    global _intake_service_instance
+    if _intake_service_instance is None:
+        _intake_service_instance = ConsultationIntakeService()
+    return _intake_service_instance
 
 
 def _user_content_with_images(
@@ -164,6 +182,8 @@ def _format_body_state_context(body_state: dict[str, Any]) -> str:
     for fact in body_state.get("facts", []) or []:
         if not isinstance(fact, dict):
             continue
+        if fact.get("review_state") != "confirmed" or bool(fact.get("excluded_from_reasoning")):
+            continue
         region = str(fact.get("body_region") or "全身/一般")
         value = str(fact.get("value") or "").strip()
         if not value:
@@ -175,6 +195,10 @@ def _format_body_state_context(body_state: dict[str, Any]) -> str:
 
     for observation in body_state.get("observations", []) or []:
         if not isinstance(observation, dict):
+            continue
+        if observation.get("review_state") != "confirmed" or bool(
+            observation.get("excluded_from_reasoning")
+        ):
             continue
         region = str(observation.get("body_region") or "全身/一般")
         value = observation.get("value") or {}
@@ -270,7 +294,8 @@ def _runtime_messages_to_chat_messages(state: ConsultationThreadState) -> list[C
     messages: list[ChatMessage] = []
 
     profile_context = format_profile_context(state.get("profile", {}))
-    system_content = get_system_prompt(profile_context)
+    manifest = state.get("consultation_manifest") or get_consultation_manifest(None)
+    system_content = get_system_prompt(profile_context, manifest.prompt_revision)
 
     body_state_context = _format_body_state_context(state.get("body_state", {}))
     if body_state_context:
@@ -293,12 +318,13 @@ def _runtime_messages_to_chat_messages(state: ConsultationThreadState) -> list[C
 
     extracted = state.get("extracted_symptoms", [])
     if extracted:
-        info_lines = ["## 已提取的症状信息"]
+        info_lines = ["## 本轮状态采集结果（未标记 confirmed 的候选不得作为确定事实）"]
         for symptom in extracted:
             body_part = symptom.get("body_part", "")
             if not body_part:
                 continue
-            line = f"- {body_part}：{symptom.get('symptom_type', '待补充')}"
+            status = "已由结构化回答确认" if symptom.get("confirmed") else "待用户确认"
+            line = f"- [{status}] {body_part}：{symptom.get('symptom_type', '待补充')}"
             if symptom.get("duration"):
                 line += f"，持续{symptom['duration']}"
             if symptom.get("trigger"):
@@ -352,10 +378,20 @@ def _determine_phase(extracted_symptoms: list[dict[str, Any]]) -> str:
         body_part = symptom.get("body_part", "")
         if not body_part:
             continue
-        has_detail = any(
-            symptom.get(key) for key in ("symptom_type", "duration", "trigger", "severity")
+        if not symptom.get("symptom_type"):
+            continue
+        detail_count = sum(
+            bool(symptom.get(key))
+            for key in (
+                "duration",
+                "trigger",
+                "severity",
+                "radiation",
+                "functional_impact",
+                "neurological_signs",
+            )
         )
-        if has_detail:
+        if detail_count >= 2:
             return "ready_for_analysis"
     return "collecting"
 
@@ -371,6 +407,7 @@ async def prepare_turn(state: ConsultationThreadState) -> dict[str, Any]:
     runtime_messages.append({"role": "user", "content": content})
     return {
         "runtime_messages": runtime_messages,
+        "latest_user_message": current_user_message,
         "current_user_message": "",
         "pending_user_images": [],
         "pending_tool_calls": [],
@@ -378,6 +415,46 @@ async def prepare_turn(state: ConsultationThreadState) -> dict[str, Any]:
         "tool_rounds": 0,
         "retrieved_published_evidence": {},
         "answer_attributions": [],
+        "intake_result": {},
+        "intake_question": None,
+    }
+
+
+async def acquire_turn_state(
+    state: ConsultationThreadState,
+    *,
+    writer: StreamWriter,
+) -> dict[str, Any]:
+    """Classify the latest turn and emit durable candidates before any prose."""
+    manifest = state.get("consultation_manifest") or get_consultation_manifest(None)
+    latest_user_message = state.get("latest_user_message", "").strip()
+    if manifest.intake is None or not latest_user_message:
+        return {"intake_result": {}, "intake_question": None}
+
+    output = await _get_intake_service().assess(
+        latest_user_message=latest_user_message,
+        profile=state.get("profile", {}),
+        body_state=state.get("body_state", {}),
+        config=manifest,
+    )
+    symptoms, lifestyle = intake_state_candidates(
+        output,
+        run_id=state.get("run_id", ""),
+        latest_user_message=latest_user_message,
+    )
+    for symptom in symptoms:
+        writer({"type": "extracted_info", "info": symptom})
+    for item in lifestyle:
+        writer({"type": "lifestyle_context", "context": item})
+
+    question = build_symptom_intake_question(symptoms[0]) if symptoms else None
+    result = output.model_dump(mode="json")
+    result["symptoms"] = symptoms
+    result["lifestyle"] = lifestyle
+    return {
+        "intake_result": result,
+        "intake_question": question,
+        "extracted_symptoms": symptoms,
     }
 
 
@@ -394,6 +471,70 @@ async def safety_check(state: ConsultationThreadState, *, writer: StreamWriter) 
     return {
         "red_flag_result": red_flag_result.to_dict() if red_flag_result.has_red_flags else None,
     }
+
+
+async def enforce_state_acquisition(
+    state: ConsultationThreadState,
+    *,
+    writer: StreamWriter,
+) -> dict[str, Any]:
+    """Pause on one deterministic structured intake gap before visible advice."""
+    question = state.get("intake_question")
+    if not question or state.get("red_flag_result"):
+        return {"intake_question": None}
+
+    binding = question.get("state_binding")
+    capture_id = str(binding.get("capture_id") if isinstance(binding, dict) else "")
+    tool_call_id = f"intake-{capture_id}"
+    writer(
+        {
+            "type": "tool_call",
+            "id": tool_call_id,
+            "tool": "ask_user",
+            "args": question,
+        }
+    )
+    result = await get_consultation_executor().execute(
+        tool_call_id,
+        "ask_user",
+        question,
+    )
+    if result.status != ToolStatus.INTERRUPTED or not isinstance(result.content, dict):
+        raise RuntimeError(result.error or "state acquisition question could not be normalized")
+
+    normalized_question = result.content
+    answer = interrupt(
+        {
+            "interrupt_type": "ask_user",
+            "tool_call_id": tool_call_id,
+            "tool_name": "ask_user",
+            "question": normalized_question,
+        }
+    )
+    writer(
+        {
+            "type": "tool_result",
+            "id": tool_call_id,
+            "tool": "ask_user",
+            "result": {"answer": answer},
+        }
+    )
+
+    completed = apply_structured_intake_answer(normalized_question, answer)
+    runtime_messages = list(state.get("runtime_messages", []))
+    runtime_messages.append(
+        {
+            "role": "user",
+            "content": "[结构化补充回答] " + json.dumps(answer, ensure_ascii=False),
+        }
+    )
+    update: dict[str, Any] = {
+        "runtime_messages": runtime_messages,
+        "intake_question": None,
+    }
+    if completed is not None:
+        update["extracted_symptoms"] = [completed]
+    return update
 
 
 async def llm_turn(state: ConsultationThreadState, *, writer: StreamWriter) -> dict[str, Any]:
@@ -798,15 +939,19 @@ async def emit_done(state: ConsultationThreadState, *, writer: StreamWriter) -> 
 def _build_graph(checkpointer: Any):
     graph = StateGraph(ConsultationThreadState)
     graph.add_node("prepare_turn", prepare_turn)
+    graph.add_node("acquire_turn_state", acquire_turn_state)
     graph.add_node("safety_check", safety_check)
+    graph.add_node("enforce_state_acquisition", enforce_state_acquisition)
     graph.add_node("llm_turn", llm_turn)
     graph.add_node("execute_tool", execute_tool)
     graph.add_node("decide_phase", decide_phase)
     graph.add_node("emit_done", emit_done)
 
     graph.add_edge(START, "prepare_turn")
-    graph.add_edge("prepare_turn", "safety_check")
-    graph.add_edge("safety_check", "llm_turn")
+    graph.add_edge("prepare_turn", "acquire_turn_state")
+    graph.add_edge("acquire_turn_state", "safety_check")
+    graph.add_edge("safety_check", "enforce_state_acquisition")
+    graph.add_edge("enforce_state_acquisition", "llm_turn")
     graph.add_conditional_edges("llm_turn", route_after_model)
     graph.add_conditional_edges("execute_tool", route_after_tool)
     graph.add_edge("decide_phase", "emit_done")
@@ -977,6 +1122,7 @@ async def stream_thread_turn(
     async for chunk in graph.astream(
         {
             "session_id": conversation_id,
+            "run_id": run_id,
             "user_id": user_id,
             "profile": profile,
             "body_state": body_state or {},

@@ -29,6 +29,7 @@ type HealthWorkspaceBodyState struct {
 	CurrentRevision     int64                        `json:"current_revision"`
 	SafetyState         json.RawMessage              `json:"safety_state"`
 	Facts               []model.BodyStateFact        `json:"facts"`
+	PendingFacts        []model.BodyStateFact        `json:"pending_facts"`
 	Observations        []model.BodyStateObservation `json:"observations"`
 	PendingObservations []model.BodyStateObservation `json:"pending_observations"`
 	Hypotheses          []model.BodyStateHypothesis  `json:"hypotheses"`
