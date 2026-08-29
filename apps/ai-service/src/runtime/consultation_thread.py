@@ -47,6 +47,15 @@ logger = logging.getLogger(__name__)
 
 MAX_CONTEXT_TURNS = 10
 MAX_TOOL_ROUNDS = 6
+STREAM_TAIL_HOLD_CHARS = 320
+_OPTIONAL_OFFER_PREFIXES = (
+    "需要我",
+    "要不要我",
+    "是否需要我",
+    "你还需要我",
+    "如果你愿意，我可以",
+    "如果需要，我可以",
+)
 
 
 def get_consultation_manifest(configuration_id: str | None = None):
@@ -537,6 +546,37 @@ async def enforce_state_acquisition(
     return update
 
 
+def _split_trailing_question(text: str) -> tuple[str, str | None]:
+    """Separate one short final prose question from the answer body.
+
+    Consultation questions belong to the HITL interaction protocol. Holding a
+    small streaming tail lets the runtime prevent a model from leaking a final
+    manual-input question into the chat transcript before that policy is
+    enforced.
+    """
+    stripped = text.rstrip()
+    if not stripped.endswith(("?", "？")):
+        return stripped, None
+
+    boundary = max(stripped.rfind(mark) for mark in ("。", "！", "!", "\n"))
+    question = stripped[boundary + 1 :].strip()
+    if not question or len(question) > STREAM_TAIL_HOLD_CHARS:
+        return stripped, None
+    body = stripped[: boundary + 1].rstrip()
+    return body, question
+
+
+def _guard_final_assistant_text(text: str) -> tuple[str, str | None]:
+    """Drop optional sales-like questions and route real questions to ask_user."""
+    body, question = _split_trailing_question(text)
+    if question is None:
+        return text.rstrip(), None
+    compact = question.lstrip("-*# ").strip()
+    if compact.startswith(_OPTIONAL_OFFER_PREFIXES):
+        return body, None
+    return body, question
+
+
 async def llm_turn(state: ConsultationThreadState, *, writer: StreamWriter) -> dict[str, Any]:
     tool_rounds = state.get("tool_rounds", 0)
     if tool_rounds >= MAX_TOOL_ROUNDS:
@@ -569,7 +609,8 @@ async def llm_turn(state: ConsultationThreadState, *, writer: StreamWriter) -> d
         }
 
     provider_tools = get_consultation_registry().to_provider_tools()
-    accumulated_text = ""
+    raw_text = ""
+    emitted_text_length = 0
     completed_tool_calls: list[dict[str, Any]] = []
 
     # North-Star: pin the exact logical model + generation settings from the
@@ -586,9 +627,13 @@ async def llm_turn(state: ConsultationThreadState, *, writer: StreamWriter) -> d
         )
     ):
         if event.type == "text_delta" and event.text:
-            accumulated_text += event.text
-            writer({"type": "text_delta", "delta": event.text})
-            await asyncio.sleep(0)
+            raw_text += event.text
+            safe_end = max(0, len(raw_text) - STREAM_TAIL_HOLD_CHARS)
+            if safe_end > emitted_text_length:
+                delta = raw_text[emitted_text_length:safe_end]
+                emitted_text_length = safe_end
+                writer({"type": "text_delta", "delta": delta})
+                await asyncio.sleep(0)
         elif event.type == "tool_call_done" and event.tool_name:
             tool_call_id = event.tool_call_id or ""
             if not any(existing["id"] == tool_call_id for existing in completed_tool_calls):
@@ -610,6 +655,40 @@ async def llm_turn(state: ConsultationThreadState, *, writer: StreamWriter) -> d
                     },
                 }
             )
+
+    accumulated_text, guarded_question = _guard_final_assistant_text(raw_text)
+    # Do not synthesize a question on an intermediate tool round; the model gets
+    # another turn after tool results and can decide again with the new evidence.
+    if completed_tool_calls:
+        guarded_question = None
+    elif guarded_question:
+        completed_tool_calls.append(
+            {
+                "id": f"guard-ask-{state.get('run_id', 'run')}-{tool_rounds}",
+                "name": "ask_user",
+                "arguments": {
+                    "question": guarded_question,
+                    "reason": "runtime_text_question_guard",
+                    "answer_type": "text",
+                    "allow_custom_input": True,
+                },
+            }
+        )
+
+    if len(accumulated_text) < emitted_text_length:
+        # The guard only owns the held tail. If a provider emits an exceptionally
+        # long final question, never pretend already-streamed bytes were retracted.
+        accumulated_text = raw_text
+        guarded_question = None
+        completed_tool_calls = [
+            call
+            for call in completed_tool_calls
+            if not str(call.get("id", "")).startswith("guard-ask-")
+        ]
+    tail = accumulated_text[emitted_text_length:]
+    if tail:
+        writer({"type": "text_delta", "delta": tail})
+        await asyncio.sleep(0)
 
     runtime_messages = list(state.get("runtime_messages", []))
     assistant_message: dict[str, Any] = {
