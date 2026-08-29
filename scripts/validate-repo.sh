@@ -9,6 +9,7 @@ bash scripts/validate-production-capacity.sh
 bash scripts/validate-production-postgres18.sh
 bash scripts/validate-supply-chain.sh
 pnpm test:static-assets
+pnpm test:delivery
 pnpm lint
 pnpm typecheck
 pnpm test
