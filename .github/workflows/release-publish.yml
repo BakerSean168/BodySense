@@ -201,19 +201,52 @@ jobs:
             repository="$(jq -r ".images.${component}.repository" "$CANDIDATE_PATH")"
             digest="$(jq -r ".images.${component}.digest" "$CANDIDATE_PATH")"
             release_ref="${repository}:${RELEASE_TAG}"
+            source_ref="${repository}@${digest}"
             [[ "$repository" == "$REGISTRY/$NAMESPACE/"* ]] || { echo "$component repository is outside configured ACR namespace" >&2; exit 1; }
+
+            rewrite_release_ref=false
             if inspection="$(docker buildx imagetools inspect "$release_ref" 2>/dev/null)"; then
               existing_digest="$(awk '$1 == "Digest:" { print $2; exit }' <<<"$inspection")"
-              [[ "$existing_digest" == "$digest" ]] || { echo "$component immutable release tag collision: $existing_digest != $digest" >&2; exit 1; }
+              if [[ "$existing_digest" != "$digest" ]]; then
+                # Buildx defaults --prefer-index=true. A failed V3 pilot run may
+                # therefore have left a one-member OCI index whose only child is
+                # the exact candidate manifest. That wrapper contains no new
+                # application artifact and is safe to normalize back to the
+                # candidate manifest. Any other existing release identity is a
+                # real collision and remains fail-closed.
+                existing_raw="$(docker buildx imagetools inspect --raw "$release_ref")"
+                if jq -e --arg digest "$digest" '
+                  .mediaType == "application/vnd.oci.image.index.v1+json" and
+                  (.manifests | length) == 1 and
+                  .manifests[0].digest == $digest
+                ' <<<"$existing_raw" >/dev/null; then
+                  rewrite_release_ref=true
+                  echo "$component: normalizing recoverable single-member index wrapper $existing_digest -> $digest" >> "$GITHUB_STEP_SUMMARY"
+                else
+                  echo "$component immutable release tag collision: $existing_digest != $digest" >&2
+                  exit 1
+                fi
+              fi
             else
-              docker buildx imagetools create --tag "$release_ref" "${repository}@${digest}"
+              rewrite_release_ref=true
             fi
+
+            if [[ "$rewrite_release_ref" == true ]]; then
+              # The candidate is single-platform linux/amd64. Carbon-copy its OCI
+              # manifest instead of wrapping it in a new single-member index, so
+              # the immutable release tag retains the exact candidate digest.
+              docker buildx imagetools create --prefer-index=false --tag "$release_ref" "$source_ref"
+            fi
+
+            release_inspection="$(docker buildx imagetools inspect "$release_ref")"
+            release_digest="$(awk '$1 == "Digest:" { print $2; exit }' <<<"$release_inspection")"
+            [[ "$release_digest" == "$digest" ]] || { echo "$component release manifest digest mismatch: $release_digest != $digest" >&2; exit 1; }
             docker pull "$release_ref" >/dev/null
             actual_revision="$(docker image inspect "$release_ref" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')"
             actual_repo_digest="$(docker image inspect "$release_ref" --format '{{index .RepoDigests 0}}')"
             actual_digest="${actual_repo_digest#*@}"
             [[ "$actual_revision" == "$RELEASE_SHA" ]] || { echo "$component release revision mismatch" >&2; exit 1; }
-            [[ "$actual_digest" == "$digest" ]] || { echo "$component release digest mismatch: $actual_digest != $digest" >&2; exit 1; }
+            [[ "$actual_digest" == "$digest" ]] || { echo "$component pulled release digest mismatch: $actual_digest != $digest" >&2; exit 1; }
           done
       - name: Build canonical release manifest from the candidate
         run: |

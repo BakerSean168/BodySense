@@ -167,7 +167,7 @@ jobs:
           for component in runtime web api aiService; do
             repository="$(jq -r ".images.${component}.repository" "$RELEASE_MANIFEST")"
             digest="$(jq -r ".images.${component}.digest" "$RELEASE_MANIFEST")"
-            docker buildx imagetools create --tag "${repository}:prod-latest" "${repository}@${digest}"
+            docker buildx imagetools create --prefer-index=false --tag "${repository}:prod-latest" "${repository}@${digest}"
           done
       - name: Verify production channel coherence after promotion
         shell: bash
