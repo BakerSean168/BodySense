@@ -41,10 +41,11 @@ jobs:
             "required_status_checks": {
               "strict": true,
               "contexts": [
-                "Repository quality gate",
-                "PostgreSQL 18 current-history replay",
-                "PostgreSQL 18 production-baseline upgrade",
-                "Browser longitudinal health E2E",
+                "Governance Oracle",
+                "Quality Oracle",
+                "Database Oracle",
+                "Experience Oracle",
+                "Delivery Observation",
                 "commit-lint"
               ]
             },
@@ -142,7 +143,7 @@ jobs:
           set -euo pipefail
           {
             echo '### Repository production governance'
-            echo '- main requires PR flow and all five CI checks, including commit lint.'
+            echo '- main requires PR flow and the stable Delivery Platform Oracles/Observation plus commit lint.'
             echo '- Administrators are subject to branch protection.'
             echo '- Force pushes and branch deletion are disabled.'
             if [[ "$PRODUCTION_ENV_OUTCOME" == success ]]; then

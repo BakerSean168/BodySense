@@ -1,0 +1,192 @@
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Published immutable release tag (for example v0.9.0)
+        required: true
+        type: string
+
+concurrency:
+  group: production-release-selection
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  RELEASE_MANIFEST: reports/deploy/release-manifest.json
+
+jobs:
+  verify-release:
+    name: Verify published release contract
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://body.bakersean.top
+    outputs:
+      revision: ${{ steps.identity.outputs.revision }}
+      release_tag: ${{ steps.identity.outputs.release_tag }}
+      manifest_digest: ${{ steps.identity.outputs.manifest_digest }}
+    steps:
+      - id: published
+        name: Resolve Published Release tag identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]] || { echo 'release_tag must be an immutable vX.Y.Z release' >&2; exit 1; }
+          release_json="$(gh release view "$RELEASE_TAG" --repo "$REPOSITORY" --json isDraft,isPrerelease,tagName)"
+          [[ "$(jq -r .tagName <<<"$release_json")" == "$RELEASE_TAG" ]] || { echo 'release lookup/tag mismatch' >&2; exit 1; }
+          [[ "$(jq -r .isDraft <<<"$release_json")" == false ]] || { echo 'Draft Release cannot be deployed' >&2; exit 1; }
+          [[ "$(jq -r .isPrerelease <<<"$release_json")" == false ]] || { echo 'prerelease is not eligible for the production channel' >&2; exit 1; }
+          tag_json="$(gh api "repos/${REPOSITORY}/git/ref/tags/${RELEASE_TAG}")"
+          tag_sha="$(jq -r .object.sha <<<"$tag_json")"
+          tag_type="$(jq -r .object.type <<<"$tag_json")"
+          if [[ "$tag_type" == tag ]]; then
+            tag_sha="$(gh api "repos/${REPOSITORY}/git/tags/${tag_sha}" --jq .object.sha)"
+          fi
+          [[ "$tag_sha" =~ ^[0-9a-f]{40}$ ]] || { echo 'release tag does not resolve to a full Git SHA' >&2; exit 1; }
+          echo "tag_sha=$tag_sha" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ steps.published.outputs.tag_sha }}
+          fetch-depth: 0
+      - name: Download canonical manifest from Published Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$(dirname "$RELEASE_MANIFEST")"
+          gh release download "$RELEASE_TAG" --repo "$REPOSITORY" --pattern release-manifest.json --dir "$(dirname "$RELEASE_MANIFEST")"
+          [[ -s "$RELEASE_MANIFEST" ]] || { echo 'Published Release is missing release-manifest.json' >&2; exit 1; }
+      - id: identity
+        name: Resolve release identity
+        env:
+          REQUESTED_TAG: ${{ inputs.release_tag }}
+          TAG_SHA: ${{ steps.published.outputs.tag_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          revision="$(jq -r .gitSha "$RELEASE_MANIFEST")"
+          release_tag="$(jq -r .tag "$RELEASE_MANIFEST")"
+          manifest_digest="$(jq -r .digest "$RELEASE_MANIFEST")"
+          [[ "$release_tag" == "$REQUESTED_TAG" ]] || { echo 'release manifest tag mismatch' >&2; exit 1; }
+          [[ "$revision" == "$TAG_SHA" ]] || { echo 'release manifest/tag SHA mismatch' >&2; exit 1; }
+          [[ "$revision" =~ ^[0-9a-f]{40}$ ]] || { echo 'release manifest revision is invalid' >&2; exit 1; }
+          [[ "$manifest_digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo 'release manifest digest is invalid' >&2; exit 1; }
+          {
+            echo "revision=$revision"
+            echo "release_tag=$release_tag"
+            echo "manifest_digest=$manifest_digest"
+          } >> "$GITHUB_OUTPUT"
+      - name: Verify release SHA, tag, main ancestry and exact source CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: ${{ steps.identity.outputs.release_tag }}
+          RELEASE_SHA: ${{ steps.identity.outputs.revision }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/delivery/release-manifest.mjs --validate "$RELEASE_MANIFEST"
+          node scripts/delivery/release-contract.mjs --require-release
+          git fetch --quiet origin main --tags
+          tag_sha="$(git rev-list -n 1 "$RELEASE_TAG")"
+          [[ "$tag_sha" == "$RELEASE_SHA" ]] || { echo "tag $RELEASE_TAG points to $tag_sha, manifest expects $RELEASE_SHA" >&2; exit 1; }
+          git merge-base --is-ancestor "$RELEASE_SHA" origin/main || { echo 'release SHA is not reachable from main' >&2; exit 1; }
+          ci_run_id="$(jq -r .ciRunId "$RELEASE_MANIFEST")"
+          ci_json="$(gh api "repos/${REPOSITORY}/actions/runs/${ci_run_id}")"
+          [[ "$(jq -r .name <<<"$ci_json")" == CI ]] || { echo 'release source run is not CI' >&2; exit 1; }
+          [[ "$(jq -r .event <<<"$ci_json")" == push ]] || { echo 'release source CI was not push' >&2; exit 1; }
+          [[ "$(jq -r .head_branch <<<"$ci_json")" == main ]] || { echo 'release source CI was not main' >&2; exit 1; }
+          [[ "$(jq -r .head_sha <<<"$ci_json")" == "$RELEASE_SHA" ]] || { echo 'release source CI SHA mismatch' >&2; exit 1; }
+          [[ "$(jq -r .conclusion <<<"$ci_json")" == success ]] || { echo 'release source CI did not succeed' >&2; exit 1; }
+
+  promote:
+    name: Select published release for production
+    needs: verify-release
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://body.bakersean.top
+    env:
+      REGISTRY: ${{ secrets.ACR_REGISTRY }}
+      NAMESPACE: ${{ secrets.ACR_NAMESPACE }}
+      RELEASE_TAG: ${{ needs.verify-release.outputs.release_tag }}
+      RELEASE_SHA: ${{ needs.verify-release.outputs.revision }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.verify-release.outputs.revision }}
+      - name: Download canonical release manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          mkdir -p "$(dirname "$RELEASE_MANIFEST")"
+          gh release download "$RELEASE_TAG" --repo "$REPOSITORY" --pattern release-manifest.json --dir "$(dirname "$RELEASE_MANIFEST")"
+          node scripts/delivery/release-manifest.mjs --validate "$RELEASE_MANIFEST"
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
+      - name: Login to Alibaba Cloud ACR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      - name: Verify immutable release digests before promotion
+        shell: bash
+        run: |
+          set -euo pipefail
+          for component in web api aiService runtime; do
+            repository="$(jq -r ".images.${component}.repository" "$RELEASE_MANIFEST")"
+            digest="$(jq -r ".images.${component}.digest" "$RELEASE_MANIFEST")"
+            component_tag="$(jq -r ".images.${component}.releaseTag" "$RELEASE_MANIFEST")"
+            [[ "$repository" == "$REGISTRY/$NAMESPACE/"* ]] || { echo "$component repository outside production namespace" >&2; exit 1; }
+            [[ "$component_tag" == "$RELEASE_TAG" ]] || { echo "$component release tag mismatch" >&2; exit 1; }
+            docker pull "${repository}:${RELEASE_TAG}" >/dev/null
+            actual_revision="$(docker image inspect "${repository}:${RELEASE_TAG}" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')"
+            actual_repo_digest="$(docker image inspect "${repository}:${RELEASE_TAG}" --format '{{index .RepoDigests 0}}')"
+            [[ "$actual_revision" == "$RELEASE_SHA" ]] || { echo "$component immutable release revision mismatch" >&2; exit 1; }
+            [[ "${actual_repo_digest#*@}" == "$digest" ]] || { echo "$component immutable release digest mismatch" >&2; exit 1; }
+          done
+      - name: Promote coherent release set to prod-latest
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Registry tag writes are not transactional. The Alibaba host watcher
+          # therefore refuses to deploy until all four revision labels converge.
+          for component in runtime web api aiService; do
+            repository="$(jq -r ".images.${component}.repository" "$RELEASE_MANIFEST")"
+            digest="$(jq -r ".images.${component}.digest" "$RELEASE_MANIFEST")"
+            docker buildx imagetools create --tag "${repository}:prod-latest" "${repository}@${digest}"
+          done
+      - name: Verify production channel coherence after promotion
+        shell: bash
+        run: |
+          set -euo pipefail
+          for component in runtime web api aiService; do
+            repository="$(jq -r ".images.${component}.repository" "$RELEASE_MANIFEST")"
+            expected_digest="$(jq -r ".images.${component}.digest" "$RELEASE_MANIFEST")"
+            docker pull "${repository}:prod-latest" >/dev/null
+            actual_revision="$(docker image inspect "${repository}:prod-latest" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')"
+            actual_repo_digest="$(docker image inspect "${repository}:prod-latest" --format '{{index .RepoDigests 0}}')"
+            [[ "$actual_revision" == "$RELEASE_SHA" ]] || { echo "$component prod-latest revision mismatch" >&2; exit 1; }
+            [[ "${actual_repo_digest#*@}" == "$expected_digest" ]] || { echo "$component prod-latest digest mismatch" >&2; exit 1; }
+          done
+          {
+            echo '### Production release selected'
+            echo ''
+            echo "- Release: $RELEASE_TAG"
+            echo "- Revision: $RELEASE_SHA"
+            echo "- Manifest: ${{ needs.verify-release.outputs.manifest_digest }}"
+            echo '- Alibaba deploy watcher owns backup, migration, health and rollback.'
+          } >> "$GITHUB_STEP_SUMMARY"

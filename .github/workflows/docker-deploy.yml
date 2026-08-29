@@ -1,19 +1,15 @@
-name: Build & Publish Production Images
+name: Legacy Build Production Images (manual fallback)
 
+# Delivery Platform V3 publishes exact-SHA candidates after main CI and Release
+# Publish promotes those verified digests. This workflow is retained temporarily
+# as a manual build fallback only; it cannot create v* releases or move prod-latest.
 on:
-  push:
-    tags: ["v*"]
   workflow_dispatch:
     inputs:
       tag_override:
-        description: "Immutable image tag override (manual runs only)"
+        description: "Immutable non-release image tag override"
         required: false
         type: string
-      promote:
-        description: "Also promote this manual candidate to prod-latest"
-        required: false
-        default: false
-        type: boolean
 
 concurrency:
   group: production-image-publish-${{ github.ref }}
@@ -37,15 +33,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REVISION: ${{ github.sha }}
           REPOSITORY: ${{ github.repository }}
-          EVENT_NAME: ${{ github.event_name }}
-          PROMOTE: ${{ inputs.promote }}
         run: |
           set -euo pipefail
 
-          if [[ "$EVENT_NAME" == workflow_dispatch && "$PROMOTE" == true && "$GITHUB_REF" != refs/heads/main ]]; then
-            echo 'Manual production promotion is allowed only from main.' >&2
-            exit 1
-          fi
 
           git fetch --quiet origin main
           if ! git merge-base --is-ancestor "$REVISION" origin/main; then
@@ -308,43 +298,3 @@ jobs:
           done < <(find "$RUNNER_TEMP/bodysense-web-root/assets" -type f -print0)
           (( failures == 0 )) || exit 1
           echo 'Web image and public immutable asset prefix are coherent.' >> "$GITHUB_STEP_SUMMARY"
-
-  promote:
-    name: Promote coherent production pointers
-    needs: [metadata, build, verify-static-coherence]
-    environment:
-      name: production
-      url: https://body.bakersean.top
-    env:
-      REGISTRY: ${{ secrets.ACR_REGISTRY }}
-      NAMESPACE: ${{ secrets.ACR_NAMESPACE }}
-    if: github.ref_type == 'tag' || inputs.promote == true
-    runs-on: ubuntu-latest
-    steps:
-      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
-      - name: Login to Alibaba Cloud ACR
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
-      - name: Promote immutable images to prod-latest
-        shell: bash
-        run: |
-          set -euo pipefail
-          tag="${{ needs.metadata.outputs.tag }}"
-          for image in bodysense-runtime bodysense-web bodysense-api bodysense-ai-service; do
-            src="${REGISTRY}/${NAMESPACE}/${image}:${tag}"
-            dst="${REGISTRY}/${NAMESPACE}/${image}:prod-latest"
-            docker buildx imagetools create --tag "$dst" "$src"
-          done
-      - name: Summary
-        run: |
-          {
-            echo '### Production image promotion complete'
-            echo ''
-            echo "- Immutable tag: \`${{ needs.metadata.outputs.tag }}\`"
-            echo "- Revision: \`${{ needs.metadata.outputs.revision }}\`"
-            echo "- \`prod-latest\` was promoted only after all four immutable artifacts succeeded."
-            echo "- The production watcher deploys only when Web, API, AI and runtime image revision labels match."
-          } >> "$GITHUB_STEP_SUMMARY"
