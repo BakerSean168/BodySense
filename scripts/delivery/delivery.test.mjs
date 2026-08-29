@@ -13,6 +13,8 @@ import {
   validateManifest,
 } from './lib.mjs';
 import { createCandidate, validateCandidate } from './candidate-manifest.mjs';
+import { extractReleaseNotes, validateReleaseFiles } from './release-contract.mjs';
+import { createReleaseManifest, validateReleaseManifest } from './release-manifest.mjs';
 
 const A = 'a'.repeat(40);
 const B = 'b'.repeat(40);
@@ -350,4 +352,95 @@ test('staging watcher fails closed when an image revision label is missing', () 
   const result = runStagingWatcherCheck({ apiRevision: '' });
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /api staging image has no org.opencontainers.image.revision/);
+});
+
+test('release file contract recognizes release-please merge/squash identity and rejects normal commits', () => {
+  const changelog = '# Changelog\n\n## [0.9.0](https://example/compare) (2026-08-29)\n\n### Features\n\n* delivery v3\n\n## [0.8.1](https://example/old)\n';
+  const valid = validateReleaseFiles({
+    packageVersion: '0.9.0',
+    manifestVersion: '0.9.0',
+    changelog,
+    subjects: ['Merge pull request #140', 'chore(main): release 0.9.0'],
+  });
+  assert.deepEqual(valid.errors, []);
+  assert.equal(valid.releaseShaped, true);
+
+  const normal = validateReleaseFiles({
+    packageVersion: '0.9.0',
+    manifestVersion: '0.9.0',
+    changelog,
+    subjects: ['feat(ops): later normal change'],
+  });
+  assert.deepEqual(normal.errors, []);
+  assert.equal(normal.releaseShaped, false);
+});
+
+test('release file contract fails on version drift and extracts only the requested notes section', () => {
+  const changelog = '# Changelog\n\n## [0.9.0](https://example/new)\n\nnew notes\n\n## [0.8.1](https://example/old)\n\nold notes\n';
+  const drift = validateReleaseFiles({
+    packageVersion: '0.9.0',
+    manifestVersion: '0.8.1',
+    changelog,
+    subjects: ['chore(main): release 0.9.0'],
+  });
+  assert.ok(drift.errors.some((error) => error.includes('manifest version')));
+  const notes = extractReleaseNotes(changelog, '0.9.0');
+  assert.match(notes, /new notes/);
+  assert.doesNotMatch(notes, /old notes/);
+});
+
+test('release manifest promotes candidate digests without changing artifact identity', () => {
+  const gitSha = 'c'.repeat(40);
+  const tag = `sha-${gitSha}`;
+  const digest = (char) => `sha256:${char.repeat(64)}`;
+  const candidate = createCandidate({
+    gitSha,
+    ciRunId: '12345',
+    deliveryManifestDigest: digest('d'),
+    migrationHead: 59,
+    images: {
+      web: { repository: 'registry/bodysense-web', tag, digest: digest('1'), revision: gitSha },
+      api: { repository: 'registry/bodysense-api', tag, digest: digest('2'), revision: gitSha },
+      aiService: { repository: 'registry/bodysense-ai-service', tag, digest: digest('3'), revision: gitSha },
+      runtime: { repository: 'registry/bodysense-runtime', tag, digest: digest('4'), revision: gitSha },
+    },
+    staticAssets: {
+      enabled: true,
+      revision: gitSha,
+      assetBase: `https://assets.example/web/${gitSha}/`,
+      atlasCatalogUrl: 'https://assets.example/anatomy/vanatome/1.4.0/releases/1.4.0/catalog.json',
+      atlasVersion: '1.4.0',
+    },
+  });
+  const release = createReleaseManifest({ candidate, version: '0.9.0', tag: 'v0.9.0', candidateRunId: '6789' });
+  assert.deepEqual(validateReleaseManifest(release), []);
+  assert.equal(release.images.web.digest, candidate.images.web.digest);
+  assert.equal(release.images.api.digest, candidate.images.api.digest);
+  assert.equal(release.candidateManifestDigest, candidate.digest);
+});
+
+test('release manifest fails closed if a promoted component digest/revision is tampered', () => {
+  const gitSha = 'c'.repeat(40);
+  const tag = `sha-${gitSha}`;
+  const digest = (char) => `sha256:${char.repeat(64)}`;
+  const candidate = createCandidate({
+    gitSha,
+    ciRunId: '12345',
+    deliveryManifestDigest: digest('d'),
+    migrationHead: 59,
+    images: {
+      web: { repository: 'registry/bodysense-web', tag, digest: digest('1'), revision: gitSha },
+      api: { repository: 'registry/bodysense-api', tag, digest: digest('2'), revision: gitSha },
+      aiService: { repository: 'registry/bodysense-ai-service', tag, digest: digest('3'), revision: gitSha },
+      runtime: { repository: 'registry/bodysense-runtime', tag, digest: digest('4'), revision: gitSha },
+    },
+    staticAssets: { enabled: false, revision: gitSha, assetBase: '', atlasCatalogUrl: '', atlasVersion: '1.4.0' },
+  });
+  const release = createReleaseManifest({ candidate, version: '0.9.0', tag: 'v0.9.0', candidateRunId: '6789' });
+  release.images.aiService.revision = 'a'.repeat(40);
+  release.images.api.digest = 'bad';
+  const errors = validateReleaseManifest(release);
+  assert.ok(errors.some((error) => error.includes('aiService.revision')));
+  assert.ok(errors.some((error) => error.includes('api.digest')));
+  assert.ok(errors.some((error) => error.includes('release digest mismatch')));
 });

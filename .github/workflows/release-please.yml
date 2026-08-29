@@ -1,56 +1,28 @@
-name: release-please
+name: Prepare Release
 
-# A release is considered only after the exact main revision has completed the
-# full CI workflow successfully. This prevents release tags from racing ahead of
-# migration and browser E2E gates.
+# Release preparation is an explicit product milestone. Normal main integration
+# and staging delivery do not implicitly create/update a release PR.
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
   pull-requests: write
 
 concurrency:
-  group: release-please-main
-  cancel-in-progress: true
+  group: prepare-release-main
+  cancel-in-progress: false
 
 jobs:
   release-please:
-    if: >-
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.conclusion == 'success'
+    name: Prepare Release PR
     runs-on: ubuntu-latest
     steps:
-      - name: Verify tested revision is still main HEAD
-        id: guard
-        shell: bash
-        env:
-          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
-          REPOSITORY: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          current_sha="$(git ls-remote "https://github.com/${REPOSITORY}.git" refs/heads/main | awk '{print $1}')"
-          if [[ -z "$current_sha" ]]; then
-            echo 'Unable to resolve main HEAD.' >&2
-            exit 1
-          fi
-          if [[ "$current_sha" != "$TESTED_SHA" ]]; then
-            echo "eligible=false" >> "$GITHUB_OUTPUT"
-            echo "Main advanced from tested ${TESTED_SHA} to ${current_sha}; a newer CI run will own release processing." >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-          echo "eligible=true" >> "$GITHUB_OUTPUT"
-          echo "Release processing is eligible for tested main revision ${TESTED_SHA}." >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Create or update release PR / release
-        if: steps.guard.outputs.eligible == 'true'
-        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
-          # A PAT is required so a release tag can trigger the production image
-          # workflow. GITHUB_TOKEN remains a fallback for release-PR maintenance.
+          # BODYSENSE_WORKFLOW allows the generated Release PR to trigger normal
+          # protected-branch CI. release-please is configured to prepare version
+          # files/CHANGELOG only; Release Publish owns tag/GitHub Release creation.
           token: ${{ secrets.BODYSENSE_WORKFLOW || secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json

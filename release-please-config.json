@@ -6,7 +6,8 @@
     ".": {
       "release-type": "node",
       "package-name": "bodysense",
-      "changelog-path": "CHANGELOG.md"
+      "changelog-path": "CHANGELOG.md",
+      "skip-github-release": true
     }
   }
 }

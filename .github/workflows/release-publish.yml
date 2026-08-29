@@ -1,0 +1,271 @@
+name: Release Publish
+
+on:
+  workflow_run:
+    workflows: [Publish Main Candidate]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      candidate_run_id:
+        description: Successful Publish Main Candidate run ID to resume/retry
+        required: true
+        type: string
+
+concurrency:
+  group: release-publish-${{ github.event.workflow_run.id || inputs.candidate_run_id }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: read
+  pull-requests: read
+
+env:
+  CANDIDATE_PATH: reports/release/candidate/candidate-set-v1.json
+
+jobs:
+  resolve:
+    name: Resolve exact release candidate
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      eligible: ${{ steps.contract.outputs.eligible }}
+      revision: ${{ steps.contract.outputs.sha }}
+      version: ${{ steps.contract.outputs.version }}
+      tag: ${{ steps.contract.outputs.tag }}
+      candidate_run_id: ${{ steps.run.outputs.candidate_run_id }}
+      candidate_digest: ${{ steps.candidate.outputs.digest }}
+    steps:
+      - id: run
+        name: Resolve and verify candidate workflow run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          EVENT_RUN_ID: ${{ github.event.workflow_run.id }}
+          REQUESTED_RUN_ID: ${{ inputs.candidate_run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_id="${EVENT_RUN_ID:-$REQUESTED_RUN_ID}"
+          [[ "$run_id" =~ ^[0-9]+$ ]] || { echo 'candidate workflow run ID must be numeric' >&2; exit 1; }
+          run_json="$(gh api "repos/${REPOSITORY}/actions/runs/${run_id}")"
+          [[ "$(jq -r .name <<<"$run_json")" == 'Publish Main Candidate' ]] || { echo 'selected run is not Publish Main Candidate' >&2; exit 1; }
+          [[ "$(jq -r .conclusion <<<"$run_json")" == success ]] || { echo 'selected candidate workflow did not complete successfully' >&2; exit 1; }
+          candidate_revision="$(jq -r .head_sha <<<"$run_json")"
+          [[ "$candidate_revision" =~ ^[0-9a-f]{40}$ ]] || { echo 'candidate workflow run has invalid head_sha' >&2; exit 1; }
+          echo "candidate_run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "candidate_revision=$candidate_revision" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ steps.run.outputs.candidate_revision }}
+          fetch-depth: 0
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: candidate-set-*
+          path: reports/release/candidate
+          merge-multiple: true
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.run.outputs.candidate_run_id }}
+      - id: candidate
+        name: Resolve candidate identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -s "$CANDIDATE_PATH" ]] || { echo "missing candidate manifest: $CANDIDATE_PATH" >&2; exit 1; }
+          revision="$(jq -r .gitSha "$CANDIDATE_PATH")"
+          digest="$(jq -r .digest "$CANDIDATE_PATH")"
+          [[ "$revision" =~ ^[0-9a-f]{40}$ ]] || { echo 'candidate manifest has invalid gitSha' >&2; exit 1; }
+          [[ "$revision" == "${{ steps.run.outputs.candidate_revision }}" ]] || { echo 'candidate manifest/workflow revision mismatch' >&2; exit 1; }
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo 'candidate manifest has invalid digest' >&2; exit 1; }
+          echo "revision=$revision" >> "$GITHUB_OUTPUT"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+      - name: Validate candidate and exact source CI provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/delivery/candidate-manifest.mjs --validate "$CANDIDATE_PATH"
+          candidate_sha="$(jq -r .gitSha "$CANDIDATE_PATH")"
+          [[ "$(git rev-parse HEAD)" == "$candidate_sha" ]] || { echo 'candidate/source checkout mismatch' >&2; exit 1; }
+          ci_run_id="$(jq -r .ciRunId "$CANDIDATE_PATH")"
+          ci_json="$(gh api "repos/${REPOSITORY}/actions/runs/${ci_run_id}")"
+          [[ "$(jq -r .name <<<"$ci_json")" == CI ]] || { echo 'candidate source run is not CI' >&2; exit 1; }
+          [[ "$(jq -r .event <<<"$ci_json")" == push ]] || { echo 'candidate source CI was not a main push run' >&2; exit 1; }
+          [[ "$(jq -r .head_branch <<<"$ci_json")" == main ]] || { echo 'candidate source CI was not on main' >&2; exit 1; }
+          [[ "$(jq -r .head_sha <<<"$ci_json")" == "$candidate_sha" ]] || { echo 'candidate source CI SHA mismatch' >&2; exit 1; }
+          [[ "$(jq -r .conclusion <<<"$ci_json")" == success ]] || { echo 'candidate source CI did not succeed' >&2; exit 1; }
+          git fetch --quiet origin main
+          git merge-base --is-ancestor "$candidate_sha" origin/main || { echo 'candidate revision is no longer reachable from main' >&2; exit 1; }
+      - id: contract
+        name: Detect exact Release PR merge contract
+        run: node scripts/delivery/release-contract.mjs --github-output
+      - name: No-op summary for normal main candidate
+        if: steps.contract.outputs.eligible != 'true'
+        run: echo 'Candidate is not a release-preparation merge; Release Publish is a safe no-op.' >> "$GITHUB_STEP_SUMMARY"
+
+  prepare-draft:
+    name: Create or resume Draft Release
+    needs: resolve
+    if: needs.resolve.outputs.eligible == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      already_published: ${{ steps.release.outputs.already_published }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.resolve.outputs.revision }}
+          fetch-depth: 0
+      - name: Revalidate release identity and extract notes
+        run: |
+          node scripts/delivery/release-contract.mjs --require-release --write-notes release-notes.md
+      - id: release
+        name: Create immutable tag and Draft Release idempotently
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
+          RELEASE_SHA: ${{ needs.resolve.outputs.revision }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag_json=''
+          if tag_json="$(gh api "repos/${REPOSITORY}/git/ref/tags/${RELEASE_TAG}" 2>/dev/null)"; then
+            existing_sha="$(jq -r .object.sha <<<"$tag_json")"
+            existing_type="$(jq -r .object.type <<<"$tag_json")"
+            if [[ "$existing_type" == tag ]]; then
+              existing_sha="$(gh api "repos/${REPOSITORY}/git/tags/${existing_sha}" --jq .object.sha)"
+            fi
+            [[ "$existing_sha" == "$RELEASE_SHA" ]] || { echo "$RELEASE_TAG already points to $existing_sha, expected $RELEASE_SHA" >&2; exit 1; }
+          else
+            gh api --method POST "repos/${REPOSITORY}/git/refs" \
+              -f ref="refs/tags/${RELEASE_TAG}" -f sha="$RELEASE_SHA" >/dev/null
+          fi
+
+          if gh release view "$RELEASE_TAG" --repo "$REPOSITORY" >/dev/null 2>&1; then
+            is_draft="$(gh release view "$RELEASE_TAG" --repo "$REPOSITORY" --json isDraft --jq .isDraft)"
+            if [[ "$is_draft" != true ]]; then
+              echo 'already_published=true' >> "$GITHUB_OUTPUT"
+              echo "$RELEASE_TAG is already published; no duplicate release will be created." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+          else
+            gh release create "$RELEASE_TAG" --repo "$REPOSITORY" --verify-tag --draft \
+              --title "$RELEASE_TAG" --notes-file release-notes.md
+          fi
+          echo 'already_published=false' >> "$GITHUB_OUTPUT"
+
+  promote-release-artifacts:
+    name: Promote verified candidate digests to release
+    needs: [resolve, prepare-draft]
+    if: needs.prepare-draft.outputs.already_published != 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: artifact-publish
+    env:
+      REGISTRY: ${{ vars.ACR_REGISTRY }}
+      NAMESPACE: ${{ vars.ACR_NAMESPACE }}
+      RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
+      RELEASE_SHA: ${{ needs.resolve.outputs.revision }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.resolve.outputs.revision }}
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: candidate-set-*
+          path: reports/release/candidate
+          merge-multiple: true
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ needs.resolve.outputs.candidate_run_id }}
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
+      - name: Login to Alibaba Cloud ACR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      - name: Promote exact candidate digests without rebuilding source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/delivery/candidate-manifest.mjs --validate "$CANDIDATE_PATH"
+          [[ "$(jq -r .gitSha "$CANDIDATE_PATH")" == "$RELEASE_SHA" ]] || { echo 'release/candidate SHA mismatch' >&2; exit 1; }
+          for component in web api aiService runtime; do
+            repository="$(jq -r ".images.${component}.repository" "$CANDIDATE_PATH")"
+            digest="$(jq -r ".images.${component}.digest" "$CANDIDATE_PATH")"
+            [[ "$repository" == "$REGISTRY/$NAMESPACE/"* ]] || { echo "$component repository is outside configured ACR namespace" >&2; exit 1; }
+            docker buildx imagetools create --tag "${repository}:${RELEASE_TAG}" "${repository}@${digest}"
+            docker pull "${repository}:${RELEASE_TAG}" >/dev/null
+            actual_revision="$(docker image inspect "${repository}:${RELEASE_TAG}" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')"
+            actual_repo_digest="$(docker image inspect "${repository}:${RELEASE_TAG}" --format '{{index .RepoDigests 0}}')"
+            actual_digest="${actual_repo_digest#*@}"
+            [[ "$actual_revision" == "$RELEASE_SHA" ]] || { echo "$component release revision mismatch" >&2; exit 1; }
+            [[ "$actual_digest" == "$digest" ]] || { echo "$component release digest mismatch: $actual_digest != $digest" >&2; exit 1; }
+          done
+      - name: Build canonical release manifest from the candidate
+        run: |
+          node scripts/delivery/release-manifest.mjs \
+            --candidate "$CANDIDATE_PATH" \
+            --version "${{ needs.resolve.outputs.version }}" \
+            --tag "$RELEASE_TAG" \
+            --candidate-run-id "${{ needs.resolve.outputs.candidate_run_id }}" \
+            --output reports/release/release-manifest.json
+          node scripts/delivery/release-manifest.mjs --validate reports/release/release-manifest.json
+      - name: Attach canonical manifest to Draft Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          test "$(gh release view "$RELEASE_TAG" --repo "$REPOSITORY" --json isDraft --jq .isDraft)" = true
+          gh release upload "$RELEASE_TAG" reports/release/release-manifest.json --clobber --repo "$REPOSITORY"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: release-manifest-${{ needs.resolve.outputs.tag }}
+          path: reports/release/release-manifest.json
+          if-no-files-found: error
+          retention-days: 180
+
+  finalize:
+    name: Release postflight and publish
+    needs: [resolve, prepare-draft, promote-release-artifacts]
+    if: >-
+      always() &&
+      needs.resolve.outputs.eligible == 'true' &&
+      needs.prepare-draft.result == 'success' &&
+      needs.prepare-draft.outputs.already_published != 'true' &&
+      needs.promote-release-artifacts.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.resolve.outputs.revision }}
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: release-manifest-${{ needs.resolve.outputs.tag }}
+          path: reports/release
+      - name: Verify manifest remains attached before publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
+        run: |
+          set -euo pipefail
+          node scripts/delivery/release-manifest.mjs --validate reports/release/release-manifest.json
+          test "$(gh release view "$RELEASE_TAG" --repo "$REPOSITORY" --json isDraft --jq .isDraft)" = true
+          assets="$(gh release view "$RELEASE_TAG" --repo "$REPOSITORY" --json assets --jq '.assets[].name')"
+          grep -Fxq release-manifest.json <<<"$assets" || { echo 'draft release is missing release-manifest.json' >&2; exit 1; }
+          gh release edit "$RELEASE_TAG" --repo "$REPOSITORY" --draft=false --latest
+          {
+            echo '### Release published'
+            echo ''
+            echo "- Tag: $RELEASE_TAG"
+            echo "- Revision: ${{ needs.resolve.outputs.revision }}"
+            echo '- Production pointers were not changed.'
+          } >> "$GITHUB_STEP_SUMMARY"
