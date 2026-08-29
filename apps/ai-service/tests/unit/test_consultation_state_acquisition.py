@@ -49,6 +49,13 @@ def test_runtime_guard_keeps_example_question_as_explanatory_prose() -> None:
     assert question is None
 
 
+def test_runtime_guard_keeps_rhetorical_markdown_heading() -> None:
+    text = "### 下一步\n3. **是否需要进一步评估**？\n如果持续加重，建议线下评估。"
+    guarded, question = _guard_final_assistant_text(text)
+    assert guarded == text
+    assert question is None
+
+
 def test_runtime_guard_removes_embedded_manual_question_block() -> None:
     text = (
         "可以先减少连续久坐。\n\n"

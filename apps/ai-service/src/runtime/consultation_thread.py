@@ -50,6 +50,7 @@ MAX_CONTEXT_TURNS = 10
 MAX_TOOL_ROUNDS = 6
 STREAM_TAIL_HOLD_CHARS = 320
 _QUESTION_SENTENCE_RE = re.compile(r"(?P<question>[^。！？!?\n]{2,220}[？?])")
+_RHETORICAL_HEADING_RE = re.compile(r"^\d+[.、]\s*\*\*[^*]+\*\*[？?]$")
 _NON_INTERACTIVE_QUESTION_MARKERS = ("例如", "比如")
 _OPTIONAL_OFFER_PREFIXES = (
     "需要我",
@@ -560,6 +561,15 @@ async def enforce_state_acquisition(
     return update
 
 
+def _is_non_interactive_question(question: str) -> bool:
+    compact = question.strip()
+    if any(marker in compact for marker in _NON_INTERACTIVE_QUESTION_MARKERS):
+        return True
+    if compact.startswith("#"):
+        return True
+    return bool(_RHETORICAL_HEADING_RE.fullmatch(compact))
+
+
 def _guard_final_assistant_text(text: str) -> tuple[str, str | None]:
     """Keep manual-input questions out of assistant prose.
 
@@ -574,11 +584,7 @@ def _guard_final_assistant_text(text: str) -> tuple[str, str | None]:
     held_tail = stripped[tail_start:]
     matches = list(_QUESTION_SENTENCE_RE.finditer(held_tail))
     interactive_matches = [
-        match
-        for match in matches
-        if not any(
-            marker in match.group("question") for marker in _NON_INTERACTIVE_QUESTION_MARKERS
-        )
+        match for match in matches if not _is_non_interactive_question(match.group("question"))
     ]
     if not interactive_matches:
         return stripped, None
