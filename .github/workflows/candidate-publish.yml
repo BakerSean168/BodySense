@@ -413,7 +413,7 @@ jobs:
           for image in bodysense-runtime bodysense-web bodysense-api bodysense-ai-service; do
             src="${REGISTRY}/${NAMESPACE}/${image}:${TAG}"
             dst="${REGISTRY}/${NAMESPACE}/${image}:staging-latest"
-            docker buildx imagetools create --tag "$dst" "$src"
+            docker buildx imagetools create --prefer-index=false --tag "$dst" "$src"
           done
       - name: Verify staging channel converged to one revision
         if: steps.freshness.outputs.eligible == 'true'

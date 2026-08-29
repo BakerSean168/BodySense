@@ -444,3 +444,20 @@ test('release manifest fails closed if a promoted component digest/revision is t
   assert.ok(errors.some((error) => error.includes('api.digest')));
   assert.ok(errors.some((error) => error.includes('release digest mismatch')));
 });
+
+test('all registry channel/release promotions carbon-copy single-platform manifests', () => {
+  for (const workflow of [
+    '.github/workflows/candidate-publish.yml',
+    '.github/workflows/release-publish.yml',
+    '.github/workflows/deploy-production.yml',
+  ]) {
+    const contents = fs.readFileSync(workflow, 'utf8');
+    const promotionLines = contents
+      .split(/\r?\n/)
+      .filter((line) => line.includes('docker buildx imagetools create') && line.includes('--tag'));
+    assert.ok(promotionLines.length > 0, `${workflow} must contain a registry promotion`);
+    for (const line of promotionLines) {
+      assert.match(line, /--prefer-index=false/, `${workflow}: ${line.trim()}`);
+    }
+  }
+});
