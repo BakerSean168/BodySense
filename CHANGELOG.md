@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/BakerSean168/BodySense/compare/v0.9.0...v0.9.1) (2026-08-29)
+
+
+### Operations
+
+* close Delivery Platform V3 rollout and align canonical CI/CD with the production-proven release/deploy contract ([dce2a3e](https://github.com/BakerSean168/BodySense/commit/dce2a3e6d91aaedf03d61f59589efe18a3124ce7))
+
 ## [0.9.0](https://github.com/BakerSean168/BodySense/compare/v0.8.1...v0.9.0) (2026-08-29)
 
 
