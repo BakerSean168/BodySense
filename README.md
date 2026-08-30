@@ -114,10 +114,23 @@ For the current runtime and deployment boundaries, see [`docs/architecture/deplo
 git clone https://github.com/BakerSean168/BodySense.git
 cd BodySense
 pnpm install
-cp .env.example .env
-pnpm docker:dev:up
 pnpm dev
 ```
+
+`pnpm dev` is the canonical interactive direct-dev entrypoint. It idempotently ensures the Docker-only development infrastructure is healthy, loads `.env.dev.local` when present, and then runs Web/API/AI on the host with hot reload.
+
+The infrastructure is intentionally longer-lived than the application processes:
+
+```bash
+pnpm dev:infra:status  # PostgreSQL 18 + pgvector, Redis, LiteLLM
+pnpm dev:infra:up      # create/start and wait for health
+pnpm dev:infra:logs    # infrastructure logs
+pnpm dev:infra:down    # explicit teardown; persistent volumes are preserved
+```
+
+The default direct-dev ports are Web `20100`, API `20101`, AI `20102`, PostgreSQL `20110`, Redis `20111`, and LiteLLM `20112`. Infrastructure containers use `restart: unless-stopped`, so a normal Docker/host restart brings them back without requiring the application processes to stay running.
+
+Put host-specific overrides and provider credentials in the gitignored `.env.dev.local`; `scripts/dev-env.sh` supplies non-secret development defaults, so copying `.env.example` to `.env` is not required.
 
 Run a single surface when you do not need the full stack:
 

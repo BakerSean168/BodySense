@@ -114,10 +114,23 @@ tools/            项目专用工程工具
 git clone https://github.com/BakerSean168/BodySense.git
 cd BodySense
 pnpm install
-cp .env.example .env
-pnpm docker:dev:up
 pnpm dev
 ```
+
+`pnpm dev` 是 direct-dev 的标准交互入口：它会幂等确认 Docker 基础设施健康，读取存在的 `.env.dev.local`，然后在宿主机前台启动 Web / API / AI，并保留热更新能力。
+
+基础设施刻意比应用进程更长寿：
+
+```bash
+pnpm dev:infra:status  # PostgreSQL 18 + pgvector、Redis、LiteLLM
+pnpm dev:infra:up      # 创建/启动并等待健康
+pnpm dev:infra:logs    # 查看基础设施日志
+pnpm dev:infra:down    # 显式拆除；持久化数据卷保留
+```
+
+默认 direct-dev 端口为 Web `20100`、API `20101`、AI `20102`、PostgreSQL `20110`、Redis `20111`、LiteLLM `20112`。基础设施容器采用 `restart: unless-stopped`，因此 Docker 或宿主机正常重启后会自动恢复，但 Web / API / AI 不会被强制常驻。
+
+机器相关覆盖项和模型供应商凭据放到 Git 忽略的 `.env.dev.local`。`scripts/dev-env.sh` 已提供非敏感开发默认值，不再要求把 `.env.example` 复制成 `.env`。
 
 如果不需要完整技术栈，可以单独启动某个运行面：
 

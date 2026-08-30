@@ -5,36 +5,17 @@ ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$ROOT"
 
 RUNTIME_DIR=${BODYSENSE_DEV_RUNTIME_DIR:-$ROOT/.runtime/dev}
-ENV_FILE=${BODYSENSE_DEV_ENV_FILE:-$ROOT/.env.dev.local}
+# shellcheck source=scripts/dev-env.sh
+source "$ROOT/scripts/dev-env.sh"
+
 COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-bodysense-dev-infra}
 export COMPOSE_PROJECT_NAME
-
-# BodySense project block: 20100-20199.
-export DEV_BIND_HOST=${DEV_BIND_HOST:-127.0.0.1}
-export WEB_PORT=${WEB_PORT:-20100}
-export API_PORT=${API_PORT:-20101}
-export AI_SERVICE_PORT=${AI_SERVICE_PORT:-20102}
-export DB_PORT=${DB_PORT:-20110}
-export REDIS_PORT=${REDIS_PORT:-20111}
-export LITELLM_PORT=${LITELLM_PORT:-20112}
-
-if [[ -f "$ENV_FILE" ]]; then
-  set -a
-  # shellcheck disable=SC1090
-  source "$ENV_FILE"
-  set +a
-fi
-
-export DB_USER=${DB_USER:-bodysense}
-export DB_PASSWORD=${DB_PASSWORD:-bodysense123}
-export DB_NAME=${DB_NAME:-bodysense}
-export REDIS_PASSWORD=${REDIS_PASSWORD:-bodysense123}
-export JWT_SECRET_KEY=${JWT_SECRET_KEY:-bodysense-dev-only-secret}
-export LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:-sk-bodysense-dev-gateway}
-export EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-hashing}
-export CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:${WEB_PORT},http://127.0.0.1:${WEB_PORT}}
-
-compose=(docker compose -f docker/docker-compose.yml --profile dev)
+compose=(
+  docker compose
+  -f docker/docker-compose.yml
+  -f docker/docker-compose.dev-infra.yml
+  --profile dev
+)
 
 mkdir -p "$RUNTIME_DIR"
 
@@ -97,7 +78,7 @@ wait_http() {
 }
 
 up() {
-  "${compose[@]}" up -d --wait --wait-timeout 120 postgres-dev redis-dev litellm-gateway
+  "$ROOT/scripts/dev-infra.sh" up
 
   # The Go API owns schema migration/extension initialization. Start it before
   # the Python knowledge pool so a brand-new dev volume is bootstrapped deterministically.
@@ -115,7 +96,7 @@ down() {
   stop_process web
   stop_process api
   stop_process ai
-  "${compose[@]}" down --remove-orphans
+  echo "persistent dev infrastructure left running; use '$ROOT/scripts/dev-infra.sh down' to stop it explicitly"
 }
 
 status() {
@@ -136,7 +117,8 @@ case "${1:-status}" in
   up) up ;;
   down) down ;;
   restart) down; up ;;
+  infra-down) down; "$ROOT/scripts/dev-infra.sh" down ;;
   status) status ;;
   logs) tail -n "${2:-120}" "$RUNTIME_DIR"/*.log 2>/dev/null || true ;;
-  *) echo "usage: $0 {up|down|restart|status|logs [lines]}" >&2; exit 2 ;;
+  *) echo "usage: $0 {up|down|restart|infra-down|status|logs [lines]}" >&2; exit 2 ;;
 esac

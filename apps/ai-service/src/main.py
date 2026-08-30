@@ -20,7 +20,9 @@ _env_paths = [
 
 for _env_path in _env_paths:
     if load_dotenv and _env_path.exists():
-        load_dotenv(_env_path, override=True)
+        # Explicit process environment (for example scripts/dev-env.sh or Docker)
+        # is authoritative; .env is only a local fallback.
+        load_dotenv(_env_path, override=False)
         break
 
 from .api.routes import (  # noqa: E402

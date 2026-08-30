@@ -49,7 +49,11 @@ export default defineConfig({
   },
   server: {
     ...(allowedHosts.length > 0 ? { allowedHosts } : {}),
+    // Direct dev stays loopback-only. Tailscale Serve owns the Tailnet address
+    // on the same project port and proxies into this listener.
+    host: process.env.BODYSENSE_WEB_HOST || "127.0.0.1",
     port: Number(process.env.BODYSENSE_WEB_PORT || 5173),
+    strictPort: true,
     proxy: {
       "/api": {
         target: process.env.VITE_DEV_API_TARGET || "http://localhost:8080",

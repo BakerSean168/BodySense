@@ -2,6 +2,11 @@
 
 > **目标：** 搭建一键启动的本地开发环境，包含 PostgreSQL、Redis、Go API、React 前端
 
+> [!NOTE]
+> **2026-08-30 当前 direct-dev 契约：** PostgreSQL 18 + pgvector、Redis、LiteLLM 是 Docker 常驻基础设施；Web / Go API / Python AI 是宿主机开发进程。标准入口为 `pnpm dev`，它会先幂等确认基础设施健康，再以前台热更新方式启动应用。当前端口块固定为 Web `20100`、API `20101`、AI `20102`、PostgreSQL `20110`、Redis `20111`、LiteLLM `20112`。本文后面保留的早期 `5432` / `6384` 示例属于最初学习记录，不再是当前仓库的 canonical 端口。
+>
+> 常用命令：`pnpm dev:infra:status`、`pnpm dev:infra:up`、`pnpm dev:infra:logs`、`pnpm dev:infra:down`。正常结束 `pnpm dev` 不会拆除基础设施；只有显式执行 `dev:infra:down` 才会移除基础设施容器，PostgreSQL 数据卷仍保留。
+
 ---
 
 ## 1. Docker Compose 多容器编排
