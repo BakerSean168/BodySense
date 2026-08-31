@@ -6,6 +6,7 @@ import {
   History,
   Lightbulb,
   PencilLine,
+  RefreshCw,
   ShieldCheck,
   TrendingDown,
   TrendingUp,
@@ -29,12 +30,26 @@ import {
   useBodyStateCommand,
   type BodyStateCommand,
 } from "../hooks/useBodyStateCommand";
+import type { LifestyleSectionKey } from "../api/workspaceApi";
 
 interface BodyStateWorkbenchProps {
   snapshot: BodyStateSnapshot;
   selectedRegionId?: BodyRegionId | null;
   onSelectRegion?: (regionId: BodyRegionId | null) => void;
   onAskRegion?: (regionId: BodyRegionId) => void;
+}
+
+const lifestyleSectionByKind: Record<string, LifestyleSectionKey> = {
+  "lifestyle.activity": "activity",
+  "lifestyle.sleep": "sleep",
+  "lifestyle.exercise": "exercise",
+  "lifestyle.nutrition": "nutrition",
+  "lifestyle.substances": "substances",
+  "lifestyle.recovery": "recovery",
+} as const;
+
+function isLifestyleFact(kind: string) {
+  return kind in lifestyleSectionByKind;
 }
 
 const factKindLabels: Record<string, string> = {
@@ -136,6 +151,10 @@ export function BodyStateWorkbench({
     fact: BodyStateFact;
     value: string;
   } | null>(null);
+  const [currentUpdate, setCurrentUpdate] = useState<{
+    fact: BodyStateFact;
+    value: string;
+  } | null>(null);
   const [safetyNote, setSafetyNote] = useState("");
   const safety = useMemo(() => safetyState(snapshot), [snapshot]);
   const selectedRegionLabel = selectedRegionId
@@ -151,8 +170,10 @@ export function BodyStateWorkbench({
     try {
       await bodyStateCommand.mutateAsync(command);
       toast.success(success);
+      return true;
     } catch (error) {
       toast.error(errorMessage(error, "身体记录更新失败"));
+      return false;
     } finally {
       setBusyKey(null);
     }
@@ -200,7 +221,7 @@ export function BodyStateWorkbench({
   const handleCorrection = async () => {
     if (!correction || !correction.value.trim()) return;
     const fact = correction.fact;
-    await mutate(
+    const saved = await mutate(
       `correct:${fact.id}`,
       {
         type: "correctFact",
@@ -222,7 +243,45 @@ export function BodyStateWorkbench({
       },
       "已保留原记录，并保存纠正后的内容",
     );
-    setCorrection(null);
+
+    if (saved) {
+      setCorrection(null);
+    }
+  };
+
+  const handleCurrentUpdate = async () => {
+    if (!currentUpdate) return;
+
+    const summary = currentUpdate.value.trim();
+
+    if (!summary) {
+      toast.error("请填写当前状态");
+      return;
+    }
+
+    const fact = currentUpdate.fact;
+    const section = lifestyleSectionByKind[fact.kind];
+
+    if (!section) {
+      toast.error("无法识别生活方式类型");
+      return;
+    }
+
+    const saved = await mutate(
+      `update-current:${fact.id}`,
+      {
+        type: "updateLifestyleCurrent",
+        expectedRevision: snapshot.current_revision,
+        section,
+        summary,
+        details: fact.details ?? {},
+      },
+      "现状已更新，原记录已保留为历史",
+    );
+
+    if (saved) {
+      setCurrentUpdate(null);
+    }
   };
 
   const hypotheses = snapshot.hypotheses ?? [];
@@ -632,6 +691,37 @@ export function BodyStateWorkbench({
                       </Button>
                     </div>
                   </div>
+                ) : currentUpdate?.fact.id === fact.id ? (
+                  <div className="mt-3 rounded-lg border border-warning/35 bg-warning/10 p-2">
+                    <p className="mb-2 text-xs text-warning-foreground">
+                      原记录当时是正确的，只是现在情况发生了变化。
+                      保存后，原记录会保留为历史，新内容会成为当前状态。
+                    </p>
+                    <textarea
+                      rows={2}
+                      value={currentUpdate.value}
+                      onChange={(event) =>
+                        setCurrentUpdate({ fact, value: event.target.value })
+                      }
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                    />
+                    <div className="mt-2 flex justify-end gap-2">
+                      <Button
+                        size="xs"
+                        variant="ghost"
+                        onClick={() => setCurrentUpdate(null)}
+                      >
+                        取消
+                      </Button>
+                      <Button
+                        size="xs"
+                        isLoading={busyKey === `update-current:${fact.id}`}
+                        onClick={handleCurrentUpdate}
+                      >
+                        保存更新
+                      </Button>
+                    </div>
+                  </div>
                 ) : (
                   <div className="mt-2.5 flex flex-wrap gap-1.5">
                     {fact.review_state === "unverified" && (
@@ -640,7 +730,7 @@ export function BodyStateWorkbench({
                           size="xs"
                           variant="secondary"
                           isLoading={busyKey === `confirm:${fact.id}`}
-                          onClick={() =>
+                          onClick={() => {
                             mutate(
                               `confirm:${fact.id}`,
                               {
@@ -650,8 +740,8 @@ export function BodyStateWorkbench({
                                 reviewState: "confirmed",
                               },
                               "已确认这条事实，没有改变其时间语义",
-                            )
-                          }
+                            );
+                          }}
                         >
                           <Check className="h-3 w-3" />
                           确认
@@ -681,74 +771,95 @@ export function BodyStateWorkbench({
                     <Button
                       size="xs"
                       variant="outline"
-                      onClick={() => setCorrection({ fact, value: fact.value })}
+                      onClick={() => {
+                        setCurrentUpdate(null);
+                        setCorrection({ fact, value: fact.value });
+                      }}
                     >
                       <PencilLine className="h-3 w-3" />
                       纠正记录
                     </Button>
-                    <Button
-                      size="xs"
-                      variant="ghost"
-                      isLoading={busyKey === `improving:${fact.id}`}
-                      onClick={() =>
-                        mutate(
-                          `improving:${fact.id}`,
-                          {
-                            type: "updateFactTemporal",
-                            factId: fact.id,
-                            expectedRevision: snapshot.current_revision,
-                            input: { trend: "improving" },
-                          },
-                          "已记录为后来正在改善",
-                        )
-                      }
-                    >
-                      <TrendingUp className="h-3 w-3" />
-                      后来改善
-                    </Button>
-                    <Button
-                      size="xs"
-                      variant="ghost"
-                      isLoading={busyKey === `worsening:${fact.id}`}
-                      onClick={() =>
-                        mutate(
-                          `worsening:${fact.id}`,
-                          {
-                            type: "updateFactTemporal",
-                            factId: fact.id,
-                            expectedRevision: snapshot.current_revision,
-                            input: { trend: "worsening" },
-                          },
-                          "已记录为后来加重",
-                        )
-                      }
-                    >
-                      <TrendingDown className="h-3 w-3" />
-                      后来加重
-                    </Button>
-                    <Button
-                      size="xs"
-                      variant="ghost"
-                      isLoading={busyKey === `resolved:${fact.id}`}
-                      onClick={() =>
-                        mutate(
-                          `resolved:${fact.id}`,
-                          {
-                            type: "updateFactTemporal",
-                            factId: fact.id,
-                            expectedRevision: snapshot.current_revision,
-                            input: {
-                              lifecycle_state: "resolved",
-                              trend: "improving",
-                              valid_until: new Date().toISOString(),
-                            },
-                          },
-                          "已记录为后来恢复；旧事实仍保留在历史中",
-                        )
-                      }
-                    >
-                      后来恢复
-                    </Button>
+                    {isLifestyleFact(fact.kind) ? (
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        onClick={() => {
+                          setCorrection(null);
+                          setCurrentUpdate({ fact, value: fact.value });
+                        }}
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                        更新现状
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          size="xs"
+                          variant="ghost"
+                          isLoading={busyKey === `improving:${fact.id}`}
+                          onClick={() =>
+                            mutate(
+                              `improving:${fact.id}`,
+                              {
+                                type: "updateFactTemporal",
+                                factId: fact.id,
+                                expectedRevision: snapshot.current_revision,
+                                input: { trend: "improving" },
+                              },
+                              "已记录为后来正在改善",
+                            )
+                          }
+                        >
+                          <TrendingUp className="h-3 w-3" />
+                          后来改善
+                        </Button>
+
+                        <Button
+                          size="xs"
+                          variant="ghost"
+                          isLoading={busyKey === `worsening:${fact.id}`}
+                          onClick={() =>
+                            mutate(
+                              `worsening:${fact.id}`,
+                              {
+                                type: "updateFactTemporal",
+                                factId: fact.id,
+                                expectedRevision: snapshot.current_revision,
+                                input: { trend: "worsening" },
+                              },
+                              "已记录为后来加重",
+                            )
+                          }
+                        >
+                          <TrendingDown className="h-3 w-3" />
+                          后来加重
+                        </Button>
+
+                        <Button
+                          size="xs"
+                          variant="ghost"
+                          isLoading={busyKey === `resolved:${fact.id}`}
+                          onClick={() =>
+                            mutate(
+                              `resolved:${fact.id}`,
+                              {
+                                type: "updateFactTemporal",
+                                factId: fact.id,
+                                expectedRevision: snapshot.current_revision,
+                                input: {
+                                  lifecycle_state: "resolved",
+                                  trend: "improving",
+                                  valid_until: new Date().toISOString(),
+                                },
+                              },
+                              "已记录为后来恢复；旧事实仍保留在历史中",
+                            )
+                          }
+                        >
+                          后来恢复
+                        </Button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

@@ -32,6 +32,9 @@ export interface AddFactInput {
   observed_at?: string;
 }
 
+export type LifestyleSectionKey =
+  "activity" | "sleep" | "exercise" | "nutrition" | "substances" | "recovery";
+
 export const workspaceApi = {
   get: () => request<HealthWorkspace>("/api/v1/health-workspace"),
 
@@ -181,5 +184,23 @@ export const workspaceApi = {
       method: "POST",
       headers: jsonHeaders,
       body: JSON.stringify(input),
+    }),
+
+  updateLifestyleCurrent: (
+    expectedRevision: number,
+    section: LifestyleSectionKey,
+    summary: string,
+    details: Record<string, unknown> = {},
+  ) =>
+    request("/api/v1/lifestyle", {
+      method: "PUT",
+      headers: jsonHeaders,
+      body: JSON.stringify({
+        expected_revision: expectedRevision,
+        [section]: {
+          summary,
+          details,
+        },
+      }),
     }),
 };
