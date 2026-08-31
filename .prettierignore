@@ -1,0 +1,20 @@
+node_modules/
+.pnpm-store/
+.nx/
+dist/
+build/
+coverage/
+playwright-report/
+test-results/
+.runtime/
+
+# Generated or vendored assets
+apps/web/public/static/anatomy/vanatome/
+
+# These languages use their native formatters instead of Prettier.
+apps/api/**/*.go
+apps/ai-service/**/*.py
+apps/ai-service/.venv/
+
+# Lockfile formatting is owned by pnpm.
+pnpm-lock.yaml
