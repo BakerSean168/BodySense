@@ -1,0 +1,9 @@
+services:
+  postgres-dev:
+    restart: unless-stopped
+
+  redis-dev:
+    restart: unless-stopped
+
+  litellm-gateway:
+    restart: unless-stopped

@@ -13,7 +13,7 @@
       "cache": false,
       "options": {
         "cwd": "apps/ai-service",
-        "command": "uv run --extra ocr uvicorn src.main:app --reload --port 8100"
+        "command": "uv run --extra ocr uvicorn src.main:app --reload --host 127.0.0.1 --port ${AI_SERVICE_PORT:-20102}"
       }
     },
     "test": {
