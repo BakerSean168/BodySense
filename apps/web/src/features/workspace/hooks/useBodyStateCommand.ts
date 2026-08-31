@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { ApiRequestError } from "@/lib/api-client";
-import type { AddFactInput } from "../api/workspaceApi";
+import type { AddFactInput, LifestyleSectionKey } from "../api/workspaceApi";
 import { workspaceApi } from "../api/workspaceApi";
 import { useWorkspaceInvalidation } from "./useWorkspaceInvalidation";
 
@@ -45,6 +45,13 @@ export type BodyStateCommand =
       expectedRevision: number;
       resolution: string;
       note: string;
+    }
+  | {
+      type: "updateLifestyleCurrent";
+      expectedRevision: number;
+      section: LifestyleSectionKey;
+      summary: string;
+      details?: Record<string, unknown>;
     };
 
 export async function executeBodyStateCommand(command: BodyStateCommand) {
@@ -86,6 +93,13 @@ export async function executeBodyStateCommand(command: BodyStateCommand) {
         command.expectedRevision,
         command.resolution,
         command.note,
+      );
+    case "updateLifestyleCurrent":
+      return workspaceApi.updateLifestyleCurrent(
+        command.expectedRevision,
+        command.section,
+        command.summary,
+        command.details,
       );
   }
 }
