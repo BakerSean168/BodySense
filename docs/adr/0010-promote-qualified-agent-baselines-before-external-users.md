@@ -98,4 +98,30 @@ The migration is complete only when:
 5. future non-Champion rollout without a distinct approved pair fails closed;
 6. longitudinal E2E persists latest Agent configuration IDs;
 7. repository release verification passes;
-8. Dev, Staging and Production are validated on the same merged SHA.
+8. the serving runtime in Staging/Production is traceable to one immutable Published Release SHA, while later control-plane-only commits may advance `main`/Staging without forcing a new production release when they do not change application runtime behavior.
+
+## Implementation evidence — 2026-09-01
+
+The one-time promotion is complete. `v0.10.0` was published from release SHA
+`d25ea0fd8c95bbb5a7c7b8462a5f255e00bcc1f6` and deployed through Delivery
+Platform V3. Production reports migration head `60` with `dirty=false`, public API
+health is green, and the API container explicitly runs:
+
+```text
+Diagnosis Champion:  diag-config-5a4a13627e14b4cf
+Diagnosis Challenger: <empty>
+Diagnosis rollback:   diag-config-f492eb1c0c6676ae
+Diagnosis stage:      champion
+
+Treatment Champion:  treat-config-f68eec9846664596
+Treatment Challenger: <empty>
+Treatment rollback:   treat-config-85718f8e90ac9d80
+Treatment stage:      champion
+```
+
+The production watcher created a pre-deploy PostgreSQL dump and a runtime backup
+of the previous `v0.9.1` revision before converging `.deploy-state` and all three
+application OCI revision labels to the `v0.10.0` release SHA. Later `main` commit
+`b7c68520847fbfeaa251bbbe97828c6c8120a2be` only repairs the GitHub Release
+control plane and documentation/tests; it does not change the shipped
+Diagnosis/Treatment runtime, so it does not require a synthetic `v0.10.1` release.

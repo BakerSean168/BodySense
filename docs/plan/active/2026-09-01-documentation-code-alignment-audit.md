@@ -120,14 +120,14 @@ The historical `diagnosis_promotion_v1` and `treatment_promotion_v1` records rem
 
 ### Implementation steps
 
-1. Separate historical v1 IDs from the mutable/default Champion constants in Go.
-2. Make Diagnosis v3 and Treatment v2 the repository defaults.
-3. Introduce explicit rollback configuration identities instead of using the `Challenger` slot as a rollback alias.
-4. Allow the stable Champion state to have no active Challenger. Require a distinct repository-known Challenger plus a matching future promotion record before any future `shadow/canary/promoted` stage.
-5. Keep historical v1/v2/v3 manifests immutable for replay.
-6. Update Compose/dev/staging/prod defaults and deployment validation so clean environments serve the latest Champion without an operator override.
-7. Update rollout/provenance docs so `Champion`, `Challenger`, `rollback target`, and `historical promotion evidence` are distinct concepts.
-8. Re-run qualification/policy tests, Go rollout tests, longitudinal E2E, repository release verification, then validate Dev -> Staging -> Production with the exact merged SHA.
+- [x] Separate historical v1 IDs from the mutable/default Champion constants in Go.
+- [x] Make Diagnosis v3 and Treatment v2 the repository defaults.
+- [x] Introduce explicit rollback configuration identities instead of using the `Challenger` slot as a rollback alias.
+- [x] Allow the stable Champion state to have no active Challenger. Require a distinct repository-known Challenger plus a matching future promotion record before any future `shadow/canary/promoted` stage.
+- [x] Keep historical v1/v2/v3 manifests immutable for replay.
+- [x] Update Compose/dev/staging/prod defaults and deployment validation so clean environments serve the latest Champion without an operator override.
+- [x] Update rollout/provenance docs so `Champion`, `Challenger`, rollback target and historical promotion evidence are distinct concepts.
+- [x] Re-run qualification/policy tests, Go rollout tests, longitudinal E2E and repository release verification, then validate Staging and Production against immutable release/runtime identities. Control-plane-only commits may advance `main`/Staging without manufacturing another production release when application runtime behavior is unchanged.
 
 ### Release-pipeline bookkeeping issue discovered during promotion
 
@@ -139,13 +139,13 @@ The first v0.10.0 publication proved the release/tag/manifest boundary but expos
 
 ### Acceptance criteria
 
-- a clean `AgentDeploymentPolicy` serves Diagnosis v3 and Treatment v2 in `champion` stage;
-- no current config calls Diagnosis v1 or Treatment v1 the active Challenger;
-- explicit rollback serves the historical v1 configuration;
-- future non-Champion rollout without a distinct qualified Challenger fails closed;
-- historical v1 -> latest promotion artifacts remain unchanged and their sync tests use historical IDs rather than current default aliases;
-- Dev/Staging/Production report latest Agent configuration IDs after deployment;
-- rollback remains a one-step configuration operation with no schema/data rollback.
+- [x] a clean `AgentDeploymentPolicy` serves Diagnosis v3 and Treatment v2 in `champion` stage;
+- [x] no current config calls Diagnosis v1 or Treatment v1 the active Challenger;
+- [x] explicit rollback serves the historical v1 configuration;
+- [x] future non-Champion rollout without a distinct qualified Challenger fails closed;
+- [x] historical v1 -> latest promotion artifacts remain unchanged and their sync tests use historical IDs rather than current default aliases;
+- [x] Dev/Staging/Production serve the latest Diagnosis/Treatment Agent configurations after deployment;
+- [x] rollback remains a one-step configuration operation with no schema/data rollback.
 
 ---
 
@@ -469,7 +469,7 @@ These were reviewed and must not be reopened as implementation bugs merely becau
 
 ### C1. Diagnosis v3 and Treatment v2 baseline promotion
 
-**Classification:** `DEPLOYMENT-STATE` resolved by ADR 0010 in this lane.
+**Classification:** `DEPLOYMENT-STATE` — **COMPLETE** under ADR 0010.
 
 The rollout mechanisms were already implemented; the remaining decision was whether
 to keep waiting for live multi-user samples before changing the repository baseline.
@@ -487,6 +487,29 @@ Active Challenger:          none
 
 The old promotion records are preserved as immutable evidence for the completed
 v1 -> latest transition; they are not rewritten into future rollout records.
+
+Final environment evidence:
+
+```text
+Published Release: v0.10.0
+Runtime release SHA: d25ea0fd8c95bbb5a7c7b8462a5f255e00bcc1f6
+Production deploy workflow: 33484845107 PASS
+Production .deploy-state: d25ea0fd8c95bbb5a7c7b8462a5f255e00bcc1f6
+Production schema_migrations: version=60 dirty=false
+Production public /api/health: PASS
+Production pre-deploy DB dump: bodysense-pre-d25ea0fd8c95-20260901-080611.dump
+Production previous-runtime backup: 61553a40c362597061a6701570c6e8aaf0b62895-20260901-080612
+Diagnosis Champion: diag-config-5a4a13627e14b4cf
+Treatment Champion: treat-config-f68eec9846664596
+Active Challenger: none
+```
+
+`main`/Staging later advanced to `b7c68520847fbfeaa251bbbe97828c6c8120a2be`
+for the idempotent release-please bookkeeping hotfix. That commit changes the
+GitHub Release control plane plus docs/tests only; the application runtime and
+Agent baseline are the same as the `v0.10.0` release, so Production correctly
+remains on the immutable Published Release rather than receiving a synthetic
+patch release with no runtime behavior change.
 
 ### C2. 3D final visual/anatomy-boundary audit
 
@@ -611,6 +634,15 @@ Pre-user baseline promotion validation:
 - DIAGNOSIS_BASELINE_VALIDATION: PASS (latest=3, legacy=0, rollout_observations=0)
 - TREATMENT_BASELINE_VALIDATION: PASS (latest=3, legacy=0, rollout_observations=0)
 - LOCAL_DEPLOY_VALIDATION: PASS
+- Published Release `v0.10.0`: `d25ea0fd8c95bbb5a7c7b8462a5f255e00bcc1f6`
+- Release manifest/tag/Published Release identity: PASS
+- Release-please bookkeeping retry: PASS; PR #152 = `autorelease: tagged`; release manifest byte identity unchanged
+- Production Deploy workflow `33484845107`: PASS
+- Production `.deploy-state` / Web / API / AI OCI revision: `d25ea0fd8c95bbb5a7c7b8462a5f255e00bcc1f6`
+- Production migration head: `60`, `dirty=false`
+- Production pre-deploy DB dump + previous-runtime backup: PASS
+- Production public `/api/health`: PASS
+- Production explicit Agent env: Diagnosis v3 Champion / Treatment v2 Champion / Challenger empty / v1 rollback
 ```
 
 The Web test target still emits pre-existing localhost connection noise and one React `act(...)` warning to stderr, but the Nx target exits successfully and all 204 tests pass.
