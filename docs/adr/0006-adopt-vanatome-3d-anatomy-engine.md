@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — implementation pending
+Accepted — implemented; staging validated; final anatomy-boundary visual audit remains
 
 ## Date
 
@@ -283,13 +283,19 @@ Research snapshot on 2026-08-27:
 
 The implementation branch must pin exact resolved versions in the lockfile. These values are a planning baseline, not a permanent requirement; upgrades require explicit review.
 
-## Follow-up
+## Implementation outcome / remaining acceptance
 
-- Implement the architecture in `docs/architecture/body-explorer-3d-anatomy.md`.
-- Define the canonical region model in `docs/architecture/body-region-ontology.md`.
-- Implement the product behavior in `docs/feature_spec_3d_body_explorer.md`.
-- Execute `docs/plan/active/2026-08-27-vanatome-3d-body-explorer.md`.
-- Add atlas attribution and self-hosting artifacts before production cutover.
+Implemented:
+
+- `BodyRegionOntology` v1 and deterministic Vanatome mapping;
+- BodyState `body_region_id` support and Go-side canonical validation;
+- `VanatomeAdapter` boundary and controlled `BodyExplorer3D`;
+- Region mode, anatomy drill-down, focus/isolation/layers and SVG fallback;
+- BodyState ↔ region selection and selected-region Consultation spatial context;
+- pinned Vanatome atlas registry/provenance plus CDN/self-host-ready distribution artifacts;
+- staging validation of the 3D viewer and static-asset path.
+
+Remaining acceptance is not an architecture implementation backlog. The active plan now tracks the final visual/anatomy-boundary audit and release-environment validation.
 
 ## Upstream references
 

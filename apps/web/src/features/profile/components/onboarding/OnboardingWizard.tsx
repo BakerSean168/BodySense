@@ -58,10 +58,10 @@ export function OnboardingWizard() {
   const [loadingPhraseIndex, setLoadingPhraseIndex] = useState(0);
 
   const loadingPhrases = [
-    "“体悟” AI 正在分析您的生理指标...",
-    "正在进行体相结构多模态检测...",
-    "正在提取体检报告中的关键健康数据...",
-    "结合知识库，正在为您生成个性化体态分析报告...",
+    "正在整理您已提交的身体资料...",
+    "正在读取已完成的体态分析结果...",
+    "正在读取体检报告中已识别的指标...",
+    "正在根据当前可用证据生成健康评估...",
   ];
 
   useEffect(() => {
@@ -132,7 +132,10 @@ export function OnboardingWizard() {
         .filter(Boolean)
         .join("；");
 
-      if (formData.height_cm === undefined || formData.weight_kg === undefined) {
+      if (
+        formData.height_cm === undefined ||
+        formData.weight_kg === undefined
+      ) {
         throw new Error("请先填写身高和体重");
       }
 
@@ -163,7 +166,7 @@ export function OnboardingWizard() {
       });
       await fetchProfile();
 
-      // 2. 基于 stable Profile + 当前 BodyState 生成健康评估报告
+      // 2. 从当前可采纳的 BodyState / 报告 / 已完成体态分析构建证据并生成评估；Profile 本身不是健康观察证据
       await assessmentApi.generate();
 
       toast.success("初始身体状态已建立");

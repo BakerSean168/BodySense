@@ -34,7 +34,7 @@ func rolloutTestRoute(served, shadow string) DiagnosisRouteSelection {
 	return DiagnosisRouteSelection{
 		Stage: DiagnosisRolloutShadow, SubjectBucket: 1234, CanaryBPS: defaultDiagnosisCanaryBPS,
 		ServedConfigurationID: served, ShadowConfigurationID: shadow,
-		ChampionConfigurationID:   defaultDiagnosisConfigurationID,
+		ChampionConfigurationID:   diagnosisV1ConfigurationID,
 		ChallengerConfigurationID: diagnosisDecisionAuthorityConfigID,
 	}
 }
@@ -57,7 +57,7 @@ func rolloutComparisonReport(baselineOutcome, replayOutcome string, hardMatch, s
 func TestDiagnosisRolloutRecordsUnsafeRelaxationAgainstChampionDirection(t *testing.T) {
 	repo := &fakeDiagnosisRolloutRepository{}
 	svc := NewDiagnosisRolloutService(repo)
-	route := rolloutTestRoute(defaultDiagnosisConfigurationID, diagnosisDecisionAuthorityConfigID)
+	route := rolloutTestRoute(diagnosisV1ConfigurationID, diagnosisDecisionAuthorityConfigID)
 	report := rolloutComparisonReport(string(DiagnosisBlock), string(DiagnosisAllowNormal), false, false)
 
 	if err := svc.RecordComparison(context.Background(), route, uuid.New(), report, nil); err != nil {
@@ -71,7 +71,7 @@ func TestDiagnosisRolloutRecordsUnsafeRelaxationAgainstChampionDirection(t *test
 func TestDiagnosisRolloutNormalizesCanaryWhenChallengerIsServed(t *testing.T) {
 	repo := &fakeDiagnosisRolloutRepository{}
 	svc := NewDiagnosisRolloutService(repo)
-	route := rolloutTestRoute(diagnosisDecisionAuthorityConfigID, defaultDiagnosisConfigurationID)
+	route := rolloutTestRoute(diagnosisDecisionAuthorityConfigID, diagnosisV1ConfigurationID)
 	route.Stage = DiagnosisRolloutCanary
 	// Baseline is the served challenger; replay is the shadow champion. Challenger
 	// is more conservative, so this must not be labeled an unsafe relaxation.
@@ -109,11 +109,11 @@ func TestDiagnosisRolloutGatePredeclaresRollbackAndPauseRules(t *testing.T) {
 func TestDiagnosisRolloutShadowErrorIsDurableOperationalEvidence(t *testing.T) {
 	repo := &fakeDiagnosisRolloutRepository{}
 	svc := NewDiagnosisRolloutService(repo)
-	route := rolloutTestRoute(defaultDiagnosisConfigurationID, diagnosisDecisionAuthorityConfigID)
+	route := rolloutTestRoute(diagnosisV1ConfigurationID, diagnosisDecisionAuthorityConfigID)
 	if err := svc.RecordComparison(context.Background(), route, uuid.New(), nil, errors.New("shadow timeout")); err != nil {
 		t.Fatal(err)
 	}
-	summary, err := svc.Summary(context.Background(), defaultDiagnosisConfigurationID, diagnosisDecisionAuthorityConfigID, DiagnosisRolloutShadow, 0, 100)
+	summary, err := svc.Summary(context.Background(), diagnosisV1ConfigurationID, diagnosisDecisionAuthorityConfigID, DiagnosisRolloutShadow, 0, 100)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 SERVICE_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_ROOT = SERVICE_ROOT / "config" / "agents"
-DEFAULT_MANIFEST_PATH = CONFIG_ROOT / "treatment-v1.yaml"
+DEFAULT_MANIFEST_PATH = CONFIG_ROOT / "treatment-v2-evidence-gap.yaml"
 
 
 class TreatmentGenerationConfig(BaseModel):

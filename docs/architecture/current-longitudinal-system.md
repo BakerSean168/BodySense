@@ -36,16 +36,16 @@ There is no user-level terminal `completed` state. `HealthWorkspace` derives cur
 
 ## 2. State ownership
 
-| State                                                       | Owner                | Rules                                                                                                                                |
-| ----------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Conversation messages, run envelopes, public runtime events | Go                   | Durable public ledger, request idempotency, one active run per user conversation                                                     |
-| LangGraph checkpoints, tool loop, interrupt/resume          | Python               | Agent runtime only; not business truth                                                                                               |
-| BodyState current projection and revisions                  | Go                   | One per user, optimistic concurrency, semantic revisions                                                                             |
-| DiagnosisAnalysis and candidate assessments                 | Go                   | Analysis immutable; user assessment separate and independently editable                                                              |
+| State                                                       | Owner                | Rules                                                                                                                                              |
+| ----------------------------------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Conversation messages, run envelopes, public runtime events | Go                   | Durable public ledger, request idempotency, one active run per user conversation                                                                   |
+| LangGraph checkpoints, tool loop, interrupt/resume          | Python               | Agent runtime only; not business truth                                                                                                             |
+| BodyState current projection and revisions                  | Go                   | One per user, optimistic concurrency, semantic revisions                                                                                           |
+| DiagnosisAnalysis and candidate assessments                 | Go                   | Analysis immutable; user assessment separate and independently editable                                                                            |
 | Treatment and TreatmentRevision                             | Go                   | AI may propose through an exact immutable Agent configuration; Go verifies/persists provenance and alone accepts; accepted revisions are immutable |
-| Intervention, TrainingPlan, TrainingLog, Outcome            | Go                   | Training is an execution projection of an accepted revision                                                                          |
-| Capability/action projection                                | Go `HealthWorkspace` | Pure read; no hidden mutation from GET                                                                                               |
-| React query cache and workbench preferences                 | Web                  | Server projection cache only; URL owns active conversation/workspace mode; Zustand owns presentation preferences, never health truth |
+| Intervention, TrainingPlan, TrainingLog, Outcome            | Go                   | Training is an execution projection of an accepted revision                                                                                        |
+| Capability/action projection                                | Go `HealthWorkspace` | Pure read; no hidden mutation from GET                                                                                                             |
+| React query cache and workbench preferences                 | Web                  | Server projection cache only; URL owns active conversation/workspace mode; Zustand owns presentation preferences, never health truth               |
 
 ## 3. Mandatory mutation invariants
 
@@ -69,7 +69,7 @@ Generation and final acceptance both require:
 Final acceptance additionally re-reads current BodyState and rejects a proposal when a material related change occurred after its source revision. UI capabilities are advisory; the mutation boundary enforces the invariant again.
 
 Every AI-generated proposal also records the exact immutable Treatment Agent configuration and PydanticAI/LiteLLM execution provenance. Go selects the configuration, verifies configuration ID/role/decision-policy/runtime/logical-model identity before persistence, and never treats Agent provenance as acceptance authority.
-Treatment v2 additionally records a bounded `EvidenceGap` acquisition trace on the immutable TreatmentRevision. `user_fact` gaps cannot invoke external RAG, external knowledge searches have a finite per-run budget, and every stop reason is auditable. v2 is now qualification/replay/rollout-ready, but all committed production defaults remain Treatment v1 / `champion`; non-Champion stages require the approved `treatment_promotion_v1` record and exact v1/v2 pair.
+Treatment v2 additionally records a bounded `EvidenceGap` acquisition trace on the immutable TreatmentRevision. `user_fact` gaps cannot invoke external RAG, external knowledge searches have a finite per-run budget, and every stop reason is auditable. Under ADR 0010, v2 is the repository Champion/default serving baseline; v1 remains the explicit rollback and historical replay target. A future Challenger requires its own immutable promotion record.
 Successful Treatment proposals also persist the Go `generation_decision_trace`; successful acceptance writes `acceptance_decision_trace` atomically with the acceptance/current-pointer transaction. These traces record the deterministic authority facts and exact checked BodyState revision. Malformed or unknown durable safety state now fails closed instead of being interpreted as safe.
 Treatment proposals also freeze their exact Agent input in a private replay envelope. Historical replay recomputes Go generation authority without calling a model; counterfactual replay can run another immutable Treatment configuration against the same frozen input and reports hard/semantic/presentation drift without persistence side effects. Revisions predating frozen input are explicitly not replayable.
 Treatment rollout selection is Go-owned and stable per user. Shadow/canary runs use the frozen replay envelope after the served proposal is durable; anonymous `treatment_rollout_observations` capture comparison/blocker signals while the served revision stores `rollout_provenance`. The hermetic validator proves v1 serving + v2 shadow with zero v2 TreatmentRevision persistence.
@@ -91,7 +91,7 @@ Assessment is a derived report, not a second health truth or Treatment system.
 
 - The application receives stable Profile context plus current BodyState, report indicators and **completed governed Posture analysis**; Profile is not health-observation evidence, and the v3 Agent itself only receives the canonical evidence catalog. Assessment never directly interprets raw images.
 - It emits traceable Observation candidates with exact evidence refs; evidence coverage/gaps are derived deterministically by the application.
-- Observations are projected into BodyState with content-addressed source keys before the report is stored.
+- Observations are projected into BodyState inside the same transaction as the report, using report-scoped source keys (`assessment:<report_id>:observation:<index>`). Cross-report evidence/content-addressed idempotency is an explicit `DECISION-GAP`: report-history semantics and evidence-candidate deduplication are both valid models, so no stronger key should be introduced until the longitudinal meaning is chosen.
 - It does not emit executable exercise, nutrition, or treatment prescriptions.
 
 ### Safety and consultation input

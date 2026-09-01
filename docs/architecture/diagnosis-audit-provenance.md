@@ -1,6 +1,6 @@
 # Diagnosis DecisionTrace and Provenance
 
-> Status: Phase 7 durable audit boundary.
+> Status: Historical Phase-7 implementation checkpoint; durable DecisionTrace/provenance is implemented.
 
 ## Purpose
 

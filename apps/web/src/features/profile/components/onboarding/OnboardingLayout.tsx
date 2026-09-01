@@ -52,7 +52,7 @@ export function OnboardingLayout({
           身体档案
         </h1>
         <p className="text-center text-slate-500 mb-8">
-          完善信息，获得更精准的健康建议
+          完善身体资料，建立可持续更新的健康档案
         </p>
       </div>
 

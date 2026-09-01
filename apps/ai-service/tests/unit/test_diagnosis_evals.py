@@ -43,7 +43,7 @@ def test_diagnosis_qualification_is_slice_aware_and_critical_gate_green() -> Non
     assert summary["splits"]["challenge"] == {"passed": 2, "total": 2}
 
 
-def test_tool_trace_proves_safety_cases_bypass_agent_and_normal_cases_expose_only_search() -> None:
+def test_tool_trace_uses_current_evidence_tool_for_normal_cases() -> None:
     summary = report_summary(run_diagnosis_qualification())
     cases = {case["name"]: case for case in summary["cases"]}
     assert cases["current-severe-pain-blocks"]["trace"] == {
@@ -53,7 +53,7 @@ def test_tool_trace_proves_safety_cases_bypass_agent_and_normal_cases_expose_onl
     }
     assert cases["mild-neck-load"]["trace"] == {
         "agent_executed": True,
-        "available_tools": ["search_evidence"],
+        "available_tools": ["acquire_evidence"],
         "tool_calls": [],
     }
 

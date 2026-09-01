@@ -1,13 +1,13 @@
 # Anatomy Asset Governance and Distribution
 
-> Status: Target governance / required before production cutover
+> Status: Implemented for pinned atlas acquisition/verification/staging CDN; production release validation pending
 > Date: 2026-08-27
 > Decision source: ADR 0006
 > Scope: Vanatome/Z-Anatomy-derived atlas assets, versioning, provenance, self-hosting, and release controls
 
 ## 1. Purpose
 
-BodySense will consume a third-party open anatomy atlas as static product infrastructure. The atlas is not user data, but it is a versioned product dependency with licensing and compatibility consequences.
+BodySense consumes a third-party open anatomy atlas as static product infrastructure. The atlas is not user data, but it is a versioned product dependency with licensing and compatibility consequences.
 
 This document defines how BodySense acquires, validates, pins, hosts, upgrades, attributes, and rolls back anatomy assets.
 
@@ -30,7 +30,7 @@ Therefore BodySense must not treat the GLB/catalog/metadata as ordinary MIT appl
 
 ## 3. Repository boundary
 
-Recommended structure after self-host preparation:
+Implemented logical release structure (Git retains notices/manifests; binary atlas bytes may live in controlled static/CDN storage):
 
 ```text
 THIRD_PARTY_NOTICES.md
@@ -83,7 +83,7 @@ For each imported release, record:
 - hashes for acquired files where practical;
 - whether BodySense modified the material.
 
-The first planned release baseline is the Vanatome atlas `1.4.0` referenced by upstream on 2026-08-27.
+The current pinned release is Vanatome atlas `1.4.0`; BodySense records upstream provenance and immutable file metadata in `scripts/anatomy/vanatome-1.4.0.manifest.json`.
 
 ## 6. Verification before promotion
 
@@ -142,7 +142,7 @@ The mapping must be regenerated/revalidated for every atlas upgrade.
 
 Atlas URL must come from environment/runtime config rather than hardcoded component source.
 
-Suggested concept:
+Implemented runtime variable:
 
 ```text
 VITE_BODYSENSE_ANATOMY_CATALOG_URL

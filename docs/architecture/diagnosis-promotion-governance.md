@@ -1,6 +1,6 @@
 # Diagnosis Promotion, Shadow, Canary, and Rollback
 
-Status: Phase 9 implementation checkpoint (2026-08-20)
+Status: Current rollout mechanism. Diagnosis v3 became the repository Champion on 2026-09-01 under ADR 0010; v1 is now the explicit rollback/historical target and there is no active Challenger by default.
 
 ## North-star rule
 
@@ -21,9 +21,10 @@ champion
 any rollout stage -> rollback
 ```
 
-Repository/default production state remains `champion`. Advancing a real
-environment requires explicit rollout environment settings and the approved
-promotion record identity.
+Repository/default production state remains `champion`, but Champion now means the
+latest qualified v3 baseline. `shadow/canary/promoted` are only meaningful after a
+future distinct Challenger and matching promotion record exist. The historical
+v1 -> v3 record remains immutable evidence for the baseline transition.
 
 ## Promotion evidence
 
@@ -48,18 +49,19 @@ must explicitly require the interaction experiment instead of reusing this waive
 
 ## Runtime admission
 
-Non-Champion stages require all of the following:
+Current clean-environment baseline:
 
 ```text
-DIAGNOSIS_CHAMPION_CONFIGURATION_ID=diag-config-f492eb1c0c6676ae
-DIAGNOSIS_CHALLENGER_CONFIGURATION_ID=diag-config-5a4a13627e14b4cf
-DIAGNOSIS_PROMOTION_RECORD=diagnosis_promotion_v1
-DIAGNOSIS_ROLLOUT_STAGE=shadow|canary|promoted
+DIAGNOSIS_CHAMPION_CONFIGURATION_ID=diag-config-5a4a13627e14b4cf
+DIAGNOSIS_CHALLENGER_CONFIGURATION_ID=
+DIAGNOSIS_ROLLBACK_CONFIGURATION_ID=diag-config-f492eb1c0c6676ae
+DIAGNOSIS_ROLLOUT_STAGE=champion
 ```
 
-A missing/wrong promotion record or different config pair fails service startup.
-The old `DIAGNOSIS_AGENT_CONFIGURATION_ID` is only a Phase-10 compatibility alias
-for the Champion pointer.
+The old v1 -> v3 pair may still be configured explicitly in hermetic/history tests
+with `diagnosis_promotion_v1`; that does not make v1 the current Champion. A future
+non-Champion stage requires a distinct Challenger and an approved record for that
+exact pair. `DIAGNOSIS_AGENT_CONFIGURATION_ID` remains retired.
 
 ## Stable canary assignment
 
@@ -76,7 +78,7 @@ as a canary and must use the explicit `promoted` stage.
 
 During `shadow`, Champion serves and Challenger is paired read-only. During
 `canary`, the assigned config serves and the opposite config runs as the paired
-shadow. `promoted` serves Challenger only. `rollback` serves Champion only.
+shadow. `promoted` serves Challenger only. `rollback` serves the explicit rollback target, which is separate from the current Champion.
 
 ## Shadow/canary side-effect boundary
 
@@ -156,11 +158,9 @@ returns non-zero when the stop gate says pause/rollback.
 
 ## Hermetic deployment proof
 
-`local-deploy-validate.sh` explicitly enables shadow only inside the disposable
-validator stack. The longitudinal browser suite runs through the normal serving
-path, then the script queries PostgreSQL and requires at least one v1/v3 shadow
-observation with zero unsafe-relaxation, forbidden-side-effect, config-mismatch,
-or shadow-error blockers.
-
-This proves the real Docker composition and HTTP application path while keeping
-production Compose defaults on Champion.
+`local-deploy-validate.sh` now runs the disposable production-shaped stack on the
+same baseline as clean environments: Diagnosis v3 serves directly in `champion`
+with no active Challenger. After longitudinal E2E, PostgreSQL must contain v3
+Diagnosis artifacts, zero newly served v1 artifacts and zero rollout observations.
+Historical v1 -> v3 shadow/canary mechanics remain covered by focused Go tests and
+the immutable promotion-policy evaluator.

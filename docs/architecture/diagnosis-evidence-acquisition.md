@@ -1,6 +1,6 @@
 # Diagnosis Evidence Acquisition Architecture
 
-> Status: implemented Challenger boundary in Phase 5; production promotion remains Phase 9 governance work.
+> Status: Historical Phase-5 implementation checkpoint; capability and rollout machinery are implemented. Under ADR 0010, Diagnosis v3 is now the repository Champion; v1 remains rollback/historical replay only.
 
 ## Ownership
 

@@ -20,7 +20,7 @@ type UserUpload struct {
 	OCRResult      json.RawMessage `gorm:"type:jsonb" json:"ocr_result,omitempty"`
 	OCRStatus      string          `gorm:"type:varchar(20);not null;default:'pending'" json:"ocr_status"`
 	// AnalysisResult holds the structured posture-analysis payload for photo
-	// uploads (see docs/plan/active/posture-photo-analysis-plan.md §3). It is
+	// uploads (see docs/plan/archive/posture-photo-analysis-plan.md §3). It is
 	// deliberately separate from OCRResult, which is report-specific.
 	AnalysisResult json.RawMessage `gorm:"type:jsonb" json:"analysis_result,omitempty"`
 	AnalysisStatus string          `gorm:"type:varchar(20);not null;default:'none'" json:"analysis_status"`

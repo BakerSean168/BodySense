@@ -13,7 +13,7 @@ export function GenderStep({ value, onChange }: GenderStepProps) {
     <div>
       <h2 className="text-lg font-medium text-gray-900 mb-2">您的性别是？</h2>
       <p className="text-sm text-gray-500 mb-6">
-        了解性别有助于我们为您提供更准确的身体评估和训练建议。
+        性别会作为稳定身份信息保存；它本身不会生成健康结论。
       </p>
 
       <div className="grid grid-cols-2 gap-4">

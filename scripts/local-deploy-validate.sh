@@ -1,21 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# Exercise the real Phase-9 shadow path in the hermetic validator. Production
-# Compose defaults to champion until operators explicitly advance the rollout.
-export DIAGNOSIS_ROLLOUT_STAGE="shadow"
-export DIAGNOSIS_PROMOTION_RECORD="diagnosis_promotion_v1"
-export DIAGNOSIS_CHAMPION_CONFIGURATION_ID="diag-config-f492eb1c0c6676ae"
-export DIAGNOSIS_CHALLENGER_CONFIGURATION_ID="diag-config-5a4a13627e14b4cf"
-export DIAGNOSIS_ROLLOUT_SALT="local-deploy-shadow-v1"
-# Exercise the approved Treatment v1 -> v2 shadow path only in this hermetic validator.
-# Committed Compose defaults remain Champion and never persist the v2 shadow result.
-export TREATMENT_AGENT_CONFIGURATION_ID="treat-config-85718f8e90ac9d80"
-export TREATMENT_CHAMPION_CONFIGURATION_ID="treat-config-85718f8e90ac9d80"
-export TREATMENT_CHALLENGER_CONFIGURATION_ID="treat-config-f68eec9846664596"
-export TREATMENT_ROLLOUT_STAGE="shadow"
-export TREATMENT_CANARY_BPS="500"
-export TREATMENT_PROMOTION_RECORD="treatment_promotion_v1"
-export TREATMENT_ROLLOUT_SALT="local-treatment-shadow-v1"
+# Production-shaped validation now exercises the 2026-09-01 promoted baseline.
+# Historical v1 -> latest shadow/canary behavior remains covered by unit and
+# immutable promotion-policy tests; this runtime should prove clean environments
+# actually serve the latest Champion without any operator override.
+export DIAGNOSIS_CHAMPION_CONFIGURATION_ID="diag-config-5a4a13627e14b4cf"
+export DIAGNOSIS_CHALLENGER_CONFIGURATION_ID=""
+export DIAGNOSIS_ROLLBACK_CONFIGURATION_ID="diag-config-f492eb1c0c6676ae"
+export DIAGNOSIS_ROLLOUT_STAGE="champion"
+export DIAGNOSIS_PROMOTION_RECORD=""
+export TREATMENT_CHAMPION_CONFIGURATION_ID="treat-config-f68eec9846664596"
+export TREATMENT_CHALLENGER_CONFIGURATION_ID=""
+export TREATMENT_ROLLBACK_CONFIGURATION_ID="treat-config-85718f8e90ac9d80"
+export TREATMENT_ROLLOUT_STAGE="champion"
+export TREATMENT_PROMOTION_RECORD=""
 
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
@@ -115,23 +113,23 @@ E2E_API_BASE_URL="http://127.0.0.1:${API_PORT}" \
 E2E_RESTART_API_COMMAND="$repo_root/scripts/e2e-expire-run-and-restart-api.sh" \
 pnpm e2e
 
-shadow_observations="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM diagnosis_rollout_observations WHERE stage='shadow' AND champion_configuration_id='diag-config-f492eb1c0c6676ae' AND challenger_configuration_id='diag-config-5a4a13627e14b4cf';")"
-shadow_blockers="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM diagnosis_rollout_observations WHERE stage='shadow' AND (unsafe_relaxation OR forbidden_side_effect OR configuration_mismatch OR shadow_error <> '');")"
-if [[ "$shadow_observations" -lt 1 || "$shadow_blockers" -ne 0 ]]; then
-  echo "DIAGNOSIS_SHADOW_VALIDATION=FAIL observations=${shadow_observations} blockers=${shadow_blockers}" >&2
+diagnosis_latest_analyses="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM diagnosis_analyses WHERE agent_configuration_id='diag-config-5a4a13627e14b4cf';")"
+diagnosis_legacy_analyses="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM diagnosis_analyses WHERE agent_configuration_id='diag-config-f492eb1c0c6676ae';")"
+diagnosis_rollout_observations="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM diagnosis_rollout_observations;")"
+if [[ "$diagnosis_latest_analyses" -lt 1 || "$diagnosis_legacy_analyses" -ne 0 || "$diagnosis_rollout_observations" -ne 0 ]]; then
+  echo "DIAGNOSIS_BASELINE_VALIDATION=FAIL latest=${diagnosis_latest_analyses} legacy=${diagnosis_legacy_analyses} rollout_observations=${diagnosis_rollout_observations}" >&2
   exit 1
 fi
-echo "DIAGNOSIS_SHADOW_VALIDATION=PASS observations=${shadow_observations} blockers=${shadow_blockers}"
+echo "DIAGNOSIS_BASELINE_VALIDATION=PASS latest=${diagnosis_latest_analyses} legacy=${diagnosis_legacy_analyses} rollout_observations=${diagnosis_rollout_observations}"
 
-treatment_shadow_observations="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_rollout_observations WHERE stage='shadow' AND champion_configuration_id='treat-config-85718f8e90ac9d80' AND challenger_configuration_id='treat-config-f68eec9846664596';")"
-treatment_shadow_blockers="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_rollout_observations WHERE stage='shadow' AND champion_configuration_id='treat-config-85718f8e90ac9d80' AND challenger_configuration_id='treat-config-f68eec9846664596' AND (unsafe_relaxation OR forbidden_side_effect OR configuration_mismatch OR shadow_error <> '');")"
-treatment_served_champion_revisions="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_revisions WHERE agent_configuration_id='treat-config-85718f8e90ac9d80' AND rollout_provenance->>'stage'='shadow';")"
-treatment_persisted_challenger_revisions="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_revisions WHERE agent_configuration_id='treat-config-f68eec9846664596';")"
-if [[ "$treatment_shadow_observations" -lt 1 || "$treatment_shadow_blockers" -ne 0 || "$treatment_served_champion_revisions" -lt 1 || "$treatment_persisted_challenger_revisions" -ne 0 ]]; then
-  echo "TREATMENT_SHADOW_VALIDATION=FAIL observations=${treatment_shadow_observations} blockers=${treatment_shadow_blockers} served_champion=${treatment_served_champion_revisions} persisted_challenger=${treatment_persisted_challenger_revisions}" >&2
+treatment_latest_revisions="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_revisions WHERE agent_configuration_id='treat-config-f68eec9846664596';")"
+treatment_legacy_revisions="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_revisions WHERE agent_configuration_id='treat-config-85718f8e90ac9d80';")"
+treatment_rollout_observations="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_rollout_observations;")"
+if [[ "$treatment_latest_revisions" -lt 1 || "$treatment_legacy_revisions" -ne 0 || "$treatment_rollout_observations" -ne 0 ]]; then
+  echo "TREATMENT_BASELINE_VALIDATION=FAIL latest=${treatment_latest_revisions} legacy=${treatment_legacy_revisions} rollout_observations=${treatment_rollout_observations}" >&2
   exit 1
 fi
-echo "TREATMENT_SHADOW_VALIDATION=PASS observations=${treatment_shadow_observations} blockers=${treatment_shadow_blockers} served_champion=${treatment_served_champion_revisions} persisted_challenger=${treatment_persisted_challenger_revisions}"
+echo "TREATMENT_BASELINE_VALIDATION=PASS latest=${treatment_latest_revisions} legacy=${treatment_legacy_revisions} rollout_observations=${treatment_rollout_observations}"
 
 treatment_decision_traces="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_revisions WHERE generation_decision_trace <> '{}'::jsonb AND acceptance_state='accepted' AND acceptance_decision_trace <> '{}'::jsonb;")"
 if [[ "$treatment_decision_traces" -lt 1 ]]; then

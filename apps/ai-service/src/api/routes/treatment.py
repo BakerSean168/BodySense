@@ -9,7 +9,8 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
-from ...services.treatment_agent_service import get_treatment_agent_service
+from ...services.treatment_agent_service import TreatmentAgentService, get_treatment_agent_service
+from ...testing_support.deterministic_ai import deterministic_treatment_model
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/treatment", tags=["treatment"])
@@ -31,48 +32,18 @@ class TreatmentRecommendationRequest(BaseModel):
 
 @router.post("/recommend")
 async def recommend_treatment(request: TreatmentRecommendationRequest):
-    if os.getenv("BODYSENSE_E2E_STUB_AI") == "1" and os.getenv(
-        "ENVIRONMENT", "development"
-    ).lower() in {"development", "test", "e2e"}:
-        return {
-            "status": "proposed",
-            "summary": "E2E deterministic intervention proposal",
-            "goal": "Reduce neck load",
-            "duration_weeks": 4,
-            "interventions": [
-                {
-                    "kind": "exercise",
-                    "title": "Controlled chin tuck",
-                    "description": "Low-load controlled movement",
-                    "prescription": {"sets": "2", "reps": "8", "notes": "stop on worsening"},
-                }
-            ],
-            "daily_habits": ["change position regularly"],
-            "expected_timeline": "review after one week",
-            "warning_signs": ["new numbness or weakness"],
-            "review_triggers": ["symptoms worsen"],
-            "safety_notes": ["do not continue through worsening symptoms"],
-            "evidence_ids": [],
-            "agent_configuration": {
-                "id": request.configuration_id,
-                "role": "treatment",
-                "decision_policy_revision": "treatment-go-acceptance-v1",
-            },
-            "execution_provenance": {
-                "status": "executed",
-                "runtime": "pydantic-ai",
-                "logical_model": "bodysense-structured",
-            },
-            "governance": {
-                "kind": "treatment",
-                "verdict": "accepted",
-                "reasons": [],
-                "issues": [],
-            },
-        }
-
     try:
-        return await get_treatment_agent_service().recommend(**request.model_dump())
+        if os.getenv("BODYSENSE_E2E_STUB_AI") == "1" and os.getenv(
+            "ENVIRONMENT", "development"
+        ).lower() in {"development", "test", "e2e"}:
+            # E2E stays deterministic but must execute the same immutable
+            # Treatment contract, EvidenceGap trace and governance path as production.
+            service = TreatmentAgentService(
+                model_resolver=lambda _config: deterministic_treatment_model()
+            )
+        else:
+            service = get_treatment_agent_service()
+        return await service.recommend(**request.model_dump())
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:

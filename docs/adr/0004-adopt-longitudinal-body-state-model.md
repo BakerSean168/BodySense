@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted — core migration implemented; remaining evolution is tracked as normal domain work
 
 ## Date
 
@@ -258,10 +258,15 @@ The following are considered architecture invariants unless replaced by a later 
 13. MedicalRecord is not a core aggregate.
 14. Go owns durable business truth; Python owns Agent runtime reasoning; Web consumes projections.
 
-## Follow-up
+## Implementation outcome
 
-- Define the full Longitudinal BodyState domain vocabulary and lifecycle.
-- Replace the old Consultation -> MedicalRecord feature specification.
-- Replace the linear Health Journey workflow with a longitudinal health loop.
-- Create a migration plan from `consultation_sessions` / `health_features` / legacy Diagnosis to BodyState-based contracts.
-- Remove the current hard `DiagnosisAgentOutput.candidates <= 3` target constraint during the corresponding implementation ticket.
+The core migration is complete:
+
+- BodyState vocabulary/revisions and current projections are implemented;
+- MedicalRecord is not a current aggregate;
+- the user model is a longitudinal health loop rather than a terminal Health Journey;
+- Diagnosis pins BodyState revisions and stores separate durable analysis/candidate history;
+- the old fixed-three Diagnosis candidate target has been removed;
+- Treatment/Intervention/Outcome use separate durable history tied back to BodyState/Diagnosis.
+
+One schema-cleanup residue remains: migration-era `health_features` columns introduced in migration 29 still exist in historical schema migration lineage even though executable application models no longer consume them. Whether to physically drop those unused columns is tracked in the documentation/code alignment audit rather than as an unresolved architecture design.

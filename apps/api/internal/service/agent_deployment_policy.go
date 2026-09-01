@@ -10,9 +10,11 @@ import (
 )
 
 const (
-	defaultDiagnosisConfigurationID     = "diag-config-f492eb1c0c6676ae"
+	diagnosisV1ConfigurationID          = "diag-config-f492eb1c0c6676ae"
 	diagnosisEvidenceGapConfigurationID = "diag-config-20fbfc23ca09cbab"
 	diagnosisDecisionAuthorityConfigID  = "diag-config-5a4a13627e14b4cf"
+	defaultDiagnosisConfigurationID     = diagnosisDecisionAuthorityConfigID
+	diagnosisRollbackConfigurationID    = diagnosisV1ConfigurationID
 
 	DiagnosisRolloutChampion = "champion"
 	DiagnosisRolloutShadow   = "shadow"
@@ -34,8 +36,10 @@ const (
 	defaultAssessmentRolloutSalt = "assessment-rollout-v1"
 	AssessmentPromotionRecordV1  = "assessment_promotion_v1"
 
-	defaultTreatmentConfigurationID     = "treat-config-85718f8e90ac9d80"
+	treatmentV1ConfigurationID          = "treat-config-85718f8e90ac9d80"
 	treatmentEvidenceGapConfigurationID = "treat-config-f68eec9846664596"
+	defaultTreatmentConfigurationID     = treatmentEvidenceGapConfigurationID
+	treatmentRollbackConfigurationID    = treatmentV1ConfigurationID
 	treatmentLogicalModelV1             = "bodysense-structured"
 
 	TreatmentRolloutChampion = "champion"
@@ -103,7 +107,7 @@ type knowledgeConfigurationRegistration struct {
 }
 
 var knownTreatmentConfigurations = map[string]treatmentConfigurationRegistration{
-	defaultTreatmentConfigurationID: {
+	treatmentV1ConfigurationID: {
 		DecisionPolicyRevision: TreatmentDecisionPolicyV1,
 		LogicalModel:           treatmentLogicalModelV1,
 	},
@@ -202,7 +206,7 @@ var knownKnowledgeSplitterConfigurations = map[string]knowledgeConfigurationRegi
 }
 
 var knownDiagnosisConfigurations = map[string]diagnosisConfigurationRegistration{
-	defaultDiagnosisConfigurationID: {
+	diagnosisV1ConfigurationID: {
 		DecisionPolicyRevision: DiagnosisDecisionPolicyPreEnvelope,
 	},
 	diagnosisEvidenceGapConfigurationID: {
@@ -221,7 +225,8 @@ type DiagnosisRouteSelection struct {
 	ShadowConfigurationID        string `json:"shadow_configuration_id,omitempty"`
 	ShadowDecisionPolicyRevision string `json:"shadow_decision_policy_revision,omitempty"`
 	ChampionConfigurationID      string `json:"champion_configuration_id"`
-	ChallengerConfigurationID    string `json:"challenger_configuration_id"`
+	ChallengerConfigurationID    string `json:"challenger_configuration_id,omitempty"`
+	RollbackConfigurationID      string `json:"rollback_configuration_id,omitempty"`
 	CanaryBPS                    int    `json:"canary_bps"`
 	PromotionRecord              string `json:"promotion_record,omitempty"`
 }
@@ -234,7 +239,8 @@ type TreatmentRouteSelection struct {
 	ShadowConfigurationID        string `json:"shadow_configuration_id,omitempty"`
 	ShadowDecisionPolicyRevision string `json:"shadow_decision_policy_revision,omitempty"`
 	ChampionConfigurationID      string `json:"champion_configuration_id"`
-	ChallengerConfigurationID    string `json:"challenger_configuration_id"`
+	ChallengerConfigurationID    string `json:"challenger_configuration_id,omitempty"`
+	RollbackConfigurationID      string `json:"rollback_configuration_id,omitempty"`
 	CanaryBPS                    int    `json:"canary_bps"`
 	PromotionRecord              string `json:"promotion_record,omitempty"`
 }
@@ -258,6 +264,7 @@ type AssessmentRouteSelection struct {
 type AgentDeploymentPolicy struct {
 	diagnosisChampionConfigurationID   string
 	diagnosisChallengerConfigurationID string
+	diagnosisRollbackConfigurationID   string
 	diagnosisStage                     string
 	diagnosisCanaryBPS                 int
 	diagnosisRolloutSalt               string
@@ -265,6 +272,7 @@ type AgentDeploymentPolicy struct {
 
 	treatmentChampionConfigurationID   string
 	treatmentChallengerConfigurationID string
+	treatmentRollbackConfigurationID   string
 	treatmentStage                     string
 	treatmentCanaryBPS                 int
 	treatmentRolloutSalt               string
@@ -290,18 +298,24 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 	if diagnosisChampion == "" {
 		diagnosisChampion = defaultDiagnosisConfigurationID
 	}
-	diagnosisChallenger := strings.TrimSpace(os.Getenv("DIAGNOSIS_CHALLENGER_CONFIGURATION_ID"))
-	if diagnosisChallenger == "" {
-		diagnosisChallenger = diagnosisDecisionAuthorityConfigID
-	}
 	if err := validateDiagnosisConfigurationID(diagnosisChampion); err != nil {
 		return nil, err
 	}
-	if err := validateDiagnosisConfigurationID(diagnosisChallenger); err != nil {
+	diagnosisRollback := strings.TrimSpace(os.Getenv("DIAGNOSIS_ROLLBACK_CONFIGURATION_ID"))
+	if diagnosisRollback == "" {
+		diagnosisRollback = diagnosisRollbackConfigurationID
+	}
+	if err := validateDiagnosisConfigurationID(diagnosisRollback); err != nil {
 		return nil, err
 	}
-	if diagnosisChampion == diagnosisChallenger {
-		return nil, fmt.Errorf("Diagnosis champion and challenger must be different immutable configurations")
+	diagnosisChallenger := strings.TrimSpace(os.Getenv("DIAGNOSIS_CHALLENGER_CONFIGURATION_ID"))
+	if diagnosisChallenger != "" {
+		if err := validateDiagnosisConfigurationID(diagnosisChallenger); err != nil {
+			return nil, err
+		}
+		if diagnosisChampion == diagnosisChallenger {
+			return nil, fmt.Errorf("Diagnosis champion and challenger must be different immutable configurations")
+		}
 	}
 
 	diagnosisStage := strings.TrimSpace(strings.ToLower(os.Getenv("DIAGNOSIS_ROLLOUT_STAGE")))
@@ -331,41 +345,44 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 	}
 	diagnosisPromotionRecord := strings.TrimSpace(os.Getenv("DIAGNOSIS_PROMOTION_RECORD"))
 	if diagnosisStage == DiagnosisRolloutShadow || diagnosisStage == DiagnosisRolloutCanary || diagnosisStage == DiagnosisRolloutPromoted {
+		if diagnosisChallenger == "" {
+			return nil, fmt.Errorf("Diagnosis rollout stage %q requires a distinct active challenger configuration", diagnosisStage)
+		}
+		// The only currently approved rollout record is the historical v1 -> v3
+		// promotion used to establish the 2026-09-01 baseline. A future v4
+		// challenger must introduce a new immutable promotion record.
 		if diagnosisPromotionRecord != DiagnosisPromotionRecordV1 ||
-			diagnosisChampion != defaultDiagnosisConfigurationID ||
+			diagnosisChampion != diagnosisV1ConfigurationID ||
 			diagnosisChallenger != diagnosisDecisionAuthorityConfigID {
 			return nil, fmt.Errorf(
-				"Diagnosis rollout stage %q requires approved promotion record %q for the qualified v1 -> v3 pair",
-				diagnosisStage,
-				DiagnosisPromotionRecordV1,
+				"Diagnosis rollout stage %q has no approved promotion record for champion %q -> challenger %q",
+				diagnosisStage, diagnosisChampion, diagnosisChallenger,
 			)
 		}
 	}
 
 	treatmentChampion := strings.TrimSpace(os.Getenv("TREATMENT_CHAMPION_CONFIGURATION_ID"))
-	legacyTreatmentPointer := strings.TrimSpace(os.Getenv("TREATMENT_AGENT_CONFIGURATION_ID"))
-	if treatmentChampion == "" {
-		treatmentChampion = legacyTreatmentPointer
-	}
 	if treatmentChampion == "" {
 		treatmentChampion = defaultTreatmentConfigurationID
 	}
 	if err := validateTreatmentConfigurationID(treatmentChampion); err != nil {
 		return nil, err
 	}
-	explicitTreatmentChallenger := strings.TrimSpace(os.Getenv("TREATMENT_CHALLENGER_CONFIGURATION_ID"))
-	treatmentChallenger := explicitTreatmentChallenger
-	if treatmentChallenger == "" {
-		treatmentChallenger = treatmentEvidenceGapConfigurationID
-		if treatmentChallenger == treatmentChampion {
-			treatmentChallenger = defaultTreatmentConfigurationID
-		}
+	treatmentRollback := strings.TrimSpace(os.Getenv("TREATMENT_ROLLBACK_CONFIGURATION_ID"))
+	if treatmentRollback == "" {
+		treatmentRollback = treatmentRollbackConfigurationID
 	}
-	if err := validateTreatmentConfigurationID(treatmentChallenger); err != nil {
+	if err := validateTreatmentConfigurationID(treatmentRollback); err != nil {
 		return nil, err
 	}
-	if treatmentChampion == treatmentChallenger {
-		return nil, fmt.Errorf("Treatment champion and challenger must be different immutable configurations")
+	treatmentChallenger := strings.TrimSpace(os.Getenv("TREATMENT_CHALLENGER_CONFIGURATION_ID"))
+	if treatmentChallenger != "" {
+		if err := validateTreatmentConfigurationID(treatmentChallenger); err != nil {
+			return nil, err
+		}
+		if treatmentChampion == treatmentChallenger {
+			return nil, fmt.Errorf("Treatment champion and challenger must be different immutable configurations")
+		}
 	}
 
 	treatmentStage := strings.TrimSpace(strings.ToLower(os.Getenv("TREATMENT_ROLLOUT_STAGE")))
@@ -395,13 +412,15 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 	}
 	treatmentPromotionRecord := strings.TrimSpace(os.Getenv("TREATMENT_PROMOTION_RECORD"))
 	if treatmentStage == TreatmentRolloutShadow || treatmentStage == TreatmentRolloutCanary || treatmentStage == TreatmentRolloutPromoted {
+		if treatmentChallenger == "" {
+			return nil, fmt.Errorf("Treatment rollout stage %q requires a distinct active challenger configuration", treatmentStage)
+		}
 		if treatmentPromotionRecord != TreatmentPromotionRecordV1 ||
-			treatmentChampion != defaultTreatmentConfigurationID ||
+			treatmentChampion != treatmentV1ConfigurationID ||
 			treatmentChallenger != treatmentEvidenceGapConfigurationID {
 			return nil, fmt.Errorf(
-				"Treatment rollout stage %q requires approved promotion record %q for the qualified v1 -> v2 pair",
-				treatmentStage,
-				TreatmentPromotionRecordV1,
+				"Treatment rollout stage %q has no approved promotion record for champion %q -> challenger %q",
+				treatmentStage, treatmentChampion, treatmentChallenger,
 			)
 		}
 	}
@@ -513,12 +532,14 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 	return &AgentDeploymentPolicy{
 		diagnosisChampionConfigurationID:    diagnosisChampion,
 		diagnosisChallengerConfigurationID:  diagnosisChallenger,
+		diagnosisRollbackConfigurationID:    diagnosisRollback,
 		diagnosisStage:                      diagnosisStage,
 		diagnosisCanaryBPS:                  diagnosisCanaryBPS,
 		diagnosisRolloutSalt:                diagnosisRolloutSalt,
 		diagnosisPromotionRecord:            diagnosisPromotionRecord,
 		treatmentChampionConfigurationID:    treatmentChampion,
 		treatmentChallengerConfigurationID:  treatmentChallenger,
+		treatmentRollbackConfigurationID:    treatmentRollback,
 		treatmentStage:                      treatmentStage,
 		treatmentCanaryBPS:                  treatmentCanaryBPS,
 		treatmentRolloutSalt:                treatmentRolloutSalt,
@@ -549,8 +570,9 @@ func (p *AgentDeploymentPolicy) DiagnosisDecisionPolicyRevision() string {
 
 func (p *AgentDeploymentPolicy) DiagnosisRolloutStage() string { return p.diagnosisStage }
 
-// TreatmentConfigurationID preserves the pre-rollout compatibility accessor.
-// TREATMENT_AGENT_CONFIGURATION_ID is interpreted as the Champion alias only.
+// TreatmentConfigurationID returns the current repository Champion.
+// The retired TREATMENT_AGENT_CONFIGURATION_ID alias is intentionally ignored;
+// rollback now has its own explicit configuration pointer.
 func (p *AgentDeploymentPolicy) TreatmentConfigurationID() string {
 	return p.treatmentChampionConfigurationID
 }
@@ -575,7 +597,7 @@ func (p *AgentDeploymentPolicy) SelectDiagnosisRoute(subjectID string) Diagnosis
 	case DiagnosisRolloutPromoted:
 		served = p.diagnosisChallengerConfigurationID
 	case DiagnosisRolloutRollback:
-		served = p.diagnosisChampionConfigurationID
+		served = p.diagnosisRollbackConfigurationID
 	}
 
 	selection := DiagnosisRouteSelection{
@@ -585,6 +607,7 @@ func (p *AgentDeploymentPolicy) SelectDiagnosisRoute(subjectID string) Diagnosis
 		ShadowConfigurationID:        shadow,
 		ChampionConfigurationID:      p.diagnosisChampionConfigurationID,
 		ChallengerConfigurationID:    p.diagnosisChallengerConfigurationID,
+		RollbackConfigurationID:      p.diagnosisRollbackConfigurationID,
 		CanaryBPS:                    p.diagnosisCanaryBPS,
 		PromotionRecord:              p.diagnosisPromotionRecord,
 	}
@@ -612,7 +635,7 @@ func (p *AgentDeploymentPolicy) SelectTreatmentRoute(subjectID string) Treatment
 	case TreatmentRolloutPromoted:
 		served = p.treatmentChallengerConfigurationID
 	case TreatmentRolloutRollback:
-		served = p.treatmentChampionConfigurationID
+		served = p.treatmentRollbackConfigurationID
 	}
 
 	selection := TreatmentRouteSelection{
@@ -622,6 +645,7 @@ func (p *AgentDeploymentPolicy) SelectTreatmentRoute(subjectID string) Treatment
 		ShadowConfigurationID:        shadow,
 		ChampionConfigurationID:      p.treatmentChampionConfigurationID,
 		ChallengerConfigurationID:    p.treatmentChallengerConfigurationID,
+		RollbackConfigurationID:      p.treatmentRollbackConfigurationID,
 		CanaryBPS:                    p.treatmentCanaryBPS,
 		PromotionRecord:              p.treatmentPromotionRecord,
 	}
