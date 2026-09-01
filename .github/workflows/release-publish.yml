@@ -350,8 +350,8 @@ jobs:
             gh api \
               -H 'Accept: application/vnd.github+json' \
               "repos/${REPOSITORY}/commits/${RELEASE_SHA}/pulls?per_page=100" \
-              --jq --arg title "$expected_title" \
-              '[.[] | select(.merged_at != null and .base.ref == "main" and .title == $title)][0].number // empty'
+              | jq -r --arg title "$expected_title" \
+                '[.[] | select(.merged_at != null and .base.ref == "main" and .title == $title)][0].number // empty'
           )"
           [[ "$release_pr" =~ ^[0-9]+$ ]] || {
             echo "could not resolve the merged Release PR for $RELEASE_TAG / $RELEASE_SHA" >&2

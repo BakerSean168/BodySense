@@ -135,6 +135,8 @@ The first post-merge `Prepare Release` attempt exposed a delivery-control-plane 
 
 The historical GitHub metadata was reconciled to `autorelease: tagged` only after proving tag/SHA identity. Release Publish is also being hardened with an idempotent post-publish reconciliation job: a Release PR may become `autorelease: tagged` only after Published Release state and exact tag SHA are both proven, and a workflow retry can repair bookkeeping after publication without rebuilding or rewriting artifacts.
 
+The first v0.10.0 publication proved the release/tag/manifest boundary but exposed a CLI wiring bug in that reconciliation job: `gh api` does not forward `jq --arg` parameters. The release itself remained Published and immutable; the retry path is corrected to pipe the API response into standalone `jq -r --arg`, then re-run against the existing candidate/release without rebuilding artifacts.
+
 ### Acceptance criteria
 
 - a clean `AgentDeploymentPolicy` serves Diagnosis v3 and Treatment v2 in `champion` stage;

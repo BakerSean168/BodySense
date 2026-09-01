@@ -452,6 +452,7 @@ test('Release Publish reconciles release-please tagged state only after publicat
   assert.match(contents, /reconcile-release-please-state:/);
   assert.match(contents, /needs\.prepare-draft\.outputs\.already_published == 'true'/);
   assert.match(contents, /needs\.finalize\.result == 'success'/);
+  assert.match(contents, /\| jq -r --arg title/);
   assert.match(contents, /gh release view \"\$RELEASE_TAG\".*--json isDraft/);
   assert.match(contents, /\[\[ \"\$tag_sha\" == \"\$RELEASE_SHA\" \]\]/);
   assert.match(contents, /autorelease%3A%20pending/);
