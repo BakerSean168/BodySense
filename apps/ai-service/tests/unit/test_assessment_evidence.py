@@ -1,6 +1,8 @@
 """Deterministic Assessment evidence-catalog/rendering contract tests."""
 
 from src.services.assessment_evidence import (
+    ASSESSMENT_EVIDENCE_POLICY_REVISION_V2,
+    ASSESSMENT_EVIDENCE_POLICY_REVISION_V3,
     assessment_evidence_issues,
     build_assessment_evidence_catalog,
     build_assessment_evidence_coverage,
@@ -37,7 +39,16 @@ def _catalog_fixture():
             {
                 "upload_id": report_upload_id,
                 "indicator_index": 0,
-                "value": {"name": "25-OH-D", "value": "12.5", "unit": "ng/mL"},
+                "value": {
+                    "name": "25-OH-D",
+                    "value": "12.5",
+                    "unit": "ng/mL",
+                    "evidence_admissibility": {
+                        "status": "admissible",
+                        "policy_revision": "ocr-indicator-admissibility-v1",
+                        "reason_codes": ["high_confidence_ocr_and_indicator"],
+                    },
+                },
             }
         ],
         posture_analysis={
@@ -150,3 +161,77 @@ def test_renderer_uses_source_snapshot_not_model_prose() -> None:
     assert rendered[0]["description"] == "来源记录：健身；频率：1-2。"
     assert rendered[1]["description"] == "体态分析记录：右侧肩峰位置略高。"
     assert rendered[2]["description"] == "报告记录：25-OH-D=12.5 ng/mL。"
+
+
+def test_report_indicator_v3_requires_explicit_admissibility_provenance() -> None:
+    report_upload_id = "55555555-5555-5555-5555-555555555555"
+    base = {
+        "upload_id": report_upload_id,
+        "indicator_index": 0,
+        "value": {"name": "Vitamin D", "value": "25.3", "unit": "ng/mL"},
+    }
+
+    legacy = build_assessment_evidence_catalog(
+        profile={},
+        body_state={},
+        report_indicators=[base],
+        posture_analysis={},
+        evidence_policy_revision=ASSESSMENT_EVIDENCE_POLICY_REVISION_V2,
+    )
+    ref = f"report:upload:{report_upload_id}:indicator:0"
+    assert ref in legacy
+
+    current = build_assessment_evidence_catalog(
+        profile={},
+        body_state={},
+        report_indicators=[base],
+        posture_analysis={},
+        evidence_policy_revision=ASSESSMENT_EVIDENCE_POLICY_REVISION_V3,
+    )
+    assert ref not in current
+
+
+def test_report_indicator_v3_excludes_review_required_and_accepts_admissible() -> None:
+    report_upload_id = "66666666-6666-6666-6666-666666666666"
+    ref0 = f"report:upload:{report_upload_id}:indicator:0"
+    ref1 = f"report:upload:{report_upload_id}:indicator:1"
+    catalog = build_assessment_evidence_catalog(
+        profile={},
+        body_state={},
+        report_indicators=[
+            {
+                "upload_id": report_upload_id,
+                "indicator_index": 0,
+                "value": {
+                    "name": "Vitamin D",
+                    "value": "25.3",
+                    "unit": "ng/mL",
+                    "evidence_admissibility": {
+                        "status": "needs_review",
+                        "policy_revision": "ocr-indicator-admissibility-v1",
+                        "reason_codes": ["indicator_confidence_medium"],
+                    },
+                },
+            },
+            {
+                "upload_id": report_upload_id,
+                "indicator_index": 1,
+                "value": {
+                    "name": "Ferritin",
+                    "value": "50",
+                    "unit": "ng/mL",
+                    "evidence_admissibility": {
+                        "status": "admissible",
+                        "policy_revision": "ocr-indicator-admissibility-v1",
+                        "reason_codes": ["high_confidence_ocr_and_indicator"],
+                    },
+                },
+            },
+        ],
+        posture_analysis={},
+        evidence_policy_revision=ASSESSMENT_EVIDENCE_POLICY_REVISION_V3,
+    )
+    assert ref0 not in catalog
+    assert ref1 in catalog
+    coverage = build_assessment_evidence_coverage(catalog)
+    assert coverage["domains"]["health_report"]["status"] == "available"

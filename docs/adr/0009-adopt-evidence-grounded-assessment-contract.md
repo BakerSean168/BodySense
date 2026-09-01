@@ -5,6 +5,8 @@
 - Scope: Assessment Agent, evidence governance, BodyState projection, replay, API contract
 - Supersedes for new reports: model-authored Assessment prose, health grades, and numeric dimension scores
 
+> **Later evolution:** ADR 0011 keeps this selection-only/output-v2 design but advances the serving Assessment configuration to v4 / `assessment-evidence-contract-v3`. Report indicators now require explicit OCR evidence-admissibility provenance before they enter the current catalog. Assessment v3 / evidence-v2 remains immutable historical replay semantics.
+
 ## Context
 
 A real Assessment report was generated from a frozen input with no images, no completed posture analysis and no report indicators, yet the model emitted shoulder-protraction and spinal-curvature observations. The same output assigned a posture score while also admitting that posture detail was missing.
@@ -182,7 +184,7 @@ Counterfactual replay for the serving contract passes through the same Go eviden
 
 `assessment-v1` and `assessment-v2` remain repository-known historical configurations and are not allowed to serve new durable reports.
 
-`assessment-v3` is the serving configuration and binds:
+`assessment-v3` was the initial serving configuration for this ADR and binds:
 
 ```text
 prompt_revision: assessment-prompt-v3-evidence-contract
@@ -192,7 +194,7 @@ governance_policy_revision: assessment-governance-v2
 decision_policy_revision: assessment-go-generation-v2
 ```
 
-Because this v3 contract is introduced atomically in this change, its immutable configuration identity represents the final selection-only behavior. Future behavior-significant changes require a new revision/configuration identity rather than silently mutating a published contract.
+Its immutable identity remains the historical selection-only/evidence-v2 behavior. ADR 0011 demonstrates the intended evolution rule: behavior-significant evidence-admission changes create a new Assessment v4 identity instead of mutating v3 in place.
 
 ## Persistence and compatibility
 
@@ -211,7 +213,7 @@ Assessment regression export is versioned as `assessment_qualification_v2` and r
 
 ## Qualification
 
-The contract has a deterministic Pydantic Evals policy suite (`assessment-evidence-contract-v2`) that exercises profile-only input, source-only BodyState rendering, unverified evidence exclusion, incompatible source/kind selection, duplicate refs, governed Posture findings, report-vs-injury domain separation, and BodyState-kind compatibility. The initial qualification is **8/8 passed** and is exposed as the Nx target `eval:assessment-evidence-contract`. Real Playwright E2E separately verifies both model-executed grounded persistence and the zero-evidence no-model path.
+The initial contract had a deterministic Pydantic Evals policy suite (`assessment-evidence-contract-v2`) that exercises profile-only input, source-only BodyState rendering, unverified evidence exclusion, incompatible source/kind selection, duplicate refs, governed Posture findings, report-vs-injury domain separation, and BodyState-kind compatibility. The initial qualification was **8/8 passed**. ADR 0011 advances the current qualification to `assessment-evidence-contract-v3` (9/9) under the same Nx target `eval:assessment-evidence-contract`. Real Playwright E2E separately verifies both model-executed grounded persistence and the zero-evidence no-model path.
 
 ## Consequences
 

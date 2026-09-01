@@ -135,24 +135,26 @@ These are tools/mechanisms, not reasoning Agents. They do not receive fake `Agen
 identities merely for platform uniformity. They still need their own version/provider provenance where
 that matters, input validation, credential isolation and deterministic error handling.
 
+For OCR, extraction completion and downstream evidence authority are explicitly separate. `ocr-indicator-admissibility-v1` may mark a parsed report value `admissible`, `needs_review` or `rejected`; current Assessment v4 only catalogs the first class and Go revalidates the exact policy revision before durable projection. This admission policy does not remove the separate requirement to version the OCR mechanism implementation itself.
+
 If one of these mechanisms later gains LLM reasoning behavior, the LLM portion becomes an Agent role
 and must enter the universal invariants above.
 
 ## 4. Current role matrix
 
-| Role / mechanism | Class | Immutable config | Go selection | Exact manifest execution | Durable lineage | Replay / rollout authority |
-| --- | --- | :---: | :---: | :---: | :---: | --- |
-| Diagnosis | clinical decision | ✅ | ✅ | ✅ | ✅ | full qualification + replay + rollout |
-| Treatment | clinical decision | ✅ | ✅ | ✅ | ✅ | full qualification + replay + rollout |
-| Assessment | clinical derived decision | ✅ | ✅ | ✅ | ✅ | qualification + replay + rollout |
-| Consultation | clinical conversational | ✅ | ✅ | ✅ | ✅ | multi-turn replay + rollout |
-| Posture | perception | ✅ | ✅ | ✅ | ✅ | config qualification/pointer; downstream clinical gates |
-| Title | utility | ✅ | ✅ | ✅ | ✅ | no clinical rollout required |
-| Knowledge Splitter | offline content | ✅ | ✅ when LLM enabled | ✅ | ✅ source metadata | publication/review gate |
-| Knowledge Curator | offline content | ✅ | ✅ when enabled | ✅ | ✅ source metadata | publication/review gate |
-| OCR | mechanism | n/a | n/a | n/a | mechanism provenance | n/a |
-| ASR | mechanism | n/a | n/a | n/a | source metadata | n/a |
-| Embedding | mechanism | n/a | n/a | n/a | index/model provenance | n/a |
+| Role / mechanism   | Class                     | Immutable config |    Go selection     | Exact manifest execution |    Durable lineage     | Replay / rollout authority                              |
+| ------------------ | ------------------------- | :--------------: | :-----------------: | :----------------------: | :--------------------: | ------------------------------------------------------- |
+| Diagnosis          | clinical decision         |        ✅        |         ✅          |            ✅            |           ✅           | full qualification + replay + rollout                   |
+| Treatment          | clinical decision         |        ✅        |         ✅          |            ✅            |           ✅           | full qualification + replay + rollout                   |
+| Assessment         | clinical derived decision |        ✅        |         ✅          |            ✅            |           ✅           | qualification + replay + rollout                        |
+| Consultation       | clinical conversational   |        ✅        |         ✅          |            ✅            |           ✅           | multi-turn replay + rollout                             |
+| Posture            | perception                |        ✅        |         ✅          |            ✅            |           ✅           | config qualification/pointer; downstream clinical gates |
+| Title              | utility                   |        ✅        |         ✅          |            ✅            |           ✅           | no clinical rollout required                            |
+| Knowledge Splitter | offline content           |        ✅        | ✅ when LLM enabled |            ✅            |   ✅ source metadata   | publication/review gate                                 |
+| Knowledge Curator  | offline content           |        ✅        |   ✅ when enabled   |            ✅            |   ✅ source metadata   | publication/review gate                                 |
+| OCR                | mechanism                 |       n/a        |         n/a         |           n/a            |  mechanism provenance  | n/a                                                     |
+| ASR                | mechanism                 |       n/a        |         n/a         |           n/a            |    source metadata     | n/a                                                     |
+| Embedding          | mechanism                 |       n/a        |         n/a         |           n/a            | index/model provenance | n/a                                                     |
 
 ## 5. Internal HTTP authority rule
 

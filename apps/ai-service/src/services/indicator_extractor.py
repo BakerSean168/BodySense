@@ -2,7 +2,7 @@
 
 import re
 
-from ..models.ocr import HealthIndicator
+from ..models.ocr import HealthIndicator, OCRConfidence
 
 # Common health indicator patterns
 # Pattern: indicator name + value + optional unit + optional reference range
@@ -118,7 +118,7 @@ def _determine_confidence(
     value: str,
     unit: str | None,
     full_text: str,
-) -> str:
+) -> OCRConfidence:
     """
     Determine confidence level for an extracted indicator.
 
@@ -150,7 +150,7 @@ def _has_reference_context(text: str, indicator_name: str) -> bool:
     return any(kw in context for kw in ref_keywords)
 
 
-def get_overall_confidence(indicators: list[HealthIndicator]) -> str:
+def get_overall_confidence(indicators: list[HealthIndicator]) -> OCRConfidence:
     """
     Determine overall confidence based on individual indicators.
 

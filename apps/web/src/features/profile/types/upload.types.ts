@@ -1,15 +1,27 @@
+export type OCRConfidence = "high" | "medium" | "low" | "unknown";
+export type IndicatorAdmissibilityStatus =
+  "admissible" | "needs_review" | "rejected";
+
+export interface IndicatorEvidenceAdmissibility {
+  status: IndicatorAdmissibilityStatus;
+  policy_revision: string;
+  reason_codes: string[];
+}
+
 export interface HealthIndicator {
   name: string;
   value: string;
   unit: string | null;
   reference_range: string | null;
-  confidence: "high" | "medium" | "low";
+  confidence: OCRConfidence;
+  /** Missing on historical OCR rows; consumers must fail closed to needs_review. */
+  evidence_admissibility?: IndicatorEvidenceAdmissibility;
 }
 
 export interface OCRResult {
   raw_text: string;
   indicators: HealthIndicator[];
-  confidence: "high" | "medium" | "low";
+  confidence: OCRConfidence;
 }
 
 export type Confidence = "high" | "medium" | "low";

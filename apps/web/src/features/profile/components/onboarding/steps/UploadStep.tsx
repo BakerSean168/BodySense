@@ -362,12 +362,12 @@ export function UploadStep() {
                   <p className="text-[10px] text-slate-500 mt-0.5">
                     大小: {(report.file_size / (1024 * 1024)).toFixed(2)} MB •{" "}
                     {report.ocr_status === "completed" && report.ocr_result
-                      ? `AI 成功识别 ${report.ocr_result.indicators?.length || 0} 项健康指标`
+                      ? `OCR 识别 ${report.ocr_result.indicators?.length || 0} 项指标候选，其中 ${report.ocr_result.indicators?.filter((indicator) => indicator.evidence_admissibility?.status === "admissible").length || 0} 项可用于评估`
                       : report.ocr_status === "processing"
-                        ? "AI 正在智能读取中..."
+                        ? "OCR 正在读取中..."
                         : report.ocr_status === "failed"
                           ? "指标读取失败"
-                          : "等待 AI 读取"}
+                          : "等待 OCR 读取"}
                   </p>
                 </div>
               </div>

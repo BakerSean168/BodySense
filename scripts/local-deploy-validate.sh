@@ -1,20 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# Production-shaped validation now exercises the 2026-09-01 promoted baseline.
-# Historical v1 -> latest shadow/canary behavior remains covered by unit and
-# immutable promotion-policy tests; this runtime should prove clean environments
-# actually serve the latest Champion without any operator override.
-export DIAGNOSIS_CHAMPION_CONFIGURATION_ID="diag-config-5a4a13627e14b4cf"
-export DIAGNOSIS_CHALLENGER_CONFIGURATION_ID=""
-export DIAGNOSIS_ROLLBACK_CONFIGURATION_ID="diag-config-f492eb1c0c6676ae"
-export DIAGNOSIS_ROLLOUT_STAGE="champion"
-export DIAGNOSIS_PROMOTION_RECORD=""
-export TREATMENT_CHAMPION_CONFIGURATION_ID="treat-config-f68eec9846664596"
-export TREATMENT_CHALLENGER_CONFIGURATION_ID=""
-export TREATMENT_ROLLBACK_CONFIGURATION_ID="treat-config-85718f8e90ac9d80"
-export TREATMENT_ROLLOUT_STAGE="champion"
-export TREATMENT_PROMOTION_RECORD=""
-
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
@@ -46,12 +31,6 @@ export LITELLM_PORT="${VALIDATOR_LITELLM_PORT:-$(pick_port 0)}"
 export API_PORT="${VALIDATOR_API_PORT:-$(pick_port 18080)}"
 export AI_SERVICE_PORT="${VALIDATOR_AI_PORT:-$(pick_port 18100)}"
 export WEB_PORT="${VALIDATOR_WEB_PORT:-$(pick_port 15173)}"
-export DB_USER="bodysense"
-export DB_PASSWORD="bodysense123"
-export DB_NAME="bodysense"
-export REDIS_PASSWORD="bodysense123"
-export JWT_SECRET_KEY="bodysense-local-validator-secret"
-compose=(docker compose -f docker/docker-compose.yml --profile dev)
 
 cleanup() {
   if [[ "${KEEP_VALIDATOR_STACK:-0}" != "1" ]]; then
@@ -75,11 +54,35 @@ wait_http() {
 }
 
 if [[ "${SKIP_QUALITY:-0}" != "1" ]]; then
+  # Repository quality must run before any production-shaped runtime variables
+  # are exported. Several hermetic tests intentionally verify their own secret
+  # precedence; leaking the validator DB password into those tests breaks the
+  # trust boundary they are designed to prove.
   bash scripts/validate-repo.sh
 fi
 
+# Runtime-only environment starts here. Historical rollout behavior remains
+# covered by unit/promotion-policy tests; this disposable stack proves clean
+# environments serve the current Champions without operator overrides.
+export DIAGNOSIS_CHAMPION_CONFIGURATION_ID="diag-config-5a4a13627e14b4cf"
+export DIAGNOSIS_CHALLENGER_CONFIGURATION_ID=""
+export DIAGNOSIS_ROLLBACK_CONFIGURATION_ID="diag-config-f492eb1c0c6676ae"
+export DIAGNOSIS_ROLLOUT_STAGE="champion"
+export DIAGNOSIS_PROMOTION_RECORD=""
+export TREATMENT_CHAMPION_CONFIGURATION_ID="treat-config-f68eec9846664596"
+export TREATMENT_CHALLENGER_CONFIGURATION_ID=""
+export TREATMENT_ROLLBACK_CONFIGURATION_ID="treat-config-85718f8e90ac9d80"
+export TREATMENT_ROLLOUT_STAGE="champion"
+export TREATMENT_PROMOTION_RECORD=""
+export DB_USER="bodysense"
+export DB_PASSWORD="bodysense123"
+export DB_NAME="bodysense"
+export REDIS_PASSWORD="bodysense123"
+export JWT_SECRET_KEY="bodysense-local-validator-secret"
+compose=(docker compose -f docker/docker-compose.yml --profile dev)
+
 # Only the production-shaped runtime/E2E phase is stubbed/deterministic. Quality
-# tests above must observe their normal model/gateway contracts and own their mocks.
+# tests above observed their normal model/gateway contracts and owned their mocks.
 export BODYSENSE_E2E_STUB_AI=1
 export BODYSENSE_DETERMINISTIC_AI="true"
 

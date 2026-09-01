@@ -94,6 +94,7 @@ class AssessmentService:
             body_state=normalized_body_state,
             report_indicators=normalized_indicators,
             posture_analysis=normalized_posture,
+            evidence_policy_revision=config.evidence_policy_revision,
         )
         if (
             config.output_schema_revision == ASSESSMENT_OUTPUT_SCHEMA_REVISION_V2

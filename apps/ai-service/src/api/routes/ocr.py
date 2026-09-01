@@ -4,9 +4,10 @@ import logging
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
-from ...models.ocr import OCRResponse, OCRResult, TextExtractionResponse
+from ...models.ocr import OCRConfidence, OCRResponse, OCRResult, TextExtractionResponse
 from ...services.indicator_extractor import extract_indicators, get_overall_confidence
 from ...services.ocr import extract_text
+from ...services.report_indicator_admissibility import apply_indicator_admissibility
 
 logger = logging.getLogger(__name__)
 
@@ -70,13 +71,21 @@ async def extract_ocr(file: UploadFile = File(...)):
                 ),
             )
 
-        # Extract health indicators
+        # Extract health indicators. Extraction completion and evidence
+        # admissibility are separate contracts: only high-confidence OCR +
+        # high-confidence indicator parses are auto-admissible downstream.
         indicators = extract_indicators(raw_text)
+        ocr_confidence = _confidence_level(confidence)
+        indicators = apply_indicator_admissibility(
+            indicators,
+            ocr_confidence=ocr_confidence,
+        )
         overall_confidence = get_overall_confidence(indicators)
 
-        # Use the lower of OCR confidence and indicator confidence
+        # Overall OCRResult confidence remains descriptive metadata. It is not
+        # itself an evidence-admission decision.
         final_confidence = _min_confidence(
-            _confidence_level(confidence),
+            ocr_confidence,
             overall_confidence,
         )
         # 返回状态为 "completed" 的 OCRResponse，
@@ -152,7 +161,7 @@ async def extract_text_only(file: UploadFile = File(...)):
         )
 
 
-def _confidence_level(score: float) -> str:
+def _confidence_level(score: float) -> OCRConfidence:
     """Convert numeric confidence score to level string."""
     if score >= 0.8:
         return "high"
@@ -161,7 +170,7 @@ def _confidence_level(score: float) -> str:
     return "low"
 
 
-def _min_confidence(a: str, b: str) -> str:
+def _min_confidence(a: OCRConfidence, b: OCRConfidence) -> OCRConfidence:
     """Return the lower of two confidence levels."""
     order = {"high": 3, "medium": 2, "low": 1}
     return a if order.get(a, 0) <= order.get(b, 0) else b

@@ -30,11 +30,12 @@ class TestHealthIndicatorModel:
         assert indicator.value == "100"
         assert indicator.unit is None
         assert indicator.reference_range is None
-        assert indicator.confidence == "high"  # default
+        assert indicator.confidence == "unknown"  # fail-closed default
 
     def test_indicator_default_confidence(self):
         indicator = HealthIndicator(name="Test", value="1")
-        assert indicator.confidence == "high"
+        assert indicator.confidence == "unknown"
+        assert indicator.evidence_admissibility.status == "needs_review"
 
 
 class TestOCRResultModel:
@@ -158,3 +159,108 @@ class TestOverallConfidence:
         ]
         confidence = get_overall_confidence(indicators)
         assert confidence == "low"
+
+
+class TestIndicatorEvidenceAdmissibility:
+    """OCR completion must not imply health-evidence admissibility."""
+
+    def test_missing_confidence_fails_closed(self):
+        from src.services.report_indicator_admissibility import (
+            evaluate_indicator_admissibility,
+        )
+
+        indicator = HealthIndicator(name="Vitamin D", value="25.3", unit="ng/mL")
+        assert indicator.confidence == "unknown"
+        decision = evaluate_indicator_admissibility(indicator, ocr_confidence="high")
+        assert decision.status == "needs_review"
+        assert "indicator_confidence_unknown" in decision.reason_codes
+
+    def test_only_high_ocr_and_high_indicator_are_auto_admissible(self):
+        from src.services.report_indicator_admissibility import (
+            OCR_INDICATOR_ADMISSIBILITY_POLICY_REVISION,
+            evaluate_indicator_admissibility,
+        )
+
+        indicator = HealthIndicator(
+            name="Vitamin D",
+            value="25.3",
+            unit="ng/mL",
+            confidence="high",
+        )
+        decision = evaluate_indicator_admissibility(indicator, ocr_confidence="high")
+        assert decision.status == "admissible"
+        assert decision.policy_revision == OCR_INDICATOR_ADMISSIBILITY_POLICY_REVISION
+
+    def test_medium_ocr_requires_review_even_for_high_indicator(self):
+        from src.services.report_indicator_admissibility import (
+            evaluate_indicator_admissibility,
+        )
+
+        indicator = HealthIndicator(
+            name="Vitamin D",
+            value="25.3",
+            unit="ng/mL",
+            confidence="high",
+        )
+        decision = evaluate_indicator_admissibility(indicator, ocr_confidence="medium")
+        assert decision.status == "needs_review"
+        assert "ocr_confidence_medium" in decision.reason_codes
+
+    def test_medium_indicator_requires_review_even_for_high_ocr(self):
+        from src.services.report_indicator_admissibility import (
+            evaluate_indicator_admissibility,
+        )
+
+        indicator = HealthIndicator(
+            name="Vitamin D",
+            value="25.3",
+            unit="ng/mL",
+            confidence="medium",
+        )
+        decision = evaluate_indicator_admissibility(indicator, ocr_confidence="high")
+        assert decision.status == "needs_review"
+        assert "indicator_confidence_medium" in decision.reason_codes
+
+
+def test_ocr_route_attaches_admissible_evidence_metadata(client, monkeypatch):
+    monkeypatch.setattr(
+        "src.api.routes.ocr.extract_text",
+        lambda _payload, _mime: ("维生素D: 25.3 ng/mL\n参考范围: 30-100", 0.95),
+    )
+
+    response = client.post(
+        "/api/ocr/extract",
+        files={"file": ("report.png", b"fake-image", "image/png")},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "completed"
+    indicator = next(item for item in payload["result"]["indicators"] if "D" in item["name"])
+    assert indicator["confidence"] == "high"
+    assert indicator["evidence_admissibility"] == {
+        "status": "admissible",
+        "policy_revision": "ocr-indicator-admissibility-v1",
+        "reason_codes": ["high_confidence_ocr_and_indicator"],
+    }
+
+
+def test_ocr_route_preserves_review_required_indicator_without_admitting_it(client, monkeypatch):
+    monkeypatch.setattr(
+        "src.api.routes.ocr.extract_text",
+        lambda _payload, _mime: ("维生素D: 25.3 ng/mL\n参考范围: 30-100", 0.65),
+    )
+
+    response = client.post(
+        "/api/ocr/extract",
+        files={"file": ("report.png", b"fake-image", "image/png")},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "completed"
+    indicator = next(item for item in payload["result"]["indicators"] if "D" in item["name"])
+    assert indicator["confidence"] == "high"
+    assert indicator["evidence_admissibility"]["status"] == "needs_review"
+    assert indicator["evidence_admissibility"]["policy_revision"] == (
+        "ocr-indicator-admissibility-v1"
+    )
+    assert "ocr_confidence_medium" in indicator["evidence_admissibility"]["reason_codes"]

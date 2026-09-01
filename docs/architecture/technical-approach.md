@@ -122,7 +122,7 @@ Important boundaries:
 
 ## 5. Assessment contract
 
-New Assessment reports use `assessment-output-v2` served by `assessment-v3`.
+New Assessment reports use `assessment-output-v2` served by `assessment-v4` (`assess-config-e579030c2b8b540c`) with `assessment-evidence-contract-v3`.
 
 ```text
 Frozen health inputs
@@ -147,7 +147,7 @@ model_executed = false
 BodyState mutation = none
 ```
 
-See [ADR 0009](../adr/0009-adopt-evidence-grounded-assessment-contract.md).
+See [ADR 0009](../adr/0009-adopt-evidence-grounded-assessment-contract.md) and the report-indicator admission amendment in [ADR 0011](../adr/0011-adopt-ocr-report-indicator-evidence-admissibility.md).
 
 ## 6. Upload, Posture and OCR
 
@@ -177,7 +177,7 @@ POST /api/v1/uploads
 
 OCR is a non-LLM mechanism. The current code does not use an LLM prompt to clean/extract report indicators.
 
-Known alignment gaps around OCR provenance and indicator admissibility are tracked in the active documentation/code alignment audit.
+OCR indicator admissibility is now an explicit versioned gate (`ocr-indicator-admissibility-v1`) consumed by Assessment evidence-contract v3. The remaining OCR alignment gap is immutable mechanism provenance (engine/parser/rendering/extractor revision), tracked in the active documentation/code alignment audit.
 
 ## 7. Knowledge architecture
 

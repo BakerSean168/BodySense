@@ -1,0 +1,71 @@
+{
+  "cases": [
+    {
+      "assertions": {
+        "AssessmentEvidencePolicyBehavior": true
+      },
+      "name": "profile-is-not-health-evidence",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "AssessmentEvidencePolicyBehavior": true
+      },
+      "name": "confirmed-exercise-renders-source-only",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "AssessmentEvidencePolicyBehavior": true
+      },
+      "name": "unverified-body-state-is-unavailable",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "AssessmentEvidencePolicyBehavior": true
+      },
+      "name": "posture-cannot-borrow-lifestyle-evidence",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "AssessmentEvidencePolicyBehavior": true
+      },
+      "name": "same-evidence-cannot-be-selected-twice",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "AssessmentEvidencePolicyBehavior": true
+      },
+      "name": "posture-finding-renders-governed-evidence",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "AssessmentEvidencePolicyBehavior": true
+      },
+      "name": "health-report-is-not-injury-evidence",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "AssessmentEvidencePolicyBehavior": true
+      },
+      "name": "body-state-kind-must-match-observation-kind",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "AssessmentEvidencePolicyBehavior": true
+      },
+      "name": "review-required-report-is-unavailable",
+      "passed": true
+    }
+  ],
+  "failed": 0,
+  "name": "assessment-evidence-contract-v3",
+  "passed": 9,
+  "total": 9
+}

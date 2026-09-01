@@ -1,18 +1,35 @@
 """OCR-related Pydantic models."""
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
+
+OCRConfidence = Literal["high", "medium", "low", "unknown"]
+IndicatorAdmissibilityStatus = Literal["admissible", "needs_review", "rejected"]
+
+
+class IndicatorEvidenceAdmissibility(BaseModel):
+    """Deterministic evidence-admissibility decision for one OCR indicator."""
+
+    status: IndicatorAdmissibilityStatus = "needs_review"
+    policy_revision: str = "ocr-indicator-admissibility-v1"
+    reason_codes: list[str] = Field(default_factory=lambda: ["not_evaluated"])
 
 
 class HealthIndicator(BaseModel):
     """A health indicator extracted from a report."""
 
-    name: str = Field(..., description="Name of the indicator (e.g., 'Vitamin D')")
-    value: str = Field(..., description="Measured value")
+    name: str = Field(..., min_length=1, description="Name of the indicator (e.g., 'Vitamin D')")
+    value: str = Field(..., min_length=1, description="Measured value")
     unit: str | None = Field(None, description="Unit of measurement")
     reference_range: str | None = Field(None, description="Normal reference range")
-    confidence: str = Field(
-        default="high",
-        description="Confidence level: high, medium, or low",
+    confidence: OCRConfidence = Field(
+        default="unknown",
+        description="Extraction confidence: high, medium, low, or unknown",
+    )
+    evidence_admissibility: IndicatorEvidenceAdmissibility = Field(
+        default_factory=IndicatorEvidenceAdmissibility,
+        description="Whether this OCR indicator may be used as health evidence",
     )
 
 
@@ -24,9 +41,9 @@ class OCRResult(BaseModel):
         default_factory=list,
         description="Extracted health indicators",
     )
-    confidence: str = Field(
-        default="high",
-        description="Overall confidence level",
+    confidence: OCRConfidence = Field(
+        default="unknown",
+        description="Overall OCR/extraction confidence",
     )
 
 

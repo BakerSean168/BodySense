@@ -1,6 +1,7 @@
 # 功能设计文档：用户信息构建与健康评估 (Feature Line 1)
 
 ## 1. 功能概述
+
 本功能线是用户进入 BodySense 的起点，但 **Onboarding 只是采集入口，不是数据所有者**。一次表单会把不同语义的信息分别交给稳定 Profile、BodyState Fact、BodyState Observation 与上传/评估管线，而不是把所有答案压进 `user_profiles`。
 
 当前 North Star（ADR 0007）：
@@ -19,6 +20,7 @@
 ## 2. 业务流程与状态机
 
 ### 2.1 步骤流转流程 (User Wizard Flow)
+
 ```mermaid
 graph TD
     Start([用户进入应用]) --> Identity[稳定身份: 性别/出生日期]
@@ -48,18 +50,18 @@ graph TD
 
 ### 2.2 状态机设计 (User Onboarding State Machine)
 
-| 当前状态 | 触发事件 | 目标状态 | 动作/说明 |
-| :--- | :--- | :--- | :--- |
-| `UNINITIALIZED` | 进入页面 | `STEP_IDENTITY` | 初始化分步表单 |
-| `STEP_IDENTITY` | 完成身份 | `STEP_METRICS` | 校验出生日期 |
-| `STEP_METRICS` | 完成测量 | `STEP_LIFESTYLE` | 校验身高/体重范围 |
-| `STEP_LIFESTYLE` | 完成/跳过生活方式 | `STEP_HISTORY` | 自由文本可为空 |
-| `STEP_HISTORY` | 完成/跳过伤病史 | `STEP_UPLOAD` | - |
-| `STEP_UPLOAD` | 点击开始评估 | `PERSISTING_CONTEXT` | 先按领域边界写 stable Profile 与 BodyState |
-| `PERSISTING_CONTEXT` | 写入成功 | `GENERATING_ASSESSMENT` | Assessment 从 frozen health input 构建 evidence catalog；图片本身不进入 Assessment |
-| `PERSISTING_CONTEXT` | 写入失败 | `STEP_UPLOAD` | 显式错误；不得只保存一份胖 Profile 作为降级真值 |
-| `GENERATING_ASSESSMENT` | 报告生成成功 | `REPORT_COMPLETED` | 通过 evidence contract 的 Observation 写入 BodyState；进入工作台 |
-| `GENERATING_ASSESSMENT` | 生成失败 | `STEP_UPLOAD` | 保留已提交的用户健康上下文，允许重试 Assessment |
+| 当前状态                | 触发事件          | 目标状态                | 动作/说明                                                                          |
+| :---------------------- | :---------------- | :---------------------- | :--------------------------------------------------------------------------------- |
+| `UNINITIALIZED`         | 进入页面          | `STEP_IDENTITY`         | 初始化分步表单                                                                     |
+| `STEP_IDENTITY`         | 完成身份          | `STEP_METRICS`          | 校验出生日期                                                                       |
+| `STEP_METRICS`          | 完成测量          | `STEP_LIFESTYLE`        | 校验身高/体重范围                                                                  |
+| `STEP_LIFESTYLE`        | 完成/跳过生活方式 | `STEP_HISTORY`          | 自由文本可为空                                                                     |
+| `STEP_HISTORY`          | 完成/跳过伤病史   | `STEP_UPLOAD`           | -                                                                                  |
+| `STEP_UPLOAD`           | 点击开始评估      | `PERSISTING_CONTEXT`    | 先按领域边界写 stable Profile 与 BodyState                                         |
+| `PERSISTING_CONTEXT`    | 写入成功          | `GENERATING_ASSESSMENT` | Assessment 从 frozen health input 构建 evidence catalog；图片本身不进入 Assessment |
+| `PERSISTING_CONTEXT`    | 写入失败          | `STEP_UPLOAD`           | 显式错误；不得只保存一份胖 Profile 作为降级真值                                    |
+| `GENERATING_ASSESSMENT` | 报告生成成功      | `REPORT_COMPLETED`      | 通过 evidence contract 的 Observation 写入 BodyState；进入工作台                   |
+| `GENERATING_ASSESSMENT` | 生成失败          | `STEP_UPLOAD`           | 保留已提交的用户健康上下文，允许重试 Assessment                                    |
 
 ---
 
@@ -78,6 +80,7 @@ UploadStorage bytes
      - PDF: PyMuPDF 逐页渲染后 OCR
   -> deterministic HealthIndicator regex extractor
   -> OCRResult(raw_text, indicators, confidence)
+     -> per-indicator evidence_admissibility
   -> user_uploads.ocr_result
 ```
 
@@ -88,13 +91,17 @@ name
 value
 unit?
 reference_range?
-confidence = high | medium | low
+confidence = high | medium | low | unknown
+evidence_admissibility = admissible | needs_review | rejected
+evidence_admissibility.policy_revision = ocr-indicator-admissibility-v1
 ```
 
 当前实现**没有**再调用 LLM 根据 OCR 文本自由挑选“骨骼/肌肉相关指标”，也没有让模型生成 `normal/high/low` 医学解释。这样可以避免把 OCR 噪声经过第二个生成模型进一步放大。
 
-> [!warning] Remaining evidence gap
-> `OCRResult` 已有 confidence，但当前 Assessment report-indicator catalog 仍会收集 completed OCR 中的全部 indicator，尚未把低置信度/用户确认状态编码成明确的 admissibility gate；OCR engine/parser revision provenance 也尚未持久化。两项缺口记录在 `docs/plan/active/2026-09-01-documentation-code-alignment-audit.md`，不得把“completed OCR”误写成“已经确认的健康事实”。
+当前 `ocr-indicator-admissibility-v1` 明确把“识别完成”和“可用于健康推理”分开：只有 OCR confidence 与 indicator confidence 都为 `high` 的完整指标可自动标记为 `admissible`；`medium / low / unknown` 保留为 `needs_review`，不会进入当前 Assessment evidence catalog。`admissible` 只表示可作为来源证据，不表示医学正常/异常或用户确认。完整决策见 ADR 0011。
+
+> [!warning] Remaining provenance gap
+> OCR engine/parser/PDF rendering/indicator extractor revision 仍未形成完整 immutable mechanism identity。该剩余问题单独记录在 `docs/plan/active/2026-09-01-documentation-code-alignment-audit.md`，不得与本次已经完成的 indicator admissibility 混淆。
 
 ### 3.2 节点 2：Evidence-grounded Assessment
 
@@ -115,7 +122,7 @@ body_state
   -> other current facts/observations
 
 report_indicators
-  -> 本次外部报告结构化指标
+  -> 仅当前 admissibility policy 允许进入 Assessment 的外部报告结构化指标
 
 posture_analysis
   -> Posture Agent 已完成并治理过的体态观察证据
@@ -123,7 +130,7 @@ posture_analysis
 
 禁止为了 Prompt 方便把 BodyState、OCR 指标或 lifestyle 再嵌回 `profile`。Assessment 需要健康上下文时以 `body_state` 为准。
 
-**输出（assessment-output-v2）**：模型权限进一步收敛为 evidence selection/classification。每个候选只能输出 `kind + 单个 evidence_ref`；模型没有 `label / description / body_region / severity / confidence` 等可持久化自然语言权限，也不再生成健康等级、0-100 分数、总体 summary 或 information gaps。Python 与 Go 都从 frozen evidence 快照确定性渲染 observation 文案，避免“ref 正确但模型仍扩写一个 unsupported claim”。
+**当前 serving configuration：Assessment v4 / `assessment-output-v2` / `assessment-evidence-contract-v3`。** 模型权限进一步收敛为 evidence selection/classification。每个候选只能输出 `kind + 单个 evidence_ref`；模型没有 `label / description / body_region / severity / confidence` 等可持久化自然语言权限，也不再生成健康等级、0-100 分数、总体 summary 或 information gaps。Python 与 Go 都从 frozen evidence 快照确定性渲染 observation 文案，避免“ref 正确但模型仍扩写一个 unsupported claim”。
 
 **证据来源**：应用层从 frozen health input 构建 evidence catalog，仅允许 `posture_analysis / body_state / report`。`profile` 是稳定身份背景，不是健康 observation evidence；raw image 与未建模 `rag_context` 也不能直接进入 serving Assessment contract。模型声明的 ref 不可信，Python governance 与 Go durable boundary 都必须验证 ref 真实存在、唯一且与 observation kind 的 evidence policy 匹配。完整决策见 [[ADR 0009]] `docs/adr/0009-adopt-evidence-grounded-assessment-contract.md`。
 
@@ -152,15 +159,15 @@ PUT /api/v1/onboarding/context
     "weight_kg": 75.0
   },
   "lifestyle": {
-    "activity": {"summary": "工作日久坐为主，每次连续坐 2-3 小时"},
-    "sleep": {"summary": "白班和夜班交替，平均每天睡 6-7 小时"},
+    "activity": { "summary": "工作日久坐为主，每次连续坐 2-3 小时" },
+    "sleep": { "summary": "白班和夜班交替，平均每天睡 6-7 小时" },
     "exercise": {
       "summary": "健身房抗阻训练；频率：1-2",
-      "details": {"type": "健身房抗阻训练", "frequency": "1-2"}
+      "details": { "type": "健身房抗阻训练", "frequency": "1-2" }
     },
-    "nutrition": {"summary": "三餐通常规律"},
-    "substances": {"summary": "每天咖啡 2 杯，不吸烟"},
-    "recovery": {"summary": "工作日压力偏高，周末恢复较好"}
+    "nutrition": { "summary": "三餐通常规律" },
+    "substances": { "summary": "每天咖啡 2 杯，不吸烟" },
+    "recovery": { "summary": "工作日压力偏高，周末恢复较好" }
   },
   "injury_history": "两年前左膝轻微拉伤，偶有酸痛"
 }
@@ -190,6 +197,7 @@ all writes participate in one database transaction
 然后触发 Assessment。Assessment 的 replay input 分别保存 `profile`、`body_state`、`report_indicators` 与 posture input，以保证反事实评测不重新混淆领域边界。
 
 #### 数据库持久化结构 (assessment_reports 表)
+
 ```json
 {
   "id": "8f8b8a8b-4a5d-4f1a-b6d8-74431e7845ba",
@@ -200,12 +208,18 @@ all writes participate in one database transaction
     "status": "partial",
     "available_sources": ["body_state"],
     "domains": {
-      "posture": {"status": "missing", "evidence_refs": []},
-      "exercise": {"status": "available", "evidence_refs": ["body_state:fact:<uuid>"]},
-      "lifestyle": {"status": "available", "evidence_refs": ["body_state:fact:<uuid>"]},
-      "anthropometry": {"status": "missing", "evidence_refs": []},
-      "health_report": {"status": "missing", "evidence_refs": []},
-      "injury_symptoms": {"status": "missing", "evidence_refs": []}
+      "posture": { "status": "missing", "evidence_refs": [] },
+      "exercise": {
+        "status": "available",
+        "evidence_refs": ["body_state:fact:<uuid>"]
+      },
+      "lifestyle": {
+        "status": "available",
+        "evidence_refs": ["body_state:fact:<uuid>"]
+      },
+      "anthropometry": { "status": "missing", "evidence_refs": [] },
+      "health_report": { "status": "missing", "evidence_refs": [] },
+      "injury_symptoms": { "status": "missing", "evidence_refs": [] }
     }
   },
   "observations": [
@@ -237,20 +251,23 @@ all writes participate in one database transaction
 ## 5. 异常与兜底策略
 
 ### 5.1 OCR 处理异常
-* **情况 1：上传内容不是可识别体检报告，或 OCR 文本/指标为空**。
-  * *处理*：OCR job 可以 completed，但 `indicators=[]`；Assessment 不把空报告制造成健康 observation。
-  * *前端*：明确提示“未识别到可用体检指标”，其它 BodyState/Posture evidence 仍可独立参与 Assessment。
-* **情况 2：OCR job 失败、超时或服务重启恢复**。
-  * *处理*：JobRuntime 持久化 job 状态与幂等键 `upload_ocr:<upload_id>`；失败/超时写入 upload OCR 状态，不能伪装成 completed evidence。
-  * *恢复*：服务启动后的 recoverable-job 扫描负责处理 pending/stale running OCR job；不依赖不可恢复的 request goroutine。
+
+- **情况 1：上传内容不是可识别体检报告，或 OCR 文本/指标为空**。
+  - _处理_：OCR job 可以 completed，但 `indicators=[]`；Assessment 不把空报告制造成健康 observation。
+  - _前端_：明确提示“未识别到可用体检指标”，其它 BodyState/Posture evidence 仍可独立参与 Assessment。
+- **情况 2：OCR job 失败、超时或服务重启恢复**。
+  - _处理_：JobRuntime 持久化 job 状态与幂等键 `upload_ocr:<upload_id>`；失败/超时写入 upload OCR 状态，不能伪装成 completed evidence。
+  - _恢复_：服务启动后的 recoverable-job 扫描负责处理 pending/stale running OCR job；不依赖不可恢复的 request goroutine。
 
 ### 5.2 Posture 图像分析失败或尚未完成
-*   **情况：Posture Agent 无法读取/分析图片，或用户图片仍处于 pending**。
-    *   *权威边界*：Assessment 不直接解释 raw image；图片 → 体态 observation 只由 Posture Agent 负责。
-    *   *降级处理*：若仍有 BodyState/report evidence，可仅生成这些 evidence 能支持的 observation；`posture` coverage 标记为 `missing`。
-    *   *前端交互*：明确提示“本次没有可用的已治理体态分析证据”，而不是展示伪造的体态分数或结论。
+
+- **情况：Posture Agent 无法读取/分析图片，或用户图片仍处于 pending**。
+  - _权威边界_：Assessment 不直接解释 raw image；图片 → 体态 observation 只由 Posture Agent 负责。
+  - _降级处理_：若仍有 BodyState/report evidence，可仅生成这些 evidence 能支持的 observation；`posture` coverage 标记为 `missing`。
+  - _前端交互_：明确提示“本次没有可用的已治理体态分析证据”，而不是展示伪造的体态分数或结论。
 
 ### 5.3 LLM 输出格式或 evidence contract 校验失败
-*   **情况：模型输出无法通过 typed schema、evidence refs、observation-only 或 Go durable revalidation**。
-    *   *处理原则*：fail closed。原始输出不得修补后强行进入 BodyState，也不得用固定 B 级、70 分或“亚健康倾向”等静态健康结论兜底。
-    *   *允许的安全 fallback*：返回不含健康 claim 的错误/空状态，由客户端提示重新生成或补充资料。若应用层能够从 frozen input 确定性计算 evidence coverage/gaps，可展示这些 coverage 信息，但不得伪造 observation。
+
+- **情况：模型输出无法通过 typed schema、evidence refs、observation-only 或 Go durable revalidation**。
+  - _处理原则_：fail closed。原始输出不得修补后强行进入 BodyState，也不得用固定 B 级、70 分或“亚健康倾向”等静态健康结论兜底。
+  - _允许的安全 fallback_：返回不含健康 claim 的错误/空状态，由客户端提示重新生成或补充资料。若应用层能够从 frozen input 确定性计算 evidence coverage/gaps，可展示这些 coverage 信息，但不得伪造 observation。

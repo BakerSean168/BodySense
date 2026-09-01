@@ -167,7 +167,7 @@ func (s *AssessmentReplayService) CounterfactualReplay(
 		return nil, errors.New("counterfactual Assessment replay returned the wrong Agent configuration")
 	}
 	if registration.OutputContractRevision == assessmentOutputContractV2 {
-		payload, err := parseAssessmentAgentPayload(result)
+		payload, err := parseAssessmentAgentPayload(result, registration.EvidencePolicyRevision)
 		if err != nil {
 			return nil, fmt.Errorf("counterfactual Assessment evidence contract: %w", err)
 		}

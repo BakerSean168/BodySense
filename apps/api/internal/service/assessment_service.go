@@ -85,6 +85,7 @@ func (s *AssessmentService) WithAssessmentRollout(r *AssessmentRolloutService) *
 const (
 	assessmentOutputContractV2 = "assessment-output-v2"
 	assessmentEvidencePolicyV2 = "assessment-evidence-contract-v2"
+	assessmentEvidencePolicyV3 = "assessment-evidence-contract-v3"
 )
 
 // ErrAssessmentOutputRejected means an upstream/generated Assessment failed the
@@ -188,7 +189,7 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 		}
 		return nil, fmt.Errorf("generate typed assessment: %w", err)
 	}
-	payload, err := parseAssessmentAgentPayload(raw)
+	payload, err := parseAssessmentAgentPayload(raw, expectedAssessmentEvidencePolicyRevision(configurationID))
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrAssessmentOutputRejected, err)
 	}
@@ -317,7 +318,18 @@ func (s *AssessmentService) ListReports(ctx context.Context, userID uuid.UUID, l
 	return s.assessmentRepo.ListByUserID(ctx, userID, limit, offset)
 }
 
-func parseAssessmentAgentPayload(raw json.RawMessage) (*assessmentAgentPayload, error) {
+func expectedAssessmentEvidencePolicyRevision(configurationID string) string {
+	configurationID = strings.TrimSpace(configurationID)
+	if configurationID == "" {
+		configurationID = defaultAssessmentConfigurationID
+	}
+	if registration, ok := knownAssessmentConfigurations[configurationID]; ok {
+		return registration.EvidencePolicyRevision
+	}
+	return ""
+}
+
+func parseAssessmentAgentPayload(raw json.RawMessage, expectedEvidencePolicyRevision string) (*assessmentAgentPayload, error) {
 	var payload assessmentAgentPayload
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return nil, fmt.Errorf("decode assessment output: %w", err)
@@ -328,8 +340,14 @@ func parseAssessmentAgentPayload(raw json.RawMessage) (*assessmentAgentPayload, 
 	if payload.Status != "completed" && payload.Status != "insufficient_information" {
 		return nil, fmt.Errorf("invalid assessment status %q", payload.Status)
 	}
-	if payload.EvidencePolicyRevision != assessmentEvidencePolicyV2 {
-		return nil, fmt.Errorf("unsupported assessment evidence policy %q", payload.EvidencePolicyRevision)
+	if expectedEvidencePolicyRevision == "" {
+		expectedEvidencePolicyRevision = assessmentEvidencePolicyV3
+	}
+	if payload.EvidencePolicyRevision != expectedEvidencePolicyRevision {
+		return nil, fmt.Errorf(
+			"assessment evidence policy mismatch: got %q want %q",
+			payload.EvidencePolicyRevision, expectedEvidencePolicyRevision,
+		)
 	}
 	if verdict, _ := payload.Governance["verdict"].(string); verdict != "accepted" {
 		return nil, fmt.Errorf("assessment governance verdict must be accepted, got %q", verdict)

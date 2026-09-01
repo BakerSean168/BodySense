@@ -1,4 +1,4 @@
-name: assessment_evidence_contract_v2
+name: assessment_evidence_contract_v3
 cases:
   - name: profile-is-not-health-evidence
     inputs:
@@ -113,6 +113,11 @@ cases:
             name: 25-OH-D
             value: "12.5"
             unit: ng/mL
+            confidence: high
+            evidence_admissibility:
+              status: admissible
+              policy_revision: ocr-indicator-admissibility-v1
+              reason_codes: [high_confidence_ocr_and_indicator]
       selections:
         - kind: report_indicator
           evidence_refs: [report:0]
@@ -138,4 +143,26 @@ cases:
       expected_issue_fragments: [is not supported by BodyState kind]
       expected_coverage_status: partial
       expected_available_domains: [lifestyle]
+      expected_rendered_descriptions: []
+
+  - name: review-required-report-is-unavailable
+    inputs:
+      report_indicators:
+        - value:
+            name: 25-OH-D
+            value: "12.5"
+            unit: ng/mL
+            confidence: medium
+            evidence_admissibility:
+              status: needs_review
+              policy_revision: ocr-indicator-admissibility-v1
+              reason_codes: [indicator_confidence_medium]
+      selections:
+        - kind: report_indicator
+          evidence_refs: [report:0]
+    metadata:
+      expected_issue_count: 1
+      expected_issue_fragments: [references unavailable evidence]
+      expected_coverage_status: insufficient
+      expected_available_domains: []
       expected_rendered_descriptions: []

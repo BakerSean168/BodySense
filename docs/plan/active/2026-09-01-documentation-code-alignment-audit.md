@@ -151,66 +151,57 @@ The first v0.10.0 publication proved the release/tag/manifest boundary but expos
 
 ## 6. Highest-priority remaining code gaps
 
-### P1 — A1. OCR report indicators bypass an explicit admissibility/review gate
+### P1 — A1. OCR report indicators bypass an explicit admissibility/review gate — RESOLVED
 
-**Classification:** `CODE-GAP`
-**Contracts:** ADR 0009 + `agent-platform-role-governance.md` + current Assessment feature spec.
+**Classification:** `RESOLVED-CODE-GAP`
+**Decision:** ADR 0011.
 
-Current BodyState evidence has explicit eligibility:
+The original problem was real: `ocr_status=completed` caused every parsed report indicator to enter the Assessment evidence catalog, while BodyState candidates already had explicit review/lifecycle eligibility. Missing indicator confidence also defaulted to `high`, which could fail open.
 
-```text
-excluded_from_reasoning != true
-review_state == confirmed (when present)
-lifecycle_state == active (when present)
-```
-
-Report indicators do not. Current path:
+The implemented contract now separates extraction state from evidence authority:
 
 ```text
-user_uploads.ocr_status == completed
-  -> read result.indicators[]
-  -> every indicator copied into reportIndicators
-  -> Python/Go Assessment evidence catalog
-  -> selectable as report_indicator evidence
+OCR job completed
+  -> persist all extracted indicators
+  -> ocr-indicator-admissibility-v1
+       high OCR + high indicator + valid name/value -> admissible
+       medium/low/unknown                          -> needs_review
+       malformed                                   -> rejected
+  -> Assessment v4 / assessment-evidence-contract-v3
+       only exact admissible provenance enters catalog
+  -> Python gate
+  -> Go rebuild/revalidation
+  -> durable projection
 ```
 
-Code evidence:
-
-- `apps/api/internal/service/assessment_service.go::assessmentInputsFromUploads`
-- `apps/ai-service/src/services/assessment_evidence.py::build_assessment_evidence_catalog`
-- `apps/api/internal/service/assessment_evidence_contract.go::buildAssessmentEvidenceCatalog`
-- `apps/ai-service/src/models/ocr.py::HealthIndicator.confidence`
-
-`HealthIndicator.confidence` is currently only a free string with default `high`; no policy maps `high/medium/low` into evidence admissibility and there is no user/reviewer confirmation identity.
-
-**Risk**
-
-A false-positive or low-confidence deterministic OCR match can become an exact durable Assessment evidence ref even though a BodyState AI observation would have been excluded until confirmation. This creates inconsistent evidence standards across sources.
-
-**Recommended contract**
-
-Choose and version one explicit policy, for example:
+Current immutable Assessment identity:
 
 ```text
-OCR indicator
-  -> extraction confidence + parser revision
-  -> normalized indicator candidate
-  -> admissibility policy
-       high + strict parse      -> admissible candidate (if product accepts this risk)
-       medium/low/ambiguous     -> excluded or review_required
-  -> optional user confirmation
-  -> Assessment catalog
+assessment-v4
+assess-config-e579030c2b8b540c
+output = assessment-output-v2
+evidence = assessment-evidence-contract-v3
 ```
 
-A stronger option is to promote reviewed report indicators into an explicit durable evidence/fact model and let Assessment select only that normalized identity.
+The previous v3 config (`assess-config-c6cfff22aa362fff`) remains repository-known with evidence-contract v2 for historical replay/counterfactual comparison only and cannot serve durable reports. No relational migration/backfill invents admissibility for legacy OCR JSON; old report indicators without the new metadata fail closed under v4 until reprocessed or later reviewed.
 
-**Acceptance tests**
+Validation evidence:
 
-- low-confidence OCR indicator never enters the Assessment catalog;
-- malformed/unknown confidence fails closed;
-- policy revision is frozen in replay/provenance;
-- a confirmed/admissible report indicator is selectable in both Python and Go;
-- Python/Go policy fixtures remain identical.
+- Python OCR/admissibility + Assessment focused tests: PASS;
+- actual `/api/ocr/extract` route emits `evidence_admissibility`;
+- current Assessment deterministic qualification: `assessment-evidence-contract-v3` **9/9 PASS**;
+- Python full suite: **407 passed**;
+- Ruff: PASS;
+- Pyright `src`: PASS;
+- Go Assessment focused admissibility/serving/replay tests: PASS;
+- Go full suite + `go vet`: PASS;
+- Go vertical fixture proves `UserUpload.OCRResult -> assessmentInputsFromUploads -> evidence catalog` preserves review-required metadata but excludes it from current durable evidence;
+- Web OCR compatibility tests: historical indicators without admissibility metadata fail closed to `needs_review`, while explicit admissible indicators display `可用于评估`;
+- production-shaped Assessment E2E: **2/2 PASS** with durable `assess-config-e579030c2b8b540c` / `assessment-evidence-contract-v3`;
+- production-shaped full Playwright suite: **10/10 PASS**;
+- `LOCAL_DEPLOY_VALIDATION=PASS`.
+
+This closes **admissibility**, not **mechanism provenance**. OCR engine/parser/PDF-rendering/extractor version identity remains open as A3 below.
 
 ---
 
@@ -598,6 +589,12 @@ B2 Assessment source-key semantics
    -> decide domain meaning first; implement only after decision
 ```
 
+### Validation-infrastructure drift discovered while qualifying A1 — RESOLVED
+
+The first production-shaped A1 validation exposed an unrelated hermeticity bug in `scripts/local-deploy-validate.sh`: disposable runtime credentials such as `DB_PASSWORD=bodysense123` were exported **before** `validate-repo.sh`. The off-host DR unit suite intentionally uses its own fixed secret to prove password argv isolation, so the outer runtime variable overrode the hermetic fixture and produced a false failure.
+
+The validator now runs repository quality before exporting any production-shaped Agent/DB/Redis/JWT variables. A delivery regression test asserts the ordering. Re-running the full validator produced `offhost DR unit tests: PASS=86 FAIL=0`, `REPO_QUALITY=PASS`, 10/10 Playwright and `LOCAL_DEPLOY_VALIDATION=PASS`. This is a test-isolation fix; it does not change production secret precedence or runtime deployment semantics.
+
 ## 11. Definition of done for this alignment lane
 
 Documentation cleanup is done when:
@@ -621,7 +618,7 @@ git diff --check: PASS
 Changed TSX Prettier: PASS
 Rewritten/new Markdown Prettier: PASS
 pnpm nx typecheck web: PASS
-pnpm nx test web: 41 files / 204 tests PASS
+pnpm nx test web: 42 files / 206 tests PASS
 
 Pre-user baseline promotion validation:
 - Go full suite + go vet: PASS
@@ -643,9 +640,12 @@ Pre-user baseline promotion validation:
 - Production pre-deploy DB dump + previous-runtime backup: PASS
 - Production public `/api/health`: PASS
 - Production explicit Agent env: Diagnosis v3 Champion / Treatment v2 Champion / Challenger empty / v1 rollback
+- OCR indicator admissibility: `ocr-indicator-admissibility-v1`
+- Current Assessment: v4 / `assess-config-e579030c2b8b540c` / `assessment-evidence-contract-v3`
+- Assessment evidence qualification: 9/9 PASS
 ```
 
-The Web test target still emits pre-existing localhost connection noise and one React `act(...)` warning to stderr, but the Nx target exits successfully and all 204 tests pass.
+The Web test target still emits pre-existing localhost connection noise and one React `act(...)` warning to stderr, but the Nx target exits successfully and all 206 tests pass.
 
 ## 12. Future audit rule
 
