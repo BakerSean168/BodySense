@@ -17,6 +17,7 @@ bash scripts/validate-migration-history.sh
 python3 scripts/test_offhost_s3.py
 bash scripts/validate-offhost-dr-unit.sh
 bash scripts/validate-offhost-dr.sh
+pnpm nx run ai-service:eval:assessment-evidence-contract
 pnpm nx run ai-service:eval:diagnosis
 pnpm nx run ai-service:eval:diagnosis-evidence-policy
 pnpm nx run ai-service:eval:diagnosis-promotion

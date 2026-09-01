@@ -6,6 +6,7 @@ from typing import Any
 
 ASSESSMENT_PROMPT_REVISION = "assessment-prompt-v1"
 ASSESSMENT_PROMPT_REVISION_V2 = "assessment-prompt-v2"
+ASSESSMENT_PROMPT_REVISION_V3 = "assessment-prompt-v3-evidence-contract"
 
 ASSESSMENT_SYSTEM_PROMPT = """你是 BodySense 的结构化观察评估 Agent。
 
@@ -23,11 +24,6 @@ ASSESSMENT_SYSTEM_PROMPT = """你是 BodySense 的结构化观察评估 Agent。
 - 安全风险只写入 safety_notes，不得弱化就医提醒。
 """
 
-# v2 iterates the observation taxonomy: it asks the Agent to split observations
-# into fine-grained posture/lifestyle/exercise-influence categories and to tag
-# each observation with the evidence source (photo, profile, report) it relies
-# on. It keeps the same output schema, tool surface, and boundaries as v1 so it
-# can be qualified and rollout-gated as a Challenger without changing Go.
 ASSESSMENT_SYSTEM_PROMPT_V2 = """你是 BodySense 的结构化观察评估 Agent（v2）。
 
 你的职责仅限于：
@@ -49,11 +45,33 @@ v2 细化：
 - 安全风险只写入 safety_notes，不得弱化就医提醒。
 """
 
+ASSESSMENT_SYSTEM_PROMPT_V3 = """你是 BodySense 的 evidence-selection Assessment Agent。
+
+你唯一可以做的事情是：从“可用证据目录”选择证据，并为每条证据指定一个 observation kind。
+你不拥有任何可持久化自然语言的撰写权限；label、description、body_region、summary、
+健康等级、分数、建议等都由应用层确定性生成或明确禁止。
+
+每条 observation 必须遵守：
+- 只输出 kind 和 evidence_refs；不得输出任何其它字段；
+- evidence_refs 必须恰好包含 1 个目录中真实存在的 ref；
+- 同一个 evidence ref 最多选择一次；
+- kind 只能是 posture_alignment、posture_asymmetry、lifestyle_pattern、
+  exercise_pattern、report_indicator、anthropometry；
+- posture_alignment / posture_asymmetry 只能选择 posture_analysis；
+- exercise_pattern 只能选择 BodyState lifestyle.exercise；
+- lifestyle_pattern 只能选择 BodyState 中除 exercise 外的 lifestyle.*；
+- report_indicator 只能选择 report；
+- anthropometry 只能选择 BodyState anthropometry.*；
+- 不得根据年龄、性别、久坐、运动频率等间接推导新的身体状态；
+- 证据不足时返回 observations=[]。
+
+输出必须严格匹配结构化 schema。
+"""
+
 ASSESSMENT_DISCLAIMER = (
     "本报告只呈现待审核的资料与体态观察，不构成医疗诊断、治疗方案或运动处方。"
     "如存在持续疼痛、进行性无力、麻木或严重不适，请寻求专业医疗评估。"
 )
-
 
 
 def format_posture_analysis_section(posture_analysis: dict[str, Any] | None) -> str:
@@ -105,14 +123,20 @@ def get_assessment_prompt(
     *,
     prompt_revision: str = ASSESSMENT_PROMPT_REVISION,
 ) -> str:
-    if prompt_revision != ASSESSMENT_PROMPT_REVISION:
+    if prompt_revision == ASSESSMENT_PROMPT_REVISION_V3:
+        return (
+            "请只选择可用证据并输出 kind + 单个 evidence_ref。"
+            "不要生成任何观察文案；如果没有足够证据，返回 observations=[]。\n\n"
+            + ASSESSMENT_DISCLAIMER
+        )
+    if prompt_revision not in {ASSESSMENT_PROMPT_REVISION, ASSESSMENT_PROMPT_REVISION_V2}:
         raise ValueError(f"unsupported Assessment prompt revision: {prompt_revision}")
+
     parts = ["请生成一份 observation-only 评估报告。"]
     if profile:
         parts.append("稳定用户档案已通过 run dependencies 提供。")
     parts.append(
-        "当前 BodyState 与报告指标通过 run dependencies 提供；"
-        "可变健康信息以 BodyState 为准。"
+        "当前 BodyState 与报告指标通过 run dependencies 提供；可变健康信息以 BodyState 为准。"
     )
     posture_section = format_posture_analysis_section(posture_analysis)
     if posture_section:
@@ -124,10 +148,10 @@ def get_assessment_prompt(
 
 
 def get_assessment_system_prompt(revision: str = ASSESSMENT_PROMPT_REVISION) -> str:
-    """Return the deterministic system prompt for a supported prompt revision."""
     prompts = {
         ASSESSMENT_PROMPT_REVISION: ASSESSMENT_SYSTEM_PROMPT,
         ASSESSMENT_PROMPT_REVISION_V2: ASSESSMENT_SYSTEM_PROMPT_V2,
+        ASSESSMENT_PROMPT_REVISION_V3: ASSESSMENT_SYSTEM_PROMPT_V3,
     }
     try:
         return prompts[revision]

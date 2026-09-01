@@ -348,11 +348,17 @@ BMI                       -> current height + weight derived projection
 |------|------|------|
 | id | UUID (PK) | 报告 ID |
 | user_id | UUID (FK → users) | 关联用户 |
-| health_grade | VARCHAR(5) | 健康等级（A/B/C/D） |
-| dimension_scores | JSONB | 各维度评分 |
-| identified_issues | JSONB | 识别的问题列表 |
-| improvement_summary | JSONB | 改善方案概要 |
+| status | VARCHAR(40) | 报告可用状态；零可用健康证据为 `insufficient_information`，partial/complete 细节由 `evidence_coverage` 表达 |
+| contract_revision | VARCHAR(80) | 输出 contract revision；新报告为 `assessment-output-v2` |
+| evidence_coverage | JSONB | 从 frozen input 确定性派生的证据来源/维度覆盖 |
+| evidence_gaps | JSONB | 确定性缺口及需要的 evidence source |
+| observations | JSONB | 待用户审核的 observation candidates，含 exact `evidence_refs` |
+| summary | TEXT | 应用层根据 observation count / coverage 确定性生成 |
+| health_grade | VARCHAR(5), nullable | **历史 v1 兼容字段；新报告不写入** |
+| dimension_scores | JSONB, nullable | **历史 v1 兼容字段；新报告不写入** |
 | created_at | TIMESTAMPTZ | 生成时间 |
+
+新 Assessment 不再把 LLM 生成的 0-100 分数或 A-D 等级当作健康真值。若未来重新引入评分，必须先有独立、可执行、可验证的评分 rubric。
 
 #### knowledge_entries — 知识库条目表
 

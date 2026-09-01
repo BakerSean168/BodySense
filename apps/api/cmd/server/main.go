@@ -160,7 +160,6 @@ func main() {
 		bodyStateService,
 		aiClient,
 		database.NewTransactionManager(database.DB),
-		uploadStorage,
 	).WithAssessmentDeployment(agentDeploymentPolicy).
 		WithAssessmentRollout(assessmentRolloutService)
 	authHandler := handler.NewAuthHandler(authService, authSecurity)

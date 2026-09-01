@@ -1,0 +1,141 @@
+name: assessment_evidence_contract_v2
+cases:
+  - name: profile-is-not-health-evidence
+    inputs:
+      profile:
+        gender: male
+        birth_date: "1996-08-27"
+      selections: []
+    metadata:
+      expected_issue_count: 0
+      expected_coverage_status: insufficient
+      expected_available_domains: []
+      expected_rendered_descriptions: []
+
+  - name: confirmed-exercise-renders-source-only
+    inputs:
+      body_state:
+        facts:
+          - kind: lifestyle.exercise
+            value: "健身；频率：1-2"
+            review_state: confirmed
+            lifecycle_state: active
+      selections:
+        - kind: exercise_pattern
+          evidence_refs: [body_state:fact:0]
+    metadata:
+      expected_issue_count: 0
+      expected_coverage_status: partial
+      expected_available_domains: [exercise]
+      expected_rendered_descriptions: ["来源记录：健身；频率：1-2。"]
+
+  - name: unverified-body-state-is-unavailable
+    inputs:
+      body_state:
+        facts:
+          - kind: lifestyle.exercise
+            value: "健身；频率：1-2"
+            review_state: unverified
+            lifecycle_state: active
+            excluded_from_reasoning: true
+      selections:
+        - kind: exercise_pattern
+          evidence_refs: [body_state:fact:0]
+    metadata:
+      expected_issue_count: 1
+      expected_issue_fragments: [references unavailable evidence]
+      expected_coverage_status: insufficient
+      expected_available_domains: []
+      expected_rendered_descriptions: []
+
+  - name: posture-cannot-borrow-lifestyle-evidence
+    inputs:
+      body_state:
+        facts:
+          - kind: lifestyle.activity
+            value: 久坐为主
+            review_state: confirmed
+            lifecycle_state: active
+      selections:
+        - kind: posture_alignment
+          evidence_refs: [body_state:fact:0]
+    metadata:
+      expected_issue_count: 1
+      expected_issue_fragments: [cannot use body_state evidence]
+      expected_coverage_status: partial
+      expected_available_domains: [lifestyle]
+      expected_rendered_descriptions: []
+
+  - name: same-evidence-cannot-be-selected-twice
+    inputs:
+      body_state:
+        facts:
+          - kind: lifestyle.exercise
+            value: 跑步
+            review_state: confirmed
+            lifecycle_state: active
+      selections:
+        - kind: exercise_pattern
+          evidence_refs: [body_state:fact:0]
+        - kind: exercise_pattern
+          evidence_refs: [body_state:fact:0]
+    metadata:
+      expected_issue_count: 1
+      expected_issue_fragments: [selected more than once]
+      expected_coverage_status: partial
+      expected_available_domains: [exercise]
+      expected_rendered_descriptions: []
+
+  - name: posture-finding-renders-governed-evidence
+    inputs:
+      posture_analysis:
+        has_analysis: true
+        views:
+          - view: front
+            analysis:
+              findings:
+                - key: uneven_shoulders
+                  label: 肩部对称性待复核
+                  evidence: 右侧肩峰位置略高
+      selections:
+        - kind: posture_asymmetry
+          evidence_refs: [posture:view:0:finding:0]
+    metadata:
+      expected_issue_count: 0
+      expected_coverage_status: partial
+      expected_available_domains: [posture]
+      expected_rendered_descriptions: ["体态分析记录：右侧肩峰位置略高。"]
+
+  - name: health-report-is-not-injury-evidence
+    inputs:
+      report_indicators:
+        - value:
+            name: 25-OH-D
+            value: "12.5"
+            unit: ng/mL
+      selections:
+        - kind: report_indicator
+          evidence_refs: [report:0]
+    metadata:
+      expected_issue_count: 0
+      expected_coverage_status: partial
+      expected_available_domains: [health_report]
+      expected_rendered_descriptions: ["报告记录：25-OH-D=12.5 ng/mL。"]
+
+  - name: body-state-kind-must-match-observation-kind
+    inputs:
+      body_state:
+        facts:
+          - kind: lifestyle.sleep
+            value: 规律
+            review_state: confirmed
+            lifecycle_state: active
+      selections:
+        - kind: exercise_pattern
+          evidence_refs: [body_state:fact:0]
+    metadata:
+      expected_issue_count: 1
+      expected_issue_fragments: [is not supported by BodyState kind]
+      expected_coverage_status: partial
+      expected_available_domains: [lifestyle]
+      expected_rendered_descriptions: []

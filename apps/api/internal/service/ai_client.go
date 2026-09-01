@@ -54,6 +54,20 @@ type AIClient struct {
 	baseURL    string
 }
 
+// AIServiceHTTPError preserves upstream status semantics so application services
+// can distinguish an invalid model output from transport/infrastructure failure.
+type AIServiceHTTPError struct {
+	StatusCode int
+	Body       string
+}
+
+func (e *AIServiceHTTPError) Error() string {
+	if strings.TrimSpace(e.Body) == "" {
+		return fmt.Sprintf("AI service returned status %d", e.StatusCode)
+	}
+	return fmt.Sprintf("AI service returned status %d: %s", e.StatusCode, e.Body)
+}
+
 // ConsultationImageRef is a single user-attached image for multimodal turns.
 // DataURL is a data: URL resolved server-side from an owned upload; never trust
 // client-supplied raw URLs for model input.
@@ -517,7 +531,7 @@ func (c *AIClient) callJSON(ctx context.Context, path string, req any) (json.Raw
 
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("AI service returned status %d: %s", resp.StatusCode, string(bodyBytes))
+		return nil, &AIServiceHTTPError{StatusCode: resp.StatusCode, Body: string(bodyBytes)}
 	}
 
 	var result json.RawMessage

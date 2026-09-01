@@ -325,7 +325,7 @@ CREATE INDEX idx_ai_output_reviews_job
 | `consultation.extracted_info` | schema、state merge rule | 是 |
 | `consultation.diagnosis` | schema、red flag、evidence | 否 |
 | `consultation.treatment_plan` | schema、faithfulness、contraindication | 是 |
-| `assessment.report` | schema、profile consistency | 是 |
+| `assessment.report` | selection-only schema、exact/unique evidence refs、kind/source policy、deterministic rendering、Go durable revalidation | 否（evidence violation fail-closed） |
 | `training.plan` | schema、exercise safety、faithfulness | 是 |
 | `training.reassessment` | schema、plan mutation rule | 是 |
 | `knowledge.curated_unit` | source evidence、toxic text、quality | 否 |
@@ -472,3 +472,8 @@ apps/ai-service/tests/unit/test_red_flag_detector.py
 5. 可以用 golden cases 回归 AI 输出质量。
 6. 后续新增输出类型只需要注册 policy，不需要在各 handler 散写校验。
 
+### Assessment evidence-grounded contract
+
+Assessment 从 `assessment-output-v2` 开始把模型权限收敛为 **evidence selection / classification**：模型只能返回 `kind + 单个 exact evidence_ref`，不能撰写可持久化 `label / description / body_region`，也不能生成 health grade、0-100 score、summary 或 gaps。Python 的统一 `guard_structured_output("assessment", ...)` 根据 frozen input 构建的 evidence catalog 校验 ref 的存在性、唯一性及 kind/source policy；随后 Python 从可信 evidence 确定性渲染 observation。Go 在写入 BodyState 前独立重建 catalog、再次校验并再次确定性渲染，因此即使上游偷偷夹带自由文本也不具备 durable authority。
+
+`profile` 仅是稳定身份背景，不属于健康 observation evidence；Posture 是唯一 raw-image → 体态 finding 权威，Assessment 只消费已治理 `posture_analysis`。零可用健康 evidence 时直接确定性返回 `insufficient_information`，不调用模型。Evidence coverage、gaps、status 与 summary 都由应用层派生。历史 v1/v2 AgentConfig 仅用于 replay/shadow comparison，不得承担 durable serving。详见 ADR 0009。

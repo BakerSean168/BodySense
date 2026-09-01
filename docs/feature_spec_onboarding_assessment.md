@@ -118,15 +118,15 @@ body_state
 report_indicators
   -> 本次外部报告结构化指标
 
-posture_analysis / images
-  -> 本次体态视觉输入
+posture_analysis
+  -> Posture Agent 已完成并治理过的体态观察证据
 ```
 
 禁止为了 Prompt 方便把 BodyState、OCR 指标或 lifestyle 再嵌回 `profile`。Assessment 需要健康上下文时以 `body_state` 为准。
 
-**输出**：沿用当前 typed `AssessmentAgentOutput`，核心产物是待审核 `observations[]`、summary、information gaps 与 safety notes；不得在这个节点偷偷建立第二套健康真值。
+**输出（assessment-output-v2）**：模型权限进一步收敛为 evidence selection/classification。每个候选只能输出 `kind + 单个 evidence_ref`；模型没有 `label / description / body_region / severity / confidence` 等可持久化自然语言权限，也不再生成健康等级、0-100 分数、总体 summary 或 information gaps。Python 与 Go 都从 frozen evidence 快照确定性渲染 observation 文案，避免“ref 正确但模型仍扩写一个 unsupported claim”。
 
-**证据来源**：Observation 的依据应明确区分 `photo / profile / body_state / report`。其中 `profile` 仅代表稳定身份背景。
+**证据来源**：应用层从 frozen health input 构建 evidence catalog，仅允许 `posture_analysis / body_state / report`。`profile` 是稳定身份背景，不是健康 observation evidence；raw image 与未建模 `rag_context` 也不能直接进入 serving Assessment contract。模型声明的 ref 不可信，Python governance 与 Go durable boundary 都必须验证 ref 真实存在、唯一且与 observation kind 的 evidence policy 匹配。完整决策见 [[ADR 0009]] `docs/adr/0009-adopt-evidence-grounded-assessment-contract.md`。
 
 ---
 
@@ -195,28 +195,43 @@ all writes participate in one database transaction
 {
   "id": "8f8b8a8b-4a5d-4f1a-b6d8-74431e7845ba",
   "user_id": "33b8a32a-5b12-4c07-95ba-13d8756c9a62",
-  "health_grade": "B",
-  "dimension_scores": {
-    "posture": 70,
-    "habit": 65,
-    "exercise": 75
+  "status": "completed",
+  "contract_revision": "assessment-output-v2",
+  "evidence_coverage": {
+    "status": "partial",
+    "available_sources": ["body_state"],
+    "domains": {
+      "posture": {"status": "missing", "evidence_refs": []},
+      "exercise": {"status": "available", "evidence_refs": ["body_state:fact:<uuid>"]},
+      "lifestyle": {"status": "available", "evidence_refs": ["body_state:fact:<uuid>"]},
+      "anthropometry": {"status": "missing", "evidence_refs": []},
+      "health_report": {"status": "missing", "evidence_refs": []},
+      "injury_symptoms": {"status": "missing", "evidence_refs": []}
+    }
   },
-  "identified_issues": [
+  "observations": [
     {
-      "issue_name": "上交叉综合征（圆肩头前伸）",
-      "severity": "moderate",
-      "evidence": "侧面照片耳屏垂线落于肩峰前侧约3cm，且自述日常低头有肩颈酸胀"
-    },
-    {
-      "issue_name": "骨骼矿物质及维生素D缺乏风险",
-      "severity": "mild",
-      "evidence": "体检报告显示 25-羟基维生素D 偏低 (12.5 ng/ml)"
+      "kind": "exercise_pattern",
+      "label": "运动记录",
+      "description": "来源记录：健身；频率：1-2。",
+      "review_state": "unverified",
+      "evidence_refs": ["body_state:fact:<uuid>"]
     }
   ],
-  "improvement_summary": "建议先从松解胸小肌与上斜方肌入手，结合颈部深层屈肌激活；日常注意调整显示器高度，并适当增加户外活动或补充维生素D3。",
+  "evidence_gaps": [
+    {
+      "dimension": "posture",
+      "description": "当前未提供已完成的体态分析。",
+      "needed_sources": ["posture_analysis"],
+      "required": false
+    }
+  ],
+  "summary": "当前资料支持 1 项待审核观察；2/6 个证据领域已有资料，4/6 个领域当前未提供资料。",
   "created_at": "2026-06-29T11:24:22+08:00"
 }
 ```
+
+`health_grade` 与 `dimension_scores` 仅为历史 `assessment-output-v1` 兼容字段；新报告不再写入。没有明确、可执行的评分 rubric 时，不允许用任意 0-100 数字表达健康程度。
 
 ---
 
@@ -229,24 +244,13 @@ all writes participate in one database transaction
 *   **情况 2：OCR 服务超时或挂掉**。
     *   *降级处理*：Go 后端在转发 Python 服务时设置 8s 超时。若超时，则直接返回空结果，并在 Onboarding 请求中标记 `health_report_status = "skipped"`。
 
-### 5.2 多模态图像损坏或服务受阻
-*   **情况：多模态大模型在读取 Base64 图像时报错（如图片损坏、分辨率超限）或限流**。
-    *   *降级处理*：Python AI 服务捕获异常后，**自动降级为单模态纯文本评估**（仅将表单的 JSON 数据发送给普通 LLM 进行文本评估）。
-    *   *数据标记*：返回的评估报告数据中，标记 `visual_analyzed = false`。
-    *   *前端交互*：报告页照常渲染，但在体态对比区提示：“由于图片读取异常，本次报告仅基于文字档案生成。”
+### 5.2 Posture 图像分析失败或尚未完成
+*   **情况：Posture Agent 无法读取/分析图片，或用户图片仍处于 pending**。
+    *   *权威边界*：Assessment 不直接解释 raw image；图片 → 体态 observation 只由 Posture Agent 负责。
+    *   *降级处理*：若仍有 BodyState/report evidence，可仅生成这些 evidence 能支持的 observation；`posture` coverage 标记为 `missing`。
+    *   *前端交互*：明确提示“本次没有可用的已治理体态分析证据”，而不是展示伪造的体态分数或结论。
 
-### 5.3 LLM 输出格式解析失败
-*   **情况：LLM 返回的 JSON 包含截断或非法字符，导致后端 `json.Unmarshal` 失败**。
-    *   *容错三部曲*：
-        1.  **正则提取**：使用 Python 端的 `json-repair` 库或正则匹配 `\{.*\}` 尝试强行修复并提取 JSON。
-        2.  **二次修复**：若失败，使用较低温度的轻量级大模型进行快速修正。
-        3.  **兜底渲染**：若依然失败，则采用静态兜底报告结构：
-            ```json
-            {
-              "health_grade": "B",
-              "dimension_scores": {"posture": 70, "habit": 70, "exercise": 70},
-              "identified_issues": [{"issue_name": "日常体态亚健康倾向", "severity": "mild", "evidence": "根据自述存在日常肌肉疲劳，建议在对话工作台中进一步咨询。"}],
-              "improvement_summary": "请在咨询工作台中进一步向 AI 发送具体症状，以获取详尽改善建议。"
-            }
-            ```
-            同时前端通过 Sonner 提示：“生成报告时部分组件加载异常，您可随时在历史记录中重新生成或发起问诊。”
+### 5.3 LLM 输出格式或 evidence contract 校验失败
+*   **情况：模型输出无法通过 typed schema、evidence refs、observation-only 或 Go durable revalidation**。
+    *   *处理原则*：fail closed。原始输出不得修补后强行进入 BodyState，也不得用固定 B 级、70 分或“亚健康倾向”等静态健康结论兜底。
+    *   *允许的安全 fallback*：返回不含健康 claim 的错误/空状态，由客户端提示重新生成或补充资料。若应用层能够从 frozen input 确定性计算 evidence coverage/gaps，可展示这些 coverage 信息，但不得伪造 observation。

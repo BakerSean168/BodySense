@@ -1,0 +1,13 @@
+role: assessment
+manifest_revision: assessment-agent-v3
+logical_model: bodysense-structured
+model_group_revision: assessment-model-group-v1
+prompt_revision: assessment-prompt-v3-evidence-contract
+output_schema_revision: assessment-output-v2
+tool_policy_revision: assessment-tools-none-v1
+evidence_policy_revision: assessment-evidence-contract-v2
+governance_policy_revision: assessment-governance-v2
+decision_policy_revision: assessment-go-generation-v2
+generation:
+  temperature: 0.2
+  max_tokens: 2048
