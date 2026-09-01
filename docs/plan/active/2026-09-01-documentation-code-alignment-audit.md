@@ -643,6 +643,23 @@ Pre-user baseline promotion validation:
 - OCR indicator admissibility: `ocr-indicator-admissibility-v1`
 - Current Assessment: v4 / `assess-config-e579030c2b8b540c` / `assessment-evidence-contract-v3`
 - Assessment evidence qualification: 9/9 PASS
+
+OCR admissibility production closeout:
+
+- A1 implementation PR #155 merged as `27c917dadd925f6efc86933cabe4f5a4d865392d`;
+- release PR #156 produced Published Release `v0.10.1` at `afae3d3adf9e9584e6a4864468b5fc2d39664525` and is labeled `autorelease: tagged`;
+- release tag `v0.10.1` resolves exactly to `afae3d3adf9e9584e6a4864468b5fc2d39664525`;
+- main CI, `Publish Main Candidate`, and `Release Publish` for the release SHA: PASS;
+- Staging Web / API / AI OCI revision: `afae3d3adf9e9584e6a4864468b5fc2d39664525`;
+- production Deploy workflow `33499842273`: PASS;
+- production watcher preflight: READY with `active_running=0`;
+- production `.deploy-state` / Web / API / AI OCI revision: `afae3d3adf9e9584e6a4864468b5fc2d39664525`;
+- production Web / API / AI containers: running + healthy;
+- production migration head: `60`, `dirty=false`;
+- production pre-deploy database backup: `bodysense-pre-afae3d3adf9e-20260901-110535.dump`, validated at schema `60:false`;
+- production previous-runtime backup: `d25ea0fd8c95bbb5a7c7b8462a5f255e00bcc1f6-20260901-110536`;
+- production public `/api/health`: PASS; public Web: HTTP 200;
+- production Assessment default: v4 / `assess-config-e579030c2b8b540c` / `assessment-evidence-contract-v3`.
 ```
 
 The Web test target still emits pre-existing localhost connection noise and one React `act(...)` warning to stderr, but the Nx target exits successfully and all 206 tests pass.
