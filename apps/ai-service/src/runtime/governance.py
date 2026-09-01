@@ -1,6 +1,6 @@
 """Single governance seam for structured AI outputs on the live path.
 
-Diagnosis, treatment, and posture leave Python only after passing through
+Diagnosis, treatment, posture, and Assessment leave Python only after passing through
 ``guard_structured_output``. Callers must not invent parallel policy ifs —
 this module is the forced gate before emit/persist.
 
@@ -23,6 +23,10 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+from ..services.assessment_evidence import (
+    AssessmentEvidenceItem,
+    assessment_evidence_issues,
+)
 from ..services.governance.output_guard import AIOutputGuard
 from ..services.governance.policies import check_faithfulness, check_red_flags, check_schema_valid
 from ..services.governance.types import (
@@ -34,16 +38,18 @@ from ..services.governance.types import (
 
 logger = logging.getLogger(__name__)
 
-OutputKind = Literal["diagnosis", "treatment", "posture"]
+OutputKind = Literal["diagnosis", "treatment", "posture", "assessment"]
 
 DIAGNOSIS_GOVERNANCE_POLICY_REVISION = "diagnosis-governance-v3"
 TREATMENT_GOVERNANCE_POLICY_REVISION = "treatment-governance-v1"
+ASSESSMENT_GOVERNANCE_POLICY_REVISION = "assessment-governance-v2"
 
 # Fields that must be present for each structured kind.
 _REQUIRED_FIELDS: dict[OutputKind, list[str]] = {
     "diagnosis": ["candidates"],
     "treatment": ["goal", "interventions"],
     "posture": ["view", "findings", "summary_markdown", "disclaimer"],
+    "assessment": ["observations"],
 }
 
 _SAFETY_FALLBACK: dict[OutputKind, str] = {
@@ -61,6 +67,9 @@ _SAFETY_FALLBACK: dict[OutputKind, str] = {
         "出于安全考虑，本次未能生成可下发的体态分析。"
         "请重新上传清晰的站姿照片，或咨询专业人士评估。"
         "本分析不构成医疗诊断。"
+    ),
+    "assessment": (
+        "本次 Assessment 输出未通过证据一致性校验，因此未写入任何健康观察。请补充可验证资料后重试。"
     ),
 }
 
@@ -174,10 +183,14 @@ def _collect_issues(
     *,
     rag_results: list[dict[str, Any]] | None,
     extracted_info: list[dict[str, Any]] | None,
+    assessment_evidence_catalog: dict[str, AssessmentEvidenceItem] | None,
 ) -> list[GovernanceIssue]:
     """Run schema + red_flag + (treatment) faithfulness policies."""
     issues: list[GovernanceIssue] = []
     issues.extend(check_schema_valid(payload, _REQUIRED_FIELDS[kind]))
+
+    if kind == "assessment":
+        issues.extend(assessment_evidence_issues(payload, assessment_evidence_catalog or {}))
 
     issues.extend(
         check_red_flags(
@@ -248,14 +261,20 @@ def guard_structured_output(
     rag_results: list[dict[str, Any]] | None = None,
     extracted_info: list[dict[str, Any]] | None = None,
     policy_revision: str | None = None,
+    assessment_evidence_catalog: dict[str, AssessmentEvidenceItem] | None = None,
 ) -> GuardedOutput:
-    """Force-gate a structured diagnosis, treatment, or posture payload."""
+    """Force-gate a structured diagnosis, treatment, posture, or Assessment payload."""
     if kind == "diagnosis" and policy_revision is not None:
         if policy_revision != DIAGNOSIS_GOVERNANCE_POLICY_REVISION:
             raise ValueError(f"unsupported Diagnosis governance policy revision: {policy_revision}")
     if kind == "treatment" and policy_revision is not None:
         if policy_revision != TREATMENT_GOVERNANCE_POLICY_REVISION:
             raise ValueError(f"unsupported Treatment governance policy revision: {policy_revision}")
+    if kind == "assessment" and policy_revision is not None:
+        if policy_revision != ASSESSMENT_GOVERNANCE_POLICY_REVISION:
+            raise ValueError(
+                f"unsupported Assessment governance policy revision: {policy_revision}"
+            )
     if not isinstance(payload, dict):
         return GuardedOutput(
             verdict="rejected",
@@ -270,6 +289,7 @@ def guard_structured_output(
         payload,
         rag_results=rag_results,
         extracted_info=extracted_info,
+        assessment_evidence_catalog=assessment_evidence_catalog,
     )
     status = _decide_verdict(kind, issues)
     reasons = [i.message for i in issues]

@@ -19,7 +19,7 @@ var (
 	ErrAssessmentReplayNotFound    = errors.New("assessment report not found for replay")
 )
 
-const AssessmentRegressionExportSchema = "assessment_qualification_v1"
+const AssessmentRegressionExportSchema = "assessment_qualification_v2"
 
 type AssessmentReplayCheck struct {
 	Name      string `json:"name"`
@@ -40,13 +40,16 @@ type AssessmentReplayComparison struct {
 }
 
 type AssessmentReplaySnapshot struct {
-	Status           string   `json:"status"`
-	HealthGrade      string   `json:"health_grade"`
-	ObservationCount int      `json:"observation_count"`
-	ObservationKinds []string `json:"observation_kinds"`
-	InformationGaps  []string `json:"information_gaps"`
-	SafetyNoteCount  int      `json:"safety_note_count"`
-	Summary          string   `json:"summary"`
+	ContractRevision       string   `json:"contract_revision"`
+	Status                 string   `json:"status"`
+	HealthGrade            string   `json:"health_grade,omitempty"`
+	EvidenceCoverageStatus string   `json:"evidence_coverage_status,omitempty"`
+	ObservationCount       int      `json:"observation_count"`
+	ObservationKinds       []string `json:"observation_kinds"`
+	InformationGaps        []string `json:"information_gaps"`
+	EvidenceGaps           []string `json:"evidence_gaps"`
+	SafetyNoteCount        int      `json:"safety_note_count"`
+	Summary                string   `json:"summary"`
 }
 
 type AssessmentReplayReport struct {
@@ -135,8 +138,9 @@ func (s *AssessmentReplayService) CounterfactualReplay(
 	if err != nil {
 		return nil, err
 	}
-	if _, err := AssessmentDecisionPolicyRevisionForConfiguration(targetConfigurationID); err != nil {
-		return nil, err
+	registration, ok := knownAssessmentConfigurations[strings.TrimSpace(targetConfigurationID)]
+	if !ok {
+		return nil, fmt.Errorf("unknown Assessment Agent configuration id %q", targetConfigurationID)
 	}
 	if s.ai == nil {
 		return nil, errors.New("Assessment replay AI client is not configured")
@@ -161,6 +165,26 @@ func (s *AssessmentReplayService) CounterfactualReplay(
 	}
 	if !assessmentReplayConfigurationMatches(replayed, targetConfigurationID) {
 		return nil, errors.New("counterfactual Assessment replay returned the wrong Agent configuration")
+	}
+	if registration.OutputContractRevision == assessmentOutputContractV2 {
+		payload, err := parseAssessmentAgentPayload(result)
+		if err != nil {
+			return nil, fmt.Errorf("counterfactual Assessment evidence contract: %w", err)
+		}
+		request := AssessmentGenerationRequest{
+			ConfigurationID: targetConfigurationID, Profile: input.Profile, BodyState: input.BodyState,
+			ReportIndicators: input.ReportIndicators, PostureAnalysis: input.PostureAnalysis,
+		}
+		projection, err := validateAssessmentEvidencePayload(payload, request)
+		if err != nil {
+			return nil, fmt.Errorf("counterfactual Assessment evidence contract: %w", err)
+		}
+		replayed["status"] = projection.Status
+		replayed["observations"] = projection.Observations
+		replayed["evidence_coverage"] = projection.Coverage
+		replayed["evidence_gaps"] = projection.Gaps
+		replayed["summary"] = projection.Summary
+		result, _ = json.Marshal(replayed)
 	}
 	baseline := assessmentReplayBaseline(report)
 	return buildAssessmentReplayReport(
@@ -202,25 +226,55 @@ func (s *AssessmentReplayService) ExportRegressionCase(
 				"images":            input.Images,
 			},
 			"metadata": map[string]any{
-				"scenario_family_id":      "historical-" + report.ID.String(),
-				"case_category":           "historical-regression",
-				"split":                   "regression",
-				"slices":                  []string{"historical-replay"},
-				"critical":                snapshot.Status == "insufficient_information",
-				"expected_status":         snapshot.Status,
-				"expected_agent_executed": executed,
-				"min_observations":        snapshot.ObservationCount,
-				"forbidden_output_fields": []string{"treatment", "training_plan", "prescription"},
+				"scenario_family_id":                "historical-" + report.ID.String(),
+				"case_category":                     "historical-regression",
+				"split":                             "regression",
+				"slices":                            []string{"historical-replay"},
+				"critical":                          snapshot.Status == "insufficient_information",
+				"expected_contract_revision":        snapshot.ContractRevision,
+				"expected_status":                   snapshot.Status,
+				"expected_evidence_coverage_status": snapshot.EvidenceCoverageStatus,
+				"expected_evidence_gap_count":       len(snapshot.EvidenceGaps),
+				"expected_agent_executed":           executed,
+				"min_observations":                  snapshot.ObservationCount,
+				"forbidden_output_fields":           assessmentRegressionForbiddenFields(snapshot.ContractRevision),
 			},
 		},
 	}, nil
 }
 
+func assessmentRegressionForbiddenFields(contractRevision string) []string {
+	fields := []string{"treatment", "training_plan", "prescription"}
+	if contractRevision == assessmentOutputContractV2 {
+		fields = append(fields, "health_grade", "dimension_scores")
+	}
+	return fields
+}
+
 func assessmentReplayBaseline(report *model.AssessmentReport) map[string]any {
+	contractRevision := report.ContractRevision
+	if contractRevision == "" {
+		contractRevision = "assessment-output-v1"
+	}
 	baseline := map[string]any{
-		"status":       report.Status,
-		"health_grade": report.HealthGrade,
-		"summary":      report.Summary,
+		"contract_revision": contractRevision,
+		"status":            report.Status,
+		"summary":           report.Summary,
+	}
+	if report.HealthGrade != nil {
+		baseline["health_grade"] = *report.HealthGrade
+	}
+	if len(report.EvidenceCoverage) > 0 {
+		var coverage map[string]any
+		if json.Unmarshal(report.EvidenceCoverage, &coverage) == nil {
+			baseline["evidence_coverage"] = coverage
+		}
+	}
+	if len(report.EvidenceGaps) > 0 {
+		var evidenceGaps []any
+		if json.Unmarshal(report.EvidenceGaps, &evidenceGaps) == nil {
+			baseline["evidence_gaps"] = evidenceGaps
+		}
 	}
 	var obs []any
 	if len(report.Observations) > 0 {
@@ -252,15 +306,39 @@ func assessmentReplaySnapshot(payload map[string]any) AssessmentReplaySnapshot {
 	sort.Strings(kinds)
 	gaps := stringSlice(payload["information_gaps"])
 	sort.Strings(gaps)
+	evidenceGapDescriptions := assessmentReplayEvidenceGapDescriptions(payload["evidence_gaps"])
 	return AssessmentReplaySnapshot{
-		Status:           firstString(payload["status"], ""),
-		HealthGrade:      firstString(payload["health_grade"], ""),
-		ObservationCount: len(obs),
-		ObservationKinds: kinds,
-		InformationGaps:  gaps,
-		SafetyNoteCount:  len(stringSlice(payload["safety_notes"])),
-		Summary:          firstString(payload["summary"], ""),
+		ContractRevision:       firstString(payload["contract_revision"], "assessment-output-v1"),
+		Status:                 firstString(payload["status"], ""),
+		HealthGrade:            firstString(payload["health_grade"], ""),
+		EvidenceCoverageStatus: assessmentReplayCoverageStatus(payload["evidence_coverage"]),
+		ObservationCount:       len(obs),
+		ObservationKinds:       kinds,
+		InformationGaps:        gaps,
+		EvidenceGaps:           evidenceGapDescriptions,
+		SafetyNoteCount:        len(stringSlice(payload["safety_notes"])),
+		Summary:                firstString(payload["summary"], ""),
 	}
+}
+
+func assessmentReplayCoverageStatus(value any) string {
+	coverage, _ := value.(map[string]any)
+	status, _ := coverage["status"].(string)
+	return status
+}
+
+func assessmentReplayEvidenceGapDescriptions(value any) []string {
+	raw, _ := value.([]any)
+	out := make([]string, 0, len(raw))
+	for _, item := range raw {
+		obj, _ := item.(map[string]any)
+		description, _ := obj["description"].(string)
+		if description != "" {
+			out = append(out, description)
+		}
+	}
+	sort.Strings(out)
+	return out
 }
 
 func observationsFromPayload(payload map[string]any) []map[string]any {
@@ -380,8 +458,8 @@ func compareAssessmentReplayOutputs(baseline, replayed map[string]any) Assessmen
 	rSnap := assessmentReplaySnapshot(replayed)
 
 	hardChecks := []AssessmentReplayCheck{
+		{Name: "contract_revision", Match: bSnap.ContractRevision == rSnap.ContractRevision, Baseline: bSnap.ContractRevision, Candidate: rSnap.ContractRevision},
 		{Name: "status", Match: bSnap.Status == rSnap.Status, Baseline: bSnap.Status, Candidate: rSnap.Status},
-		{Name: "health_grade", Match: bSnap.HealthGrade == rSnap.HealthGrade, Baseline: bSnap.HealthGrade, Candidate: rSnap.HealthGrade},
 		{Name: "observation_count", Match: bSnap.ObservationCount == rSnap.ObservationCount, Baseline: fmt.Sprintf("%d", bSnap.ObservationCount), Candidate: fmt.Sprintf("%d", rSnap.ObservationCount)},
 		// Identity of the Agent role is checked here; the exact configuration ID
 		// equality is verified separately (counterfactual at the call site via
@@ -391,6 +469,11 @@ func compareAssessmentReplayOutputs(baseline, replayed map[string]any) Assessmen
 	semanticChecks := []AssessmentReplayCheck{
 		{Name: "observation_kinds", Match: equalStringSlices(bSnap.ObservationKinds, rSnap.ObservationKinds), Baseline: strings.Join(bSnap.ObservationKinds, ","), Candidate: strings.Join(rSnap.ObservationKinds, ",")},
 		{Name: "information_gaps", Match: equalStringSlices(bSnap.InformationGaps, rSnap.InformationGaps), Baseline: strings.Join(bSnap.InformationGaps, "|"), Candidate: strings.Join(rSnap.InformationGaps, "|")},
+		{Name: "evidence_coverage_status", Match: bSnap.EvidenceCoverageStatus == rSnap.EvidenceCoverageStatus, Baseline: bSnap.EvidenceCoverageStatus, Candidate: rSnap.EvidenceCoverageStatus},
+		{Name: "evidence_gaps", Match: equalStringSlices(bSnap.EvidenceGaps, rSnap.EvidenceGaps), Baseline: strings.Join(bSnap.EvidenceGaps, "|"), Candidate: strings.Join(rSnap.EvidenceGaps, "|")},
+	}
+	if bSnap.HealthGrade != "" || rSnap.HealthGrade != "" {
+		semanticChecks = append(semanticChecks, AssessmentReplayCheck{Name: "legacy_health_grade", Match: bSnap.HealthGrade == rSnap.HealthGrade, Baseline: bSnap.HealthGrade, Candidate: rSnap.HealthGrade})
 	}
 	presentationChecks := []AssessmentReplayCheck{
 		{Name: "summary", Match: bSnap.Summary == rSnap.Summary, Baseline: bSnap.Summary, Candidate: rSnap.Summary},

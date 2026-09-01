@@ -1,110 +1,218 @@
-"""Typed Assessment Agent boundary tests."""
+"""Typed Assessment selection/rendering and evidence-governance boundary tests."""
 
 from __future__ import annotations
 
 import base64
 
 import pytest
+from pydantic import ValidationError
 from pydantic_ai.models.test import TestModel
 
 from src.agents.assessment_agent import create_assessment_agent
-from src.models.assessment import AssessmentAgentOutput, AssessmentDependencies
-from src.services.assessment_service import AssessmentService
+from src.models.assessment import (
+    ASSESSMENT_OUTPUT_SCHEMA_REVISION_V2,
+    AssessmentAgentOutput,
+    AssessmentDependencies,
+)
+from src.prompts.assessment import ASSESSMENT_PROMPT_REVISION_V3
+from src.services.assessment_service import AssessmentOutputRejectedError, AssessmentService
 
 
-def _output() -> dict:
-    return {
-        "status": "completed",
-        "health_grade": "B",
-        "dimension_scores": {
-            "posture": 72,
-            "exercise": 68,
-            "lifestyle": 70,
-            "injury_risk": 75,
-            "overall": 71,
-        },
-        "observations": [
-            {
-                "kind": "posture_alignment",
-                "body_region": "肩部",
-                "label": "高低肩倾向",
-                "description": "正面图中右侧肩峰略高。",
-                "severity": "轻度",
-                "confidence": "中",
-                "method": "posture_photo_front",
-                "condition": {"view": "front"},
-            }
-        ],
-        "summary": "当前资料支持一项待审核的体态观察。",
-        "information_gaps": [],
-        "safety_notes": [],
-    }
+def _posture_output(evidence_ref: str = "posture:view:0:finding:0") -> dict:
+    return {"observations": [{"kind": "posture_alignment", "evidence_refs": [evidence_ref]}]}
+
+
+def _exercise_output() -> dict:
+    return {"observations": [{"kind": "exercise_pattern", "evidence_refs": ["body_state:fact:0"]}]}
 
 
 @pytest.mark.asyncio
-async def test_assessment_agent_returns_typed_observations_without_advice() -> None:
-    model = TestModel(custom_output_args=_output())
-    agent = create_assessment_agent(model)
+async def test_v2_agent_can_only_select_kind_and_exact_evidence_ref() -> None:
+    model = TestModel(custom_output_args=_posture_output())
+    agent = create_assessment_agent(
+        model,
+        prompt_revision=ASSESSMENT_PROMPT_REVISION_V3,
+        output_schema_revision=ASSESSMENT_OUTPUT_SCHEMA_REVISION_V2,
+    )
     result = await agent.run(
-        "Create an observation-only report.",
+        "Select grounded observations.",
         deps=AssessmentDependencies(
             profile={"birth_date": "1996-08-27"},
-            body_state={
-                "current_revision": 2,
-                "facts": [{"kind": "lifestyle.sleep", "value": "轮班"}],
+            evidence_catalog={
+                "posture:view:0:finding:0": {
+                    "ref": "posture:view:0:finding:0",
+                    "source": "posture_analysis",
+                    "kind": "uneven_shoulders",
+                    "value": {"label": "肩部对称性待复核"},
+                }
             },
         ),
     )
 
     assert isinstance(result.output, AssessmentAgentOutput)
-    assert result.output.observations[0].label == "高低肩倾向"
-    dumped = result.output.model_dump(mode="json")
-    assert "improvement_summary" not in dumped
-    assert "treatment" not in dumped
+    assert result.output.model_dump(mode="json") == _posture_output()
+
+
+def test_v2_schema_forbids_model_authored_observation_prose() -> None:
+    with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+        AssessmentAgentOutput.model_validate(
+            {
+                "observations": [
+                    {
+                        "kind": "exercise_pattern",
+                        "evidence_refs": ["body_state:fact:0"],
+                        "description": "建议增加运动频率",
+                    }
+                ]
+            }
+        )
 
 
 @pytest.mark.asyncio
-async def test_assessment_service_supports_typed_multimodal_content() -> None:
-    model = TestModel(custom_output_args=_output())
+async def test_service_renders_posture_observation_from_trusted_posture_evidence() -> None:
+    model = TestModel(custom_output_args=_posture_output())
+    service = AssessmentService(model_resolver=lambda _config: model)
+    result = await service.generate_assessment(
+        profile={"birth_date": "1996-08-27"},
+        body_state={"current_revision": 2, "facts": []},
+        posture_analysis={
+            "has_analysis": True,
+            "views": [
+                {
+                    "view": "front",
+                    "analysis": {
+                        "findings": [
+                            {
+                                "key": "uneven_shoulders",
+                                "label": "肩部对称性待复核",
+                                "evidence": "右侧肩峰位置略高",
+                            }
+                        ]
+                    },
+                }
+            ],
+        },
+    )
+
+    observation = result["observations"][0]
+    assert observation == {
+        "kind": "posture_alignment",
+        "body_region": "",
+        "label": "肩部对称性待复核",
+        "description": "体态分析记录：右侧肩峰位置略高。",
+        "evidence_refs": ["posture:view:0:finding:0"],
+    }
+    assert result["evidence_coverage"]["domains"]["posture"]["status"] == "available"
+    assert "health_grade" not in result
+    assert "dimension_scores" not in result
+    request = str(model.last_model_request_parameters)
+    assert "posture:view:0:finding:0" in request
+    # v3 receives the canonical evidence catalog, not duplicate full business context.
+    assert "稳定用户档案" not in request
+    assert "当前 BodyState" not in request
+
+
+@pytest.mark.asyncio
+async def test_service_renders_body_state_fact_without_claim_expansion() -> None:
+    model = TestModel(custom_output_args=_exercise_output())
+    service = AssessmentService(model_resolver=lambda _config: model)
+
+    result = await service.generate_assessment(
+        profile={"birth_date": "1996-08-27"},
+        body_state={
+            "current_revision": 1,
+            "facts": [
+                {"kind": "lifestyle.exercise", "value": "健身；频率：1-2"},
+                {"kind": "lifestyle.sleep", "value": "规律"},
+            ],
+        },
+    )
+
+    observation = result["observations"][0]
+    assert observation["label"] == "运动记录"
+    assert observation["description"] == "来源记录：健身；频率：1-2。"
+    assert "可能" not in observation["description"]
+    assert "建议" not in observation["description"]
+    domains = result["evidence_coverage"]["domains"]
+    assert domains["exercise"]["status"] == "available"
+    assert domains["lifestyle"]["status"] == "available"
+    assert domains["posture"]["status"] == "missing"
+
+
+@pytest.mark.asyncio
+async def test_service_derives_insufficient_status_when_no_health_evidence_exists() -> None:
+    from src.configuration.assessment_agent_config import get_default_assessment_configuration
+
+    def fail_if_model_is_resolved(_config):
+        raise AssertionError("no-evidence Assessment must not resolve or call a model")
+
+    service = AssessmentService(model_resolver=fail_if_model_is_resolved)
+    config = get_default_assessment_configuration()
+
+    result = await service.generate_assessment(
+        profile={"birth_date": "1996-08-27", "gender": "male"},
+        body_state={"current_revision": 1, "facts": []},
+        configuration_id=config.configuration_id,
+    )
+
+    assert result["status"] == "insufficient_information"
+    assert result["evidence_coverage"]["status"] == "insufficient"
+    assert result["evidence_coverage"]["available_sources"] == []
+    assert len(result["evidence_gaps"]) == 6
+    assert result["agent_configuration"]["id"] == config.configuration_id
+    assert result["execution_provenance"]["status"] == "skipped_no_evidence"
+    assert result["execution_provenance"]["usage"]["requests"] == 0
+
+
+@pytest.mark.asyncio
+async def test_service_rejects_posture_selection_without_posture_evidence() -> None:
+    model = TestModel(custom_output_args=_posture_output())
+    service = AssessmentService(model_resolver=lambda _config: model)
+
+    with pytest.raises(AssessmentOutputRejectedError, match="evidence governance"):
+        await service.generate_assessment(
+            profile={"birth_date": "1996-08-27"},
+            body_state={"facts": [{"kind": "lifestyle.sleep", "value": "轮班"}]},
+            posture_analysis={},
+        )
+
+
+@pytest.mark.asyncio
+async def test_service_does_not_reuse_unverified_body_state_as_evidence() -> None:
+    def fail_if_model_is_resolved(_config):
+        raise AssertionError("excluded evidence must not trigger model execution")
+
+    service = AssessmentService(model_resolver=fail_if_model_is_resolved)
+    result = await service.generate_assessment(
+        profile={},
+        body_state={
+            "facts": [
+                {
+                    "kind": "lifestyle.exercise",
+                    "value": "健身；频率：1-2",
+                    "review_state": "unverified",
+                    "excluded_from_reasoning": True,
+                    "lifecycle_state": "active",
+                }
+            ]
+        },
+    )
+
+    assert result["status"] == "insufficient_information"
+    assert result["observations"] == []
+    assert result["evidence_coverage"]["status"] == "insufficient"
+    assert result["evidence_coverage"]["domains"]["exercise"]["status"] == "missing"
+    assert result["execution_provenance"]["usage"]["requests"] == 0
+
+
+@pytest.mark.asyncio
+async def test_v2_rejects_raw_images_and_unmodeled_rag_context() -> None:
+    model = TestModel(custom_output_args={"observations": []})
     service = AssessmentService(model_resolver=lambda _config: model)
     image = "data:image/jpeg;base64," + base64.b64encode(b"fake-jpeg").decode()
 
-    result = await service.generate_assessment(
-        profile={"birth_date": "1996-08-27"},
-        body_state={"current_revision": 2, "facts": [{"kind": "lifestyle.sleep", "value": "轮班"}]},
-        images=[image],
-        posture_analysis={"has_analysis": True, "summaries": ["正面观轻微高低肩"]},
-    )
+    with pytest.raises(ValueError, match="does not accept raw images"):
+        await service.generate_assessment(profile={}, images=[image])
 
-    assert result["status"] == "completed"
-    assert result["observations"][0]["kind"] == "posture_alignment"
-    # immutable configuration + execution provenance are attached to the payload
-    assert result["agent_configuration"]["role"] == "assessment"
-    assert result["agent_configuration"]["logical_model"] == "bodysense-structured"
-    assert result["execution_provenance"]["runtime"] == "pydantic-ai"
-    request = str(model.last_model_request_parameters)
-    assert "正面观轻微高低肩" in request
-    assert "lifestyle.sleep" in request
-    assert "轮班" in request
-
-
-@pytest.mark.asyncio
-async def test_assessment_service_resolves_immutable_configuration() -> None:
-    from src.configuration.assessment_agent_config import get_default_assessment_configuration
-
-    model = TestModel(custom_output_args=_output())
-    service = AssessmentService(model_resolver=lambda _config: model)
-    default_config = get_default_assessment_configuration()
-
-    result = await service.generate_assessment(
-        profile={"birth_date": "1996-08-27"},
-        body_state={"current_revision": 1, "facts": []},
-        configuration_id=default_config.configuration_id,
-    )
-
-    assert result["agent_configuration"]["id"] == default_config.configuration_id
-    assert (
-        result["agent_configuration"]["decision_policy_revision"]
-        == "assessment-go-generation-v1"
-    )
-    assert result["execution_provenance"]["logical_model"] == "bodysense-structured"
+    with pytest.raises(ValueError, match="does not accept unmodeled rag_context"):
+        await service.generate_assessment(profile={}, rag_context="hidden posture claim")

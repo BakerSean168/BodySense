@@ -528,7 +528,7 @@ func replayAgentExecuted(raw json.RawMessage) bool {
 		Status string `json:"status"`
 	}
 	_ = json.Unmarshal(raw, &execution)
-	return execution.Status != "bypassed"
+	return execution.Status == "executed"
 }
 
 func replayEvidenceAttemptCount(raw json.RawMessage) int {

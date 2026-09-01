@@ -88,34 +88,10 @@ def deterministic_treatment_model(*, call_tools: list[str] | Literal["all"] = "a
 
 
 def deterministic_assessment_model() -> Model:
-    return TestModel(
-        custom_output_args={
-            "status": "completed",
-            "health_grade": "B",
-            "dimension_scores": {
-                "posture": 72,
-                "exercise": 68,
-                "lifestyle": 70,
-                "injury_risk": 75,
-                "overall": 71,
-            },
-            "observations": [
-                {
-                    "kind": "posture_alignment",
-                    "body_region": "肩部",
-                    "label": "肩部对称性待复核",
-                    "description": "当前资料提示肩部对称性值得进一步观察。",
-                    "severity": "轻度",
-                    "confidence": "中",
-                    "method": "assessment",
-                    "condition": {"source": "deterministic_validation"},
-                }
-            ],
-            "summary": "当前资料支持一项待用户审核的观察。",
-            "information_gaps": [],
-            "safety_notes": [],
-        }
-    )
+    # The deterministic model deliberately emits no claims. Tests that need a
+    # claim inject their own TestModel with exact evidence_refs; this default
+    # cannot manufacture health observations without request-specific evidence.
+    return TestModel(custom_output_args={"observations": []})
 
 
 def deterministic_text_for(use_case: str) -> str:

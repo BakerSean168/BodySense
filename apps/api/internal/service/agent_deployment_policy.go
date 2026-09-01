@@ -48,9 +48,10 @@ const (
 	defaultTreatmentRolloutSalt = "treatment-rollout-v1"
 	TreatmentPromotionRecordV1  = "treatment_promotion_v1"
 
-	defaultAssessmentConfigurationID = "assess-config-fbff8155337b388d"
-	assessmentV2ConfigurationID      = "assess-config-cae55474253e1601"
-	assessmentLogicalModelV1         = "bodysense-structured"
+	historicalAssessmentV1ConfigurationID = "assess-config-fbff8155337b388d"
+	historicalAssessmentV2ConfigurationID = "assess-config-cae55474253e1601"
+	defaultAssessmentConfigurationID      = "assess-config-c6cfff22aa362fff"
+	assessmentLogicalModelV1              = "bodysense-structured"
 
 	consultationV1ConfigurationID      = "consult-config-2bd9b46735dd693c"
 	defaultConsultationConfigurationID = "consult-config-7feb8ca2d5bfad5a"
@@ -77,6 +78,8 @@ type treatmentConfigurationRegistration struct {
 type assessmentConfigurationRegistration struct {
 	DecisionPolicyRevision string
 	LogicalModel           string
+	OutputContractRevision string
+	ServingAllowed         bool
 }
 
 type consultationConfigurationRegistration struct {
@@ -110,18 +113,32 @@ var knownTreatmentConfigurations = map[string]treatmentConfigurationRegistration
 	},
 }
 
-// AssessmentDecisionPolicyV1 is the deterministic fail-closed generation policy
-// revision for the Assessment role (mirrors treatment-go-acceptance-v1 naming).
-const AssessmentDecisionPolicyV1 = "assessment-go-generation-v1"
+// Assessment v1/v2 remain registered for immutable historical replay only.
+// V2 decision authority is the first serving contract that requires exact
+// evidence refs and removes model-authored health grades / pseudo scores.
+const (
+	AssessmentDecisionPolicyV1 = "assessment-go-generation-v1"
+	AssessmentDecisionPolicyV2 = "assessment-go-generation-v2"
+)
 
 var knownAssessmentConfigurations = map[string]assessmentConfigurationRegistration{
-	defaultAssessmentConfigurationID: {
+	historicalAssessmentV1ConfigurationID: {
 		DecisionPolicyRevision: AssessmentDecisionPolicyV1,
 		LogicalModel:           assessmentLogicalModelV1,
+		OutputContractRevision: "assessment-output-v1",
+		ServingAllowed:         false,
 	},
-	assessmentV2ConfigurationID: {
+	historicalAssessmentV2ConfigurationID: {
 		DecisionPolicyRevision: AssessmentDecisionPolicyV1,
 		LogicalModel:           assessmentLogicalModelV1,
+		OutputContractRevision: "assessment-output-v1",
+		ServingAllowed:         false,
+	},
+	defaultAssessmentConfigurationID: {
+		DecisionPolicyRevision: AssessmentDecisionPolicyV2,
+		LogicalModel:           assessmentLogicalModelV1,
+		OutputContractRevision: assessmentOutputContractV2,
+		ServingAllowed:         true,
 	},
 }
 
@@ -393,7 +410,7 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 	if assessmentChampion == "" {
 		assessmentChampion = defaultAssessmentConfigurationID
 	}
-	if err := validateAssessmentConfigurationID(assessmentChampion); err != nil {
+	if err := validateAssessmentServingConfigurationID(assessmentChampion); err != nil {
 		return nil, err
 	}
 	assessmentChallenger := strings.TrimSpace(os.Getenv("ASSESSMENT_CHALLENGER_CONFIGURATION_ID"))
@@ -401,7 +418,7 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		// No challenger yet: Assessment has a single Champion configuration.
 		assessmentChallenger = assessmentChampion
 	}
-	if err := validateAssessmentConfigurationID(assessmentChallenger); err != nil {
+	if err := validateAssessmentKnownConfigurationID(assessmentChallenger); err != nil {
 		return nil, err
 	}
 
@@ -416,6 +433,14 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 	if assessmentStage != AssessmentRolloutChampion && assessmentStage != AssessmentRolloutRollback {
 		if assessmentChampion == assessmentChallenger {
 			return nil, fmt.Errorf("Assessment rollout stage %q requires a distinct challenger configuration", assessmentStage)
+		}
+	}
+	// A historical contract may be used as a read-only shadow/replay comparator,
+	// but canary/promoted stages would serve the challenger and therefore require
+	// a configuration explicitly marked safe for durable reports.
+	if assessmentStage == AssessmentRolloutCanary || assessmentStage == AssessmentRolloutPromoted {
+		if err := validateAssessmentServingConfigurationID(assessmentChallenger); err != nil {
+			return nil, fmt.Errorf("Assessment rollout stage %q cannot serve challenger: %w", assessmentStage, err)
 		}
 	}
 	assessmentCanaryBPS := defaultAssessmentCanaryBPS
@@ -701,12 +726,25 @@ func AssessmentDecisionPolicyRevisionForConfiguration(configurationID string) (s
 	return registration.DecisionPolicyRevision, nil
 }
 
-func validateAssessmentConfigurationID(id string) error {
+func validateAssessmentKnownConfigurationID(id string) error {
 	if !strings.HasPrefix(id, "assess-config-") {
 		return fmt.Errorf("invalid Assessment Agent configuration id %q", id)
 	}
 	if _, ok := knownAssessmentConfigurations[id]; !ok {
 		return fmt.Errorf("unknown Assessment Agent configuration id %q", id)
+	}
+	return nil
+}
+
+func validateAssessmentServingConfigurationID(id string) error {
+	if err := validateAssessmentKnownConfigurationID(id); err != nil {
+		return err
+	}
+	if !knownAssessmentConfigurations[id].ServingAllowed {
+		return fmt.Errorf(
+			"Assessment Agent configuration id %q is historical replay-only and cannot serve durable reports",
+			id,
+		)
 	}
 	return nil
 }

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -43,7 +44,13 @@ func (h *AssessmentHandler) GenerateAssessment(c *gin.Context) {
 
 	report, err := h.assessmentService.GenerateAssessment(c.Request.Context(), uid)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if errors.Is(err, service.ErrAssessmentOutputRejected) {
+			c.JSON(http.StatusBadGateway, gin.H{
+				"error": "assessment generation did not pass evidence validation",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate assessment"})
 		return
 	}
 

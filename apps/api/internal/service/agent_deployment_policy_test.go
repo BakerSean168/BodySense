@@ -368,3 +368,64 @@ func TestConsultationCanPinHistoricalV1WithoutChangingDefault(t *testing.T) {
 		t.Fatalf("default Consultation champion changed: %q", defaultPolicy.ConsultationConfigurationID())
 	}
 }
+
+func clearAssessmentRolloutEnv(t *testing.T) {
+	t.Helper()
+	t.Setenv("ASSESSMENT_CHAMPION_CONFIGURATION_ID", "")
+	t.Setenv("ASSESSMENT_CHALLENGER_CONFIGURATION_ID", "")
+	t.Setenv("ASSESSMENT_ROLLOUT_STAGE", "")
+	t.Setenv("ASSESSMENT_CANARY_BPS", "")
+	t.Setenv("ASSESSMENT_ROLLOUT_SALT", "")
+	t.Setenv("ASSESSMENT_PROMOTION_RECORD", "")
+}
+
+func TestAssessmentRolloutDefaultsToEvidenceContractV3(t *testing.T) {
+	clearDiagnosisRolloutEnv(t)
+	clearAssessmentRolloutEnv(t)
+	policy, err := NewAgentDeploymentPolicy()
+	if err != nil {
+		t.Fatal(err)
+	}
+	selection := policy.SelectAssessmentRoute("user-1")
+	if selection.ServedConfigurationID != defaultAssessmentConfigurationID {
+		t.Fatalf("unexpected Assessment serving config: %#v", selection)
+	}
+	if selection.ShadowConfigurationID != "" || selection.Stage != AssessmentRolloutChampion {
+		t.Fatalf("unexpected default Assessment route: %#v", selection)
+	}
+}
+
+func TestAssessmentShadowMayCompareHistoricalReplayOnlyContract(t *testing.T) {
+	clearDiagnosisRolloutEnv(t)
+	clearAssessmentRolloutEnv(t)
+	t.Setenv("ASSESSMENT_CHALLENGER_CONFIGURATION_ID", historicalAssessmentV2ConfigurationID)
+	t.Setenv("ASSESSMENT_ROLLOUT_STAGE", AssessmentRolloutShadow)
+	t.Setenv("ASSESSMENT_PROMOTION_RECORD", AssessmentPromotionRecordV1)
+
+	policy, err := NewAgentDeploymentPolicy()
+	if err != nil {
+		t.Fatalf("historical shadow should remain replayable: %v", err)
+	}
+	selection := policy.SelectAssessmentRoute("user-shadow")
+	if selection.ServedConfigurationID != defaultAssessmentConfigurationID || selection.ShadowConfigurationID != historicalAssessmentV2ConfigurationID {
+		t.Fatalf("historical contract must be shadow-only: %#v", selection)
+	}
+}
+
+func TestAssessmentHistoricalContractCannotBeServed(t *testing.T) {
+	clearDiagnosisRolloutEnv(t)
+	clearAssessmentRolloutEnv(t)
+	t.Setenv("ASSESSMENT_CHAMPION_CONFIGURATION_ID", historicalAssessmentV2ConfigurationID)
+	if _, err := NewAgentDeploymentPolicy(); err == nil {
+		t.Fatal("historical Assessment contract must never serve as champion")
+	}
+
+	clearAssessmentRolloutEnv(t)
+	t.Setenv("ASSESSMENT_CHALLENGER_CONFIGURATION_ID", historicalAssessmentV2ConfigurationID)
+	t.Setenv("ASSESSMENT_ROLLOUT_STAGE", AssessmentRolloutCanary)
+	t.Setenv("ASSESSMENT_CANARY_BPS", "500")
+	t.Setenv("ASSESSMENT_PROMOTION_RECORD", AssessmentPromotionRecordV1)
+	if _, err := NewAgentDeploymentPolicy(); err == nil {
+		t.Fatal("historical Assessment contract must never receive canary traffic")
+	}
+}

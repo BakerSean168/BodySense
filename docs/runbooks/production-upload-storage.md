@@ -4,7 +4,7 @@ Status: implementation runbook. The application defaults to local storage until 
 
 ## Purpose and protected boundaries
 
-`user_uploads.storage_backend + storage_key` is the durable object identity. A host filesystem path is not persisted. Go is the storage authority: OCR, posture analysis, consultation images, assessment fallback images, deletion and privacy erasure all read/delete through `UploadStorage`. Python receives only Go-forwarded bytes/data URLs and never receives OSS credentials or object coordinates.
+`user_uploads.storage_backend + storage_key` is the durable object identity. A host filesystem path is not persisted. Go is the storage authority: OCR, Posture analysis, consultation images, deletion and privacy erasure all read/delete through `UploadStorage`. Assessment no longer reads raw image objects; it consumes completed governed Posture analysis metadata. Python receives only Go-forwarded bytes/data URLs and never receives OSS credentials or object coordinates.
 
 The v1 upload HTTP response still exposes `file_path` for compatibility, but its value is the opaque storage key. `storage_backend` and `storage_key` remain server-private.
 
@@ -164,7 +164,7 @@ Smoke-test with a dedicated removable account:
 2. verify the DB rows have `storage_backend='oss'`;
 3. verify consultation image loading works;
 4. verify OCR/report processing works;
-5. verify posture/assessment image consumption works where applicable;
+5. verify Posture image consumption works and Assessment can reuse the resulting governed posture analysis without rereading the raw image;
 6. delete one upload and prove the OSS object is gone;
 7. exercise the privacy-erasure synthetic path and prove the user prefix is empty after the post-delete sweep.
 

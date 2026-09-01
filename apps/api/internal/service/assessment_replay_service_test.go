@@ -29,7 +29,7 @@ func assessmentReplayTestReport() *model.AssessmentReport {
 		ID:                      reportID,
 		UserID:                  uuid.New(),
 		Status:                  "completed",
-		HealthGrade:             "B",
+		HealthGrade:             func() *string { value := "B"; return &value }(),
 		Summary:                 "当前资料支持一项待审核观察。",
 		Observations:            observations,
 		InformationGaps:         json.RawMessage(`[]`),
@@ -127,4 +127,71 @@ func TestAssessmentReplayComparisonDetectsConfigMismatch(t *testing.T) {
 	if err == nil {
 		t.Fatal("counterfactual replay without a configured AI client must fail")
 	}
+}
+
+func TestAssessmentRegressionExportCarriesEvidenceContractSemantics(t *testing.T) {
+	configID := defaultAssessmentConfigurationID
+	env, _ := encodeAssessmentReplayInput(
+		configID,
+		json.RawMessage(`{"gender":"female","birth_date":"1996-08-27"}`),
+		json.RawMessage(`{"current_revision":0,"facts":[],"observations":[]}`),
+		json.RawMessage(`[]`),
+		json.RawMessage(`{}`),
+		nil,
+	)
+	fingerprint := assessmentReplayInputFingerprintOfRaw(env)
+	report := &model.AssessmentReport{
+		ID:                      uuid.New(),
+		UserID:                  uuid.New(),
+		Status:                  "insufficient_information",
+		ContractRevision:        assessmentOutputContractV2,
+		EvidenceCoverage:        json.RawMessage(`{"status":"insufficient","available_sources":[],"domains":{}}`),
+		EvidenceGaps:            json.RawMessage(`[{"dimension":"posture","description":"当前未提供已完成的体态分析。","needed_sources":["posture_analysis"],"required":false}]`),
+		Observations:            json.RawMessage(`[]`),
+		Summary:                 "当前资料支持 0 项待审核观察；0/6 个证据领域已有资料，6/6 个领域当前未提供资料。",
+		SafetyNotes:             json.RawMessage(`[]`),
+		AgentConfigurationID:    configID,
+		AgentConfiguration:      datatypes.JSON(fmt.Sprintf(`{"id":%q,"role":"assessment"}`, configID)),
+		ExecutionProvenance:     datatypes.JSON(`{"status":"skipped_no_evidence","runtime":"deterministic","usage":{"requests":0}}`),
+		GenerationDecisionTrace: datatypes.JSON(fmt.Sprintf(`{"status":"derived_without_model","outcome":"accepted","replay_input_fingerprint":%q}`, fingerprint)),
+		ReplayInput:             datatypes.JSON(env),
+		CreatedAt:               time.Now().UTC(),
+	}
+	svc, repo := newAssessmentReplaySvc()
+	repo.created = report
+
+	exported, err := svc.ExportRegressionCase(context.Background(), report.UserID, report.ID)
+	if err != nil {
+		t.Fatalf("ExportRegressionCase: %v", err)
+	}
+	if exported["schema_target"] != AssessmentRegressionExportSchema || AssessmentRegressionExportSchema != "assessment_qualification_v2" {
+		t.Fatalf("unexpected regression schema: %#v", exported["schema_target"])
+	}
+	casePayload, _ := exported["case"].(map[string]any)
+	metadata, _ := casePayload["metadata"].(map[string]any)
+	if metadata["expected_contract_revision"] != assessmentOutputContractV2 {
+		t.Fatalf("missing contract revision metadata: %#v", metadata)
+	}
+	if metadata["expected_evidence_coverage_status"] != "insufficient" {
+		t.Fatalf("missing evidence coverage metadata: %#v", metadata)
+	}
+	if metadata["expected_evidence_gap_count"] != 1 {
+		t.Fatalf("missing evidence gap count: %#v", metadata)
+	}
+	if executed, _ := metadata["expected_agent_executed"].(bool); executed {
+		t.Fatalf("no-evidence regression must expect no model execution: %#v", metadata)
+	}
+	fields, _ := metadata["forbidden_output_fields"].([]string)
+	if !stringSliceContains(fields, "health_grade") || !stringSliceContains(fields, "dimension_scores") {
+		t.Fatalf("v2 regression must forbid legacy score fields: %#v", metadata)
+	}
+}
+
+func stringSliceContains(values []string, expected string) bool {
+	for _, value := range values {
+		if value == expected {
+			return true
+		}
+	}
+	return false
 }

@@ -2,16 +2,15 @@ package service
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"strings"
 	"time"
 
 	"github.com/bodysense/api/internal/model"
-	"github.com/bodysense/api/internal/uploadstorage"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 )
@@ -48,7 +47,6 @@ type AssessmentService struct {
 	unitOfWork     treatmentUnitOfWork
 	deployment     *AgentDeploymentPolicy
 	rollout        *AssessmentRolloutService
-	storage        *uploadstorage.Registry
 }
 
 func NewAssessmentService(
@@ -58,7 +56,6 @@ func NewAssessmentService(
 	bodyState assessmentBodyStateSource,
 	reasoner assessmentReasoner,
 	unitOfWork treatmentUnitOfWork,
-	storage *uploadstorage.Registry,
 ) *AssessmentService {
 	return &AssessmentService{
 		assessmentRepo: assessmentRepo,
@@ -67,7 +64,6 @@ func NewAssessmentService(
 		bodyState:      bodyState,
 		reasoner:       reasoner,
 		unitOfWork:     unitOfWork,
-		storage:        storage,
 	}
 }
 
@@ -86,25 +82,47 @@ func (s *AssessmentService) WithAssessmentRollout(r *AssessmentRolloutService) *
 	return s
 }
 
+const (
+	assessmentOutputContractV2 = "assessment-output-v2"
+	assessmentEvidencePolicyV2 = "assessment-evidence-contract-v2"
+)
+
+// ErrAssessmentOutputRejected means an upstream/generated Assessment failed the
+// trusted evidence contract. No Assessment report or BodyState projection may be
+// persisted when this error is returned.
+var ErrAssessmentOutputRejected = errors.New("assessment output rejected by evidence governance")
+
+var assessmentSafetyNotesV2 = []string{
+	"本报告只呈现待审核的资料与体态观察，不构成医疗诊断、治疗方案或运动处方。" +
+		"如存在持续疼痛、进行性无力、麻木或严重不适，请寻求专业医疗评估。",
+}
+
 type assessmentObservationDraft struct {
-	Kind        string         `json:"kind"`
-	BodyRegion  string         `json:"body_region"`
-	Label       string         `json:"label"`
-	Description string         `json:"description"`
-	Severity    string         `json:"severity"`
-	Confidence  string         `json:"confidence"`
-	Method      string         `json:"method"`
-	Condition   map[string]any `json:"condition"`
+	Kind         string   `json:"kind"`
+	BodyRegion   string   `json:"body_region"`
+	Label        string   `json:"label"`
+	Description  string   `json:"description"`
+	EvidenceRefs []string `json:"evidence_refs"`
 }
 
 type assessmentAgentPayload struct {
-	Status          string                       `json:"status"`
-	HealthGrade     string                       `json:"health_grade"`
-	DimensionScores map[string]float64           `json:"dimension_scores"`
-	Observations    []assessmentObservationDraft `json:"observations"`
-	Summary         string                       `json:"summary"`
-	InformationGaps []string                     `json:"information_gaps"`
-	SafetyNotes     []string                     `json:"safety_notes"`
+	ContractRevision       string                       `json:"contract_revision"`
+	Status                 string                       `json:"status"`
+	EvidencePolicyRevision string                       `json:"evidence_policy_revision"`
+	Observations           []assessmentObservationDraft `json:"observations"`
+	EvidenceCoverage       map[string]any               `json:"evidence_coverage"`
+	EvidenceGaps           []map[string]any             `json:"evidence_gaps"`
+	Summary                string                       `json:"summary"`
+	SafetyNotes            []string                     `json:"safety_notes"`
+	Governance             map[string]any               `json:"governance"`
+}
+
+type assessmentEvidenceProjection struct {
+	Status       string
+	Observations []assessmentObservationDraft
+	Coverage     map[string]any
+	Gaps         []map[string]any
+	Summary      string
 }
 
 func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.UUID) (*model.AssessmentReport, error) {
@@ -135,10 +153,7 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 	if err != nil {
 		return nil, fmt.Errorf("load assessment uploads: %w", err)
 	}
-	images, reportIndicators, completedPosture, err := assessmentInputsFromUploads(ctx, s.storage, uploads)
-	if err != nil {
-		return nil, err
-	}
+	reportIndicators, completedPosture := assessmentInputsFromUploads(uploads)
 	reportIndicatorsPayload, _ := json.Marshal(reportIndicators)
 	posturePayload := json.RawMessage(`{}`)
 	if len(completedPosture) > 0 {
@@ -158,20 +173,28 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 		}
 	}
 
-	raw, err := s.reasoner.GenerateAssessment(ctx, AssessmentGenerationRequest{
+	generationRequest := AssessmentGenerationRequest{
 		ConfigurationID:  configurationID,
 		Profile:          profilePayload,
 		BodyState:        bodyStatePayload,
 		ReportIndicators: reportIndicatorsPayload,
-		Images:           images,
 		PostureAnalysis:  posturePayload,
-	})
+	}
+	raw, err := s.reasoner.GenerateAssessment(ctx, generationRequest)
 	if err != nil {
+		var upstream *AIServiceHTTPError
+		if errors.As(err, &upstream) && upstream.StatusCode == http.StatusUnprocessableEntity {
+			return nil, fmt.Errorf("%w: upstream governance rejected generated output", ErrAssessmentOutputRejected)
+		}
 		return nil, fmt.Errorf("generate typed assessment: %w", err)
 	}
 	payload, err := parseAssessmentAgentPayload(raw)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %v", ErrAssessmentOutputRejected, err)
+	}
+	evidenceProjection, err := validateAssessmentEvidencePayload(payload, generationRequest)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrAssessmentOutputRejected, err)
 	}
 
 	provenance, provenanceErr := parseAssessmentProvenance(raw)
@@ -190,21 +213,33 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 		bodyStatePayload,
 		reportIndicatorsPayload,
 		posturePayload,
-		images,
+		nil,
 	)
 	if replayErr != nil {
 		return nil, replayErr
 	}
 	replayFingerprint := assessmentReplayInputFingerprintOfRaw(replayEnvelope)
-
-	generationTrace := buildAssessmentGenerationTrace(provenance, configurationID, policyRevision, replayFingerprint)
+	generationTrace := buildAssessmentGenerationTrace(
+		provenance,
+		configurationID,
+		policyRevision,
+		replayFingerprint,
+		payload.ContractRevision,
+		payload.EvidencePolicyRevision,
+	)
 
 	report := &model.AssessmentReport{
-		ID: uuid.New(), UserID: userID, Status: payload.Status,
-		HealthGrade: payload.HealthGrade, Summary: strings.TrimSpace(payload.Summary),
-		DimensionScores:         jsonRaw(payload.DimensionScores, `{}`),
-		InformationGaps:         jsonRaw(payload.InformationGaps, `[]`),
-		SafetyNotes:             jsonRaw(payload.SafetyNotes, `[]`),
+		ID:                      uuid.New(),
+		UserID:                  userID,
+		Status:                  evidenceProjection.Status,
+		ContractRevision:        payload.ContractRevision,
+		HealthGrade:             nil,
+		DimensionScores:         nil,
+		EvidenceCoverage:        jsonRaw(evidenceProjection.Coverage, `{}`),
+		EvidenceGaps:            jsonRaw(evidenceProjection.Gaps, `[]`),
+		Summary:                 evidenceProjection.Summary,
+		InformationGaps:         json.RawMessage(`[]`),
+		SafetyNotes:             jsonRaw(assessmentSafetyNotesV2, `[]`),
 		AgentConfigurationID:    provenance.AgentConfigurationID,
 		AgentConfiguration:      datatypes.JSON(normalizeRaw(provenance.AgentConfiguration, `{}`)),
 		ExecutionProvenance:     datatypes.JSON(normalizeRaw(provenance.ExecutionProvenance, `{}`)),
@@ -212,27 +247,28 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 		ReplayInput:             datatypes.JSON(replayEnvelope),
 		CreatedAt:               time.Now().UTC(),
 	}
-	projected := make([]map[string]any, 0, len(payload.Observations))
+	projected := make([]map[string]any, 0, len(evidenceProjection.Observations))
 	err = s.unitOfWork.WithinTransaction(ctx, func(txCtx context.Context) error {
-		for index, draft := range payload.Observations {
+		for index, draft := range evidenceProjection.Observations {
 			value := map[string]any{
 				"label":       draft.Label,
 				"description": draft.Description,
-				"severity":    draft.Severity,
-				"confidence":  draft.Confidence,
 			}
 			stored, revision, projectionErr := s.bodyState.AddAssessmentObservation(txCtx, userID, model.BodyStateObservation{
 				ConcernKey: bodyStateConcernKey(draft.BodyRegion),
 				Kind:       draft.Kind,
 				BodyRegion: draft.BodyRegion,
-				Method:     firstNonEmpty(draft.Method, "assessment"),
+				Method:     "assessment_evidence",
 				Value:      datatypes.JSON(jsonRaw(value, `{}`)),
-				Condition:  datatypes.JSON(jsonRaw(draft.Condition, `{}`)),
+				Condition:  datatypes.JSON(`{}`),
 				SourceKey:  fmt.Sprintf("assessment:%s:observation:%d", report.ID, index),
 				Provenance: datatypes.JSON(jsonRaw(map[string]any{
 					"source_type":          "assessment",
 					"assessment_report_id": report.ID,
-					"agent_output":         draft,
+					"contract_revision":    payload.ContractRevision,
+					"evidence_selection": map[string]any{
+						"kind": draft.Kind, "evidence_refs": draft.EvidenceRefs,
+					},
 				}, `{}`)),
 				ObservedAt:     &report.CreatedAt,
 				LifecycleState: "active",
@@ -247,10 +283,8 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 				"body_region":    draft.BodyRegion,
 				"label":          draft.Label,
 				"description":    draft.Description,
-				"severity":       draft.Severity,
-				"confidence":     draft.Confidence,
 				"method":         stored.Method,
-				"condition":      draft.Condition,
+				"evidence_refs":  draft.EvidenceRefs,
 			}
 			projected = append(projected, item)
 			if revision != nil {
@@ -265,8 +299,6 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 		return nil, fmt.Errorf("persist assessment and BodyState observations: %w", err)
 	}
 	if s.rollout != nil && assessmentRoute != nil {
-		// Shadow observation is non-blocking evidence collection; it never
-		// changes the served report. Log failures so operators can trace.
 		if observeErr := s.rollout.ObserveReport(ctx, userID, *assessmentRoute, report.ID); observeErr != nil {
 			log.Printf("assessment rollout shadow observation failed: %v", observeErr)
 		}
@@ -290,31 +322,30 @@ func parseAssessmentAgentPayload(raw json.RawMessage) (*assessmentAgentPayload, 
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return nil, fmt.Errorf("decode assessment output: %w", err)
 	}
+	if payload.ContractRevision != assessmentOutputContractV2 {
+		return nil, fmt.Errorf("unsupported assessment contract revision %q", payload.ContractRevision)
+	}
 	if payload.Status != "completed" && payload.Status != "insufficient_information" {
 		return nil, fmt.Errorf("invalid assessment status %q", payload.Status)
 	}
-	if payload.HealthGrade != "A" && payload.HealthGrade != "B" && payload.HealthGrade != "C" && payload.HealthGrade != "D" {
-		return nil, fmt.Errorf("invalid assessment health grade %q", payload.HealthGrade)
+	if payload.EvidencePolicyRevision != assessmentEvidencePolicyV2 {
+		return nil, fmt.Errorf("unsupported assessment evidence policy %q", payload.EvidencePolicyRevision)
 	}
-	for _, key := range []string{"posture", "exercise", "lifestyle", "injury_risk", "overall"} {
-		score, ok := payload.DimensionScores[key]
-		if !ok || score < 0 || score > 100 {
-			return nil, fmt.Errorf("invalid assessment score %q", key)
-		}
-	}
-	if payload.Status == "completed" && len(payload.Observations) == 0 {
-		return nil, errors.New("completed assessment requires at least one observation")
+	if verdict, _ := payload.Governance["verdict"].(string); verdict != "accepted" {
+		return nil, fmt.Errorf("assessment governance verdict must be accepted, got %q", verdict)
 	}
 	for index, observation := range payload.Observations {
-		if strings.TrimSpace(observation.Kind) == "" || strings.TrimSpace(observation.Label) == "" || strings.TrimSpace(observation.Description) == "" {
-			return nil, fmt.Errorf("assessment observation %d is incomplete", index)
+		if strings.TrimSpace(observation.Kind) == "" {
+			return nil, fmt.Errorf("assessment observation %d has no kind", index)
+		}
+		if len(observation.EvidenceRefs) != 1 {
+			return nil, fmt.Errorf("assessment observation %d must reference exactly one evidence item", index)
 		}
 	}
 	return &payload, nil
 }
 
-func assessmentInputsFromUploads(ctx context.Context, storage *uploadstorage.Registry, uploads []model.UserUpload) ([]string, []any, []model.UserUpload, error) {
-	images := make([]string, 0, 3)
+func assessmentInputsFromUploads(uploads []model.UserUpload) ([]any, []model.UserUpload) {
 	reportIndicators := make([]any, 0)
 	completedPosture := make([]model.UserUpload, 0, 3)
 	for _, upload := range uploads {
@@ -322,13 +353,7 @@ func assessmentInputsFromUploads(ctx context.Context, storage *uploadstorage.Reg
 		case "photo_front", "photo_side", "photo_back":
 			if upload.AnalysisStatus == "completed" && len(upload.AnalysisResult) > 0 {
 				completedPosture = append(completedPosture, upload)
-				continue
 			}
-			imageBytes, err := readUploadObject(ctx, storage, &upload, MaxFileSize)
-			if err != nil {
-				return nil, nil, nil, fmt.Errorf("read assessment image %s: %w", upload.ID, err)
-			}
-			images = append(images, fmt.Sprintf("data:%s;base64,%s", upload.MimeType, base64.StdEncoding.EncodeToString(imageBytes)))
 		case "report":
 			if upload.OCRStatus != "completed" {
 				continue
@@ -337,13 +362,19 @@ func assessmentInputsFromUploads(ctx context.Context, storage *uploadstorage.Reg
 			if json.Unmarshal(upload.OCRResult, &ocrResponse) == nil {
 				if result, ok := ocrResponse["result"].(map[string]any); ok {
 					if indicators, ok := result["indicators"].([]any); ok {
-						reportIndicators = append(reportIndicators, indicators...)
+						for indicatorIndex, indicator := range indicators {
+							reportIndicators = append(reportIndicators, map[string]any{
+								"upload_id":       upload.ID.String(),
+								"indicator_index": indicatorIndex,
+								"value":           indicator,
+							})
+						}
 					}
 				}
 			}
 		}
 	}
-	return images, reportIndicators, completedPosture, nil
+	return reportIndicators, completedPosture
 }
 
 func jsonRaw(value any, fallback string) json.RawMessage {
@@ -358,6 +389,7 @@ type assessmentProvenance struct {
 	AgentConfigurationID    string          `json:"id"`
 	AgentConfiguration      json.RawMessage `json:"agent_configuration"`
 	ExecutionProvenance     json.RawMessage `json:"execution_provenance"`
+	ExecutionStatus         string
 	agentConfigurationText  string
 	executionProvenanceText string
 }
@@ -371,6 +403,7 @@ func parseAssessmentProvenance(raw json.RawMessage) (assessmentProvenance, error
 		return assessmentProvenance{}, fmt.Errorf("decode assessment provenance: %w", err)
 	}
 	configID, _ := outer.AgentConfiguration["id"].(string)
+	executionStatus, _ := outer.ExecutionProvenance["status"].(string)
 	configJSON, err := json.Marshal(outer.AgentConfiguration)
 	if err != nil {
 		return assessmentProvenance{}, fmt.Errorf("encode assessment agent configuration: %w", err)
@@ -383,6 +416,7 @@ func parseAssessmentProvenance(raw json.RawMessage) (assessmentProvenance, error
 		AgentConfigurationID:    configID,
 		AgentConfiguration:      configJSON,
 		ExecutionProvenance:     execJSON,
+		ExecutionStatus:         executionStatus,
 		agentConfigurationText:  string(configJSON),
 		executionProvenanceText: string(execJSON),
 	}, nil
@@ -417,15 +451,28 @@ func buildAssessmentGenerationTrace(
 	configurationID string,
 	policyRevision string,
 	replayFingerprint string,
+	contractRevision string,
+	evidencePolicyRevision string,
 ) json.RawMessage {
+	modelExecuted := prov.ExecutionStatus == "executed"
+	status := "generated"
+	phase := "generation"
+	if !modelExecuted && prov.ExecutionStatus == "skipped_no_evidence" {
+		status = "derived_without_model"
+		phase = "deterministic_derivation"
+	}
 	trace := map[string]any{
-		"status":                   "generated",
-		"phase":                    "generation",
+		"status":                   status,
+		"phase":                    phase,
 		"agent_configuration_id":   configurationID,
 		"decision_policy_revision": policyRevision,
 		"evaluated":                prov.AgentConfigurationID != "",
+		"model_executed":           modelExecuted,
+		"execution_status":         prov.ExecutionStatus,
 		"outcome":                  "accepted",
 		"replay_input_fingerprint": replayFingerprint,
+		"contract_revision":        contractRevision,
+		"evidence_policy_revision": evidencePolicyRevision,
 	}
 	encoded, err := json.Marshal(trace)
 	if err != nil {
