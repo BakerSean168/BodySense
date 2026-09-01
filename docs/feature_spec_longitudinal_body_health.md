@@ -1,9 +1,9 @@
 # Feature Spec: Longitudinal Body Health Workspace
 
-> Status: Active product specification  
-> Version: v1  
-> Updated: 2026-08-15  
-> Domain source: [Longitudinal BodyState Domain Model](./architecture/longitudinal-body-state-domain.md)  
+> Status: Current product specification
+> Version: v1
+> Updated: 2026-08-15
+> Domain source: [Longitudinal BodyState Domain Model](./architecture/longitudinal-body-state-domain.md)
 > Decision: [ADR 0004](./adr/0004-adopt-longitudinal-body-state-model.md)
 
 ## 1. Feature Positioning
@@ -580,28 +580,34 @@ The business model changes; the runtime ownership decision in ADR 0002 remains.
 
 ---
 
-## 16. MVP Migration Interpretation
+## 16. Implemented Migration Interpretation
 
-Current repository features are transitional:
+The core ADR 0004 migration has completed. Current interpretation is:
 
 ```text
 health_features
-  -> initial workbench projection, later mapped into BodyState concepts
+  -> legacy schema residue only; not current application truth
 
 extracted_info
-  -> narrow symptom precursor, eventually retired
+  -> no longer a durable health aggregate
 
 consultation phase
-  -> workflow state, not long-term health state
+  -> workflow/runtime state only
 
-legacy Diagnosis
-  -> migrate to BodyStateRevision-based DiagnosisAnalysis
+Diagnosis
+  -> immutable DiagnosisAnalysis pinned to BodyState revision
 
-legacy treatment_plan
-  -> migrate to current revisioned Treatment model
+Treatment
+  -> revisioned Treatment authority with separate acceptance state
+
+Training
+  -> execution projection of accepted TreatmentRevision
+
+Outcome
+  -> durable feedback into longitudinal review/BodyState semantics
 ```
 
-The migration should preserve existing user-visible consultation streaming while replacing business truth incrementally.
+Historical migration tasks are kept in archive/ADR history. Remaining schema cleanup or behavioral gaps must be tracked in an active plan rather than left here as implementation TODOs.
 
 ---
 

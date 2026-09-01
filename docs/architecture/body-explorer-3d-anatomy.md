@@ -1,6 +1,6 @@
 # BodySense 3D Body Explorer Architecture
 
-> Status: Target architecture / ready for implementation
+> Status: Implemented / staging validated / final anatomy-boundary visual audit pending
 > Date: 2026-08-27
 > Decision source: ADR 0006
 > Business source of truth: ADR 0004, Longitudinal BodyState Domain Model
@@ -406,7 +406,7 @@ This is a business-contract change and must be implemented through the Go-owned 
 
 ### 15.1 Integration stage
 
-The implementation spike may use the upstream immutable release catalog observed in the Vanatome README:
+The integration fallback still supports the pinned upstream immutable release catalog:
 
 ```text
 https://atlas.vanatome.vixotic.in/releases/1.4.0/catalog.json
@@ -414,9 +414,9 @@ https://atlas.vanatome.vixotic.in/releases/1.4.0/catalog.json
 
 The exact version must be explicit.
 
-### 15.2 Production stage
+### 15.2 Controlled static/CDN stage
 
-Self-host the pinned release under an immutable path, for example:
+BodySense now has sync/verify/publish tooling for the pinned release and staging uses a BodySense-controlled immutable atlas path. The logical release layout is:
 
 ```text
 /static/anatomy/vanatome/1.4.0/
@@ -467,7 +467,7 @@ The Status workspace may show a lightweight skeleton/fallback immediately while 
 
 ### 17.2 Asset strategy
 
-Initial implementation should benchmark:
+The implemented viewer is covered by staging/runtime diagnostics; the final acceptance audit should retain measurements for:
 
 - upstream `full-body` profile;
 - system-specific loading;
@@ -489,7 +489,7 @@ Requirements:
 
 ### 17.4 Performance acceptance
 
-The implementation plan must record real measured values before final cutover:
+The remaining final visual/performance acceptance should preserve measured values for:
 
 - JS lazy chunk size;
 - atlas bytes transferred;

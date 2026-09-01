@@ -20,8 +20,8 @@
 - 🏷️ **[Release Lifecycle V3](./release-lifecycle-v3.md)**
   _定义版本准备、不可变 Release 发布与生产部署选择之间的权限边界、exact-SHA / digest contract 与 rollback 语义。_
 
-- 🧠 **[上下文工程架构 (Context Engineering Architecture)](./context-engineering-architecture.md)** ⚠️ _已归档_
-  _原设计的 Go ContextBuilder 方案已被 ADR 0002 取代。当前由 Python LangGraph checkpoint 拥有 Agent Thread 真值。_
+- 🧠 **[上下文工程架构 (Context Engineering Architecture)](./context-engineering-architecture.md)** — _superseded redirect_
+  _旧 Go ContextBuilder 全文已移入 archive；当前由 Python LangGraph checkpoint 拥有 Agent Thread 真值。_
 
 ---
 
@@ -56,16 +56,16 @@ BodySense 当前业务领域的最高层设计以以下文档为准：
 
 | 文档                                                                      | 子模块          | 状态            | 说明                                                                  |
 | ------------------------------------------------------------------------- | --------------- | --------------- | --------------------------------------------------------------------- |
-| [System Engineering Refactor Plan](./system-engineering-refactor-plan.md) | 总控计划        | 历史/需逐步对齐 | 早期系统级重构方案，遇到业务模型冲突时以新领域模型为准                |
-| [Context Engineering Architecture](./context-engineering-architecture.md) | 上下文工程      | ⚠️ 归档         | ADR 0002 取代了 Go ContextBuilder 方案                                |
-| [Agent Tool Calling Runtime](./agent-tool-calling-runtime.md)             | 工具调用运行时  | ⚠️ 部分归档     | 设计概念仍有效，执行路径已被 ADR 0002 取代                            |
-| [AI Run / Job Runtime](./ai-run-job-runtime.md)                           | 任务运行时      | ~50%            | jobs schema、Go JobRuntime、OCR 迁移                                  |
-| [Stream Event Contract Runtime](./stream-event-contract-runtime.md)       | 流事件契约      | ~30%            | Go StreamRuntime、StreamEvent v1                                      |
-| [AI Output Governance](./ai-output-governance.md)                         | AI 输出治理     | ~35%            | AIOutputGuard 骨架、OutputReviewService                               |
-| [Knowledge Lifecycle](./knowledge-lifecycle-architecture.md)              | 知识生命周期    | ~25%            | lifecycle schema、publication repo                                    |
-| [Longitudinal Health Loop](./longitudinal-health-loop.md)                 | 长期健康闭环    | Active target   | 替代旧线性 Health Journey；BodyState 为闭环中心                       |
-| [Model Gateway Routing](./model-gateway-routing.md)                       | 模型路由        | Current         | LiteLLM 为唯一物理 provider/fallback 边界                             |
-| [Treatment Agent Configuration](./treatment-agent-configuration.md)       | Treatment Agent | Current         | Immutable config、Go identity gate、durable provenance、eval baseline |
+| [System Engineering Refactor Plan](./system-engineering-refactor-plan.md) | 历史总控计划 | Historical redirect | 旧全文已移至 archive，不再承担当前 backlog |
+| [Context Engineering Architecture](./context-engineering-architecture.md) | 上下文工程 | Superseded redirect | ADR 0002 已删除 Go ContextBuilder 目标 |
+| [Agent Tool Calling Runtime](./agent-tool-calling-runtime.md) | 工具调用运行时 | 部分历史 | 概念可参考；执行所有权以 ADR 0002 为准 |
+| [AI Run / Job Runtime](./ai-run-job-runtime.md) | 任务运行时 | Current / partial | JobRuntime 已承载 OCR + Posture；其它任务按业务需要迁移 |
+| [Stream Event Contract Runtime](./stream-event-contract-runtime.md) | 流事件契约 | Current / evolving | Runtime Event Log、StreamEvent contract 与 projection |
+| [AI Output Governance](./ai-output-governance.md) | AI 输出治理 | Current | role-specific deterministic governance；generic Guard 不是最终 authority |
+| [Knowledge Lifecycle](./knowledge-lifecycle-architecture.md) | 知识生命周期 | Current / evolving | source registry、review/publication、published retrieval、observations |
+| [Longitudinal Health Loop](./longitudinal-health-loop.md) | 长期健康闭环 | Current | BodyState 为闭环中心 |
+| [Model Gateway Routing](./model-gateway-routing.md) | 模型路由 | Current | LiteLLM 为唯一物理 provider/fallback 边界 |
+| [Treatment Agent Configuration](./treatment-agent-configuration.md) | Treatment Agent | Current | Immutable config、Go identity gate、durable provenance、eval baseline |
 
 ---
 
@@ -77,6 +77,9 @@ BodySense 当前业务领域的最高层设计以以下文档为准：
 - **[ADR 0002: Python 拥有 Agent Runtime 真值，Go 拥有 Durable Ledger 真值](../adr/0002-agent-runtime-ownership.md)** ⭐
   _Python 通过 LangGraph checkpoint 拥有 Agent Thread 运行时真值；Go 拥有用户业务真值、Runtime Event Log 和 projection；Web 为 projection consumer。_
 
+- **[ADR 0003: StreamEvent Contract Versioning](../adr/0003-stream-event-versioning.md)**
+  _跨 Web/Go/Python 的公共 StreamEvent 必须版本化并以契约测试保持一致。_
+
 - **[ADR 0004: Adopt a Longitudinal BodyState as the Core Health Domain Model](../adr/0004-adopt-longitudinal-body-state-model.md)** ⭐
   _一用户一份长期 BodyState；Conversation 只是交互入口；Diagnosis / Treatment pin 明确 BodyState revision；取消 MedicalRecord 作为核心 aggregate，并用 BodyState / Diagnosis / Treatment 历史表达长期健康变化。_
 
@@ -86,8 +89,14 @@ BodySense 当前业务领域的最高层设计以以下文档为准：
 - **[ADR 0006: Adopt Vanatome as the 3D Anatomy Visualization Engine](../adr/0006-adopt-vanatome-3d-anatomy-engine.md)** ⭐
   _采用 Vanatome 作为默认 3D anatomy engine；BodySense 自有 BodyRegionOntology 保持 durable domain 与 third-party anatomyId 解耦；完整 anatomy 能力一次实现，通过 progressive disclosure 控制用户复杂度。_
 
+- **[ADR 0007: Separate stable Profile from longitudinal Lifestyle and Body Metrics](../adr/0007-separate-stable-profile-from-longitudinal-lifestyle.md)** ⭐
+  _Profile 仅保留稳定身份；身高体重、生活方式和伤病史进入 BodyState，并通过统一 current-context/review 语义维护历史。_
+
 - **[ADR 0008: Adopt Delivery Platform V3](../adr/0008-adopt-delivery-platform-v3.md)** ⭐
   _融合 MemoFlow 的 delivery control/artifact/observation 思路与 BodySense 的 coherent production watcher：PR 差分、main 全量、build-once/promote-many，以及 Release 与 Deploy 解耦。_
+
+- **[ADR 0009: Adopt an evidence-grounded Assessment contract](../adr/0009-adopt-evidence-grounded-assessment-contract.md)** ⭐
+  _Assessment 模型只选择 `kind + evidence_ref`；应用拥有 evidence catalog、确定性渲染与 durable gate；零证据直接跳过模型。_
 
 ---
 
@@ -127,4 +136,7 @@ BodySense 当前业务领域的最高层设计以以下文档为准：
 
 ## Current source of truth
 
-- [Current Longitudinal System](./current-longitudinal-system.md) — authoritative implemented architecture
+- [Current Longitudinal System](./current-longitudinal-system.md) — authoritative implemented longitudinal architecture
+- [Current Technical Approach](./technical-approach.md) — implemented stack, route and persistence snapshot
+- [Agent Platform Role Governance](./agent-platform-role-governance.md) — current LLM/mechanism governance classes
+- [Documentation / Code Alignment Audit](../plan/active/2026-09-01-documentation-code-alignment-audit.md) — known remaining mismatches; aspirational behavior must stay here until implemented

@@ -56,48 +56,47 @@ graph TD
 | `STEP_LIFESTYLE` | 完成/跳过生活方式 | `STEP_HISTORY` | 自由文本可为空 |
 | `STEP_HISTORY` | 完成/跳过伤病史 | `STEP_UPLOAD` | - |
 | `STEP_UPLOAD` | 点击开始评估 | `PERSISTING_CONTEXT` | 先按领域边界写 stable Profile 与 BodyState |
-| `PERSISTING_CONTEXT` | 写入成功 | `ANALYZING_MULTIMODAL` | Assessment 读取刚写入的 current BodyState |
+| `PERSISTING_CONTEXT` | 写入成功 | `GENERATING_ASSESSMENT` | Assessment 从 frozen health input 构建 evidence catalog；图片本身不进入 Assessment |
 | `PERSISTING_CONTEXT` | 写入失败 | `STEP_UPLOAD` | 显式错误；不得只保存一份胖 Profile 作为降级真值 |
-| `ANALYZING_MULTIMODAL` | 报告生成成功 | `REPORT_COMPLETED` | Observation 写入 BodyState；进入工作台 |
-| `ANALYZING_MULTIMODAL` | 生成失败 | `STEP_UPLOAD` | 保留已提交的用户健康上下文，允许重试 Assessment |
+| `GENERATING_ASSESSMENT` | 报告生成成功 | `REPORT_COMPLETED` | 通过 evidence contract 的 Observation 写入 BodyState；进入工作台 |
+| `GENERATING_ASSESSMENT` | 生成失败 | `STEP_UPLOAD` | 保留已提交的用户健康上下文，允许重试 Assessment |
 
 ---
 
 ## 3. AI 节点设计
 
-### 3.1 节点 1：体检报告 OCR 提取节点
-*   **核心意图**：从 PaddleOCR 识别出的松散文本行中，精准提炼与肌肉、骨骼、炎症、代谢相关的关键健康指标。
-*   **输入**：`ocr_raw_text` (String)
-*   **输出**：`extracted_health_metrics` (JSON)
-*   **提示词策略 (Prompt Strategy)**：
-    *   **意图设定**：你是一位专业的医学数据清洗助手。
-    *   **约束条件**：
-        1. 仅提取与运动、骨骼、肌肉、炎症、酸碱平衡、微量元素（如钙、镁、维生素D、尿酸、类风湿因子、C反应蛋白等）相关的指标。过滤其他无关指标（如乙肝五项、视力测试等）。
-        2. 输出格式必须是合法 JSON，不要输出 Markdown 标记外的任何废话。
-        3. 对于每一项提取的指标，包含：指标名称、数值、参考单位、状态（正常/偏高/偏低）。
-    *   **Prompt 模板**：
-        ```
-        你是一位专业的医学数据清洗助手。请从以下通过 OCR 识别出的体检报告文本中，提取出所有与“骨骼、肌肉、微量元素、维生素、炎性反应、电解质”相关的关键指标。
-        
-        [输入文本]
-        {{ocr_raw_text}}
-        
-        [输出格式要求]
-        必须输出为以下 JSON 格式：
-        {
-          "metrics": [
-            {
-              "name": "指标名称(中文)",
-              "value": "测量值(数字/正负号)",
-              "unit": "单位(如 ng/ml)",
-              "status": "normal / high / low / positive"
-            }
-          ]
-        }
-        如未发现相关指标，请返回空数组：{"metrics": []}。不要添加任何解释说明。
-        ```
+### 3.1 节点 1：体检报告 OCR / 指标提取机制
 
-### 3.2 节点 2：多模态健康评估节点
+OCR 是**非 LLM mechanism**，不是一个医学数据清洗 Agent。当前实现链路：
+
+```text
+UploadStorage bytes
+  -> durable JobRuntime OCR job
+  -> Python /api/ocr/extract
+  -> Tesseract OCR
+     - image: pytesseract
+     - PDF: PyMuPDF 逐页渲染后 OCR
+  -> deterministic HealthIndicator regex extractor
+  -> OCRResult(raw_text, indicators, confidence)
+  -> user_uploads.ocr_result
+```
+
+每个 `HealthIndicator` 当前包含：
+
+```text
+name
+value
+unit?
+reference_range?
+confidence = high | medium | low
+```
+
+当前实现**没有**再调用 LLM 根据 OCR 文本自由挑选“骨骼/肌肉相关指标”，也没有让模型生成 `normal/high/low` 医学解释。这样可以避免把 OCR 噪声经过第二个生成模型进一步放大。
+
+> [!warning] Remaining evidence gap
+> `OCRResult` 已有 confidence，但当前 Assessment report-indicator catalog 仍会收集 completed OCR 中的全部 indicator，尚未把低置信度/用户确认状态编码成明确的 admissibility gate；OCR engine/parser revision provenance 也尚未持久化。两项缺口记录在 `docs/plan/active/2026-09-01-documentation-code-alignment-audit.md`，不得把“completed OCR”误写成“已经确认的健康事实”。
+
+### 3.2 节点 2：Evidence-grounded Assessment
 
 **核心意图**：生成 reviewable observation candidates，而不是把 Onboarding 资料直接变成诊断或治疗建议。
 
@@ -238,11 +237,12 @@ all writes participate in one database transaction
 ## 5. 异常与兜底策略
 
 ### 5.1 OCR 处理异常
-*   **情况 1：上传的图片不是体检单，或字迹模糊导致 PaddleOCR 提取内容为空**。
-    *   *降级处理*：后端跳过 LLM 结构化提取节点，直接返回空的 `metrics` 数组。
-    *   *前端交互*：前端检测到解析结束但 `metrics` 为空，在上传组件处使用 **Sonner Toast 吐司提示**：“未能在图片中识别出有效的体检指标，我们将在健康评估中忽略体检数据，不影响其他评估。”
-*   **情况 2：OCR 服务超时或挂掉**。
-    *   *降级处理*：Go 后端在转发 Python 服务时设置 8s 超时。若超时，则直接返回空结果，并在 Onboarding 请求中标记 `health_report_status = "skipped"`。
+* **情况 1：上传内容不是可识别体检报告，或 OCR 文本/指标为空**。
+  * *处理*：OCR job 可以 completed，但 `indicators=[]`；Assessment 不把空报告制造成健康 observation。
+  * *前端*：明确提示“未识别到可用体检指标”，其它 BodyState/Posture evidence 仍可独立参与 Assessment。
+* **情况 2：OCR job 失败、超时或服务重启恢复**。
+  * *处理*：JobRuntime 持久化 job 状态与幂等键 `upload_ocr:<upload_id>`；失败/超时写入 upload OCR 状态，不能伪装成 completed evidence。
+  * *恢复*：服务启动后的 recoverable-job 扫描负责处理 pending/stale running OCR job；不依赖不可恢复的 request goroutine。
 
 ### 5.2 Posture 图像分析失败或尚未完成
 *   **情况：Posture Agent 无法读取/分析图片，或用户图片仍处于 pending**。

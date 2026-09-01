@@ -1,6 +1,6 @@
 # Diagnosis Promotion, Shadow, Canary, and Rollback
 
-Status: Phase 9 implementation checkpoint (2026-08-20)
+Status: Current rollout mechanism (implemented). Repository/Compose defaults remain Champion; shadow/canary/promoted serving requires explicit environment selection plus the approved promotion record.
 
 ## North-star rule
 
@@ -58,8 +58,7 @@ DIAGNOSIS_ROLLOUT_STAGE=shadow|canary|promoted
 ```
 
 A missing/wrong promotion record or different config pair fails service startup.
-The old `DIAGNOSIS_AGENT_CONFIGURATION_ID` is only a Phase-10 compatibility alias
-for the Champion pointer.
+`DIAGNOSIS_AGENT_CONFIGURATION_ID` is retired and is not read by the current deployment policy; Diagnosis serving is controlled only by the explicit Champion/Challenger/Stage fields above.
 
 ## Stable canary assignment
 

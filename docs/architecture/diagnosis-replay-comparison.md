@@ -1,6 +1,6 @@
 # Diagnosis Replay and Configuration Comparison
 
-Status: Phase 8 implementation checkpoint (2026-08-20)
+Status: Historical Phase-8 implementation checkpoint; historical/counterfactual replay is implemented.
 
 ## Purpose
 

@@ -1,6 +1,6 @@
 # Diagnosis Evidence Acquisition Architecture
 
-> Status: implemented Challenger boundary in Phase 5; production promotion remains Phase 9 governance work.
+> Status: Historical Phase-5 implementation checkpoint; capability and rollout machinery are implemented. Repository/Compose default serving remains the v1 Champion unless an operator explicitly advances the qualified v1 -> v3 rollout.
 
 ## Ownership
 

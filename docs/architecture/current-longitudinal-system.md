@@ -36,16 +36,16 @@ There is no user-level terminal `completed` state. `HealthWorkspace` derives cur
 
 ## 2. State ownership
 
-| State                                                       | Owner                | Rules                                                                                                                                |
-| ----------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Conversation messages, run envelopes, public runtime events | Go                   | Durable public ledger, request idempotency, one active run per user conversation                                                     |
-| LangGraph checkpoints, tool loop, interrupt/resume          | Python               | Agent runtime only; not business truth                                                                                               |
-| BodyState current projection and revisions                  | Go                   | One per user, optimistic concurrency, semantic revisions                                                                             |
-| DiagnosisAnalysis and candidate assessments                 | Go                   | Analysis immutable; user assessment separate and independently editable                                                              |
+| State                                                       | Owner                | Rules                                                                                                                                              |
+| ----------------------------------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Conversation messages, run envelopes, public runtime events | Go                   | Durable public ledger, request idempotency, one active run per user conversation                                                                   |
+| LangGraph checkpoints, tool loop, interrupt/resume          | Python               | Agent runtime only; not business truth                                                                                                             |
+| BodyState current projection and revisions                  | Go                   | One per user, optimistic concurrency, semantic revisions                                                                                           |
+| DiagnosisAnalysis and candidate assessments                 | Go                   | Analysis immutable; user assessment separate and independently editable                                                                            |
 | Treatment and TreatmentRevision                             | Go                   | AI may propose through an exact immutable Agent configuration; Go verifies/persists provenance and alone accepts; accepted revisions are immutable |
-| Intervention, TrainingPlan, TrainingLog, Outcome            | Go                   | Training is an execution projection of an accepted revision                                                                          |
-| Capability/action projection                                | Go `HealthWorkspace` | Pure read; no hidden mutation from GET                                                                                               |
-| React query cache and workbench preferences                 | Web                  | Server projection cache only; URL owns active conversation/workspace mode; Zustand owns presentation preferences, never health truth |
+| Intervention, TrainingPlan, TrainingLog, Outcome            | Go                   | Training is an execution projection of an accepted revision                                                                                        |
+| Capability/action projection                                | Go `HealthWorkspace` | Pure read; no hidden mutation from GET                                                                                                             |
+| React query cache and workbench preferences                 | Web                  | Server projection cache only; URL owns active conversation/workspace mode; Zustand owns presentation preferences, never health truth               |
 
 ## 3. Mandatory mutation invariants
 
@@ -91,7 +91,7 @@ Assessment is a derived report, not a second health truth or Treatment system.
 
 - The application receives stable Profile context plus current BodyState, report indicators and **completed governed Posture analysis**; Profile is not health-observation evidence, and the v3 Agent itself only receives the canonical evidence catalog. Assessment never directly interprets raw images.
 - It emits traceable Observation candidates with exact evidence refs; evidence coverage/gaps are derived deterministically by the application.
-- Observations are projected into BodyState with content-addressed source keys before the report is stored.
+- Observations are projected into BodyState inside the same transaction as the report, using report-scoped source keys (`assessment:<report_id>:observation:<index>`). Cross-report evidence/content-addressed idempotency is an explicit `DECISION-GAP`: report-history semantics and evidence-candidate deduplication are both valid models, so no stronger key should be introduced until the longitudinal meaning is chosen.
 - It does not emit executable exercise, nutrition, or treatment prescriptions.
 
 ### Safety and consultation input

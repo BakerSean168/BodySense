@@ -1,6 +1,6 @@
 # Diagnosis Decision Authority and SafetyEnvelope
 
-> Status: Phase 6 implemented as a qualified cumulative Challenger. Production promotion remains Phase 9 work.
+> Status: Historical Phase-6 implementation checkpoint; DecisionAuthority and rollout machinery are implemented. Repository/Compose default serving remains the v1 Champion unless an operator explicitly advances the qualified v1 -> v3 rollout.
 
 ## Authority boundary
 

@@ -1,7 +1,7 @@
 """Posture-analysis Pydantic models.
 
 Mirrors the data contract in
-docs/plan/active/posture-photo-analysis-plan.md §3 so the AI service, Go
+docs/plan/archive/posture-photo-analysis-plan.md §3 so the AI service, Go
 backend and frontend all agree on the shape stored in
 `user_uploads.analysis_result`.
 """

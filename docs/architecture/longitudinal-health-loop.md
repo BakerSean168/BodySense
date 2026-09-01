@@ -1,8 +1,8 @@
 # BodySense Longitudinal Health Loop Architecture
 
-> Status: Active target architecture  
-> Updated: 2026-08-15  
-> Domain source: [Longitudinal BodyState Domain Model](./longitudinal-body-state-domain.md)  
+> Status: Current implemented longitudinal architecture
+> Updated: 2026-08-15
+> Domain source: [Longitudinal BodyState Domain Model](./longitudinal-body-state-domain.md)
 > Decision: [ADR 0004](../adr/0004-adopt-longitudinal-body-state-model.md)
 
 ## 1. Why the old linear journey model was replaced

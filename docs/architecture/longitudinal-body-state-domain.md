@@ -1272,31 +1272,28 @@ Future decisions must preserve the invariants above.
 
 ---
 
-## 34. Migration Interpretation of Current Models
+## 34. Completed Migration Notes
 
-Existing repository concepts should be interpreted as migration-era pieces:
+The migration-era overloads that originally motivated this model have been removed from the current decision path:
 
 ```text
-consultation_sessions.extracted_info
-    -> narrow precursor to BodyState Facts
+consultation_sessions
+  -> workflow/session state only; no current Diagnosis/Treatment truth ownership
 
-consultation_sessions.health_features
-    -> precursor to BodyState Fact / Observation projection
+DiagnosisDependencies
+  -> consumes pinned BodyState revision + relevant history + stable Profile + controlled evidence acquisition
+  -> no preloaded session diagnosis/treatment JSON or generic rag_context as health truth
 
-Consultation phase
-    -> workflow/runtime state, not the user's health lifecycle
+DiagnosisAgentOutput
+  -> no business max-3 candidate target constraint
 
-DiagnosisDependencies(extracted_info, profile, conversation_summary, rag_context)
-    -> transitional Diagnosis input, not the target domain boundary
-
-DiagnosisAgentOutput candidates max 3
-    -> obsolete target constraint, to be removed in implementation
-
-consultation_sessions.diagnosis / treatment_plan
-    -> overloaded legacy fields to be migrated
+DiagnosisAnalysis / TreatmentRevision / Intervention / Outcome
+  -> separate durable history aligned with BodyState revisions
 ```
 
-This document defines the target semantics; migration should preserve existing runtime contracts until their replacement vertical slice is ready.
+Historical migration details belong in archived implementation plans. This domain document now describes the target/current invariants rather than carrying already-completed TODOs.
+
+Remaining implementation gaps must be recorded explicitly in an active plan instead of being embedded as stale migration annotations. See [`2026-09-01-documentation-code-alignment-audit.md`](../plan/active/2026-09-01-documentation-code-alignment-audit.md).
 
 ---
 

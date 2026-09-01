@@ -258,8 +258,9 @@ export function UploadStep() {
       <div>
         <h2 className="text-xl font-bold text-slate-900">材料上传 (可选)</h2>
         <p className="text-sm text-slate-500 mt-1 leading-relaxed">
-          上传您的体态照片，AI
-          会通过多模态视觉进行体态分析（如头前移、高低肩等倾向）；上传体检报告，我们将自动识别微量元素等影响体态康复的指标。
+          上传体态照片后，会由独立的体态分析流程生成可复核的视觉观察；上传体检报告后，会通过
+          OCR
+          识别报告中的结构化指标。成功处理后的结果才会作为后续健康评估的证据来源。
         </p>
         <p className="text-[11px] text-slate-400 mt-1">
           注：AI 分析基于照片视觉判断，仅供参考，不构成医疗诊断。

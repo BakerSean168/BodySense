@@ -2,11 +2,11 @@
 
 ## Status
 
-Accepted
+Accepted — runtime-module principle retained; Agent runtime ownership details superseded by ADR 0002
 
 ## Context
 
-BodySense uses React, Go, and Python as separate runtimes. The system already has ContextBuilder, StreamRuntime, ToolRuntime, JobRuntime, and KnowledgeLifecycle concepts, but orchestration details were still spread across large caller modules.
+BodySense uses React, Go, and Python as separate runtimes. At the time of this decision the system had ContextBuilder, StreamRuntime, ToolRuntime, JobRuntime, and KnowledgeLifecycle concepts, but orchestration details were still spread across large caller modules. ADR 0002 later replaced the transitional Go/Python Agent-runtime ownership split while preserving the broader principle of deep runtime modules.
 
 ## Decision
 

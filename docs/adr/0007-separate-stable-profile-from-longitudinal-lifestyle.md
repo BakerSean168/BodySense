@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-08-27
 - Supersedes: the temporary profile health-context fields introduced during rapid UI iteration
-- Related: ADR 0004 (Longitudinal BodyState)
+- Related: ADR 0004 (Longitudinal BodyState), ADR 0009 (Evidence-grounded Assessment; narrows Assessment evidence semantics)
 
 ## Context
 
@@ -110,18 +110,21 @@ excluded_from_reasoning = true
 
 `LifestyleSnapshot.pending_updates` exposes those candidates to the user. Accepting a candidate is an explicit user-review command: the previous confirmed current fact is closed, the candidate is promoted to `confirmed + active + included`, and the supersession is committed in one BodyState revision. Rejecting a candidate keeps the durable audit record but marks it `rejected + excluded_from_reasoning`. Direct onboarding/editor input remains immediately confirmed because the user is editing the canonical structure directly.
 
-### 7. Assessment receives stable Profile and BodyState separately
+### 7. Assessment receives stable Profile and health evidence separately
 
-Assessment input is intentionally split:
+This ADR established the ownership split between stable identity and longitudinal health context. ADR 0009 later narrowed the serving Assessment contract further:
 
 ```text
-profile            = stable identity context
-body_state         = current health truth
-report_indicators  = current external-report input
-posture_analysis   = current posture-analysis input
+profile
+  = stable identity context only
+  = NOT health-observation evidence
+
+body_state / report_indicators / posture_analysis
+  -> authoritative evidence catalog
+  -> the only sources that may support durable Assessment observations
 ```
 
-Mutable health information is never embedded into `profile` to make the prompt convenient.
+The request may still carry stable Profile context for compatibility/other use-cases, but Profile existence must never manufacture an Assessment health observation. Mutable health information is never embedded into `profile` to make the prompt convenient.
 
 ### 8. Destructive development migration is intentional
 

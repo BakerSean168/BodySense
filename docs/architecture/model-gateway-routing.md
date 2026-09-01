@@ -159,7 +159,7 @@ src/ai/pydantic_model.py
 src/ai/diagnosis_model_boundary.py
 src/config/models.yaml
 DIAGNOSIS_MODEL_BACKEND
-DIAGNOSIS_AGENT_CONFIGURATION_ID compatibility alias
+DIAGNOSIS_AGENT_CONFIGURATION_ID
 llm.json / llm.text business routing semantics
 ```
 

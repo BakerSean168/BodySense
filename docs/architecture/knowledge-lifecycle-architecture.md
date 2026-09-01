@@ -11,20 +11,20 @@
 
 **当前状态**：核心生命周期、Published Retrieval / Citation / Grounding、Runtime Answer Attribution 与首个 artifact-bound Reviewed Cohort 已实现；管理 UI 与真实生产 observation window 仍待运行数据形成。
 
-| 模块 | 状态 | 说明 |
-|---|---|---|
-| lifecycle_status 列 | ✅ 已完成 | knowledge_units 表添加 lifecycle_status 字段。Phase 07a 完成。 |
-| quality_score / content_hash 列 | ✅ 已完成 | knowledge_units 表扩展。Phase 07a 完成。 |
-| license_status 列 | ✅ 已完成 | knowledge_sources 表扩展。Phase 07a 完成。 |
-| knowledge_publications 表 | ✅ 已完成 | 发布批次管理表。Phase 07a 完成。 |
-| KnowledgePublication Repository | ✅ 已完成 | Go 侧 repository 实现。 |
-| KnowledgeSourceRegistry | 未实现 | 知识源注册和管理。 |
-| 发布批次工作流 | ✅ 核心已完成 | Go `KnowledgePublicationService` 事务化执行 reviewed → published 与显式 rollback；当前通过 operator CLI 驱动，管理 UI 未实现。 |
-| 质量阈值门控 | ✅ 核心已完成 | 发布前强制 review/lifecycle、quality ≥ 0.90、content hash、external support、claim review、license 与 provenance gate。 |
-| 检索质量评估 | ✅ 首轮完成 | unpublished retrieval + published positive/negative retrieval、citation identity/provenance、claim grounding pilot 已建立。 |
-| Publication observations / gate | ✅ 首轮完成 | migration 51 + Go observation service/CLI；按 immutable publication identity 汇总并输出 continue / hold / rollback。 |
-| Reviewed cohort artifact-bound publish | ✅ 首轮完成 | Stage 8 `publish-reviewed` 从 immutable reviewed snapshot 派生精确 unit set，并在 publication transaction 内交叉验证 content/claim/review/evidence/provenance identity。 |
-| Runtime answer attribution | ✅ 首轮完成 | Stage 7 `source.answer_attribution.added` + `runtime_answer` observation；真实 production window 尚需上线后采样。 |
+| 模块                                   | 状态          | 说明                                                                                                                                                                     |
+| -------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| lifecycle_status 列                    | ✅ 已完成     | knowledge_units 表添加 lifecycle_status 字段。Phase 07a 完成。                                                                                                           |
+| quality_score / content_hash 列        | ✅ 已完成     | knowledge_units 表扩展。Phase 07a 完成。                                                                                                                                 |
+| license_status 列                      | ✅ 已完成     | knowledge_sources 表扩展。Phase 07a 完成。                                                                                                                               |
+| knowledge_publications 表              | ✅ 已完成     | 发布批次管理表。Phase 07a 完成。                                                                                                                                         |
+| KnowledgePublication Repository        | ✅ 已完成     | Go 侧 repository 实现。                                                                                                                                                  |
+| KnowledgeSourceRegistry                | ✅ 已完成     | Go `KnowledgeSourceRegistry` + operator-protected register/list API；source identity/license/provenance 在 ingestion 前建立。                                            |
+| 发布批次工作流                         | ✅ 核心已完成 | Go `KnowledgePublicationService` 事务化执行 reviewed → published 与显式 rollback；当前 operator CLI 是受支持的管理入口，独立管理 UI 不属于当前 correctness contract。    |
+| 质量阈值门控                           | ✅ 核心已完成 | 发布前强制 review/lifecycle、quality ≥ 0.90、content hash、external support、claim review、license 与 provenance gate。                                                  |
+| 检索质量评估                           | ✅ 首轮完成   | unpublished retrieval + published positive/negative retrieval、citation identity/provenance、claim grounding pilot 已建立。                                              |
+| Publication observations / gate        | ✅ 首轮完成   | migration 51 + Go observation service/CLI；按 immutable publication identity 汇总并输出 continue / hold / rollback。                                                     |
+| Reviewed cohort artifact-bound publish | ✅ 首轮完成   | Stage 8 `publish-reviewed` 从 immutable reviewed snapshot 派生精确 unit set，并在 publication transaction 内交叉验证 content/claim/review/evidence/provenance identity。 |
+| Runtime answer attribution             | ✅ 首轮完成   | Stage 7 `source.answer_attribution.added` + `runtime_answer` observation；真实 production window 尚需上线后采样。                                                        |
 
 **相关 Phase**：07a → 归档于 `docs/plan/archive/implementation/`
 
@@ -246,62 +246,34 @@ rollback_of
 
 ---
 
-## 6. 数据库设计
+## 6. 当前数据库边界
 
-### 6.1 knowledge_sources
+旧 `knowledge_entries` 单表方案已经退出当前架构。知识生命周期使用显式 source/unit/publication 模型：
 
-```sql
-CREATE TABLE knowledge_sources (
-    id              UUID PRIMARY KEY DEFAULT uuidv7(),
-    source_key      TEXT NOT NULL UNIQUE,
-    source_type     VARCHAR(40) NOT NULL,
-    title           TEXT NOT NULL,
-    author          TEXT,
-    problem_slug    TEXT NOT NULL,
-    original_uri    TEXT,
-    artifact_dir    TEXT,
-    license_status  VARCHAR(40) NOT NULL DEFAULT 'unknown',
-    status          VARCHAR(40) NOT NULL DEFAULT 'raw',
-    metadata        JSONB NOT NULL DEFAULT '{}',
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+```text
+knowledge_sources
+  -> durable source identity / license / provenance / registration
+
+knowledge_segments
+  -> source transcript segments
+
+knowledge_units
+  -> generated/curated/reviewed/published retrievable units
+  -> embedding + lifecycle/review/quality/content identity
+
+knowledge_clips
+  -> media artifacts linked to source/unit
+
+knowledge_publications
+  -> immutable publication batch / rollback lineage
+
+knowledge_publication_observations
+  -> rollout/runtime quality observations
 ```
 
-### 6.2 knowledge_units
+The canonical schema is the migration history (`000010`, `000019`, `000020`, `000023`, `000050`, `000051`, `000056`, and later migrations), not an illustrative `ALTER knowledge_entries` snippet.
 
-当前已有 `knowledge_entries`，建议演进或新增状态字段：
-
-```sql
-ALTER TABLE knowledge_entries
-ADD COLUMN IF NOT EXISTS source_id UUID REFERENCES knowledge_sources(id),
-ADD COLUMN IF NOT EXISTS unit_key TEXT,
-ADD COLUMN IF NOT EXISTS lifecycle_status VARCHAR(40) NOT NULL DEFAULT 'generated',
-ADD COLUMN IF NOT EXISTS quality_score NUMERIC,
-ADD COLUMN IF NOT EXISTS review_status VARCHAR(40) NOT NULL DEFAULT 'unreviewed',
-ADD COLUMN IF NOT EXISTS evidence JSONB NOT NULL DEFAULT '{}',
-ADD COLUMN IF NOT EXISTS publication_id UUID,
-ADD COLUMN IF NOT EXISTS content_hash TEXT;
-```
-
-### 6.3 knowledge_publications
-
-```sql
-CREATE TABLE knowledge_publications (
-    id              UUID PRIMARY KEY DEFAULT uuidv7(),
-    version         TEXT NOT NULL UNIQUE,
-    status          VARCHAR(40) NOT NULL,
-    summary         TEXT,
-    unit_count      INT NOT NULL DEFAULT 0,
-    created_by      UUID REFERENCES users(id),
-    published_at    TIMESTAMPTZ,
-    rollback_of     UUID REFERENCES knowledge_publications(id),
-    metadata        JSONB NOT NULL DEFAULT '{}',
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-```
-
----
+`KnowledgeSourceRegistry` is now implemented and establishes source identity before ingestion. Operator HTTP routes are capability-protected; generated content does not become published retrieval material merely because a pipeline completed.
 
 ## 7. 质量门槛
 
@@ -715,4 +687,3 @@ runtime samples 时 gate 保持 `hold`。
 4. RAG 检索质量可以用 query set 评估。
 5. `search_knowledge` 工具只返回满足质量门槛的结果。
 6. 视频入库从脚本能力升级为可管理生命周期。
-

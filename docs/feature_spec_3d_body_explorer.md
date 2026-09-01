@@ -1,6 +1,7 @@
 # Feature Spec: 3D Body Explorer
 
-> Status: Ready for implementation
+> Status: Implemented / staging validated / final visual anatomy-boundary audit pending
+> Updated: 2026-09-01
 > Date: 2026-08-27
 > Architecture: `architecture/body-explorer-3d-anatomy.md`
 > Domain mapping: `architecture/body-region-ontology.md`

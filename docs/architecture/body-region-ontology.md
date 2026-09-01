@@ -1,6 +1,6 @@
 # BodySense BodyRegionOntology
 
-> Status: Target canonical ontology v1
+> Status: Implemented canonical ontology v1 / atlas 1.4.0 mapping active
 > Date: 2026-08-27
 > Decision source: ADR 0006
 > Scope: durable BodySense body-region identity and mapping to anatomy visualization
@@ -244,7 +244,7 @@ The mapping is versioned separately from the ontology:
 }
 ```
 
-Actual anatomy IDs must be generated/curated from the pinned atlas registry during implementation. This design document deliberately does not invent identifiers.
+Actual anatomy IDs are generated/curated against the pinned Vanatome 1.4.0 registry. The current generated registry is `apps/web/src/features/body-explorer/data/vanatome-1.4.0-registry.generated.json`, and the checked mapping is `vanatome-region-map.v1.json`.
 
 ## 10. Mapping construction process
 
@@ -447,9 +447,9 @@ select anatomy structure
 -> no BodyState filter unless user explicitly navigates to an owning/mapped region
 ```
 
-## 21. Implementation artifacts
+## 21. Implemented artifacts
 
-The implementation should produce:
+The implementation currently provides:
 
 - `body-regions.v1.json` — canonical region definitions and aliases;
 - `vanatome-region-map.v1.json` — exact mapping for pinned atlas release;
