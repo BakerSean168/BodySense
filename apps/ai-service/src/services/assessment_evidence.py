@@ -15,7 +15,15 @@ from typing import Any
 from ..models.assessment import AssessmentEvidenceSource
 from .governance.types import GovernanceIssue, IssueSeverity
 
-ASSESSMENT_EVIDENCE_POLICY_REVISION = "assessment-evidence-contract-v2"
+ASSESSMENT_EVIDENCE_POLICY_REVISION_V2 = "assessment-evidence-contract-v2"
+ASSESSMENT_EVIDENCE_POLICY_REVISION_V3 = "assessment-evidence-contract-v3"
+ASSESSMENT_EVIDENCE_POLICY_REVISION = ASSESSMENT_EVIDENCE_POLICY_REVISION_V3
+OCR_INDICATOR_ADMISSIBILITY_POLICY_REVISION = "ocr-indicator-admissibility-v1"
+
+_LEGACY_REPORT_EVIDENCE_POLICIES = frozenset({
+    "assessment-evidence-reuse-v1",
+    ASSESSMENT_EVIDENCE_POLICY_REVISION_V2,
+})
 
 _VISUAL_SOURCES = frozenset({"posture_analysis"})
 _KIND_ALLOWED_SOURCES: dict[str, frozenset[str]] = {
@@ -109,6 +117,7 @@ def build_assessment_evidence_catalog(
     body_state: dict[str, Any],
     report_indicators: list[Any],
     posture_analysis: dict[str, Any],
+    evidence_policy_revision: str = ASSESSMENT_EVIDENCE_POLICY_REVISION,
 ) -> dict[str, AssessmentEvidenceItem]:
     """Build the v2 selectable evidence catalog from frozen health inputs.
 
@@ -144,11 +153,29 @@ def build_assessment_evidence_catalog(
             _compact_body_state_value(item),
         )
 
+    if evidence_policy_revision not in _LEGACY_REPORT_EVIDENCE_POLICIES and (
+        evidence_policy_revision != ASSESSMENT_EVIDENCE_POLICY_REVISION_V3
+    ):
+        raise ValueError(
+            f"unsupported Assessment evidence policy revision: {evidence_policy_revision}"
+        )
+
     for index, raw in enumerate(report_indicators):
         item = _clean_mapping(raw)
         upload_id = _durable_id(item.get("upload_id")) if item else ""
         indicator_index = item.get("indicator_index") if item else None
         value = item.get("value") if item and "value" in item else raw
+
+        if evidence_policy_revision == ASSESSMENT_EVIDENCE_POLICY_REVISION_V3:
+            value_mapping = _clean_mapping(value)
+            admissibility = _clean_mapping(value_mapping.get("evidence_admissibility"))
+            if (
+                admissibility.get("policy_revision")
+                != OCR_INDICATOR_ADMISSIBILITY_POLICY_REVISION
+                or admissibility.get("status") != "admissible"
+            ):
+                continue
+
         if upload_id and isinstance(indicator_index, int):
             ref = f"report:upload:{upload_id}:indicator:{indicator_index}"
         else:

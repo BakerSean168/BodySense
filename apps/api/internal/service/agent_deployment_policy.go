@@ -54,7 +54,8 @@ const (
 
 	historicalAssessmentV1ConfigurationID = "assess-config-fbff8155337b388d"
 	historicalAssessmentV2ConfigurationID = "assess-config-cae55474253e1601"
-	defaultAssessmentConfigurationID      = "assess-config-c6cfff22aa362fff"
+	historicalAssessmentV3ConfigurationID = "assess-config-c6cfff22aa362fff"
+	defaultAssessmentConfigurationID      = "assess-config-e579030c2b8b540c"
 	assessmentLogicalModelV1              = "bodysense-structured"
 
 	consultationV1ConfigurationID      = "consult-config-2bd9b46735dd693c"
@@ -81,6 +82,7 @@ type treatmentConfigurationRegistration struct {
 
 type assessmentConfigurationRegistration struct {
 	DecisionPolicyRevision string
+	EvidencePolicyRevision string
 	LogicalModel           string
 	OutputContractRevision string
 	ServingAllowed         bool
@@ -128,18 +130,28 @@ const (
 var knownAssessmentConfigurations = map[string]assessmentConfigurationRegistration{
 	historicalAssessmentV1ConfigurationID: {
 		DecisionPolicyRevision: AssessmentDecisionPolicyV1,
+		EvidencePolicyRevision: "assessment-evidence-reuse-v1",
 		LogicalModel:           assessmentLogicalModelV1,
 		OutputContractRevision: "assessment-output-v1",
 		ServingAllowed:         false,
 	},
 	historicalAssessmentV2ConfigurationID: {
 		DecisionPolicyRevision: AssessmentDecisionPolicyV1,
+		EvidencePolicyRevision: "assessment-evidence-reuse-v1",
 		LogicalModel:           assessmentLogicalModelV1,
 		OutputContractRevision: "assessment-output-v1",
 		ServingAllowed:         false,
 	},
+	historicalAssessmentV3ConfigurationID: {
+		DecisionPolicyRevision: AssessmentDecisionPolicyV2,
+		EvidencePolicyRevision: assessmentEvidencePolicyV2,
+		LogicalModel:           assessmentLogicalModelV1,
+		OutputContractRevision: assessmentOutputContractV2,
+		ServingAllowed:         false,
+	},
 	defaultAssessmentConfigurationID: {
 		DecisionPolicyRevision: AssessmentDecisionPolicyV2,
+		EvidencePolicyRevision: assessmentEvidencePolicyV3,
 		LogicalModel:           assessmentLogicalModelV1,
 		OutputContractRevision: assessmentOutputContractV2,
 		ServingAllowed:         true,

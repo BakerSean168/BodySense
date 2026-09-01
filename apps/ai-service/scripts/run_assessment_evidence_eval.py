@@ -1,4 +1,4 @@
-"""Run deterministic qualification for Assessment evidence contract v2."""
+"""Run deterministic qualification for the current Assessment evidence contract."""
 
 
 def _main() -> int:
@@ -25,7 +25,7 @@ def _main() -> int:
 
     reports = service_root / "data" / "evals" / "reports"
     reports.mkdir(parents=True, exist_ok=True)
-    (reports / "assessment_evidence_contract_v2.json").write_text(
+    (reports / "assessment_evidence_contract_v3.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )

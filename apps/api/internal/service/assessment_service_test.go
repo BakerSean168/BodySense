@@ -90,7 +90,7 @@ func assessmentExerciseOutput() json.RawMessage {
 	return json.RawMessage(`{
 		"contract_revision":"assessment-output-v2",
 		"status":"completed",
-		"evidence_policy_revision":"assessment-evidence-contract-v2",
+		"evidence_policy_revision":"assessment-evidence-contract-v3",
 		"observations":[{
 			"kind":"exercise_pattern","body_region":"","label":"当前运动频率记录",
 			"description":"当前 BodyState 记录每周健身 1-2 次。","evidence_refs":["body_state:fact:0"]
@@ -119,7 +119,7 @@ func assessmentPostureOutput(evidenceRef string) json.RawMessage {
 	raw := `{
 		"contract_revision":"assessment-output-v2",
 		"status":"completed",
-		"evidence_policy_revision":"assessment-evidence-contract-v2",
+		"evidence_policy_revision":"assessment-evidence-contract-v3",
 		"observations":[{
 			"kind":"posture_alignment","body_region":"肩部","label":"肩部对称性待复核",
 			"description":"正面视觉资料中右侧肩峰位置略高。","evidence_refs":["__POSTURE_EVIDENCE_REF__"]
@@ -377,8 +377,8 @@ func TestAssessmentPersistsAgentProvenanceAndDecisionTrace(t *testing.T) {
 		t.Fatal("report must persist agent configuration and execution provenance")
 	}
 	trace := string(report.GenerationDecisionTrace)
-	if trace == "{}" || !strings.Contains(trace, assessmentOutputContractV2) || !strings.Contains(trace, assessmentEvidencePolicyV2) {
-		t.Fatalf("generation trace must freeze v2 contract/evidence policy: %s", trace)
+	if trace == "{}" || !strings.Contains(trace, assessmentOutputContractV2) || !strings.Contains(trace, assessmentEvidencePolicyV3) {
+		t.Fatalf("generation trace must freeze current contract/evidence policy: %s", trace)
 	}
 }
 
@@ -457,7 +457,7 @@ func TestAssessmentDerivesInsufficientStatusWhenOnlyProfileExists(t *testing.T) 
 	raw := json.RawMessage(`{
 		"contract_revision":"assessment-output-v2",
 		"status":"insufficient_information",
-		"evidence_policy_revision":"assessment-evidence-contract-v2",
+		"evidence_policy_revision":"assessment-evidence-contract-v3",
 		"observations":[],
 		"evidence_coverage":{},
 		"evidence_gaps":[],
@@ -493,7 +493,7 @@ func TestAssessmentDerivesInsufficientStatusWhenOnlyProfileExists(t *testing.T) 
 
 func TestAssessmentGenerationTraceDistinguishesNoModelDerivation(t *testing.T) {
 	raw := json.RawMessage(`{
-		"agent_configuration":{"id":"assess-config-c6cfff22aa362fff","role":"assessment"},
+		"agent_configuration":{"id":"assess-config-e579030c2b8b540c","role":"assessment"},
 		"execution_provenance":{"status":"skipped_no_evidence","runtime":"deterministic","usage":{"requests":0}}
 	}`)
 	prov, err := parseAssessmentProvenance(raw)
@@ -502,11 +502,11 @@ func TestAssessmentGenerationTraceDistinguishesNoModelDerivation(t *testing.T) {
 	}
 	traceRaw := buildAssessmentGenerationTrace(
 		prov,
-		"assess-config-c6cfff22aa362fff",
+		defaultAssessmentConfigurationID,
 		AssessmentDecisionPolicyV2,
 		"fingerprint",
 		assessmentOutputContractV2,
-		assessmentEvidencePolicyV2,
+		assessmentEvidencePolicyV3,
 	)
 	var trace map[string]any
 	if err := json.Unmarshal(traceRaw, &trace); err != nil {

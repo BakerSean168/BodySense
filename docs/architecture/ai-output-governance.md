@@ -138,7 +138,7 @@ OCR, ASR, Embedding and geometric pose estimation are not Agents. They still nee
 - confidence/quality semantics;
 - explicit downstream admissibility policy.
 
-The current OCR pipeline has known remaining gaps in mechanism provenance and report-indicator admissibility. They are tracked in [`2026-09-01-documentation-code-alignment-audit.md`](../plan/active/2026-09-01-documentation-code-alignment-audit.md).
+OCR report-indicator admissibility is now deterministic and versioned: completed extraction alone does not grant evidence authority, and current Assessment accepts only `ocr-indicator-admissibility-v1` items marked `admissible`. The remaining OCR gap is mechanism provenance (engine/parser/rendering/extractor identity), tracked in [`2026-09-01-documentation-code-alignment-audit.md`](../plan/active/2026-09-01-documentation-code-alignment-audit.md).
 
 ## 10. Definition of done for a new durable AI output
 

@@ -101,6 +101,9 @@ BodySense 当前业务领域的最高层设计以以下文档为准：
 - **[ADR 0010: Promote qualified Agent baselines before external users](../adr/0010-promote-qualified-agent-baselines-before-external-users.md)** ⭐
   _在无外部用户阶段，对已完成 qualification/non-inferiority 的 Diagnosis v3 与 Treatment v2 做一次显式 owner-approved baseline promotion；最新版成为 Champion，v1 仅保留为 rollback/replay，未来 Challenger 仍必须重新走标准 rollout governance。_
 
+- **[ADR 0011: Adopt explicit OCR report-indicator evidence admissibility](../adr/0011-adopt-ocr-report-indicator-evidence-admissibility.md)** ⭐
+  _把 OCR “处理完成”和“可作为健康证据”拆开；未知/中低置信度 fail closed 为 needs_review，只有带版本化 admissibility provenance 的指标才能进入 Assessment v4 evidence catalog。_
+
 ---
 
 ## 4. 历史方案与设计文档归档 (Archived Plans)

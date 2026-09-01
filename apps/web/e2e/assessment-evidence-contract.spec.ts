@@ -84,11 +84,17 @@ test("assessment v2 persists only deterministic source-grounded observations", a
       model_executed: boolean;
       execution_status: string;
     };
+    agent_configuration_id: string;
+    agent_configuration: { evidence_policy_revision: string };
     health_grade?: unknown;
     dimension_scores?: unknown;
   };
 
   expect(report.contract_revision).toBe("assessment-output-v2");
+  expect(report.agent_configuration_id).toBe("assess-config-e579030c2b8b540c");
+  expect(report.agent_configuration.evidence_policy_revision).toBe(
+    "assessment-evidence-contract-v3",
+  );
   expect(report.status).toBe("completed");
   expect(report.health_grade).toBeUndefined();
   expect(report.dimension_scores).toBeUndefined();
@@ -221,9 +227,15 @@ test("assessment v2 derives insufficient information without any model request",
       model_executed: boolean;
       execution_status: string;
     };
+    agent_configuration_id: string;
+    agent_configuration: { evidence_policy_revision: string };
   };
 
   expect(report.contract_revision).toBe("assessment-output-v2");
+  expect(report.agent_configuration_id).toBe("assess-config-e579030c2b8b540c");
+  expect(report.agent_configuration.evidence_policy_revision).toBe(
+    "assessment-evidence-contract-v3",
+  );
   expect(report.status).toBe("insufficient_information");
   expect(report.observations).toEqual([]);
   expect(report.evidence_coverage.status).toBe("insufficient");

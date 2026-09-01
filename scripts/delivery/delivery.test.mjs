@@ -459,6 +459,18 @@ test('Release Publish reconciles release-please tagged state only after publicat
   assert.match(contents, /labels\[\]=autorelease: tagged/);
 });
 
+test('local deploy keeps production-shaped runtime env after repository quality validation', () => {
+  const contents = fs.readFileSync('scripts/local-deploy-validate.sh', 'utf8');
+  const qualityGate = contents.indexOf('bash scripts/validate-repo.sh');
+  const diagnosisEnv = contents.indexOf('export DIAGNOSIS_CHAMPION_CONFIGURATION_ID=');
+  const dbPassword = contents.indexOf('export DB_PASSWORD=');
+  const e2eStub = contents.indexOf('export BODYSENSE_E2E_STUB_AI=');
+  assert.ok(qualityGate >= 0);
+  assert.ok(diagnosisEnv > qualityGate);
+  assert.ok(dbPassword > qualityGate);
+  assert.ok(e2eStub > qualityGate);
+});
+
 test('all registry channel/release promotions carbon-copy single-platform manifests', () => {
   for (const workflow of [
     '.github/workflows/candidate-publish.yml',

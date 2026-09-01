@@ -1,4 +1,4 @@
-"""Deterministic qualification suite for Assessment evidence contract v2."""
+"""Deterministic qualification suite for the current Assessment evidence contract."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 
 from src.services.assessment_evidence import (
+    ASSESSMENT_EVIDENCE_POLICY_REVISION_V3,
     assessment_evidence_issues,
     build_assessment_evidence_catalog,
     build_assessment_evidence_coverage,
@@ -118,6 +119,7 @@ def build_assessment_evidence_policy_task() -> Any:
             body_state=inputs.body_state,
             report_indicators=inputs.report_indicators,
             posture_analysis=inputs.posture_analysis,
+            evidence_policy_revision=ASSESSMENT_EVIDENCE_POLICY_REVISION_V3,
         )
         issues = assessment_evidence_issues({"observations": inputs.selections}, catalog)
         coverage = build_assessment_evidence_coverage(catalog)
@@ -146,7 +148,7 @@ def run_assessment_evidence_policy_qualification(
     return load_assessment_evidence_policy_dataset(path).evaluate_sync(
         build_assessment_evidence_policy_task(),
         progress=False,
-        name="assessment-evidence-contract-v2",
+        name=ASSESSMENT_EVIDENCE_POLICY_REVISION_V3,
     )
 
 

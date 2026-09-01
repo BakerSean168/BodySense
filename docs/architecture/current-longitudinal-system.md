@@ -89,7 +89,7 @@ Treatment rollout selection is Go-owned and stable per user. Shadow/canary runs 
 
 Assessment is a derived report, not a second health truth or Treatment system.
 
-- The application receives stable Profile context plus current BodyState, report indicators and **completed governed Posture analysis**; Profile is not health-observation evidence, and the v3 Agent itself only receives the canonical evidence catalog. Assessment never directly interprets raw images.
+- The application receives stable Profile context plus current BodyState, report indicators and **completed governed Posture analysis**; Profile is not health-observation evidence, and the current v4 Agent itself only receives the canonical evidence catalog. Completed OCR indicators enter that catalog only when `ocr-indicator-admissibility-v1` marks them `admissible`; review-required report values remain stored but unavailable to Assessment reasoning. Assessment never directly interprets raw images.
 - It emits traceable Observation candidates with exact evidence refs; evidence coverage/gaps are derived deterministically by the application.
 - Observations are projected into BodyState inside the same transaction as the report, using report-scoped source keys (`assessment:<report_id>:observation:<index>`). Cross-report evidence/content-addressed idempotency is an explicit `DECISION-GAP`: report-history semantics and evidence-candidate deduplication are both valid models, so no stronger key should be introduced until the longitudinal meaning is chosen.
 - It does not emit executable exercise, nutrition, or treatment prescriptions.

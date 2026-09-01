@@ -35,7 +35,7 @@ func validateAssessmentEvidencePayload(
 	payload *assessmentAgentPayload,
 	req AssessmentGenerationRequest,
 ) (*assessmentEvidenceProjection, error) {
-	catalog := buildAssessmentEvidenceCatalog(req)
+	catalog := buildAssessmentEvidenceCatalog(req, payload.EvidencePolicyRevision)
 	rendered := make([]assessmentObservationDraft, 0, len(payload.Observations))
 	usedRefs := map[string]bool{}
 	for index, observation := range payload.Observations {
@@ -150,7 +150,21 @@ func assessmentBodyStateCompactValue(item map[string]any) map[string]any {
 	return out
 }
 
-func buildAssessmentEvidenceCatalog(req AssessmentGenerationRequest) map[string]assessmentEvidenceItem {
+func assessmentReportIndicatorAdmissible(value any) bool {
+	indicator, ok := value.(map[string]any)
+	if !ok {
+		return false
+	}
+	admissibility, ok := indicator["evidence_admissibility"].(map[string]any)
+	if !ok {
+		return false
+	}
+	policyRevision, _ := admissibility["policy_revision"].(string)
+	status, _ := admissibility["status"].(string)
+	return policyRevision == "ocr-indicator-admissibility-v1" && status == "admissible"
+}
+
+func buildAssessmentEvidenceCatalog(req AssessmentGenerationRequest, evidencePolicyRevision string) map[string]assessmentEvidenceItem {
 	catalog := map[string]assessmentEvidenceItem{}
 
 	var bodyState map[string]any
@@ -194,6 +208,9 @@ func buildAssessmentEvidenceCatalog(req AssessmentGenerationRequest) map[string]
 				if nested, exists := item["value"]; exists {
 					value = nested
 				}
+			}
+			if evidencePolicyRevision == assessmentEvidencePolicyV3 && !assessmentReportIndicatorAdmissible(value) {
+				continue
 			}
 			catalog[ref] = assessmentEvidenceItem{Source: "report", Kind: "report_indicator", Value: value}
 		}

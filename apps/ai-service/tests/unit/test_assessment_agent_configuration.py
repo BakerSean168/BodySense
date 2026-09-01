@@ -18,7 +18,7 @@ def test_default_assessment_configuration_is_repository_versioned_and_stable() -
     assert config.logical_model == "bodysense-structured"
     assert config.configuration_id.startswith("assess-config-")
     assert len(config.configuration_id) == len("assess-config-") + 16
-    assert (CONFIG_ROOT / "assessment-v3.yaml").exists()
+    assert (CONFIG_ROOT / "assessment-v4.yaml").exists()
     assert get_assessment_configuration(config.configuration_id) == config
     # fingerprint identity is stable across runs
     assert get_default_assessment_configuration().configuration_id == config.configuration_id
@@ -56,25 +56,30 @@ def test_assessment_manifest_excludes_runtime_host_from_provenance() -> None:
     assert "temperature" not in prov  # generation settings live in the behavior fingerprint
 
 
-def test_assessment_historical_and_v3_configs_are_repository_known_and_distinct() -> None:
+def test_assessment_historical_and_v4_configs_are_repository_known_and_distinct() -> None:
     from src.configuration.assessment_agent_config import (
         get_assessment_configuration,
         known_assessment_configuration_ids,
     )
 
     ids = known_assessment_configuration_ids()
-    assert len(ids) == 3
-    v3 = get_default_assessment_configuration()
+    assert len(ids) == 4
+    v4 = get_default_assessment_configuration()
     v1 = get_assessment_configuration("assess-config-fbff8155337b388d")
     v2 = get_assessment_configuration("assess-config-cae55474253e1601")
-    assert len({v1.configuration_id, v2.configuration_id, v3.configuration_id}) == 3
+    v3 = get_assessment_configuration("assess-config-c6cfff22aa362fff")
+    assert len(
+        {v1.configuration_id, v2.configuration_id, v3.configuration_id, v4.configuration_id}
+    ) == 4
     assert v1.output_schema_revision == "assessment-output-v1"
     assert v2.output_schema_revision == "assessment-output-v1"
     assert v3.output_schema_revision == "assessment-output-v2"
-    assert v3.prompt_revision == "assessment-prompt-v3-evidence-contract"
     assert v3.evidence_policy_revision == "assessment-evidence-contract-v2"
-    assert v3.governance_policy_revision == "assessment-governance-v2"
-    assert v3.decision_policy_revision == "assessment-go-generation-v2"
+    assert v4.output_schema_revision == "assessment-output-v2"
+    assert v4.prompt_revision == "assessment-prompt-v3-evidence-contract"
+    assert v4.evidence_policy_revision == "assessment-evidence-contract-v3"
+    assert v4.governance_policy_revision == "assessment-governance-v2"
+    assert v4.decision_policy_revision == "assessment-go-generation-v2"
 
 
 def test_assessment_v2_agent_accepts_v2_prompt_revision() -> None:
