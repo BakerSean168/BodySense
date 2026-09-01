@@ -1,8 +1,10 @@
 """Pose landmark extraction and geometric posture metrics (Phase 2).
 
 Design:
-- MediaPipe Pose is an *optional* dependency (``uv sync --extra pose``).
-- When unavailable or when no person is detected, callers degrade to pure VLM.
+- Historical Posture v1 tolerated optional MediaPipe; current Posture v2 requires
+  the pinned ``pose`` runtime and fails closed when its mechanism is unavailable.
+- When the mechanism is verified but no person is detected, callers may continue
+  with zero geometric metrics plus qualitative VLM analysis.
 - Numeric ``metric`` values may **only** come from this module. The VLM must
   never invent angles — ``posture_analyzer`` enforces that post-check.
 
@@ -14,10 +16,17 @@ Coordinate convention (MediaPipe Pose):
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import math
+import os
 from dataclasses import dataclass
+from importlib import metadata
+from pathlib import Path
 from typing import Any
+
+from ..configuration.posture_agent_config import PostureGeometryMechanismConfig
 
 logger = logging.getLogger(__name__)
 
@@ -53,25 +62,58 @@ class GeometricMetric:
 
 
 # ---------------------------------------------------------------------------
-# Threshold tables (centralized so tests can pin expected severity bands)
+# Threshold contract
 # ---------------------------------------------------------------------------
+# Every behavior-significant numeric threshold used by geometric perception is
+# represented in this canonical spec. Current Posture manifests pin its SHA256;
+# changing a threshold without advancing the manifest therefore fails closed.
 
-# Craniovertebral angle (deg): higher is better. Typical upright ~50–55°.
-CVA_MARKED = 40.0
-CVA_MODERATE = 45.0
-CVA_MILD = 50.0
+POSE_GEOMETRY_THRESHOLD_SPEC: dict[str, Any] = {
+    "landmark_visibility_min": 0.5,
+    "c7_proxy_y_offset": 0.02,
+    "craniovertebral_angle_deg": {"mild": 50.0, "moderate": 45.0, "marked": 40.0},
+    "shoulder_hip_asymmetry_norm": {"mild": 0.015, "moderate": 0.025, "marked": 0.04},
+    "ear_shoulder_offset_norm": {"mild": 0.02, "moderate": 0.04, "marked": 0.06},
+    "pelvic_tilt_proxy_norm": {"mild": 0.03, "moderate": 0.05, "marked": 0.08},
+    "spine_midline_offset_norm": {"mild": 0.015, "moderate": 0.03, "marked": 0.05},
+    "pose_landmarker": {
+        "num_poses": 1,
+        "min_pose_detection_confidence": 0.5,
+        "min_pose_presence_confidence": 0.5,
+        "min_tracking_confidence": 0.5,
+    },
+}
 
-# Absolute shoulder / hip height asymmetry as fraction of image height.
-ASYMMETRY_MARKED = 0.04
-ASYMMETRY_MODERATE = 0.025
-ASYMMETRY_MILD = 0.015
 
-# Pelvic tilt proxy: hip-to-shoulder vertical offset ratio (side view).
-# Positive = hips behind shoulders in y (anterior pelvic tilt tendency when
-# combined with lumbar lordosis cues — kept mild-only without depth).
-PELVIC_TILT_MARKED = 0.08
-PELVIC_TILT_MODERATE = 0.05
-PELVIC_TILT_MILD = 0.03
+def geometry_threshold_sha256() -> str:
+    payload = json.dumps(
+        POSE_GEOMETRY_THRESHOLD_SPEC,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+    )
+    return hashlib.sha256(payload.encode()).hexdigest()
+
+
+CVA_MILD = float(POSE_GEOMETRY_THRESHOLD_SPEC["craniovertebral_angle_deg"]["mild"])
+CVA_MODERATE = float(POSE_GEOMETRY_THRESHOLD_SPEC["craniovertebral_angle_deg"]["moderate"])
+CVA_MARKED = float(POSE_GEOMETRY_THRESHOLD_SPEC["craniovertebral_angle_deg"]["marked"])
+ASYMMETRY_MILD = float(POSE_GEOMETRY_THRESHOLD_SPEC["shoulder_hip_asymmetry_norm"]["mild"])
+ASYMMETRY_MODERATE = float(POSE_GEOMETRY_THRESHOLD_SPEC["shoulder_hip_asymmetry_norm"]["moderate"])
+ASYMMETRY_MARKED = float(POSE_GEOMETRY_THRESHOLD_SPEC["shoulder_hip_asymmetry_norm"]["marked"])
+EAR_SHOULDER_MILD = float(POSE_GEOMETRY_THRESHOLD_SPEC["ear_shoulder_offset_norm"]["mild"])
+EAR_SHOULDER_MODERATE = float(POSE_GEOMETRY_THRESHOLD_SPEC["ear_shoulder_offset_norm"]["moderate"])
+EAR_SHOULDER_MARKED = float(POSE_GEOMETRY_THRESHOLD_SPEC["ear_shoulder_offset_norm"]["marked"])
+PELVIC_TILT_MILD = float(POSE_GEOMETRY_THRESHOLD_SPEC["pelvic_tilt_proxy_norm"]["mild"])
+PELVIC_TILT_MODERATE = float(POSE_GEOMETRY_THRESHOLD_SPEC["pelvic_tilt_proxy_norm"]["moderate"])
+PELVIC_TILT_MARKED = float(POSE_GEOMETRY_THRESHOLD_SPEC["pelvic_tilt_proxy_norm"]["marked"])
+SPINE_MIDLINE_MILD = float(POSE_GEOMETRY_THRESHOLD_SPEC["spine_midline_offset_norm"]["mild"])
+SPINE_MIDLINE_MODERATE = float(
+    POSE_GEOMETRY_THRESHOLD_SPEC["spine_midline_offset_norm"]["moderate"]
+)
+SPINE_MIDLINE_MARKED = float(POSE_GEOMETRY_THRESHOLD_SPEC["spine_midline_offset_norm"]["marked"])
+LANDMARK_VISIBILITY_MIN = float(POSE_GEOMETRY_THRESHOLD_SPEC["landmark_visibility_min"])
+C7_PROXY_Y_OFFSET = float(POSE_GEOMETRY_THRESHOLD_SPEC["c7_proxy_y_offset"])
 
 
 def _severity_from_bands(
@@ -122,7 +164,7 @@ def _midpoint(a: Landmark, b: Landmark) -> Landmark:
     )
 
 
-def _visible(lm: Landmark | None, min_vis: float = 0.5) -> bool:
+def _visible(lm: Landmark | None, min_vis: float = LANDMARK_VISIBILITY_MIN) -> bool:
     return lm is not None and lm.visibility >= min_vis
 
 
@@ -154,7 +196,9 @@ def compute_side_metrics(landmarks: dict[int, Landmark]) -> list[GeometricMetric
     # C7 proxy: slightly above shoulder midpoint (no true C7 in BlazePose).
     c7 = None
     if shoulder is not None:
-        c7 = Landmark(x=shoulder.x, y=shoulder.y - 0.02, visibility=shoulder.visibility)
+        c7 = Landmark(
+            x=shoulder.x, y=shoulder.y - C7_PROXY_Y_OFFSET, visibility=shoulder.visibility
+        )
 
     if ear is not None and c7 is not None:
         # Clinical CVA: angle at C7 between the horizontal and the C7→tragus
@@ -202,9 +246,9 @@ def compute_side_metrics(landmarks: dict[int, Landmark]) -> list[GeometricMetric
         offset = abs(ear.x - shoulder.x)
         sev = _severity_from_bands(
             offset,
-            mild=0.02,
-            moderate=0.04,
-            marked=0.06,
+            mild=EAR_SHOULDER_MILD,
+            moderate=EAR_SHOULDER_MODERATE,
+            marked=EAR_SHOULDER_MARKED,
             lower_is_worse=False,
         )
         if sev:
@@ -317,9 +361,9 @@ def compute_frontal_metrics(landmarks: dict[int, Landmark], view: str) -> list[G
         offset = abs(mid_sh.x - mid_hip.x)
         sev = _severity_from_bands(
             offset,
-            mild=0.015,
-            moderate=0.03,
-            marked=0.05,
+            mild=SPINE_MIDLINE_MILD,
+            moderate=SPINE_MIDLINE_MODERATE,
+            marked=SPINE_MIDLINE_MARKED,
             lower_is_worse=False,
         )
         if sev:
@@ -386,106 +430,174 @@ def findings_from_metrics(metrics: list[GeometricMetric]) -> list[dict[str, Any]
 
 
 # ---------------------------------------------------------------------------
-# MediaPipe extraction (optional)
+# MediaPipe extraction (required by current Posture v2)
 # ---------------------------------------------------------------------------
-# MediaPipe Tasks PoseLandmarker (1.x). The classic ``mp.solutions`` API was
-# removed in 1.0; we lazy-load a lite .task model into the user cache.
-# ---------------------------------------------------------------------------
+# Production images bake the pinned artifact at build time. Local development
+# may provision the same versioned artifact before starting the service, but the
+# request path never downloads a model and never accepts an unverified cache.
 
-_POSE_MODEL_URL = (
-    "https://storage.googleapis.com/mediapipe-models/pose_landmarker/"
-    "pose_landmarker_lite/float16/latest/pose_landmarker_lite.task"
-)
-_POSE_MODEL_NAME = "pose_landmarker_lite.task"
+_POSE_MODEL_PATH_ENV = "BODYSENSE_POSE_MODEL_PATH"
+
+
+class PoseMechanismError(RuntimeError):
+    """Base class for a Posture geometric-mechanism contract failure."""
+
+
+class PoseMechanismUnavailableError(PoseMechanismError):
+    """Required engine/model is not installed or available."""
+
+
+class PoseMechanismIntegrityError(PoseMechanismError):
+    """Pinned engine/model/threshold identity does not match runtime reality."""
+
 
 _landmarker = None
-_mp_import_attempted = False
+_landmarker_key: tuple[str, ...] | None = None
+_landmarker_provenance: dict[str, str] | None = None
 
 
-def _pose_model_path() -> Any:
-    """Return a local path to the Pose Landmarker model, downloading if needed."""
-    from pathlib import Path
-
-    cache_dir = Path.home() / ".cache" / "bodysense" / "mediapipe"
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    model_path = cache_dir / _POSE_MODEL_NAME
-    if model_path.exists() and model_path.stat().st_size > 0:
-        return model_path
-
-    import urllib.request
-
-    tmp_path = model_path.with_suffix(".task.partial")
-    logger.info("downloading MediaPipe pose model to %s", model_path)
-    urllib.request.urlretrieve(_POSE_MODEL_URL, tmp_path)  # noqa: S310 — fixed Google CDN URL
-    tmp_path.replace(model_path)
-    return model_path
+def default_pose_model_path(mechanism: PostureGeometryMechanismConfig) -> Path:
+    override = os.getenv(_POSE_MODEL_PATH_ENV, "").strip()
+    if override:
+        return Path(override)
+    return (
+        Path.home()
+        / ".cache"
+        / "bodysense"
+        / "mediapipe"
+        / f"pose-landmarker-{mechanism.model_sha256[:16]}.task"
+    )
 
 
-def mediapipe_available() -> bool:
-    """True when MediaPipe Tasks + a usable PoseLandmarker can be constructed."""
-    global _landmarker, _mp_import_attempted
-    if _mp_import_attempted:
-        return _landmarker is not None
-    _mp_import_attempted = True
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def verify_pose_mechanism(
+    mechanism: PostureGeometryMechanismConfig,
+) -> dict[str, str]:
+    """Verify the exact non-LLM mechanism bound by the Posture manifest."""
+
+    actual_threshold_sha = geometry_threshold_sha256()
+    if actual_threshold_sha != mechanism.threshold_sha256:
+        raise PoseMechanismIntegrityError(
+            "posture geometry threshold fingerprint mismatch: "
+            f"got {actual_threshold_sha} want {mechanism.threshold_sha256}"
+        )
+
+    try:
+        engine_version = metadata.version("mediapipe")
+    except metadata.PackageNotFoundError as exc:
+        raise PoseMechanismUnavailableError("required mediapipe package is not installed") from exc
+    if engine_version != mechanism.engine_version:
+        raise PoseMechanismIntegrityError(
+            f"mediapipe version mismatch: got {engine_version} want {mechanism.engine_version}"
+        )
+
+    model_path = default_pose_model_path(mechanism)
+    if not model_path.is_file() or model_path.stat().st_size <= 0:
+        raise PoseMechanismUnavailableError(f"pinned pose model is missing: {model_path}")
+    actual_model_sha = _sha256_file(model_path)
+    if actual_model_sha != mechanism.model_sha256:
+        raise PoseMechanismIntegrityError(
+            f"pose model sha256 mismatch: got {actual_model_sha} want {mechanism.model_sha256}"
+        )
+
+    return {
+        "status": "verified",
+        "mechanism_revision": mechanism.mechanism_revision,
+        "engine": mechanism.engine,
+        "engine_version": engine_version,
+        "model_uri": mechanism.model_uri,
+        "model_sha256": actual_model_sha,
+        "threshold_revision": mechanism.threshold_revision,
+        "threshold_sha256": actual_threshold_sha,
+    }
+
+
+def _landmarker_for(
+    mechanism: PostureGeometryMechanismConfig,
+) -> tuple[Any, dict[str, str]]:
+    global _landmarker, _landmarker_key, _landmarker_provenance
+
+    provenance = verify_pose_mechanism(mechanism)
+    key = (
+        mechanism.mechanism_revision,
+        mechanism.engine_version,
+        mechanism.model_sha256,
+        mechanism.threshold_sha256,
+        str(default_pose_model_path(mechanism)),
+    )
+    if _landmarker is not None and _landmarker_key == key and _landmarker_provenance is not None:
+        return _landmarker, dict(_landmarker_provenance)
+
     try:
         from mediapipe.tasks.python import vision  # pyright: ignore[reportMissingImports]
         from mediapipe.tasks.python.core import (  # pyright: ignore[reportMissingImports]
             base_options as base_options_module,
         )
+    except Exception as exc:  # noqa: BLE001
+        raise PoseMechanismUnavailableError("mediapipe Tasks API is unavailable") from exc
 
-        model_path = _pose_model_path()
+    pose_options = POSE_GEOMETRY_THRESHOLD_SPEC["pose_landmarker"]
+    try:
         options = vision.PoseLandmarkerOptions(
             base_options=base_options_module.BaseOptions(
-                model_asset_path=str(model_path),
+                model_asset_path=str(default_pose_model_path(mechanism)),
             ),
             running_mode=vision.RunningMode.IMAGE,
-            num_poses=1,
-            min_pose_detection_confidence=0.5,
-            min_pose_presence_confidence=0.5,
-            min_tracking_confidence=0.5,
+            num_poses=int(pose_options["num_poses"]),
+            min_pose_detection_confidence=float(pose_options["min_pose_detection_confidence"]),
+            min_pose_presence_confidence=float(pose_options["min_pose_presence_confidence"]),
+            min_tracking_confidence=float(pose_options["min_tracking_confidence"]),
         )
-        _landmarker = vision.PoseLandmarker.create_from_options(options)
-        return True
-    except Exception as exc:  # noqa: BLE001 — optional dep / model fetch
-        logger.info("mediapipe Tasks pose unavailable; geometry disabled: %s", exc)
-        _landmarker = None
-        return False
+        landmarker = vision.PoseLandmarker.create_from_options(options)
+    except Exception as exc:  # noqa: BLE001
+        raise PoseMechanismUnavailableError("unable to construct pinned PoseLandmarker") from exc
+
+    _landmarker = landmarker
+    _landmarker_key = key
+    _landmarker_provenance = dict(provenance)
+    return landmarker, provenance
 
 
-def extract_landmarks(image_bytes: bytes) -> dict[int, Landmark] | None:
-    """Run MediaPipe Pose Landmarker and return index→Landmark, or None."""
-    if not mediapipe_available():
-        return None
+def extract_landmarks(
+    image_bytes: bytes,
+    mechanism: PostureGeometryMechanismConfig,
+) -> tuple[dict[int, Landmark] | None, dict[str, str]]:
+    """Run the pinned Pose Landmarker and return landmarks + mechanism provenance."""
+
+    landmarker, provenance = _landmarker_for(mechanism)
 
     try:
+        import cv2  # type: ignore
         import numpy as np  # type: ignore
         from mediapipe.tasks.python.vision.core import (  # pyright: ignore[reportMissingImports]
             image as mp_image_module,
         )
     except Exception as exc:  # noqa: BLE001
-        logger.info("numpy/mediapipe image helpers missing: %s", exc)
-        return None
+        raise PoseMechanismUnavailableError(
+            "pose image-decoding dependencies are unavailable"
+        ) from exc
 
     try:
-        # Decode via mediapipe Image which accepts encoded bytes through numpy RGB.
-        import cv2  # type: ignore
-
         arr = np.frombuffer(image_bytes, dtype=np.uint8)
         bgr = cv2.imdecode(arr, cv2.IMREAD_COLOR)
         if bgr is None:
-            return None
+            return None, provenance
         rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
         mp_image = mp_image_module.Image(
             image_format=mp_image_module.ImageFormat.SRGB,
             data=np.ascontiguousarray(rgb),
         )
-
-        assert _landmarker is not None
-        result = _landmarker.detect(mp_image)
+        result = landmarker.detect(mp_image)
         if not result.pose_landmarks:
-            return None
+            return None, provenance
 
-        # Tasks API returns a list of pose landmark lists (one per person).
         pose = result.pose_landmarks[0]
         out: dict[int, Landmark] = {}
         for idx, lm in enumerate(pose):
@@ -493,18 +605,22 @@ def extract_landmarks(image_bytes: bytes) -> dict[int, Landmark] | None:
                 getattr(lm, "visibility", None) or getattr(lm, "presence", None) or 1.0
             )
             out[idx] = Landmark(x=float(lm.x), y=float(lm.y), visibility=visibility)
-        return out
+        return out, provenance
+    except PoseMechanismError:
+        raise
     except Exception:
         logger.exception("pose landmark extraction failed")
-        return None
+        return None, provenance
 
 
 def estimate_pose_metrics(
     image_bytes: bytes,
     view: str,
-) -> list[GeometricMetric]:
-    """Full Phase-2 pipeline: extract landmarks → compute view metrics."""
-    landmarks = extract_landmarks(image_bytes)
+    mechanism: PostureGeometryMechanismConfig,
+) -> tuple[list[GeometricMetric], dict[str, str]]:
+    """Run pinned geometry and return metrics with exact mechanism provenance."""
+
+    landmarks, provenance = extract_landmarks(image_bytes, mechanism)
     if not landmarks:
-        return []
-    return compute_metrics_for_view(landmarks, view)
+        return [], provenance
+    return compute_metrics_for_view(landmarks, view), provenance

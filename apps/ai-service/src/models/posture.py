@@ -64,6 +64,7 @@ class PostureAnalysis(BaseModel):
     safety_fallback: str | None = None
     agent_configuration: dict[str, str] | None = None
     execution_provenance: dict[str, str] | None = None
+    mechanism_provenance: dict[str, str] | None = None
 
 
 class PostureAnalysisResponse(BaseModel):

@@ -94,6 +94,23 @@ wait_http "http://127.0.0.1:${API_PORT}/api/health" "API_HEALTH"
 wait_http "http://127.0.0.1:${AI_SERVICE_PORT}/health" "AI_HEALTH"
 wait_http "http://127.0.0.1:${WEB_PORT}" "WEB_HEALTH"
 
+posture_geometry_identity="$("${compose[@]}" exec -T ai-service python -c '
+import io
+from PIL import Image
+from src.configuration.posture_agent_config import get_default_posture_configuration
+from src.services.pose_estimator import estimate_pose_metrics
+c = get_default_posture_configuration()
+assert c.configuration_id == "posture-config-efa3a84622818772"
+assert c.geometry_mechanism is not None
+image = io.BytesIO()
+Image.new("RGB", (96, 96), "white").save(image, format="PNG")
+metrics, p = estimate_pose_metrics(image.getvalue(), "front", c.geometry_mechanism)
+assert metrics == []
+assert p["status"] == "verified"
+print(c.configuration_id, p["mechanism_revision"], p["model_sha256"], p["threshold_sha256"])
+')"
+echo "POSTURE_GEOMETRY_MECHANISM=PASS ${posture_geometry_identity}"
+
 migration_db="bodysense_migration_validator"
 "${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS ${migration_db} WITH (FORCE);" >/dev/null
 "${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE ${migration_db};" >/dev/null

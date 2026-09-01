@@ -205,66 +205,58 @@ This closes **admissibility**, not **mechanism provenance**. OCR engine/parser/P
 
 ---
 
-### P1 — A2. Posture geometric perception is behavior-significant but not version-pinned in Posture configuration/provenance
+### P1 — A2. Posture geometric perception mechanism identity — RESOLVED
 
-**Classification:** `CODE-GAP`
-**Contracts:** Agent Platform non-LLM mechanism provenance + Posture immutable behavior identity + ADR 0009 visual evidence chain.
+**Classification:** `RESOLVED-CODE-GAP`
+**Decision:** ADR 0012.
 
-Current geometric path:
+The original gap was larger than the initial documentation audit showed. Posture v1 did not fingerprint the geometric mechanism, used a runtime `.../latest/...` pose-model URL and accepted any non-empty cached model. A production-shaped inspection also proved the deployed AI image installed only the OCR optional dependency: both Staging and Production lacked `mediapipe`, so the same v1 configuration could mean VLM-only in deployment and VLM + geometry in another environment.
+
+The first v2 Docker smoke exposed one more native-runtime dependency: `mediapipe==1.0.0` and the pinned artifact were present, but OpenCV could not load because `libGL.so.1` was missing. The final image now includes the minimal `libgl1` dependency, and validation constructs/runs the actual PoseLandmarker rather than merely checking Python package metadata.
+
+The implemented contract is:
 
 ```text
-MediaPipe Tasks PoseLandmarker
-  -> pose_landmarker_lite/float16/latest/pose_landmarker_lite.task
-  -> repository threshold constants
-  -> geometric findings/metrics
-  -> govern_posture_result
+Posture v2 / posture-config-efa3a84622818772
+  -> geometry required
+  -> mediapipe-tasks 1.0.0
+  -> versioned pose_landmarker_lite/float16/1 artifact
+  -> model SHA256 = 59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a
+  -> canonical threshold SHA256 = 588917b4a071ee1e249d3930b37769c9c9bd7a4fdebd68eb2a00bfdd13fbb140
+  -> build/startup provisioning only; request path never downloads
+  -> runtime engine/model/threshold verification before VLM generation
+  -> Python mechanism_provenance
+  -> Go exact mechanism revalidation
+  -> generation_decision_trace
   -> user_uploads.analysis_result
-  -> Assessment posture evidence
 ```
 
-Current `posture-v1.yaml` fingerprints prompt/schema/tool/governance/model/generation but contains no:
+Historical v1 remains repository-known as `posture-config-3a774008db422a31`; its fingerprint is unchanged, but it is non-serving and cannot be selected as the current Posture Champion.
 
-```text
-pose engine revision
-pose model artifact hash/version
-geometric-threshold revision
-```
+No relational migration/backfill is required. Current provenance fits the existing `user_uploads.analysis_result` JSONB and exact `agent_configuration_id`; historical analyses are not given invented geometry provenance.
 
-The model URL uses `latest`, and the resulting numeric metrics are intentionally authoritative over VLM-invented numeric values.
+Validation evidence:
 
-Code evidence:
+- Python historical v1 identity remains `posture-config-3a774008db422a31`;
+- Python current v2 identity is `posture-config-efa3a84622818772`;
+- changing model/threshold identity changes the Posture configuration ID;
+- artifact SHA mismatch and threshold drift fail closed;
+- required geometry failure stops before the VLM call;
+- focused Posture Python tests: **27/27 PASS**;
+- Python full suite: **414 passed**;
+- Ruff: PASS;
+- Pyright `src`: PASS;
+- Go Posture deployment/response gate tests: PASS;
+- Go full suite + `go vet`: PASS;
+- historical v1 cannot serve as Champion, but remains repository-known;
+- final AI Docker image contains `mediapipe==1.0.0`, the pinned model, `libgl1`, and successfully constructs the real `PoseLandmarker`;
+- blank-image geometry smoke executes OpenCV decode + MediaPipe detect and returns zero metrics with exact verified mechanism provenance;
+- production-shaped `POSTURE_GEOMETRY_MECHANISM=PASS` with the exact current config/model/threshold identities;
+- production-shaped migration/domain validators: PASS;
+- production-shaped Playwright: **10/10 PASS**;
+- `LOCAL_DEPLOY_VALIDATION=PASS`.
 
-- `apps/ai-service/src/services/pose_estimator.py`
-- `apps/ai-service/src/services/posture_analyzer.py`
-- `apps/ai-service/src/configuration/posture_agent_config.py`
-- `apps/ai-service/config/agents/posture-v1.yaml`
-
-**Risk**
-
-The same immutable Posture configuration ID can produce different governed numeric evidence after an upstream `latest` model changes or threshold behavior changes. That weakens replay, audit and the meaning of immutable configuration identity for an evidence-producing perception role.
-
-**Recommended contract**
-
-Introduce an explicit mechanism identity, e.g.:
-
-```text
-pose_mechanism_revision: posture-geometry-v1
-engine: mediapipe-tasks
-package_version: ...
-model_artifact: pose_landmarker_lite-<pinned-version>.task
-model_sha256: ...
-threshold_revision: posture-geometry-thresholds-v1
-```
-
-The Posture durable result/execution provenance must record it. If geometric behavior affects the Agent output contract, the mechanism revision should also participate in the Posture immutable behavior fingerprint or be a separately pinned subordinate identity referenced by the manifest.
-
-**Acceptance tests**
-
-- no runtime download from an unversioned `latest` artifact;
-- artifact hash mismatch fails closed;
-- changing threshold/model revision changes the declared behavior identity;
-- persisted Posture result exposes exact mechanism identity;
-- replay/qualification fixture asserts the identity.
+This closes Posture geometry mechanism identity. OCR mechanism provenance remains open as A3 below.
 
 ---
 

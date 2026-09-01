@@ -25,6 +25,29 @@ class _FakeAI:
         return _FakeResponse(text=json.dumps(self._payload))
 
 
+_MECHANISM_PROVENANCE = {
+    "status": "verified",
+    "mechanism_revision": "posture-geometry-v1",
+    "engine": "mediapipe-tasks",
+    "engine_version": "1.0.0",
+    "model_uri": "https://example.invalid/pose/1/model.task",
+    "model_sha256": "a" * 64,
+    "threshold_revision": "posture-geometry-thresholds-v1",
+    "threshold_sha256": "b" * 64,
+}
+
+
+@pytest.fixture(autouse=True)
+def _stub_pinned_geometry(monkeypatch):
+    import src.services.posture_analyzer as posture_mod
+
+    monkeypatch.setattr(
+        posture_mod,
+        "estimate_pose_metrics",
+        lambda _image, _view, _mechanism: ([], dict(_MECHANISM_PROVENANCE)),
+    )
+
+
 class TestGovernance:
     def test_metrics_are_stripped(self):
         raw = {
@@ -209,6 +232,22 @@ class TestAnalyzePosture:
         assert ai.calls == 1
         assert out["view"] == "side"
         assert out["findings"][0]["metric"] is None
+        assert out["mechanism_provenance"] == _MECHANISM_PROVENANCE
+
+    async def test_required_geometry_failure_stops_before_vlm(self, monkeypatch):
+        import src.services.posture_analyzer as posture_mod
+        from src.services.pose_estimator import PoseMechanismIntegrityError
+
+        def _fail_geometry(_image, _view, _mechanism):  # noqa: ANN001
+            raise PoseMechanismIntegrityError("forced geometry identity failure")
+
+        monkeypatch.setattr(posture_mod, "estimate_pose_metrics", _fail_geometry)
+        ai = _FakeAI({"view": "side", "findings": []})
+
+        with pytest.raises(PoseMechanismIntegrityError, match="forced geometry identity failure"):
+            await analyze_posture(b"fakebytes", "image/jpeg", "side", ai=ai)
+
+        assert ai.calls == 0
 
     async def test_non_json_output_degrades_gracefully(self):
         class _BadAI:

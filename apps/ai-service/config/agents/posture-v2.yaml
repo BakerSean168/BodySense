@@ -1,0 +1,21 @@
+role: posture
+manifest_revision: posture-agent-v2
+logical_model: bodysense-posture
+model_group_revision: posture-model-group-v1
+prompt_revision: posture-prompt-v1
+output_schema_revision: posture-output-v1
+tool_policy_revision: posture-tools-none-v1
+governance_policy_revision: posture-governance-v1
+decision_policy_revision: posture-go-analysis-v1
+geometry_mechanism:
+  required: true
+  mechanism_revision: posture-geometry-v1
+  engine: mediapipe-tasks
+  engine_version: "1.0.0"
+  model_uri: https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task
+  model_sha256: 59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a
+  threshold_revision: posture-geometry-thresholds-v1
+  threshold_sha256: 588917b4a071ee1e249d3930b37769c9c9bd7a4fdebd68eb2a00bfdd13fbb140
+generation:
+  temperature: 0.3
+  max_tokens: 2048
