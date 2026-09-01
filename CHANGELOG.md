@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.10.0](https://github.com/BakerSean168/BodySense/compare/v0.9.1...v0.10.0) (2026-09-01)
+
+
+### Features
+
+* align architecture and promote latest agent baselines ([#150](https://github.com/BakerSean168/BodySense/issues/150)) ([fe7e58a](https://github.com/BakerSean168/BodySense/commit/fe7e58aab3f254867faae3b4983a7ddecf3a881b))
+
+
+### Bug Fixes
+
+* enforce evidence-grounded assessment contract ([#149](https://github.com/BakerSean168/BodySense/issues/149)) ([7139d2f](https://github.com/BakerSean168/BodySense/commit/7139d2f648d9242ca987c8ac9bc17b7a86d3e50b))
+* **ops:** persist direct-dev infrastructure ([#146](https://github.com/BakerSean168/BodySense/issues/146)) ([64ee7ef](https://github.com/BakerSean168/BodySense/commit/64ee7efb81cf0ba1afdb0c3e97b671e9bff883e3))
+* **ops:** reconcile release-please tagged state ([#151](https://github.com/BakerSean168/BodySense/issues/151)) ([a339430](https://github.com/BakerSean168/BodySense/commit/a3394307448e0fb4e1d106c6be70ef4fbf3e1730))
+* **web:** scope temporal actions by fact semantics ([#145](https://github.com/BakerSean168/BodySense/issues/145)) ([653aaa5](https://github.com/BakerSean168/BodySense/commit/653aaa5fd34fd0f8392799233f4184a87661fe98))
+
 ## [0.9.1](https://github.com/BakerSean168/BodySense/compare/v0.9.0...v0.9.1) (2026-08-29)
 
 
