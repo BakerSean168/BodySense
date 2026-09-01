@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.1](https://github.com/BakerSean168/BodySense/compare/v0.10.0...v0.10.1) (2026-09-01)
+
+
+### Bug Fixes
+
+* gate OCR report evidence admission ([#155](https://github.com/BakerSean168/BodySense/issues/155)) ([27c917d](https://github.com/BakerSean168/BodySense/commit/27c917dadd925f6efc86933cabe4f5a4d865392d))
+* **ops:** pipe release PR lookup through jq ([#153](https://github.com/BakerSean168/BodySense/issues/153)) ([b7c6852](https://github.com/BakerSean168/BodySense/commit/b7c68520847fbfeaa251bbbe97828c6c8120a2be))
+
 ## [0.10.0](https://github.com/BakerSean168/BodySense/compare/v0.9.1...v0.10.0) (2026-09-01)
 
 
