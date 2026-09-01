@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.2](https://github.com/BakerSean168/BodySense/compare/v0.10.1...v0.10.2) (2026-09-01)
+
+
+### Bug Fixes
+
+* pin Posture geometry mechanism ([#158](https://github.com/BakerSean168/BodySense/issues/158)) ([879f4f3](https://github.com/BakerSean168/BodySense/commit/879f4f3f96528427f9c5c4466351154f007bdefe))
+
 ## [0.10.1](https://github.com/BakerSean168/BodySense/compare/v0.10.0...v0.10.1) (2026-09-01)
 
 
