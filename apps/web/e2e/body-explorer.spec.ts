@@ -19,7 +19,7 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
 
   page.on("request", (req) => {
     const url = req.url();
-    if (url.includes("/anatomy/vanatome/1.4.0/")) {
+    if (isPinnedAtlasRequest(url)) {
       atlasRequests.push(url);
     }
     if (/\/assets\/BodyExplorer3D-[^/]+\.js(?:$|\?)/.test(url)) {
@@ -245,7 +245,6 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
     page.getByRole("combobox", { name: "选择身体区域" }),
   ).toBeVisible();
   await expect(page.getByText("Atlas 1.4.0", { exact: true })).toBeVisible();
-
 });
 
 test("3D Body Explorer falls back when atlas metadata is unavailable", async ({
@@ -274,21 +273,28 @@ test("3D Body Explorer falls back when atlas metadata is unavailable", async ({
   });
   expect(profile.ok(), await profile.text()).toBeTruthy();
 
-  await page.route("**/anatomy/vanatome/1.4.0/**/catalog.json", (route) =>
-    route.abort(),
-  );
+  await page.route("**/releases/1.4.0/catalog.json", (route) => route.abort());
   await page.goto("/consultation?view=state");
 
   await expect(page.getByText("3D 身体视图暂时不可用")).toBeVisible({
     timeout: 30_000,
   });
-  await expect(page.getByText("已切换到可访问的 2D 身体概览。", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("已切换到可访问的 2D 身体概览。", { exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: "重试" })).toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath("body-explorer-atlas-fallback.png"),
     fullPage: true,
   });
 });
+
+function isPinnedAtlasRequest(url: string): boolean {
+  return (
+    url.includes("/anatomy/vanatome/1.4.0/") ||
+    url.includes("atlas.vanatome.vixotic.in/releases/1.4.0/")
+  );
+}
 
 async function readUsedJsHeap(page: import("@playwright/test").Page) {
   return page.evaluate(() => {

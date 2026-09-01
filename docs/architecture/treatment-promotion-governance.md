@@ -1,6 +1,6 @@
 # Treatment Promotion, Shadow, Canary, and Rollback
 
-Status: current implementation (2026-08-20)
+Status: Current rollout mechanism. Treatment v2 became the repository Champion on 2026-09-01 under ADR 0010; v1 is the explicit rollback/historical target and there is no active Challenger by default.
 
 ## North-star rule
 
@@ -21,9 +21,9 @@ champion
 any rollout stage -> rollback
 ```
 
-All committed Compose files default to `champion`. `TREATMENT_AGENT_CONFIGURATION_ID`
-remains a compatibility alias for the Champion pointer; rollout selection is owned
-by the explicit Treatment champion/challenger/stage policy.
+All committed Compose files default to `champion`, which now serves Treatment v2.
+`TREATMENT_AGENT_CONFIGURATION_ID` is retired as serving authority; Champion,
+optional Challenger and rollback target use separate explicit pointers.
 
 ## Promotion evidence
 
@@ -47,18 +47,19 @@ several such changes must not silently inherit this waiver.
 
 ## Runtime admission
 
-The approved pair is:
+Current clean-environment baseline:
 
 ```text
-TREATMENT_CHAMPION_CONFIGURATION_ID=treat-config-85718f8e90ac9d80
-TREATMENT_CHALLENGER_CONFIGURATION_ID=treat-config-f68eec9846664596
-TREATMENT_PROMOTION_RECORD=treatment_promotion_v1
-TREATMENT_ROLLOUT_STAGE=shadow|canary|promoted
+TREATMENT_CHAMPION_CONFIGURATION_ID=treat-config-f68eec9846664596
+TREATMENT_CHALLENGER_CONFIGURATION_ID=
+TREATMENT_ROLLBACK_CONFIGURATION_ID=treat-config-85718f8e90ac9d80
+TREATMENT_ROLLOUT_STAGE=champion
 ```
 
-A missing/wrong promotion record or a different config pair fails startup for a
-non-Champion rollout stage. Canary admits only the predeclared 500, 2500 and 5000
-basis-point steps; 100% requires explicit `promoted`.
+`treatment_promotion_v1` remains immutable evidence for the historical v1 -> v2
+transition. A future non-Champion stage requires a distinct Challenger and a new
+approved record for that exact pair. Canary still admits only the predeclared
+basis-point steps once such a pair exists.
 
 ## Stable serving assignment
 
@@ -71,8 +72,7 @@ challenger iff bucket < canary_bps
 
 For one rollout salt the same user stays in the same bucket. During `shadow`, v1
 serves and v2 is paired read-only. During canary, the assigned configuration serves
-and the opposite configuration runs as the paired shadow. `promoted` serves v2
-only; `rollback` serves v1 only.
+and the opposite configuration runs as the paired shadow. `promoted` serves the active Challenger only; current `rollback` serves the explicit v1 rollback target.
 
 Route selection lives in `TreatmentService`, not the HTTP handler, so both direct
 proposal generation and internal Training-feedback regeneration use the same
@@ -141,7 +141,8 @@ go run ./cmd/treatment-rollout-status -stage shadow -canary-bps 0
 
 ## Hermetic deployment proof
 
-`local-deploy-validate.sh` enables Treatment shadow only inside the disposable
-validator stack. Longitudinal E2E must produce v1/v2 paired observations with zero
-blockers, persist served v1 revisions with rollout provenance, and persist **zero**
-v2 shadow revisions. Production/default Compose state remains Champion v1.
+`local-deploy-validate.sh` now validates the promoted baseline directly. Longitudinal
+E2E must persist Treatment v2 revisions, persist zero newly served v1 revisions,
+and create zero rollout observations because no Challenger is active. Historical
+v1 -> v2 rollout mechanics remain covered by focused Go tests and the immutable
+promotion-policy evaluator.

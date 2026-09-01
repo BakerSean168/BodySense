@@ -9,48 +9,62 @@ func clearDiagnosisRolloutEnv(t *testing.T) {
 	t.Helper()
 	t.Setenv("DIAGNOSIS_CHAMPION_CONFIGURATION_ID", "")
 	t.Setenv("DIAGNOSIS_CHALLENGER_CONFIGURATION_ID", "")
+	t.Setenv("DIAGNOSIS_ROLLBACK_CONFIGURATION_ID", "")
 	t.Setenv("DIAGNOSIS_ROLLOUT_STAGE", "")
 	t.Setenv("DIAGNOSIS_CANARY_BPS", "")
 	t.Setenv("DIAGNOSIS_ROLLOUT_SALT", "")
 	t.Setenv("DIAGNOSIS_PROMOTION_RECORD", "")
 }
 
-func TestAgentDeploymentPolicyDefaultsToChampionWithQualifiedV3Challenger(t *testing.T) {
+func configureHistoricalDiagnosisPromotion(t *testing.T) {
+	t.Helper()
+	t.Setenv("DIAGNOSIS_CHAMPION_CONFIGURATION_ID", diagnosisV1ConfigurationID)
+	t.Setenv("DIAGNOSIS_CHALLENGER_CONFIGURATION_ID", diagnosisDecisionAuthorityConfigID)
+	t.Setenv("DIAGNOSIS_PROMOTION_RECORD", DiagnosisPromotionRecordV1)
+}
+
+func TestAgentDeploymentPolicyDefaultsToLatestDiagnosisChampionWithoutActiveChallenger(t *testing.T) {
 	clearDiagnosisRolloutEnv(t)
 	policy, err := NewAgentDeploymentPolicy()
 	if err != nil {
 		t.Fatalf("NewAgentDeploymentPolicy: %v", err)
 	}
 	selection := policy.SelectDiagnosisRoute("user-1")
-	if selection.Stage != DiagnosisRolloutChampion || selection.ServedConfigurationID != defaultDiagnosisConfigurationID {
+	if selection.Stage != DiagnosisRolloutChampion ||
+		selection.ServedConfigurationID != defaultDiagnosisConfigurationID ||
+		selection.ChampionConfigurationID != diagnosisDecisionAuthorityConfigID {
 		t.Fatalf("unexpected default route: %#v", selection)
 	}
-	if selection.ChallengerConfigurationID != diagnosisDecisionAuthorityConfigID || selection.ShadowConfigurationID != "" {
-		t.Fatalf("unexpected default challenger: %#v", selection)
+	if selection.ChallengerConfigurationID != "" || selection.ShadowConfigurationID != "" {
+		t.Fatalf("new baseline must not invent an active challenger: %#v", selection)
+	}
+	if selection.RollbackConfigurationID != diagnosisV1ConfigurationID {
+		t.Fatalf("unexpected Diagnosis rollback target: %#v", selection)
 	}
 }
 
-func TestAgentDeploymentPolicyShadowServesChampionAndPairsChallenger(t *testing.T) {
+func TestHistoricalDiagnosisPromotionPairRemainsExplicitlyAdmitted(t *testing.T) {
 	clearDiagnosisRolloutEnv(t)
+	configureHistoricalDiagnosisPromotion(t)
 	t.Setenv("DIAGNOSIS_ROLLOUT_STAGE", DiagnosisRolloutShadow)
-	t.Setenv("DIAGNOSIS_PROMOTION_RECORD", DiagnosisPromotionRecordV1)
 	policy, err := NewAgentDeploymentPolicy()
 	if err != nil {
 		t.Fatal(err)
 	}
 	selection := policy.SelectDiagnosisRoute("stable-user")
-	if selection.ServedConfigurationID != defaultDiagnosisConfigurationID || selection.ShadowConfigurationID != diagnosisDecisionAuthorityConfigID {
-		t.Fatalf("unexpected shadow route: %#v", selection)
+	if selection.ServedConfigurationID != diagnosisV1ConfigurationID ||
+		selection.ShadowConfigurationID != diagnosisDecisionAuthorityConfigID {
+		t.Fatalf("unexpected historical shadow route: %#v", selection)
 	}
 	if selection.PromotionRecord != DiagnosisPromotionRecordV1 {
-		t.Fatalf("shadow route must carry approved promotion identity: %#v", selection)
+		t.Fatalf("historical shadow route must carry approved promotion identity: %#v", selection)
 	}
 }
 
-func TestAgentDeploymentPolicyCanaryAssignmentIsStableAndPaired(t *testing.T) {
+func TestHistoricalDiagnosisCanaryAssignmentIsStableAndPaired(t *testing.T) {
 	clearDiagnosisRolloutEnv(t)
+	configureHistoricalDiagnosisPromotion(t)
 	t.Setenv("DIAGNOSIS_ROLLOUT_STAGE", DiagnosisRolloutCanary)
-	t.Setenv("DIAGNOSIS_PROMOTION_RECORD", DiagnosisPromotionRecordV1)
 	t.Setenv("DIAGNOSIS_CANARY_BPS", "2500")
 	t.Setenv("DIAGNOSIS_ROLLOUT_SALT", "rollout-test")
 	policy, err := NewAgentDeploymentPolicy()
@@ -68,10 +82,10 @@ func TestAgentDeploymentPolicyCanaryAssignmentIsStableAndPaired(t *testing.T) {
 	}
 }
 
-func TestAgentDeploymentPolicyCanaryDistributionTracksBasisPoints(t *testing.T) {
+func TestHistoricalDiagnosisCanaryDistributionTracksBasisPoints(t *testing.T) {
 	clearDiagnosisRolloutEnv(t)
+	configureHistoricalDiagnosisPromotion(t)
 	t.Setenv("DIAGNOSIS_ROLLOUT_STAGE", DiagnosisRolloutCanary)
-	t.Setenv("DIAGNOSIS_PROMOTION_RECORD", DiagnosisPromotionRecordV1)
 	t.Setenv("DIAGNOSIS_CANARY_BPS", "1000")
 	policy, err := NewAgentDeploymentPolicy()
 	if err != nil {
@@ -88,45 +102,64 @@ func TestAgentDeploymentPolicyCanaryDistributionTracksBasisPoints(t *testing.T) 
 	}
 }
 
-func TestAgentDeploymentPolicyPromotedAndRollbackAreExplicit(t *testing.T) {
-	for _, tc := range []struct{ stage, want string }{
-		{DiagnosisRolloutPromoted, diagnosisDecisionAuthorityConfigID},
-		{DiagnosisRolloutRollback, defaultDiagnosisConfigurationID},
-	} {
-		t.Run(tc.stage, func(t *testing.T) {
-			clearDiagnosisRolloutEnv(t)
-			t.Setenv("DIAGNOSIS_ROLLOUT_STAGE", tc.stage)
-			if tc.stage == DiagnosisRolloutPromoted {
-				t.Setenv("DIAGNOSIS_PROMOTION_RECORD", DiagnosisPromotionRecordV1)
-			}
-			policy, err := NewAgentDeploymentPolicy()
-			if err != nil {
-				t.Fatal(err)
-			}
-			selection := policy.SelectDiagnosisRoute("user")
-			if selection.ServedConfigurationID != tc.want || selection.ShadowConfigurationID != "" {
-				t.Fatalf("unexpected %s route: %#v", tc.stage, selection)
-			}
-		})
-	}
+func TestDiagnosisHistoricalPromotedAndCurrentRollbackAreExplicit(t *testing.T) {
+	t.Run("historical-promoted", func(t *testing.T) {
+		clearDiagnosisRolloutEnv(t)
+		configureHistoricalDiagnosisPromotion(t)
+		t.Setenv("DIAGNOSIS_ROLLOUT_STAGE", DiagnosisRolloutPromoted)
+		policy, err := NewAgentDeploymentPolicy()
+		if err != nil {
+			t.Fatal(err)
+		}
+		selection := policy.SelectDiagnosisRoute("user")
+		if selection.ServedConfigurationID != diagnosisDecisionAuthorityConfigID || selection.ShadowConfigurationID != "" {
+			t.Fatalf("unexpected historical promoted route: %#v", selection)
+		}
+	})
+
+	t.Run("current-rollback", func(t *testing.T) {
+		clearDiagnosisRolloutEnv(t)
+		t.Setenv("DIAGNOSIS_ROLLOUT_STAGE", DiagnosisRolloutRollback)
+		policy, err := NewAgentDeploymentPolicy()
+		if err != nil {
+			t.Fatal(err)
+		}
+		selection := policy.SelectDiagnosisRoute("user")
+		if selection.ServedConfigurationID != diagnosisV1ConfigurationID ||
+			selection.RollbackConfigurationID != diagnosisV1ConfigurationID {
+			t.Fatalf("unexpected current rollback route: %#v", selection)
+		}
+	})
 }
 
-func TestAgentDeploymentPolicyRejectsInvalidRollout(t *testing.T) {
+func TestAgentDeploymentPolicyRejectsInvalidDiagnosisRollout(t *testing.T) {
 	clearDiagnosisRolloutEnv(t)
+	configureHistoricalDiagnosisPromotion(t)
 	t.Setenv("DIAGNOSIS_ROLLOUT_STAGE", DiagnosisRolloutCanary)
-	t.Setenv("DIAGNOSIS_PROMOTION_RECORD", DiagnosisPromotionRecordV1)
 	t.Setenv("DIAGNOSIS_CANARY_BPS", "10000")
 	if _, err := NewAgentDeploymentPolicy(); err == nil {
 		t.Fatal("canary cannot silently become 100% promotion")
 	}
 }
 
-func TestAgentDeploymentPolicyRefusesRolloutWithoutApprovedPromotionRecord(t *testing.T) {
-	clearDiagnosisRolloutEnv(t)
-	t.Setenv("DIAGNOSIS_ROLLOUT_STAGE", DiagnosisRolloutShadow)
-	if _, err := NewAgentDeploymentPolicy(); err == nil {
-		t.Fatal("shadow must require the CI-qualified promotion record")
-	}
+func TestAgentDeploymentPolicyRefusesDiagnosisRolloutWithoutQualifiedPair(t *testing.T) {
+	t.Run("no-active-challenger", func(t *testing.T) {
+		clearDiagnosisRolloutEnv(t)
+		t.Setenv("DIAGNOSIS_ROLLOUT_STAGE", DiagnosisRolloutShadow)
+		if _, err := NewAgentDeploymentPolicy(); err == nil {
+			t.Fatal("shadow must require an active Challenger")
+		}
+	})
+
+	t.Run("no-promotion-record", func(t *testing.T) {
+		clearDiagnosisRolloutEnv(t)
+		t.Setenv("DIAGNOSIS_CHAMPION_CONFIGURATION_ID", diagnosisV1ConfigurationID)
+		t.Setenv("DIAGNOSIS_CHALLENGER_CONFIGURATION_ID", diagnosisDecisionAuthorityConfigID)
+		t.Setenv("DIAGNOSIS_ROLLOUT_STAGE", DiagnosisRolloutShadow)
+		if _, err := NewAgentDeploymentPolicy(); err == nil {
+			t.Fatal("historical shadow must still require its CI-qualified promotion record")
+		}
+	})
 }
 
 func TestDiagnosisDecisionPolicyRevisionForConfigurationRejectsUnknownCounterfactual(t *testing.T) {
@@ -139,63 +172,26 @@ func TestDiagnosisDecisionPolicyRevisionForConfigurationRejectsUnknownCounterfac
 	}
 }
 
-func TestAgentDeploymentPolicyOwnsTreatmentConfigurationPointer(t *testing.T) {
-	clearDiagnosisRolloutEnv(t)
-	clearTreatmentRolloutEnv(t)
-	t.Setenv("TREATMENT_AGENT_CONFIGURATION_ID", "")
-	policy, err := NewAgentDeploymentPolicy()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if policy.TreatmentConfigurationID() != defaultTreatmentConfigurationID {
-		t.Fatalf("unexpected Treatment configuration: %q", policy.TreatmentConfigurationID())
-	}
-}
-
-func TestAgentDeploymentPolicyRejectsUnknownTreatmentConfiguration(t *testing.T) {
-	clearDiagnosisRolloutEnv(t)
-	clearTreatmentRolloutEnv(t)
-	t.Setenv("TREATMENT_AGENT_CONFIGURATION_ID", "treat-config-unknown")
-	if _, err := NewAgentDeploymentPolicy(); err == nil {
-		t.Fatal("unknown Treatment configuration must fail closed")
-	}
-}
-
-func TestAgentDeploymentPolicyCanSelectQualifiedTreatmentChallengerWithoutChangingDefault(t *testing.T) {
-	clearDiagnosisRolloutEnv(t)
-	clearTreatmentRolloutEnv(t)
-	t.Setenv("TREATMENT_AGENT_CONFIGURATION_ID", treatmentEvidenceGapConfigurationID)
-	policy, err := NewAgentDeploymentPolicy()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if policy.TreatmentConfigurationID() != treatmentEvidenceGapConfigurationID {
-		t.Fatalf("unexpected Treatment challenger: %q", policy.TreatmentConfigurationID())
-	}
-
-	clearDiagnosisRolloutEnv(t)
-	t.Setenv("TREATMENT_AGENT_CONFIGURATION_ID", "")
-	defaultPolicy, err := NewAgentDeploymentPolicy()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if defaultPolicy.TreatmentConfigurationID() != defaultTreatmentConfigurationID {
-		t.Fatalf("default Treatment pointer changed unexpectedly: %q", defaultPolicy.TreatmentConfigurationID())
-	}
-}
-
 func clearTreatmentRolloutEnv(t *testing.T) {
 	t.Helper()
 	t.Setenv("TREATMENT_AGENT_CONFIGURATION_ID", "")
 	t.Setenv("TREATMENT_CHAMPION_CONFIGURATION_ID", "")
 	t.Setenv("TREATMENT_CHALLENGER_CONFIGURATION_ID", "")
+	t.Setenv("TREATMENT_ROLLBACK_CONFIGURATION_ID", "")
 	t.Setenv("TREATMENT_ROLLOUT_STAGE", "")
 	t.Setenv("TREATMENT_CANARY_BPS", "")
 	t.Setenv("TREATMENT_ROLLOUT_SALT", "")
 	t.Setenv("TREATMENT_PROMOTION_RECORD", "")
 }
 
-func TestTreatmentRolloutDefaultsToChampionWithQualifiedV2Challenger(t *testing.T) {
+func configureHistoricalTreatmentPromotion(t *testing.T) {
+	t.Helper()
+	t.Setenv("TREATMENT_CHAMPION_CONFIGURATION_ID", treatmentV1ConfigurationID)
+	t.Setenv("TREATMENT_CHALLENGER_CONFIGURATION_ID", treatmentEvidenceGapConfigurationID)
+	t.Setenv("TREATMENT_PROMOTION_RECORD", TreatmentPromotionRecordV1)
+}
+
+func TestAgentDeploymentPolicyDefaultsToLatestTreatmentChampionWithoutActiveChallenger(t *testing.T) {
 	clearDiagnosisRolloutEnv(t)
 	clearTreatmentRolloutEnv(t)
 	policy, err := NewAgentDeploymentPolicy()
@@ -203,40 +199,65 @@ func TestTreatmentRolloutDefaultsToChampionWithQualifiedV2Challenger(t *testing.
 		t.Fatal(err)
 	}
 	selection := policy.SelectTreatmentRoute("user-1")
-	if selection.Stage != TreatmentRolloutChampion || selection.ServedConfigurationID != defaultTreatmentConfigurationID {
+	if selection.Stage != TreatmentRolloutChampion ||
+		selection.ServedConfigurationID != defaultTreatmentConfigurationID ||
+		selection.ChampionConfigurationID != treatmentEvidenceGapConfigurationID {
 		t.Fatalf("unexpected Treatment default route: %#v", selection)
 	}
-	if selection.ChallengerConfigurationID != treatmentEvidenceGapConfigurationID || selection.ShadowConfigurationID != "" {
-		t.Fatalf("unexpected Treatment default Challenger: %#v", selection)
+	if selection.ChallengerConfigurationID != "" || selection.ShadowConfigurationID != "" {
+		t.Fatalf("new Treatment baseline must not invent an active Challenger: %#v", selection)
+	}
+	if selection.RollbackConfigurationID != treatmentV1ConfigurationID {
+		t.Fatalf("unexpected Treatment rollback target: %#v", selection)
 	}
 }
 
-func TestTreatmentRolloutShadowRequiresApprovedPromotionAndPairsV2(t *testing.T) {
+func TestRetiredTreatmentAgentAliasCannotDowngradeChampion(t *testing.T) {
 	clearDiagnosisRolloutEnv(t)
 	clearTreatmentRolloutEnv(t)
-	t.Setenv("TREATMENT_ROLLOUT_STAGE", TreatmentRolloutShadow)
-	if _, err := NewAgentDeploymentPolicy(); err == nil {
-		t.Fatal("Treatment shadow must require an approved promotion record")
+	t.Setenv("TREATMENT_AGENT_CONFIGURATION_ID", treatmentV1ConfigurationID)
+	policy, err := NewAgentDeploymentPolicy()
+	if err != nil {
+		t.Fatal(err)
 	}
-	t.Setenv("TREATMENT_PROMOTION_RECORD", TreatmentPromotionRecordV1)
+	if policy.TreatmentConfigurationID() != defaultTreatmentConfigurationID {
+		t.Fatalf("retired alias changed current Champion: %q", policy.TreatmentConfigurationID())
+	}
+}
+
+func TestAgentDeploymentPolicyRejectsUnknownTreatmentChampion(t *testing.T) {
+	clearDiagnosisRolloutEnv(t)
+	clearTreatmentRolloutEnv(t)
+	t.Setenv("TREATMENT_CHAMPION_CONFIGURATION_ID", "treat-config-unknown")
+	if _, err := NewAgentDeploymentPolicy(); err == nil {
+		t.Fatal("unknown Treatment Champion must fail closed")
+	}
+}
+
+func TestHistoricalTreatmentPromotionPairRemainsExplicitlyAdmitted(t *testing.T) {
+	clearDiagnosisRolloutEnv(t)
+	clearTreatmentRolloutEnv(t)
+	configureHistoricalTreatmentPromotion(t)
+	t.Setenv("TREATMENT_ROLLOUT_STAGE", TreatmentRolloutShadow)
 	policy, err := NewAgentDeploymentPolicy()
 	if err != nil {
 		t.Fatal(err)
 	}
 	selection := policy.SelectTreatmentRoute("stable-user")
-	if selection.ServedConfigurationID != defaultTreatmentConfigurationID || selection.ShadowConfigurationID != treatmentEvidenceGapConfigurationID {
-		t.Fatalf("unexpected Treatment shadow route: %#v", selection)
+	if selection.ServedConfigurationID != treatmentV1ConfigurationID ||
+		selection.ShadowConfigurationID != treatmentEvidenceGapConfigurationID {
+		t.Fatalf("unexpected Treatment historical shadow route: %#v", selection)
 	}
 	if selection.PromotionRecord != TreatmentPromotionRecordV1 {
-		t.Fatalf("Treatment shadow route lost promotion identity: %#v", selection)
+		t.Fatalf("Treatment historical shadow route lost promotion identity: %#v", selection)
 	}
 }
 
-func TestTreatmentRolloutCanaryAssignmentIsStableAndOnlyAllowsApprovedSteps(t *testing.T) {
+func TestHistoricalTreatmentCanaryAssignmentIsStableAndOnlyAllowsApprovedSteps(t *testing.T) {
 	clearDiagnosisRolloutEnv(t)
 	clearTreatmentRolloutEnv(t)
+	configureHistoricalTreatmentPromotion(t)
 	t.Setenv("TREATMENT_ROLLOUT_STAGE", TreatmentRolloutCanary)
-	t.Setenv("TREATMENT_PROMOTION_RECORD", TreatmentPromotionRecordV1)
 	t.Setenv("TREATMENT_CANARY_BPS", "2500")
 	t.Setenv("TREATMENT_ROLLOUT_SALT", "treatment-rollout-test")
 	policy, err := NewAgentDeploymentPolicy()
@@ -255,36 +276,44 @@ func TestTreatmentRolloutCanaryAssignmentIsStableAndOnlyAllowsApprovedSteps(t *t
 	}
 
 	clearTreatmentRolloutEnv(t)
+	configureHistoricalTreatmentPromotion(t)
 	t.Setenv("TREATMENT_ROLLOUT_STAGE", TreatmentRolloutCanary)
-	t.Setenv("TREATMENT_PROMOTION_RECORD", TreatmentPromotionRecordV1)
 	t.Setenv("TREATMENT_CANARY_BPS", "1000")
 	if _, err := NewAgentDeploymentPolicy(); err == nil {
 		t.Fatal("Treatment canary must reject non-policy basis-point steps")
 	}
 }
 
-func TestTreatmentRolloutPromotedAndRollbackAreExplicit(t *testing.T) {
-	for _, tc := range []struct{ stage, want string }{
-		{TreatmentRolloutPromoted, treatmentEvidenceGapConfigurationID},
-		{TreatmentRolloutRollback, defaultTreatmentConfigurationID},
-	} {
-		t.Run(tc.stage, func(t *testing.T) {
-			clearDiagnosisRolloutEnv(t)
-			clearTreatmentRolloutEnv(t)
-			t.Setenv("TREATMENT_ROLLOUT_STAGE", tc.stage)
-			if tc.stage == TreatmentRolloutPromoted {
-				t.Setenv("TREATMENT_PROMOTION_RECORD", TreatmentPromotionRecordV1)
-			}
-			policy, err := NewAgentDeploymentPolicy()
-			if err != nil {
-				t.Fatal(err)
-			}
-			selection := policy.SelectTreatmentRoute("user")
-			if selection.ServedConfigurationID != tc.want || selection.ShadowConfigurationID != "" {
-				t.Fatalf("unexpected Treatment %s route: %#v", tc.stage, selection)
-			}
-		})
-	}
+func TestTreatmentHistoricalPromotedAndCurrentRollbackAreExplicit(t *testing.T) {
+	t.Run("historical-promoted", func(t *testing.T) {
+		clearDiagnosisRolloutEnv(t)
+		clearTreatmentRolloutEnv(t)
+		configureHistoricalTreatmentPromotion(t)
+		t.Setenv("TREATMENT_ROLLOUT_STAGE", TreatmentRolloutPromoted)
+		policy, err := NewAgentDeploymentPolicy()
+		if err != nil {
+			t.Fatal(err)
+		}
+		selection := policy.SelectTreatmentRoute("user")
+		if selection.ServedConfigurationID != treatmentEvidenceGapConfigurationID || selection.ShadowConfigurationID != "" {
+			t.Fatalf("unexpected Treatment historical promoted route: %#v", selection)
+		}
+	})
+
+	t.Run("current-rollback", func(t *testing.T) {
+		clearDiagnosisRolloutEnv(t)
+		clearTreatmentRolloutEnv(t)
+		t.Setenv("TREATMENT_ROLLOUT_STAGE", TreatmentRolloutRollback)
+		policy, err := NewAgentDeploymentPolicy()
+		if err != nil {
+			t.Fatal(err)
+		}
+		selection := policy.SelectTreatmentRoute("user")
+		if selection.ServedConfigurationID != treatmentV1ConfigurationID ||
+			selection.RollbackConfigurationID != treatmentV1ConfigurationID {
+			t.Fatalf("unexpected Treatment current rollback route: %#v", selection)
+		}
+	})
 }
 
 func TestAgentDeploymentPolicyOwnsUtilityAndKnowledgeAgentPointers(t *testing.T) {

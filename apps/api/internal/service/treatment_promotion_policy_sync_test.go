@@ -40,7 +40,7 @@ func TestTreatmentRuntimeRolloutPolicyMatchesQualifiedPromotionPolicy(t *testing
 		t.Fatal(err)
 	}
 	if policy.Name != TreatmentPromotionRecordV1 ||
-		policy.ChampionConfigurationID != defaultTreatmentConfigurationID ||
+		policy.ChampionConfigurationID != treatmentV1ConfigurationID ||
 		policy.ChallengerConfigurationID != treatmentEvidenceGapConfigurationID {
 		t.Fatalf("Treatment promotion identity drift: %#v", policy)
 	}

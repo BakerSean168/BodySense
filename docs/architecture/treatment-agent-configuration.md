@@ -26,7 +26,7 @@ The initial immutable configuration is `treat-config-85718f8e90ac9d80`, derived 
 
 ## Ownership and authority
 
-Go owns the mutable deployment pointer `TREATMENT_AGENT_CONFIGURATION_ID`. Python cannot choose a different configuration for a request. The request carries the exact `configuration_id`, Python resolves only repository manifests, and the response returns `agent_configuration` plus `execution_provenance`.
+Go owns the mutable deployment pointer `TREATMENT_CHAMPION_CONFIGURATION_ID`. Python cannot choose a different configuration for a request. The request carries the exact `configuration_id`, Python resolves only repository manifests, and the response returns `agent_configuration` plus `execution_provenance`.
 
 Before persistence, Go fails closed unless all of these agree with its registration:
 
@@ -65,9 +65,9 @@ Together with the existing `source_body_state_revision` and `source_diagnosis_an
 
 The baseline passes 4/4 for `treat-config-85718f8e90ac9d80`. This is a platform qualification baseline, not proof of clinical efficacy or semantic superiority of the intervention content.
 
-## EvidenceGap v2 Challenger
+## EvidenceGap v2 current Champion
 
-Treatment v1 remains immutable and is still the default Go deployment pointer. The additive Challenger `treat-config-f68eec9846664596` changes only the prompt/tool/evidence revisions to `treatment-prompt-v2-evidence-gap`, `treatment-tools-v2`, and `treatment-evidence-gap-v2`. Its logical model, output schema, governance policy and Go acceptance decision policy remain unchanged.
+Treatment v1 remains immutable as the historical/rollback configuration. Under ADR 0010, `treat-config-f68eec9846664596` is now the repository Champion. It changes only the prompt/tool/evidence revisions to `treatment-prompt-v2-evidence-gap`, `treatment-tools-v2`, and `treatment-evidence-gap-v2`. Its logical model, output schema, governance policy and Go acceptance decision policy remain unchanged.
 
 v1 exposes the historical `search_evidence(query)` tool. v2 exposes only `acquire_evidence(EvidenceGap)`. The shared bounded acquisition engine enforces these runtime rules independently of model instructions:
 
@@ -79,7 +79,7 @@ v1 exposes the historical `search_evidence(query)` tool. v2 exposes only `acquir
 
 Migration `000039_add_treatment_evidence_acquisition_trace` persists that non-authoritative execution trace on each TreatmentRevision proposal as `evidence_acquisition_trace`. The trace explains acquisition behavior; it does not grant acceptance authority.
 
-The v2 Challenger passes the same `treatment_qualification_v1` dataset 4/4 with the same dataset fingerprint as v1, producing zero deterministic regressions and a pass-rate delta of 0.0. The dedicated Treatment EvidenceGap policy suite passes 5/5. This makes v2 eligible for later rollout-governance work, but it does **not** promote v2: all committed Compose definitions continue to default `TREATMENT_AGENT_CONFIGURATION_ID` to v1.
+The v2 Challenger passes the same `treatment_qualification_v1` dataset 4/4 with the same dataset fingerprint as v1, producing zero deterministic regressions and a pass-rate delta of 0.0. The dedicated Treatment EvidenceGap policy suite passes 5/5. This qualification evidence justified the 2026-09-01 pre-user baseline promotion. The original v1 -> v2 promotion record remains immutable historical evidence; future Challengers require a new record.
 
 ## Go DecisionAuthority and DecisionTrace
 
@@ -112,7 +112,7 @@ Treatment v2 now has repository-versioned promotion evidence and a Go-owned roll
 
 `TreatmentService` performs stable per-user route selection for every proposal path, including Training-driven regeneration. Shadow/canary pairing reuses the exact frozen replay input through a read-only revision source; only the served run may persist a TreatmentRevision. Migration `000042_create_treatment_rollout_observations` stores anonymous paired observations, while each served revision stores `rollout_provenance`. The stop/progression evaluator is deny-first and never mutates deployment state.
 
-All committed Compose files still default to v1 / `champion`; rollout readiness is not automatic promotion. See [`treatment-promotion-governance.md`](./treatment-promotion-governance.md).
+All committed Compose files now default to v2 / `champion`; v1 remains the explicit rollback target. Future rollout readiness is still not automatic promotion. See [`treatment-promotion-governance.md`](./treatment-promotion-governance.md).
 
 ## Protected contracts
 

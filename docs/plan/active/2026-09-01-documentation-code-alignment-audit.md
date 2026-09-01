@@ -54,7 +54,94 @@ For this audit:
 | 0008 Delivery Platform V3             | adopted/proven release/deploy control is present                                                                        | aligned                                               |
 | 0009 Evidence-grounded Assessment     | selection-only model authority, deterministic rendering, Python+Go evidence gate, no-evidence no-model path implemented | core aligned; remaining evidence/mechanism gaps below |
 
-## 5. Highest-priority remaining code gaps
+## 5. Pre-user Agent baseline promotion — owner-approved
+
+**Decision date:** 2026-09-01
+**Owner decision:** promote the latest qualified Diagnosis and Treatment configurations to the repository baseline now, while BodySense is still a single-owner/pre-user product.
+
+### Why this is a baseline promotion, not a claim that live rollout finished
+
+The original rollout policies require a live sequence of:
+
+```text
+shadow >= 20 observations
+  -> canary 5%
+  -> canary 25%
+  -> canary 50%
+  -> promoted 100%
+```
+
+That ladder remains the default governance for a product with meaningful external-user traffic. BodySense currently has no external user population from which those samples would provide independent rollout evidence. Repeating one owner's development traffic twenty times would satisfy a counter without adding the statistical meaning the gate was designed for.
+
+Therefore this plan records an explicit **pre-user promotion waiver** rather than pretending the live sample progression has already occurred. The waiver is bounded to these already-qualified immutable pairs:
+
+```text
+Diagnosis
+  historical v1: diag-config-f492eb1c0c6676ae
+  latest v3:     diag-config-5a4a13627e14b4cf
+
+Treatment
+  historical v1: treat-config-85718f8e90ac9d80
+  latest v2:     treat-config-f68eec9846664596
+```
+
+Qualification evidence already exists and remains immutable historical evidence:
+
+- Diagnosis v1 baseline: 100%;
+- Diagnosis v1 -> v2 EvidenceGap: non-inferior, zero critical regression;
+- Diagnosis v2 -> v3 DecisionAuthority: non-inferior, zero critical regression;
+- Diagnosis Evidence policy: 5/5;
+- Treatment v1 baseline: 4/4;
+- Treatment v2 Challenger: 4/4, non-inferior, zero regression;
+- Treatment EvidenceGap policy: 5/5;
+- both promotion-readiness reports contain no blocking reason.
+
+### Target repository semantics
+
+Do **not** leave the system permanently encoded as:
+
+```text
+v1 Champion + latest Challenger + ROLLOUT_STAGE=promoted
+```
+
+That would serve the correct version but leave the repository vocabulary lying about which behavior is the stable baseline. The completed migration must instead converge to:
+
+```text
+Diagnosis v3 = repository Champion/default serving baseline
+Treatment v2 = repository Champion/default serving baseline
+
+Diagnosis v1 = explicit rollback + historical replay target
+Treatment v1 = explicit rollback + historical replay target
+
+active Challenger = none until a future qualified v4/v3 exists
+```
+
+The historical `diagnosis_promotion_v1` and `treatment_promotion_v1` records remain evidence that justified the one-time v1 -> latest transition. They must not be rewritten to pretend they describe a future rollout pair.
+
+### Implementation steps
+
+1. Separate historical v1 IDs from the mutable/default Champion constants in Go.
+2. Make Diagnosis v3 and Treatment v2 the repository defaults.
+3. Introduce explicit rollback configuration identities instead of using the `Challenger` slot as a rollback alias.
+4. Allow the stable Champion state to have no active Challenger. Require a distinct repository-known Challenger plus a matching future promotion record before any future `shadow/canary/promoted` stage.
+5. Keep historical v1/v2/v3 manifests immutable for replay.
+6. Update Compose/dev/staging/prod defaults and deployment validation so clean environments serve the latest Champion without an operator override.
+7. Update rollout/provenance docs so `Champion`, `Challenger`, `rollback target`, and `historical promotion evidence` are distinct concepts.
+8. Re-run qualification/policy tests, Go rollout tests, longitudinal E2E, repository release verification, then validate Dev -> Staging -> Production with the exact merged SHA.
+
+### Acceptance criteria
+
+- a clean `AgentDeploymentPolicy` serves Diagnosis v3 and Treatment v2 in `champion` stage;
+- no current config calls Diagnosis v1 or Treatment v1 the active Challenger;
+- explicit rollback serves the historical v1 configuration;
+- future non-Champion rollout without a distinct qualified Challenger fails closed;
+- historical v1 -> latest promotion artifacts remain unchanged and their sync tests use historical IDs rather than current default aliases;
+- Dev/Staging/Production report latest Agent configuration IDs after deployment;
+- rollback remains a one-step configuration operation with no schema/data rollback.
+
+---
+
+## 6. Highest-priority remaining code gaps
 
 ### P1 — A1. OCR report indicators bypass an explicit admissibility/review gate
 
@@ -230,7 +317,7 @@ Persist `mechanism_provenance` in OCR result, including an explicit repository-o
 - missing/unknown extractor revision fails evidence admission for new reports;
 - regression export includes the evidence mechanism revision without exposing raw private report text unnecessarily.
 
-## 6. Medium-priority hardening / architecture gaps
+## 7. Medium-priority hardening / architecture gaps
 
 ### P2 — B1. Assessment v3 still exposes legacy request/dependency fields that the serving contract forbids
 
@@ -368,22 +455,30 @@ This does **not** violate ADR 0005 today: both paths still route exclusively thr
 
 Unless Diagnosis needs a documented special transport behavior, delegate to the common `get_gateway_model(config.logical_model)` and keep only Diagnosis model-group validation/settings in the role-specific module.
 
-## 7. Explicit non-gaps / deployment states
+## 8. Explicit non-gaps / deployment states
 
 These were reviewed and must not be reopened as implementation bugs merely because old docs used future tense.
 
-### C1. Diagnosis v3 and Treatment v2 are not default serving configurations
+### C1. Diagnosis v3 and Treatment v2 baseline promotion
 
-**Classification:** `DEPLOYMENT-STATE`, not a code gap.
+**Classification:** `DEPLOYMENT-STATE` resolved by ADR 0010 in this lane.
 
-Rollout machinery is implemented. Committed Compose/default policy intentionally serves the v1 Champion unless operators provide the qualified config pair, explicit rollout stage and approved promotion record.
+The rollout mechanisms were already implemented; the remaining decision was whether
+to keep waiting for live multi-user samples before changing the repository baseline.
+The owner approved the bounded pre-user waiver documented in Section 5 and ADR 0010.
+
+Current target/default after this lane:
 
 ```text
-Diagnosis default: champion v1
-Treatment default: champion v1
+Diagnosis default Champion: v3 / diag-config-5a4a13627e14b4cf
+Diagnosis rollback:         v1 / diag-config-f492eb1c0c6676ae
+Treatment default Champion: v2 / treat-config-f68eec9846664596
+Treatment rollback:         v1 / treat-config-85718f8e90ac9d80
+Active Challenger:          none
 ```
 
-Shadow/canary/promoted are explicit deployment decisions. The old Phase documents were updated to say this instead of “Phase 9 unimplemented”.
+The old promotion records are preserved as immutable evidence for the completed
+v1 -> latest transition; they are not rewritten into future rollout records.
 
 ### C2. 3D final visual/anatomy-boundary audit
 
@@ -397,7 +492,7 @@ Not a current goal. Go owns durable Job truth and invokes Python as bounded comp
 
 The source registry/publication/review backend and operator capability exist. A dedicated management UI is absent, but current architecture does not require one for correctness; it remains optional product/operations work unless promoted to an active feature requirement.
 
-## 8. Documentation drift cleaned in this audit
+## 9. Documentation drift cleaned in this audit
 
 ### D1. Historical architecture removed from current source-of-truth
 
@@ -447,7 +542,7 @@ Source comments pointing to removed active Posture plan now point to archive.
 
 Immutable migrations 20/22 still reference their historical `docs/implementation/...` paths. Redirect documents were restored at those paths rather than mutating checksummed migration files.
 
-## 9. Suggested implementation order
+## 10. Suggested implementation order
 
 ```text
 P1 A1 Report indicator admissibility
@@ -472,7 +567,7 @@ B2 Assessment source-key semantics
    -> decide domain meaning first; implement only after decision
 ```
 
-## 10. Definition of done for this alignment lane
+## 11. Definition of done for this alignment lane
 
 Documentation cleanup is done when:
 
@@ -496,11 +591,23 @@ Changed TSX Prettier: PASS
 Rewritten/new Markdown Prettier: PASS
 pnpm nx typecheck web: PASS
 pnpm nx test web: 41 files / 204 tests PASS
+
+Pre-user baseline promotion validation:
+- Go full suite + go vet: PASS
+- Python unit suite: 399 passed
+- Diagnosis historical promotion evaluator: PASS / no blocking reasons
+- Treatment historical promotion evaluator: PASS / no blocking reasons
+- Python default configuration: Diagnosis v3 / Treatment v2
+- Dev/Staging/Prod Compose interpolation: latest Champion + empty Challenger + explicit v1 rollback
+- Production-shaped Playwright: 10/10 PASS
+- DIAGNOSIS_BASELINE_VALIDATION: PASS (latest=3, legacy=0, rollout_observations=0)
+- TREATMENT_BASELINE_VALIDATION: PASS (latest=3, legacy=0, rollout_observations=0)
+- LOCAL_DEPLOY_VALIDATION: PASS
 ```
 
 The Web test target still emits pre-existing localhost connection noise and one React `act(...)` warning to stderr, but the Nx target exits successfully and all 204 tests pass.
 
-## 11. Future audit rule
+## 12. Future audit rule
 
 For every behavior-significant change:
 

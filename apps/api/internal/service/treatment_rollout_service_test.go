@@ -47,7 +47,7 @@ func treatmentRolloutTestRoute(served, shadow string) TreatmentRouteSelection {
 	return TreatmentRouteSelection{
 		Stage: TreatmentRolloutShadow, SubjectBucket: 1234, CanaryBPS: defaultTreatmentCanaryBPS,
 		ServedConfigurationID: served, ShadowConfigurationID: shadow,
-		ChampionConfigurationID:   defaultTreatmentConfigurationID,
+		ChampionConfigurationID:   treatmentV1ConfigurationID,
 		ChallengerConfigurationID: treatmentEvidenceGapConfigurationID,
 		PromotionRecord:           TreatmentPromotionRecordV1,
 	}
@@ -55,7 +55,7 @@ func treatmentRolloutTestRoute(served, shadow string) TreatmentRouteSelection {
 
 func treatmentRolloutComparisonReport(sourceOutcome, replayOutcome TreatmentDecisionOutcome, hardMatch, semanticMatch bool) *TreatmentReplayReport {
 	return &TreatmentReplayReport{
-		SourceConfigurationID:    defaultTreatmentConfigurationID,
+		SourceConfigurationID:    treatmentV1ConfigurationID,
 		TargetConfigurationID:    treatmentEvidenceGapConfigurationID,
 		ArtifactIntegrity:        TreatmentReplayLayer{Match: true},
 		SourceGenerationDecision: TreatmentDecision{Outcome: sourceOutcome},
@@ -73,7 +73,7 @@ func treatmentRolloutComparisonReport(sourceOutcome, replayOutcome TreatmentDeci
 func TestTreatmentRolloutRecordsUnsafeRelaxationAgainstChampionDirection(t *testing.T) {
 	repo := &fakeTreatmentRolloutRepository{}
 	svc := NewTreatmentRolloutService(repo, nil)
-	route := treatmentRolloutTestRoute(defaultTreatmentConfigurationID, treatmentEvidenceGapConfigurationID)
+	route := treatmentRolloutTestRoute(treatmentV1ConfigurationID, treatmentEvidenceGapConfigurationID)
 	report := treatmentRolloutComparisonReport(TreatmentBlock, TreatmentAllowProposal, false, false)
 	if err := svc.RecordComparison(context.Background(), route, uuid.New(), report, nil); err != nil {
 		t.Fatal(err)
@@ -86,13 +86,13 @@ func TestTreatmentRolloutRecordsUnsafeRelaxationAgainstChampionDirection(t *test
 func TestTreatmentRolloutNormalizesCanaryWhenChallengerIsServed(t *testing.T) {
 	repo := &fakeTreatmentRolloutRepository{}
 	svc := NewTreatmentRolloutService(repo, nil)
-	route := treatmentRolloutTestRoute(treatmentEvidenceGapConfigurationID, defaultTreatmentConfigurationID)
+	route := treatmentRolloutTestRoute(treatmentEvidenceGapConfigurationID, treatmentV1ConfigurationID)
 	route.Stage = TreatmentRolloutCanary
 	// Baseline/source is the served Challenger; replay is the shadow Champion.
 	// A blocked Challenger against an allowing Champion is conservative, not an unsafe relaxation.
 	report := treatmentRolloutComparisonReport(TreatmentBlock, TreatmentAllowProposal, false, false)
 	report.SourceConfigurationID = treatmentEvidenceGapConfigurationID
-	report.TargetConfigurationID = defaultTreatmentConfigurationID
+	report.TargetConfigurationID = treatmentV1ConfigurationID
 	if err := svc.RecordComparison(context.Background(), route, uuid.New(), report, nil); err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +105,7 @@ func TestTreatmentRolloutObserveProposalUsesOppositeConfigAndPersistsShadowError
 	repo := &fakeTreatmentRolloutRepository{}
 	replay := &fakeTreatmentRolloutReplay{err: errors.New("shadow timeout")}
 	svc := NewTreatmentRolloutService(repo, replay)
-	route := treatmentRolloutTestRoute(defaultTreatmentConfigurationID, treatmentEvidenceGapConfigurationID)
+	route := treatmentRolloutTestRoute(treatmentV1ConfigurationID, treatmentEvidenceGapConfigurationID)
 	if err := svc.ObserveProposal(context.Background(), uuid.New(), route, uuid.New()); err != nil {
 		t.Fatal(err)
 	}

@@ -183,10 +183,18 @@ func (p testTreatmentDeploymentPolicy) SelectTreatmentRoute(_ string) TreatmentR
 	if stage == "" {
 		stage = TreatmentRolloutChampion
 	}
-	champion := defaultTreatmentConfigurationID
-	challenger := treatmentEvidenceGapConfigurationID
-	if served == treatmentEvidenceGapConfigurationID && p.shadowConfigurationID == defaultTreatmentConfigurationID {
-		champion, challenger = defaultTreatmentConfigurationID, treatmentEvidenceGapConfigurationID
+	champion := served
+	challenger := ""
+	if p.shadowConfigurationID != "" {
+		// Rollout-focused tests explicitly model the historical v1 -> v2 pair.
+		// Champion-only tests model the current v2 baseline with no Challenger.
+		if (served == treatmentV1ConfigurationID && p.shadowConfigurationID == treatmentEvidenceGapConfigurationID) ||
+			(served == treatmentEvidenceGapConfigurationID && p.shadowConfigurationID == treatmentV1ConfigurationID) {
+			champion = treatmentV1ConfigurationID
+			challenger = treatmentEvidenceGapConfigurationID
+		} else {
+			challenger = p.shadowConfigurationID
+		}
 	}
 	registration := knownTreatmentConfigurations[served]
 	route := TreatmentRouteSelection{
@@ -194,7 +202,7 @@ func (p testTreatmentDeploymentPolicy) SelectTreatmentRoute(_ string) TreatmentR
 		ServedDecisionPolicyRevision: registration.DecisionPolicyRevision,
 		ShadowConfigurationID:        p.shadowConfigurationID,
 		ChampionConfigurationID:      champion, ChallengerConfigurationID: challenger,
-		CanaryBPS: p.canaryBPS,
+		RollbackConfigurationID: treatmentV1ConfigurationID, CanaryBPS: p.canaryBPS,
 	}
 	if route.ShadowConfigurationID != "" {
 		route.ShadowDecisionPolicyRevision = knownTreatmentConfigurations[route.ShadowConfigurationID].DecisionPolicyRevision
@@ -249,6 +257,16 @@ func (f fakeTreatmentReasoner) RecommendTreatment(_ context.Context, req Treatme
 		payload["execution_provenance"] = map[string]any{
 			"status": "executed", "runtime": "pydantic-ai",
 			"logical_model": treatmentLogicalModelV1,
+		}
+	}
+	if req.ConfigurationID == treatmentEvidenceGapConfigurationID {
+		if _, exists := payload["evidence_acquisition"]; !exists {
+			payload["evidence_acquisition"] = map[string]any{
+				"trace_revision":           evidenceAvailabilityTraceV2,
+				"policy_revision":          "treatment-evidence-gap-v2",
+				"external_evidence_status": externalEvidenceNotRequired,
+				"attempts":                 []any{},
+			}
 		}
 	}
 	encoded, err := json.Marshal(payload)
@@ -1060,7 +1078,7 @@ func TestTreatmentGenerationPersistsRolloutRouteAndShadowFailureDoesNotFailServe
 	repo := &fakeTreatmentRepo{}
 	observer := &fakeTreatmentRolloutObserver{err: errors.New("shadow storage unavailable")}
 	deployment := testTreatmentDeploymentPolicy{
-		configurationID:       defaultTreatmentConfigurationID,
+		configurationID:       treatmentV1ConfigurationID,
 		shadowConfigurationID: treatmentEvidenceGapConfigurationID,
 		stage:                 TreatmentRolloutShadow,
 		subjectBucket:         2468,
@@ -1084,15 +1102,15 @@ func TestTreatmentGenerationPersistsRolloutRouteAndShadowFailureDoesNotFailServe
 	if err != nil {
 		t.Fatalf("served Treatment proposal must survive shadow observation failure: %v", err)
 	}
-	if revision.AgentConfigurationID != defaultTreatmentConfigurationID {
-		t.Fatalf("shadow must not replace served Champion: %#v", revision)
+	if revision.AgentConfigurationID != treatmentV1ConfigurationID {
+		t.Fatalf("historical shadow must not replace served v1 Champion: %#v", revision)
 	}
 	var provenance TreatmentRouteSelection
 	if err := json.Unmarshal(revision.RolloutProvenance, &provenance); err != nil {
 		t.Fatalf("decode rollout provenance: %v", err)
 	}
 	if provenance.Stage != TreatmentRolloutShadow || provenance.SubjectBucket != 2468 ||
-		provenance.ServedConfigurationID != defaultTreatmentConfigurationID ||
+		provenance.ServedConfigurationID != treatmentV1ConfigurationID ||
 		provenance.ShadowConfigurationID != treatmentEvidenceGapConfigurationID {
 		t.Fatalf("unexpected durable Treatment rollout provenance: %#v", provenance)
 	}

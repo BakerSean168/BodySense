@@ -54,18 +54,18 @@ BodySense 当前业务领域的最高层设计以以下文档为准：
 
 以下文档定义系统各核心子模块的目标架构：
 
-| 文档                                                                      | 子模块          | 状态            | 说明                                                                  |
-| ------------------------------------------------------------------------- | --------------- | --------------- | --------------------------------------------------------------------- |
-| [System Engineering Refactor Plan](./system-engineering-refactor-plan.md) | 历史总控计划 | Historical redirect | 旧全文已移至 archive，不再承担当前 backlog |
-| [Context Engineering Architecture](./context-engineering-architecture.md) | 上下文工程 | Superseded redirect | ADR 0002 已删除 Go ContextBuilder 目标 |
-| [Agent Tool Calling Runtime](./agent-tool-calling-runtime.md) | 工具调用运行时 | 部分历史 | 概念可参考；执行所有权以 ADR 0002 为准 |
-| [AI Run / Job Runtime](./ai-run-job-runtime.md) | 任务运行时 | Current / partial | JobRuntime 已承载 OCR + Posture；其它任务按业务需要迁移 |
-| [Stream Event Contract Runtime](./stream-event-contract-runtime.md) | 流事件契约 | Current / evolving | Runtime Event Log、StreamEvent contract 与 projection |
-| [AI Output Governance](./ai-output-governance.md) | AI 输出治理 | Current | role-specific deterministic governance；generic Guard 不是最终 authority |
-| [Knowledge Lifecycle](./knowledge-lifecycle-architecture.md) | 知识生命周期 | Current / evolving | source registry、review/publication、published retrieval、observations |
-| [Longitudinal Health Loop](./longitudinal-health-loop.md) | 长期健康闭环 | Current | BodyState 为闭环中心 |
-| [Model Gateway Routing](./model-gateway-routing.md) | 模型路由 | Current | LiteLLM 为唯一物理 provider/fallback 边界 |
-| [Treatment Agent Configuration](./treatment-agent-configuration.md) | Treatment Agent | Current | Immutable config、Go identity gate、durable provenance、eval baseline |
+| 文档                                                                      | 子模块          | 状态                | 说明                                                                     |
+| ------------------------------------------------------------------------- | --------------- | ------------------- | ------------------------------------------------------------------------ |
+| [System Engineering Refactor Plan](./system-engineering-refactor-plan.md) | 历史总控计划    | Historical redirect | 旧全文已移至 archive，不再承担当前 backlog                               |
+| [Context Engineering Architecture](./context-engineering-architecture.md) | 上下文工程      | Superseded redirect | ADR 0002 已删除 Go ContextBuilder 目标                                   |
+| [Agent Tool Calling Runtime](./agent-tool-calling-runtime.md)             | 工具调用运行时  | 部分历史            | 概念可参考；执行所有权以 ADR 0002 为准                                   |
+| [AI Run / Job Runtime](./ai-run-job-runtime.md)                           | 任务运行时      | Current / partial   | JobRuntime 已承载 OCR + Posture；其它任务按业务需要迁移                  |
+| [Stream Event Contract Runtime](./stream-event-contract-runtime.md)       | 流事件契约      | Current / evolving  | Runtime Event Log、StreamEvent contract 与 projection                    |
+| [AI Output Governance](./ai-output-governance.md)                         | AI 输出治理     | Current             | role-specific deterministic governance；generic Guard 不是最终 authority |
+| [Knowledge Lifecycle](./knowledge-lifecycle-architecture.md)              | 知识生命周期    | Current / evolving  | source registry、review/publication、published retrieval、observations   |
+| [Longitudinal Health Loop](./longitudinal-health-loop.md)                 | 长期健康闭环    | Current             | BodyState 为闭环中心                                                     |
+| [Model Gateway Routing](./model-gateway-routing.md)                       | 模型路由        | Current             | LiteLLM 为唯一物理 provider/fallback 边界                                |
+| [Treatment Agent Configuration](./treatment-agent-configuration.md)       | Treatment Agent | Current             | Immutable config、Go identity gate、durable provenance、eval baseline    |
 
 ---
 
@@ -97,6 +97,9 @@ BodySense 当前业务领域的最高层设计以以下文档为准：
 
 - **[ADR 0009: Adopt an evidence-grounded Assessment contract](../adr/0009-adopt-evidence-grounded-assessment-contract.md)** ⭐
   _Assessment 模型只选择 `kind + evidence_ref`；应用拥有 evidence catalog、确定性渲染与 durable gate；零证据直接跳过模型。_
+
+- **[ADR 0010: Promote qualified Agent baselines before external users](../adr/0010-promote-qualified-agent-baselines-before-external-users.md)** ⭐
+  _在无外部用户阶段，对已完成 qualification/non-inferiority 的 Diagnosis v3 与 Treatment v2 做一次显式 owner-approved baseline promotion；最新版成为 Champion，v1 仅保留为 rollback/replay，未来 Challenger 仍必须重新走标准 rollout governance。_
 
 ---
 

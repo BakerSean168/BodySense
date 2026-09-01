@@ -1,6 +1,6 @@
 # Diagnosis Decision Authority and SafetyEnvelope
 
-> Status: Historical Phase-6 implementation checkpoint; DecisionAuthority and rollout machinery are implemented. Repository/Compose default serving remains the v1 Champion unless an operator explicitly advances the qualified v1 -> v3 rollout.
+> Status: Historical Phase-6 implementation checkpoint; DecisionAuthority and rollout machinery are implemented. Under ADR 0010, Diagnosis v3 is now the repository Champion; v1 remains rollback/historical replay only.
 
 ## Authority boundary
 
@@ -72,7 +72,7 @@ evidence: diagnosis-evidence-gap-v2
 decision: diagnosis-decision-policy-v1
 ```
 
-The Go control plane now accepts only repository-known immutable configuration IDs and binds each ID to its expected decision-policy revision. v1/v2 remain registered with `diagnosis-authority-pre-envelope-v0` for historical replay and current serving compatibility. The default production pointer remains v1 until Phase 9.
+The Go control plane accepts only repository-known immutable configuration IDs and binds each ID to its expected decision-policy revision. v1/v2 remain registered with `diagnosis-authority-pre-envelope-v0` for historical replay/rollback compatibility. ADR 0010 promoted v3 to the repository Champion after qualification; v1 is no longer the default serving pointer.
 
 ## Qualification evidence
 

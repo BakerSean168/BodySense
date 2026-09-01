@@ -1,6 +1,6 @@
 # Diagnosis Evidence Acquisition Architecture
 
-> Status: Historical Phase-5 implementation checkpoint; capability and rollout machinery are implemented. Repository/Compose default serving remains the v1 Champion unless an operator explicitly advances the qualified v1 -> v3 rollout.
+> Status: Historical Phase-5 implementation checkpoint; capability and rollout machinery are implemented. Under ADR 0010, Diagnosis v3 is now the repository Champion; v1 remains rollback/historical replay only.
 
 ## Ownership
 

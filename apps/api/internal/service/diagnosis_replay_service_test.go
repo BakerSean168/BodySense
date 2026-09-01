@@ -111,7 +111,7 @@ func TestHistoricalDiagnosisReplayFailsClosedWhenFrozenInputPredatesPhase8(t *te
 	userID := uuid.New()
 	analysis, err := diagnosis.PersistAIResult(
 		context.Background(), userID, 12,
-		replayTestRaw(defaultDiagnosisConfigurationID, DiagnosisDecisionPolicyPreEnvelope, "region:neck"),
+		replayTestRaw(diagnosisV1ConfigurationID, DiagnosisDecisionPolicyPreEnvelope, "region:neck"),
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -126,7 +126,7 @@ func TestHistoricalDiagnosisReplayFailsClosedWhenFrozenInputPredatesPhase8(t *te
 
 func TestCounterfactualDiagnosisReplayUsesFrozenInputAndSelectedConfigurationWithoutPersistence(t *testing.T) {
 	diagnosis, repo, userID, analysisID := persistReplayTestAnalysis(
-		t, defaultDiagnosisConfigurationID, DiagnosisDecisionPolicyPreEnvelope, "region:neck",
+		t, diagnosisV1ConfigurationID, DiagnosisDecisionPolicyPreEnvelope, "region:neck",
 	)
 	originalID := repo.createdAnalysis.ID
 	var captured DiagnosisRequest
@@ -225,7 +225,7 @@ func TestCounterfactualFrozenPreservesLegacyRejectedBaselineForUnsafeRelaxationD
 	}`)
 	report, err := NewDiagnosisReplayService(nil, NewAIClient()).CounterfactualFrozen(
 		context.Background(), uuid.New(), replayTestInput(t, 12), baseline,
-		defaultDiagnosisConfigurationID, diagnosisDecisionAuthorityConfigID,
+		diagnosisV1ConfigurationID, diagnosisDecisionAuthorityConfigID,
 	)
 	if err != nil {
 		t.Fatalf("CounterfactualFrozen: %v", err)
@@ -235,7 +235,7 @@ func TestCounterfactualFrozenPreservesLegacyRejectedBaselineForUnsafeRelaxationD
 	}
 	repo := &fakeDiagnosisRolloutRepository{}
 	rollout := NewDiagnosisRolloutService(repo)
-	route := rolloutTestRoute(defaultDiagnosisConfigurationID, diagnosisDecisionAuthorityConfigID)
+	route := rolloutTestRoute(diagnosisV1ConfigurationID, diagnosisDecisionAuthorityConfigID)
 	if err := rollout.RecordComparison(context.Background(), route, uuid.Nil, report, nil); err != nil {
 		t.Fatal(err)
 	}

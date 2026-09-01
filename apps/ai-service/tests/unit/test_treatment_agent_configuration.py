@@ -16,8 +16,8 @@ def test_default_treatment_configuration_is_repository_versioned_and_stable() ->
     config = get_default_treatment_configuration()
     assert config.role == "treatment"
     assert config.logical_model == "bodysense-structured"
-    assert config.configuration_id == "treat-config-85718f8e90ac9d80"
-    assert (CONFIG_ROOT / "treatment-v1.yaml").exists()
+    assert config.configuration_id == "treat-config-f68eec9846664596"
+    assert (CONFIG_ROOT / "treatment-v2-evidence-gap.yaml").exists()
     assert get_treatment_configuration(config.configuration_id) == config
 
 
@@ -57,11 +57,11 @@ def test_runtime_rejects_unimplemented_treatment_revisions() -> None:
 
 def test_go_control_plane_registers_every_repository_treatment_manifest() -> None:
     repo_root = Path(__file__).resolve().parents[4]
-    go_policy = (
-        repo_root / "apps/api/internal/service/agent_deployment_policy.go"
-    ).read_text(encoding="utf-8") + (
-        repo_root / "apps/api/internal/service/treatment_decision_policy.go"
-    ).read_text(encoding="utf-8")
+    go_policy = (repo_root / "apps/api/internal/service/agent_deployment_policy.go").read_text(
+        encoding="utf-8"
+    ) + (repo_root / "apps/api/internal/service/treatment_decision_policy.go").read_text(
+        encoding="utf-8"
+    )
     manifests = [load_manifest(path) for path in sorted(CONFIG_ROOT.glob("treatment-*.yaml"))]
     assert get_default_treatment_configuration() in manifests
     for config in manifests:
