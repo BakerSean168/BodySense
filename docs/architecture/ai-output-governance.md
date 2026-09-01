@@ -138,6 +138,8 @@ OCR, ASR, Embedding and geometric pose estimation are not Agents. They still nee
 - confidence/quality semantics;
 - explicit downstream admissibility policy.
 
+Posture geometric perception now satisfies this mechanism rule through ADR 0012: current Posture v2 pins MediaPipe version, a versioned pose-model SHA256 and a canonical threshold SHA256, requires the mechanism at serving time, and persists/revalidates exact mechanism provenance before durable analysis storage.
+
 OCR report-indicator admissibility is now deterministic and versioned: completed extraction alone does not grant evidence authority, and current Assessment accepts only `ocr-indicator-admissibility-v1` items marked `admissible`. The remaining OCR gap is mechanism provenance (engine/parser/rendering/extractor identity), tracked in [`2026-09-01-documentation-code-alignment-audit.md`](../plan/active/2026-09-01-documentation-code-alignment-audit.md).
 
 ## 10. Definition of done for a new durable AI output

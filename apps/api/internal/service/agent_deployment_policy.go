@@ -61,7 +61,8 @@ const (
 	consultationV1ConfigurationID      = "consult-config-2bd9b46735dd693c"
 	defaultConsultationConfigurationID = "consult-config-7feb8ca2d5bfad5a"
 
-	defaultPostureConfigurationID = "posture-config-3a774008db422a31"
+	historicalPostureV1ConfigurationID = "posture-config-3a774008db422a31"
+	defaultPostureConfigurationID      = "posture-config-efa3a84622818772"
 
 	defaultTitleConfigurationID = "title-config-bcc5f3a39bc98200"
 	titleLogicalModelV1         = "bodysense-text"
@@ -96,6 +97,14 @@ type consultationConfigurationRegistration struct {
 type postureConfigurationRegistration struct {
 	DecisionPolicyRevision string
 	LogicalModel           string
+	MechanismRevision      string
+	Engine                 string
+	EngineVersion          string
+	ModelURI               string
+	ModelSHA256            string
+	ThresholdRevision      string
+	ThresholdSHA256        string
+	ServingAllowed         bool
 }
 
 type titleConfigurationRegistration struct {
@@ -183,9 +192,22 @@ var knownConsultationConfigurations = map[string]consultationConfigurationRegist
 const PostureDecisionPolicyV1 = "posture-go-analysis-v1"
 
 var knownPostureConfigurations = map[string]postureConfigurationRegistration{
+	historicalPostureV1ConfigurationID: {
+		DecisionPolicyRevision: PostureDecisionPolicyV1,
+		LogicalModel:           "bodysense-posture",
+		ServingAllowed:         false,
+	},
 	defaultPostureConfigurationID: {
 		DecisionPolicyRevision: PostureDecisionPolicyV1,
 		LogicalModel:           "bodysense-posture",
+		MechanismRevision:      "posture-geometry-v1",
+		Engine:                 "mediapipe-tasks",
+		EngineVersion:          "1.0.0",
+		ModelURI:               "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+		ModelSHA256:            "59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a",
+		ThresholdRevision:      "posture-geometry-thresholds-v1",
+		ThresholdSHA256:        "588917b4a071ee1e249d3930b37769c9c9bd7a4fdebd68eb2a00bfdd13fbb140",
+		ServingAllowed:         true,
 	},
 }
 
@@ -833,12 +855,25 @@ func PostureDecisionPolicyRevisionForConfiguration(configurationID string) (stri
 	return registration.DecisionPolicyRevision, nil
 }
 
-func validatePostureConfigurationID(id string) error {
+func validatePostureKnownConfigurationID(id string) error {
 	if !strings.HasPrefix(id, "posture-config-") {
 		return fmt.Errorf("invalid Posture Agent configuration id %q", id)
 	}
 	if _, ok := knownPostureConfigurations[id]; !ok {
 		return fmt.Errorf("unknown Posture Agent configuration id %q", id)
+	}
+	return nil
+}
+
+func validatePostureConfigurationID(id string) error {
+	if err := validatePostureKnownConfigurationID(id); err != nil {
+		return err
+	}
+	if !knownPostureConfigurations[id].ServingAllowed {
+		return fmt.Errorf(
+			"Posture Agent configuration id %q is historical and cannot serve new analyses",
+			id,
+		)
 	}
 	return nil
 }

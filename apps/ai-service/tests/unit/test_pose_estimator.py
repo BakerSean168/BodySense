@@ -1,7 +1,13 @@
-"""Unit tests for geometric pose metrics (no MediaPipe required)."""
+"""Unit tests for geometric pose metrics and mechanism integrity."""
 
 from __future__ import annotations
 
+import hashlib
+
+import pytest
+
+from src.configuration.posture_agent_config import get_default_posture_configuration
+from src.services import pose_estimator as pose_mod
 from src.services.pose_estimator import (
     LM_LEFT_EAR,
     LM_LEFT_HIP,
@@ -10,6 +16,7 @@ from src.services.pose_estimator import (
     LM_RIGHT_HIP,
     LM_RIGHT_SHOULDER,
     Landmark,
+    PoseMechanismIntegrityError,
     compute_frontal_metrics,
     compute_side_metrics,
     findings_from_metrics,
@@ -85,3 +92,49 @@ def test_low_visibility_landmarks_skipped():
     }
     metrics = compute_frontal_metrics(landmarks, "front")
     assert metrics == []
+
+
+def test_current_threshold_fingerprint_matches_manifest() -> None:
+    config = get_default_posture_configuration()
+    assert config.geometry_mechanism is not None
+    assert pose_mod.geometry_threshold_sha256() == config.geometry_mechanism.threshold_sha256
+
+
+def test_verify_pose_mechanism_accepts_exact_artifact(tmp_path, monkeypatch) -> None:
+    config = get_default_posture_configuration()
+    assert config.geometry_mechanism is not None
+    model = tmp_path / "pose.task"
+    model.write_bytes(b"pinned-pose-model")
+    digest = hashlib.sha256(model.read_bytes()).hexdigest()
+    mechanism = config.geometry_mechanism.model_copy(update={"model_sha256": digest})
+    monkeypatch.setenv("BODYSENSE_POSE_MODEL_PATH", str(model))
+    monkeypatch.setattr(pose_mod.metadata, "version", lambda _name: mechanism.engine_version)
+
+    provenance = pose_mod.verify_pose_mechanism(mechanism)
+
+    assert provenance["status"] == "verified"
+    assert provenance["model_sha256"] == digest
+    assert provenance["threshold_sha256"] == pose_mod.geometry_threshold_sha256()
+
+
+def test_verify_pose_mechanism_rejects_artifact_hash_mismatch(tmp_path, monkeypatch) -> None:
+    config = get_default_posture_configuration()
+    assert config.geometry_mechanism is not None
+    model = tmp_path / "pose.task"
+    model.write_bytes(b"tampered")
+    monkeypatch.setenv("BODYSENSE_POSE_MODEL_PATH", str(model))
+    monkeypatch.setattr(
+        pose_mod.metadata, "version", lambda _name: config.geometry_mechanism.engine_version
+    )
+
+    with pytest.raises(PoseMechanismIntegrityError, match="model sha256 mismatch"):
+        pose_mod.verify_pose_mechanism(config.geometry_mechanism)
+
+
+def test_verify_pose_mechanism_rejects_threshold_drift(tmp_path, monkeypatch) -> None:
+    config = get_default_posture_configuration()
+    assert config.geometry_mechanism is not None
+    mechanism = config.geometry_mechanism.model_copy(update={"threshold_sha256": "0" * 64})
+
+    with pytest.raises(PoseMechanismIntegrityError, match="threshold fingerprint mismatch"):
+        pose_mod.verify_pose_mechanism(mechanism)

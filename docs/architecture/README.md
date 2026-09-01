@@ -104,6 +104,9 @@ BodySense 当前业务领域的最高层设计以以下文档为准：
 - **[ADR 0011: Adopt explicit OCR report-indicator evidence admissibility](../adr/0011-adopt-ocr-report-indicator-evidence-admissibility.md)** ⭐
   _把 OCR “处理完成”和“可作为健康证据”拆开；未知/中低置信度 fail closed 为 needs_review，只有带版本化 admissibility provenance 的指标才能进入 Assessment v4 evidence catalog。_
 
+- **[ADR 0012: Adopt a pinned Posture geometric perception mechanism](../adr/0012-adopt-pinned-posture-geometry-mechanism.md)** ⭐
+  _Posture v2 把 MediaPipe engine、versioned pose model + SHA256 和 canonical threshold hash 纳入 immutable identity；当前 serving 缺失/漂移时 fail closed，Python/Go 双层验证 mechanism provenance。_
+
 ---
 
 ## 4. 历史方案与设计文档归档 (Archived Plans)

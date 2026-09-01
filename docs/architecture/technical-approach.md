@@ -162,7 +162,7 @@ POST /api/v1/uploads
   -> user_uploads.analysis_result + configuration identity
 ```
 
-Completed governed Posture findings may later enter Assessment as visual evidence.
+Completed governed Posture findings may later enter Assessment as visual evidence. Current Posture v2 requires `posture-geometry-v1`: MediaPipe `1.0.0`, the versioned `pose_landmarker_lite/float16/1` artifact with pinned SHA256, and a canonical threshold SHA256 are all part of the immutable Posture identity. The artifact is provisioned before serving, never downloaded in the request path, and Python/Go both fail closed on mechanism identity drift. See [ADR 0012](../adr/0012-adopt-pinned-posture-geometry-mechanism.md).
 
 ### Health report OCR
 

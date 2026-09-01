@@ -623,6 +623,11 @@ func validatePostureAgentResponse(respBody []byte, expectedConfigurationID strin
 	if logicalModel, _ := configuration["logical_model"].(string); logicalModel != registration.LogicalModel {
 		return nil, fmt.Errorf("posture logical model mismatch: %q", logicalModel)
 	}
+	if registration.MechanismRevision != "" {
+		if revision, _ := configuration["geometry_mechanism_revision"].(string); revision != registration.MechanismRevision {
+			return nil, fmt.Errorf("posture configuration mechanism mismatch: %q", revision)
+		}
+	}
 	execution, ok := envelope.Result["execution_provenance"].(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("posture agent response missing execution_provenance")
@@ -630,14 +635,56 @@ func validatePostureAgentResponse(respBody []byte, expectedConfigurationID strin
 	if logicalModel, _ := execution["logical_model"].(string); logicalModel != registration.LogicalModel {
 		return nil, fmt.Errorf("posture execution logical model mismatch: %q", logicalModel)
 	}
-	envelope.Result["generation_decision_trace"] = map[string]any{
+	if err := validatePostureMechanismProvenance(envelope.Result, registration); err != nil {
+		return nil, err
+	}
+	trace := map[string]any{
 		"decision":                 "persist",
 		"authority":                "go",
 		"agent_configuration_id":   expectedConfigurationID,
 		"decision_policy_revision": registration.DecisionPolicyRevision,
 		"logical_model":            registration.LogicalModel,
 	}
+	if registration.MechanismRevision != "" {
+		trace["mechanism_revision"] = registration.MechanismRevision
+		trace["model_sha256"] = registration.ModelSHA256
+		trace["threshold_revision"] = registration.ThresholdRevision
+		trace["threshold_sha256"] = registration.ThresholdSHA256
+	}
+	envelope.Result["generation_decision_trace"] = trace
 	return json.Marshal(envelope.Result)
+}
+
+func validatePostureMechanismProvenance(
+	result map[string]any,
+	registration postureConfigurationRegistration,
+) error {
+	if registration.MechanismRevision == "" {
+		return nil
+	}
+	mechanism, ok := result["mechanism_provenance"].(map[string]any)
+	if !ok {
+		return errors.New("posture agent response missing mechanism_provenance")
+	}
+	if status, _ := mechanism["status"].(string); status != "verified" {
+		return fmt.Errorf("posture mechanism status mismatch: %q", status)
+	}
+	expected := map[string]string{
+		"mechanism_revision": registration.MechanismRevision,
+		"engine":             registration.Engine,
+		"engine_version":     registration.EngineVersion,
+		"model_uri":          registration.ModelURI,
+		"model_sha256":       registration.ModelSHA256,
+		"threshold_revision": registration.ThresholdRevision,
+		"threshold_sha256":   registration.ThresholdSHA256,
+	}
+	for field, want := range expected {
+		got, _ := mechanism[field].(string)
+		if got != want {
+			return fmt.Errorf("posture mechanism %s mismatch: got %q want %q", field, got, want)
+		}
+	}
+	return nil
 }
 
 // recordPostureGovernance audits the P2 gate result for posture analysis jobs.

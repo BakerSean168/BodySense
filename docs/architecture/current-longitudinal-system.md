@@ -85,6 +85,10 @@ Treatment rollout selection is Go-owned and stable per user. Shadow/canary runs 
 - `HealthWorkspace.active_training_plan` makes the plan discoverable after reload, login, or device change.
 - Training feedback creates Outcomes; it never mutates an accepted plan in place.
 
+### Posture perception
+
+Posture v2 is the current perception Champion (`posture-config-efa3a84622818772`). Its VLM behavior and required deterministic `posture-geometry-v1` mechanism share one immutable configuration identity. The current AI image contract contains MediaPipe `1.0.0` and the versioned `pose_landmarker_lite/float16/1` artifact; runtime verifies the model SHA256 and canonical threshold SHA256 before the VLM call. Current analysis fails closed if this mechanism is missing or mismatched. The governed result carries exact mechanism provenance, and Go independently revalidates it before writing `user_uploads.analysis_result`. Historical Posture v1 remains repository-known but cannot serve new analyses.
+
 ### Assessment
 
 Assessment is a derived report, not a second health truth or Treatment system.

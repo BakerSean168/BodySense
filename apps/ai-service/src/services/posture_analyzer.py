@@ -73,8 +73,17 @@ async def analyze_posture(
     # North-Star: resolve the exact immutable Agent configuration.
     manifest = get_posture_manifest(configuration_id)
 
-    # Phase 2: geometric metrics first (empty list when pose extra missing).
-    geo_metrics = estimate_pose_metrics(image_bytes, view)
+    # Current Posture v2 binds geometric perception into the immutable config.
+    # Historical v1 has no pinned mechanism and therefore remains VLM-only.
+    mechanism_provenance: dict[str, str] | None = None
+    if manifest.geometry_mechanism is not None:
+        geo_metrics, mechanism_provenance = estimate_pose_metrics(
+            image_bytes,
+            view,
+            manifest.geometry_mechanism,
+        )
+    else:
+        geo_metrics = []
     geo_findings = findings_from_metrics(geo_metrics)
     metrics_hint = ""
     if geo_metrics:
@@ -147,6 +156,8 @@ async def analyze_posture(
         "provider": getattr(resp, "provider", ""),
         "model": getattr(resp, "model", ""),
     }
+    if mechanism_provenance is not None:
+        result["mechanism_provenance"] = mechanism_provenance
     return result
 
 

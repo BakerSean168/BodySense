@@ -201,7 +201,7 @@ cd apps/api && go mod download && cd ../..
 echo "  Done."
 
 echo ">>> 安装 Python 依赖..."
-cd apps/ai-service && uv sync --no-dev --extra ocr && cd ../..
+cd apps/ai-service && uv sync --no-dev --extra ocr --extra pose && cd ../..
 echo "  Done."
 
 # ── 10. 启动开发基础设施 ─────────────────────────────
@@ -230,7 +230,7 @@ echo ""
 echo "热启动开发 (不容器化应用):"
 echo "  前端:   cd apps/web && pnpm dev"
 echo "  后端:   cd apps/api && go run ./cmd/server"
-echo "  AI:     cd apps/ai-service && uv run uvicorn src.main:app --host 0.0.0.0 --port 8100 --reload"
+echo "  AI:     pnpm nx run ai-service:serve   # provisions and verifies pinned Posture geometry first"
 echo ""
 echo "VS Code Remote SSH:"
 echo "  1. 安装 Remote - SSH 扩展"

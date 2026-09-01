@@ -76,12 +76,14 @@ Role: **Posture**.
 Posture converts a user-owned image into a derived observation; it does not become health truth by
 itself. Required controls are:
 
-- immutable `posture-v1` configuration;
+- immutable current `posture-v2` configuration; historical v1 remains known but non-serving;
+- required `posture-geometry-v1` subordinate mechanism pinned by MediaPipe version, versioned model URI + SHA256 and canonical threshold SHA256;
 - Go-owned Champion pointer;
 - exact config pinning on the multipart Go -> Python call;
-- Python-returned config + provider/model execution provenance;
+- build/startup provisioning of the pinned pose model; the request path never downloads a mutable model;
+- Python-returned Agent execution + exact geometric mechanism provenance;
 - deterministic posture output governance;
-- Go identity validation and a deterministic generation decision trace before persistence;
+- Go validates both Agent identity and mechanism identity and writes a deterministic generation decision trace before persistence;
 - direct analysis payload persisted to `user_uploads.analysis_result` (not the HTTP envelope).
 
 A future posture challenger must be added as another immutable manifest and qualified before changing

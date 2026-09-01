@@ -207,6 +207,46 @@ func mustParseUUID(s string) uuid.UUID {
 	return id
 }
 
+func postureResponseBody(t *testing.T, view, configurationID string) []byte {
+	t.Helper()
+	registration, ok := knownPostureConfigurations[configurationID]
+	if !ok {
+		t.Fatalf("unknown posture fixture configuration %q", configurationID)
+	}
+	configuration := map[string]any{
+		"id":                       configurationID,
+		"role":                     "posture",
+		"decision_policy_revision": registration.DecisionPolicyRevision,
+		"logical_model":            registration.LogicalModel,
+	}
+	result := map[string]any{
+		"view":                 view,
+		"findings":             []any{},
+		"summary_markdown":     "ok",
+		"disclaimer":           "d",
+		"agent_configuration":  configuration,
+		"execution_provenance": map[string]any{"logical_model": registration.LogicalModel},
+	}
+	if registration.MechanismRevision != "" {
+		configuration["geometry_mechanism_revision"] = registration.MechanismRevision
+		result["mechanism_provenance"] = map[string]any{
+			"status":             "verified",
+			"mechanism_revision": registration.MechanismRevision,
+			"engine":             registration.Engine,
+			"engine_version":     registration.EngineVersion,
+			"model_uri":          registration.ModelURI,
+			"model_sha256":       registration.ModelSHA256,
+			"threshold_revision": registration.ThresholdRevision,
+			"threshold_sha256":   registration.ThresholdSHA256,
+		}
+	}
+	body, err := json.Marshal(map[string]any{"status": "completed", "result": result})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return body
+}
+
 func TestExecutePostureCallPinsConfiguration(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/posture/analyze" {
@@ -223,7 +263,7 @@ func TestExecutePostureCallPinsConfiguration(t *testing.T) {
 			t.Fatalf("configuration_id = %q, want %q", got, defaultPostureConfigurationID)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, `{"status":"completed","result":{"view":"side","findings":[],"summary_markdown":"ok","disclaimer":"d","agent_configuration":{"id":"%s","role":"posture","decision_policy_revision":"%s","logical_model":"bodysense-posture"},"execution_provenance":{"logical_model":"bodysense-posture"}}}`, defaultPostureConfigurationID, PostureDecisionPolicyV1)
+		_, _ = w.Write(postureResponseBody(t, "side", defaultPostureConfigurationID))
 	}))
 	defer server.Close()
 
@@ -245,7 +285,7 @@ func TestValidatePostureAgentResponseRejectsIdentityMismatch(t *testing.T) {
 }
 
 func TestValidatePostureAgentResponseUnwrapsAndAddsDecisionTrace(t *testing.T) {
-	body := []byte(fmt.Sprintf(`{"status":"completed","result":{"view":"front","findings":[],"summary_markdown":"ok","disclaimer":"d","agent_configuration":{"id":"%s","role":"posture","decision_policy_revision":"%s","logical_model":"bodysense-posture"},"execution_provenance":{"logical_model":"bodysense-posture"}}}`, defaultPostureConfigurationID, PostureDecisionPolicyV1))
+	body := postureResponseBody(t, "front", defaultPostureConfigurationID)
 	result, err := validatePostureAgentResponse(body, defaultPostureConfigurationID)
 	if err != nil {
 		t.Fatalf("validatePostureAgentResponse: %v", err)
@@ -260,6 +300,35 @@ func TestValidatePostureAgentResponseUnwrapsAndAddsDecisionTrace(t *testing.T) {
 	trace, ok := parsed["generation_decision_trace"].(map[string]any)
 	if !ok || trace["authority"] != "go" || trace["decision"] != "persist" {
 		t.Fatalf("missing Go decision trace: %#v", parsed["generation_decision_trace"])
+	}
+}
+
+func TestValidatePostureAgentResponseRejectsMissingMechanismProvenance(t *testing.T) {
+	body := postureResponseBody(t, "front", defaultPostureConfigurationID)
+	var envelope map[string]any
+	if err := json.Unmarshal(body, &envelope); err != nil {
+		t.Fatal(err)
+	}
+	result := envelope["result"].(map[string]any)
+	delete(result, "mechanism_provenance")
+	body, _ = json.Marshal(envelope)
+	if _, err := validatePostureAgentResponse(body, defaultPostureConfigurationID); err == nil {
+		t.Fatal("current Posture response without mechanism provenance must fail closed")
+	}
+}
+
+func TestValidatePostureAgentResponseRejectsMechanismHashMismatch(t *testing.T) {
+	body := postureResponseBody(t, "front", defaultPostureConfigurationID)
+	var envelope map[string]any
+	if err := json.Unmarshal(body, &envelope); err != nil {
+		t.Fatal(err)
+	}
+	result := envelope["result"].(map[string]any)
+	mechanism := result["mechanism_provenance"].(map[string]any)
+	mechanism["model_sha256"] = strings.Repeat("0", 64)
+	body, _ = json.Marshal(envelope)
+	if _, err := validatePostureAgentResponse(body, defaultPostureConfigurationID); err == nil {
+		t.Fatal("Posture mechanism hash mismatch must fail closed")
 	}
 }
 

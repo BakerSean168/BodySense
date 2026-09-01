@@ -465,3 +465,31 @@ func TestAssessmentHistoricalContractCannotBeServed(t *testing.T) {
 		})
 	}
 }
+
+func TestPostureDefaultsToPinnedGeometryChampion(t *testing.T) {
+	t.Setenv("POSTURE_CHAMPION_CONFIGURATION_ID", "")
+	policy, err := NewAgentDeploymentPolicy()
+	if err != nil {
+		t.Fatalf("NewAgentDeploymentPolicy: %v", err)
+	}
+	if got := policy.PostureConfigurationID(); got != defaultPostureConfigurationID {
+		t.Fatalf("unexpected Posture Champion: %q", got)
+	}
+	registration := knownPostureConfigurations[defaultPostureConfigurationID]
+	if !registration.ServingAllowed || registration.MechanismRevision != "posture-geometry-v1" {
+		t.Fatalf("current Posture config must bind serving geometry: %#v", registration)
+	}
+	if registration.ModelSHA256 == "" || registration.ThresholdSHA256 == "" {
+		t.Fatalf("current Posture geometry identity is incomplete: %#v", registration)
+	}
+}
+
+func TestHistoricalPostureV1CannotServeAsChampion(t *testing.T) {
+	t.Setenv("POSTURE_CHAMPION_CONFIGURATION_ID", historicalPostureV1ConfigurationID)
+	if _, err := NewAgentDeploymentPolicy(); err == nil {
+		t.Fatal("historical Posture v1 must not serve new analyses")
+	}
+	if got, err := PostureDecisionPolicyRevisionForConfiguration(historicalPostureV1ConfigurationID); err != nil || got != PostureDecisionPolicyV1 {
+		t.Fatalf("historical Posture identity must remain repository-known: policy=%q err=%v", got, err)
+	}
+}
