@@ -445,6 +445,19 @@ test('release manifest fails closed if a promoted component digest/revision is t
   assert.ok(errors.some((error) => error.includes('release digest mismatch')));
 });
 
+test('Release Publish reconciles release-please tagged state only after publication and supports retries', () => {
+  const contents = fs.readFileSync('.github/workflows/release-publish.yml', 'utf8');
+  assert.match(contents, /pull-requests: write/);
+  assert.match(contents, /issues: write/);
+  assert.match(contents, /reconcile-release-please-state:/);
+  assert.match(contents, /needs\.prepare-draft\.outputs\.already_published == 'true'/);
+  assert.match(contents, /needs\.finalize\.result == 'success'/);
+  assert.match(contents, /gh release view \"\$RELEASE_TAG\".*--json isDraft/);
+  assert.match(contents, /\[\[ \"\$tag_sha\" == \"\$RELEASE_SHA\" \]\]/);
+  assert.match(contents, /autorelease%3A%20pending/);
+  assert.match(contents, /labels\[\]=autorelease: tagged/);
+});
+
 test('all registry channel/release promotions carbon-copy single-platform manifests', () => {
   for (const workflow of [
     '.github/workflows/candidate-publish.yml',

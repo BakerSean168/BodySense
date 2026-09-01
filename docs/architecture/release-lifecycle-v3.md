@@ -149,6 +149,8 @@ The exact schema is versioned and validated before publication.
 
 Only after release identity, candidate digests, static assets and release manifest all pass postflight may Draft become Published/Latest.
 
+After publication, Release Publish also reconciles release-please bookkeeping: the merged Release PR is resolved from the exact release SHA and may move from `autorelease: pending` to `autorelease: tagged` only after the workflow proves that the GitHub Release is Published and the immutable tag resolves to that same SHA. This reconciliation is an idempotent retry boundary, so a previously published release can repair a failed label update without rebuilding artifacts or rewriting the release.
+
 The completion condition is:
 
 ```text

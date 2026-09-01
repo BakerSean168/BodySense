@@ -129,6 +129,12 @@ The historical `diagnosis_promotion_v1` and `treatment_promotion_v1` records rem
 7. Update rollout/provenance docs so `Champion`, `Challenger`, `rollback target`, and `historical promotion evidence` are distinct concepts.
 8. Re-run qualification/policy tests, Go rollout tests, longitudinal E2E, repository release verification, then validate Dev -> Staging -> Production with the exact merged SHA.
 
+### Release-pipeline bookkeeping issue discovered during promotion
+
+The first post-merge `Prepare Release` attempt exposed a delivery-control-plane drift rather than an Agent regression: PR #140 (`chore(main): release 0.9.0`) was still labeled `autorelease: pending` even though the Published `v0.9.0` tag resolves exactly to that PR's merge SHA. release-please therefore correctly refused to create another Release PR because it interpreted #140 as an outstanding untagged release.
+
+The historical GitHub metadata was reconciled to `autorelease: tagged` only after proving tag/SHA identity. Release Publish is also being hardened with an idempotent post-publish reconciliation job: a Release PR may become `autorelease: tagged` only after Published Release state and exact tag SHA are both proven, and a workflow retry can repair bookkeeping after publication without rebuilding or rewriting artifacts.
+
 ### Acceptance criteria
 
 - a clean `AgentDeploymentPolicy` serves Diagnosis v3 and Treatment v2 in `champion` stage;

@@ -19,7 +19,8 @@ concurrency:
 permissions:
   contents: write
   actions: read
-  pull-requests: read
+  pull-requests: write
+  issues: write
 
 env:
   CANDIDATE_PATH: reports/release/candidate/candidate-set-v1.json
@@ -307,4 +308,71 @@ jobs:
             echo "- Tag: $RELEASE_TAG"
             echo "- Revision: ${{ needs.resolve.outputs.revision }}"
             echo '- Production pointers were not changed.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  reconcile-release-please-state:
+    name: Reconcile release-please PR state
+    needs: [resolve, prepare-draft, finalize]
+    if: >-
+      always() &&
+      needs.resolve.outputs.eligible == 'true' &&
+      needs.prepare-draft.result == 'success' &&
+      (needs.prepare-draft.outputs.already_published == 'true' || needs.finalize.result == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify Published Release and reconcile Release PR label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
+          RELEASE_SHA: ${{ needs.resolve.outputs.revision }}
+          RELEASE_VERSION: ${{ needs.resolve.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          is_draft="$(gh release view "$RELEASE_TAG" --repo "$REPOSITORY" --json isDraft --jq .isDraft)"
+          [[ "$is_draft" == false ]] || { echo "$RELEASE_TAG is not Published" >&2; exit 1; }
+
+          tag_json="$(gh api "repos/${REPOSITORY}/git/ref/tags/${RELEASE_TAG}")"
+          tag_sha="$(jq -r .object.sha <<<"$tag_json")"
+          tag_type="$(jq -r .object.type <<<"$tag_json")"
+          if [[ "$tag_type" == tag ]]; then
+            tag_sha="$(gh api "repos/${REPOSITORY}/git/tags/${tag_sha}" --jq .object.sha)"
+          fi
+          [[ "$tag_sha" == "$RELEASE_SHA" ]] || {
+            echo "$RELEASE_TAG points to $tag_sha, expected $RELEASE_SHA" >&2
+            exit 1
+          }
+
+          expected_title="chore(main): release ${RELEASE_VERSION}"
+          release_pr="$(
+            gh api \
+              -H 'Accept: application/vnd.github+json' \
+              "repos/${REPOSITORY}/commits/${RELEASE_SHA}/pulls?per_page=100" \
+              --jq --arg title "$expected_title" \
+              '[.[] | select(.merged_at != null and .base.ref == "main" and .title == $title)][0].number // empty'
+          )"
+          [[ "$release_pr" =~ ^[0-9]+$ ]] || {
+            echo "could not resolve the merged Release PR for $RELEASE_TAG / $RELEASE_SHA" >&2
+            exit 1
+          }
+
+          issue_json="$(gh api "repos/${REPOSITORY}/issues/${release_pr}")"
+          if jq -e '.labels[] | select(.name == "autorelease: pending")' <<<"$issue_json" >/dev/null; then
+            gh api --method DELETE \
+              "repos/${REPOSITORY}/issues/${release_pr}/labels/autorelease%3A%20pending" >/dev/null
+          fi
+          if ! jq -e '.labels[] | select(.name == "autorelease: tagged")' <<<"$issue_json" >/dev/null; then
+            gh api --method POST "repos/${REPOSITORY}/issues/${release_pr}/labels" \
+              -f 'labels[]=autorelease: tagged' >/dev/null
+          fi
+
+          {
+            echo '### release-please state reconciled'
+            echo ''
+            echo "- Release PR: #${release_pr}"
+            echo "- Tag: ${RELEASE_TAG}"
+            echo "- Revision: ${RELEASE_SHA}"
+            echo '- State: autorelease: tagged'
           } >> "$GITHUB_STEP_SUMMARY"
