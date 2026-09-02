@@ -84,6 +84,7 @@ explicit production rollout
        - promote the four release digests to prod-latest
     -> Alibaba Cloud systemd deploy watcher
        - require identical OCI revision labels across Web/API/AI/runtime
+       - probe the target runtime deployer and hand off when its contract changed
        - extract runtime files from the coherent ACR runtime image
        - validate Compose against production secrets
        - back up PostgreSQL
@@ -196,7 +197,7 @@ The production host now uses:
 - `deploy/systemd/bodysense-deploy-watch.service`
 - `deploy/systemd/bodysense-deploy-watch.timer`
 
-The timer polls every ~2 minutes. The script uses `flock`, so overlapping deployment attempts cannot race.
+The timer polls every few minutes. The script uses `flock`, so overlapping deployment attempts cannot race.
 
 ### Eligibility
 
@@ -206,22 +207,42 @@ Before touching running containers it:
 2. reads each image OCI revision label;
 3. refuses deployment unless all three revisions are non-empty and identical;
 4. pulls the `bodysense-runtime:prod-latest` artifact and requires its OCI revision label to match Web/API/AI;
-5. extracts `.env.production`, production Compose, Caddy, LiteLLM config, the deployment watcher, the off-host backup/restore scripts and the off-host systemd units from that runtime artifact;
-6. validates `docker compose config` with the server's untracked `.env.production.local`.
+5. extracts the target deployment watcher from the coherent runtime artifact and compares its SHA-256 with the currently executing watcher;
+6. if the watcher changed, requires `DEPLOY_WATCH_HANDOFF_PROTOCOL=1` and `exec`s the target watcher while preserving the same deployment `flock`, **before** database backup, schema changes or service mutations;
+7. the target watcher re-verifies the coherent release and preflight, then extracts `.env.production`, production Compose, Caddy, LiteLLM config, the deployment watcher, off-host backup/restore scripts and systemd units from that exact runtime artifact;
+8. validates `docker compose config` with the server's untracked `.env.production.local`.
 
 Secrets are never fetched from Git and are never overwritten.
 
+### Runtime deployer self-handoff
+
+The deployment watcher is itself part of the immutable runtime bundle, so a release may change the deployment contract at the same time that it changes application services. The running host watcher must never certify a target release using only the previous release's deployment logic. This matters for changes such as adding a required service, adding a health gate, or changing service ordering.
+
+BodySense therefore uses a two-phase self-handoff protocol:
+
+1. the current watcher resolves one coherent Web/API/AI/runtime revision and passes the Consultation-run preflight;
+2. it copies **only** the target watcher from that already-verified runtime image to a temporary executable and compares source hashes;
+3. an unchanged watcher continues normally;
+4. a changed watcher must declare handoff protocol `1`; otherwise deployment fails closed before creating a backup or mutating managed runtime state;
+5. for a compatible change the current process `exec`s the target watcher, preserving the already-held lock file descriptor;
+6. the target watcher starts the release validation again, then owns the database backup, runtime synchronization, migrations, service health gates and `.deploy-state` commit.
+
+The handoff occurs before the deployment transaction's first durable side effect. Consequently, there is no supported state where an old watcher writes `.deploy-state=success` and waits for a later timer tick to create a service that exists only in the new runtime contract. Hermetic DR tests exercise both a successful handoff (one backup, one deployment) and an incompatible target watcher (zero backup and zero managed-state mutation).
+
 ### Deployment
 
-For an eligible release it:
+For an eligible release, after any required watcher handoff, it:
 
-1. creates a PostgreSQL custom-format backup plus SHA-256;
-2. updates AI Service and waits for health;
-3. updates API and waits for health (API applies pending migrations on startup);
-4. updates Web and waits for health;
-5. reloads Caddy configuration;
-6. checks `https://body.bakersean.top/api/health`;
-7. records the deployed Git revision in `/opt/bodysense/.deploy-state`.
+1. creates and validates a PostgreSQL custom-format backup plus SHA-256;
+2. synchronizes the exact runtime bundle and re-checks immutable deployment/database coordinates;
+3. updates the bounded `document-service` and waits for health/revision identity;
+4. updates AI Service and waits for health/revision identity;
+5. updates API and waits for health/revision identity (API applies pending migrations on startup);
+6. updates Web and waits for health/revision identity;
+7. reloads Caddy configuration and checks `https://body.bakersean.top/api/health`;
+8. records the deployed Git/runtime revision in `/opt/bodysense/.deploy-state`.
+
+For the one-time fresh-PostgreSQL-18 bootstrap path, API schema bootstrap intentionally precedes document/AI startup; steady-state releases use document-service -> AI -> API.
 
 Production backups generated by the watcher are retained for 14 days by default.
 

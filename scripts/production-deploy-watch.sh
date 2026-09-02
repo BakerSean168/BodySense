@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+DEPLOY_WATCH_HANDOFF_PROTOCOL=1
+
 ROOT="${BODYSENSE_DEPLOY_ROOT:-/opt/bodysense}"
 PUBLIC_ENV="$ROOT/.env.production"
 SECRET_ENV="$ROOT/.env.production.local"
@@ -19,6 +21,7 @@ SYSTEMD_DIR="${BODYSENSE_SYSTEMD_DIR:-/etc/systemd/system}"
 FORCE=false
 CHECK_ONLY=false
 PREFLIGHT_ONLY=false
+RUNTIME_HANDOFF=false
 COMPOSE_PROJECT="${BODYSENSE_COMPOSE_PROJECT:-docker}"
 ROLLBACK_READY=false
 ROLLBACK_TAG=""
@@ -34,6 +37,7 @@ for arg in "$@"; do
     --force) FORCE=true ;;
     --check-only) CHECK_ONLY=true ;;
     --preflight-only) PREFLIGHT_ONLY=true ;;
+    --runtime-handoff) RUNTIME_HANDOFF=true ;;
     *) echo "unknown argument: $arg" >&2; exit 2 ;;
   esac
 done
@@ -42,8 +46,17 @@ log() { printf '[%s] %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"; }
 fail() { log "ERROR: $*" >&2; exit 1; }
 
 mkdir -p "$ROOT" "$BACKUP_DIR" "$RUNTIME_BACKUP_DIR"
-exec 9>"$LOCK_FILE"
-flock -n 9 || { log 'another deploy check is already running'; exit 0; }
+RUNNING_WATCHER_SHA=$(sha256sum "$0" | awk '{print $1}')
+if $RUNTIME_HANDOFF; then
+  [ "${BODYSENSE_DEPLOY_HANDOFF_PROTOCOL:-}" = "$DEPLOY_WATCH_HANDOFF_PROTOCOL" ] \
+    || fail 'runtime watcher handoff protocol token is missing or incompatible'
+  inherited_lock=$(readlink "/proc/$$/fd/9" 2>/dev/null || true)
+  [ "$inherited_lock" = "$LOCK_FILE" ] \
+    || fail 'runtime watcher handoff is missing the inherited deployment lock'
+else
+  exec 9>"$LOCK_FILE"
+  flock -n 9 || { log 'another deploy check is already running'; exit 0; }
+fi
 
 [ -s "$PUBLIC_ENV" ] || fail "missing $PUBLIC_ENV"
 [ -s "$SECRET_ENV" ] || fail "missing $SECRET_ENV"
@@ -405,6 +418,47 @@ wait_healthy() {
   done
 }
 
+handoff_to_runtime_watcher_if_needed() {
+  local revision="$1" runtime_container handoff_path target_sha handoff_args
+  handoff_path="$ROOT/scripts/.deploy-watch-handoff-${revision:0:12}-$$-$(date +%s%N)"
+  rm -f "$handoff_path"
+
+  runtime_container=$(docker create "$runtime_ref" /bin/true)
+  if ! docker cp "$runtime_container:/runtime/scripts/production-deploy-watch.sh" "$handoff_path"; then
+    docker rm -f "$runtime_container" >/dev/null 2>&1 || true
+    rm -f "$handoff_path"
+    fail 'failed to extract target deploy watcher for runtime handoff'
+  fi
+  docker rm "$runtime_container" >/dev/null
+  [ -s "$handoff_path" ] || { rm -f "$handoff_path"; fail 'target runtime deploy watcher is empty'; }
+  chmod 0755 "$handoff_path"
+  target_sha=$(sha256sum "$handoff_path" | awk '{print $1}')
+  if [ "$target_sha" = "$RUNNING_WATCHER_SHA" ]; then
+    rm -f "$handoff_path"
+    return 0
+  fi
+  if ! grep -Eq '^DEPLOY_WATCH_HANDOFF_PROTOCOL=1$' "$handoff_path"; then
+    rm -f "$handoff_path"
+    fail 'target runtime deploy watcher changed without compatible handoff protocol 1'
+  fi
+
+  log "deploy watcher changed running=$RUNNING_WATCHER_SHA target=$target_sha; handing off before backup/schema/service changes"
+  handoff_args=(--runtime-handoff)
+  $FORCE && handoff_args+=(--force)
+  exec env \
+    BODYSENSE_DEPLOY_HANDOFF_PROTOCOL="$DEPLOY_WATCH_HANDOFF_PROTOCOL" \
+    BODYSENSE_DEPLOY_HANDOFF_EXECUTABLE="$handoff_path" \
+    "$handoff_path" "${handoff_args[@]}"
+}
+
+cleanup_handoff_executable() {
+  local path="${BODYSENSE_DEPLOY_HANDOFF_EXECUTABLE:-}"
+  [ -n "$path" ] || return 0
+  case "$path" in
+    "$ROOT"/scripts/.deploy-watch-handoff-*) rm -f "$path" ;;
+  esac
+}
+
 sync_runtime() {
   local revision="$1" stage="$ROOT/.runtime-next" old_runtime_revision runtime_container archive stage_postgres_major
 
@@ -477,10 +531,10 @@ sync_runtime() {
   install -m 0644 "$stage/docker/docker-compose.prod.yml" "$COMPOSE"
   install -m 0644 "$stage/docker/Caddyfile" "$ROOT/docker/Caddyfile"
   [ -f "$stage/docker/litellm/config.yaml" ] && install -m 0644 "$stage/docker/litellm/config.yaml" "$ROOT/docker/litellm/config.yaml"
-  # production-deploy-watch.sh installs ITSELF into the managed runtime while
-  # executing, so it is replaced atomically (temp file + rename): the running
-  # process keeps reading its already-open file descriptor and the next
-  # scheduled run reads the new revision's watcher.
+  # production-deploy-watch.sh installs ITSELF atomically. A deployment whose
+  # target watcher differs is handed off BEFORE backup/schema/service changes,
+  # so by the time sync_runtime runs here the active deployer already implements
+  # the target release's deployment contract.
   dw_tmp="$ROOT/scripts/.deploy-watch-$$.tmp"
   cp -f "$stage/scripts/production-deploy-watch.sh" "$dw_tmp"
   chmod 0755 "$dw_tmp"
@@ -573,6 +627,11 @@ if ! deploy_run_preflight; then
   exit 0
 fi
 
+# The runtime bundle owns the deployment contract. If that contract changed,
+# transfer the still-side-effect-free transaction to the target watcher before
+# creating a database backup, changing schema, or touching application services.
+handoff_to_runtime_watcher_if_needed "$desired_revision"
+
 log "deploying coherent revision $desired_revision"
 # Legacy Watchtower updated containers independently and can race this coherent
 # release transaction. Remove it before the managed cutover on upgraded hosts.
@@ -625,6 +684,7 @@ backup=$(basename "$backup")
 BLOCK
     log "revision $desired_revision marked blocked after deployment failure rollback=$rollback_status"
   fi
+  cleanup_handoff_executable
   exit "$status"
 }
 trap on_exit EXIT
@@ -751,4 +811,5 @@ trap - EXIT
 cleanup_rollback_tags
 find "$BACKUP_DIR" -type f -name 'bodysense-pre-*.dump*' -mtime +14 -delete 2>/dev/null || true
 find "$RUNTIME_BACKUP_DIR" -mindepth 1 -maxdepth 1 -type d -mtime +14 -exec rm -rf {} + 2>/dev/null || true
+cleanup_handoff_executable
 log "deployment successful revision=$desired_revision"

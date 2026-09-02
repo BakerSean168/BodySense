@@ -1434,7 +1434,8 @@ ENV
 printf 'new-compose\n' > "$DLW_BUNDLE/docker/docker-compose.prod.yml"
 printf 'new-caddyfile\n' > "$DLW_BUNDLE/docker/Caddyfile"
 printf 'new-litellm-config\n' > "$DLW_BUNDLE/docker/litellm/config.yaml"
-printf '#!/usr/bin/env bash\necho NEW-DEPLOY-WATCH\n' > "$DLW_BUNDLE/scripts/production-deploy-watch.sh"
+cp "$PWD/scripts/production-deploy-watch.sh" "$DLW_BUNDLE/scripts/production-deploy-watch.sh"
+chmod 0755 "$DLW_BUNDLE/scripts/production-deploy-watch.sh"
 printf 'new-offhost-s3\n' > "$DLW_BUNDLE/scripts/offhost-s3.py"
 printf 'new-offhost-backup\n' > "$DLW_BUNDLE/scripts/production-offhost-backup.sh"
 printf 'new-offhost-restore\n' > "$DLW_BUNDLE/scripts/restore-production-backup.sh"
@@ -1470,6 +1471,10 @@ case "$1" in
     ;;
   create) printf 'faectr-runtime\n'; exit 0 ;;
   cp)
+    if [[ "$2" == *":/runtime/scripts/production-deploy-watch.sh" ]] && [ -n "${FAKEDOCKER_RUNTIME_BUNDLE:-}" ]; then
+      cp "$FAKEDOCKER_RUNTIME_BUNDLE/scripts/production-deploy-watch.sh" "$3"
+      exit 0
+    fi
     if [[ "$2" == *":/runtime/." ]] && [ -n "${FAKEDOCKER_RUNTIME_BUNDLE:-}" ]; then
       cp -R "$FAKEDOCKER_RUNTIME_BUNDLE/." "$3"
       exit 0
@@ -1567,6 +1572,146 @@ if [ $rc -ne 0 ] && ls "$DLW_ROOT/runtime-backups"/r1-*/scripts/production-deplo
   report 0 "the pre-deploy archive snapshots the DR scripts and systemd units for rollback"
 else
   report 1 "the pre-deploy archive snapshots the DR scripts and systemd units for rollback" "rc=$rc archives=$(ls "$DLW_ROOT/runtime-backups" 2>/dev/null | tr '\n' '|')"
+fi
+
+# ==============================================================================
+# 16. A runtime release that changes the deploy watcher must hand the still-
+#     side-effect-free transaction to the TARGET watcher before creating a DB
+#     backup or touching schema/services.  This prevents a self-updating old
+#     watcher from certifying success while omitting a service or health gate
+#     introduced by the target runtime.
+# ==============================================================================
+HDO_ROOT="$TMP/handoff-root"
+HDO_SYSD="$TMP/handoff-systemd"
+HDO_BUNDLE="$TMP/handoff-runtime-bundle"
+HDO_MARKER="$TMP/handoff-target-executed"
+mkdir -p "$HDO_ROOT/docker/litellm" "$HDO_ROOT/scripts" "$HDO_ROOT/deploy/systemd" \
+  "$HDO_ROOT/backups" "$HDO_ROOT/runtime-backups" "$HDO_SYSD"
+cat > "$HDO_ROOT/.env.production" <<ENV
+APP_DOMAIN=invalid.invalid
+AUTO_DEPLOY_ENABLED=true
+REGISTRY=registry.example.test
+ACR_NAMESPACE=bodysense
+WEB_TAG=prod-latest
+API_TAG=prod-latest
+AI_TAG=prod-latest
+RUNTIME_TAG=prod-latest
+DB_USER=bodysense
+DB_NAME=bodysense
+ENV
+cat > "$HDO_ROOT/.env.production.local" <<ENV
+DB_PASSWORD=0123456789abcdef
+ENV
+printf 'old-compose\n' > "$HDO_ROOT/docker/docker-compose.prod.yml"
+printf 'old-caddyfile\n' > "$HDO_ROOT/docker/Caddyfile"
+printf 'old-litellm-config\n' > "$HDO_ROOT/docker/litellm/config.yaml"
+printf '#!/usr/bin/env bash\necho OLD-INSTALLED-WATCHER\n' > "$HDO_ROOT/scripts/production-deploy-watch.sh"
+printf 'old-offhost-s3\n' > "$HDO_ROOT/scripts/offhost-s3.py"
+printf 'old-offhost-backup\n' > "$HDO_ROOT/scripts/production-offhost-backup.sh"
+printf 'old-backup-unit\n' > "$HDO_ROOT/deploy/systemd/bodysense-offhost-backup.service"
+printf 'old-backup-timer\n' > "$HDO_ROOT/deploy/systemd/bodysense-offhost-backup.timer"
+cat > "$HDO_ROOT/.deploy-state" <<STATE
+revision=r1
+runtime_revision=r1
+runtime_source=acr
+deployed_at=2026-08-23T00:00:00Z
+STATE
+
+cp -R "$DLW_BUNDLE" "$HDO_BUNDLE"
+python3 - "$PWD/scripts/production-deploy-watch.sh" "$HDO_BUNDLE/scripts/production-deploy-watch.sh" <<'PYMARK'
+from pathlib import Path
+import sys
+source = Path(sys.argv[1]).read_text()
+marker = '''set -Eeuo pipefail
+if [ -n "${BODYSENSE_HANDOFF_TEST_MARKER:-}" ]; then
+  printf 'target-watcher-executed\\n' >> "$BODYSENSE_HANDOFF_TEST_MARKER"
+fi
+'''
+source = source.replace('set -Eeuo pipefail\n', marker, 1)
+Path(sys.argv[2]).write_text(source)
+PYMARK
+chmod 0755 "$HDO_BUNDLE/scripts/production-deploy-watch.sh"
+: > "$TMP/handoff-docker.log"
+: > "$TMP/handoff-systemctl.log"
+: > "$TMP/handoff-curl.log"
+printf '1' > "$TMP/handoff-curl-count" # make the deployment health probe succeed
+
+run_handoff_watch() {
+  FAKEDOCKER_LOG="$TMP/handoff-docker.log" SYSTEMCTL_LOG="$TMP/handoff-systemctl.log" \
+  FAKE_CURL_LOG="$TMP/handoff-curl.log" FAKE_CURL_COUNT="$TMP/handoff-curl-count" \
+  FAKEDOCKER_RUNTIME_BUNDLE="$HDO_BUNDLE" FAKEDOCKER_IMAGE_REV=r2 \
+  BODYSENSE_HANDOFF_TEST_MARKER="$HDO_MARKER" \
+  BODYSENSE_SYSTEMD_DIR="$HDO_SYSD" BODYSENSE_DEPLOY_ROOT="$HDO_ROOT" \
+  bash "$PWD/scripts/production-deploy-watch.sh" --force 2>&1
+}
+handoff_out=$(run_handoff_watch) && handoff_rc=0 || handoff_rc=$?
+printf '%s\n' "$handoff_out"
+handoff_backups=$(find "$HDO_ROOT/backups" -maxdepth 1 -type f -name 'bodysense-pre-*.dump' | wc -l | tr -d ' ')
+handoff_temp=$(find "$HDO_ROOT/scripts" -maxdepth 1 -type f -name '.deploy-watch-handoff-*' | wc -l | tr -d ' ')
+if [ "$handoff_rc" -eq 0 ] \
+  && grep -q 'handing off before backup/schema/service changes' <<<"$handoff_out" \
+  && [ "$(grep -c '^target-watcher-executed$' "$HDO_MARKER" 2>/dev/null || true)" -eq 1 ] \
+  && grep -q '^revision=r2$' "$HDO_ROOT/.deploy-state" \
+  && [ "$handoff_backups" -eq 1 ] \
+  && [ "$handoff_temp" -eq 0 ] \
+  && [ ! -e "$HDO_ROOT/.deploy-blocked" ]; then
+  report 0 "deploy-watch hands a changed runtime contract to the target watcher before one transactional backup/deploy"
+else
+  report 1 "deploy-watch hands a changed runtime contract to the target watcher before one transactional backup/deploy" \
+    "rc=$handoff_rc backups=$handoff_backups temp=$handoff_temp marker=$(cat "$HDO_MARKER" 2>/dev/null | tr '\n' '|') state=$(tr '\n' '|' < "$HDO_ROOT/.deploy-state" 2>/dev/null)"
+fi
+
+# A changed target watcher that drops the handoff protocol is not safe to run.
+# The current watcher must reject it BEFORE backup/runtime/schema/service side effects.
+rm -rf "$HDO_ROOT/backups"/* "$HDO_ROOT/runtime-backups"/* "$HDO_ROOT/.runtime-next" "$HDO_ROOT/.deploy-blocked"
+cat > "$HDO_ROOT/.env.production" <<ENV
+APP_DOMAIN=invalid.invalid
+AUTO_DEPLOY_ENABLED=true
+REGISTRY=registry.example.test
+ACR_NAMESPACE=bodysense
+WEB_TAG=prod-latest
+API_TAG=prod-latest
+AI_TAG=prod-latest
+RUNTIME_TAG=prod-latest
+DB_USER=bodysense
+DB_NAME=bodysense
+#HANDOFF-OLD-ENV
+ENV
+printf 'handoff-old-compose\n' > "$HDO_ROOT/docker/docker-compose.prod.yml"
+printf 'handoff-old-caddy\n' > "$HDO_ROOT/docker/Caddyfile"
+printf '#!/usr/bin/env bash\necho HANDOFF-OLD-WATCHER\n' > "$HDO_ROOT/scripts/production-deploy-watch.sh"
+cat > "$HDO_ROOT/.deploy-state" <<STATE
+revision=r1
+runtime_revision=r1
+runtime_source=acr
+deployed_at=2026-08-23T00:00:00Z
+STATE
+HFI_BUNDLE="$TMP/handoff-incompatible-runtime-bundle"
+cp -R "$DLW_BUNDLE" "$HFI_BUNDLE"
+printf '#!/usr/bin/env bash\nset -Eeuo pipefail\necho incompatible-target\n' > "$HFI_BUNDLE/scripts/production-deploy-watch.sh"
+chmod 0755 "$HFI_BUNDLE/scripts/production-deploy-watch.sh"
+: > "$TMP/handoff-incompatible-docker.log"
+set +e
+hfi_out=$(FAKEDOCKER_LOG="$TMP/handoff-incompatible-docker.log" \
+  FAKEDOCKER_RUNTIME_BUNDLE="$HFI_BUNDLE" FAKEDOCKER_IMAGE_REV=r2 \
+  BODYSENSE_SYSTEMD_DIR="$HDO_SYSD" BODYSENSE_DEPLOY_ROOT="$HDO_ROOT" \
+  bash "$PWD/scripts/production-deploy-watch.sh" --force 2>&1)
+hfi_rc=$?
+set -e
+hfi_backups=$(find "$HDO_ROOT/backups" -maxdepth 1 -type f -name 'bodysense-pre-*.dump' | wc -l | tr -d ' ')
+hfi_temp=$(find "$HDO_ROOT/scripts" -maxdepth 1 -type f -name '.deploy-watch-handoff-*' | wc -l | tr -d ' ')
+if [ "$hfi_rc" -ne 0 ] \
+  && grep -q 'changed without compatible handoff protocol 1' <<<"$hfi_out" \
+  && [ "$hfi_backups" -eq 0 ] \
+  && [ "$hfi_temp" -eq 0 ] \
+  && grep -q '^revision=r1$' "$HDO_ROOT/.deploy-state" \
+  && grep -q 'HANDOFF-OLD-ENV' "$HDO_ROOT/.env.production" \
+  && grep -q '^handoff-old-compose$' "$HDO_ROOT/docker/docker-compose.prod.yml" \
+  && [ ! -e "$HDO_ROOT/.deploy-blocked" ]; then
+  report 0 "deploy-watch rejects an incompatible target watcher before any deployment side effect"
+else
+  report 1 "deploy-watch rejects an incompatible target watcher before any deployment side effect" \
+    "rc=$hfi_rc backups=$hfi_backups temp=$hfi_temp state=$(tr '\n' '|' < "$HDO_ROOT/.deploy-state" 2>/dev/null) out=$(tr '\n' '|' <<<"$hfi_out")"
 fi
 
 echo
