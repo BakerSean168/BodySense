@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.11.0](https://github.com/BakerSean168/BodySense/compare/v0.10.2...v0.11.0) (2026-09-02)
+
+
+### Features
+
+* add governed health document evidence pipeline ([#160](https://github.com/BakerSean168/BodySense/issues/160)) ([0bcf8df](https://github.com/BakerSean168/BodySense/commit/0bcf8df99154e5c65f12ce7634e45a83a60948f9))
+
+
+### Bug Fixes
+
+* **ops:** deploy health document runtime coherently ([#161](https://github.com/BakerSean168/BodySense/issues/161)) ([7692982](https://github.com/BakerSean168/BodySense/commit/769298294a54a4f08e52a5f662afa5419adaf117))
+
 ## [0.10.2](https://github.com/BakerSean168/BodySense/compare/v0.10.1...v0.10.2) (2026-09-01)
 
 
