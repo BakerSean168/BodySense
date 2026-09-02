@@ -47,6 +47,10 @@ BodySense 当前业务领域的最高层设计以以下文档为准：
   _定义用户可见的 3D region mode、anatomy drill-down、BodyState/Chat 联动、空状态、WebGL fallback 与验收标准。_
 - ⚖️ **[Anatomy Asset Governance](./anatomy-asset-governance.md)**
   _定义 Vanatome/Z-Anatomy atlas 的 license boundary、immutable release、自托管、mapping 兼容性、升级与回滚。_
+- 📄 **[Health Document Evidence Pipeline](./health-document-evidence-pipeline.md)** — _Target / benchmark-gated_
+  _把报告图片/PDF处理从单一 OCR 提升为 native-text-first、可插拔 OCR、layout/table fallback、source-grounded indicator、append-only replay/review 的证据管线；当前生产仍以 Tesseract/PyMuPDF + ADR 0011 为准。_
+- 🧾 **[Health Document Ingestion Feature Spec](../feature_spec_health_document_ingestion.md)** — _Target_
+  _定义用户上传体检/病例资料、待确认指标、来源页/区域高亮、确认/纠正/拒绝以及 Assessment authority 边界。_
 
 如果旧文档与上述领域模型冲突，以 ADR 0004 + Longitudinal BodyState Domain Model 为准。
 
@@ -54,18 +58,19 @@ BodySense 当前业务领域的最高层设计以以下文档为准：
 
 以下文档定义系统各核心子模块的目标架构：
 
-| 文档                                                                      | 子模块          | 状态                | 说明                                                                     |
-| ------------------------------------------------------------------------- | --------------- | ------------------- | ------------------------------------------------------------------------ |
-| [System Engineering Refactor Plan](./system-engineering-refactor-plan.md) | 历史总控计划    | Historical redirect | 旧全文已移至 archive，不再承担当前 backlog                               |
-| [Context Engineering Architecture](./context-engineering-architecture.md) | 上下文工程      | Superseded redirect | ADR 0002 已删除 Go ContextBuilder 目标                                   |
-| [Agent Tool Calling Runtime](./agent-tool-calling-runtime.md)             | 工具调用运行时  | 部分历史            | 概念可参考；执行所有权以 ADR 0002 为准                                   |
-| [AI Run / Job Runtime](./ai-run-job-runtime.md)                           | 任务运行时      | Current / partial   | JobRuntime 已承载 OCR + Posture；其它任务按业务需要迁移                  |
-| [Stream Event Contract Runtime](./stream-event-contract-runtime.md)       | 流事件契约      | Current / evolving  | Runtime Event Log、StreamEvent contract 与 projection                    |
-| [AI Output Governance](./ai-output-governance.md)                         | AI 输出治理     | Current             | role-specific deterministic governance；generic Guard 不是最终 authority |
-| [Knowledge Lifecycle](./knowledge-lifecycle-architecture.md)              | 知识生命周期    | Current / evolving  | source registry、review/publication、published retrieval、observations   |
-| [Longitudinal Health Loop](./longitudinal-health-loop.md)                 | 长期健康闭环    | Current             | BodyState 为闭环中心                                                     |
-| [Model Gateway Routing](./model-gateway-routing.md)                       | 模型路由        | Current             | LiteLLM 为唯一物理 provider/fallback 边界                                |
-| [Treatment Agent Configuration](./treatment-agent-configuration.md)       | Treatment Agent | Current             | Immutable config、Go identity gate、durable provenance、eval baseline    |
+| 文档                                                                        | 子模块           | 状态                     | 说明                                                                         |
+| --------------------------------------------------------------------------- | ---------------- | ------------------------ | ---------------------------------------------------------------------------- |
+| [System Engineering Refactor Plan](./system-engineering-refactor-plan.md)   | 历史总控计划     | Historical redirect      | 旧全文已移至 archive，不再承担当前 backlog                                   |
+| [Context Engineering Architecture](./context-engineering-architecture.md)   | 上下文工程       | Superseded redirect      | ADR 0002 已删除 Go ContextBuilder 目标                                       |
+| [Agent Tool Calling Runtime](./agent-tool-calling-runtime.md)               | 工具调用运行时   | 部分历史                 | 概念可参考；执行所有权以 ADR 0002 为准                                       |
+| [AI Run / Job Runtime](./ai-run-job-runtime.md)                             | 任务运行时       | Current / partial        | JobRuntime 已承载 OCR + Posture；其它任务按业务需要迁移                      |
+| [Stream Event Contract Runtime](./stream-event-contract-runtime.md)         | 流事件契约       | Current / evolving       | Runtime Event Log、StreamEvent contract 与 projection                        |
+| [AI Output Governance](./ai-output-governance.md)                           | AI 输出治理      | Current                  | role-specific deterministic governance；generic Guard 不是最终 authority     |
+| [Health Document Evidence Pipeline](./health-document-evidence-pipeline.md) | 健康文档证据管线 | Target / benchmark-gated | native PDF、OCR、layout/table、source span、review/replay；ADR 0013 Proposed |
+| [Knowledge Lifecycle](./knowledge-lifecycle-architecture.md)                | 知识生命周期     | Current / evolving       | source registry、review/publication、published retrieval、observations       |
+| [Longitudinal Health Loop](./longitudinal-health-loop.md)                   | 长期健康闭环     | Current                  | BodyState 为闭环中心                                                         |
+| [Model Gateway Routing](./model-gateway-routing.md)                         | 模型路由         | Current                  | LiteLLM 为唯一物理 provider/fallback 边界                                    |
+| [Treatment Agent Configuration](./treatment-agent-configuration.md)         | Treatment Agent  | Current                  | Immutable config、Go identity gate、durable provenance、eval baseline        |
 
 ---
 
@@ -106,6 +111,9 @@ BodySense 当前业务领域的最高层设计以以下文档为准：
 
 - **[ADR 0012: Adopt a pinned Posture geometric perception mechanism](../adr/0012-adopt-pinned-posture-geometry-mechanism.md)** ⭐
   _Posture v2 把 MediaPipe engine、versioned pose model + SHA256 和 canonical threshold hash 纳入 immutable identity；当前 serving 缺失/漂移时 fail closed，Python/Go 双层验证 mechanism provenance。_
+
+- **[ADR 0013: Adopt a versioned Health Document Evidence Pipeline with benchmark-gated OCR selection](../adr/0013-adopt-versioned-health-document-evidence-pipeline.md)** — _Proposed_
+  _先固定原始文档、native-text-first、可插拔 OCR/PDF/layout/parser、source-grounded evidence、append-only review/replay 的目标契约；RapidOCR + PP-OCRv6 small 为 leading candidate，但必须经 BodySense 健康文档 benchmark 后才能成为 Champion。_
 
 ---
 

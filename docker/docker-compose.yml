@@ -88,6 +88,11 @@ services:
       JWT_REFRESH_TTL_HOURS: ${JWT_REFRESH_TTL_HOURS:-720}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:20100,http://127.0.0.1:20100}
       AI_SERVICE_URL: http://ai-service:8100
+      HEALTH_DOCUMENT_SERVICE_URL: http://document-service:8100
+      HEALTH_DOCUMENT_STAGE: ${HEALTH_DOCUMENT_STAGE:-champion}
+      HEALTH_DOCUMENT_CHAMPION_CONFIGURATION_ID: ${HEALTH_DOCUMENT_CHAMPION_CONFIGURATION_ID:-hdex-config-14af808ef184bf8b}
+      HEALTH_DOCUMENT_QUALIFICATION_CONFIGURATION_ID: ${HEALTH_DOCUMENT_QUALIFICATION_CONFIGURATION_ID:-hdex-config-f2495c95b6ed9de2}
+      HEALTH_DOCUMENT_ROLLBACK_CONFIGURATION_ID: ${HEALTH_DOCUMENT_ROLLBACK_CONFIGURATION_ID:-hdex-config-14af808ef184bf8b}
 
       # 2026-09-01 pre-user baseline promotion: latest qualified configs are
       # the repository Champions; previous v1 configs are explicit rollback targets.
@@ -112,8 +117,30 @@ services:
         condition: service_healthy
       redis-dev:
         condition: service_healthy
+      document-service:
+        condition: service_healthy
     networks:
       - bodysense-network
+
+  document-service:
+    profiles: [dev]
+    build:
+      context: ../apps/ai-service
+      dockerfile: Dockerfile
+    command: ["uvicorn", "src.document_main:app", "--host", "0.0.0.0", "--port", "8100"]
+    init: true
+    mem_limit: ${DOCUMENT_SERVICE_MEMORY_LIMIT:-384m}
+    mem_reservation: ${DOCUMENT_SERVICE_MEMORY_RESERVATION:-64m}
+    ports:
+      - '${DEV_BIND_HOST:-127.0.0.1}:${DOCUMENT_SERVICE_PORT:-20103}:8100'
+    networks:
+      - bodysense-network
+    healthcheck:
+      test: ['CMD', 'python', '-c', "import urllib.request; urllib.request.urlopen('http://localhost:8100/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   ai-service:
     profiles: [dev]

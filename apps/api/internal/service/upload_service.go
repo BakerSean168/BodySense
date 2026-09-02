@@ -3,7 +3,9 @@ package service
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -57,14 +59,21 @@ type uploadRepository interface {
 	GetLatestPostureAnalyses(ctx context.Context, userID uuid.UUID) ([]model.UserUpload, error)
 }
 
+type documentExtractionRunRepository interface {
+	Create(ctx context.Context, run *model.DocumentExtractionRun) error
+}
+
 // UploadService handles upload business logic.
 type UploadService struct {
-	uploadRepo          uploadRepository
-	jobRuntime          *JobRuntime
-	outputReviewService *OutputReviewService
-	aiServiceURL        string
-	deployment          *AgentDeploymentPolicy
-	storage             *uploadstorage.Registry
+	uploadRepo               uploadRepository
+	jobRuntime               *JobRuntime
+	outputReviewService      *OutputReviewService
+	aiServiceURL             string
+	healthDocumentServiceURL string
+	deployment               *AgentDeploymentPolicy
+	healthDocumentDeployment *HealthDocumentDeploymentPolicy
+	documentExtractionRuns   documentExtractionRunRepository
+	storage                  *uploadstorage.Registry
 }
 
 // NewUploadService creates a new UploadService.
@@ -78,12 +87,17 @@ func NewUploadService(
 	if aiServiceURL == "" {
 		aiServiceURL = "http://localhost:8100"
 	}
+	healthDocumentServiceURL := os.Getenv("HEALTH_DOCUMENT_SERVICE_URL")
+	if healthDocumentServiceURL == "" {
+		healthDocumentServiceURL = aiServiceURL
+	}
 	return &UploadService{
-		uploadRepo:          uploadRepo,
-		jobRuntime:          jobRuntime,
-		outputReviewService: outputReviewService,
-		aiServiceURL:        aiServiceURL,
-		storage:             storage,
+		uploadRepo:               uploadRepo,
+		jobRuntime:               jobRuntime,
+		outputReviewService:      outputReviewService,
+		aiServiceURL:             aiServiceURL,
+		healthDocumentServiceURL: healthDocumentServiceURL,
+		storage:                  storage,
 	}
 }
 
@@ -91,6 +105,16 @@ func NewUploadService(
 // resolves its champion Agent configuration through the North-Star control plane.
 func (s *UploadService) WithDeployment(deployment *AgentDeploymentPolicy) *UploadService {
 	s.deployment = deployment
+	return s
+}
+
+func (s *UploadService) WithHealthDocumentDeployment(deployment *HealthDocumentDeploymentPolicy) *UploadService {
+	s.healthDocumentDeployment = deployment
+	return s
+}
+
+func (s *UploadService) WithDocumentExtractionRuns(repo documentExtractionRunRepository) *UploadService {
+	s.documentExtractionRuns = repo
 	return s
 }
 
@@ -255,10 +279,10 @@ func (s *UploadService) DeleteUpload(ctx context.Context, userID uuid.UUID, uplo
 	return s.uploadRepo.Delete(ctx, uploadID, userID)
 }
 
-// executeOCRCall streams an already-authorized upload to the AI service. Go
-// remains the blob authority; Python receives only the request body, never OSS
-// credentials or an object-store location.
-func (s *UploadService) executeOCRCall(reader io.Reader, mimeType string) ([]byte, error) {
+// executeOCRCall streams an already-authorized upload to the bounded health-document
+// runtime. Go remains the blob authority; Python receives only the request body,
+// never OSS credentials or an object-store location.
+func (s *UploadService) executeOCRCall(reader io.Reader, mimeType, configurationID string) ([]byte, error) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	part, err := writer.CreatePart(map[string][]string{
@@ -271,13 +295,20 @@ func (s *UploadService) executeOCRCall(reader io.Reader, mimeType string) ([]byt
 	if _, err = io.Copy(part, reader); err != nil {
 		return nil, fmt.Errorf("failed to copy file content: %w", err)
 	}
+	if err := writer.WriteField("configuration_id", configurationID); err != nil {
+		return nil, fmt.Errorf("failed to write OCR configuration id: %w", err)
+	}
 	if err := writer.Close(); err != nil {
 		return nil, fmt.Errorf("failed to finalize OCR multipart body: %w", err)
 	}
 
-	resp, err := http.Post(s.aiServiceURL+"/api/ocr/extract", writer.FormDataContentType(), body)
+	baseURL := s.healthDocumentServiceURL
+	if baseURL == "" {
+		baseURL = s.aiServiceURL
+	}
+	resp, err := http.Post(baseURL+"/api/ocr/extract", writer.FormDataContentType(), body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to AI service: %w", err)
+		return nil, fmt.Errorf("failed to connect to health-document service: %w", err)
 	}
 	defer resp.Body.Close()
 	respBody, err := io.ReadAll(resp.Body)
@@ -291,7 +322,8 @@ func (s *UploadService) executeOCRCall(reader io.Reader, mimeType string) ([]byt
 }
 
 type ocrJobInput struct {
-	UploadID string `json:"upload_id"`
+	UploadID        string `json:"upload_id"`
+	ConfigurationID string `json:"configuration_id,omitempty"`
 }
 
 // StartUploadWorker starts a background worker that recovers and processes
@@ -365,7 +397,11 @@ func (s *UploadService) RecoverUploadJobs(ctx context.Context, limit int, staleR
 
 func (s *UploadService) enqueueOCRJob(ctx context.Context, uploadID, userID uuid.UUID) (*model.Job, bool, error) {
 	idempotencyKey := fmt.Sprintf("upload_ocr:%s", uploadID.String())
-	inputJSON, _ := json.Marshal(ocrJobInput{UploadID: uploadID.String()})
+	configurationID := defaultHealthDocumentChampionID
+	if s.healthDocumentDeployment != nil {
+		configurationID = s.healthDocumentDeployment.ConfigurationID()
+	}
+	inputJSON, _ := json.Marshal(ocrJobInput{UploadID: uploadID.String(), ConfigurationID: configurationID})
 	job, existed, err := s.jobRuntime.CreateJobWithIdempotency(ctx, userID, ocrJobType, inputJSON, idempotencyKey, nil, nil)
 	if err != nil {
 		return nil, false, err
@@ -406,7 +442,8 @@ func (s *UploadService) processOCRJob(ctx context.Context, job model.Job) error 
 		_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, job.UserID, "failed", json.RawMessage(`{"error":"upload object unavailable"}`))
 		return err
 	}
-	respBody, callErr := s.executeOCRCall(reader, upload.MimeType)
+	documentHasher := sha256.New()
+	respBody, callErr := s.executeOCRCall(io.TeeReader(reader, documentHasher), upload.MimeType, input.ConfigurationID)
 	closeErr := reader.Close()
 	if callErr == nil && closeErr != nil {
 		callErr = closeErr
@@ -416,6 +453,31 @@ func (s *UploadService) processOCRJob(ctx context.Context, job model.Job) error 
 		errPayload, _ := json.Marshal(map[string]string{"error": callErr.Error()})
 		_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, job.UserID, "failed", errPayload)
 		return callErr
+	}
+	validatedBody, err := validateHealthDocumentResponse(respBody, input.ConfigurationID)
+	if err != nil {
+		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": err.Error()})
+		errPayload, _ := json.Marshal(map[string]string{"error": "health-document response validation failed"})
+		_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, job.UserID, "failed", errPayload)
+		return err
+	}
+	respBody = validatedBody
+	if s.documentExtractionRuns == nil {
+		err := errors.New("document extraction run repository is not configured")
+		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": err.Error()})
+		return err
+	}
+	documentSHA256 := hex.EncodeToString(documentHasher.Sum(nil))
+	extractionRun, err := buildDocumentExtractionRun(
+		validatedBody, documentSHA256, uploadID, job.UserID, job.ID, input.ConfigurationID,
+	)
+	if err != nil {
+		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": err.Error()})
+		return err
+	}
+	if err := s.documentExtractionRuns.Create(ctx, extractionRun); err != nil {
+		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": "persist document extraction audit run"})
+		return fmt.Errorf("persist document extraction audit run: %w", err)
 	}
 
 	_ = s.jobRuntime.UpdateProgress(ctx, job.ID, map[string]any{"stage": "ocr_completed", "percent": 100})
@@ -445,6 +507,14 @@ func parseOCRJobInput(job model.Job) (ocrJobInput, error) {
 	}
 	if input.UploadID == "" {
 		return input, fmt.Errorf("OCR job input missing upload_id")
+	}
+	if input.ConfigurationID == "" {
+		// Jobs created before health-document configuration pinning retain the
+		// exact Tesseract behavior they were enqueued under.
+		input.ConfigurationID = legacyTesseractConfigurationID
+	}
+	if _, ok := knownHealthDocumentConfigurations[input.ConfigurationID]; !ok {
+		return input, fmt.Errorf("unknown health-document configuration id %q", input.ConfigurationID)
 	}
 	return input, nil
 }
@@ -490,6 +560,9 @@ func (s *UploadService) executePostureCall(reader io.Reader, mimeType, view, con
 	}
 	if _, err = io.Copy(part, reader); err != nil {
 		return nil, fmt.Errorf("failed to copy file content: %w", err)
+	}
+	if err := writer.WriteField("configuration_id", configurationID); err != nil {
+		return nil, fmt.Errorf("failed to write OCR configuration id: %w", err)
 	}
 	if err := writer.Close(); err != nil {
 		return nil, fmt.Errorf("failed to finalize posture multipart body: %w", err)

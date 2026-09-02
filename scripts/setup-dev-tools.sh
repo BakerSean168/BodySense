@@ -102,7 +102,7 @@ alias bsdev='docker compose -f docker/docker-compose.yml --profile dev up -d pos
 alias bsstop='docker compose -f docker/docker-compose.yml --profile dev down'
 alias bsw='cd apps/web && pnpm dev'
 alias bsa='cd apps/api && go run ./cmd/server'
-alias bsai='cd apps/ai-service && uv run --extra ocr --extra pose python scripts/ensure_pose_model.py && uv run --extra ocr --extra pose uvicorn src.main:app --host 0.0.0.0 --port 8100 --reload'
+alias bsai='cd apps/ai-service && uv run --extra ocr --extra pose --extra document-ocr python scripts/ensure_pose_model.py && uv run --extra ocr --extra pose --extra document-ocr uvicorn src.main:app --host 0.0.0.0 --port 8100 --reload'
 alias bslogs='docker compose -f docker/docker-compose.yml --profile dev logs -f'
 ZSHRC
 

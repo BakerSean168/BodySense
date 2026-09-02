@@ -2,5 +2,9 @@
   "venvPath": ".",
   "venv": ".venv",
   "pythonVersion": "3.13",
-  "typeCheckingMode": "basic"
+  "typeCheckingMode": "basic",
+  "ignore": [
+    "src/document_pipeline/engines/rapidocr_ppocrv6.py",
+    "src/document_pipeline/engines/rapidocr_ppocrv6_bounded.py"
+  ]
 }

@@ -1,0 +1,62 @@
+{
+  "schema_version": "health-document-candidate-v1",
+  "candidate_id": "rapidocr-ppocrv6-small-bounded-v1",
+  "label": "RapidOCR 3.9.2 + ONNXRuntime 1.29.0 + PP-OCRv6 small, bounded PDF/image envelope",
+  "mechanism_revision": "health-document-rapidocr-ppocrv6-small-bounded-v1",
+  "engine": "rapidocr",
+  "engine_version": "3.9.2",
+  "wrapper": "rapidocr",
+  "wrapper_version": "3.9.2",
+  "pillow_version": "12.3.0",
+  "languages": ["ch"],
+  "language_artifacts": [],
+  "runtime_engine": "onnxruntime",
+  "runtime_version": "1.29.0",
+  "model_family": "PP-OCRv6",
+  "model_type": "small",
+  "model_artifacts": [
+    {
+      "role": "det",
+      "filename": "PP-OCRv6_det_small.onnx",
+      "sha256": "090f04abcd9d9a7498bc4ebf677e4cb9bdce1fe4197ddb7e529f1ef44e1ff94f"
+    },
+    {
+      "role": "rec",
+      "filename": "PP-OCRv6_rec_small.onnx",
+      "sha256": "6f327246b50388f3c176ae304bd95767ea6dc0c9ae92153ef8cbe210b3c14884"
+    },
+    {
+      "role": "cls",
+      "filename": "ch_ppocr_mobile_v2.0_cls_mobile.onnx",
+      "sha256": "e47acedf663230f8863ff1ab0e64dd2d82b838fceb5957146dab185a89d6215c"
+    }
+  ],
+  "engine_parameters": {
+    "Det.engine_type": "onnxruntime",
+    "Det.lang_type": "ch",
+    "Det.model_type": "small",
+    "Det.ocr_version": "PP-OCRv6",
+    "Det.limit_type": "max",
+    "Det.limit_side_len": "736",
+    "Rec.engine_type": "onnxruntime",
+    "Rec.lang_type": "ch",
+    "Rec.model_type": "small",
+    "Rec.ocr_version": "PP-OCRv6",
+    "Cls.engine_type": "onnxruntime",
+    "Cls.lang_type": "ch",
+    "Cls.model_type": "mobile",
+    "Cls.ocr_version": "PP-OCRv4"
+  },
+  "pdf_raster": {
+    "engine": "PyMuPDF",
+    "engine_version": "1.28.0",
+    "strategy": "raster_all_pages",
+    "dpi": 150,
+    "image_format": "png"
+  },
+  "source_contract": {
+    "engine_adapter_sha256": "33094562c238ff6171093f915cf3bc99955bfe9343dc525837ac16f6e5a616e8",
+    "indicator_extractor_sha256": "22d6e1c8689557c8b5a878004a647b428950b47c44602c958ce1cb54e383eec7",
+    "admissibility_policy_sha256": "74926abcac70a326e254702774c18f0a03f3d5c567cb3a51aafb4b4da2757c78"
+  }
+}

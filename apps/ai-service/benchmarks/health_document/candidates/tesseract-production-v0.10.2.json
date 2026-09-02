@@ -1,0 +1,35 @@
+{
+  "schema_version": "health-document-candidate-v1",
+  "candidate_id": "tesseract-production-v0.10.2",
+  "label": "BodySense production Tesseract baseline at v0.10.2",
+  "mechanism_revision": "health-document-tesseract-baseline-v1",
+  "engine": "tesseract",
+  "engine_version": "5.5.0",
+  "wrapper": "pytesseract",
+  "wrapper_version": "0.3.13",
+  "pillow_version": "12.3.0",
+  "languages": ["chi_sim", "eng"],
+  "language_artifacts": [
+    {
+      "language": "chi_sim",
+      "sha256": "a5fcb6f0db1e1d6d8522f39db4e848f05984669172e584e8d76b6b3141e1f730"
+    },
+    {
+      "language": "eng",
+      "sha256": "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2"
+    }
+  ],
+  "tesseract_config": "",
+  "pdf_raster": {
+    "engine": "PyMuPDF",
+    "engine_version": "1.28.0",
+    "strategy": "raster_all_pages",
+    "dpi": 300,
+    "image_format": "png"
+  },
+  "source_contract": {
+    "ocr_service_sha256": "cd31066a2be9f80e38a00c636f10d31bdf83c5b21165c8084acb9cb7cde60220",
+    "indicator_extractor_sha256": "22d6e1c8689557c8b5a878004a647b428950b47c44602c958ce1cb54e383eec7",
+    "admissibility_policy_sha256": "74926abcac70a326e254702774c18f0a03f3d5c567cb3a51aafb4b4da2757c78"
+  }
+}

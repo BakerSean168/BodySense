@@ -78,6 +78,9 @@ func TestExecuteOCRCall_Success(t *testing.T) {
 			http.Error(w, "bad form", http.StatusBadRequest)
 			return
 		}
+		if got := r.FormValue("configuration_id"); got != healthDocumentCandidateConfigurationID {
+			t.Fatalf("configuration_id = %q, want %q", got, healthDocumentCandidateConfigurationID)
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, `{"text":"OCR结果","confidence":0.95}`)
@@ -85,7 +88,7 @@ func TestExecuteOCRCall_Success(t *testing.T) {
 	defer server.Close()
 
 	svc := &UploadService{aiServiceURL: server.URL}
-	respBody, err := svc.executeOCRCall(strings.NewReader("fake pdf"), "application/pdf")
+	respBody, err := svc.executeOCRCall(strings.NewReader("fake pdf"), "application/pdf", healthDocumentCandidateConfigurationID)
 	if err != nil {
 		t.Fatalf("executeOCRCall: %v", err)
 	}
@@ -107,7 +110,7 @@ func TestExecuteOCRCall_ServerError(t *testing.T) {
 	defer server.Close()
 
 	svc := &UploadService{aiServiceURL: server.URL}
-	_, err := svc.executeOCRCall(strings.NewReader("content"), "application/pdf")
+	_, err := svc.executeOCRCall(strings.NewReader("content"), "application/pdf", healthDocumentCandidateConfigurationID)
 	if err == nil {
 		t.Error("expected error for 500, got nil")
 	}
@@ -115,7 +118,7 @@ func TestExecuteOCRCall_ServerError(t *testing.T) {
 
 func TestExecuteOCRCall_ConnectionRefused(t *testing.T) {
 	svc := &UploadService{aiServiceURL: "http://127.0.0.1:1"}
-	_, err := svc.executeOCRCall(strings.NewReader("content"), "application/pdf")
+	_, err := svc.executeOCRCall(strings.NewReader("content"), "application/pdf", healthDocumentCandidateConfigurationID)
 	if err == nil {
 		t.Error("expected error for connection refused")
 	}
@@ -140,6 +143,9 @@ func TestParseOCRJobInput(t *testing.T) {
 	}
 	if input.UploadID != "upload-1" {
 		t.Fatalf("unexpected input: %+v", input)
+	}
+	if input.ConfigurationID != legacyTesseractConfigurationID {
+		t.Fatalf("legacy job configuration = %q, want %q", input.ConfigurationID, legacyTesseractConfigurationID)
 	}
 }
 

@@ -51,6 +51,24 @@ services:
       retries: 8
       start_period: 15s
 
+  document-service:
+    image: ${STAGING_AI_IMAGE:-bodysense-staging-ai-service:local}
+    build:
+      context: ../apps/ai-service
+      dockerfile: Dockerfile
+    command: ["uvicorn", "src.document_main:app", "--host", "0.0.0.0", "--port", "8100"]
+    restart: unless-stopped
+    init: true
+    mem_limit: ${DOCUMENT_SERVICE_MEMORY_LIMIT:-384m}
+    mem_reservation: ${DOCUMENT_SERVICE_MEMORY_RESERVATION:-64m}
+    networks: [bodysense-staging]
+    healthcheck:
+      test: ['CMD', 'python', '-c', "import urllib.request; urllib.request.urlopen('http://localhost:8100/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 20s
+
   ai-service:
     # Canonical staging consumes the immutable ACR channel image. The build
     # block remains only for `scripts/staging-runtime.sh` emergency/source-build
@@ -106,6 +124,11 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:?set JWT_SECRET_KEY}
       AI_SERVICE_URL: http://ai-service:8100
+      HEALTH_DOCUMENT_SERVICE_URL: http://document-service:8100
+      HEALTH_DOCUMENT_STAGE: ${HEALTH_DOCUMENT_STAGE:-champion}
+      HEALTH_DOCUMENT_CHAMPION_CONFIGURATION_ID: ${HEALTH_DOCUMENT_CHAMPION_CONFIGURATION_ID:-hdex-config-14af808ef184bf8b}
+      HEALTH_DOCUMENT_QUALIFICATION_CONFIGURATION_ID: ${HEALTH_DOCUMENT_QUALIFICATION_CONFIGURATION_ID:-hdex-config-f2495c95b6ed9de2}
+      HEALTH_DOCUMENT_ROLLBACK_CONFIGURATION_ID: ${HEALTH_DOCUMENT_ROLLBACK_CONFIGURATION_ID:-hdex-config-14af808ef184bf8b}
       # Latest qualified Agent baselines (ADR 0010). Historical v1 configs are
       # rollback targets; no Challenger is active until a future qualified version exists.
       DIAGNOSIS_CHAMPION_CONFIGURATION_ID: ${DIAGNOSIS_CHAMPION_CONFIGURATION_ID:-diag-config-5a4a13627e14b4cf}
@@ -127,6 +150,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      document-service:
         condition: service_healthy
     networks: [bodysense-staging]
     healthcheck:

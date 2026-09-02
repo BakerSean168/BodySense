@@ -222,45 +222,122 @@ class TestIndicatorEvidenceAdmissibility:
         assert "indicator_confidence_medium" in decision.reason_codes
 
 
-def test_ocr_route_attaches_admissible_evidence_metadata(client, monkeypatch):
-    monkeypatch.setattr(
-        "src.api.routes.ocr.extract_text",
-        lambda _payload, _mime: ("维生素D: 25.3 ng/mL\n参考范围: 30-100", 0.95),
+def _worker_response(*, confidence: str = "high", admissible: bool = True):
+    from src.models.ocr import (
+        HealthDocumentMechanismProvenance,
+        HealthDocumentModelArtifactProvenance,
+        IndicatorEvidenceAdmissibility,
     )
 
+    result = OCRResult(
+        raw_text="维生素D: 25.3 ng/mL 参考范围: 30-100",
+        indicators=[
+            HealthIndicator(
+                indicator_id="vitamin_d",
+                name="维生素D",
+                value="25.3",
+                unit="ng/mL",
+                reference_range="30-100",
+                confidence="high",
+                source_refs=["page:1:ocr-block:1"],
+                source_page=1,
+                parser_revision="health-indicator-parser-v2-unicode",
+                evidence_admissibility=IndicatorEvidenceAdmissibility(
+                    status="admissible" if admissible else "needs_review",
+                    policy_revision="ocr-indicator-admissibility-v1",
+                    reason_codes=[
+                        "high_confidence_ocr_and_indicator"
+                        if admissible
+                        else "ocr_confidence_medium"
+                    ],
+                ),
+            )
+        ],
+        confidence=confidence,
+        mechanism_provenance=HealthDocumentMechanismProvenance(
+            status="verified",
+            configuration_id="hdex-config-5724d60d423d308b",
+            mechanism_revision="health-document-extraction-v4",
+            output_schema_revision="health-document-output-v1",
+            execution_topology_revision="per-document-subprocess-v1",
+            pdf_strategy_revision="native-text-first-v1",
+            native_text_engine="pymupdf",
+            native_text_engine_version="1.28.0",
+            native_text_quality_policy_revision="health-document-native-text-quality-v1",
+            native_text_quality_policy_sha256="c594a92d70679ef0da41a21c1fdf520a2feaec6e081adc6d67509be1db9fd09d",
+            ocr_engine="rapidocr",
+            ocr_engine_version="3.9.2",
+            runtime_engine="onnxruntime",
+            runtime_version="1.29.0",
+            model_family="PP-OCRv6",
+            model_type="small",
+            model_artifacts=[
+                HealthDocumentModelArtifactProvenance(
+                    role="det", filename="det.onnx", sha256="1" * 64
+                ),
+                HealthDocumentModelArtifactProvenance(
+                    role="rec", filename="rec.onnx", sha256="2" * 64
+                ),
+                HealthDocumentModelArtifactProvenance(
+                    role="cls", filename="cls.onnx", sha256="3" * 64
+                ),
+            ],
+            pdf_raster_dpi=150,
+            detector_limit_type="max",
+            detector_limit_side_len=736,
+            indicator_parser_revision="health-indicator-parser-v2-unicode",
+            indicator_parser_sha256="4" * 64,
+            admissibility_policy_revision="ocr-indicator-admissibility-v1",
+            engine_adapter_sha256="5" * 64,
+            worker_sha256="6" * 64,
+        ),
+    )
+    return OCRResponse(result=result)
+
+
+def test_ocr_route_requires_explicit_configuration_id(client):
     response = client.post(
         "/api/ocr/extract",
         files={"file": ("report.png", b"fake-image", "image/png")},
     )
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["status"] == "completed"
-    indicator = next(item for item in payload["result"]["indicators"] if "D" in item["name"])
-    assert indicator["confidence"] == "high"
-    assert indicator["evidence_admissibility"] == {
-        "status": "admissible",
-        "policy_revision": "ocr-indicator-admissibility-v1",
-        "reason_codes": ["high_confidence_ocr_and_indicator"],
-    }
+    assert response.status_code == 422
 
 
-def test_ocr_route_preserves_review_required_indicator_without_admitting_it(client, monkeypatch):
-    monkeypatch.setattr(
-        "src.api.routes.ocr.extract_text",
-        lambda _payload, _mime: ("维生素D: 25.3 ng/mL\n参考范围: 30-100", 0.65),
-    )
+def test_ocr_route_passes_configuration_to_bounded_worker(client, monkeypatch):
+    calls: list[tuple[bytes, str, str]] = []
 
+    async def fake_worker(payload: bytes, mime: str, config: str):
+        calls.append((payload, mime, config))
+        return _worker_response()
+
+    monkeypatch.setattr("src.api.routes.ocr.run_health_document_worker", fake_worker)
     response = client.post(
         "/api/ocr/extract",
         files={"file": ("report.png", b"fake-image", "image/png")},
+        data={"configuration_id": "hdex-config-5724d60d423d308b"},
     )
     assert response.status_code == 200
+    assert calls == [(b"fake-image", "image/png", "hdex-config-5724d60d423d308b")]
     payload = response.json()
-    assert payload["status"] == "completed"
-    indicator = next(item for item in payload["result"]["indicators"] if "D" in item["name"])
-    assert indicator["confidence"] == "high"
+    indicator = payload["result"]["indicators"][0]
+    assert indicator["evidence_admissibility"]["status"] == "admissible"
+    assert indicator["source_refs"] == ["page:1:ocr-block:1"]
+    assert payload["result"]["mechanism_provenance"]["configuration_id"] == (
+        "hdex-config-5724d60d423d308b"
+    )
+
+
+def test_ocr_route_preserves_review_required_worker_result(client, monkeypatch):
+    async def fake_worker(_payload: bytes, _mime: str, _config: str):
+        return _worker_response(confidence="medium", admissible=False)
+
+    monkeypatch.setattr("src.api.routes.ocr.run_health_document_worker", fake_worker)
+    response = client.post(
+        "/api/ocr/extract",
+        files={"file": ("report.png", b"fake-image", "image/png")},
+        data={"configuration_id": "hdex-config-5724d60d423d308b"},
+    )
+    assert response.status_code == 200
+    indicator = response.json()["result"]["indicators"][0]
     assert indicator["evidence_admissibility"]["status"] == "needs_review"
-    assert indicator["evidence_admissibility"]["policy_revision"] == (
-        "ocr-indicator-admissibility-v1"
-    )
     assert "ocr_confidence_medium" in indicator["evidence_admissibility"]["reason_codes"]

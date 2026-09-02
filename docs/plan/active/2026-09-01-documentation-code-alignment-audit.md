@@ -260,10 +260,15 @@ This closes Posture geometry mechanism identity. OCR mechanism provenance remain
 
 ---
 
-### P1/P2 — A3. OCR engine/parser provenance is missing even though OCR output can become Assessment evidence
+### P1/P2 — A3. OCR / health-document mechanism provenance and extraction architecture
 
-**Classification:** `CODE-GAP`
-**Contracts:** non-LLM mechanism provenance.
+**Classification:** `CODE-GAP / DESIGN-READY / BENCHMARK-GATED`
+**Contracts:** non-LLM mechanism provenance, source-grounded document evidence, replayable extraction history.
+**Target ADR:** [ADR 0013](../../adr/0013-adopt-versioned-health-document-evidence-pipeline.md) — Proposed until OCR Champion selection is benchmark-qualified.
+**Active implementation plan:** [Health Document Technology Selection & Benchmark](./2026-09-01-health-document-technology-selection-and-benchmark.md).
+**Target architecture:** [Health Document Evidence Pipeline](../../architecture/health-document-evidence-pipeline.md).
+
+The gap is no longer treated as “add a few Tesseract version fields”. Research and design work expanded it into a versioned Health Document Evidence Pipeline because current behavior also rasterizes born-digital PDFs, flattens document/table structure and overwrites the conceptual extraction history into one `ocr_result` projection. The code gap remains open until the benchmark selects the actual OCR Champion and the target pipeline is implemented.
 
 Current durable `OCRResult` stores:
 
@@ -298,15 +303,33 @@ Code evidence:
 
 Historical report evidence cannot answer which OCR/parser behavior produced an indicator. A future OCR/parser change can alter evidence while replay/audit sees only the extracted values.
 
-**Recommended contract**
+**Target contract**
 
-Persist `mechanism_provenance` in OCR result, including an explicit repository-owned extractor revision. Prefer a pinned container/OS package image or at minimum record the runtime-reported Tesseract version.
+Do not freeze Tesseract as the long-term mechanism before selection evidence exists. The target lane is:
 
-**Acceptance tests**
+```text
+immutable original document
+  -> native PDF text first when trustworthy
+  -> OCR fallback through a pluggable engine boundary
+  -> document/page/block/table source evidence
+  -> source-grounded deterministic indicator parser
+  -> versioned admissibility / human review
+  -> Assessment evidence
+```
 
-- OCR result always contains non-empty mechanism identity;
-- missing/unknown extractor revision fails evidence admission for new reports;
-- regression export includes the evidence mechanism revision without exposing raw private report text unnecessarily.
+Initial OCR benchmark candidates are current Tesseract, RapidOCR + ONNXRuntime + PP-OCRv6 small as the leading challenger, and PP-OCRv6 medium as a quality challenger. Selection is driven primarily by critical numeric error rate, numeric/unit/row/indicator exactness and production-shaped resource behavior, not generic CER alone.
+
+**Acceptance tests / gates**
+
+- born-digital PDF can use versioned native-text extraction without mandatory OCR;
+- each current extraction run contains exact mechanism/configuration identity;
+- automatically admissible indicators carry source evidence references;
+- missing/unknown mechanism or parser identity fails automatic evidence admission;
+- reprocessing creates a new extraction run instead of overwriting historical truth;
+- frozen-document replay can compare old/new configurations;
+- benchmark corpus and privacy/license validation are reproducible;
+- OCR Champion satisfies the hard numeric/unit/row/resource gates in the active plan;
+- regression exports remain privacy-bounded and do not expose raw private report text.
 
 ## 7. Medium-priority hardening / architecture gaps
 
@@ -565,8 +588,9 @@ P1 A1 Report indicator admissibility
 P1 A2 Posture geometry mechanism identity
    -> restores reproducibility of authoritative numeric visual evidence
 
-P1/P2 A3 OCR mechanism provenance
-   -> makes report evidence auditable/replayable
+P1/P2 A3 Health Document technology selection + mechanism provenance
+   -> benchmark Tesseract vs RapidOCR/PP-OCRv6 candidates first
+   -> then implement native-text-first, source-grounded, replayable document evidence
 
 P2 B1 Assessment v3 request/dependency hardening
    -> remove obsolete authority surface after safety-critical gaps are closed

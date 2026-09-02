@@ -71,6 +71,7 @@ func main() {
 	knowledgeSourceRegistry := service.NewKnowledgeSourceRegistry(knowledgeSourceRepo)
 	profileRepo := repository.NewProfileRepository(database.DB)
 	uploadRepo := repository.NewUploadRepository(database.DB)
+	documentExtractionRunRepo := repository.NewDocumentExtractionRunRepository(database.DB)
 	uploadStorage, err := uploadstorage.NewRegistryFromEnv()
 	if err != nil {
 		log.Fatalf("Upload storage configuration failed: %v", err)
@@ -116,6 +117,10 @@ func main() {
 	agentDeploymentPolicy, err := service.NewAgentDeploymentPolicy()
 	if err != nil {
 		log.Fatalf("failed to configure Agent deployment policy: %v", err)
+	}
+	healthDocumentDeploymentPolicy, err := service.NewHealthDocumentDeploymentPolicy()
+	if err != nil {
+		log.Fatalf("failed to configure health-document deployment policy: %v", err)
 	}
 	messageService := service.NewMessageService(messageRepo)
 	contextRetrievalService := service.NewContextRetrievalService(messageContextRepo)
@@ -182,7 +187,9 @@ func main() {
 	outputReviewRepo := repository.NewAIOutputReviewRepository(database.DB)
 	outputReviewService := service.NewOutputReviewService(outputReviewRepo)
 	uploadService := service.NewUploadService(uploadRepo, jobRuntime, outputReviewService, uploadStorage).
-		WithDeployment(agentDeploymentPolicy)
+		WithDeployment(agentDeploymentPolicy).
+		WithHealthDocumentDeployment(healthDocumentDeploymentPolicy).
+		WithDocumentExtractionRuns(documentExtractionRunRepo)
 	uploadService.StartUploadWorker(context.Background(), 10*time.Second, 10*time.Minute)
 	uploadHandler := handler.NewUploadHandler(uploadService)
 	consultationRuntime := consultationruntime.NewRuntime(

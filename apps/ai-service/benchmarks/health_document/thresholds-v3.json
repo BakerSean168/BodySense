@@ -1,0 +1,22 @@
+{
+  "schema_version": "health-document-benchmark-thresholds-v3",
+  "selection_scope": "verified-evidence-authority",
+  "evidence_authority": {
+    "critical_false_admission_rate_max": 0.0,
+    "auto_admission_exact_rate_min": 1.0,
+    "auto_admission_coverage_min": 0.9
+  },
+  "resource": {
+    "failed_fixture_count_max": 0,
+    "cgroup_memory_events_max_max": 0,
+    "cgroup_memory_events_oom_max": 0,
+    "cgroup_memory_events_oom_kill_max": 0,
+    "cgroup_swap_peak_mb_max": 0.0
+  },
+  "notes": [
+    "V2 remains the immutable raw-source OCR mechanism gate for historical single-pass candidates.",
+    "V3 evaluates the authority boundary introduced by independent verification: raw primary OCR errors remain diagnostic but cannot automatically become health evidence.",
+    "A candidate must auto-admit at least 90% of annotated indicators on the synthetic mechanics corpus, admit zero safety-critical wrong numbers, and make every auto-admitted indicator exact across value/unit/reference range.",
+    "Final Champion selection remains blocked until a deidentified, double-reviewed real-layout subset is evaluated under the same authority contract."
+  ]
+}

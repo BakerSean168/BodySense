@@ -1,0 +1,237 @@
+{
+  "accuracy": {
+    "critical_numeric_error_rate": 0.015,
+    "indicator_exact_match": 0.9175,
+    "matched_indicators": 379,
+    "numeric_exact_match": 0.9325,
+    "reference_range_exact_match": 0.92,
+    "row_association_accuracy": 0.9325,
+    "truth_indicators": 400,
+    "unit_exact_match": 0.935
+  },
+  "candidate_fingerprint": "5724d60d423d308b6470bb22526541417d5992de8406e1c1d7c0c2a83e0aa68c",
+  "candidate_id": "health-document-current",
+  "champion_selection_blocker": "deidentified_double_reviewed_real-layout_subset_missing",
+  "champion_selection_ready": false,
+  "cohort_accuracy": {
+    "chinese_lab_table": {
+      "critical_numeric_error_rate": 0.0,
+      "indicator_exact_match": 0.8958333333333334,
+      "matched_indicators": 43,
+      "numeric_exact_match": 0.8958333333333334,
+      "reference_range_exact_match": 0.8958333333333334,
+      "row_association_accuracy": 0.8958333333333334,
+      "truth_indicators": 48,
+      "unit_exact_match": 0.8958333333333334
+    },
+    "complex_table": {
+      "critical_numeric_error_rate": 0.041666666666666664,
+      "indicator_exact_match": 0.75,
+      "matched_indicators": 41,
+      "numeric_exact_match": 0.8125,
+      "reference_range_exact_match": 0.7708333333333334,
+      "row_association_accuracy": 0.8125,
+      "truth_indicators": 48,
+      "unit_exact_match": 0.8333333333333334
+    },
+    "mixed_zh_en_units": {
+      "critical_numeric_error_rate": 0.0,
+      "indicator_exact_match": 1.0,
+      "matched_indicators": 32,
+      "numeric_exact_match": 1.0,
+      "reference_range_exact_match": 1.0,
+      "row_association_accuracy": 1.0,
+      "truth_indicators": 32,
+      "unit_exact_match": 1.0
+    },
+    "native_pdf_simple": {
+      "critical_numeric_error_rate": 0.0,
+      "indicator_exact_match": 1.0,
+      "matched_indicators": 60,
+      "numeric_exact_match": 1.0,
+      "reference_range_exact_match": 1.0,
+      "row_association_accuracy": 1.0,
+      "truth_indicators": 60,
+      "unit_exact_match": 1.0
+    },
+    "native_pdf_table": {
+      "critical_numeric_error_rate": 0.0,
+      "indicator_exact_match": 1.0,
+      "matched_indicators": 60,
+      "numeric_exact_match": 1.0,
+      "reference_range_exact_match": 1.0,
+      "row_association_accuracy": 1.0,
+      "truth_indicators": 60,
+      "unit_exact_match": 1.0
+    },
+    "phone_photo_clear": {
+      "critical_numeric_error_rate": 0.1875,
+      "indicator_exact_match": 0.3125,
+      "matched_indicators": 11,
+      "numeric_exact_match": 0.5,
+      "reference_range_exact_match": 0.3125,
+      "row_association_accuracy": 0.5,
+      "truth_indicators": 16,
+      "unit_exact_match": 0.5
+    },
+    "phone_photo_degraded": {
+      "critical_numeric_error_rate": 0.0,
+      "indicator_exact_match": 0.9375,
+      "matched_indicators": 15,
+      "numeric_exact_match": 0.9375,
+      "reference_range_exact_match": 0.9375,
+      "row_association_accuracy": 0.9375,
+      "truth_indicators": 16,
+      "unit_exact_match": 0.9375
+    },
+    "scanned_pdf_clear": {
+      "critical_numeric_error_rate": 0.0,
+      "indicator_exact_match": 0.9666666666666667,
+      "matched_indicators": 58,
+      "numeric_exact_match": 0.9666666666666667,
+      "reference_range_exact_match": 0.9666666666666667,
+      "row_association_accuracy": 0.9666666666666667,
+      "truth_indicators": 60,
+      "unit_exact_match": 0.9666666666666667
+    },
+    "scanned_pdf_degraded": {
+      "critical_numeric_error_rate": 0.016666666666666666,
+      "indicator_exact_match": 0.9666666666666667,
+      "matched_indicators": 59,
+      "numeric_exact_match": 0.9666666666666667,
+      "reference_range_exact_match": 0.9666666666666667,
+      "row_association_accuracy": 0.9666666666666667,
+      "truth_indicators": 60,
+      "unit_exact_match": 0.9666666666666667
+    }
+  },
+  "cohort_source_accuracy": {
+    "chinese_lab_table": {
+      "critical_numeric_error_rate": 0.0,
+      "name_recall": 0.8958333333333334,
+      "numeric_exact_match": 0.8958333333333334,
+      "reference_range_exact_match": 0.8958333333333334,
+      "row_bundle_exact_match": 0.8958333333333334,
+      "truth_indicators": 48,
+      "unit_exact_match": 0.8958333333333334
+    },
+    "complex_table": {
+      "critical_numeric_error_rate": 0.041666666666666664,
+      "name_recall": 0.8541666666666666,
+      "numeric_exact_match": 0.8125,
+      "reference_range_exact_match": 0.7916666666666666,
+      "row_bundle_exact_match": 0.75,
+      "truth_indicators": 48,
+      "unit_exact_match": 0.8541666666666666
+    },
+    "mixed_zh_en_units": {
+      "critical_numeric_error_rate": 0.0,
+      "name_recall": 1.0,
+      "numeric_exact_match": 1.0,
+      "reference_range_exact_match": 1.0,
+      "row_bundle_exact_match": 1.0,
+      "truth_indicators": 32,
+      "unit_exact_match": 1.0
+    },
+    "native_pdf_simple": {
+      "critical_numeric_error_rate": 0.0,
+      "name_recall": 1.0,
+      "numeric_exact_match": 1.0,
+      "reference_range_exact_match": 1.0,
+      "row_bundle_exact_match": 1.0,
+      "truth_indicators": 60,
+      "unit_exact_match": 1.0
+    },
+    "native_pdf_table": {
+      "critical_numeric_error_rate": 0.0,
+      "name_recall": 1.0,
+      "numeric_exact_match": 1.0,
+      "reference_range_exact_match": 1.0,
+      "row_bundle_exact_match": 1.0,
+      "truth_indicators": 60,
+      "unit_exact_match": 1.0
+    },
+    "phone_photo_clear": {
+      "critical_numeric_error_rate": 0.1875,
+      "name_recall": 0.6875,
+      "numeric_exact_match": 0.5,
+      "reference_range_exact_match": 0.6875,
+      "row_bundle_exact_match": 0.5,
+      "truth_indicators": 16,
+      "unit_exact_match": 0.6875
+    },
+    "phone_photo_degraded": {
+      "critical_numeric_error_rate": 0.0,
+      "name_recall": 1.0,
+      "numeric_exact_match": 1.0,
+      "reference_range_exact_match": 1.0,
+      "row_bundle_exact_match": 1.0,
+      "truth_indicators": 16,
+      "unit_exact_match": 1.0
+    },
+    "scanned_pdf_clear": {
+      "critical_numeric_error_rate": 0.0,
+      "name_recall": 0.9666666666666667,
+      "numeric_exact_match": 0.9666666666666667,
+      "reference_range_exact_match": 0.9666666666666667,
+      "row_bundle_exact_match": 0.9666666666666667,
+      "truth_indicators": 60,
+      "unit_exact_match": 0.9666666666666667
+    },
+    "scanned_pdf_degraded": {
+      "critical_numeric_error_rate": 0.016666666666666666,
+      "name_recall": 0.9833333333333333,
+      "numeric_exact_match": 0.9666666666666667,
+      "reference_range_exact_match": 0.9833333333333333,
+      "row_bundle_exact_match": 0.9666666666666667,
+      "truth_indicators": 60,
+      "unit_exact_match": 0.9833333333333333
+    }
+  },
+  "configuration_id": "hdex-config-5724d60d423d308b",
+  "corpus_manifest_sha256": "6b9415851f2671aaa982158d91783a84a19358644373a017668432ba24189126",
+  "execution_topology_revision": "per-document-subprocess-v1",
+  "failure_taxonomy": {
+    "missing_indicator": 21,
+    "numeric_mismatch": 6,
+    "reference_range_mismatch": 11,
+    "unit_mismatch": 5
+  },
+  "fixture_execution": {
+    "failed": 0,
+    "succeeded": 40,
+    "total": 40
+  },
+  "harness_revision": "health-document-benchmark-v4",
+  "privacy": {
+    "contains_document_images": false,
+    "contains_raw_text": false,
+    "contains_user_identifiers": false
+  },
+  "production_shaped": true,
+  "runtime": {
+    "cgroup_cpu_limit": 2.0,
+    "cgroup_memory_events_max": 0,
+    "cgroup_memory_events_oom": 0,
+    "cgroup_memory_events_oom_kill": 0,
+    "cgroup_memory_limit_mb": 384.0,
+    "cgroup_memory_peak_mb": 300.45703125,
+    "cgroup_swap_peak_mb": 0.0,
+    "mean_fixture_ms": 1615.3264158747334,
+    "p95_fixture_ms": 3702.908222003316,
+    "peak_child_rss_mb": 319.95703125,
+    "peak_self_rss_mb": 87.95703125,
+    "total_elapsed_ms": 64613.056634989334
+  },
+  "schema_version": "health-document-benchmark-summary-v1",
+  "selection_evidence_scope": "synthetic-mechanics-only",
+  "source_accuracy": {
+    "critical_numeric_error_rate": 0.015,
+    "name_recall": 0.95,
+    "numeric_exact_match": 0.935,
+    "reference_range_exact_match": 0.9425,
+    "row_bundle_exact_match": 0.9275,
+    "truth_indicators": 400,
+    "unit_exact_match": 0.95
+  }
+}

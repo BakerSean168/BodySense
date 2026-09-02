@@ -105,9 +105,17 @@ on_signal() {
 trap on_signal INT TERM
 trap cleanup EXIT
 
+start_document() {
+  assert_port_free document "$DOCUMENT_SERVICE_PORT"
+  "$ROOT/scripts/dev-infra.sh" up
+  (cd "$ROOT/apps/ai-service" && uv run --extra document-ocr python scripts/ensure_health_document_models.py)
+  start_service document "$ROOT/apps/ai-service" uv run --extra document-ocr uvicorn src.document_main:app --host 127.0.0.1 --port "$DOCUMENT_SERVICE_PORT"
+  wait_http document "http://127.0.0.1:${DOCUMENT_SERVICE_PORT}/health" "${pids[-1]}"
+}
+
 start_api() {
   assert_port_free api "$API_PORT"
-  "$ROOT/scripts/dev-infra.sh" up
+  start_document
   start_service api "$ROOT/apps/api" go run ./cmd/server
   wait_http api "http://127.0.0.1:${API_PORT}/api/health" "${pids[-1]}"
 }
@@ -115,8 +123,8 @@ start_api() {
 start_ai() {
   assert_port_free ai "$AI_SERVICE_PORT"
   "$ROOT/scripts/dev-infra.sh" up
-  (cd "$ROOT/apps/ai-service" && uv run --extra ocr --extra pose python scripts/ensure_pose_model.py)
-  start_service ai "$ROOT/apps/ai-service" uv run --extra ocr --extra pose uvicorn src.main:app --reload --host 127.0.0.1 --port "$AI_SERVICE_PORT"
+  (cd "$ROOT/apps/ai-service" && uv run --extra ocr --extra pose --extra document-ocr python scripts/ensure_pose_model.py && uv run --extra ocr --extra pose --extra document-ocr python scripts/ensure_health_document_models.py)
+  start_service ai "$ROOT/apps/ai-service" uv run --extra ocr --extra pose --extra document-ocr uvicorn src.main:app --reload --host 127.0.0.1 --port "$AI_SERVICE_PORT"
   wait_http ai "http://127.0.0.1:${AI_SERVICE_PORT}/health" "${pids[-1]}"
 }
 
@@ -130,14 +138,18 @@ case "$mode" in
   all)
     assert_port_free api "$API_PORT"
     assert_port_free ai "$AI_SERVICE_PORT"
+    assert_port_free document "$DOCUMENT_SERVICE_PORT"
     assert_port_free web "$WEB_PORT"
     "$ROOT/scripts/dev-infra.sh" up
+
+    (cd "$ROOT/apps/ai-service" && uv run --extra ocr --extra pose --extra document-ocr python scripts/ensure_pose_model.py && uv run --extra document-ocr python scripts/ensure_health_document_models.py)
+    start_service document "$ROOT/apps/ai-service" uv run --extra document-ocr uvicorn src.document_main:app --host 127.0.0.1 --port "$DOCUMENT_SERVICE_PORT"
+    wait_http document "http://127.0.0.1:${DOCUMENT_SERVICE_PORT}/health" "${pids[-1]}"
 
     start_service api "$ROOT/apps/api" go run ./cmd/server
     wait_http api "http://127.0.0.1:${API_PORT}/api/health" "${pids[-1]}"
 
-    (cd "$ROOT/apps/ai-service" && uv run --extra ocr --extra pose python scripts/ensure_pose_model.py)
-    start_service ai "$ROOT/apps/ai-service" uv run --extra ocr --extra pose uvicorn src.main:app --reload --host 127.0.0.1 --port "$AI_SERVICE_PORT"
+    start_service ai "$ROOT/apps/ai-service" uv run --extra ocr --extra pose --extra document-ocr uvicorn src.main:app --reload --host 127.0.0.1 --port "$AI_SERVICE_PORT"
     wait_http ai "http://127.0.0.1:${AI_SERVICE_PORT}/health" "${pids[-1]}"
 
     start_service web "$ROOT" pnpm exec vite --config apps/web/vite.config.ts --host 127.0.0.1 --port "$WEB_PORT" --strictPort
@@ -147,15 +159,17 @@ case "$mode" in
     echo "  web: http://127.0.0.1:${WEB_PORT}"
     echo "  api: http://127.0.0.1:${API_PORT}"
     echo "  ai:  http://127.0.0.1:${AI_SERVICE_PORT}"
+    echo "  document: http://127.0.0.1:${DOCUMENT_SERVICE_PORT}"
     if [[ -n "${BODYSENSE_DEV_PUBLIC_URL:-}" ]]; then
       echo "  remote: ${BODYSENSE_DEV_PUBLIC_URL}"
     fi
     ;;
   api) start_api ;;
   ai) start_ai ;;
+  document) start_document ;;
   web) start_web ;;
   *)
-    echo "usage: $0 {all|web|api|ai}" >&2
+    echo "usage: $0 {all|web|api|ai|document}" >&2
     exit 2
     ;;
 esac

@@ -19,6 +19,7 @@ export WEB_PORT=${WEB_PORT:-$BODYSENSE_WEB_PORT}
 export API_HOST=${API_HOST:-127.0.0.1}
 export API_PORT=${API_PORT:-20101}
 export AI_SERVICE_PORT=${AI_SERVICE_PORT:-20102}
+export DOCUMENT_SERVICE_PORT=${DOCUMENT_SERVICE_PORT:-20103}
 export DB_HOST=${DB_HOST:-127.0.0.1}
 export DB_PORT=${DB_PORT:-20110}
 export REDIS_HOST=${REDIS_HOST:-127.0.0.1}
@@ -39,6 +40,7 @@ export LITELLM_BASE_URL=${LITELLM_BASE_URL:-http://127.0.0.1:${LITELLM_PORT}/v1}
 export LITELLM_API_KEY=${LITELLM_API_KEY:-$LITELLM_MASTER_KEY}
 export DATABASE_URL=${DATABASE_URL:-postgresql://${DB_USER}:${DB_PASSWORD}@127.0.0.1:${DB_PORT}/${DB_NAME}}
 export AI_SERVICE_URL=${AI_SERVICE_URL:-http://127.0.0.1:${AI_SERVICE_PORT}}
+export HEALTH_DOCUMENT_SERVICE_URL=${HEALTH_DOCUMENT_SERVICE_URL:-http://127.0.0.1:${DOCUMENT_SERVICE_PORT}}
 export EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-hashing}
 export CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:${WEB_PORT},http://127.0.0.1:${WEB_PORT}}
 export VITE_DEV_API_TARGET=${VITE_DEV_API_TARGET:-http://127.0.0.1:${API_PORT}}
@@ -46,8 +48,8 @@ export VITE_WS_URL=${VITE_WS_URL:-ws://127.0.0.1:${API_PORT}/ws}
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
   if [[ $# -eq 0 ]]; then
-    printf 'BodySense direct-dev env: web=%s api=%s ai=%s postgres=%s redis=%s litellm=%s\n' \
-      "$WEB_PORT" "$API_PORT" "$AI_SERVICE_PORT" "$DB_PORT" "$REDIS_PORT" "$LITELLM_PORT"
+    printf 'BodySense direct-dev env: web=%s api=%s ai=%s document=%s postgres=%s redis=%s litellm=%s\n' \
+      "$WEB_PORT" "$API_PORT" "$AI_SERVICE_PORT" "$DOCUMENT_SERVICE_PORT" "$DB_PORT" "$REDIS_PORT" "$LITELLM_PORT"
     exit 0
   fi
   cd "$ROOT"

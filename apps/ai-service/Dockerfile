@@ -6,15 +6,18 @@ WORKDIR /app
 # Parameterized PyPI mirror — default is Aliyun for China-based CI,
 # override with --build-arg UV_INDEX_URL=https://pypi.org/simple/ on GHA runners.
 ARG UV_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
+ARG UV_SYNC_EXTRAS="--extra ocr --extra pose --extra document-ocr"
 ENV UV_INDEX_URL=${UV_INDEX_URL}
 
 COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --no-dev --extra ocr --extra pose --no-cache
+    uv sync --no-dev ${UV_SYNC_EXTRAS} --no-cache
 
 COPY . .
 RUN /app/.venv/bin/python scripts/ensure_pose_model.py \
     --output /app/models/pose_landmarker_lite-float16-v1.task
+RUN /app/.venv/bin/python scripts/ensure_health_document_models.py \
+    --output /app/models/health-document/ppocrv6-small-v1
 
 # ---- Final: runtime image (no uv cache, no runtime model downloads) ----
 FROM python:3.13-slim
@@ -37,7 +40,8 @@ COPY --from=builder /app/.venv /app/.venv
 COPY . .
 COPY --from=builder /app/models /app/models
 ENV PATH="/app/.venv/bin:$PATH" \
-    BODYSENSE_POSE_MODEL_PATH="/app/models/pose_landmarker_lite-float16-v1.task"
+    BODYSENSE_POSE_MODEL_PATH="/app/models/pose_landmarker_lite-float16-v1.task" \
+    BODYSENSE_HEALTH_DOCUMENT_MODEL_ROOT="/app/models/health-document/ppocrv6-small-v1"
 EXPOSE 8100
 HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=3 \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8100/health')" || exit 1

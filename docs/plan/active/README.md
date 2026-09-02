@@ -3,6 +3,7 @@
 BodySense currently has one documentation/code alignment lane, active 3D/observability/static-distribution acceptance work, one Workbench visual plan, and one parked durability plan:
 
 - [`2026-09-01-documentation-code-alignment-audit.md`](./2026-09-01-documentation-code-alignment-audit.md) — ACTIVE; repository-wide ADR/current-doc/code alignment audit. Current documentation baseline has been cleaned; remaining P1/P2 evidence/mechanism/code gaps are explicitly tracked here.
+- [`2026-09-01-health-document-technology-selection-and-benchmark.md`](./2026-09-01-health-document-technology-selection-and-benchmark.md) — ACTIVE / BENCHMARK-FIRST; defines BodySense-specific health-document corpus, OCR/PDF/layout/parser candidate evaluation, safety/resource gates, immutable mechanism selection, append-only extraction history and rollout. ADR 0013 remains Proposed until the OCR Champion is proven.
 - [`2026-08-27-vanatome-3d-body-explorer.md`](./2026-08-27-vanatome-3d-body-explorer.md) — IMPLEMENTED / staging validated / final anatomy-boundary visual audit pending.
 - [`2026-08-27-static-asset-cdn.md`](./2026-08-27-static-asset-cdn.md) — STAGING + CLOUDFLARE EDGE COMPLETE / production release validation pending.
 - [`2026-08-27-observability-foundation.md`](./2026-08-27-observability-foundation.md) — ACTIVE; converge application/browser diagnostics on structured privacy-bounded logging and an OpenTelemetry-compatible observability path.

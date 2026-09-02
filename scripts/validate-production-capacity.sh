@@ -53,15 +53,24 @@ REGISTRY=example.invalid
 ENV
 
 docker compose --profile ops -f docker/docker-compose.prod.yml --env-file .env.production --env-file "$secret_env" config > "$compose_out"
-# Seven long-running services must have bounded memory; the DR one-shot has its own existing cap.
+# Eight long-running services must have bounded memory; the DR one-shot has its own existing cap.
+# document-service is intentionally isolated from ai-service and must preserve the
+# same 384 MiB qualification ceiling while keeping a smaller 64 MiB reservation.
 for bytes in 402653184 100663296 1207959552 201326592 134217728; do
   grep -q "mem_limit: \"$bytes\"" "$compose_out"
 done
-[ "$(grep -c 'mem_limit:' "$compose_out")" -eq 8 ]
-[ "$(grep -c 'mem_reservation:' "$compose_out")" -eq 7 ]
+[ "$(grep -c 'mem_limit:' "$compose_out")" -eq 9 ]
+[ "$(grep -c 'mem_reservation:' "$compose_out")" -eq 8 ]
+awk '''
+  /^  document-service:$/ { in_document=1; next }
+  /^  [A-Za-z0-9_-]+:$/ { in_document=0 }
+  in_document && /mem_limit: "402653184"/ { limit_ok=1 }
+  in_document && /mem_reservation: "67108864"/ { reservation_ok=1 }
+  END { exit !(limit_ok && reservation_ok) }
+''' "$compose_out"
 # Every service, including the ops-only DR runner, gets bounded json-file logs.
-[ "$(grep -c 'max-size: 10m' "$compose_out")" -eq 9 ]
-[ "$(grep -c 'max-file: \"3\"' "$compose_out")" -eq 9 ]
+[ "$(grep -c 'max-size: 10m' "$compose_out")" -eq 10 ]
+[ "$(grep -c 'max-file: \"3\"' "$compose_out")" -eq 10 ]
 
 # Cleanup is intentionally conservative: no all-image prune and no volume prune.
 grep -q 'docker image prune -f' scripts/production-capacity-status.sh

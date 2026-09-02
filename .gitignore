@@ -98,3 +98,6 @@ test-results/
 
 # Local managed runtime PID/log state
 .runtime/
+
+# Locally materialized pinned AI model artifacts (verified/baked by Docker build)
+apps/ai-service/models/

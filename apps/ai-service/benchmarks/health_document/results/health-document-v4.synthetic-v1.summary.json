@@ -1,0 +1,237 @@
+{
+  "accuracy": {
+    "critical_numeric_error_rate": 0.01,
+    "indicator_exact_match": 0.49,
+    "matched_indicators": 295,
+    "numeric_exact_match": 0.7275,
+    "reference_range_exact_match": 0.49,
+    "row_association_accuracy": 0.7275,
+    "truth_indicators": 400,
+    "unit_exact_match": 0.7275
+  },
+  "candidate_fingerprint": "b2fd4a501465e0eb21bb4860fa9a156c01928c7308823d8fc0320a366037c0d6",
+  "candidate_id": "health-document-current",
+  "champion_selection_blocker": "deidentified_double_reviewed_real-layout_subset_missing",
+  "champion_selection_ready": false,
+  "cohort_accuracy": {
+    "chinese_lab_table": {
+      "critical_numeric_error_rate": 0.0,
+      "indicator_exact_match": 0.0,
+      "matched_indicators": 0,
+      "numeric_exact_match": 0.0,
+      "reference_range_exact_match": 0.0,
+      "row_association_accuracy": 0.0,
+      "truth_indicators": 48,
+      "unit_exact_match": 0.0
+    },
+    "complex_table": {
+      "critical_numeric_error_rate": 0.0,
+      "indicator_exact_match": 0.0,
+      "matched_indicators": 0,
+      "numeric_exact_match": 0.0,
+      "reference_range_exact_match": 0.0,
+      "row_association_accuracy": 0.0,
+      "truth_indicators": 48,
+      "unit_exact_match": 0.0
+    },
+    "mixed_zh_en_units": {
+      "critical_numeric_error_rate": 0.0,
+      "indicator_exact_match": 0.0,
+      "matched_indicators": 32,
+      "numeric_exact_match": 1.0,
+      "reference_range_exact_match": 0.0,
+      "row_association_accuracy": 1.0,
+      "truth_indicators": 32,
+      "unit_exact_match": 1.0
+    },
+    "native_pdf_simple": {
+      "critical_numeric_error_rate": 0.0,
+      "indicator_exact_match": 1.0,
+      "matched_indicators": 60,
+      "numeric_exact_match": 1.0,
+      "reference_range_exact_match": 1.0,
+      "row_association_accuracy": 1.0,
+      "truth_indicators": 60,
+      "unit_exact_match": 1.0
+    },
+    "native_pdf_table": {
+      "critical_numeric_error_rate": 0.0,
+      "indicator_exact_match": 0.0,
+      "matched_indicators": 60,
+      "numeric_exact_match": 1.0,
+      "reference_range_exact_match": 0.0,
+      "row_association_accuracy": 1.0,
+      "truth_indicators": 60,
+      "unit_exact_match": 1.0
+    },
+    "phone_photo_clear": {
+      "critical_numeric_error_rate": 0.1875,
+      "indicator_exact_match": 0.3125,
+      "matched_indicators": 11,
+      "numeric_exact_match": 0.5,
+      "reference_range_exact_match": 0.3125,
+      "row_association_accuracy": 0.5,
+      "truth_indicators": 16,
+      "unit_exact_match": 0.5
+    },
+    "phone_photo_degraded": {
+      "critical_numeric_error_rate": 0.0,
+      "indicator_exact_match": 0.9375,
+      "matched_indicators": 15,
+      "numeric_exact_match": 0.9375,
+      "reference_range_exact_match": 0.9375,
+      "row_association_accuracy": 0.9375,
+      "truth_indicators": 16,
+      "unit_exact_match": 0.9375
+    },
+    "scanned_pdf_clear": {
+      "critical_numeric_error_rate": 0.0,
+      "indicator_exact_match": 0.9666666666666667,
+      "matched_indicators": 58,
+      "numeric_exact_match": 0.9666666666666667,
+      "reference_range_exact_match": 0.9666666666666667,
+      "row_association_accuracy": 0.9666666666666667,
+      "truth_indicators": 60,
+      "unit_exact_match": 0.9666666666666667
+    },
+    "scanned_pdf_degraded": {
+      "critical_numeric_error_rate": 0.016666666666666666,
+      "indicator_exact_match": 0.9666666666666667,
+      "matched_indicators": 59,
+      "numeric_exact_match": 0.9666666666666667,
+      "reference_range_exact_match": 0.9666666666666667,
+      "row_association_accuracy": 0.9666666666666667,
+      "truth_indicators": 60,
+      "unit_exact_match": 0.9666666666666667
+    }
+  },
+  "cohort_source_accuracy": {
+    "chinese_lab_table": {
+      "critical_numeric_error_rate": 0.0,
+      "name_recall": 0.8958333333333334,
+      "numeric_exact_match": 0.0,
+      "reference_range_exact_match": 0.0,
+      "row_bundle_exact_match": 0.0,
+      "truth_indicators": 48,
+      "unit_exact_match": 0.0
+    },
+    "complex_table": {
+      "critical_numeric_error_rate": 0.0,
+      "name_recall": 0.8541666666666666,
+      "numeric_exact_match": 0.0,
+      "reference_range_exact_match": 0.0,
+      "row_bundle_exact_match": 0.0,
+      "truth_indicators": 48,
+      "unit_exact_match": 0.0
+    },
+    "mixed_zh_en_units": {
+      "critical_numeric_error_rate": 0.0,
+      "name_recall": 1.0,
+      "numeric_exact_match": 1.0,
+      "reference_range_exact_match": 1.0,
+      "row_bundle_exact_match": 1.0,
+      "truth_indicators": 32,
+      "unit_exact_match": 1.0
+    },
+    "native_pdf_simple": {
+      "critical_numeric_error_rate": 0.0,
+      "name_recall": 1.0,
+      "numeric_exact_match": 1.0,
+      "reference_range_exact_match": 1.0,
+      "row_bundle_exact_match": 1.0,
+      "truth_indicators": 60,
+      "unit_exact_match": 1.0
+    },
+    "native_pdf_table": {
+      "critical_numeric_error_rate": 0.0,
+      "name_recall": 1.0,
+      "numeric_exact_match": 1.0,
+      "reference_range_exact_match": 1.0,
+      "row_bundle_exact_match": 1.0,
+      "truth_indicators": 60,
+      "unit_exact_match": 1.0
+    },
+    "phone_photo_clear": {
+      "critical_numeric_error_rate": 0.1875,
+      "name_recall": 0.6875,
+      "numeric_exact_match": 0.5,
+      "reference_range_exact_match": 0.6875,
+      "row_bundle_exact_match": 0.5,
+      "truth_indicators": 16,
+      "unit_exact_match": 0.6875
+    },
+    "phone_photo_degraded": {
+      "critical_numeric_error_rate": 0.0,
+      "name_recall": 1.0,
+      "numeric_exact_match": 1.0,
+      "reference_range_exact_match": 1.0,
+      "row_bundle_exact_match": 1.0,
+      "truth_indicators": 16,
+      "unit_exact_match": 1.0
+    },
+    "scanned_pdf_clear": {
+      "critical_numeric_error_rate": 0.0,
+      "name_recall": 0.9666666666666667,
+      "numeric_exact_match": 0.9666666666666667,
+      "reference_range_exact_match": 0.9666666666666667,
+      "row_bundle_exact_match": 0.9666666666666667,
+      "truth_indicators": 60,
+      "unit_exact_match": 0.9666666666666667
+    },
+    "scanned_pdf_degraded": {
+      "critical_numeric_error_rate": 0.016666666666666666,
+      "name_recall": 0.9833333333333333,
+      "numeric_exact_match": 0.9666666666666667,
+      "reference_range_exact_match": 0.9833333333333333,
+      "row_bundle_exact_match": 0.9666666666666667,
+      "truth_indicators": 60,
+      "unit_exact_match": 0.9833333333333333
+    }
+  },
+  "configuration_id": "hdex-config-b2fd4a501465e0eb",
+  "corpus_manifest_sha256": "6b9415851f2671aaa982158d91783a84a19358644373a017668432ba24189126",
+  "execution_topology_revision": "per-document-subprocess-v1",
+  "failure_taxonomy": {
+    "missing_indicator": 105,
+    "numeric_mismatch": 4,
+    "reference_range_mismatch": 99,
+    "unit_mismatch": 4
+  },
+  "fixture_execution": {
+    "failed": 0,
+    "succeeded": 40,
+    "total": 40
+  },
+  "harness_revision": "health-document-benchmark-v4",
+  "privacy": {
+    "contains_document_images": false,
+    "contains_raw_text": false,
+    "contains_user_identifiers": false
+  },
+  "production_shaped": true,
+  "runtime": {
+    "cgroup_cpu_limit": 2.0,
+    "cgroup_memory_events_max": 0,
+    "cgroup_memory_events_oom": 0,
+    "cgroup_memory_events_oom_kill": 0,
+    "cgroup_memory_limit_mb": 384.0,
+    "cgroup_memory_peak_mb": 301.2421875,
+    "cgroup_swap_peak_mb": 0.0,
+    "mean_fixture_ms": 1611.3416117492307,
+    "p95_fixture_ms": 3530.9091599992826,
+    "peak_child_rss_mb": 320.15234375,
+    "peak_self_rss_mb": 87.98046875,
+    "total_elapsed_ms": 64453.664469969226
+  },
+  "schema_version": "health-document-benchmark-summary-v1",
+  "selection_evidence_scope": "synthetic-mechanics-only",
+  "source_accuracy": {
+    "critical_numeric_error_rate": 0.01,
+    "name_recall": 0.95,
+    "numeric_exact_match": 0.73,
+    "reference_range_exact_match": 0.74,
+    "row_bundle_exact_match": 0.73,
+    "truth_indicators": 400,
+    "unit_exact_match": 0.74
+  }
+}
