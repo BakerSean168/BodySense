@@ -373,6 +373,25 @@ test('production watcher deploys, verifies, and conditionally rolls back documen
   assert.match(contents, /if compose_service_exists document-service; then/);
 });
 
+test('production watcher hands a changed runtime contract to the target deployer before backup or service mutation', () => {
+  const contents = fs.readFileSync('scripts/production-deploy-watch.sh', 'utf8');
+  assert.match(contents, /^DEPLOY_WATCH_HANDOFF_PROTOCOL=1$/m);
+  assert.match(contents, /runtime watcher handoff is missing the inherited deployment lock/);
+  assert.match(contents, /changed without compatible handoff protocol 1/);
+  const execEnv = contents.indexOf('exec env');
+  const handoffProtocolEnv = contents.indexOf(
+    'BODYSENSE_DEPLOY_HANDOFF_PROTOCOL="$DEPLOY_WATCH_HANDOFF_PROTOCOL"',
+    execEnv,
+  );
+  assert.ok(execEnv >= 0 && handoffProtocolEnv > execEnv, 'handoff must exec target watcher with protocol token');
+  const handoffCall = contents.indexOf('handoff_to_runtime_watcher_if_needed "$desired_revision"');
+  const backup = contents.indexOf('backup="$BACKUP_DIR/bodysense-pre-');
+  const sync = contents.indexOf('sync_runtime "$desired_revision"');
+  assert.ok(handoffCall >= 0, 'runtime watcher handoff call must exist');
+  assert.ok(backup > handoffCall, 'handoff must happen before the database backup');
+  assert.ok(sync > backup, 'managed runtime synchronization must remain inside the target-owned transaction');
+});
+
 
 test('staging health-document qualification validator is fail-safe and restores Champion', () => {
   const contents = fs.readFileSync('scripts/validate-health-document-staging-qualification.sh', 'utf8');
