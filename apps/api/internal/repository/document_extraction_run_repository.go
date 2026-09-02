@@ -29,3 +29,21 @@ func (r *DocumentExtractionRunRepository) ListByUpload(
 		Find(&runs).Error
 	return runs, err
 }
+
+// GetOwnedByID retrieves a single extraction run while enforcing user
+// ownership. Returns gorm.ErrRecordNotFound when the run does not exist or
+// belongs to another user so callers cannot probe other users' runs.
+func (r *DocumentExtractionRunRepository) GetOwnedByID(
+	ctx context.Context,
+	id uuid.UUID,
+	userID uuid.UUID,
+) (*model.DocumentExtractionRun, error) {
+	var run model.DocumentExtractionRun
+	err := r.db.WithContext(ctx).
+		Where("id = ? AND user_id = ?", id, userID).
+		First(&run).Error
+	if err != nil {
+		return nil, err
+	}
+	return &run, nil
+}

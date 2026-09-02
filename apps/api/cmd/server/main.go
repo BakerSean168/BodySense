@@ -191,7 +191,10 @@ func main() {
 		WithHealthDocumentDeployment(healthDocumentDeploymentPolicy).
 		WithDocumentExtractionRuns(documentExtractionRunRepo)
 	uploadService.StartUploadWorker(context.Background(), 10*time.Second, 10*time.Minute)
+	documentIndicatorReviewRepo := repository.NewDocumentIndicatorReviewRepository(database.DB)
+	healthDocumentReviewService := service.NewHealthDocumentReviewService(documentExtractionRunRepo, documentIndicatorReviewRepo)
 	uploadHandler := handler.NewUploadHandler(uploadService)
+	healthDocumentReviewHandler := handler.NewHealthDocumentReviewHandler(healthDocumentReviewService, uploadService)
 	consultationRuntime := consultationruntime.NewRuntime(
 		conversationService,
 		consultationService,
@@ -396,6 +399,12 @@ func main() {
 		protected.GET("/uploads/posture-analysis", uploadHandler.GetPostureAnalysis)
 		protected.GET("/uploads/:id", uploadHandler.GetUpload)
 		protected.DELETE("/uploads/:id", uploadHandler.DeleteUpload)
+
+		// Append-only indicator review APIs bound to one extraction run.
+		extractions := protected.Group("/uploads/:id/extractions")
+		extractions.GET("/:runId/reviews", healthDocumentReviewHandler.ListCandidates)
+		extractions.POST("/:runId/reviews", healthDocumentReviewHandler.AppendReview)
+		extractions.GET("/:runId/source", healthDocumentReviewHandler.SourceContext)
 
 		// Conversation API
 		conversations := protected.Group("/conversations")
