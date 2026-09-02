@@ -354,6 +354,44 @@ test('staging watcher fails closed when an image revision label is missing', () 
   assert.match(result.stderr, /api staging image has no org.opencontainers.image.revision/);
 });
 
+
+test('staging watcher deploys document-service as part of the coherent application revision', () => {
+  const contents = fs.readFileSync('scripts/staging-deploy-watch.sh', 'utf8');
+  assert.match(contents, /current_document=\$\(container_revision document-service\)/);
+  assert.match(contents, /compose up -d --no-deps --no-build document-service/);
+  assert.match(contents, /wait_healthy document-service 180/);
+  assert.match(contents, /assert_container_revision document-service \"\$desired_revision\"/);
+});
+
+test('production watcher deploys, verifies, and conditionally rolls back document-service', () => {
+  const contents = fs.readFileSync('scripts/production-deploy-watch.sh', 'utf8');
+  assert.match(contents, /current_document=\$\(container_revision document-service\)/);
+  assert.match(contents, /deploy_document_service\(\)/);
+  assert.match(contents, /compose up -d --no-deps document-service/);
+  assert.match(contents, /wait_healthy document-service 120/);
+  assert.match(contents, /assert_container_revision document-service \"\$desired_revision\"/);
+  assert.match(contents, /if compose_service_exists document-service; then/);
+});
+
+
+test('staging health-document qualification validator is fail-safe and restores Champion', () => {
+  const contents = fs.readFileSync('scripts/validate-health-document-staging-qualification.sh', 'utf8');
+  const runtimeDockerfile = fs.readFileSync('docker/Dockerfile.runtime', 'utf8');
+  const stagingWatcher = fs.readFileSync('scripts/staging-deploy-watch.sh', 'utf8');
+  assert.match(runtimeDockerfile, /validate-health-document-staging-qualification\.sh \/runtime\/staging\/scripts\/validate-health-document-staging-qualification\.sh/);
+  assert.match(stagingWatcher, /scripts\/validate-health-document-staging-qualification\.sh/);
+  assert.match(contents, /label=com\.docker\.compose\.service=document-service/);
+  assert.match(contents, /document-service revision mismatch/);
+  assert.match(contents, /trap cleanup EXIT INT TERM/);
+  assert.match(contents, /HEALTH_DOCUMENT_STAGE=qualification/);
+  assert.match(contents, /HEALTH_DOCUMENT_STAGE=champion/);
+  assert.match(contents, /document_extraction_runs/);
+  assert.match(contents, /HEALTH_DOCUMENT_STAGING_QUALIFICATION=PASS/);
+  assert.match(contents, /-X DELETE/);
+  assert.match(contents, /api\/v1\/uploads\/\$upload_id/);
+  assert.match(contents, /DELETE FROM users WHERE email/);
+});
+
 test('release file contract recognizes release-please merge/squash identity and rejects normal commits', () => {
   const changelog = '# Changelog\n\n## [0.9.0](https://example/compare) (2026-08-29)\n\n### Features\n\n* delivery v3\n\n## [0.8.1](https://example/old)\n';
   const valid = validateReleaseFiles({

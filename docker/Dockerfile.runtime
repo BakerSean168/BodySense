@@ -42,6 +42,7 @@ COPY deploy/systemd/bodysense-capacity-cleanup.timer /runtime/deploy/systemd/bod
 COPY docker/docker-compose.staging.yml /runtime/staging/docker/docker-compose.staging.yml
 COPY docker/litellm/config.staging.yaml /runtime/staging/docker/litellm/config.staging.yaml
 COPY scripts/staging-deploy-watch.sh /runtime/staging/scripts/staging-deploy-watch.sh
+COPY scripts/validate-health-document-staging-qualification.sh /runtime/staging/scripts/validate-health-document-staging-qualification.sh
 COPY scripts/install-staging-deploy-watch.sh /runtime/staging/scripts/install-staging-deploy-watch.sh
 COPY deploy/systemd/bodysense-staging-deploy-watch.service /runtime/staging/deploy/systemd/bodysense-staging-deploy-watch.service
 COPY deploy/systemd/bodysense-staging-deploy-watch.timer /runtime/staging/deploy/systemd/bodysense-staging-deploy-watch.timer
