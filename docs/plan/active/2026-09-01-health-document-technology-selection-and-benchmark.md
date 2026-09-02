@@ -8,6 +8,47 @@
 - User-facing contract: [Health Document Ingestion Feature Spec](../../feature_spec_health_document_ingestion.md)
 - Existing safety gate: [ADR 0011](../../adr/0011-adopt-ocr-report-indicator-evidence-admissibility.md)
 
+## Current implementation status — 2026-09-02
+
+The implementation lane has produced a mechanics-qualified Challenger while intentionally leaving the production Champion unchanged.
+
+```text
+Production Champion / rollback:
+  tesseract-production-v0.10.2
+  hdex-config-14af808ef184bf8b
+
+Mechanics-qualified Challenger:
+  health-document-extraction-v20
+  hdex-config-f2495c95b6ed9de2
+
+Runtime topology:
+  Go JobRuntime
+    -> dedicated document-service
+    -> primary RapidOCR/native-PDF subprocess
+    -> primary exits
+    -> independent Tesseract verifier subprocess
+    -> Go exact provenance validation
+    -> append-only document_extraction_runs
+```
+
+The v20 production-shaped synthetic qualification used 40 documents / 100 pages / 400 annotated indicators under 2 CPU and 384 MiB with no swap. Results:
+
+```text
+auto-admission coverage       97.0%
+auto-admitted exact rate     100.0%
+critical false admissions    0
+fixture failures             0
+OOM / OOM-kill               0 / 0
+memory events                0
+swap peak                    0 MiB
+container memory peak        363.52 MiB / 384 MiB
+P95 fixture latency          ~7.40 s
+```
+
+Raw primary OCR still contains controlled diagnostic errors (`source CNER = 1%` on the synthetic corpus). The independent verifier plus `ocr-indicator-admissibility-v2` prevents those disagreements from automatically becoming Assessment evidence. The automatic evidence boundary, not raw OCR perfection, is the current promotion gate.
+
+**Final Champion selection remains blocked** until at least 10 deidentified real-layout documents satisfy the private-corpus contract, every item is independently double-reviewed, and v20 passes the same authority/resource gates on that subset. ADR 0013 therefore remains Proposed.
+
 ## 1. Objective
 
 Choose and implement the long-term BodySense health-document extraction stack using evidence from BodySense-specific documents rather than general OCR reputation.
@@ -418,51 +459,53 @@ Do not bake developer-specific absolute paths into committed artifacts.
 
 ### Phase 0 — Freeze current baseline
 
-- [ ] record current Tesseract/pytesseract/PyMuPDF versions;
-- [ ] record current `chi_sim+eng` language configuration;
-- [ ] convert current behavior into an explicit historical baseline configuration ID;
-- [ ] add baseline regression fixtures before changing extraction behavior.
+- [x] record current Tesseract/pytesseract/PyMuPDF versions;
+- [x] record current `chi_sim+eng` language configuration;
+- [x] convert current behavior into an explicit historical baseline configuration ID;
+- [x] add baseline regression fixtures before changing extraction behavior.
 
 Exit gate: current production behavior reproducible in benchmark harness.
 
 ### Phase 1 — Build corpus + annotations
 
-- [ ] create synthetic report generator/templates;
-- [ ] add at least 40 documents / 100 pages across required cohorts;
-- [ ] annotate health-critical indicator truth;
+- [x] create synthetic report generator/templates;
+- [x] add at least 40 documents / 100 pages across required cohorts;
+- [x] annotate health-critical indicator truth;
 - [ ] add double-review subset;
-- [ ] add privacy/license metadata.
+- [x] add privacy/license metadata.
 
 Exit gate: corpus validator passes and no sensitive source is committed.
 
 ### Phase 2 — Benchmark current Tesseract
 
-- [ ] run baseline accuracy;
-- [ ] collect resource metrics;
-- [ ] store result artifact;
-- [ ] identify failure taxonomy.
+- [x] run baseline accuracy;
+- [x] collect resource metrics;
+- [x] store result artifact;
+- [x] identify failure taxonomy.
 
 Exit gate: reproducible baseline report.
 
 ### Phase 3 — Benchmark RapidOCR + PP-OCRv6 small
 
-- [ ] pin RapidOCR/runtime versions;
-- [ ] pin model artifacts/hashes;
-- [ ] run same corpus;
-- [ ] compare NEM/UEM/RAA/IEM/CNER;
-- [ ] measure production-shaped resource use.
+- [x] pin RapidOCR/runtime versions;
+- [x] pin model artifacts/hashes;
+- [x] run same corpus;
+- [x] compare NEM/UEM/RAA/IEM/CNER;
+- [x] measure production-shaped resource use.
 
 Exit gate: candidate result is reproducible and license review complete.
 
 ### Phase 4 — Benchmark PP-OCRv6 medium
 
-- [ ] pin exact runtime/model identity;
-- [ ] run same corpus;
-- [ ] measure whether quality improvement justifies cost.
+- [x] pin exact runtime/model identity;
+- [x] run same corpus;
+- [x] measure whether quality improvement justifies cost.
 
 Exit gate: quality challenger comparison complete.
 
 ### Phase 5 — Select OCR Champion
+
+v20 is mechanics-qualified on the deterministic synthetic corpus, but it is **not** the Champion. Final selection is blocked by the deidentified double-reviewed real-layout gate.
 
 Decision record must state:
 
@@ -480,28 +523,30 @@ At this point ADR 0013 may move from Proposed to Accepted with exact Champion id
 
 ### Phase 6 — Native PDF first implementation
 
-- [ ] add versioned PyMuPDF text extractor;
-- [ ] implement deterministic Text Quality Gate;
-- [ ] selective page OCR fallback;
-- [ ] mixed-PDF regression tests;
-- [ ] benchmark against old all-page OCR path.
+- [x] add versioned PyMuPDF text extractor;
+- [x] implement deterministic Text Quality Gate;
+- [x] selective page OCR fallback;
+- [x] mixed-PDF regression tests;
+- [x] benchmark against old all-page OCR path.
 
 ### Phase 7 — Document Evidence Model
 
-- [ ] define extraction-run and source-span contracts;
-- [ ] add append-only schema migrations;
-- [ ] retain current `ocr_result` only as compatibility projection;
-- [ ] source blocks/cells carry page/bbox/method/mechanism identity.
+- [x] define extraction-run and source-span contracts;
+- [x] add append-only schema migrations;
+- [x] retain current `ocr_result` only as compatibility projection;
+- [x] source blocks carry page/bbox/method/mechanism identity; table-cell specialization remains optional for later complex-layout work.
 
 ### Phase 8 — Structured indicator parser v1
 
-- [ ] versioned health indicator lexicon;
-- [ ] block/table row reconstruction;
-- [ ] source-grounded value/unit/range extraction;
-- [ ] mandatory source refs;
-- [ ] current regex kept as historical comparator.
+- [x] versioned health indicator lexicon;
+- [x] block/table row reconstruction;
+- [x] source-grounded value/unit/range extraction;
+- [x] mandatory source refs;
+- [x] current regex kept as historical comparator.
 
 ### Phase 9 — Admissibility v2 / review integration if required
+
+Implemented for the v20 Challenger: `ocr-indicator-admissibility-v2` requires independent verifier consensus for OCR-derived indicators while native PDF text can be marked `not_required`. Disagreement never edits the primary value and always remains `needs_review`.
 
 ADR 0011 v1 remains valid until evidence shows a reason to change.
 
@@ -523,10 +568,10 @@ Any change to automatic evidence membership requires a new versioned admissibili
 
 ### Phase 11 — Replay / comparison
 
-- [ ] same frozen document under old/new configurations;
-- [ ] numeric/unit/row regression diff;
-- [ ] privacy-bounded artifacts;
-- [ ] qualification report.
+- [x] same frozen document under old/new configurations;
+- [x] numeric/unit/row regression diff;
+- [x] privacy-bounded artifacts;
+- [x] qualification report.
 
 ### Phase 12 — Shadow / promotion
 
@@ -611,24 +656,24 @@ Do not create a second durable job queue. Go JobRuntime continues to own job sta
 Technology selection is done when:
 
 - [ ] required corpus exists and passes privacy/license validation;
-- [ ] Tesseract baseline measured;
-- [ ] RapidOCR + PP-OCRv6 small measured;
-- [ ] PP-OCRv6 medium measured;
-- [ ] hard safety/resource gates frozen and evaluated;
+- [x] Tesseract baseline measured;
+- [x] RapidOCR + PP-OCRv6 small measured;
+- [x] PP-OCRv6 medium measured;
+- [x] hard safety/resource gates frozen and evaluated;
 - [ ] Champion selected with exact immutable identity;
 - [ ] ADR 0013 updated to Accepted.
 
 Architecture implementation is done when:
 
-- [ ] native PDF text-first routing is current;
-- [ ] immutable extraction-run provenance is durable;
+- [x] native PDF text-first routing is implemented in the v20 qualification path;
+- [x] immutable extraction-run provenance is durable;
 - [ ] source-grounded evidence blocks/cells exist;
-- [ ] indicator candidates carry source refs + parser identity;
-- [ ] Go validates supported mechanism/config before publication;
-- [ ] legacy rows are not assigned invented provenance;
+- [x] indicator candidates carry source refs + parser identity;
+- [x] Go validates supported mechanism/config before publication;
+- [x] legacy rows are not assigned invented provenance;
 - [ ] human review is append-only;
 - [ ] replay comparison works on frozen documents;
-- [ ] production-shaped validation passes;
+- [x] production-shaped synthetic mechanics validation passes for v20;
 - [ ] current architecture/feature docs updated in same PR;
 - [ ] current Champion deployed to Staging and Production via exact-SHA Release lifecycle.
 

@@ -5,6 +5,12 @@
 - Scope: health-report ingestion, OCR/PDF extraction, layout/table parsing, indicator extraction, evidence provenance, review, replay, deployment resource policy
 - Related: ADR 0002, ADR 0004, ADR 0009, ADR 0011, ADR 0012
 
+## Implementation status — 2026-09-02
+
+The architectural direction is implemented behind a non-Champion qualification lane. `health-document-extraction-v20` (`hdex-config-f2495c95b6ed9de2`) passed the deterministic 40-document / 100-page synthetic authority and resource gates in a dedicated 2 CPU / 384 MiB `document-service`: 97% automatic evidence coverage, 100% exactness among auto-admitted indicators, zero critical false admissions, zero failed fixtures, zero OOM/memory events and zero swap.
+
+Production remains on the frozen Tesseract baseline `hdex-config-14af808ef184bf8b`. This ADR remains **Proposed** because final acceptance still requires the deidentified, independently double-reviewed real-layout selection subset. Passing the synthetic mechanics gate is necessary but not sufficient for Champion promotion.
+
 ## Context
 
 BodySense accepts health-report images and PDFs so users do not need to manually re-enter laboratory values, examination summaries or other report text. The current implementation is functional but is still an MVP mechanism:

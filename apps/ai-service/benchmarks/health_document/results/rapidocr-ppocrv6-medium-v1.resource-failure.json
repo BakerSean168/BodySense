@@ -1,0 +1,13 @@
+{
+  "schema_version": "health-document-resource-failure-v1",
+  "candidate_id": "rapidocr-ppocrv6-medium-v1",
+  "configuration_id": "hdex-config-8d72c45c7010773f",
+  "corpus_manifest_sha256": "6b9415851f2671aaa982158d91783a84a19358644373a017668432ba24189126",
+  "fixture_scope": ["native-pdf-simple-01"],
+  "production_shape": {"cpu": 2.0, "memory_mb": 384, "swap_additional_mb": 384},
+  "exit_code": 137,
+  "classification": "resource-disqualified",
+  "reason": "PP-OCRv6 medium exceeded the production cgroup while processing one 3-page native PDF; full-corpus execution is not justified after this hard resource failure.",
+  "contains_raw_text": false,
+  "contains_document_images": false
+}

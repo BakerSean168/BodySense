@@ -1,0 +1,18 @@
+{
+  "schema_version": "health-document-synthetic-corpus-spec-v1",
+  "generator_revision": "health-document-synthetic-v1",
+  "seed": 20260901,
+  "target_documents": 40,
+  "target_pages": 100,
+  "cohorts": [
+    {"id": "native_pdf_simple", "documents": 5, "pages_per_document": 3},
+    {"id": "native_pdf_table", "documents": 5, "pages_per_document": 3},
+    {"id": "scanned_pdf_clear", "documents": 5, "pages_per_document": 3},
+    {"id": "scanned_pdf_degraded", "documents": 5, "pages_per_document": 3},
+    {"id": "phone_photo_clear", "documents": 4, "pages_per_document": 1},
+    {"id": "phone_photo_degraded", "documents": 4, "pages_per_document": 1},
+    {"id": "chinese_lab_table", "documents": 4, "pages_per_document": 3},
+    {"id": "mixed_zh_en_units", "documents": 4, "pages_per_document": 2},
+    {"id": "complex_table", "documents": 4, "pages_per_document": 3}
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "indicators": [
+    {
+      "indicator_id": "hemoglobin",
+      "display_name": "血红蛋白",
+      "value": "142",
+      "unit": "g/L",
+      "reference_range": "130-175",
+      "page": 1,
+      "row": 1,
+      "critical_numeric": true
+    }
+  ]
+}

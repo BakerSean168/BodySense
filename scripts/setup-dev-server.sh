@@ -201,7 +201,7 @@ cd apps/api && go mod download && cd ../..
 echo "  Done."
 
 echo ">>> 安装 Python 依赖..."
-cd apps/ai-service && uv sync --no-dev --extra ocr --extra pose && cd ../..
+cd apps/ai-service && uv sync --no-dev --extra ocr --extra pose --extra document-ocr && cd ../..
 echo "  Done."
 
 # ── 10. 启动开发基础设施 ─────────────────────────────

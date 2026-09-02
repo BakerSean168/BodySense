@@ -1,0 +1,24 @@
+{
+  "schema_version": "health-document-benchmark-thresholds-v2",
+  "selection_scope": "ocr-source-mechanism",
+  "source_accuracy": {
+    "critical_numeric_error_rate_max": 0.005,
+    "safety_critical_numeric_error_rate_max": 0.0,
+    "name_recall_min": 0.99,
+    "numeric_exact_match_min": 0.99,
+    "unit_exact_match_min": 0.99,
+    "row_bundle_exact_match_min": 0.975
+  },
+  "resource": {
+    "failed_fixture_count_max": 0,
+    "cgroup_memory_events_max_max": 0,
+    "cgroup_memory_events_oom_max": 0,
+    "cgroup_memory_events_oom_kill_max": 0,
+    "cgroup_swap_peak_mb_max": 0.0
+  },
+  "notes": [
+    "This revision separates OCR/source accuracy from the current regex parser's end-to-end accuracy.",
+    "The numeric/unit/indicator thresholds preserve the predeclared v1 safety intent rather than weakening gates after candidate results.",
+    "Final Champion selection additionally requires the deidentified double-reviewed real-layout subset and license evidence."
+  ]
+}

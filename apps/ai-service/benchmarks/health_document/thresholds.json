@@ -1,0 +1,10 @@
+{
+  "schema_version": "health-document-benchmark-thresholds-v1",
+  "critical_numeric_error_rate_max": 0.005,
+  "safety_critical_numeric_error_rate_max": 0.0,
+  "numeric_exact_match_min": 0.99,
+  "unit_exact_match_min": 0.99,
+  "row_association_accuracy_min": 0.985,
+  "indicator_exact_match_min": 0.975,
+  "notes": "Predeclared gates. Do not weaken after seeing candidate results without a new decision record."
+}

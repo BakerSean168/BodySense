@@ -3,17 +3,22 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "apps/ai-service",
   "projectType": "application",
-  "tags": [
-    "scope:ai",
-    "type:app"
-  ],
+  "tags": ["scope:ai", "type:app"],
   "targets": {
     "serve": {
       "executor": "nx:run-commands",
       "cache": false,
       "options": {
         "cwd": "apps/ai-service",
-        "command": "uv run --extra ocr --extra pose python scripts/ensure_pose_model.py && uv run --extra ocr --extra pose uvicorn src.main:app --reload --host 127.0.0.1 --port ${AI_SERVICE_PORT:-20102}"
+        "command": "uv run --extra ocr --extra pose --extra document-ocr python scripts/ensure_pose_model.py && uv run --extra ocr --extra pose --extra document-ocr python scripts/ensure_health_document_models.py && uv run --extra ocr --extra pose --extra document-ocr uvicorn src.main:app --reload --host 127.0.0.1 --port ${AI_SERVICE_PORT:-20102}"
+      }
+    },
+    "serve-document": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "cwd": "apps/ai-service",
+        "command": "uv run --extra document-ocr python scripts/ensure_health_document_models.py && uv run --extra document-ocr uvicorn src.document_main:app --reload --host 127.0.0.1 --port ${DOCUMENT_SERVICE_PORT:-20103}"
       }
     },
     "test": {
@@ -26,9 +31,7 @@
     },
     "test:coverage": {
       "executor": "nx:run-commands",
-      "outputs": [
-        "{projectRoot}/coverage"
-      ],
+      "outputs": ["{projectRoot}/coverage"],
       "cache": true,
       "options": {
         "cwd": "apps/ai-service",
@@ -127,6 +130,78 @@
       "options": {
         "cwd": "apps/ai-service",
         "command": "uv run python scripts/run_assessment_evidence_eval.py"
+      }
+    },
+    "benchmark:health-document:generate": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "cwd": "apps/ai-service",
+        "command": "uv run --extra ocr python scripts/generate_health_document_synthetic_corpus.py --force"
+      }
+    },
+    "benchmark:health-document:validate": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "cwd": "apps/ai-service",
+        "command": "uv run --extra ocr python scripts/validate_health_document_corpus.py"
+      }
+    },
+    "benchmark:health-document:real-layout:status": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "cwd": "apps/ai-service",
+        "command": "uv run --extra ocr python scripts/manage_health_document_real_layout.py status"
+      }
+    },
+    "benchmark:health-document:real-layout:validate": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "cwd": "apps/ai-service",
+        "command": "uv run --extra ocr python scripts/manage_health_document_real_layout.py validate"
+      }
+    },
+    "benchmark:health-document:tesseract": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "cwd": "apps/ai-service",
+        "command": "uv run --extra ocr python scripts/benchmark_health_document_candidates.py --candidate tesseract"
+      }
+    },
+    "benchmark:health-document:rapidocr-small-bounded": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "cwd": "apps/ai-service",
+        "command": "uv run --extra ocr --extra ocr-benchmark python scripts/benchmark_health_document_candidates.py --candidate rapidocr-ppocrv6-small-bounded"
+      }
+    },
+    "benchmark:health-document:rapidocr-tiny": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "cwd": "apps/ai-service",
+        "command": "uv run --extra ocr --extra ocr-benchmark python scripts/benchmark_health_document_candidates.py --candidate rapidocr-ppocrv6-tiny --execution-topology per-document-subprocess-v1"
+      }
+    },
+    "benchmark:health-document:evaluate": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "cwd": "apps/ai-service",
+        "command": "uv run python scripts/evaluate_health_document_candidate.py --help"
+      }
+    },
+    "benchmark:health-document:rapidocr-medium": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "cwd": "apps/ai-service",
+        "command": "uv run --extra ocr --extra ocr-benchmark python scripts/benchmark_health_document_candidates.py --candidate rapidocr-ppocrv6-medium"
       }
     }
   }

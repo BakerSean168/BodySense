@@ -1,0 +1,23 @@
+{
+  "candidate_id": "tesseract-production-v0.10.2",
+  "champion_selection_blockers": [
+    "mechanics_or_resource_gates_failed",
+    "deidentified_double_reviewed_real-layout_subset_missing"
+  ],
+  "champion_selection_ready": false,
+  "configuration_id": "hdex-config-14af808ef184bf8b",
+  "corpus_manifest_sha256": "6b9415851f2671aaa982158d91783a84a19358644373a017668432ba24189126",
+  "execution_topology_revision": "in-process-v1",
+  "harness_revision": "health-document-benchmark-v3",
+  "mechanics_blocking_reasons": [
+    "source.name_recall:0.47<0.99",
+    "source.numeric_exact_match:0.45<0.99",
+    "source.unit_exact_match:0.29<0.99",
+    "source.row_bundle_exact_match:0.2825<0.975",
+    "resource.memory_events_max:2289>0",
+    "resource.swap_peak_mb:258.71484375>0.0"
+  ],
+  "mechanics_qualified": false,
+  "schema_version": "health-document-candidate-qualification-v1",
+  "thresholds_revision": "health-document-benchmark-thresholds-v2"
+}

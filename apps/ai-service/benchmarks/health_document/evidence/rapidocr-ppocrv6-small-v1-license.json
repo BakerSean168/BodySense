@@ -1,0 +1,33 @@
+{
+  "schema_version": "health-document-candidate-license-evidence-v1",
+  "candidate_id": "rapidocr-ppocrv6-small-v1",
+  "review_status": "benchmark-approved",
+  "production_promotion_requires_notice_capture": true,
+  "components": [
+    {
+      "name": "rapidocr",
+      "version": "3.9.2",
+      "license": "Apache-2.0",
+      "evidence": "installed Python package metadata License-Expression"
+    },
+    {
+      "name": "onnxruntime",
+      "version": "1.29.0",
+      "license": "MIT",
+      "evidence": "installed Python package metadata License"
+    },
+    {
+      "name": "PaddleOCR PP-OCRv6 model family",
+      "version": "PP-OCRv6",
+      "license": "Apache-2.0",
+      "evidence": "PaddleOCR project license; exact RapidOCR model artifacts separately SHA256 pinned"
+    }
+  ],
+  "source_references": [
+    "https://github.com/RapidAI/RapidOCR",
+    "https://github.com/RapidAI/RapidOCRDocs/blob/main/docs/model_list.md",
+    "https://github.com/PaddlePaddle/PaddleOCR",
+    "https://onnxruntime.ai/"
+  ],
+  "notes": "This is sufficient for benchmark execution. Before production promotion, capture the exact distributed wheel/model NOTICE or equivalent release evidence with the candidate artifact set."
+}

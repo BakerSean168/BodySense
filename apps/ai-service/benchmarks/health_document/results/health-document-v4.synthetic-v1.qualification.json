@@ -1,0 +1,23 @@
+{
+  "candidate_id": "health-document-current",
+  "champion_selection_blockers": [
+    "mechanics_or_resource_gates_failed",
+    "deidentified_double_reviewed_real-layout_subset_missing"
+  ],
+  "champion_selection_ready": false,
+  "configuration_id": "hdex-config-b2fd4a501465e0eb",
+  "corpus_manifest_sha256": "6b9415851f2671aaa982158d91783a84a19358644373a017668432ba24189126",
+  "execution_topology_revision": "per-document-subprocess-v1",
+  "harness_revision": "health-document-benchmark-v4",
+  "mechanics_blocking_reasons": [
+    "source.critical_numeric_error_rate:0.01>0.005",
+    "source.safety_critical_numeric_error_rate:0.01>0.0",
+    "source.name_recall:0.95<0.99",
+    "source.numeric_exact_match:0.73<0.99",
+    "source.unit_exact_match:0.74<0.99",
+    "source.row_bundle_exact_match:0.73<0.975"
+  ],
+  "mechanics_qualified": false,
+  "schema_version": "health-document-candidate-qualification-v1",
+  "thresholds_revision": "health-document-benchmark-thresholds-v2"
+}

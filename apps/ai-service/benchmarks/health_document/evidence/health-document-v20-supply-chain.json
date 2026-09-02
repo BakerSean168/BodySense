@@ -1,0 +1,70 @@
+{
+  "candidate_id": "health-document-extraction-v20",
+  "configuration_id": "hdex-config-f2495c95b6ed9de2",
+  "distributions": [
+    {
+      "license": null,
+      "license_expression": "Apache-2.0",
+      "metadata_sha256": "39bcad37352500bddff188407efff244c0ddbefb348d1a097b0731a6cbf476a8",
+      "name": "rapidocr",
+      "version": "3.9.2"
+    },
+    {
+      "license": "MIT License",
+      "license_expression": null,
+      "license_sha256": "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c",
+      "metadata_sha256": "513d45ca74cf6318c91ab9944e3d43d39188e409f0c65e8e15c121e3f08db1e2",
+      "name": "onnxruntime",
+      "third_party_notices_sha256": "53d3fa5821ac016ac24dd35775c996efec86e2ae0841e9a3a5e146c0ae916845",
+      "version": "1.29.0"
+    }
+  ],
+  "engineering_review": {
+    "reviewer_id": null,
+    "scope": "engineering distribution/license compatibility review; not legal advice",
+    "status": "pending"
+  },
+  "machine_evidence_complete": true,
+  "model_artifacts": [
+    {
+      "family": "PP-OCRv6",
+      "filename": "PP-OCRv6_det_small.onnx",
+      "model_type": "small",
+      "role": "det",
+      "sha256": "090f04abcd9d9a7498bc4ebf677e4cb9bdce1fe4197ddb7e529f1ef44e1ff94f"
+    },
+    {
+      "family": "PP-OCRv6",
+      "filename": "PP-OCRv6_rec_small.onnx",
+      "model_type": "small",
+      "role": "rec",
+      "sha256": "6f327246b50388f3c176ae304bd95767ea6dc0c9ae92153ef8cbe210b3c14884"
+    },
+    {
+      "family": "PP-OCRv6",
+      "filename": "ch_ppocr_mobile_v2.0_cls_mobile.onnx",
+      "model_type": "small",
+      "role": "cls",
+      "sha256": "e47acedf663230f8863ff1ab0e64dd2d82b838fceb5957146dab185a89d6215c"
+    }
+  ],
+  "official_license_references": [
+    {
+      "component": "RapidOCR",
+      "license": "Apache-2.0",
+      "url": "https://github.com/RapidAI/RapidOCR"
+    },
+    {
+      "component": "PaddleOCR / PP-OCRv6 model family",
+      "license": "Apache-2.0",
+      "url": "https://github.com/PaddlePaddle/PaddleOCR"
+    },
+    {
+      "component": "ONNXRuntime",
+      "license": "MIT",
+      "url": "https://github.com/microsoft/onnxruntime"
+    }
+  ],
+  "production_promotion_ready": false,
+  "schema_version": "health-document-supply-chain-evidence-v1"
+}

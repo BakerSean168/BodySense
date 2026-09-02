@@ -1,0 +1,57 @@
+role: health_document
+manifest_revision: health-document-config-v20
+mechanism_revision: health-document-extraction-v20
+output_schema_revision: health-document-output-v2
+execution_topology_revision: primary-then-verifier-subprocess-v1
+pdf_strategy_revision: native-text-first-v1
+native_text_engine: pymupdf
+native_text_engine_version: "1.28.0"
+native_text_quality_policy_revision: health-document-native-text-quality-v1
+native_text_quality_policy_sha256: c594a92d70679ef0da41a21c1fdf520a2feaec6e081adc6d67509be1db9fd09d
+ocr_engine: rapidocr
+ocr_engine_version: "3.9.2"
+runtime_engine: onnxruntime
+runtime_version: "1.29.0"
+model_family: PP-OCRv6
+model_type: small
+model_artifacts:
+  - role: det
+    filename: PP-OCRv6_det_small.onnx
+    sha256: 090f04abcd9d9a7498bc4ebf677e4cb9bdce1fe4197ddb7e529f1ef44e1ff94f
+  - role: rec
+    filename: PP-OCRv6_rec_small.onnx
+    sha256: 6f327246b50388f3c176ae304bd95767ea6dc0c9ae92153ef8cbe210b3c14884
+  - role: cls
+    filename: ch_ppocr_mobile_v2.0_cls_mobile.onnx
+    sha256: e47acedf663230f8863ff1ab0e64dd2d82b838fceb5957146dab185a89d6215c
+pdf_raster_dpi: 150
+detector_limit_type: max
+detector_limit_side_len: 608
+global_max_side_len: 960
+rec_batch_num: 1
+cls_batch_num: 1
+ort_intra_op_num_threads: 1
+ort_inter_op_num_threads: 1
+indicator_parser_revision: health-indicator-parser-v3-table-rows
+indicator_parser_sha256: eec0ec8da623f6b05855a3e27bcb19868936b05a99c0520450882f27572b34f9
+admissibility_policy_revision: ocr-indicator-admissibility-v2
+admissibility_policy_sha256: 5d67fa3d0dfa96a915c8392db6e0004be2b87b508df106a2eb17a84fd4eda79b
+engine_adapter_sha256: 89918e6983eb8b82c5b6d8ebe1edbfdf6f95e8d61526c4bdf45f983500984db6
+worker_sha256: 19b60effa34f5dc9daa0ece053d9a13957340c424aee5fbc3376fa4b9a4a6e14
+verification_revision: health-document-row-verification-v7-percent-unit-normalization
+verifier_engine: tesseract
+verifier_engine_version: "5.5.0"
+verifier_languages:
+  - chi_sim
+  - eng
+verifier_language_artifacts:
+  - language: chi_sim
+    sha256: a5fcb6f0db1e1d6d8522f39db4e848f05984669172e584e8d76b6b3141e1f730
+  - language: eng
+    sha256: 7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2
+verifier_psm: 6
+verifier_strategy_revision: full-ocr-page-tsv-geometry-v6-percent-unit-normalization
+verifier_adapter_sha256: b212c823b6cc7bf76bd0666f656f969208566c55d9355514bf02bd2c29800507
+verifier_worker_sha256: a88514650cf6e9e294c657059d37890da71bbc751c35fcb984accd533c33ba03
+verification_policy_sha256: e62b2aed48cd0350519da5bad1858b10e2c50f4d3f5e9c662061285424d5e88d
+orchestrator_sha256: 579a07181c3e003d59ab8ac01120bd84080d408495989857947c8f373015c72c

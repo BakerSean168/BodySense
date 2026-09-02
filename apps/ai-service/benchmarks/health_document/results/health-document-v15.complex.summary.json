@@ -1,0 +1,96 @@
+{
+  "accuracy": {
+    "critical_numeric_error_rate": 0.0625,
+    "indicator_exact_match": 0.9166666666666666,
+    "matched_indicators": 47,
+    "numeric_exact_match": 0.9166666666666666,
+    "reference_range_exact_match": 0.9583333333333334,
+    "row_association_accuracy": 0.9166666666666666,
+    "truth_indicators": 48,
+    "unit_exact_match": 0.9583333333333334
+  },
+  "candidate_fingerprint": "d5df656e8a8ea54c125b28bc95cf8da33cf66eec1c50613cdfa8f9a34fcccec0",
+  "candidate_id": "health-document-extraction-v15",
+  "champion_selection_blocker": "deidentified_double_reviewed_real-layout_subset_missing",
+  "champion_selection_ready": false,
+  "cohort_accuracy": {
+    "complex_table": {
+      "critical_numeric_error_rate": 0.0625,
+      "indicator_exact_match": 0.9166666666666666,
+      "matched_indicators": 47,
+      "numeric_exact_match": 0.9166666666666666,
+      "reference_range_exact_match": 0.9583333333333334,
+      "row_association_accuracy": 0.9166666666666666,
+      "truth_indicators": 48,
+      "unit_exact_match": 0.9583333333333334
+    }
+  },
+  "cohort_source_accuracy": {
+    "complex_table": {
+      "critical_numeric_error_rate": 0.08333333333333333,
+      "name_recall": 1.0,
+      "numeric_exact_match": 0.9166666666666666,
+      "reference_range_exact_match": 1.0,
+      "row_bundle_exact_match": 0.9166666666666666,
+      "truth_indicators": 48,
+      "unit_exact_match": 1.0
+    }
+  },
+  "configuration_id": "hdex-config-d5df656e8a8ea54c",
+  "corpus_manifest_sha256": "c6e565a92781b5ad14d5f1e1af2c39fc354af0e7eab0fe0232f3d484d773eab0",
+  "evidence_authority": {
+    "auto_admission_coverage": 0.6458333333333334,
+    "auto_admission_exact_rate": 1.0,
+    "auto_admitted": 31,
+    "critical_false_admission_rate": 0.0,
+    "critical_false_admissions": 0,
+    "exact_auto_admitted": 31,
+    "needs_review": 16,
+    "truth_indicators": 48,
+    "verification_disagreements": 16
+  },
+  "execution_topology_revision": "primary-then-verifier-subprocess-v1",
+  "failure_taxonomy": {
+    "missing_indicator": 1,
+    "numeric_mismatch": 3,
+    "reference_range_mismatch": 1,
+    "unit_mismatch": 1
+  },
+  "fixture_execution": {
+    "failed": 0,
+    "succeeded": 4,
+    "total": 4
+  },
+  "harness_revision": "health-document-benchmark-v4",
+  "privacy": {
+    "contains_document_images": false,
+    "contains_raw_text": false,
+    "contains_user_identifiers": false
+  },
+  "production_shaped": true,
+  "runtime": {
+    "cgroup_cpu_limit": 2.0,
+    "cgroup_memory_events_max": 0,
+    "cgroup_memory_events_oom": 0,
+    "cgroup_memory_events_oom_kill": 0,
+    "cgroup_memory_limit_mb": 384.0,
+    "cgroup_memory_peak_mb": 357.9375,
+    "cgroup_swap_peak_mb": 0.0,
+    "mean_fixture_ms": 7450.232955252432,
+    "p95_fixture_ms": 7731.845603004331,
+    "peak_child_rss_mb": 0.0,
+    "peak_self_rss_mb": 0.0,
+    "total_elapsed_ms": 29800.931821009726
+  },
+  "schema_version": "health-document-benchmark-summary-v1",
+  "selection_evidence_scope": "synthetic-mechanics-only",
+  "source_accuracy": {
+    "critical_numeric_error_rate": 0.08333333333333333,
+    "name_recall": 1.0,
+    "numeric_exact_match": 0.9166666666666666,
+    "reference_range_exact_match": 1.0,
+    "row_bundle_exact_match": 0.9166666666666666,
+    "truth_indicators": 48,
+    "unit_exact_match": 1.0
+  }
+}

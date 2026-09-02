@@ -115,6 +115,31 @@ services:
       retries: 3
       start_period: 20s
 
+  document-service:
+    logging: *default-logging
+    image: ${REGISTRY:?set REGISTRY}/${ACR_NAMESPACE:-bodysense}/bodysense-ai-service:${AI_TAG:-prod-latest}
+    restart: unless-stopped
+    mem_limit: ${DOCUMENT_SERVICE_MEMORY_LIMIT:-384m}
+    mem_reservation: ${DOCUMENT_SERVICE_MEMORY_RESERVATION:-64m}
+    init: true
+    command: ["uvicorn", "src.document_main:app", "--host", "0.0.0.0", "--port", "8100"]
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+    networks:
+      - bodysense-network
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'python',
+          '-c',
+          "import urllib.request; urllib.request.urlopen('http://localhost:8100/health')",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
   ai-service:
     logging: *default-logging
     image: ${REGISTRY:?set REGISTRY}/${ACR_NAMESPACE:-bodysense}/bodysense-ai-service:${AI_TAG:-prod-latest}
@@ -169,6 +194,8 @@ services:
         condition: service_healthy
       ai-service:
         condition: service_healthy
+      document-service:
+        condition: service_healthy
     environment:
       APP_ENV: production
       GIN_MODE: release
@@ -189,6 +216,11 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://115.29.222.2}
       DB_SSLMODE: ${DB_SSLMODE:-disable}
       AI_SERVICE_URL: http://ai-service:${AI_SERVICE_PORT:-8100}
+      HEALTH_DOCUMENT_SERVICE_URL: http://document-service:8100
+      HEALTH_DOCUMENT_STAGE: ${HEALTH_DOCUMENT_STAGE:-champion}
+      HEALTH_DOCUMENT_CHAMPION_CONFIGURATION_ID: ${HEALTH_DOCUMENT_CHAMPION_CONFIGURATION_ID:-hdex-config-14af808ef184bf8b}
+      HEALTH_DOCUMENT_QUALIFICATION_CONFIGURATION_ID: ${HEALTH_DOCUMENT_QUALIFICATION_CONFIGURATION_ID:-hdex-config-f2495c95b6ed9de2}
+      HEALTH_DOCUMENT_ROLLBACK_CONFIGURATION_ID: ${HEALTH_DOCUMENT_ROLLBACK_CONFIGURATION_ID:-hdex-config-14af808ef184bf8b}
       UPLOAD_STORAGE_BACKEND: ${UPLOAD_STORAGE_BACKEND:-local}
       UPLOAD_STORAGE_LOCAL_ROOT: ${UPLOAD_STORAGE_LOCAL_ROOT:-/app/uploads}
       UPLOAD_OSS_REGION: ${UPLOAD_OSS_REGION:-cn-hangzhou}

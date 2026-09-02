@@ -1,0 +1,16 @@
+{
+  "candidate_id": "health-document-extraction-v20",
+  "champion_selection_blockers": [
+    "deidentified_double_reviewed_real-layout_subset_missing"
+  ],
+  "champion_selection_ready": false,
+  "configuration_id": "hdex-config-f2495c95b6ed9de2",
+  "corpus_manifest_sha256": "c6e565a92781b5ad14d5f1e1af2c39fc354af0e7eab0fe0232f3d484d773eab0",
+  "execution_topology_revision": "primary-then-verifier-subprocess-v1",
+  "harness_revision": "health-document-benchmark-v4",
+  "mechanics_blocking_reasons": [],
+  "mechanics_qualified": true,
+  "schema_version": "health-document-candidate-qualification-v1",
+  "selection_scope": "verified-evidence-authority",
+  "thresholds_revision": "health-document-benchmark-thresholds-v3"
+}

@@ -1,0 +1,27 @@
+{
+  "schema_version": "health-document-candidate-representative-v1",
+  "candidate_id": "rapidocr-ppocrv6-small-bounded-v1",
+  "configuration_id": "hdex-config-0b014f7a50b2aded",
+  "corpus_manifest_sha256": "6b9415851f2671aaa982158d91783a84a19358644373a017668432ba24189126",
+  "fixture_scope": ["native-pdf-simple-01", "scanned-pdf-degraded-01", "phone-photo-degraded-01"],
+  "source_accuracy": {
+    "critical_numeric_error_rate": 0.0,
+    "name_recall": 1.0,
+    "numeric_exact_match": 1.0,
+    "unit_exact_match": 1.0,
+    "reference_range_exact_match": 1.0,
+    "row_bundle_exact_match": 1.0
+  },
+  "runtime": {
+    "memory_limit_mb": 384.0,
+    "memory_peak_mb": 384.0,
+    "memory_events_max": 4877,
+    "oom": 0,
+    "oom_kill": 0,
+    "swap_peak_mb": 248.87109375
+  },
+  "classification": "quality-leading-topology-blocked",
+  "reason": "PP-OCRv6 small preserved all annotated source rows in the representative set with zero critical numeric errors, but the existing 384 MiB ai-service cgroup is not a safe runtime boundary.",
+  "contains_raw_text": false,
+  "contains_document_images": false
+}

@@ -2,7 +2,7 @@
 
 > Status: Target architecture / not yet current production source-of-truth.
 > Decision gate: ADR 0013 (Proposed).
-> Current production remains Tesseract + PyMuPDF + regex indicator extraction + ADR 0011 admissibility until the benchmark/promotion lane completes.
+> Current production remains the frozen Tesseract baseline. The target architecture is implemented as v20 in a dedicated 384 MiB `document-service` qualification lane and has passed synthetic mechanics gates, but it is not eligible for Champion promotion until the deidentified double-reviewed real-layout gate passes.
 
 ## 1. Purpose
 

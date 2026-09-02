@@ -40,6 +40,14 @@ dev = [
     "httpx>=0.28.1",
     "httpx2>=2.9.0",
 ]
+document-ocr = [
+    "onnxruntime==1.29.0",
+    "rapidocr==3.9.2",
+]
+ocr-benchmark = [
+    "onnxruntime==1.29.0",
+    "rapidocr==3.9.2",
+]
 
 [tool.ruff]
 line-length = 100

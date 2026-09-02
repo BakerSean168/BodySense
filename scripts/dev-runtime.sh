@@ -80,13 +80,16 @@ wait_http() {
 up() {
   "$ROOT/scripts/dev-infra.sh" up
 
+  (cd "$ROOT/apps/ai-service" && uv run --extra ocr --extra pose --extra document-ocr python scripts/ensure_pose_model.py && uv run --extra document-ocr python scripts/ensure_health_document_models.py)
+  start_process document "cd '$ROOT/apps/ai-service' && exec uv run --extra document-ocr uvicorn src.document_main:app --host 127.0.0.1 --port '${DOCUMENT_SERVICE_PORT}'"
+  wait_http document "http://127.0.0.1:${DOCUMENT_SERVICE_PORT}/health"
+
   # The Go API owns schema migration/extension initialization. Start it before
   # the Python knowledge pool so a brand-new dev volume is bootstrapped deterministically.
-  start_process api "cd '$ROOT/apps/api' && exec env API_HOST=127.0.0.1 API_PORT='${API_PORT}' DB_HOST=127.0.0.1 DB_PORT='${DB_PORT}' DB_NAME='${DB_NAME}' DB_USER='${DB_USER}' DB_PASSWORD='${DB_PASSWORD}' DB_SSLMODE=disable REDIS_HOST=127.0.0.1 REDIS_PORT='${REDIS_PORT}' REDIS_PASSWORD='${REDIS_PASSWORD}' JWT_SECRET_KEY='${JWT_SECRET_KEY}' CORS_ORIGINS='${CORS_ORIGINS}' AI_SERVICE_URL='http://127.0.0.1:${AI_SERVICE_PORT}' go run ./cmd/server"
+  start_process api "cd '$ROOT/apps/api' && exec env API_HOST=127.0.0.1 API_PORT='${API_PORT}' DB_HOST=127.0.0.1 DB_PORT='${DB_PORT}' DB_NAME='${DB_NAME}' DB_USER='${DB_USER}' DB_PASSWORD='${DB_PASSWORD}' DB_SSLMODE=disable REDIS_HOST=127.0.0.1 REDIS_PORT='${REDIS_PORT}' REDIS_PASSWORD='${REDIS_PASSWORD}' JWT_SECRET_KEY='${JWT_SECRET_KEY}' CORS_ORIGINS='${CORS_ORIGINS}' AI_SERVICE_URL='http://127.0.0.1:${AI_SERVICE_PORT}' HEALTH_DOCUMENT_SERVICE_URL='http://127.0.0.1:${DOCUMENT_SERVICE_PORT}' go run ./cmd/server"
   wait_http api "http://127.0.0.1:${API_PORT}/api/health"
 
-  (cd "$ROOT/apps/ai-service" && uv run --extra ocr --extra pose python scripts/ensure_pose_model.py)
-  start_process ai "cd '$ROOT/apps/ai-service' && exec env DATABASE_URL='postgresql://${DB_USER}:${DB_PASSWORD}@127.0.0.1:${DB_PORT}/${DB_NAME}' LITELLM_BASE_URL='http://127.0.0.1:${LITELLM_PORT}/v1' LITELLM_API_KEY='${LITELLM_MASTER_KEY}' EMBEDDING_PROVIDER='${EMBEDDING_PROVIDER}' CORS_ORIGINS='${CORS_ORIGINS}' uv run --extra ocr --extra pose uvicorn src.main:app --host 127.0.0.1 --port '${AI_SERVICE_PORT}' --reload"
+  start_process ai "cd '$ROOT/apps/ai-service' && exec env DATABASE_URL='postgresql://${DB_USER}:${DB_PASSWORD}@127.0.0.1:${DB_PORT}/${DB_NAME}' LITELLM_BASE_URL='http://127.0.0.1:${LITELLM_PORT}/v1' LITELLM_API_KEY='${LITELLM_MASTER_KEY}' EMBEDDING_PROVIDER='${EMBEDDING_PROVIDER}' CORS_ORIGINS='${CORS_ORIGINS}' uv run --extra ocr --extra pose --extra document-ocr uvicorn src.main:app --host 127.0.0.1 --port '${AI_SERVICE_PORT}' --reload"
   wait_http ai "http://127.0.0.1:${AI_SERVICE_PORT}/health"
 
   start_process web "cd '$ROOT' && exec env BODYSENSE_WEB_PORT='${WEB_PORT}' BODYSENSE_ALLOWED_HOSTS='${BODYSENSE_ALLOWED_HOSTS:-}' VITE_DEV_API_TARGET='http://127.0.0.1:${API_PORT}' pnpm exec vite --config apps/web/vite.config.ts --host 127.0.0.1 --port '${WEB_PORT}' --strictPort"
@@ -97,12 +100,13 @@ down() {
   stop_process web
   stop_process api
   stop_process ai
+  stop_process document
   echo "persistent dev infrastructure left running; use '$ROOT/scripts/dev-infra.sh down' to stop it explicitly"
 }
 
 status() {
-  echo "BodySense dev ports: web=${WEB_PORT} api=${API_PORT} ai=${AI_SERVICE_PORT} postgres=${DB_PORT} redis=${REDIS_PORT} litellm=${LITELLM_PORT}"
-  for name in web api ai; do
+  echo "BodySense dev ports: web=${WEB_PORT} api=${API_PORT} ai=${AI_SERVICE_PORT} document=${DOCUMENT_SERVICE_PORT} postgres=${DB_PORT} redis=${REDIS_PORT} litellm=${LITELLM_PORT}"
+  for name in web api ai document; do
     if is_running "$name"; then
       echo "$name=RUNNING pid=$(cat "$(pid_file "$name")")"
     else

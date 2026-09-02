@@ -1,0 +1,42 @@
+{
+  "schema_version": "health-document-benchmark-failure-v1",
+  "candidate_id": "rapidocr-ppocrv6-small-v1",
+  "configuration_id": "hdex-config-381a5312d0eddc5c",
+  "candidate_fingerprint": "381a5312d0eddc5c26b21b66ef9799fd6d6a93dc749dafe7fbeda57f95c6de4b",
+  "harness_revision": "health-document-benchmark-v1",
+  "corpus_manifest_sha256": "6b9415851f2671aaa982158d91783a84a19358644373a017668432ba24189126",
+  "production_shaped": true,
+  "resource_envelope": {
+    "cpus": 2,
+    "memory_mib": 384,
+    "memory_plus_swap_mib": 768
+  },
+  "full_run": {
+    "completed": false,
+    "exit_code": 137,
+    "classification": "resource_gate_failed",
+    "reason": "OOM kill while processing the 300-DPI all-page PDF raster path with RapidOCR default Det.limit_type=min behavior"
+  },
+  "single_fixture_smoke": {
+    "fixture_id": "phone-photo-clear-01",
+    "truth_indicators": 4,
+    "numeric_exact_match": 1.0,
+    "unit_exact_match": 0.75,
+    "reference_range_exact_match": 1.0,
+    "indicator_exact_match": 0.75,
+    "critical_numeric_error_rate": 0.0,
+    "elapsed_ms": 11528.255215000172
+  },
+  "root_cause_evidence": {
+    "pdf_raster_dpi": 300,
+    "rapidocr_detector_limit_type": "min",
+    "rapidocr_detector_limit_side_len": 736,
+    "observed_behavior": "limit_type=min upscales small images but does not downscale large 300-DPI A4 page rasters before detector execution"
+  },
+  "privacy": {
+    "contains_raw_text": false,
+    "contains_document_images": false,
+    "contains_user_identifiers": false
+  },
+  "disposition": "rejected_as_production_candidate; retain immutable failure evidence and evaluate a new bounded configuration identity"
+}
