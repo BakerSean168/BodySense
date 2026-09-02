@@ -301,6 +301,11 @@ rollback_postgres18_reset() {
     "$ROOT/scripts/production-postgres18-reset.sh" rollback
 }
 
+compose_service_exists() {
+  local service="$1"
+  compose config --services 2>/dev/null | grep -Fxq "$service"
+}
+
 rollback_deployment() {
   local current_schema reset_status preserve_runtime=false
   if [ "$ROLLBACK_READY" != true ]; then
@@ -344,6 +349,10 @@ rollback_deployment() {
 
   LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" compose up -d --no-deps litellm-gateway
   LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" wait_healthy litellm-gateway 120 || return 1
+  if compose_service_exists document-service; then
+    LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" compose up -d --no-deps document-service
+    LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" wait_healthy document-service 120 || return 1
+  fi
   LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" compose up -d --no-deps ai-service
   LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" wait_healthy ai-service 120 || return 1
   LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" compose up -d --no-deps api
@@ -539,13 +548,14 @@ fi
 
 current_web=$(container_revision web)
 current_api=$(container_revision api)
+current_document=$(container_revision document-service)
 current_ai=$(container_revision ai-service)
 managed_revision=$(sed -n 's/^revision=//p' "$STATE_FILE" 2>/dev/null | tail -1 || true)
 
 if $CHECK_ONLY; then
   preflight=READY
   deploy_run_preflight || preflight=DEFER
-  log "coherent candidate revision=$desired_revision runtime=$runtime_revision current_web=${current_web:-none} current_api=${current_api:-none} current_ai=${current_ai:-none} managed=${managed_revision:-none} run_preflight=$preflight"
+  log "coherent candidate revision=$desired_revision runtime=$runtime_revision current_web=${current_web:-none} current_api=${current_api:-none} current_document=${current_document:-none} current_ai=${current_ai:-none} managed=${managed_revision:-none} run_preflight=$preflight"
   exit 0
 fi
 
@@ -553,7 +563,7 @@ if ! $FORCE && [ "$AUTO_DEPLOY" != true ]; then
   log "candidate $desired_revision is coherent; AUTO_DEPLOY_ENABLED=$AUTO_DEPLOY"
   exit 0
 fi
-if ! $FORCE && [ "$desired_revision" = "$current_web" ] && [ "$desired_revision" = "$current_api" ] && [ "$desired_revision" = "$current_ai" ] && [ "$desired_revision" = "$managed_revision" ]; then
+if ! $FORCE && [ "$desired_revision" = "$current_web" ] && [ "$desired_revision" = "$current_api" ] && [ "$desired_revision" = "$current_document" ] && [ "$desired_revision" = "$current_ai" ] && [ "$desired_revision" = "$managed_revision" ]; then
   log "already deployed revision $desired_revision"
   exit 0
 fi
@@ -669,6 +679,12 @@ compose pull litellm-gateway >/dev/null
 compose up -d --no-deps litellm-gateway
 wait_healthy litellm-gateway 120 || fail 'litellm-gateway deployment failed'
 
+deploy_document_service() {
+  compose up -d --no-deps document-service
+  wait_healthy document-service 120 || fail 'document-service deployment failed'
+  assert_container_revision document-service "$desired_revision" || fail 'document-service revision verification failed'
+}
+
 deploy_ai_service() {
   compose up -d --no-deps ai-service
   wait_healthy ai-service 120 || fail 'ai-service deployment failed'
@@ -688,10 +704,13 @@ if [ "$reset_status" = cutover_complete ]; then
   # during its FastAPI lifespan. Bootstrap schema first, with Caddy still down.
   log 'fresh PostgreSQL 18 detected; bootstrapping API migrations before AI service'
   deploy_api_service
+  deploy_document_service
   deploy_ai_service
 else
-  # Existing databases are already migrated, so preserve the established rollout
-  # order that upgrades AI before the externally reachable API.
+  # Existing databases are already migrated. Bring the bounded document runtime
+  # up before the API can enqueue report work, then preserve the established AI
+  # before externally reachable API order.
+  deploy_document_service
   deploy_ai_service
   deploy_api_service
 fi

@@ -133,8 +133,9 @@ fi
 if ! $FORCE && [[ "$managed_revision" == "$desired_revision" ]]; then
   current_web=$(container_revision web)
   current_api=$(container_revision api)
+  current_document=$(container_revision document-service)
   current_ai=$(container_revision ai-service)
-  if [[ "$current_web" == "$desired_revision" && "$current_api" == "$desired_revision" && "$current_ai" == "$desired_revision" ]]; then
+  if [[ "$current_web" == "$desired_revision" && "$current_api" == "$desired_revision" && "$current_document" == "$desired_revision" && "$current_ai" == "$desired_revision" ]]; then
     log "already deployed staging revision $desired_revision"
     exit 0
   fi
@@ -156,6 +157,7 @@ for required in \
   docker/docker-compose.staging.yml \
   docker/litellm/config.staging.yaml \
   scripts/staging-deploy-watch.sh \
+  scripts/validate-health-document-staging-qualification.sh \
   deploy/systemd/bodysense-staging-deploy-watch.service \
   deploy/systemd/bodysense-staging-deploy-watch.timer; do
   [[ -s "$stage/$required" ]] || fail "candidate runtime missing staging artifact: $required"
@@ -194,6 +196,11 @@ wait_healthy litellm-gateway 120 || fail 'staging LiteLLM is unhealthy'
 # tolerates this short maintenance window in exchange for never serving a mixed
 # Web/API/AI revision as the canonical environment.
 compose stop web >/dev/null 2>&1 || true
+
+compose up -d --no-deps --no-build document-service
+wait_healthy document-service 180 || fail 'staging document-service candidate is unhealthy'
+assert_container_revision document-service "$desired_revision" || fail 'staging document-service revision check failed'
+
 compose up -d --no-deps --no-build api
 wait_healthy api 180 || fail 'staging API candidate is unhealthy'
 assert_container_revision api "$desired_revision" || fail 'staging API revision check failed'
