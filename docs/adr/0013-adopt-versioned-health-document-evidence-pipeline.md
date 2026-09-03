@@ -9,7 +9,7 @@
 
 The architectural direction is implemented behind a non-Champion qualification lane. `health-document-extraction-v20` (`hdex-config-f2495c95b6ed9de2`) passed the deterministic 40-document / 100-page synthetic authority and resource gates in a dedicated 2 CPU / 384 MiB `document-service`: 97% automatic evidence coverage, 100% exactness among auto-admitted indicators, zero critical false admissions, zero failed fixtures, zero OOM/memory events and zero swap.
 
-Production remains on the frozen Tesseract baseline `hdex-config-14af808ef184bf8b`. This ADR remains **Proposed** because final acceptance still requires the deidentified, independently double-reviewed real-layout selection subset. Passing the synthetic mechanics gate is necessary but not sufficient for Champion promotion.
+Production remains on the frozen Tesseract baseline `hdex-config-14af808ef184bf8b`. The append-only human-review contract, source-grounded authenticated review UX, and Assessment v5 / `assessment-evidence-contract-v4` reviewed-evidence lane are now implemented; these close the human publication path without changing OCR Champion authority. This ADR remains **Proposed** because final acceptance still requires at least 10 deidentified real-layout documents, each independently double-reviewed, with the v20 Challenger passing the same authority/resource gates on that private subset. Passing the synthetic mechanics gate is necessary but not sufficient for Champion promotion.
 
 ## Context
 

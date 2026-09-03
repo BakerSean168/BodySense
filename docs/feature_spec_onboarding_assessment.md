@@ -130,7 +130,7 @@ posture_analysis
 
 禁止为了 Prompt 方便把 BodyState、OCR 指标或 lifestyle 再嵌回 `profile`。Assessment 需要健康上下文时以 `body_state` 为准。
 
-**当前 serving configuration：Assessment v4 / `assessment-output-v2` / `assessment-evidence-contract-v3`。** 模型权限进一步收敛为 evidence selection/classification。每个候选只能输出 `kind + 单个 evidence_ref`；模型没有 `label / description / body_region / severity / confidence` 等可持久化自然语言权限，也不再生成健康等级、0-100 分数、总体 summary 或 information gaps。Python 与 Go 都从 frozen evidence 快照确定性渲染 observation 文案，避免“ref 正确但模型仍扩写一个 unsupported claim”。
+**当前 serving configuration：Assessment v5 / `assessment-output-v2` / `assessment-evidence-contract-v4`。** Assessment v4 / `assessment-evidence-contract-v3` 保持不可变，仅用于历史 replay。v5 在不改变 machine-admissible 证据权限的前提下，新增独立的 `human-reviewed` 报告证据通道：只有当前有效的 confirmed/corrected review 可进入 catalog，rejected 或已被后续 review supersede 的状态继续 fail closed。模型权限仍收敛为 evidence selection/classification。每个候选只能输出 `kind + 单个 evidence_ref`；模型没有 `label / description / body_region / severity / confidence` 等可持久化自然语言权限，也不再生成健康等级、0-100 分数、总体 summary 或 information gaps。Python 与 Go 都从 frozen evidence 快照确定性渲染 observation 文案，避免“ref 正确但模型仍扩写一个 unsupported claim”。
 
 **证据来源**：应用层从 frozen health input 构建 evidence catalog，仅允许 `posture_analysis / body_state / report`。`profile` 是稳定身份背景，不是健康 observation evidence；raw image 与未建模 `rag_context` 也不能直接进入 serving Assessment contract。模型声明的 ref 不可信，Python governance 与 Go durable boundary 都必须验证 ref 真实存在、唯一且与 observation kind 的 evidence policy 匹配。完整决策见 [[ADR 0009]] `docs/adr/0009-adopt-evidence-grounded-assessment-contract.md`。
 

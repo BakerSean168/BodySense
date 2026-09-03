@@ -149,12 +149,13 @@ func (s *AssessmentReplayService) CounterfactualReplay(
 	// Images are stored as descriptors; counterfactual replay does not re-attach
 	// raw bytes. The model is invoked with the profile + posture inputs only.
 	result, err := s.ai.GenerateAssessment(ctx, AssessmentGenerationRequest{
-		ConfigurationID:  targetConfigurationID,
-		Profile:          input.Profile,
-		BodyState:        input.BodyState,
-		ReportIndicators: input.ReportIndicators,
-		PostureAnalysis:  input.PostureAnalysis,
-		Images:           images,
+		ConfigurationID:        targetConfigurationID,
+		Profile:                input.Profile,
+		BodyState:              input.BodyState,
+		ReportIndicators:       input.ReportIndicators,
+		ReviewedReportEvidence: input.ReviewedReportEvidence,
+		PostureAnalysis:        input.PostureAnalysis,
+		Images:                 images,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("counterfactual Assessment replay: %w", err)
@@ -173,7 +174,9 @@ func (s *AssessmentReplayService) CounterfactualReplay(
 		}
 		request := AssessmentGenerationRequest{
 			ConfigurationID: targetConfigurationID, Profile: input.Profile, BodyState: input.BodyState,
-			ReportIndicators: input.ReportIndicators, PostureAnalysis: input.PostureAnalysis,
+			ReportIndicators:       input.ReportIndicators,
+			ReviewedReportEvidence: input.ReviewedReportEvidence,
+			PostureAnalysis:        input.PostureAnalysis,
 		}
 		projection, err := validateAssessmentEvidencePayload(payload, request)
 		if err != nil {

@@ -11,7 +11,7 @@ from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import Evaluator, EvaluatorContext
 
 from src.services.assessment_evidence import (
-    ASSESSMENT_EVIDENCE_POLICY_REVISION_V3,
+    ASSESSMENT_EVIDENCE_POLICY_REVISION_V4,
     assessment_evidence_issues,
     build_assessment_evidence_catalog,
     build_assessment_evidence_coverage,
@@ -30,6 +30,7 @@ class AssessmentEvidencePolicyInputs(BaseModel):
     profile: dict[str, Any] = Field(default_factory=dict)
     body_state: dict[str, Any] = Field(default_factory=dict)
     report_indicators: list[Any] = Field(default_factory=list)
+    reviewed_report_evidence: list[Any] = Field(default_factory=list)
     posture_analysis: dict[str, Any] = Field(default_factory=dict)
     selections: list[dict[str, Any]] = Field(default_factory=list)
 
@@ -118,8 +119,9 @@ def build_assessment_evidence_policy_task() -> Any:
             profile=inputs.profile,
             body_state=inputs.body_state,
             report_indicators=inputs.report_indicators,
+            reviewed_report_evidence=inputs.reviewed_report_evidence,
             posture_analysis=inputs.posture_analysis,
-            evidence_policy_revision=ASSESSMENT_EVIDENCE_POLICY_REVISION_V3,
+            evidence_policy_revision=ASSESSMENT_EVIDENCE_POLICY_REVISION_V4,
         )
         issues = assessment_evidence_issues({"observations": inputs.selections}, catalog)
         coverage = build_assessment_evidence_coverage(catalog)
@@ -148,7 +150,7 @@ def run_assessment_evidence_policy_qualification(
     return load_assessment_evidence_policy_dataset(path).evaluate_sync(
         build_assessment_evidence_policy_task(),
         progress=False,
-        name=ASSESSMENT_EVIDENCE_POLICY_REVISION_V3,
+        name=ASSESSMENT_EVIDENCE_POLICY_REVISION_V4,
     )
 
 

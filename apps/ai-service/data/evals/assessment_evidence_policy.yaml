@@ -1,4 +1,4 @@
-name: assessment_evidence_contract_v3
+name: assessment_evidence_contract_v4
 cases:
   - name: profile-is-not-health-evidence
     inputs:
@@ -160,6 +160,136 @@ cases:
       selections:
         - kind: report_indicator
           evidence_refs: [report:0]
+    metadata:
+      expected_issue_count: 1
+      expected_issue_fragments: [references unavailable evidence]
+      expected_coverage_status: insufficient
+      expected_available_domains: []
+      expected_rendered_descriptions: []
+
+  - name: confirmed-review-promotes-review-required-indicator
+    inputs:
+      reviewed_report_evidence:
+        - upload_id: 22222222-2222-2222-2222-222222222222
+          indicator_index: 0
+          indicator_id: 25-oh-d
+          extraction_run_id: 33333333-3333-3333-3333-333333333333
+          review_id: 44444444-4444-4444-4444-444444444444
+          reviewer_user_id: 77777777-7777-7777-7777-777777777777
+          source_refs: [src:a]
+          page_ref:
+            src:a:
+              page_number: 1
+              bbox: [0, 0, 1, 1]
+          action: confirm
+          reviewed: true
+          value:
+            indicator_id: 25-oh-d
+            name: 25-OH-D
+            value: "12.5"
+            unit: ng/mL
+      selections:
+        - kind: report_indicator
+          evidence_refs: [report:upload:22222222-2222-2222-2222-222222222222:indicator:0]
+    metadata:
+      expected_issue_count: 0
+      expected_coverage_status: partial
+      expected_available_domains: [health_report]
+      expected_rendered_descriptions: ["报告记录：25-OH-D=12.5 ng/mL。"]
+
+  - name: corrected-review-renders-reviewed-value
+    inputs:
+      reviewed_report_evidence:
+        - upload_id: 22222222-2222-2222-2222-222222222222
+          indicator_index: 1
+          indicator_id: ferritin
+          extraction_run_id: 33333333-3333-3333-3333-333333333333
+          review_id: 55555555-5555-5555-5555-555555555555
+          reviewer_user_id: 77777777-7777-7777-7777-777777777777
+          source_refs: [src:a]
+          page_ref:
+            src:a:
+              page_number: 1
+              bbox: [0, 0, 1, 1]
+          action: correct
+          reviewed: true
+          value:
+            indicator_id: ferritin
+            name: Ferritin
+            value: "50.0"
+            unit: ng/mL
+      selections:
+        - kind: report_indicator
+          evidence_refs: [report:upload:22222222-2222-2222-2222-222222222222:indicator:1]
+    metadata:
+      expected_issue_count: 0
+      expected_coverage_status: partial
+      expected_available_domains: [health_report]
+      expected_rendered_descriptions: ["报告记录：Ferritin=50.0 ng/mL。"]
+
+  - name: reviewed-evidence-without-provenance-fails-closed
+    inputs:
+      reviewed_report_evidence:
+        - upload_id: 22222222-2222-2222-2222-222222222222
+          indicator_index: 0
+          indicator_id: 25-oh-d
+          action: confirm
+          value:
+            indicator_id: 25-oh-d
+            name: 25-OH-D
+            value: "12.5"
+            unit: ng/mL
+        - upload_id: 22222222-2222-2222-2222-222222222222
+          indicator_index: 1
+          indicator_id: ferritin
+          extraction_run_id: 33333333-3333-3333-3333-333333333333
+          review_id: 66666666-6666-6666-6666-666666666666
+          reviewer_user_id: 77777777-7777-7777-7777-777777777777
+          source_refs: [src:a]
+          page_ref:
+            src:a:
+              page_number: 1
+              bbox: [0, 0, 1, 1]
+          action: reject
+          reviewed: true
+          value:
+            indicator_id: ferritin
+            name: Ferritin
+            value: "50.0"
+            unit: ng/mL
+      selections:
+        - kind: report_indicator
+          evidence_refs: [report:upload:22222222-2222-2222-2222-222222222222:indicator:0]
+        - kind: report_indicator
+          evidence_refs: [report:upload:22222222-2222-2222-2222-222222222222:indicator:1]
+    metadata:
+      expected_issue_count: 2
+      expected_issue_fragments: [references unavailable evidence]
+      expected_coverage_status: insufficient
+      expected_available_domains: []
+      expected_rendered_descriptions: []
+
+  - name: reviewed-evidence-without-source-provenance-fails-closed
+    inputs:
+      reviewed_report_evidence:
+        - upload_id: 22222222-2222-2222-2222-222222222222
+          indicator_index: 2
+          indicator_id: glucose
+          extraction_run_id: 33333333-3333-3333-3333-333333333333
+          review_id: 88888888-8888-8888-8888-888888888888
+          reviewer_user_id: 77777777-7777-7777-7777-777777777777
+          action: confirm
+          reviewed: true
+          source_refs: []
+          page_ref: {}
+          value:
+            indicator_id: glucose
+            name: Glucose
+            value: "5.2"
+            unit: mmol/L
+      selections:
+        - kind: report_indicator
+          evidence_refs: [report:upload:22222222-2222-2222-2222-222222222222:indicator:2]
     metadata:
       expected_issue_count: 1
       expected_issue_fragments: [references unavailable evidence]

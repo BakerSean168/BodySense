@@ -1,0 +1,99 @@
+{
+  "cases": [
+    {
+      "assertions": {
+        "AssessmentEvidencePolicyBehavior": true
+      },
+      "name": "profile-is-not-health-evidence",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "AssessmentEvidencePolicyBehavior": true
+      },
+      "name": "confirmed-exercise-renders-source-only",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "AssessmentEvidencePolicyBehavior": true
+      },
+      "name": "unverified-body-state-is-unavailable",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "AssessmentEvidencePolicyBehavior": true
+      },
+      "name": "posture-cannot-borrow-lifestyle-evidence",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "AssessmentEvidencePolicyBehavior": true
+      },
+      "name": "same-evidence-cannot-be-selected-twice",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "AssessmentEvidencePolicyBehavior": true
+      },
+      "name": "posture-finding-renders-governed-evidence",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "AssessmentEvidencePolicyBehavior": true
+      },
+      "name": "health-report-is-not-injury-evidence",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "AssessmentEvidencePolicyBehavior": true
+      },
+      "name": "body-state-kind-must-match-observation-kind",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "AssessmentEvidencePolicyBehavior": true
+      },
+      "name": "review-required-report-is-unavailable",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "AssessmentEvidencePolicyBehavior": true
+      },
+      "name": "confirmed-review-promotes-review-required-indicator",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "AssessmentEvidencePolicyBehavior": true
+      },
+      "name": "corrected-review-renders-reviewed-value",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "AssessmentEvidencePolicyBehavior": true
+      },
+      "name": "reviewed-evidence-without-provenance-fails-closed",
+      "passed": true
+    },
+    {
+      "assertions": {
+        "AssessmentEvidencePolicyBehavior": true
+      },
+      "name": "reviewed-evidence-without-source-provenance-fails-closed",
+      "passed": true
+    }
+  ],
+  "failed": 0,
+  "name": "assessment-evidence-contract-v4",
+  "passed": 13,
+  "total": 13
+}

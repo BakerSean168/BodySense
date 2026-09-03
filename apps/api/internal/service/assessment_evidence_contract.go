@@ -209,10 +209,39 @@ func buildAssessmentEvidenceCatalog(req AssessmentGenerationRequest, evidencePol
 					value = nested
 				}
 			}
-			if evidencePolicyRevision == assessmentEvidencePolicyV3 && !assessmentReportIndicatorAdmissible(value) {
-				continue
+			if evidencePolicyRevision == assessmentEvidencePolicyV3 || evidencePolicyRevision == assessmentEvidencePolicyV4 {
+				// Both the legacy Machine-admissible Champion lane and the v4
+				// reviewed-aware policy keep this admission rule: a nagging report
+				// indicator only enters when it carries the exact supported byte
+				// admissibility (ocr-indicator-admissibility-v1 + admissible).
+				if !assessmentReportIndicatorAdmissible(value) {
+					continue
+				}
 			}
 			catalog[ref] = assessmentEvidenceItem{Source: "report", Kind: "report_indicator", Value: value}
+		}
+	}
+
+	// Reviewed report evidence is a separate durable lane assembled only from
+	// the append-only review projection. Under v3 the machine admissibility
+	// policy remains the sole authority so these entries do not change replay;
+	// under v4 confirmed/corrected latest reviews may supply the reviewed
+	// payload with exact provenance. Rejected or unresolved candidates and
+	// unknown/missing provenance fail closed.
+	for index, raw := range assessmentReviewedReportIndicators(req) {
+		item, ok := raw.(map[string]any)
+		if !ok || !assessmentReviewedProvenanceComplete(item) {
+			continue
+		}
+		if evidencePolicyRevision != assessmentEvidencePolicyV4 {
+			continue
+		}
+		if ref, ok := assessmentReviewedRef(item, index); ok {
+			catalog[ref] = assessmentEvidenceItem{
+				Source: "report",
+				Kind:   "report_indicator",
+				Value:  assessmentReviewedIndicatorValue(item),
+			}
 		}
 	}
 

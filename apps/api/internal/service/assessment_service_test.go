@@ -90,7 +90,7 @@ func assessmentExerciseOutput() json.RawMessage {
 	return json.RawMessage(`{
 		"contract_revision":"assessment-output-v2",
 		"status":"completed",
-		"evidence_policy_revision":"assessment-evidence-contract-v3",
+		"evidence_policy_revision":"assessment-evidence-contract-v4",
 		"observations":[{
 			"kind":"exercise_pattern","body_region":"","label":"当前运动频率记录",
 			"description":"当前 BodyState 记录每周健身 1-2 次。","evidence_refs":["body_state:fact:0"]
@@ -119,7 +119,7 @@ func assessmentPostureOutput(evidenceRef string) json.RawMessage {
 	raw := `{
 		"contract_revision":"assessment-output-v2",
 		"status":"completed",
-		"evidence_policy_revision":"assessment-evidence-contract-v3",
+		"evidence_policy_revision":"assessment-evidence-contract-v4",
 		"observations":[{
 			"kind":"posture_alignment","body_region":"肩部","label":"肩部对称性待复核",
 			"description":"正面视觉资料中右侧肩峰位置略高。","evidence_refs":["__POSTURE_EVIDENCE_REF__"]
@@ -377,7 +377,7 @@ func TestAssessmentPersistsAgentProvenanceAndDecisionTrace(t *testing.T) {
 		t.Fatal("report must persist agent configuration and execution provenance")
 	}
 	trace := string(report.GenerationDecisionTrace)
-	if trace == "{}" || !strings.Contains(trace, assessmentOutputContractV2) || !strings.Contains(trace, assessmentEvidencePolicyV3) {
+	if trace == "{}" || !strings.Contains(trace, assessmentOutputContractV2) || !strings.Contains(trace, assessmentEvidencePolicyV4) {
 		t.Fatalf("generation trace must freeze current contract/evidence policy: %s", trace)
 	}
 }
@@ -457,7 +457,7 @@ func TestAssessmentDerivesInsufficientStatusWhenOnlyProfileExists(t *testing.T) 
 	raw := json.RawMessage(`{
 		"contract_revision":"assessment-output-v2",
 		"status":"insufficient_information",
-		"evidence_policy_revision":"assessment-evidence-contract-v3",
+		"evidence_policy_revision":"assessment-evidence-contract-v4",
 		"observations":[],
 		"evidence_coverage":{},
 		"evidence_gaps":[],
@@ -506,7 +506,7 @@ func TestAssessmentGenerationTraceDistinguishesNoModelDerivation(t *testing.T) {
 		AssessmentDecisionPolicyV2,
 		"fingerprint",
 		assessmentOutputContractV2,
-		assessmentEvidencePolicyV3,
+		assessmentEvidencePolicyV4,
 	)
 	var trace map[string]any
 	if err := json.Unmarshal(traceRaw, &trace); err != nil {

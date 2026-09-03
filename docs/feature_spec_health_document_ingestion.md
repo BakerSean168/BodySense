@@ -323,15 +323,15 @@ indicator name -> value -> unit -> reference range -> review status
 ### Evidence grounding
 
 - [ ] every new automatically admissible indicator has source evidence refs;
-- [ ] user can see the source page/region for review-required indicators;
-- [ ] current result shows extraction/review status without implying diagnosis.
+- [x] user can see the persisted source page/region for review-required current-pipeline indicators;
+- [x] current result shows extraction/review status with explicit non-diagnostic wording.
 
 ### Review
 
-- [ ] user can confirm/correct/reject;
-- [ ] machine candidate remains immutable;
-- [ ] review creates append-only history;
-- [ ] reviewed state participates in evidence authority through a versioned policy.
+- [x] user can confirm/correct/reject through authenticated exact-run actions;
+- [x] machine candidate remains immutable;
+- [x] review creates append-only history and exposes the effective latest state;
+- [x] reviewed state participates in evidence authority through versioned Assessment v5 / `assessment-evidence-contract-v4`.
 
 ### Longitudinal/replay
 

@@ -122,7 +122,7 @@ Important boundaries:
 
 ## 5. Assessment contract
 
-New Assessment reports use `assessment-output-v2` served by `assessment-v4` (`assess-config-e579030c2b8b540c`) with `assessment-evidence-contract-v3`.
+New Assessment reports use `assessment-output-v2` served by `assessment-v5` (`assess-config-617534e4b17c512a`) with `assessment-evidence-contract-v4`. Assessment v4 / `assessment-evidence-contract-v3` remains immutable for historical replay. The v5 evidence boundary preserves the existing machine-admissible lane and adds a distinct `human-reviewed` lane for the latest effective confirmed/corrected Health Document review; rejected or superseded review states remain unavailable to Assessment.
 
 ```text
 Frozen health inputs

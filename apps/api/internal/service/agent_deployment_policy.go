@@ -55,7 +55,8 @@ const (
 	historicalAssessmentV1ConfigurationID = "assess-config-fbff8155337b388d"
 	historicalAssessmentV2ConfigurationID = "assess-config-cae55474253e1601"
 	historicalAssessmentV3ConfigurationID = "assess-config-c6cfff22aa362fff"
-	defaultAssessmentConfigurationID      = "assess-config-e579030c2b8b540c"
+	historicalAssessmentV4ConfigurationID = "assess-config-e579030c2b8b540c"
+	defaultAssessmentConfigurationID      = "assess-config-617534e4b17c512a"
 	assessmentLogicalModelV1              = "bodysense-structured"
 
 	consultationV1ConfigurationID      = "consult-config-2bd9b46735dd693c"
@@ -158,9 +159,16 @@ var knownAssessmentConfigurations = map[string]assessmentConfigurationRegistrati
 		OutputContractRevision: assessmentOutputContractV2,
 		ServingAllowed:         false,
 	},
-	defaultAssessmentConfigurationID: {
+	historicalAssessmentV4ConfigurationID: {
 		DecisionPolicyRevision: AssessmentDecisionPolicyV2,
 		EvidencePolicyRevision: assessmentEvidencePolicyV3,
+		LogicalModel:           assessmentLogicalModelV1,
+		OutputContractRevision: assessmentOutputContractV2,
+		ServingAllowed:         false,
+	},
+	defaultAssessmentConfigurationID: {
+		DecisionPolicyRevision: AssessmentDecisionPolicyV2,
+		EvidencePolicyRevision: assessmentEvidencePolicyV4,
 		LogicalModel:           assessmentLogicalModelV1,
 		OutputContractRevision: assessmentOutputContractV2,
 		ServingAllowed:         true,

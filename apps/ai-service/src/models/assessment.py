@@ -115,6 +115,7 @@ class AssessmentDependencies:
     profile: dict[str, Any]
     body_state: dict[str, Any] = field(default_factory=dict)
     report_indicators: list[Any] = field(default_factory=list)
+    reviewed_report_evidence: list[Any] = field(default_factory=list)
     posture_analysis: dict[str, Any] = field(default_factory=dict)
     rag_context: str = ""
     evidence_catalog: dict[str, dict[str, Any]] = field(default_factory=dict)

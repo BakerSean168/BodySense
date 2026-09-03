@@ -262,15 +262,17 @@ This closes Posture geometry mechanism identity. OCR mechanism provenance remain
 
 ### P1/P2 — A3. OCR / health-document mechanism provenance and extraction architecture
 
-**Classification:** `CODE-GAP / DESIGN-READY / BENCHMARK-GATED`
+**Classification:** `IMPLEMENTED-QUALIFICATION-LANE / REVIEW-CLOSED / CHAMPION-BENCHMARK-GATED`
 **Contracts:** non-LLM mechanism provenance, source-grounded document evidence, replayable extraction history.
 **Target ADR:** [ADR 0013](../../adr/0013-adopt-versioned-health-document-evidence-pipeline.md) — Proposed until OCR Champion selection is benchmark-qualified.
 **Active implementation plan:** [Health Document Technology Selection & Benchmark](./2026-09-01-health-document-technology-selection-and-benchmark.md).
 **Target architecture:** [Health Document Evidence Pipeline](../../architecture/health-document-evidence-pipeline.md).
 
-The gap is no longer treated as “add a few Tesseract version fields”. Research and design work expanded it into a versioned Health Document Evidence Pipeline because current behavior also rasterizes born-digital PDFs, flattens document/table structure and overwrites the conceptual extraction history into one `ocr_result` projection. The code gap remains open until the benchmark selects the actual OCR Champion and the target pipeline is implemented.
+The gap is no longer treated as “add a few Tesseract version fields”. The versioned Health Document Evidence Pipeline is now implemented in the non-Champion v20 qualification lane: append-only extraction runs preserve mechanism identity/source snapshots, indicator candidates carry source refs, human review is append-only and source-grounded, and Assessment v5 admits confirmed/corrected reviewed evidence through `assessment-evidence-contract-v4` without rewriting machine admissibility.
 
-Current durable `OCRResult` stores:
+The remaining A3 gate is **Champion selection/deployment**, not the base review/provenance architecture. Production continues to serve the frozen Tesseract Champion until at least 10 deidentified real-layout documents are independently double-reviewed and the Challenger passes the same authority/resource gates on that private subset. ADR 0013 therefore remains Proposed.
+
+`user_uploads.ocr_result` remains a compatibility/current projection with:
 
 ```text
 raw_text
@@ -278,30 +280,21 @@ indicators
 confidence
 ```
 
-but does not store:
+and is deliberately **not** the provenance source-of-truth. Current-pipeline provenance lives in append-only `document_extraction_runs`, including configuration/mechanism identity, hashes, indicator snapshot and source summary; human decisions live in append-only `document_indicator_reviews`. Legacy `ocr_result` rows receive no invented mechanism/source metadata and remain review-ineligible until a real persisted run exists.
 
-```text
-engine = tesseract
-engine version
-language/config
-pytesseract wrapper revision
-indicator extractor revision
-PDF extraction/rendering revision
-```
+Code evidence now includes:
 
-The container installs the OS `tesseract-ocr` package without a durable per-result engine identity. The indicator extractor is deterministic code but has no explicit revision.
+- `apps/api/internal/model/document_extraction_run.go`
+- `apps/api/internal/model/document_indicator_review.go`
+- `apps/api/internal/service/health_document_review_service.go`
+- `apps/api/internal/service/assessment_reviewed_report.go`
+- `apps/ai-service/config/agents/assessment-v5.yaml`
+- `apps/ai-service/src/services/assessment_evidence.py`
+- `apps/web/src/features/profile/components/uploads/HealthDocumentReviewPanel.tsx`
 
-Code evidence:
+**Remaining risk/gate**
 
-- `apps/ai-service/src/services/ocr.py`
-- `apps/ai-service/src/services/indicator_extractor.py`
-- `apps/ai-service/src/models/ocr.py`
-- `apps/ai-service/Dockerfile`
-- `apps/api/internal/service/upload_service.go`
-
-**Risk**
-
-Historical report evidence cannot answer which OCR/parser behavior produced an indicator. A future OCR/parser change can alter evidence while replay/audit sees only the extracted values.
+The new extraction mechanism is still a Challenger. Synthetic mechanics evidence cannot substitute for the private real-layout selection set, so production mechanism identity remains the frozen Tesseract Champion until the final gate passes.
 
 **Target contract**
 

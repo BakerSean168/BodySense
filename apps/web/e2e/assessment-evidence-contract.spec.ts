@@ -2,8 +2,11 @@ import { expect, test } from "@playwright/test";
 import { refreshBrowserAccessToken } from "./support/auth";
 
 const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
+const currentAssessmentConfigurationId = "assess-config-617534e4b17c512a";
+const currentAssessmentEvidencePolicyRevision =
+  "assessment-evidence-contract-v4";
 
-test("assessment v2 persists only deterministic source-grounded observations", async ({
+test("assessment output v2 persists only deterministic source-grounded observations", async ({
   page,
   request,
 }) => {
@@ -91,9 +94,9 @@ test("assessment v2 persists only deterministic source-grounded observations", a
   };
 
   expect(report.contract_revision).toBe("assessment-output-v2");
-  expect(report.agent_configuration_id).toBe("assess-config-e579030c2b8b540c");
+  expect(report.agent_configuration_id).toBe(currentAssessmentConfigurationId);
   expect(report.agent_configuration.evidence_policy_revision).toBe(
-    "assessment-evidence-contract-v3",
+    currentAssessmentEvidencePolicyRevision,
   );
   expect(report.status).toBe("completed");
   expect(report.health_grade).toBeUndefined();
@@ -169,7 +172,7 @@ test("assessment v2 persists only deterministic source-grounded observations", a
   }
 });
 
-test("assessment v2 derives insufficient information without any model request", async ({
+test("assessment output v2 derives insufficient information without any model request", async ({
   page,
   request,
 }) => {
@@ -232,9 +235,9 @@ test("assessment v2 derives insufficient information without any model request",
   };
 
   expect(report.contract_revision).toBe("assessment-output-v2");
-  expect(report.agent_configuration_id).toBe("assess-config-e579030c2b8b540c");
+  expect(report.agent_configuration_id).toBe(currentAssessmentConfigurationId);
   expect(report.agent_configuration.evidence_policy_revision).toBe(
-    "assessment-evidence-contract-v3",
+    currentAssessmentEvidencePolicyRevision,
   );
   expect(report.status).toBe("insufficient_information");
   expect(report.observations).toEqual([]);

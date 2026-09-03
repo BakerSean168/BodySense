@@ -20,6 +20,7 @@ func assessmentReplayTestReport() *model.AssessmentReport {
 		json.RawMessage(`{"gender":"male","birth_date":"1996-08-27"}`),
 		json.RawMessage(`{"current_revision":3,"facts":[],"observations":[]}`),
 		json.RawMessage(`[]`),
+		json.RawMessage(`[]`),
 		json.RawMessage(`{"has_analysis":true,"summaries":["正面观轻微高低肩"]}`),
 		[]string{"data:image/jpeg;base64,AAAA"},
 	)
@@ -135,6 +136,7 @@ func TestAssessmentRegressionExportCarriesEvidenceContractSemantics(t *testing.T
 		configID,
 		json.RawMessage(`{"gender":"female","birth_date":"1996-08-27"}`),
 		json.RawMessage(`{"current_revision":0,"facts":[],"observations":[]}`),
+		json.RawMessage(`[]`),
 		json.RawMessage(`[]`),
 		json.RawMessage(`{}`),
 		nil,

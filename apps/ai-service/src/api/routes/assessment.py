@@ -22,6 +22,7 @@ class AssessmentRequest(BaseModel):
     profile: dict[str, Any] = Field(default_factory=dict)
     body_state: dict[str, Any] = Field(default_factory=dict)
     report_indicators: list[Any] = Field(default_factory=list)
+    reviewed_report_evidence: list[Any] = Field(default_factory=list)
     rag_context: str = ""
     images: list[str] = Field(default_factory=list)
     posture_analysis: dict[str, Any] = Field(default_factory=dict)

@@ -2,7 +2,7 @@
 
 > Status: Target architecture / not yet current production source-of-truth.
 > Decision gate: ADR 0013 (Proposed).
-> Current production remains the frozen Tesseract baseline. The target architecture is implemented as v20 in a dedicated 384 MiB `document-service` qualification lane and has passed synthetic mechanics gates, but it is not eligible for Champion promotion until the deidentified double-reviewed real-layout gate passes.
+> Current production remains the frozen Tesseract baseline. The extraction target architecture is implemented as v20 in a dedicated 384 MiB `document-service` qualification lane and has passed synthetic mechanics gates. The append-only human-review domain, source-grounded Web review projection and Assessment v5 reviewed-evidence path are also implemented. None of those facts make v20 eligible for Champion promotion: the deidentified independently double-reviewed real-layout gate remains mandatory.
 
 ## 1. Purpose
 
@@ -503,9 +503,11 @@ needs_review candidate
   -> derive reviewed report fact/admissibility state
 ```
 
-Review UI must display enough source context to avoid asking the user to trust the machine transcription blindly.
+Current implementation resolves the browser review context from the server-owned latest persisted extraction run for the owned upload; the browser never invents a run UUID. The projection exposes source refs plus page/bbox geometry, while authenticated source streaming continues through the private upload boundary. Historical OCR rows with no persisted extraction/source context fail closed instead of receiving invented provenance.
 
-A review decision never mutates the historical machine candidate.
+Review UI displays enough source context to avoid asking the user to trust the machine transcription blindly. It exposes textual status, confirm/correct/reject controls, effective review state and append-only history without relying on color alone.
+
+A review decision never mutates the historical machine candidate. Assessment v5 consumes reviewed-confirmed/corrected evidence through `assessment-evidence-contract-v4`; rejected candidates never enter that reviewed lane, and machine OCR admissibility remains a separate authority path.
 
 ## 16. Replay and regression
 

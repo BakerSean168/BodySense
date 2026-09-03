@@ -205,7 +205,7 @@ function UploadItem({
             {showOCR ? "隐藏识别结果" : "查看识别结果"}
           </button>
 
-          {showOCR && <OCRResultView result={upload.ocr_result} />}
+          {showOCR && <OCRResultView result={upload.ocr_result} uploadId={upload.id} />}
         </div>
       )}
 

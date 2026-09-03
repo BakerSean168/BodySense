@@ -158,6 +158,7 @@ func main() {
 		repository.NewAssessmentRolloutRepository(database.DB),
 		assessmentReplayService,
 	)
+	documentIndicatorReviewRepo := repository.NewDocumentIndicatorReviewRepository(database.DB)
 	assessmentService := service.NewAssessmentService(
 		assessmentRepo,
 		profileService,
@@ -166,7 +167,8 @@ func main() {
 		aiClient,
 		database.NewTransactionManager(database.DB),
 	).WithAssessmentDeployment(agentDeploymentPolicy).
-		WithAssessmentRollout(assessmentRolloutService)
+		WithAssessmentRollout(assessmentRolloutService).
+		WithAssessmentReviews(documentIndicatorReviewRepo)
 	authHandler := handler.NewAuthHandler(authService, authSecurity)
 	privacyHandler := handler.NewPrivacyHandler(privacyErasureService, authHandler)
 	profileHandler := handler.NewProfileHandler(profileService)
@@ -191,7 +193,9 @@ func main() {
 		WithHealthDocumentDeployment(healthDocumentDeploymentPolicy).
 		WithDocumentExtractionRuns(documentExtractionRunRepo)
 	uploadService.StartUploadWorker(context.Background(), 10*time.Second, 10*time.Minute)
+	healthDocumentReviewService := service.NewHealthDocumentReviewService(documentExtractionRunRepo, documentIndicatorReviewRepo)
 	uploadHandler := handler.NewUploadHandler(uploadService)
+	healthDocumentReviewHandler := handler.NewHealthDocumentReviewHandler(healthDocumentReviewService, uploadService)
 	consultationRuntime := consultationruntime.NewRuntime(
 		conversationService,
 		consultationService,
@@ -396,6 +400,15 @@ func main() {
 		protected.GET("/uploads/posture-analysis", uploadHandler.GetPostureAnalysis)
 		protected.GET("/uploads/:id", uploadHandler.GetUpload)
 		protected.DELETE("/uploads/:id", uploadHandler.DeleteUpload)
+
+		// Health-document review context resolves the current server-owned run;
+		// action/source APIs stay bound to that exact run id.
+		protected.GET("/uploads/:id/health-document-review", healthDocumentReviewHandler.CurrentContext)
+		// Append-only indicator review APIs bound to one extraction run.
+		extractions := protected.Group("/uploads/:id/extractions")
+		extractions.GET("/:runId/reviews", healthDocumentReviewHandler.ListCandidates)
+		extractions.POST("/:runId/reviews", healthDocumentReviewHandler.AppendReview)
+		extractions.GET("/:runId/source", healthDocumentReviewHandler.SourceContext)
 
 		// Conversation API
 		conversations := protected.Group("/conversations")
