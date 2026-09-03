@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.12.0](https://github.com/BakerSean168/BodySense/compare/v0.11.0...v0.12.0) (2026-09-03)
+
+
+### Features
+
+* **api:** add append-only document indicator review aggregate ([d11e48d](https://github.com/BakerSean168/BodySense/commit/d11e48d4e1ba3103fa4091cca17fdcd6120f469e))
+* **assessment:** admit reviewed document evidence ([7d250eb](https://github.com/BakerSean168/BodySense/commit/7d250eb667080b5f4c46284ddd9dca588969b08a))
+* **web:** add source-grounded health document review ([c6451cb](https://github.com/BakerSean168/BodySense/commit/c6451cb60cc0eca55d021aebe0ff982c313219e0))
+
+
+### Bug Fixes
+
+* **api:** accept quadrilateral bboxes in review source regions ([4d69acd](https://github.com/BakerSean168/BodySense/commit/4d69acd05d3e242d90164e418e38b0c234e0dfb6))
+* **ops:** hand off production deployer atomically ([20601f7](https://github.com/BakerSean168/BodySense/commit/20601f7b05bdd6e431feb0df37c8dea0bd803802))
+* **ops:** hand off production deployer atomically ([cfd25be](https://github.com/BakerSean168/BodySense/commit/cfd25be8e95a487ee9d4ea4755214823e2e52c56))
+
 ## [0.11.0](https://github.com/BakerSean168/BodySense/compare/v0.10.2...v0.11.0) (2026-09-02)
 
 
