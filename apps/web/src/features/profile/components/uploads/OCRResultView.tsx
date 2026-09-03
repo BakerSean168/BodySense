@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { HealthDocumentReviewPanel } from "./HealthDocumentReviewPanel";
 import type {
   HealthIndicator,
   IndicatorAdmissibilityStatus,
@@ -8,9 +9,10 @@ import type {
 
 interface OCRResultViewProps {
   result: OCRResult;
+  uploadId?: string;
 }
 
-export function OCRResultView({ result }: OCRResultViewProps) {
+export function OCRResultView({ result, uploadId }: OCRResultViewProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   if (!result.indicators || result.indicators.length === 0) {
@@ -68,6 +70,8 @@ export function OCRResultView({ result }: OCRResultViewProps) {
       <p className="text-xs text-gray-500">
         “可用于评估”只表示识别结果通过当前证据准入规则，不代表医学正常/异常或已经由你确认。
       </p>
+
+      {uploadId && <HealthDocumentReviewPanel uploadId={uploadId} />}
 
       <button
         type="button"

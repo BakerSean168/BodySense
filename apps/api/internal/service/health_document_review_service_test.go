@@ -26,9 +26,9 @@ func mustReviewJSON(t *testing.T, v any) datatypes.JSON {
 func testExtractionRun(t *testing.T, uploadID, userID, runID uuid.UUID) *model.DocumentExtractionRun {
 	t.Helper()
 	indicator := map[string]any{
-		"indicator_id": "hemoglobin", "name": "hb", "value": float64(142), "unit": "g/L",
+		"indicator_id": "hemoglobin", "name": "hb", "value": float64(142), "unit": "g/L", "reference_range": "120-160",
 		"parser_revision": "parser-v1", "source_refs": []any{testIndicatorRef},
-		"evidence_admissibility": map[string]any{"status": "admissible", "policy_revision": "pol-v1"},
+		"evidence_admissibility": map[string]any{"status": "needs_review", "policy_revision": "pol-v1", "reason_codes": []any{"manual_confirmation_required"}},
 		"evidence_verification":  map[string]any{"status": "verified_consensus", "revision": "ver-v1"},
 	}
 	sourceSummary := map[string]any{
@@ -62,6 +62,22 @@ func (f *fakeReviewRunReader) GetOwnedByID(_ context.Context, id, userID uuid.UU
 		return nil, errReviewNotFound
 	}
 	return run, nil
+}
+
+func (f *fakeReviewRunReader) GetLatestOwnedByUpload(_ context.Context, uploadID, userID uuid.UUID) (*model.DocumentExtractionRun, error) {
+	var latest *model.DocumentExtractionRun
+	for _, run := range f.runs {
+		if run.UploadID != uploadID || run.UserID != userID {
+			continue
+		}
+		if latest == nil || run.CreatedAt.After(latest.CreatedAt) || (run.CreatedAt.Equal(latest.CreatedAt) && run.ID.String() > latest.ID.String()) {
+			latest = run
+		}
+	}
+	if latest == nil {
+		return nil, errReviewNotFound
+	}
+	return latest, nil
 }
 
 var errReviewNotFound = errors.New("not found")
@@ -117,6 +133,55 @@ func newReviewTestService(t *testing.T, run *model.DocumentExtractionRun) (*Heal
 	writer := &fakeReviewWriter{}
 	svc := NewHealthDocumentReviewService(reader, writer)
 	return svc, writer
+}
+
+func TestCurrentReviewContextResolvesLatestOwnedRunAndProjectsSourceRegion(t *testing.T) {
+	userID := uuid.New()
+	uploadID := uuid.New()
+	older := testExtractionRun(t, uploadID, userID, uuid.New())
+	older.CreatedAt = time.Now().Add(-time.Minute)
+	latest := testExtractionRun(t, uploadID, userID, uuid.New())
+	latest.CreatedAt = time.Now()
+	reader := &fakeReviewRunReader{runs: map[uuid.UUID]*model.DocumentExtractionRun{older.ID: older, latest.ID: latest}}
+	svc := NewHealthDocumentReviewService(reader, &fakeReviewWriter{})
+
+	context, err := svc.CurrentContext(context.Background(), userID, uploadID)
+	if err != nil {
+		t.Fatalf("CurrentContext: %v", err)
+	}
+	if context.ExtractionRunID != latest.ID || context.UploadID != uploadID {
+		t.Fatalf("context ids=%s/%s want %s/%s", context.ExtractionRunID, context.UploadID, latest.ID, uploadID)
+	}
+	if len(context.ReviewCandidates) != 1 {
+		t.Fatalf("candidates=%d want 1", len(context.ReviewCandidates))
+	}
+	candidate := context.ReviewCandidates[0].Candidate
+	if candidate.EvidenceAdmissibility.Status != "needs_review" || candidate.ReferenceRange != "120-160" {
+		t.Fatalf("candidate governance=%+v range=%q", candidate.EvidenceAdmissibility, candidate.ReferenceRange)
+	}
+	regions := candidate.SourceRegions
+	if len(regions) != 1 || regions[0].PageNumber == nil || *regions[0].PageNumber != 1 {
+		t.Fatalf("source regions=%+v want page 1", regions)
+	}
+	if got := regions[0].BBox; len(got) != 4 || got[0] != 1 || got[1] != 2 || got[2] != 3 || got[3] != 4 {
+		t.Fatalf("bbox=%v want [1 2 3 4]", got)
+	}
+}
+
+func TestCurrentReviewContextFailsClosedForMissingOrForeignUpload(t *testing.T) {
+	owner := uuid.New()
+	foreign := uuid.New()
+	uploadID := uuid.New()
+	run := testExtractionRun(t, uploadID, owner, uuid.New())
+	reader := &fakeReviewRunReader{runs: map[uuid.UUID]*model.DocumentExtractionRun{run.ID: run}}
+	svc := NewHealthDocumentReviewService(reader, &fakeReviewWriter{})
+
+	if _, err := svc.CurrentContext(context.Background(), foreign, uploadID); !errors.Is(err, ErrReviewContextUnavailable) {
+		t.Fatalf("foreign err=%v want ErrReviewContextUnavailable", err)
+	}
+	if _, err := svc.CurrentContext(context.Background(), owner, uuid.New()); !errors.Is(err, ErrReviewContextUnavailable) {
+		t.Fatalf("missing err=%v want ErrReviewContextUnavailable", err)
+	}
 }
 
 func TestApplyReviewConfirmAppendsImmutableSnapshotAndNeverMutatesRun(t *testing.T) {

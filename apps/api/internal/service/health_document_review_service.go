@@ -30,10 +30,16 @@ var ErrReviewDuplicateConflict = errors.New("idempotency key reused with differe
 // ErrReviewValidation indicates a malformed review request (400).
 var ErrReviewValidation = errors.New("invalid review request")
 
+// ErrReviewContextUnavailable is returned when an upload has no owned
+// persisted extraction run that can be safely reviewed. The handler maps it to
+// 404 so callers cannot distinguish another user's upload from no review data.
+var ErrReviewContextUnavailable = errors.New("health document review context unavailable")
+
 // documentExtractionRunReader is the ownership-scoped read side the review
 // service needs from the extraction-run repository.
 type documentExtractionRunReader interface {
 	GetOwnedByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*model.DocumentExtractionRun, error)
+	GetLatestOwnedByUpload(ctx context.Context, uploadID uuid.UUID, userID uuid.UUID) (*model.DocumentExtractionRun, error)
 }
 
 // documentIndicatorReviewWriter is the append-only write/read side for reviews.
@@ -64,23 +70,43 @@ func NewHealthDocumentReviewService(
 // reviewCandidateSnapshot decodes one persisted machine candidate drawn from
 // the extraction run indicator snapshot. raw keeps the exact immutable JSON.
 type reviewCandidateSnapshot struct {
-	raw         map[string]any
-	IndicatorID string
-	Name        string
-	Value       any
-	Unit        string
-	SourceRefs  []string
+	raw                   map[string]any
+	IndicatorID           string
+	Name                  string
+	Value                 any
+	Unit                  string
+	ReferenceRange        string
+	SourceRefs            []string
+	EvidenceAdmissibility DocumentIndicatorEvidenceAdmissibility
 }
 
 // DocumentIndicatorCandidate is one machine-extracted candidate projection
 // exposed to the review UI. It never includes private raw text or storage keys.
+type DocumentIndicatorSourceRegion struct {
+	SourceRef  string    `json:"source_ref"`
+	PageNumber *int      `json:"page_number,omitempty"`
+	BBox       []float64 `json:"bbox,omitempty"`
+}
+
+type DocumentIndicatorEvidenceAdmissibility struct {
+	Status         string   `json:"status"`
+	PolicyRevision string   `json:"policy_revision"`
+	ReasonCodes    []string `json:"reason_codes,omitempty"`
+}
+
+// DocumentIndicatorCandidate exposes only the structured candidate and
+// source-page geometry needed by the review UI. Raw OCR text and storage
+// authority stay private.
 type DocumentIndicatorCandidate struct {
-	IndicatorIndex int      `json:"indicator_index"`
-	IndicatorID    string   `json:"indicator_id"`
-	Name           string   `json:"name"`
-	Value          any      `json:"value,omitempty"`
-	Unit           string   `json:"unit,omitempty"`
-	SourceRefs     []string `json:"source_refs,omitempty"`
+	IndicatorIndex        int                                    `json:"indicator_index"`
+	IndicatorID           string                                 `json:"indicator_id"`
+	Name                  string                                 `json:"name"`
+	Value                 any                                    `json:"value,omitempty"`
+	Unit                  string                                 `json:"unit,omitempty"`
+	ReferenceRange        string                                 `json:"reference_range,omitempty"`
+	EvidenceAdmissibility DocumentIndicatorEvidenceAdmissibility `json:"evidence_admissibility"`
+	SourceRefs            []string                               `json:"source_refs,omitempty"`
+	SourceRegions         []DocumentIndicatorSourceRegion        `json:"source_regions,omitempty"`
 }
 
 // DocumentIndicatorReviewRecord is one immutable review row as exposed to
@@ -109,6 +135,15 @@ type DocumentIndicatorReviewProjection struct {
 	History         []DocumentIndicatorReviewRecord `json:"history,omitempty"`
 }
 
+// HealthDocumentReviewContext binds the Web review experience to the exact
+// latest server-owned extraction run. Clients use this returned run id for
+// append-review and source-stream requests; they never invent a run identity.
+type HealthDocumentReviewContext struct {
+	ExtractionRunID  uuid.UUID                           `json:"extraction_run_id"`
+	UploadID         uuid.UUID                           `json:"upload_id"`
+	ReviewCandidates []DocumentIndicatorReviewProjection `json:"review_candidates"`
+}
+
 // ListCandidates projects the machine candidates of one extraction run plus
 // their effective latest review, scoped to the caller's ownership.
 func (s *HealthDocumentReviewService) ListCandidates(
@@ -123,6 +158,10 @@ func (s *HealthDocumentReviewService) ListCandidates(
 	snapshot, err := decodeIndicatorSnapshot(run.IndicatorSnapshot)
 	if err != nil {
 		return nil, fmt.Errorf("decode indicator snapshot: %w", err)
+	}
+	sourceBlocks, err := decodeSourceBlocks(run.SourceSummary)
+	if err != nil {
+		return nil, fmt.Errorf("decode source summary: %w", err)
 	}
 	history, err := s.reviews.ListByExtractionRun(ctx, run.ID)
 	if err != nil {
@@ -139,16 +178,23 @@ func (s *HealthDocumentReviewService) ListCandidates(
 	}
 	projections := make([]DocumentIndicatorReviewProjection, 0, len(snapshot))
 	for index, candidate := range snapshot {
+		sourceRegions, err := reviewSourceRegions(sourceBlocks, candidate.SourceRefs)
+		if err != nil {
+			return nil, fmt.Errorf("project source context for indicator %d: %w", index, err)
+		}
 		proj := DocumentIndicatorReviewProjection{
 			IndicatorIndex: index,
 			IndicatorID:    candidate.IndicatorID,
 			Candidate: DocumentIndicatorCandidate{
-				IndicatorIndex: index,
-				IndicatorID:    candidate.IndicatorID,
-				Name:           candidate.Name,
-				Value:          candidate.Value,
-				Unit:           candidate.Unit,
-				SourceRefs:     append([]string(nil), candidate.SourceRefs...),
+				IndicatorIndex:        index,
+				IndicatorID:           candidate.IndicatorID,
+				Name:                  candidate.Name,
+				Value:                 candidate.Value,
+				Unit:                  candidate.Unit,
+				ReferenceRange:        candidate.ReferenceRange,
+				EvidenceAdmissibility: candidate.EvidenceAdmissibility,
+				SourceRefs:            append([]string(nil), candidate.SourceRefs...),
+				SourceRegions:         sourceRegions,
 			},
 		}
 		if record, ok := latestByIndex[index]; ok {
@@ -160,6 +206,38 @@ func (s *HealthDocumentReviewService) ListCandidates(
 		projections = append(projections, proj)
 	}
 	return projections, nil
+}
+
+// CurrentContext resolves the exact newest owned extraction run for an upload
+// and returns its review projection. Missing/historical uploads fail closed
+// instead of asking the browser to infer a run id from OCRResult.
+func (s *HealthDocumentReviewService) CurrentContext(
+	ctx context.Context,
+	userID uuid.UUID,
+	uploadID uuid.UUID,
+) (*HealthDocumentReviewContext, error) {
+	if uploadID == uuid.Nil {
+		return nil, ErrReviewContextUnavailable
+	}
+	run, err := s.runs.GetLatestOwnedByUpload(ctx, uploadID, userID)
+	if err != nil || run == nil || run.ID == uuid.Nil || run.UploadID != uploadID {
+		return nil, ErrReviewContextUnavailable
+	}
+	candidates, err := s.ListCandidates(ctx, userID, run.ID)
+	if err != nil {
+		if errors.Is(err, ErrReviewAccessDenied) {
+			return nil, ErrReviewContextUnavailable
+		}
+		return nil, err
+	}
+	if candidates == nil {
+		candidates = []DocumentIndicatorReviewProjection{}
+	}
+	return &HealthDocumentReviewContext{
+		ExtractionRunID:  run.ID,
+		UploadID:         uploadID,
+		ReviewCandidates: candidates,
+	}, nil
 }
 
 // ReviewRequest is the authenticated payload to append a review action for a

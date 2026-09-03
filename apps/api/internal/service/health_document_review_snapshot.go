@@ -35,6 +35,11 @@ func decodeIndicatorSnapshot(snapshot datatypes.JSON) ([]reviewCandidateSnapshot
 		name, _ := obj["name"].(string)
 		value := obj["value"]
 		unit, _ := obj["unit"].(string)
+		referenceRange, _ := obj["reference_range"].(string)
+		admissibility, err := reviewEvidenceAdmissibility(obj["evidence_admissibility"])
+		if err != nil {
+			return nil, fmt.Errorf("indicator snapshot item %d evidence_admissibility: %w", position, err)
+		}
 		refs, err := reviewStringSlice(obj["source_refs"])
 		if err != nil {
 			return nil, fmt.Errorf("indicator snapshot item %d source_refs: %w", position, err)
@@ -43,15 +48,39 @@ func decodeIndicatorSnapshot(snapshot datatypes.JSON) ([]reviewCandidateSnapshot
 			return nil, fmt.Errorf("indicator snapshot item %d has no source_refs", position)
 		}
 		out = append(out, reviewCandidateSnapshot{
-			raw:         obj,
-			IndicatorID: indicatorID,
-			Name:        name,
-			Value:       value,
-			Unit:        unit,
-			SourceRefs:  refs,
+			raw:                   obj,
+			IndicatorID:           indicatorID,
+			Name:                  name,
+			Value:                 value,
+			Unit:                  unit,
+			ReferenceRange:        referenceRange,
+			SourceRefs:            refs,
+			EvidenceAdmissibility: admissibility,
 		})
 	}
 	return out, nil
+}
+
+func reviewEvidenceAdmissibility(value any) (DocumentIndicatorEvidenceAdmissibility, error) {
+	obj, ok := value.(map[string]any)
+	if !ok {
+		return DocumentIndicatorEvidenceAdmissibility{}, errors.New("missing admissibility object")
+	}
+	status, _ := obj["status"].(string)
+	if status != "admissible" && status != "needs_review" && status != "rejected" {
+		return DocumentIndicatorEvidenceAdmissibility{}, fmt.Errorf("unsupported status %q", status)
+	}
+	policyRevision, _ := obj["policy_revision"].(string)
+	if strings.TrimSpace(policyRevision) == "" {
+		return DocumentIndicatorEvidenceAdmissibility{}, errors.New("missing policy_revision")
+	}
+	reasonCodes, err := reviewStringSlice(obj["reason_codes"])
+	if err != nil {
+		return DocumentIndicatorEvidenceAdmissibility{}, fmt.Errorf("reason_codes: %w", err)
+	}
+	return DocumentIndicatorEvidenceAdmissibility{
+		Status: status, PolicyRevision: policyRevision, ReasonCodes: reasonCodes,
+	}, nil
 }
 
 // decodeSourceBlocks decodes the source_blocks portion of the persisted source
@@ -116,6 +145,45 @@ func validateReviewSourceRefs(submitted []string, blocks map[string]map[string]a
 		}
 	}
 	return nil
+}
+
+func reviewSourceRegions(blocks map[string]map[string]any, refs []string) ([]DocumentIndicatorSourceRegion, error) {
+	regions := make([]DocumentIndicatorSourceRegion, 0, len(refs))
+	for _, ref := range refs {
+		block, ok := blocks[ref]
+		if !ok {
+			return nil, fmt.Errorf("source ref %q is absent from persisted source blocks", ref)
+		}
+		region := DocumentIndicatorSourceRegion{SourceRef: ref}
+		pageValue, hasPage := block["page_number"]
+		if !hasPage {
+			pageValue, hasPage = block["page"]
+		}
+		if hasPage {
+			pageFloat, ok := pageValue.(float64)
+			if !ok || pageFloat < 1 || pageFloat != float64(int(pageFloat)) {
+				return nil, fmt.Errorf("source ref %q has invalid page number", ref)
+			}
+			page := int(pageFloat)
+			region.PageNumber = &page
+		}
+		if bboxValue, ok := block["bbox"]; ok {
+			items, ok := bboxValue.([]any)
+			if !ok || len(items) != 4 {
+				return nil, fmt.Errorf("source ref %q has invalid bbox", ref)
+			}
+			region.BBox = make([]float64, 4)
+			for i, item := range items {
+				value, ok := item.(float64)
+				if !ok {
+					return nil, fmt.Errorf("source ref %q has non-numeric bbox", ref)
+				}
+				region.BBox[i] = value
+			}
+		}
+		regions = append(regions, region)
+	}
+	return regions, nil
 }
 
 // pageRefForCandidate captures the page + bbox context for the reviewed

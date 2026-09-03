@@ -34,6 +34,7 @@ func TestHealthDocumentReviewHandlerRequiresAuthentication(t *testing.T) {
 		body   string
 		fn     func(*gin.Context)
 	}{
+		{"CurrentContext", http.MethodGet, "", h.CurrentContext},
 		{"ListCandidates", http.MethodGet, "", h.ListCandidates},
 		{"AppendReview", http.MethodPost, `{}`, h.AppendReview},
 		{"SourceContext", http.MethodGet, "", h.SourceContext},
@@ -84,5 +85,17 @@ func TestDocumentIndicatorReviewRecordNeverLeaksStorageAuthority(t *testing.T) {
 	}
 	if strings.Contains(text, "ocr_result") {
 		t.Fatalf("review record leaked raw OCR payload: %s", text)
+	}
+}
+
+func TestHealthDocumentReviewCurrentContextRejectsMalformedUploadID(t *testing.T) {
+	userID := uuid.New()
+	h := NewHealthDocumentReviewHandler(nil, nil)
+	ctx, recorder := reviewHandlerContext(http.MethodGet, "/api/v1/uploads/not-an-id/health-document-review", "")
+	ctx.Params = gin.Params{{Key: "id", Value: "not-an-id"}}
+	ctx.Set("user_id", userID.String())
+	h.CurrentContext(ctx)
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("status=%d want 400 body=%s", recorder.Code, recorder.Body.String())
 	}
 }

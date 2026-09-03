@@ -544,27 +544,22 @@ At this point ADR 0013 may move from Proposed to Accepted with exact Champion id
 - [x] mandatory source refs;
 - [x] current regex kept as historical comparator.
 
-### Phase 9 — Admissibility v2 / review integration if required
+### Phase 9 — Admissibility v2 / reviewed evidence integration
 
 Implemented for the v20 Challenger: `ocr-indicator-admissibility-v2` requires independent verifier consensus for OCR-derived indicators while native PDF text can be marked `not_required`. Disagreement never edits the primary value and always remains `needs_review`.
 
-ADR 0011 v1 remains valid until evidence shows a reason to change.
+The human-reviewed publication path is now separately versioned in Assessment v5 / `assessment-evidence-contract-v4`: `confirm` and `correct` can produce reviewed report evidence with exact review/source provenance; `reject` remains unavailable to Assessment. This does **not** rewrite machine admissibility or promote the v20 Challenger. Assessment v4 / evidence-contract-v3 remains immutable for replay.
 
-Possible additions:
-
-- source-grounding requirement;
-- mechanism-provenance requirement;
-- user-confirmed path from `needs_review` to reviewed evidence.
-
-Any change to automatic evidence membership requires a new versioned admissibility policy and corresponding Assessment evidence-policy/config revision.
+ADR 0011 v1 remains valid for the current automatic-admission lane; any future change to automatic evidence membership still requires a new versioned admissibility policy and corresponding Assessment evidence-policy/config revision.
 
 ### Phase 10 — Human review UX
 
-- [ ] show candidate + source page/region;
-- [ ] confirm/correct/reject;
-- [ ] append review history;
-- [ ] never mutate machine extraction result;
-- [ ] reviewed values expose reviewer provenance.
+- [x] show candidate + persisted source page/region;
+- [x] confirm/correct/reject through authenticated exact-run APIs;
+- [x] append and display immutable review history;
+- [x] never mutate machine extraction result;
+- [x] reviewed values expose reviewer provenance and effective state;
+- [x] historical rows without an owned persisted extraction/source context fail closed and are explained as unavailable for human confirmation.
 
 ### Phase 11 — Replay / comparison
 
@@ -667,14 +662,14 @@ Architecture implementation is done when:
 
 - [x] native PDF text-first routing is implemented in the v20 qualification path;
 - [x] immutable extraction-run provenance is durable;
-- [ ] source-grounded evidence blocks/cells exist;
+- [x] source-grounded evidence blocks with page/bbox exist; table-cell specialization remains optional for later complex-layout work;
 - [x] indicator candidates carry source refs + parser identity;
 - [x] Go validates supported mechanism/config before publication;
 - [x] legacy rows are not assigned invented provenance;
-- [ ] human review is append-only;
-- [ ] replay comparison works on frozen documents;
+- [x] human review is append-only and machine candidates remain immutable;
+- [x] replay comparison works on frozen documents;
 - [x] production-shaped synthetic mechanics validation passes for v20;
-- [ ] current architecture/feature docs updated in same PR;
+- [x] current architecture/feature docs updated with the implemented review/evidence boundary;
 - [ ] current Champion deployed to Staging and Production via exact-SHA Release lifecycle.
 
 ## 19. Explicit non-goals

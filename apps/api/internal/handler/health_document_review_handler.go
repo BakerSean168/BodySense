@@ -41,15 +41,48 @@ func (h *HealthDocumentReviewHandler) authenticatedUserID(c *gin.Context) (uuid.
 	return uid, true
 }
 
+// CurrentContext handles GET /api/v1/uploads/:id/health-document-review. It
+// resolves the current run on the server so the browser never guesses a run id.
+func (h *HealthDocumentReviewHandler) CurrentContext(c *gin.Context) {
+	userID, ok := h.authenticatedUserID(c)
+	if !ok {
+		return
+	}
+	uploadID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid upload id"})
+		return
+	}
+	context, err := h.reviewService.CurrentContext(c.Request.Context(), userID, uploadID)
+	if err != nil {
+		if errors.Is(err, service.ErrReviewContextUnavailable) || errors.Is(err, service.ErrReviewAccessDenied) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "review context unavailable"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load review context"})
+		return
+	}
+	c.JSON(http.StatusOK, context)
+}
+
 // ListCandidates handles GET /api/v1/uploads/:id/extractions/:runId/reviews
 func (h *HealthDocumentReviewHandler) ListCandidates(c *gin.Context) {
 	userID, ok := h.authenticatedUserID(c)
 	if !ok {
 		return
 	}
+	uploadID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid upload id"})
+		return
+	}
 	runID, err := uuid.Parse(c.Param("runId"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid extraction run id"})
+		return
+	}
+	if err := h.reviewService.EnsureUploadOwnsRun(c.Request.Context(), userID, uploadID, runID); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "review target not accessible"})
 		return
 	}
 	projection, err := h.reviewService.ListCandidates(c.Request.Context(), userID, runID)

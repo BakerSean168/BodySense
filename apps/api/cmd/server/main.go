@@ -401,6 +401,9 @@ func main() {
 		protected.GET("/uploads/:id", uploadHandler.GetUpload)
 		protected.DELETE("/uploads/:id", uploadHandler.DeleteUpload)
 
+		// Health-document review context resolves the current server-owned run;
+		// action/source APIs stay bound to that exact run id.
+		protected.GET("/uploads/:id/health-document-review", healthDocumentReviewHandler.CurrentContext)
 		// Append-only indicator review APIs bound to one extraction run.
 		extractions := protected.Group("/uploads/:id/extractions")
 		extractions.GET("/:runId/reviews", healthDocumentReviewHandler.ListCandidates)
