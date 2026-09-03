@@ -42,6 +42,7 @@ type AssessmentService struct {
 	assessmentRepo assessmentRepository
 	profiles       assessmentProfileSource
 	uploads        assessmentUploadSource
+	reviews        AssessmentReviewSource
 	bodyState      assessmentBodyStateSource
 	reasoner       assessmentReasoner
 	unitOfWork     treatmentUnitOfWork
@@ -67,6 +68,13 @@ func NewAssessmentService(
 	}
 }
 
+// WithAssessmentReviews attaches the durable review projection so Assessment
+// derives reviewed report evidence from append-only document_indicator_reviews.
+func (s *AssessmentService) WithAssessmentReviews(reviews AssessmentReviewSource) *AssessmentService {
+	s.reviews = reviews
+	return s
+}
+
 // WithAssessmentDeployment attaches the Go-owned deployment policy so Assessment
 // generation resolves its champion Agent configuration through the North-Star
 // control plane and records provenance/decision trace on the immutable report.
@@ -86,6 +94,7 @@ const (
 	assessmentOutputContractV2 = "assessment-output-v2"
 	assessmentEvidencePolicyV2 = "assessment-evidence-contract-v2"
 	assessmentEvidencePolicyV3 = "assessment-evidence-contract-v3"
+	assessmentEvidencePolicyV4 = "assessment-evidence-contract-v4"
 )
 
 // ErrAssessmentOutputRejected means an upstream/generated Assessment failed the
@@ -156,6 +165,10 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 	}
 	reportIndicators, completedPosture := assessmentInputsFromUploads(uploads)
 	reportIndicatorsPayload, _ := json.Marshal(reportIndicators)
+	reviewedEvidencePayload, err := s.collectReviewedReportEvidence(ctx, userID, uploads)
+	if err != nil {
+		return nil, err
+	}
 	posturePayload := json.RawMessage(`{}`)
 	if len(completedPosture) > 0 {
 		posturePayload, _ = json.Marshal(BuildPostureAnalysisSummary(completedPosture))
@@ -175,11 +188,12 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 	}
 
 	generationRequest := AssessmentGenerationRequest{
-		ConfigurationID:  configurationID,
-		Profile:          profilePayload,
-		BodyState:        bodyStatePayload,
-		ReportIndicators: reportIndicatorsPayload,
-		PostureAnalysis:  posturePayload,
+		ConfigurationID:        configurationID,
+		Profile:                profilePayload,
+		BodyState:              bodyStatePayload,
+		ReportIndicators:       reportIndicatorsPayload,
+		PostureAnalysis:        posturePayload,
+		ReviewedReportEvidence: reviewedEvidencePayload,
 	}
 	raw, err := s.reasoner.GenerateAssessment(ctx, generationRequest)
 	if err != nil {
@@ -213,6 +227,7 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 		profilePayload,
 		bodyStatePayload,
 		reportIndicatorsPayload,
+		reviewedEvidencePayload,
 		posturePayload,
 		nil,
 	)
@@ -363,6 +378,33 @@ func parseAssessmentAgentPayload(raw json.RawMessage, expectedEvidencePolicyRevi
 	return &payload, nil
 }
 
+func (s *AssessmentService) collectReviewedReportEvidence(ctx context.Context, userID uuid.UUID, uploads []model.UserUpload) (json.RawMessage, error) {
+	if s.reviews == nil {
+		return json.RawMessage(`[]`), nil
+	}
+	reportUploads := make([]model.UserUpload, 0, len(uploads))
+	reviewsByUpload := make(map[uuid.UUID][]model.DocumentIndicatorReview, len(uploads))
+	for _, upload := range uploads {
+		if upload.FileType != "report" {
+			continue
+		}
+		reportUploads = append(reportUploads, upload)
+		rows, err := s.reviews.ListByUpload(ctx, upload.ID, userID)
+		if err != nil {
+			return nil, fmt.Errorf("load document indicator reviews for upload %s: %w", upload.ID, err)
+		}
+		if len(rows) > 0 {
+			reviewsByUpload[upload.ID] = rows
+		}
+	}
+	reviewed := buildAssessmentReviewedIndicators(reportUploads, reviewsByUpload)
+	encoded, err := json.Marshal(reviewed)
+	if err != nil {
+		return nil, fmt.Errorf("encode reviewed report evidence: %w", err)
+	}
+	return encoded, nil
+}
+
 func assessmentInputsFromUploads(uploads []model.UserUpload) ([]any, []model.UserUpload) {
 	reportIndicators := make([]any, 0)
 	completedPosture := make([]model.UserUpload, 0, 3)
@@ -505,12 +547,13 @@ func buildAssessmentGenerationTrace(
 // (media-type + count), never raw base64, to keep the replay envelope private
 // and lightweight.
 type AssessmentReplayInput struct {
-	ConfigurationID  string            `json:"configuration_id"`
-	Profile          json.RawMessage   `json:"profile"`
-	BodyState        json.RawMessage   `json:"body_state"`
-	ReportIndicators json.RawMessage   `json:"report_indicators"`
-	PostureAnalysis  json.RawMessage   `json:"posture_analysis"`
-	Images           []imageDescriptor `json:"images"`
+	ConfigurationID        string            `json:"configuration_id"`
+	Profile                json.RawMessage   `json:"profile"`
+	BodyState              json.RawMessage   `json:"body_state"`
+	ReportIndicators       json.RawMessage   `json:"report_indicators"`
+	ReviewedReportEvidence json.RawMessage   `json:"reviewed_report_evidence"`
+	PostureAnalysis        json.RawMessage   `json:"posture_analysis"`
+	Images                 []imageDescriptor `json:"images"`
 }
 
 type imageDescriptor struct {
@@ -522,6 +565,7 @@ func encodeAssessmentReplayInput(
 	profile json.RawMessage,
 	bodyState json.RawMessage,
 	reportIndicators json.RawMessage,
+	reviewedReportEvidence json.RawMessage,
 	posture json.RawMessage,
 	images []string,
 ) (json.RawMessage, error) {
@@ -533,6 +577,9 @@ func encodeAssessmentReplayInput(
 	}
 	if len(reportIndicators) == 0 || !json.Valid(reportIndicators) {
 		reportIndicators = json.RawMessage(`[]`)
+	}
+	if len(reviewedReportEvidence) == 0 || !json.Valid(reviewedReportEvidence) {
+		reviewedReportEvidence = json.RawMessage(`[]`)
 	}
 	if len(posture) == 0 || !json.Valid(posture) {
 		posture = json.RawMessage(`{}`)
@@ -548,12 +595,13 @@ func encodeAssessmentReplayInput(
 		descriptors = append(descriptors, imageDescriptor{MediaType: mediaType})
 	}
 	return json.Marshal(AssessmentReplayInput{
-		ConfigurationID:  configurationID,
-		Profile:          profile,
-		BodyState:        bodyState,
-		ReportIndicators: reportIndicators,
-		PostureAnalysis:  posture,
-		Images:           descriptors,
+		ConfigurationID:        configurationID,
+		Profile:                profile,
+		BodyState:              bodyState,
+		ReportIndicators:       reportIndicators,
+		ReviewedReportEvidence: reviewedReportEvidence,
+		PostureAnalysis:        posture,
+		Images:                 descriptors,
 	})
 }
 

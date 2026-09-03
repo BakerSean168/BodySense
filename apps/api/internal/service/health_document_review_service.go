@@ -217,6 +217,16 @@ func (s *HealthDocumentReviewService) ApplyReview(
 	if err != nil {
 		return nil, err
 	}
+	if action == string(model.ReviewActionCorrect) {
+		var corrected map[string]any
+		if err := json.Unmarshal(payload, &corrected); err != nil {
+			return nil, fmt.Errorf("%w: corrected payload cannot be decoded", ErrReviewValidation)
+		}
+		correctedID, _ := corrected["indicator_id"].(string)
+		if strings.TrimSpace(correctedID) != candidate.IndicatorID {
+			return nil, fmt.Errorf("%w: corrected payload changed indicator identity", ErrReviewCandidateMismatch)
+		}
+	}
 
 	// Source refs must resolve against the run's persisted source snapshot.
 	sourceBlocks, err := decodeSourceBlocks(run.SourceSummary)

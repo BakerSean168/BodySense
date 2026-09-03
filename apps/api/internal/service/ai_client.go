@@ -47,6 +47,10 @@ type AssessmentGenerationRequest struct {
 	RAGContext       string          `json:"rag_context,omitempty"`
 	Images           []string        `json:"images,omitempty"`
 	PostureAnalysis  json.RawMessage `json:"posture_analysis,omitempty"`
+	// ReviewedReportEvidence carries user-confirmed/corrected health-document
+	// indicators derived from the durable review projection. It is never
+	// assembled from mutating OCRResult/evidence_admissibility.
+	ReviewedReportEvidence json.RawMessage `json:"reviewed_report_evidence,omitempty"`
 }
 
 type AIClient struct {

@@ -11,19 +11,23 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from typing import Any
+from uuid import UUID
 
 from ..models.assessment import AssessmentEvidenceSource
 from .governance.types import GovernanceIssue, IssueSeverity
 
 ASSESSMENT_EVIDENCE_POLICY_REVISION_V2 = "assessment-evidence-contract-v2"
 ASSESSMENT_EVIDENCE_POLICY_REVISION_V3 = "assessment-evidence-contract-v3"
-ASSESSMENT_EVIDENCE_POLICY_REVISION = ASSESSMENT_EVIDENCE_POLICY_REVISION_V3
+ASSESSMENT_EVIDENCE_POLICY_REVISION_V4 = "assessment-evidence-contract-v4"
+ASSESSMENT_EVIDENCE_POLICY_REVISION = ASSESSMENT_EVIDENCE_POLICY_REVISION_V4
 OCR_INDICATOR_ADMISSIBILITY_POLICY_REVISION = "ocr-indicator-admissibility-v1"
 
-_LEGACY_REPORT_EVIDENCE_POLICIES = frozenset({
-    "assessment-evidence-reuse-v1",
-    ASSESSMENT_EVIDENCE_POLICY_REVISION_V2,
-})
+_LEGACY_REPORT_EVIDENCE_POLICIES = frozenset(
+    {
+        "assessment-evidence-reuse-v1",
+        ASSESSMENT_EVIDENCE_POLICY_REVISION_V2,
+    }
+)
 
 _VISUAL_SOURCES = frozenset({"posture_analysis"})
 _KIND_ALLOWED_SOURCES: dict[str, frozenset[str]] = {
@@ -99,11 +103,98 @@ def _compact_body_state_value(item: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _admissible_report_value(value_mapping: dict[str, Any]) -> bool:
+    admissibility = _clean_mapping(value_mapping.get("evidence_admissibility"))
+    return (
+        admissibility.get("policy_revision") == OCR_INDICATOR_ADMISSIBILITY_POLICY_REVISION
+        and admissibility.get("status") == "admissible"
+    )
+
+
+_REVIEWED_ACTIONS = frozenset({"confirm", "correct"})
+
+
 def _durable_id(value: Any) -> str:
     text = str(value or "").strip()
     if not text or text == "00000000-0000-0000-0000-000000000000":
         return ""
     return text
+
+
+def _reviewed_uuid(value: Any) -> str:
+    text = str(value or "").strip()
+    try:
+        parsed = UUID(text)
+    except (ValueError, TypeError, AttributeError):
+        return ""
+    return str(parsed) if parsed.int else ""
+
+
+def _reviewed_source_refs(value: Any) -> list[str] | None:
+    if not isinstance(value, list) or not value:
+        return None
+    refs: list[str] = []
+    for raw in value:
+        if not isinstance(raw, str) or not raw.strip():
+            return None
+        ref = raw.strip()
+        if ref not in refs:
+            refs.append(ref)
+    return refs or None
+
+
+def _reviewed_provenance_complete(item: dict[str, Any]) -> bool:
+    """Fail closed unless immutable review + source provenance is exact."""
+    if item.get("reviewed") is not True:
+        return False
+    if not _reviewed_uuid(item.get("upload_id")) or not _reviewed_uuid(
+        item.get("extraction_run_id")
+    ):
+        return False
+    if not _reviewed_uuid(item.get("review_id")):
+        return False
+    indicator_id = str(item.get("indicator_id") or "").strip()
+    if not indicator_id:
+        return False
+    if str(item.get("action") or "").strip() not in _REVIEWED_ACTIONS:
+        return False
+    indicator_index = item.get("indicator_index")
+    if type(indicator_index) is not int or indicator_index < 0:
+        return False
+    value_mapping = _clean_mapping(item.get("value"))
+    if not value_mapping or str(value_mapping.get("indicator_id") or "").strip() != indicator_id:
+        return False
+    if _reviewed_source_refs(item.get("source_refs")) is None:
+        return False
+    if not isinstance(item.get("page_ref"), dict):
+        return False
+    return True
+
+
+def _attach_review_provenance(
+    value_mapping: dict[str, Any], item: dict[str, Any]
+) -> dict[str, Any]:
+    result = dict(value_mapping)
+    result["reviewed"] = True
+    result["review_provenance"] = {
+        "action": str(item.get("action") or "").strip(),
+        "review_id": _reviewed_uuid(item.get("review_id")),
+        "reviewer_user_id": _reviewed_uuid(item.get("reviewer_user_id")),
+        "upload_id": _reviewed_uuid(item.get("upload_id")),
+        "extraction_run_id": _reviewed_uuid(item.get("extraction_run_id")),
+        "indicator_id": str(item.get("indicator_id") or "").strip(),
+        "indicator_index": item.get("indicator_index"),
+        "source_refs": _reviewed_source_refs(item.get("source_refs")) or [],
+        "page_ref": dict(item.get("page_ref") or {}),
+    }
+    return result
+
+
+def _reviewed_indicator_value(item: dict[str, Any]) -> dict[str, Any] | None:
+    value_mapping = _clean_mapping(item.get("value"))
+    if not value_mapping:
+        return None
+    return _attach_review_provenance(value_mapping, item)
 
 
 def _body_state_ref(prefix: str, item: dict[str, Any], index: int) -> str:
@@ -117,6 +208,7 @@ def build_assessment_evidence_catalog(
     body_state: dict[str, Any],
     report_indicators: list[Any],
     posture_analysis: dict[str, Any],
+    reviewed_report_evidence: list[Any] | None = None,
     evidence_policy_revision: str = ASSESSMENT_EVIDENCE_POLICY_REVISION,
 ) -> dict[str, AssessmentEvidenceItem]:
     """Build the v2 selectable evidence catalog from frozen health inputs.
@@ -128,6 +220,7 @@ def build_assessment_evidence_catalog(
 
     _ = profile
     catalog: dict[str, AssessmentEvidenceItem] = {}
+    reviewed_report_evidence = reviewed_report_evidence or []
 
     for index, raw in enumerate(body_state.get("facts") or []):
         item = _clean_mapping(raw)
@@ -153,34 +246,57 @@ def build_assessment_evidence_catalog(
             _compact_body_state_value(item),
         )
 
+    allowed_policies = frozenset(
+        {ASSESSMENT_EVIDENCE_POLICY_REVISION_V3, ASSESSMENT_EVIDENCE_POLICY_REVISION_V4}
+    )
     if evidence_policy_revision not in _LEGACY_REPORT_EVIDENCE_POLICIES and (
-        evidence_policy_revision != ASSESSMENT_EVIDENCE_POLICY_REVISION_V3
+        evidence_policy_revision not in allowed_policies
     ):
         raise ValueError(
             f"unsupported Assessment evidence policy revision: {evidence_policy_revision}"
         )
 
+    # Machine-admissible report indicators: extraction completion never implies
+    # evidence authority, so v3 and v4 both require the exact supported
+    # OCR-admissibility decision (ocr-indicator-admissibility-v1 + admissible).
+    # Review support never silently reinterprets a machine decision.
     for index, raw in enumerate(report_indicators):
         item = _clean_mapping(raw)
         upload_id = _durable_id(item.get("upload_id")) if item else ""
         indicator_index = item.get("indicator_index") if item else None
         value = item.get("value") if item and "value" in item else raw
 
-        if evidence_policy_revision == ASSESSMENT_EVIDENCE_POLICY_REVISION_V3:
-            value_mapping = _clean_mapping(value)
-            admissibility = _clean_mapping(value_mapping.get("evidence_admissibility"))
-            if (
-                admissibility.get("policy_revision")
-                != OCR_INDICATOR_ADMISSIBILITY_POLICY_REVISION
-                or admissibility.get("status") != "admissible"
-            ):
+        if evidence_policy_revision in (
+            ASSESSMENT_EVIDENCE_POLICY_REVISION_V3,
+            ASSESSMENT_EVIDENCE_POLICY_REVISION_V4,
+        ):
+            if not _admissible_report_value(_clean_mapping(value)):
                 continue
-
         if upload_id and isinstance(indicator_index, int):
             ref = f"report:upload:{upload_id}:indicator:{indicator_index}"
         else:
             ref = f"report:{index}"
         catalog[ref] = AssessmentEvidenceItem(ref, "report", "report_indicator", value)
+
+    # Reviewed report evidence is a distinct durable lane carried from the
+    # append-only review projection (never from mutating OCRResult). Under v4 a
+    # confirmed/corrected latest review may enter the catalog with exact
+    # upload/extraction-run/review/indicator provenance. Rejected, unresolved,
+    # superseded and provenance-less entries fail closed.
+    if evidence_policy_revision == ASSESSMENT_EVIDENCE_POLICY_REVISION_V4:
+        for raw in reviewed_report_evidence:
+            item = _clean_mapping(raw)
+            if not item or not _reviewed_provenance_complete(item):
+                continue
+            upload_id = _durable_id(item.get("upload_id"))
+            indicator_index = item.get("indicator_index")
+            if not upload_id or not isinstance(indicator_index, int) or indicator_index < 0:
+                continue
+            value_mapping = _reviewed_indicator_value(item)
+            if value_mapping is None:
+                continue
+            ref = f"report:upload:{upload_id}:indicator:{indicator_index}"
+            catalog[ref] = AssessmentEvidenceItem(ref, "report", "report_indicator", value_mapping)
 
     views = posture_analysis.get("views") if isinstance(posture_analysis, dict) else None
     seen_posture_summaries: set[str] = set()

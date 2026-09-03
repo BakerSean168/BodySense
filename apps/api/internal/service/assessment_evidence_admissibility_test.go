@@ -123,3 +123,36 @@ func TestAssessmentUploadOCRAdmissibilitySurvivesInputAssemblyAndGatesDurableEvi
 		t.Fatalf("review-required indicator must not become durable Assessment evidence: %#v", catalog)
 	}
 }
+
+func TestAssessmentMachineAdmissibleLaneKeepsWorkingUnderV4(t *testing.T) {
+	// The machine-admissible Champion lane (ocr-indicator-admissibility-v1 +
+	// admissible) continues to work under evidence-contract-v4 alongside the new
+	// reviewed lane, and admissibility-v2 does not become production authority.
+	req := reportIndicatorRequest(`[{
+		"upload_id":"44444444-4444-4444-4444-444444444444",
+		"indicator_index":0,
+		"value":{
+			"name":"Vitamin D","value":"25.3","unit":"ng/mL",
+			"evidence_admissibility":{
+				"status":"admissible",
+				"policy_revision":"ocr-indicator-admissibility-v1",
+				"reason_codes":["high_confidence_ocr_and_indicator"]
+			}
+		}
+	}]`)
+	catalog := buildAssessmentEvidenceCatalog(req, assessmentEvidencePolicyV4)
+	if _, ok := catalog["report:upload:44444444-4444-4444-4444-444444444444:indicator:0"]; !ok {
+		t.Fatalf("v4 must keep the machine-admissible Champion lane: %#v", catalog)
+	}
+	// A forged/unknown admissibility (e.g. admissibility-v2) still fails closed.
+	req = reportIndicatorRequest(`[{
+		"indicator_index":0,
+		"value":{
+			"name":"Vitamin D","value":"25.3","unit":"ng/mL",
+			"evidence_admissibility":{"status":"admissible","policy_revision":"ocr-indicator-admissibility-v2"}
+		}
+	}]`)
+	if catalog := buildAssessmentEvidenceCatalog(req, assessmentEvidencePolicyV4); len(catalog) != 0 {
+		t.Fatalf("admissibility-v2 must not become production authority under v4: %#v", catalog)
+	}
+}

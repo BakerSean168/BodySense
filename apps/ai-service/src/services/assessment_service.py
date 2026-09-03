@@ -61,6 +61,7 @@ class AssessmentService:
         profile: dict[str, Any],
         body_state: dict[str, Any] | None = None,
         report_indicators: list[Any] | None = None,
+        reviewed_report_evidence: list[Any] | None = None,
         rag_context: str = "",
         images: list[str] | None = None,
         posture_analysis: dict[str, Any] | None = None,
@@ -73,6 +74,7 @@ class AssessmentService:
         )
         normalized_body_state = body_state or {}
         normalized_indicators = report_indicators or []
+        normalized_reviewed = reviewed_report_evidence or []
         normalized_posture = posture_analysis or {}
         normalized_images = [value for value in (images or []) if value]
 
@@ -93,6 +95,7 @@ class AssessmentService:
             profile=profile,
             body_state=normalized_body_state,
             report_indicators=normalized_indicators,
+            reviewed_report_evidence=normalized_reviewed,
             posture_analysis=normalized_posture,
             evidence_policy_revision=config.evidence_policy_revision,
         )
@@ -124,6 +127,7 @@ class AssessmentService:
             profile=profile,
             body_state=normalized_body_state,
             report_indicators=normalized_indicators,
+            reviewed_report_evidence=normalized_reviewed,
             posture_analysis=normalized_posture,
             rag_context=rag_context,
             evidence_catalog=evidence_catalog_for_prompt(evidence_catalog),

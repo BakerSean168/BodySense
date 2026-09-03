@@ -158,6 +158,7 @@ func main() {
 		repository.NewAssessmentRolloutRepository(database.DB),
 		assessmentReplayService,
 	)
+	documentIndicatorReviewRepo := repository.NewDocumentIndicatorReviewRepository(database.DB)
 	assessmentService := service.NewAssessmentService(
 		assessmentRepo,
 		profileService,
@@ -166,7 +167,8 @@ func main() {
 		aiClient,
 		database.NewTransactionManager(database.DB),
 	).WithAssessmentDeployment(agentDeploymentPolicy).
-		WithAssessmentRollout(assessmentRolloutService)
+		WithAssessmentRollout(assessmentRolloutService).
+		WithAssessmentReviews(documentIndicatorReviewRepo)
 	authHandler := handler.NewAuthHandler(authService, authSecurity)
 	privacyHandler := handler.NewPrivacyHandler(privacyErasureService, authHandler)
 	profileHandler := handler.NewProfileHandler(profileService)
@@ -191,7 +193,6 @@ func main() {
 		WithHealthDocumentDeployment(healthDocumentDeploymentPolicy).
 		WithDocumentExtractionRuns(documentExtractionRunRepo)
 	uploadService.StartUploadWorker(context.Background(), 10*time.Second, 10*time.Minute)
-	documentIndicatorReviewRepo := repository.NewDocumentIndicatorReviewRepository(database.DB)
 	healthDocumentReviewService := service.NewHealthDocumentReviewService(documentExtractionRunRepo, documentIndicatorReviewRepo)
 	uploadHandler := handler.NewUploadHandler(uploadService)
 	healthDocumentReviewHandler := handler.NewHealthDocumentReviewHandler(healthDocumentReviewService, uploadService)

@@ -266,6 +266,26 @@ func TestApplyReviewMalformedCorrectionFailsClosed(t *testing.T) {
 	}
 }
 
+func TestApplyReviewCorrectionCannotChangeCandidateIdentity(t *testing.T) {
+	userID := uuid.New()
+	uploadID := uuid.New()
+	runID := uuid.New()
+	run := testExtractionRun(t, uploadID, userID, runID)
+	svc, writer := newReviewTestService(t, run)
+	req := ReviewRequest{
+		ExtractionRunID: runID, IndicatorIndex: 0, IndicatorID: "hemoglobin",
+		Action: string(model.ReviewActionCorrect), SourceRefs: []string{testIndicatorRef},
+		ReviewedPayload: json.RawMessage(`{"indicator_id":"glucose","value":6.2,"unit":"mmol/L"}`),
+		IdempotencyKey:  "cross-indicator-correction",
+	}
+	if _, err := svc.ApplyReview(context.Background(), userID, req); !errors.Is(err, ErrReviewCandidateMismatch) {
+		t.Fatalf("err=%v want ErrReviewCandidateMismatch", err)
+	}
+	if len(writer.rows) != 0 {
+		t.Fatalf("cross-indicator correction appended rows: %d", len(writer.rows))
+	}
+}
+
 func TestApplyReviewFabricatedSourceRefOrIdentityFailsClosed(t *testing.T) {
 	userID := uuid.New()
 	uploadID := uuid.New()

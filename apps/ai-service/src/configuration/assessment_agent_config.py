@@ -22,7 +22,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 SERVICE_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_ROOT = SERVICE_ROOT / "config" / "agents"
-DEFAULT_MANIFEST_PATH = CONFIG_ROOT / "assessment-v4.yaml"
+DEFAULT_MANIFEST_PATH = CONFIG_ROOT / "assessment-v5.yaml"
 
 
 class AssessmentGenerationConfig(BaseModel):
