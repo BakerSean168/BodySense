@@ -453,3 +453,61 @@ func TestEnsureUploadOwnsRunRejectsCrossUploadBinding(t *testing.T) {
 		t.Fatalf("cross-upload binding err=%v want mismatch", err)
 	}
 }
+func TestReviewSourceRegionsAccepts4And8NumberBBoxes(t *testing.T) {
+	cases := []struct {
+		name    string
+		bbox    []any
+		want    []float64
+		wantErr bool
+	}{
+		{
+			name: "axis aligned 4-number rectangle",
+			bbox: []any{float64(1), float64(2), float64(3), float64(4)},
+			want: []float64{1, 2, 3, 4},
+		},
+		{
+			name: "8-number quadrilateral preserved",
+			bbox: []any{float64(0), float64(0), float64(10), float64(0), float64(10), float64(10), float64(0), float64(10)},
+			want: []float64{0, 0, 10, 0, 10, 10, 0, 10},
+		},
+		{
+			name:    "9-number bbox fails closed",
+			bbox:    []any{0, 0, 1, 1, 2, 2, 3, 3, 4},
+			wantErr: true,
+		},
+		{
+			name:    "non-numeric bbox fails closed",
+			bbox:    []any{"x", "y", 3, 4},
+			wantErr: true,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			blocks := map[string]map[string]any{
+				testIndicatorRef: {"source_ref": testIndicatorRef, "page_number": float64(1), "bbox": tc.bbox},
+			}
+			regions, err := reviewSourceRegions(blocks, []string{testIndicatorRef})
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("expected error for bbox %v", tc.bbox)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("reviewSourceRegions: %v", err)
+			}
+			if len(regions) != 1 {
+				t.Fatalf("regions=%d want 1", len(regions))
+			}
+			got := regions[0].BBox
+			if len(got) != len(tc.want) {
+				t.Fatalf("bbox=%v want %v", got, tc.want)
+			}
+			for i := range got {
+				if got[i] != tc.want[i] {
+					t.Fatalf("bbox=%v want %v", got, tc.want)
+				}
+			}
+		})
+	}
+}

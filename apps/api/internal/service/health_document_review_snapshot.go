@@ -169,10 +169,12 @@ func reviewSourceRegions(blocks map[string]map[string]any, refs []string) ([]Doc
 		}
 		if bboxValue, ok := block["bbox"]; ok {
 			items, ok := bboxValue.([]any)
-			if !ok || len(items) != 4 {
+			// Accept both axis-aligned 4-number rectangles and 8-number
+			// quadrilaterals, preserving the persisted geometry shape.
+			if !ok || (len(items) != 4 && len(items) != 8) {
 				return nil, fmt.Errorf("source ref %q has invalid bbox", ref)
 			}
-			region.BBox = make([]float64, 4)
+			region.BBox = make([]float64, len(items))
 			for i, item := range items {
 				value, ok := item.(float64)
 				if !ok {
