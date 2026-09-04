@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.12.1](https://github.com/BakerSean168/BodySense/compare/v0.12.0...v0.12.1) (2026-09-04)
+
+
+### Bug Fixes
+
+* **ops:** add resilient runtime advisory fallback ([3c0890a](https://github.com/BakerSean168/BodySense/commit/3c0890acfdada7cce4029b17c20d83c006fb16ba))
+* **ops:** honor supply-chain audit threshold ([f302fa6](https://github.com/BakerSean168/BodySense/commit/f302fa6c6638c4375f6ed9931d124bb269593114))
+* **ops:** keep parked DR schedulers disabled ([ed3ace2](https://github.com/BakerSean168/BodySense/commit/ed3ace24b7ff02f790e123e30538a3bbaa707fc9))
+* **ops:** keep parked DR schedulers disabled ([e1958bd](https://github.com/BakerSean168/BodySense/commit/e1958bd8793dcb97444407359740c695c0da681a))
+
 ## [0.12.0](https://github.com/BakerSean168/BodySense/compare/v0.11.0...v0.12.0) (2026-09-03)
 
 
