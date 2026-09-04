@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.12.3](https://github.com/BakerSean168/BodySense/compare/v0.12.2...v0.12.3) (2026-09-04)
+
+
+### Bug Fixes
+
+* **ops:** allow immutable CDN assets through CSP ([f852b22](https://github.com/BakerSean168/BodySense/commit/f852b22b08a4fcdf4ecc3ba40cdaffb7b6829eae))
+* **ops:** allow immutable CDN assets through CSP ([95fe565](https://github.com/BakerSean168/BodySense/commit/95fe565e816f793e308aad840f67a3670e4061d3))
+
 ## [0.12.2](https://github.com/BakerSean168/BodySense/compare/v0.12.1...v0.12.2) (2026-09-04)
 
 
