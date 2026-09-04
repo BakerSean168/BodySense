@@ -4,7 +4,7 @@ cd "$(git rev-parse --show-toplevel)"
 bash -n scripts/setup-server.sh scripts/production-deploy-watch.sh scripts/production-postgres18-reset.sh \
   scripts/setup-postgres18-client-wrappers.sh \
   scripts/production-offhost-backup.sh scripts/restore-production-backup.sh \
-  scripts/validate-offhost-dr-unit.sh scripts/validate-offhost-dr.sh scripts/install-production-dr.sh scripts/validate-production-dr-installer.sh scripts/test-validate-supply-chain.sh
+  scripts/validate-offhost-dr-unit.sh scripts/validate-offhost-dr.sh scripts/install-production-dr.sh scripts/validate-production-dr-installer.sh scripts/validate-supply-chain.sh scripts/test-validate-supply-chain.sh
 bash scripts/validate-production-capacity.sh
 bash scripts/validate-production-postgres18.sh
 bash scripts/validate-production-dr-installer.sh
