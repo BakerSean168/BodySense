@@ -44,6 +44,8 @@ Browser
 
 The CDN namespace is immutable: Web assets are keyed by the full source revision and anatomy assets by the pinned atlas release. The production workflow publishes and verifies CDN bytes before building/promoting the Web artifact that references them, then performs a Web-image-to-CDN coherence gate. No user, conversation, diagnosis or BodyState identifiers may appear in static asset paths.
 
+The application origin CSP must explicitly trust only the BodySense-controlled CDN origin for static execution/fetch surfaces (`script-src`, `style-src`, `font-src`, `img-src`, `media-src`, `connect-src`, `worker-src`). The production Caddyfile is a single-file bind mount; when an immutable runtime bundle replaces that host file, the deploy watcher must force-recreate Caddy so the container binds the new inode before external health acceptance. A plain `caddy reload` against the old bind-mounted inode is not sufficient.
+
 When `STATIC_ASSET_CDN_BASE` is not configured, the Web image keeps same-origin behavior so local development and emergency rollback do not depend on R2 credentials. See `docs/runbooks/static-asset-cdn.md`.
 
 ## Production delivery flow
