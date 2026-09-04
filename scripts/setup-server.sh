@@ -92,9 +92,11 @@ UPLOAD_OSS_BUCKET=
 UPLOAD_OSS_ECS_RAM_ROLE=
 UPLOAD_OSS_ENDPOINT=
 
-# Off-host backup (BS-PROD-012): least-privilege object-store credentials for
-# the operator-owned off-host PostgreSQL backups.  Generate an access key/secret
-# that has PutObject/GetObject/DeleteObject/ListBucket on the backup bucket and
+# Legacy S3-compatible off-host backup credentials (retired scheduler).
+# Leave these blank in normal production. The supported DR manager uses an ECS
+# RAM Role and DR_OSS_* settings instead of long-lived credentials. If the
+# compatibility script is ever invoked manually, use a least-privilege key that
+# has PutObject/GetObject/DeleteObject/ListBucket on the backup bucket and
 # ALWAYS GetBucketAcl (the privacy preflight reads the ACL).  GetBucketPolicyStatus
 # is additionally required ONLY when the tracked .env.production sets
 # OFFHOST_BACKUP_PRIVACY_PROOF=acl+policy (the default); stores such as Alibaba
@@ -153,16 +155,16 @@ compose=(
 install -m 0644 "$SOURCE_DIR/deploy/systemd/bodysense-deploy-watch.service" /etc/systemd/system/bodysense-deploy-watch.service
 install -m 0644 "$SOURCE_DIR/deploy/systemd/bodysense-deploy-watch.timer" /etc/systemd/system/bodysense-deploy-watch.timer
 
-# Off-host backup + freshness scheduling (BS-PROD-012).  The units are always
-# installed; the deploy watcher enables the timers.  Until the operator supplies
-# OFFHOST_BACKUP_* credentials in .env.production.local the freshness check
-# alerts every hour instead of reporting "OK", so an unconfigured host cannot
-# masquerade as being protected.
-install -m 0644 "$SOURCE_DIR/deploy/systemd/bodysense-offhost-backup.service" /etc/systemd/system/bodysense-offhost-backup.service
-install -m 0644 "$SOURCE_DIR/deploy/systemd/bodysense-offhost-backup.timer" /etc/systemd/system/bodysense-offhost-backup.timer
-install -m 0644 "$SOURCE_DIR/deploy/systemd/bodysense-offhost-freshness.service" /etc/systemd/system/bodysense-offhost-freshness.service
-install -m 0644 "$SOURCE_DIR/deploy/systemd/bodysense-offhost-freshness.timer" /etc/systemd/system/bodysense-offhost-freshness.timer
+# The legacy AccessKey-based bodysense-offhost-* scheduler is retired.  Its
+# scripts remain in the runtime for manual compatibility, but production DR is
+# owned by install-production-dr.sh and stays inert while DR_ENABLED=false.
+systemctl disable --now bodysense-offhost-backup.timer bodysense-offhost-freshness.timer >/dev/null 2>&1 || true
+rm -f /etc/systemd/system/bodysense-offhost-backup.service \
+  /etc/systemd/system/bodysense-offhost-backup.timer \
+  /etc/systemd/system/bodysense-offhost-freshness.service \
+  /etc/systemd/system/bodysense-offhost-freshness.timer
 systemctl daemon-reload
+systemctl reset-failed bodysense-offhost-backup.service bodysense-offhost-freshness.service >/dev/null 2>&1 || true
 
 # First deployment uses the exact same safety gates as subsequent polling deployments.
 "$DEPLOY_DIR/scripts/production-deploy-watch.sh" --force
