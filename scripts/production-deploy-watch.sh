@@ -372,7 +372,7 @@ rollback_deployment() {
   LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" wait_healthy api 150 || return 1
   LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" compose up -d --no-deps web
   LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" wait_healthy web 90 || return 1
-  LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" compose up -d --no-deps caddy
+  LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" compose up -d --no-deps --force-recreate caddy
   LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1 || true
   curl -fsS --max-time 15 "https://${APP_DOMAIN}/api/health" >/dev/null || return 1
   log "automatic rollback restored managed revision ${managed_revision:-unknown}"
@@ -792,7 +792,7 @@ fi
 
 # Caddy is deliberately exposed only after the fresh PostgreSQL 18 reset is committed.
 # Before this point the legacy database can still be restored if the fresh PG18 service itself fails health checks.
-compose up -d --no-deps caddy
+compose up -d --no-deps --force-recreate caddy
 compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1 || true
 
 curl -fsS --max-time 15 "https://${APP_DOMAIN}/api/health" >/dev/null || fail 'external API health check failed'

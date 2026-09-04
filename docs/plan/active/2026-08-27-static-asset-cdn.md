@@ -236,3 +236,16 @@ Cloudflare edge closeout is complete:
 - a cross-origin Chromium probe can read `nextHopProtocol=h2`, transfer/encoded/decoded byte counts, and TTFB instead of receiving TAO-restricted Resource Timing.
 
 One uncached TAO probe of the 6,288,144-byte regional GLB reported `transferSize=6,288,444`, `encodedBodySize=decodedBodySize=6,288,144`, `nextHopProtocol=h2`, and measurable TTFB. Production's first real release remains the final release-pipeline acceptance.
+
+
+## 13. Production CSP / proxy incident closeout — 2026-09-04
+
+The first `v0.12.2` production cutover exposed a release-boundary defect rather than a CDN byte-availability defect: `index.html` correctly referenced revision-scoped JS/CSS on `https://assets.bakersean.top`, but the application-origin CSP still had `script-src 'self'` and did not allow the CDN for stylesheet/static fetch surfaces. Browsers therefore blocked the entry chunks and rendered a black screen even though the CDN objects returned HTTP 200.
+
+A second runtime defect made a simple Caddy reload insufficient. `docker/Caddyfile` is bind-mounted as a single file. Runtime synchronization replaces that host file with the immutable runtime artifact, which can change its inode; a long-lived Caddy container can therefore keep seeing the previously mounted inode. Production was recovered by updating the CSP and force-recreating only the Caddy container, after which a real Chromium probe loaded the page with no CSP errors or failed CDN requests.
+
+Durable contract:
+
+- CSP allowlists only the BodySense-controlled `https://assets.bakersean.top` origin for script/style/font/image/media/fetch/worker static surfaces; no wildcard `https:`/`*` relaxation is accepted.
+- every forward deploy and rollback force-recreates Caddy after runtime-file replacement, then reloads/health-checks the current config;
+- `scripts/validate-production-proxy.sh` fails repository validation if the CDN origin disappears from CSP or either deploy path stops force-recreating Caddy.
