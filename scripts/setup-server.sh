@@ -164,7 +164,7 @@ rm -f /etc/systemd/system/bodysense-offhost-backup.service \
   /etc/systemd/system/bodysense-offhost-freshness.service \
   /etc/systemd/system/bodysense-offhost-freshness.timer
 systemctl daemon-reload
-systemctl reset-failed bodysense-offhost-backup.service bodysense-offhost-freshness.service >/dev/null 2>&1 || true
+systemctl reset-failed bodysense-offhost-backup.service bodysense-offhost-freshness.service bodysense-offhost-backup.timer bodysense-offhost-freshness.timer >/dev/null 2>&1 || true
 
 # First deployment uses the exact same safety gates as subsequent polling deployments.
 "$DEPLOY_DIR/scripts/production-deploy-watch.sh" --force

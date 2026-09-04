@@ -285,7 +285,7 @@ restore_runtime() {
       rm -f "$SYSTEMD_DIR/$unit"
     done
     systemctl daemon-reload
-    systemctl reset-failed bodysense-offhost-backup.service bodysense-offhost-freshness.service >/dev/null 2>&1 || true
+    systemctl reset-failed bodysense-offhost-backup.service bodysense-offhost-freshness.service bodysense-offhost-backup.timer bodysense-offhost-freshness.timer >/dev/null 2>&1 || true
   fi
 }
 
@@ -569,7 +569,7 @@ sync_runtime() {
       systemctl disable --now bodysense-offhost-backup.timer bodysense-offhost-freshness.timer >/dev/null 2>&1 || true
       systemctl stop bodysense-offhost-backup.service bodysense-offhost-freshness.service >/dev/null 2>&1 || true
       systemctl daemon-reload
-      systemctl reset-failed bodysense-offhost-backup.service bodysense-offhost-freshness.service >/dev/null 2>&1 || true
+      systemctl reset-failed bodysense-offhost-backup.service bodysense-offhost-freshness.service bodysense-offhost-backup.timer bodysense-offhost-freshness.timer >/dev/null 2>&1 || true
     fi
   }
   install_offhost_units
