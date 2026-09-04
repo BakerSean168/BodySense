@@ -276,16 +276,16 @@ restore_runtime() {
     fi
   done
   if command -v systemctl >/dev/null 2>&1; then
+    # Legacy AccessKey-based timers are retired globally; a runtime rollback may
+    # restore their files for manual compatibility but must never reactivate
+    # their scheduler.
+    systemctl disable --now bodysense-offhost-backup.timer bodysense-offhost-freshness.timer >/dev/null 2>&1 || true
+    systemctl stop bodysense-offhost-backup.service bodysense-offhost-freshness.service >/dev/null 2>&1 || true
     for unit in bodysense-offhost-backup.service bodysense-offhost-backup.timer bodysense-offhost-freshness.service bodysense-offhost-freshness.timer; do
-      if [ -f "$ROOT/deploy/systemd/$unit" ]; then
-        ln -sf "$ROOT/deploy/systemd/$unit" "$SYSTEMD_DIR/$unit"
-      else
-        rm -f "$SYSTEMD_DIR/$unit"
-        systemctl disable "$unit" >/dev/null 2>&1 || true
-      fi
+      rm -f "$SYSTEMD_DIR/$unit"
     done
     systemctl daemon-reload
-    systemctl enable --now bodysense-offhost-backup.timer bodysense-offhost-freshness.timer >/dev/null 2>&1 || true
+    systemctl reset-failed bodysense-offhost-backup.service bodysense-offhost-freshness.service >/dev/null 2>&1 || true
   fi
 }
 
@@ -550,23 +550,30 @@ sync_runtime() {
     fi
   done
   install_offhost_units() {
+    # Legacy AccessKey-based off-host artifacts are preserved in the managed
+    # runtime for manual restore compatibility, but their automatic timers are
+    # retired. The supported production DR path is production-postgres-dr.sh
+    # with ECS RAM Role + private OSS and is gated by DR_ENABLED.
     install -d -m 0755 "$ROOT/deploy/systemd"
     install -m 0644 "$stage/deploy/systemd/bodysense-offhost-backup.service" "$ROOT/deploy/systemd/bodysense-offhost-backup.service"
     install -m 0644 "$stage/deploy/systemd/bodysense-offhost-backup.timer" "$ROOT/deploy/systemd/bodysense-offhost-backup.timer"
     install -m 0644 "$stage/deploy/systemd/bodysense-offhost-freshness.service" "$ROOT/deploy/systemd/bodysense-offhost-freshness.service"
     install -m 0644 "$stage/deploy/systemd/bodysense-offhost-freshness.timer" "$ROOT/deploy/systemd/bodysense-offhost-freshness.timer"
   }
-  if command -v systemctl >/dev/null 2>&1; then
-    install_offhost_units
-    ln -sf "$ROOT/deploy/systemd/bodysense-offhost-backup.service" "$SYSTEMD_DIR/bodysense-offhost-backup.service"
-    ln -sf "$ROOT/deploy/systemd/bodysense-offhost-backup.timer" "$SYSTEMD_DIR/bodysense-offhost-backup.timer"
-    ln -sf "$ROOT/deploy/systemd/bodysense-offhost-freshness.service" "$SYSTEMD_DIR/bodysense-offhost-freshness.service"
-    ln -sf "$ROOT/deploy/systemd/bodysense-offhost-freshness.timer" "$SYSTEMD_DIR/bodysense-offhost-freshness.timer"
-    systemctl daemon-reload
-    systemctl enable --now bodysense-offhost-backup.timer bodysense-offhost-freshness.timer
-  else
-    install_offhost_units
-  fi
+  retire_legacy_offhost_units() {
+    local unit
+    for unit in bodysense-offhost-backup.service bodysense-offhost-backup.timer bodysense-offhost-freshness.service bodysense-offhost-freshness.timer; do
+      rm -f "$SYSTEMD_DIR/$unit"
+    done
+    if command -v systemctl >/dev/null 2>&1; then
+      systemctl disable --now bodysense-offhost-backup.timer bodysense-offhost-freshness.timer >/dev/null 2>&1 || true
+      systemctl stop bodysense-offhost-backup.service bodysense-offhost-freshness.service >/dev/null 2>&1 || true
+      systemctl daemon-reload
+      systemctl reset-failed bodysense-offhost-backup.service bodysense-offhost-freshness.service >/dev/null 2>&1 || true
+    fi
+  }
+  install_offhost_units
+  retire_legacy_offhost_units
   for unit in bodysense-postgres-dr-backup.service bodysense-postgres-dr-backup.timer bodysense-postgres-dr-restore.service bodysense-postgres-dr-restore.timer bodysense-postgres-dr-status.service bodysense-postgres-dr-status.timer bodysense-capacity-status.service bodysense-capacity-status.timer bodysense-capacity-cleanup.service bodysense-capacity-cleanup.timer; do
     if [ -e "$stage/deploy/systemd/$unit" ]; then
       install -m 0644 "$stage/deploy/systemd/$unit" "$ROOT/deploy/systemd/$unit"
@@ -797,8 +804,9 @@ runtime_source=acr
 deployed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 STATE
 
-if systemctl list-unit-files bodysense-postgres-dr-backup.timer --no-legend 2>/dev/null | grep -q bodysense-postgres-dr-backup.timer \
-  && [ -x "$ROOT/scripts/install-production-dr.sh" ]; then
+if [ -x "$ROOT/scripts/install-production-dr.sh" ]; then
+  # The installer is bootstrap-safe: it installs the unit files on first
+  # deployment, but only enables their timers when DR_ENABLED=true.
   "$ROOT/scripts/install-production-dr.sh" >/dev/null
 fi
 if [ -x "$ROOT/scripts/install-production-capacity.sh" ]; then

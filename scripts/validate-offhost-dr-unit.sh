@@ -1556,16 +1556,15 @@ else
   report 1 "rollback restores the previous systemd units and removes units it did not have" "rc=$rc $(ls "$DLW_ROOT/deploy/systemd" 2>/dev/null | tr '\n' '|')"
 fi
 if [ $rc -ne 0 ] \
-  && [ -L "$DLW_SYSD/bodysense-offhost-backup.service" ] \
-  && [ "$(readlink "$DLW_SYSD/bodysense-offhost-backup.service")" = "$DLW_ROOT/deploy/systemd/bodysense-offhost-backup.service" ] \
-  && [ -L "$DLW_SYSD/bodysense-offhost-backup.timer" ] \
+  && [ ! -e "$DLW_SYSD/bodysense-offhost-backup.service" ] \
+  && [ ! -e "$DLW_SYSD/bodysense-offhost-backup.timer" ] \
   && [ ! -e "$DLW_SYSD/bodysense-offhost-freshness.service" ] \
   && [ ! -e "$DLW_SYSD/bodysense-offhost-freshness.timer" ] \
   && grep -q 'daemon-reload' "$TMP/systemctl.log" \
-  && grep -q 'disable bodysense-offhost-freshness.timer' "$TMP/systemctl.log"; then
-  report 0 "rollback re-points host systemd symlinks, removes absent units, disables them and daemon-reloads"
+  && grep -q 'disable --now bodysense-offhost-backup.timer bodysense-offhost-freshness.timer' "$TMP/systemctl.log"; then
+  report 0 "rollback preserves legacy unit files for compatibility but never resurrects their host scheduler"
 else
-  report 1 "rollback re-points host systemd symlinks, removes absent units, disables them and daemon-reloads" "rc=$rc symds_dir=$(ls "$DLW_SYSD" 2>/dev/null | tr '\n' '|') sysctl=$(tr '\n' '|' < "$TMP/systemctl.log" 2>/dev/null)"
+  report 1 "rollback preserves legacy unit files for compatibility but never resurrects their host scheduler" "rc=$rc symds_dir=$(ls "$DLW_SYSD" 2>/dev/null | tr '\n' '|') sysctl=$(tr '\n' '|' < "$TMP/systemctl.log" 2>/dev/null)"
 fi
 if [ $rc -ne 0 ] && ls "$DLW_ROOT/runtime-backups"/r1-*/scripts/production-deploy-watch.sh >/dev/null 2>&1 \
   && [ "$(find "$DLW_ROOT/runtime-backups" -mindepth 1 -maxdepth 1 -type d | wc -l)" -ge 1 ]; then

@@ -15,6 +15,8 @@ The plan has two independent durability outcomes:
 
 Until the owner reactivates this plan, production intentionally keeps the current PostgreSQL/local-upload arrangement. Repository-side implementations remain preserved and must not be removed as “unused”.
 
+**2026-09-04 parked-state reconciliation:** the legacy AccessKey-based `bodysense-offhost-*` automatic timers are retired and disabled while this plan is parked. Their scripts/units remain packaged only for manual compatibility and historical rollback evidence. The supported PostgreSQL DR path is `production-postgres-dr.sh` with ECS RAM Role + private OSS. Its unit files are now bootstrap-installed idempotently, but `install-production-dr.sh` leaves all backup/status/restore timers disabled while `DR_ENABLED=false`. No real Alibaba off-host backup or restore-drill acceptance is claimed by this reconciliation.
+
 ## 2. Protected contracts
 
 - Alibaba ECS (`body.bakersean.top`) remains the sole production runtime.

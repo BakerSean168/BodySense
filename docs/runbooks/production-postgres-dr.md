@@ -3,6 +3,8 @@
 ## Scope
 
 This runbook covers `BS-PROD-012`: off-host PostgreSQL durability and restore evidence for Alibaba Cloud production.
+
+> **Current production state (2026-09-04):** the DR manager is implemented but intentionally parked. `DR_ENABLED=false`; its systemd unit files may be installed for bootstrap readiness, but backup/status/restore timers must remain disabled until the private OSS target and ECS RAM Role are provisioned and an operator explicitly activates the plan. The older `bodysense-offhost-*` AccessKey scheduler is retired and must not be re-enabled as a substitute.
 It does **not** cover durable upload/blob storage (`BS-PROD-013`).
 
 The production contract is:

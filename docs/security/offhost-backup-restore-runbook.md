@@ -1,5 +1,7 @@
 # Off-host PostgreSQL backup & restore runbook (BS-PROD-012)
 
+> **Legacy compatibility path (retired scheduler, 2026-09-04):** this runbook documents the older S3-compatible AccessKey implementation. Its `bodysense-offhost-*` timers are no longer automatically enabled in production. Keep the scripts for manual compatibility only. New production activation must use `docs/runbooks/production-postgres-dr.md` (ECS RAM Role + private OSS); while `DR_ENABLED=false`, no automatic off-host backup/status/restore job should run.
+
 Operator-owned **off-host** disaster-recovery backups: every day a custom-format
 `pg_dump` is uploaded to a private OSS/S3-compatible destination together with
 its SHA-256 and a metadata object, and a freshness check alerts if backups are
