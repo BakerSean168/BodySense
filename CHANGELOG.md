@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.12.2](https://github.com/BakerSean168/BodySense/compare/v0.12.1...v0.12.2) (2026-09-04)
+
+
+### Bug Fixes
+
+* **ops:** clear retired DR timer failures ([7a2f982](https://github.com/BakerSean168/BodySense/commit/7a2f982894c6e9bae11725d81ea5a8128716ee6b))
+* **ops:** clear retired DR timer failures ([4e2f15b](https://github.com/BakerSean168/BodySense/commit/4e2f15b66315d4676a8ffcd3b75ca1a9e79f66c3))
+
 ## [0.12.1](https://github.com/BakerSean168/BodySense/compare/v0.12.0...v0.12.1) (2026-09-04)
 
 
