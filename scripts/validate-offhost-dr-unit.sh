@@ -1561,8 +1561,9 @@ if [ $rc -ne 0 ] \
   && [ ! -e "$DLW_SYSD/bodysense-offhost-freshness.service" ] \
   && [ ! -e "$DLW_SYSD/bodysense-offhost-freshness.timer" ] \
   && grep -q 'daemon-reload' "$TMP/systemctl.log" \
-  && grep -q 'disable --now bodysense-offhost-backup.timer bodysense-offhost-freshness.timer' "$TMP/systemctl.log"; then
-  report 0 "rollback preserves legacy unit files for compatibility but never resurrects their host scheduler"
+  && grep -q 'disable --now bodysense-offhost-backup.timer bodysense-offhost-freshness.timer' "$TMP/systemctl.log" \
+  && grep -q 'reset-failed bodysense-offhost-backup.service bodysense-offhost-freshness.service bodysense-offhost-backup.timer bodysense-offhost-freshness.timer' "$TMP/systemctl.log"; then
+  report 0 "rollback preserves legacy unit files for compatibility, clears stale failure state, and never resurrects their host scheduler"
 else
   report 1 "rollback preserves legacy unit files for compatibility but never resurrects their host scheduler" "rc=$rc symds_dir=$(ls "$DLW_SYSD" 2>/dev/null | tr '\n' '|') sysctl=$(tr '\n' '|' < "$TMP/systemctl.log" 2>/dev/null)"
 fi
