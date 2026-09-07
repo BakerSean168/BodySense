@@ -1,142 +1,73 @@
 ---
 id: bodysense-fundamentals
-title: BodySense 边学边改主线
+title: BodySense Master Course
 status: active
 level: intermediate
 language: go, python, javascript, typescript, react
 created_at: 2026-07-13
-updated_at: 2026-08-22
+updated_at: 2026-09-07
 ---
 
 # Goal
 
-直接在当前 production-shaped BodySense 主仓库中学习并推进真实功能，不再维护长期分叉的 learning snapshot。
+以当前 production-shaped BodySense 主仓库作为唯一长期练习项目，系统覆盖 Full Stack Open 与 TECH SCHOOL Backend Master Class 的知识/训练目标，并补齐 BodySense 特有的 Agent engineering。
 
-稳定课程结构见：`docs/learning/00-unified-roadmap.md`。
+课程唯一入口：`docs/learning/README.md`。
 
-本文件只记录**当前 checkpoint**，避免同时维护 M1~M7、P1~P9、DX/DMR 多套学习进度编号。
+课程编号只用于定位来源与练习：
 
-# Current Checkpoint
+- `BS-FSO-*`：Full Stack Open 对应训练点；
+- `TS-*`：TECH SCHOOL lecture 对应训练点；
+- `A*`：BodySense Agent extension。
 
-**L1 · Diagnosis Production Agent 已完成（100%）。当前下一阶段：L2 · Treatment Typed Vertical Slice。**
+这些编号不是新的平行项目。Phonebook、Blog List、Simple Bank 不作为长期学习代码库。
 
-L1 已经不再只是“会用 PydanticAI 写一个 Diagnosis Agent”，而是完成了从模型调用到 production governance / runtime authority 的整条学习链：
+# Current Focus
 
-```text
-Typed Agent
-  -> LiteLLM logical routing
-  -> Immutable AgentConfiguration
-  -> Qualification / Non-Inferiority
-  -> EvidenceGap / Acquisition / Admissibility
-  -> SafetyEnvelope / DecisionAuthority
-  -> Durable Diagnosis Domain
-  -> DecisionTrace / Provenance
-  -> Historical / Counterfactual Replay
-  -> Behavioral Contract / Failure Attribution
-  -> Shadow / Canary / Promotion
-```
+**BodySense Master Course 已建立。下一步进行 placement audit，再从第一个未达到 L4（Verify）的核心训练点继续。**
 
-已经实际理解并完成知识沉淀：
+placement audit 不要求把已经真正掌握的内容重新做一遍。已有证据可以直接认定 mastery；只有“代码是 AI 写的但自己无法解释/预测/验证”的部分需要补做。
 
-- Go handler/service/repository 分层、constructor DI、DIP / composition root。
-- Python `Protocol`、Pydantic models/dataclass、PydanticAI `Agent[Deps, Output]` 与 `RunContext`。
-- ToolCall/ToolReturn、structured output、run-scoped evidence trail。
-- logical model 与 physical provider 分层；LiteLLM 独占 provider/retry/fallback mechanism。
-- immutable Agent Configuration 是 qualification/promotion unit。
-- Capability Policy：`REQUIRED / PREFERRED / OPTIONAL`。
-- Pydantic Evals dataset/slices、deterministic evaluators、paired non-inferiority、interaction effect。
-- Decision-Relevant EvidenceGap：user information / external knowledge / conflict / safety。
-- Evidence Acquisition Policy、EvidenceBudget、typed EvidenceAttempt 与 stopping reason。
-- Evidence Admissibility：`retrieved != admissible != resolved`。
-- `LLM = proposer/reasoner`、`Runtime = recorder/verifier`、`Policy = authority`。
-- SafetyEnvelope 与 deterministic Go DecisionAuthority；deny-overrides；fail closed。
-- immutable `DiagnosisAnalysis`、Candidate vs longitudinal Hypothesis、durable Evidence/Gap/Attempt。
-- `Past knowledge != current knowledge`；旧 Analysis 不被未来 BodyState 改写。
-- Observability Trace vs DecisionTrace。
-- Configuration Provenance vs Execution Provenance。
-- Historical Replay vs Counterfactual Replay vs Current Re-analysis。
-- Behavioral Contract：hard invariants / bounded semantic variation / presentation variation。
-- Production failure attribution：沿链寻找第一个 contract violation，而不是默认怪模型。
-
-统一知识入口已经整理到 Thought Forest：`BodySense Diagnosis Agent Architecture`。
-
-# Verified State on Oracle Two
-
-当前主仓库：`/home/ubuntu/projects/bodysense`。
-
-Diagnosis Agent Platform 的 North-Star 治理计划已完成并归档：
+当前建议的第一轮诊断顺序：
 
 ```text
-docs/plan/archive/2026-08-diagnosis-agent-platform/
-  diagnosis-agent-governance-eval-plan-2026-08-19.md
+BS-FSO-0.4/0.6  HTTP/SPA sequence tracing
+-> BS-FSO-2.x    server communication
+-> TS-06/07/09   transaction / lock / isolation
+-> TS-11/16      REST + DB error boundary
+-> BS-FSO-4.x    tests + auth
+-> BS-FSO-6.x    state ownership
+-> A7            streaming / interrupt / replay
 ```
 
-已落地并可从归档计划/代码验证的关键 checkpoint：
+# Prior Mastery Evidence
 
-- Diagnosis general qualification：**7/7**。
-- EvidenceGap policy suite：**5/5**。
-- v1 -> v2 -> v3 paired non-inferiority：零 critical regression。
-- typed/bounded EvidenceGap acquisition 与 `EvidenceAttempt`。
-- deterministic Go `DiagnosisDecisionPolicy` / SafetyEnvelope。
-- durable DecisionTrace、configuration/execution provenance、evidence acquisition trace。
-- frozen-input Historical Replay 与 side-effect-free Counterfactual Replay。
-- Champion -> Shadow -> Canary(5% -> 25% -> 50%) -> Promoted / Rollback governance state machine。
-- application-owned provider routing stack repository-wide retired；Diagnosis / Treatment / Assessment / Consultation 等统一进入 LiteLLM logical routing boundary。
+Diagnosis Production Agent 学习已经形成可复用的高阶证据，不因课程重构而重置：
 
-2026-08-18 建立的 AI Service 开发环境仍位于：
+- Go handler/service/repository、constructor DI、DIP / composition root；
+- Python `Protocol`、Pydantic/PydanticAI typed boundaries；
+- LiteLLM logical routing 与 provider boundary；
+- immutable Agent Configuration、qualification、non-inferiority；
+- EvidenceGap / acquisition / admissibility；
+- SafetyEnvelope / deterministic DecisionAuthority；
+- durable Diagnosis domain、DecisionTrace、provenance；
+- historical / counterfactual replay；
+- behavioral contract 与 production failure attribution；
+- shadow / canary / promotion governance。
 
-```text
-apps/ai-service/.venv
-```
-
-L1 当前完成标准已经从早期的“14 条 focused tests 通过”升级为：**能够解释并验证一个 Diagnosis Configuration 为什么有资格上线、一个具体 case 为什么有/没有资格 AUTO，以及怎样从 DecisionTrace/Replay 定位生产失败。**
-
-# Current Routing Boundary
-
-```text
-AIService / Typed Agent
-  -> BodySense logical model group
-  -> internal LiteLLM gateway
-  -> provider / retry / fallback
-```
-
-Application code no longer owns `ModelRouter`, physical provider construction, or `FallbackModel`. Diagnosis additionally pins immutable AgentConfiguration and Go DecisionAuthority before normal delivery.
-
-# Protected Contracts
-
-Diagnosis 阶段继续保护：
-
-- Go-owned BodyState 与精确 revision。
-- Go-owned durable analysis/candidate IDs。
-- Safety gate。
-- Diagnosis history persistence。
-- HTTP `diagnoses` compatibility。
-- governance。
-- Consultation LangGraph runtime。
-- Treatment 暂不提前迁移。
-
-# Remaining Estimate
-
-从 2026-08-22 checkpoint 计算，L1 Diagnosis 已完成；剩余统一路线预计：**20~32 小时**。
-
-```text
-L2 Treatment                 5~8 h
-L3 Streaming + React/TS/Go   6~10 h
-L4 Async / RAG               4~6 h
-L5 Independent Delivery      5~8 h
-```
-
-优先达到“能够独立继续推进 BodySense”的最短路径：
-
-```text
-L2 Treatment -> L5 独立纵向交付
-```
-
-预计约：**10~16 小时**。
-
-下一学习任务不是重新实现 Treatment Agent；当前仓库已经存在 typed Treatment Agent、immutable configurations、EvidenceGap challenger、qualification/evidence/promotion evals。L2 应从**阅读并验证现有 production-shaped Treatment vertical slice**开始，重点学习 proposal/action authority、contraindication/human review、durable Treatment identity 与 outcome ownership。
+这些项目将在新的 parity 课程里通过 placement exercise 认定对应 mastery level，而不是重复实现。
 
 # Session Log
+
+## 2026-09-07 · 课程体系重建为 source-parity BodySense Master Course
+
+- 退役旧 `docs/learning/00~06` topic tutorials 与第一版 `07-bodysense-open.md`，不再维护本地自创课程和外部课程两套结构。
+- 新唯一入口为 `docs/learning/README.md`。
+- Full Stack Open 采用 coverage parity：Parts 0~7 建立 `BS-FSO-*` 直接训练序列；Parts 8/9/11/12/13 做直接或比较迁移；React Native/Next.js 明确保留为 optional/compare，不静默跳过。
+- TECH SCHOOL Backend Master Class 的 backend lecture #0~#77 已逐条映射到 BodySense，使用 `DIRECT` 或 `COMPARE` 标记，避免为了课程强制引入 sqlc/PASETO/gRPC/Asynq/Kubernetes。
+- 新增 BodySense Agent extension，覆盖 typed Agent、runtime ownership、evidence、safety、eval、replay、HITL 与 failure attribution。
+- 课程原则从“复制教程项目”改为“source objective -> BodySense prediction/trace/test -> 只有真实缺口才改 production”。
+- 旧 Diagnosis 学习成果保留为 prior mastery evidence；下一步先做 placement audit，不机械从零重做已掌握内容。
 
 ## 2026-08-22 · Diagnosis 学习阶段完成与知识体系收口
 
@@ -160,5 +91,5 @@ L2 Treatment -> L5 独立纵向交付
 - 补齐开发测试需要的 dev + OCR extras。
 - 新增 `apps/ai-service/pyrightconfig.json`，让 Pyright 直接识别项目 `.venv`。
 - Diagnosis focused tests 扩展到 14 条并全部通过；Ruff clean；Pyright 0 errors。
-- 新增 `docs/learning/00-unified-roadmap.md`，从此只使用 L0~L5 一套学习阶段。
+- 当时曾新增 `docs/learning/00-unified-roadmap.md`；该旧路线已于 2026-09-07 随 Master Course 重构退役。
 - learning snapshot 完成知识迁移后计划退役；主仓库成为唯一学习与实施工作区。
