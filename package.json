@@ -50,7 +50,7 @@
     "test:static-assets": "node --test scripts/static-assets/*.test.mjs",
     "test:delivery": "node --test scripts/delivery/*.test.mjs",
     "curriculum:validate": "node scripts/learning/validate-curriculum.mjs",
-    "curriculum:status": "node scripts/learning/generate-curriculum-status.mjs && node scripts/learning/generate-prerequisite-spine.mjs",
+    "curriculum:status": "node scripts/learning/generate-curriculum-status.mjs && node scripts/learning/generate-prerequisite-spine.mjs && node scripts/learning/generate-curriculum-catalogs.mjs && node scripts/learning/generate-concept-audit.mjs",
     "curriculum:check": "pnpm curriculum:validate && pnpm curriculum:status",
     "curriculum:refresh-fso-sources": "node scripts/learning/refresh-fso-mooc-index.mjs && node scripts/learning/sync-fso-current-source.mjs && pnpm curriculum:check"
   },

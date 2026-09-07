@@ -43,6 +43,13 @@ source exists
 
 Current generated counts are in [`curriculum/views/coverage-status.md`](./curriculum/views/coverage-status.md).
 
+Browse every mapped training point without opening JSON through:
+
+- [`Full Stack Open catalog`](./curriculum/views/full-stack-open-catalog.md)
+- [`TECH SCHOOL backend catalog`](./curriculum/views/techschool-backend-catalog.md)
+- [`Agent engineering catalog`](./curriculum/views/agent-engineering-catalog.md)
+- [`Concept semantic-audit queue`](./curriculum/views/concept-audit-queue.md)
+
 ## Current source-integrity boundary
 
 As of the pinned 2026-09-07 audit:
@@ -98,7 +105,11 @@ docs/learning/
 │   │   └── bodysense-agent.json
 │   └── views/
 │       ├── coverage-status.md
-│       └── prerequisite-spine.md
+│       ├── prerequisite-spine.md
+│       ├── full-stack-open-catalog.md
+│       ├── techschool-backend-catalog.md
+│       ├── agent-engineering-catalog.md
+│       └── concept-audit-queue.md
 └── exercises/
     └── bs-*.md
 ```

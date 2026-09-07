@@ -198,6 +198,13 @@ function validateFSO() {
     if (rows.length !== count) fail(`FSO historical Part ${part}: expected ${count}, got ${rows.length}`);
   }
 
+  const activeSectionIds = new Set([...(fso.source_sections ?? []), ...(fso.current_mooc_sections ?? [])].map((item) => item.id));
+  for (const concept of fso.items.filter((item) => item.kind === 'concept')) {
+    for (const sectionId of concept.source?.section_ids ?? []) {
+      if (!activeSectionIds.has(sectionId)) fail(`${concept.id}: references unknown/inactive source section ${sectionId}`);
+    }
+  }
+
   const conceptIds = [
     'FSO-P2-CONCEPT-ASYNC-RUNTIME','FSO-P2-CONCEPT-PROMISES','FSO-P2-CONCEPT-EFFECTS',
     'FSO-P7-CONCEPT-USEMEMO','FSO-P7-CONCEPT-REACT-MEMO','FSO-P7-CONCEPT-USECALLBACK',

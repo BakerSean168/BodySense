@@ -6466,7 +6466,10 @@
         "path": "src/content/2/en/part2c.md",
         "line": 82,
         "verification": "VERIFIED_SNAPSHOT",
-        "authority": "current-site-snapshot"
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P2-SECTION-015"
+        ]
       },
       "lifecycle": "MAPPED",
       "mapping": {
@@ -6505,7 +6508,11 @@
         "path": "src/content/2/en/part2c.md",
         "line": 260,
         "verification": "VERIFIED_SNAPSHOT",
-        "authority": "current-site-snapshot"
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P2-SECTION-017",
+          "FSO-P2-SECTION-025"
+        ]
       },
       "lifecycle": "MAPPED",
       "mapping": {
@@ -6544,7 +6551,10 @@
         "path": "src/content/2/en/part2c.md",
         "line": 359,
         "verification": "VERIFIED_SNAPSHOT",
-        "authority": "current-site-snapshot"
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P2-SECTION-018"
+        ]
       },
       "lifecycle": "MAPPED",
       "mapping": {
@@ -6583,7 +6593,10 @@
         "path": "src/content/7/en/part7a.md",
         "line": 37,
         "verification": "VERIFIED_SNAPSHOT",
-        "authority": "current-site-snapshot"
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P7-SECTION-002"
+        ]
       },
       "lifecycle": "MAPPED",
       "mapping": {
@@ -6622,7 +6635,10 @@
         "path": "src/content/7/en/part7a.md",
         "line": 133,
         "verification": "VERIFIED_SNAPSHOT",
-        "authority": "current-site-snapshot"
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P7-SECTION-003"
+        ]
       },
       "lifecycle": "MAPPED",
       "mapping": {
@@ -6661,7 +6677,10 @@
         "path": "src/content/7/en/part7a.md",
         "line": 152,
         "verification": "VERIFIED_SNAPSHOT",
-        "authority": "current-site-snapshot"
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P7-SECTION-004"
+        ]
       },
       "lifecycle": "MAPPED",
       "mapping": {
@@ -6700,7 +6719,10 @@
         "path": "src/content/7/en/part7c.md",
         "line": 449,
         "verification": "VERIFIED_SNAPSHOT",
-        "authority": "current-site-snapshot"
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P7-SECTION-020"
+        ]
       },
       "lifecycle": "MAPPED",
       "mapping": {
@@ -6739,7 +6761,10 @@
         "path": "src/content/7/en/part7c.md",
         "line": 477,
         "verification": "VERIFIED_SNAPSHOT",
-        "authority": "current-site-snapshot"
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P7-SECTION-020"
+        ]
       },
       "lifecycle": "MAPPED",
       "mapping": {
@@ -6778,7 +6803,10 @@
         "path": "src/content/7/en/part7c.md",
         "line": 491,
         "verification": "VERIFIED_SNAPSHOT",
-        "authority": "current-site-snapshot"
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P7-SECTION-020"
+        ]
       },
       "lifecycle": "MAPPED",
       "mapping": {
@@ -6818,7 +6846,10 @@
         "path": "src/content/7/en/part7c.md",
         "line": 622,
         "verification": "VERIFIED_SNAPSHOT",
-        "authority": "current-site-snapshot"
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P7-SECTION-020"
+        ]
       },
       "lifecycle": "MAPPED",
       "mapping": {
