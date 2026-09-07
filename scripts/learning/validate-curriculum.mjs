@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -18,6 +19,26 @@ const lifecycleRank = new Map([
   ['LEARNER_VERIFIED', 4],
 ]);
 const allowedModes = new Set(['DIRECT', 'COMPARE', 'OPTIONAL']);
+
+function stableStringify(value) {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function sourceStateDigest(mooc) {
+  const state = {
+    schema_version: mooc.schema_version,
+    platform: mooc.platform,
+    organization: mooc.organization,
+    api_base: mooc.api_base,
+    courses: mooc.courses,
+  };
+  return crypto.createHash('sha256').update(stableStringify(state)).digest('hex');
+}
+
 const masteryRank = new Map([['L1',1],['L2',2],['L3',3],['L4',4],['L5',5]]);
 
 function allItems() {
@@ -119,15 +140,18 @@ function validateDependencyGraph() {
 }
 
 function validateFSO() {
-  const expectedCounts = {0:6,1:14,2:20,3:22,4:23,5:31,6:22,7:20,8:26,9:30,10:27,11:21};
+  const expectedCurrentCounts = {0:6,1:14,2:20,3:22,4:23,5:31,6:22,7:20,8:30,9:35,10:30,11:24,12:25,13:28,14:26};
+  const expectedHistoricalAdvancedCounts = {8:26,9:30,10:27,11:21};
   const exercises = fso.items.filter((item) => item.kind === 'exercise');
-  if (exercises.length !== 262) fail(`FSO: expected 262 indexed exercises for Parts 0-11, got ${exercises.length}`);
-  for (const [partText, count] of Object.entries(expectedCounts)) {
+  if (exercises.length !== 356) fail(`FSO: expected 356 active current-source exercise records for Parts 0-14, got ${exercises.length}`);
+
+  for (const [partText, count] of Object.entries(expectedCurrentCounts)) {
     const part = Number(partText);
     const rows = exercises.filter((item) => item.source.part === part);
-    if (rows.length !== count) fail(`FSO Part ${part}: expected ${count} exercises, got ${rows.length}`);
-    const numbers = new Set(rows.map((item) => item.source.number));
-    if (numbers.size !== rows.length) fail(`FSO Part ${part}: duplicate source numbers`);
+    if (rows.length !== count) fail(`FSO Part ${part}: expected ${count} active exercise records, got ${rows.length}`);
+    const ids = new Set(rows.map((item) => item.source.platform_exercise_id ?? item.source.number ?? item.id));
+    if (ids.size !== rows.length) fail(`FSO Part ${part}: duplicate source exercise identities`);
+
     if (part <= 7) {
       for (const item of rows) {
         if ((lifecycleRank.get(item.lifecycle) ?? 0) < lifecycleRank.get('MAPPED')) fail(`${item.id}: core Part ${part} must be at least MAPPED`);
@@ -136,17 +160,40 @@ function validateFSO() {
       }
     } else {
       for (const item of rows) {
-        if (item.source.authority !== 'historical-snapshot-current-mooc-unverified') fail(`${item.id}: Part ${part} must not claim current MOOC parity`);
+        if (item.source.authority !== 'current-mooc-api') fail(`${item.id}: Part ${part} must use current-mooc-api authority`);
+        if (item.source.verification !== 'VERIFIED_CURRENT_MOOC_API_INDEX') fail(`${item.id}: Part ${part} must record verified current MOOC API indexing`);
+        if (item.source.source_snapshot_sha256 !== fso.baseline.current_mooc?.source_state_sha256) fail(`${item.id}: Part ${part} source digest differs from current MOOC baseline`);
       }
     }
   }
-  if (fso.baseline.indexed_snapshot_commit !== '0711aef8a451c4458263e5587ccda85f08fd7a96') fail('FSO: unexpected indexed snapshot commit');
-  const boundaries = new Map(fso.items.filter((item) => item.kind === 'source_boundary').map((item) => [item.source.part, item]));
-  for (const part of [12,13,14]) {
-    const item = boundaries.get(part);
-    if (!item) fail(`FSO Part ${part}: missing current source boundary record`);
-    else if (item.source.verification !== 'UNVERIFIED_CURRENT_MOOC') fail(`FSO Part ${part}: must remain explicitly UNVERIFIED_CURRENT_MOOC until source is obtained`);
+
+  if (fso.baseline.indexed_snapshot_commit !== '0711aef8a451c4458263e5587ccda85f08fd7a96') fail('FSO: unexpected indexed core snapshot commit');
+  if (!fso.baseline.current_mooc?.source_state_sha256) fail('FSO: current MOOC source digest missing');
+
+  const moocIndexPath = path.join(ledgerDir, 'full-stack-open-current-mooc.json');
+  if (!fs.existsSync(moocIndexPath)) {
+    fail('FSO: current MOOC metadata snapshot file missing');
+  } else {
+    const mooc = JSON.parse(fs.readFileSync(moocIndexPath, 'utf8'));
+    if (mooc.source_state_sha256 !== sourceStateDigest(mooc)) fail('FSO: MOOC metadata snapshot content does not match its source_state_sha256');
+    if (mooc.source_state_sha256 !== fso.baseline.current_mooc?.source_state_sha256) fail('FSO: MOOC snapshot digest does not match ledger baseline');
+    const moocExercises = mooc.courses.flatMap((course) => course.exercises ?? []);
+    if (moocExercises.length !== 198) fail(`FSO: expected 198 current MOOC exercise records for Parts 8-14, got ${moocExercises.length}`);
+    for (const course of mooc.courses) {
+      const expected = expectedCurrentCounts[course.part];
+      if (!expected) fail(`FSO: unexpected current MOOC part ${course.part}`);
+      if ((course.exercises ?? []).length !== expected) fail(`FSO Part ${course.part}: MOOC index expected ${expected}, got ${(course.exercises ?? []).length}`);
+    }
   }
+
+  const historical = fso.historical_items ?? [];
+  if (historical.length !== 104) fail(`FSO: expected 104 archived snapshot exercises for historical Parts 8-11, got ${historical.length}`);
+  for (const [partText, count] of Object.entries(expectedHistoricalAdvancedCounts)) {
+    const part = Number(partText);
+    const rows = historical.filter((item) => item.source?.part === part && item.kind === 'exercise');
+    if (rows.length !== count) fail(`FSO historical Part ${part}: expected ${count}, got ${rows.length}`);
+  }
+
   const conceptIds = [
     'FSO-P2-CONCEPT-ASYNC-RUNTIME','FSO-P2-CONCEPT-PROMISES','FSO-P2-CONCEPT-EFFECTS',
     'FSO-P7-CONCEPT-USEMEMO','FSO-P7-CONCEPT-REACT-MEMO','FSO-P7-CONCEPT-USECALLBACK',
@@ -154,7 +201,10 @@ function validateFSO() {
   ];
   const ids = new Set(fso.items.map((item) => item.id));
   for (const id of conceptIds) if (!ids.has(id)) fail(`FSO: audited concept missing: ${id}`);
-  if (!Array.isArray(fso.source_sections) || fso.source_sections.length !== 411) fail(`FSO: expected 411 indexed section headings from snapshot, got ${fso.source_sections?.length}`);
+
+  if (!Array.isArray(fso.source_sections) || fso.source_sections.length !== 279) fail(`FSO: expected 279 active core section headings for Parts 0-7, got ${fso.source_sections?.length}`);
+  if (!Array.isArray(fso.current_mooc_sections) || fso.current_mooc_sections.length !== 385) fail(`FSO: expected 385 current MOOC section headings for Parts 8-14, got ${fso.current_mooc_sections?.length}`);
+  if (!Array.isArray(fso.historical_source_sections) || fso.historical_source_sections.length !== 132) fail(`FSO: expected 132 archived section headings for historical Parts 8-11, got ${fso.historical_source_sections?.length}`);
 }
 
 function validateTech() {

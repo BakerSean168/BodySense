@@ -30,8 +30,8 @@ updated_at: 2026-09-07
 
 ```text
 FSO Parts 0-7 numbered exercises: 158/158 MAPPED
-FSO Parts 8-11: historical snapshot indexed; current MOOC pending
-FSO Parts 12-14: current source UNVERIFIED_CURRENT_MOOC
+FSO Parts 8-14: current MOOC API source indexed (198 exercise records / 385 headings); semantic mapping pending
+FSO historical Parts 8-11: 104 exercise records archived for comparison
 TECH public lectures #0-#77: 78/78 title-level MAPPED
 Agent A1-A8: 8/8 MAPPED
 EXERCISE_READY: 27
@@ -53,8 +53,8 @@ BS-A7
 下一步优先级：
 
 1. 继续把高价值 prerequisite 节点从 `MAPPED` 提升为 `EXERCISE_READY`；
-2. 获取并固定 FSO Parts 8-14 当前 MOOC 可复现来源；
-3. 继续 semantic concept audit，而不是把 section heading 数量当成知识点完成率；
+2. 对已固定的 FSO Parts 8-14 当前 MOOC source index 做逐项 semantic mapping；
+3. 继续 semantic concept audit，而不是把 heading / exercise record 数量当成知识点完成率；
 4. 当某条依赖链已 ready 后，再对该链执行 placement audit。
 
 # Prior Mastery Evidence
@@ -82,6 +82,14 @@ Diagnosis Production Agent 学习已经形成可复用的高阶证据，不因�
 这些是历史学习/工程证据，不会自动写成新的 `LEARNER_VERIFIED`；placement 时仍需确认它们是否满足对应 exercise 的 L4/L5 acceptance contract。
 
 # Session Log
+
+## 2026-09-07 · Current FSO MOOC source integrity recovered
+
+- 通过 `courses.mooc.fi/api/v0/course-material` 公共 API 获取并固定 Full Stack Open 当前 Parts 8~14 元数据索引，不再把 Part 12/13/14 标为来源不可获取。
+- 当前 MOOC source snapshot：198 个 exercise records、385 个 headings；snapshot SHA-256 `4a8093083af985c19e04b03bf876fd148676bd6c2b65327c7628d8b20122689d`。
+- 历史 repository snapshot 的 Parts 8~11 共 104 exercise records / 132 headings 移入历史索引，只用于版本对照，不再冒充 current parity。
+- 新增可重复刷新脚本 `refresh-fso-mooc-index.mjs` + `sync-fso-current-source.mjs`；普通 curriculum check 保持离线确定性。
+- 此步骤只把 Parts 8~14 提升到 `SOURCE_INDEXED`，没有把 source availability 错算成 `MAPPED` / `EXERCISE_READY` / learner mastery。
 
 ## 2026-09-07 · Coverage ledger / executable curriculum hardening
 

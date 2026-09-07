@@ -26,11 +26,13 @@ This fixes the earlier range-only mapping. In particular, source `1.13` is expli
 
 | Part | Current status |
 |---|---|
-| 0-7 | current-site snapshot indexed + semantically mapped |
-| 8-11 | historical snapshot exercise IDs indexed; current MOOC content still unverified |
-| 12-14 | current MOOC source explicitly unverified in this environment |
+| 0-7 | pinned course-repository snapshot indexed + 158 numbered exercises semantically mapped |
+| 8-14 | current `courses.mooc.fi` public Course Material API metadata indexed: exercise IDs/titles, chapters/pages and headings; semantic mapping still pending |
+| historical 8-11 | 104 old repository-snapshot exercises archived for comparison only |
 
-Therefore this repository does **not** claim current Full Stack Open 0-14 parity yet.
+The current MOOC metadata snapshot contains **198 exercise records** across Parts 8-14 and **385 headings**. It is fingerprinted in `ledger/full-stack-open-current-mooc.json`. This resolves the earlier source-availability gap for Parts 12-14 at the **source-index** layer, but it does not by itself establish knowledge/training parity.
+
+Therefore this repository still does **not** claim Full Stack Open 0-14 semantic parity.
 
 ## Exercise numbers and concepts are different inventories
 
@@ -67,3 +69,5 @@ No production framework/library is changed merely to make the repository look li
 ## Exercise-ready reps
 
 The first FSO cards currently ready for actual L4 learning are generated/listed in [`views/coverage-status.md`](./views/coverage-status.md). More cards are promoted from `MAPPED` only after target files, failure cases and verification evidence are concrete.
+
+Current Parts 8-14 remain `SOURCE_INDEXED`: the next parity step is semantic review of their current MOOC exercise/headline inventory, then `DIRECT` / `COMPARE` / `OPTIONAL` mapping. Historical Part 8-11 mappings are not silently reused as proof that the new MOOC versions are equivalent.

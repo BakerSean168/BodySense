@@ -48,8 +48,8 @@ Current generated counts are in [`curriculum/views/coverage-status.md`](./curric
 As of the pinned 2026-09-07 audit:
 
 - Full Stack Open Parts **0-7**: 158 numbered source exercises are individually indexed and semantically mapped to BodySense.
-- Full Stack Open Parts **8-11**: 104 numbered exercises are indexed from the pinned historical repository snapshot, but current MOOC-platform parity is still unverified.
-- Full Stack Open Parts **12-14**: current MOOC source is explicitly `UNVERIFIED_CURRENT_MOOC`; no 100% claim is allowed until a reproducible source is obtained.
+- Full Stack Open Parts **8-14**: the public `courses.mooc.fi` Course Material API has been indexed into a metadata-only snapshot: **198 current exercise records and 385 current section headings**. These are source-integrity records, not yet semantic mappings.
+- The former repository-snapshot records for Parts **8-11** are retained as **104 historical exercises** for comparison and are not counted as current parity.
 - TECH SCHOOL Backend #0-#77: 78/78 public README lecture IDs/titles are pinned and mapped. This is **public title-level parity only**, not a claim that paid/video-internal teaching semantics were audited.
 - FSO concept coverage is tracked separately from numbered exercises. Source section headings are indexed and high-risk previously-missed concepts (Promises/Effects, memoization, XSS/injection, dependency security, access control) now have explicit records; exhaustive paragraph-level semantic parity is not yet claimed.
 
@@ -93,6 +93,7 @@ docs/learning/
 │   ├── ledger/
 │   │   ├── schema-v1.json
 │   │   ├── full-stack-open.json
+│   │   ├── full-stack-open-current-mooc.json
 │   │   ├── techschool-backend.json
 │   │   └── bodysense-agent.json
 │   └── views/
@@ -104,6 +105,14 @@ docs/learning/
 
 The JSON ledgers are canonical for source IDs, mapping state, exercise readiness and mastery evidence. Markdown parity files are human-readable views/policy notes and must not invent counts that disagree with the ledgers. Prerequisite edges become authoritative only when `dependency_audit` is `REVIEWED`; unready mappings explicitly keep their dependency graph unmodeled instead of treating source order as proof of prerequisite semantics.
 
+Current advanced FSO source metadata can be refreshed explicitly with:
+
+```bash
+pnpm curriculum:refresh-fso-sources
+```
+
+This is intentionally **not** part of ordinary `curriculum:check`, so validation remains deterministic/offline against the committed source snapshot.
+
 ## Current execution order
 
 Do **not** jump directly to Treatment or placement merely because an old roadmap named it next.
@@ -112,7 +121,7 @@ The current order is:
 
 ```text
 1. Source integrity / source gaps
-2. Source -> BodySense mapping
+2. Source -> BodySense semantic mapping (current advanced MOOC Parts 8-14 are the largest remaining mapping gap)
 3. Make the prerequisite slice EXERCISE_READY
 4. Placement audit on that ready slice
 5. Start from the first prerequisite gap below L4
