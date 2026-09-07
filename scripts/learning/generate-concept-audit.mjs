@@ -3,45 +3,47 @@ import path from 'node:path';
 import process from 'node:process';
 
 const root = process.cwd();
-const ledger = JSON.parse(fs.readFileSync(path.join(root, 'docs/learning/curriculum/ledger/full-stack-open.json'), 'utf8'));
+const ledgerDir = path.join(root, 'docs/learning/curriculum/ledger');
+const ledger = JSON.parse(fs.readFileSync(path.join(ledgerDir, 'full-stack-open.json'), 'utf8'));
+const audit = JSON.parse(fs.readFileSync(path.join(ledgerDir, 'full-stack-open-concept-audit.json'), 'utf8'));
 const out = path.join(root, 'docs/learning/curriculum/views/concept-audit-queue.md');
-
 const activeSections = [...(ledger.source_sections ?? []), ...(ledger.current_mooc_sections ?? [])];
-const concepts = ledger.items.filter((item) => item.kind === 'concept');
-const conceptsBySection = new Map();
-for (const concept of concepts) {
-  for (const sectionId of concept.source?.section_ids ?? []) {
-    const list = conceptsBySection.get(sectionId) ?? [];
-    list.push(concept);
-    conceptsBySection.set(sectionId, list);
-  }
-}
+const sectionById = new Map(activeSections.map((item) => [item.id, item]));
+const auditById = new Map(audit.sections.map((item) => [item.section_id, item]));
+
+const counts = {};
+for (const row of audit.sections) counts[row.status] = (counts[row.status] ?? 0) + 1;
+const disposed = audit.sections.length - (counts.PENDING ?? 0);
 
 const lines = [
   '# Full Stack Open concept semantic-audit queue',
   '',
-  '> Generated from the active source-section inventory and explicit concept records.',
-  '> A section heading is a review unit, not proof that every paragraph-level concept is covered. `REVIEWED` below only means the section has at least one explicit semantic concept record linked to it.',
+  '> Generated from `ledger/full-stack-open-concept-audit.json` and the active source-section inventory.',
+  '> A section heading is a review unit, not proof that every paragraph-level concept is covered.',
   '',
-  `Active section-heading review units: **${activeSections.length}**.`,
-  `Sections with at least one explicit semantic concept record: **${[...conceptsBySection.keys()].length}**.`,
-  `Pending section review units: **${activeSections.length - conceptsBySection.size}**.`,
+  `Active section-heading review units: **${audit.sections.length}**.`,
+  `Semantically dispositioned section units: **${disposed}**.`,
+  `- concepts mapped: **${counts.REVIEWED_CONCEPTS_MAPPED ?? 0}**`,
+  `- reviewed non-engineering/course logistics: **${counts.REVIEWED_NON_ENGINEERING ?? 0}**`,
+  `- reviewed redundant: **${counts.REVIEWED_REDUNDANT ?? 0}**`,
+  `- pending: **${counts.PENDING ?? 0}**`,
   '',
 ];
 
 for (let part = 0; part <= 14; part++) {
-  const sections = activeSections.filter((item) => item.source?.part === part);
-  if (!sections.length) continue;
-  const reviewed = sections.filter((section) => conceptsBySection.has(section.id));
-  lines.push(`## Part ${part} — ${reviewed.length}/${sections.length} section units linked to explicit concepts`, '');
-  lines.push('| Section source | Heading | Semantic audit | Explicit concept records |');
+  const rows = audit.sections.filter((item) => item.part === part);
+  if (!rows.length) continue;
+  const partDisposed = rows.filter((item) => item.status !== 'PENDING').length;
+  lines.push(`## Part ${part} — ${partDisposed}/${rows.length} section units dispositioned`, '');
+  lines.push('| Section source | Heading | Semantic disposition | Explicit concept records |');
   lines.push('|---|---|---|---|');
-  for (const section of sections) {
-    const refs = conceptsBySection.get(section.id) ?? [];
-    const sourceLoc = section.source.path
-      ? `${section.source.path}:${section.source.line}`
-      : `${section.source.page_path ?? 'MOOC page'}${section.source.heading_level ? ` · h${section.source.heading_level}` : ''}`;
-    lines.push(`| \`${section.id}\` · ${sourceLoc.replaceAll('|', '\\|')} | ${String(section.source.title ?? '').replaceAll('|', '\\|')} | ${refs.length ? 'REVIEWED' : 'PENDING'} | ${refs.length ? refs.map((item) => `\`${item.id}\``).join(', ') : '—'} |`);
+  for (const row of rows) {
+    const section = sectionById.get(row.section_id);
+    const source = section?.source ?? {};
+    const sourceLoc = source.path
+      ? `${source.path}:${source.line}`
+      : `${source.page_path ?? 'MOOC page'}${source.heading_level ? ` · h${source.heading_level}` : ''}`;
+    lines.push(`| \`${row.section_id}\` · ${String(sourceLoc).replaceAll('|', '\\|')} | ${String(row.title ?? source.title ?? '').replaceAll('|', '\\|')} | ${row.status} | ${row.linked_concept_ids.length ? row.linked_concept_ids.map((id) => `\`${id}\``).join(', ') : '—'} |`);
   }
   lines.push('');
 }
@@ -49,9 +51,12 @@ for (let part = 0; part <= 14; part++) {
 lines.push(
   '## Promotion rule',
   '',
-  'A heading moves out of this queue only after the section has been read semantically and any reusable engineering concepts are represented by one or more explicit `kind: concept` ledger records with BodySense mapping. Administrative/submission-only headings can instead receive an explicit reviewed-no-concept disposition in a future concept-audit ledger; they must not disappear silently.',
+  '- `REVIEWED_CONCEPTS_MAPPED`: the section was read semantically and reusable engineering concepts are represented by explicit mapped `kind: concept` records.',
+  '- `REVIEWED_NON_ENGINEERING`: course administration/study logistics were inspected and retained explicitly but do not become BodySense engineering material.',
+  '- `REVIEWED_REDUNDANT`: semantics are intentionally covered by explicit concept records attached elsewhere; the audit note must explain the relationship.',
+  '- `PENDING`: no semantic coverage claim.',
   '',
-  'Even after every heading is dispositioned, complete prose-level parity still requires a final audit that checks for important concepts taught inside a section without their own heading.',
+  'Even after every heading is dispositioned, a final prose-level audit is still required to catch important concepts taught inside a section without a dedicated heading.',
 );
 
 fs.writeFileSync(out, `${lines.join('\n').trimEnd()}\n`);

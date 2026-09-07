@@ -30,7 +30,8 @@ updated_at: 2026-09-07
 
 ```text
 FSO Parts 0-7 numbered exercises: 158/158 MAPPED
-FSO Parts 8-14: current MOOC API source indexed; 198/198 exercise records MAPPED; 385 section headings still require concept-level semantic audit
+FSO Parts 8-14: current MOOC API source indexed; 198/198 exercise records MAPPED
+FSO concept audit: Parts 0-2 = 99/99 section units dispositioned; Parts 3-14 pending; final prose-level audit remains separate
 FSO historical Parts 8-11: 104 exercise records archived for comparison
 TECH public lectures #0-#77: 78/78 title-level MAPPED
 Agent A1-A8: 8/8 MAPPED
@@ -82,6 +83,14 @@ Diagnosis Production Agent 学习已经形成可复用的高阶证据，不因�
 这些是历史学习/工程证据，不会自动写成新的 `LEARNER_VERIFIED`；placement 时仍需确认它们是否满足对应 exercise 的 L4/L5 acceptance contract。
 
 # Session Log
+
+## 2026-09-07 · FSO Parts 0~2 section-level concept audit complete
+
+- 新增 `full-stack-open-concept-audit.json`，为当前 664 个 active source-section headings 建立独立 disposition 状态：`PENDING / REVIEWED_CONCEPTS_MAPPED / REVIEWED_NON_ENGINEERING / REVIEWED_REDUNDANT`。
+- Part 0：33/33 section units dispositioned；14 个 Web 基础 concept records（HTTP GET、browser runtime、DOM、form POST、AJAX、SPA、full-stack boundary 等）+ 19 个 course-logistics 明确标为 non-engineering。
+- Part 1：37/37 dispositioned；React component/JS/state/event/hook/debugging/AI coding verification 等 31 个新增 concept records，参考资料章节显式标为 non-engineering。
+- Part 2：29/29 dispositioned；collections/keys/modules/controlled form/npm/dev runtime/REST/server mutation/error feedback/initial async loading 等 20 个新增 concept records；重复的 arrays/event/debugging 语义显式链接到前序 concepts，而不是复制或静默忽略。
+- 当前 active section audit 总状态：99 个 P0~2 单元已处理；其余 Parts 3~14 继续排队。即使全部 headings 完成，仍需最终 prose-level audit 才能宣称完整 knowledge parity。
 
 ## 2026-09-07 · Current FSO Parts 8~14 exercise semantic mapping complete
 

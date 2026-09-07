@@ -17249,6 +17249,2756 @@
         "current": null,
         "evidence": []
       }
+    },
+    {
+      "id": "FSO-P0-CONCEPT-HTTP-GET",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "title": "HTTP GET request/response lifecycle",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0b.md",
+        "line": 32,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P0-SECTION-020"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P0-CONCEPT-HTTP-GET",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "HTTP GET request/response lifecycle",
+        "target_files": [
+          "apps/web/src/lib/api-client.ts",
+          "apps/api/cmd/server/main.go"
+        ],
+        "task_summary": "Trace one BodySense GET from browser URL/request headers through Go routing to response status/body and explain what HTTP does versus what application semantics add.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/browser trace",
+          "failure/ownership prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P0-CONCEPT-TRADITIONAL-WEB",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "title": "traditional server-rendered page request model",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0b.md",
+        "line": 79,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P0-SECTION-021"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-P0-CONCEPT-TRADITIONAL-WEB",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "traditional server-rendered page request model",
+        "target_files": [
+          "apps/web/src/main.tsx",
+          "apps/api/cmd/server/main.go"
+        ],
+        "task_summary": "Compare a traditional server-rendered full-page request with BodySense’s client-side React shell plus API calls; identify document navigation, HTML generation and state-lifetime differences.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/browser trace",
+          "failure/ownership prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P0-CONCEPT-BROWSER-RUNTIME",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "title": "browser JavaScript runtime and client-side application logic",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0b.md",
+        "line": 123,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P0-SECTION-022"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P0-CONCEPT-BROWSER-RUNTIME",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "browser JavaScript runtime and client-side application logic",
+        "target_files": [
+          "apps/web/src/main.tsx",
+          "apps/web/src/App.tsx"
+        ],
+        "task_summary": "Identify which BodySense logic executes in the browser, what runtime APIs it relies on, and what cannot be trusted as durable/server authority.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/browser trace",
+          "failure/ownership prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P0-CONCEPT-EVENT-CALLBACKS",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "title": "event handlers and callback functions",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0b.md",
+        "line": 246,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P0-SECTION-023"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P0-CONCEPT-EVENT-CALLBACKS",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "event handlers and callback functions",
+        "target_files": [
+          "apps/web/src/features/auth/components/LoginForm.tsx",
+          "apps/web/src/features/consultation"
+        ],
+        "task_summary": "Trace a user event into a React callback and onward into state/mutation logic; explain function values, callback timing and why handlers are passed rather than invoked during render.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/browser trace",
+          "failure/ownership prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P0-CONCEPT-DOM",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "title": "DOM as the browser’s object model for the document",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0b.md",
+        "line": 279,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P0-SECTION-024"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P0-CONCEPT-DOM",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "DOM as the browser’s object model for the document",
+        "target_files": [
+          "apps/web/src/main.tsx",
+          "apps/web/src/App.tsx"
+        ],
+        "task_summary": "Correlate BodySense JSX/component output with the resulting DOM tree and distinguish React’s render model from the browser DOM that accessibility/layout/event systems actually consume.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/browser trace",
+          "failure/ownership prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P0-CONCEPT-DOM-CONSOLE",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "title": "direct DOM inspection/manipulation from browser developer tools",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0b.md",
+        "line": 330,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P0-SECTION-025"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P0-CONCEPT-DOM-CONSOLE",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "direct DOM inspection/manipulation from browser developer tools",
+        "target_files": [
+          "apps/web/src/main.tsx",
+          "apps/web/src/index.css"
+        ],
+        "task_summary": "Use DevTools to inspect and temporarily mutate one BodySense DOM node, then explain why that mutation is diagnostic/ephemeral and will not become React or server state.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/browser trace",
+          "failure/ownership prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P0-CONCEPT-CSS",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "title": "CSS cascade/style application and visual presentation ownership",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0b.md",
+        "line": 361,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P0-SECTION-026"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P0-CONCEPT-CSS",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "CSS cascade/style application and visual presentation ownership",
+        "target_files": [
+          "apps/web/src/index.css",
+          "apps/web/src/components"
+        ],
+        "task_summary": "Trace one rendered style from class/global CSS/component choice to computed browser styles; distinguish presentation from semantics and application state.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/browser trace",
+          "failure/ownership prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P0-CONCEPT-PAGE-JS-LOAD",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "title": "HTML/JavaScript asset loading and execution order",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0b.md",
+        "line": 404,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P0-SECTION-027"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P0-CONCEPT-PAGE-JS-LOAD",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "HTML/JavaScript asset loading and execution order",
+        "target_files": [
+          "apps/web/index.html",
+          "apps/web/src/main.tsx",
+          "vite.config.ts"
+        ],
+        "task_summary": "Trace how the BodySense web entry document loads the Vite-built JavaScript entry and when React mounts relative to initial document parsing and subsequent API requests.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/browser trace",
+          "failure/ownership prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P0-CONCEPT-FORM-POST",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "title": "HTML form submission and HTTP POST semantics",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0b.md",
+        "line": 416,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P0-SECTION-028"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P0-CONCEPT-FORM-POST",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "HTML form submission and HTTP POST semantics",
+        "target_files": [
+          "apps/web/src/features/auth/components/LoginForm.tsx",
+          "apps/web/src/features/auth/services/authService.ts",
+          "apps/api/internal/handler/auth_handler.go"
+        ],
+        "task_summary": "Compare native form submission with BodySense controlled React submission, then trace the resulting POST payload/status/error boundary.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/browser trace",
+          "failure/ownership prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P0-CONCEPT-AJAX",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "title": "asynchronous browser-server communication without full-page navigation",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0b.md",
+        "line": 475,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P0-SECTION-029"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P0-CONCEPT-AJAX",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "asynchronous browser-server communication without full-page navigation",
+        "target_files": [
+          "apps/web/src/lib/api-client.ts",
+          "apps/web/src/features/workspace/api/workspaceApi.ts"
+        ],
+        "task_summary": "Trace an asynchronous BodySense fetch that updates only the client projection; explain the historical AJAX idea in modern Fetch/Promise terms.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/browser trace",
+          "failure/ownership prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P0-CONCEPT-SPA",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "title": "single-page application navigation and incremental server communication",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0b.md",
+        "line": 491,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P0-SECTION-030"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P0-CONCEPT-SPA",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "single-page application navigation and incremental server communication",
+        "target_files": [
+          "apps/web/src/App.tsx",
+          "apps/web/src/features/consultation/pages/ConsultationPage.tsx"
+        ],
+        "task_summary": "Trace a BodySense route transition and subsequent data fetches without a full document reload; identify URL identity, component lifecycle and server-state hydration.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/browser trace",
+          "failure/ownership prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P0-CONCEPT-JS-LIBRARIES",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "title": "role of JavaScript libraries/frameworks in browser application architecture",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0b.md",
+        "line": 572,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P0-SECTION-031"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-P0-CONCEPT-JS-LIBRARIES",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "role of JavaScript libraries/frameworks in browser application architecture",
+        "target_files": [
+          "package.json",
+          "apps/web/package.json",
+          "apps/web/src/App.tsx"
+        ],
+        "task_summary": "Classify the major BodySense web libraries by problem solved (rendering, routing, server cache, client state, styling, testing) and explain why library choice does not transfer ownership of durable domain truth.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/browser trace",
+          "failure/ownership prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P0-CONCEPT-FULLSTACK",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "title": "full-stack boundaries from browser through server and database",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0b.md",
+        "line": 589,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P0-SECTION-032"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P0-CONCEPT-FULLSTACK",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "full-stack boundaries from browser through server and database",
+        "target_files": [
+          "docs/architecture/technical-approach.md",
+          "apps/web/src",
+          "apps/api",
+          "apps/ai-service"
+        ],
+        "task_summary": "Draw the BodySense browser -> Go -> PostgreSQL/Redis/Python Agent -> browser path and assign state/authority ownership to each boundary.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/browser trace",
+          "failure/ownership prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P0-CONCEPT-JS-FATIGUE",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "title": "JavaScript ecosystem/tooling churn and abstraction cost",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0b.md",
+        "line": 603,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P0-SECTION-033"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-P0-CONCEPT-JS-FATIGUE",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "JavaScript ecosystem/tooling churn and abstraction cost",
+        "target_files": [
+          "package.json",
+          "pnpm-lock.yaml",
+          "AGENT.md"
+        ],
+        "task_summary": "Use BodySense’s pinned toolchain to discuss dependency churn, lockfiles, upgrade policy and the trade-off between adopting new libraries and preserving stable engineering boundaries.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/browser trace",
+          "failure/ownership prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-COMPONENT",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "React function components as reusable UI units",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1a.md",
+        "line": 75,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-001"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-COMPONENT",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "React function components as reusable UI units",
+        "target_files": [
+          "apps/web/src/components",
+          "apps/web/src/features/workspace/components"
+        ],
+        "task_summary": "Decompose one BodySense UI surface into component responsibilities and explain the boundary between component rendering and domain/server ownership.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-JSX",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "JSX as JavaScript expressions describing UI",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1a.md",
+        "line": 208,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-002"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-JSX",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "JSX as JavaScript expressions describing UI",
+        "target_files": [
+          "apps/web/src/App.tsx",
+          "apps/web/src/features/workspace/components"
+        ],
+        "task_summary": "Trace one JSX tree to the values/expressions it evaluates and the DOM it produces; distinguish JSX syntax from HTML and from runtime DOM nodes.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-COMPOSITION",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "component composition and multiple cooperating components",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1a.md",
+        "line": 250,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-003"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-COMPOSITION",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "component composition and multiple cooperating components",
+        "target_files": [
+          "apps/web/src/features/consultation/pages/ConsultationPage.tsx",
+          "apps/web/src/features/workspace"
+        ],
+        "task_summary": "Map a BodySense page into parent/child components and identify which data or behavior should cross each boundary.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-PROPS",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "props as immutable component inputs",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1a.md",
+        "line": 298,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-004"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-PROPS",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "props as immutable component inputs",
+        "target_files": [
+          "apps/web/src/components",
+          "apps/web/src/features/workspace/components"
+        ],
+        "task_summary": "Choose one reusable BodySense component and trace each prop from parent expression to child use, including TypeScript inference/contract and why the child does not own the input.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-LINT-DIAGNOSTICS",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "framework/linter diagnostics versus runtime failures",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1a.md",
+        "line": 370,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-005"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-LINT-DIAGNOSTICS",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "framework/linter diagnostics versus runtime failures",
+        "target_files": [
+          "eslint.config.js",
+          "apps/web/src"
+        ],
+        "task_summary": "Take one lint/type/runtime diagnostic from the BodySense web stack and classify which tool produced it, whether it blocks execution, and whether suppression or root-cause repair is appropriate.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-REACT-CONVENTIONS",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "React component naming, single-root/Fragment rules and small-step feedback",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1a.md",
+        "line": 416,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-006"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-REACT-CONVENTIONS",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "React component naming, single-root/Fragment rules and small-step feedback",
+        "target_files": [
+          "apps/web/src/App.tsx",
+          "apps/web/src/components"
+        ],
+        "task_summary": "Explain why custom component names are capitalized, how Fragments satisfy root structure without extra DOM, and verify one rule in the current React toolchain.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-RENDERABLE-VALUES",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "React renderable values versus arbitrary objects",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1a.md",
+        "line": 504,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-007"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-RENDERABLE-VALUES",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "React renderable values versus arbitrary objects",
+        "target_files": [
+          "apps/web/src/features/workspace/components",
+          "apps/web/src/features/consultation/components"
+        ],
+        "task_summary": "Find a structured BodySense object and show how its fields are converted into renderable UI rather than rendering the object itself; predict the failure for an invalid React child.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-JS-VARIABLES",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "JavaScript variable bindings and const/let semantics",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1b.md",
+        "line": 28,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-008"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-JS-VARIABLES",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "JavaScript variable bindings and const/let semantics",
+        "target_files": [
+          "apps/web/src",
+          "packages/contracts/src"
+        ],
+        "task_summary": "Classify representative BodySense bindings as immutable bindings, reassigned local state, or mutable object references and explain why const does not make nested objects immutable.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-JS-ARRAYS",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "JavaScript arrays and non-mutating collection transformations",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1b.md",
+        "line": 51,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-009",
+          "FSO-P2-SECTION-003"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-JS-ARRAYS",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "JavaScript arrays and non-mutating collection transformations",
+        "target_files": [
+          "apps/web/src/features/workspace/model/workspaceSelectors.ts",
+          "apps/web/src/features/consultation/runtime/activeTurnReducer.ts"
+        ],
+        "task_summary": "Trace map/filter/reduce/spread usage on a BodySense collection and identify where mutation would break React/state assumptions.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-JS-OBJECTS",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "JavaScript object literals, property access and immutable copying",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1b.md",
+        "line": 127,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-010"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-JS-OBJECTS",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "JavaScript object literals, property access and immutable copying",
+        "target_files": [
+          "apps/web/src/features/consultation/runtime/activeTurnReducer.ts",
+          "apps/web/src/features/body-explorer/model/bodyExplorerStore.ts"
+        ],
+        "task_summary": "Trace an object spread/update in BodySense and explain own properties, nested references, and the difference between shallow copy and deep immutability.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-JS-FUNCTIONS",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "JavaScript function values, declarations and arrow functions",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1b.md",
+        "line": 177,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-011"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-JS-FUNCTIONS",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "JavaScript function values, declarations and arrow functions",
+        "target_files": [
+          "apps/web/src/features/consultation/hooks",
+          "apps/web/src/features/workspace/hooks"
+        ],
+        "task_summary": "Identify functions passed as values, callbacks and closures in one BodySense hook and explain call time versus definition time.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-THIS",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "JavaScript this binding and method-call context",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1b.md",
+        "line": 380,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-012"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-P1-CONCEPT-THIS",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "JavaScript this binding and method-call context",
+        "target_files": [
+          "apps/web/src",
+          "scripts"
+        ],
+        "task_summary": "Use a small BodySense-domain example to compare ordinary method `this`, extracted method calls and arrow-function lexical `this`; explain why modern functional React largely avoids this class of component bug.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-CLASSES-LEGACY",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "JavaScript classes/prototypes and legacy React class components",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1b.md",
+        "line": 491,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-013",
+          "FSO-P1-SECTION-028"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-P1-CONCEPT-CLASSES-LEGACY",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "JavaScript classes/prototypes and legacy React class components",
+        "target_files": [
+          "apps/web/src",
+          "docs/learning"
+        ],
+        "task_summary": "Read a minimal legacy class-component pattern and translate its state/lifecycle concerns to current function components/hooks without introducing class components into BodySense.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-COMPONENT-HELPERS",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "component-local helper functions and closure over render values",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1c.md",
+        "line": 39,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-015"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-COMPONENT-HELPERS",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "component-local helper functions and closure over render values",
+        "target_files": [
+          "apps/web/src/features/workspace/components",
+          "apps/web/src/features/consultation/components"
+        ],
+        "task_summary": "Trace a helper defined inside a BodySense component, list the render-snapshot values it closes over, and decide whether it belongs inside the component, a hook, or a pure module.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-DESTRUCTURING",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "object/array destructuring for explicit data selection",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1c.md",
+        "line": 69,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-016"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-DESTRUCTURING",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "object/array destructuring for explicit data selection",
+        "target_files": [
+          "apps/web/src",
+          "packages/contracts/src"
+        ],
+        "task_summary": "Trace destructured props/query results/state in BodySense and rewrite one mentally to equivalent property access to prove the semantics rather than treating destructuring as magic.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-RENDER-CYCLE",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "React render snapshots and state-triggered rerendering",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1c.md",
+        "line": 177,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-017",
+          "FSO-P1-SECTION-022"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-RENDER-CYCLE",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "React render snapshots and state-triggered rerendering",
+        "target_files": [
+          "apps/web/src/features/consultation/runtime/ActiveTurnProvider.tsx",
+          "apps/web/src/features/workspace/components"
+        ],
+        "task_summary": "Choose one state update and predict which component function runs again, which values belong to the old snapshot, and why rerender is not equivalent to remount.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-USESTATE",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "useState as component-local memory across renders",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1c.md",
+        "line": 249,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-018"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-USESTATE",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "useState as component-local memory across renders",
+        "target_files": [
+          "apps/web/src/features/auth/components/LoginForm.tsx",
+          "apps/web/src/features/workspace/components"
+        ],
+        "task_summary": "Trace one BodySense local state tuple from initialization through setter to rerender and justify why it is local state rather than URL/server/Zustand state.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-EVENT-HANDLING",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "React event handling from user action to state transition",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1c.md",
+        "line": 371,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-019",
+          "FSO-P2-SECTION-004"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-EVENT-HANDLING",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "React event handling from user action to state transition",
+        "target_files": [
+          "apps/web/src/features/auth/components/LoginForm.tsx",
+          "apps/web/src/features/consultation/components"
+        ],
+        "task_summary": "Trace one click/change/submit event through its handler and resulting state/mutation, including event object use and side-effect boundary.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-HANDLER-REFERENCE",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "event handler function references versus function calls during render",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1c.md",
+        "line": 459,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-020",
+          "FSO-P1-SECTION-031"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-HANDLER-REFERENCE",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "event handler function references versus function calls during render",
+        "target_files": [
+          "apps/web/src/features/auth/components/LoginForm.tsx",
+          "apps/web/src/features/consultation/components"
+        ],
+        "task_summary": "Find handlers passed as references or arrow closures and explain why passing a call result can execute during render, cause invalid handler types, or create rerender loops.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-STATE-PROP-OWNERSHIP",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "lifting/owning state and passing state down through props",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1c.md",
+        "line": 538,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-021"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-STATE-PROP-OWNERSHIP",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "lifting/owning state and passing state down through props",
+        "target_files": [
+          "apps/web/src/features/consultation/context",
+          "apps/web/src/features/workspace"
+        ],
+        "task_summary": "Pick state consumed by multiple BodySense children, identify its actual owner, and explain why children receive values/actions rather than duplicate the state.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-COMPONENT-REFACTOR",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "behavior-preserving component refactoring",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1c.md",
+        "line": 689,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-023"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-COMPONENT-REFACTOR",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "behavior-preserving component refactoring",
+        "target_files": [
+          "apps/web/src/features/workspace",
+          "apps/web/src/features/consultation"
+        ],
+        "task_summary": "Take one existing component boundary and explain a possible extraction based on responsibility/reuse; require behavior tests before structural change rather than refactoring for exercise aesthetics.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-COMPLEX-STATE",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "multiple state values versus one structured state object",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1d.md",
+        "line": 10,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-024"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-COMPLEX-STATE",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "multiple state values versus one structured state object",
+        "target_files": [
+          "apps/web/src/features/consultation/runtime/activeTurnReducer.ts",
+          "apps/web/src/features/body-explorer/model/bodyExplorerStore.ts"
+        ],
+        "task_summary": "Compare independent state variables with structured/reducer state in BodySense and identify when fields change atomically versus independently.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-IMMUTABLE-ARRAY-STATE",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "immutable updates of array-backed React state",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1d.md",
+        "line": 164,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-025"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-IMMUTABLE-ARRAY-STATE",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "immutable updates of array-backed React state",
+        "target_files": [
+          "apps/web/src/features/consultation/runtime/activeTurnReducer.ts",
+          "apps/web/src/features/body-explorer/model/bodyExplorerStore.ts"
+        ],
+        "task_summary": "Trace an append/update/filter of collection state and predict how in-place mutation could defeat change detection or corrupt prior snapshots.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-ASYNC-STATE-UPDATES",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "queued/asynchronous React state updates and stale snapshot reads",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1d.md",
+        "line": 249,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-026"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-ASYNC-STATE-UPDATES",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "queued/asynchronous React state updates and stale snapshot reads",
+        "target_files": [
+          "apps/web/src/features/consultation",
+          "apps/web/src/features/workspace"
+        ],
+        "task_summary": "Find or construct a BodySense local-state update where reading state immediately after setting it would still observe the current render snapshot; explain when functional updates are required.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-CONDITIONAL-RENDER",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "conditional rendering from explicit UI state",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1d.md",
+        "line": 355,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-027"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-CONDITIONAL-RENDER",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "conditional rendering from explicit UI state",
+        "target_files": [
+          "apps/web/src/features/workspace/components",
+          "apps/web/src/features/consultation/components"
+        ],
+        "task_summary": "Trace loading/empty/error/capability conditional branches in a BodySense component and explain how impossible/ambiguous UI states are avoided.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-DEBUGGING-DISCIPLINE",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "small-step debugging with console/devtools and working checkpoints",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1a.md",
+        "line": 416,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-006",
+          "FSO-P1-SECTION-029",
+          "FSO-P1-SECTION-036",
+          "FSO-P2-SECTION-010",
+          "FSO-P2-SECTION-011",
+          "FSO-P2-SECTION-026"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-DEBUGGING-DISCIPLINE",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "small-step debugging with console/devtools and working checkpoints",
+        "target_files": [
+          "docs/ai-development-workflow.md",
+          "AGENT.md",
+          "apps/web/src"
+        ],
+        "task_summary": "Reproduce one harmless frontend defect, inspect the first concrete browser/type/test signal, revert/isolate until the boundary is understood, and explain why adding more code before diagnosis increases uncertainty.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-HOOK-RULES",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "Rules of Hooks and stable hook call order",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1d.md",
+        "line": 571,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-030"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-HOOK-RULES",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "Rules of Hooks and stable hook call order",
+        "target_files": [
+          "apps/web/src/features/consultation/hooks",
+          "apps/web/src/features/workspace/hooks"
+        ],
+        "task_summary": "Review one custom BodySense hook and explain why hooks are called unconditionally at component/hook top level; create a tiny invalid example only in a test/scratch context if needed.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-HIGHER-ORDER-FUNCTION",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "functions that return functions and closure-based handler factories",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1d.md",
+        "line": 756,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-032"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-HIGHER-ORDER-FUNCTION",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "functions that return functions and closure-based handler factories",
+        "target_files": [
+          "apps/web/src/features/consultation/hooks",
+          "apps/web/src/features/workspace/hooks"
+        ],
+        "task_summary": "Find or construct a BodySense-domain handler factory and compare it with an inline arrow closure; explain captured arguments and when the abstraction helps or obscures code.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-HANDLER-PROP",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "passing event handlers to child components as behavior props",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1d.md",
+        "line": 1019,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-033"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-HANDLER-PROP",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "passing event handlers to child components as behavior props",
+        "target_files": [
+          "apps/web/src/components",
+          "apps/web/src/features/workspace/components"
+        ],
+        "task_summary": "Trace one callback prop from parent to child invocation and explain who owns the action, how TypeScript types the callback, and why the child should not duplicate the parent business state.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-NESTED-COMPONENT-DEFINITION",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "component identity and why component definitions should not be recreated inside renders",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1d.md",
+        "line": 1051,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-034"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-NESTED-COMPONENT-DEFINITION",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "component identity and why component definitions should not be recreated inside renders",
+        "target_files": [
+          "apps/web/src/features/workspace/components",
+          "apps/web/src/features/consultation/components"
+        ],
+        "task_summary": "Explain how defining a component type inside another component changes identity each render and can reset child state; verify current BodySense components avoid this pattern.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P1-CONCEPT-AI-CODING-VERIFICATION",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 1,
+        "title": "responsible use of LLM coding tools: hallucination, context limits and human verification",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/1/en/part1d.md",
+        "line": 1138,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P1-SECTION-037"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P1-CONCEPT-AI-CODING-VERIFICATION",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "responsible use of LLM coding tools: hallucination, context limits and human verification",
+        "target_files": [
+          "AGENT.md",
+          "docs/ai-development-workflow.md",
+          ".practice-map/maps/bodysense-fundamentals.md"
+        ],
+        "task_summary": "Compare the source warning about AI-generated code with BodySense’s AI-assisted workflow: require current-code context, executable tests/contracts, review and learner explain-back before accepting generated implementation or mastery.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/test trace",
+          "failure/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P2-CONCEPT-CONSOLE-DEBUG",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 2,
+        "title": "console logging as an executable debugging observation",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/2/en/part2a.md",
+        "line": 12,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P2-SECTION-001"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P2-CONCEPT-CONSOLE-DEBUG",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "console logging as an executable debugging observation",
+        "target_files": [
+          "apps/web/src",
+          "apps/web/src/features/consultation"
+        ],
+        "task_summary": "Use targeted logging or a debugger on a BodySense client flow to inspect values at a boundary, then remove/contain diagnostic output rather than treating logs as production state.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/network trace",
+          "error/async/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P2-CONCEPT-EDITOR-SNIPPETS",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 2,
+        "title": "editor snippets/automation as productivity tooling rather than application semantics",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/2/en/part2a.md",
+        "line": 41,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P2-SECTION-002"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-P2-CONCEPT-EDITOR-SNIPPETS",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "editor snippets/automation as productivity tooling rather than application semantics",
+        "target_files": [
+          ".vscode",
+          "AGENT.md"
+        ],
+        "task_summary": "Compare snippets/editor automation with BodySense code-generation/AI workflows and explain how productivity tools must not bypass typing, tests or review.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/network trace",
+          "error/async/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P2-CONCEPT-COLLECTION-RENDERING",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 2,
+        "title": "rendering collections from data rather than duplicated JSX",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/2/en/part2a.md",
+        "line": 83,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P2-SECTION-005"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P2-CONCEPT-COLLECTION-RENDERING",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "rendering collections from data rather than duplicated JSX",
+        "target_files": [
+          "apps/web/src/features/workspace/components",
+          "apps/web/src/features/consultation/components"
+        ],
+        "task_summary": "Trace one `.map`-driven BodySense list and identify stable item identity, derived presentation and where the collection data originates.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/network trace",
+          "error/async/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P2-CONCEPT-REACT-KEYS",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 2,
+        "title": "React key identity for reconciling list items",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/2/en/part2a.md",
+        "line": 208,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P2-SECTION-006"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P2-CONCEPT-REACT-KEYS",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "React key identity for reconciling list items",
+        "target_files": [
+          "apps/web/src/features/workspace/components",
+          "apps/web/src/features/consultation/components"
+        ],
+        "task_summary": "Inspect one BodySense list key and explain why it represents stable item identity across reorders/updates rather than merely suppressing a warning.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/network trace",
+          "error/async/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P2-CONCEPT-MAP",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 2,
+        "title": "Array.map as a pure data-to-view transformation",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/2/en/part2a.md",
+        "line": 241,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P2-SECTION-007"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P2-CONCEPT-MAP",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "Array.map as a pure data-to-view transformation",
+        "target_files": [
+          "apps/web/src/features/workspace/model/workspaceSelectors.ts",
+          "apps/web/src/features/workspace/components"
+        ],
+        "task_summary": "Trace a BodySense map transformation and explain callback inputs/output, non-mutation and how it composes with JSX rendering.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/network trace",
+          "error/async/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P2-CONCEPT-INDEX-KEY",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 2,
+        "title": "array-index keys as unstable identity under insertion/reordering",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/2/en/part2a.md",
+        "line": 325,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P2-SECTION-008"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P2-CONCEPT-INDEX-KEY",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "array-index keys as unstable identity under insertion/reordering",
+        "target_files": [
+          "apps/web/src/features/workspace/components",
+          "apps/web/src/features/consultation/components"
+        ],
+        "task_summary": "Find a dynamic list or construct a test fixture where index keys would associate child state with the wrong logical item after reordering; identify the stable domain key instead.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/network trace",
+          "error/async/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P2-CONCEPT-MODULES",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 2,
+        "title": "ES modules and feature/module boundaries",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/2/en/part2a.md",
+        "line": 351,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P2-SECTION-009"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P2-CONCEPT-MODULES",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "ES modules and feature/module boundaries",
+        "target_files": [
+          "apps/web/src/features",
+          "packages/contracts/src"
+        ],
+        "task_summary": "Trace an export/import across one BodySense feature boundary and explain module responsibility, public surface and why arbitrary file extraction is not architecture by itself.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/network trace",
+          "error/async/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P2-CONCEPT-COMPONENT-STATE-FORM",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 2,
+        "title": "form data stored as React component state",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/2/en/part2b.md",
+        "line": 12,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P2-SECTION-012"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P2-CONCEPT-COMPONENT-STATE-FORM",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "form data stored as React component state",
+        "target_files": [
+          "apps/web/src/features/auth/components/LoginForm.tsx",
+          "apps/web/src/features/workspace/components"
+        ],
+        "task_summary": "Trace one controlled BodySense form value from state initialization through input update and submission, then classify what should not persist beyond the component.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/network trace",
+          "error/async/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P2-CONCEPT-CONTROLLED-COMPONENT",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 2,
+        "title": "controlled inputs: value supplied by state and changes returned through events",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/2/en/part2b.md",
+        "line": 119,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P2-SECTION-013"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P2-CONCEPT-CONTROLLED-COMPONENT",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "controlled inputs: value supplied by state and changes returned through events",
+        "target_files": [
+          "apps/web/src/features/auth/components/LoginForm.tsx",
+          "apps/web/src/components"
+        ],
+        "task_summary": "Inspect a BodySense controlled input and explain the feedback loop `state -> value -> onChange -> setState -> render`, including validation implications.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/network trace",
+          "error/async/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P2-CONCEPT-FILTERING",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 2,
+        "title": "derived filtered views without duplicating source state",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/2/en/part2b.md",
+        "line": 264,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P2-SECTION-014"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P2-CONCEPT-FILTERING",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "derived filtered views without duplicating source state",
+        "target_files": [
+          "apps/web/src/features/workspace/model/workspaceSelectors.ts",
+          "apps/web/src/features/body-explorer"
+        ],
+        "task_summary": "Choose one BodySense search/filter projection and explain why the filtered list is derived data rather than a second authoritative collection.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/network trace",
+          "error/async/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P2-CONCEPT-NPM",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 2,
+        "title": "package manager manifest/lockfile and dependency installation model",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/2/en/part2c.md",
+        "line": 136,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P2-SECTION-016"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P2-CONCEPT-NPM",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "package manager manifest/lockfile and dependency installation model",
+        "target_files": [
+          "package.json",
+          "pnpm-lock.yaml",
+          "pnpm-workspace.yaml"
+        ],
+        "task_summary": "Translate the source npm concept to BodySense pnpm: trace manifest -> lockfile -> workspace install and explain reproducibility, scripts and dependency ownership.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/network trace",
+          "error/async/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P2-CONCEPT-DEV-RUNTIME",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 2,
+        "title": "development runtime environment: bundler/dev server/browser/backend processes",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/2/en/part2c.md",
+        "line": 522,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P2-SECTION-019"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P2-CONCEPT-DEV-RUNTIME",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "development runtime environment: bundler/dev server/browser/backend processes",
+        "target_files": [
+          "package.json",
+          "vite.config.ts",
+          "scripts/dev-interactive.sh"
+        ],
+        "task_summary": "Draw BodySense direct-dev process topology and explain which code runs in Vite/Node tooling, browser, Go and Python, including development proxy/config boundaries.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/network trace",
+          "error/async/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P2-CONCEPT-REST",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 2,
+        "title": "REST resource identity, URLs and conventional HTTP methods",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/2/en/part2d.md",
+        "line": 18,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P2-SECTION-020"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P2-CONCEPT-REST",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "REST resource identity, URLs and conventional HTTP methods",
+        "target_files": [
+          "apps/api/cmd/server/main.go",
+          "apps/api/internal/handler"
+        ],
+        "task_summary": "Classify one BodySense resource collection/item route and explain GET/POST/PATCH/DELETE semantics, identity and where BodySense intentionally departs from simplistic CRUD.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/network trace",
+          "error/async/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P2-CONCEPT-SEND-DATA",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 2,
+        "title": "JSON mutation requests, server-owned identity and client reconciliation",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/2/en/part2d.md",
+        "line": 28,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P2-SECTION-021"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P2-CONCEPT-SEND-DATA",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "JSON mutation requests, server-owned identity and client reconciliation",
+        "target_files": [
+          "apps/web/src/features/workspace/api/workspaceApi.ts",
+          "apps/api/internal/handler/body_state_handler.go"
+        ],
+        "task_summary": "Trace a BodySense POST/PATCH payload in DevTools/code, identify headers/body/server-owned fields, and show how the returned authoritative data reaches the client projection.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/network trace",
+          "error/async/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P2-CONCEPT-UPDATE-RESOURCE",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 2,
+        "title": "updating an existing server resource and immutably reconciling client state",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/2/en/part2d.md",
+        "line": 111,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P2-SECTION-022"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P2-CONCEPT-UPDATE-RESOURCE",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "updating an existing server resource and immutably reconciling client state",
+        "target_files": [
+          "apps/web/src/features/workspace/hooks/useBodyStateCommand.ts",
+          "apps/api/internal/handler"
+        ],
+        "task_summary": "Trace one BodySense update command, distinguish full replacement/partial update semantics, and explain why the client must not mutate cached/source objects in place.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/network trace",
+          "error/async/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P2-CONCEPT-API-SERVICE-MODULE",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 2,
+        "title": "extracting transport calls behind a focused client service/module boundary",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/2/en/part2d.md",
+        "line": 260,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P2-SECTION-023"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P2-CONCEPT-API-SERVICE-MODULE",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "extracting transport calls behind a focused client service/module boundary",
+        "target_files": [
+          "apps/web/src/features/workspace/api/workspaceApi.ts",
+          "apps/web/src/lib/api-client.ts"
+        ],
+        "task_summary": "Explain what the BodySense API module centralizes (URL/auth/error/serialization) versus what belongs in query hooks or presentation components.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/network trace",
+          "error/async/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P2-CONCEPT-OBJECT-SHORTHAND",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 2,
+        "title": "JavaScript object literal property shorthand",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/2/en/part2d.md",
+        "line": 483,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P2-SECTION-024"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P2-CONCEPT-OBJECT-SHORTHAND",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "JavaScript object literal property shorthand",
+        "target_files": [
+          "apps/web/src",
+          "packages/contracts/src"
+        ],
+        "task_summary": "Identify object shorthand in a BodySense request/state object and expand it to the long form mentally to verify key/value semantics.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/network trace",
+          "error/async/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P2-CONCEPT-USER-FEEDBACK",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 2,
+        "title": "turning async mutation failures into observable user feedback",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/2/en/part2e.md",
+        "line": 109,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P2-SECTION-027"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P2-CONCEPT-USER-FEEDBACK",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "turning async mutation failures into observable user feedback",
+        "target_files": [
+          "apps/web/src/lib/api-client.ts",
+          "apps/web/src/features/workspace/hooks/useBodyStateCommand.ts"
+        ],
+        "task_summary": "Trace an HTTP failure into normalized error state and user-visible feedback; distinguish logging, developer diagnostics and actionable UI error messaging.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/network trace",
+          "error/async/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P2-CONCEPT-INLINE-STYLES",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 2,
+        "title": "inline style objects versus class/design-system styling",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/2/en/part2e.md",
+        "line": 211,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P2-SECTION-028"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-P2-CONCEPT-INLINE-STYLES",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "inline style objects versus class/design-system styling",
+        "target_files": [
+          "apps/web/src/index.css",
+          "apps/web/src/components"
+        ],
+        "task_summary": "Compare React inline style objects with BodySense Tailwind/component tokens: identify dynamic-style cases, type safety, cascade limitations and consistency trade-offs.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/network trace",
+          "error/async/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P2-CONCEPT-INITIAL-NULL-ASYNC",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 2,
+        "title": "initial null/loading state before an Effect-backed request completes",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/2/en/part2e.md",
+        "line": 321,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P2-SECTION-029"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P2-CONCEPT-INITIAL-NULL-ASYNC",
+        "semantic_audit": "reviewed-against-source-section",
+        "objective": "initial null/loading state before an Effect-backed request completes",
+        "target_files": [
+          "apps/web/src/features/workspace/hooks/useHealthWorkspaceQuery.ts",
+          "apps/web/src/features/workspace/components"
+        ],
+        "task_summary": "Predict the first render before server data exists, then trace loading/null/data/error branches so collection methods are never called on unavailable data and loading state is modeled explicitly.",
+        "completion_evidence_plan": [
+          "source-section explain-back",
+          "BodySense code/network trace",
+          "error/async/state prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
     }
   ],
   "source_sections": [

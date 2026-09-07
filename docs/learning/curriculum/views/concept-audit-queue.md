@@ -1,129 +1,132 @@
 # Full Stack Open concept semantic-audit queue
 
-> Generated from the active source-section inventory and explicit concept records.
-> A section heading is a review unit, not proof that every paragraph-level concept is covered. `REVIEWED` below only means the section has at least one explicit semantic concept record linked to it.
+> Generated from `ledger/full-stack-open-concept-audit.json` and the active source-section inventory.
+> A section heading is a review unit, not proof that every paragraph-level concept is covered.
 
 Active section-heading review units: **664**.
-Sections with at least one explicit semantic concept record: **8**.
-Pending section review units: **656**.
+Semantically dispositioned section units: **103**.
+- concepts mapped: **77**
+- reviewed non-engineering/course logistics: **21**
+- reviewed redundant: **5**
+- pending: **561**
 
-## Part 0 — 0/33 section units linked to explicit concepts
+## Part 0 — 33/33 section units dispositioned
 
-| Section source | Heading | Semantic audit | Explicit concept records |
+| Section source | Heading | Semantic disposition | Explicit concept records |
 |---|---|---|---|
-| `FSO-P0-SECTION-001` · src/content/0/en/part0a.md:16 | Prerequisites | PENDING | — |
-| `FSO-P0-SECTION-002` · src/content/0/en/part0a.md:24 | Course material | PENDING | — |
-| `FSO-P0-SECTION-003` · src/content/0/en/part0a.md:34 | Taking the course | PENDING | — |
-| `FSO-P0-SECTION-004` · src/content/0/en/part0a.md:46 | Course channel in Discord | PENDING | — |
-| `FSO-P0-SECTION-005` · src/content/0/en/part0a.md:50 | How to get help in Discord | PENDING | — |
-| `FSO-P0-SECTION-006` · src/content/0/en/part0a.md:81 | Parts and completion | PENDING | — |
-| `FSO-P0-SECTION-007` · src/content/0/en/part0a.md:155 | Studying the course in a nutshell | PENDING | — |
-| `FSO-P0-SECTION-008` · src/content/0/en/part0a.md:182 | Submitting exercises | PENDING | — |
-| `FSO-P0-SECTION-009` · src/content/0/en/part0a.md:194 | The course exam | PENDING | — |
-| `FSO-P0-SECTION-010` · src/content/0/en/part0a.md:238 | How to get your credits | PENDING | — |
-| `FSO-P0-SECTION-011` · src/content/0/en/part0a.md:268 | Where do I get my University of Helsinki Student number | PENDING | — |
-| `FSO-P0-SECTION-012` · src/content/0/en/part0a.md:302 | Course certificate | PENDING | — |
-| `FSO-P0-SECTION-013` · src/content/0/en/part0a.md:308 | Request a transcript of studies | PENDING | — |
-| `FSO-P0-SECTION-014` · src/content/0/en/part0a.md:314 | No more yearly versions | PENDING | — |
-| `FSO-P0-SECTION-015` · src/content/0/en/part0a.md:331 | Expanding on a previously completed course | PENDING | — |
-| `FSO-P0-SECTION-016` · src/content/0/en/part0a.md:343 | Full stack project | PENDING | — |
-| `FSO-P0-SECTION-017` · src/content/0/en/part0a.md:355 | Interview promise | PENDING | — |
-| `FSO-P0-SECTION-018` · src/content/0/en/part0a.md:363 | Before you start | PENDING | — |
-| `FSO-P0-SECTION-019` · src/content/0/en/part0a.md:377 | Typos in the material | PENDING | — |
-| `FSO-P0-SECTION-020` · src/content/0/en/part0b.md:32 | HTTP GET | PENDING | — |
-| `FSO-P0-SECTION-021` · src/content/0/en/part0b.md:79 | Traditional web applications | PENDING | — |
-| `FSO-P0-SECTION-022` · src/content/0/en/part0b.md:123 | Running application logic in the browser | PENDING | — |
-| `FSO-P0-SECTION-023` · src/content/0/en/part0b.md:246 | Event handlers and Callback functions | PENDING | — |
-| `FSO-P0-SECTION-024` · src/content/0/en/part0b.md:279 | Document Object Model or DOM | PENDING | — |
-| `FSO-P0-SECTION-025` · src/content/0/en/part0b.md:330 | Manipulating the document object from console | PENDING | — |
-| `FSO-P0-SECTION-026` · src/content/0/en/part0b.md:361 | CSS | PENDING | — |
-| `FSO-P0-SECTION-027` · src/content/0/en/part0b.md:404 | Loading a page containing JavaScript - review | PENDING | — |
-| `FSO-P0-SECTION-028` · src/content/0/en/part0b.md:416 | Forms and HTTP POST | PENDING | — |
-| `FSO-P0-SECTION-029` · src/content/0/en/part0b.md:475 | AJAX | PENDING | — |
-| `FSO-P0-SECTION-030` · src/content/0/en/part0b.md:491 | Single page app | PENDING | — |
-| `FSO-P0-SECTION-031` · src/content/0/en/part0b.md:572 | JavaScript-libraries | PENDING | — |
-| `FSO-P0-SECTION-032` · src/content/0/en/part0b.md:589 | Full-stack web development | PENDING | — |
-| `FSO-P0-SECTION-033` · src/content/0/en/part0b.md:603 | JavaScript fatigue | PENDING | — |
+| `FSO-P0-SECTION-001` · src/content/0/en/part0a.md:16 | Prerequisites | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P0-SECTION-002` · src/content/0/en/part0a.md:24 | Course material | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P0-SECTION-003` · src/content/0/en/part0a.md:34 | Taking the course | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P0-SECTION-004` · src/content/0/en/part0a.md:46 | Course channel in Discord | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P0-SECTION-005` · src/content/0/en/part0a.md:50 | How to get help in Discord | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P0-SECTION-006` · src/content/0/en/part0a.md:81 | Parts and completion | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P0-SECTION-007` · src/content/0/en/part0a.md:155 | Studying the course in a nutshell | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P0-SECTION-008` · src/content/0/en/part0a.md:182 | Submitting exercises | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P0-SECTION-009` · src/content/0/en/part0a.md:194 | The course exam | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P0-SECTION-010` · src/content/0/en/part0a.md:238 | How to get your credits | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P0-SECTION-011` · src/content/0/en/part0a.md:268 | Where do I get my University of Helsinki Student number | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P0-SECTION-012` · src/content/0/en/part0a.md:302 | Course certificate | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P0-SECTION-013` · src/content/0/en/part0a.md:308 | Request a transcript of studies | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P0-SECTION-014` · src/content/0/en/part0a.md:314 | No more yearly versions | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P0-SECTION-015` · src/content/0/en/part0a.md:331 | Expanding on a previously completed course | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P0-SECTION-016` · src/content/0/en/part0a.md:343 | Full stack project | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P0-SECTION-017` · src/content/0/en/part0a.md:355 | Interview promise | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P0-SECTION-018` · src/content/0/en/part0a.md:363 | Before you start | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P0-SECTION-019` · src/content/0/en/part0a.md:377 | Typos in the material | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P0-SECTION-020` · src/content/0/en/part0b.md:32 | HTTP GET | REVIEWED_CONCEPTS_MAPPED | `FSO-P0-CONCEPT-HTTP-GET` |
+| `FSO-P0-SECTION-021` · src/content/0/en/part0b.md:79 | Traditional web applications | REVIEWED_CONCEPTS_MAPPED | `FSO-P0-CONCEPT-TRADITIONAL-WEB` |
+| `FSO-P0-SECTION-022` · src/content/0/en/part0b.md:123 | Running application logic in the browser | REVIEWED_CONCEPTS_MAPPED | `FSO-P0-CONCEPT-BROWSER-RUNTIME` |
+| `FSO-P0-SECTION-023` · src/content/0/en/part0b.md:246 | Event handlers and Callback functions | REVIEWED_CONCEPTS_MAPPED | `FSO-P0-CONCEPT-EVENT-CALLBACKS` |
+| `FSO-P0-SECTION-024` · src/content/0/en/part0b.md:279 | Document Object Model or DOM | REVIEWED_CONCEPTS_MAPPED | `FSO-P0-CONCEPT-DOM` |
+| `FSO-P0-SECTION-025` · src/content/0/en/part0b.md:330 | Manipulating the document object from console | REVIEWED_CONCEPTS_MAPPED | `FSO-P0-CONCEPT-DOM-CONSOLE` |
+| `FSO-P0-SECTION-026` · src/content/0/en/part0b.md:361 | CSS | REVIEWED_CONCEPTS_MAPPED | `FSO-P0-CONCEPT-CSS` |
+| `FSO-P0-SECTION-027` · src/content/0/en/part0b.md:404 | Loading a page containing JavaScript - review | REVIEWED_CONCEPTS_MAPPED | `FSO-P0-CONCEPT-PAGE-JS-LOAD` |
+| `FSO-P0-SECTION-028` · src/content/0/en/part0b.md:416 | Forms and HTTP POST | REVIEWED_CONCEPTS_MAPPED | `FSO-P0-CONCEPT-FORM-POST` |
+| `FSO-P0-SECTION-029` · src/content/0/en/part0b.md:475 | AJAX | REVIEWED_CONCEPTS_MAPPED | `FSO-P0-CONCEPT-AJAX` |
+| `FSO-P0-SECTION-030` · src/content/0/en/part0b.md:491 | Single page app | REVIEWED_CONCEPTS_MAPPED | `FSO-P0-CONCEPT-SPA` |
+| `FSO-P0-SECTION-031` · src/content/0/en/part0b.md:572 | JavaScript-libraries | REVIEWED_CONCEPTS_MAPPED | `FSO-P0-CONCEPT-JS-LIBRARIES` |
+| `FSO-P0-SECTION-032` · src/content/0/en/part0b.md:589 | Full-stack web development | REVIEWED_CONCEPTS_MAPPED | `FSO-P0-CONCEPT-FULLSTACK` |
+| `FSO-P0-SECTION-033` · src/content/0/en/part0b.md:603 | JavaScript fatigue | REVIEWED_CONCEPTS_MAPPED | `FSO-P0-CONCEPT-JS-FATIGUE` |
 
-## Part 1 — 0/37 section units linked to explicit concepts
+## Part 1 — 37/37 section units dispositioned
 
-| Section source | Heading | Semantic audit | Explicit concept records |
+| Section source | Heading | Semantic disposition | Explicit concept records |
 |---|---|---|---|
-| `FSO-P1-SECTION-001` · src/content/1/en/part1a.md:75 | Component | PENDING | — |
-| `FSO-P1-SECTION-002` · src/content/1/en/part1a.md:208 | JSX | PENDING | — |
-| `FSO-P1-SECTION-003` · src/content/1/en/part1a.md:250 | Multiple components | PENDING | — |
-| `FSO-P1-SECTION-004` · src/content/1/en/part1a.md:298 | props: passing data to components | PENDING | — |
-| `FSO-P1-SECTION-005` · src/content/1/en/part1a.md:370 | Possible error message | PENDING | — |
-| `FSO-P1-SECTION-006` · src/content/1/en/part1a.md:416 | Some notes | PENDING | — |
-| `FSO-P1-SECTION-007` · src/content/1/en/part1a.md:504 | Do not render objects | PENDING | — |
-| `FSO-P1-SECTION-008` · src/content/1/en/part1b.md:28 | Variables | PENDING | — |
-| `FSO-P1-SECTION-009` · src/content/1/en/part1b.md:51 | Arrays | PENDING | — |
-| `FSO-P1-SECTION-010` · src/content/1/en/part1b.md:127 | Objects | PENDING | — |
-| `FSO-P1-SECTION-011` · src/content/1/en/part1b.md:177 | Functions | PENDING | — |
-| `FSO-P1-SECTION-012` · src/content/1/en/part1b.md:380 | Object methods and "this" | PENDING | — |
-| `FSO-P1-SECTION-013` · src/content/1/en/part1b.md:491 | Classes | PENDING | — |
-| `FSO-P1-SECTION-014` · src/content/1/en/part1b.md:523 | JavaScript materials | PENDING | — |
-| `FSO-P1-SECTION-015` · src/content/1/en/part1c.md:39 | Component helper functions | PENDING | — |
-| `FSO-P1-SECTION-016` · src/content/1/en/part1c.md:69 | Destructuring | PENDING | — |
-| `FSO-P1-SECTION-017` · src/content/1/en/part1c.md:177 | Page re-rendering | PENDING | — |
-| `FSO-P1-SECTION-018` · src/content/1/en/part1c.md:249 | Stateful component | PENDING | — |
-| `FSO-P1-SECTION-019` · src/content/1/en/part1c.md:371 | Event handling | PENDING | — |
-| `FSO-P1-SECTION-020` · src/content/1/en/part1c.md:459 | An event handler is a function | PENDING | — |
-| `FSO-P1-SECTION-021` · src/content/1/en/part1c.md:538 | Passing state - to child components | PENDING | — |
-| `FSO-P1-SECTION-022` · src/content/1/en/part1c.md:636 | Changes in state cause re-rendering | PENDING | — |
-| `FSO-P1-SECTION-023` · src/content/1/en/part1c.md:689 | Refactoring the components | PENDING | — |
-| `FSO-P1-SECTION-024` · src/content/1/en/part1d.md:10 | Complex state | PENDING | — |
-| `FSO-P1-SECTION-025` · src/content/1/en/part1d.md:164 | Handling arrays | PENDING | — |
-| `FSO-P1-SECTION-026` · src/content/1/en/part1d.md:249 | Update of the state is asynchronous | PENDING | — |
-| `FSO-P1-SECTION-027` · src/content/1/en/part1d.md:355 | Conditional rendering | PENDING | — |
-| `FSO-P1-SECTION-028` · src/content/1/en/part1d.md:461 | Old React | PENDING | — |
-| `FSO-P1-SECTION-029` · src/content/1/en/part1d.md:469 | Debugging React applications | PENDING | — |
-| `FSO-P1-SECTION-030` · src/content/1/en/part1d.md:571 | Rules of Hooks | PENDING | — |
-| `FSO-P1-SECTION-031` · src/content/1/en/part1d.md:606 | Event Handling Revisited | PENDING | — |
-| `FSO-P1-SECTION-032` · src/content/1/en/part1d.md:756 | A function that returns a function | PENDING | — |
-| `FSO-P1-SECTION-033` · src/content/1/en/part1d.md:1019 | Passing Event Handlers to Child Components | PENDING | — |
-| `FSO-P1-SECTION-034` · src/content/1/en/part1d.md:1051 | Do Not Define Components Within Components | PENDING | — |
-| `FSO-P1-SECTION-035` · src/content/1/en/part1d.md:1119 | Useful Reading | PENDING | — |
-| `FSO-P1-SECTION-036` · src/content/1/en/part1d.md:1128 | Web Programmer's Oath | PENDING | — |
-| `FSO-P1-SECTION-037` · src/content/1/en/part1d.md:1138 | Utilization of Large language models | PENDING | — |
+| `FSO-P1-SECTION-001` · src/content/1/en/part1a.md:75 | Component | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-COMPONENT` |
+| `FSO-P1-SECTION-002` · src/content/1/en/part1a.md:208 | JSX | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-JSX` |
+| `FSO-P1-SECTION-003` · src/content/1/en/part1a.md:250 | Multiple components | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-COMPOSITION` |
+| `FSO-P1-SECTION-004` · src/content/1/en/part1a.md:298 | props: passing data to components | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-PROPS` |
+| `FSO-P1-SECTION-005` · src/content/1/en/part1a.md:370 | Possible error message | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-LINT-DIAGNOSTICS` |
+| `FSO-P1-SECTION-006` · src/content/1/en/part1a.md:416 | Some notes | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-DEBUGGING-DISCIPLINE`, `FSO-P1-CONCEPT-REACT-CONVENTIONS` |
+| `FSO-P1-SECTION-007` · src/content/1/en/part1a.md:504 | Do not render objects | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-RENDERABLE-VALUES` |
+| `FSO-P1-SECTION-008` · src/content/1/en/part1b.md:28 | Variables | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-JS-VARIABLES` |
+| `FSO-P1-SECTION-009` · src/content/1/en/part1b.md:51 | Arrays | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-JS-ARRAYS` |
+| `FSO-P1-SECTION-010` · src/content/1/en/part1b.md:127 | Objects | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-JS-OBJECTS` |
+| `FSO-P1-SECTION-011` · src/content/1/en/part1b.md:177 | Functions | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-JS-FUNCTIONS` |
+| `FSO-P1-SECTION-012` · src/content/1/en/part1b.md:380 | Object methods and "this" | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-THIS` |
+| `FSO-P1-SECTION-013` · src/content/1/en/part1b.md:491 | Classes | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-CLASSES-LEGACY` |
+| `FSO-P1-SECTION-014` · src/content/1/en/part1b.md:523 | JavaScript materials | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P1-SECTION-015` · src/content/1/en/part1c.md:39 | Component helper functions | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-COMPONENT-HELPERS` |
+| `FSO-P1-SECTION-016` · src/content/1/en/part1c.md:69 | Destructuring | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-DESTRUCTURING` |
+| `FSO-P1-SECTION-017` · src/content/1/en/part1c.md:177 | Page re-rendering | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-RENDER-CYCLE` |
+| `FSO-P1-SECTION-018` · src/content/1/en/part1c.md:249 | Stateful component | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-USESTATE` |
+| `FSO-P1-SECTION-019` · src/content/1/en/part1c.md:371 | Event handling | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-EVENT-HANDLING` |
+| `FSO-P1-SECTION-020` · src/content/1/en/part1c.md:459 | An event handler is a function | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-HANDLER-REFERENCE` |
+| `FSO-P1-SECTION-021` · src/content/1/en/part1c.md:538 | Passing state - to child components | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-STATE-PROP-OWNERSHIP` |
+| `FSO-P1-SECTION-022` · src/content/1/en/part1c.md:636 | Changes in state cause re-rendering | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-RENDER-CYCLE` |
+| `FSO-P1-SECTION-023` · src/content/1/en/part1c.md:689 | Refactoring the components | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-COMPONENT-REFACTOR` |
+| `FSO-P1-SECTION-024` · src/content/1/en/part1d.md:10 | Complex state | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-COMPLEX-STATE` |
+| `FSO-P1-SECTION-025` · src/content/1/en/part1d.md:164 | Handling arrays | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-IMMUTABLE-ARRAY-STATE` |
+| `FSO-P1-SECTION-026` · src/content/1/en/part1d.md:249 | Update of the state is asynchronous | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-ASYNC-STATE-UPDATES` |
+| `FSO-P1-SECTION-027` · src/content/1/en/part1d.md:355 | Conditional rendering | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-CONDITIONAL-RENDER` |
+| `FSO-P1-SECTION-028` · src/content/1/en/part1d.md:461 | Old React | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-CLASSES-LEGACY` |
+| `FSO-P1-SECTION-029` · src/content/1/en/part1d.md:469 | Debugging React applications | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-DEBUGGING-DISCIPLINE` |
+| `FSO-P1-SECTION-030` · src/content/1/en/part1d.md:571 | Rules of Hooks | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-HOOK-RULES` |
+| `FSO-P1-SECTION-031` · src/content/1/en/part1d.md:606 | Event Handling Revisited | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-HANDLER-REFERENCE` |
+| `FSO-P1-SECTION-032` · src/content/1/en/part1d.md:756 | A function that returns a function | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-HIGHER-ORDER-FUNCTION` |
+| `FSO-P1-SECTION-033` · src/content/1/en/part1d.md:1019 | Passing Event Handlers to Child Components | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-HANDLER-PROP` |
+| `FSO-P1-SECTION-034` · src/content/1/en/part1d.md:1051 | Do Not Define Components Within Components | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-NESTED-COMPONENT-DEFINITION` |
+| `FSO-P1-SECTION-035` · src/content/1/en/part1d.md:1119 | Useful Reading | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P1-SECTION-036` · src/content/1/en/part1d.md:1128 | Web Programmer's Oath | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-DEBUGGING-DISCIPLINE` |
+| `FSO-P1-SECTION-037` · src/content/1/en/part1d.md:1138 | Utilization of Large language models | REVIEWED_CONCEPTS_MAPPED | `FSO-P1-CONCEPT-AI-CODING-VERIFICATION` |
 
-## Part 2 — 4/29 section units linked to explicit concepts
+## Part 2 — 29/29 section units dispositioned
 
-| Section source | Heading | Semantic audit | Explicit concept records |
+| Section source | Heading | Semantic disposition | Explicit concept records |
 |---|---|---|---|
-| `FSO-P2-SECTION-001` · src/content/2/en/part2a.md:12 | console.log | PENDING | — |
-| `FSO-P2-SECTION-002` · src/content/2/en/part2a.md:41 | Protip: Visual Studio Code snippets | PENDING | — |
-| `FSO-P2-SECTION-003` · src/content/2/en/part2a.md:65 | JavaScript Arrays | PENDING | — |
-| `FSO-P2-SECTION-004` · src/content/2/en/part2a.md:75 | Event Handlers Revisited | PENDING | — |
-| `FSO-P2-SECTION-005` · src/content/2/en/part2a.md:83 | Rendering Collections | PENDING | — |
-| `FSO-P2-SECTION-006` · src/content/2/en/part2a.md:208 | Key-attribute | PENDING | — |
-| `FSO-P2-SECTION-007` · src/content/2/en/part2a.md:241 | Map | PENDING | — |
-| `FSO-P2-SECTION-008` · src/content/2/en/part2a.md:325 | Anti-pattern: Array Indexes as Keys | PENDING | — |
-| `FSO-P2-SECTION-009` · src/content/2/en/part2a.md:351 | Refactoring Modules | PENDING | — |
-| `FSO-P2-SECTION-010` · src/content/2/en/part2a.md:470 | When the Application Breaks | PENDING | — |
-| `FSO-P2-SECTION-011` · src/content/2/en/part2a.md:563 | Web developer's oath | PENDING | — |
-| `FSO-P2-SECTION-012` · src/content/2/en/part2b.md:12 | Saving the notes in the component state | PENDING | — |
-| `FSO-P2-SECTION-013` · src/content/2/en/part2b.md:119 | Controlled component | PENDING | — |
-| `FSO-P2-SECTION-014` · src/content/2/en/part2b.md:264 | Filtering Displayed Elements | PENDING | — |
-| `FSO-P2-SECTION-015` · src/content/2/en/part2c.md:56 | The browser as a runtime environment | REVIEWED | `FSO-P2-CONCEPT-ASYNC-RUNTIME` |
-| `FSO-P2-SECTION-016` · src/content/2/en/part2c.md:136 | npm | PENDING | — |
-| `FSO-P2-SECTION-017` · src/content/2/en/part2c.md:260 | Axios and promises | REVIEWED | `FSO-P2-CONCEPT-PROMISES` |
-| `FSO-P2-SECTION-018` · src/content/2/en/part2c.md:359 | Effect-hooks | REVIEWED | `FSO-P2-CONCEPT-EFFECTS` |
-| `FSO-P2-SECTION-019` · src/content/2/en/part2c.md:522 | The development runtime environment | PENDING | — |
-| `FSO-P2-SECTION-020` · src/content/2/en/part2d.md:18 | REST | PENDING | — |
-| `FSO-P2-SECTION-021` · src/content/2/en/part2d.md:28 | Sending Data to the Server | PENDING | — |
-| `FSO-P2-SECTION-022` · src/content/2/en/part2d.md:111 | Changing the Importance of Notes | PENDING | — |
-| `FSO-P2-SECTION-023` · src/content/2/en/part2d.md:260 | Extracting Communication with the Backend into a Separate Module | PENDING | — |
-| `FSO-P2-SECTION-024` · src/content/2/en/part2d.md:483 | Cleaner Syntax for Defining Object Literals | PENDING | — |
-| `FSO-P2-SECTION-025` · src/content/2/en/part2d.md:587 | Promises and Errors | REVIEWED | `FSO-P2-CONCEPT-PROMISES` |
-| `FSO-P2-SECTION-026` · src/content/2/en/part2d.md:693 | Full stack developer's oath | PENDING | — |
-| `FSO-P2-SECTION-027` · src/content/2/en/part2e.md:109 | Improved error message | PENDING | — |
-| `FSO-P2-SECTION-028` · src/content/2/en/part2e.md:211 | Inline styles | PENDING | — |
-| `FSO-P2-SECTION-029` · src/content/2/en/part2e.md:321 | Couple of important remarks | PENDING | — |
+| `FSO-P2-SECTION-001` · src/content/2/en/part2a.md:12 | console.log | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-CONSOLE-DEBUG` |
+| `FSO-P2-SECTION-002` · src/content/2/en/part2a.md:41 | Protip: Visual Studio Code snippets | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-EDITOR-SNIPPETS` |
+| `FSO-P2-SECTION-003` · src/content/2/en/part2a.md:65 | JavaScript Arrays | REVIEWED_REDUNDANT | `FSO-P1-CONCEPT-JS-ARRAYS` |
+| `FSO-P2-SECTION-004` · src/content/2/en/part2a.md:75 | Event Handlers Revisited | REVIEWED_REDUNDANT | `FSO-P1-CONCEPT-EVENT-HANDLING` |
+| `FSO-P2-SECTION-005` · src/content/2/en/part2a.md:83 | Rendering Collections | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-COLLECTION-RENDERING` |
+| `FSO-P2-SECTION-006` · src/content/2/en/part2a.md:208 | Key-attribute | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-REACT-KEYS` |
+| `FSO-P2-SECTION-007` · src/content/2/en/part2a.md:241 | Map | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-MAP` |
+| `FSO-P2-SECTION-008` · src/content/2/en/part2a.md:325 | Anti-pattern: Array Indexes as Keys | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-INDEX-KEY` |
+| `FSO-P2-SECTION-009` · src/content/2/en/part2a.md:351 | Refactoring Modules | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-MODULES` |
+| `FSO-P2-SECTION-010` · src/content/2/en/part2a.md:470 | When the Application Breaks | REVIEWED_REDUNDANT | `FSO-P1-CONCEPT-DEBUGGING-DISCIPLINE` |
+| `FSO-P2-SECTION-011` · src/content/2/en/part2a.md:563 | Web developer's oath | REVIEWED_REDUNDANT | `FSO-P1-CONCEPT-DEBUGGING-DISCIPLINE` |
+| `FSO-P2-SECTION-012` · src/content/2/en/part2b.md:12 | Saving the notes in the component state | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-COMPONENT-STATE-FORM` |
+| `FSO-P2-SECTION-013` · src/content/2/en/part2b.md:119 | Controlled component | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-CONTROLLED-COMPONENT` |
+| `FSO-P2-SECTION-014` · src/content/2/en/part2b.md:264 | Filtering Displayed Elements | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-FILTERING` |
+| `FSO-P2-SECTION-015` · src/content/2/en/part2c.md:56 | The browser as a runtime environment | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-ASYNC-RUNTIME` |
+| `FSO-P2-SECTION-016` · src/content/2/en/part2c.md:136 | npm | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-NPM` |
+| `FSO-P2-SECTION-017` · src/content/2/en/part2c.md:260 | Axios and promises | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-PROMISES` |
+| `FSO-P2-SECTION-018` · src/content/2/en/part2c.md:359 | Effect-hooks | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-EFFECTS` |
+| `FSO-P2-SECTION-019` · src/content/2/en/part2c.md:522 | The development runtime environment | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-DEV-RUNTIME` |
+| `FSO-P2-SECTION-020` · src/content/2/en/part2d.md:18 | REST | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-REST` |
+| `FSO-P2-SECTION-021` · src/content/2/en/part2d.md:28 | Sending Data to the Server | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-SEND-DATA` |
+| `FSO-P2-SECTION-022` · src/content/2/en/part2d.md:111 | Changing the Importance of Notes | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-UPDATE-RESOURCE` |
+| `FSO-P2-SECTION-023` · src/content/2/en/part2d.md:260 | Extracting Communication with the Backend into a Separate Module | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-API-SERVICE-MODULE` |
+| `FSO-P2-SECTION-024` · src/content/2/en/part2d.md:483 | Cleaner Syntax for Defining Object Literals | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-OBJECT-SHORTHAND` |
+| `FSO-P2-SECTION-025` · src/content/2/en/part2d.md:587 | Promises and Errors | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-PROMISES` |
+| `FSO-P2-SECTION-026` · src/content/2/en/part2d.md:693 | Full stack developer's oath | REVIEWED_REDUNDANT | `FSO-P1-CONCEPT-DEBUGGING-DISCIPLINE` |
+| `FSO-P2-SECTION-027` · src/content/2/en/part2e.md:109 | Improved error message | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-USER-FEEDBACK` |
+| `FSO-P2-SECTION-028` · src/content/2/en/part2e.md:211 | Inline styles | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-INLINE-STYLES` |
+| `FSO-P2-SECTION-029` · src/content/2/en/part2e.md:321 | Couple of important remarks | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-INITIAL-NULL-ASYNC` |
 
-## Part 3 — 0/40 section units linked to explicit concepts
+## Part 3 — 0/40 section units dispositioned
 
-| Section source | Heading | Semantic audit | Explicit concept records |
+| Section source | Heading | Semantic disposition | Explicit concept records |
 |---|---|---|---|
 | `FSO-P3-SECTION-001` · src/content/3/en/part3a.md:94 | Simple web server | PENDING | — |
 | `FSO-P3-SECTION-002` · src/content/3/en/part3a.md:225 | Express | PENDING | — |
@@ -166,9 +169,9 @@ Pending section review units: **656**.
 | `FSO-P3-SECTION-039` · src/content/3/en/part3d.md:310 | Running the Linter | PENDING | — |
 | `FSO-P3-SECTION-040` · src/content/3/en/part3d.md:368 | Adding More Style Rules | PENDING | — |
 
-## Part 4 — 0/23 section units linked to explicit concepts
+## Part 4 — 0/23 section units dispositioned
 
-| Section source | Heading | Semantic audit | Explicit concept records |
+| Section source | Heading | Semantic disposition | Explicit concept records |
 |---|---|---|---|
 | `FSO-P4-SECTION-001` · src/content/4/en/part4a.md:12 | Project structure | PENDING | — |
 | `FSO-P4-SECTION-002` · src/content/4/en/part4a.md:331 | Note on exports | PENDING | — |
@@ -194,9 +197,9 @@ Pending section review units: **656**.
 | `FSO-P4-SECTION-022` · src/content/4/en/part4d.md:269 | Problems of Token-based authentication | PENDING | — |
 | `FSO-P4-SECTION-023` · src/content/4/en/part4d.md:350 | End notes | PENDING | — |
 
-## Part 5 — 0/42 section units linked to explicit concepts
+## Part 5 — 0/42 section units dispositioned
 
-| Section source | Heading | Semantic audit | Explicit concept records |
+| Section source | Heading | Semantic disposition | Explicit concept records |
 |---|---|---|---|
 | `FSO-P5-SECTION-001` · src/content/5/en/part5a.md:16 | Adding a Login Form | PENDING | — |
 | `FSO-P5-SECTION-002` · src/content/5/en/part5a.md:106 | Adding Logic to the Login Form | PENDING | — |
@@ -241,9 +244,9 @@ Pending section review units: **656**.
 | `FSO-P5-SECTION-041` · src/content/5/en/part5e.md:657 | UI libraries | PENDING | — |
 | `FSO-P5-SECTION-042` · src/content/5/en/part5e.md:952 | Styled Components | PENDING | — |
 
-## Part 6 — 0/51 section units linked to explicit concepts
+## Part 6 — 0/51 section units dispositioned
 
-| Section source | Heading | Semantic audit | Explicit concept records |
+| Section source | Heading | Semantic disposition | Explicit concept records |
 |---|---|---|---|
 | `FSO-P6-SECTION-001` · src/content/6/en/part6a.md:12 | Flux architecture | PENDING | — |
 | `FSO-P6-SECTION-002` · src/content/6/en/part6a.md:26 | Redux | PENDING | — |
@@ -297,14 +300,14 @@ Pending section review units: **656**.
 | `FSO-P6-SECTION-050` · src/content/6/en/part6d.md:2363 | Sending data to the backend | PENDING | — |
 | `FSO-P6-SECTION-051` · src/content/6/en/part6d.md:2511 | Asynchronous actions and Redux Thunk | PENDING | — |
 
-## Part 7 — 4/24 section units linked to explicit concepts
+## Part 7 — 4/24 section units dispositioned
 
-| Section source | Heading | Semantic audit | Explicit concept records |
+| Section source | Heading | Semantic disposition | Explicit concept records |
 |---|---|---|---|
 | `FSO-P7-SECTION-001` · src/content/7/en/part7a.md:14 | React Hooks | PENDING | — |
-| `FSO-P7-SECTION-002` · src/content/7/en/part7a.md:37 | useMemo | REVIEWED | `FSO-P7-CONCEPT-USEMEMO` |
-| `FSO-P7-SECTION-003` · src/content/7/en/part7a.md:133 | React.memo | REVIEWED | `FSO-P7-CONCEPT-REACT-MEMO` |
-| `FSO-P7-SECTION-004` · src/content/7/en/part7a.md:152 | useCallback | REVIEWED | `FSO-P7-CONCEPT-USECALLBACK` |
+| `FSO-P7-SECTION-002` · src/content/7/en/part7a.md:37 | useMemo | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-USEMEMO` |
+| `FSO-P7-SECTION-003` · src/content/7/en/part7a.md:133 | React.memo | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-REACT-MEMO` |
+| `FSO-P7-SECTION-004` · src/content/7/en/part7a.md:152 | useCallback | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-USECALLBACK` |
 | `FSO-P7-SECTION-005` · src/content/7/en/part7a.md:242 | Custom hooks | PENDING | — |
 | `FSO-P7-SECTION-006` · src/content/7/en/part7a.md:478 | Spread attributes | PENDING | — |
 | `FSO-P7-SECTION-007` · src/content/7/en/part7a.md:578 | More about hooks | PENDING | — |
@@ -320,15 +323,15 @@ Pending section review units: **656**.
 | `FSO-P7-SECTION-017` · src/content/7/en/part7c.md:257 | Frontend and backend in the same repository | PENDING | — |
 | `FSO-P7-SECTION-018` · src/content/7/en/part7c.md:356 | Organization of code in React application | PENDING | — |
 | `FSO-P7-SECTION-019` · src/content/7/en/part7c.md:429 | Changes on the server | PENDING | — |
-| `FSO-P7-SECTION-020` · src/content/7/en/part7c.md:441 | React/node-application security | REVIEWED | `FSO-P7-CONCEPT-SQL-INJECTION`, `FSO-P7-CONCEPT-XSS`, `FSO-P7-CONCEPT-DEPENDENCY-SECURITY`, `FSO-P7-CONCEPT-BROKEN-AUTHZ` |
+| `FSO-P7-SECTION-020` · src/content/7/en/part7c.md:441 | React/node-application security | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-BROKEN-AUTHZ`, `FSO-P7-CONCEPT-DEPENDENCY-SECURITY`, `FSO-P7-CONCEPT-SQL-INJECTION`, `FSO-P7-CONCEPT-XSS` |
 | `FSO-P7-SECTION-021` · src/content/7/en/part7c.md:632 | Current trends | PENDING | — |
 | `FSO-P7-SECTION-022` · src/content/7/en/part7c.md:698 | Useful libraries and further reading | PENDING | — |
 | `FSO-P7-SECTION-023` · src/content/7/en/part7d.md:84 | State Management: Zustand | PENDING | — |
 | `FSO-P7-SECTION-024` · src/content/7/en/part7d.md:110 | State Management: React Query and Context | PENDING | — |
 
-## Part 8 — 0/51 section units linked to explicit concepts
+## Part 8 — 0/51 section units dispositioned
 
-| Section source | Heading | Semantic audit | Explicit concept records |
+| Section source | Heading | Semantic disposition | Explicit concept records |
 |---|---|---|---|
 | `FSO-P8-MOOC-SECTION-001` · /chapter-2 · h2 | Schemas and queries | PENDING | — |
 | `FSO-P8-MOOC-SECTION-002` · /chapter-2 · h2 | Apollo Server | PENDING | — |
@@ -382,9 +385,9 @@ Pending section review units: **656**.
 | `FSO-P8-MOOC-SECTION-050` · /chapter-1 · h2 | Using LLM:s | PENDING | — |
 | `FSO-P8-MOOC-SECTION-051` · /chapter-1 · h2 | About the material | PENDING | — |
 
-## Part 9 — 0/64 section units linked to explicit concepts
+## Part 9 — 0/64 section units dispositioned
 
-| Section source | Heading | Semantic audit | Explicit concept records |
+| Section source | Heading | Semantic disposition | Explicit concept records |
 |---|---|---|---|
 | `FSO-P9-MOOC-SECTION-001` · / · h3 | Type-safe full stack development with TypeScript across Node/Express and React | PENDING | — |
 | `FSO-P9-MOOC-SECTION-002` · / · h3 | Safe data handling with validation, narrowing | PENDING | — |
@@ -451,9 +454,9 @@ Pending section review units: **656**.
 | `FSO-P9-MOOC-SECTION-063` · /chapter-4 · h4 | Using schema validation libraries | PENDING | — |
 | `FSO-P9-MOOC-SECTION-064` · /chapter-4 · h3 | Parsing request body in middleware | PENDING | — |
 
-## Part 10 — 0/56 section units linked to explicit concepts
+## Part 10 — 0/56 section units dispositioned
 
-| Section source | Heading | Semantic audit | Explicit concept records |
+| Section source | Heading | Semantic disposition | Explicit concept records |
 |---|---|---|---|
 | `FSO-P10-MOOC-SECTION-001` · /chapter-1 · h2 | Prerequisites | PENDING | — |
 | `FSO-P10-MOOC-SECTION-002` · /chapter-1 · h2 | Enrollment | PENDING | — |
@@ -512,9 +515,9 @@ Pending section review units: **656**.
 | `FSO-P10-MOOC-SECTION-055` · /chapter-4 · h2 | Enhancing Apollo Client's requests | PENDING | — |
 | `FSO-P10-MOOC-SECTION-056` · /chapter-4 · h2 | Using React Context for dependency injection | PENDING | — |
 
-## Part 11 — 0/64 section units linked to explicit concepts
+## Part 11 — 0/64 section units dispositioned
 
-| Section source | Heading | Semantic audit | Explicit concept records |
+| Section source | Heading | Semantic disposition | Explicit concept records |
 |---|---|---|---|
 | `FSO-P11-MOOC-SECTION-001` · / · h3 | Build CI/CD pipelines with GitHub | PENDING | — |
 | `FSO-P11-MOOC-SECTION-002` · / · h3 | Automate safe deployments to the cloud | PENDING | — |
@@ -581,9 +584,9 @@ Pending section review units: **656**.
 | `FSO-P11-MOOC-SECTION-063` · /chapter-6 · h3 | Metrics | PENDING | — |
 | `FSO-P11-MOOC-SECTION-064` · /chapter-6 · h3 | Periodic tasks | PENDING | — |
 
-## Part 12 — 0/42 section units linked to explicit concepts
+## Part 12 — 0/42 section units dispositioned
 
-| Section source | Heading | Semantic audit | Explicit concept records |
+| Section source | Heading | Semantic disposition | Explicit concept records |
 |---|---|---|---|
 | `FSO-P12-MOOC-SECTION-001` · / · h3 | Use containers to run and manage applications consistently across environments | PENDING | — |
 | `FSO-P12-MOOC-SECTION-002` · / · h3 | Containerize and orchestrate full stack apps with Dockerfiles and Docker Compose | PENDING | — |
@@ -628,9 +631,9 @@ Pending section review units: **656**.
 | `FSO-P12-MOOC-SECTION-041` · /chapter-4 · h3 | Communications between containers in a more ambitious environment | PENDING | — |
 | `FSO-P12-MOOC-SECTION-042` · /chapter-4 · h3 | Tools for Production | PENDING | — |
 
-## Part 13 — 0/43 section units linked to explicit concepts
+## Part 13 — 0/43 section units dispositioned
 
-| Section source | Heading | Semantic audit | Explicit concept records |
+| Section source | Heading | Semantic disposition | Explicit concept records |
 |---|---|---|---|
 | `FSO-P13-MOOC-SECTION-001` · / · h3 | Use relational databases with Node.js applications | PENDING | — |
 | `FSO-P13-MOOC-SECTION-002` · / · h3 | Use Sequelize as an ORM | PENDING | — |
@@ -676,9 +679,9 @@ Pending section review units: **656**.
 | `FSO-P13-MOOC-SECTION-042` · /chapter-1 · h3 | Using LLM:s | PENDING | — |
 | `FSO-P13-MOOC-SECTION-043` · /chapter-1 · h3 | About the material | PENDING | — |
 
-## Part 14 — 0/65 section units linked to explicit concepts
+## Part 14 — 0/65 section units dispositioned
 
-| Section source | Heading | Semantic audit | Explicit concept records |
+| Section source | Heading | Semantic disposition | Explicit concept records |
 |---|---|---|---|
 | `FSO-P14-MOOC-SECTION-001` · /chapter-2 · h3 | Next.js notes | PENDING | — |
 | `FSO-P14-MOOC-SECTION-002` · /chapter-2 · h3 | App router | PENDING | — |
@@ -748,6 +751,9 @@ Pending section review units: **656**.
 
 ## Promotion rule
 
-A heading moves out of this queue only after the section has been read semantically and any reusable engineering concepts are represented by one or more explicit `kind: concept` ledger records with BodySense mapping. Administrative/submission-only headings can instead receive an explicit reviewed-no-concept disposition in a future concept-audit ledger; they must not disappear silently.
+- `REVIEWED_CONCEPTS_MAPPED`: the section was read semantically and reusable engineering concepts are represented by explicit mapped `kind: concept` records.
+- `REVIEWED_NON_ENGINEERING`: course administration/study logistics were inspected and retained explicitly but do not become BodySense engineering material.
+- `REVIEWED_REDUNDANT`: semantics are intentionally covered by explicit concept records attached elsewhere; the audit note must explain the relationship.
+- `PENDING`: no semantic coverage claim.
 
-Even after every heading is dispositioned, complete prose-level parity still requires a final audit that checks for important concepts taught inside a section without their own heading.
+Even after every heading is dispositioned, a final prose-level audit is still required to catch important concepts taught inside a section without a dedicated heading.

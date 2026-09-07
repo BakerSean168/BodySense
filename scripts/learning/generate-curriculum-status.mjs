@@ -63,7 +63,7 @@ lines.push(
   '',
   `The previous repository snapshot's Parts 8-11 are retained only as **${(fso.historical_items ?? []).length} historical exercise records** for comparison; they are not counted as current-course parity.`,
   '',
-  `Current source-section inventory: **${fso.source_sections.length} core headings (Parts 0-7)** + **${fso.current_mooc_sections.length} current MOOC headings (Parts 8-14)**. **${fsoConcepts.length} selected high-risk/previously-missed concepts** have already been semantically decomposed and mapped. Heading inventory improves omission detection but does not equal exhaustive paragraph-level semantic parity.`,
+  `Current source-section inventory: **${fso.source_sections.length} core headings (Parts 0-7)** + **${fso.current_mooc_sections.length} current MOOC headings (Parts 8-14)**. **${fsoConcepts.length} explicit section-derived concepts** have already been semantically decomposed and mapped. Heading inventory improves omission detection but does not equal exhaustive paragraph-level semantic parity.`,
   '',
   'The MOOC metadata snapshot intentionally stores only identifiers, page/chapter metadata, headings and short exercise titles; it does not copy exercise assignments, answers or course prose.',
   '',

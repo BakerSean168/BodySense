@@ -44,7 +44,7 @@ Advanced Parts 8-14: **198/198 current exercise records semantically mapped** af
 
 The previous repository snapshot's Parts 8-11 are retained only as **104 historical exercise records** for comparison; they are not counted as current-course parity.
 
-Current source-section inventory: **279 core headings (Parts 0-7)** + **385 current MOOC headings (Parts 8-14)**. **10 selected high-risk/previously-missed concepts** have already been semantically decomposed and mapped. Heading inventory improves omission detection but does not equal exhaustive paragraph-level semantic parity.
+Current source-section inventory: **279 core headings (Parts 0-7)** + **385 current MOOC headings (Parts 8-14)**. **75 explicit section-derived concepts** have already been semantically decomposed and mapped. Heading inventory improves omission detection but does not equal exhaustive paragraph-level semantic parity.
 
 The MOOC metadata snapshot intentionally stores only identifiers, page/chapter metadata, headings and short exercise titles; it does not copy exercise assignments, answers or course prose.
 

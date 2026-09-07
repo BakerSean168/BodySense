@@ -9,6 +9,7 @@ const load = (name) => JSON.parse(fs.readFileSync(path.join(ledgerDir, name), 'u
 const fso = load('full-stack-open.json');
 const tech = load('techschool-backend.json');
 const agent = load('bodysense-agent.json');
+const fsoConceptAudit = load('full-stack-open-concept-audit.json');
 
 const errors = [];
 const fail = (message) => errors.push(message);
@@ -218,6 +219,35 @@ function validateFSO() {
   if (!Array.isArray(fso.historical_source_sections) || fso.historical_source_sections.length !== 132) fail(`FSO: expected 132 archived section headings for historical Parts 8-11, got ${fso.historical_source_sections?.length}`);
 }
 
+
+function validateFSOConceptAudit() {
+  const activeSections = [...(fso.source_sections ?? []), ...(fso.current_mooc_sections ?? [])];
+  const activeIds = new Set(activeSections.map((item) => item.id));
+  const auditRows = fsoConceptAudit.sections ?? [];
+  const auditIds = new Set(auditRows.map((item) => item.section_id));
+  if (auditRows.length !== activeSections.length) fail(`FSO concept audit: expected ${activeSections.length} rows, got ${auditRows.length}`);
+  if (auditIds.size !== auditRows.length) fail('FSO concept audit: duplicate section_id');
+  for (const id of activeIds) if (!auditIds.has(id)) fail(`FSO concept audit: missing active section ${id}`);
+  for (const id of auditIds) if (!activeIds.has(id)) fail(`FSO concept audit: stale/inactive section ${id}`);
+
+  if (fsoConceptAudit.active_source_fingerprint?.core_snapshot_commit !== fso.baseline.indexed_snapshot_commit) fail('FSO concept audit: core snapshot fingerprint mismatch');
+  if (fsoConceptAudit.active_source_fingerprint?.current_mooc_source_state_sha256 !== fso.baseline.current_mooc?.source_state_sha256) fail('FSO concept audit: current MOOC fingerprint mismatch');
+
+  const conceptById = new Map(fso.items.filter((item) => item.kind === 'concept').map((item) => [item.id, item]));
+  const allowed = new Set(['PENDING','REVIEWED_CONCEPTS_MAPPED','REVIEWED_NON_ENGINEERING','REVIEWED_REDUNDANT']);
+  for (const row of auditRows) {
+    if (!allowed.has(row.status)) fail(`FSO concept audit ${row.section_id}: invalid status ${row.status}`);
+    const linked = row.linked_concept_ids ?? [];
+    if (row.status === 'REVIEWED_CONCEPTS_MAPPED' && linked.length === 0) fail(`FSO concept audit ${row.section_id}: mapped status requires concept links`);
+    if (row.status === 'PENDING' && row.reviewed_at) fail(`FSO concept audit ${row.section_id}: pending row must not have reviewed_at`);
+    for (const conceptId of linked) {
+      const concept = conceptById.get(conceptId);
+      if (!concept) fail(`FSO concept audit ${row.section_id}: unknown linked concept ${conceptId}`);
+      if (!(concept?.source?.section_ids ?? []).includes(row.section_id)) fail(`FSO concept audit ${row.section_id}: concept ${conceptId} lacks reciprocal section link`);
+    }
+  }
+}
+
 function validateTech() {
   if (tech.baseline.public_repo_commit !== '97f000fe58ad01a0774179ffa8884ac7784cf263') fail('TECH: unexpected public README baseline commit');
   const lectures = tech.items.filter((item) => item.kind === 'lecture');
@@ -237,6 +267,7 @@ function validateAgent() {
 
 validateUniqueIds();
 validateFSO();
+validateFSOConceptAudit();
 validateTech();
 validateAgent();
 for (const [ledger, filename] of [[fso,'full-stack-open.json'],[tech,'techschool-backend.json'],[agent,'bodysense-agent.json']]) {

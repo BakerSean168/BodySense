@@ -56,6 +56,7 @@ As of the pinned 2026-09-07 audit:
 
 - Full Stack Open Parts **0-7**: 158 numbered source exercises are individually indexed and semantically mapped to BodySense.
 - Full Stack Open Parts **8-14**: the public `courses.mooc.fi` Course Material API is pinned as a metadata-only snapshot: **198 current exercise records and 385 current section headings**. All **198/198 current exercise records now have exercise-level semantic BodySense mappings**; section/prose concept parity remains a separate unfinished audit.
+- Full Stack Open section/concept audit: Parts **0-2** currently have **99/99 section-heading review units dispositioned** (technical concepts mapped or non-engineering/redundant disposition recorded). This is section-level semantic audit, not yet final prose-level parity.
 - The former repository-snapshot records for Parts **8-11** are retained as **104 historical exercises** for comparison and are not counted as current parity.
 - TECH SCHOOL Backend #0-#77: 78/78 public README lecture IDs/titles are pinned and mapped. This is **public title-level parity only**, not a claim that paid/video-internal teaching semantics were audited.
 - FSO concept coverage is tracked separately from numbered exercises. Source section headings are indexed and high-risk previously-missed concepts (Promises/Effects, memoization, XSS/injection, dependency security, access control) now have explicit records; exhaustive paragraph-level semantic parity is not yet claimed.
@@ -101,6 +102,7 @@ docs/learning/
 │   │   ├── schema-v1.json
 │   │   ├── full-stack-open.json
 │   │   ├── full-stack-open-current-mooc.json
+│   │   ├── full-stack-open-concept-audit.json
 │   │   ├── techschool-backend.json
 │   │   └── bodysense-agent.json
 │   └── views/
