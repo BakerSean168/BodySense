@@ -1,5 +1,9 @@
 # BodySense Agent Engineering Extension
 
+> Machine-readable truth: [`ledger/bodysense-agent.json`](./ledger/bodysense-agent.json)
+> Generated status: [`views/coverage-status.md`](./views/coverage-status.md)
+> Current state: all A1-A8 are mapped; only records with an explicit exercise card are `EXERCISE_READY`.
+
 Full Stack Open and TECH SCHOOL provide a strong web/backend foundation, but BodySense also contains an AI runtime whose production concerns are not covered deeply enough by either source. This extension is mandatory for understanding BodySense as a whole.
 
 ## A1 — Typed Agent boundary

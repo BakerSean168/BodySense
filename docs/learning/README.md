@@ -1,76 +1,122 @@
 # BodySense Master Course
 
-> Status: active
+> Status: **curriculum reconstruction in progress**
 > Baseline date: 2026-09-07
-> Learning workspace: the production-shaped BodySense repository itself
-> Progress source of truth: `.practice-map/maps/bodysense-fundamentals.md`
+> Practice application: the production-shaped BodySense repository itself
+> Coverage source of truth: `docs/learning/curriculum/ledger/*.json`
+> Learner-progress source of truth: `.practice-map/maps/bodysense-fundamentals.md`
 
 ## Purpose
 
-This is the only maintained BodySense learning curriculum.
+BodySense is the single long-lived practice project. Phonebook, Blog List and Simple Bank are source-course teaching domains, not additional repositories that must be maintained.
 
-The older topic-by-topic local tutorials have been retired. The curriculum now uses two mature public courses as the external syllabus backbone:
+The external syllabus backbone is:
 
-1. **Full Stack Open** — full-stack/Web pedagogy, incremental exercises, debugging, React, server communication, testing, state management, TypeScript, CI/CD, containers and databases.
-2. **TECH SCHOOL Backend Master Class** — Go/PostgreSQL backend depth, transactions, locking, isolation, testing, authentication, background work, production delivery and server hardening.
+1. **Full Stack Open** for browser/Web/React/server communication/testing/state/TypeScript/CI/container/database pedagogy.
+2. **TECH SCHOOL Backend Master Class** for Go/PostgreSQL depth: schema, transactions, locks, isolation, API design, testing, auth, async work and production hardening.
+3. **BodySense Agent Engineering** for typed Agents, runtime ownership, evidence, safety, evaluation, replay, HITL and production debugging that the two external courses do not cover deeply enough.
 
-BodySense itself replaces Phonebook, Blog List and Simple Bank as the primary practice application.
+## Coverage is a lifecycle, not one percentage
 
-## What "1:1 parity" means
-
-The goal is **coverage parity, not text/code copying**.
-
-Every source knowledge point or training point must end in exactly one of three states:
-
-- `DIRECT` — reproduced as an original BodySense exercise against current code.
-- `COMPARE` — learned by comparing the source technology/design with the BodySense production choice; no forced migration.
-- `OPTIONAL` — explicitly retained as an extension when the source topic targets a different product surface (for example React Native or Next.js).
-
-Nothing is silently skipped.
-
-We do not copy course explanations, solution code, or exercise wording. Full Stack Open is CC BY-NC-SA; TECH SCHOOL's public Simple Bank repository is MIT, while video/course material has its own rights. This curriculum therefore records attribution and source coverage while using newly written BodySense exercises.
-
-## Course files
-
-- [`curriculum/01-full-stack-open-parity.md`](./curriculum/01-full-stack-open-parity.md) — Full Stack Open coverage map and BodySense exercise families.
-- [`curriculum/02-techschool-backend-parity.md`](./curriculum/02-techschool-backend-parity.md) — TECH SCHOOL lectures #0-#77 mapped one-by-one.
-- [`curriculum/03-bodysense-agent-extension.md`](./curriculum/03-bodysense-agent-extension.md) — Agent engineering that neither source course covers deeply enough.
-- [`curriculum/04-learning-protocol.md`](./curriculum/04-learning-protocol.md) — how every exercise is performed and accepted.
-- [`curriculum/SOURCES.md`](./curriculum/SOURCES.md) — source snapshots, attribution, and refresh policy.
-
-## Curriculum order
+Every source item moves through four different states:
 
 ```text
-Foundation / browser / HTTP
-  -> React + TypeScript
-  -> server communication + state
-  -> Go API architecture
-  -> PostgreSQL schema + migrations
-  -> transactions / locks / isolation
-  -> testing / validation / auth
-  -> streaming / async / jobs
-  -> CI / containers / release / recovery
-  -> typed Agent / RAG / eval / safety / replay
-  -> independent BodySense vertical slice
+SOURCE_INDEXED
+  -> MAPPED
+  -> EXERCISE_READY
+  -> LEARNER_VERIFIED
 ```
 
-The order is intentionally not identical to either source course. Coverage is one-to-one, but sequencing is optimized for the existing BodySense architecture.
+- `SOURCE_INDEXED`: the source item has a stable identifier/location. No learning-coverage claim is implied yet.
+- `MAPPED`: the source objective has a `DIRECT`, `COMPARE` or `OPTIONAL` BodySense mapping.
+- `EXERCISE_READY`: the rep has concrete target files, prerequisites, prediction, task, failure case, verification evidence and acceptance criteria.
+- `LEARNER_VERIFIED`: the learner actually reached the required mastery with recorded evidence.
 
-## Mastery rule
+This separation prevents four different facts from being conflated:
 
-A topic is not complete because an AI agent changed code successfully. Completion requires evidence that the learner can reason about it.
+```text
+source exists
+!= mapping exists
+!= exercise is executable
+!= learner has mastered it
+```
 
-For each exercise, produce at least two of:
+Current generated counts are in [`curriculum/views/coverage-status.md`](./curriculum/views/coverage-status.md).
 
-- a request/data/state/ownership diagram;
-- a prediction before running the code or test;
-- a test written or substantially modified by the learner;
-- a failure analysis identifying the first violated contract;
-- a small production improvement with verification evidence;
-- an explain-back without reading the answer.
+## Current source-integrity boundary
 
-Production code is modified only when the exercise reveals a real gap. Otherwise the exercise ends with understanding + proof.
+As of the pinned 2026-09-07 audit:
 
-## Current starting point
+- Full Stack Open Parts **0-7**: 158 numbered source exercises are individually indexed and semantically mapped to BodySense.
+- Full Stack Open Parts **8-11**: 104 numbered exercises are indexed from the pinned historical repository snapshot, but current MOOC-platform parity is still unverified.
+- Full Stack Open Parts **12-14**: current MOOC source is explicitly `UNVERIFIED_CURRENT_MOOC`; no 100% claim is allowed until a reproducible source is obtained.
+- TECH SCHOOL Backend #0-#77: 78/78 public README lecture IDs/titles are pinned and mapped. This is **public title-level parity only**, not a claim that paid/video-internal teaching semantics were audited.
+- FSO concept coverage is tracked separately from numbered exercises. Source section headings are indexed and high-risk previously-missed concepts (Promises/Effects, memoization, XSS/injection, dependency security, access control) now have explicit records; exhaustive paragraph-level semantic parity is not yet claimed.
 
-Existing learning progress is preserved rather than reset. Diagnosis Agent work already completed remains completed. The next active production-shaped learning slice continues from Treatment, while this new curriculum becomes the canonical knowledge map for future sessions.
+Exact source commits and unresolved source gaps are recorded in [`curriculum/SOURCES.md`](./curriculum/SOURCES.md).
+
+## Mapping modes
+
+- `DIRECT`: reproduce the engineering objective against current BodySense.
+- `COMPARE`: preserve the source design/technology as a structured comparison or isolated spike; do not force a production migration.
+- `OPTIONAL`: explicitly retain a different product-surface extension such as React Native/Next.js.
+
+Nothing should be silently omitted. A source gap remains a visible source gap instead of being filled by guesswork.
+
+## Mastery gate
+
+Evidence artifacts are **not** interchangeable with mastery.
+
+Core exercises require at least **L4 Verify**:
+
+- `L1 Recognize`: locate the concept.
+- `L2 Explain`: explain the path/ownership.
+- `L3 Predict`: predict normal and failure behavior before execution.
+- `L4 Verify`: design/select a test, trace or experiment that can prove or falsify the prediction.
+- `L5 Change`: safely modify the boundary while preserving invariants.
+
+A diagram plus a prediction can be useful evidence, but by themselves do not pass an L4 core exercise. Independent delivery/capstone work requires **L5**.
+
+See [`curriculum/04-learning-protocol.md`](./curriculum/04-learning-protocol.md).
+
+## Repository layout
+
+```text
+docs/learning/
+├── README.md
+├── curriculum/
+│   ├── SOURCES.md
+│   ├── 01-full-stack-open-parity.md
+│   ├── 02-techschool-backend-parity.md
+│   ├── 03-bodysense-agent-extension.md
+│   ├── 04-learning-protocol.md
+│   ├── ledger/
+│   │   ├── schema-v1.json
+│   │   ├── full-stack-open.json
+│   │   ├── techschool-backend.json
+│   │   └── bodysense-agent.json
+│   └── views/
+│       ├── coverage-status.md
+│       └── prerequisite-spine.md
+└── exercises/
+    └── bs-*.md
+```
+
+The JSON ledgers are canonical for source IDs, mapping state, exercise readiness and mastery evidence. Markdown parity files are human-readable views/policy notes and must not invent counts that disagree with the ledgers. Prerequisite edges become authoritative only when `dependency_audit` is `REVIEWED`; unready mappings explicitly keep their dependency graph unmodeled instead of treating source order as proof of prerequisite semantics.
+
+## Current execution order
+
+Do **not** jump directly to Treatment or placement merely because an old roadmap named it next.
+
+The current order is:
+
+```text
+1. Source integrity / source gaps
+2. Source -> BodySense mapping
+3. Make the prerequisite slice EXERCISE_READY
+4. Placement audit on that ready slice
+5. Start from the first prerequisite gap below L4
+6. Continue through the dependency graph
+```
+
+The first executable spine is intentionally small and high-value: HTTP/SPA tracing, stale mutation handling, transaction/lock/isolation, REST/error boundaries, refresh-token races, durable jobs and streaming/replay. It is listed in the generated coverage view.

@@ -1,36 +1,60 @@
 # BodySense Learning Protocol
 
-This file defines how a source-course point becomes a real BodySense learning exercise.
+This protocol separates curriculum completeness from learner progress and defines how a source-course point becomes a real BodySense exercise.
 
-## 1. Exercise template
+## 1. Two independent state machines
 
-Every `BS-*` exercise should be written/run with these fields:
+### Curriculum lifecycle
+
+```text
+SOURCE_INDEXED
+  -> MAPPED
+  -> EXERCISE_READY
+  -> LEARNER_VERIFIED
+```
+
+- `SOURCE_INDEXED`: stable source identity/location is known.
+- `MAPPED`: source objective is assigned `DIRECT`, `COMPARE` or `OPTIONAL` and has a BodySense adaptation.
+- `EXERCISE_READY`: a concrete exercise card exists and passes curriculum validation.
+- `LEARNER_VERIFIED`: learner mastery evidence meets the exercise gate.
+
+### Mastery level
+
+```text
+L1 Recognize
+-> L2 Explain
+-> L3 Predict
+-> L4 Verify
+-> L5 Change
+```
+
+Do not use `L1/L2` for historical project phases. Old phrases such as “L1 Diagnosis / L2 Treatment” are historical roadmap labels only; current mastery levels always mean Recognize/Explain/Predict/Verify/Change.
+
+## 2. Exercise card contract
+
+An `EXERCISE_READY` card must contain:
 
 ```text
 Source point
 Concept
+Prerequisites
 BodySense target files
 Prediction before reading/running
 Task
 Failure case
 Verification command/evidence
 Explain-back questions
-Production change: none | justified change
+Production change rule
+L4/L5 acceptance gate
 ```
 
-## 2. The six-step loop
+The machine ledger must point to the card and the validator must confirm its target paths exist.
+
+## 3. The learning loop
 
 ### Step 1 — Locate
 
-Use the source point only to know what concept to study. Find the smallest real BodySense surface that exhibits it.
-
-### Step 2 — Predict
-
-Before asking AI for an explanation, write what you think happens. A wrong prediction is useful evidence of the actual knowledge gap.
-
-### Step 3 — Trace
-
-Follow the real call/data/state path. Prefer executable truth in this order:
+Use the source point to identify the smallest real BodySense surface that demonstrates the concept. Executable truth order:
 
 ```text
 code/tests/config
@@ -38,33 +62,97 @@ code/tests/config
 -> historical plans
 ```
 
-### Step 4 — Break or test
+### Step 2 — Predict
 
-Do at least one:
+Write what should happen before asking AI to explain it. Include at least one failure prediction.
 
-- write a characterization test;
-- add a malformed input;
-- simulate a race/retry/disconnect;
-- inspect a real network/DB trace;
-- construct a small isolated spike for a comparison topic.
+### Step 3 — Trace
+
+Follow the actual call/data/state path and name ownership at each boundary.
+
+### Step 4 — Verify or falsify
+
+At least one observation must be capable of proving the prediction wrong:
+
+- characterization test;
+- malformed input;
+- race/retry/disconnect simulation;
+- browser/network/database trace;
+- isolated comparison spike;
+- performance/rerender measurement when the concept is an optimization.
 
 ### Step 5 — Repair only a real gap
 
-Do not refactor production merely to use a technique mentioned by a course. Change production code only if the existing behavior or architecture has a demonstrated deficiency.
+Do not refactor production merely to use a source-course technique. Change product code only when the exercise demonstrates a defect, missing invariant, missing observability, or justified structural improvement. Adding a focused regression/characterization test can itself be the useful production-quality improvement.
 
 ### Step 6 — Explain back
 
-Without looking at the source answer, explain:
+Without reading the prepared answer, explain:
 
-1. what problem the concept solves;
+1. the engineering problem;
 2. how BodySense currently solves it;
-3. what alternative the source course uses;
+3. the source-course alternative when different;
 4. the important failure mode;
-5. how the tests prove the behavior.
+5. why the selected evidence proves the behavior.
 
-## 3. AI coaching policy
+## 4. L4 is a hard gate for core material
 
-Default learning mode is progressive hints:
+For core Full Stack Open, TECH SCHOOL and Agent engineering material, completion requires at least `L4 Verify`.
+
+The learner must independently design or select a test/trace/experiment that distinguishes correct behavior from a relevant failure case and explain why that evidence is discriminating.
+
+Examples of evidence that are useful but insufficient alone:
+
+- a diagram;
+- a prediction;
+- AI-generated explanation;
+- tests that were already green but the learner cannot explain;
+- a successful AI-generated code change.
+
+Independent vertical delivery requires `L5 Change`.
+
+## 5. Placement audit rule
+
+Placement is performed only against `EXERCISE_READY` prerequisite nodes. Existing project work can satisfy an exercise, but only if there is concrete evidence that the learner reached the same mastery gate.
+
+Placement outcome per exercise:
+
+```text
+unassessed
+L1/L2/L3 gap
+L4 verified
+L5 verified
+```
+
+A previous AI implementation is not automatically learner evidence. Conversely, a previously documented prediction/test/review can be reused; the learner is not forced to rewrite code just to re-earn credit.
+
+## 6. Dependency rule
+
+Dependency claims are promoted with exercise readiness rather than invented globally. A mapped-but-not-ready record uses `dependency_audit: UNMODELED` and does not pretend that simple source ordering is a verified prerequisite graph.
+
+Every ready exercise uses `dependency_audit: REVIEWED` and lists its concrete prerequisites. The curriculum validator rejects unknown/self dependencies, cycles, and any ready node that depends on a non-ready node. The generated prerequisite view therefore shows a closed, currently executable dependency spine.
+
+The dependency graph is allowed to merge source courses. For example:
+
+```text
+HTTP mutation tracing
+  -> stale-client conflict handling
+
+migration/repository basics
+  -> transaction
+  -> row lock/deadlock
+  -> isolation
+
+JWT/auth middleware
+  -> refresh rotation/replay
+
+Agent typed boundary + runtime ownership
+  -> streaming/HITL/replay
+```
+
+## 7. AI coaching policy
+
+Default learning mode:
 
 ```text
 Goal
@@ -76,35 +164,15 @@ Goal
 -> direct solution only when blocked or explicitly requested
 ```
 
-AI may implement directly in a shipping session, but that session does not count as a completed learning exercise until the learner later performs the explain/test evidence.
+A shipping session may use direct Agent implementation, but that session does not grant mastery automatically.
 
-## 4. Mastery levels
+## 8. Session closeout
 
-- `L1 Recognize` — can locate the concept in BodySense.
-- `L2 Explain` — can explain the path/ownership in their own words.
-- `L3 Predict` — can predict normal and failure behavior before execution.
-- `L4 Verify` — can design tests/traces that prove the behavior.
-- `L5 Change` — can safely modify the boundary and preserve invariants.
+Update `.practice-map/maps/bodysense-fundamentals.md` with:
 
-Core topics require at least `L4`; independent delivery topics require `L5`.
-
-## 5. What does not count
-
-These are not completion evidence by themselves:
-
-- AI generated a correct answer;
-- all tests were already green before the learner understood why;
-- reading a tutorial without touching the real code;
-- copying a source exercise into another toy repository;
-- changing libraries just to match the course stack.
-
-## 6. Session closeout
-
-After a meaningful session, update `.practice-map/maps/bodysense-fundamentals.md` with:
-
-- source points covered;
-- mastery level reached;
-- files traced/changed;
-- tests/commands actually run;
-- one misconception corrected;
-- next smallest rep.
+- source/exercise IDs covered;
+- mastery level actually reached;
+- files traced or changed;
+- commands/tests actually run;
+- one corrected misconception or confirmed prediction;
+- next unlocked prerequisite node.

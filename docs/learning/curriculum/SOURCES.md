@@ -1,29 +1,56 @@
-# Curriculum Sources and Attribution
+# Curriculum Sources, authority and refresh policy
+
+This file records what source material has actually been obtained. Missing source material is represented as a source gap rather than reconstructed from memory.
 
 ## Full Stack Open
 
-- Course: Full Stack Open, University of Helsinki.
-- Course URL: https://fullstackopen.com/
-- Current course model checked on 2026-09-07: Parts 0-14; the course is continuously updated rather than versioned yearly.
-- Source repository snapshot used when auditing Parts 0-13: `fullstack-hy2020/fullstack-hy2020.github.io` commit `0711aef8a451c4458263e5587ccda85f08fd7a96` (2026-09-01).
-- License of the course material: Creative Commons BY-NC-SA 3.0.
+- Publisher: University of Helsinki.
+- Public course: `https://fullstackopen.com/`
+- License of the public course material: Creative Commons BY-NC-SA 3.0.
+- Indexed repository: `fullstack-hy2020/fullstack-hy2020.github.io`.
+- Pinned indexed commit: `0711aef8a451c4458263e5587ccda85f08fd7a96` (used in the 2026-09-07 audit).
 
-This repository does not reproduce or redistribute the Full Stack Open material. It references its public syllabus and creates new BodySense-specific exercises. If course material is ever copied or adapted beyond short labels/metadata, it must be handled under the upstream CC BY-NC-SA terms rather than silently absorbed into BodySense's repository licensing.
+### Authority matrix
+
+| Parts | Source obtained | What may be claimed |
+|---|---|---|
+| 0-7 | full English snapshot content at pinned commit | numbered exercise index + reviewed source-exercise semantics can be mapped |
+| 8-11 | numbered exercise/content snapshot exists at pinned commit, but official course now routes these advanced parts through MOOC course instances | historical snapshot inventory only until current MOOC material is pinned/verified |
+| 12-13 | pinned repository files are migration notices to the MOOC platform rather than the full course body | current source remains `UNVERIFIED_CURRENT_MOOC`; no exercise/knowledge completeness claim |
+| 14 | current course index points to a Next.js MOOC instance; reproducible full body not captured by this audit | current source remains `UNVERIFIED_CURRENT_MOOC` |
+
+The machine ledger contains 262 distinct numbered snapshot exercises for Parts 0-11 using the audit's de-duplication rule. Parts 0-7 account for 158 of them.
+
+The ledger also indexes source section headings separately. Section-heading inventory improves omission detection but does not automatically equal exhaustive semantic knowledge-point decomposition.
 
 ## TECH SCHOOL Backend Master Class
 
-- Public code repository: https://github.com/techschool/simplebank
-- Course: Backend Master Class by TECH SCHOOL.
-- Public README checked on 2026-09-07 contains backend lectures #0 through #77 in six sections.
-- `techschool/simplebank` code repository license: MIT.
+- Public repository: `techschool/simplebank`.
+- Pinned public README commit: `97f000fe58ad01a0774179ffa8884ac7784cf263`.
+- Public README at that commit lists backend Lecture #0 through Lecture #77.
+- Repository code license: MIT.
 
-This curriculum uses lecture titles/topics as a coverage checklist and writes new BodySense-specific practice. It does not reproduce paid course/video content.
+Authority limit:
+
+```text
+VERIFIED_PUBLIC_README_TITLE_ONLY
+```
+
+The curriculum may claim 78/78 public lecture ID/title indexing and BodySense title-level mapping. It must **not** claim that all paid/video-internal subtopics, examples or demonstrations were audited unless the course content is separately obtained and reviewed.
+
+## BodySense Agent extension
+
+The Agent extension is project-defined rather than imported from a third-party syllabus. Its source authority is current code/tests + accepted architecture/ADR material, with prior Diagnosis learning evidence retained as historical mastery evidence rather than external source coverage.
 
 ## Refresh policy
 
-The source courses evolve. Once per quarter, or before a major curriculum rewrite:
+Before changing a source-completeness claim:
 
-1. check the current Full Stack Open parts and recent update notes;
-2. check the TECH SCHOOL Simple Bank README for newly published lectures;
-3. append new source items to the parity map;
-4. never invalidate completed BodySense learning unless the underlying concept changed materially.
+1. pin the exact source commit/version/URL;
+2. update the corresponding ledger source metadata;
+3. validate source IDs/counts without silently deleting old items;
+4. separately update semantic mapping state;
+5. only then promote exercises to `EXERCISE_READY`;
+6. never convert source availability into learner mastery.
+
+Quarterly source refreshes may append/update mappings, but completed learner evidence is invalidated only if the underlying concept or acceptance contract materially changes.
