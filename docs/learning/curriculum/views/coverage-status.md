@@ -30,17 +30,17 @@ Active current-source exercise inventory: **356 records across Parts 0-14**.
 | 5 | 31 | 31 | 0 | 0 | pinned course-repository snapshot |
 | 6 | 22 | 22 | 0 | 0 | pinned course-repository snapshot |
 | 7 | 20 | 20 | 0 | 0 | pinned course-repository snapshot |
-| 8 | 30 | 0 | 0 | 0 | current courses.mooc.fi API snapshot |
-| 9 | 35 | 0 | 0 | 0 | current courses.mooc.fi API snapshot |
-| 10 | 30 | 0 | 0 | 0 | current courses.mooc.fi API snapshot |
-| 11 | 24 | 0 | 0 | 0 | current courses.mooc.fi API snapshot |
-| 12 | 25 | 0 | 0 | 0 | current courses.mooc.fi API snapshot |
-| 13 | 28 | 0 | 0 | 0 | current courses.mooc.fi API snapshot |
-| 14 | 26 | 0 | 0 | 0 | current courses.mooc.fi API snapshot |
+| 8 | 30 | 30 | 0 | 0 | current courses.mooc.fi API snapshot |
+| 9 | 35 | 35 | 0 | 0 | current courses.mooc.fi API snapshot |
+| 10 | 30 | 30 | 0 | 0 | current courses.mooc.fi API snapshot |
+| 11 | 24 | 24 | 0 | 0 | current courses.mooc.fi API snapshot |
+| 12 | 25 | 25 | 0 | 0 | current courses.mooc.fi API snapshot |
+| 13 | 28 | 28 | 0 | 0 | current courses.mooc.fi API snapshot |
+| 14 | 26 | 26 | 0 | 0 | current courses.mooc.fi API snapshot |
 
 Core Parts 0-7: **158/158 numbered source exercises semantically mapped** against pinned repository snapshot `0711aef8a451c4458263e5587ccda85f08fd7a96`. This is mapping coverage, not completed learning.
 
-Advanced Parts 8-14: **198 current exercise records source-indexed** directly from the public courses.mooc.fi Course Material API. Snapshot retrieval: `2026-09-07T15:30:35.638Z`; source-state SHA-256: `4a8093083af985c19e04b03bf876fd148676bd6c2b65327c7628d8b20122689d`. They remain `SOURCE_INDEXED` until each current objective is semantically reviewed and mapped.
+Advanced Parts 8-14: **198/198 current exercise records semantically mapped** after indexing from the public courses.mooc.fi Course Material API. Snapshot retrieval: `2026-09-07T15:30:35.638Z`; source-state SHA-256: `4a8093083af985c19e04b03bf876fd148676bd6c2b65327c7628d8b20122689d`. Mapping is complete at exercise-objective level; exercise readiness and concept-level parity remain separate.
 
 The previous repository snapshot's Parts 8-11 are retained only as **104 historical exercise records** for comparison; they are not counted as current-course parity.
 
@@ -97,4 +97,4 @@ There are currently **27** executable cards and **0** learner-verified cards.
 - `BS-A2` -> [card](../../exercises/bs-a2.md)
 - `BS-A7` -> [card](../../exercises/bs-a7.md)
 
-The next curriculum milestone is to semantically map current FSO Parts 8-14 and continue expanding `EXERCISE_READY` coverage while preserving prerequisite closure. Placement assessment starts only on ready prerequisite slices.
+The next curriculum milestone is concept-level semantic audit plus expansion of `EXERCISE_READY` coverage while preserving prerequisite closure. Placement assessment starts only on ready prerequisite slices.

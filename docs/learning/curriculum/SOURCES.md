@@ -39,7 +39,7 @@ Committed metadata snapshot:
 
 These counts are **platform exercise records**, including warmups or unnamed records where the MOOC platform exposes them. They must not be silently reinterpreted as the number of graded assignments published in prose.
 
-Source-integrity state for Parts 8-14 is now `VERIFIED_CURRENT_MOOC_API_INDEX`. Semantic objective review, BodySense mapping, exercise readiness and learner mastery remain separate later states.
+Source-integrity state for Parts 8-14 is `VERIFIED_CURRENT_MOOC_API_INDEX`. The **198 current exercise records have also completed exercise-level semantic review and BodySense mapping**. Exercise readiness, section/prose concept parity and learner mastery remain separate later states.
 
 The older repository snapshot's Parts 8-11 are retained in `historical_items` (104 exercises, 132 headings) for change comparison only; they are not current-course evidence.
 

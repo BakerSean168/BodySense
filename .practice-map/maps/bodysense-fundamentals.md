@@ -30,7 +30,7 @@ updated_at: 2026-09-07
 
 ```text
 FSO Parts 0-7 numbered exercises: 158/158 MAPPED
-FSO Parts 8-14: current MOOC API source indexed (198 exercise records / 385 headings); semantic mapping pending
+FSO Parts 8-14: current MOOC API source indexed; 198/198 exercise records MAPPED; 385 section headings still require concept-level semantic audit
 FSO historical Parts 8-11: 104 exercise records archived for comparison
 TECH public lectures #0-#77: 78/78 title-level MAPPED
 Agent A1-A8: 8/8 MAPPED
@@ -53,8 +53,8 @@ BS-A7
 下一步优先级：
 
 1. 继续把高价值 prerequisite 节点从 `MAPPED` 提升为 `EXERCISE_READY`；
-2. 对已固定的 FSO Parts 8-14 当前 MOOC source index 做逐项 semantic mapping；
-3. 继续 semantic concept audit，而不是把 heading / exercise record 数量当成知识点完成率；
+2. 对 FSO current section/prose concepts 继续逐项 semantic audit；
+3. 不把 exercise mapping / heading 数量当成完整知识点完成率；
 4. 当某条依赖链已 ready 后，再对该链执行 placement audit。
 
 # Prior Mastery Evidence
@@ -82,6 +82,14 @@ Diagnosis Production Agent 学习已经形成可复用的高阶证据，不因�
 这些是历史学习/工程证据，不会自动写成新的 `LEARNER_VERIFIED`；placement 时仍需确认它们是否满足对应 exercise 的 L4/L5 acceptance contract。
 
 # Session Log
+
+## 2026-09-07 · Current FSO Parts 8~14 exercise semantic mapping complete
+
+- 基于已固定的 current MOOC exercise UUID/title 与逐题 assignment semantic review，将 Parts 8~14 的 **198/198 exercise records** 全部提升为 `MAPPED`。
+- 每条记录独立保存 exercise number、原创 concise objective、`DIRECT / COMPARE / OPTIONAL`、BodySense target surface、adaptation task 和 completion-evidence plan；没有使用“范围 = 覆盖”的 shortcut。
+- Mode 分布：P8 GraphQL = 26 COMPARE + 4 OPTIONAL；P9 TypeScript = 35 DIRECT；P10 React Native = 30 OPTIONAL；P11 CI = 24 DIRECT；P12 Containers = 23 DIRECT + 2 Mongo-specific COMPARE；P13 Relational DB = 28 DIRECT；P14 Next.js = 26 COMPARE。
+- 所有这些节点仍保持 `dependency_audit: UNMODELED`，不会因为 exercise mapping 完成就假装已有完整 prerequisite DAG，也不会自动升级为 `EXERCISE_READY`。
+- Full Stack Open 当前**编号/平台 exercise-objective mapping**已覆盖 Parts 0~14；完整 knowledge parity 仍被 section/prose concept audit 和 executable exercise readiness 阻塞。
 
 ## 2026-09-07 · Current FSO MOOC source integrity recovered
 

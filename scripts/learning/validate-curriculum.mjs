@@ -163,12 +163,16 @@ function validateFSO() {
         if (item.source.authority !== 'current-mooc-api') fail(`${item.id}: Part ${part} must use current-mooc-api authority`);
         if (item.source.verification !== 'VERIFIED_CURRENT_MOOC_API_INDEX') fail(`${item.id}: Part ${part} must record verified current MOOC API indexing`);
         if (item.source.source_snapshot_sha256 !== fso.baseline.current_mooc?.source_state_sha256) fail(`${item.id}: Part ${part} source digest differs from current MOOC baseline`);
+        if ((lifecycleRank.get(item.lifecycle) ?? 0) < lifecycleRank.get('MAPPED')) fail(`${item.id}: current MOOC Part ${part} must be at least MAPPED after semantic audit`);
+        if (item.mapping?.semantic_audit !== 'reviewed-against-current-mooc-exercise') fail(`${item.id}: current MOOC mapping must record semantic review`);
+        if (item.mapping?.dependency_audit !== 'UNMODELED' && (lifecycleRank.get(item.lifecycle) ?? 0) < lifecycleRank.get('EXERCISE_READY')) fail(`${item.id}: mapped current MOOC dependency graph must remain UNMODELED until ready`);
       }
     }
   }
 
   if (fso.baseline.indexed_snapshot_commit !== '0711aef8a451c4458263e5587ccda85f08fd7a96') fail('FSO: unexpected indexed core snapshot commit');
   if (!fso.baseline.current_mooc?.source_state_sha256) fail('FSO: current MOOC source digest missing');
+  if (fso.baseline.current_mooc?.semantic_mapping?.exercise_records_mapped !== 198) fail('FSO: current MOOC semantic mapping baseline must record 198 mapped exercise records');
 
   const moocIndexPath = path.join(ledgerDir, 'full-stack-open-current-mooc.json');
   if (!fs.existsSync(moocIndexPath)) {

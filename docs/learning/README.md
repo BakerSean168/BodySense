@@ -48,7 +48,7 @@ Current generated counts are in [`curriculum/views/coverage-status.md`](./curric
 As of the pinned 2026-09-07 audit:
 
 - Full Stack Open Parts **0-7**: 158 numbered source exercises are individually indexed and semantically mapped to BodySense.
-- Full Stack Open Parts **8-14**: the public `courses.mooc.fi` Course Material API has been indexed into a metadata-only snapshot: **198 current exercise records and 385 current section headings**. These are source-integrity records, not yet semantic mappings.
+- Full Stack Open Parts **8-14**: the public `courses.mooc.fi` Course Material API is pinned as a metadata-only snapshot: **198 current exercise records and 385 current section headings**. All **198/198 current exercise records now have exercise-level semantic BodySense mappings**; section/prose concept parity remains a separate unfinished audit.
 - The former repository-snapshot records for Parts **8-11** are retained as **104 historical exercises** for comparison and are not counted as current parity.
 - TECH SCHOOL Backend #0-#77: 78/78 public README lecture IDs/titles are pinned and mapped. This is **public title-level parity only**, not a claim that paid/video-internal teaching semantics were audited.
 - FSO concept coverage is tracked separately from numbered exercises. Source section headings are indexed and high-risk previously-missed concepts (Promises/Effects, memoization, XSS/injection, dependency security, access control) now have explicit records; exhaustive paragraph-level semantic parity is not yet claimed.
@@ -121,8 +121,8 @@ The current order is:
 
 ```text
 1. Source integrity / source gaps
-2. Source -> BodySense semantic mapping (current advanced MOOC Parts 8-14 are the largest remaining mapping gap)
-3. Make the prerequisite slice EXERCISE_READY
+2. Continue source-section/prose concept semantic audit (numbered exercise mapping is complete across current FSO Parts 0-14)
+3. Promote mapped training points to EXERCISE_READY with reviewed prerequisite closure
 4. Placement audit on that ready slice
 5. Start from the first prerequisite gap below L4
 6. Continue through the dependency graph

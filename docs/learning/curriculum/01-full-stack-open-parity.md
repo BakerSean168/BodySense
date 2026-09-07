@@ -27,12 +27,12 @@ This fixes the earlier range-only mapping. In particular, source `1.13` is expli
 | Part | Current status |
 |---|---|
 | 0-7 | pinned course-repository snapshot indexed + 158 numbered exercises semantically mapped |
-| 8-14 | current `courses.mooc.fi` public Course Material API metadata indexed: exercise IDs/titles, chapters/pages and headings; semantic mapping still pending |
+| 8-14 | current `courses.mooc.fi` API metadata indexed; all 198 exercise records semantically mapped; section/prose concept audit still pending |
 | historical 8-11 | 104 old repository-snapshot exercises archived for comparison only |
 
-The current MOOC metadata snapshot contains **198 exercise records** across Parts 8-14 and **385 headings**. It is fingerprinted in `ledger/full-stack-open-current-mooc.json`. This resolves the earlier source-availability gap for Parts 12-14 at the **source-index** layer, but it does not by itself establish knowledge/training parity.
+The current MOOC metadata snapshot contains **198 exercise records** across Parts 8-14 and **385 headings**. It is fingerprinted in `ledger/full-stack-open-current-mooc.json`. Every current exercise record has now been reviewed at the exercise-objective level and assigned an original BodySense `DIRECT` / `COMPARE` / `OPTIONAL` mapping.
 
-Therefore this repository still does **not** claim Full Stack Open 0-14 semantic parity.
+This means **numbered/current exercise-objective mapping is complete across Parts 0-14**, but the repository still does **not** claim complete Full Stack Open knowledge parity: section/prose teaching concepts and exercise executability are separate unfinished layers.
 
 ## Exercise numbers and concepts are different inventories
 
@@ -70,4 +70,4 @@ No production framework/library is changed merely to make the repository look li
 
 The first FSO cards currently ready for actual L4 learning are generated/listed in [`views/coverage-status.md`](./views/coverage-status.md). More cards are promoted from `MAPPED` only after target files, failure cases and verification evidence are concrete.
 
-Current Parts 8-14 remain `SOURCE_INDEXED`: the next parity step is semantic review of their current MOOC exercise/headline inventory, then `DIRECT` / `COMPARE` / `OPTIONAL` mapping. Historical Part 8-11 mappings are not silently reused as proof that the new MOOC versions are equivalent.
+Current Parts 8-14 exercise records are now `MAPPED`; historical Part 8-11 mappings were not silently reused. The next parity work is (1) semantic decomposition/mapping of current section/prose concepts and (2) promotion of mapped exercises to concrete `EXERCISE_READY` cards.
