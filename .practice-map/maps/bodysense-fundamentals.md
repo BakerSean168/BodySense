@@ -31,7 +31,7 @@ updated_at: 2026-09-08
 ```text
 FSO Parts 0-7 numbered exercises: 158/158 MAPPED
 FSO Parts 8-14: current MOOC API source indexed; 198/198 exercise records MAPPED
-FSO concept audit: core Parts 0-7 = 279/279 section units dispositioned; Parts 8-14 = 385 section units pending; final paragraph/prose-level audit remains separate
+FSO concept audit: Parts 0-14 = 664/664 current section-heading units dispositioned; 462 explicit section-derived concepts; final paragraph/example-level parity remains separate
 FSO historical Parts 8-11: 104 exercise records archived for comparison
 TECH public lectures #0-#77: 78/78 title-level MAPPED
 Agent A1-A8: 8/8 MAPPED
@@ -54,7 +54,7 @@ BS-A7
 下一步优先级：
 
 1. 继续把高价值 prerequisite 节点从 `MAPPED` 提升为 `EXERCISE_READY`；
-2. 对 FSO current MOOC Parts 8-14 的 section/prose concepts 继续逐项 semantic audit（core 0-7 section audit 已完成）；
+2. 对高风险 section 做 paragraph/subheading 定向审计，同时开始把已映射节点继续提升为 `EXERCISE_READY`；
 3. 不把 exercise mapping / heading 数量当成完整知识点完成率；
 4. 当某条依赖链已 ready 后，再对该链执行 placement audit。
 
@@ -83,6 +83,17 @@ Diagnosis Production Agent 学习已经形成可复用的高阶证据，不因�
 这些是历史学习/工程证据，不会自动写成新的 `LEARNER_VERIFIED`；placement 时仍需确认它们是否满足对应 exercise 的 L4/L5 acceptance contract。
 
 # Session Log
+
+## 2026-09-08 · FSO current Parts 8~14 section-level semantic audit complete
+
+- 完成 current MOOC P8 GraphQL 51/51 section units：schema/query/resolver/mutation/error、Apollo client/cache、auth context、subscription/WebSocket、N+1 等均以 `COMPARE` 为主映射到当前 REST/SSE/TanStack Query/PostgreSQL 架构，不为课程强行迁移生产技术栈。
+- 完成 P9 TypeScript 64/64：structural typing、inference/erasure、unknown/any/assertion、guards/Zod、React props/state/discriminated union/exhaustiveness、utility/distributive types、typed HTTP trust boundary 等形成显式 concept records。
+- 完成 P10 React Native 56/56：Expo/native renderer/device storage/navigation/testing/pagination 等保留为 `OPTIONAL/COMPARE`，复用 Web/GraphQL/state/test 已有知识，不强制建设移动端。
+- 完成 P11 CI/CD 64/64：CI workflow/runner/reproducibility/gates/deploy health/version provenance/branch protection/supply-chain pinning/metrics/scheduled automation 映射到 BodySense 当前 GitHub Actions 与 production delivery。
+- 完成 P12 Containers 42/42：image/container/Dockerfile/Compose/volumes/network/DNS/dev loop/multi-stage/Redis/reverse proxy/orchestration 等映射到现有容器与部署配置。
+- 完成 P13 Relational DB 43/43：PostgreSQL/GORM/migrations/constraints/joins/many-to-many/eager-lazy/ORM/query/migration-history 等映射到现有 Go persistence layer。
+- 完成 P14 Next.js 65/65：App Router/RSC/Server Actions/static-vs-dynamic/cache revalidation/Auth.js/Route Handlers/Suspense/SEO 等以 `COMPARE` 映射到当前 Vite SPA + Go API，明确何时才值得迁移。
+- Full Stack Open 当前 source 的 **664/664 section-heading review units 已全部 dispositioned**；当前 ledger 共 **462 个显式 section-derived concept records**。这只表示 section-level semantic coverage，不把 heading 覆盖冒充 paragraph/example-level 全量知识 parity。
 
 ## 2026-09-08 · FSO core Parts 0~7 section-level concept audit complete
 

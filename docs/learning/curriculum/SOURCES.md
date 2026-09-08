@@ -13,7 +13,7 @@ This file records what source material has actually been obtained. Missing seman
 - Indexed repository: `fullstack-hy2020/fullstack-hy2020.github.io`.
 - Pinned commit: `0711aef8a451c4458263e5587ccda85f08fd7a96`.
 - Current active source inventory: 158 distinct numbered exercises and 279 level-3 section headings for Parts 0-7 under the audit counting rule.
-- All 158 numbered exercises have individual semantic BodySense mappings. Section-heading inventory is used for omission detection and is not treated as exhaustive paragraph-level knowledge parity.
+- All 158 numbered exercises have individual semantic BodySense mappings. All 279 active Part 0-7 section-heading review units have explicit concept/redundant/non-engineering dispositions. Heading coverage is still not treated as exhaustive paragraph-level knowledge parity.
 
 ### Parts 8-14 — current MOOC Course Material API snapshot
 
@@ -39,7 +39,7 @@ Committed metadata snapshot:
 
 These counts are **platform exercise records**, including warmups or unnamed records where the MOOC platform exposes them. They must not be silently reinterpreted as the number of graded assignments published in prose.
 
-Source-integrity state for Parts 8-14 is `VERIFIED_CURRENT_MOOC_API_INDEX`. The **198 current exercise records have also completed exercise-level semantic review and BodySense mapping**. Exercise readiness, section/prose concept parity and learner mastery remain separate later states.
+Source-integrity state for Parts 8-14 is `VERIFIED_CURRENT_MOOC_API_INDEX`. The **198 current exercise records have completed exercise-level semantic mapping**, and the **385 current section-heading review units have all been dispositioned**. Paragraph/example-level prose parity, exercise readiness and learner mastery remain separate later states.
 
 The older repository snapshot's Parts 8-11 are retained in `historical_items` (104 exercises, 132 headings) for change comparison only; they are not current-course evidence.
 

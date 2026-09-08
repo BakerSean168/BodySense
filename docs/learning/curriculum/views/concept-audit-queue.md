@@ -4,11 +4,11 @@
 > A section heading is a review unit, not proof that every paragraph-level concept is covered.
 
 Active section-heading review units: **664**.
-Semantically dispositioned section units: **279**.
-- concepts mapped: **227**
-- reviewed non-engineering/course logistics: **23**
-- reviewed redundant: **29**
-- pending: **385**
+Semantically dispositioned section units: **664**.
+- concepts mapped: **461**
+- reviewed non-engineering/course logistics: **97**
+- reviewed redundant: **106**
+- pending: **0**
 
 ## Part 0 — 33/33 section units dispositioned
 
@@ -329,425 +329,425 @@ Semantically dispositioned section units: **279**.
 | `FSO-P7-SECTION-023` · src/content/7/en/part7d.md:84 | State Management: Zustand | REVIEWED_REDUNDANT | `FSO-P6-CONCEPT-ZUSTAND-STORE`, `FSO-P6-CONCEPT-STATE-OWNERSHIP-CHOICE` |
 | `FSO-P7-SECTION-024` · src/content/7/en/part7d.md:110 | State Management: React Query and Context | REVIEWED_REDUNDANT | `FSO-P6-CONCEPT-TANSTACK-QUERY`, `FSO-P6-CONCEPT-REACT-CONTEXT`, `FSO-P6-CONCEPT-STATE-OWNERSHIP-CHOICE` |
 
-## Part 8 — 0/51 section units dispositioned
+## Part 8 — 51/51 section units dispositioned
 
 | Section source | Heading | Semantic disposition | Explicit concept records |
 |---|---|---|---|
-| `FSO-P8-MOOC-SECTION-001` · /chapter-2 · h2 | Schemas and queries | PENDING | — |
-| `FSO-P8-MOOC-SECTION-002` · /chapter-2 · h2 | Apollo Server | PENDING | — |
-| `FSO-P8-MOOC-SECTION-003` · /chapter-2 · h2 | Apollo Studio Explorer | PENDING | — |
-| `FSO-P8-MOOC-SECTION-004` · /chapter-2 · h2 | Schema syntax highlighting in VS Code | PENDING | — |
-| `FSO-P8-MOOC-SECTION-005` · /chapter-2 · h3 | Parameters of a resolver | PENDING | — |
-| `FSO-P8-MOOC-SECTION-006` · /chapter-2 · h2 | The default resolver | PENDING | — |
-| `FSO-P8-MOOC-SECTION-007` · /chapter-2 · h2 | Object within an object | PENDING | — |
-| `FSO-P8-MOOC-SECTION-008` · /chapter-2 · h2 | Mutations | PENDING | — |
-| `FSO-P8-MOOC-SECTION-009` · /chapter-2 · h2 | Error handling | PENDING | — |
-| `FSO-P8-MOOC-SECTION-010` · /chapter-2 · h2 | Enum | PENDING | — |
-| `FSO-P8-MOOC-SECTION-011` · /chapter-2 · h2 | Changing a phone number | PENDING | — |
-| `FSO-P8-MOOC-SECTION-012` · /chapter-2 · h2 | More on queries | PENDING | — |
-| `FSO-P8-MOOC-SECTION-013` · /chapter-4 · h2 | Refactoring the backend | PENDING | — |
-| `FSO-P8-MOOC-SECTION-014` · /chapter-4 · h2 | Mongoose and Apollo | PENDING | — |
-| `FSO-P8-MOOC-SECTION-015` · /chapter-4 · h2 | Validation | PENDING | — |
-| `FSO-P8-MOOC-SECTION-016` · /chapter-4 · h3 | User and log in | PENDING | — |
-| `FSO-P8-MOOC-SECTION-017` · /chapter-4 · h2 | Friends list | PENDING | — |
-| `FSO-P8-MOOC-SECTION-018` · /chapter-5 · h2 | User login | PENDING | — |
-| `FSO-P8-MOOC-SECTION-019` · /chapter-5 · h2 | Adding a token to a header | PENDING | — |
-| `FSO-P8-MOOC-SECTION-020` · /chapter-5 · h2 | Fixing validations | PENDING | — |
-| `FSO-P8-MOOC-SECTION-021` · /chapter-5 · h2 | Updating cache, revisited | PENDING | — |
-| `FSO-P8-MOOC-SECTION-022` · /chapter-6 · h2 | Fragments | PENDING | — |
-| `FSO-P8-MOOC-SECTION-023` · /chapter-6 · h2 | Subscriptions | PENDING | — |
-| `FSO-P8-MOOC-SECTION-024` · /chapter-6 · h2 | expressMiddleware | PENDING | — |
-| `FSO-P8-MOOC-SECTION-025` · /chapter-6 · h2 | Subscriptions on the server | PENDING | — |
-| `FSO-P8-MOOC-SECTION-026` · /chapter-6 · h2 | Subscriptions on the client | PENDING | — |
-| `FSO-P8-MOOC-SECTION-027` · /chapter-6 · h2 | n+1 problem | PENDING | — |
-| `FSO-P8-MOOC-SECTION-028` · /chapter-6 · h2 | Epilogue | PENDING | — |
-| `FSO-P8-MOOC-SECTION-029` · /chapter-3 · h2 | Apollo client | PENDING | — |
-| `FSO-P8-MOOC-SECTION-030` · /chapter-3 · h2 | Making queries | PENDING | — |
-| `FSO-P8-MOOC-SECTION-031` · /chapter-3 · h2 | Named queries and variables | PENDING | — |
-| `FSO-P8-MOOC-SECTION-032` · /chapter-3 · h3 | Cache | PENDING | — |
-| `FSO-P8-MOOC-SECTION-033` · /chapter-3 · h2 | Doing mutations | PENDING | — |
-| `FSO-P8-MOOC-SECTION-034` · /chapter-3 · h2 | Updating the cache | PENDING | — |
-| `FSO-P8-MOOC-SECTION-035` · /chapter-3 · h2 | Handling mutation errors | PENDING | — |
-| `FSO-P8-MOOC-SECTION-036` · /chapter-3 · h2 | Updating a phone number | PENDING | — |
-| `FSO-P8-MOOC-SECTION-037` · /chapter-3 · h2 | Apollo Client and the applications state | PENDING | — |
-| `FSO-P8-MOOC-SECTION-038` · / · h3 | Learn what GraphQL is | PENDING | — |
-| `FSO-P8-MOOC-SECTION-039` · / · h3 | Build GraphQL APIs with Apollo Server | PENDING | — |
-| `FSO-P8-MOOC-SECTION-040` · / · h3 | Use GraphQL from a React application | PENDING | — |
-| `FSO-P8-MOOC-SECTION-041` · /chapter-1 · h2 | Prerequisites | PENDING | — |
-| `FSO-P8-MOOC-SECTION-042` · /chapter-1 · h2 | Enrollment | PENDING | — |
-| `FSO-P8-MOOC-SECTION-043` · /chapter-1 · h2 | Help with exercises or course practicalities | PENDING | — |
-| `FSO-P8-MOOC-SECTION-044` · /chapter-1 · h2 | Submitting exercises | PENDING | — |
-| `FSO-P8-MOOC-SECTION-045` · /chapter-1 · h2 | Locking a chapter | PENDING | — |
-| `FSO-P8-MOOC-SECTION-046` · /chapter-1 · h2 | Getting ECTS credits and the certificate | PENDING | — |
-| `FSO-P8-MOOC-SECTION-047` · /chapter-1 · h4 | University of Helsinki degree students and exchange students | PENDING | — |
-| `FSO-P8-MOOC-SECTION-048` · /chapter-1 · h4 | Others | PENDING | — |
-| `FSO-P8-MOOC-SECTION-049` · /chapter-1 · h2 | Improvements and feedback to the course material | PENDING | — |
-| `FSO-P8-MOOC-SECTION-050` · /chapter-1 · h2 | Using LLM:s | PENDING | — |
-| `FSO-P8-MOOC-SECTION-051` · /chapter-1 · h2 | About the material | PENDING | — |
+| `FSO-P8-MOOC-SECTION-001` · /chapter-2 · h2 | Schemas and queries | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-GRAPHQL-SCHEMA-QUERY` |
+| `FSO-P8-MOOC-SECTION-002` · /chapter-2 · h2 | Apollo Server | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-APOLLO-SERVER` |
+| `FSO-P8-MOOC-SECTION-003` · /chapter-2 · h2 | Apollo Studio Explorer | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-GRAPHQL-EXPLORER` |
+| `FSO-P8-MOOC-SECTION-004` · /chapter-2 · h2 | Schema syntax highlighting in VS Code | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-GRAPHQL-LANGUAGE-TOOLING` |
+| `FSO-P8-MOOC-SECTION-005` · /chapter-2 · h3 | Parameters of a resolver | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-RESOLVER-ARGS-CONTEXT` |
+| `FSO-P8-MOOC-SECTION-006` · /chapter-2 · h2 | The default resolver | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-DEFAULT-RESOLVER` |
+| `FSO-P8-MOOC-SECTION-007` · /chapter-2 · h2 | Object within an object | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-NESTED-RESOLVER` |
+| `FSO-P8-MOOC-SECTION-008` · /chapter-2 · h2 | Mutations | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-GRAPHQL-MUTATION` |
+| `FSO-P8-MOOC-SECTION-009` · /chapter-2 · h2 | Error handling | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-GRAPHQL-ERRORS` |
+| `FSO-P8-MOOC-SECTION-010` · /chapter-2 · h2 | Enum | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-GRAPHQL-ENUM` |
+| `FSO-P8-MOOC-SECTION-011` · /chapter-2 · h2 | Changing a phone number | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-GRAPHQL-UPDATE-MUTATION` |
+| `FSO-P8-MOOC-SECTION-012` · /chapter-2 · h2 | More on queries | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-GRAPHQL-ALIASES-COMPOSITION` |
+| `FSO-P8-MOOC-SECTION-013` · /chapter-4 · h2 | Refactoring the backend | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-GRAPHQL-MODULE-STRUCTURE` |
+| `FSO-P8-MOOC-SECTION-014` · /chapter-4 · h2 | Mongoose and Apollo | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-GRAPHQL-PERSISTENCE` |
+| `FSO-P8-MOOC-SECTION-015` · /chapter-4 · h2 | Validation | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-LAYERED-VALIDATION` |
+| `FSO-P8-MOOC-SECTION-016` · /chapter-4 · h3 | User and log in | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-GRAPHQL-AUTH-CONTEXT` |
+| `FSO-P8-MOOC-SECTION-017` · /chapter-4 · h2 | Friends list | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-GRAPHQL-OWNERSHIP` |
+| `FSO-P8-MOOC-SECTION-018` · /chapter-5 · h2 | User login | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-APOLLO-LOGIN-MUTATION` |
+| `FSO-P8-MOOC-SECTION-019` · /chapter-5 · h2 | Adding a token to a header | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-APOLLO-AUTH-LINK` |
+| `FSO-P8-MOOC-SECTION-020` · /chapter-5 · h2 | Fixing validations | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-OPTIONAL-INPUT-NORMALIZATION` |
+| `FSO-P8-MOOC-SECTION-021` · /chapter-5 · h2 | Updating cache, revisited | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-APOLLO-CACHE-UPDATE` |
+| `FSO-P8-MOOC-SECTION-022` · /chapter-6 · h2 | Fragments | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-GRAPHQL-FRAGMENTS` |
+| `FSO-P8-MOOC-SECTION-023` · /chapter-6 · h2 | Subscriptions | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-GRAPHQL-SUBSCRIPTIONS` |
+| `FSO-P8-MOOC-SECTION-024` · /chapter-6 · h2 | expressMiddleware | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-APOLLO-EXPRESS-MIDDLEWARE` |
+| `FSO-P8-MOOC-SECTION-025` · /chapter-6 · h2 | Subscriptions on the server | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-SUBSCRIPTION-SERVER` |
+| `FSO-P8-MOOC-SECTION-026` · /chapter-6 · h2 | Subscriptions on the client | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-SUBSCRIPTION-CLIENT` |
+| `FSO-P8-MOOC-SECTION-027` · /chapter-6 · h2 | n+1 problem | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-GRAPHQL-NPLUS1` |
+| `FSO-P8-MOOC-SECTION-028` · /chapter-6 · h2 | Epilogue | REVIEWED_REDUNDANT | `FSO-P8-CONCEPT-GRAPHQL-MODULE-STRUCTURE`, `FSO-P8-CONCEPT-GRAPHQL-NPLUS1` |
+| `FSO-P8-MOOC-SECTION-029` · /chapter-3 · h2 | Apollo client | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-APOLLO-CLIENT` |
+| `FSO-P8-MOOC-SECTION-030` · /chapter-3 · h2 | Making queries | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-APOLLO-USEQUERY` |
+| `FSO-P8-MOOC-SECTION-031` · /chapter-3 · h2 | Named queries and variables | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-GRAPHQL-VARIABLES` |
+| `FSO-P8-MOOC-SECTION-032` · /chapter-3 · h3 | Cache | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-NORMALIZED-CACHE` |
+| `FSO-P8-MOOC-SECTION-033` · /chapter-3 · h2 | Doing mutations | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-APOLLO-USEMUTATION` |
+| `FSO-P8-MOOC-SECTION-034` · /chapter-3 · h2 | Updating the cache | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-GRAPHQL-CACHE-RECONCILIATION` |
+| `FSO-P8-MOOC-SECTION-035` · /chapter-3 · h2 | Handling mutation errors | REVIEWED_CONCEPTS_MAPPED | `FSO-P8-CONCEPT-GRAPHQL-MUTATION-ERRORS` |
+| `FSO-P8-MOOC-SECTION-036` · /chapter-3 · h2 | Updating a phone number | REVIEWED_REDUNDANT | `FSO-P8-CONCEPT-APOLLO-USEMUTATION`, `FSO-P8-CONCEPT-GRAPHQL-VARIABLES` |
+| `FSO-P8-MOOC-SECTION-037` · /chapter-3 · h2 | Apollo Client and the applications state | REVIEWED_REDUNDANT | `FSO-P6-CONCEPT-SERVER-VS-CLIENT-STATE`, `FSO-P8-CONCEPT-APOLLO-CLIENT` |
+| `FSO-P8-MOOC-SECTION-038` · / · h3 | Learn what GraphQL is | REVIEWED_REDUNDANT | `FSO-P8-CONCEPT-GRAPHQL-SCHEMA-QUERY`, `FSO-P8-CONCEPT-GRAPHQL-MUTATION` |
+| `FSO-P8-MOOC-SECTION-039` · / · h3 | Build GraphQL APIs with Apollo Server | REVIEWED_REDUNDANT | `FSO-P8-CONCEPT-APOLLO-SERVER`, `FSO-P8-CONCEPT-RESOLVER-ARGS-CONTEXT` |
+| `FSO-P8-MOOC-SECTION-040` · / · h3 | Use GraphQL from a React application | REVIEWED_REDUNDANT | `FSO-P8-CONCEPT-APOLLO-CLIENT`, `FSO-P8-CONCEPT-APOLLO-USEQUERY`, `FSO-P8-CONCEPT-APOLLO-USEMUTATION` |
+| `FSO-P8-MOOC-SECTION-041` · /chapter-1 · h2 | Prerequisites | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P8-MOOC-SECTION-042` · /chapter-1 · h2 | Enrollment | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P8-MOOC-SECTION-043` · /chapter-1 · h2 | Help with exercises or course practicalities | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P8-MOOC-SECTION-044` · /chapter-1 · h2 | Submitting exercises | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P8-MOOC-SECTION-045` · /chapter-1 · h2 | Locking a chapter | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P8-MOOC-SECTION-046` · /chapter-1 · h2 | Getting ECTS credits and the certificate | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P8-MOOC-SECTION-047` · /chapter-1 · h4 | University of Helsinki degree students and exchange students | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P8-MOOC-SECTION-048` · /chapter-1 · h4 | Others | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P8-MOOC-SECTION-049` · /chapter-1 · h2 | Improvements and feedback to the course material | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P8-MOOC-SECTION-050` · /chapter-1 · h2 | Using LLM:s | REVIEWED_REDUNDANT | `FSO-P1-CONCEPT-AI-CODING-VERIFICATION` |
+| `FSO-P8-MOOC-SECTION-051` · /chapter-1 · h2 | About the material | REVIEWED_NON_ENGINEERING | — |
 
-## Part 9 — 0/64 section units dispositioned
-
-| Section source | Heading | Semantic disposition | Explicit concept records |
-|---|---|---|---|
-| `FSO-P9-MOOC-SECTION-001` · / · h3 | Type-safe full stack development with TypeScript across Node/Express and React | PENDING | — |
-| `FSO-P9-MOOC-SECTION-002` · / · h3 | Safe data handling with validation, narrowing | PENDING | — |
-| `FSO-P9-MOOC-SECTION-003` · / · h3 | Scalable project structure and tooling for real-world apps | PENDING | — |
-| `FSO-P9-MOOC-SECTION-004` · /chapter-1 · h3 | Prerequisites | PENDING | — |
-| `FSO-P9-MOOC-SECTION-005` · /chapter-1 · h3 | Enrollment | PENDING | — |
-| `FSO-P9-MOOC-SECTION-006` · /chapter-1 · h3 | Help with exercises or course practicalities | PENDING | — |
-| `FSO-P9-MOOC-SECTION-007` · /chapter-1 · h3 | Submitting exercises | PENDING | — |
-| `FSO-P9-MOOC-SECTION-008` · /chapter-1 · h3 | Locking a chapter | PENDING | — |
-| `FSO-P9-MOOC-SECTION-009` · /chapter-1 · h3 | Getting ECTS credits and the certificate | PENDING | — |
-| `FSO-P9-MOOC-SECTION-010` · /chapter-1 · h4 | University of Helsinki degree students and exchange students | PENDING | — |
-| `FSO-P9-MOOC-SECTION-011` · /chapter-1 · h4 | Others | PENDING | — |
-| `FSO-P9-MOOC-SECTION-012` · /chapter-1 · h3 | Improvements and feedback to the course material | PENDING | — |
-| `FSO-P9-MOOC-SECTION-013` · /chapter-1 · h3 | Using LLM:s | PENDING | — |
-| `FSO-P9-MOOC-SECTION-014` · /chapter-1 · h3 | About the material | PENDING | — |
-| `FSO-P9-MOOC-SECTION-015` · /chapter-2 · h3 | Main principle | PENDING | — |
-| `FSO-P9-MOOC-SECTION-016` · /chapter-2 · h3 | TypeScript key language features | PENDING | — |
-| `FSO-P9-MOOC-SECTION-017` · /chapter-2 · h4 | Type annotations | PENDING | — |
-| `FSO-P9-MOOC-SECTION-018` · /chapter-2 · h4 | Keywords | PENDING | — |
-| `FSO-P9-MOOC-SECTION-019` · /chapter-2 · h4 | Structural typing | PENDING | — |
-| `FSO-P9-MOOC-SECTION-020` · /chapter-2 · h4 | Type inference | PENDING | — |
-| `FSO-P9-MOOC-SECTION-021` · /chapter-2 · h4 | Type erasure | PENDING | — |
-| `FSO-P9-MOOC-SECTION-022` · /chapter-2 · h3 | Why should one use TypeScript? | PENDING | — |
-| `FSO-P9-MOOC-SECTION-023` · /chapter-2 · h3 | What does TypeScript not fix? | PENDING | — |
-| `FSO-P9-MOOC-SECTION-024` · /chapter-2 · h4 | Incomplete, invalid or missing types in external libraries | PENDING | — |
-| `FSO-P9-MOOC-SECTION-025` · /chapter-2 · h4 | Sometimes, type inference needs assistance | PENDING | — |
-| `FSO-P9-MOOC-SECTION-026` · /chapter-2 · h4 | Mysterious type errors | PENDING | — |
-| `FSO-P9-MOOC-SECTION-027` · /chapter-3 · h3 | Setting things up | PENDING | — |
-| `FSO-P9-MOOC-SECTION-028` · /chapter-3 · h4 | A note about the coding style | PENDING | — |
-| `FSO-P9-MOOC-SECTION-029` · /chapter-3 · h3 | Creating your first own types | PENDING | — |
-| `FSO-P9-MOOC-SECTION-030` · /chapter-3 · h3 | Type narrowing | PENDING | — |
-| `FSO-P9-MOOC-SECTION-031` · /chapter-3 · h3 | Accessing command line arguments | PENDING | — |
-| `FSO-P9-MOOC-SECTION-032` · /chapter-3 · h3 | About @types/{npm_package} | PENDING | — |
-| `FSO-P9-MOOC-SECTION-033` · /chapter-3 · h3 | Improving the project | PENDING | — |
-| `FSO-P9-MOOC-SECTION-034` · /chapter-3 · h4 | The alternative array syntax | PENDING | — |
-| `FSO-P9-MOOC-SECTION-035` · /chapter-3 · h3 | Adding Express to the mix | PENDING | — |
-| `FSO-P9-MOOC-SECTION-036` · /chapter-3 · h3 | The horrors of any | PENDING | — |
-| `FSO-P9-MOOC-SECTION-037` · /chapter-3 · h3 | Type assertion | PENDING | — |
-| `FSO-P9-MOOC-SECTION-038` · /chapter-5 · h3 | Vite with TypeScript | PENDING | — |
-| `FSO-P9-MOOC-SECTION-039` · /chapter-5 · h3 | React components with TypeScript | PENDING | — |
-| `FSO-P9-MOOC-SECTION-040` · /chapter-5 · h3 | Deeper type usage | PENDING | — |
-| `FSO-P9-MOOC-SECTION-041` · /chapter-5 · h3 | More type narrowing | PENDING | — |
-| `FSO-P9-MOOC-SECTION-042` · /chapter-5 · h3 | React app with state | PENDING | — |
-| `FSO-P9-MOOC-SECTION-043` · /chapter-5 · h3 | Communicating with the server | PENDING | — |
-| `FSO-P9-MOOC-SECTION-044` · /chapter-5 · h3 | A note about defining object types | PENDING | — |
-| `FSO-P9-MOOC-SECTION-045` · /chapter-6 · h3 | Working with an existing codebase | PENDING | — |
-| `FSO-P9-MOOC-SECTION-046` · /chapter-6 · h3 | Patientor frontend | PENDING | — |
-| `FSO-P9-MOOC-SECTION-047` · /chapter-6 · h3 | Full entries | PENDING | — |
-| `FSO-P9-MOOC-SECTION-048` · /chapter-6 · h3 | Omit with unions | PENDING | — |
-| `FSO-P9-MOOC-SECTION-049` · /chapter-4 · h3 | Setting up the project | PENDING | — |
-| `FSO-P9-MOOC-SECTION-050` · /chapter-4 · h3 | Let there be code | PENDING | — |
-| `FSO-P9-MOOC-SECTION-051` · /chapter-4 · h3 | A few words on running TypeScript with Node.js | PENDING | — |
-| `FSO-P9-MOOC-SECTION-052` · /chapter-4 · h3 | Implementing the functionality | PENDING | — |
-| `FSO-P9-MOOC-SECTION-053` · /chapter-4 · h3 | Defining the types | PENDING | — |
-| `FSO-P9-MOOC-SECTION-054` · /chapter-4 · h3 | Utility Types | PENDING | — |
-| `FSO-P9-MOOC-SECTION-055` · /chapter-4 · h3 | Typing the request and response | PENDING | — |
-| `FSO-P9-MOOC-SECTION-056` · /chapter-4 · h3 | Preventing an accidental undefined result | PENDING | — |
-| `FSO-P9-MOOC-SECTION-057` · /chapter-4 · h3 | Adding a new diary | PENDING | — |
-| `FSO-P9-MOOC-SECTION-058` · /chapter-4 · h3 | Validating requests | PENDING | — |
-| `FSO-P9-MOOC-SECTION-059` · /chapter-4 · h4 | A sidenote from the editor | PENDING | — |
-| `FSO-P9-MOOC-SECTION-060` · /chapter-4 · h3 | Type guards | PENDING | — |
-| `FSO-P9-MOOC-SECTION-061` · /chapter-4 · h4 | Side note: testing if something is a string | PENDING | — |
-| `FSO-P9-MOOC-SECTION-062` · /chapter-4 · h3 | as const object | PENDING | — |
-| `FSO-P9-MOOC-SECTION-063` · /chapter-4 · h4 | Using schema validation libraries | PENDING | — |
-| `FSO-P9-MOOC-SECTION-064` · /chapter-4 · h3 | Parsing request body in middleware | PENDING | — |
-
-## Part 10 — 0/56 section units dispositioned
+## Part 9 — 64/64 section units dispositioned
 
 | Section source | Heading | Semantic disposition | Explicit concept records |
 |---|---|---|---|
-| `FSO-P10-MOOC-SECTION-001` · /chapter-1 · h2 | Prerequisites | PENDING | — |
-| `FSO-P10-MOOC-SECTION-002` · /chapter-1 · h2 | Enrollment | PENDING | — |
-| `FSO-P10-MOOC-SECTION-003` · /chapter-1 · h2 | Help with exercises or course practicalities | PENDING | — |
-| `FSO-P10-MOOC-SECTION-004` · /chapter-1 · h2 | Submitting exercises | PENDING | — |
-| `FSO-P10-MOOC-SECTION-005` · /chapter-1 · h2 | Locking a chapter | PENDING | — |
-| `FSO-P10-MOOC-SECTION-006` · /chapter-1 · h2 | Getting ECTS credits and the certificate | PENDING | — |
-| `FSO-P10-MOOC-SECTION-007` · /chapter-1 · h4 | University of Helsinki degree students and exchange students | PENDING | — |
-| `FSO-P10-MOOC-SECTION-008` · /chapter-1 · h4 | Others | PENDING | — |
-| `FSO-P10-MOOC-SECTION-009` · /chapter-1 · h2 | Improvements and feedback to the course material | PENDING | — |
-| `FSO-P10-MOOC-SECTION-010` · /chapter-1 · h2 | Using LLM:s | PENDING | — |
-| `FSO-P10-MOOC-SECTION-011` · /chapter-1 · h2 | About the material | PENDING | — |
-| `FSO-P10-MOOC-SECTION-012` · /chapter-2 · h2 | About this part | PENDING | — |
-| `FSO-P10-MOOC-SECTION-013` · /chapter-2 · h2 | Initializing the application | PENDING | — |
-| `FSO-P10-MOOC-SECTION-014` · /chapter-2 · h2 | Setting up the virtual devices | PENDING | — |
-| `FSO-P10-MOOC-SECTION-015` · /chapter-2 · h2 | Using your own phone with Expo Go | PENDING | — |
-| `FSO-P10-MOOC-SECTION-016` · /chapter-2 · h2 | ESLint | PENDING | — |
-| `FSO-P10-MOOC-SECTION-017` · /chapter-2 · h2 | Debugging | PENDING | — |
-| `FSO-P10-MOOC-SECTION-018` · /chapter-3 · h2 | Core components | PENDING | — |
-| `FSO-P10-MOOC-SECTION-019` · /chapter-3 · h2 | Installing dependencies in Expo project | PENDING | — |
-| `FSO-P10-MOOC-SECTION-020` · /chapter-3 · h2 | Structuring our project | PENDING | — |
-| `FSO-P10-MOOC-SECTION-021` · /chapter-3 · h2 | Manually reloading the application | PENDING | — |
-| `FSO-P10-MOOC-SECTION-022` · /chapter-3 · h2 | Style | PENDING | — |
-| `FSO-P10-MOOC-SECTION-023` · /chapter-3 · h2 | Consistent user interface with theming | PENDING | — |
-| `FSO-P10-MOOC-SECTION-024` · /chapter-3 · h2 | Using flexbox for layout | PENDING | — |
-| `FSO-P10-MOOC-SECTION-025` · /chapter-3 · h2 | Status bar style | PENDING | — |
-| `FSO-P10-MOOC-SECTION-026` · /chapter-3 · h2 | Routing | PENDING | — |
-| `FSO-P10-MOOC-SECTION-027` · /chapter-3 · h2 | Form state management | PENDING | — |
-| `FSO-P10-MOOC-SECTION-028` · /chapter-3 · h2 | Form validation | PENDING | — |
-| `FSO-P10-MOOC-SECTION-029` · /chapter-3 · h2 | Platform-specific code | PENDING | — |
-| `FSO-P10-MOOC-SECTION-030` · /chapter-5 · h2 | Testing React Native applications | PENDING | — |
-| `FSO-P10-MOOC-SECTION-031` · /chapter-5 · h2 | Organizing tests | PENDING | — |
-| `FSO-P10-MOOC-SECTION-032` · /chapter-5 · h2 | Testing components | PENDING | — |
-| `FSO-P10-MOOC-SECTION-033` · /chapter-5 · h2 | Handling dependencies in tests | PENDING | — |
-| `FSO-P10-MOOC-SECTION-034` · /chapter-5 · h2 | Extending our application | PENDING | — |
-| `FSO-P10-MOOC-SECTION-035` · /chapter-5 · h2 | Cursor-based pagination | PENDING | — |
-| `FSO-P10-MOOC-SECTION-036` · /chapter-5 · h2 | Infinite scrolling | PENDING | — |
-| `FSO-P10-MOOC-SECTION-037` · /chapter-5 · h2 | Sharing the application with a QR code | PENDING | — |
-| `FSO-P10-MOOC-SECTION-038` · /chapter-5 · h2 | Additional resources | PENDING | — |
-| `FSO-P10-MOOC-SECTION-039` · /chapter-5 · h3 | React Native Paper | PENDING | — |
-| `FSO-P10-MOOC-SECTION-040` · /chapter-5 · h3 | Styled-components | PENDING | — |
-| `FSO-P10-MOOC-SECTION-041` · /chapter-5 · h3 | React-spring | PENDING | — |
-| `FSO-P10-MOOC-SECTION-042` · /chapter-5 · h3 | React Navigation | PENDING | — |
-| `FSO-P10-MOOC-SECTION-043` · /chapter-5 · h2 | Closing words | PENDING | — |
-| `FSO-P10-MOOC-SECTION-044` · / · h3 | Extend React skills to mobile development | PENDING | — |
-| `FSO-P10-MOOC-SECTION-045` · / · h3 | Build mobile user interfaces and navigation | PENDING | — |
-| `FSO-P10-MOOC-SECTION-046` · / · h3 | Use GraphQL and Apollo Client in a mobile app | PENDING | — |
-| `FSO-P10-MOOC-SECTION-047` · /chapter-4 · h2 | HTTP requests | PENDING | — |
-| `FSO-P10-MOOC-SECTION-048` · /chapter-4 · h2 | GraphQL and Apollo client | PENDING | — |
-| `FSO-P10-MOOC-SECTION-049` · /chapter-4 · h2 | Organizing GraphQL related code | PENDING | — |
-| `FSO-P10-MOOC-SECTION-050` · /chapter-4 · h2 | Evolving the structure | PENDING | — |
-| `FSO-P10-MOOC-SECTION-051` · /chapter-4 · h2 | Exercise 10.11 | PENDING | — |
-| `FSO-P10-MOOC-SECTION-052` · /chapter-4 · h3 | Exercise 10.11: fetching repositories with Apollo Client | PENDING | — |
-| `FSO-P10-MOOC-SECTION-053` · /chapter-4 · h2 | Environment variables | PENDING | — |
-| `FSO-P10-MOOC-SECTION-054` · /chapter-4 · h2 | Storing data in the user's device | PENDING | — |
-| `FSO-P10-MOOC-SECTION-055` · /chapter-4 · h2 | Enhancing Apollo Client's requests | PENDING | — |
-| `FSO-P10-MOOC-SECTION-056` · /chapter-4 · h2 | Using React Context for dependency injection | PENDING | — |
+| `FSO-P9-MOOC-SECTION-001` · / · h3 | Type-safe full stack development with TypeScript across Node/Express and React | REVIEWED_REDUNDANT | `FSO-P9-CONCEPT-TYPE-ANNOTATIONS`, `FSO-P9-CONCEPT-REACT-PROPS-TYPES`, `FSO-P9-CONCEPT-EXPRESS-GENERIC-CONTRACTS` |
+| `FSO-P9-MOOC-SECTION-002` · / · h3 | Safe data handling with validation, narrowing | REVIEWED_REDUNDANT | `FSO-P9-CONCEPT-UNKNOWN-NARROWING`, `FSO-P9-CONCEPT-TYPE-GUARDS`, `FSO-P9-CONCEPT-SCHEMA-VALIDATION` |
+| `FSO-P9-MOOC-SECTION-003` · / · h3 | Scalable project structure and tooling for real-world apps | REVIEWED_REDUNDANT | `FSO-P9-CONCEPT-NODE-TS-SETUP`, `FSO-P9-CONCEPT-TSCONFIG-BACKEND`, `FSO-P9-CONCEPT-CODEBASE-RECON` |
+| `FSO-P9-MOOC-SECTION-004` · /chapter-1 · h3 | Prerequisites | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P9-MOOC-SECTION-005` · /chapter-1 · h3 | Enrollment | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P9-MOOC-SECTION-006` · /chapter-1 · h3 | Help with exercises or course practicalities | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P9-MOOC-SECTION-007` · /chapter-1 · h3 | Submitting exercises | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P9-MOOC-SECTION-008` · /chapter-1 · h3 | Locking a chapter | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P9-MOOC-SECTION-009` · /chapter-1 · h3 | Getting ECTS credits and the certificate | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P9-MOOC-SECTION-010` · /chapter-1 · h4 | University of Helsinki degree students and exchange students | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P9-MOOC-SECTION-011` · /chapter-1 · h4 | Others | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P9-MOOC-SECTION-012` · /chapter-1 · h3 | Improvements and feedback to the course material | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P9-MOOC-SECTION-013` · /chapter-1 · h3 | Using LLM:s | REVIEWED_REDUNDANT | `FSO-P1-CONCEPT-AI-CODING-VERIFICATION` |
+| `FSO-P9-MOOC-SECTION-014` · /chapter-1 · h3 | About the material | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P9-MOOC-SECTION-015` · /chapter-2 · h3 | Main principle | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-TS-SUPERSET-COMPILE` |
+| `FSO-P9-MOOC-SECTION-016` · /chapter-2 · h3 | TypeScript key language features | REVIEWED_REDUNDANT | `FSO-P9-CONCEPT-TYPE-ANNOTATIONS`, `FSO-P9-CONCEPT-STRUCTURAL-TYPING`, `FSO-P9-CONCEPT-TYPE-INFERENCE`, `FSO-P9-CONCEPT-TYPE-ERASURE` |
+| `FSO-P9-MOOC-SECTION-017` · /chapter-2 · h4 | Type annotations | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-TYPE-ANNOTATIONS` |
+| `FSO-P9-MOOC-SECTION-018` · /chapter-2 · h4 | Keywords | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-TS-KEYWORDS` |
+| `FSO-P9-MOOC-SECTION-019` · /chapter-2 · h4 | Structural typing | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-STRUCTURAL-TYPING` |
+| `FSO-P9-MOOC-SECTION-020` · /chapter-2 · h4 | Type inference | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-TYPE-INFERENCE` |
+| `FSO-P9-MOOC-SECTION-021` · /chapter-2 · h4 | Type erasure | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-TYPE-ERASURE` |
+| `FSO-P9-MOOC-SECTION-022` · /chapter-2 · h3 | Why should one use TypeScript? | REVIEWED_REDUNDANT | `FSO-P7-CONCEPT-TYPESCRIPT-TREND`, `FSO-P9-CONCEPT-TYPE-ANNOTATIONS`, `FSO-P9-CONCEPT-TYPE-INFERENCE` |
+| `FSO-P9-MOOC-SECTION-023` · /chapter-2 · h3 | What does TypeScript not fix? | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-STATIC-NOT-RUNTIME-SAFETY` |
+| `FSO-P9-MOOC-SECTION-024` · /chapter-2 · h4 | Incomplete, invalid or missing types in external libraries | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-DECLARATION-QUALITY` |
+| `FSO-P9-MOOC-SECTION-025` · /chapter-2 · h4 | Sometimes, type inference needs assistance | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-INFERENCE-GUIDANCE` |
+| `FSO-P9-MOOC-SECTION-026` · /chapter-2 · h4 | Mysterious type errors | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-TS-DIAGNOSTICS` |
+| `FSO-P9-MOOC-SECTION-027` · /chapter-3 · h3 | Setting things up | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-NODE-TS-SETUP` |
+| `FSO-P9-MOOC-SECTION-028` · /chapter-3 · h4 | A note about the coding style | REVIEWED_REDUNDANT | `FSO-P3-CONCEPT-LINT-POLICY` |
+| `FSO-P9-MOOC-SECTION-029` · /chapter-3 · h3 | Creating your first own types | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-LITERAL-UNION-TYPES` |
+| `FSO-P9-MOOC-SECTION-030` · /chapter-3 · h3 | Type narrowing | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-UNKNOWN-NARROWING` |
+| `FSO-P9-MOOC-SECTION-031` · /chapter-3 · h3 | Accessing command line arguments | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-PROCESS-ARGV-INPUT` |
+| `FSO-P9-MOOC-SECTION-032` · /chapter-3 · h3 | About @types/{npm_package} | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-DEFINITELY-TYPED` |
+| `FSO-P9-MOOC-SECTION-033` · /chapter-3 · h3 | Improving the project | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-PARSE-VALIDATE` |
+| `FSO-P9-MOOC-SECTION-034` · /chapter-3 · h4 | The alternative array syntax | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-ARRAY-TYPE-SYNTAX` |
+| `FSO-P9-MOOC-SECTION-035` · /chapter-3 · h3 | Adding Express to the mix | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-TSCONFIG-BACKEND` |
+| `FSO-P9-MOOC-SECTION-036` · /chapter-3 · h3 | The horrors of any | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-ANY-ESCAPE-HATCH` |
+| `FSO-P9-MOOC-SECTION-037` · /chapter-3 · h3 | Type assertion | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-TYPE-ASSERTIONS` |
+| `FSO-P9-MOOC-SECTION-038` · /chapter-5 · h3 | Vite with TypeScript | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-VITE-TYPESCRIPT` |
+| `FSO-P9-MOOC-SECTION-039` · /chapter-5 · h3 | React components with TypeScript | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-REACT-PROPS-TYPES` |
+| `FSO-P9-MOOC-SECTION-040` · /chapter-5 · h3 | Deeper type usage | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-DISCRIMINATED-UNIONS` |
+| `FSO-P9-MOOC-SECTION-041` · /chapter-5 · h3 | More type narrowing | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-EXHAUSTIVE-NARROWING` |
+| `FSO-P9-MOOC-SECTION-042` · /chapter-5 · h3 | React app with state | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-USESTATE-TYPING` |
+| `FSO-P9-MOOC-SECTION-043` · /chapter-5 · h3 | Communicating with the server | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-TYPED-SERVER-DATA` |
+| `FSO-P9-MOOC-SECTION-044` · /chapter-5 · h3 | A note about defining object types | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-TYPE-VS-INTERFACE` |
+| `FSO-P9-MOOC-SECTION-045` · /chapter-6 · h3 | Working with an existing codebase | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-CODEBASE-RECON` |
+| `FSO-P9-MOOC-SECTION-046` · /chapter-6 · h3 | Patientor frontend | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-TYPED-FULLSTACK-INTEGRATION` |
+| `FSO-P9-MOOC-SECTION-047` · /chapter-6 · h3 | Full entries | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-NESTED-DOMAIN-UNIONS` |
+| `FSO-P9-MOOC-SECTION-048` · /chapter-6 · h3 | Omit with unions | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-DISTRIBUTIVE-OMIT` |
+| `FSO-P9-MOOC-SECTION-049` · /chapter-4 · h3 | Setting up the project | REVIEWED_REDUNDANT | `FSO-P9-CONCEPT-NODE-TS-SETUP`, `FSO-P9-CONCEPT-TSCONFIG-BACKEND` |
+| `FSO-P9-MOOC-SECTION-050` · /chapter-4 · h3 | Let there be code | REVIEWED_REDUNDANT | `FSO-P3-CONCEPT-HTTP-SERVER-LIFECYCLE`, `FSO-P9-CONCEPT-NODE-TS-SETUP` |
+| `FSO-P9-MOOC-SECTION-051` · /chapter-4 · h3 | A few words on running TypeScript with Node.js | REVIEWED_REDUNDANT | `FSO-P9-CONCEPT-NODE-TS-SETUP`, `FSO-P9-CONCEPT-TYPE-ERASURE` |
+| `FSO-P9-MOOC-SECTION-052` · /chapter-4 · h3 | Implementing the functionality | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-TYPED-SERVICE-BOUNDARY` |
+| `FSO-P9-MOOC-SECTION-053` · /chapter-4 · h3 | Defining the types | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-DOMAIN-LITERAL-TYPES` |
+| `FSO-P9-MOOC-SECTION-054` · /chapter-4 · h3 | Utility Types | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-UTILITY-TYPES` |
+| `FSO-P9-MOOC-SECTION-055` · /chapter-4 · h3 | Typing the request and response | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-EXPRESS-GENERIC-CONTRACTS` |
+| `FSO-P9-MOOC-SECTION-056` · /chapter-4 · h3 | Preventing an accidental undefined result | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-OPTIONAL-UNDEFINED` |
+| `FSO-P9-MOOC-SECTION-057` · /chapter-4 · h3 | Adding a new diary | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-INPUT-DOMAIN-TYPE` |
+| `FSO-P9-MOOC-SECTION-058` · /chapter-4 · h3 | Validating requests | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-UNTRUSTED-INPUT` |
+| `FSO-P9-MOOC-SECTION-059` · /chapter-4 · h4 | A sidenote from the editor | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-INCREMENTAL-TYPING` |
+| `FSO-P9-MOOC-SECTION-060` · /chapter-4 · h3 | Type guards | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-TYPE-GUARDS` |
+| `FSO-P9-MOOC-SECTION-061` · /chapter-4 · h4 | Side note: testing if something is a string | REVIEWED_REDUNDANT | `FSO-P9-CONCEPT-TYPE-GUARDS` |
+| `FSO-P9-MOOC-SECTION-062` · /chapter-4 · h3 | as const object | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-AS-CONST` |
+| `FSO-P9-MOOC-SECTION-063` · /chapter-4 · h4 | Using schema validation libraries | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-SCHEMA-VALIDATION` |
+| `FSO-P9-MOOC-SECTION-064` · /chapter-4 · h3 | Parsing request body in middleware | REVIEWED_CONCEPTS_MAPPED | `FSO-P9-CONCEPT-VALIDATION-MIDDLEWARE` |
 
-## Part 11 — 0/64 section units dispositioned
-
-| Section source | Heading | Semantic disposition | Explicit concept records |
-|---|---|---|---|
-| `FSO-P11-MOOC-SECTION-001` · / · h3 | Build CI/CD pipelines with GitHub | PENDING | — |
-| `FSO-P11-MOOC-SECTION-002` · / · h3 | Automate safe deployments to the cloud | PENDING | — |
-| `FSO-P11-MOOC-SECTION-003` · / · h3 | Keep the main branch green | PENDING | — |
-| `FSO-P11-MOOC-SECTION-004` · /chapter-1 · h3 | Prerequisites | PENDING | — |
-| `FSO-P11-MOOC-SECTION-005` · /chapter-1 · h3 | Enrollment | PENDING | — |
-| `FSO-P11-MOOC-SECTION-006` · /chapter-1 · h3 | Help with exercises or course practicalities | PENDING | — |
-| `FSO-P11-MOOC-SECTION-007` · /chapter-1 · h3 | Submitting exercises | PENDING | — |
-| `FSO-P11-MOOC-SECTION-008` · /chapter-1 · h3 | Locking a chapter | PENDING | — |
-| `FSO-P11-MOOC-SECTION-009` · /chapter-1 · h3 | Getting ECTS credits and the certificate | PENDING | — |
-| `FSO-P11-MOOC-SECTION-010` · /chapter-1 · h4 | University of Helsinki degree students and exchange students | PENDING | — |
-| `FSO-P11-MOOC-SECTION-011` · /chapter-1 · h4 | Others | PENDING | — |
-| `FSO-P11-MOOC-SECTION-012` · /chapter-1 · h3 | Improvements and feedback to the course material | PENDING | — |
-| `FSO-P11-MOOC-SECTION-013` · /chapter-1 · h3 | Using LLM:s | PENDING | — |
-| `FSO-P11-MOOC-SECTION-014` · /chapter-1 · h3 | About the material | PENDING | — |
-| `FSO-P11-MOOC-SECTION-015` · /chapter-2 · h3 | Getting software to production | PENDING | — |
-| `FSO-P11-MOOC-SECTION-016` · /chapter-2 · h3 | Some useful terms | PENDING | — |
-| `FSO-P11-MOOC-SECTION-017` · /chapter-2 · h4 | Branches | PENDING | — |
-| `FSO-P11-MOOC-SECTION-018` · /chapter-2 · h4 | Pull request | PENDING | — |
-| `FSO-P11-MOOC-SECTION-019` · /chapter-2 · h4 | Build | PENDING | — |
-| `FSO-P11-MOOC-SECTION-020` · /chapter-2 · h4 | Deploy | PENDING | — |
-| `FSO-P11-MOOC-SECTION-021` · /chapter-2 · h3 | What is CI? | PENDING | — |
-| `FSO-P11-MOOC-SECTION-022` · /chapter-2 · h3 | Packaging and Deployment as a part of CI | PENDING | — |
-| `FSO-P11-MOOC-SECTION-023` · /chapter-2 · h4 | Is this CD thing related? | PENDING | — |
-| `FSO-P11-MOOC-SECTION-024` · /chapter-2 · h3 | Why is it important? | PENDING | — |
-| `FSO-P11-MOOC-SECTION-025` · /chapter-2 · h3 | Important principles | PENDING | — |
-| `FSO-P11-MOOC-SECTION-026` · /chapter-2 · h4 | Documented behavior | PENDING | — |
-| `FSO-P11-MOOC-SECTION-027` · /chapter-2 · h4 | Know the same thing happens every time | PENDING | — |
-| `FSO-P11-MOOC-SECTION-028` · /chapter-2 · h4 | Code always kept deployable | PENDING | — |
-| `FSO-P11-MOOC-SECTION-029` · /chapter-2 · h4 | Knowing what code is deployed (sha sum/version) | PENDING | — |
-| `FSO-P11-MOOC-SECTION-030` · /chapter-2 · h3 | Types of CI setup | PENDING | — |
-| `FSO-P11-MOOC-SECTION-031` · /chapter-2 · h4 | Jenkins (and other self-hosted setups) | PENDING | — |
-| `FSO-P11-MOOC-SECTION-032` · /chapter-2 · h4 | GitHub Actions and other cloud-based solutions | PENDING | — |
-| `FSO-P11-MOOC-SECTION-033` · /chapter-2 · h4 | Why pick one over the other | PENDING | — |
-| `FSO-P11-MOOC-SECTION-034` · /chapter-2 · h4 | Why use GitHub Actions for this course | PENDING | — |
-| `FSO-P11-MOOC-SECTION-035` · /chapter-3 · h3 | Basic needs | PENDING | — |
-| `FSO-P11-MOOC-SECTION-036` · /chapter-3 · h3 | Getting started with workflows | PENDING | — |
-| `FSO-P11-MOOC-SECTION-037` · /chapter-3 · h3 | Setting up lint, test and build steps | PENDING | — |
-| `FSO-P11-MOOC-SECTION-038` · /chapter-3 · h4 | Setting up the environment | PENDING | — |
-| `FSO-P11-MOOC-SECTION-039` · /chapter-3 · h4 | Lint | PENDING | — |
-| `FSO-P11-MOOC-SECTION-040` · /chapter-4 · h3 | Anything that can go wrong... | PENDING | — |
-| `FSO-P11-MOOC-SECTION-041` · /chapter-4 · h3 | What does a good deployment system do? | PENDING | — |
-| `FSO-P11-MOOC-SECTION-042` · /chapter-4 · h3 | Has the app been deployed? | PENDING | — |
-| `FSO-P11-MOOC-SECTION-043` · /chapter-4 · h3 | Exercises 10.-12. (Fly.io) | PENDING | — |
-| `FSO-P11-MOOC-SECTION-044` · /chapter-4 · h4 | 10. Deploying your application to Fly.io | PENDING | — |
-| `FSO-P11-MOOC-SECTION-045` · /chapter-4 · h4 | 11. Automatic deployments to Fly.io | PENDING | — |
-| `FSO-P11-MOOC-SECTION-046` · /chapter-4 · h4 | 12. Health check in Fly.io | PENDING | — |
-| `FSO-P11-MOOC-SECTION-047` · /chapter-4 · h3 | Exercises 10.-12. (Render) | PENDING | — |
-| `FSO-P11-MOOC-SECTION-048` · /chapter-4 · h4 | 10. Deploying your application to Render | PENDING | — |
-| `FSO-P11-MOOC-SECTION-049` · /chapter-4 · h4 | 11. Automatic deployments to Render | PENDING | — |
-| `FSO-P11-MOOC-SECTION-050` · /chapter-4 · h4 | 12. Health check in Render | PENDING | — |
-| `FSO-P11-MOOC-SECTION-051` · /chapter-5 · h1 | Keeping green | PENDING | — |
-| `FSO-P11-MOOC-SECTION-052` · /chapter-5 · h3 | Working with Pull Requests | PENDING | — |
-| `FSO-P11-MOOC-SECTION-053` · /chapter-5 · h3 | Versioning | PENDING | — |
-| `FSO-P11-MOOC-SECTION-054` · /chapter-5 · h4 | Semantic Versioning and Hash Versioning | PENDING | — |
-| `FSO-P11-MOOC-SECTION-055` · /chapter-5 · h4 | But what does the version point to? | PENDING | — |
-| `FSO-P11-MOOC-SECTION-056` · /chapter-5 · h4 | Version order | PENDING | — |
-| `FSO-P11-MOOC-SECTION-057` · /chapter-5 · h4 | Comparing the Two | PENDING | — |
-| `FSO-P11-MOOC-SECTION-058` · /chapter-5 · h4 | Best of Both Worlds | PENDING | — |
-| `FSO-P11-MOOC-SECTION-059` · /chapter-5 · h3 | A note about using third-party actions | PENDING | — |
-| `FSO-P11-MOOC-SECTION-060` · /chapter-5 · h3 | Keep the main branch protected | PENDING | — |
-| `FSO-P11-MOOC-SECTION-061` · /chapter-6 · h3 | Visibility and Understanding | PENDING | — |
-| `FSO-P11-MOOC-SECTION-062` · /chapter-6 · h3 | Notifications | PENDING | — |
-| `FSO-P11-MOOC-SECTION-063` · /chapter-6 · h3 | Metrics | PENDING | — |
-| `FSO-P11-MOOC-SECTION-064` · /chapter-6 · h3 | Periodic tasks | PENDING | — |
-
-## Part 12 — 0/42 section units dispositioned
+## Part 10 — 56/56 section units dispositioned
 
 | Section source | Heading | Semantic disposition | Explicit concept records |
 |---|---|---|---|
-| `FSO-P12-MOOC-SECTION-001` · / · h3 | Use containers to run and manage applications consistently across environments | PENDING | — |
-| `FSO-P12-MOOC-SECTION-002` · / · h3 | Containerize and orchestrate full stack apps with Dockerfiles and Docker Compose | PENDING | — |
-| `FSO-P12-MOOC-SECTION-003` · / · h3 | Use Docker for a development environment | PENDING | — |
-| `FSO-P12-MOOC-SECTION-004` · /chapter-1 · h3 | Prerequisites | PENDING | — |
-| `FSO-P12-MOOC-SECTION-005` · /chapter-1 · h3 | Enrollment | PENDING | — |
-| `FSO-P12-MOOC-SECTION-006` · /chapter-1 · h3 | Help with exercises or course practicalities | PENDING | — |
-| `FSO-P12-MOOC-SECTION-007` · /chapter-1 · h3 | Submitting exercises | PENDING | — |
-| `FSO-P12-MOOC-SECTION-008` · /chapter-1 · h3 | Locking a chapter | PENDING | — |
-| `FSO-P12-MOOC-SECTION-009` · /chapter-1 · h3 | Getting ECTS credits and the certificate | PENDING | — |
-| `FSO-P12-MOOC-SECTION-010` · /chapter-1 · h4 | University of Helsinki degree students and exchange students | PENDING | — |
-| `FSO-P12-MOOC-SECTION-011` · /chapter-1 · h4 | Others | PENDING | — |
-| `FSO-P12-MOOC-SECTION-012` · /chapter-1 · h3 | Improvements and feedback to the course material | PENDING | — |
-| `FSO-P12-MOOC-SECTION-013` · /chapter-1 · h3 | Using LLM:s | PENDING | — |
-| `FSO-P12-MOOC-SECTION-014` · /chapter-1 · h3 | About the material | PENDING | — |
-| `FSO-P12-MOOC-SECTION-015` · /chapter-2 · h3 | About this part | PENDING | — |
-| `FSO-P12-MOOC-SECTION-016` · /chapter-2 · h3 | Warning | PENDING | — |
-| `FSO-P12-MOOC-SECTION-017` · /chapter-2 · h3 | Tools of the trade | PENDING | — |
-| `FSO-P12-MOOC-SECTION-018` · /chapter-2 · h3 | Installing everything required for this part | PENDING | — |
-| `FSO-P12-MOOC-SECTION-019` · /chapter-2 · h3 | Containers and images | PENDING | — |
-| `FSO-P12-MOOC-SECTION-020` · /chapter-2 · h3 | Ubuntu image | PENDING | — |
-| `FSO-P12-MOOC-SECTION-021` · /chapter-2 · h3 | Other Docker commands | PENDING | — |
-| `FSO-P12-MOOC-SECTION-022` · /chapter-3 · h3 | Dockerfile | PENDING | — |
-| `FSO-P12-MOOC-SECTION-023` · /chapter-3 · h3 | More meaningful image | PENDING | — |
-| `FSO-P12-MOOC-SECTION-024` · /chapter-3 · h4 | Fixing potential issues we created by copy-pasting | PENDING | — |
-| `FSO-P12-MOOC-SECTION-025` · /chapter-3 · h3 | Dockerfile best practices | PENDING | — |
-| `FSO-P12-MOOC-SECTION-026` · /chapter-3 · h3 | Using Docker compose | PENDING | — |
-| `FSO-P12-MOOC-SECTION-027` · /chapter-3 · h3 | Utilizing containers in development | PENDING | — |
-| `FSO-P12-MOOC-SECTION-028` · /chapter-3 · h3 | Bind mount and initializing the database | PENDING | — |
-| `FSO-P12-MOOC-SECTION-029` · /chapter-3 · h3 | Still problems? | PENDING | — |
-| `FSO-P12-MOOC-SECTION-030` · /chapter-3 · h3 | Persisting data with volumes | PENDING | — |
-| `FSO-P12-MOOC-SECTION-031` · /chapter-3 · h3 | Debugging issues in containers | PENDING | — |
-| `FSO-P12-MOOC-SECTION-032` · /chapter-3 · h4 | exec | PENDING | — |
-| `FSO-P12-MOOC-SECTION-033` · /chapter-3 · h3 | Redis | PENDING | — |
-| `FSO-P12-MOOC-SECTION-034` · /chapter-3 · h3 | Persisting data with Redis | PENDING | — |
-| `FSO-P12-MOOC-SECTION-035` · /chapter-3 · h4 | Other functionality of Redis | PENDING | — |
-| `FSO-P12-MOOC-SECTION-036` · /chapter-4 · h3 | React in container | PENDING | — |
-| `FSO-P12-MOOC-SECTION-037` · /chapter-4 · h3 | Using multiple stages | PENDING | — |
-| `FSO-P12-MOOC-SECTION-038` · /chapter-4 · h3 | Development in containers | PENDING | — |
-| `FSO-P12-MOOC-SECTION-039` · /chapter-4 · h3 | Communication between containers in a Docker network | PENDING | — |
-| `FSO-P12-MOOC-SECTION-040` · /chapter-4 · h3 | On accessing the Vite Dev Server | PENDING | — |
-| `FSO-P12-MOOC-SECTION-041` · /chapter-4 · h3 | Communications between containers in a more ambitious environment | PENDING | — |
-| `FSO-P12-MOOC-SECTION-042` · /chapter-4 · h3 | Tools for Production | PENDING | — |
+| `FSO-P10-MOOC-SECTION-001` · /chapter-1 · h2 | Prerequisites | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P10-MOOC-SECTION-002` · /chapter-1 · h2 | Enrollment | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P10-MOOC-SECTION-003` · /chapter-1 · h2 | Help with exercises or course practicalities | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P10-MOOC-SECTION-004` · /chapter-1 · h2 | Submitting exercises | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P10-MOOC-SECTION-005` · /chapter-1 · h2 | Locking a chapter | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P10-MOOC-SECTION-006` · /chapter-1 · h2 | Getting ECTS credits and the certificate | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P10-MOOC-SECTION-007` · /chapter-1 · h4 | University of Helsinki degree students and exchange students | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P10-MOOC-SECTION-008` · /chapter-1 · h4 | Others | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P10-MOOC-SECTION-009` · /chapter-1 · h2 | Improvements and feedback to the course material | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P10-MOOC-SECTION-010` · /chapter-1 · h2 | Using LLM:s | REVIEWED_REDUNDANT | `FSO-P1-CONCEPT-AI-CODING-VERIFICATION` |
+| `FSO-P10-MOOC-SECTION-011` · /chapter-1 · h2 | About the material | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P10-MOOC-SECTION-012` · /chapter-2 · h2 | About this part | REVIEWED_REDUNDANT | `FSO-P10-CONCEPT-EXPO-APP-BOOTSTRAP`, `FSO-P10-CONCEPT-REACT-NATIVE-CORE-COMPONENTS`, `FSO-P10-CONCEPT-MOBILE-NAVIGATION` |
+| `FSO-P10-MOOC-SECTION-013` · /chapter-2 · h2 | Initializing the application | REVIEWED_CONCEPTS_MAPPED | `FSO-P10-CONCEPT-EXPO-APP-BOOTSTRAP` |
+| `FSO-P10-MOOC-SECTION-014` · /chapter-2 · h2 | Setting up the virtual devices | REVIEWED_CONCEPTS_MAPPED | `FSO-P10-CONCEPT-MOBILE-EMULATORS` |
+| `FSO-P10-MOOC-SECTION-015` · /chapter-2 · h2 | Using your own phone with Expo Go | REVIEWED_CONCEPTS_MAPPED | `FSO-P10-CONCEPT-EXPO-GO-DEVICE` |
+| `FSO-P10-MOOC-SECTION-016` · /chapter-2 · h2 | ESLint | REVIEWED_REDUNDANT | `FSO-P3-CONCEPT-STATIC-ANALYSIS`, `FSO-P3-CONCEPT-LINT-CONFIG-SCOPE` |
+| `FSO-P10-MOOC-SECTION-017` · /chapter-2 · h2 | Debugging | REVIEWED_REDUNDANT | `FSO-P1-CONCEPT-DEBUGGING-DISCIPLINE`, `FSO-P5-CONCEPT-FRONTEND-TEST-DEBUGGING` |
+| `FSO-P10-MOOC-SECTION-018` · /chapter-3 · h2 | Core components | REVIEWED_CONCEPTS_MAPPED | `FSO-P10-CONCEPT-REACT-NATIVE-CORE-COMPONENTS` |
+| `FSO-P10-MOOC-SECTION-019` · /chapter-3 · h2 | Installing dependencies in Expo project | REVIEWED_CONCEPTS_MAPPED | `FSO-P10-CONCEPT-EXPO-DEPENDENCY-COMPATIBILITY` |
+| `FSO-P10-MOOC-SECTION-020` · /chapter-3 · h2 | Structuring our project | REVIEWED_CONCEPTS_MAPPED | `FSO-P10-CONCEPT-MOBILE-PROJECT-STRUCTURE` |
+| `FSO-P10-MOOC-SECTION-021` · /chapter-3 · h2 | Manually reloading the application | REVIEWED_CONCEPTS_MAPPED | `FSO-P10-CONCEPT-MOBILE-DEV-RELOAD` |
+| `FSO-P10-MOOC-SECTION-022` · /chapter-3 · h2 | Style | REVIEWED_CONCEPTS_MAPPED | `FSO-P10-CONCEPT-REACT-NATIVE-STYLING` |
+| `FSO-P10-MOOC-SECTION-023` · /chapter-3 · h2 | Consistent user interface with theming | REVIEWED_CONCEPTS_MAPPED | `FSO-P10-CONCEPT-MOBILE-THEMING` |
+| `FSO-P10-MOOC-SECTION-024` · /chapter-3 · h2 | Using flexbox for layout | REVIEWED_CONCEPTS_MAPPED | `FSO-P10-CONCEPT-FLEXBOX-CROSS-PLATFORM` |
+| `FSO-P10-MOOC-SECTION-025` · /chapter-3 · h2 | Status bar style | REVIEWED_CONCEPTS_MAPPED | `FSO-P10-CONCEPT-MOBILE-SYSTEM-UI` |
+| `FSO-P10-MOOC-SECTION-026` · /chapter-3 · h2 | Routing | REVIEWED_CONCEPTS_MAPPED | `FSO-P10-CONCEPT-MOBILE-NAVIGATION` |
+| `FSO-P10-MOOC-SECTION-027` · /chapter-3 · h2 | Form state management | REVIEWED_CONCEPTS_MAPPED | `FSO-P10-CONCEPT-FORMIK-FORM-STATE` |
+| `FSO-P10-MOOC-SECTION-028` · /chapter-3 · h2 | Form validation | REVIEWED_CONCEPTS_MAPPED | `FSO-P10-CONCEPT-FORM-SCHEMA-VALIDATION` |
+| `FSO-P10-MOOC-SECTION-029` · /chapter-3 · h2 | Platform-specific code | REVIEWED_CONCEPTS_MAPPED | `FSO-P10-CONCEPT-PLATFORM-SPECIFIC-CODE` |
+| `FSO-P10-MOOC-SECTION-030` · /chapter-5 · h2 | Testing React Native applications | REVIEWED_CONCEPTS_MAPPED | `FSO-P10-CONCEPT-REACT-NATIVE-TESTING` |
+| `FSO-P10-MOOC-SECTION-031` · /chapter-5 · h2 | Organizing tests | REVIEWED_REDUNDANT | `FSO-P5-CONCEPT-TEST-COLOCATION` |
+| `FSO-P10-MOOC-SECTION-032` · /chapter-5 · h2 | Testing components | REVIEWED_CONCEPTS_MAPPED | `FSO-P10-CONCEPT-NATIVE-COMPONENT-TESTS` |
+| `FSO-P10-MOOC-SECTION-033` · /chapter-5 · h2 | Handling dependencies in tests | REVIEWED_CONCEPTS_MAPPED | `FSO-P10-CONCEPT-NATIVE-TEST-DEPENDENCIES` |
+| `FSO-P10-MOOC-SECTION-034` · /chapter-5 · h2 | Extending our application | REVIEWED_REDUNDANT | `FSO-P10-CONCEPT-MOBILE-PROJECT-STRUCTURE` |
+| `FSO-P10-MOOC-SECTION-035` · /chapter-5 · h2 | Cursor-based pagination | REVIEWED_CONCEPTS_MAPPED | `FSO-P10-CONCEPT-CURSOR-PAGINATION` |
+| `FSO-P10-MOOC-SECTION-036` · /chapter-5 · h2 | Infinite scrolling | REVIEWED_CONCEPTS_MAPPED | `FSO-P10-CONCEPT-INFINITE-SCROLL` |
+| `FSO-P10-MOOC-SECTION-037` · /chapter-5 · h2 | Sharing the application with a QR code | REVIEWED_CONCEPTS_MAPPED | `FSO-P10-CONCEPT-MOBILE-DISTRIBUTION-PREVIEW` |
+| `FSO-P10-MOOC-SECTION-038` · /chapter-5 · h2 | Additional resources | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P10-MOOC-SECTION-039` · /chapter-5 · h3 | React Native Paper | REVIEWED_CONCEPTS_MAPPED | `FSO-P10-CONCEPT-REACT-NATIVE-UI-LIBRARY` |
+| `FSO-P10-MOOC-SECTION-040` · /chapter-5 · h3 | Styled-components | REVIEWED_REDUNDANT | `FSO-P5-CONCEPT-CSS-IN-JS-COMPARE` |
+| `FSO-P10-MOOC-SECTION-041` · /chapter-5 · h3 | React-spring | REVIEWED_CONCEPTS_MAPPED | `FSO-P10-CONCEPT-MOBILE-ANIMATION` |
+| `FSO-P10-MOOC-SECTION-042` · /chapter-5 · h3 | React Navigation | REVIEWED_REDUNDANT | `FSO-P10-CONCEPT-MOBILE-NAVIGATION` |
+| `FSO-P10-MOOC-SECTION-043` · /chapter-5 · h2 | Closing words | REVIEWED_REDUNDANT | `FSO-P10-CONCEPT-EXPO-APP-BOOTSTRAP`, `FSO-P10-CONCEPT-REACT-NATIVE-CORE-COMPONENTS`, `FSO-P10-CONCEPT-REACT-NATIVE-TESTING` |
+| `FSO-P10-MOOC-SECTION-044` · / · h3 | Extend React skills to mobile development | REVIEWED_REDUNDANT | `FSO-P10-CONCEPT-EXPO-APP-BOOTSTRAP`, `FSO-P10-CONCEPT-REACT-NATIVE-CORE-COMPONENTS` |
+| `FSO-P10-MOOC-SECTION-045` · / · h3 | Build mobile user interfaces and navigation | REVIEWED_REDUNDANT | `FSO-P10-CONCEPT-REACT-NATIVE-STYLING`, `FSO-P10-CONCEPT-MOBILE-NAVIGATION` |
+| `FSO-P10-MOOC-SECTION-046` · / · h3 | Use GraphQL and Apollo Client in a mobile app | REVIEWED_REDUNDANT | `FSO-P8-CONCEPT-APOLLO-CLIENT`, `FSO-P8-CONCEPT-APOLLO-USEQUERY`, `FSO-P8-CONCEPT-APOLLO-USEMUTATION` |
+| `FSO-P10-MOOC-SECTION-047` · /chapter-4 · h2 | HTTP requests | REVIEWED_REDUNDANT | `FSO-P6-CONCEPT-FETCH-API` |
+| `FSO-P10-MOOC-SECTION-048` · /chapter-4 · h2 | GraphQL and Apollo client | REVIEWED_REDUNDANT | `FSO-P8-CONCEPT-APOLLO-CLIENT` |
+| `FSO-P10-MOOC-SECTION-049` · /chapter-4 · h2 | Organizing GraphQL related code | REVIEWED_CONCEPTS_MAPPED | `FSO-P10-CONCEPT-GRAPHQL-CLIENT-MODULES` |
+| `FSO-P10-MOOC-SECTION-050` · /chapter-4 · h2 | Evolving the structure | REVIEWED_REDUNDANT | `FSO-P7-CONCEPT-FEATURE-ORGANIZATION`, `FSO-P10-CONCEPT-GRAPHQL-CLIENT-MODULES` |
+| `FSO-P10-MOOC-SECTION-051` · /chapter-4 · h2 | Exercise 10.11 | REVIEWED_REDUNDANT | `FSO-P8-CONCEPT-APOLLO-USEQUERY` |
+| `FSO-P10-MOOC-SECTION-052` · /chapter-4 · h3 | Exercise 10.11: fetching repositories with Apollo Client | REVIEWED_REDUNDANT | `FSO-P8-CONCEPT-APOLLO-USEQUERY` |
+| `FSO-P10-MOOC-SECTION-053` · /chapter-4 · h2 | Environment variables | REVIEWED_CONCEPTS_MAPPED | `FSO-P10-CONCEPT-MOBILE-ENV-CONFIG` |
+| `FSO-P10-MOOC-SECTION-054` · /chapter-4 · h2 | Storing data in the user's device | REVIEWED_CONCEPTS_MAPPED | `FSO-P10-CONCEPT-DEVICE-PERSISTENT-STORAGE` |
+| `FSO-P10-MOOC-SECTION-055` · /chapter-4 · h2 | Enhancing Apollo Client's requests | REVIEWED_REDUNDANT | `FSO-P8-CONCEPT-APOLLO-AUTH-LINK`, `FSO-P10-CONCEPT-DEVICE-PERSISTENT-STORAGE` |
+| `FSO-P10-MOOC-SECTION-056` · /chapter-4 · h2 | Using React Context for dependency injection | REVIEWED_CONCEPTS_MAPPED | `FSO-P10-CONCEPT-CONTEXT-DEPENDENCY-INJECTION` |
 
-## Part 13 — 0/43 section units dispositioned
-
-| Section source | Heading | Semantic disposition | Explicit concept records |
-|---|---|---|---|
-| `FSO-P13-MOOC-SECTION-001` · / · h3 | Use relational databases with Node.js applications | PENDING | — |
-| `FSO-P13-MOOC-SECTION-002` · / · h3 | Use Sequelize as an ORM | PENDING | — |
-| `FSO-P13-MOOC-SECTION-003` · / · h3 | Manage database schema changes with migrations | PENDING | — |
-| `FSO-P13-MOOC-SECTION-004` · /chapter-4 · h3 | Migrations | PENDING | — |
-| `FSO-P13-MOOC-SECTION-005` · /chapter-4 · h3 | Admin user and user disabling | PENDING | — |
-| `FSO-P13-MOOC-SECTION-006` · /chapter-4 · h3 | Many-to-many relationships | PENDING | — |
-| `FSO-P13-MOOC-SECTION-007` · /chapter-4 · h3 | Note on the properties of Sequelize model objects | PENDING | — |
-| `FSO-P13-MOOC-SECTION-008` · /chapter-4 · h3 | Revisiting many-to-many relationships | PENDING | — |
-| `FSO-P13-MOOC-SECTION-009` · /chapter-4 · h3 | Concluding remarks | PENDING | — |
-| `FSO-P13-MOOC-SECTION-010` · /chapter-4 · h4 | Eager vs lazy fetch | PENDING | — |
-| `FSO-P13-MOOC-SECTION-011` · /chapter-4 · h4 | Features of models | PENDING | — |
-| `FSO-P13-MOOC-SECTION-012` · /chapter-4 · h4 | Code duplication in models and migrations | PENDING | — |
-| `FSO-P13-MOOC-SECTION-013` · /chapter-2 · h3 | Pros and cons of document databases | PENDING | — |
-| `FSO-P13-MOOC-SECTION-014` · /chapter-2 · h3 | Application database | PENDING | — |
-| `FSO-P13-MOOC-SECTION-015` · /chapter-2 · h4 | A hosted solution: Aiven | PENDING | — |
-| `FSO-P13-MOOC-SECTION-016` · /chapter-2 · h4 | Docker | PENDING | — |
-| `FSO-P13-MOOC-SECTION-017` · /chapter-2 · h4 | Accessing the database | PENDING | — |
-| `FSO-P13-MOOC-SECTION-018` · /chapter-2 · h5 | Opening a connection with psql | PENDING | — |
-| `FSO-P13-MOOC-SECTION-019` · /chapter-2 · h5 | Opening a connection with pgAdmin | PENDING | — |
-| `FSO-P13-MOOC-SECTION-020` · /chapter-2 · h4 | When connection is opened | PENDING | — |
-| `FSO-P13-MOOC-SECTION-021` · /chapter-2 · h3 | Node application using a relational database | PENDING | — |
-| `FSO-P13-MOOC-SECTION-022` · /chapter-2 · h3 | Model | PENDING | — |
-| `FSO-P13-MOOC-SECTION-023` · /chapter-2 · h3 | Creating database tables automatically | PENDING | — |
-| `FSO-P13-MOOC-SECTION-024` · /chapter-2 · h3 | Other operations | PENDING | — |
-| `FSO-P13-MOOC-SECTION-025` · /chapter-2 · h3 | Printing the objects returned by Sequelize to the console | PENDING | — |
-| `FSO-P13-MOOC-SECTION-026` · /chapter-3 · h3 | Structure of the application | PENDING | — |
-| `FSO-P13-MOOC-SECTION-027` · /chapter-3 · h3 | User management | PENDING | — |
-| `FSO-P13-MOOC-SECTION-028` · /chapter-3 · h3 | Join between the tables | PENDING | — |
-| `FSO-P13-MOOC-SECTION-029` · /chapter-3 · h3 | Proper insertion of notes | PENDING | — |
-| `FSO-P13-MOOC-SECTION-030` · /chapter-3 · h3 | Fine-tuning | PENDING | — |
-| `FSO-P13-MOOC-SECTION-031` · /chapter-3 · h3 | A note on the model definitions | PENDING | — |
-| `FSO-P13-MOOC-SECTION-032` · /chapter-3 · h3 | More queries | PENDING | — |
-| `FSO-P13-MOOC-SECTION-033` · /chapter-1 · h3 | Prerequisites | PENDING | — |
-| `FSO-P13-MOOC-SECTION-034` · /chapter-1 · h3 | Enrollment | PENDING | — |
-| `FSO-P13-MOOC-SECTION-035` · /chapter-1 · h3 | Help with exercises or course practicalities | PENDING | — |
-| `FSO-P13-MOOC-SECTION-036` · /chapter-1 · h3 | Submitting exercises | PENDING | — |
-| `FSO-P13-MOOC-SECTION-037` · /chapter-1 · h3 | Locking a chapter | PENDING | — |
-| `FSO-P13-MOOC-SECTION-038` · /chapter-1 · h3 | Getting ECTS credits and the certificate | PENDING | — |
-| `FSO-P13-MOOC-SECTION-039` · /chapter-1 · h4 | University of Helsinki degree students and exchange students | PENDING | — |
-| `FSO-P13-MOOC-SECTION-040` · /chapter-1 · h4 | Others | PENDING | — |
-| `FSO-P13-MOOC-SECTION-041` · /chapter-1 · h3 | Improvements and feedback to the course material | PENDING | — |
-| `FSO-P13-MOOC-SECTION-042` · /chapter-1 · h3 | Using LLM:s | PENDING | — |
-| `FSO-P13-MOOC-SECTION-043` · /chapter-1 · h3 | About the material | PENDING | — |
-
-## Part 14 — 0/65 section units dispositioned
+## Part 11 — 64/64 section units dispositioned
 
 | Section source | Heading | Semantic disposition | Explicit concept records |
 |---|---|---|---|
-| `FSO-P14-MOOC-SECTION-001` · /chapter-2 · h3 | Next.js notes | PENDING | — |
-| `FSO-P14-MOOC-SECTION-002` · /chapter-2 · h3 | App router | PENDING | — |
-| `FSO-P14-MOOC-SECTION-003` · /chapter-2 · h3 | Page for notes | PENDING | — |
-| `FSO-P14-MOOC-SECTION-004` · /chapter-2 · h3 | Creating new notes | PENDING | — |
-| `FSO-P14-MOOC-SECTION-005` · /chapter-2 · h3 | Static rendering | PENDING | — |
-| `FSO-P14-MOOC-SECTION-006` · /chapter-2 · h3 | Page of a note | PENDING | — |
-| `FSO-P14-MOOC-SECTION-007` · /chapter-2 · h3 | More functionality | PENDING | — |
-| `FSO-P14-MOOC-SECTION-008` · /chapter-2 · h3 | Showing important notes only, client component solution | PENDING | — |
-| `FSO-P14-MOOC-SECTION-009` · /chapter-2 · h3 | Showing important notes only, server component solution | PENDING | — |
-| `FSO-P14-MOOC-SECTION-010` · /chapter-3 · h3 | Deployment to Vercel | PENDING | — |
-| `FSO-P14-MOOC-SECTION-011` · /chapter-3 · h3 | Creating a database | PENDING | — |
-| `FSO-P14-MOOC-SECTION-012` · /chapter-3 · h3 | Database access with Drizzle ORM | PENDING | — |
-| `FSO-P14-MOOC-SECTION-013` · /chapter-3 · h3 | Migrations | PENDING | — |
-| `FSO-P14-MOOC-SECTION-014` · /chapter-3 · h3 | Users | PENDING | — |
-| `FSO-P14-MOOC-SECTION-015` · /chapter-3 · h3 | Users notes | PENDING | — |
-| `FSO-P14-MOOC-SECTION-016` · /chapter-3 · h3 | Join queries | PENDING | — |
-| `FSO-P14-MOOC-SECTION-017` · /chapter-3 · h4 | Query logger | PENDING | — |
-| `FSO-P14-MOOC-SECTION-018` · /chapter-3 · h3 | Word of warning about migrations | PENDING | — |
-| `FSO-P14-MOOC-SECTION-019` · / · h3 | Build full stack applications with Next.js and React Server Components | PENDING | — |
-| `FSO-P14-MOOC-SECTION-020` · / · h3 | Persist data with Drizzle ORM and PostgreSQL | PENDING | — |
-| `FSO-P14-MOOC-SECTION-021` · / · h3 | Implement auth, validation, and production-ready UX | PENDING | — |
-| `FSO-P14-MOOC-SECTION-022` · /chapter-4 · h3 | Logging in | PENDING | — |
-| `FSO-P14-MOOC-SECTION-023` · /chapter-4 · h4 | Schema change | PENDING | — |
-| `FSO-P14-MOOC-SECTION-024` · /chapter-4 · h4 | NextAuth configuration | PENDING | — |
-| `FSO-P14-MOOC-SECTION-025` · /chapter-4 · h4 | What actually is the session | PENDING | — |
-| `FSO-P14-MOOC-SECTION-026` · /chapter-4 · h4 | Auth API route | PENDING | — |
-| `FSO-P14-MOOC-SECTION-027` · /chapter-4 · h4 | Session provider and layout | PENDING | — |
-| `FSO-P14-MOOC-SECTION-028` · /chapter-4 · h4 | Navigation bar | PENDING | — |
-| `FSO-P14-MOOC-SECTION-029` · /chapter-4 · h4 | Login page | PENDING | — |
-| `FSO-P14-MOOC-SECTION-030` · /chapter-4 · h4 | Reading the session on the server | PENDING | — |
-| `FSO-P14-MOOC-SECTION-031` · /chapter-4 · h4 | Protecting the create note action | PENDING | — |
-| `FSO-P14-MOOC-SECTION-032` · /chapter-4 · h4 | Environment variables | PENDING | — |
-| `FSO-P14-MOOC-SECTION-033` · /chapter-4 · h4 | Setting passwords for existing users | PENDING | — |
-| `FSO-P14-MOOC-SECTION-034` · /chapter-4 · h3 | Authentication flow revisited | PENDING | — |
-| `FSO-P14-MOOC-SECTION-035` · /chapter-4 · h3 | User registration | PENDING | — |
-| `FSO-P14-MOOC-SECTION-036` · /chapter-4 · h4 | The @ path alias | PENDING | — |
-| `FSO-P14-MOOC-SECTION-037` · /chapter-4 · h3 | Error handling | PENDING | — |
-| `FSO-P14-MOOC-SECTION-038` · /chapter-4 · h4 | Client-side validation | PENDING | — |
-| `FSO-P14-MOOC-SECTION-039` · /chapter-4 · h4 | Returning validation errors with useActionState | PENDING | — |
-| `FSO-P14-MOOC-SECTION-040` · /chapter-4 · h4 | More UI components: notification | PENDING | — |
-| `FSO-P14-MOOC-SECTION-041` · /chapter-4 · h4 | Showing a notification after note creation | PENDING | — |
-| `FSO-P14-MOOC-SECTION-042` · /chapter-4 · h4 | Where to put components | PENDING | — |
-| `FSO-P14-MOOC-SECTION-043` · /chapter-4 · h3 | Styling the app with Tailwind CSS | PENDING | — |
-| `FSO-P14-MOOC-SECTION-044` · /chapter-4 · h4 | Learning and applying Tailwind | PENDING | — |
-| `FSO-P14-MOOC-SECTION-045` · /chapter-4 · h3 | Exercises | PENDING | — |
-| `FSO-P14-MOOC-SECTION-046` · /chapter-4 · h3 | More about Drizzle: SQL query API | PENDING | — |
-| `FSO-P14-MOOC-SECTION-047` · /chapter-4 · h3 | API routes | PENDING | — |
-| `FSO-P14-MOOC-SECTION-048` · /chapter-4 · h4 | How Route Handlers work | PENDING | — |
-| `FSO-P14-MOOC-SECTION-049` · /chapter-4 · h4 | When to use API routes vs. Server Actions | PENDING | — |
-| `FSO-P14-MOOC-SECTION-050` · /chapter-4 · h3 | Exercises | PENDING | — |
-| `FSO-P14-MOOC-SECTION-051` · /chapter-4 · h3 | Some loose ends | PENDING | — |
-| `FSO-P14-MOOC-SECTION-052` · /chapter-4 · h4 | Suspense and streaming | PENDING | — |
-| `FSO-P14-MOOC-SECTION-053` · /chapter-4 · h4 | Optimizing images with next/image | PENDING | — |
-| `FSO-P14-MOOC-SECTION-054` · /chapter-4 · h4 | Metadata and SEO | PENDING | — |
-| `FSO-P14-MOOC-SECTION-055` · /chapter-4 · h3 | Exercises | PENDING | — |
-| `FSO-P14-MOOC-SECTION-056` · /chapter-1 · h3 | Prerequisites | PENDING | — |
-| `FSO-P14-MOOC-SECTION-057` · /chapter-1 · h3 | Help with exercises or course practicalities | PENDING | — |
-| `FSO-P14-MOOC-SECTION-058` · /chapter-1 · h3 | Submitting exercises | PENDING | — |
-| `FSO-P14-MOOC-SECTION-059` · /chapter-1 · h3 | Locking a chapter | PENDING | — |
-| `FSO-P14-MOOC-SECTION-060` · /chapter-1 · h3 | Getting ECTS credits and the certificate | PENDING | — |
-| `FSO-P14-MOOC-SECTION-061` · /chapter-1 · h4 | University of Helsinki degree students and exchange students | PENDING | — |
-| `FSO-P14-MOOC-SECTION-062` · /chapter-1 · h4 | Others | PENDING | — |
-| `FSO-P14-MOOC-SECTION-063` · /chapter-1 · h3 | Improvements and feedback to the course material | PENDING | — |
-| `FSO-P14-MOOC-SECTION-064` · /chapter-1 · h3 | Using LLMs | PENDING | — |
-| `FSO-P14-MOOC-SECTION-065` · /chapter-1 · h3 | About the material | PENDING | — |
+| `FSO-P11-MOOC-SECTION-001` · / · h3 | Build CI/CD pipelines with GitHub | REVIEWED_REDUNDANT | `FSO-P11-CONCEPT-GITHUB-ACTIONS-MODEL`, `FSO-P11-CONCEPT-CI-QUALITY-GATES` |
+| `FSO-P11-MOOC-SECTION-002` · / · h3 | Automate safe deployments to the cloud | REVIEWED_REDUNDANT | `FSO-P11-CONCEPT-AUTOMATED-DEPLOYMENT`, `FSO-P11-CONCEPT-SAFE-DEPLOYMENT-SYSTEM`, `FSO-P11-CONCEPT-APPLICATION-HEALTH-CHECK` |
+| `FSO-P11-MOOC-SECTION-003` · / · h3 | Keep the main branch green | REVIEWED_REDUNDANT | `FSO-P11-CONCEPT-GREEN-MAIN`, `FSO-P11-CONCEPT-BRANCH-PROTECTION`, `FSO-P11-CONCEPT-RELEASE-VERSIONING` |
+| `FSO-P11-MOOC-SECTION-004` · /chapter-1 · h3 | Prerequisites | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P11-MOOC-SECTION-005` · /chapter-1 · h3 | Enrollment | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P11-MOOC-SECTION-006` · /chapter-1 · h3 | Help with exercises or course practicalities | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P11-MOOC-SECTION-007` · /chapter-1 · h3 | Submitting exercises | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P11-MOOC-SECTION-008` · /chapter-1 · h3 | Locking a chapter | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P11-MOOC-SECTION-009` · /chapter-1 · h3 | Getting ECTS credits and the certificate | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P11-MOOC-SECTION-010` · /chapter-1 · h4 | University of Helsinki degree students and exchange students | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P11-MOOC-SECTION-011` · /chapter-1 · h4 | Others | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P11-MOOC-SECTION-012` · /chapter-1 · h3 | Improvements and feedback to the course material | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P11-MOOC-SECTION-013` · /chapter-1 · h3 | Using LLM:s | REVIEWED_REDUNDANT | `FSO-P1-CONCEPT-AI-CODING-VERIFICATION` |
+| `FSO-P11-MOOC-SECTION-014` · /chapter-1 · h3 | About the material | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P11-MOOC-SECTION-015` · /chapter-2 · h3 | Getting software to production | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-PRODUCTION-DELIVERY-LIFECYCLE` |
+| `FSO-P11-MOOC-SECTION-016` · /chapter-2 · h3 | Some useful terms | REVIEWED_REDUNDANT | `FSO-P11-CONCEPT-BUILD-ARTIFACT`, `FSO-P11-CONCEPT-DEPLOYMENT`, `FSO-P11-CONCEPT-CONTINUOUS-INTEGRATION`, `FSO-P11-CONCEPT-DELIVERY-VS-DEPLOYMENT` |
+| `FSO-P11-MOOC-SECTION-017` · /chapter-2 · h4 | Branches | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-GIT-BRANCHES` |
+| `FSO-P11-MOOC-SECTION-018` · /chapter-2 · h4 | Pull request | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-PULL-REQUESTS` |
+| `FSO-P11-MOOC-SECTION-019` · /chapter-2 · h4 | Build | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-BUILD-ARTIFACT` |
+| `FSO-P11-MOOC-SECTION-020` · /chapter-2 · h4 | Deploy | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-DEPLOYMENT` |
+| `FSO-P11-MOOC-SECTION-021` · /chapter-2 · h3 | What is CI? | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-CONTINUOUS-INTEGRATION` |
+| `FSO-P11-MOOC-SECTION-022` · /chapter-2 · h3 | Packaging and Deployment as a part of CI | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-PIPELINE-STAGES` |
+| `FSO-P11-MOOC-SECTION-023` · /chapter-2 · h4 | Is this CD thing related? | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-DELIVERY-VS-DEPLOYMENT` |
+| `FSO-P11-MOOC-SECTION-024` · /chapter-2 · h3 | Why is it important? | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-CI-RISK-REDUCTION` |
+| `FSO-P11-MOOC-SECTION-025` · /chapter-2 · h3 | Important principles | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-CI-FIT-FOR-PURPOSE` |
+| `FSO-P11-MOOC-SECTION-026` · /chapter-2 · h4 | Documented behavior | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-PIPELINE-AS-DOCUMENTED-BEHAVIOR` |
+| `FSO-P11-MOOC-SECTION-027` · /chapter-2 · h4 | Know the same thing happens every time | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-REPRODUCIBLE-PIPELINE` |
+| `FSO-P11-MOOC-SECTION-028` · /chapter-2 · h4 | Code always kept deployable | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-DEPLOYABLE-MAIN` |
+| `FSO-P11-MOOC-SECTION-029` · /chapter-2 · h4 | Knowing what code is deployed (sha sum/version) | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-DEPLOYED-REVISION-PROVENANCE` |
+| `FSO-P11-MOOC-SECTION-030` · /chapter-2 · h3 | Types of CI setup | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-CI-EXECUTION-MODELS` |
+| `FSO-P11-MOOC-SECTION-031` · /chapter-2 · h4 | Jenkins (and other self-hosted setups) | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-SELF-HOSTED-CI` |
+| `FSO-P11-MOOC-SECTION-032` · /chapter-2 · h4 | GitHub Actions and other cloud-based solutions | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-CLOUD-CI` |
+| `FSO-P11-MOOC-SECTION-033` · /chapter-2 · h4 | Why pick one over the other | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-CI-PLATFORM-SELECTION` |
+| `FSO-P11-MOOC-SECTION-034` · /chapter-2 · h4 | Why use GitHub Actions for this course | REVIEWED_REDUNDANT | `FSO-P11-CONCEPT-CLOUD-CI`, `FSO-P11-CONCEPT-CI-PLATFORM-SELECTION` |
+| `FSO-P11-MOOC-SECTION-035` · /chapter-3 · h3 | Basic needs | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-CI-REPOSITORY-CONTRACT` |
+| `FSO-P11-MOOC-SECTION-036` · /chapter-3 · h3 | Getting started with workflows | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-GITHUB-ACTIONS-MODEL` |
+| `FSO-P11-MOOC-SECTION-037` · /chapter-3 · h3 | Setting up lint, test and build steps | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-CI-QUALITY-GATES` |
+| `FSO-P11-MOOC-SECTION-038` · /chapter-3 · h4 | Setting up the environment | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-CI-ENVIRONMENT-PARITY` |
+| `FSO-P11-MOOC-SECTION-039` · /chapter-3 · h4 | Lint | REVIEWED_REDUNDANT | `FSO-P3-CONCEPT-STATIC-ANALYSIS`, `FSO-P3-CONCEPT-LINT-AUTOMATION` |
+| `FSO-P11-MOOC-SECTION-040` · /chapter-4 · h3 | Anything that can go wrong... | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-DEPLOYMENT-FAILURE-MODEL` |
+| `FSO-P11-MOOC-SECTION-041` · /chapter-4 · h3 | What does a good deployment system do? | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-SAFE-DEPLOYMENT-SYSTEM` |
+| `FSO-P11-MOOC-SECTION-042` · /chapter-4 · h3 | Has the app been deployed? | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-POST-DEPLOY-VERIFICATION` |
+| `FSO-P11-MOOC-SECTION-043` · /chapter-4 · h3 | Exercises 10.-12. (Fly.io) | REVIEWED_REDUNDANT | `FSO-P11-CONCEPT-DEPLOYMENT`, `FSO-P11-CONCEPT-SAFE-DEPLOYMENT-SYSTEM` |
+| `FSO-P11-MOOC-SECTION-044` · /chapter-4 · h4 | 10. Deploying your application to Fly.io | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-CLOUD-DEPLOY-TARGET` |
+| `FSO-P11-MOOC-SECTION-045` · /chapter-4 · h4 | 11. Automatic deployments to Fly.io | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-AUTOMATED-DEPLOYMENT` |
+| `FSO-P11-MOOC-SECTION-046` · /chapter-4 · h4 | 12. Health check in Fly.io | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-APPLICATION-HEALTH-CHECK` |
+| `FSO-P11-MOOC-SECTION-047` · /chapter-4 · h3 | Exercises 10.-12. (Render) | REVIEWED_REDUNDANT | `FSO-P11-CONCEPT-DEPLOYMENT`, `FSO-P11-CONCEPT-SAFE-DEPLOYMENT-SYSTEM` |
+| `FSO-P11-MOOC-SECTION-048` · /chapter-4 · h4 | 10. Deploying your application to Render | REVIEWED_REDUNDANT | `FSO-P11-CONCEPT-CLOUD-DEPLOY-TARGET` |
+| `FSO-P11-MOOC-SECTION-049` · /chapter-4 · h4 | 11. Automatic deployments to Render | REVIEWED_REDUNDANT | `FSO-P11-CONCEPT-AUTOMATED-DEPLOYMENT` |
+| `FSO-P11-MOOC-SECTION-050` · /chapter-4 · h4 | 12. Health check in Render | REVIEWED_REDUNDANT | `FSO-P11-CONCEPT-APPLICATION-HEALTH-CHECK` |
+| `FSO-P11-MOOC-SECTION-051` · /chapter-5 · h1 | Keeping green | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-GREEN-MAIN` |
+| `FSO-P11-MOOC-SECTION-052` · /chapter-5 · h3 | Working with Pull Requests | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-PR-CHECKS-AND-REVIEW` |
+| `FSO-P11-MOOC-SECTION-053` · /chapter-5 · h3 | Versioning | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-RELEASE-VERSIONING` |
+| `FSO-P11-MOOC-SECTION-054` · /chapter-5 · h4 | Semantic Versioning and Hash Versioning | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-SEMVER-VS-COMMIT` |
+| `FSO-P11-MOOC-SECTION-055` · /chapter-5 · h4 | But what does the version point to? | REVIEWED_REDUNDANT | `FSO-P11-CONCEPT-DEPLOYED-REVISION-PROVENANCE`, `FSO-P11-CONCEPT-SEMVER-VS-COMMIT` |
+| `FSO-P11-MOOC-SECTION-056` · /chapter-5 · h4 | Version order | REVIEWED_REDUNDANT | `FSO-P11-CONCEPT-SEMVER-VS-COMMIT` |
+| `FSO-P11-MOOC-SECTION-057` · /chapter-5 · h4 | Comparing the Two | REVIEWED_REDUNDANT | `FSO-P11-CONCEPT-SEMVER-VS-COMMIT` |
+| `FSO-P11-MOOC-SECTION-058` · /chapter-5 · h4 | Best of Both Worlds | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-RELEASE-AND-ARTIFACT-IDENTITY` |
+| `FSO-P11-MOOC-SECTION-059` · /chapter-5 · h3 | A note about using third-party actions | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-PINNED-CI-ACTIONS` |
+| `FSO-P11-MOOC-SECTION-060` · /chapter-5 · h3 | Keep the main branch protected | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-BRANCH-PROTECTION` |
+| `FSO-P11-MOOC-SECTION-061` · /chapter-6 · h3 | Visibility and Understanding | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-DELIVERY-VISIBILITY` |
+| `FSO-P11-MOOC-SECTION-062` · /chapter-6 · h3 | Notifications | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-PIPELINE-NOTIFICATIONS` |
+| `FSO-P11-MOOC-SECTION-063` · /chapter-6 · h3 | Metrics | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-DELIVERY-METRICS` |
+| `FSO-P11-MOOC-SECTION-064` · /chapter-6 · h3 | Periodic tasks | REVIEWED_CONCEPTS_MAPPED | `FSO-P11-CONCEPT-SCHEDULED-AUTOMATION` |
+
+## Part 12 — 42/42 section units dispositioned
+
+| Section source | Heading | Semantic disposition | Explicit concept records |
+|---|---|---|---|
+| `FSO-P12-MOOC-SECTION-001` · / · h3 | Use containers to run and manage applications consistently across environments | REVIEWED_REDUNDANT | `FSO-P12-CONCEPT-IMAGE-VS-CONTAINER`, `FSO-P12-CONCEPT-DOCKER-VOLUMES` |
+| `FSO-P12-MOOC-SECTION-002` · / · h3 | Containerize and orchestrate full stack apps with Dockerfiles and Docker Compose | REVIEWED_REDUNDANT | `FSO-P12-CONCEPT-DOCKERFILE`, `FSO-P12-CONCEPT-DOCKER-COMPOSE`, `FSO-P12-CONCEPT-MULTI-STAGE-BUILD` |
+| `FSO-P12-MOOC-SECTION-003` · / · h3 | Use Docker for a development environment | REVIEWED_REDUNDANT | `FSO-P12-CONCEPT-DEV-CONTAINERS`, `FSO-P12-CONCEPT-CONTAINERIZED-DEV-LOOP`, `FSO-P12-CONCEPT-DOCKER-NETWORK-DNS` |
+| `FSO-P12-MOOC-SECTION-004` · /chapter-1 · h3 | Prerequisites | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P12-MOOC-SECTION-005` · /chapter-1 · h3 | Enrollment | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P12-MOOC-SECTION-006` · /chapter-1 · h3 | Help with exercises or course practicalities | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P12-MOOC-SECTION-007` · /chapter-1 · h3 | Submitting exercises | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P12-MOOC-SECTION-008` · /chapter-1 · h3 | Locking a chapter | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P12-MOOC-SECTION-009` · /chapter-1 · h3 | Getting ECTS credits and the certificate | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P12-MOOC-SECTION-010` · /chapter-1 · h4 | University of Helsinki degree students and exchange students | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P12-MOOC-SECTION-011` · /chapter-1 · h4 | Others | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P12-MOOC-SECTION-012` · /chapter-1 · h3 | Improvements and feedback to the course material | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P12-MOOC-SECTION-013` · /chapter-1 · h3 | Using LLM:s | REVIEWED_REDUNDANT | `FSO-P1-CONCEPT-AI-CODING-VERIFICATION` |
+| `FSO-P12-MOOC-SECTION-014` · /chapter-1 · h3 | About the material | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P12-MOOC-SECTION-015` · /chapter-2 · h3 | About this part | REVIEWED_REDUNDANT | `FSO-P12-CONCEPT-DEV-CONTAINERS`, `FSO-P12-CONCEPT-CONTAINER-RUNTIME-HOST` |
+| `FSO-P12-MOOC-SECTION-016` · /chapter-2 · h3 | Warning | REVIEWED_CONCEPTS_MAPPED | `FSO-P12-CONCEPT-SHELL-CLI` |
+| `FSO-P12-MOOC-SECTION-017` · /chapter-2 · h3 | Tools of the trade | REVIEWED_REDUNDANT | `FSO-P12-CONCEPT-SHELL-CLI` |
+| `FSO-P12-MOOC-SECTION-018` · /chapter-2 · h3 | Installing everything required for this part | REVIEWED_CONCEPTS_MAPPED | `FSO-P12-CONCEPT-CONTAINER-RUNTIME-HOST` |
+| `FSO-P12-MOOC-SECTION-019` · /chapter-2 · h3 | Containers and images | REVIEWED_CONCEPTS_MAPPED | `FSO-P12-CONCEPT-IMAGE-VS-CONTAINER` |
+| `FSO-P12-MOOC-SECTION-020` · /chapter-2 · h3 | Ubuntu image | REVIEWED_CONCEPTS_MAPPED | `FSO-P12-CONCEPT-DOCKER-RUN` |
+| `FSO-P12-MOOC-SECTION-021` · /chapter-2 · h3 | Other Docker commands | REVIEWED_CONCEPTS_MAPPED | `FSO-P12-CONCEPT-CONTAINER-LIFECYCLE-COMMANDS` |
+| `FSO-P12-MOOC-SECTION-022` · /chapter-3 · h3 | Dockerfile | REVIEWED_CONCEPTS_MAPPED | `FSO-P12-CONCEPT-DOCKERFILE` |
+| `FSO-P12-MOOC-SECTION-023` · /chapter-3 · h3 | More meaningful image | REVIEWED_CONCEPTS_MAPPED | `FSO-P12-CONCEPT-APPLICATION-IMAGE` |
+| `FSO-P12-MOOC-SECTION-024` · /chapter-3 · h4 | Fixing potential issues we created by copy-pasting | REVIEWED_CONCEPTS_MAPPED | `FSO-P12-CONCEPT-BUILD-INSIDE-TARGET-ENV` |
+| `FSO-P12-MOOC-SECTION-025` · /chapter-3 · h3 | Dockerfile best practices | REVIEWED_CONCEPTS_MAPPED | `FSO-P12-CONCEPT-IMAGE-HARDENING` |
+| `FSO-P12-MOOC-SECTION-026` · /chapter-3 · h3 | Using Docker compose | REVIEWED_CONCEPTS_MAPPED | `FSO-P12-CONCEPT-DOCKER-COMPOSE` |
+| `FSO-P12-MOOC-SECTION-027` · /chapter-3 · h3 | Utilizing containers in development | REVIEWED_CONCEPTS_MAPPED | `FSO-P12-CONCEPT-DEV-CONTAINERS` |
+| `FSO-P12-MOOC-SECTION-028` · /chapter-3 · h3 | Bind mount and initializing the database | REVIEWED_CONCEPTS_MAPPED | `FSO-P12-CONCEPT-BIND-MOUNTS-INIT` |
+| `FSO-P12-MOOC-SECTION-029` · /chapter-3 · h3 | Still problems? | REVIEWED_CONCEPTS_MAPPED | `FSO-P12-CONCEPT-CONTAINER-STATE-TROUBLESHOOTING` |
+| `FSO-P12-MOOC-SECTION-030` · /chapter-3 · h3 | Persisting data with volumes | REVIEWED_CONCEPTS_MAPPED | `FSO-P12-CONCEPT-DOCKER-VOLUMES` |
+| `FSO-P12-MOOC-SECTION-031` · /chapter-3 · h3 | Debugging issues in containers | REVIEWED_CONCEPTS_MAPPED | `FSO-P12-CONCEPT-CONTAINER-DEBUGGING` |
+| `FSO-P12-MOOC-SECTION-032` · /chapter-3 · h4 | exec | REVIEWED_CONCEPTS_MAPPED | `FSO-P12-CONCEPT-DOCKER-EXEC` |
+| `FSO-P12-MOOC-SECTION-033` · /chapter-3 · h3 | Redis | REVIEWED_CONCEPTS_MAPPED | `FSO-P12-CONCEPT-REDIS-KV` |
+| `FSO-P12-MOOC-SECTION-034` · /chapter-3 · h3 | Persisting data with Redis | REVIEWED_CONCEPTS_MAPPED | `FSO-P12-CONCEPT-REDIS-PERSISTENCE` |
+| `FSO-P12-MOOC-SECTION-035` · /chapter-3 · h4 | Other functionality of Redis | REVIEWED_CONCEPTS_MAPPED | `FSO-P12-CONCEPT-REDIS-CAPABILITIES` |
+| `FSO-P12-MOOC-SECTION-036` · /chapter-4 · h3 | React in container | REVIEWED_CONCEPTS_MAPPED | `FSO-P12-CONCEPT-STATIC-WEB-CONTAINER` |
+| `FSO-P12-MOOC-SECTION-037` · /chapter-4 · h3 | Using multiple stages | REVIEWED_CONCEPTS_MAPPED | `FSO-P12-CONCEPT-MULTI-STAGE-BUILD` |
+| `FSO-P12-MOOC-SECTION-038` · /chapter-4 · h3 | Development in containers | REVIEWED_CONCEPTS_MAPPED | `FSO-P12-CONCEPT-CONTAINERIZED-DEV-LOOP` |
+| `FSO-P12-MOOC-SECTION-039` · /chapter-4 · h3 | Communication between containers in a Docker network | REVIEWED_CONCEPTS_MAPPED | `FSO-P12-CONCEPT-DOCKER-NETWORK-DNS` |
+| `FSO-P12-MOOC-SECTION-040` · /chapter-4 · h3 | On accessing the Vite Dev Server | REVIEWED_CONCEPTS_MAPPED | `FSO-P12-CONCEPT-DEV-SERVER-HOST-BINDING` |
+| `FSO-P12-MOOC-SECTION-041` · /chapter-4 · h3 | Communications between containers in a more ambitious environment | REVIEWED_CONCEPTS_MAPPED | `FSO-P12-CONCEPT-REVERSE-PROXY-TOPOLOGY` |
+| `FSO-P12-MOOC-SECTION-042` · /chapter-4 · h3 | Tools for Production | REVIEWED_CONCEPTS_MAPPED | `FSO-P12-CONCEPT-CONTAINER-ORCHESTRATION` |
+
+## Part 13 — 43/43 section units dispositioned
+
+| Section source | Heading | Semantic disposition | Explicit concept records |
+|---|---|---|---|
+| `FSO-P13-MOOC-SECTION-001` · / · h3 | Use relational databases with Node.js applications | REVIEWED_REDUNDANT | `FSO-P13-CONCEPT-POSTGRESQL-DATABASE`, `FSO-P13-CONCEPT-RELATIONAL-SCHEMA-SQL`, `FSO-P13-CONCEPT-RELATIONAL-QUERYING` |
+| `FSO-P13-MOOC-SECTION-002` · / · h3 | Use Sequelize as an ORM | REVIEWED_REDUNDANT | `FSO-P13-CONCEPT-ORM-DB-CONNECTION`, `FSO-P13-CONCEPT-ORM-MODEL`, `FSO-P13-CONCEPT-ORM-CRUD` |
+| `FSO-P13-MOOC-SECTION-003` · / · h3 | Manage database schema changes with migrations | REVIEWED_REDUNDANT | `FSO-P13-CONCEPT-DATABASE-MIGRATIONS`, `FSO-P13-CONCEPT-MIGRATION-MODEL-SEPARATION`, `FSO-P13-CONCEPT-AUTO-SCHEMA-SYNC-RISK` |
+| `FSO-P13-MOOC-SECTION-004` · /chapter-4 · h3 | Migrations | REVIEWED_CONCEPTS_MAPPED | `FSO-P13-CONCEPT-DATABASE-MIGRATIONS` |
+| `FSO-P13-MOOC-SECTION-005` · /chapter-4 · h3 | Admin user and user disabling | REVIEWED_CONCEPTS_MAPPED | `FSO-P13-CONCEPT-ACCOUNT-STATUS-AUTHORITY` |
+| `FSO-P13-MOOC-SECTION-006` · /chapter-4 · h3 | Many-to-many relationships | REVIEWED_CONCEPTS_MAPPED | `FSO-P13-CONCEPT-MANY-TO-MANY` |
+| `FSO-P13-MOOC-SECTION-007` · /chapter-4 · h3 | Note on the properties of Sequelize model objects | REVIEWED_CONCEPTS_MAPPED | `FSO-P13-CONCEPT-ORM-ASSOCIATION-API` |
+| `FSO-P13-MOOC-SECTION-008` · /chapter-4 · h3 | Revisiting many-to-many relationships | REVIEWED_CONCEPTS_MAPPED | `FSO-P13-CONCEPT-JOIN-TABLE-SEMANTICS` |
+| `FSO-P13-MOOC-SECTION-009` · /chapter-4 · h3 | Concluding remarks | REVIEWED_REDUNDANT | `FSO-P13-CONCEPT-DATABASE-MIGRATIONS`, `FSO-P13-CONCEPT-MANY-TO-MANY`, `FSO-P13-CONCEPT-ORM-ASSOCIATION-API` |
+| `FSO-P13-MOOC-SECTION-010` · /chapter-4 · h4 | Eager vs lazy fetch | REVIEWED_CONCEPTS_MAPPED | `FSO-P13-CONCEPT-EAGER-VS-LAZY-LOAD` |
+| `FSO-P13-MOOC-SECTION-011` · /chapter-4 · h4 | Features of models | REVIEWED_CONCEPTS_MAPPED | `FSO-P13-CONCEPT-ORM-SCOPES-METHODS` |
+| `FSO-P13-MOOC-SECTION-012` · /chapter-4 · h4 | Code duplication in models and migrations | REVIEWED_CONCEPTS_MAPPED | `FSO-P13-CONCEPT-MIGRATION-MODEL-SEPARATION` |
+| `FSO-P13-MOOC-SECTION-013` · /chapter-2 · h3 | Pros and cons of document databases | REVIEWED_REDUNDANT | `FSO-P3-CONCEPT-DOCUMENT-VS-RELATIONAL` |
+| `FSO-P13-MOOC-SECTION-014` · /chapter-2 · h3 | Application database | REVIEWED_CONCEPTS_MAPPED | `FSO-P13-CONCEPT-POSTGRESQL-DATABASE` |
+| `FSO-P13-MOOC-SECTION-015` · /chapter-2 · h4 | A hosted solution: Aiven | REVIEWED_CONCEPTS_MAPPED | `FSO-P13-CONCEPT-HOSTED-DATABASE` |
+| `FSO-P13-MOOC-SECTION-016` · /chapter-2 · h4 | Docker | REVIEWED_REDUNDANT | `FSO-P12-CONCEPT-IMAGE-VS-CONTAINER`, `FSO-P12-CONCEPT-DOCKER-VOLUMES`, `FSO-P13-CONCEPT-POSTGRESQL-DATABASE` |
+| `FSO-P13-MOOC-SECTION-017` · /chapter-2 · h4 | Accessing the database | REVIEWED_CONCEPTS_MAPPED | `FSO-P13-CONCEPT-DIRECT-DATABASE-INSPECTION` |
+| `FSO-P13-MOOC-SECTION-018` · /chapter-2 · h5 | Opening a connection with psql | REVIEWED_CONCEPTS_MAPPED | `FSO-P13-CONCEPT-PSQL` |
+| `FSO-P13-MOOC-SECTION-019` · /chapter-2 · h5 | Opening a connection with pgAdmin | REVIEWED_REDUNDANT | `FSO-P13-CONCEPT-DIRECT-DATABASE-INSPECTION`, `FSO-P13-CONCEPT-PSQL` |
+| `FSO-P13-MOOC-SECTION-020` · /chapter-2 · h4 | When connection is opened | REVIEWED_CONCEPTS_MAPPED | `FSO-P13-CONCEPT-RELATIONAL-SCHEMA-SQL` |
+| `FSO-P13-MOOC-SECTION-021` · /chapter-2 · h3 | Node application using a relational database | REVIEWED_CONCEPTS_MAPPED | `FSO-P13-CONCEPT-ORM-DB-CONNECTION` |
+| `FSO-P13-MOOC-SECTION-022` · /chapter-2 · h3 | Model | REVIEWED_CONCEPTS_MAPPED | `FSO-P13-CONCEPT-ORM-MODEL` |
+| `FSO-P13-MOOC-SECTION-023` · /chapter-2 · h3 | Creating database tables automatically | REVIEWED_CONCEPTS_MAPPED | `FSO-P13-CONCEPT-AUTO-SCHEMA-SYNC-RISK` |
+| `FSO-P13-MOOC-SECTION-024` · /chapter-2 · h3 | Other operations | REVIEWED_CONCEPTS_MAPPED | `FSO-P13-CONCEPT-ORM-CRUD` |
+| `FSO-P13-MOOC-SECTION-025` · /chapter-2 · h3 | Printing the objects returned by Sequelize to the console | REVIEWED_CONCEPTS_MAPPED | `FSO-P13-CONCEPT-ORM-INSTANCE-SERIALIZATION` |
+| `FSO-P13-MOOC-SECTION-026` · /chapter-3 · h3 | Structure of the application | REVIEWED_CONCEPTS_MAPPED | `FSO-P13-CONCEPT-DATABASE-LAYER-STRUCTURE` |
+| `FSO-P13-MOOC-SECTION-027` · /chapter-3 · h3 | User management | REVIEWED_REDUNDANT | `FSO-P4-CONCEPT-PASSWORD-HASHING`, `FSO-P4-CONCEPT-BEARER-AUTHORIZATION`, `FSO-P13-CONCEPT-POSTGRESQL-DATABASE` |
+| `FSO-P13-MOOC-SECTION-028` · /chapter-3 · h3 | Join between the tables | REVIEWED_CONCEPTS_MAPPED | `FSO-P13-CONCEPT-FOREIGN-KEY-JOIN` |
+| `FSO-P13-MOOC-SECTION-029` · /chapter-3 · h3 | Proper insertion of notes | REVIEWED_CONCEPTS_MAPPED | `FSO-P13-CONCEPT-TRANSACTIONAL-OWNED-INSERT` |
+| `FSO-P13-MOOC-SECTION-030` · /chapter-3 · h3 | Fine-tuning | REVIEWED_CONCEPTS_MAPPED | `FSO-P13-CONCEPT-RELATIONAL-PROJECTIONS` |
+| `FSO-P13-MOOC-SECTION-031` · /chapter-3 · h3 | A note on the model definitions | REVIEWED_REDUNDANT | `FSO-P13-CONCEPT-ORM-ASSOCIATION-API`, `FSO-P13-CONCEPT-ORM-MODEL` |
+| `FSO-P13-MOOC-SECTION-032` · /chapter-3 · h3 | More queries | REVIEWED_CONCEPTS_MAPPED | `FSO-P13-CONCEPT-RELATIONAL-QUERYING` |
+| `FSO-P13-MOOC-SECTION-033` · /chapter-1 · h3 | Prerequisites | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P13-MOOC-SECTION-034` · /chapter-1 · h3 | Enrollment | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P13-MOOC-SECTION-035` · /chapter-1 · h3 | Help with exercises or course practicalities | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P13-MOOC-SECTION-036` · /chapter-1 · h3 | Submitting exercises | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P13-MOOC-SECTION-037` · /chapter-1 · h3 | Locking a chapter | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P13-MOOC-SECTION-038` · /chapter-1 · h3 | Getting ECTS credits and the certificate | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P13-MOOC-SECTION-039` · /chapter-1 · h4 | University of Helsinki degree students and exchange students | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P13-MOOC-SECTION-040` · /chapter-1 · h4 | Others | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P13-MOOC-SECTION-041` · /chapter-1 · h3 | Improvements and feedback to the course material | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P13-MOOC-SECTION-042` · /chapter-1 · h3 | Using LLM:s | REVIEWED_REDUNDANT | `FSO-P1-CONCEPT-AI-CODING-VERIFICATION` |
+| `FSO-P13-MOOC-SECTION-043` · /chapter-1 · h3 | About the material | REVIEWED_NON_ENGINEERING | — |
+
+## Part 14 — 65/65 section units dispositioned
+
+| Section source | Heading | Semantic disposition | Explicit concept records |
+|---|---|---|---|
+| `FSO-P14-MOOC-SECTION-001` · /chapter-2 · h3 | Next.js notes | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-NEXTJS-FULLSTACK-MODEL` |
+| `FSO-P14-MOOC-SECTION-002` · /chapter-2 · h3 | App router | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-APP-ROUTER` |
+| `FSO-P14-MOOC-SECTION-003` · /chapter-2 · h3 | Page for notes | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-SERVER-COMPONENT-DATA` |
+| `FSO-P14-MOOC-SECTION-004` · /chapter-2 · h3 | Creating new notes | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-SERVER-ACTIONS` |
+| `FSO-P14-MOOC-SECTION-005` · /chapter-2 · h3 | Static rendering | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-STATIC-DYNAMIC-RENDERING` |
+| `FSO-P14-MOOC-SECTION-006` · /chapter-2 · h3 | Page of a note | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-NEXT-DYNAMIC-ROUTES` |
+| `FSO-P14-MOOC-SECTION-007` · /chapter-2 · h3 | More functionality | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-NEXT-REVALIDATION` |
+| `FSO-P14-MOOC-SECTION-008` · /chapter-2 · h3 | Showing important notes only, client component solution | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-CLIENT-COMPONENT` |
+| `FSO-P14-MOOC-SECTION-009` · /chapter-2 · h3 | Showing important notes only, server component solution | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-URL-SERVER-STATE` |
+| `FSO-P14-MOOC-SECTION-010` · /chapter-3 · h3 | Deployment to Vercel | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-VERCEL-DEPLOYMENT` |
+| `FSO-P14-MOOC-SECTION-011` · /chapter-3 · h3 | Creating a database | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-SERVERLESS-POSTGRES` |
+| `FSO-P14-MOOC-SECTION-012` · /chapter-3 · h3 | Database access with Drizzle ORM | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-DRIZZLE-ORM` |
+| `FSO-P14-MOOC-SECTION-013` · /chapter-3 · h3 | Migrations | REVIEWED_REDUNDANT | `FSO-P13-CONCEPT-DATABASE-MIGRATIONS`, `FSO-P13-CONCEPT-MIGRATION-MODEL-SEPARATION` |
+| `FSO-P14-MOOC-SECTION-014` · /chapter-3 · h3 | Users | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-NEXT-RELATIONAL-SCHEMA` |
+| `FSO-P14-MOOC-SECTION-015` · /chapter-3 · h3 | Users notes | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-SERVER-RELATION-PAGES` |
+| `FSO-P14-MOOC-SECTION-016` · /chapter-3 · h3 | Join queries | REVIEWED_REDUNDANT | `FSO-P13-CONCEPT-FOREIGN-KEY-JOIN`, `FSO-P13-CONCEPT-RELATIONAL-PROJECTIONS` |
+| `FSO-P14-MOOC-SECTION-017` · /chapter-3 · h4 | Query logger | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-SQL-QUERY-LOGGING` |
+| `FSO-P14-MOOC-SECTION-018` · /chapter-3 · h3 | Word of warning about migrations | REVIEWED_REDUNDANT | `FSO-P13-CONCEPT-DATABASE-MIGRATIONS`, `FSO-P13-CONCEPT-MIGRATION-MODEL-SEPARATION`, `FSO-P13-CONCEPT-AUTO-SCHEMA-SYNC-RISK` |
+| `FSO-P14-MOOC-SECTION-019` · / · h3 | Build full stack applications with Next.js and React Server Components | REVIEWED_REDUNDANT | `FSO-P14-CONCEPT-NEXTJS-FULLSTACK-MODEL`, `FSO-P14-CONCEPT-SERVER-COMPONENT-DATA`, `FSO-P14-CONCEPT-SERVER-ACTIONS` |
+| `FSO-P14-MOOC-SECTION-020` · / · h3 | Persist data with Drizzle ORM and PostgreSQL | REVIEWED_REDUNDANT | `FSO-P14-CONCEPT-DRIZZLE-ORM`, `FSO-P13-CONCEPT-DATABASE-MIGRATIONS`, `FSO-P13-CONCEPT-FOREIGN-KEY-JOIN` |
+| `FSO-P14-MOOC-SECTION-021` · / · h3 | Implement auth, validation, and production-ready UX | REVIEWED_REDUNDANT | `FSO-P14-CONCEPT-NEXTAUTH-LOGIN`, `FSO-P14-CONCEPT-SERVER-ACTION-AUTHZ`, `FSO-P14-CONCEPT-USEACTIONSTATE`, `FSO-P14-CONCEPT-POST-MUTATION-UX` |
+| `FSO-P14-MOOC-SECTION-022` · /chapter-4 · h3 | Logging in | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-NEXTAUTH-LOGIN` |
+| `FSO-P14-MOOC-SECTION-023` · /chapter-4 · h4 | Schema change | REVIEWED_REDUNDANT | `FSO-P4-CONCEPT-PASSWORD-HASHING`, `FSO-P13-CONCEPT-DATABASE-MIGRATIONS` |
+| `FSO-P14-MOOC-SECTION-024` · /chapter-4 · h4 | NextAuth configuration | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-NEXTAUTH-CONFIG` |
+| `FSO-P14-MOOC-SECTION-025` · /chapter-4 · h4 | What actually is the session | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-HTTPONLY-JWT-SESSION` |
+| `FSO-P14-MOOC-SECTION-026` · /chapter-4 · h4 | Auth API route | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-NEXT-CATCHALL-ROUTE` |
+| `FSO-P14-MOOC-SECTION-027` · /chapter-4 · h4 | Session provider and layout | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-SESSION-PROVIDER-LAYOUT` |
+| `FSO-P14-MOOC-SECTION-028` · /chapter-4 · h4 | Navigation bar | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-AUTH-NAVIGATION-UI` |
+| `FSO-P14-MOOC-SECTION-029` · /chapter-4 · h4 | Login page | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-NEXTAUTH-CLIENT-FORM` |
+| `FSO-P14-MOOC-SECTION-030` · /chapter-4 · h4 | Reading the session on the server | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-SERVER-SESSION-READ` |
+| `FSO-P14-MOOC-SECTION-031` · /chapter-4 · h4 | Protecting the create note action | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-SERVER-ACTION-AUTHZ` |
+| `FSO-P14-MOOC-SECTION-032` · /chapter-4 · h4 | Environment variables | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-NEXT-ENV-SECRETS` |
+| `FSO-P14-MOOC-SECTION-033` · /chapter-4 · h4 | Setting passwords for existing users | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-PASSWORD-DATA-MIGRATION` |
+| `FSO-P14-MOOC-SECTION-034` · /chapter-4 · h3 | Authentication flow revisited | REVIEWED_REDUNDANT | `FSO-P14-CONCEPT-NEXTAUTH-LOGIN`, `FSO-P14-CONCEPT-HTTPONLY-JWT-SESSION`, `FSO-P14-CONCEPT-SERVER-SESSION-READ`, `FSO-P14-CONCEPT-SERVER-ACTION-AUTHZ` |
+| `FSO-P14-MOOC-SECTION-035` · /chapter-4 · h3 | User registration | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-NEXT-REGISTRATION` |
+| `FSO-P14-MOOC-SECTION-036` · /chapter-4 · h4 | The @ path alias | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-PATH-ALIASES` |
+| `FSO-P14-MOOC-SECTION-037` · /chapter-4 · h3 | Error handling | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-SERVER-ACTION-ERRORS` |
+| `FSO-P14-MOOC-SECTION-038` · /chapter-4 · h4 | Client-side validation | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-CLIENT-VALIDATION-IS-UX` |
+| `FSO-P14-MOOC-SECTION-039` · /chapter-4 · h4 | Returning validation errors with useActionState | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-USEACTIONSTATE` |
+| `FSO-P14-MOOC-SECTION-040` · /chapter-4 · h4 | More UI components: notification | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-NOTIFICATION-CONTEXT` |
+| `FSO-P14-MOOC-SECTION-041` · /chapter-4 · h4 | Showing a notification after note creation | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-POST-MUTATION-UX` |
+| `FSO-P14-MOOC-SECTION-042` · /chapter-4 · h4 | Where to put components | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-NEXT-COMPONENT-COLOCATION` |
+| `FSO-P14-MOOC-SECTION-043` · /chapter-4 · h3 | Styling the app with Tailwind CSS | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-TAILWIND-UTILITY-CSS` |
+| `FSO-P14-MOOC-SECTION-044` · /chapter-4 · h4 | Learning and applying Tailwind | REVIEWED_REDUNDANT | `FSO-P14-CONCEPT-TAILWIND-UTILITY-CSS` |
+| `FSO-P14-MOOC-SECTION-045` · /chapter-4 · h3 | Exercises | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P14-MOOC-SECTION-046` · /chapter-4 · h3 | More about Drizzle: SQL query API | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-DRIZZLE-SQL-QUERY-API` |
+| `FSO-P14-MOOC-SECTION-047` · /chapter-4 · h3 | API routes | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-NEXT-API-ROUTES` |
+| `FSO-P14-MOOC-SECTION-048` · /chapter-4 · h4 | How Route Handlers work | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-NEXT-ROUTE-HANDLERS` |
+| `FSO-P14-MOOC-SECTION-049` · /chapter-4 · h4 | When to use API routes vs. Server Actions | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-API-VS-SERVER-ACTION` |
+| `FSO-P14-MOOC-SECTION-050` · /chapter-4 · h3 | Exercises | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P14-MOOC-SECTION-051` · /chapter-4 · h3 | Some loose ends | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P14-MOOC-SECTION-052` · /chapter-4 · h4 | Suspense and streaming | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-SUSPENSE-STREAMING` |
+| `FSO-P14-MOOC-SECTION-053` · /chapter-4 · h4 | Optimizing images with next/image | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-NEXT-IMAGE-OPTIMIZATION` |
+| `FSO-P14-MOOC-SECTION-054` · /chapter-4 · h4 | Metadata and SEO | REVIEWED_CONCEPTS_MAPPED | `FSO-P14-CONCEPT-SSR-METADATA-SEO` |
+| `FSO-P14-MOOC-SECTION-055` · /chapter-4 · h3 | Exercises | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P14-MOOC-SECTION-056` · /chapter-1 · h3 | Prerequisites | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P14-MOOC-SECTION-057` · /chapter-1 · h3 | Help with exercises or course practicalities | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P14-MOOC-SECTION-058` · /chapter-1 · h3 | Submitting exercises | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P14-MOOC-SECTION-059` · /chapter-1 · h3 | Locking a chapter | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P14-MOOC-SECTION-060` · /chapter-1 · h3 | Getting ECTS credits and the certificate | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P14-MOOC-SECTION-061` · /chapter-1 · h4 | University of Helsinki degree students and exchange students | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P14-MOOC-SECTION-062` · /chapter-1 · h4 | Others | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P14-MOOC-SECTION-063` · /chapter-1 · h3 | Improvements and feedback to the course material | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P14-MOOC-SECTION-064` · /chapter-1 · h3 | Using LLMs | REVIEWED_REDUNDANT | `FSO-P1-CONCEPT-AI-CODING-VERIFICATION` |
+| `FSO-P14-MOOC-SECTION-065` · /chapter-1 · h3 | About the material | REVIEWED_NON_ENGINEERING | — |
 
 ## Promotion rule
 

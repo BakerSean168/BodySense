@@ -65,7 +65,7 @@ lines.push(
   '',
   `Core Parts 0-7: **${atLeast(core, 'MAPPED')}/${core.length} numbered source exercises semantically mapped** against pinned repository snapshot \`${fso.baseline.indexed_snapshot_commit}\`. This is mapping coverage, not completed learning.`,
   '',
-  `Advanced Parts 8-14: **${atLeast(currentMoocExercises, 'MAPPED')}/${currentMoocExercises.length} current exercise records semantically mapped** after indexing from the public courses.mooc.fi Course Material API. Snapshot retrieval: \`${mooc.retrieved_at}\`; source-state SHA-256: \`${mooc.source_state_sha256}\`. Mapping is complete at exercise-objective level; exercise readiness and concept-level parity remain separate.`,
+  `Advanced Parts 8-14: **${atLeast(currentMoocExercises, 'MAPPED')}/${currentMoocExercises.length} current exercise records semantically mapped** after indexing from the public courses.mooc.fi Course Material API. Snapshot retrieval: \`${mooc.retrieved_at}\`; source-state SHA-256: \`${mooc.source_state_sha256}\`. Mapping is complete at exercise-objective level; current section-heading audit is also complete, while paragraph/example-level prose parity and exercise readiness remain separate.`,
   '',
   `The previous repository snapshot's Parts 8-11 are retained only as **${(fso.historical_items ?? []).length} historical exercise records** for comparison; they are not counted as current-course parity.`,
   '',
@@ -104,7 +104,7 @@ for (const item of ready) {
 
 lines.push(
   '',
-  'The next curriculum milestone is concept-level semantic audit plus expansion of `EXERCISE_READY` coverage while preserving prerequisite closure. Placement assessment starts only on ready prerequisite slices.',
+  'The next curriculum milestone is targeted paragraph/subheading audit for high-risk source sections plus expansion of `EXERCISE_READY` coverage while preserving prerequisite closure. Placement assessment starts only on ready prerequisite slices.',
 );
 
 fs.mkdirSync(path.dirname(viewPath), { recursive: true });

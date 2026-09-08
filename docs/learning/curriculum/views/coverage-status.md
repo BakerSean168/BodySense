@@ -40,13 +40,13 @@ Active current-source exercise inventory: **356 records across Parts 0-14**.
 
 Core Parts 0-7: **158/158 numbered source exercises semantically mapped** against pinned repository snapshot `0711aef8a451c4458263e5587ccda85f08fd7a96`. This is mapping coverage, not completed learning.
 
-Advanced Parts 8-14: **198/198 current exercise records semantically mapped** after indexing from the public courses.mooc.fi Course Material API. Snapshot retrieval: `2026-09-07T15:30:35.638Z`; source-state SHA-256: `4a8093083af985c19e04b03bf876fd148676bd6c2b65327c7628d8b20122689d`. Mapping is complete at exercise-objective level; exercise readiness and concept-level parity remain separate.
+Advanced Parts 8-14: **198/198 current exercise records semantically mapped** after indexing from the public courses.mooc.fi Course Material API. Snapshot retrieval: `2026-09-07T15:30:35.638Z`; source-state SHA-256: `4a8093083af985c19e04b03bf876fd148676bd6c2b65327c7628d8b20122689d`. Mapping is complete at exercise-objective level; current section-heading audit is also complete, while paragraph/example-level prose parity and exercise readiness remain separate.
 
 The previous repository snapshot's Parts 8-11 are retained only as **104 historical exercise records** for comparison; they are not counted as current-course parity.
 
-Current source-section inventory: **279 core headings (Parts 0-7)** + **385 current MOOC headings (Parts 8-14)**. **228 explicit section-derived concepts** have already been semantically decomposed and mapped.
+Current source-section inventory: **279 core headings (Parts 0-7)** + **385 current MOOC headings (Parts 8-14)**. **462 explicit section-derived concepts** have already been semantically decomposed and mapped.
 
-Section semantic-audit disposition: **279/664** reviewed; **227** concept-mapped, **29** explicitly redundant, **23** non-engineering/logistics, **385** pending. Heading review improves omission detection but does not equal exhaustive paragraph-level prose parity.
+Section semantic-audit disposition: **664/664** reviewed; **461** concept-mapped, **106** explicitly redundant, **97** non-engineering/logistics, **0** pending. Heading review improves omission detection but does not equal exhaustive paragraph-level prose parity.
 
 The MOOC metadata snapshot intentionally stores only identifiers, page/chapter metadata, headings and short exercise titles; it does not copy exercise assignments, answers or course prose.
 
@@ -99,4 +99,4 @@ There are currently **27** executable cards and **0** learner-verified cards.
 - `BS-A2` -> [card](../../exercises/bs-a2.md)
 - `BS-A7` -> [card](../../exercises/bs-a7.md)
 
-The next curriculum milestone is concept-level semantic audit plus expansion of `EXERCISE_READY` coverage while preserving prerequisite closure. Placement assessment starts only on ready prerequisite slices.
+The next curriculum milestone is targeted paragraph/subheading audit for high-risk source sections plus expansion of `EXERCISE_READY` coverage while preserving prerequisite closure. Placement assessment starts only on ready prerequisite slices.
