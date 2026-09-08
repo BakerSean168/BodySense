@@ -35,11 +35,11 @@ FSO concept audit: Parts 0-14 = 664/664 current section-heading units dispositio
 FSO historical Parts 8-11: 104 exercise records archived for comparison
 TECH public lectures #0-#77: 78/78 title-level MAPPED
 Agent A1-A8: 8/8 EXERCISE_READY
-EXERCISE_READY: 62
+EXERCISE_READY: 86
 LEARNER_VERIFIED: 0 in the new mastery ledger
 ```
 
-当前可执行课程已经不是一条短链，而是 **62-node ready graph**。学习时优先使用 `docs/learning/curriculum/views/study-tracks.md` 的 7 条 learner-facing tracks；机器依赖真相仍由 `prerequisite-spine.md` + ledgers 维护。
+当前可执行课程已经扩展为 **86-node ready graph**。学习时优先使用 `docs/learning/curriculum/views/study-tracks.md` 的 9 条 learner-facing tracks；机器依赖真相仍由 `prerequisite-spine.md` + ledgers 维护。
 
 下一步优先级：
 
@@ -73,6 +73,17 @@ Diagnosis Production Agent 学习已经形成可复用的高阶证据，不因�
 这些是历史学习/工程证据，不会自动写成新的 `LEARNER_VERIFIED`；placement 时仍需确认它们是否满足对应 exercise 的 L4/L5 acceptance contract。
 
 # Session Log
+
+## 2026-09-08 · React core readiness + 86-node study graph
+
+- 将 **24 个前端高价值 concept nodes** 从 `MAPPED` 提升为 `EXERCISE_READY`：React component/JSX/props/render cycle/useState/event/state ownership/immutable update/queued state/hook rules，browser async/Promise/useEffect/list key/controlled input，Testing Library/user-event/stateful component tests，以及 hooks mental model/custom hooks/useMemo/useCallback/error boundary。
+- 为每个节点新增独立 L4 card，要求先预测 render/lifecycle/identity/failure，再用 BodySense 真实组件、hooks、tests 或浏览器证据验证；memoization 明确禁止 cargo-cult 化，production change 仅在测量/回归证据支持时进行。
+- 修复一个 stale curriculum target：`FSO-P1-CONCEPT-RENDER-CYCLE` 原指向已不存在的 `runtime/ActiveTurnProvider.tsx`，更新为当前 `context/ActiveTurnContext.tsx`。
+- executable graph 由 **62 -> 86 nodes**：FSO 62 + TECH 16 + Agent 8；仍为 **0 LEARNER_VERIFIED**。
+- `study-tracks.md` 从 7 条扩为 **9 条**，新增「React component model, async effects and hooks」与「React component testing and failure isolation」；generator 现在会拒绝任何未被 learner-facing track 收录的 ready node。
+- 真实验证：React/hook/error-boundary focused suite **6 files / 45 tests passed**，Web TypeScript typecheck passed，`pnpm curriculum:check` passed。
+- 这一步扩大的是可执行训练覆盖，不把已有 production code/tests 自动算成掌握。
+
 
 ## 2026-09-08 · Pinned core h4-h6 nested-heading completeness audit
 

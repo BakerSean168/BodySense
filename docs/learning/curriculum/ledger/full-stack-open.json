@@ -6482,7 +6482,7 @@
           "FSO-P2-SECTION-015"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P2-CONCEPT-ASYNC-RUNTIME",
@@ -6498,9 +6498,11 @@
           "focused trace/test/measurement",
           "explain-back"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-0.5"
+        ],
+        "exercise_card": "../../exercises/bs-p2-concept-async-runtime.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -6525,7 +6527,7 @@
           "FSO-P2-SECTION-025"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P2-CONCEPT-PROMISES",
@@ -6541,9 +6543,11 @@
           "focused trace/test/measurement",
           "explain-back"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P2-CONCEPT-ASYNC-RUNTIME"
+        ],
+        "exercise_card": "../../exercises/bs-p2-concept-promises.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -6567,7 +6571,7 @@
           "FSO-P2-SECTION-018"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P2-CONCEPT-EFFECTS",
@@ -6583,9 +6587,12 @@
           "focused trace/test/measurement",
           "explain-back"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P1-CONCEPT-HOOK-RULES",
+          "FSO-P2-CONCEPT-PROMISES"
+        ],
+        "exercise_card": "../../exercises/bs-p2-concept-effects.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -6609,7 +6616,7 @@
           "FSO-P7-SECTION-002"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P7-CONCEPT-USEMEMO",
@@ -6625,9 +6632,11 @@
           "focused trace/test/measurement",
           "explain-back"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P7-CONCEPT-HOOKS-MENTAL-MODEL"
+        ],
+        "exercise_card": "../../exercises/bs-p7-concept-usememo.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -6693,7 +6702,7 @@
           "FSO-P7-SECTION-004"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P7-CONCEPT-USECALLBACK",
@@ -6709,9 +6718,11 @@
           "focused trace/test/measurement",
           "explain-back"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P7-CONCEPT-HOOKS-MENTAL-MODEL"
+        ],
+        "exercise_card": "../../exercises/bs-p7-concept-usecallback.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -17875,7 +17886,7 @@
           "FSO-P1-SECTION-001"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P1-CONCEPT-COMPONENT",
@@ -17891,9 +17902,11 @@
           "BodySense code/test trace",
           "failure/state prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-0.1"
+        ],
+        "exercise_card": "../../exercises/bs-p1-concept-component.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -17917,7 +17930,7 @@
           "FSO-P1-SECTION-002"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P1-CONCEPT-JSX",
@@ -17933,9 +17946,11 @@
           "BodySense code/test trace",
           "failure/state prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P1-CONCEPT-COMPONENT"
+        ],
+        "exercise_card": "../../exercises/bs-p1-concept-jsx.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -18001,7 +18016,7 @@
           "FSO-P1-SECTION-004"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P1-CONCEPT-PROPS",
@@ -18017,9 +18032,12 @@
           "BodySense code/test trace",
           "failure/state prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P1-CONCEPT-COMPONENT",
+          "FSO-P1-CONCEPT-JSX"
+        ],
+        "exercise_card": "../../exercises/bs-p1-concept-props.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -18508,14 +18526,14 @@
           "FSO-P1-SECTION-022"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P1-CONCEPT-RENDER-CYCLE",
         "semantic_audit": "reviewed-against-source-section",
         "objective": "React render snapshots and state-triggered rerendering",
         "target_files": [
-          "apps/web/src/features/consultation/runtime/ActiveTurnProvider.tsx",
+          "apps/web/src/features/consultation/context/ActiveTurnContext.tsx",
           "apps/web/src/features/workspace/components"
         ],
         "task_summary": "Choose one state update and predict which component function runs again, which values belong to the old snapshot, and why rerender is not equivalent to remount.",
@@ -18524,9 +18542,11 @@
           "BodySense code/test trace",
           "failure/state prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P1-CONCEPT-COMPONENT"
+        ],
+        "exercise_card": "../../exercises/bs-p1-concept-render-cycle.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -18550,7 +18570,7 @@
           "FSO-P1-SECTION-018"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P1-CONCEPT-USESTATE",
@@ -18566,9 +18586,11 @@
           "BodySense code/test trace",
           "failure/state prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P1-CONCEPT-RENDER-CYCLE"
+        ],
+        "exercise_card": "../../exercises/bs-p1-concept-usestate.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -18593,7 +18615,7 @@
           "FSO-P2-SECTION-004"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P1-CONCEPT-EVENT-HANDLING",
@@ -18609,9 +18631,11 @@
           "BodySense code/test trace",
           "failure/state prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P1-CONCEPT-USESTATE"
+        ],
+        "exercise_card": "../../exercises/bs-p1-concept-event-handling.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -18679,7 +18703,7 @@
           "FSO-P5-SECTION-010"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P1-CONCEPT-STATE-PROP-OWNERSHIP",
@@ -18695,9 +18719,12 @@
           "BodySense code/test trace",
           "failure/state prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P1-CONCEPT-PROPS",
+          "FSO-P1-CONCEPT-USESTATE"
+        ],
+        "exercise_card": "../../exercises/bs-p1-concept-state-prop-ownership.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -18806,7 +18833,7 @@
           "FSO-P6-SECTION-034"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P1-CONCEPT-IMMUTABLE-ARRAY-STATE",
@@ -18822,9 +18849,11 @@
           "BodySense code/test trace",
           "failure/state prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P1-CONCEPT-USESTATE"
+        ],
+        "exercise_card": "../../exercises/bs-p1-concept-immutable-array-state.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -18848,7 +18877,7 @@
           "FSO-P1-SECTION-026"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P1-CONCEPT-ASYNC-STATE-UPDATES",
@@ -18864,9 +18893,11 @@
           "BodySense code/test trace",
           "failure/state prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P1-CONCEPT-USESTATE"
+        ],
+        "exercise_card": "../../exercises/bs-p1-concept-async-state-updates.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -18983,7 +19014,7 @@
           "FSO-P1-SECTION-030"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P1-CONCEPT-HOOK-RULES",
@@ -18999,9 +19030,11 @@
           "BodySense code/test trace",
           "failure/state prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P1-CONCEPT-USESTATE"
+        ],
+        "exercise_card": "../../exercises/bs-p1-concept-hook-rules.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -19327,7 +19360,7 @@
           "FSO-P2-SECTION-006"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P2-CONCEPT-REACT-KEYS",
@@ -19343,9 +19376,11 @@
           "BodySense code/network trace",
           "error/async/state prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P1-CONCEPT-JSX"
+        ],
+        "exercise_card": "../../exercises/bs-p2-concept-react-keys.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -19537,7 +19572,7 @@
           "FSO-P2-SECTION-013"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P2-CONCEPT-CONTROLLED-COMPONENT",
@@ -19553,9 +19588,12 @@
           "BodySense code/network trace",
           "error/async/state prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P1-CONCEPT-EVENT-HANDLING",
+          "FSO-P1-CONCEPT-USESTATE"
+        ],
+        "exercise_card": "../../exercises/bs-p2-concept-controlled-component.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -22921,7 +22959,7 @@
           "FSO-P6-SECTION-032"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P5-CONCEPT-COMPONENT-TEST-RENDER",
@@ -22937,9 +22975,11 @@
           "BodySense code/config/test trace",
           "state/ownership/failure prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P1-CONCEPT-COMPONENT"
+        ],
+        "exercise_card": "../../exercises/bs-p5-concept-component-test-render.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -23005,7 +23045,7 @@
           "FSO-P5-SECTION-017"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P5-CONCEPT-TESTING-LIBRARY-QUERIES",
@@ -23021,9 +23061,11 @@
           "BodySense code/config/test trace",
           "state/ownership/failure prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P5-CONCEPT-COMPONENT-TEST-RENDER"
+        ],
+        "exercise_card": "../../exercises/bs-p5-concept-testing-library-queries.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -23090,7 +23132,7 @@
           "FSO-P5-SECTION-019"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P5-CONCEPT-USER-EVENT-TESTING",
@@ -23106,9 +23148,12 @@
           "BodySense code/config/test trace",
           "state/ownership/failure prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P1-CONCEPT-EVENT-HANDLING",
+          "FSO-P5-CONCEPT-TESTING-LIBRARY-QUERIES"
+        ],
+        "exercise_card": "../../exercises/bs-p5-concept-user-event-testing.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -23132,7 +23177,7 @@
           "FSO-P5-SECTION-020"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P5-CONCEPT-STATEFUL-COMPONENT-TESTS",
@@ -23148,9 +23193,12 @@
           "BodySense code/config/test trace",
           "state/ownership/failure prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P1-CONCEPT-USESTATE",
+          "FSO-P5-CONCEPT-USER-EVENT-TESTING"
+        ],
+        "exercise_card": "../../exercises/bs-p5-concept-stateful-component-tests.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -25757,7 +25805,7 @@
           "FSO-P7-SECTION-001"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P7-CONCEPT-HOOKS-MENTAL-MODEL",
@@ -25772,9 +25820,12 @@
           "BodySense code/config/test trace",
           "state/ownership/failure prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P1-CONCEPT-HOOK-RULES",
+          "FSO-P2-CONCEPT-EFFECTS"
+        ],
+        "exercise_card": "../../exercises/bs-p7-concept-hooks-mental-model.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -25799,7 +25850,7 @@
           "FSO-P7-SECTION-007"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P7-CONCEPT-CUSTOM-HOOKS",
@@ -25815,9 +25866,11 @@
           "BodySense code/config/test trace",
           "state/ownership/failure prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P7-CONCEPT-HOOKS-MENTAL-MODEL"
+        ],
+        "exercise_card": "../../exercises/bs-p7-concept-custom-hooks.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -26174,7 +26227,7 @@
           "FSO-P7-SECTION-016"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P7-CONCEPT-ERROR-BOUNDARY",
@@ -26190,9 +26243,11 @@
           "BodySense code/config/test trace",
           "state/ownership/failure prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P5-CONCEPT-COMPONENT-TEST-RENDER"
+        ],
+        "exercise_card": "../../exercises/bs-p7-concept-error-boundary.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",

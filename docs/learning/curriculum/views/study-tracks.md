@@ -3,7 +3,7 @@
 > Generated from the machine-readable ledgers. This is a curated learner-facing lens over the ready prerequisite graph, not a second source of truth.
 > Tracks overlap intentionally. Complete a prerequisite once and reuse the same evidence across every track that depends on it.
 
-Current executable curriculum: **62 ready/verified nodes**.
+Current executable curriculum: **86 ready/verified nodes**.
 
 ## 1. Web/browser request foundation
 
@@ -22,7 +22,49 @@ Build the browser -> React -> HTTP -> API mental model used by every later front
 
 Prerequisite closure outside this track: none.
 
-## 2. TypeScript contracts and runtime trust
+## 2. React component model, async effects and hooks
+
+Build the React render/state/event mental model first, then connect browser async work, effects, stable identity and reusable hooks without cargo-cult memoization.
+
+| # | Exercise | Required level |
+|---:|---|---|
+| 1 | [BS-P1-CONCEPT-COMPONENT](../../exercises/bs-p1-concept-component.md) | L4 |
+| 2 | [BS-P1-CONCEPT-JSX](../../exercises/bs-p1-concept-jsx.md) | L4 |
+| 3 | [BS-P1-CONCEPT-PROPS](../../exercises/bs-p1-concept-props.md) | L4 |
+| 4 | [BS-P1-CONCEPT-RENDER-CYCLE](../../exercises/bs-p1-concept-render-cycle.md) | L4 |
+| 5 | [BS-P1-CONCEPT-USESTATE](../../exercises/bs-p1-concept-usestate.md) | L4 |
+| 6 | [BS-P1-CONCEPT-EVENT-HANDLING](../../exercises/bs-p1-concept-event-handling.md) | L4 |
+| 7 | [BS-P1-CONCEPT-STATE-PROP-OWNERSHIP](../../exercises/bs-p1-concept-state-prop-ownership.md) | L4 |
+| 8 | [BS-P1-CONCEPT-IMMUTABLE-ARRAY-STATE](../../exercises/bs-p1-concept-immutable-array-state.md) | L4 |
+| 9 | [BS-P1-CONCEPT-ASYNC-STATE-UPDATES](../../exercises/bs-p1-concept-async-state-updates.md) | L4 |
+| 10 | [BS-P1-CONCEPT-HOOK-RULES](../../exercises/bs-p1-concept-hook-rules.md) | L4 |
+| 11 | [BS-P2-CONCEPT-ASYNC-RUNTIME](../../exercises/bs-p2-concept-async-runtime.md) | L4 |
+| 12 | [BS-P2-CONCEPT-PROMISES](../../exercises/bs-p2-concept-promises.md) | L4 |
+| 13 | [BS-P2-CONCEPT-EFFECTS](../../exercises/bs-p2-concept-effects.md) | L4 |
+| 14 | [BS-P2-CONCEPT-REACT-KEYS](../../exercises/bs-p2-concept-react-keys.md) | L4 |
+| 15 | [BS-P2-CONCEPT-CONTROLLED-COMPONENT](../../exercises/bs-p2-concept-controlled-component.md) | L4 |
+| 16 | [BS-P7-CONCEPT-HOOKS-MENTAL-MODEL](../../exercises/bs-p7-concept-hooks-mental-model.md) | L4 |
+| 17 | [BS-P7-CONCEPT-CUSTOM-HOOKS](../../exercises/bs-p7-concept-custom-hooks.md) | L4 |
+| 18 | [BS-P7-CONCEPT-USEMEMO](../../exercises/bs-p7-concept-usememo.md) | L4 |
+| 19 | [BS-P7-CONCEPT-USECALLBACK](../../exercises/bs-p7-concept-usecallback.md) | L4 |
+
+Prerequisite closure outside this track: `BS-FSO-0.1`, `BS-FSO-0.5`, `BS-FSO-0.4`, `BS-FSO-0.3`.
+
+## 3. React component testing and failure isolation
+
+Test React through user-observable behavior, realistic interaction semantics and explicit render-failure boundaries rather than private implementation details.
+
+| # | Exercise | Required level |
+|---:|---|---|
+| 1 | [BS-P5-CONCEPT-COMPONENT-TEST-RENDER](../../exercises/bs-p5-concept-component-test-render.md) | L4 |
+| 2 | [BS-P5-CONCEPT-TESTING-LIBRARY-QUERIES](../../exercises/bs-p5-concept-testing-library-queries.md) | L4 |
+| 3 | [BS-P5-CONCEPT-USER-EVENT-TESTING](../../exercises/bs-p5-concept-user-event-testing.md) | L4 |
+| 4 | [BS-P5-CONCEPT-STATEFUL-COMPONENT-TESTS](../../exercises/bs-p5-concept-stateful-component-tests.md) | L4 |
+| 5 | [BS-P7-CONCEPT-ERROR-BOUNDARY](../../exercises/bs-p7-concept-error-boundary.md) | L4 |
+
+Prerequisite closure outside this track: `BS-P1-CONCEPT-COMPONENT`, `BS-FSO-0.1`, `BS-P1-CONCEPT-EVENT-HANDLING`, `BS-P1-CONCEPT-USESTATE`, `BS-P1-CONCEPT-RENDER-CYCLE`.
+
+## 4. TypeScript contracts and runtime trust
 
 Separate structural static typing from runtime validation, then encode variant/state contracts safely.
 
@@ -38,7 +80,7 @@ Separate structural static typing from runtime validation, then encode variant/s
 
 Prerequisite closure outside this track: `BS-FSO-2.11`, `BS-FSO-0.5`, `BS-FSO-0.4`, `BS-FSO-0.1`, `BS-FSO-0.3`.
 
-## 3. HTTP, authentication and web security
+## 5. HTTP, authentication and web security
 
 Understand request semantics and middleware, then prove authentication, revocation, browser token storage and server-side authorization boundaries.
 
@@ -60,7 +102,7 @@ Understand request semantics and middleware, then prove authentication, revocati
 
 Prerequisite closure outside this track: `BS-FSO-3.1`, `BS-FSO-0.4`, `BS-FSO-0.1`, `BS-FSO-0.3`, `BS-FSO-0.5`, `BS-TECH-15`, `BS-TECH-11`, `BS-TECH-01`.
 
-## 4. Frontend state, server cache and realtime recovery
+## 6. Frontend state, server cache and realtime recovery
 
 Choose the correct state owner, synchronize server mutations, and recover push streams without treating transport state as durable truth.
 
@@ -74,7 +116,7 @@ Choose the correct state owner, synchronize server mutations, and recover push s
 
 Prerequisite closure outside this track: `BS-FSO-0.5`, `BS-FSO-0.4`, `BS-FSO-0.1`, `BS-FSO-0.3`, `BS-FSO-0.6`, `BS-FSO-2.11`, `BS-FSO-2.17`, `BS-A1`, `BS-A2`.
 
-## 5. Go backend, database and concurrency reliability
+## 7. Go backend, database and concurrency reliability
 
 Move from schema/repository tests through transaction locks/isolation into HTTP/API errors, authentication and durable jobs.
 
@@ -97,7 +139,7 @@ Move from schema/repository tests through transaction locks/isolation into HTTP/
 
 Prerequisite closure outside this track: `BS-FSO-3.1`, `BS-FSO-0.4`, `BS-FSO-0.1`, `BS-FSO-0.3`, `BS-TECH-10`, `BS-TECH-25`.
 
-## 6. Containers and production delivery
+## 8. Containers and production delivery
 
 Understand image/runtime/network persistence first, then make CI/deploy reproducible, gated, recoverable and revision-identifiable.
 
@@ -118,7 +160,7 @@ Understand image/runtime/network persistence first, then make CI/deploy reproduc
 
 Prerequisite closure outside this track: `BS-TECH-05`, `BS-TECH-03`, `BS-TECH-01`.
 
-## 7. Production Agent engineering
+## 9. Production Agent engineering
 
 Learn typed execution, durable ownership, evidence/admissibility, deterministic authority, eval/rollout, replay, HITL/recovery and failure attribution as one production system.
 

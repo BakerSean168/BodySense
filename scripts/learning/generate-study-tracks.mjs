@@ -17,6 +17,25 @@ const tracks = [
     ids: ['FSO-0.1','FSO-0.3','FSO-0.4','FSO-0.5','FSO-0.6','FSO-2.11','FSO-2.17','FSO-3.1'],
   },
   {
+    name: 'React component model, async effects and hooks',
+    goal: 'Build the React render/state/event mental model first, then connect browser async work, effects, stable identity and reusable hooks without cargo-cult memoization.',
+    ids: [
+      'FSO-P1-CONCEPT-COMPONENT','FSO-P1-CONCEPT-JSX','FSO-P1-CONCEPT-PROPS','FSO-P1-CONCEPT-RENDER-CYCLE',
+      'FSO-P1-CONCEPT-USESTATE','FSO-P1-CONCEPT-EVENT-HANDLING','FSO-P1-CONCEPT-STATE-PROP-OWNERSHIP',
+      'FSO-P1-CONCEPT-IMMUTABLE-ARRAY-STATE','FSO-P1-CONCEPT-ASYNC-STATE-UPDATES','FSO-P1-CONCEPT-HOOK-RULES',
+      'FSO-P2-CONCEPT-ASYNC-RUNTIME','FSO-P2-CONCEPT-PROMISES','FSO-P2-CONCEPT-EFFECTS','FSO-P2-CONCEPT-REACT-KEYS','FSO-P2-CONCEPT-CONTROLLED-COMPONENT',
+      'FSO-P7-CONCEPT-HOOKS-MENTAL-MODEL','FSO-P7-CONCEPT-CUSTOM-HOOKS','FSO-P7-CONCEPT-USEMEMO','FSO-P7-CONCEPT-USECALLBACK',
+    ],
+  },
+  {
+    name: 'React component testing and failure isolation',
+    goal: 'Test React through user-observable behavior, realistic interaction semantics and explicit render-failure boundaries rather than private implementation details.',
+    ids: [
+      'FSO-P5-CONCEPT-COMPONENT-TEST-RENDER','FSO-P5-CONCEPT-TESTING-LIBRARY-QUERIES',
+      'FSO-P5-CONCEPT-USER-EVENT-TESTING','FSO-P5-CONCEPT-STATEFUL-COMPONENT-TESTS','FSO-P7-CONCEPT-ERROR-BOUNDARY',
+    ],
+  },
+  {
     name: 'TypeScript contracts and runtime trust',
     goal: 'Separate structural static typing from runtime validation, then encode variant/state contracts safely.',
     ids: [
@@ -69,6 +88,12 @@ for (const track of tracks) {
     if (!item) throw new Error(`${track.name}: unknown item ${id}`);
     if (!ready(item)) throw new Error(`${track.name}: ${id} is ${item.lifecycle}, not exercise-ready`);
   }
+}
+
+const trackedReadyIds = new Set(tracks.flatMap((track) => track.ids));
+const untrackedReady = [...items.values()].filter((item) => ready(item) && !trackedReadyIds.has(item.id));
+if (untrackedReady.length) {
+  throw new Error(`study tracks omit ${untrackedReady.length} ready node(s): ${untrackedReady.map((item) => item.id).join(', ')}`);
 }
 
 function prerequisiteClosure(ids) {
