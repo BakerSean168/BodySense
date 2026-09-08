@@ -1022,7 +1022,10 @@
       "source_authority": "current-site-snapshot",
       "status": "REVIEWED_CONCEPTS_MAPPED",
       "linked_concept_ids": [
-        "FSO-P2-CONCEPT-EFFECTS"
+        "FSO-P2-CONCEPT-EFFECTS",
+        "FSO-P2-CONCEPT-PROMISES",
+        "FSO-P2-CONCEPT-ASYNC-RUNTIME",
+        "FSO-P1-CONCEPT-RENDER-CYCLE"
       ],
       "reviewed_at": "2026-09-07",
       "note": "Technical section reviewed; reusable concepts represented by explicit concept record(s)."
@@ -1539,7 +1542,9 @@
       "source_authority": "current-site-snapshot",
       "status": "REVIEWED_CONCEPTS_MAPPED",
       "linked_concept_ids": [
-        "FSO-P3-CONCEPT-HTTP-ERROR-TAXONOMY"
+        "FSO-P3-CONCEPT-HTTP-ERROR-TAXONOMY",
+        "FSO-P3-CONCEPT-SERVER-DEBUGGING",
+        "FSO-P2-CONCEPT-PROMISES"
       ],
       "reviewed_at": "2026-09-08",
       "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
@@ -1900,7 +1905,8 @@
       "source_authority": "current-site-snapshot",
       "status": "REVIEWED_CONCEPTS_MAPPED",
       "linked_concept_ids": [
-        "FSO-P4-CONCEPT-TOKEN-REVOCATION"
+        "FSO-P4-CONCEPT-TOKEN-REVOCATION",
+        "FSO-P4-CONCEPT-BEARER-AUTHORIZATION"
       ],
       "reviewed_at": "2026-09-08",
       "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
@@ -1984,7 +1990,8 @@
       "source_authority": "current-site-snapshot",
       "status": "REVIEWED_CONCEPTS_MAPPED",
       "linked_concept_ids": [
-        "FSO-P5-CONCEPT-BROWSER-TOKEN-PERSISTENCE"
+        "FSO-P5-CONCEPT-BROWSER-TOKEN-PERSISTENCE",
+        "FSO-P2-CONCEPT-EFFECTS"
       ],
       "reviewed_at": "2026-09-08",
       "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
@@ -2118,7 +2125,8 @@
       "source_authority": "current-site-snapshot",
       "status": "REVIEWED_CONCEPTS_MAPPED",
       "linked_concept_ids": [
-        "FSO-P5-CONCEPT-TESTING-LIBRARY-QUERIES"
+        "FSO-P5-CONCEPT-TESTING-LIBRARY-QUERIES",
+        "FSO-P5-CONCEPT-TEST-QUERY-VARIANTS"
       ],
       "reviewed_at": "2026-09-08",
       "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
@@ -2656,7 +2664,8 @@
       "source_authority": "current-site-snapshot",
       "status": "REVIEWED_CONCEPTS_MAPPED",
       "linked_concept_ids": [
-        "FSO-P6-CONCEPT-TANSTACK-QUERY"
+        "FSO-P6-CONCEPT-TANSTACK-QUERY",
+        "FSO-P6-CONCEPT-SERVER-VS-CLIENT-STATE"
       ],
       "reviewed_at": "2026-09-08",
       "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
@@ -2668,7 +2677,8 @@
       "source_authority": "current-site-snapshot",
       "status": "REVIEWED_CONCEPTS_MAPPED",
       "linked_concept_ids": [
-        "FSO-P6-CONCEPT-QUERY-MUTATION-INVALIDATION"
+        "FSO-P6-CONCEPT-QUERY-MUTATION-INVALIDATION",
+        "FSO-P6-CONCEPT-SERVER-MUTATION-RECONCILE"
       ],
       "reviewed_at": "2026-09-08",
       "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
@@ -3053,7 +3063,8 @@
       "source_authority": "current-site-snapshot",
       "status": "REVIEWED_CONCEPTS_MAPPED",
       "linked_concept_ids": [
-        "FSO-P7-CONCEPT-USEMEMO"
+        "FSO-P7-CONCEPT-USEMEMO",
+        "FSO-P1-CONCEPT-RENDER-CYCLE"
       ],
       "reviewed_at": "2026-09-08",
       "note": "Existing explicit useMemo concept was created in the earlier high-risk audit and directly covers this section."
@@ -3270,7 +3281,8 @@
         "FSO-P7-CONCEPT-SQL-INJECTION",
         "FSO-P7-CONCEPT-XSS",
         "FSO-P7-CONCEPT-DEPENDENCY-SECURITY",
-        "FSO-P7-CONCEPT-BROKEN-AUTHZ"
+        "FSO-P7-CONCEPT-BROKEN-AUTHZ",
+        "FSO-P7-CONCEPT-SECURITY-HEADERS"
       ],
       "reviewed_at": "2026-09-08",
       "note": "Existing high-risk security concepts were reviewed directly against this source section and jointly represent its principal reusable security semantics."

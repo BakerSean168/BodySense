@@ -3,7 +3,7 @@
 > Generated from the machine-readable ledgers. This is a curated learner-facing lens over the ready prerequisite graph, not a second source of truth.
 > Tracks overlap intentionally. Complete a prerequisite once and reuse the same evidence across every track that depends on it.
 
-Current executable curriculum: **94 ready/verified nodes**.
+Current executable curriculum: **97 ready/verified nodes**.
 
 ## 1. Web/browser request foundation
 
@@ -60,7 +60,8 @@ Test React through user-observable behavior, realistic interaction semantics and
 | 2 | [BS-P5-CONCEPT-TESTING-LIBRARY-QUERIES](../../exercises/bs-p5-concept-testing-library-queries.md) | L4 |
 | 3 | [BS-P5-CONCEPT-USER-EVENT-TESTING](../../exercises/bs-p5-concept-user-event-testing.md) | L4 |
 | 4 | [BS-P5-CONCEPT-STATEFUL-COMPONENT-TESTS](../../exercises/bs-p5-concept-stateful-component-tests.md) | L4 |
-| 5 | [BS-P7-CONCEPT-ERROR-BOUNDARY](../../exercises/bs-p7-concept-error-boundary.md) | L4 |
+| 5 | [BS-P5-CONCEPT-TEST-QUERY-VARIANTS](../../exercises/bs-p5-concept-test-query-variants.md) | L4 |
+| 6 | [BS-P7-CONCEPT-ERROR-BOUNDARY](../../exercises/bs-p7-concept-error-boundary.md) | L4 |
 
 Prerequisite closure outside this track: `BS-P1-CONCEPT-COMPONENT`, `BS-FSO-0.1`, `BS-P1-CONCEPT-EVENT-HANDLING`, `BS-P1-CONCEPT-USESTATE`, `BS-P1-CONCEPT-RENDER-CYCLE`.
 
@@ -99,8 +100,10 @@ Understand request semantics and middleware, then prove authentication, revocati
 | 11 | [BS-P5-CONCEPT-BROWSER-TOKEN-PERSISTENCE](../../exercises/bs-p5-concept-browser-token-persistence.md) | L4 |
 | 12 | [BS-P7-CONCEPT-BROKEN-AUTHZ](../../exercises/bs-p7-concept-broken-authz.md) | L4 |
 | 13 | [BS-P7-CONCEPT-XSS](../../exercises/bs-p7-concept-xss.md) | L4 |
+| 14 | [BS-P7-CONCEPT-SECURITY-HEADERS](../../exercises/bs-p7-concept-security-headers.md) | L4 |
+| 15 | [BS-P7-CONCEPT-DEPENDENCY-SECURITY](../../exercises/bs-p7-concept-dependency-security.md) | L4 |
 
-Prerequisite closure outside this track: `BS-FSO-3.1`, `BS-FSO-0.4`, `BS-FSO-0.1`, `BS-FSO-0.3`, `BS-FSO-0.5`, `BS-TECH-15`, `BS-TECH-11`, `BS-TECH-01`.
+Prerequisite closure outside this track: `BS-FSO-3.1`, `BS-FSO-0.4`, `BS-FSO-0.1`, `BS-FSO-0.3`, `BS-FSO-0.5`, `BS-TECH-15`, `BS-TECH-11`, `BS-TECH-01`, `BS-P11-CONCEPT-REPRODUCIBLE-PIPELINE`, `BS-TECH-10`, `BS-TECH-05`, `BS-TECH-03`.
 
 ## 6. Frontend state, server cache and realtime recovery
 

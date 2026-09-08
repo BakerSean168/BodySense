@@ -1,0 +1,241 @@
+{
+  "version": 1,
+  "source": {
+    "course": "full-stack-open",
+    "scope": "targeted high-risk unheaded prose/example audit for selected pinned-core h3 sections",
+    "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+    "source_state_sha256": "ab0d861320e86c30276651c7e59c8177f4529ee72d9943831fb5da1ecfabd845"
+  },
+  "policy": "Selection is risk-based, not exhaustive. REVIEWED means the complete h3 fragment was inspected for engineering semantics hidden below headings; it does not claim paragraph parity for unselected sections.",
+  "rows": [
+    {
+      "section_id": "FSO-P2-SECTION-018",
+      "part": 2,
+      "title": "Effect-hooks",
+      "source": {
+        "path": "src/content/2/en/part2c.md",
+        "start_line": 359,
+        "end_line": 521,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96"
+      },
+      "source_fragment_sha256": "a3247c9a2b566e33c73faeba001c9d79dc2fcb20784a58f8a3a43d216b2d7d02",
+      "source_fragment_bytes": 6427,
+      "selection_reason": "React effect timing/dependencies are lifecycle-sensitive and easy to misunderstand from heading-only mapping.",
+      "status": "REVIEWED",
+      "linked_concept_ids": [
+        "FSO-P2-CONCEPT-EFFECTS",
+        "FSO-P2-CONCEPT-PROMISES",
+        "FSO-P2-CONCEPT-ASYNC-RUNTIME",
+        "FSO-P1-CONCEPT-RENDER-CYCLE"
+      ],
+      "newly_exposed_concept_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "Read full effect-hook fragment. Render -> post-render effect -> promise completion -> state-triggered rerender and empty dependency behavior are covered by existing render/async/promise/effect concepts. No additional unheaded concept required."
+    },
+    {
+      "section_id": "FSO-P3-SECTION-014",
+      "part": 3,
+      "title": "Same origin policy and CORS",
+      "source": {
+        "path": "src/content/3/en/part3b.md",
+        "start_line": 34,
+        "end_line": 86,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96"
+      },
+      "source_fragment_sha256": "ce0deea735fea7a0a4a28e6258a18cb8c0b0e6396e5b6581493f5b8e6100ec06",
+      "source_fragment_bytes": 3883,
+      "selection_reason": "Same-origin/CORS is a browser security boundary with important request/response semantics.",
+      "status": "REVIEWED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-SAME-ORIGIN-CORS"
+      ],
+      "newly_exposed_concept_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "Full fragment reviewed: origin = scheme+host+port, browser enforcement, Access-Control-Allow-Origin and restrictive production allowlisting are represented by the existing same-origin/CORS concept and ready card."
+    },
+    {
+      "section_id": "FSO-P3-SECTION-032",
+      "part": 3,
+      "title": "Error handling",
+      "source": {
+        "path": "src/content/3/en/part3c.md",
+        "start_line": 673,
+        "end_line": 760,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96"
+      },
+      "source_fragment_sha256": "6073888c16868cf7ea40e881ef84dd4042e8a5f569916ab8b8db6eb476e5db76",
+      "source_fragment_bytes": 4596,
+      "selection_reason": "HTTP error mapping often contains multiple failure classes and transport/domain boundary details.",
+      "status": "REVIEWED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-HTTP-ERROR-TAXONOMY",
+        "FSO-P3-CONCEPT-SERVER-DEBUGGING",
+        "FSO-P2-CONCEPT-PROMISES"
+      ],
+      "newly_exposed_concept_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "Full fragment reviewed: null/not-found vs malformed identifier vs rejected/internal failure, status mapping and diagnostic logging are covered by error taxonomy, promise propagation and server-debugging concepts."
+    },
+    {
+      "section_id": "FSO-P4-SECTION-022",
+      "part": 4,
+      "title": "Problems of Token-based authentication",
+      "source": {
+        "path": "src/content/4/en/part4d.md",
+        "start_line": 269,
+        "end_line": 349,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96"
+      },
+      "source_fragment_sha256": "c0a345ffecf86d650eff37b1c76981aea5c3bfca2c713413141fc2cb5861991f",
+      "source_fragment_bytes": 3900,
+      "selection_reason": "Token expiry, revocation and server-side sessions materially affect authentication authority.",
+      "status": "REVIEWED",
+      "linked_concept_ids": [
+        "FSO-P4-CONCEPT-TOKEN-REVOCATION",
+        "FSO-P4-CONCEPT-BEARER-AUTHORIZATION"
+      ],
+      "newly_exposed_concept_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "Full fragment reviewed. Short-lived JWTs versus server-side session state, revocation lookup cost, Redis/opaque-token/cookie alternatives are intentionally covered under the broader token/session revocation authority concept rather than split into a duplicate node."
+    },
+    {
+      "section_id": "FSO-P5-SECTION-006",
+      "part": 5,
+      "title": "Saving the token to the browser's local storage",
+      "source": {
+        "path": "src/content/5/en/part5a.md",
+        "start_line": 415,
+        "end_line": 531,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96"
+      },
+      "source_fragment_sha256": "5cac7be1d325a7bb58523637c9443fe043d153e1b8e9d91d29164ccad35a240d",
+      "source_fragment_bytes": 5098,
+      "selection_reason": "Browser credential persistence changes XSS exposure, reload behavior and logout/session semantics.",
+      "status": "REVIEWED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-BROWSER-TOKEN-PERSISTENCE",
+        "FSO-P2-CONCEPT-EFFECTS"
+      ],
+      "newly_exposed_concept_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "Full fragment reviewed: origin-scoped persistent string storage, JSON serialize/parse, reload restoration via effect and logout removal are covered by browser credential persistence plus effect lifecycle. BodySense card compares this course localStorage approach with in-memory access token + refresh authority."
+    },
+    {
+      "section_id": "FSO-P5-SECTION-017",
+      "part": 5,
+      "title": "Searching for content in a component",
+      "source": {
+        "path": "src/content/5/en/part5c.md",
+        "start_line": 180,
+        "end_line": 299,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96"
+      },
+      "source_fragment_sha256": "b307a5c3675b6b126a6e0018a90a1a7636014f15109d9c59185fc91b17ce4b98",
+      "source_fragment_bytes": 4103,
+      "selection_reason": "Testing Library query semantics encode user-observable/accessibility-oriented testing practice.",
+      "status": "REVIEWED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-TESTING-LIBRARY-QUERIES",
+        "FSO-P5-CONCEPT-TEST-QUERY-VARIANTS"
+      ],
+      "newly_exposed_concept_ids": [
+        "FSO-P5-CONCEPT-TEST-QUERY-VARIANTS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Full fragment exposed a distinct timing/absence semantic not explicit in the heading audit: getBy throws for missing synchronous content, findBy awaits asynchronous appearance, queryBy supports expected absence. Promoted to an explicit ready concept."
+    },
+    {
+      "section_id": "FSO-P6-SECTION-020",
+      "part": 6,
+      "title": "Managing data on the server with the TanStack Query library",
+      "source": {
+        "path": "src/content/6/en/part6c.md",
+        "start_line": 53,
+        "end_line": 179,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96"
+      },
+      "source_fragment_sha256": "e8bbe38c210382d1b5460d52a2beafdf436092474b1a59d129654b9b3d22bcd9",
+      "source_fragment_bytes": 4709,
+      "selection_reason": "Remote-cache ownership, query lifecycle and refetch behavior are core frontend server-state semantics.",
+      "status": "REVIEWED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-TANSTACK-QUERY",
+        "FSO-P6-CONCEPT-SERVER-VS-CLIENT-STATE"
+      ],
+      "newly_exposed_concept_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "Full fragment reviewed: QueryClient/provider, queryKey identity, queryFn, pending/success data lifecycle and server-state ownership are covered by TanStack Query and server-vs-client-state concepts."
+    },
+    {
+      "section_id": "FSO-P6-SECTION-021",
+      "part": 6,
+      "title": "Synchronizing data to the server using TanStack Query",
+      "source": {
+        "path": "src/content/6/en/part6c.md",
+        "start_line": 180,
+        "end_line": 352,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96"
+      },
+      "source_fragment_sha256": "faf3aad6042d8a59447fdffef3635b6f5e4e07535a8b4d15df89d6681145fc58",
+      "source_fragment_bytes": 5446,
+      "selection_reason": "Mutation reconciliation/invalidation is a concurrency and cache-consistency boundary.",
+      "status": "REVIEWED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-QUERY-MUTATION-INVALIDATION",
+        "FSO-P6-CONCEPT-SERVER-MUTATION-RECONCILE"
+      ],
+      "newly_exposed_concept_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "Full fragment reviewed: mutationFn/mutate, stale cached result after server success and onSuccess invalidation/refetch are covered by mutation invalidation and remote mutation reconciliation concepts."
+    },
+    {
+      "section_id": "FSO-P7-SECTION-002",
+      "part": 7,
+      "title": "useMemo",
+      "source": {
+        "path": "src/content/7/en/part7a.md",
+        "start_line": 37,
+        "end_line": 132,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96"
+      },
+      "source_fragment_sha256": "bfac37f349537d298c92e38ba1a93b99e12278f7595512d40ded76bb1b8a92ab",
+      "source_fragment_bytes": 3669,
+      "selection_reason": "Memoization is frequently cargo-culted; prose contains dependency/identity/performance caveats beyond the heading.",
+      "status": "REVIEWED",
+      "linked_concept_ids": [
+        "FSO-P7-CONCEPT-USEMEMO",
+        "FSO-P1-CONCEPT-RENDER-CYCLE"
+      ],
+      "newly_exposed_concept_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "Full fragment reviewed: rerender recomputation, dependency equality, memoized object/array identity and measure-before-memoize guidance are covered by useMemo plus render-cycle concepts and the ready card explicitly treats memoization as optimization rather than correctness."
+    },
+    {
+      "section_id": "FSO-P7-SECTION-020",
+      "part": 7,
+      "title": "React/node-application security",
+      "source": {
+        "path": "src/content/7/en/part7c.md",
+        "start_line": 441,
+        "end_line": 631,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96"
+      },
+      "source_fragment_sha256": "87d33c064db58d84d24d67f17d0c5f349788626ebb733607949ffd6955bc4121",
+      "source_fragment_bytes": 12183,
+      "selection_reason": "Security prose combines injection, XSS, dependency supply chain, access control and defense-in-depth guidance.",
+      "status": "REVIEWED",
+      "linked_concept_ids": [
+        "FSO-P7-CONCEPT-SQL-INJECTION",
+        "FSO-P7-CONCEPT-XSS",
+        "FSO-P7-CONCEPT-DEPENDENCY-SECURITY",
+        "FSO-P7-CONCEPT-BROKEN-AUTHZ",
+        "FSO-P7-CONCEPT-SECURITY-HEADERS"
+      ],
+      "newly_exposed_concept_ids": [
+        "FSO-P7-CONCEPT-SECURITY-HEADERS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Full security fragment reviewed. Existing concepts cover parameterized injection defense, React/untrusted rendering, vulnerable/supply-chain dependencies and server-side authorization. The final Helmet/defense-in-depth paragraph exposed a missing browser security-header concept, now mapped directly to BodySense Caddy/Nginx CSP/HSTS/nosniff/frame/referrer policy."
+    }
+  ]
+}

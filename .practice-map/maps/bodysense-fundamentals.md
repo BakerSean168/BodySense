@@ -31,20 +31,20 @@ updated_at: 2026-09-08
 ```text
 FSO Parts 0-7 numbered exercises: 158/158 MAPPED
 FSO Parts 8-14: current MOOC API source indexed; 198/198 exercise records MAPPED
-FSO concept audit: Parts 0-14 = 664/664 current section-heading units dispositioned; 467 explicit section/subheading-derived concepts; pinned core h4-h6 = 196/196 dispositioned; final paragraph/example-level parity remains separate
+FSO concept audit: Parts 0-14 = 664/664 current section-heading units dispositioned; 469 explicit section/subheading/prose-derived concepts; pinned core h4-h6 = 196/196 dispositioned; targeted prose-risk = 10/10 selected fragments reviewed, 2 new concepts; exhaustive paragraph/example parity remains separate
 FSO historical Parts 8-11: 104 exercise records archived for comparison
 TECH public lectures #0-#77: 78/78 title-level MAPPED
 Agent A1-A8: 8/8 EXERCISE_READY
-EXERCISE_READY: 94
+EXERCISE_READY: 97
 LEARNER_VERIFIED: 0 in the new mastery ledger
 ```
 
-当前可执行课程已经扩展为 **94-node ready graph**。学习时优先使用 `docs/learning/curriculum/views/study-tracks.md` 的 9 条 learner-facing tracks；机器依赖真相仍由 `prerequisite-spine.md` + ledgers 维护。
+当前可执行课程已经扩展为 **97-node ready graph**。学习时优先使用 `docs/learning/curriculum/views/study-tracks.md` 的 9 条 learner-facing tracks；机器依赖真相仍由 `prerequisite-spine.md` + ledgers 维护。
 
 下一步优先级：
 
-1. 使用 `study-tracks.md` 维护 62 个 ready 节点的可学习路径，并继续补真正高价值的 readiness；
-2. 对高风险 section 做 paragraph/example 定向审计；primary section 与 pinned-core nested h4-h6 heading inventory 已无 PENDING；
+1. 使用 `study-tracks.md` 维护 97 个 ready 节点的可学习路径，并继续补真正高价值的 readiness；
+2. 扩展已建立的 fingerprinted paragraph/example prose-risk 审计；首批 10/10 高风险 core sections 已完成，primary section 与 pinned-core nested h4-h6 heading inventory 也均无 PENDING；
 3. 不把 exercise/heading/concept mapping 或已有 production tests 当成 learner mastery；
 4. 选择一条 ready track 后再做 placement audit，从第一个低于 L4 的 prerequisite 开始。
 
@@ -73,6 +73,17 @@ Diagnosis Production Agent 学习已经形成可复用的高阶证据，不因�
 这些是历史学习/工程证据，不会自动写成新的 `LEARNER_VERIFIED`；placement 时仍需确认它们是否满足对应 exercise 的 L4/L5 acceptance contract。
 
 # Session Log
+
+## 2026-09-08 · Targeted prose-risk audit + 97-node graph
+
+- 新增 fingerprinted **targeted prose-risk audit**：对 pinned Full Stack Open core 中 10 个高风险 h3 fragment 做完整段落/示例级阅读，source-state SHA-256 为 `ab0d861320e86c30276651c7e59c8177f4529ee72d9943831fb5da1ecfabd845`；**10/10 REVIEWED，0 PENDING**。
+- 审计不是“全篇逐段完成率”，而是风险选样的 omission-detection layer；validator 会校验 pinned commit、fragment hash、review disposition、reciprocal concept links 与新暴露概念。
+- prose review 找到 **2 个 heading audit 未显式暴露的概念**：Testing Library `getBy/findBy/queryBy` 的同步存在/异步出现/预期缺失语义，以及 CSP/HSTS/nosniff/frame/referrer 等浏览器 security headers；两者均进入 canonical ledger 并直接生成 L4 exercise cards。
+- 将 dependency/supply-chain security 也提升为 `EXERCISE_READY`，覆盖 lockfile/frozen install/audit/install scripts/maintainer compromise/升级回归风险。
+- executable graph 由 **94 -> 97 nodes**：FSO 73 + TECH 16 + Agent 8；仍为 **0 LEARNER_VERIFIED**。
+- 新增 `core-prose-risk-audit.md` generated view、refresh/generator scripts，并把新 ready nodes 纳入现有 9 条 study tracks；track generator 继续 fail closed，禁止 ready node 在 learner-facing map 中失踪。
+- 真实验证：Testing Library/React focused suite **3 files / 18 tests passed**，Web TypeScript typecheck passed；`validate-production-proxy.sh` 返回 `PRODUCTION_PROXY_CONTRACT=PASS`；Go refresh/logout/session authority focused suites passed；`pnpm curriculum:check` passed。
+
 
 ## 2026-09-08 · Relational persistence readiness + 94-node graph
 

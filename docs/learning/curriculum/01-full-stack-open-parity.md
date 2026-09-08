@@ -49,7 +49,9 @@ The first explicit concept repairs cover previously audited gaps:
 - dependency auditing / lockfile / supply-chain risk;
 - broken authentication vs broken access control and server-side authorization.
 
-The active current-source inventory now has **664 section-heading review units** (279 pinned core + 385 current MOOC advanced). All 664 have an explicit disposition, backed by **467 section/subheading-derived concept records** plus explicit redundant/non-engineering classifications. For the pinned core, a second audit now indexes and dispositions **196/196 h4-h6 headings** outside fenced code blocks, so alternative exercises, source-removed Redux material, build-tool subtopics and bonus testing sections are no longer hidden below h3. This makes known heading-level omissions inspectable, but it is still not proof that every unheaded paragraph, code example or warning has been independently decomposed.
+The active current-source inventory now has **664 section-heading review units** (279 pinned core + 385 current MOOC advanced). All 664 have an explicit disposition, backed by **469 section/subheading/prose-derived concept records** plus explicit redundant/non-engineering classifications. For the pinned core, a second audit now indexes and dispositions **196/196 h4-h6 headings** outside fenced code blocks, so alternative exercises, source-removed Redux material, build-tool subtopics and bonus testing sections are no longer hidden below h3. This makes known heading-level omissions inspectable, but it is still not proof that every unheaded paragraph, code example or warning has been independently decomposed.
+
+A first targeted prose-risk pass now fingerprints and reads **10/10 selected high-risk core h3 fragments** in full. It found two semantics that heading-only coverage did not make explicit: Testing Library `getBy`/`findBy`/`queryBy` timing-and-absence semantics, and browser-enforced HTTP security headers/defense-in-depth. Both were promoted into canonical concept records and executable BodySense cards. The selection remains intentionally risk-based; unselected prose is still an explicit non-claim.
 
 ## BodySense translation rule
 
@@ -70,4 +72,4 @@ No production framework/library is changed merely to make the repository look li
 
 The first FSO cards currently ready for actual L4 learning are generated/listed in [`views/coverage-status.md`](./views/coverage-status.md). More cards are promoted from `MAPPED` only after target files, failure cases and verification evidence are concrete.
 
-Current Parts 8-14 exercise records and section-heading units are now mapped/dispositioned; historical Part 8-11 mappings were not silently reused. The next work is (1) targeted paragraph/example audits where unheaded prose may hide multiple high-risk ideas and (2) promotion of mapped exercises/concepts to concrete `EXERCISE_READY` cards with reviewed prerequisite closure.
+Current Parts 8-14 exercise records and section-heading units are now mapped/dispositioned; historical Part 8-11 mappings were not silently reused. The next work is (1) expanding the fingerprinted prose-risk selection to additional high-risk sections while preserving the explicit non-exhaustive boundary and (2) promotion of mapped exercises/concepts to concrete `EXERCISE_READY` cards with reviewed prerequisite closure.

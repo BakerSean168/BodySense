@@ -111,7 +111,7 @@ Semantically dispositioned section units: **664**.
 | `FSO-P2-SECTION-015` · src/content/2/en/part2c.md:56 | The browser as a runtime environment | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-ASYNC-RUNTIME` |
 | `FSO-P2-SECTION-016` · src/content/2/en/part2c.md:136 | npm | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-NPM` |
 | `FSO-P2-SECTION-017` · src/content/2/en/part2c.md:260 | Axios and promises | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-PROMISES` |
-| `FSO-P2-SECTION-018` · src/content/2/en/part2c.md:359 | Effect-hooks | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-EFFECTS` |
+| `FSO-P2-SECTION-018` · src/content/2/en/part2c.md:359 | Effect-hooks | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-EFFECTS`, `FSO-P2-CONCEPT-PROMISES`, `FSO-P2-CONCEPT-ASYNC-RUNTIME`, `FSO-P1-CONCEPT-RENDER-CYCLE` |
 | `FSO-P2-SECTION-019` · src/content/2/en/part2c.md:522 | The development runtime environment | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-DEV-RUNTIME` |
 | `FSO-P2-SECTION-020` · src/content/2/en/part2d.md:18 | REST | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-REST` |
 | `FSO-P2-SECTION-021` · src/content/2/en/part2d.md:28 | Sending Data to the Server | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-SEND-DATA` |
@@ -159,7 +159,7 @@ Semantically dispositioned section units: **664**.
 | `FSO-P3-SECTION-029` · src/content/3/en/part3c.md:572 | Using database in route handlers | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-HANDLER-REPOSITORY-BOUNDARY` |
 | `FSO-P3-SECTION-030` · src/content/3/en/part3c.md:615 | Verifying frontend and backend integration | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-INTEGRATION-FAULT-LOCALIZATION` |
 | `FSO-P3-SECTION-031` · src/content/3/en/part3c.md:629 | A true full stack developer's oath | REVIEWED_REDUNDANT | `FSO-P1-CONCEPT-DEBUGGING-DISCIPLINE`, `FSO-P3-CONCEPT-INTEGRATION-FAULT-LOCALIZATION` |
-| `FSO-P3-SECTION-032` · src/content/3/en/part3c.md:673 | Error handling | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-HTTP-ERROR-TAXONOMY` |
+| `FSO-P3-SECTION-032` · src/content/3/en/part3c.md:673 | Error handling | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-HTTP-ERROR-TAXONOMY`, `FSO-P3-CONCEPT-SERVER-DEBUGGING`, `FSO-P2-CONCEPT-PROMISES` |
 | `FSO-P3-SECTION-033` · src/content/3/en/part3c.md:761 | Moving error handling into middleware | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-CENTRAL-ERROR-MIDDLEWARE` |
 | `FSO-P3-SECTION-034` · src/content/3/en/part3c.md:804 | The order of middleware loading | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-MIDDLEWARE-ORDER` |
 | `FSO-P3-SECTION-035` · src/content/3/en/part3c.md:868 | Other operations | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-DATABASE-MUTATION-SEMANTICS` |
@@ -194,7 +194,7 @@ Semantically dispositioned section units: **664**.
 | `FSO-P4-SECTION-019` · src/content/4/en/part4c.md:427 | Creating a new note | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-RESOURCE-OWNERSHIP` |
 | `FSO-P4-SECTION-020` · src/content/4/en/part4c.md:496 | Populate | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-RELATION-PROJECTION` |
 | `FSO-P4-SECTION-021` · src/content/4/en/part4d.md:157 | Limiting creating new notes to logged-in users | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-BEARER-AUTHORIZATION` |
-| `FSO-P4-SECTION-022` · src/content/4/en/part4d.md:269 | Problems of Token-based authentication | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-TOKEN-REVOCATION` |
+| `FSO-P4-SECTION-022` · src/content/4/en/part4d.md:269 | Problems of Token-based authentication | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-TOKEN-REVOCATION`, `FSO-P4-CONCEPT-BEARER-AUTHORIZATION` |
 | `FSO-P4-SECTION-023` · src/content/4/en/part4d.md:350 | End notes | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-HTTPS-CREDENTIAL-TRANSPORT` |
 
 ## Part 5 — 42/42 section units dispositioned
@@ -206,7 +206,7 @@ Semantically dispositioned section units: **664**.
 | `FSO-P5-SECTION-003` · src/content/5/en/part5a.md:165 | Conditional Rendering of the Login Form | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-AUTH-CONDITIONAL-UI` |
 | `FSO-P5-SECTION-004` · src/content/5/en/part5a.md:294 | Note on Using the Label Element | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-FORM-LABELS` |
 | `FSO-P5-SECTION-005` · src/content/5/en/part5a.md:332 | Creating new notes | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-AUTHENTICATED-MUTATION` |
-| `FSO-P5-SECTION-006` · src/content/5/en/part5a.md:415 | Saving the token to the browser's local storage | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-BROWSER-TOKEN-PERSISTENCE` |
+| `FSO-P5-SECTION-006` · src/content/5/en/part5a.md:415 | Saving the token to the browser's local storage | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-BROWSER-TOKEN-PERSISTENCE`, `FSO-P2-CONCEPT-EFFECTS` |
 | `FSO-P5-SECTION-007` · src/content/5/en/part5a.md:634 | A note on using local storage | REVIEWED_REDUNDANT | `FSO-P5-CONCEPT-BROWSER-TOKEN-PERSISTENCE` |
 | `FSO-P5-SECTION-008` · src/content/5/en/part5b.md:28 | Displaying the login form only when appropriate | REVIEWED_REDUNDANT | `FSO-P5-CONCEPT-AUTH-CONDITIONAL-UI` |
 | `FSO-P5-SECTION-009` · src/content/5/en/part5b.md:175 | The components children, aka. props.children | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-PROPS-CHILDREN` |
@@ -217,7 +217,7 @@ Semantically dispositioned section units: **664**.
 | `FSO-P5-SECTION-014` · src/content/5/en/part5b.md:653 | ESlint | REVIEWED_REDUNDANT | `FSO-P3-CONCEPT-STATIC-ANALYSIS`, `FSO-P3-CONCEPT-LINT-CONFIG-SCOPE` |
 | `FSO-P5-SECTION-015` · src/content/5/en/part5c.md:90 | Rendering the component for tests | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-COMPONENT-TEST-RENDER` |
 | `FSO-P5-SECTION-016` · src/content/5/en/part5c.md:172 | Test file location | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-TEST-COLOCATION` |
-| `FSO-P5-SECTION-017` · src/content/5/en/part5c.md:180 | Searching for content in a component | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-TESTING-LIBRARY-QUERIES` |
+| `FSO-P5-SECTION-017` · src/content/5/en/part5c.md:180 | Searching for content in a component | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-TESTING-LIBRARY-QUERIES`, `FSO-P5-CONCEPT-TEST-QUERY-VARIANTS` |
 | `FSO-P5-SECTION-018` · src/content/5/en/part5c.md:300 | Debugging tests | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-FRONTEND-TEST-DEBUGGING` |
 | `FSO-P5-SECTION-019` · src/content/5/en/part5c.md:378 | Clicking buttons in tests | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-USER-EVENT-TESTING` |
 | `FSO-P5-SECTION-020` · src/content/5/en/part5c.md:450 | Tests for the Togglable component | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-STATEFUL-COMPONENT-TESTS` |
@@ -267,8 +267,8 @@ Semantically dispositioned section units: **664**.
 | `FSO-P6-SECTION-017` · src/content/6/en/part6b.md:792 | Middlewares | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-STORE-MIDDLEWARE` |
 | `FSO-P6-SECTION-018` · src/content/6/en/part6b.md:860 | Testing Zustand stores | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-STORE-UNIT-TESTS` |
 | `FSO-P6-SECTION-019` · src/content/6/en/part6b.md:1063 | Testing the notes store | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-ASYNC-STORE-TESTS` |
-| `FSO-P6-SECTION-020` · src/content/6/en/part6c.md:53 | Managing data on the server with the TanStack Query library | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-TANSTACK-QUERY` |
-| `FSO-P6-SECTION-021` · src/content/6/en/part6c.md:180 | Synchronizing data to the server using TanStack Query | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-QUERY-MUTATION-INVALIDATION` |
+| `FSO-P6-SECTION-020` · src/content/6/en/part6c.md:53 | Managing data on the server with the TanStack Query library | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-TANSTACK-QUERY`, `FSO-P6-CONCEPT-SERVER-VS-CLIENT-STATE` |
+| `FSO-P6-SECTION-021` · src/content/6/en/part6c.md:180 | Synchronizing data to the server using TanStack Query | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-QUERY-MUTATION-INVALIDATION`, `FSO-P6-CONCEPT-SERVER-MUTATION-RECONCILE` |
 | `FSO-P6-SECTION-022` · src/content/6/en/part6c.md:353 | Optimizing the performance | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-QUERY-PERFORMANCE` |
 | `FSO-P6-SECTION-023` · src/content/6/en/part6c.md:438 | useNotes custom hook | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-QUERY-CUSTOM-HOOK` |
 | `FSO-P6-SECTION-024` · src/content/6/en/part6c.md:627 | Context API | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-REACT-CONTEXT` |
@@ -305,7 +305,7 @@ Semantically dispositioned section units: **664**.
 | Section source | Heading | Semantic disposition | Explicit concept records |
 |---|---|---|---|
 | `FSO-P7-SECTION-001` · src/content/7/en/part7a.md:14 | React Hooks | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-HOOKS-MENTAL-MODEL` |
-| `FSO-P7-SECTION-002` · src/content/7/en/part7a.md:37 | useMemo | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-USEMEMO` |
+| `FSO-P7-SECTION-002` · src/content/7/en/part7a.md:37 | useMemo | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-USEMEMO`, `FSO-P1-CONCEPT-RENDER-CYCLE` |
 | `FSO-P7-SECTION-003` · src/content/7/en/part7a.md:133 | React.memo | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-REACT-MEMO` |
 | `FSO-P7-SECTION-004` · src/content/7/en/part7a.md:152 | useCallback | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-USECALLBACK` |
 | `FSO-P7-SECTION-005` · src/content/7/en/part7a.md:242 | Custom hooks | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-CUSTOM-HOOKS` |
@@ -323,7 +323,7 @@ Semantically dispositioned section units: **664**.
 | `FSO-P7-SECTION-017` · src/content/7/en/part7c.md:257 | Frontend and backend in the same repository | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-MONOREPO-TOPOLOGY` |
 | `FSO-P7-SECTION-018` · src/content/7/en/part7c.md:356 | Organization of code in React application | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-FEATURE-ORGANIZATION` |
 | `FSO-P7-SECTION-019` · src/content/7/en/part7c.md:429 | Changes on the server | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-SERVER-PUSH-SYNC` |
-| `FSO-P7-SECTION-020` · src/content/7/en/part7c.md:441 | React/node-application security | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-SQL-INJECTION`, `FSO-P7-CONCEPT-XSS`, `FSO-P7-CONCEPT-DEPENDENCY-SECURITY`, `FSO-P7-CONCEPT-BROKEN-AUTHZ` |
+| `FSO-P7-SECTION-020` · src/content/7/en/part7c.md:441 | React/node-application security | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-SQL-INJECTION`, `FSO-P7-CONCEPT-XSS`, `FSO-P7-CONCEPT-DEPENDENCY-SECURITY`, `FSO-P7-CONCEPT-BROKEN-AUTHZ`, `FSO-P7-CONCEPT-SECURITY-HEADERS` |
 | `FSO-P7-SECTION-021` · src/content/7/en/part7c.md:632 | Current trends | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-TYPESCRIPT-TREND`, `FSO-P7-CONCEPT-SSR-RSC-NEXT`, `FSO-P7-CONCEPT-MICROSERVICE-BOUNDARIES`, `FSO-P7-CONCEPT-SERVERLESS` |
 | `FSO-P7-SECTION-022` · src/content/7/en/part7c.md:698 | Useful libraries and further reading | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-ECOSYSTEM-LIBRARY-SELECTION` |
 | `FSO-P7-SECTION-023` · src/content/7/en/part7d.md:84 | State Management: Zustand | REVIEWED_REDUNDANT | `FSO-P6-CONCEPT-ZUSTAND-STORE`, `FSO-P6-CONCEPT-STATE-OWNERSHIP-CHOICE` |

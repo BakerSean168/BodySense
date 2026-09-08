@@ -44,11 +44,13 @@ Advanced Parts 8-14: **198/198 current exercise records semantically mapped** af
 
 The previous repository snapshot's Parts 8-11 are retained only as **104 historical exercise records** for comparison; they are not counted as current-course parity.
 
-Current source-section inventory: **279 core h3 teaching headings (Parts 0-7)** + **385 current MOOC headings (Parts 8-14)**. **467 explicit section/subheading-derived concepts** have already been semantically decomposed and mapped.
+Current source-section inventory: **279 core h3 teaching headings (Parts 0-7)** + **385 current MOOC headings (Parts 8-14)**. **469 explicit section/subheading/prose-derived concepts** have already been semantically decomposed and mapped.
 
 Primary section semantic-audit disposition: **664/664** reviewed; **461** concept-mapped, **106** explicitly redundant, **97** non-engineering/logistics, **0** pending.
 
 Pinned-core nested-heading audit: **196/196 h4-h6 units dispositioned**; **118** covered by current exercises, **4** current alternative exercise variants retained, **19** explicitly removed-track headings retained only historically, **0** pending. This closes the known h3-only core indexing gap but still does not equal exhaustive paragraph/example-level prose parity.
+
+Targeted pinned-core prose-risk audit: **10/10 selected high-risk h3 fragments reviewed**, **2 newly exposed paragraph-level concepts**, **0 pending**. This layer is deliberately risk-selected and fingerprinted; it improves omission detection without claiming exhaustive prose parity.
 
 The MOOC metadata snapshot intentionally stores only identifiers, page/chapter metadata, headings and short exercise titles; it does not copy exercise assignments, answers or course prose.
 
@@ -71,7 +73,7 @@ This does **not** claim that paid/video-internal teaching semantics were audited
 
 ## Exercise-ready spine
 
-There are currently **94** executable cards and **0** learner-verified cards.
+There are currently **97** executable cards and **0** learner-verified cards.
 
 - `BS-FSO-0.1` -> [card](../../exercises/bs-fso-0-1.md)
 - `BS-FSO-0.3` -> [card](../../exercises/bs-fso-0-3.md)
@@ -87,6 +89,7 @@ There are currently **94** executable cards and **0** learner-verified cards.
 - `BS-P7-CONCEPT-USEMEMO` -> [card](../../exercises/bs-p7-concept-usememo.md)
 - `BS-P7-CONCEPT-USECALLBACK` -> [card](../../exercises/bs-p7-concept-usecallback.md)
 - `BS-P7-CONCEPT-XSS` -> [card](../../exercises/bs-p7-concept-xss.md)
+- `BS-P7-CONCEPT-DEPENDENCY-SECURITY` -> [card](../../exercises/bs-p7-concept-dependency-security.md)
 - `BS-P7-CONCEPT-BROKEN-AUTHZ` -> [card](../../exercises/bs-p7-concept-broken-authz.md)
 - `BS-P1-CONCEPT-COMPONENT` -> [card](../../exercises/bs-p1-concept-component.md)
 - `BS-P1-CONCEPT-JSX` -> [card](../../exercises/bs-p1-concept-jsx.md)
@@ -143,6 +146,8 @@ There are currently **94** executable cards and **0** learner-verified cards.
 - `BS-P13-CONCEPT-TRANSACTIONAL-OWNED-INSERT` -> [card](../../exercises/bs-p13-concept-transactional-owned-insert.md)
 - `BS-P13-CONCEPT-RELATIONAL-PROJECTIONS` -> [card](../../exercises/bs-p13-concept-relational-projections.md)
 - `BS-P13-CONCEPT-RELATIONAL-QUERYING` -> [card](../../exercises/bs-p13-concept-relational-querying.md)
+- `BS-P5-CONCEPT-TEST-QUERY-VARIANTS` -> [card](../../exercises/bs-p5-concept-test-query-variants.md)
+- `BS-P7-CONCEPT-SECURITY-HEADERS` -> [card](../../exercises/bs-p7-concept-security-headers.md)
 - `BS-TECH-01` -> [card](../../exercises/bs-tech-01.md)
 - `BS-TECH-03` -> [card](../../exercises/bs-tech-03.md)
 - `BS-TECH-05` -> [card](../../exercises/bs-tech-05.md)
@@ -168,4 +173,4 @@ There are currently **94** executable cards and **0** learner-verified cards.
 - `BS-A7` -> [card](../../exercises/bs-a7.md)
 - `BS-A8` -> [card](../../exercises/bs-a8.md)
 
-The next curriculum milestone is targeted paragraph/example audit for high-risk source sections plus expansion of `EXERCISE_READY` coverage while preserving prerequisite closure. Placement assessment starts only on ready prerequisite slices.
+The next curriculum milestone is to expand the fingerprinted high-risk prose selection and continue promoting high-value mapped nodes to `EXERCISE_READY` while preserving prerequisite closure. Placement assessment starts only on ready prerequisite slices.

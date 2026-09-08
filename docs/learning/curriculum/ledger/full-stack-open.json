@@ -4,7 +4,7 @@
   "baseline": {
     "indexed_snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
     "snapshot_checked_at": "2026-09-07",
-    "current_parity_scope": "Parts 0-14 current exercises are semantically mapped; all 664 active current section-heading review units are explicitly dispositioned. Exercise readiness, learner mastery and exhaustive paragraph/example-level prose parity remain separate.",
+    "current_parity_scope": "Parts 0-14 current exercises are semantically mapped; all 664 active current section-heading review units and pinned-core h4-h6 units are dispositioned. A fingerprinted targeted prose-risk audit now covers selected high-risk core sections; exhaustive paragraph/example-level parity remains unclaimed.",
     "exercise_counts_snapshot": {
       "0": 6,
       "1": 14,
@@ -19,7 +19,7 @@
       "10": 27,
       "11": 21
     },
-    "semantic_concept_inventory": "section-heading audit complete: 664/664 current review units dispositioned with explicit section-derived concepts or redundant/non-engineering classification; exhaustive paragraph/example-level audit is not yet claimed.",
+    "semantic_concept_inventory": "section/subheading audit complete with 469 explicit mapped concepts; targeted high-risk prose review has begun and exposes hidden paragraph-level concepts without claiming exhaustive prose parity.",
     "current_mooc": {
       "retrieved_at": "2026-09-07T15:30:35.638Z",
       "source_state_sha256": "4a8093083af985c19e04b03bf876fd148676bd6c2b65327c7628d8b20122689d",
@@ -99,6 +99,15 @@
       "dispositioned": 196,
       "reviewed_at": "2026-09-08",
       "scope": "Pinned core Parts 0-7 markdown h4-h6 outside fenced code blocks; exercise detail headings, alternative/removed tracks and nested technical concepts are audited separately from h3 section units."
+    },
+    "core_prose_risk_audit": {
+      "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+      "source_state_sha256": "ab0d861320e86c30276651c7e59c8177f4529ee72d9943831fb5da1ecfabd845",
+      "rows": 10,
+      "dispositioned": 10,
+      "newly_exposed_concepts": 2,
+      "reviewed_at": "2026-09-08",
+      "scope": "Risk-selected pinned-core h3 fragments are fingerprinted and fully read for unheaded engineering semantics; this is intentionally targeted and does not claim exhaustive paragraph parity."
     }
   },
   "items": [
@@ -6479,7 +6488,8 @@
         "verification": "VERIFIED_SNAPSHOT",
         "authority": "current-site-snapshot",
         "section_ids": [
-          "FSO-P2-SECTION-015"
+          "FSO-P2-SECTION-015",
+          "FSO-P2-SECTION-018"
         ]
       },
       "lifecycle": "EXERCISE_READY",
@@ -6524,7 +6534,9 @@
         "authority": "current-site-snapshot",
         "section_ids": [
           "FSO-P2-SECTION-017",
-          "FSO-P2-SECTION-025"
+          "FSO-P2-SECTION-025",
+          "FSO-P2-SECTION-018",
+          "FSO-P3-SECTION-032"
         ]
       },
       "lifecycle": "EXERCISE_READY",
@@ -6568,7 +6580,8 @@
         "verification": "VERIFIED_SNAPSHOT",
         "authority": "current-site-snapshot",
         "section_ids": [
-          "FSO-P2-SECTION-018"
+          "FSO-P2-SECTION-018",
+          "FSO-P5-SECTION-006"
         ]
       },
       "lifecycle": "EXERCISE_READY",
@@ -6832,7 +6845,7 @@
           "FSO-P7-SECTION-020"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P7-CONCEPT-DEPENDENCY-SECURITY",
@@ -6849,9 +6862,11 @@
           "focused trace/test/measurement",
           "explain-back"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P11-CONCEPT-REPRODUCIBLE-PIPELINE"
+        ],
+        "exercise_card": "../../exercises/bs-p7-concept-dependency-security.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -18523,7 +18538,9 @@
         "authority": "current-site-snapshot",
         "section_ids": [
           "FSO-P1-SECTION-017",
-          "FSO-P1-SECTION-022"
+          "FSO-P1-SECTION-022",
+          "FSO-P2-SECTION-018",
+          "FSO-P7-SECTION-002"
         ]
       },
       "lifecycle": "EXERCISE_READY",
@@ -20807,7 +20824,8 @@
         "verification": "VERIFIED_SNAPSHOT",
         "authority": "current-site-snapshot",
         "section_ids": [
-          "FSO-P3-SECTION-021"
+          "FSO-P3-SECTION-021",
+          "FSO-P3-SECTION-032"
         ]
       },
       "lifecycle": "MAPPED",
@@ -22438,7 +22456,8 @@
         "authority": "current-site-snapshot",
         "section_ids": [
           "FSO-P4-SECTION-021",
-          "FSO-P13-MOOC-SECTION-027"
+          "FSO-P13-MOOC-SECTION-027",
+          "FSO-P4-SECTION-022"
         ]
       },
       "lifecycle": "EXERCISE_READY",
@@ -22498,11 +22517,11 @@
           "apps/api/internal/middleware/auth.go",
           "apps/api/internal/service/auth_service_test.go"
         ],
-        "task_summary": "Trace BodySense refresh/access token lifetime and revocation/replay behavior. Explain why signed token validity alone is insufficient when access must be revoked before token expiry.",
+        "task_summary": "Compare stateless signed-token validity with BodySense server-side session authority. Trace access-token session checks, Redis-backed opaque refresh rotation/replay tombstones and family revocation, then compare Authorization-header transport with the source course cookie/session alternative and explain revocation-latency/per-request-lookup trade-offs.",
         "completion_evidence_plan": [
-          "source-section explain-back",
-          "BodySense code/config/test trace",
-          "failure/ownership/contract prediction where applicable"
+          "`cd apps/api && go test ./internal/service -run \"RefreshToken|Logout|GenerateTokens\" -count=1`",
+          "`cd apps/api && go test ./internal/middleware -run \"Session|Auth\" -count=1`",
+          "Build a comparison matrix: stateless JWT expiry vs server-side session authority; opaque refresh token family/replay; Authorization header vs cookie transport; immediate revocation vs lookup cost."
         ],
         "prerequisites": [
           "TECH-37",
@@ -24530,7 +24549,8 @@
         "section_ids": [
           "FSO-P6-SECTION-012",
           "FSO-P6-SECTION-046",
-          "FSO-P8-MOOC-SECTION-037"
+          "FSO-P8-MOOC-SECTION-037",
+          "FSO-P6-SECTION-020"
         ]
       },
       "lifecycle": "MAPPED",
@@ -24659,7 +24679,8 @@
         "verification": "VERIFIED_SNAPSHOT",
         "authority": "current-site-snapshot",
         "section_ids": [
-          "FSO-P6-SECTION-015"
+          "FSO-P6-SECTION-015",
+          "FSO-P6-SECTION-021"
         ]
       },
       "lifecycle": "MAPPED",
@@ -38497,6 +38518,95 @@
         "prerequisites": [],
         "exercise_card": null,
         "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P5-CONCEPT-TEST-QUERY-VARIANTS",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "title": "Testing Library getBy/findBy/queryBy variants encode synchronous presence, asynchronous appearance and expected absence semantics",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5c.md",
+        "line": 247,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P5-SECTION-017"
+        ]
+      },
+      "lifecycle": "EXERCISE_READY",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P5-CONCEPT-TEST-QUERY-VARIANTS",
+        "semantic_audit": "reviewed-against-source-prose-risk",
+        "objective": "Testing Library getBy/findBy/queryBy variants encode synchronous presence, asynchronous appearance and expected absence semantics",
+        "target_files": [
+          "apps/web/src/components/__tests__/ProtectedRoute.test.tsx",
+          "apps/web/src/features/workspace/components/__tests__/BodyStateWorkbench.test.tsx",
+          "apps/web/src/features/consultation/components/__tests__/StreamingAssistantTurn.test.tsx"
+        ],
+        "task_summary": "Classify BodySense test queries by expected timing/presence: use getBy for synchronous presence, findBy for asynchronous appearance, and queryBy when absence is the assertion. Explain failure/timeout behavior for the wrong choice.",
+        "completion_evidence_plan": [
+          "Compare query variants in existing component tests and identify one assertion whose semantics would change with another variant.",
+          "Run the focused tests and, if needed, create an isolated delayed-render example without changing production code."
+        ],
+        "prerequisites": [
+          "FSO-P5-CONCEPT-TESTING-LIBRARY-QUERIES"
+        ],
+        "exercise_card": "../../exercises/bs-p5-concept-test-query-variants.md",
+        "dependency_audit": "REVIEWED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P7-CONCEPT-SECURITY-HEADERS",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "title": "HTTP response security headers provide browser-enforced defense in depth for content execution, framing, MIME handling, referrers and transport",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7c.md",
+        "line": 628,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P7-SECTION-020"
+        ]
+      },
+      "lifecycle": "EXERCISE_READY",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P7-CONCEPT-SECURITY-HEADERS",
+        "semantic_audit": "reviewed-against-source-prose-risk",
+        "objective": "HTTP response security headers provide browser-enforced defense in depth for content execution, framing, MIME handling, referrers and transport",
+        "target_files": [
+          "docker/Caddyfile",
+          "docker/nginx.conf",
+          "scripts/validate-production-proxy.sh"
+        ],
+        "task_summary": "Trace BodySense CSP, HSTS, nosniff, frame and referrer headers from proxy configuration to browser enforcement. Explain which threat each header reduces and why headers complement rather than replace input validation/authz.",
+        "completion_evidence_plan": [
+          "Inspect Caddy/Nginx header configuration and the production proxy validator.",
+          "Use config/static validation or a local response-header probe to verify expected headers without weakening the policy."
+        ],
+        "prerequisites": [
+          "FSO-P7-CONCEPT-XSS",
+          "FSO-P3-CONCEPT-SAME-ORIGIN-CORS"
+        ],
+        "exercise_card": "../../exercises/bs-p7-concept-security-headers.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",

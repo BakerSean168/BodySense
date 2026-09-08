@@ -21,20 +21,21 @@ token/session revocation, expiry and replay handling are part of authentication 
 
 ## Prediction before reading/running
 
-Predict access/refresh behavior after normal refresh rotation, replay of a consumed refresh token and logout/revocation of a token family.
+Predict access/refresh behavior after normal refresh rotation, replay of a consumed refresh token and logout/revocation of a token family. Also predict the difference between a cryptographically valid access token and a server-side session that has already been revoked.
 
 ## Task
 
-Trace BodySense refresh/access token lifetime and revocation/replay behavior. Explain why signed token validity alone is insufficient when access must be revoked before token expiry.
+Compare stateless signed-token validity with BodySense server-side session authority. Trace access-token session checks, Redis-backed opaque refresh rotation/replay tombstones and family revocation, then compare Authorization-header transport with the source course cookie/session alternative and explain revocation-latency/per-request-lookup trade-offs.
 
 ## Failure case
 
-Treat a signed refresh token as valid until expiry even after replay or logout. Explain how a stolen token remains usable.
+Treat a cryptographically valid access/refresh token as sufficient authority until expiry even after server-side revocation, or rotate refresh tokens without replay-family invalidation. Explain how stolen credentials remain usable and how a cache outage must fail closed rather than silently restore authority.
 
 ## Verification command / evidence
 
 - `cd apps/api && go test ./internal/service -run "RefreshToken|Logout|GenerateTokens" -count=1`
 - `cd apps/api && go test ./internal/middleware -run "Session|Auth" -count=1`
+- Build a comparison matrix: stateless JWT expiry vs server-side session authority; opaque refresh token family/replay; Authorization header vs cookie transport; immediate revocation vs lookup cost.
 
 Passing an existing test is **not** sufficient for L4. The learner must explain which invariant the evidence proves, which relevant layer is outside the evidence, and what observation would falsify the conclusion.
 
@@ -43,6 +44,8 @@ Passing an existing test is **not** sufficient for L4. The learner must explain 
 - Why rotate refresh tokens?
 - What is a token family and why can replay revoke it?
 - What authority is checked on every access request?
+- What does server-side session state buy compared with a purely stateless JWT, and what per-request availability/performance cost does it introduce?
+- Why are cookie vs Authorization header transport choices separate from the question of whether session authority is stateful?
 
 ## Production change
 

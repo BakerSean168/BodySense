@@ -11,6 +11,7 @@ const tech = load('techschool-backend.json');
 const agent = load('bodysense-agent.json');
 const fsoConceptAudit = load('full-stack-open-concept-audit.json');
 const fsoCoreSubheadingAudit = load('full-stack-open-core-subheading-audit.json');
+const fsoCoreProseRiskAudit = load('full-stack-open-core-prose-risk-audit.json');
 
 const errors = [];
 const fail = (message) => errors.push(message);
@@ -305,6 +306,61 @@ function validateFSOCoreSubheadingAudit() {
   if (baseline.reviewed_at && dispositioned !== rows.length) fail(`FSO core subheading audit: baseline claims reviewed at ${baseline.reviewed_at} but ${rows.length - dispositioned} rows remain pending`);
 }
 
+function validateFSOCoreProseRiskAudit() {
+  const audit = fsoCoreProseRiskAudit;
+  const rows = audit.rows ?? [];
+  const baseline = fso.baseline.core_prose_risk_audit;
+  if (!baseline) {
+    fail('FSO core prose-risk audit: missing baseline metadata');
+    return;
+  }
+  if (audit.source?.snapshot_commit !== fso.baseline.indexed_snapshot_commit) fail('FSO core prose-risk audit: pinned snapshot commit mismatch');
+  if (baseline.snapshot_commit !== audit.source?.snapshot_commit) fail('FSO core prose-risk audit: baseline snapshot mismatch');
+  const state = rows.map((row) => ({ section_id: row.section_id, source_fragment_sha256: row.source_fragment_sha256 }));
+  const calculatedState = crypto.createHash('sha256').update(JSON.stringify(state)).digest('hex');
+  if (audit.source?.source_state_sha256 !== calculatedState) fail('FSO core prose-risk audit: row fingerprints do not match source-state hash');
+  if (baseline.source_state_sha256 !== audit.source?.source_state_sha256) fail('FSO core prose-risk audit: baseline source-state fingerprint mismatch');
+  if (baseline.rows !== rows.length) fail(`FSO core prose-risk audit: baseline rows ${baseline.rows} != ${rows.length}`);
+  const rowIds = new Set(rows.map((row) => row.section_id));
+  if (rowIds.size !== rows.length) fail('FSO core prose-risk audit: duplicate section_id');
+  const coreSections = new Map((fso.source_sections ?? []).map((section) => [section.id, section]));
+  const conceptById = new Map(fso.items.filter((item) => item.kind === 'concept').map((item) => [item.id, item]));
+  let dispositioned = 0;
+  let newlyExposed = 0;
+  for (const row of rows) {
+    if (!['PENDING','REVIEWED'].includes(row.status)) fail(`FSO core prose-risk audit ${row.section_id}: invalid status ${row.status}`);
+    const section = coreSections.get(row.section_id);
+    if (!section) fail(`FSO core prose-risk audit ${row.section_id}: unknown/non-core section`);
+    if (row.source?.snapshot_commit !== fso.baseline.indexed_snapshot_commit) fail(`FSO core prose-risk audit ${row.section_id}: source commit mismatch`);
+    if (!/^[a-f0-9]{64}$/.test(row.source_fragment_sha256 ?? '')) fail(`FSO core prose-risk audit ${row.section_id}: invalid fragment sha256`);
+    if (row.status === 'PENDING') {
+      if (row.reviewed_at) fail(`FSO core prose-risk audit ${row.section_id}: pending row must not have reviewed_at`);
+      continue;
+    }
+    dispositioned += 1;
+    if (!row.reviewed_at || !row.note) fail(`FSO core prose-risk audit ${row.section_id}: reviewed row requires reviewed_at and note`);
+    const linked = row.linked_concept_ids ?? [];
+    if (linked.length === 0) fail(`FSO core prose-risk audit ${row.section_id}: reviewed row requires linked concepts`);
+    for (const conceptId of linked) {
+      const concept = conceptById.get(conceptId);
+      if (!concept) {
+        fail(`FSO core prose-risk audit ${row.section_id}: unknown concept ${conceptId}`);
+        continue;
+      }
+      if (!(concept.source?.section_ids ?? []).includes(row.section_id)) fail(`FSO core prose-risk audit ${row.section_id}: concept ${conceptId} lacks reciprocal section link`);
+    }
+    for (const conceptId of row.newly_exposed_concept_ids ?? []) {
+      newlyExposed += 1;
+      if (!linked.includes(conceptId)) fail(`FSO core prose-risk audit ${row.section_id}: newly exposed ${conceptId} must also be linked`);
+      const concept = conceptById.get(conceptId);
+      if (concept?.mapping?.semantic_audit !== 'reviewed-against-source-prose-risk') fail(`FSO core prose-risk audit ${row.section_id}: new concept ${conceptId} must record prose-risk semantic audit`);
+    }
+  }
+  if (baseline.dispositioned !== dispositioned) fail(`FSO core prose-risk audit: baseline dispositioned ${baseline.dispositioned} != ${dispositioned}`);
+  if (baseline.newly_exposed_concepts !== newlyExposed) fail(`FSO core prose-risk audit: baseline new concepts ${baseline.newly_exposed_concepts} != ${newlyExposed}`);
+  if (baseline.reviewed_at && dispositioned !== rows.length) fail(`FSO core prose-risk audit: baseline claims reviewed but ${rows.length - dispositioned} rows remain pending`);
+}
+
 function validateTech() {
   if (tech.baseline.public_repo_commit !== '97f000fe58ad01a0774179ffa8884ac7784cf263') fail('TECH: unexpected public README baseline commit');
   const lectures = tech.items.filter((item) => item.kind === 'lecture');
@@ -326,6 +382,7 @@ validateUniqueIds();
 validateFSO();
 validateFSOConceptAudit();
 validateFSOCoreSubheadingAudit();
+validateFSOCoreProseRiskAudit();
 validateTech();
 validateAgent();
 for (const [ledger, filename] of [[fso,'full-stack-open.json'],[tech,'techschool-backend.json'],[agent,'bodysense-agent.json']]) {

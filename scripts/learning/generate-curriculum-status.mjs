@@ -12,6 +12,7 @@ const agent = load('bodysense-agent.json');
 const mooc = load('full-stack-open-current-mooc.json');
 const conceptAudit = load('full-stack-open-concept-audit.json');
 const coreSubheadingAudit = load('full-stack-open-core-subheading-audit.json');
+const coreProseRiskAudit = load('full-stack-open-core-prose-risk-audit.json');
 
 const rank = { SOURCE_INDEXED: 1, MAPPED: 2, EXERCISE_READY: 3, LEARNER_VERIFIED: 4 };
 const atLeast = (items, state) => items.filter((item) => rank[item.lifecycle] >= rank[state]).length;
@@ -29,6 +30,8 @@ const coreSubheadingAuditCounts = coreSubheadingAudit.rows.reduce((counts, row) 
   return counts;
 }, {});
 const coreSubheadingDisposed = coreSubheadingAudit.rows.filter((row) => row.status !== 'PENDING').length;
+const coreProseRiskReviewed = coreProseRiskAudit.rows.filter((row) => row.status === 'REVIEWED').length;
+const coreProseRiskNewConcepts = coreProseRiskAudit.rows.flatMap((row) => row.newly_exposed_concept_ids ?? []).length;
 const techLectures = tech.items.filter((item) => item.kind === 'lecture');
 const all = [...fso.items, ...tech.items, ...agent.items];
 const ready = all.filter((item) => ['EXERCISE_READY', 'LEARNER_VERIFIED'].includes(item.lifecycle));
@@ -75,11 +78,13 @@ lines.push(
   '',
   `The previous repository snapshot's Parts 8-11 are retained only as **${(fso.historical_items ?? []).length} historical exercise records** for comparison; they are not counted as current-course parity.`,
   '',
-  `Current source-section inventory: **${fso.source_sections.length} core h3 teaching headings (Parts 0-7)** + **${fso.current_mooc_sections.length} current MOOC headings (Parts 8-14)**. **${fsoConcepts.length} explicit section/subheading-derived concepts** have already been semantically decomposed and mapped.`,
+  `Current source-section inventory: **${fso.source_sections.length} core h3 teaching headings (Parts 0-7)** + **${fso.current_mooc_sections.length} current MOOC headings (Parts 8-14)**. **${fsoConcepts.length} explicit section/subheading/prose-derived concepts** have already been semantically decomposed and mapped.`,
   '',
   `Primary section semantic-audit disposition: **${conceptAuditDispositioned}/${conceptAudit.sections.length}** reviewed; **${conceptAuditCounts.REVIEWED_CONCEPTS_MAPPED ?? 0}** concept-mapped, **${conceptAuditCounts.REVIEWED_REDUNDANT ?? 0}** explicitly redundant, **${conceptAuditCounts.REVIEWED_NON_ENGINEERING ?? 0}** non-engineering/logistics, **${conceptAuditCounts.PENDING ?? 0}** pending.`,
   '',
   `Pinned-core nested-heading audit: **${coreSubheadingDisposed}/${coreSubheadingAudit.rows.length} h4-h6 units dispositioned**; **${coreSubheadingAuditCounts.COVERED_BY_EXERCISE ?? 0}** covered by current exercises, **${coreSubheadingAuditCounts.ALTERNATIVE_EXERCISE_VARIANT ?? 0}** current alternative exercise variants retained, **${coreSubheadingAuditCounts.REMOVED_SOURCE_TRACK ?? 0}** explicitly removed-track headings retained only historically, **${coreSubheadingAuditCounts.PENDING ?? 0}** pending. This closes the known h3-only core indexing gap but still does not equal exhaustive paragraph/example-level prose parity.`,
+  '',
+  `Targeted pinned-core prose-risk audit: **${coreProseRiskReviewed}/${coreProseRiskAudit.rows.length} selected high-risk h3 fragments reviewed**, **${coreProseRiskNewConcepts} newly exposed paragraph-level concepts**, **${coreProseRiskAudit.rows.length - coreProseRiskReviewed} pending**. This layer is deliberately risk-selected and fingerprinted; it improves omission detection without claiming exhaustive prose parity.`,
   '',
   'The MOOC metadata snapshot intentionally stores only identifiers, page/chapter metadata, headings and short exercise titles; it does not copy exercise assignments, answers or course prose.',
   '',
@@ -112,7 +117,7 @@ for (const item of ready) {
 
 lines.push(
   '',
-  'The next curriculum milestone is targeted paragraph/example audit for high-risk source sections plus expansion of `EXERCISE_READY` coverage while preserving prerequisite closure. Placement assessment starts only on ready prerequisite slices.',
+  'The next curriculum milestone is to expand the fingerprinted high-risk prose selection and continue promoting high-value mapped nodes to `EXERCISE_READY` while preserving prerequisite closure. Placement assessment starts only on ready prerequisite slices.',
 );
 
 fs.mkdirSync(path.dirname(viewPath), { recursive: true });

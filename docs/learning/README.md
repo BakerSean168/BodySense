@@ -50,6 +50,7 @@ Browse every mapped training point without opening JSON through:
 - [`Agent engineering catalog`](./curriculum/views/agent-engineering-catalog.md)
 - [`Concept semantic-audit queue`](./curriculum/views/concept-audit-queue.md)
 - [`Pinned-core nested-heading audit`](./curriculum/views/core-subheading-audit.md) — h4-h6 coverage for Parts 0-7, including alternative/removed exercise tracks
+- [`Pinned-core targeted prose-risk audit`](./curriculum/views/core-prose-risk-audit.md) — fingerprinted full-fragment review of selected high-risk h3 sections; explicitly non-exhaustive
 - [`Exercise-ready study tracks`](./curriculum/views/study-tracks.md) — the recommended learner-facing path through the current ready graph
 
 ## Current source-integrity boundary
@@ -58,7 +59,7 @@ As of the 2026-09-08 curriculum audit (with the advanced MOOC source snapshot pi
 
 - Full Stack Open Parts **0-7**: 158 numbered source exercises are individually indexed and semantically mapped to BodySense.
 - Full Stack Open Parts **8-14**: the public `courses.mooc.fi` Course Material API is pinned as a metadata-only snapshot: **198 current exercise records and 385 current section headings**. All **198/198 current exercise records are mapped**, and all **385/385 current advanced section-heading review units are dispositioned** against BodySense (`DIRECT` / `COMPARE` / `OPTIONAL`, redundant, or non-engineering).
-- Full Stack Open section/concept audit: **664/664 current section-heading review units across Parts 0-14 are dispositioned**. The ledger currently contains **467 explicit section/subheading-derived concept records**; redundant and course-logistics headings are recorded explicitly instead of silently skipped. A separate pinned-core audit now also dispositioned **196/196 h4-h6 headings**: 118 current exercise detail headings, 4 current alternative exercise variants, 32 nested technical mappings, 6 redundant items, 17 non-engineering headings and 19 headings from a source track explicitly marked removed. This still does **not** claim every paragraph/example is independently audited.
+- Full Stack Open section/concept audit: **664/664 current section-heading review units across Parts 0-14 are dispositioned**. The ledger currently contains **469 explicit section/subheading/prose-derived concept records**; redundant and course-logistics headings are recorded explicitly instead of silently skipped. A separate pinned-core audit dispositioned **196/196 h4-h6 headings**: 118 current exercise detail headings, 4 current alternative exercise variants, 32 nested technical mappings, 6 redundant items, 17 non-engineering headings and 19 headings from a source track explicitly marked removed. A fingerprinted targeted prose-risk layer has also reviewed **10/10 selected high-risk h3 fragments**, exposing 2 previously hidden concepts (`Testing Library` query timing/absence variants and browser security headers). This is deliberately risk-selected and still does **not** claim exhaustive paragraph/example parity.
 - BodySense Agent extension: **8/8 modules are now `EXERCISE_READY`**; A3-A6/A8 add executable evidence/admissibility, deterministic authority, qualification/rollout, replay/provenance and production failure-attribution labs.
 - The former repository-snapshot records for Parts **8-11** are retained as **104 historical exercises** for comparison and are not counted as current parity.
 - TECH SCHOOL Backend #0-#77: 78/78 public README lecture IDs/titles are pinned and mapped. This is **public title-level parity only**, not a claim that paid/video-internal teaching semantics were audited.
@@ -106,6 +107,8 @@ docs/learning/
 │   │   ├── full-stack-open.json
 │   │   ├── full-stack-open-current-mooc.json
 │   │   ├── full-stack-open-concept-audit.json
+│   │   ├── full-stack-open-core-subheading-audit.json
+│   │   ├── full-stack-open-core-prose-risk-audit.json
 │   │   ├── techschool-backend.json
 │   │   └── bodysense-agent.json
 │   └── views/
@@ -116,6 +119,7 @@ docs/learning/
 │       ├── agent-engineering-catalog.md
 │       ├── concept-audit-queue.md
 │       ├── core-subheading-audit.md
+│       ├── core-prose-risk-audit.md
 │       └── study-tracks.md
 └── exercises/
     └── bs-*.md
@@ -129,7 +133,14 @@ Current advanced FSO source metadata can be refreshed explicitly with:
 pnpm curriculum:refresh-fso-sources
 ```
 
-This is intentionally **not** part of ordinary `curriculum:check`, so validation remains deterministic/offline against the committed source snapshot.
+Pinned-core nested/prose audit fingerprints can be refreshed only against a checkout at the exact pinned commit:
+
+```bash
+pnpm curriculum:refresh-fso-core-subheadings -- /path/to/fullstack-checkout
+pnpm curriculum:refresh-fso-core-prose-risk -- /path/to/fullstack-checkout
+```
+
+These refresh commands update source fingerprints/inventory only; changed fragments return to `PENDING` until semantic review is repeated. They are intentionally **not** part of ordinary `curriculum:check`, so validation remains deterministic/offline against the committed source snapshots.
 
 ## Current execution order
 
@@ -139,11 +150,11 @@ The current order is:
 
 ```text
 1. Source integrity is pinned; exercise-objective + section-heading mapping is complete across current FSO Parts 0-14
-2. Maintain targeted paragraph/example audits for high-risk sections; primary and nested heading inventories are now fully dispositioned
+2. Expand the fingerprinted targeted prose-risk audit beyond the first 10/10 reviewed high-risk core sections; primary and nested heading inventories are already fully dispositioned
 3. Expand high-value mapped nodes to EXERCISE_READY with reviewed prerequisite closure
 4. Use the generated study tracks to choose a coherent ready slice
 5. Placement audit only on that ready slice
 6. Start from the first prerequisite gap below L4 and continue through the dependency graph
 ```
 
-The executable curriculum is now a **94-node ready graph** (70 FSO, 16 TECH SCHOOL, 8 Agent; 0 learner-verified). Rather than asking the learner to navigate that graph manually, [`study-tracks.md`](./curriculum/views/study-tracks.md) groups it into nine coherent tracks: Web/browser foundations, React component/hooks, React testing/failure isolation, TypeScript runtime trust, HTTP/auth/security, frontend state/realtime, Go backend reliability, containers/delivery, and production Agent engineering. The track generator now fails if any ready node is omitted from the learner-facing map.
+The executable curriculum is now a **97-node ready graph** (73 FSO, 16 TECH SCHOOL, 8 Agent; 0 learner-verified). Rather than asking the learner to navigate that graph manually, [`study-tracks.md`](./curriculum/views/study-tracks.md) groups it into nine coherent tracks: Web/browser foundations, React component/hooks, React testing/failure isolation, TypeScript runtime trust, HTTP/auth/security, frontend state/realtime, Go backend reliability, containers/delivery, and production Agent engineering. The track generator now fails if any ready node is omitted from the learner-facing map.
