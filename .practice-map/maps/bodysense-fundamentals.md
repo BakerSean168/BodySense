@@ -34,8 +34,8 @@ FSO Parts 8-14: current MOOC API source indexed; 198/198 exercise records MAPPED
 FSO concept audit: Parts 0-14 = 664/664 current section-heading units dispositioned; 462 explicit section-derived concepts; final paragraph/example-level parity remains separate
 FSO historical Parts 8-11: 104 exercise records archived for comparison
 TECH public lectures #0-#77: 78/78 title-level MAPPED
-Agent A1-A8: 8/8 MAPPED
-EXERCISE_READY: 27
+Agent A1-A8: 8/8 EXERCISE_READY
+EXERCISE_READY: 32
 LEARNER_VERIFIED: 0 in the new mastery ledger
 ```
 
@@ -83,6 +83,14 @@ Diagnosis Production Agent 学习已经形成可复用的高阶证据，不因�
 这些是历史学习/工程证据，不会自动写成新的 `LEARNER_VERIFIED`；placement 时仍需确认它们是否满足对应 exercise 的 L4/L5 acceptance contract。
 
 # Session Log
+
+## 2026-09-08 · Agent extension 8/8 executable readiness
+
+- 将 A3 Evidence/RAG/admissibility、A4 deterministic safety/DecisionAuthority、A5 eval/qualification/rollout、A6 DecisionTrace/replay、A8 production failure attribution 从 `MAPPED` 提升为 `EXERCISE_READY`。
+- 补齐 A1~A8 prerequisite closure：A8 作为综合 debugging capstone 依赖 A1~A7；所有 ready prerequisite 均通过 curriculum validator。
+- 新增 5 张 L4 exercise cards，要求 prediction -> failure case -> focused test/trace -> explain-back，禁止把“已有测试全绿”当作掌握证明。
+- 真实验证：AI service 相关 7 个 test files **31/31 passed**；Go diagnosis decision/rollout/replay/provenance focused suite passed。
+- Agent extension 当前 **8/8 EXERCISE_READY, 0/8 LEARNER_VERIFIED**；课程仍等待学习者实际 placement/练习证据。
 
 ## 2026-09-08 · FSO current Parts 8~14 section-level semantic audit complete
 

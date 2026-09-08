@@ -64,12 +64,12 @@ This does **not** claim that paid/video-internal teaching semantics were audited
 ## BodySense Agent extension
 
 - Project-defined modules mapped: **8/8**.
-- Exercise-ready: **3/8**.
+- Exercise-ready: **8/8**.
 - Learner-verified: **0/8**.
 
 ## Exercise-ready spine
 
-There are currently **27** executable cards and **0** learner-verified cards.
+There are currently **32** executable cards and **0** learner-verified cards.
 
 - `BS-FSO-0.1` -> [card](../../exercises/bs-fso-0-1.md)
 - `BS-FSO-0.3` -> [card](../../exercises/bs-fso-0-3.md)
@@ -97,6 +97,11 @@ There are currently **27** executable cards and **0** learner-verified cards.
 - `BS-TECH-54` -> [card](../../exercises/bs-tech-54.md)
 - `BS-A1` -> [card](../../exercises/bs-a1.md)
 - `BS-A2` -> [card](../../exercises/bs-a2.md)
+- `BS-A3` -> [card](../../exercises/bs-a3.md)
+- `BS-A4` -> [card](../../exercises/bs-a4.md)
+- `BS-A5` -> [card](../../exercises/bs-a5.md)
+- `BS-A6` -> [card](../../exercises/bs-a6.md)
 - `BS-A7` -> [card](../../exercises/bs-a7.md)
+- `BS-A8` -> [card](../../exercises/bs-a8.md)
 
 The next curriculum milestone is targeted paragraph/subheading audit for high-risk source sections plus expansion of `EXERCISE_READY` coverage while preserving prerequisite closure. Placement assessment starts only on ready prerequisite slices.

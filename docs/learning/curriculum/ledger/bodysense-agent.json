@@ -88,25 +88,30 @@
         "verification": "PROJECT_DEFINED",
         "authority": "BodySense current architecture"
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-A3",
         "semantic_audit": "project-defined",
         "objective": "Evidence, RAG and admissibility",
         "target_files": [
-          "apps/ai-service/src",
-          "apps/ai-service/tests/unit/test_diagnosis_evidence_acquisition.py"
+          "apps/ai-service/src/agents/evidence.py",
+          "apps/ai-service/src/rag/external_evidence.py",
+          "apps/ai-service/src/evals/diagnosis_evidence_policy.py",
+          "apps/ai-service/tests/unit/test_diagnosis_evidence_acquisition.py",
+          "apps/ai-service/tests/unit/test_diagnosis_evidence_evals.py"
         ],
-        "task_summary": "Construct retrieved-but-inadmissible evidence and locate the deterministic rejection gate.",
+        "task_summary": "Trace one Diagnosis evidence gap from proposal through acquisition/source identity into admissibility policy. Distinguish retrieved evidence, admissible evidence, attempted acquisition and resolved gap; identify which layer may make each claim.",
         "completion_evidence_plan": [
-          "prediction",
-          "focused test/trace",
-          "explain-back"
+          "`cd apps/ai-service && .venv/bin/python -m pytest tests/unit/test_diagnosis_evidence_acquisition.py tests/unit/test_diagnosis_evidence_evals.py -q`",
+          "Record one evidence item/gap/acquisition trace and explain why retrieval alone cannot close the gap."
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "BS-A1",
+          "BS-A2"
+        ],
+        "exercise_card": "../../exercises/bs-a3.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -123,7 +128,7 @@
         "verification": "PROJECT_DEFINED",
         "authority": "BodySense current architecture"
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-A4",
@@ -131,17 +136,21 @@
         "objective": "Safety and decision authority",
         "target_files": [
           "apps/api/internal/service/diagnosis_decision_policy.go",
-          "apps/api/internal/service/diagnosis_decision_policy_test.go"
+          "apps/api/internal/service/diagnosis_decision_policy_test.go",
+          "apps/api/internal/service/diagnosis_analysis_service.go"
         ],
-        "task_summary": "Predict authority outcomes for adversarial cases before running policy tests.",
+        "task_summary": "Trace model-proposed Diagnosis candidates into deterministic Go decision authority. Enumerate hard blockers, abstain/deny/deliver outcomes and the durable representation of a blocked result; show that confidence/Judge output cannot override policy.",
         "completion_evidence_plan": [
-          "prediction",
-          "focused test/trace",
-          "explain-back"
+          "`cd apps/api && go test ./internal/service -run \"DiagnosisDecisionPolicy|DecisionAuthority|PythonRejected\" -count=1`",
+          "Explain one fail-closed path from malformed/unknown safety input to suppressed normal delivery."
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "BS-A1",
+          "BS-A2",
+          "BS-A3"
+        ],
+        "exercise_card": "../../exercises/bs-a4.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -158,25 +167,34 @@
         "verification": "PROJECT_DEFINED",
         "authority": "BodySense current architecture"
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-A5",
         "semantic_audit": "project-defined",
         "objective": "Evaluation and configuration qualification",
         "target_files": [
-          "apps/ai-service",
-          "docs/plan/archive/2026-08-diagnosis-agent-platform"
+          "apps/ai-service/src/evals/diagnosis_qualification.py",
+          "apps/ai-service/src/evals/diagnosis_promotion.py",
+          "apps/ai-service/tests/unit/test_diagnosis_evals.py",
+          "apps/api/internal/service/agent_deployment_policy.go",
+          "apps/api/internal/service/diagnosis_rollout_service.go",
+          "apps/api/internal/service/agent_deployment_policy_test.go",
+          "apps/api/internal/service/diagnosis_rollout_service_test.go"
         ],
-        "task_summary": "Inspect one qualification dataset/report and state promotion/block evidence.",
+        "task_summary": "Trace the qualification unit from versioned dataset/slices through critical gates and paired non-inferiority into an explicitly admitted Champion/Challenger rollout. Then trace shadow/canary evidence and predeclared promotion/rollback rules.",
         "completion_evidence_plan": [
-          "prediction",
-          "focused test/trace",
-          "explain-back"
+          "`cd apps/ai-service && .venv/bin/python -m pytest tests/unit/test_diagnosis_evals.py tests/unit/test_diagnosis_promotion.py -q`",
+          "`cd apps/api && go test ./internal/service -run \"AgentDeploymentPolicy|DiagnosisRollout|PromotionPolicy\" -count=1`",
+          "Explain which observation blocks promotion even if average quality improves."
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "BS-A1",
+          "BS-A3",
+          "BS-A4"
+        ],
+        "exercise_card": "../../exercises/bs-a5.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -193,7 +211,7 @@
         "verification": "PROJECT_DEFINED",
         "authority": "BodySense current architecture"
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-A6",
@@ -201,17 +219,24 @@
         "objective": "Decision trace and replay",
         "target_files": [
           "apps/api/internal/service/diagnosis_replay_service.go",
-          "apps/api/internal/service/diagnosis_replay_service_test.go"
+          "apps/api/internal/service/diagnosis_replay_service_test.go",
+          "apps/api/internal/service/diagnosis_analysis_service.go",
+          "apps/ai-service/src/evals/diagnosis_regression_import.py"
         ],
-        "task_summary": "Compare historical replay, counterfactual replay, and current re-analysis on one frozen case.",
+        "task_summary": "Trace a persisted Diagnosis artifact into frozen replay input, immutable configuration/decision policy identity and replay output. Compare historical replay with counterfactual replay and prove counterfactual execution does not mutate ordinary durable user state.",
         "completion_evidence_plan": [
-          "prediction",
-          "focused test/trace",
-          "explain-back"
+          "`cd apps/api && go test ./internal/service -run \"DiagnosisReplay|PersistAndPublicPayloadUseDedicatedDiagnosisProvenance|FreezesReplayInput\" -count=1`",
+          "`cd apps/ai-service && .venv/bin/python -m pytest tests/unit/test_diagnosis_regression_import.py -q`",
+          "Explain why a pre-provenance legacy run must fail closed or degrade explicitly instead of inventing replay inputs."
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "BS-A1",
+          "BS-A2",
+          "BS-A4",
+          "BS-A5"
+        ],
+        "exercise_card": "../../exercises/bs-a6.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -268,25 +293,37 @@
         "verification": "PROJECT_DEFINED",
         "authority": "BodySense current architecture"
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-A8",
         "semantic_audit": "project-defined",
         "objective": "Agent production debugging",
         "target_files": [
-          "apps/api/internal/service",
-          "apps/ai-service/src"
+          "apps/api/internal/service/diagnosis_analysis_service.go",
+          "apps/api/internal/service/diagnosis_rollout_service.go",
+          "apps/api/internal/service/diagnosis_replay_service.go",
+          "apps/api/internal/service/ai_client_test.go",
+          "apps/ai-service/src/services/diagnosis_service.py",
+          "apps/ai-service/tests/unit/test_diagnosis_service.py"
         ],
-        "task_summary": "Attribute a failure to the earliest violated contract instead of defaulting to model blame.",
+        "task_summary": "Debug one synthetic production-shaped Diagnosis failure by walking the contract chain Input -> Context -> Evidence -> Proposal -> Decision -> Execution Provenance -> Persistence -> Delivery. Locate the first violated invariant, distinguish model/runtime/policy/transport faults and identify replayable evidence before proposing a fix.",
         "completion_evidence_plan": [
-          "prediction",
-          "focused test/trace",
-          "explain-back"
+          "`cd apps/api && go test ./internal/service -run \"Diagnosis|AnalyzeDiagnosisSendsPythonContract\" -count=1` (focus on the selected failure slice, not necessarily the whole package during iteration)",
+          "`cd apps/ai-service && .venv/bin/python -m pytest tests/unit/test_diagnosis_service.py tests/unit/test_diagnosis_api_contract.py -q`",
+          "Produce a one-page failure-attribution trace naming the first contract violation and one observation that would falsify the diagnosis."
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "BS-A1",
+          "BS-A2",
+          "BS-A3",
+          "BS-A4",
+          "BS-A5",
+          "BS-A6",
+          "BS-A7"
+        ],
+        "exercise_card": "../../exercises/bs-a8.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
