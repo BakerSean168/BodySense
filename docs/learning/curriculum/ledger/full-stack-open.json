@@ -91,7 +91,15 @@
         "section_units_dispositioned": 385
       }
     },
-    "semantic_section_audit_checked_at": "2026-09-08"
+    "semantic_section_audit_checked_at": "2026-09-08",
+    "core_subheading_audit": {
+      "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+      "source_state_sha256": "f240ac03b800fa109fcf584658022d2f2ac1364e653bf74feab06b5b132969c1",
+      "rows": 196,
+      "dispositioned": 196,
+      "reviewed_at": "2026-09-08",
+      "scope": "Pinned core Parts 0-7 markdown h4-h6 outside fenced code blocks; exercise detail headings, alternative/removed tracks and nested technical concepts are audited separately from h3 section units."
+    }
   },
   "items": [
     {
@@ -38199,6 +38207,217 @@
           "current-source section explain-back",
           "Next.js versus current BodySense architecture comparison/spike",
           "server/client/cache/auth/rendering failure prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P7-CONCEPT-MINIFICATION",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7b.md",
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P7-SECTION-014"
+        ],
+        "title": "production minification reduces shipped JavaScript/CSS size while preserving program semantics",
+        "line": 399
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P7-CONCEPT-MINIFICATION",
+        "semantic_audit": "reviewed-against-source-subheading",
+        "objective": "production minification reduces shipped JavaScript/CSS size while preserving program semantics",
+        "target_files": [
+          "apps/web/vite.config.ts",
+          "apps/web/Dockerfile"
+        ],
+        "task_summary": "Trace BodySense production build output versus source/development output. Explain minification, dead-code/tree-shaking boundaries, why smaller text is not equivalent to fewer modules, and how minification can affect debugging without being a correctness feature.",
+        "completion_evidence_plan": [
+          "nested-source-heading explain-back",
+          "BodySense build/config/runtime trace",
+          "failure prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P7-CONCEPT-SOURCE-MAPS",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7b.md",
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P7-SECTION-014"
+        ],
+        "title": "source maps relate transformed/minified production code back to original source locations for debugging",
+        "line": 405
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P7-CONCEPT-SOURCE-MAPS",
+        "semantic_audit": "reviewed-against-source-subheading",
+        "objective": "source maps relate transformed/minified production code back to original source locations for debugging",
+        "target_files": [
+          "apps/web/vite.config.ts",
+          "apps/web/Dockerfile"
+        ],
+        "task_summary": "Determine whether/how BodySense production builds emit source maps. Explain browser/error-monitoring use, privacy/source exposure trade-offs, and why stack traces must identify the deployed revision as well as source locations.",
+        "completion_evidence_plan": [
+          "nested-source-heading explain-back",
+          "BodySense build/config/runtime trace",
+          "failure prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P7-CONCEPT-BUILD-PLUGINS",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7b.md",
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P7-SECTION-014"
+        ],
+        "title": "build-tool plugins extend the transformation/bundle pipeline at explicit lifecycle hooks",
+        "line": 422
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P7-CONCEPT-BUILD-PLUGINS",
+        "semantic_audit": "reviewed-against-source-subheading",
+        "objective": "build-tool plugins extend the transformation/bundle pipeline at explicit lifecycle hooks",
+        "target_files": [
+          "apps/web/vite.config.ts",
+          "package.json"
+        ],
+        "task_summary": "Inspect BodySense Vite plugins and explain which build/dev lifecycle each changes. Distinguish plugin-provided transformation from application runtime behavior and identify supply-chain/configuration risks.",
+        "completion_evidence_plan": [
+          "nested-source-heading explain-back",
+          "BodySense build/config/runtime trace",
+          "failure prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P7-CONCEPT-POLYFILLS",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7b.md",
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P7-SECTION-014"
+        ],
+        "title": "polyfills provide missing runtime APIs for older targets while transpilation only rewrites syntax",
+        "line": 433
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P7-CONCEPT-POLYFILLS",
+        "semantic_audit": "reviewed-against-source-subheading",
+        "objective": "polyfills provide missing runtime APIs for older targets while transpilation only rewrites syntax",
+        "target_files": [
+          "apps/web/vite.config.ts",
+          "apps/web/tsconfig.json",
+          "package.json"
+        ],
+        "task_summary": "Contrast syntax transpilation with runtime API polyfills using one browser feature. Determine BodySense browser-target assumptions and explain bundle/compatibility costs of broad automatic polyfilling.",
+        "completion_evidence_plan": [
+          "nested-source-heading explain-back",
+          "BodySense build/config/runtime trace",
+          "failure prediction where applicable"
+        ],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "FSO-P6-CONCEPT-TEST-QUALITY-META-CHECK",
+      "kind": "concept",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "title": "tests themselves need discriminating checks: a test is weak if intentionally broken behavior still passes",
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6b.md",
+        "line": 1327,
+        "verification": "VERIFIED_SNAPSHOT",
+        "authority": "current-site-snapshot",
+        "section_ids": [
+          "FSO-P6-SECTION-019"
+        ]
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-P6-CONCEPT-TEST-QUALITY-META-CHECK",
+        "semantic_audit": "reviewed-against-source-subheading",
+        "objective": "tests themselves need discriminating checks: a test is weak if intentionally broken behavior still passes",
+        "target_files": [
+          "apps/web/src/features/consultation/runtime/activeTurnReducer.test.ts",
+          "scripts/delivery/delivery.test.mjs"
+        ],
+        "task_summary": "For one BodySense test, identify the production behavior it claims to distinguish, then propose or run a controlled mutation/fault that should make the test fail. Explain why line coverage or a permanently green test does not prove the assertion is discriminating.",
+        "completion_evidence_plan": [
+          "nested-source-heading explain-back",
+          "one mutation/fault that should make the selected test fail",
+          "explain false-positive/false-negative risk"
         ],
         "prerequisites": [],
         "exercise_card": null,

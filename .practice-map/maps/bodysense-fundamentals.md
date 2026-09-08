@@ -24,14 +24,14 @@ updated_at: 2026-09-08
 
 # Current Focus
 
-**课程重构的 source/exercise/section mapping 已完成，当前进入“高价值 `EXERCISE_READY` 图谱 + 定向 paragraph/subheading 审计”阶段。正式 placement 只在 ready slice 上进行。**
+**课程重构的 source/exercise/section mapping 已完成，当前进入“高价值 `EXERCISE_READY` 图谱 + 定向 paragraph/example 审计”阶段。正式 placement 只在 ready slice 上进行。**
 
 2026-09-08 本轮后，已可核实的状态：
 
 ```text
 FSO Parts 0-7 numbered exercises: 158/158 MAPPED
 FSO Parts 8-14: current MOOC API source indexed; 198/198 exercise records MAPPED
-FSO concept audit: Parts 0-14 = 664/664 current section-heading units dispositioned; 462 explicit section-derived concepts; final paragraph/example-level parity remains separate
+FSO concept audit: Parts 0-14 = 664/664 current section-heading units dispositioned; 467 explicit section/subheading-derived concepts; pinned core h4-h6 = 196/196 dispositioned; final paragraph/example-level parity remains separate
 FSO historical Parts 8-11: 104 exercise records archived for comparison
 TECH public lectures #0-#77: 78/78 title-level MAPPED
 Agent A1-A8: 8/8 EXERCISE_READY
@@ -44,7 +44,7 @@ LEARNER_VERIFIED: 0 in the new mastery ledger
 下一步优先级：
 
 1. 使用 `study-tracks.md` 维护 62 个 ready 节点的可学习路径，并继续补真正高价值的 readiness；
-2. 对高风险 section 做 paragraph/subheading 定向审计，尤其是 heading 内含多层机制但当前只按 section disposition 的内容；
+2. 对高风险 section 做 paragraph/example 定向审计；primary section 与 pinned-core nested h4-h6 heading inventory 已无 PENDING；
 3. 不把 exercise/heading/concept mapping 或已有 production tests 当成 learner mastery；
 4. 选择一条 ready track 后再做 placement audit，从第一个低于 L4 的 prerequisite 开始。
 
@@ -74,6 +74,15 @@ Diagnosis Production Agent 学习已经形成可复用的高阶证据，不因�
 
 # Session Log
 
+## 2026-09-08 · Pinned core h4-h6 nested-heading completeness audit
+
+- 发现 core Parts 0~7 原 `source_sections` 有意只索引 h3 teaching headings；虽然 numbered exercises 独立索引，但 h4/h5 的工具链子主题、bonus tests、alternative exercise variants 与 source-removed tracks 仍可能形成可见性盲区。
+- 对 pinned Full Stack Open commit `0711aef8a451c4458263e5587ccda85f08fd7a96` 增加独立 h4-h6 inventory，排除 fenced code block 内伪 heading；source fingerprint 为 `f240ac03b800fa109fcf584658022d2f2ac1364e653bf74feab06b5b132969c1`。
+- **196/196 nested heading units 全部 dispositioned**：118 covered by current numbered exercise、4 current alternative exercise variants（Part 7 React Query + Context 7.11~7.14）、32 nested technical mappings、6 redundant、17 non-engineering、19 `REMOVED_SOURCE_TRACK`（Part 6 明确标记已从当前课程移除的 Redux exercise material）。
+- 新增 5 个此前只藏在 nested heading 中的显式 concepts：test-quality meta-check、minification、source maps、build plugins、polyfills；FSO explicit concepts 由 462 增至 **467**。
+- 新增 machine-checkable `full-stack-open-core-subheading-audit.json`、refresh script、validator hard gate 与 generated `core-subheading-audit.md`；若未来 pinned source fingerprint/row count 改变，curriculum check 会拒绝沿用旧完成声明。
+- 此审计关闭的是已知 **heading-level** 缺口；仍不宣称 unheaded paragraph/code example/warning 已逐段完成 semantic parity。
+
 ## 2026-09-08 · 62-node executable graph + learner-facing study tracks
 
 - 从已完成的 FSO section concept ledger 中挑选 **30 个高 ROI concept nodes** 提升为 `EXERCISE_READY`：HTTP/middleware/CORS/error taxonomy、auth/revocation/browser token/XSS/BOLA、TanStack Query/state ownership/realtime recovery、TypeScript structural typing/runtime trust、CI/CD provenance/safe deploy、Docker image/Compose/network/volume。
@@ -100,7 +109,7 @@ Diagnosis Production Agent 学习已经形成可复用的高阶证据，不因�
 - 完成 P12 Containers 42/42：image/container/Dockerfile/Compose/volumes/network/DNS/dev loop/multi-stage/Redis/reverse proxy/orchestration 等映射到现有容器与部署配置。
 - 完成 P13 Relational DB 43/43：PostgreSQL/GORM/migrations/constraints/joins/many-to-many/eager-lazy/ORM/query/migration-history 等映射到现有 Go persistence layer。
 - 完成 P14 Next.js 65/65：App Router/RSC/Server Actions/static-vs-dynamic/cache revalidation/Auth.js/Route Handlers/Suspense/SEO 等以 `COMPARE` 映射到当前 Vite SPA + Go API，明确何时才值得迁移。
-- Full Stack Open 当前 source 的 **664/664 section-heading review units 已全部 dispositioned**；当前 ledger 共 **462 个显式 section-derived concept records**。这只表示 section-level semantic coverage，不把 heading 覆盖冒充 paragraph/example-level 全量知识 parity。
+- Full Stack Open 当前 source 的 **664/664 section-heading review units 已全部 dispositioned**；当前 ledger 共 **467 个显式 section/subheading-derived concept records**。这只表示 section-level semantic coverage，不把 heading 覆盖冒充 paragraph/example-level 全量知识 parity。
 
 ## 2026-09-08 · FSO core Parts 0~7 section-level concept audit complete
 

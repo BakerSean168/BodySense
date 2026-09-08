@@ -14,6 +14,7 @@ This file records what source material has actually been obtained. Missing seman
 - Pinned commit: `0711aef8a451c4458263e5587ccda85f08fd7a96`.
 - Current active source inventory: 158 distinct numbered exercises and 279 level-3 section headings for Parts 0-7 under the audit counting rule.
 - All 158 numbered exercises have individual semantic BodySense mappings. All 279 active Part 0-7 section-heading review units have explicit concept/redundant/non-engineering dispositions. Heading coverage is still not treated as exhaustive paragraph-level knowledge parity.
+- Nested core source integrity is tracked separately in `ledger/full-stack-open-core-subheading-audit.json`: **196 h4-h6 headings** outside fenced code blocks at the same pinned commit, fingerprinted by SHA-256. All 196 are dispositioned, including **4 current alternative exercise variants** and **19 headings from the Redux source track explicitly marked removed from the current course**. Refresh only against a checkout at the exact pinned commit using `node scripts/learning/refresh-fso-core-subheadings.mjs <checkout>`; any source fingerprint change must be re-audited before baseline acceptance.
 
 ### Parts 8-14 — current MOOC Course Material API snapshot
 

@@ -44,9 +44,11 @@ Advanced Parts 8-14: **198/198 current exercise records semantically mapped** af
 
 The previous repository snapshot's Parts 8-11 are retained only as **104 historical exercise records** for comparison; they are not counted as current-course parity.
 
-Current source-section inventory: **279 core headings (Parts 0-7)** + **385 current MOOC headings (Parts 8-14)**. **462 explicit section-derived concepts** have already been semantically decomposed and mapped.
+Current source-section inventory: **279 core h3 teaching headings (Parts 0-7)** + **385 current MOOC headings (Parts 8-14)**. **467 explicit section/subheading-derived concepts** have already been semantically decomposed and mapped.
 
-Section semantic-audit disposition: **664/664** reviewed; **461** concept-mapped, **106** explicitly redundant, **97** non-engineering/logistics, **0** pending. Heading review improves omission detection but does not equal exhaustive paragraph-level prose parity.
+Primary section semantic-audit disposition: **664/664** reviewed; **461** concept-mapped, **106** explicitly redundant, **97** non-engineering/logistics, **0** pending.
+
+Pinned-core nested-heading audit: **196/196 h4-h6 units dispositioned**; **118** covered by current exercises, **4** current alternative exercise variants retained, **19** explicitly removed-track headings retained only historically, **0** pending. This closes the known h3-only core indexing gap but still does not equal exhaustive paragraph/example-level prose parity.
 
 The MOOC metadata snapshot intentionally stores only identifiers, page/chapter metadata, headings and short exercise titles; it does not copy exercise assignments, answers or course prose.
 
@@ -134,4 +136,4 @@ There are currently **62** executable cards and **0** learner-verified cards.
 - `BS-A7` -> [card](../../exercises/bs-a7.md)
 - `BS-A8` -> [card](../../exercises/bs-a8.md)
 
-The next curriculum milestone is targeted paragraph/subheading audit for high-risk source sections plus expansion of `EXERCISE_READY` coverage while preserving prerequisite closure. Placement assessment starts only on ready prerequisite slices.
+The next curriculum milestone is targeted paragraph/example audit for high-risk source sections plus expansion of `EXERCISE_READY` coverage while preserving prerequisite closure. Placement assessment starts only on ready prerequisite slices.

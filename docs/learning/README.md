@@ -49,6 +49,7 @@ Browse every mapped training point without opening JSON through:
 - [`TECH SCHOOL backend catalog`](./curriculum/views/techschool-backend-catalog.md)
 - [`Agent engineering catalog`](./curriculum/views/agent-engineering-catalog.md)
 - [`Concept semantic-audit queue`](./curriculum/views/concept-audit-queue.md)
+- [`Pinned-core nested-heading audit`](./curriculum/views/core-subheading-audit.md) — h4-h6 coverage for Parts 0-7, including alternative/removed exercise tracks
 - [`Exercise-ready study tracks`](./curriculum/views/study-tracks.md) — the recommended learner-facing path through the current ready graph
 
 ## Current source-integrity boundary
@@ -57,7 +58,7 @@ As of the 2026-09-08 curriculum audit (with the advanced MOOC source snapshot pi
 
 - Full Stack Open Parts **0-7**: 158 numbered source exercises are individually indexed and semantically mapped to BodySense.
 - Full Stack Open Parts **8-14**: the public `courses.mooc.fi` Course Material API is pinned as a metadata-only snapshot: **198 current exercise records and 385 current section headings**. All **198/198 current exercise records are mapped**, and all **385/385 current advanced section-heading review units are dispositioned** against BodySense (`DIRECT` / `COMPARE` / `OPTIONAL`, redundant, or non-engineering).
-- Full Stack Open section/concept audit: **664/664 current section-heading review units across Parts 0-14 are dispositioned**. The ledger currently contains **462 explicit section-derived concept records**; redundant and course-logistics headings are recorded explicitly instead of silently skipped. This is section-level semantic coverage, **not** a claim that every paragraph/example in the source prose has been independently audited.
+- Full Stack Open section/concept audit: **664/664 current section-heading review units across Parts 0-14 are dispositioned**. The ledger currently contains **467 explicit section/subheading-derived concept records**; redundant and course-logistics headings are recorded explicitly instead of silently skipped. A separate pinned-core audit now also dispositioned **196/196 h4-h6 headings**: 118 current exercise detail headings, 4 current alternative exercise variants, 32 nested technical mappings, 6 redundant items, 17 non-engineering headings and 19 headings from a source track explicitly marked removed. This still does **not** claim every paragraph/example is independently audited.
 - BodySense Agent extension: **8/8 modules are now `EXERCISE_READY`**; A3-A6/A8 add executable evidence/admissibility, deterministic authority, qualification/rollout, replay/provenance and production failure-attribution labs.
 - The former repository-snapshot records for Parts **8-11** are retained as **104 historical exercises** for comparison and are not counted as current parity.
 - TECH SCHOOL Backend #0-#77: 78/78 public README lecture IDs/titles are pinned and mapped. This is **public title-level parity only**, not a claim that paid/video-internal teaching semantics were audited.
@@ -114,6 +115,7 @@ docs/learning/
 │       ├── techschool-backend-catalog.md
 │       ├── agent-engineering-catalog.md
 │       ├── concept-audit-queue.md
+│       ├── core-subheading-audit.md
 │       └── study-tracks.md
 └── exercises/
     └── bs-*.md
@@ -137,7 +139,7 @@ The current order is:
 
 ```text
 1. Source integrity is pinned; exercise-objective + section-heading mapping is complete across current FSO Parts 0-14
-2. Maintain targeted paragraph/subheading audits for high-risk sections without pretending this is learner mastery
+2. Maintain targeted paragraph/example audits for high-risk sections; primary and nested heading inventories are now fully dispositioned
 3. Expand high-value mapped nodes to EXERCISE_READY with reviewed prerequisite closure
 4. Use the generated study tracks to choose a coherent ready slice
 5. Placement audit only on that ready slice

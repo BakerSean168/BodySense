@@ -10,6 +10,7 @@ const fso = load('full-stack-open.json');
 const tech = load('techschool-backend.json');
 const agent = load('bodysense-agent.json');
 const fsoConceptAudit = load('full-stack-open-concept-audit.json');
+const fsoCoreSubheadingAudit = load('full-stack-open-core-subheading-audit.json');
 
 const errors = [];
 const fail = (message) => errors.push(message);
@@ -255,6 +256,55 @@ function validateFSOConceptAudit() {
   }
 }
 
+
+function validateFSOCoreSubheadingAudit() {
+  const audit = fsoCoreSubheadingAudit;
+  const rows = audit.rows ?? [];
+  const baseline = fso.baseline.core_subheading_audit;
+  if (!baseline) {
+    fail('FSO core subheading audit: missing baseline metadata');
+    return;
+  }
+  if (audit.source?.snapshot_commit !== fso.baseline.indexed_snapshot_commit) fail('FSO core subheading audit: pinned snapshot commit mismatch');
+  if (baseline.snapshot_commit !== audit.source?.snapshot_commit) fail('FSO core subheading audit: baseline snapshot mismatch');
+  if (baseline.source_state_sha256 !== audit.source?.source_state_sha256) fail('FSO core subheading audit: source-state fingerprint mismatch');
+  if (baseline.rows !== rows.length) fail(`FSO core subheading audit: baseline rows ${baseline.rows} != ${rows.length}`);
+  if (rows.length !== 196) fail(`FSO core subheading audit: expected 196 pinned h4-h6 rows, got ${rows.length}`);
+  const ids = new Set(rows.map((row) => row.id));
+  if (ids.size !== rows.length) fail('FSO core subheading audit: duplicate row id');
+  const allowed = new Set(['PENDING','COVERED_BY_EXERCISE','ALTERNATIVE_EXERCISE_VARIANT','REVIEWED_CONCEPTS_MAPPED','REVIEWED_REDUNDANT','REVIEWED_NON_ENGINEERING','REMOVED_SOURCE_TRACK']);
+  const itemById = new Map(fso.items.map((item) => [item.id, item]));
+  let dispositioned = 0;
+  for (const row of rows) {
+    if (!allowed.has(row.status)) fail(`FSO core subheading audit ${row.id}: invalid status ${row.status}`);
+    if (row.source?.snapshot_commit !== fso.baseline.indexed_snapshot_commit) fail(`FSO core subheading audit ${row.id}: source commit mismatch`);
+    if (row.source?.level < 4 || row.source?.level > 6) fail(`FSO core subheading audit ${row.id}: level must be 4..6`);
+    const linked = row.linked_item_ids ?? [];
+    if (row.status !== 'PENDING') dispositioned += 1;
+    if (row.status === 'PENDING' && row.reviewed_at) fail(`FSO core subheading audit ${row.id}: pending row must not have reviewed_at`);
+    if (['COVERED_BY_EXERCISE','ALTERNATIVE_EXERCISE_VARIANT','REVIEWED_CONCEPTS_MAPPED','REVIEWED_REDUNDANT'].includes(row.status) && linked.length === 0) {
+      fail(`FSO core subheading audit ${row.id}: ${row.status} requires linked items`);
+    }
+    let exerciseLinks = 0;
+    let conceptLinks = 0;
+    for (const linkedId of linked) {
+      const item = itemById.get(linkedId);
+      if (!item) {
+        fail(`FSO core subheading audit ${row.id}: unknown linked item ${linkedId}`);
+        continue;
+      }
+      if (item.kind === 'exercise') exerciseLinks += 1;
+      if (item.kind === 'concept') conceptLinks += 1;
+    }
+    if (row.status === 'COVERED_BY_EXERCISE' && exerciseLinks === 0) fail(`FSO core subheading audit ${row.id}: covered-by-exercise requires exercise link`);
+    if (row.status === 'ALTERNATIVE_EXERCISE_VARIANT' && (exerciseLinks === 0 || conceptLinks === 0)) fail(`FSO core subheading audit ${row.id}: alternative variant requires exercise + concept links`);
+    if (row.status === 'REVIEWED_CONCEPTS_MAPPED' && conceptLinks === 0) fail(`FSO core subheading audit ${row.id}: concept-mapped requires concept link`);
+    if (['REVIEWED_NON_ENGINEERING','REMOVED_SOURCE_TRACK'].includes(row.status) && linked.length > 0) fail(`FSO core subheading audit ${row.id}: ${row.status} should not claim active linked coverage`);
+  }
+  if (baseline.dispositioned !== dispositioned) fail(`FSO core subheading audit: baseline dispositioned ${baseline.dispositioned} != ${dispositioned}`);
+  if (baseline.reviewed_at && dispositioned !== rows.length) fail(`FSO core subheading audit: baseline claims reviewed at ${baseline.reviewed_at} but ${rows.length - dispositioned} rows remain pending`);
+}
+
 function validateTech() {
   if (tech.baseline.public_repo_commit !== '97f000fe58ad01a0774179ffa8884ac7784cf263') fail('TECH: unexpected public README baseline commit');
   const lectures = tech.items.filter((item) => item.kind === 'lecture');
@@ -275,6 +325,7 @@ function validateAgent() {
 validateUniqueIds();
 validateFSO();
 validateFSOConceptAudit();
+validateFSOCoreSubheadingAudit();
 validateTech();
 validateAgent();
 for (const [ledger, filename] of [[fso,'full-stack-open.json'],[tech,'techschool-backend.json'],[agent,'bodysense-agent.json']]) {
