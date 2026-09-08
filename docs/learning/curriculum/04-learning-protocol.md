@@ -150,6 +150,25 @@ Agent typed boundary + runtime ownership
   -> streaming/HITL/replay
 ```
 
+
+## 6.5 Learner-facing study tracks
+
+The generated prerequisite graph is the dependency truth, but it is not the most ergonomic study interface once dozens of nodes are ready. Use [`views/study-tracks.md`](./views/study-tracks.md) as the learner-facing lens over that graph.
+
+A track is **not** a second curriculum source of truth. It may overlap other tracks and it may depend on ready prerequisites outside the track. The generator checks that every listed node is currently `EXERCISE_READY` / `LEARNER_VERIFIED`; the ledgers and prerequisite graph remain canonical.
+
+Recommended rule:
+
+```text
+choose one track
+-> resolve its external prerequisite closure once
+-> placement-audit the ready nodes
+-> start at the first node below L4
+-> reuse verified prerequisite evidence across overlapping tracks
+```
+
+This keeps study order coherent without forcing a single global linear course sequence.
+
 ## 7. AI coaching policy
 
 Default learning mode:

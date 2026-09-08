@@ -49,6 +49,7 @@ Browse every mapped training point without opening JSON through:
 - [`TECH SCHOOL backend catalog`](./curriculum/views/techschool-backend-catalog.md)
 - [`Agent engineering catalog`](./curriculum/views/agent-engineering-catalog.md)
 - [`Concept semantic-audit queue`](./curriculum/views/concept-audit-queue.md)
+- [`Exercise-ready study tracks`](./curriculum/views/study-tracks.md) — the recommended learner-facing path through the current ready graph
 
 ## Current source-integrity boundary
 
@@ -112,7 +113,8 @@ docs/learning/
 │       ├── full-stack-open-catalog.md
 │       ├── techschool-backend-catalog.md
 │       ├── agent-engineering-catalog.md
-│       └── concept-audit-queue.md
+│       ├── concept-audit-queue.md
+│       └── study-tracks.md
 └── exercises/
     └── bs-*.md
 ```
@@ -134,12 +136,12 @@ Do **not** jump directly to Treatment or placement merely because an old roadmap
 The current order is:
 
 ```text
-1. Source integrity / source gaps
-2. Run targeted paragraph/subheading audits for high-risk sections while expanding mapped nodes into `EXERCISE_READY` cards (exercise-objective + section-heading mapping is complete across Parts 0-14)
-3. Promote mapped training points to EXERCISE_READY with reviewed prerequisite closure
-4. Placement audit on that ready slice
-5. Start from the first prerequisite gap below L4
-6. Continue through the dependency graph
+1. Source integrity is pinned; exercise-objective + section-heading mapping is complete across current FSO Parts 0-14
+2. Maintain targeted paragraph/subheading audits for high-risk sections without pretending this is learner mastery
+3. Expand high-value mapped nodes to EXERCISE_READY with reviewed prerequisite closure
+4. Use the generated study tracks to choose a coherent ready slice
+5. Placement audit only on that ready slice
+6. Start from the first prerequisite gap below L4 and continue through the dependency graph
 ```
 
-The first executable spine is intentionally small and high-value: HTTP/SPA tracing, stale mutation handling, transaction/lock/isolation, REST/error boundaries, refresh-token races, durable jobs and streaming/replay. It is listed in the generated coverage view.
+The executable curriculum is now a **62-node ready graph** (38 FSO, 16 TECH SCHOOL, 8 Agent; 0 learner-verified). Rather than asking the learner to navigate that graph manually, [`study-tracks.md`](./curriculum/views/study-tracks.md) groups it into seven coherent tracks: Web/browser foundations, TypeScript runtime trust, HTTP/auth/security, frontend state/realtime, Go backend reliability, containers/delivery, and production Agent engineering.

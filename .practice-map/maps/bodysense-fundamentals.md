@@ -24,7 +24,7 @@ updated_at: 2026-09-08
 
 # Current Focus
 
-**课程重构已进入可机器验收阶段。当前不做正式 placement；先扩大 `EXERCISE_READY` 前置链并继续补当前 FSO MOOC 来源。**
+**课程重构的 source/exercise/section mapping 已完成，当前进入“高价值 `EXERCISE_READY` 图谱 + 定向 paragraph/subheading 审计”阶段。正式 placement 只在 ready slice 上进行。**
 
 2026-09-08 本轮后，已可核实的状态：
 
@@ -35,28 +35,18 @@ FSO concept audit: Parts 0-14 = 664/664 current section-heading units dispositio
 FSO historical Parts 8-11: 104 exercise records archived for comparison
 TECH public lectures #0-#77: 78/78 title-level MAPPED
 Agent A1-A8: 8/8 EXERCISE_READY
-EXERCISE_READY: 32
+EXERCISE_READY: 62
 LEARNER_VERIFIED: 0 in the new mastery ledger
 ```
 
-第一条可执行前置链：
-
-```text
-BS-FSO-0.4 -> BS-FSO-0.6 -> BS-FSO-2.17
-
-BS-TECH-06 -> BS-TECH-07 -> BS-TECH-09
-BS-TECH-11 -> BS-TECH-16
-BS-TECH-37
-BS-TECH-54
-BS-A7
-```
+当前可执行课程已经不是一条短链，而是 **62-node ready graph**。学习时优先使用 `docs/learning/curriculum/views/study-tracks.md` 的 7 条 learner-facing tracks；机器依赖真相仍由 `prerequisite-spine.md` + ledgers 维护。
 
 下一步优先级：
 
-1. 继续把高价值 prerequisite 节点从 `MAPPED` 提升为 `EXERCISE_READY`；
-2. 对高风险 section 做 paragraph/subheading 定向审计，同时开始把已映射节点继续提升为 `EXERCISE_READY`；
-3. 不把 exercise mapping / heading 数量当成完整知识点完成率；
-4. 当某条依赖链已 ready 后，再对该链执行 placement audit。
+1. 使用 `study-tracks.md` 维护 62 个 ready 节点的可学习路径，并继续补真正高价值的 readiness；
+2. 对高风险 section 做 paragraph/subheading 定向审计，尤其是 heading 内含多层机制但当前只按 section disposition 的内容；
+3. 不把 exercise/heading/concept mapping 或已有 production tests 当成 learner mastery；
+4. 选择一条 ready track 后再做 placement audit，从第一个低于 L4 的 prerequisite 开始。
 
 # Prior Mastery Evidence
 
@@ -83,6 +73,15 @@ Diagnosis Production Agent 学习已经形成可复用的高阶证据，不因�
 这些是历史学习/工程证据，不会自动写成新的 `LEARNER_VERIFIED`；placement 时仍需确认它们是否满足对应 exercise 的 L4/L5 acceptance contract。
 
 # Session Log
+
+## 2026-09-08 · 62-node executable graph + learner-facing study tracks
+
+- 从已完成的 FSO section concept ledger 中挑选 **30 个高 ROI concept nodes** 提升为 `EXERCISE_READY`：HTTP/middleware/CORS/error taxonomy、auth/revocation/browser token/XSS/BOLA、TanStack Query/state ownership/realtime recovery、TypeScript structural typing/runtime trust、CI/CD provenance/safe deploy、Docker image/Compose/network/volume。
+- 每个新增 ready concept 都有独立 L4 card：prediction、failure case、BodySense target、focused verification、explain-back、production-change rule 与 reviewed prerequisite closure。
+- 当前 executable graph：**FSO 38 + TECH 16 + Agent 8 = 62 nodes**；仍为 **0 LEARNER_VERIFIED**。
+- 新增生成式 `views/study-tracks.md`，将 62-node graph 组织为 7 条重叠但可复用 prerequisite evidence 的学习路径；ledger/prerequisite graph 仍是唯一依赖真相。
+- 真实系统验证：Go middleware/auth focused suites passed；Web 5 files / **42 tests passed** + TypeScript typecheck passed；stream-event parser **12/12 passed**；delivery platform **31/31 passed**；`docker compose ... config --quiet` passed。
+- 这些测试验证的是课程 exercise target 当前确实可执行/可观察，不自动授予任何 learner mastery。
 
 ## 2026-09-08 · Agent extension 8/8 executable readiness
 

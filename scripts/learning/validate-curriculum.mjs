@@ -235,6 +235,13 @@ function validateFSOConceptAudit() {
 
   const conceptById = new Map(fso.items.filter((item) => item.kind === 'concept').map((item) => [item.id, item]));
   const allowed = new Set(['PENDING','REVIEWED_CONCEPTS_MAPPED','REVIEWED_NON_ENGINEERING','REVIEWED_REDUNDANT']);
+  const pendingRows = auditRows.filter((row) => row.status === 'PENDING');
+  if (fso.baseline.semantic_section_audit_checked_at && pendingRows.length > 0) {
+    fail(`FSO concept audit: baseline claims completed section audit at ${fso.baseline.semantic_section_audit_checked_at}, but ${pendingRows.length} rows are PENDING`);
+  }
+  if (fso.baseline.current_mooc?.semantic_mapping?.section_units_dispositioned !== 385) {
+    fail('FSO concept audit: current MOOC baseline must record 385 dispositioned section units');
+  }
   for (const row of auditRows) {
     if (!allowed.has(row.status)) fail(`FSO concept audit ${row.section_id}: invalid status ${row.status}`);
     const linked = row.linked_concept_ids ?? [];
