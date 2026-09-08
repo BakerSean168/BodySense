@@ -35,15 +35,15 @@ FSO concept audit: Parts 0-14 = 664/664 current section-heading units dispositio
 FSO historical Parts 8-11: 104 exercise records archived for comparison
 TECH public lectures #0-#77: 78/78 title-level MAPPED
 Agent A1-A8: 8/8 EXERCISE_READY
-EXERCISE_READY: 97
+EXERCISE_READY: 113
 LEARNER_VERIFIED: 0 in the new mastery ledger
 ```
 
-当前可执行课程已经扩展为 **97-node ready graph**。学习时优先使用 `docs/learning/curriculum/views/study-tracks.md` 的 9 条 learner-facing tracks；机器依赖真相仍由 `prerequisite-spine.md` + ledgers 维护。
+当前可执行课程已经扩展为 **113-node ready graph**。学习时优先使用 `docs/learning/curriculum/views/study-tracks.md` 的 10 条 learner-facing tracks；机器依赖真相仍由 `prerequisite-spine.md` + ledgers 维护。
 
 下一步优先级：
 
-1. 使用 `study-tracks.md` 维护 97 个 ready 节点的可学习路径，并继续补真正高价值的 readiness；
+1. 使用 `study-tracks.md` 维护 113 个 ready 节点的可学习路径，并继续补真正高价值的 readiness；
 2. 扩展已建立的 fingerprinted paragraph/example prose-risk 审计；首批 10/10 高风险 core sections 已完成，primary section 与 pinned-core nested h4-h6 heading inventory 也均无 PENDING；
 3. 不把 exercise/heading/concept mapping 或已有 production tests 当成 learner mastery；
 4. 选择一条 ready track 后再做 placement audit，从第一个低于 L4 的 prerequisite 开始。
@@ -73,6 +73,16 @@ Diagnosis Production Agent 学习已经形成可复用的高阶证据，不因�
 这些是历史学习/工程证据，不会自动写成新的 `LEARNER_VERIFIED`；placement 时仍需确认它们是否满足对应 exercise 的 L4/L5 acceptance contract。
 
 # Session Log
+
+## 2026-09-08 · Frontend architecture/build readiness + 113-node graph
+
+- 将 **16 个 frontend architecture/build/testing concepts** 从 `MAPPED` 提升为 `EXERCISE_READY`：client routing、route params、imperative navigation、route-owned data、form labels、frontend integration boundary、E2E black-box、negative E2E、coverage semantics、transpilation、bundling、Vite dev-vs-prod、Vite config、feature organization、React.memo、monorepo topology。
+- 新增第 **10 条 learner-facing track**：`Frontend routing, build and application architecture`；React testing track 同时接入 integration/E2E/coverage，React hooks track 接入 React.memo。
+- 每张 card 都要求区分“开发时能跑”和“生产构建/深链/URL ownership/可访问性/黑盒边界真的成立”，避免把 Vite/Router/Playwright 仅当作 API 用法记忆。
+- executable graph 由 **97 -> 113 nodes**：FSO 89 + TECH 16 + Agent 8；仍为 **0 LEARNER_VERIFIED**。
+- 真实验证：`pnpm nx build @bodysense/web` passed（3670 modules transformed，产出 hashed/code-split chunks；同时观测到 BodyExplorer3D chunk >500kB 的 Vite warning，作为后续 measurement evidence 而非立即重构理由）；routing/service focused suite **3 files / 23 tests passed**；Playwright discovery 成功列出 **10 tests / 6 files**；Nx project inventory 正常。
+- 复跑 `pnpm exec playwright test --list` 后 stderr 为空、exit 0，稳定列出 **10 tests / 6 files**；因此这里只证明 E2E 配置与 test discovery 可用，不把 test listing 冒充真实浏览器全链路通过。
+
 
 ## 2026-09-08 · Targeted prose-risk audit + 97-node graph
 
