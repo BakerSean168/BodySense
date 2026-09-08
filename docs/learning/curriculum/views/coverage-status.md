@@ -71,7 +71,7 @@ This does **not** claim that paid/video-internal teaching semantics were audited
 
 ## Exercise-ready spine
 
-There are currently **86** executable cards and **0** learner-verified cards.
+There are currently **94** executable cards and **0** learner-verified cards.
 
 - `BS-FSO-0.1` -> [card](../../exercises/bs-fso-0-1.md)
 - `BS-FSO-0.3` -> [card](../../exercises/bs-fso-0-3.md)
@@ -135,6 +135,14 @@ There are currently **86** executable cards and **0** learner-verified cards.
 - `BS-P12-CONCEPT-DOCKER-COMPOSE` -> [card](../../exercises/bs-p12-concept-docker-compose.md)
 - `BS-P12-CONCEPT-DOCKER-VOLUMES` -> [card](../../exercises/bs-p12-concept-docker-volumes.md)
 - `BS-P12-CONCEPT-DOCKER-NETWORK-DNS` -> [card](../../exercises/bs-p12-concept-docker-network-dns.md)
+- `BS-P13-CONCEPT-EAGER-VS-LAZY-LOAD` -> [card](../../exercises/bs-p13-concept-eager-vs-lazy-load.md)
+- `BS-P13-CONCEPT-MIGRATION-MODEL-SEPARATION` -> [card](../../exercises/bs-p13-concept-migration-model-separation.md)
+- `BS-P13-CONCEPT-DIRECT-DATABASE-INSPECTION` -> [card](../../exercises/bs-p13-concept-direct-database-inspection.md)
+- `BS-P13-CONCEPT-DATABASE-LAYER-STRUCTURE` -> [card](../../exercises/bs-p13-concept-database-layer-structure.md)
+- `BS-P13-CONCEPT-FOREIGN-KEY-JOIN` -> [card](../../exercises/bs-p13-concept-foreign-key-join.md)
+- `BS-P13-CONCEPT-TRANSACTIONAL-OWNED-INSERT` -> [card](../../exercises/bs-p13-concept-transactional-owned-insert.md)
+- `BS-P13-CONCEPT-RELATIONAL-PROJECTIONS` -> [card](../../exercises/bs-p13-concept-relational-projections.md)
+- `BS-P13-CONCEPT-RELATIONAL-QUERYING` -> [card](../../exercises/bs-p13-concept-relational-querying.md)
 - `BS-TECH-01` -> [card](../../exercises/bs-tech-01.md)
 - `BS-TECH-03` -> [card](../../exercises/bs-tech-03.md)
 - `BS-TECH-05` -> [card](../../exercises/bs-tech-05.md)

@@ -3,7 +3,7 @@
 > Generated from the machine-readable ledgers. This is a curated learner-facing lens over the ready prerequisite graph, not a second source of truth.
 > Tracks overlap intentionally. Complete a prerequisite once and reuse the same evidence across every track that depends on it.
 
-Current executable curriculum: **86 ready/verified nodes**.
+Current executable curriculum: **94 ready/verified nodes**.
 
 ## 1. Web/browser request foundation
 
@@ -118,7 +118,7 @@ Prerequisite closure outside this track: `BS-FSO-0.5`, `BS-FSO-0.4`, `BS-FSO-0.1
 
 ## 7. Go backend, database and concurrency reliability
 
-Move from schema/repository tests through transaction locks/isolation into HTTP/API errors, authentication and durable jobs.
+Move from schema/migrations and repository boundaries through joins/query projections, transaction locks/isolation, authentication and durable jobs.
 
 | # | Exercise | Required level |
 |---:|---|---|
@@ -131,11 +131,19 @@ Move from schema/repository tests through transaction locks/isolation into HTTP/
 | 7 | [BS-TECH-11](../../exercises/bs-tech-11.md) | L4 |
 | 8 | [BS-TECH-15](../../exercises/bs-tech-15.md) | L4 |
 | 9 | [BS-TECH-16](../../exercises/bs-tech-16.md) | L4 |
-| 10 | [BS-TECH-20](../../exercises/bs-tech-20.md) | L4 |
-| 11 | [BS-TECH-21](../../exercises/bs-tech-21.md) | L4 |
-| 12 | [BS-TECH-22](../../exercises/bs-tech-22.md) | L4 |
-| 13 | [BS-TECH-37](../../exercises/bs-tech-37.md) | L4 |
-| 14 | [BS-TECH-54](../../exercises/bs-tech-54.md) | L4 |
+| 10 | [BS-P13-CONCEPT-DATABASE-LAYER-STRUCTURE](../../exercises/bs-p13-concept-database-layer-structure.md) | L4 |
+| 11 | [BS-P13-CONCEPT-FOREIGN-KEY-JOIN](../../exercises/bs-p13-concept-foreign-key-join.md) | L4 |
+| 12 | [BS-P13-CONCEPT-RELATIONAL-QUERYING](../../exercises/bs-p13-concept-relational-querying.md) | L4 |
+| 13 | [BS-P13-CONCEPT-RELATIONAL-PROJECTIONS](../../exercises/bs-p13-concept-relational-projections.md) | L4 |
+| 14 | [BS-P13-CONCEPT-MIGRATION-MODEL-SEPARATION](../../exercises/bs-p13-concept-migration-model-separation.md) | L4 |
+| 15 | [BS-P13-CONCEPT-TRANSACTIONAL-OWNED-INSERT](../../exercises/bs-p13-concept-transactional-owned-insert.md) | L4 |
+| 16 | [BS-P13-CONCEPT-DIRECT-DATABASE-INSPECTION](../../exercises/bs-p13-concept-direct-database-inspection.md) | L4 |
+| 17 | [BS-P13-CONCEPT-EAGER-VS-LAZY-LOAD](../../exercises/bs-p13-concept-eager-vs-lazy-load.md) | L4 |
+| 18 | [BS-TECH-20](../../exercises/bs-tech-20.md) | L4 |
+| 19 | [BS-TECH-21](../../exercises/bs-tech-21.md) | L4 |
+| 20 | [BS-TECH-22](../../exercises/bs-tech-22.md) | L4 |
+| 21 | [BS-TECH-37](../../exercises/bs-tech-37.md) | L4 |
+| 22 | [BS-TECH-54](../../exercises/bs-tech-54.md) | L4 |
 
 Prerequisite closure outside this track: `BS-FSO-3.1`, `BS-FSO-0.4`, `BS-FSO-0.1`, `BS-FSO-0.3`, `BS-TECH-10`, `BS-TECH-25`.
 

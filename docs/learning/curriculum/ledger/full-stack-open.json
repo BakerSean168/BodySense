@@ -33988,7 +33988,7 @@
           "FSO-P13-MOOC-SECTION-010"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P13-CONCEPT-EAGER-VS-LAZY-LOAD",
@@ -34004,9 +34004,11 @@
           "BodySense PostgreSQL/GORM/migration trace",
           "query/constraint/migration/failure prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P13-CONCEPT-RELATIONAL-QUERYING"
+        ],
+        "exercise_card": "../../exercises/bs-p13-concept-eager-vs-lazy-load.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -34089,7 +34091,7 @@
           "FSO-P14-MOOC-SECTION-018"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P13-CONCEPT-MIGRATION-MODEL-SEPARATION",
@@ -34105,9 +34107,11 @@
           "BodySense PostgreSQL/GORM/migration trace",
           "query/constraint/migration/failure prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "TECH-03"
+        ],
+        "exercise_card": "../../exercises/bs-p13-concept-migration-model-separation.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -34241,7 +34245,7 @@
           "FSO-P13-MOOC-SECTION-019"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P13-CONCEPT-DIRECT-DATABASE-INSPECTION",
@@ -34257,9 +34261,12 @@
           "BodySense PostgreSQL/GORM/migration trace",
           "query/constraint/migration/failure prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "TECH-03",
+          "TECH-05"
+        ],
+        "exercise_card": "../../exercises/bs-p13-concept-direct-database-inspection.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -34640,7 +34647,7 @@
           "FSO-P13-MOOC-SECTION-026"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P13-CONCEPT-DATABASE-LAYER-STRUCTURE",
@@ -34659,9 +34666,12 @@
           "BodySense PostgreSQL/GORM/migration trace",
           "query/constraint/migration/failure prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "TECH-01",
+          "TECH-11"
+        ],
+        "exercise_card": "../../exercises/bs-p13-concept-database-layer-structure.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -34694,7 +34704,7 @@
           "FSO-P14-MOOC-SECTION-020"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P13-CONCEPT-FOREIGN-KEY-JOIN",
@@ -34710,9 +34720,11 @@
           "BodySense PostgreSQL/GORM/migration trace",
           "query/constraint/migration/failure prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "TECH-15"
+        ],
+        "exercise_card": "../../exercises/bs-p13-concept-foreign-key-join.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -34743,7 +34755,7 @@
           "FSO-P13-MOOC-SECTION-029"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P13-CONCEPT-TRANSACTIONAL-OWNED-INSERT",
@@ -34760,9 +34772,12 @@
           "BodySense PostgreSQL/GORM/migration trace",
           "query/constraint/migration/failure prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "TECH-06",
+          "TECH-22"
+        ],
+        "exercise_card": "../../exercises/bs-p13-concept-transactional-owned-insert.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -34794,7 +34809,7 @@
           "FSO-P14-MOOC-SECTION-016"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P13-CONCEPT-RELATIONAL-PROJECTIONS",
@@ -34811,9 +34826,11 @@
           "BodySense PostgreSQL/GORM/migration trace",
           "query/constraint/migration/failure prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P13-CONCEPT-RELATIONAL-QUERYING"
+        ],
+        "exercise_card": "../../exercises/bs-p13-concept-relational-projections.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -34845,7 +34862,7 @@
           "FSO-P13-MOOC-SECTION-001"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P13-CONCEPT-RELATIONAL-QUERYING",
@@ -34860,9 +34877,12 @@
           "BodySense PostgreSQL/GORM/migration trace",
           "query/constraint/migration/failure prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P13-CONCEPT-FOREIGN-KEY-JOIN",
+          "TECH-05"
+        ],
+        "exercise_card": "../../exercises/bs-p13-concept-relational-querying.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",

@@ -35,11 +35,11 @@ FSO concept audit: Parts 0-14 = 664/664 current section-heading units dispositio
 FSO historical Parts 8-11: 104 exercise records archived for comparison
 TECH public lectures #0-#77: 78/78 title-level MAPPED
 Agent A1-A8: 8/8 EXERCISE_READY
-EXERCISE_READY: 86
+EXERCISE_READY: 94
 LEARNER_VERIFIED: 0 in the new mastery ledger
 ```
 
-当前可执行课程已经扩展为 **86-node ready graph**。学习时优先使用 `docs/learning/curriculum/views/study-tracks.md` 的 9 条 learner-facing tracks；机器依赖真相仍由 `prerequisite-spine.md` + ledgers 维护。
+当前可执行课程已经扩展为 **94-node ready graph**。学习时优先使用 `docs/learning/curriculum/views/study-tracks.md` 的 9 条 learner-facing tracks；机器依赖真相仍由 `prerequisite-spine.md` + ledgers 维护。
 
 下一步优先级：
 
@@ -73,6 +73,16 @@ Diagnosis Production Agent 学习已经形成可复用的高阶证据，不因�
 这些是历史学习/工程证据，不会自动写成新的 `LEARNER_VERIFIED`；placement 时仍需确认它们是否满足对应 exercise 的 L4/L5 acceptance contract。
 
 # Session Log
+
+## 2026-09-08 · Relational persistence readiness + 94-node graph
+
+- 将 **8 个 relational/persistence concept nodes** 提升为 `EXERCISE_READY`：database layer boundaries、FK/join、relational query、intentional projection、migration/model separation、transactional user-owned insert、direct database inspection、eager-vs-lazy loading。
+- 这些节点直接基于 BodySense 当前 Go/PostgreSQL/GORM/migration/repository/service 结构，不强制改成 FSO 的 Sequelize 技术栈；重点是 SQL/约束/ownership/transaction/query-count 等可迁移语义。
+- Go backend track 从 14 个显式节点扩展为 **22 个**，把 TECH SCHOOL 的 schema/transaction/lock/isolation/auth/worker 与 FSO relational semantics 合并在同一 prerequisite graph 中。
+- executable graph 由 **86 -> 94 nodes**：FSO 70 + TECH 16 + Agent 8；仍为 **0 LEARNER_VERIFIED**。
+- 真实验证：`go test ./internal/database ./internal/repository -count=1` passed；service 的 BodyState/HealthWorkspace/Auth/Treatment/Consultation focused suite passed；curriculum validator/status passed。
+- 仍遵循规则：已有 repository/service tests 只证明 exercise target 可观察，不自动证明学习者达到 L4。
+
 
 ## 2026-09-08 · React core readiness + 86-node study graph
 

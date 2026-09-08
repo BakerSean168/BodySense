@@ -63,8 +63,14 @@ const tracks = [
   },
   {
     name: 'Go backend, database and concurrency reliability',
-    goal: 'Move from schema/repository tests through transaction locks/isolation into HTTP/API errors, authentication and durable jobs.',
-    ids: ['TECH-01','TECH-03','TECH-05','TECH-06','TECH-07','TECH-09','TECH-11','TECH-15','TECH-16','TECH-20','TECH-21','TECH-22','TECH-37','TECH-54'],
+    goal: 'Move from schema/migrations and repository boundaries through joins/query projections, transaction locks/isolation, authentication and durable jobs.',
+    ids: [
+      'TECH-01','TECH-03','TECH-05','TECH-06','TECH-07','TECH-09','TECH-11','TECH-15','TECH-16',
+      'FSO-P13-CONCEPT-DATABASE-LAYER-STRUCTURE','FSO-P13-CONCEPT-FOREIGN-KEY-JOIN','FSO-P13-CONCEPT-RELATIONAL-QUERYING',
+      'FSO-P13-CONCEPT-RELATIONAL-PROJECTIONS','FSO-P13-CONCEPT-MIGRATION-MODEL-SEPARATION',
+      'FSO-P13-CONCEPT-TRANSACTIONAL-OWNED-INSERT','FSO-P13-CONCEPT-DIRECT-DATABASE-INSPECTION','FSO-P13-CONCEPT-EAGER-VS-LAZY-LOAD',
+      'TECH-20','TECH-21','TECH-22','TECH-37','TECH-54',
+    ],
   },
   {
     name: 'Containers and production delivery',
