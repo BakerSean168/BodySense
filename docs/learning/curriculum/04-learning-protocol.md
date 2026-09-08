@@ -126,6 +126,19 @@ L5 verified
 
 A previous AI implementation is not automatically learner evidence. Conversely, a previously documented prediction/test/review can be reused; the learner is not forced to rewrite code just to re-earn credit.
 
+Machine recording path:
+
+```text
+select active track
+-> generate placement-status.md
+-> assess the next ready node
+-> record L1..L5 + concrete evidence
+-> update canonical ledger mastery/current lifecycle
+-> regenerate/validate
+```
+
+`ledger/learner-placement.json` stores the active track and the latest placement journal row per assessed item. The source ledgers remain canonical for `mastery.current`, evidence and `LEARNER_VERIFIED`. The placement validator rejects journal/ledger drift, ghost mastery without a journal row, and verification below the required gate. Mastery recording is monotonic through the normal command; a downgrade requires an explicit manual correction because it invalidates earlier evidence rather than representing ordinary study progress.
+
 ## 6. Dependency rule
 
 Dependency claims are promoted with exercise readiness rather than invented globally. A mapped-but-not-ready record uses `dependency_audit: UNMODELED` and does not pretend that simple source ordering is a verified prerequisite graph.

@@ -52,6 +52,7 @@ Browse every mapped training point without opening JSON through:
 - [`Pinned-core nested-heading audit`](./curriculum/views/core-subheading-audit.md) — h4-h6 coverage for Parts 0-7, including alternative/removed exercise tracks
 - [`Pinned-core targeted prose-risk audit`](./curriculum/views/core-prose-risk-audit.md) — fingerprinted full-fragment review of selected high-risk h3 sections; explicitly non-exhaustive
 - [`Exercise-ready study tracks`](./curriculum/views/study-tracks.md) — the recommended learner-facing path through the current ready graph
+- [`Learner placement status`](./curriculum/views/placement-status.md) — active track, prerequisite closure, assessed gaps/verification and the next placement target
 
 ## Current source-integrity boundary
 
@@ -109,8 +110,11 @@ docs/learning/
 │   │   ├── full-stack-open-concept-audit.json
 │   │   ├── full-stack-open-core-subheading-audit.json
 │   │   ├── full-stack-open-core-prose-risk-audit.json
+│   │   ├── learner-placement.json
 │   │   ├── techschool-backend.json
 │   │   └── bodysense-agent.json
+│   ├── placement/
+│   │   └── README.md
 │   └── views/
 │       ├── coverage-status.md
 │       ├── prerequisite-spine.md
@@ -120,7 +124,8 @@ docs/learning/
 │       ├── concept-audit-queue.md
 │       ├── core-subheading-audit.md
 │       ├── core-prose-risk-audit.md
-│       └── study-tracks.md
+│       ├── study-tracks.md
+│       └── placement-status.md
 └── exercises/
     └── bs-*.md
 ```
@@ -142,6 +147,17 @@ pnpm curriculum:refresh-fso-core-prose-risk -- /path/to/fullstack-checkout
 
 These refresh commands update source fingerprints/inventory only; changed fragments return to `PENDING` until semantic review is repeated. They are intentionally **not** part of ordinary `curriculum:check`, so validation remains deterministic/offline against the committed source snapshots.
 
+Placement is now machine-backed as well:
+
+```bash
+pnpm curriculum:select-track -- typescript-runtime-trust
+pnpm curriculum:placement
+node scripts/learning/record-placement.mjs <ITEM_ID> <L1|L2|L3|L4|L5> --evidence "learner evidence"
+pnpm curriculum:check
+```
+
+`record-placement.mjs` can be run with `--dry-run` to preview lifecycle/mastery effects. No placement result is written without explicit evidence, and existing production code/tests are never converted into mastery automatically.
+
 ## Current execution order
 
 Do **not** jump directly to Treatment or placement merely because an old roadmap named it next.
@@ -157,4 +173,4 @@ The current order is:
 6. Start from the first prerequisite gap below L4 and continue through the dependency graph
 ```
 
-The executable curriculum is now a **113-node ready graph** (89 FSO, 16 TECH SCHOOL, 8 Agent; 0 learner-verified). Rather than asking the learner to navigate that graph manually, [`study-tracks.md`](./curriculum/views/study-tracks.md) groups it into ten coherent tracks: Web/browser foundations, React component/hooks, React testing/failure isolation, frontend routing/build/application architecture, TypeScript runtime trust, HTTP/auth/security, frontend state/realtime, Go backend reliability, containers/delivery, and production Agent engineering. The track generator fails if any ready node is omitted from the learner-facing map.
+The executable curriculum is now a **113-node ready graph** (89 FSO, 16 TECH SCHOOL, 8 Agent; 0 learner-verified). Rather than asking the learner to navigate that graph manually, [`study-tracks.md`](./curriculum/views/study-tracks.md) groups it into ten coherent tracks: Web/browser foundations, React component/hooks, React testing/failure isolation, frontend routing/build/application architecture, TypeScript runtime trust, HTTP/auth/security, frontend state/realtime, Go backend reliability, containers/delivery, and production Agent engineering. The track generator fails if any ready node is omitted from the learner-facing map. Placement state is tracked separately in `learner-placement.json`; the current active placement slice is generated in [`placement-status.md`](./curriculum/views/placement-status.md) and begins with TypeScript/runtime-trust without granting any mastery in advance.

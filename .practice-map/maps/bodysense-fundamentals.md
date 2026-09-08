@@ -24,7 +24,7 @@ updated_at: 2026-09-08
 
 # Current Focus
 
-**课程重构的 source/exercise/section mapping 已完成，当前进入“高价值 `EXERCISE_READY` 图谱 + 定向 paragraph/example 审计”阶段。正式 placement 只在 ready slice 上进行。**
+**课程重构的 source/exercise/section mapping 与 113-node ready graph 已完成到可执行状态；placement 现在也有 machine-backed journal/validator/view。当前 active slice 为 TypeScript contracts/runtime trust，但尚未把任何历史工程成果自动计为 mastery。**
 
 2026-09-08 本轮后，已可核实的状态：
 
@@ -39,14 +39,14 @@ EXERCISE_READY: 113
 LEARNER_VERIFIED: 0 in the new mastery ledger
 ```
 
-当前可执行课程已经扩展为 **113-node ready graph**。学习时优先使用 `docs/learning/curriculum/views/study-tracks.md` 的 10 条 learner-facing tracks；机器依赖真相仍由 `prerequisite-spine.md` + ledgers 维护。
+当前可执行课程是 **113-node ready graph**。学习路径由 `study-tracks.md` 的 10 条 learner-facing tracks 提供；机器依赖真相由 `prerequisite-spine.md` + source ledgers 维护；placement 状态由 `learner-placement.json` + `placement-status.md` 维护。当前 `typescript-runtime-trust` slice 含 7 个 track nodes + 5 个 prerequisite nodes，全部仍是 UNASSESSED。
 
 下一步优先级：
 
-1. 使用 `study-tracks.md` 维护 113 个 ready 节点的可学习路径，并继续补真正高价值的 readiness；
-2. 扩展已建立的 fingerprinted paragraph/example prose-risk 审计；首批 10/10 高风险 core sections 已完成，primary section 与 pinned-core nested h4-h6 heading inventory 也均无 PENDING；
-3. 不把 exercise/heading/concept mapping 或已有 production tests 当成 learner mastery；
-4. 选择一条 ready track 后再做 placement audit，从第一个低于 L4 的 prerequisite 开始。
+1. 对当前 `typescript-runtime-trust` ready slice 做真实 placement，不读实现答案先做 prediction / falsification / explain-back；
+2. 用 `record-placement.mjs` 只记录实际观察到的 L1-L5 证据，低于 gate 的节点保留为 gap；
+3. placement 过程中继续补真正阻塞学习的 readiness / prose-risk 缺口，而不是为了扩大数字继续铺节点；
+4. Agent/Go 等历史高阶工程证据只作为 `prior-evidence-review` 候选，不自动升级为 `LEARNER_VERIFIED`。
 
 # Prior Mastery Evidence
 
@@ -73,6 +73,15 @@ Diagnosis Production Agent 学习已经形成可复用的高阶证据，不因�
 这些是历史学习/工程证据，不会自动写成新的 `LEARNER_VERIFIED`；placement 时仍需确认它们是否满足对应 exercise 的 L4/L5 acceptance contract。
 
 # Session Log
+
+## 2026-09-08 · Machine-backed placement workflow
+
+- 将 placement 从文档规则升级成可执行状态机：新增 `ledger/learner-placement.json`、stable track IDs、placement validator、active-track selector、placement status generator 与 evidence-gated record command。
+- 当前 active track 设为 `typescript-runtime-trust`；generated queue 自动合并 prerequisite closure，当前 **12 nodes = 7 track + 5 prerequisite，0 assessed / 0 verified**，下一 placement target 为 `BS-P9-CONCEPT-STRUCTURAL-TYPING`。
+- `record-placement.mjs` 只有在显式 `--evidence` 存在时才写入；L1-L3 记录真实 gap 并保持 `EXERCISE_READY`，达到 required gate 才切到 `LEARNER_VERIFIED`；普通命令禁止 mastery downgrade。
+- placement journal 与 canonical source ledgers 双向校验：禁止 ghost mastery、禁止 journal/ledger level drift、禁止低于 required gate 却标记 verified。
+- `--dry-run` smoke test 已验证不会写入真实 mastery；当前 ledger 仍保持 **LEARNER_VERIFIED = 0**。
+
 
 ## 2026-09-08 · Frontend architecture/build readiness + 113-node graph
 
