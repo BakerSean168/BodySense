@@ -10,6 +10,7 @@ const fso = load('full-stack-open.json');
 const tech = load('techschool-backend.json');
 const agent = load('bodysense-agent.json');
 const mooc = load('full-stack-open-current-mooc.json');
+const conceptAudit = load('full-stack-open-concept-audit.json');
 
 const rank = { SOURCE_INDEXED: 1, MAPPED: 2, EXERCISE_READY: 3, LEARNER_VERIFIED: 4 };
 const atLeast = (items, state) => items.filter((item) => rank[item.lifecycle] >= rank[state]).length;
@@ -17,6 +18,11 @@ const fsoExercises = fso.items.filter((item) => item.kind === 'exercise');
 const core = fsoExercises.filter((item) => item.source.part <= 7);
 const currentMoocExercises = fsoExercises.filter((item) => item.source.part >= 8 && item.source.part <= 14);
 const fsoConcepts = fso.items.filter((item) => item.kind === 'concept');
+const conceptAuditCounts = conceptAudit.sections.reduce((counts, row) => {
+  counts[row.status] = (counts[row.status] ?? 0) + 1;
+  return counts;
+}, {});
+const conceptAuditDispositioned = conceptAudit.sections.filter((row) => row.status !== 'PENDING').length;
 const techLectures = tech.items.filter((item) => item.kind === 'lecture');
 const all = [...fso.items, ...tech.items, ...agent.items];
 const ready = all.filter((item) => ['EXERCISE_READY', 'LEARNER_VERIFIED'].includes(item.lifecycle));
@@ -26,7 +32,7 @@ const lines = [
   '# BodySense Master Course · Coverage Status',
   '',
   '> Generated from machine-readable ledgers. Do not hand-edit counts in this file.',
-  '> Baseline date: 2026-09-07',
+  '> Baseline date: 2026-09-08',
   '',
   '## What the numbers mean',
   '',
@@ -63,7 +69,9 @@ lines.push(
   '',
   `The previous repository snapshot's Parts 8-11 are retained only as **${(fso.historical_items ?? []).length} historical exercise records** for comparison; they are not counted as current-course parity.`,
   '',
-  `Current source-section inventory: **${fso.source_sections.length} core headings (Parts 0-7)** + **${fso.current_mooc_sections.length} current MOOC headings (Parts 8-14)**. **${fsoConcepts.length} explicit section-derived concepts** have already been semantically decomposed and mapped. Heading inventory improves omission detection but does not equal exhaustive paragraph-level semantic parity.`,
+  `Current source-section inventory: **${fso.source_sections.length} core headings (Parts 0-7)** + **${fso.current_mooc_sections.length} current MOOC headings (Parts 8-14)**. **${fsoConcepts.length} explicit section-derived concepts** have already been semantically decomposed and mapped.`,
+  '',
+  `Section semantic-audit disposition: **${conceptAuditDispositioned}/${conceptAudit.sections.length}** reviewed; **${conceptAuditCounts.REVIEWED_CONCEPTS_MAPPED ?? 0}** concept-mapped, **${conceptAuditCounts.REVIEWED_REDUNDANT ?? 0}** explicitly redundant, **${conceptAuditCounts.REVIEWED_NON_ENGINEERING ?? 0}** non-engineering/logistics, **${conceptAuditCounts.PENDING ?? 0}** pending. Heading review improves omission detection but does not equal exhaustive paragraph-level prose parity.`,
   '',
   'The MOOC metadata snapshot intentionally stores only identifiers, page/chapter metadata, headings and short exercise titles; it does not copy exercise assignments, answers or course prose.',
   '',

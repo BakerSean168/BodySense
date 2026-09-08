@@ -1,7 +1,7 @@
 # BodySense Master Course
 
 > Status: **curriculum reconstruction in progress**
-> Baseline date: 2026-09-07
+> Baseline date: 2026-09-08
 > Practice application: the production-shaped BodySense repository itself
 > Coverage source of truth: `docs/learning/curriculum/ledger/*.json`
 > Learner-progress source of truth: `.practice-map/maps/bodysense-fundamentals.md`
@@ -52,14 +52,14 @@ Browse every mapped training point without opening JSON through:
 
 ## Current source-integrity boundary
 
-As of the pinned 2026-09-07 audit:
+As of the 2026-09-08 curriculum audit (with the advanced MOOC source snapshot pinned on 2026-09-07):
 
 - Full Stack Open Parts **0-7**: 158 numbered source exercises are individually indexed and semantically mapped to BodySense.
 - Full Stack Open Parts **8-14**: the public `courses.mooc.fi` Course Material API is pinned as a metadata-only snapshot: **198 current exercise records and 385 current section headings**. All **198/198 current exercise records now have exercise-level semantic BodySense mappings**; section/prose concept parity remains a separate unfinished audit.
-- Full Stack Open section/concept audit: Parts **0-2** currently have **99/99 section-heading review units dispositioned** (technical concepts mapped or non-engineering/redundant disposition recorded). This is section-level semantic audit, not yet final prose-level parity.
+- Full Stack Open section/concept audit: core Parts **0-7** now have **279/279 section-heading review units dispositioned**. Across the full current Parts 0-14 inventory, **279/664** section units are reviewed and **385** advanced MOOC section units (Parts 8-14) remain pending. This is section-level semantic audit, not yet final paragraph/prose parity.
 - The former repository-snapshot records for Parts **8-11** are retained as **104 historical exercises** for comparison and are not counted as current parity.
 - TECH SCHOOL Backend #0-#77: 78/78 public README lecture IDs/titles are pinned and mapped. This is **public title-level parity only**, not a claim that paid/video-internal teaching semantics were audited.
-- FSO concept coverage is tracked separately from numbered exercises. Source section headings are indexed and high-risk previously-missed concepts (Promises/Effects, memoization, XSS/injection, dependency security, access control) now have explicit records; exhaustive paragraph-level semantic parity is not yet claimed.
+- FSO concept coverage is tracked separately from numbered exercises. The core 0-7 section audit now includes explicit mappings for browser/runtime/React/backend/persistence/testing/state/build/security concepts, while redundant and non-engineering sections are dispositioned explicitly rather than silently skipped. Exhaustive paragraph-level semantic parity is still not claimed.
 
 Exact source commits and unresolved source gaps are recorded in [`curriculum/SOURCES.md`](./curriculum/SOURCES.md).
 
@@ -134,7 +134,7 @@ The current order is:
 
 ```text
 1. Source integrity / source gaps
-2. Continue source-section/prose concept semantic audit (numbered exercise mapping is complete across current FSO Parts 0-14)
+2. Continue section/prose semantic audit for current MOOC Parts 8-14 (core Parts 0-7 section audit is complete; numbered exercise mapping is complete across Parts 0-14)
 3. Promote mapped training points to EXERCISE_READY with reviewed prerequisite closure
 4. Placement audit on that ready slice
 5. Start from the first prerequisite gap below L4

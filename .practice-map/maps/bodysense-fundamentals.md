@@ -5,7 +5,7 @@ status: active
 level: intermediate
 language: go, python, javascript, typescript, react
 created_at: 2026-07-13
-updated_at: 2026-09-07
+updated_at: 2026-09-08
 ---
 
 # Goal
@@ -26,12 +26,12 @@ updated_at: 2026-09-07
 
 **课程重构已进入可机器验收阶段。当前不做正式 placement；先扩大 `EXERCISE_READY` 前置链并继续补当前 FSO MOOC 来源。**
 
-2026-09-07 本轮后，已可核实的状态：
+2026-09-08 本轮后，已可核实的状态：
 
 ```text
 FSO Parts 0-7 numbered exercises: 158/158 MAPPED
 FSO Parts 8-14: current MOOC API source indexed; 198/198 exercise records MAPPED
-FSO concept audit: Parts 0-2 = 99/99 section units dispositioned; Parts 3-14 pending; final prose-level audit remains separate
+FSO concept audit: core Parts 0-7 = 279/279 section units dispositioned; Parts 8-14 = 385 section units pending; final paragraph/prose-level audit remains separate
 FSO historical Parts 8-11: 104 exercise records archived for comparison
 TECH public lectures #0-#77: 78/78 title-level MAPPED
 Agent A1-A8: 8/8 MAPPED
@@ -54,7 +54,7 @@ BS-A7
 下一步优先级：
 
 1. 继续把高价值 prerequisite 节点从 `MAPPED` 提升为 `EXERCISE_READY`；
-2. 对 FSO current section/prose concepts 继续逐项 semantic audit；
+2. 对 FSO current MOOC Parts 8-14 的 section/prose concepts 继续逐项 semantic audit（core 0-7 section audit 已完成）；
 3. 不把 exercise mapping / heading 数量当成完整知识点完成率；
 4. 当某条依赖链已 ready 后，再对该链执行 placement audit。
 
@@ -83,6 +83,16 @@ Diagnosis Production Agent 学习已经形成可复用的高阶证据，不因�
 这些是历史学习/工程证据，不会自动写成新的 `LEARNER_VERIFIED`；placement 时仍需确认它们是否满足对应 exercise 的 L4/L5 acceptance contract。
 
 # Session Log
+
+## 2026-09-08 · FSO core Parts 0~7 section-level concept audit complete
+
+- 完成 Part 3（40/40）Backend 基础语义审计：HTTP server/framework、route/body/method semantics、middleware/CORS、deployment/proxy、database/schema/repository boundaries、environment/secrets、error taxonomy、lint。
+- 完成 Part 4（23/23）Backend testing/auth 语义审计：unit/API integration tests、deterministic fixtures、async/await、regression-first refactor、relations/projections、password hashing、bearer auth、token revocation、HTTPS。
+- 完成 Part 5（42/42）Frontend testing/router 语义审计：auth UI/token persistence、refs/children、Testing Library、coverage/snapshot、Playwright/E2E fixture/locator/debugging、React Router、UI library/styling trade-offs。
+- 完成 Part 6（51/51）State management 语义审计：Flux/Redux/Zustand、server vs client state、Fetch、async store actions、TanStack Query/invalidation、Context、Redux Toolkit/Thunk；重复章节显式链接已有 concept。
+- 完成 Part 7（24/24）Advanced React/build/security 语义审计：hooks/memoization、bundling/Vite/esbuild/transpilation、error boundary、monorepo/feature organization、SSE/WebSocket/polling、security，以及 TypeScript/SSR-RSC/Next.js/microservices/serverless 的架构比较。
+- core Parts 0~7 的 **279/279 active section-heading review units 已全部 dispositioned**；全课程当前 664 个 section units 中还剩 **385 个 Parts 8~14 current MOOC units** 待审。
+- 这些结果只代表 section-level semantic disposition；不会把 heading 数量或 concept mapping 冒充最终 paragraph/prose-level knowledge parity，也不会自动升级 learner mastery。
 
 ## 2026-09-07 · FSO Parts 0~2 section-level concept audit complete
 

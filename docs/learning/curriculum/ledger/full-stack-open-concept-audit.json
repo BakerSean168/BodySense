@@ -1164,1570 +1164,1887 @@
       "part": 3,
       "title": "Simple web server",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-HTTP-SERVER-LIFECYCLE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-002",
       "part": 3,
       "title": "Express",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-WEB-FRAMEWORK-ABSTRACTION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-003",
       "part": 3,
       "title": "Web and Express",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-ROUTE-RESPONSE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-004",
       "part": 3,
       "title": "Automatic Change Tracking",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-DEV-RELOAD"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-005",
       "part": 3,
       "title": "REST",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_REDUNDANT",
+      "linked_concept_ids": [
+        "FSO-P2-CONCEPT-REST"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "REST is revisited here in more depth; the core resource/URL/method semantics are already represented by the Part 2 REST concept and Part 3 adds separate route/method concepts below."
     },
     {
       "section_id": "FSO-P3-SECTION-006",
       "part": 3,
       "title": "Fetching a single resource",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-ROUTE-PARAMS-404"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-007",
       "part": 3,
       "title": "Deleting resources",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-DELETE-204"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-008",
       "part": 3,
       "title": "Postman",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-MANUAL-HTTP-PROBING"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-009",
       "part": 3,
       "title": "The Visual Studio Code REST client",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_REDUNDANT",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-MANUAL-HTTP-PROBING"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "VS Code REST Client is a tooling variant of the same backend-only HTTP probing discipline."
     },
     {
       "section_id": "FSO-P3-SECTION-010",
       "part": 3,
       "title": "The WebStorm HTTP Client",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_REDUNDANT",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-MANUAL-HTTP-PROBING"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "WebStorm HTTP Client is a tooling variant of the same backend-only HTTP probing discipline."
     },
     {
       "section_id": "FSO-P3-SECTION-011",
       "part": 3,
       "title": "Receiving data",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-REQUEST-BODY-PARSING"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-012",
       "part": 3,
       "title": "About HTTP request types",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-HTTP-SAFETY-IDEMPOTENCY"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-013",
       "part": 3,
       "title": "Middleware",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-MIDDLEWARE-CHAIN"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-014",
       "part": 3,
       "title": "Same origin policy and CORS",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-SAME-ORIGIN-CORS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-015",
       "part": 3,
       "title": "Application to the Internet",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-PRODUCTION-DEPLOYMENT"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-016",
       "part": 3,
       "title": "Frontend production build",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-FRONTEND-PRODUCTION-BUILD"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-017",
       "part": 3,
       "title": "Serving static files from the backend",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-STATIC-ASSET-TOPOLOGY"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-018",
       "part": 3,
       "title": "The whole app to the internet",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-DEPLOYMENT-SMOKE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-019",
       "part": 3,
       "title": "Streamlining deploying of the frontend",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-DEPLOYMENT-AUTOMATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-020",
       "part": 3,
       "title": "Proxy",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-DEV-PROXY"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-021",
       "part": 3,
       "title": "Debugging Node applications",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-SERVER-DEBUGGING"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-022",
       "part": 3,
       "title": "MongoDB",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-DOCUMENT-VS-RELATIONAL"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-023",
       "part": 3,
       "title": "Schema",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-PERSISTENCE-SCHEMA"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-024",
       "part": 3,
       "title": "Creating and saving objects",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-PERSIST-CREATE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-025",
       "part": 3,
       "title": "Fetching objects from the database",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-PERSIST-QUERY"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-026",
       "part": 3,
       "title": "Connecting the backend to a database",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-DB-CONNECTION-LIFECYCLE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-027",
       "part": 3,
       "title": "Moving db configuration to its own module",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-PERSISTENCE-MODULE-BOUNDARY"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-028",
       "part": 3,
       "title": "Defining environment variables using the dotenv library",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-ENV-CONFIG-SECRETS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-029",
       "part": 3,
       "title": "Using database in route handlers",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-HANDLER-REPOSITORY-BOUNDARY"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-030",
       "part": 3,
       "title": "Verifying frontend and backend integration",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-INTEGRATION-FAULT-LOCALIZATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-031",
       "part": 3,
       "title": "A true full stack developer's oath",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_REDUNDANT",
+      "linked_concept_ids": [
+        "FSO-P1-CONCEPT-DEBUGGING-DISCIPLINE",
+        "FSO-P3-CONCEPT-INTEGRATION-FAULT-LOCALIZATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "The “oath” restates systematic debugging and layered verification rather than introducing a distinct technical mechanism."
     },
     {
       "section_id": "FSO-P3-SECTION-032",
       "part": 3,
       "title": "Error handling",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-HTTP-ERROR-TAXONOMY"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-033",
       "part": 3,
       "title": "Moving error handling into middleware",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-CENTRAL-ERROR-MIDDLEWARE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-034",
       "part": 3,
       "title": "The order of middleware loading",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-MIDDLEWARE-ORDER"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-035",
       "part": 3,
       "title": "Other operations",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-DATABASE-MUTATION-SEMANTICS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-036",
       "part": 3,
       "title": "Deploying the database backend to production",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-PRODUCTION-DB-SECRETS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-037",
       "part": 3,
       "title": "Lint",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-STATIC-ANALYSIS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-038",
       "part": 3,
       "title": "Formatting the Configuration File",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-LINT-CONFIG-SCOPE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-039",
       "part": 3,
       "title": "Running the Linter",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-LINT-AUTOMATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P3-SECTION-040",
       "part": 3,
       "title": "Adding More Style Rules",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-LINT-POLICY"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P4-SECTION-001",
       "part": 4,
       "title": "Project structure",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P4-CONCEPT-BACKEND-MODULE-STRUCTURE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P4-SECTION-002",
       "part": 4,
       "title": "Note on exports",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P4-CONCEPT-MODULE-EXPORTS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P4-SECTION-003",
       "part": 4,
       "title": "Testing Node applications",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P4-CONCEPT-UNIT-TESTING"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P4-SECTION-004",
       "part": 4,
       "title": "Test environment",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P4-CONCEPT-TEST-ENVIRONMENT"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P4-SECTION-005",
       "part": 4,
       "title": "supertest",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P4-CONCEPT-HTTP-INTEGRATION-TEST"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P4-SECTION-006",
       "part": 4,
       "title": "Initializing the database before tests",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P4-CONCEPT-DETERMINISTIC-DB-FIXTURES"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P4-SECTION-007",
       "part": 4,
       "title": "Running tests one by one",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P4-CONCEPT-FOCUSED-TEST-EXECUTION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P4-SECTION-008",
       "part": 4,
       "title": "async/await",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P4-CONCEPT-ASYNC-AWAIT"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P4-SECTION-009",
       "part": 4,
       "title": "async/await in the backend",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P4-CONCEPT-ASYNC-SERVER-FLOW"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P4-SECTION-010",
       "part": 4,
       "title": "Refactoring the route responsible for adding a note",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P4-CONCEPT-REGRESSION-FIRST-REFACTOR"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P4-SECTION-011",
       "part": 4,
       "title": "Refactoring the route responsible for fetching a single note",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P4-CONCEPT-GET-BY-ID-CONTRACT-TEST"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P4-SECTION-012",
       "part": 4,
       "title": "Refactoring the route responsible for deleting a note",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P4-CONCEPT-DELETE-CONTRACT-TEST"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P4-SECTION-013",
       "part": 4,
       "title": "Optimizing the beforeEach function",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P4-CONCEPT-TEST-FIXTURE-EFFICIENCY"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P4-SECTION-014",
       "part": 4,
       "title": "A true full stack developer's oath",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_REDUNDANT",
+      "linked_concept_ids": [
+        "FSO-P4-CONCEPT-UNIT-TESTING",
+        "FSO-P4-CONCEPT-DETERMINISTIC-DB-FIXTURES"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "The testing “oath” reinforces systematic test discipline already represented by explicit unit/integration fixture concepts."
     },
     {
       "section_id": "FSO-P4-SECTION-015",
       "part": 4,
       "title": "Refactoring tests",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P4-CONCEPT-TEST-ORGANIZATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P4-SECTION-016",
       "part": 4,
       "title": "References across collections",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P4-CONCEPT-DATA-RELATIONSHIPS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P4-SECTION-017",
       "part": 4,
       "title": "Mongoose schema for users",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P4-CONCEPT-USER-AUTH-SCHEMA"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P4-SECTION-018",
       "part": 4,
       "title": "Creating users",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P4-CONCEPT-PASSWORD-HASHING"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P4-SECTION-019",
       "part": 4,
       "title": "Creating a new note",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P4-CONCEPT-RESOURCE-OWNERSHIP"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P4-SECTION-020",
       "part": 4,
       "title": "Populate",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P4-CONCEPT-RELATION-PROJECTION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P4-SECTION-021",
       "part": 4,
       "title": "Limiting creating new notes to logged-in users",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P4-CONCEPT-BEARER-AUTHORIZATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P4-SECTION-022",
       "part": 4,
       "title": "Problems of Token-based authentication",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P4-CONCEPT-TOKEN-REVOCATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P4-SECTION-023",
       "part": 4,
       "title": "End notes",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P4-CONCEPT-HTTPS-CREDENTIAL-TRANSPORT"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-001",
       "part": 5,
       "title": "Adding a Login Form",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-LOGIN-FORM"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-002",
       "part": 5,
       "title": "Adding Logic to the Login Form",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-LOGIN-FLOW"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-003",
       "part": 5,
       "title": "Conditional Rendering of the Login Form",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-AUTH-CONDITIONAL-UI"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-004",
       "part": 5,
       "title": "Note on Using the Label Element",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-FORM-LABELS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-005",
       "part": 5,
       "title": "Creating new notes",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-AUTHENTICATED-MUTATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-006",
       "part": 5,
       "title": "Saving the token to the browser's local storage",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-BROWSER-TOKEN-PERSISTENCE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-007",
       "part": 5,
       "title": "A note on using local storage",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_REDUNDANT",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-BROWSER-TOKEN-PERSISTENCE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "The local-storage caution section deepens the same browser credential persistence and threat-model concept."
     },
     {
       "section_id": "FSO-P5-SECTION-008",
       "part": 5,
       "title": "Displaying the login form only when appropriate",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_REDUNDANT",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-AUTH-CONDITIONAL-UI"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "This section revisits showing/hiding the login UI according to authentication state; the reusable semantics are already captured by the authenticated conditional-UI concept."
     },
     {
       "section_id": "FSO-P5-SECTION-009",
       "part": 5,
       "title": "The components children, aka. props.children",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-PROPS-CHILDREN"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-010",
       "part": 5,
       "title": "State of the forms",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_REDUNDANT",
+      "linked_concept_ids": [
+        "FSO-P1-CONCEPT-STATE-PROP-OWNERSHIP"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "The form-state discussion is a concrete application of state colocation/lifting and ownership already represented in Part 1."
     },
     {
       "section_id": "FSO-P5-SECTION-011",
       "part": 5,
       "title": "References to components with ref",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-REACT-REFS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-012",
       "part": 5,
       "title": "One point about components",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-COMPONENT-INSTANCES"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-013",
       "part": 5,
       "title": "The updated full stack developer's oath",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_REDUNDANT",
+      "linked_concept_ids": [
+        "FSO-P1-CONCEPT-DEBUGGING-DISCIPLINE",
+        "FSO-P3-CONCEPT-INTEGRATION-FAULT-LOCALIZATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "The updated oath restates systematic fault localization as moving parts increase; no new mechanism is introduced."
     },
     {
       "section_id": "FSO-P5-SECTION-014",
       "part": 5,
       "title": "ESlint",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_REDUNDANT",
+      "linked_concept_ids": [
+        "FSO-P3-CONCEPT-STATIC-ANALYSIS",
+        "FSO-P3-CONCEPT-LINT-CONFIG-SCOPE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Frontend ESLint uses the same static-analysis/configuration semantics already mapped in Part 3."
     },
     {
       "section_id": "FSO-P5-SECTION-015",
       "part": 5,
       "title": "Rendering the component for tests",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-COMPONENT-TEST-RENDER"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-016",
       "part": 5,
       "title": "Test file location",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-TEST-COLOCATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-017",
       "part": 5,
       "title": "Searching for content in a component",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-TESTING-LIBRARY-QUERIES"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-018",
       "part": 5,
       "title": "Debugging tests",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-FRONTEND-TEST-DEBUGGING"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-019",
       "part": 5,
       "title": "Clicking buttons in tests",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-USER-EVENT-TESTING"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-020",
       "part": 5,
       "title": "Tests for the Togglable component",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-STATEFUL-COMPONENT-TESTS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-021",
       "part": 5,
       "title": "Testing the forms",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-FORM-INTERACTION-TESTS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-022",
       "part": 5,
       "title": "About finding the elements",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-TEST-LOCATOR-PRIORITY"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-023",
       "part": 5,
       "title": "Test coverage",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-TEST-COVERAGE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-024",
       "part": 5,
       "title": "Frontend integration tests",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-FRONTEND-INTEGRATION-BOUNDARY"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-025",
       "part": 5,
       "title": "Snapshot testing",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-SNAPSHOT-TESTING"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-026",
       "part": 5,
       "title": "Initializing tests",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-E2E-RUNNER-SETUP"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-027",
       "part": 5,
       "title": "Testing our own code",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-E2E-BLACK-BOX"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-028",
       "part": 5,
       "title": "Writing on the form",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-E2E-FORM-FLOW"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-029",
       "part": 5,
       "title": "Test Initialization",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-E2E-BEFOREEACH"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-030",
       "part": 5,
       "title": "Testing note creation",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-E2E-AUTH-MUTATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-031",
       "part": 5,
       "title": "Controlling the state of the database",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-E2E-DATABASE-CONTROL"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-032",
       "part": 5,
       "title": "Test for failed login",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-NEGATIVE-E2E"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-033",
       "part": 5,
       "title": "Running tests one by one",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_REDUNDANT",
+      "linked_concept_ids": [
+        "FSO-P4-CONCEPT-FOCUSED-TEST-EXECUTION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Playwright focus/only/grep is the E2E form of focused test execution already mapped in Part 4."
     },
     {
       "section_id": "FSO-P5-SECTION-034",
       "part": 5,
       "title": "Helper functions for tests",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-E2E-HELPERS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-035",
       "part": 5,
       "title": "Note importance change revisited",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-E2E-LOCATOR-SPECIFICITY"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-036",
       "part": 5,
       "title": "Test development and debugging",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-PLAYWRIGHT-DEBUGGING"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-037",
       "part": 5,
       "title": "React Router",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-CLIENT-ROUTING"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-038",
       "part": 5,
       "title": "Parameterized route",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-ROUTE-PARAMS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-039",
       "part": 5,
       "title": "useNavigate",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-IMPERATIVE-NAVIGATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-040",
       "part": 5,
       "title": "Parameterized Route Revisited",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-ROUTE-DATA-OWNERSHIP"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-041",
       "part": 5,
       "title": "UI libraries",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-UI-LIBRARY-EVALUATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P5-SECTION-042",
       "part": 5,
       "title": "Styled Components",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-CSS-IN-JS-COMPARE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-001",
       "part": 6,
       "title": "Flux architecture",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-FLUX-UNIDIRECTIONAL"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-002",
       "part": 6,
       "title": "Redux",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-REDUX-COMPARE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-003",
       "part": 6,
       "title": "Zustand",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-ZUSTAND-STORE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-004",
       "part": 6,
       "title": "Using the state from different components",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-STORE-SELECTORS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-005",
       "part": 6,
       "title": "Reorganizing the state",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-STORE-ACTION-ORGANIZATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-006",
       "part": 6,
       "title": "Submission repository",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
+      "status": "REVIEWED_NON_ENGINEERING",
       "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "reviewed_at": "2026-09-08",
+      "note": "Submission-repository logistics; retained in the audit so source coverage is explicit but it is not a reusable engineering concept."
     },
     {
       "section_id": "FSO-P6-SECTION-007",
       "part": 6,
       "title": "Zustand notes",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-DOMAIN-STORE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-008",
       "part": 6,
       "title": "Pure functions and immutable objects",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-IMMUTABLE-STORE-UPDATE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-009",
       "part": 6,
       "title": "Uncontrolled form",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-UNCONTROLLED-FORMS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-010",
       "part": 6,
       "title": "More components and functionality",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-STORE-COMPONENT-BOUNDARY"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-011",
       "part": 6,
       "title": "More complex state",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-COMPLEX-STORE-STATE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-012",
       "part": 6,
       "title": "Data to the server",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-SERVER-VS-CLIENT-STATE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-013",
       "part": 6,
       "title": "Fetch API",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-FETCH-API"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-014",
       "part": 6,
       "title": "Fetching data from the server",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-ASYNC-DATA-HYDRATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-015",
       "part": 6,
       "title": "Sending data to the server",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-SERVER-MUTATION-RECONCILE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-016",
       "part": 6,
       "title": "Async actions",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-ASYNC-STORE-ACTIONS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-017",
       "part": 6,
       "title": "Middlewares",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-STORE-MIDDLEWARE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-018",
       "part": 6,
       "title": "Testing Zustand stores",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-STORE-UNIT-TESTS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-019",
       "part": 6,
       "title": "Testing the notes store",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-ASYNC-STORE-TESTS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-020",
       "part": 6,
       "title": "Managing data on the server with the TanStack Query library",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-TANSTACK-QUERY"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-021",
       "part": 6,
       "title": "Synchronizing data to the server using TanStack Query",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-QUERY-MUTATION-INVALIDATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-022",
       "part": 6,
       "title": "Optimizing the performance",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-QUERY-PERFORMANCE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-023",
       "part": 6,
       "title": "useNotes custom hook",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-QUERY-CUSTOM-HOOK"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-024",
       "part": 6,
       "title": "Context API",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-REACT-CONTEXT"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-025",
       "part": 6,
       "title": "Defining the counter context in its own file",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-CONTEXT-MODULE-BOUNDARY"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-026",
       "part": 6,
       "title": "Which state management solution to choose?",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-STATE-OWNERSHIP-CHOICE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-027",
       "part": 6,
       "title": "Flux-architecture",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_REDUNDANT",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-FLUX-UNIDIRECTIONAL"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "This later chapter revisits the same Flux architecture semantics for the Redux track."
     },
     {
       "section_id": "FSO-P6-SECTION-028",
       "part": 6,
       "title": "Redux",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_REDUNDANT",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-REDUX-COMPARE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "This later chapter reintroduces Redux; distinct reducer/toolkit concepts are mapped in subsequent sections."
     },
     {
       "section_id": "FSO-P6-SECTION-029",
       "part": 6,
       "title": "A note about the use of createStore",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-LIBRARY-API-EVOLUTION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-030",
       "part": 6,
       "title": "Redux-notes",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-REDUX-REDUCER-MODEL"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-031",
       "part": 6,
       "title": "Pure functions, immutable",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_REDUNDANT",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-IMMUTABLE-STORE-UPDATE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "The Redux discussion repeats pure/immutable update semantics already mapped for the Zustand track."
     },
     {
       "section_id": "FSO-P6-SECTION-032",
       "part": 6,
       "title": "Configuring the test environment",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_REDUNDANT",
+      "linked_concept_ids": [
+        "FSO-P5-CONCEPT-COMPONENT-TEST-RENDER",
+        "FSO-P4-CONCEPT-TEST-ENVIRONMENT"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Vitest setup repeats the general test-environment/runtime configuration semantics already mapped."
     },
     {
       "section_id": "FSO-P6-SECTION-033",
       "part": 6,
       "title": "Tests for noteReducer",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-REDUCER-TESTS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-034",
       "part": 6,
       "title": "Array spread syntax",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_REDUNDANT",
+      "linked_concept_ids": [
+        "FSO-P1-CONCEPT-IMMUTABLE-ARRAY-STATE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Array spread is another syntax for immutable array construction already captured in Part 1."
     },
     {
       "section_id": "FSO-P6-SECTION-035",
       "part": 6,
       "title": "Uncontrolled form",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_REDUNDANT",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-UNCONTROLLED-FORMS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "This Redux example reuses the same uncontrolled-form semantics mapped earlier in Part 6."
     },
     {
       "section_id": "FSO-P6-SECTION-036",
       "part": 6,
       "title": "Action creators",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-ACTION-CREATORS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-037",
       "part": 6,
       "title": "Forwarding Redux Store to various components",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-STORE-PROVIDER"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-038",
       "part": 6,
       "title": "More components",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-COMPONENT-DISPATCH-SELECT"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-039",
       "part": 6,
       "title": "Store with complex state",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_REDUNDANT",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-COMPLEX-STORE-STATE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "The Redux example repeats multi-field complex store-state concerns already mapped in the Zustand track."
     },
     {
       "section_id": "FSO-P6-SECTION-040",
       "part": 6,
       "title": "Combined reducers",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-STATE-SLICE-COMPOSITION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-041",
       "part": 6,
       "title": "Finishing the filters",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-DERIVED-SELECTORS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-042",
       "part": 6,
       "title": "Redux Toolkit and Refactoring the Store Configuration",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-REDUX-TOOLKIT-CONFIG"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-043",
       "part": 6,
       "title": "Redux Toolkit and Refactoring Reducers",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-REDUX-CREATE-SLICE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-044",
       "part": 6,
       "title": "Redux Toolkit and console.log",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-PROXY-DRAFT-DEBUGGING"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-045",
       "part": 6,
       "title": "Redux DevTools",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-STATE-DEVTOOLS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-046",
       "part": 6,
       "title": "Setting up JSON Server",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_REDUNDANT",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-SERVER-VS-CLIENT-STATE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "JSON Server is a teaching backend used to make server-owned state concrete; the ownership distinction is already represented."
     },
     {
       "section_id": "FSO-P6-SECTION-047",
       "part": 6,
       "title": "Fetch API",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_REDUNDANT",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-FETCH-API"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "The Redux track repeats native Fetch API semantics already mapped earlier in Part 6."
     },
     {
       "section_id": "FSO-P6-SECTION-048",
       "part": 6,
       "title": "Getting data from the backend",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_REDUNDANT",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-ASYNC-DATA-HYDRATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Fetching initial backend data repeats the async hydration lifecycle already mapped earlier."
     },
     {
       "section_id": "FSO-P6-SECTION-049",
       "part": 6,
       "title": "Initializing the store with data fetched from the server",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-REDUX-ASYNC-HYDRATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-050",
       "part": 6,
       "title": "Sending data to the backend",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-REDUX-REMOTE-MUTATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P6-SECTION-051",
       "part": 6,
       "title": "Asynchronous actions and Redux Thunk",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-REDUX-THUNK"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P7-SECTION-001",
       "part": 7,
       "title": "React Hooks",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P7-CONCEPT-HOOKS-MENTAL-MODEL"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P7-SECTION-002",
@@ -2738,8 +3055,8 @@
       "linked_concept_ids": [
         "FSO-P7-CONCEPT-USEMEMO"
       ],
-      "reviewed_at": "2026-09-07",
-      "note": "Technical section reviewed; reusable concepts represented by explicit concept record(s)."
+      "reviewed_at": "2026-09-08",
+      "note": "Existing explicit useMemo concept was created in the earlier high-risk audit and directly covers this section."
     },
     {
       "section_id": "FSO-P7-SECTION-003",
@@ -2750,8 +3067,8 @@
       "linked_concept_ids": [
         "FSO-P7-CONCEPT-REACT-MEMO"
       ],
-      "reviewed_at": "2026-09-07",
-      "note": "Technical section reviewed; reusable concepts represented by explicit concept record(s)."
+      "reviewed_at": "2026-09-08",
+      "note": "Existing explicit React.memo concept directly covers this section."
     },
     {
       "section_id": "FSO-P7-SECTION-004",
@@ -2762,158 +3079,186 @@
       "linked_concept_ids": [
         "FSO-P7-CONCEPT-USECALLBACK"
       ],
-      "reviewed_at": "2026-09-07",
-      "note": "Technical section reviewed; reusable concepts represented by explicit concept record(s)."
+      "reviewed_at": "2026-09-08",
+      "note": "Existing explicit useCallback concept directly covers this section."
     },
     {
       "section_id": "FSO-P7-SECTION-005",
       "part": 7,
       "title": "Custom hooks",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P7-CONCEPT-CUSTOM-HOOKS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P7-SECTION-006",
       "part": 7,
       "title": "Spread attributes",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P7-CONCEPT-PROP-SPREAD"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P7-SECTION-007",
       "part": 7,
       "title": "More about hooks",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_REDUNDANT",
+      "linked_concept_ids": [
+        "FSO-P7-CONCEPT-CUSTOM-HOOKS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "The “more about hooks” section reinforces custom hooks as modularization/reuse rather than introducing a separate mechanism."
     },
     {
       "section_id": "FSO-P7-SECTION-008",
       "part": 7,
       "title": "Submission repository",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
+      "status": "REVIEWED_NON_ENGINEERING",
       "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "reviewed_at": "2026-09-08",
+      "note": "Submission-repository logistics; retained explicitly in the audit but not treated as a reusable engineering concept."
     },
     {
       "section_id": "FSO-P7-SECTION-009",
       "part": 7,
       "title": "Bundling",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P7-CONCEPT-BUNDLING"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P7-SECTION-010",
       "part": 7,
       "title": "How Vite works",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P7-CONCEPT-VITE-DEV-PROD"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P7-SECTION-011",
       "part": 7,
       "title": "Understanding esbuild",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P7-CONCEPT-ESBUILD-TRANSFORM"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P7-SECTION-012",
       "part": 7,
       "title": "Transpilation",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P7-CONCEPT-TRANSPILATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P7-SECTION-013",
       "part": 7,
       "title": "Development environment",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P7-CONCEPT-FRONTEND-DEV-SERVER"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P7-SECTION-014",
       "part": 7,
       "title": "Vite configuration",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P7-CONCEPT-VITE-CONFIG"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P7-SECTION-015",
       "part": 7,
       "title": "Class Components",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P7-CONCEPT-CLASS-COMPONENTS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P7-SECTION-016",
       "part": 7,
       "title": "Error boundary",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P7-CONCEPT-ERROR-BOUNDARY"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P7-SECTION-017",
       "part": 7,
       "title": "Frontend and backend in the same repository",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P7-CONCEPT-MONOREPO-TOPOLOGY"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P7-SECTION-018",
       "part": 7,
       "title": "Organization of code in React application",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P7-CONCEPT-FEATURE-ORGANIZATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P7-SECTION-019",
       "part": 7,
       "title": "Changes on the server",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P7-CONCEPT-SERVER-PUSH-SYNC"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P7-SECTION-020",
@@ -2922,53 +3267,67 @@
       "source_authority": "current-site-snapshot",
       "status": "REVIEWED_CONCEPTS_MAPPED",
       "linked_concept_ids": [
-        "FSO-P7-CONCEPT-BROKEN-AUTHZ",
-        "FSO-P7-CONCEPT-DEPENDENCY-SECURITY",
         "FSO-P7-CONCEPT-SQL-INJECTION",
-        "FSO-P7-CONCEPT-XSS"
+        "FSO-P7-CONCEPT-XSS",
+        "FSO-P7-CONCEPT-DEPENDENCY-SECURITY",
+        "FSO-P7-CONCEPT-BROKEN-AUTHZ"
       ],
-      "reviewed_at": "2026-09-07",
-      "note": "Technical section reviewed; reusable concepts represented by explicit concept record(s)."
+      "reviewed_at": "2026-09-08",
+      "note": "Existing high-risk security concepts were reviewed directly against this source section and jointly represent its principal reusable security semantics."
     },
     {
       "section_id": "FSO-P7-SECTION-021",
       "part": 7,
       "title": "Current trends",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P7-CONCEPT-TYPESCRIPT-TREND",
+        "FSO-P7-CONCEPT-SSR-RSC-NEXT",
+        "FSO-P7-CONCEPT-MICROSERVICE-BOUNDARIES",
+        "FSO-P7-CONCEPT-SERVERLESS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; distinct reusable semantics are represented by the linked explicit concept records."
     },
     {
       "section_id": "FSO-P7-SECTION-022",
       "part": 7,
       "title": "Useful libraries and further reading",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_concept_ids": [
+        "FSO-P7-CONCEPT-ECOSYSTEM-LIBRARY-SELECTION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Technical section reviewed against the pinned source; reusable semantics are represented by the linked explicit concept record."
     },
     {
       "section_id": "FSO-P7-SECTION-023",
       "part": 7,
       "title": "State Management: Zustand",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_REDUNDANT",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-ZUSTAND-STORE",
+        "FSO-P6-CONCEPT-STATE-OWNERSHIP-CHOICE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "The Zustand exercise variant reuses Zustand/state-ownership semantics already mapped in Part 6."
     },
     {
       "section_id": "FSO-P7-SECTION-024",
       "part": 7,
       "title": "State Management: React Query and Context",
       "source_authority": "current-site-snapshot",
-      "status": "PENDING",
-      "linked_concept_ids": [],
-      "reviewed_at": null,
-      "note": ""
+      "status": "REVIEWED_REDUNDANT",
+      "linked_concept_ids": [
+        "FSO-P6-CONCEPT-TANSTACK-QUERY",
+        "FSO-P6-CONCEPT-REACT-CONTEXT",
+        "FSO-P6-CONCEPT-STATE-OWNERSHIP-CHOICE"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "The React Query + Context exercise variant reuses server-state/context ownership concepts already mapped in Part 6."
     },
     {
       "section_id": "FSO-P8-MOOC-SECTION-001",

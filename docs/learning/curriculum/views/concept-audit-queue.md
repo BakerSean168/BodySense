@@ -4,11 +4,11 @@
 > A section heading is a review unit, not proof that every paragraph-level concept is covered.
 
 Active section-heading review units: **664**.
-Semantically dispositioned section units: **103**.
-- concepts mapped: **77**
-- reviewed non-engineering/course logistics: **21**
-- reviewed redundant: **5**
-- pending: **561**
+Semantically dispositioned section units: **279**.
+- concepts mapped: **227**
+- reviewed non-engineering/course logistics: **23**
+- reviewed redundant: **29**
+- pending: **385**
 
 ## Part 0 — 33/33 section units dispositioned
 
@@ -124,210 +124,210 @@ Semantically dispositioned section units: **103**.
 | `FSO-P2-SECTION-028` · src/content/2/en/part2e.md:211 | Inline styles | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-INLINE-STYLES` |
 | `FSO-P2-SECTION-029` · src/content/2/en/part2e.md:321 | Couple of important remarks | REVIEWED_CONCEPTS_MAPPED | `FSO-P2-CONCEPT-INITIAL-NULL-ASYNC` |
 
-## Part 3 — 0/40 section units dispositioned
+## Part 3 — 40/40 section units dispositioned
 
 | Section source | Heading | Semantic disposition | Explicit concept records |
 |---|---|---|---|
-| `FSO-P3-SECTION-001` · src/content/3/en/part3a.md:94 | Simple web server | PENDING | — |
-| `FSO-P3-SECTION-002` · src/content/3/en/part3a.md:225 | Express | PENDING | — |
-| `FSO-P3-SECTION-003` · src/content/3/en/part3a.md:278 | Web and Express | PENDING | — |
-| `FSO-P3-SECTION-004` · src/content/3/en/part3a.md:359 | Automatic Change Tracking | PENDING | — |
-| `FSO-P3-SECTION-005` · src/content/3/en/part3a.md:393 | REST | PENDING | — |
-| `FSO-P3-SECTION-006` · src/content/3/en/part3a.md:429 | Fetching a single resource | PENDING | — |
-| `FSO-P3-SECTION-007` · src/content/3/en/part3a.md:495 | Deleting resources | PENDING | — |
-| `FSO-P3-SECTION-008` · src/content/3/en/part3a.md:512 | Postman | PENDING | — |
-| `FSO-P3-SECTION-009` · src/content/3/en/part3a.md:530 | The Visual Studio Code REST client | PENDING | — |
-| `FSO-P3-SECTION-010` · src/content/3/en/part3a.md:544 | The WebStorm HTTP Client | PENDING | — |
-| `FSO-P3-SECTION-011` · src/content/3/en/part3a.md:548 | Receiving data | PENDING | — |
-| `FSO-P3-SECTION-012` · src/content/3/en/part3a.md:836 | About HTTP request types | PENDING | — |
-| `FSO-P3-SECTION-013` · src/content/3/en/part3a.md:862 | Middleware | PENDING | — |
-| `FSO-P3-SECTION-014` · src/content/3/en/part3b.md:34 | Same origin policy and CORS | PENDING | — |
-| `FSO-P3-SECTION-015` · src/content/3/en/part3b.md:87 | Application to the Internet | PENDING | — |
-| `FSO-P3-SECTION-016` · src/content/3/en/part3b.md:246 | Frontend production build | PENDING | — |
-| `FSO-P3-SECTION-017` · src/content/3/en/part3b.md:264 | Serving static files from the backend | PENDING | — |
-| `FSO-P3-SECTION-018` · src/content/3/en/part3b.md:347 | The whole app to the internet | PENDING | — |
-| `FSO-P3-SECTION-019` · src/content/3/en/part3b.md:378 | Streamlining deploying of the frontend | PENDING | — |
-| `FSO-P3-SECTION-020` · src/content/3/en/part3b.md:444 | Proxy | PENDING | — |
-| `FSO-P3-SECTION-021` · src/content/3/en/part3c.md:12 | Debugging Node applications | PENDING | — |
-| `FSO-P3-SECTION-022` · src/content/3/en/part3c.md:66 | MongoDB | PENDING | — |
-| `FSO-P3-SECTION-023` · src/content/3/en/part3c.md:200 | Schema | PENDING | — |
-| `FSO-P3-SECTION-024` · src/content/3/en/part3c.md:221 | Creating and saving objects | PENDING | — |
-| `FSO-P3-SECTION-025` · src/content/3/en/part3c.md:251 | Fetching objects from the database | PENDING | — |
-| `FSO-P3-SECTION-026` · src/content/3/en/part3c.md:360 | Connecting the backend to a database | PENDING | — |
-| `FSO-P3-SECTION-027` · src/content/3/en/part3c.md:426 | Moving db configuration to its own module | PENDING | — |
-| `FSO-P3-SECTION-028` · src/content/3/en/part3c.md:509 | Defining environment variables using the dotenv library | PENDING | — |
-| `FSO-P3-SECTION-029` · src/content/3/en/part3c.md:572 | Using database in route handlers | PENDING | — |
-| `FSO-P3-SECTION-030` · src/content/3/en/part3c.md:615 | Verifying frontend and backend integration | PENDING | — |
-| `FSO-P3-SECTION-031` · src/content/3/en/part3c.md:629 | A true full stack developer's oath | PENDING | — |
-| `FSO-P3-SECTION-032` · src/content/3/en/part3c.md:673 | Error handling | PENDING | — |
-| `FSO-P3-SECTION-033` · src/content/3/en/part3c.md:761 | Moving error handling into middleware | PENDING | — |
-| `FSO-P3-SECTION-034` · src/content/3/en/part3c.md:804 | The order of middleware loading | PENDING | — |
-| `FSO-P3-SECTION-035` · src/content/3/en/part3c.md:868 | Other operations | PENDING | — |
-| `FSO-P3-SECTION-036` · src/content/3/en/part3d.md:87 | Deploying the database backend to production | PENDING | — |
-| `FSO-P3-SECTION-037` · src/content/3/en/part3d.md:184 | Lint | PENDING | — |
-| `FSO-P3-SECTION-038` · src/content/3/en/part3d.md:233 | Formatting the Configuration File | PENDING | — |
-| `FSO-P3-SECTION-039` · src/content/3/en/part3d.md:310 | Running the Linter | PENDING | — |
-| `FSO-P3-SECTION-040` · src/content/3/en/part3d.md:368 | Adding More Style Rules | PENDING | — |
+| `FSO-P3-SECTION-001` · src/content/3/en/part3a.md:94 | Simple web server | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-HTTP-SERVER-LIFECYCLE` |
+| `FSO-P3-SECTION-002` · src/content/3/en/part3a.md:225 | Express | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-WEB-FRAMEWORK-ABSTRACTION` |
+| `FSO-P3-SECTION-003` · src/content/3/en/part3a.md:278 | Web and Express | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-ROUTE-RESPONSE` |
+| `FSO-P3-SECTION-004` · src/content/3/en/part3a.md:359 | Automatic Change Tracking | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-DEV-RELOAD` |
+| `FSO-P3-SECTION-005` · src/content/3/en/part3a.md:393 | REST | REVIEWED_REDUNDANT | `FSO-P2-CONCEPT-REST` |
+| `FSO-P3-SECTION-006` · src/content/3/en/part3a.md:429 | Fetching a single resource | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-ROUTE-PARAMS-404` |
+| `FSO-P3-SECTION-007` · src/content/3/en/part3a.md:495 | Deleting resources | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-DELETE-204` |
+| `FSO-P3-SECTION-008` · src/content/3/en/part3a.md:512 | Postman | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-MANUAL-HTTP-PROBING` |
+| `FSO-P3-SECTION-009` · src/content/3/en/part3a.md:530 | The Visual Studio Code REST client | REVIEWED_REDUNDANT | `FSO-P3-CONCEPT-MANUAL-HTTP-PROBING` |
+| `FSO-P3-SECTION-010` · src/content/3/en/part3a.md:544 | The WebStorm HTTP Client | REVIEWED_REDUNDANT | `FSO-P3-CONCEPT-MANUAL-HTTP-PROBING` |
+| `FSO-P3-SECTION-011` · src/content/3/en/part3a.md:548 | Receiving data | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-REQUEST-BODY-PARSING` |
+| `FSO-P3-SECTION-012` · src/content/3/en/part3a.md:836 | About HTTP request types | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-HTTP-SAFETY-IDEMPOTENCY` |
+| `FSO-P3-SECTION-013` · src/content/3/en/part3a.md:862 | Middleware | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-MIDDLEWARE-CHAIN` |
+| `FSO-P3-SECTION-014` · src/content/3/en/part3b.md:34 | Same origin policy and CORS | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-SAME-ORIGIN-CORS` |
+| `FSO-P3-SECTION-015` · src/content/3/en/part3b.md:87 | Application to the Internet | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-PRODUCTION-DEPLOYMENT` |
+| `FSO-P3-SECTION-016` · src/content/3/en/part3b.md:246 | Frontend production build | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-FRONTEND-PRODUCTION-BUILD` |
+| `FSO-P3-SECTION-017` · src/content/3/en/part3b.md:264 | Serving static files from the backend | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-STATIC-ASSET-TOPOLOGY` |
+| `FSO-P3-SECTION-018` · src/content/3/en/part3b.md:347 | The whole app to the internet | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-DEPLOYMENT-SMOKE` |
+| `FSO-P3-SECTION-019` · src/content/3/en/part3b.md:378 | Streamlining deploying of the frontend | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-DEPLOYMENT-AUTOMATION` |
+| `FSO-P3-SECTION-020` · src/content/3/en/part3b.md:444 | Proxy | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-DEV-PROXY` |
+| `FSO-P3-SECTION-021` · src/content/3/en/part3c.md:12 | Debugging Node applications | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-SERVER-DEBUGGING` |
+| `FSO-P3-SECTION-022` · src/content/3/en/part3c.md:66 | MongoDB | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-DOCUMENT-VS-RELATIONAL` |
+| `FSO-P3-SECTION-023` · src/content/3/en/part3c.md:200 | Schema | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-PERSISTENCE-SCHEMA` |
+| `FSO-P3-SECTION-024` · src/content/3/en/part3c.md:221 | Creating and saving objects | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-PERSIST-CREATE` |
+| `FSO-P3-SECTION-025` · src/content/3/en/part3c.md:251 | Fetching objects from the database | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-PERSIST-QUERY` |
+| `FSO-P3-SECTION-026` · src/content/3/en/part3c.md:360 | Connecting the backend to a database | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-DB-CONNECTION-LIFECYCLE` |
+| `FSO-P3-SECTION-027` · src/content/3/en/part3c.md:426 | Moving db configuration to its own module | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-PERSISTENCE-MODULE-BOUNDARY` |
+| `FSO-P3-SECTION-028` · src/content/3/en/part3c.md:509 | Defining environment variables using the dotenv library | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-ENV-CONFIG-SECRETS` |
+| `FSO-P3-SECTION-029` · src/content/3/en/part3c.md:572 | Using database in route handlers | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-HANDLER-REPOSITORY-BOUNDARY` |
+| `FSO-P3-SECTION-030` · src/content/3/en/part3c.md:615 | Verifying frontend and backend integration | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-INTEGRATION-FAULT-LOCALIZATION` |
+| `FSO-P3-SECTION-031` · src/content/3/en/part3c.md:629 | A true full stack developer's oath | REVIEWED_REDUNDANT | `FSO-P1-CONCEPT-DEBUGGING-DISCIPLINE`, `FSO-P3-CONCEPT-INTEGRATION-FAULT-LOCALIZATION` |
+| `FSO-P3-SECTION-032` · src/content/3/en/part3c.md:673 | Error handling | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-HTTP-ERROR-TAXONOMY` |
+| `FSO-P3-SECTION-033` · src/content/3/en/part3c.md:761 | Moving error handling into middleware | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-CENTRAL-ERROR-MIDDLEWARE` |
+| `FSO-P3-SECTION-034` · src/content/3/en/part3c.md:804 | The order of middleware loading | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-MIDDLEWARE-ORDER` |
+| `FSO-P3-SECTION-035` · src/content/3/en/part3c.md:868 | Other operations | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-DATABASE-MUTATION-SEMANTICS` |
+| `FSO-P3-SECTION-036` · src/content/3/en/part3d.md:87 | Deploying the database backend to production | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-PRODUCTION-DB-SECRETS` |
+| `FSO-P3-SECTION-037` · src/content/3/en/part3d.md:184 | Lint | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-STATIC-ANALYSIS` |
+| `FSO-P3-SECTION-038` · src/content/3/en/part3d.md:233 | Formatting the Configuration File | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-LINT-CONFIG-SCOPE` |
+| `FSO-P3-SECTION-039` · src/content/3/en/part3d.md:310 | Running the Linter | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-LINT-AUTOMATION` |
+| `FSO-P3-SECTION-040` · src/content/3/en/part3d.md:368 | Adding More Style Rules | REVIEWED_CONCEPTS_MAPPED | `FSO-P3-CONCEPT-LINT-POLICY` |
 
-## Part 4 — 0/23 section units dispositioned
-
-| Section source | Heading | Semantic disposition | Explicit concept records |
-|---|---|---|---|
-| `FSO-P4-SECTION-001` · src/content/4/en/part4a.md:12 | Project structure | PENDING | — |
-| `FSO-P4-SECTION-002` · src/content/4/en/part4a.md:331 | Note on exports | PENDING | — |
-| `FSO-P4-SECTION-003` · src/content/4/en/part4a.md:471 | Testing Node applications | PENDING | — |
-| `FSO-P4-SECTION-004` · src/content/4/en/part4b.md:16 | Test environment | PENDING | — |
-| `FSO-P4-SECTION-005` · src/content/4/en/part4b.md:105 | supertest | PENDING | — |
-| `FSO-P4-SECTION-006` · src/content/4/en/part4b.md:269 | Initializing the database before tests | PENDING | — |
-| `FSO-P4-SECTION-007` · src/content/4/en/part4b.md:335 | Running tests one by one | PENDING | — |
-| `FSO-P4-SECTION-008` · src/content/4/en/part4b.md:386 | async/await | PENDING | — |
-| `FSO-P4-SECTION-009` · src/content/4/en/part4b.md:462 | async/await in the backend | PENDING | — |
-| `FSO-P4-SECTION-010` · src/content/4/en/part4b.md:487 | Refactoring the route responsible for adding a note | PENDING | — |
-| `FSO-P4-SECTION-011` · src/content/4/en/part4b.md:739 | Refactoring the route responsible for fetching a single note | PENDING | — |
-| `FSO-P4-SECTION-012` · src/content/4/en/part4b.md:782 | Refactoring the route responsible for deleting a note | PENDING | — |
-| `FSO-P4-SECTION-013` · src/content/4/en/part4b.md:817 | Optimizing the beforeEach function | PENDING | — |
-| `FSO-P4-SECTION-014` · src/content/4/en/part4b.md:917 | A true full stack developer's oath | PENDING | — |
-| `FSO-P4-SECTION-015` · src/content/4/en/part4b.md:981 | Refactoring tests | PENDING | — |
-| `FSO-P4-SECTION-016` · src/content/4/en/part4c.md:28 | References across collections | PENDING | — |
-| `FSO-P4-SECTION-017` · src/content/4/en/part4c.md:129 | Mongoose schema for users | PENDING | — |
-| `FSO-P4-SECTION-018` · src/content/4/en/part4c.md:195 | Creating users | PENDING | — |
-| `FSO-P4-SECTION-019` · src/content/4/en/part4c.md:427 | Creating a new note | PENDING | — |
-| `FSO-P4-SECTION-020` · src/content/4/en/part4c.md:496 | Populate | PENDING | — |
-| `FSO-P4-SECTION-021` · src/content/4/en/part4d.md:157 | Limiting creating new notes to logged-in users | PENDING | — |
-| `FSO-P4-SECTION-022` · src/content/4/en/part4d.md:269 | Problems of Token-based authentication | PENDING | — |
-| `FSO-P4-SECTION-023` · src/content/4/en/part4d.md:350 | End notes | PENDING | — |
-
-## Part 5 — 0/42 section units dispositioned
+## Part 4 — 23/23 section units dispositioned
 
 | Section source | Heading | Semantic disposition | Explicit concept records |
 |---|---|---|---|
-| `FSO-P5-SECTION-001` · src/content/5/en/part5a.md:16 | Adding a Login Form | PENDING | — |
-| `FSO-P5-SECTION-002` · src/content/5/en/part5a.md:106 | Adding Logic to the Login Form | PENDING | — |
-| `FSO-P5-SECTION-003` · src/content/5/en/part5a.md:165 | Conditional Rendering of the Login Form | PENDING | — |
-| `FSO-P5-SECTION-004` · src/content/5/en/part5a.md:294 | Note on Using the Label Element | PENDING | — |
-| `FSO-P5-SECTION-005` · src/content/5/en/part5a.md:332 | Creating new notes | PENDING | — |
-| `FSO-P5-SECTION-006` · src/content/5/en/part5a.md:415 | Saving the token to the browser's local storage | PENDING | — |
-| `FSO-P5-SECTION-007` · src/content/5/en/part5a.md:634 | A note on using local storage | PENDING | — |
-| `FSO-P5-SECTION-008` · src/content/5/en/part5b.md:28 | Displaying the login form only when appropriate | PENDING | — |
-| `FSO-P5-SECTION-009` · src/content/5/en/part5b.md:175 | The components children, aka. props.children | PENDING | — |
-| `FSO-P5-SECTION-010` · src/content/5/en/part5b.md:294 | State of the forms | PENDING | — |
-| `FSO-P5-SECTION-011` · src/content/5/en/part5b.md:375 | References to components with ref | PENDING | — |
-| `FSO-P5-SECTION-012` · src/content/5/en/part5b.md:470 | One point about components | PENDING | — |
-| `FSO-P5-SECTION-013` · src/content/5/en/part5b.md:504 | The updated full stack developer's oath | PENDING | — |
-| `FSO-P5-SECTION-014` · src/content/5/en/part5b.md:653 | ESlint | PENDING | — |
-| `FSO-P5-SECTION-015` · src/content/5/en/part5c.md:90 | Rendering the component for tests | PENDING | — |
-| `FSO-P5-SECTION-016` · src/content/5/en/part5c.md:172 | Test file location | PENDING | — |
-| `FSO-P5-SECTION-017` · src/content/5/en/part5c.md:180 | Searching for content in a component | PENDING | — |
-| `FSO-P5-SECTION-018` · src/content/5/en/part5c.md:300 | Debugging tests | PENDING | — |
-| `FSO-P5-SECTION-019` · src/content/5/en/part5c.md:378 | Clicking buttons in tests | PENDING | — |
-| `FSO-P5-SECTION-020` · src/content/5/en/part5c.md:450 | Tests for the Togglable component | PENDING | — |
-| `FSO-P5-SECTION-021` · src/content/5/en/part5c.md:521 | Testing the forms | PENDING | — |
-| `FSO-P5-SECTION-022` · src/content/5/en/part5c.md:627 | About finding the elements | PENDING | — |
-| `FSO-P5-SECTION-023` · src/content/5/en/part5c.md:797 | Test coverage | PENDING | — |
-| `FSO-P5-SECTION-024` · src/content/5/en/part5c.md:852 | Frontend integration tests | PENDING | — |
-| `FSO-P5-SECTION-025` · src/content/5/en/part5c.md:861 | Snapshot testing | PENDING | — |
-| `FSO-P5-SECTION-026` · src/content/5/en/part5d.md:38 | Initializing tests | PENDING | — |
-| `FSO-P5-SECTION-027` · src/content/5/en/part5d.md:163 | Testing our own code | PENDING | — |
-| `FSO-P5-SECTION-028` · src/content/5/en/part5d.md:252 | Writing on the form | PENDING | — |
-| `FSO-P5-SECTION-029` · src/content/5/en/part5d.md:413 | Test Initialization | PENDING | — |
-| `FSO-P5-SECTION-030` · src/content/5/en/part5d.md:443 | Testing note creation | PENDING | — |
-| `FSO-P5-SECTION-031` · src/content/5/en/part5d.md:525 | Controlling the state of the database | PENDING | — |
-| `FSO-P5-SECTION-032` · src/content/5/en/part5d.md:654 | Test for failed login | PENDING | — |
-| `FSO-P5-SECTION-033` · src/content/5/en/part5d.md:741 | Running tests one by one | PENDING | — |
-| `FSO-P5-SECTION-034` · src/content/5/en/part5d.md:769 | Helper functions for tests | PENDING | — |
-| `FSO-P5-SECTION-035` · src/content/5/en/part5d.md:988 | Note importance change revisited | PENDING | — |
-| `FSO-P5-SECTION-036` · src/content/5/en/part5d.md:1105 | Test development and debugging | PENDING | — |
-| `FSO-P5-SECTION-037` · src/content/5/en/part5e.md:76 | React Router | PENDING | — |
-| `FSO-P5-SECTION-038` · src/content/5/en/part5e.md:230 | Parameterized route | PENDING | — |
-| `FSO-P5-SECTION-039` · src/content/5/en/part5e.md:325 | useNavigate | PENDING | — |
-| `FSO-P5-SECTION-040` · src/content/5/en/part5e.md:445 | Parameterized Route Revisited | PENDING | — |
-| `FSO-P5-SECTION-041` · src/content/5/en/part5e.md:657 | UI libraries | PENDING | — |
-| `FSO-P5-SECTION-042` · src/content/5/en/part5e.md:952 | Styled Components | PENDING | — |
+| `FSO-P4-SECTION-001` · src/content/4/en/part4a.md:12 | Project structure | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-BACKEND-MODULE-STRUCTURE` |
+| `FSO-P4-SECTION-002` · src/content/4/en/part4a.md:331 | Note on exports | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-MODULE-EXPORTS` |
+| `FSO-P4-SECTION-003` · src/content/4/en/part4a.md:471 | Testing Node applications | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-UNIT-TESTING` |
+| `FSO-P4-SECTION-004` · src/content/4/en/part4b.md:16 | Test environment | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-TEST-ENVIRONMENT` |
+| `FSO-P4-SECTION-005` · src/content/4/en/part4b.md:105 | supertest | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-HTTP-INTEGRATION-TEST` |
+| `FSO-P4-SECTION-006` · src/content/4/en/part4b.md:269 | Initializing the database before tests | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-DETERMINISTIC-DB-FIXTURES` |
+| `FSO-P4-SECTION-007` · src/content/4/en/part4b.md:335 | Running tests one by one | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-FOCUSED-TEST-EXECUTION` |
+| `FSO-P4-SECTION-008` · src/content/4/en/part4b.md:386 | async/await | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-ASYNC-AWAIT` |
+| `FSO-P4-SECTION-009` · src/content/4/en/part4b.md:462 | async/await in the backend | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-ASYNC-SERVER-FLOW` |
+| `FSO-P4-SECTION-010` · src/content/4/en/part4b.md:487 | Refactoring the route responsible for adding a note | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-REGRESSION-FIRST-REFACTOR` |
+| `FSO-P4-SECTION-011` · src/content/4/en/part4b.md:739 | Refactoring the route responsible for fetching a single note | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-GET-BY-ID-CONTRACT-TEST` |
+| `FSO-P4-SECTION-012` · src/content/4/en/part4b.md:782 | Refactoring the route responsible for deleting a note | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-DELETE-CONTRACT-TEST` |
+| `FSO-P4-SECTION-013` · src/content/4/en/part4b.md:817 | Optimizing the beforeEach function | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-TEST-FIXTURE-EFFICIENCY` |
+| `FSO-P4-SECTION-014` · src/content/4/en/part4b.md:917 | A true full stack developer's oath | REVIEWED_REDUNDANT | `FSO-P4-CONCEPT-UNIT-TESTING`, `FSO-P4-CONCEPT-DETERMINISTIC-DB-FIXTURES` |
+| `FSO-P4-SECTION-015` · src/content/4/en/part4b.md:981 | Refactoring tests | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-TEST-ORGANIZATION` |
+| `FSO-P4-SECTION-016` · src/content/4/en/part4c.md:28 | References across collections | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-DATA-RELATIONSHIPS` |
+| `FSO-P4-SECTION-017` · src/content/4/en/part4c.md:129 | Mongoose schema for users | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-USER-AUTH-SCHEMA` |
+| `FSO-P4-SECTION-018` · src/content/4/en/part4c.md:195 | Creating users | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-PASSWORD-HASHING` |
+| `FSO-P4-SECTION-019` · src/content/4/en/part4c.md:427 | Creating a new note | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-RESOURCE-OWNERSHIP` |
+| `FSO-P4-SECTION-020` · src/content/4/en/part4c.md:496 | Populate | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-RELATION-PROJECTION` |
+| `FSO-P4-SECTION-021` · src/content/4/en/part4d.md:157 | Limiting creating new notes to logged-in users | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-BEARER-AUTHORIZATION` |
+| `FSO-P4-SECTION-022` · src/content/4/en/part4d.md:269 | Problems of Token-based authentication | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-TOKEN-REVOCATION` |
+| `FSO-P4-SECTION-023` · src/content/4/en/part4d.md:350 | End notes | REVIEWED_CONCEPTS_MAPPED | `FSO-P4-CONCEPT-HTTPS-CREDENTIAL-TRANSPORT` |
 
-## Part 6 — 0/51 section units dispositioned
+## Part 5 — 42/42 section units dispositioned
 
 | Section source | Heading | Semantic disposition | Explicit concept records |
 |---|---|---|---|
-| `FSO-P6-SECTION-001` · src/content/6/en/part6a.md:12 | Flux architecture | PENDING | — |
-| `FSO-P6-SECTION-002` · src/content/6/en/part6a.md:26 | Redux | PENDING | — |
-| `FSO-P6-SECTION-003` · src/content/6/en/part6a.md:34 | Zustand | PENDING | — |
-| `FSO-P6-SECTION-004` · src/content/6/en/part6a.md:249 | Using the state from different components | PENDING | — |
-| `FSO-P6-SECTION-005` · src/content/6/en/part6a.md:373 | Reorganizing the state | PENDING | — |
-| `FSO-P6-SECTION-006` · src/content/6/en/part6a.md:466 | Submission repository | PENDING | — |
-| `FSO-P6-SECTION-007` · src/content/6/en/part6a.md:539 | Zustand notes | PENDING | — |
-| `FSO-P6-SECTION-008` · src/content/6/en/part6a.md:586 | Pure functions and immutable objects | PENDING | — |
-| `FSO-P6-SECTION-009` · src/content/6/en/part6a.md:645 | Uncontrolled form | PENDING | — |
-| `FSO-P6-SECTION-010` · src/content/6/en/part6a.md:720 | More components and functionality | PENDING | — |
-| `FSO-P6-SECTION-011` · src/content/6/en/part6b.md:41 | More complex state | PENDING | — |
-| `FSO-P6-SECTION-012` · src/content/6/en/part6b.md:266 | Data to the server | PENDING | — |
-| `FSO-P6-SECTION-013` · src/content/6/en/part6b.md:311 | Fetch API | PENDING | — |
-| `FSO-P6-SECTION-014` · src/content/6/en/part6b.md:336 | Fetching data from the server | PENDING | — |
-| `FSO-P6-SECTION-015` · src/content/6/en/part6b.md:435 | Sending data to the server | PENDING | — |
-| `FSO-P6-SECTION-016` · src/content/6/en/part6b.md:547 | Async actions | PENDING | — |
-| `FSO-P6-SECTION-017` · src/content/6/en/part6b.md:792 | Middlewares | PENDING | — |
-| `FSO-P6-SECTION-018` · src/content/6/en/part6b.md:860 | Testing Zustand stores | PENDING | — |
-| `FSO-P6-SECTION-019` · src/content/6/en/part6b.md:1063 | Testing the notes store | PENDING | — |
-| `FSO-P6-SECTION-020` · src/content/6/en/part6c.md:53 | Managing data on the server with the TanStack Query library | PENDING | — |
-| `FSO-P6-SECTION-021` · src/content/6/en/part6c.md:180 | Synchronizing data to the server using TanStack Query | PENDING | — |
-| `FSO-P6-SECTION-022` · src/content/6/en/part6c.md:353 | Optimizing the performance | PENDING | — |
-| `FSO-P6-SECTION-023` · src/content/6/en/part6c.md:438 | useNotes custom hook | PENDING | — |
-| `FSO-P6-SECTION-024` · src/content/6/en/part6c.md:627 | Context API | PENDING | — |
-| `FSO-P6-SECTION-025` · src/content/6/en/part6c.md:822 | Defining the counter context in its own file | PENDING | — |
-| `FSO-P6-SECTION-026` · src/content/6/en/part6c.md:1069 | Which state management solution to choose? | PENDING | — |
-| `FSO-P6-SECTION-027` · src/content/6/en/part6d.md:18 | Flux-architecture | PENDING | — |
-| `FSO-P6-SECTION-028` · src/content/6/en/part6d.md:34 | Redux | PENDING | — |
-| `FSO-P6-SECTION-029` · src/content/6/en/part6d.md:261 | A note about the use of createStore | PENDING | — |
-| `FSO-P6-SECTION-030` · src/content/6/en/part6d.md:283 | Redux-notes | PENDING | — |
-| `FSO-P6-SECTION-031` · src/content/6/en/part6d.md:364 | Pure functions, immutable | PENDING | — |
-| `FSO-P6-SECTION-032` · src/content/6/en/part6d.md:414 | Configuring the test environment | PENDING | — |
-| `FSO-P6-SECTION-033` · src/content/6/en/part6d.md:474 | Tests for noteReducer | PENDING | — |
-| `FSO-P6-SECTION-034` · src/content/6/en/part6d.md:609 | Array spread syntax | PENDING | — |
-| `FSO-P6-SECTION-035` · src/content/6/en/part6d.md:783 | Uncontrolled form | PENDING | — |
-| `FSO-P6-SECTION-036` · src/content/6/en/part6d.md:890 | Action creators | PENDING | — |
-| `FSO-P6-SECTION-037` · src/content/6/en/part6d.md:939 | Forwarding Redux Store to various components | PENDING | — |
-| `FSO-P6-SECTION-038` · src/content/6/en/part6d.md:1165 | More components | PENDING | — |
-| `FSO-P6-SECTION-039` · src/content/6/en/part6d.md:1362 | Store with complex state | PENDING | — |
-| `FSO-P6-SECTION-040` · src/content/6/en/part6d.md:1430 | Combined reducers | PENDING | — |
-| `FSO-P6-SECTION-041` · src/content/6/en/part6d.md:1557 | Finishing the filters | PENDING | — |
-| `FSO-P6-SECTION-042` · src/content/6/en/part6d.md:1775 | Redux Toolkit and Refactoring the Store Configuration | PENDING | — |
-| `FSO-P6-SECTION-043` · src/content/6/en/part6d.md:1849 | Redux Toolkit and Refactoring Reducers | PENDING | — |
-| `FSO-P6-SECTION-044` · src/content/6/en/part6d.md:2020 | Redux Toolkit and console.log | PENDING | — |
-| `FSO-P6-SECTION-045` · src/content/6/en/part6d.md:2074 | Redux DevTools | PENDING | — |
-| `FSO-P6-SECTION-046` · src/content/6/en/part6d.md:2150 | Setting up JSON Server | PENDING | — |
-| `FSO-P6-SECTION-047` · src/content/6/en/part6d.md:2190 | Fetch API | PENDING | — |
-| `FSO-P6-SECTION-048` · src/content/6/en/part6d.md:2215 | Getting data from the backend | PENDING | — |
-| `FSO-P6-SECTION-049` · src/content/6/en/part6d.md:2272 | Initializing the store with data fetched from the server | PENDING | — |
-| `FSO-P6-SECTION-050` · src/content/6/en/part6d.md:2363 | Sending data to the backend | PENDING | — |
-| `FSO-P6-SECTION-051` · src/content/6/en/part6d.md:2511 | Asynchronous actions and Redux Thunk | PENDING | — |
+| `FSO-P5-SECTION-001` · src/content/5/en/part5a.md:16 | Adding a Login Form | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-LOGIN-FORM` |
+| `FSO-P5-SECTION-002` · src/content/5/en/part5a.md:106 | Adding Logic to the Login Form | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-LOGIN-FLOW` |
+| `FSO-P5-SECTION-003` · src/content/5/en/part5a.md:165 | Conditional Rendering of the Login Form | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-AUTH-CONDITIONAL-UI` |
+| `FSO-P5-SECTION-004` · src/content/5/en/part5a.md:294 | Note on Using the Label Element | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-FORM-LABELS` |
+| `FSO-P5-SECTION-005` · src/content/5/en/part5a.md:332 | Creating new notes | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-AUTHENTICATED-MUTATION` |
+| `FSO-P5-SECTION-006` · src/content/5/en/part5a.md:415 | Saving the token to the browser's local storage | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-BROWSER-TOKEN-PERSISTENCE` |
+| `FSO-P5-SECTION-007` · src/content/5/en/part5a.md:634 | A note on using local storage | REVIEWED_REDUNDANT | `FSO-P5-CONCEPT-BROWSER-TOKEN-PERSISTENCE` |
+| `FSO-P5-SECTION-008` · src/content/5/en/part5b.md:28 | Displaying the login form only when appropriate | REVIEWED_REDUNDANT | `FSO-P5-CONCEPT-AUTH-CONDITIONAL-UI` |
+| `FSO-P5-SECTION-009` · src/content/5/en/part5b.md:175 | The components children, aka. props.children | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-PROPS-CHILDREN` |
+| `FSO-P5-SECTION-010` · src/content/5/en/part5b.md:294 | State of the forms | REVIEWED_REDUNDANT | `FSO-P1-CONCEPT-STATE-PROP-OWNERSHIP` |
+| `FSO-P5-SECTION-011` · src/content/5/en/part5b.md:375 | References to components with ref | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-REACT-REFS` |
+| `FSO-P5-SECTION-012` · src/content/5/en/part5b.md:470 | One point about components | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-COMPONENT-INSTANCES` |
+| `FSO-P5-SECTION-013` · src/content/5/en/part5b.md:504 | The updated full stack developer's oath | REVIEWED_REDUNDANT | `FSO-P1-CONCEPT-DEBUGGING-DISCIPLINE`, `FSO-P3-CONCEPT-INTEGRATION-FAULT-LOCALIZATION` |
+| `FSO-P5-SECTION-014` · src/content/5/en/part5b.md:653 | ESlint | REVIEWED_REDUNDANT | `FSO-P3-CONCEPT-STATIC-ANALYSIS`, `FSO-P3-CONCEPT-LINT-CONFIG-SCOPE` |
+| `FSO-P5-SECTION-015` · src/content/5/en/part5c.md:90 | Rendering the component for tests | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-COMPONENT-TEST-RENDER` |
+| `FSO-P5-SECTION-016` · src/content/5/en/part5c.md:172 | Test file location | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-TEST-COLOCATION` |
+| `FSO-P5-SECTION-017` · src/content/5/en/part5c.md:180 | Searching for content in a component | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-TESTING-LIBRARY-QUERIES` |
+| `FSO-P5-SECTION-018` · src/content/5/en/part5c.md:300 | Debugging tests | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-FRONTEND-TEST-DEBUGGING` |
+| `FSO-P5-SECTION-019` · src/content/5/en/part5c.md:378 | Clicking buttons in tests | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-USER-EVENT-TESTING` |
+| `FSO-P5-SECTION-020` · src/content/5/en/part5c.md:450 | Tests for the Togglable component | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-STATEFUL-COMPONENT-TESTS` |
+| `FSO-P5-SECTION-021` · src/content/5/en/part5c.md:521 | Testing the forms | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-FORM-INTERACTION-TESTS` |
+| `FSO-P5-SECTION-022` · src/content/5/en/part5c.md:627 | About finding the elements | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-TEST-LOCATOR-PRIORITY` |
+| `FSO-P5-SECTION-023` · src/content/5/en/part5c.md:797 | Test coverage | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-TEST-COVERAGE` |
+| `FSO-P5-SECTION-024` · src/content/5/en/part5c.md:852 | Frontend integration tests | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-FRONTEND-INTEGRATION-BOUNDARY` |
+| `FSO-P5-SECTION-025` · src/content/5/en/part5c.md:861 | Snapshot testing | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-SNAPSHOT-TESTING` |
+| `FSO-P5-SECTION-026` · src/content/5/en/part5d.md:38 | Initializing tests | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-E2E-RUNNER-SETUP` |
+| `FSO-P5-SECTION-027` · src/content/5/en/part5d.md:163 | Testing our own code | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-E2E-BLACK-BOX` |
+| `FSO-P5-SECTION-028` · src/content/5/en/part5d.md:252 | Writing on the form | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-E2E-FORM-FLOW` |
+| `FSO-P5-SECTION-029` · src/content/5/en/part5d.md:413 | Test Initialization | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-E2E-BEFOREEACH` |
+| `FSO-P5-SECTION-030` · src/content/5/en/part5d.md:443 | Testing note creation | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-E2E-AUTH-MUTATION` |
+| `FSO-P5-SECTION-031` · src/content/5/en/part5d.md:525 | Controlling the state of the database | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-E2E-DATABASE-CONTROL` |
+| `FSO-P5-SECTION-032` · src/content/5/en/part5d.md:654 | Test for failed login | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-NEGATIVE-E2E` |
+| `FSO-P5-SECTION-033` · src/content/5/en/part5d.md:741 | Running tests one by one | REVIEWED_REDUNDANT | `FSO-P4-CONCEPT-FOCUSED-TEST-EXECUTION` |
+| `FSO-P5-SECTION-034` · src/content/5/en/part5d.md:769 | Helper functions for tests | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-E2E-HELPERS` |
+| `FSO-P5-SECTION-035` · src/content/5/en/part5d.md:988 | Note importance change revisited | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-E2E-LOCATOR-SPECIFICITY` |
+| `FSO-P5-SECTION-036` · src/content/5/en/part5d.md:1105 | Test development and debugging | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-PLAYWRIGHT-DEBUGGING` |
+| `FSO-P5-SECTION-037` · src/content/5/en/part5e.md:76 | React Router | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-CLIENT-ROUTING` |
+| `FSO-P5-SECTION-038` · src/content/5/en/part5e.md:230 | Parameterized route | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-ROUTE-PARAMS` |
+| `FSO-P5-SECTION-039` · src/content/5/en/part5e.md:325 | useNavigate | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-IMPERATIVE-NAVIGATION` |
+| `FSO-P5-SECTION-040` · src/content/5/en/part5e.md:445 | Parameterized Route Revisited | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-ROUTE-DATA-OWNERSHIP` |
+| `FSO-P5-SECTION-041` · src/content/5/en/part5e.md:657 | UI libraries | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-UI-LIBRARY-EVALUATION` |
+| `FSO-P5-SECTION-042` · src/content/5/en/part5e.md:952 | Styled Components | REVIEWED_CONCEPTS_MAPPED | `FSO-P5-CONCEPT-CSS-IN-JS-COMPARE` |
 
-## Part 7 — 4/24 section units dispositioned
+## Part 6 — 51/51 section units dispositioned
 
 | Section source | Heading | Semantic disposition | Explicit concept records |
 |---|---|---|---|
-| `FSO-P7-SECTION-001` · src/content/7/en/part7a.md:14 | React Hooks | PENDING | — |
+| `FSO-P6-SECTION-001` · src/content/6/en/part6a.md:12 | Flux architecture | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-FLUX-UNIDIRECTIONAL` |
+| `FSO-P6-SECTION-002` · src/content/6/en/part6a.md:26 | Redux | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-REDUX-COMPARE` |
+| `FSO-P6-SECTION-003` · src/content/6/en/part6a.md:34 | Zustand | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-ZUSTAND-STORE` |
+| `FSO-P6-SECTION-004` · src/content/6/en/part6a.md:249 | Using the state from different components | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-STORE-SELECTORS` |
+| `FSO-P6-SECTION-005` · src/content/6/en/part6a.md:373 | Reorganizing the state | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-STORE-ACTION-ORGANIZATION` |
+| `FSO-P6-SECTION-006` · src/content/6/en/part6a.md:466 | Submission repository | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P6-SECTION-007` · src/content/6/en/part6a.md:539 | Zustand notes | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-DOMAIN-STORE` |
+| `FSO-P6-SECTION-008` · src/content/6/en/part6a.md:586 | Pure functions and immutable objects | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-IMMUTABLE-STORE-UPDATE` |
+| `FSO-P6-SECTION-009` · src/content/6/en/part6a.md:645 | Uncontrolled form | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-UNCONTROLLED-FORMS` |
+| `FSO-P6-SECTION-010` · src/content/6/en/part6a.md:720 | More components and functionality | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-STORE-COMPONENT-BOUNDARY` |
+| `FSO-P6-SECTION-011` · src/content/6/en/part6b.md:41 | More complex state | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-COMPLEX-STORE-STATE` |
+| `FSO-P6-SECTION-012` · src/content/6/en/part6b.md:266 | Data to the server | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-SERVER-VS-CLIENT-STATE` |
+| `FSO-P6-SECTION-013` · src/content/6/en/part6b.md:311 | Fetch API | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-FETCH-API` |
+| `FSO-P6-SECTION-014` · src/content/6/en/part6b.md:336 | Fetching data from the server | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-ASYNC-DATA-HYDRATION` |
+| `FSO-P6-SECTION-015` · src/content/6/en/part6b.md:435 | Sending data to the server | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-SERVER-MUTATION-RECONCILE` |
+| `FSO-P6-SECTION-016` · src/content/6/en/part6b.md:547 | Async actions | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-ASYNC-STORE-ACTIONS` |
+| `FSO-P6-SECTION-017` · src/content/6/en/part6b.md:792 | Middlewares | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-STORE-MIDDLEWARE` |
+| `FSO-P6-SECTION-018` · src/content/6/en/part6b.md:860 | Testing Zustand stores | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-STORE-UNIT-TESTS` |
+| `FSO-P6-SECTION-019` · src/content/6/en/part6b.md:1063 | Testing the notes store | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-ASYNC-STORE-TESTS` |
+| `FSO-P6-SECTION-020` · src/content/6/en/part6c.md:53 | Managing data on the server with the TanStack Query library | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-TANSTACK-QUERY` |
+| `FSO-P6-SECTION-021` · src/content/6/en/part6c.md:180 | Synchronizing data to the server using TanStack Query | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-QUERY-MUTATION-INVALIDATION` |
+| `FSO-P6-SECTION-022` · src/content/6/en/part6c.md:353 | Optimizing the performance | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-QUERY-PERFORMANCE` |
+| `FSO-P6-SECTION-023` · src/content/6/en/part6c.md:438 | useNotes custom hook | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-QUERY-CUSTOM-HOOK` |
+| `FSO-P6-SECTION-024` · src/content/6/en/part6c.md:627 | Context API | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-REACT-CONTEXT` |
+| `FSO-P6-SECTION-025` · src/content/6/en/part6c.md:822 | Defining the counter context in its own file | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-CONTEXT-MODULE-BOUNDARY` |
+| `FSO-P6-SECTION-026` · src/content/6/en/part6c.md:1069 | Which state management solution to choose? | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-STATE-OWNERSHIP-CHOICE` |
+| `FSO-P6-SECTION-027` · src/content/6/en/part6d.md:18 | Flux-architecture | REVIEWED_REDUNDANT | `FSO-P6-CONCEPT-FLUX-UNIDIRECTIONAL` |
+| `FSO-P6-SECTION-028` · src/content/6/en/part6d.md:34 | Redux | REVIEWED_REDUNDANT | `FSO-P6-CONCEPT-REDUX-COMPARE` |
+| `FSO-P6-SECTION-029` · src/content/6/en/part6d.md:261 | A note about the use of createStore | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-LIBRARY-API-EVOLUTION` |
+| `FSO-P6-SECTION-030` · src/content/6/en/part6d.md:283 | Redux-notes | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-REDUX-REDUCER-MODEL` |
+| `FSO-P6-SECTION-031` · src/content/6/en/part6d.md:364 | Pure functions, immutable | REVIEWED_REDUNDANT | `FSO-P6-CONCEPT-IMMUTABLE-STORE-UPDATE` |
+| `FSO-P6-SECTION-032` · src/content/6/en/part6d.md:414 | Configuring the test environment | REVIEWED_REDUNDANT | `FSO-P5-CONCEPT-COMPONENT-TEST-RENDER`, `FSO-P4-CONCEPT-TEST-ENVIRONMENT` |
+| `FSO-P6-SECTION-033` · src/content/6/en/part6d.md:474 | Tests for noteReducer | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-REDUCER-TESTS` |
+| `FSO-P6-SECTION-034` · src/content/6/en/part6d.md:609 | Array spread syntax | REVIEWED_REDUNDANT | `FSO-P1-CONCEPT-IMMUTABLE-ARRAY-STATE` |
+| `FSO-P6-SECTION-035` · src/content/6/en/part6d.md:783 | Uncontrolled form | REVIEWED_REDUNDANT | `FSO-P6-CONCEPT-UNCONTROLLED-FORMS` |
+| `FSO-P6-SECTION-036` · src/content/6/en/part6d.md:890 | Action creators | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-ACTION-CREATORS` |
+| `FSO-P6-SECTION-037` · src/content/6/en/part6d.md:939 | Forwarding Redux Store to various components | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-STORE-PROVIDER` |
+| `FSO-P6-SECTION-038` · src/content/6/en/part6d.md:1165 | More components | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-COMPONENT-DISPATCH-SELECT` |
+| `FSO-P6-SECTION-039` · src/content/6/en/part6d.md:1362 | Store with complex state | REVIEWED_REDUNDANT | `FSO-P6-CONCEPT-COMPLEX-STORE-STATE` |
+| `FSO-P6-SECTION-040` · src/content/6/en/part6d.md:1430 | Combined reducers | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-STATE-SLICE-COMPOSITION` |
+| `FSO-P6-SECTION-041` · src/content/6/en/part6d.md:1557 | Finishing the filters | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-DERIVED-SELECTORS` |
+| `FSO-P6-SECTION-042` · src/content/6/en/part6d.md:1775 | Redux Toolkit and Refactoring the Store Configuration | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-REDUX-TOOLKIT-CONFIG` |
+| `FSO-P6-SECTION-043` · src/content/6/en/part6d.md:1849 | Redux Toolkit and Refactoring Reducers | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-REDUX-CREATE-SLICE` |
+| `FSO-P6-SECTION-044` · src/content/6/en/part6d.md:2020 | Redux Toolkit and console.log | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-PROXY-DRAFT-DEBUGGING` |
+| `FSO-P6-SECTION-045` · src/content/6/en/part6d.md:2074 | Redux DevTools | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-STATE-DEVTOOLS` |
+| `FSO-P6-SECTION-046` · src/content/6/en/part6d.md:2150 | Setting up JSON Server | REVIEWED_REDUNDANT | `FSO-P6-CONCEPT-SERVER-VS-CLIENT-STATE` |
+| `FSO-P6-SECTION-047` · src/content/6/en/part6d.md:2190 | Fetch API | REVIEWED_REDUNDANT | `FSO-P6-CONCEPT-FETCH-API` |
+| `FSO-P6-SECTION-048` · src/content/6/en/part6d.md:2215 | Getting data from the backend | REVIEWED_REDUNDANT | `FSO-P6-CONCEPT-ASYNC-DATA-HYDRATION` |
+| `FSO-P6-SECTION-049` · src/content/6/en/part6d.md:2272 | Initializing the store with data fetched from the server | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-REDUX-ASYNC-HYDRATION` |
+| `FSO-P6-SECTION-050` · src/content/6/en/part6d.md:2363 | Sending data to the backend | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-REDUX-REMOTE-MUTATION` |
+| `FSO-P6-SECTION-051` · src/content/6/en/part6d.md:2511 | Asynchronous actions and Redux Thunk | REVIEWED_CONCEPTS_MAPPED | `FSO-P6-CONCEPT-REDUX-THUNK` |
+
+## Part 7 — 24/24 section units dispositioned
+
+| Section source | Heading | Semantic disposition | Explicit concept records |
+|---|---|---|---|
+| `FSO-P7-SECTION-001` · src/content/7/en/part7a.md:14 | React Hooks | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-HOOKS-MENTAL-MODEL` |
 | `FSO-P7-SECTION-002` · src/content/7/en/part7a.md:37 | useMemo | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-USEMEMO` |
 | `FSO-P7-SECTION-003` · src/content/7/en/part7a.md:133 | React.memo | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-REACT-MEMO` |
 | `FSO-P7-SECTION-004` · src/content/7/en/part7a.md:152 | useCallback | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-USECALLBACK` |
-| `FSO-P7-SECTION-005` · src/content/7/en/part7a.md:242 | Custom hooks | PENDING | — |
-| `FSO-P7-SECTION-006` · src/content/7/en/part7a.md:478 | Spread attributes | PENDING | — |
-| `FSO-P7-SECTION-007` · src/content/7/en/part7a.md:578 | More about hooks | PENDING | — |
-| `FSO-P7-SECTION-008` · src/content/7/en/part7a.md:591 | Submission repository | PENDING | — |
-| `FSO-P7-SECTION-009` · src/content/7/en/part7b.md:20 | Bundling | PENDING | — |
-| `FSO-P7-SECTION-010` · src/content/7/en/part7b.md:62 | How Vite works | PENDING | — |
-| `FSO-P7-SECTION-011` · src/content/7/en/part7b.md:75 | Understanding esbuild | PENDING | — |
-| `FSO-P7-SECTION-012` · src/content/7/en/part7b.md:209 | Transpilation | PENDING | — |
-| `FSO-P7-SECTION-013` · src/content/7/en/part7b.md:227 | Development environment | PENDING | — |
-| `FSO-P7-SECTION-014` · src/content/7/en/part7b.md:251 | Vite configuration | PENDING | — |
-| `FSO-P7-SECTION-015` · src/content/7/en/part7c.md:10 | Class Components | PENDING | — |
-| `FSO-P7-SECTION-016` · src/content/7/en/part7c.md:191 | Error boundary | PENDING | — |
-| `FSO-P7-SECTION-017` · src/content/7/en/part7c.md:257 | Frontend and backend in the same repository | PENDING | — |
-| `FSO-P7-SECTION-018` · src/content/7/en/part7c.md:356 | Organization of code in React application | PENDING | — |
-| `FSO-P7-SECTION-019` · src/content/7/en/part7c.md:429 | Changes on the server | PENDING | — |
-| `FSO-P7-SECTION-020` · src/content/7/en/part7c.md:441 | React/node-application security | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-BROKEN-AUTHZ`, `FSO-P7-CONCEPT-DEPENDENCY-SECURITY`, `FSO-P7-CONCEPT-SQL-INJECTION`, `FSO-P7-CONCEPT-XSS` |
-| `FSO-P7-SECTION-021` · src/content/7/en/part7c.md:632 | Current trends | PENDING | — |
-| `FSO-P7-SECTION-022` · src/content/7/en/part7c.md:698 | Useful libraries and further reading | PENDING | — |
-| `FSO-P7-SECTION-023` · src/content/7/en/part7d.md:84 | State Management: Zustand | PENDING | — |
-| `FSO-P7-SECTION-024` · src/content/7/en/part7d.md:110 | State Management: React Query and Context | PENDING | — |
+| `FSO-P7-SECTION-005` · src/content/7/en/part7a.md:242 | Custom hooks | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-CUSTOM-HOOKS` |
+| `FSO-P7-SECTION-006` · src/content/7/en/part7a.md:478 | Spread attributes | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-PROP-SPREAD` |
+| `FSO-P7-SECTION-007` · src/content/7/en/part7a.md:578 | More about hooks | REVIEWED_REDUNDANT | `FSO-P7-CONCEPT-CUSTOM-HOOKS` |
+| `FSO-P7-SECTION-008` · src/content/7/en/part7a.md:591 | Submission repository | REVIEWED_NON_ENGINEERING | — |
+| `FSO-P7-SECTION-009` · src/content/7/en/part7b.md:20 | Bundling | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-BUNDLING` |
+| `FSO-P7-SECTION-010` · src/content/7/en/part7b.md:62 | How Vite works | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-VITE-DEV-PROD` |
+| `FSO-P7-SECTION-011` · src/content/7/en/part7b.md:75 | Understanding esbuild | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-ESBUILD-TRANSFORM` |
+| `FSO-P7-SECTION-012` · src/content/7/en/part7b.md:209 | Transpilation | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-TRANSPILATION` |
+| `FSO-P7-SECTION-013` · src/content/7/en/part7b.md:227 | Development environment | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-FRONTEND-DEV-SERVER` |
+| `FSO-P7-SECTION-014` · src/content/7/en/part7b.md:251 | Vite configuration | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-VITE-CONFIG` |
+| `FSO-P7-SECTION-015` · src/content/7/en/part7c.md:10 | Class Components | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-CLASS-COMPONENTS` |
+| `FSO-P7-SECTION-016` · src/content/7/en/part7c.md:191 | Error boundary | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-ERROR-BOUNDARY` |
+| `FSO-P7-SECTION-017` · src/content/7/en/part7c.md:257 | Frontend and backend in the same repository | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-MONOREPO-TOPOLOGY` |
+| `FSO-P7-SECTION-018` · src/content/7/en/part7c.md:356 | Organization of code in React application | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-FEATURE-ORGANIZATION` |
+| `FSO-P7-SECTION-019` · src/content/7/en/part7c.md:429 | Changes on the server | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-SERVER-PUSH-SYNC` |
+| `FSO-P7-SECTION-020` · src/content/7/en/part7c.md:441 | React/node-application security | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-SQL-INJECTION`, `FSO-P7-CONCEPT-XSS`, `FSO-P7-CONCEPT-DEPENDENCY-SECURITY`, `FSO-P7-CONCEPT-BROKEN-AUTHZ` |
+| `FSO-P7-SECTION-021` · src/content/7/en/part7c.md:632 | Current trends | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-TYPESCRIPT-TREND`, `FSO-P7-CONCEPT-SSR-RSC-NEXT`, `FSO-P7-CONCEPT-MICROSERVICE-BOUNDARIES`, `FSO-P7-CONCEPT-SERVERLESS` |
+| `FSO-P7-SECTION-022` · src/content/7/en/part7c.md:698 | Useful libraries and further reading | REVIEWED_CONCEPTS_MAPPED | `FSO-P7-CONCEPT-ECOSYSTEM-LIBRARY-SELECTION` |
+| `FSO-P7-SECTION-023` · src/content/7/en/part7d.md:84 | State Management: Zustand | REVIEWED_REDUNDANT | `FSO-P6-CONCEPT-ZUSTAND-STORE`, `FSO-P6-CONCEPT-STATE-OWNERSHIP-CHOICE` |
+| `FSO-P7-SECTION-024` · src/content/7/en/part7d.md:110 | State Management: React Query and Context | REVIEWED_REDUNDANT | `FSO-P6-CONCEPT-TANSTACK-QUERY`, `FSO-P6-CONCEPT-REACT-CONTEXT`, `FSO-P6-CONCEPT-STATE-OWNERSHIP-CHOICE` |
 
 ## Part 8 — 0/51 section units dispositioned
 

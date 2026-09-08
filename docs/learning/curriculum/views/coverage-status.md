@@ -1,7 +1,7 @@
 # BodySense Master Course · Coverage Status
 
 > Generated from machine-readable ledgers. Do not hand-edit counts in this file.
-> Baseline date: 2026-09-07
+> Baseline date: 2026-09-08
 
 ## What the numbers mean
 
@@ -44,7 +44,9 @@ Advanced Parts 8-14: **198/198 current exercise records semantically mapped** af
 
 The previous repository snapshot's Parts 8-11 are retained only as **104 historical exercise records** for comparison; they are not counted as current-course parity.
 
-Current source-section inventory: **279 core headings (Parts 0-7)** + **385 current MOOC headings (Parts 8-14)**. **75 explicit section-derived concepts** have already been semantically decomposed and mapped. Heading inventory improves omission detection but does not equal exhaustive paragraph-level semantic parity.
+Current source-section inventory: **279 core headings (Parts 0-7)** + **385 current MOOC headings (Parts 8-14)**. **228 explicit section-derived concepts** have already been semantically decomposed and mapped.
+
+Section semantic-audit disposition: **279/664** reviewed; **227** concept-mapped, **29** explicitly redundant, **23** non-engineering/logistics, **385** pending. Heading review improves omission detection but does not equal exhaustive paragraph-level prose parity.
 
 The MOOC metadata snapshot intentionally stores only identifiers, page/chapter metadata, headings and short exercise titles; it does not copy exercise assignments, answers or course prose.
 
