@@ -1,0 +1,1 @@
+[{"id":"request-property-became-required","text":"the request property `fact/concern_key` became required","level":3,"operation":"POST","operationId":"addBodyStateFact","path":"/api/v1/body-state/facts","section":"paths","fingerprint":"75a02222c22d"}]

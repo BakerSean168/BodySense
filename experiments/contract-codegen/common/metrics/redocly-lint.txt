@@ -1,0 +1,7 @@
+No configurations were provided -- using built in recommended configuration by default.
+
+validating experiments/contract-codegen/common/spec/bodysense-spike.openapi.yaml...
+experiments/contract-codegen/common/spec/bodysense-spike.openapi.yaml: validated in 54ms
+
+Woohoo! Your API description is valid. 🎉
+

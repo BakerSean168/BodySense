@@ -1,0 +1,4 @@
+.tools/
+mutations/generated/
+spec/*.bundle.json
+spec/*.bundle-ref.json

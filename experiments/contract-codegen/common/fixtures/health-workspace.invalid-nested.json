@@ -1,0 +1,39 @@
+{
+  "generated_at": "2026-09-09T06:30:00Z",
+  "profile_ready": true,
+  "body_state": {
+    "current_revision": 7,
+    "safety_state": {},
+    "facts": [],
+    "pending_facts": [],
+    "observations": [],
+    "pending_observations": [],
+    "hypotheses": [],
+    "recent_revisions": []
+  },
+  "treatment_revisions": [],
+  "recent_outcomes": [],
+  "trends": [],
+  "capabilities": {
+    "can_continue_consultation": true,
+    "can_edit_body_state": true,
+    "can_request_diagnosis": true,
+    "can_review_diagnosis": false,
+    "can_generate_treatment": false,
+    "can_accept_treatment": false,
+    "can_execute_treatment": false,
+    "can_record_outcome": false,
+    "can_review_treatment": false,
+    "requires_safety_review": false,
+    "requires_diagnosis_review": false,
+    "requires_treatment_review": false
+  },
+  "actions": [
+    {
+      "kind": "request_diagnosis",
+      "priority": "60",
+      "enabled": true,
+      "reason": "priority is intentionally malformed"
+    }
+  ]
+}

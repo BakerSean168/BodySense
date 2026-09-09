@@ -1,0 +1,1 @@
+[{"id":"response-property-type-changed","text":"the `actions/items/priority` response's property `type` changed from `integer` to `string` for status `200`","level":3,"operation":"GET","operationId":"getHealthWorkspace","path":"/api/v1/health-workspace","section":"paths","fingerprint":"ef6a59383652"}]
