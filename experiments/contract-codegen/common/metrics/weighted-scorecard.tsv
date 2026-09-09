@@ -1,0 +1,8 @@
+scope	candidate	contract_correctness_25	source_of_truth_15	runtime_trust_10	human_dx_10	ai_efficiency_10	runtime_wire_perf_10	migration_fit_10	build_bundle_5	debuggability_5	weighted_total_100
+REST R1/R2	B0 handwritten	3.0	1.5	2.0	2.5	3.0	5.0	5.0	5.0	5.0	64.5
+REST R1/R2	O1 OpenAPI + Orval	4.5	4.5	4.5	3.0	4.0	4.0	4.0	4.5	4.0	83.5
+REST R1/R2	O2 OpenAPI + Hey API	4.0	4.5	3.0	4.5	4.0	4.5	4.5	3.5	4.5	82.5
+Public StreamEvent	B0 handwritten/parity	3.5	2.0	4.5	2.5	2.5	5.0	5.0	5.0	4.5	72.0
+Public StreamEvent	J1 JSON Schema-first	4.5	5.0	4.5	4.0	4.5	3.5	4.0	3.0	4.0	85.5
+Internal Go-Python	B0 HTTP/NDJSON handwritten	3.5	2.0	4.0	2.5	2.5	5.0	5.0	5.0	5.0	71.5
+Internal Go-Python	P1-A Proto/Buf IDL	4.5	5.0	4.5	4.0	5.0	3.5	3.5	2.5	3.5	84.5

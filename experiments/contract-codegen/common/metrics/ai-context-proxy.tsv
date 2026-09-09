@@ -1,0 +1,9 @@
+scope	candidate	canonical_files	canonical_tokens	handwritten_files	handwritten_tokens	generated_files	generated_tokens	context_tokens_generated_visible	context_tokens_generated_excluded	generated_visible_multiplier	note
+REST R1/R2	B0 handwritten	0	0	5	4403	0	0	4403	4403	1.0	Current Go DTO + TS DTO/client + shared error helper; domain/service internals excluded.
+REST R1/R2	O1 OpenAPI + Orval	1	3325	3	633	20	18619	22577	3958	5.7	Production-shaped Mini validated fetch + Go strict server + Python model; TanStack adapter intentionally handwritten/small.
+REST R1/R2	O2 OpenAPI + Hey API	1	3325	3	525	20	30698	34548	3850	8.97	Generated SDK + Zod + TanStack; runtime parse/strictness still needs explicit boundary adapter.
+Public StreamEvent	B0 handwritten/parity	0	0	5	9965	0	0	9965	9965	1.0	Current five-definition surface before fixtures/tests.
+Public StreamEvent	J1 JSON Schema-first	1	5005	1	278	2	44539	49822	5283	9.43	Fixed schema is canonical; generated TS + Ajv standalone should be excluded from normal Agent context.
+Internal Go-Python runtime	B0 HTTP/NDJSON handwritten	0	0	3	7776	0	0	7776	7776	1.0	Current cross-language request/stream boundary.
+Internal Go-Python runtime	P1 Proto/Buf internal	1	707	2	254	6	76176	77137	961	80.27	Primary internal scope; TS/browser generation intentionally excluded from this row.
+Internal Go-Python runtime	P1 Proto/Buf full 3-language	1	707	2	254	8	172967	173928	961	180.99	Control showing generated-context tax if every language output is indexed/read by the Agent.

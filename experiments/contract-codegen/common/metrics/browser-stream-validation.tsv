@@ -1,0 +1,4 @@
+event_count	validator	median_total_ms	events_per_sec
+100	j1_ajv_chromium	1.500	66667
+1000	j1_ajv_chromium	1.900	526316
+10000	j1_ajv_chromium	27.100	369004

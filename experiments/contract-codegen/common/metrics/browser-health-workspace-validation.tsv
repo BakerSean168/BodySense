@@ -1,0 +1,7 @@
+target_bytes	actual_bytes	validator	ops_s	p50_ms	p95_ms
+1000	2133	orval_zod_mini_chromium	14793	0.0000	0.1000
+10000	10035	orval_zod_mini_chromium	7685	0.1000	0.3000
+100000	100029	orval_zod_mini_chromium	932	1.0000	1.3000
+1000	2133	heyapi_zod_chromium	37244	0.0000	0.1000
+10000	10035	heyapi_zod_chromium	18519	0.0000	0.1000
+100000	100029	heyapi_zod_chromium	2459	0.4000	0.7000

@@ -1,9 +1,9 @@
 # BodySense Contract Codegen Architecture Spike Plan
 
-> 文档状态：PLAN ONLY / 待实施
+> 文档状态：SPIKE COMPLETE / 推荐已形成 / 未开始生产迁移
 > 创建日期：2026-09-09
 > 目标：在不改动生产行为的前提下，用 BodySense 的真实契约做可重复实验，比较 OpenAPI + Orval、OpenAPI + Hey API、Protobuf + Buf/Connect/Protovalidate，以及当前 JSON/JSON Schema 路线，确定各协议边界最适合的单一真值（Source of Truth）与 codegen 方案。
-> 明确约束：本阶段只产出方案与评测设计；不安装依赖、不改生产代码、不迁移接口、不改变传输协议。
+> 实施结果：已在独立 worktree 中完成依赖安装、codegen、mutation、runtime/bundle/wire/Chromium benchmark 与评分；生产代码、生产 transport 和 canonical worktree 均未修改。
 
 ---
 
@@ -36,6 +36,8 @@
 - codegen **大概率降低 contract drift 和人工重复维护**；
 - codegen **可能降低 AI token 消耗，但只有在 generated code 被排除出 Agent 常规上下文时才成立**；若 Agent 大量读取生成文件，token 反而可能上升；
 - Orval/Hey 本身**不会天然提升运行时性能**；Zod runtime validation 通常会增加少量 CPU 开销。真正可能明显改变 wire size / serialization 成本的是 Protobuf transport，但它同时带来迁移成本。
+
+> **Spike result (2026-09-09):** H1-H6 已完成验证。最终结果不是单一 winner，而是按边界采用 OpenAPI / JSON Schema / Proto 的混合策略。详细证据见 `docs/architecture/contract-codegen-spike-results-2026-09-09.md`，决策见 `docs/adr/0014-adopt-boundary-specific-contract-codegen-strategy.md`。
 
 ---
 
@@ -1252,19 +1254,23 @@ OpenAPI codegen 的主要收益应是 correctness/DX，而不是 runtime speed�
 
 ---
 
-## 23. 本次文档完成后的下一步
+## 23. Spike 完成后的下一步
 
-本次停止在 PLAN。
+本 Spike 已在独立 worktree 中完成，候选实验不直接合入 production。
 
-未来只有用户明确要求“开始实施 Spike”后，才执行：
+本轮已经完成：
 
-1. Phase 0 baseline；
-2. 创建 isolated experiment area；
-3. pin 所有 tool versions；
-4. 先 O1/O2，不动生产；
-5. 再 P1/J1；
-6. 产出统一 benchmark report + ADR；
-7. **仍然不直接生产迁移**，除非 ADR 再次获得确认。
+1. Phase 0 baseline 与统一 fixtures；
+2. O1 / O2 同 spec 对照；
+3. OpenAPI Go/Python spec-first 与 Go-first control；
+4. P1 Proto/Buf/Protovalidate/Connect；
+5. J1 StreamEvent JSON Schema-first；
+6. Node + Chromium runtime、bundle、wire benchmark；
+7. AI context-surface proxy；
+8. weighted scorecard；
+9. architecture result report + ADR。
+
+下一步只有在用户明确批准生产迁移后，才创建新的 migration Active Plan，并按 REST -> StreamEvent -> Internal IDL -> selective transport 的顺序逐边界实施。**不得把本 Spike 的 candidate branch 直接当 production patch 合并。**
 
 ---
 
@@ -1272,19 +1278,21 @@ OpenAPI codegen 的主要收益应是 correctness/DX，而不是 runtime speed�
 
 Spike 只有在以下全部完成时才算结束：
 
-- [ ] B0 baseline 被量化；
-- [ ] Orval 用 R1/R2 跑通并记录 runtime validation；
-- [ ] Hey API 用同一 R1/R2 跑通；
-- [ ] OpenAPI Go/Python generation 跑通；
-- [ ] Redocly + oasdiff mutation matrix 完成；
-- [ ] Proto/Buf 三语言 codegen 跑通；
-- [ ] Buf breaking matrix 完成；
-- [ ] Protovalidate cross-language invalid fixtures 完成；
-- [ ] Connect unary browser experiment 完成；
-- [ ] StreamEvent JSON Schema control 完成；
-- [ ] runtime/bundle/wire benchmark 完成；
-- [ ] AI token/context experiment 完成；
-- [ ] weighted scorecard 完成；
-- [ ] ADR 给出按边界的推荐，而不是强制单一技术栈；
-- [ ] 没有任何 production transport/behavior change 混进 Spike。
+- [x] B0 baseline 被量化；
+- [x] Orval 用 R1/R2 跑通并记录 runtime validation；
+- [x] Hey API 用同一 R1/R2 跑通；
+- [x] OpenAPI Go/Python generation 跑通；
+- [x] Redocly + oasdiff mutation matrix 完成；
+- [x] Proto/Buf 三语言 codegen 跑通；
+- [x] Buf breaking matrix 完成；
+- [x] Protovalidate cross-language invalid fixtures 完成；
+- [x] Connect unary browser experiment 完成；
+- [x] StreamEvent JSON Schema control 完成；
+- [x] runtime/bundle/wire benchmark 完成；
+- [x] AI token/context experiment 完成；
+- [x] weighted scorecard 完成；
+- [x] ADR 给出按边界的推荐，而不是强制单一技术栈；
+- [x] 没有任何 production transport/behavior change 混进 Spike。
+
+AI token/context 项使用计划 §9.2 允许的 context-surface proxy：Pixel Control Plane 在最终测量时未监听 `127.0.0.1:8320`，因此没有伪造真实 Agent input/output telemetry。
 
