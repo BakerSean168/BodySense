@@ -56,7 +56,9 @@
     "curriculum:refresh-fso-core-subheadings": "node scripts/learning/refresh-fso-core-subheadings.mjs",
     "curriculum:refresh-fso-core-prose-risk": "node scripts/learning/refresh-fso-core-prose-risk-audit.mjs",
     "curriculum:placement": "node scripts/learning/generate-placement-status.mjs",
-    "curriculum:select-track": "node scripts/learning/select-placement-track.mjs"
+    "curriculum:select-track": "node scripts/learning/select-placement-track.mjs",
+    "refactor:vnext:baseline": "node scripts/refactor/capture-vnext-baseline.mjs",
+    "refactor:vnext:schema": "bash scripts/refactor/capture-vnext-schema.sh"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.1118.0",

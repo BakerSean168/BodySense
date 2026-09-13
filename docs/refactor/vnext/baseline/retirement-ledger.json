@@ -1,0 +1,241 @@
+{
+  "schemaVersion": 1,
+  "allowedDispositions": ["KEEP", "REPLACE", "DELETE", "ARCHIVE-OFFLINE"],
+  "entries": [
+    {
+      "id": "BS-VNEXT-CONTRACT-001",
+      "surface": "browser REST handwritten transport mirrors and generic request<T> trust",
+      "disposition": "REPLACE",
+      "targetPhase": "02-rest-openapi",
+      "evidence": [
+        "apps/api/cmd/server/main.go",
+        "apps/web/src/services",
+        "apps/web/src/features"
+      ],
+      "decision": "OpenAPI 3.1 becomes the public HTTP authority; generated boundary types replace byte-for-byte handwritten transport mirrors while domain/view models remain handwritten."
+    },
+    {
+      "id": "BS-VNEXT-CONTRACT-002",
+      "surface": "handwritten public StreamEvent static/runtime duplication",
+      "disposition": "REPLACE",
+      "targetPhase": "03-public-stream",
+      "evidence": [
+        "packages/contracts/src/stream-events.ts",
+        "packages/contracts/src/stream-event-parser.ts",
+        "packages/contracts/schemas/stream-event.v1.schema.json"
+      ],
+      "decision": "JSON Schema 2020-12 becomes the single public stream authority and generates the TS union/runtime validator."
+    },
+    {
+      "id": "BS-VNEXT-CONTRACT-003",
+      "surface": "Python internal runtime events represented by the generic StreamEvent envelope",
+      "disposition": "REPLACE",
+      "targetPhase": "04-internal-runtime-proto",
+      "evidence": [
+        "apps/ai-service/src/models/stream_event.py",
+        "apps/ai-service/src/runtime/consultation_thread.py",
+        "apps/api/internal/service/ai_client.go"
+      ],
+      "decision": "Introduce a dedicated Proto/Buf InternalRuntimeEvent contract; public StreamEvent and internal Agent protocol become distinct types."
+    },
+    {
+      "id": "BS-VNEXT-TRUST-001",
+      "surface": "stringly AiStreamEvent with optional-field bags",
+      "disposition": "REPLACE",
+      "targetPhase": "05-runtime-trust",
+      "evidence": [
+        "apps/ai-service/src/ai/types.py",
+        "apps/ai-service/src/ai/service.py"
+      ],
+      "decision": "Use typed internal variants so impossible event states cannot be represented as one dataclass with unrelated optional fields."
+    },
+    {
+      "id": "BS-VNEXT-TRUST-002",
+      "surface": "malformed model tool-call JSON normalized to empty arguments",
+      "disposition": "DELETE",
+      "targetPhase": "05-runtime-trust",
+      "evidence": ["apps/ai-service/src/ai/service.py"],
+      "decision": "Malformed tool arguments remain an explicit invalid/protocol-error state and are never executed as an empty valid call."
+    },
+    {
+      "id": "BS-VNEXT-TRUST-003",
+      "surface": "factories/validators mutating caller-owned Python values",
+      "disposition": "REPLACE",
+      "targetPhase": "05-runtime-trust",
+      "evidence": [
+        "apps/ai-service/src/models/stream_event.py",
+        "apps/ai-service/src/services/agent/tool_executor.py"
+      ],
+      "decision": "Validation/building uses value semantics; normalization returns a new value explicitly."
+    },
+    {
+      "id": "BS-VNEXT-STATE-001",
+      "surface": "raw string Job status including duplicate completed/succeeded terminal semantics",
+      "disposition": "REPLACE",
+      "targetPhase": "06-durable-state-machines",
+      "evidence": [
+        "apps/api/internal/model/job.go",
+        "apps/api/internal/service/job_runtime.go",
+        "apps/api/internal/repository/job_repository.go"
+      ],
+      "decision": "Use typed JobStatus and retain one canonical successful terminal state: completed."
+    },
+    {
+      "id": "BS-VNEXT-STATE-002",
+      "surface": "Job read-check-write transition and best-effort authoritative lifecycle append",
+      "disposition": "REPLACE",
+      "targetPhase": "06-durable-state-machines",
+      "evidence": [
+        "apps/api/internal/service/job_runtime.go",
+        "apps/api/internal/repository/job_repository.go"
+      ],
+      "decision": "Repository transition becomes compare-and-set and the authoritative lifecycle event commits in the same transaction."
+    },
+    {
+      "id": "BS-VNEXT-LEGACY-001",
+      "surface": "consultation phase alias analysis_ready",
+      "disposition": "DELETE",
+      "targetPhase": "06-durable-state-machines",
+      "evidence": [
+        "apps/web/src/features/consultation/types/consultation.ts",
+        "apps/web/src/features/consultation/hooks/useDiagnosisActions.ts",
+        "apps/api/internal/handler/diagnosis_handler.go",
+        "apps/api/migrations/000013_session_redesign.up.sql"
+      ],
+      "decision": "One phase vocabulary remains; successful readiness is represented only by ready_for_analysis."
+    },
+    {
+      "id": "BS-VNEXT-LEGACY-002",
+      "surface": "LegacyAssessmentReport/Observation/DimensionScores runtime public union",
+      "disposition": "ARCHIVE-OFFLINE",
+      "targetPhase": "07-legacy-retirement",
+      "evidence": [
+        "apps/web/src/features/assessment/services/assessmentService.ts",
+        "apps/ai-service/src/models/assessment.py",
+        "apps/api/internal/model/assessment_report.go"
+      ],
+      "decision": "Only the current evidence-grounded Assessment contract serves runtime/API/Web; old report shapes may survive solely in eval/archive fixtures."
+    },
+    {
+      "id": "BS-VNEXT-LEGACY-003",
+      "surface": "authentication fallback for legacy tokens without session_id",
+      "disposition": "DELETE",
+      "targetPhase": "07-legacy-retirement",
+      "evidence": [
+        "apps/api/internal/middleware/auth.go",
+        "apps/api/internal/middleware/auth_test.go"
+      ],
+      "decision": "All vNext authenticated sessions require the canonical session-aware token contract."
+    },
+    {
+      "id": "BS-VNEXT-LEGACY-004",
+      "surface": "upload file_path compatibility projection",
+      "disposition": "DELETE",
+      "targetPhase": "07-legacy-retirement",
+      "evidence": [
+        "apps/api/internal/handler/upload_handler.go",
+        "apps/api/internal/handler/upload_handler_test.go"
+      ],
+      "decision": "Opaque storage identity is the only runtime storage authority; host/local file-path compatibility is not public contract state."
+    },
+    {
+      "id": "BS-VNEXT-LEGACY-005",
+      "surface": "legacy BodyRegion free-text/null canonical-id compatibility",
+      "disposition": "DELETE",
+      "targetPhase": "07-legacy-retirement",
+      "evidence": [
+        "apps/api/internal/service/body_region_validator.go",
+        "apps/api/cmd/domain-validator/main.go",
+        "apps/api/internal/model/body_state_test.go"
+      ],
+      "decision": "With no business data migration requirement, new durable BodyState facts require canonical body_region_id rather than preserving ambiguous historical rows."
+    },
+    {
+      "id": "BS-VNEXT-LEGACY-006",
+      "surface": "migration-era health_features columns/projections",
+      "disposition": "DELETE",
+      "targetPhase": "08-schema-rebaseline",
+      "evidence": [
+        "apps/api/migrations/000029_add_health_features_to_consultation_sessions_and_thread_projections.up.sql",
+        "docs/adr/0004-adopt-longitudinal-body-state-model.md"
+      ],
+      "decision": "BodyState/Lifestyle/current domain structures are authoritative; health_features does not appear in the vNext baseline schema."
+    },
+    {
+      "id": "BS-VNEXT-LEGACY-007",
+      "surface": "historical Assessment/Diagnosis/Treatment/Posture manifests selectable from serving governance",
+      "disposition": "ARCHIVE-OFFLINE",
+      "targetPhase": "07-legacy-retirement",
+      "evidence": [
+        "apps/api/internal/service/agent_deployment_policy.go",
+        "apps/ai-service/config/agents/assessment-v1.yaml",
+        "apps/ai-service/config/agents/assessment-v2.yaml",
+        "apps/ai-service/config/agents/assessment-v3.yaml",
+        "apps/ai-service/config/agents/assessment-v4.yaml",
+        "apps/ai-service/config/agents/diagnosis-v1.yaml",
+        "apps/ai-service/config/agents/diagnosis-v2-evidence-gap.yaml",
+        "apps/ai-service/config/agents/treatment-v1.yaml",
+        "apps/ai-service/config/agents/posture-v1.yaml"
+      ],
+      "decision": "Historical configs may remain as offline replay/eval evidence but cannot be current serving, canary, promotion or rollback targets in vNext runtime policy."
+    },
+    {
+      "id": "BS-VNEXT-KEEP-001",
+      "surface": "current Agent manifests",
+      "disposition": "KEEP",
+      "targetPhase": "07-legacy-retirement",
+      "evidence": [
+        "apps/ai-service/config/agents/assessment-v5.yaml",
+        "apps/ai-service/config/agents/consultation-v2.yaml",
+        "apps/ai-service/config/agents/diagnosis-v3-decision-authority.yaml",
+        "apps/ai-service/config/agents/posture-v2.yaml",
+        "apps/ai-service/config/agents/treatment-v2-evidence-gap.yaml",
+        "apps/ai-service/config/agents/title-v1.yaml",
+        "apps/ai-service/config/agents/knowledge-curator-v1.yaml",
+        "apps/ai-service/config/agents/knowledge-splitter-v1.yaml"
+      ],
+      "decision": "These are the current canonical role manifests at the baseline; vNext may simplify selection policy without changing qualified role semantics."
+    },
+    {
+      "id": "BS-VNEXT-KEEP-002",
+      "surface": "currently qualified health-document Tesseract mechanism",
+      "disposition": "KEEP",
+      "targetPhase": "07-legacy-retirement",
+      "evidence": [
+        "apps/api/internal/service/health_document_deployment_policy.go",
+        "apps/ai-service/src/document_pipeline/worker.py",
+        "docs/plan/active/2026-09-01-health-document-technology-selection-and-benchmark.md"
+      ],
+      "decision": "Do not promote an unqualified OCR mechanism merely to remove a legacy label. Keep the currently qualified mechanism until separate benchmark evidence accepts a successor; remove only unnecessary compatibility wrappers/projections."
+    },
+    {
+      "id": "BS-VNEXT-LEGACY-008",
+      "surface": "pre-vNext active migration chain 000001..000062",
+      "disposition": "ARCHIVE-OFFLINE",
+      "targetPhase": "08-schema-rebaseline",
+      "evidence": ["apps/api/migrations"],
+      "decision": "Git history preserves the old lineage; the active vNext migration directory starts from a clean PostgreSQL 18 + pgvector baseline."
+    },
+    {
+      "id": "BS-VNEXT-TOOLING-001",
+      "surface": "source-derived/manual API inventory as future Postman authority",
+      "disposition": "REPLACE",
+      "targetPhase": "09-api-tooling",
+      "evidence": [
+        "docs/plan/postman-repo-native-api-workspace-plan-2026-09-10.md"
+      ],
+      "decision": "Postman and API exploration artifacts derive from canonical OpenAPI instead of becoming an independently maintained contract."
+    },
+    {
+      "id": "BS-VNEXT-TEST-001",
+      "surface": "tests bypassing production contracts with casts or source-string assertions",
+      "disposition": "REPLACE",
+      "targetPhase": "10-quality-gates",
+      "evidence": [
+        "apps/web/src/features/consultation/runtime/activeTurnReducer.test.ts",
+        "packages/contracts/src/stream-event-parser.test.ts"
+      ],
+      "decision": "Prefer behavior/runtime/type/architecture tests; source-string assertions remain only where no stronger executable invariant is available."
+    }
+  ]
+}

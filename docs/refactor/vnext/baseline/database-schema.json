@@ -1,0 +1,4986 @@
+{
+    "tables": [
+        {
+            "table": "agent_interactions",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuidv7()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "run_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "conversation_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "tool_call_id",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "tool_name",
+                    "type": "text",
+                    "default": "'ask_user'::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "question",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "answer",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "status",
+                    "type": "character varying",
+                    "default": "'pending'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "answered_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "metadata",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "expires_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                }
+            ]
+        },
+        {
+            "table": "agent_tool_calls",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuidv7()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "run_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "conversation_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "message_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "tool_call_id",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "tool_name",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "arguments",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "status",
+                    "type": "character varying",
+                    "default": "'running'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "result",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "error",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "started_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "finished_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "metadata",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "ai_output_reviews",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuidv7()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "run_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "job_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "conversation_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "output_type",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "status",
+                    "type": "character varying",
+                    "default": "'accepted'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "issues",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "validated_output",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "raw_output",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "metadata",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                }
+            ]
+        },
+        {
+            "table": "assessment_reports",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuid_generate_v4()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "status",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "health_grade",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "dimension_scores",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "observations",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "summary",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "information_gaps",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "safety_notes",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "body_state_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "agent_configuration_id",
+                    "type": "character varying",
+                    "default": "''::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "agent_configuration",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "execution_provenance",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "generation_decision_trace",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "replay_input",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "contract_revision",
+                    "type": "character varying",
+                    "default": "'assessment-output-v1'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "evidence_coverage",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "evidence_gaps",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "assessment_rollout_observations",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuid_generate_v4()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "source_report_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "stage",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "subject_bucket",
+                    "type": "integer",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "canary_bps",
+                    "type": "integer",
+                    "default": "0",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "champion_configuration_id",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "challenger_configuration_id",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "served_configuration_id",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "shadow_configuration_id",
+                    "type": "character varying",
+                    "default": "''::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "promotion_record",
+                    "type": "character varying",
+                    "default": "''::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "comparison",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "bool",
+                    "name": "forbidden_side_effect",
+                    "type": "boolean",
+                    "default": "false",
+                    "nullable": false
+                },
+                {
+                    "udt": "bool",
+                    "name": "configuration_mismatch",
+                    "type": "boolean",
+                    "default": "false",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "shadow_error",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "body_state_evidence",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuid_generate_v4()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "source_type",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "source_key",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "source_version",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "title",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "summary",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "excerpt",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "metadata",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "retrieved_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "body_state_facts",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuidv7()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "concern_key",
+                    "type": "character varying",
+                    "default": "''::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "kind",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "body_region",
+                    "type": "character varying",
+                    "default": "''::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "value",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "details",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "origin",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "review_state",
+                    "type": "character varying",
+                    "default": "'unverified'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "lifecycle_state",
+                    "type": "character varying",
+                    "default": "'active'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "trend",
+                    "type": "character varying",
+                    "default": "'unknown'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "source_key",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "provenance",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "observed_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "valid_from",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "valid_until",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "supersedes_fact_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "bool",
+                    "name": "excluded_from_reasoning",
+                    "type": "boolean",
+                    "default": "false",
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "created_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "updated_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "body_region_id",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": true
+                }
+            ]
+        },
+        {
+            "table": "body_state_hypotheses",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuid_generate_v4()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "concern_key",
+                    "type": "character varying",
+                    "default": "'general'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "statement",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "lifecycle_state",
+                    "type": "character varying",
+                    "default": "'active'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "confidence",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "supporting_fact_ids",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "supporting_observation_ids",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "supporting_evidence_ids",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "counterevidence_ids",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "source_analysis_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "provenance",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "created_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "updated_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "body_state_observations",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuidv7()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "concern_key",
+                    "type": "character varying",
+                    "default": "''::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "kind",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "body_region",
+                    "type": "character varying",
+                    "default": "''::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "method",
+                    "type": "character varying",
+                    "default": "''::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "value",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "condition",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "source_key",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "provenance",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "observed_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "review_state",
+                    "type": "character varying",
+                    "default": "'unverified'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "lifecycle_state",
+                    "type": "character varying",
+                    "default": "'active'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "bool",
+                    "name": "excluded_from_reasoning",
+                    "type": "boolean",
+                    "default": "true",
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "created_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "updated_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "supersedes_observation_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "body_region_id",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": true
+                }
+            ]
+        },
+        {
+            "table": "body_state_revisions",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuidv7()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "change_type",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "source",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "changes",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "body_states",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "current_revision",
+                    "type": "bigint",
+                    "default": "0",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "safety_state",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "consultation_rollout_observations",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuid_generate_v4()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "run_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "conversation_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "stage",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "champion_configuration_id",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "challenger_configuration_id",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "canary_bps",
+                    "type": "integer",
+                    "default": "0",
+                    "nullable": false
+                },
+                {
+                    "udt": "bool",
+                    "name": "decision_identity_match",
+                    "type": "boolean",
+                    "default": "false",
+                    "nullable": false
+                },
+                {
+                    "udt": "bool",
+                    "name": "replay_input_frozen",
+                    "type": "boolean",
+                    "default": "false",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "shadow_error",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "comparison",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "consultation_sessions",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "conversation_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "phase",
+                    "type": "character varying",
+                    "default": "'collecting'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "extracted_info",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "ended_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "health_features",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "conversation_shares",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuidv7()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "conversation_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "share_token",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "snapshot_messages",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "snapshot_title",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "conversations",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuidv7()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "title",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "title_status",
+                    "type": "character varying",
+                    "default": "'pending'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "status",
+                    "type": "character varying",
+                    "default": "'active'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "bool",
+                    "name": "pinned",
+                    "type": "boolean",
+                    "default": "false",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "pinned_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "default_model",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "system_prompt_version",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "provider",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "provider_conversation_id",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "provider_last_response_id",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "active_run_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "active_stream_id",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "summary",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "metadata",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "last_message_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "deleted_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "title_agent_configuration_id",
+                    "type": "character varying",
+                    "default": "''::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "title_agent_configuration",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "title_execution_provenance",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "title_decision_trace",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "diagnosis_analyses",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuidv7()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "body_state_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "status",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "scope",
+                    "type": "character varying",
+                    "default": "'full_body'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "summary",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "cross_concern_patterns",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "information_gaps",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "safety_summary",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "citations",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "governance",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "raw_output",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "agent_configuration_id",
+                    "type": "character varying",
+                    "default": "''::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "agent_configuration",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "decision_trace",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "execution_provenance",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "evidence_acquisition_trace",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "replay_input",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "diagnosis_analysis_freshness",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "analysis_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "state",
+                    "type": "character varying",
+                    "default": "'fresh'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "evaluated_against_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "reasons",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "checked_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "diagnosis_candidate_assessments",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuidv7()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "analysis_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "candidate_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "state",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "assessed_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "diagnosis_candidates",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuidv7()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "analysis_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "ordinal",
+                    "type": "integer",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "concern_key",
+                    "type": "character varying",
+                    "default": "''::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "name",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "confidence",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "severity",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "evidence_strength",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "impact",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "basis",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "typical_symptoms",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "differential",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "basis_fact_ids",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "basis_observation_ids",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "supporting_evidence_ids",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "counterevidence_ids",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "reasoning_summary",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "missing_information",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "safety_notes",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "raw_payload",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "diagnosis_rollout_observations",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuid_generate_v4()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "source_analysis_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "stage",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "subject_bucket",
+                    "type": "integer",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "canary_bps",
+                    "type": "integer",
+                    "default": "0",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "champion_configuration_id",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "challenger_configuration_id",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "served_configuration_id",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "shadow_configuration_id",
+                    "type": "character varying",
+                    "default": "''::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "comparison",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "bool",
+                    "name": "unsafe_relaxation",
+                    "type": "boolean",
+                    "default": "false",
+                    "nullable": false
+                },
+                {
+                    "udt": "bool",
+                    "name": "forbidden_side_effect",
+                    "type": "boolean",
+                    "default": "false",
+                    "nullable": false
+                },
+                {
+                    "udt": "bool",
+                    "name": "configuration_mismatch",
+                    "type": "boolean",
+                    "default": "false",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "shadow_error",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "document_extraction_runs",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuidv7()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "upload_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "job_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "configuration_id",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "mechanism_revision",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "bpchar",
+                    "name": "document_sha256",
+                    "type": "character",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "bpchar",
+                    "name": "result_sha256",
+                    "type": "character",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "bpchar",
+                    "name": "raw_text_sha256",
+                    "type": "character",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "indicator_snapshot",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "source_summary",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "mechanism_provenance",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "document_indicator_reviews",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuidv7()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "upload_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "extraction_run_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "indicator_index",
+                    "type": "integer",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "action",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "idempotency_key",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "reviewed_payload",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "machine_candidate",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "source_refs",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "page_ref",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "reviewer_user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "note",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "interventions",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuid_generate_v4()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "treatment_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "treatment_revision_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "kind",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "title",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "description",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "prescription",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "position",
+                    "type": "integer",
+                    "default": "0",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "status",
+                    "type": "character varying",
+                    "default": "'proposed'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "started_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "ended_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "job_events",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuidv7()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "job_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "event_type",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "payload",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "jobs",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuidv7()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "run_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "conversation_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "job_type",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "status",
+                    "type": "character varying",
+                    "default": "'pending'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "input",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "progress",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "result",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "error",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "started_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "finished_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "metadata",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "idempotency_key",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "int4",
+                    "name": "attempts",
+                    "type": "integer",
+                    "default": "0",
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "max_attempts",
+                    "type": "integer",
+                    "default": "1",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "knowledge_clips",
+            "columns": [
+                {
+                    "udt": "int8",
+                    "name": "id",
+                    "type": "bigint",
+                    "default": "nextval('knowledge_clips_id_seq'::regclass)",
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "source_id",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "source_unit_id",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "clip_key",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "clip_type",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "title",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "file_path",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "float8",
+                    "name": "start_sec",
+                    "type": "double precision",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "float8",
+                    "name": "end_sec",
+                    "type": "double precision",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "transcript_excerpt",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "notes",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "metadata",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "knowledge_publication_observations",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuidv7()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "publication_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "observation_key",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "observation_kind",
+                    "type": "character varying",
+                    "default": "'predeploy_eval'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "evaluator_revision",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "case_id",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "retrieval_status",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "citation_status",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "grounding_status",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "identity_status",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "provenance_status",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "execution_error",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "metadata",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "knowledge_publications",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuidv7()",
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "knowledge_unit_id",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "publication_key",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "title",
+                    "type": "character varying",
+                    "default": "''::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "published_version",
+                    "type": "integer",
+                    "default": "1",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "published_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "published_by",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "created_by",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "status",
+                    "type": "character varying",
+                    "default": "'draft'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "metadata",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "publication_batch_key",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "rollback_of",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "int4",
+                    "name": "unit_count",
+                    "type": "integer",
+                    "default": "0",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "summary",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "knowledge_segments",
+            "columns": [
+                {
+                    "udt": "int8",
+                    "name": "id",
+                    "type": "bigint",
+                    "default": "nextval('knowledge_segments_id_seq'::regclass)",
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "source_id",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "segment_index",
+                    "type": "integer",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "float8",
+                    "name": "start_sec",
+                    "type": "double precision",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "float8",
+                    "name": "end_sec",
+                    "type": "double precision",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "transcript",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "normalized_transcript",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "float8",
+                    "name": "confidence",
+                    "type": "double precision",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "metadata",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "knowledge_sources",
+            "columns": [
+                {
+                    "udt": "int8",
+                    "name": "id",
+                    "type": "bigint",
+                    "default": "nextval('knowledge_sources_id_seq'::regclass)",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "source_key",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "source_type",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "title",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "author",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "problem_slug",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "problem_display_name",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "original_file_path",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "language",
+                    "type": "character varying",
+                    "default": "'zh'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "float8",
+                    "name": "duration_sec",
+                    "type": "double precision",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "transcript_provider",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "transcript_model",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "transcript_file_path",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "ingest_status",
+                    "type": "character varying",
+                    "default": "'pending'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "metadata",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "license_status",
+                    "type": "character varying",
+                    "default": "'unknown'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "content_hash",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "canonical_url",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "source_version",
+                    "type": "character varying",
+                    "default": "'v1'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "provenance",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "registered_by",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "registered_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                }
+            ]
+        },
+        {
+            "table": "knowledge_units",
+            "columns": [
+                {
+                    "udt": "int8",
+                    "name": "id",
+                    "type": "bigint",
+                    "default": "nextval('knowledge_units_id_seq'::regclass)",
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "source_id",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "unit_key",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "problem_slug",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "category",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "unit_type",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "title",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "summary",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "body_markdown",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "float8",
+                    "name": "source_start_sec",
+                    "type": "double precision",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "float8",
+                    "name": "source_end_sec",
+                    "type": "double precision",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "_int4",
+                    "name": "evidence_segment_indices",
+                    "type": "ARRAY",
+                    "default": "'{}'::integer[]",
+                    "nullable": false
+                },
+                {
+                    "udt": "_text",
+                    "name": "tags",
+                    "type": "ARRAY",
+                    "default": "'{}'::text[]",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "transcript_excerpt",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "review_status",
+                    "type": "character varying",
+                    "default": "'generated'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "vector",
+                    "name": "embedding",
+                    "type": "USER-DEFINED",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "metadata",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "float4",
+                    "name": "quality_score",
+                    "type": "real",
+                    "default": "0.0",
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "content_hash",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "int4",
+                    "name": "published_version",
+                    "type": "integer",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "lifecycle_metadata",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "lifecycle_status",
+                    "type": "character varying",
+                    "default": "'generated'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "publication_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                }
+            ]
+        },
+        {
+            "table": "messages",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuidv7()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "conversation_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "turn_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "parent_message_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "role",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "status",
+                    "type": "character varying",
+                    "default": "'completed'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "seq",
+                    "type": "integer",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "parts",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "content_text",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "model",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "provider",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "provider_message_id",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "provider_response_id",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "int4",
+                    "name": "input_tokens",
+                    "type": "integer",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "int4",
+                    "name": "output_tokens",
+                    "type": "integer",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "int4",
+                    "name": "total_tokens",
+                    "type": "integer",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "error",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "metadata",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "run_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                }
+            ]
+        },
+        {
+            "table": "outcomes",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuid_generate_v4()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "treatment_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "treatment_revision_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "intervention_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "source_type",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "source_key",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "kind",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "concern_key",
+                    "type": "character varying",
+                    "default": "'general'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "body_region",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "value",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "notes",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "association_statement",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "causality_level",
+                    "type": "character varying",
+                    "default": "'association_only'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "occurred_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "provenance",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "body_state_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "privacy_erasure_requests",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuid_generate_v4()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "subject_user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "bpchar",
+                    "name": "subject_digest",
+                    "type": "character",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "status",
+                    "type": "character varying",
+                    "default": "'pending'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "attempt_count",
+                    "type": "integer",
+                    "default": "0",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "report",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "last_error",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "lease_owner",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "lease_expires_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "requested_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "completed_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                }
+            ]
+        },
+        {
+            "table": "runs",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuidv7()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "conversation_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "turn_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "request_id",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "status",
+                    "type": "character varying",
+                    "default": "'running'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "model",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "provider",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "provider_response_id",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "started_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "completed_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "error",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "usage",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "metadata",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "agent_configuration_id",
+                    "type": "character varying",
+                    "default": "''::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "agent_configuration",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "execution_provenance",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "replay_input",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "lease_expires_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "lease_owner",
+                    "type": "character varying",
+                    "default": "''::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "lease_heartbeat_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                }
+            ]
+        },
+        {
+            "table": "runtime_events",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuidv7()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "conversation_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "run_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "turn_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "int4",
+                    "name": "seq",
+                    "type": "integer",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "channel",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "type",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "ids",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "payload",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "source",
+                    "type": "character varying",
+                    "default": "'go'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "bool",
+                    "name": "replayable",
+                    "type": "boolean",
+                    "default": "true",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "schema_migrations",
+            "columns": [
+                {
+                    "udt": "int8",
+                    "name": "version",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "bool",
+                    "name": "dirty",
+                    "type": "boolean",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "thread_projection_messages",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "message_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "conversation_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "turn_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "run_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "parent_message_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "int4",
+                    "name": "seq",
+                    "type": "integer",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "role",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "status",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "parts",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "content_text",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "model",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "provider",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "provider_message_id",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "provider_response_id",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "int4",
+                    "name": "input_tokens",
+                    "type": "integer",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "int4",
+                    "name": "output_tokens",
+                    "type": "integer",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "int4",
+                    "name": "total_tokens",
+                    "type": "integer",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "error",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "metadata",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "thread_projection_tool_calls",
+            "columns": [
+                {
+                    "udt": "text",
+                    "name": "tool_call_id",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "conversation_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "run_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "message_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "tool_name",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "arguments",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "status",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "result",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "error",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "started_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "finished_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "metadata",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "thread_projections",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "conversation_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "title",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "title_status",
+                    "type": "character varying",
+                    "default": "'pending'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "status",
+                    "type": "character varying",
+                    "default": "'active'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "bool",
+                    "name": "pinned",
+                    "type": "boolean",
+                    "default": "false",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "pinned_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "default_model",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "active_run_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "last_message_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "metadata",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "phase",
+                    "type": "character varying",
+                    "default": "'collecting'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "extracted_info",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "pending_interactions",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "conversation_created_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "conversation_updated_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "session_created_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "session_updated_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "ended_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "refreshed_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "interaction_history",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "health_features",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "training_logs",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuid_generate_v4()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "plan_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "date",
+                    "name": "date",
+                    "type": "date",
+                    "default": "CURRENT_DATE",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "exercises",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "notes",
+                    "type": "text",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "bool",
+                    "name": "is_checked_in",
+                    "type": "boolean",
+                    "default": "false",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "treatment_revision_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "intervention_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "outcome_recorded_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                }
+            ]
+        },
+        {
+            "table": "training_plans",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuid_generate_v4()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "consultation_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "text",
+                    "name": "goal",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "duration_weeks",
+                    "type": "integer",
+                    "default": "4",
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "current_week",
+                    "type": "integer",
+                    "default": "1",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "phases",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "treatment_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "treatment_revision_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "status",
+                    "type": "character varying",
+                    "default": "'active'::character varying",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "treatment_revisions",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuid_generate_v4()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "treatment_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "revision",
+                    "type": "integer",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "acceptance_state",
+                    "type": "character varying",
+                    "default": "'proposed'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "lifecycle_state",
+                    "type": "character varying",
+                    "default": "'review_recommended'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "source_body_state_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "source_diagnosis_analysis_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "goal",
+                    "type": "text",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "duration_weeks",
+                    "type": "integer",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "plan",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "user_constraints",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "evidence_ids",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "governance",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "change_reason",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "accepted_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "agent_configuration_id",
+                    "type": "character varying",
+                    "default": "''::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "agent_configuration",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "execution_provenance",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "evidence_acquisition_trace",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "generation_decision_trace",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "acceptance_decision_trace",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "replay_input",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "rollout_provenance",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "treatment_rollout_observations",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuid_generate_v4()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "source_revision_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "stage",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "subject_bucket",
+                    "type": "integer",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "canary_bps",
+                    "type": "integer",
+                    "default": "0",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "champion_configuration_id",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "challenger_configuration_id",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "served_configuration_id",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "shadow_configuration_id",
+                    "type": "character varying",
+                    "default": "''::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "promotion_record",
+                    "type": "character varying",
+                    "default": "''::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "comparison",
+                    "type": "jsonb",
+                    "default": "'{}'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "bool",
+                    "name": "unsafe_relaxation",
+                    "type": "boolean",
+                    "default": "false",
+                    "nullable": false
+                },
+                {
+                    "udt": "bool",
+                    "name": "forbidden_side_effect",
+                    "type": "boolean",
+                    "default": "false",
+                    "nullable": false
+                },
+                {
+                    "udt": "bool",
+                    "name": "configuration_mismatch",
+                    "type": "boolean",
+                    "default": "false",
+                    "nullable": false
+                },
+                {
+                    "udt": "text",
+                    "name": "shadow_error",
+                    "type": "text",
+                    "default": "''::text",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "treatments",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuid_generate_v4()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int4",
+                    "name": "current_revision",
+                    "type": "integer",
+                    "default": "0",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "status",
+                    "type": "character varying",
+                    "default": "'review_recommended'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "source_body_state_revision",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "uuid",
+                    "name": "source_diagnosis_analysis_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "status_reasons",
+                    "type": "jsonb",
+                    "default": "'[]'::jsonb",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "user_profiles",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuid_generate_v4()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "gender",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "date",
+                    "name": "birth_date",
+                    "type": "date",
+                    "default": null,
+                    "nullable": true
+                }
+            ]
+        },
+        {
+            "table": "user_uploads",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuid_generate_v4()",
+                    "nullable": false
+                },
+                {
+                    "udt": "uuid",
+                    "name": "user_id",
+                    "type": "uuid",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "file_type",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "original_name",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "int8",
+                    "name": "file_size",
+                    "type": "bigint",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "mime_type",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "ocr_result",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "ocr_status",
+                    "type": "character varying",
+                    "default": "'pending'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "analysis_status",
+                    "type": "character varying",
+                    "default": "'none'::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "jsonb",
+                    "name": "analysis_result",
+                    "type": "jsonb",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "agent_configuration_id",
+                    "type": "character varying",
+                    "default": "''::character varying",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "storage_backend",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "storage_key",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table": "users",
+            "columns": [
+                {
+                    "udt": "uuid",
+                    "name": "id",
+                    "type": "uuid",
+                    "default": "uuid_generate_v4()",
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "email",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "varchar",
+                    "name": "password_hash",
+                    "type": "character varying",
+                    "default": null,
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "default": "now()",
+                    "nullable": false
+                },
+                {
+                    "udt": "timestamptz",
+                    "name": "last_login_at",
+                    "type": "timestamp with time zone",
+                    "default": null,
+                    "nullable": true
+                },
+                {
+                    "udt": "varchar",
+                    "name": "role",
+                    "type": "character varying",
+                    "default": "'member'::character varying",
+                    "nullable": false
+                }
+            ]
+        }
+    ],
+    "runtime_image": "pgvector/pgvector:pg18",
+    "schema_version": 1,
+    "migration_state": "62:false"
+}

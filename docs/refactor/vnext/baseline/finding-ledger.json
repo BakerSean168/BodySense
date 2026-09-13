@@ -1,0 +1,180 @@
+{
+  "schemaVersion": 1,
+  "statuses": [
+    "OPEN",
+    "IN_PROGRESS",
+    "FIXED",
+    "DELETED_WITH_LEGACY",
+    "ARCHIVED_OFFLINE",
+    "NOT_REPRODUCED",
+    "DEFERRED_WITH_REASON",
+    "NEW_REGRESSION"
+  ],
+  "findings": [
+    {
+      "id": "BS-Q-TS-001",
+      "severity": "P1",
+      "status": "OPEN",
+      "targetPhase": "03-public-stream",
+      "summary": "Validated StreamEvent payloads are re-cast in activeTurnReducer instead of staying narrowed downstream.",
+      "evidence": [
+        "apps/web/src/features/consultation/runtime/activeTurnReducer.ts"
+      ],
+      "invariant": "Validate once at the public event trust boundary; downstream reducer code consumes trusted discriminated variants without reconstructing types by assertion."
+    },
+    {
+      "id": "BS-Q-TS-002",
+      "severity": "P1",
+      "status": "OPEN",
+      "targetPhase": "03-public-stream",
+      "summary": "activeTurnReducer is not exhaustive; legal variants can fall through default and not advance sequence bookkeeping.",
+      "evidence": [
+        "apps/web/src/features/consultation/runtime/activeTurnReducer.ts"
+      ],
+      "invariant": "Every legal public event is either state-changing or an explicit no-op and all legal events preserve ordered sequence accounting."
+    },
+    {
+      "id": "BS-Q-TEST-001",
+      "severity": "P1",
+      "status": "OPEN",
+      "targetPhase": "03-public-stream",
+      "summary": "Reducer tests can create StreamEvent values through casts that the production parser would reject.",
+      "evidence": [
+        "apps/web/src/features/consultation/runtime/activeTurnReducer.test.ts"
+      ],
+      "invariant": "Protocol tests use type-directed builders or parser-backed fixtures and cannot claim coverage with impossible wire values."
+    },
+    {
+      "id": "BS-Q-PY-001",
+      "severity": "P1",
+      "status": "OPEN",
+      "targetPhase": "05-runtime-trust",
+      "summary": "Malformed model tool-call JSON is normalized to an empty object and can be emitted as a valid completed tool call.",
+      "evidence": ["apps/ai-service/src/ai/service.py"],
+      "invariant": "Invalid model output remains an explicit invalid/error state and is never executed as a valid tool call."
+    },
+    {
+      "id": "BS-Q-PY-002",
+      "severity": "P2",
+      "status": "OPEN",
+      "targetPhase": "05-runtime-trust",
+      "summary": "StreamEventFactory mutates caller-owned StreamEventIds while enriching identity.",
+      "evidence": ["apps/ai-service/src/models/stream_event.py"],
+      "invariant": "Factories return new values and do not introduce hidden aliasing through caller mutation."
+    },
+    {
+      "id": "BS-Q-PY-003",
+      "severity": "P2",
+      "status": "OPEN",
+      "targetPhase": "05-runtime-trust",
+      "summary": "ToolExecutor validation/normalization mutates caller-owned argument dictionaries.",
+      "evidence": ["apps/ai-service/src/services/agent/tool_executor.py"],
+      "invariant": "Validation is side-effect free; normalization returns an explicit new value."
+    },
+    {
+      "id": "BS-Q-GO-001",
+      "severity": "P1",
+      "status": "OPEN",
+      "targetPhase": "06-durable-state-machines",
+      "summary": "Job.Status is a raw string instead of a finite domain type.",
+      "evidence": [
+        "apps/api/internal/model/job.go",
+        "apps/api/internal/service/job_runtime.go"
+      ],
+      "invariant": "Durable lifecycle state has one typed vocabulary shared by model, repository and service transitions."
+    },
+    {
+      "id": "BS-Q-GO-002",
+      "severity": "P1",
+      "status": "OPEN",
+      "targetPhase": "06-durable-state-machines",
+      "summary": "Job runtime treats completed and succeeded as duplicate successful terminal states.",
+      "evidence": [
+        "apps/api/internal/service/job_runtime.go",
+        "apps/api/internal/repository/job_repository.go"
+      ],
+      "invariant": "One semantic state has one canonical spelling; successful Job terminal state is completed."
+    },
+    {
+      "id": "BS-Q-GO-003",
+      "severity": "P1",
+      "status": "OPEN",
+      "targetPhase": "06-durable-state-machines",
+      "summary": "Job transition uses read-check-write rather than an invariant-bearing compare-and-set mutation.",
+      "evidence": [
+        "apps/api/internal/service/job_runtime.go",
+        "apps/api/internal/repository/job_repository.go"
+      ],
+      "invariant": "Concurrent lifecycle transitions cannot both succeed from the same expected state."
+    },
+    {
+      "id": "BS-Q-GO-004",
+      "severity": "P1",
+      "status": "OPEN",
+      "targetPhase": "06-durable-state-machines",
+      "summary": "Authoritative Job lifecycle event append is best-effort after status mutation.",
+      "evidence": ["apps/api/internal/service/job_runtime.go"],
+      "invariant": "When status and lifecycle event represent one durable fact they commit atomically."
+    },
+    {
+      "id": "BS-Q-X-001",
+      "severity": "P1",
+      "status": "OPEN",
+      "targetPhase": "04-internal-runtime-proto",
+      "summary": "Python internal runtime protocol and public StreamEvent reuse an overly generic event envelope/vocabulary.",
+      "evidence": [
+        "apps/ai-service/src/models/stream_event.py",
+        "apps/ai-service/src/runtime/consultation_thread.py",
+        "apps/api/internal/service/ai_client.go",
+        "packages/contracts/src/stream-events.ts"
+      ],
+      "invariant": "Internal Agent control/runtime protocol is distinct from Go-owned public projection protocol."
+    },
+    {
+      "id": "BS-Q-TOOL-001",
+      "severity": "P2",
+      "status": "FIXED",
+      "targetPhase": "00-baseline",
+      "summary": "A fresh worktree root typecheck failed because ai-service:typecheck did not declare the OCR extra required by imported fitz/pytesseract modules.",
+      "evidence": [
+        "apps/ai-service/project.json",
+        "apps/ai-service/pyproject.toml"
+      ],
+      "invariant": "The root typecheck target is self-contained on a fresh worktree and does not depend on another command having preinstalled optional packages.",
+      "verification": "Removed apps/ai-service/.venv and ran pnpm typecheck; ai-service recreated the environment and pyright completed with 0 errors."
+    },
+    {
+      "id": "BS-Q-TOOL-002",
+      "severity": "P3",
+      "status": "OPEN",
+      "targetPhase": "10-quality-gates",
+      "summary": "Web lint uses the deprecated @nx/eslint:lint executor and emits an Nx v24 migration warning.",
+      "evidence": ["apps/web/project.json"],
+      "invariant": "Quality gates use supported Nx target configuration without deprecation noise."
+    },
+    {
+      "id": "BS-Q-TEST-002",
+      "severity": "P3",
+      "status": "OPEN",
+      "targetPhase": "10-quality-gates",
+      "summary": "Passing Web unit tests emit repeated localhost:3000 ECONNREFUSED diagnostics and one React act warning.",
+      "evidence": [
+        "apps/web/src/components/layout/AppUserMenu.test.tsx",
+        "apps/web/src"
+      ],
+      "invariant": "A green unit suite is quiet enough that new actionable warnings are visible."
+    },
+    {
+      "id": "BS-Q-BUILD-001",
+      "severity": "P3",
+      "status": "OPEN",
+      "targetPhase": "11-final-simplification",
+      "summary": "Production build reports BodyExplorer3D chunk above the configured 500 kB warning threshold.",
+      "evidence": [
+        "apps/web/src/features/body-explorer",
+        "apps/web/vite.config.ts"
+      ],
+      "invariant": "Large intentional assets/chunks have an explicit loading/performance rationale or are split when that improves user-facing latency."
+    }
+  ]
+}
