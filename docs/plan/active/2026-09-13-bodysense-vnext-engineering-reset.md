@@ -418,6 +418,8 @@ Create an immutable factual baseline before deleting compatibility code.
 
 ## Phase 01 — Contract authority foundation
 
+**Status: COMPLETE — merged at `100018dd3`; evidence: `docs/refactor/vnext/phase-01-contract-foundation.md`.**
+
 Branch: `refactor/vnext-01-contract-foundation`
 
 ### Goal
