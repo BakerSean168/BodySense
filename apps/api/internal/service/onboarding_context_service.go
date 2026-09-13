@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
@@ -50,8 +49,8 @@ func NewOnboardingContextService(
 func (s *OnboardingContextService) Submit(
 	ctx context.Context,
 	userID uuid.UUID,
-	request dto.OnboardingContextRequest,
-) (*dto.OnboardingContextResult, error) {
+	request OnboardingContextRequest,
+) (*OnboardingContextResult, error) {
 	if s.transactions == nil {
 		return nil, errors.New("onboarding transaction manager is required")
 	}
@@ -101,7 +100,7 @@ func (s *OnboardingContextService) Submit(
 		return nil, err
 	}
 
-	result := &dto.OnboardingContextResult{}
+	result := &OnboardingContextResult{}
 	if committed != nil {
 		revision := committed.Revision
 		result.BodyStateRevision = &revision
@@ -110,10 +109,10 @@ func (s *OnboardingContextService) Submit(
 }
 
 func buildOnboardingBodyStatePatch(
-	request dto.OnboardingContextRequest,
+	request OnboardingContextRequest,
 	effectiveAt time.Time,
 ) model.BodyStateCurrentContextPatch {
-	lifestyle := dto.UpdateLifestyleRequest{
+	lifestyle := UpdateLifestyleRequest{
 		Activity:   &request.Lifestyle.Activity,
 		Sleep:      &request.Lifestyle.Sleep,
 		Exercise:   &request.Lifestyle.Exercise,

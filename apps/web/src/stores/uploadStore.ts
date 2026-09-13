@@ -86,7 +86,7 @@ export const useUploadStore = create<UploadState>()((set) => ({
       const upload = toUserUpload(
         await withOpenApiError(() =>
           createUpload(
-            { file, file_type: fileType },
+            CreateUploadRequestSchema.parse({ file, file_type: fileType }),
             undefined,
             openApiAuthFetch,
           ),

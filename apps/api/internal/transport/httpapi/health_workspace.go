@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/bodysense/api/internal/dto"
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
+	"github.com/bodysense/api/internal/service"
 	"github.com/google/uuid"
 )
 
 type healthWorkspaceService interface {
-	Get(ctx context.Context, userID uuid.UUID) (*dto.HealthWorkspace, error)
+	Get(ctx context.Context, userID uuid.UUID) (*service.HealthWorkspace, error)
 }
 
 func (s *PublicServer) WithHealthWorkspace(service healthWorkspaceService) *PublicServer {
@@ -50,7 +50,7 @@ func (s *PublicServer) GetHealthWorkspace(
 // encode the application projection, then decode it into the generated transport
 // model with unknown-field rejection. The generated type never enters service or
 // domain packages.
-func healthWorkspaceToOpenAPI(workspace *dto.HealthWorkspace) (openapiv1.HealthWorkspace, error) {
+func healthWorkspaceToOpenAPI(workspace *service.HealthWorkspace) (openapiv1.HealthWorkspace, error) {
 	encoded, err := json.Marshal(workspace)
 	if err != nil {
 		return openapiv1.HealthWorkspace{}, err

@@ -7,7 +7,6 @@ import (
 	"math"
 	"time"
 
-	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
@@ -30,12 +29,12 @@ func NewBodyMetricsService(bodyState bodyMetricsBodyState) *BodyMetricsService {
 	return &BodyMetricsService{bodyState: bodyState}
 }
 
-func (s *BodyMetricsService) Get(ctx context.Context, userID uuid.UUID) (*dto.BodyMetricsSnapshot, error) {
+func (s *BodyMetricsService) Get(ctx context.Context, userID uuid.UUID) (*BodyMetricsSnapshot, error) {
 	snapshot, err := s.bodyState.GetSnapshot(ctx, userID, 0)
 	if err != nil {
 		return nil, err
 	}
-	result := &dto.BodyMetricsSnapshot{CurrentRevision: snapshot.CurrentRevision}
+	result := &BodyMetricsSnapshot{CurrentRevision: snapshot.CurrentRevision}
 	for _, observation := range snapshot.Observations {
 		switch observation.Kind {
 		case model.BodyStateObservationKindHeight:
@@ -52,7 +51,7 @@ func (s *BodyMetricsService) Get(ctx context.Context, userID uuid.UUID) (*dto.Bo
 	return result, nil
 }
 
-func (s *BodyMetricsService) Update(ctx context.Context, userID uuid.UUID, request dto.UpdateBodyMetricsRequest) (*dto.BodyMetricsSnapshot, error) {
+func (s *BodyMetricsService) Update(ctx context.Context, userID uuid.UUID, request UpdateBodyMetricsRequest) (*BodyMetricsSnapshot, error) {
 	if err := validateBodyMetricValues(request.HeightCm, request.WeightKg); err != nil {
 		return nil, err
 	}
@@ -99,7 +98,7 @@ func metricMutationAt(kind string, value float64, unit string, observedAt time.T
 	}
 }
 
-func metricValueFromObservation(observation model.BodyStateObservation, fallbackUnit string) *dto.BodyMetricValue {
+func metricValueFromObservation(observation model.BodyStateObservation, fallbackUnit string) *BodyMetricValue {
 	var raw struct {
 		Value float64 `json:"value"`
 		Unit  string  `json:"unit"`
@@ -110,5 +109,5 @@ func metricValueFromObservation(observation model.BodyStateObservation, fallback
 	if raw.Unit == "" {
 		raw.Unit = fallbackUnit
 	}
-	return &dto.BodyMetricValue{Value: raw.Value, Unit: raw.Unit, ObservedAt: observation.ObservedAt}
+	return &BodyMetricValue{Value: raw.Value, Unit: raw.Unit, ObservedAt: observation.ObservedAt}
 }

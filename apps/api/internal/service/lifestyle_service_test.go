@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 )
@@ -81,10 +80,10 @@ func TestLifestyleUpdateBatchesMultipleSectionsIntoOneBodyStateMutation(t *testi
 	bodyState := &fakeLifestyleBodyState{snapshot: BodyStateSnapshot{CurrentRevision: 10}}
 	svc := NewLifestyleService(bodyState)
 	revision := int64(10)
-	_, err := svc.Update(context.Background(), uuid.New(), dto.UpdateLifestyleRequest{
+	_, err := svc.Update(context.Background(), uuid.New(), UpdateLifestyleRequest{
 		ExpectedRevision: &revision,
-		Activity:         &dto.LifestyleSectionInput{Summary: "久坐为主"},
-		Sleep:            &dto.LifestyleSectionInput{Summary: "轮班，平均睡 6-7 小时"},
+		Activity:         &LifestyleSectionInput{Summary: "久坐为主"},
+		Sleep:            &LifestyleSectionInput{Summary: "轮班，平均睡 6-7 小时"},
 	})
 	if err != nil {
 		t.Fatalf("Update returned error: %v", err)

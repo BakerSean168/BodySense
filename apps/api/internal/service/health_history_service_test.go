@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 )
@@ -46,7 +45,7 @@ func TestHealthHistoryUpdateUsesOneBodyStateMutation(t *testing.T) {
 	bodyState := &fakeHealthHistoryBodyState{snapshot: BodyStateSnapshot{CurrentRevision: 8}}
 	svc := NewHealthHistoryService(bodyState)
 	revision := int64(8)
-	_, err := svc.UpdateInjuryHistory(context.Background(), uuid.New(), dto.UpdateInjuryHistoryRequest{
+	_, err := svc.UpdateInjuryHistory(context.Background(), uuid.New(), UpdateInjuryHistoryRequest{
 		ExpectedRevision: &revision,
 		Summary:          "2024 年左膝拉伤",
 	})

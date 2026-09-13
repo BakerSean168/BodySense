@@ -1,4 +1,4 @@
-package dto
+package service
 
 // OnboardingContextRequest is a capture contract, not a persistence model.
 // Each nested section is routed by the application service to the aggregate

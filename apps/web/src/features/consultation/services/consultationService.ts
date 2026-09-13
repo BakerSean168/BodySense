@@ -34,7 +34,6 @@ import type {
   DiagnosisWorkspaceProjectionOutput as PublicDiagnosisAnalysis,
   JsonObjectOutput,
 } from "@/generated/api/model";
-import { expectJson } from "@/lib/api-client";
 import {
   openApiAuthFetch,
   openApiPublicFetch,
@@ -54,15 +53,6 @@ import type {
   PendingInteraction,
   ProjectedToolCall,
 } from "../types/consultation";
-
-/**
- * Parse a Response as JSON, throwing on non-ok status.
- * Skips the ok check when the caller needs the raw Response (e.g. SSE).
- */
-async function parseJson<T>(res: Response): Promise<T> {
-  if (res.status === 204) return undefined as T;
-  return expectJson<T>(res);
-}
 
 function toConversation(input: PublicConversation): Conversation {
   return {

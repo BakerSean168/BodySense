@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 )
@@ -24,12 +23,12 @@ func NewHealthHistoryService(bodyState healthHistoryBodyState) *HealthHistorySer
 	return &HealthHistoryService{bodyState: bodyState}
 }
 
-func (s *HealthHistoryService) GetInjuryHistory(ctx context.Context, userID uuid.UUID) (*dto.InjuryHistorySnapshot, error) {
+func (s *HealthHistoryService) GetInjuryHistory(ctx context.Context, userID uuid.UUID) (*InjuryHistorySnapshot, error) {
 	snapshot, err := s.bodyState.GetSnapshot(ctx, userID, 0)
 	if err != nil {
 		return nil, err
 	}
-	result := &dto.InjuryHistorySnapshot{CurrentRevision: snapshot.CurrentRevision}
+	result := &InjuryHistorySnapshot{CurrentRevision: snapshot.CurrentRevision}
 	for index := range snapshot.Facts {
 		fact := snapshot.Facts[index]
 		if fact.Kind != model.BodyStateFactKindInjuryHistory || fact.ReviewState != "confirmed" || fact.LifecycleState != "active" || fact.ExcludedFromReasoning {
@@ -48,8 +47,8 @@ func (s *HealthHistoryService) GetInjuryHistory(ctx context.Context, userID uuid
 func (s *HealthHistoryService) UpdateInjuryHistory(
 	ctx context.Context,
 	userID uuid.UUID,
-	request dto.UpdateInjuryHistoryRequest,
-) (*dto.InjuryHistorySnapshot, error) {
+	request UpdateInjuryHistoryRequest,
+) (*InjuryHistorySnapshot, error) {
 	mutation := injuryHistoryMutation(
 		request.Summary,
 		time.Now().UTC(),

@@ -1,6 +1,6 @@
 # vNext Phase 02 — Public REST / OpenAPI-first
 
-- Status: IN PROGRESS
+- Status: COMPLETE
 - Branch: `refactor/vnext-02-rest-openapi`
 - Parent: `refactor/bodysense-vnext`
 - Canonical authority: `packages/contracts/openapi/bodysense.v1.openapi.yaml`
@@ -1003,3 +1003,15 @@ source/job/search private-field projection   PASS
 public REST coverage                         95/95, missing=0
 git diff --check                            PASS
 ```
+
+## Phase 02 completion acceptance
+
+Status: **COMPLETE**
+
+Phase 02 closes with the canonical OpenAPI authority covering all **95 / 95** eligible browser-facing REST operations. `GET /api/health` remains the single intentional operational exclusion. The final implementation has four explicit generated security domains (auth-public, share-public, authenticated user, Knowledge operator), no missing migration routes and no duplicate generated registrations.
+
+The end-of-phase ownership review also closes the two application-model package debts discovered during migration: HealthWorkspace and the Lifestyle/BodyMetrics/InjuryHistory/Onboarding command/read-model families now live under `internal/service`, not `internal/dto`. Generated OpenAPI types remain confined to `internal/generated/openapi/v1` and `transport/httpapi`.
+
+Final bundle review closes `BS-VNEXT-REST-007` without weakening runtime validation: ConsultationPage is **357.21 kB / 105.61 kB gzip**, effectively flat versus the earlier **355.71 kB / 105.27 kB gzip** checkpoint; the earlier ~45.11 kB generated/shared chunk no longer appears, while the generated consultation service is **12.02 kB / 3.45 kB gzip**. The remaining large-chunk warning is dominated by the pre-existing BodyExplorer3D asset, not OpenAPI/Zod.
+
+Phase 03 is **not started** by this completion.

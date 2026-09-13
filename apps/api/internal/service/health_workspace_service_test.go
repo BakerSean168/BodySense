@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
@@ -111,7 +110,7 @@ func TestWorkspaceCapabilitiesRejectPotentiallyStaleDiagnosisForTreatment(t *tes
 func TestWorkspaceCapabilitiesRequireActiveTrainingProjectionForExecution(t *testing.T) {
 	analysisID := uuid.New()
 	candidateID := uuid.New()
-	baseArgs := func(plan *model.TrainingPlan) dto.HealthWorkspaceCapabilities {
+	baseArgs := func(plan *model.TrainingPlan) HealthWorkspaceCapabilities {
 		return deriveWorkspaceCapabilities(
 			&BodyStateSnapshot{CurrentRevision: 7, Facts: []model.BodyStateFact{{Kind: "discomfort"}}},
 			&model.DiagnosisAnalysisRecord{
