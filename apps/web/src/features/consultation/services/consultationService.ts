@@ -1,6 +1,27 @@
 import { parseStreamEvent } from "@bodysense/contracts";
 import { authFetch } from "@/features/auth/services/authService";
+import {
+  deleteConversation as deleteConversationOpenApi,
+  generateConversationTitle as generateConversationTitleOpenApi,
+  getConversation as getConversationOpenApi,
+  getSharedConversation as getSharedConversationOpenApi,
+  listConversations as listConversationsOpenApi,
+  listRunEvents as listRunEventsOpenApi,
+  pinConversation as pinConversationOpenApi,
+  renameConversationTitle as renameConversationTitleOpenApi,
+  shareConversation as shareConversationOpenApi,
+  unshareConversation as unshareConversationOpenApi,
+} from "@/generated/api/bodysense";
+import type {
+  ConversationMessageOutput as PublicConversationMessage,
+  ConversationOutput as PublicConversation,
+} from "@/generated/api/model";
 import { expectJson } from "@/lib/api-client";
+import {
+  openApiAuthFetch,
+  openApiPublicFetch,
+  withOpenApiError,
+} from "@/lib/openapi-client";
 import type {
   Conversation,
   ConversationListResponse,
@@ -23,6 +44,63 @@ const API_BASE = "/api/v1";
 async function parseJson<T>(res: Response): Promise<T> {
   if (res.status === 204) return undefined as T;
   return expectJson<T>(res);
+}
+
+function toConversation(input: PublicConversation): Conversation {
+  return {
+    id: input.id,
+    title: input.title ?? null,
+    title_status: input.title_status,
+    status: input.status,
+    pinned: input.pinned,
+    pinned_at: input.pinned_at ?? null,
+    default_model: input.default_model ?? null,
+    last_message_at: input.last_message_at ?? null,
+    message_count: 0,
+    metadata: input.metadata,
+    created_at: input.created_at,
+    updated_at: input.updated_at,
+  };
+}
+
+function toErrorInfo(
+  value: Record<string, unknown> | undefined,
+): Message["error"] {
+  if (!value) return null;
+  const code = value.code;
+  const message = value.message;
+  return typeof code === "string" && typeof message === "string"
+    ? { code, message }
+    : null;
+}
+
+function toConversationMessage(input: PublicConversationMessage): Message {
+  return {
+    id: input.id,
+    conversation_id: input.conversation_id,
+    turn_id: input.turn_id,
+    run_id: input.run_id ?? null,
+    parent_message_id: input.parent_message_id ?? null,
+    role: input.role,
+    status: input.status,
+    seq: input.seq,
+    // MessagePart remains a feature-domain union. The public OpenAPI transport
+    // intentionally validates the envelope while keeping part payloads as JSON
+    // objects until the StreamEvent/MessagePart contract is unified in Phase 03.
+    parts: input.parts as Message["parts"],
+    content_text: input.content_text ?? "",
+    model: input.model ?? null,
+    provider: input.provider ?? null,
+    provider_message_id: input.provider_message_id ?? null,
+    provider_response_id: input.provider_response_id ?? null,
+    input_tokens: input.input_tokens ?? null,
+    output_tokens: input.output_tokens ?? null,
+    total_tokens: input.total_tokens ?? null,
+    error: toErrorInfo(input.error),
+    metadata: input.metadata,
+    created_at: input.created_at,
+    updated_at: input.updated_at,
+  };
 }
 
 export const consultationApi = {
@@ -71,90 +149,79 @@ export const consultationApi = {
     cursor?: string;
     limit?: number;
   }): Promise<ConversationListResponse> {
-    const searchParams = new URLSearchParams();
-    if (params?.cursor) searchParams.set("cursor", params.cursor);
-    if (params?.limit) searchParams.set("limit", String(params.limit));
-    const query = searchParams.toString();
-    return authFetch(
-      `${API_BASE}/conversations${query ? "?" + query : ""}`,
-    ).then((res) => parseJson<ConversationListResponse>(res));
+    const result = await withOpenApiError(() =>
+      listConversationsOpenApi(params, undefined, openApiAuthFetch),
+    );
+    return {
+      conversations: result.conversations.map(toConversation),
+      next_cursor: result.nextCursor ?? null,
+      has_more: result.hasMore,
+    };
   },
 
-  /**
-   * Get a single conversation with its messages.
-   */
+  /** Get one conversation with its ordered messages. */
   async getConversation(
     id: string,
   ): Promise<{ conversation: Conversation; messages: Message[] }> {
-    return authFetch(`${API_BASE}/conversations/${id}`).then((res) =>
-      parseJson<{ conversation: Conversation; messages: Message[] }>(res),
+    const result = await withOpenApiError(() =>
+      getConversationOpenApi(id, undefined, openApiAuthFetch),
+    );
+    return {
+      conversation: toConversation(result.conversation),
+      messages: result.messages.map(toConversationMessage),
+    };
+  },
+
+  async deleteConversation(id: string): Promise<void> {
+    await withOpenApiError(() =>
+      deleteConversationOpenApi(id, undefined, openApiAuthFetch),
     );
   },
 
-  /**
-   * Delete a conversation.
-   */
-  async deleteConversation(id: string): Promise<void> {
-    await authFetch(`${API_BASE}/conversations/${id}`, {
-      method: "DELETE",
-    }).then((res) => parseJson<void>(res));
-  },
-
-  /**
-   * Toggle pinned state of a conversation.
-   */
   async pinConversation(id: string, pinned: boolean): Promise<void> {
-    await authFetch(`${API_BASE}/conversations/${id}/pin`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pinned }),
-    }).then((res) => parseJson<void>(res));
+    await withOpenApiError(() =>
+      pinConversationOpenApi(id, { pinned }, undefined, openApiAuthFetch),
+    );
   },
 
-  /**
-   * Trigger AI-generated title for a conversation.
-   */
   async generateTitle(id: string): Promise<void> {
-    await authFetch(`${API_BASE}/conversations/${id}/title`, {
-      method: "POST",
-    }).then((res) => parseJson<void>(res));
+    await withOpenApiError(() =>
+      generateConversationTitleOpenApi(id, undefined, openApiAuthFetch),
+    );
   },
 
-  /**
-   * Rename a conversation title (user-initiated).
-   */
   async renameTitle(id: string, title: string): Promise<void> {
-    await authFetch(`${API_BASE}/conversations/${id}/title`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title }),
-    }).then((res) => parseJson<void>(res));
+    await withOpenApiError(() =>
+      renameConversationTitleOpenApi(
+        id,
+        { title },
+        undefined,
+        openApiAuthFetch,
+      ),
+    );
   },
 
-  /**
-   * Generate a share link for a conversation.
-   */
   async shareConversation(id: string): Promise<ConversationShare> {
-    return authFetch(`${API_BASE}/conversations/${id}/share`, {
-      method: "POST",
-    }).then((res) => parseJson<ConversationShare>(res));
+    return withOpenApiError(() =>
+      shareConversationOpenApi(id, undefined, openApiAuthFetch),
+    );
   },
 
-  /**
-   * Revoke a share link.
-   */
   async unshareConversation(id: string): Promise<void> {
-    await authFetch(`${API_BASE}/conversations/${id}/share`, {
-      method: "DELETE",
-    }).then((res) => parseJson<void>(res));
+    await withOpenApiError(() =>
+      unshareConversationOpenApi(id, undefined, openApiAuthFetch),
+    );
   },
 
-  /**
-   * Fetch shared conversation content (public, no auth required).
-   */
+  /** Fetch shared conversation content through the generated public client. */
   async getSharedConversation(token: string): Promise<SharedConversation> {
-    const res = await fetch(`${API_BASE}/conversations/share/${token}`);
-    return parseJson<SharedConversation>(res);
+    const result = await withOpenApiError(() =>
+      getSharedConversationOpenApi(token, undefined, openApiPublicFetch),
+    );
+    return {
+      title: result.title,
+      messages: result.messages.map(toConversationMessage),
+    };
   },
 
   // ===== Consultation Domain API =====
@@ -226,44 +293,26 @@ export const consultationApi = {
     hasMore: boolean;
     nextAfterSeq: number | null;
   }> {
-    const searchParams = new URLSearchParams();
-    if (params?.afterSeq != null)
-      searchParams.set("after_seq", String(params.afterSeq));
-    if (params?.limit != null) searchParams.set("limit", String(params.limit));
-    const query = searchParams.toString();
-    const raw = await authFetch(
-      `${API_BASE}/conversations/${conversationId}/runs/${runId}/events${query ? "?" + query : ""}`,
-    ).then((res) =>
-      parseJson<{
-        events: Array<{
-          seq: number;
-          channel: string;
-          type: string;
-          ids: unknown;
-          payload: unknown;
-          created_at: string;
-        }>;
-        hasMore: boolean;
-        nextAfterSeq?: number | null;
-      }>(res),
+    const raw = await withOpenApiError(() =>
+      listRunEventsOpenApi(
+        conversationId,
+        runId,
+        { after_seq: params?.afterSeq, limit: params?.limit },
+        undefined,
+        openApiAuthFetch,
+      ),
     );
 
-    const events: StreamEvent[] = raw.events.map((item) => {
-      const ids: unknown =
-        typeof item.ids === "string" ? JSON.parse(item.ids) : (item.ids ?? {});
-      const payload: unknown =
-        typeof item.payload === "string"
-          ? JSON.parse(item.payload)
-          : (item.payload ?? {});
-      return parseStreamEvent({
+    const events: StreamEvent[] = raw.events.map((item) =>
+      parseStreamEvent({
         version: 1,
         seq: item.seq,
         channel: item.channel,
         type: item.type,
-        ids,
-        payload,
-      });
-    });
+        ids: item.ids,
+        payload: item.payload,
+      }),
+    );
 
     return {
       events,

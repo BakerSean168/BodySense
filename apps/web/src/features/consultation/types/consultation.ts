@@ -31,7 +31,7 @@ export type {
 export interface Conversation {
   id: string;
   title: string | null;
-  title_status: "pending" | "generating" | "generated";
+  title_status: "pending" | "generating" | "generated" | "failed";
   status: "active" | "archived" | "deleted";
   pinned: boolean;
   pinned_at: string | null;

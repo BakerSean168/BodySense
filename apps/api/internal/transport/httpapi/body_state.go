@@ -43,6 +43,9 @@ type PublicServer struct {
 	assessmentReplay assessmentReplayApplication
 	accounts         authAccountApplication
 	authSecurity     authConfig
+	conversations    conversationApplication
+	shares           conversationShareApplication
+	runtimeEvents    runtimeEventApplication
 }
 
 func NewPublicServer(bodyState bodyStateFactService) *PublicServer {

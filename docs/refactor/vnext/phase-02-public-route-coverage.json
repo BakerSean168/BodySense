@@ -5,11 +5,11 @@
   "totals": {
     "baseline": 96,
     "browserFacingEligible": 95,
-    "openapi": 36,
-    "missing": 59,
+    "openapi": 48,
+    "missing": 47,
     "retired": 0,
     "excludedOperational": 1,
-    "coveragePercent": 37.89
+    "coveragePercent": 50.53
   },
   "routes": [
     {
@@ -165,67 +165,89 @@
       "method": "GET",
       "path": "/api/v1/conversations",
       "source": "apps/api/cmd/server/main.go:415",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "listConversations",
+      "openapiPath": "/api/v1/conversations"
     },
     {
       "method": "GET",
       "path": "/api/v1/conversations/:id",
       "source": "apps/api/cmd/server/main.go:416",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getConversation",
+      "openapiPath": "/api/v1/conversations/{id}"
     },
     {
       "method": "PATCH",
       "path": "/api/v1/conversations/:id",
       "source": "apps/api/cmd/server/main.go:417",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "updateConversation",
+      "openapiPath": "/api/v1/conversations/{id}"
     },
     {
       "method": "DELETE",
       "path": "/api/v1/conversations/:id",
       "source": "apps/api/cmd/server/main.go:418",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "deleteConversation",
+      "openapiPath": "/api/v1/conversations/{id}"
     },
     {
       "method": "PATCH",
       "path": "/api/v1/conversations/:id/pin",
       "source": "apps/api/cmd/server/main.go:419",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "pinConversation",
+      "openapiPath": "/api/v1/conversations/{id}/pin"
     },
     {
       "method": "GET",
       "path": "/api/v1/conversations/:id/runs",
       "source": "apps/api/cmd/server/main.go:420",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "listConversationRuns",
+      "openapiPath": "/api/v1/conversations/{id}/runs"
     },
     {
       "method": "GET",
       "path": "/api/v1/conversations/:id/runs/:runId/events",
       "source": "apps/api/cmd/server/main.go:421",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "listRunEvents",
+      "openapiPath": "/api/v1/conversations/{id}/runs/{runId}/events"
     },
     {
       "method": "POST",
       "path": "/api/v1/conversations/:id/title",
       "source": "apps/api/cmd/server/main.go:422",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "generateConversationTitle",
+      "openapiPath": "/api/v1/conversations/{id}/title"
     },
     {
       "method": "PUT",
       "path": "/api/v1/conversations/:id/title",
       "source": "apps/api/cmd/server/main.go:423",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "renameConversationTitle",
+      "openapiPath": "/api/v1/conversations/{id}/title"
     },
     {
       "method": "POST",
       "path": "/api/v1/conversations/:id/share",
       "source": "apps/api/cmd/server/main.go:424",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "shareConversation",
+      "openapiPath": "/api/v1/conversations/{id}/share"
     },
     {
       "method": "DELETE",
       "path": "/api/v1/conversations/:id/share",
       "source": "apps/api/cmd/server/main.go:425",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "unshareConversation",
+      "openapiPath": "/api/v1/conversations/{id}/share"
     },
     {
       "method": "POST",
@@ -623,7 +645,9 @@
       "method": "GET",
       "path": "/api/v1/conversations/share/:token",
       "source": "apps/api/cmd/server/main.go:507",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getSharedConversation",
+      "openapiPath": "/api/v1/conversations/share/{token}"
     },
     {
       "method": "POST",

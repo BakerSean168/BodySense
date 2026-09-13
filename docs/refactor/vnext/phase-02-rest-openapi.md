@@ -603,3 +603,65 @@ complex migrated response projections semantic-schema validated
 ```
 
 Known baseline test stderr noise and the existing BodyExplorer3D bundle warning remain unchanged. `BS-VNEXT-REST-007` continues to track generated-client bundle review for the end of Phase 02.
+
+## Checkpoint 9 — Conversation / share / durable-event REST boundary
+
+Status: COMPLETE ON PHASE BRANCH
+
+The conversation browser surface is now owned by the generated OpenAPI router:
+
+```text
+GET    /api/v1/conversations
+GET    /api/v1/conversations/{id}
+PATCH  /api/v1/conversations/{id}
+DELETE /api/v1/conversations/{id}
+PATCH  /api/v1/conversations/{id}/pin
+PUT    /api/v1/conversations/{id}/title
+POST   /api/v1/conversations/{id}/title
+POST   /api/v1/conversations/{id}/share
+DELETE /api/v1/conversations/{id}/share
+GET    /api/v1/conversations/share/{token}
+GET    /api/v1/conversations/{id}/runs
+GET    /api/v1/conversations/{id}/runs/{runId}/events
+```
+
+The legacy ConversationHandler and RuntimeEventHandler are deleted. The public share read is registered in the unauthenticated capability-URL partition; all user-owned conversation, run and event operations stay in the authenticated partition.
+
+### Public projection boundary
+
+The first handoff draft mirrored persistence models directly into OpenAPI. That would have frozen internal fields such as `user_id`, provider conversation identifiers, active execution pointers and frozen agent configuration/provenance into the browser contract. The final adapter instead projects explicit public transport types before strict schema validation.
+
+Characterization tests prove the conversation list omits persistence-only identity/provider/agent fields while preserving the browser fields required by the consultation UI. Shared snapshots are validated as public `ConversationMessage` objects rather than arbitrary JSON objects.
+
+### Browser boundary
+
+The consultation feature no longer constructs handwritten URLs for migrated conversation operations. It calls the generated Orval Fetch + Zod operations through `openApiAuthFetch` or `openApiPublicFetch`, then maps transport output into the existing feature-domain model. Pagination naming is deliberately normalized from transport `hasMore/nextCursor` to feature `has_more/next_cursor`; generated transport types do not leak into React state.
+
+Durable run-event reads now validate the OpenAPI response first and then pass each event through the canonical `parseStreamEvent` runtime contract before it reaches recovery logic.
+
+### Coverage after this batch
+
+```text
+Phase 00 routes               96
+operational exclusions         1
+browser-facing eligible       95
+OpenAPI-authoritative         48
+missing                       47
+coverage                   50.53%
+```
+
+### Verification
+
+```text
+pnpm contracts:lint                         PASS (2 known route-ambiguity warnings for static share vs {id})
+pnpm contracts:check-generated              PASS
+Go httpapi + cmd/server tests                PASS
+Web consultation service                    20/20 PASS
+Web typecheck                               PASS
+public share bypasses bearer auth           PASS
+conversation public-projection leak test    PASS
+feature handwritten /api/v1/conversations  NONE
+git diff --check                            PASS
+```
+
+The OpenAPI linter's two `no-ambiguous-paths` warnings describe the long-standing public share shape `/conversations/share/{token}` overlapping the `{id}` namespace in abstract OpenAPI routing. Gin's static-segment precedence is covered by the security-domain characterization test. The path remains unchanged in Phase 02 so the canonical 95-route baseline is not rewritten during migration.

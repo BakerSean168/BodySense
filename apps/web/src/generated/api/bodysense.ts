@@ -19,6 +19,10 @@ import {
   BodyStateObservationMutationResponse,
   BodyStateRevisionMutationResponse,
   BodyStateSnapshot,
+  ConversationDetailResponse,
+  ConversationListResponse,
+  ConversationMutationResponse,
+  ConversationRunListResponse,
   CurrentUser,
   HealthWorkspace,
   InjuryHistorySnapshot,
@@ -28,6 +32,9 @@ import {
   OnboardingContextResult,
   PrivacyErasureAccepted,
   PrivacyErasurePlan,
+  RuntimeEventListResponse,
+  ShareConversationResponse,
+  SharedConversationResponse,
   UserProfileResponse
 } from './model';
 import type {
@@ -50,12 +57,21 @@ import type {
   BodyStateRevisionMutationResponseOutput,
   BodyStateSnapshotOutput,
   ClientDiagnostic,
+  ConversationDetailResponseOutput,
+  ConversationListResponseOutput,
+  ConversationMutationResponseOutput,
+  ConversationPinRequest,
+  ConversationRunListResponseOutput,
+  ConversationTitleRequest,
+  ConversationUpdateRequest,
   CorrectBodyStateFactRequest,
   CurrentUserOutput,
   HealthWorkspaceOutput,
   InjuryHistorySnapshotOutput,
   LifestyleSnapshotOutput,
   ListAssessmentsParams,
+  ListConversationsParams,
+  ListRunEventsParams,
   LogoutAcknowledgementOutput,
   NullableUserProfileResponseOutput,
   OnboardingContextRequest,
@@ -67,6 +83,9 @@ import type {
   ReviewBodyStateFactRequest,
   ReviewBodyStateObservationRequest,
   ReviewLifestyleCandidateRequest,
+  RuntimeEventListResponseOutput,
+  ShareConversationResponseOutput,
+  SharedConversationResponseOutput,
   UpdateBodyMetricsRequest,
   UpdateBodyStateFactTemporalRequest,
   UpdateBodyStateHypothesisLifecycleRequest,
@@ -1784,5 +1803,536 @@ export const logoutAccount = async ( options?: RequestInit, fetchFn?: typeof glo
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? LogoutAcknowledgement.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListConversationsUrl = (params?: ListConversationsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/conversations?${stringifiedParams}` : `/api/v1/conversations`
+}
+
+/**
+ * @summary List the authenticated user's conversations with cursor pagination.
+ */
+export const listConversations = async (params?: ListConversationsParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ConversationListResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListConversationsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ConversationListResponse, status?: number} = new globalThis.Error();
+    const data : ConversationListResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ConversationListResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetConversationUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/conversations/${id}`
+}
+
+/**
+ * @summary Get one conversation with its ordered messages.
+ */
+export const getConversation = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ConversationDetailResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetConversationUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ConversationDetailResponse, status?: number} = new globalThis.Error();
+    const data : ConversationDetailResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ConversationDetailResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getUpdateConversationUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/conversations/${id}`
+}
+
+/**
+ * @summary Update conversation status (active, archived, or deleted).
+ */
+export const updateConversation = async (id: string,
+    conversationUpdateRequest: ConversationUpdateRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ConversationMutationResponseOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getUpdateConversationUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(conversationUpdateRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ConversationMutationResponse, status?: number} = new globalThis.Error();
+    const data : ConversationMutationResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ConversationMutationResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getDeleteConversationUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/conversations/${id}`
+}
+
+/**
+ * @summary Soft-delete a conversation and revoke its shares.
+ */
+export const deleteConversation = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ConversationMutationResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getDeleteConversationUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ConversationMutationResponse, status?: number} = new globalThis.Error();
+    const data : ConversationMutationResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ConversationMutationResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getPinConversationUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/conversations/${id}/pin`
+}
+
+/**
+ * @summary Pin or unpin a conversation.
+ */
+export const pinConversation = async (id: string,
+    conversationPinRequest: ConversationPinRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ConversationMutationResponseOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getPinConversationUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(conversationPinRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ConversationMutationResponse, status?: number} = new globalThis.Error();
+    const data : ConversationMutationResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ConversationMutationResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getRenameConversationTitleUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/conversations/${id}/title`
+}
+
+/**
+ * @summary Rename a conversation title directly.
+ */
+export const renameConversationTitle = async (id: string,
+    conversationTitleRequest: ConversationTitleRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ConversationMutationResponseOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getRenameConversationTitleUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(conversationTitleRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ConversationMutationResponse, status?: number} = new globalThis.Error();
+    const data : ConversationMutationResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ConversationMutationResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGenerateConversationTitleUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/conversations/${id}/title`
+}
+
+/**
+ * @summary Queue asynchronous agent title generation for a conversation.
+ */
+export const generateConversationTitle = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ConversationMutationResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGenerateConversationTitleUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ConversationMutationResponse, status?: number} = new globalThis.Error();
+    const data : ConversationMutationResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ConversationMutationResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getShareConversationUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/conversations/${id}/share`
+}
+
+/**
+ * @summary Publish a share token and public URL for a conversation.
+ */
+export const shareConversation = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ShareConversationResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getShareConversationUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ShareConversationResponse, status?: number} = new globalThis.Error();
+    const data : ShareConversationResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ShareConversationResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getUnshareConversationUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/conversations/${id}/share`
+}
+
+/**
+ * @summary Revoke a conversation share.
+ */
+export const unshareConversation = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ConversationMutationResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getUnshareConversationUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ConversationMutationResponse, status?: number} = new globalThis.Error();
+    const data : ConversationMutationResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ConversationMutationResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetSharedConversationUrl = (token: string,) => {
+
+
+
+
+  return `/api/v1/conversations/share/${token}`
+}
+
+/**
+ * @summary Read a shared conversation snapshot by public token.
+ */
+export const getSharedConversation = async (token: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<SharedConversationResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetSharedConversationUrl(token),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: SharedConversationResponse, status?: number} = new globalThis.Error();
+    const data : SharedConversationResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? SharedConversationResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListConversationRunsUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/conversations/${id}/runs`
+}
+
+/**
+ * @summary List the recorded runs of a conversation.
+ */
+export const listConversationRuns = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ConversationRunListResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListConversationRunsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ConversationRunListResponse, status?: number} = new globalThis.Error();
+    const data : ConversationRunListResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ConversationRunListResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListRunEventsUrl = (id: string,
+    runId: string,
+    params?: ListRunEventsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/conversations/${id}/runs/${runId}/events?${stringifiedParams}` : `/api/v1/conversations/${id}/runs/${runId}/events`
+}
+
+/**
+ * @summary Page through the durable runtime events of one conversation run.
+ */
+export const listRunEvents = async (id: string,
+    runId: string,
+    params?: ListRunEventsParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<RuntimeEventListResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListRunEventsUrl(id,runId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: RuntimeEventListResponse, status?: number} = new globalThis.Error();
+    const data : RuntimeEventListResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? RuntimeEventListResponse.parse(parsedBody) : parsedBody
   return data
 }

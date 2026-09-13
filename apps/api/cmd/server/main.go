@@ -230,8 +230,6 @@ func main() {
 			knowledgeObservationRepo,
 		),
 	)
-	convHandler := handler.NewConversationHandler(conversationService, shareService)
-	runtimeEventHandler := handler.NewRuntimeEventHandler(runtimeEventService, conversationService)
 	threadProjectionHandler := handler.NewThreadProjectionHandler(threadProjectionService, bodyStateService)
 	consultationHandler := handler.NewConsultationHandler(
 		consultationService,
@@ -386,20 +384,6 @@ func main() {
 		extractions.POST("/:runId/reviews", healthDocumentReviewHandler.AppendReview)
 		extractions.GET("/:runId/source", healthDocumentReviewHandler.SourceContext)
 
-		// Conversation API
-		conversations := protected.Group("/conversations")
-		conversations.GET("", convHandler.ListConversations)
-		conversations.GET("/:id", convHandler.GetConversation)
-		conversations.PATCH("/:id", convHandler.UpdateConversation)
-		conversations.DELETE("/:id", convHandler.DeleteConversation)
-		conversations.PATCH("/:id/pin", convHandler.PinConversation)
-		conversations.GET("/:id/runs", convHandler.ListRuns)
-		conversations.GET("/:id/runs/:runId/events", runtimeEventHandler.ListRunEvents)
-		conversations.POST("/:id/title", convHandler.GenerateTitle)
-		conversations.PUT("/:id/title", convHandler.RenameTitle)
-		conversations.POST("/:id/share", convHandler.ShareConversation)
-		conversations.DELETE("/:id/share", convHandler.UnshareConversation)
-
 		// Consultation domain
 		protected.POST("/consultation-runs", consultationHandler.StartRun)
 		protected.POST("/consultation-runs/:id/cancel", consultationHandler.CancelRun)
@@ -462,17 +446,13 @@ func main() {
 	}
 	httpapi.RegisterRoutes(
 		r,
-		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure).WithAssessment(assessmentService, assessmentReplayService).WithAuth(authService, authSecurity)),
+		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure).WithAssessment(assessmentService, assessmentReplayService).WithAuth(authService, authSecurity).WithConversations(conversationService, shareService, runtimeEventService)),
 		httpapi.RouteSecurity{
 			Auth:      authMiddleware,
 			Operator:  middleware.RequireKnowledgeOperator(userRepo),
 			Validator: httpapi.RequestValidator(publicAPISpec),
 		},
 	)
-
-	// Public share routes (no auth)
-	public := r.Group("/api/v1")
-	public.GET("/conversations/share/:token", convHandler.GetSharedConversation)
 
 	// Global Knowledge administration is an explicit operator capability.
 	// Product Agents retrieve published Knowledge through the internal AI path;

@@ -4,11 +4,11 @@
 
 - Phase 00 baseline routes: **96**
 - Browser-facing eligible routes: **95**
-- OpenAPI-authoritative routes: **36**
-- Missing migration routes: **59**
+- OpenAPI-authoritative routes: **48**
+- Missing migration routes: **47**
 - Retired routes: **0**
 - Operational exclusions: **1**
-- Coverage: **37.89%**
+- Coverage: **50.53%**
 
 ## Missing routes
 
@@ -21,17 +21,6 @@
 - `GET /api/v1/uploads/:id/extractions/:runId/reviews`
 - `POST /api/v1/uploads/:id/extractions/:runId/reviews`
 - `GET /api/v1/uploads/:id/extractions/:runId/source`
-- `GET /api/v1/conversations`
-- `GET /api/v1/conversations/:id`
-- `PATCH /api/v1/conversations/:id`
-- `DELETE /api/v1/conversations/:id`
-- `PATCH /api/v1/conversations/:id/pin`
-- `GET /api/v1/conversations/:id/runs`
-- `GET /api/v1/conversations/:id/runs/:runId/events`
-- `POST /api/v1/conversations/:id/title`
-- `PUT /api/v1/conversations/:id/title`
-- `POST /api/v1/conversations/:id/share`
-- `DELETE /api/v1/conversations/:id/share`
 - `POST /api/v1/consultation-runs`
 - `POST /api/v1/consultation-runs/:id/cancel`
 - `GET /api/v1/consultations/:id`
@@ -64,7 +53,6 @@
 - `PUT /api/v1/training/:id/log`
 - `GET /api/v1/training/:id/progress`
 - `POST /api/v1/training/:id/reassess`
-- `GET /api/v1/conversations/share/:token`
 - `POST /api/v1/knowledge/sources`
 - `GET /api/v1/knowledge/sources`
 - `POST /api/v1/knowledge/ingestions/video`

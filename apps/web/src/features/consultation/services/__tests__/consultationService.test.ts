@@ -11,6 +11,19 @@ import { consultationApi } from "../consultationService";
 
 const mockAuthFetch = vi.mocked(authFetch);
 
+const conversationWire = {
+  id: "11111111-1111-4111-8111-111111111111",
+  title: "Conversation",
+  title_status: "generated" as const,
+  status: "active" as const,
+  pinned: false,
+  metadata: {},
+  created_at: "2026-09-13T12:00:00Z",
+  updated_at: "2026-09-13T12:00:00Z",
+};
+
+const mutationWire = { message: "ok" };
+
 function mockResponse(body: unknown, ok = true, status = 200): Response {
   const resolvedStatus = ok
     ? status >= 200 && status < 300
@@ -114,25 +127,61 @@ describe("consultationApi", () => {
   });
 
   describe("listConversations", () => {
-    it("GETs /api/v1/conversations with pagination params", async () => {
-      const data = { conversations: [], nextCursor: null, hasMore: false };
-      mockAuthFetch.mockResolvedValue(mockResponse(data));
+    it("uses the generated OpenAPI client and maps pagination to the feature domain", async () => {
+      mockAuthFetch.mockResolvedValue(
+        mockResponse({ conversations: [], hasMore: false }),
+      );
 
       const result = await consultationApi.listConversations({
-        cursor: "abc",
+        cursor: "2026-09-13T12:00:00Z",
         limit: 10,
       });
 
       expect(mockAuthFetch).toHaveBeenCalledWith(
-        "/api/v1/conversations?cursor=abc&limit=10",
+        "/api/v1/conversations?cursor=2026-09-13T12%3A00%3A00Z&limit=10",
+        { method: "GET" },
       );
-      expect(result).toEqual(data);
+      expect(result).toEqual({
+        conversations: [],
+        next_cursor: null,
+        has_more: false,
+      });
     });
 
-    it("GETs /api/v1/conversations without params", async () => {
-      mockAuthFetch.mockResolvedValue(mockResponse({ conversations: [] }));
-      await consultationApi.listConversations();
-      expect(mockAuthFetch).toHaveBeenCalledWith("/api/v1/conversations");
+    it("validates and projects public conversation fields", async () => {
+      mockAuthFetch.mockResolvedValue(
+        mockResponse({
+          conversations: [conversationWire],
+          hasMore: true,
+          nextCursor: "2026-09-13T12:00:00Z",
+        }),
+      );
+
+      const result = await consultationApi.listConversations();
+
+      expect(mockAuthFetch).toHaveBeenCalledWith("/api/v1/conversations", {
+        method: "GET",
+      });
+      expect(result).toEqual({
+        conversations: [
+          {
+            id: conversationWire.id,
+            title: "Conversation",
+            title_status: "generated",
+            status: "active",
+            pinned: false,
+            pinned_at: null,
+            default_model: null,
+            last_message_at: null,
+            message_count: 0,
+            metadata: {},
+            created_at: conversationWire.created_at,
+            updated_at: conversationWire.updated_at,
+          },
+        ],
+        next_cursor: "2026-09-13T12:00:00Z",
+        has_more: true,
+      });
     });
 
     it("throws on non-ok response", async () => {
@@ -144,16 +193,19 @@ describe("consultationApi", () => {
   });
 
   describe("getConversation", () => {
-    it("GETs /api/v1/conversations/:id", async () => {
-      const data = { conversation: { id: "conv-1" }, messages: [] };
-      mockAuthFetch.mockResolvedValue(mockResponse(data));
+    it("uses the generated detail client", async () => {
+      mockAuthFetch.mockResolvedValue(
+        mockResponse({ conversation: conversationWire, messages: [] }),
+      );
 
-      const result = await consultationApi.getConversation("conv-1");
+      const result = await consultationApi.getConversation(conversationWire.id);
 
       expect(mockAuthFetch).toHaveBeenCalledWith(
-        "/api/v1/conversations/conv-1",
+        `/api/v1/conversations/${conversationWire.id}`,
+        { method: "GET" },
       );
-      expect(result).toEqual(data);
+      expect(result.conversation.id).toBe(conversationWire.id);
+      expect(result.messages).toEqual([]);
     });
 
     it("throws on non-ok response", async () => {
@@ -165,86 +217,84 @@ describe("consultationApi", () => {
   });
 
   describe("deleteConversation", () => {
-    it("DELETEs /api/v1/conversations/:id", async () => {
-      mockAuthFetch.mockResolvedValue(mockResponse(null));
-      await consultationApi.deleteConversation("conv-1");
+    it("DELETEs through the generated client", async () => {
+      mockAuthFetch.mockResolvedValue(mockResponse(mutationWire));
+      await consultationApi.deleteConversation(conversationWire.id);
       expect(mockAuthFetch).toHaveBeenCalledWith(
-        "/api/v1/conversations/conv-1",
-        {
-          method: "DELETE",
-        },
+        `/api/v1/conversations/${conversationWire.id}`,
+        { method: "DELETE" },
       );
     });
   });
 
   describe("pinConversation", () => {
-    it("PATCHes /api/v1/conversations/:id/pin", async () => {
-      mockAuthFetch.mockResolvedValue(mockResponse(null));
-      await consultationApi.pinConversation("conv-1", true);
+    it("PATCHes through the generated client", async () => {
+      mockAuthFetch.mockResolvedValue(mockResponse(mutationWire));
+      await consultationApi.pinConversation(conversationWire.id, true);
       expect(mockAuthFetch).toHaveBeenCalledWith(
-        "/api/v1/conversations/conv-1/pin",
-        {
+        `/api/v1/conversations/${conversationWire.id}/pin`,
+        expect.objectContaining({
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ pinned: true }),
-        },
+        }),
       );
     });
   });
 
   describe("generateTitle", () => {
-    it("POSTs to /api/v1/conversations/:id/title", async () => {
-      mockAuthFetch.mockResolvedValue(mockResponse(null));
-      await consultationApi.generateTitle("conv-1");
+    it("POSTs through the generated client", async () => {
+      mockAuthFetch.mockResolvedValue(mockResponse(mutationWire, true, 202));
+      await consultationApi.generateTitle(conversationWire.id);
       expect(mockAuthFetch).toHaveBeenCalledWith(
-        "/api/v1/conversations/conv-1/title",
-        {
-          method: "POST",
-        },
+        `/api/v1/conversations/${conversationWire.id}/title`,
+        { method: "POST" },
       );
     });
   });
 
   describe("renameTitle", () => {
-    it("PUTs to /api/v1/conversations/:id/title", async () => {
-      mockAuthFetch.mockResolvedValue(mockResponse(null));
-      await consultationApi.renameTitle("conv-1", "New Title");
+    it("PUTs through the generated client", async () => {
+      mockAuthFetch.mockResolvedValue(mockResponse(mutationWire));
+      await consultationApi.renameTitle(conversationWire.id, "New Title");
       expect(mockAuthFetch).toHaveBeenCalledWith(
-        "/api/v1/conversations/conv-1/title",
-        {
+        `/api/v1/conversations/${conversationWire.id}/title`,
+        expect.objectContaining({
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ title: "New Title" }),
-        },
+        }),
       );
     });
   });
 
   describe("shareConversation", () => {
-    it("POSTs to /api/v1/conversations/:id/share", async () => {
+    it("POSTs through the authenticated generated client", async () => {
       const share = { shareToken: "tok", shareUrl: "https://x" };
-      mockAuthFetch.mockResolvedValue(mockResponse(share));
+      mockAuthFetch.mockResolvedValue(mockResponse(share, true, 201));
 
-      const result = await consultationApi.shareConversation("conv-1");
+      const result = await consultationApi.shareConversation(
+        conversationWire.id,
+      );
+      expect(mockAuthFetch).toHaveBeenCalledWith(
+        `/api/v1/conversations/${conversationWire.id}/share`,
+        { method: "POST" },
+      );
       expect(result).toEqual(share);
     });
   });
 
   describe("unshareConversation", () => {
-    it("DELETEs /api/v1/conversations/:id/share", async () => {
-      mockAuthFetch.mockResolvedValue(mockResponse(null));
-      await consultationApi.unshareConversation("conv-1");
+    it("DELETEs through the authenticated generated client", async () => {
+      mockAuthFetch.mockResolvedValue(mockResponse(mutationWire));
+      await consultationApi.unshareConversation(conversationWire.id);
       expect(mockAuthFetch).toHaveBeenCalledWith(
-        "/api/v1/conversations/conv-1/share",
-        {
-          method: "DELETE",
-        },
+        `/api/v1/conversations/${conversationWire.id}/share`,
+        { method: "DELETE" },
       );
     });
   });
 
   describe("getSharedConversation", () => {
-    it("fetches public shared conversation without auth", async () => {
+    it("uses the public generated client without bearer auth", async () => {
       const shared = { title: "Shared", messages: [] };
       const fetchSpy = vi
         .spyOn(globalThis, "fetch")
@@ -253,19 +303,59 @@ describe("consultationApi", () => {
       const result = await consultationApi.getSharedConversation("tok-123");
       expect(fetchSpy).toHaveBeenCalledWith(
         "/api/v1/conversations/share/tok-123",
+        { credentials: "include", method: "GET" },
       );
+      expect(mockAuthFetch).not.toHaveBeenCalled();
       expect(result).toEqual(shared);
 
       fetchSpy.mockRestore();
     });
 
-    it("throws on non-ok response", async () => {
+    it("normalizes public generated-client errors", async () => {
       vi.spyOn(globalThis, "fetch").mockResolvedValue(
         mockResponse({}, false, 404) as unknown as Response,
       );
       await expect(
         consultationApi.getSharedConversation("bad"),
       ).rejects.toThrow("API 404");
+    });
+  });
+
+  describe("listRunEvents", () => {
+    it("uses the generated durable-event client and parses the StreamEvent contract", async () => {
+      mockAuthFetch.mockResolvedValue(
+        mockResponse({
+          events: [
+            {
+              seq: 3,
+              channel: "run",
+              type: "run.started",
+              ids: {
+                conversation_id: conversationWire.id,
+                run_id: "22222222-2222-4222-8222-222222222222",
+              },
+              payload: { status: "running", source: "start_turn" },
+              created_at: "2026-09-13T12:00:00Z",
+            },
+          ],
+          hasMore: false,
+          nextAfterSeq: 3,
+        }),
+      );
+
+      const result = await consultationApi.listRunEvents(
+        conversationWire.id,
+        "22222222-2222-4222-8222-222222222222",
+        { afterSeq: 2, limit: 20 },
+      );
+
+      expect(mockAuthFetch).toHaveBeenCalledWith(
+        `/api/v1/conversations/${conversationWire.id}/runs/22222222-2222-4222-8222-222222222222/events?after_seq=2&limit=20`,
+        { method: "GET" },
+      );
+      expect(result.hasMore).toBe(false);
+      expect(result.nextAfterSeq).toBe(3);
+      expect(result.events[0]?.seq).toBe(3);
     });
   });
 

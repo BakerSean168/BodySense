@@ -53,6 +53,10 @@ func RegisterRoutes(router gin.IRouter, si openapiv1.ServerInterface, security R
 	authPublic.POST("/refresh", wrapper.RefreshAccountSession)
 	authPublic.POST("/logout", wrapper.LogoutAccount)
 
+	// Share tokens are capability URLs: public read without authentication.
+	sharePublic := router.Group("/api/v1/conversations/share", security.Validator)
+	sharePublic.GET("/:token", wrapper.GetSharedConversation)
+
 	protected := router.Group("/api/v1", security.Auth, security.Validator)
 	registerProtectedRoutes(protected, wrapper)
 }
@@ -103,4 +107,17 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.GET("/assessment/:id", wrapper.GetAssessment)
 	protected.POST("/assessment/:id/replay", wrapper.ReplayAssessment)
 	protected.GET("/assessment/:id/regression-export", wrapper.ExportAssessmentRegressionCase)
+
+	// Conversations, runs, durable events and public shares.
+	protected.GET("/conversations", wrapper.ListConversations)
+	protected.GET("/conversations/:id", wrapper.GetConversation)
+	protected.PATCH("/conversations/:id", wrapper.UpdateConversation)
+	protected.DELETE("/conversations/:id", wrapper.DeleteConversation)
+	protected.PATCH("/conversations/:id/pin", wrapper.PinConversation)
+	protected.PUT("/conversations/:id/title", wrapper.RenameConversationTitle)
+	protected.POST("/conversations/:id/title", wrapper.GenerateConversationTitle)
+	protected.POST("/conversations/:id/share", wrapper.ShareConversation)
+	protected.DELETE("/conversations/:id/share", wrapper.UnshareConversation)
+	protected.GET("/conversations/:id/runs", wrapper.ListConversationRuns)
+	protected.GET("/conversations/:id/runs/:runId/events", wrapper.ListRunEvents)
 }

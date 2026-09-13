@@ -413,6 +413,147 @@ func (e ClientDiagnosticSeverity) Valid() bool {
 	}
 }
 
+// Defines values for ConversationStatus.
+const (
+	ConversationStatusActive   ConversationStatus = "active"
+	ConversationStatusArchived ConversationStatus = "archived"
+	ConversationStatusDeleted  ConversationStatus = "deleted"
+)
+
+// Valid indicates whether the value is a known member of the ConversationStatus enum.
+func (e ConversationStatus) Valid() bool {
+	switch e {
+	case ConversationStatusActive:
+		return true
+	case ConversationStatusArchived:
+		return true
+	case ConversationStatusDeleted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConversationTitleStatus.
+const (
+	ConversationTitleStatusFailed     ConversationTitleStatus = "failed"
+	ConversationTitleStatusGenerated  ConversationTitleStatus = "generated"
+	ConversationTitleStatusGenerating ConversationTitleStatus = "generating"
+	ConversationTitleStatusPending    ConversationTitleStatus = "pending"
+)
+
+// Valid indicates whether the value is a known member of the ConversationTitleStatus enum.
+func (e ConversationTitleStatus) Valid() bool {
+	switch e {
+	case ConversationTitleStatusFailed:
+		return true
+	case ConversationTitleStatusGenerated:
+		return true
+	case ConversationTitleStatusGenerating:
+		return true
+	case ConversationTitleStatusPending:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConversationMessageRole.
+const (
+	Assistant ConversationMessageRole = "assistant"
+	System    ConversationMessageRole = "system"
+	Tool      ConversationMessageRole = "tool"
+	User      ConversationMessageRole = "user"
+)
+
+// Valid indicates whether the value is a known member of the ConversationMessageRole enum.
+func (e ConversationMessageRole) Valid() bool {
+	switch e {
+	case Assistant:
+		return true
+	case System:
+		return true
+	case Tool:
+		return true
+	case User:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConversationMessageStatus.
+const (
+	ConversationMessageStatusAborted   ConversationMessageStatus = "aborted"
+	ConversationMessageStatusCompleted ConversationMessageStatus = "completed"
+	ConversationMessageStatusFailed    ConversationMessageStatus = "failed"
+	ConversationMessageStatusStreaming ConversationMessageStatus = "streaming"
+	ConversationMessageStatusSubmitted ConversationMessageStatus = "submitted"
+)
+
+// Valid indicates whether the value is a known member of the ConversationMessageStatus enum.
+func (e ConversationMessageStatus) Valid() bool {
+	switch e {
+	case ConversationMessageStatusAborted:
+		return true
+	case ConversationMessageStatusCompleted:
+		return true
+	case ConversationMessageStatusFailed:
+		return true
+	case ConversationMessageStatusStreaming:
+		return true
+	case ConversationMessageStatusSubmitted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConversationRunStatus.
+const (
+	ConversationRunStatusCancelled ConversationRunStatus = "cancelled"
+	ConversationRunStatusCompleted ConversationRunStatus = "completed"
+	ConversationRunStatusFailed    ConversationRunStatus = "failed"
+	ConversationRunStatusRunning   ConversationRunStatus = "running"
+)
+
+// Valid indicates whether the value is a known member of the ConversationRunStatus enum.
+func (e ConversationRunStatus) Valid() bool {
+	switch e {
+	case ConversationRunStatusCancelled:
+		return true
+	case ConversationRunStatusCompleted:
+		return true
+	case ConversationRunStatusFailed:
+		return true
+	case ConversationRunStatusRunning:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConversationUpdateRequestStatus.
+const (
+	ConversationUpdateRequestStatusActive   ConversationUpdateRequestStatus = "active"
+	ConversationUpdateRequestStatusArchived ConversationUpdateRequestStatus = "archived"
+	ConversationUpdateRequestStatusDeleted  ConversationUpdateRequestStatus = "deleted"
+)
+
+// Valid indicates whether the value is a known member of the ConversationUpdateRequestStatus enum.
+func (e ConversationUpdateRequestStatus) Valid() bool {
+	switch e {
+	case ConversationUpdateRequestStatusActive:
+		return true
+	case ConversationUpdateRequestStatusArchived:
+		return true
+	case ConversationUpdateRequestStatusDeleted:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DiagnosisCandidateConfidence.
 const (
 	DiagnosisCandidateConfidenceEmpty DiagnosisCandidateConfidence = "高"
@@ -1348,6 +1489,117 @@ type ClientDiagnosticSchemaVersion int
 // ClientDiagnosticSeverity defines model for ClientDiagnostic.Severity.
 type ClientDiagnosticSeverity string
 
+// Conversation defines model for Conversation.
+type Conversation struct {
+	CreatedAt     time.Time               `json:"created_at"`
+	DefaultModel  *string                 `json:"default_model,omitempty"`
+	Id            openapi_types.UUID      `json:"id"`
+	LastMessageAt *time.Time              `json:"last_message_at,omitempty"`
+	Metadata      JsonObject              `json:"metadata"`
+	Pinned        bool                    `json:"pinned"`
+	PinnedAt      *time.Time              `json:"pinned_at,omitempty"`
+	Status        ConversationStatus      `json:"status"`
+	Title         *string                 `json:"title,omitempty"`
+	TitleStatus   ConversationTitleStatus `json:"title_status"`
+	UpdatedAt     time.Time               `json:"updated_at"`
+}
+
+// ConversationStatus defines model for Conversation.Status.
+type ConversationStatus string
+
+// ConversationTitleStatus defines model for Conversation.TitleStatus.
+type ConversationTitleStatus string
+
+// ConversationDetailResponse defines model for ConversationDetailResponse.
+type ConversationDetailResponse struct {
+	Conversation Conversation          `json:"conversation"`
+	Messages     []ConversationMessage `json:"messages"`
+}
+
+// ConversationListResponse defines model for ConversationListResponse.
+type ConversationListResponse struct {
+	Conversations []Conversation `json:"conversations"`
+	HasMore       bool           `json:"hasMore"`
+	NextCursor    *string        `json:"nextCursor,omitempty"`
+}
+
+// ConversationMessage defines model for ConversationMessage.
+type ConversationMessage struct {
+	ContentText        *string                   `json:"content_text,omitempty"`
+	ConversationId     openapi_types.UUID        `json:"conversation_id"`
+	CreatedAt          time.Time                 `json:"created_at"`
+	Error              *JsonObject               `json:"error,omitempty"`
+	Id                 openapi_types.UUID        `json:"id"`
+	InputTokens        *int                      `json:"input_tokens,omitempty"`
+	Metadata           JsonObject                `json:"metadata"`
+	Model              *string                   `json:"model,omitempty"`
+	OutputTokens       *int                      `json:"output_tokens,omitempty"`
+	ParentMessageId    *openapi_types.UUID       `json:"parent_message_id,omitempty"`
+	Parts              []JsonObject              `json:"parts"`
+	Provider           *string                   `json:"provider,omitempty"`
+	ProviderMessageId  *string                   `json:"provider_message_id,omitempty"`
+	ProviderResponseId *string                   `json:"provider_response_id,omitempty"`
+	Role               ConversationMessageRole   `json:"role"`
+	RunId              *openapi_types.UUID       `json:"run_id,omitempty"`
+	Seq                int                       `json:"seq"`
+	Status             ConversationMessageStatus `json:"status"`
+	TotalTokens        *int                      `json:"total_tokens,omitempty"`
+	TurnId             openapi_types.UUID        `json:"turn_id"`
+	UpdatedAt          time.Time                 `json:"updated_at"`
+}
+
+// ConversationMessageRole defines model for ConversationMessage.Role.
+type ConversationMessageRole string
+
+// ConversationMessageStatus defines model for ConversationMessage.Status.
+type ConversationMessageStatus string
+
+// ConversationMutationResponse defines model for ConversationMutationResponse.
+type ConversationMutationResponse struct {
+	Message string `json:"message"`
+}
+
+// ConversationPinRequest defines model for ConversationPinRequest.
+type ConversationPinRequest struct {
+	Pinned *bool `json:"pinned,omitempty"`
+}
+
+// ConversationRun defines model for ConversationRun.
+type ConversationRun struct {
+	CompletedAt    *time.Time            `json:"completed_at,omitempty"`
+	ConversationId openapi_types.UUID    `json:"conversation_id"`
+	Error          *JsonObject           `json:"error,omitempty"`
+	Id             openapi_types.UUID    `json:"id"`
+	Model          string                `json:"model"`
+	Provider       *string               `json:"provider,omitempty"`
+	RequestId      string                `json:"request_id"`
+	StartedAt      time.Time             `json:"started_at"`
+	Status         ConversationRunStatus `json:"status"`
+	TurnId         openapi_types.UUID    `json:"turn_id"`
+	Usage          *JsonObject           `json:"usage,omitempty"`
+}
+
+// ConversationRunStatus defines model for ConversationRun.Status.
+type ConversationRunStatus string
+
+// ConversationRunListResponse defines model for ConversationRunListResponse.
+type ConversationRunListResponse struct {
+	Runs []ConversationRun `json:"runs"`
+}
+
+// ConversationTitleRequest defines model for ConversationTitleRequest.
+type ConversationTitleRequest struct {
+	Title string `json:"title"`
+}
+
+// ConversationUpdateRequest defines model for ConversationUpdateRequest.
+type ConversationUpdateRequest struct {
+	Status *ConversationUpdateRequestStatus `json:"status,omitempty"`
+}
+
+// ConversationUpdateRequestStatus defines model for ConversationUpdateRequest.Status.
+type ConversationUpdateRequestStatus string
+
 // CorrectBodyStateFactRequest defines model for CorrectBodyStateFactRequest.
 type CorrectBodyStateFactRequest struct {
 	ExpectedRevision int64              `json:"expected_revision"`
@@ -1729,6 +1981,35 @@ type ReviewLifestyleCandidateRequest struct {
 	ExpectedRevision int64 `json:"expected_revision"`
 }
 
+// RuntimeEvent defines model for RuntimeEvent.
+type RuntimeEvent struct {
+	Channel   string     `json:"channel"`
+	CreatedAt time.Time  `json:"created_at"`
+	Ids       JsonObject `json:"ids"`
+	Payload   JsonObject `json:"payload"`
+	Seq       int        `json:"seq"`
+	Type      string     `json:"type"`
+}
+
+// RuntimeEventListResponse defines model for RuntimeEventListResponse.
+type RuntimeEventListResponse struct {
+	Events       []RuntimeEvent `json:"events"`
+	HasMore      bool           `json:"hasMore"`
+	NextAfterSeq *int           `json:"nextAfterSeq,omitempty"`
+}
+
+// ShareConversationResponse defines model for ShareConversationResponse.
+type ShareConversationResponse struct {
+	ShareToken string `json:"shareToken"`
+	ShareUrl   string `json:"shareUrl"`
+}
+
+// SharedConversationResponse defines model for SharedConversationResponse.
+type SharedConversationResponse struct {
+	Messages []ConversationMessage `json:"messages"`
+	Title    string                `json:"title"`
+}
+
 // StringArray defines model for StringArray.
 type StringArray = []string
 
@@ -1951,6 +2232,12 @@ type WorkspaceTrendPoint struct {
 // AssessmentReportId defines model for AssessmentReportId.
 type AssessmentReportId = openapi_types.UUID
 
+// ConversationId defines model for ConversationId.
+type ConversationId = openapi_types.UUID
+
+// ConversationRunId defines model for ConversationRunId.
+type ConversationRunId = openapi_types.UUID
+
 // BadGateway defines model for BadGateway.
 type BadGateway = ErrorEnvelope
 
@@ -1988,6 +2275,20 @@ type ValidationUnavailable = ErrorEnvelope
 type ListAssessmentsParams struct {
 	Limit  *int `form:"limit,omitempty" json:"limit,omitempty"`
 	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
+// ListConversationsParams defines parameters for ListConversations.
+type ListConversationsParams struct {
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor RFC3339 updated-at cursor from a previous page.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// ListRunEventsParams defines parameters for ListRunEvents.
+type ListRunEventsParams struct {
+	AfterSeq *int `form:"after_seq,omitempty" json:"after_seq,omitempty"`
+	Limit    *int `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // ReplayAssessmentJSONRequestBody defines body for ReplayAssessment for application/json ContentType.
@@ -2031,6 +2332,15 @@ type ResolveBodyStateSafetyJSONRequestBody = ResolveBodyStateSafetyRequest
 
 // RecordClientDiagnosticJSONRequestBody defines body for RecordClientDiagnostic for application/json ContentType.
 type RecordClientDiagnosticJSONRequestBody = ClientDiagnostic
+
+// UpdateConversationJSONRequestBody defines body for UpdateConversation for application/json ContentType.
+type UpdateConversationJSONRequestBody = ConversationUpdateRequest
+
+// PinConversationJSONRequestBody defines body for PinConversation for application/json ContentType.
+type PinConversationJSONRequestBody = ConversationPinRequest
+
+// RenameConversationTitleJSONRequestBody defines body for RenameConversationTitle for application/json ContentType.
+type RenameConversationTitleJSONRequestBody = ConversationTitleRequest
 
 // UpdateInjuryHistoryJSONRequestBody defines body for UpdateInjuryHistory for application/json ContentType.
 type UpdateInjuryHistoryJSONRequestBody = UpdateInjuryHistoryRequest
@@ -2510,6 +2820,42 @@ type ServerInterface interface {
 	// RecordClientDiagnostic Record bounded privacy-safe browser operational telemetry.
 	// (POST /api/v1/client-diagnostics)
 	RecordClientDiagnostic(c *gin.Context)
+	// ListConversations List the authenticated user's conversations with cursor pagination.
+	// (GET /api/v1/conversations)
+	ListConversations(c *gin.Context, params ListConversationsParams)
+	// GetSharedConversation Read a shared conversation snapshot by public token.
+	// (GET /api/v1/conversations/share/{token})
+	GetSharedConversation(c *gin.Context, token string)
+	// DeleteConversation Soft-delete a conversation and revoke its shares.
+	// (DELETE /api/v1/conversations/{id})
+	DeleteConversation(c *gin.Context, id ConversationId)
+	// GetConversation Get one conversation with its ordered messages.
+	// (GET /api/v1/conversations/{id})
+	GetConversation(c *gin.Context, id ConversationId)
+	// UpdateConversation Update conversation status (active, archived, or deleted).
+	// (PATCH /api/v1/conversations/{id})
+	UpdateConversation(c *gin.Context, id ConversationId)
+	// PinConversation Pin or unpin a conversation.
+	// (PATCH /api/v1/conversations/{id}/pin)
+	PinConversation(c *gin.Context, id ConversationId)
+	// ListConversationRuns List the recorded runs of a conversation.
+	// (GET /api/v1/conversations/{id}/runs)
+	ListConversationRuns(c *gin.Context, id ConversationId)
+	// ListRunEvents Page through the durable runtime events of one conversation run.
+	// (GET /api/v1/conversations/{id}/runs/{runId}/events)
+	ListRunEvents(c *gin.Context, id ConversationId, runId ConversationRunId, params ListRunEventsParams)
+	// UnshareConversation Revoke a conversation share.
+	// (DELETE /api/v1/conversations/{id}/share)
+	UnshareConversation(c *gin.Context, id ConversationId)
+	// ShareConversation Publish a share token and public URL for a conversation.
+	// (POST /api/v1/conversations/{id}/share)
+	ShareConversation(c *gin.Context, id ConversationId)
+	// GenerateConversationTitle Queue asynchronous agent title generation for a conversation.
+	// (POST /api/v1/conversations/{id}/title)
+	GenerateConversationTitle(c *gin.Context, id ConversationId)
+	// RenameConversationTitle Rename a conversation title directly.
+	// (PUT /api/v1/conversations/{id}/title)
+	RenameConversationTitle(c *gin.Context, id ConversationId)
 	// GetInjuryHistory Get the current injury-history projection.
 	// (GET /api/v1/health-history/injury)
 	GetInjuryHistory(c *gin.Context)
@@ -2977,6 +3323,344 @@ func (siw *ServerInterfaceWrapper) RecordClientDiagnostic(c *gin.Context) {
 	siw.Handler.RecordClientDiagnostic(c)
 }
 
+// ListConversations operation middleware
+func (siw *ServerInterfaceWrapper) ListConversations(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListConversationsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", c.Request.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter limit: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", c.Request.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter cursor: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListConversations(c, params)
+}
+
+// GetSharedConversation operation middleware
+func (siw *ServerInterfaceWrapper) GetSharedConversation(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", c.Param("token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter token: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetSharedConversation(c, token)
+}
+
+// DeleteConversation operation middleware
+func (siw *ServerInterfaceWrapper) DeleteConversation(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConversationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.DeleteConversation(c, id)
+}
+
+// GetConversation operation middleware
+func (siw *ServerInterfaceWrapper) GetConversation(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConversationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetConversation(c, id)
+}
+
+// UpdateConversation operation middleware
+func (siw *ServerInterfaceWrapper) UpdateConversation(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConversationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdateConversation(c, id)
+}
+
+// PinConversation operation middleware
+func (siw *ServerInterfaceWrapper) PinConversation(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConversationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PinConversation(c, id)
+}
+
+// ListConversationRuns operation middleware
+func (siw *ServerInterfaceWrapper) ListConversationRuns(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConversationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListConversationRuns(c, id)
+}
+
+// ListRunEvents operation middleware
+func (siw *ServerInterfaceWrapper) ListRunEvents(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConversationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "runId" -------------
+	var runId ConversationRunId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "runId", c.Param("runId"), &runId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter runId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListRunEventsParams
+
+	// ------------- Optional query parameter "after_seq" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "after_seq", c.Request.URL.Query(), &params.AfterSeq, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter after_seq: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", c.Request.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter limit: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListRunEvents(c, id, runId, params)
+}
+
+// UnshareConversation operation middleware
+func (siw *ServerInterfaceWrapper) UnshareConversation(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConversationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UnshareConversation(c, id)
+}
+
+// ShareConversation operation middleware
+func (siw *ServerInterfaceWrapper) ShareConversation(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConversationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ShareConversation(c, id)
+}
+
+// GenerateConversationTitle operation middleware
+func (siw *ServerInterfaceWrapper) GenerateConversationTitle(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConversationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GenerateConversationTitle(c, id)
+}
+
+// RenameConversationTitle operation middleware
+func (siw *ServerInterfaceWrapper) RenameConversationTitle(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConversationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RenameConversationTitle(c, id)
+}
+
 // GetInjuryHistory operation middleware
 func (siw *ServerInterfaceWrapper) GetInjuryHistory(c *gin.Context) {
 
@@ -3233,6 +3917,18 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.POST(options.BaseURL+"/api/v1/auth/login", wrapper.LoginAccount)
 	router.POST(options.BaseURL+"/api/v1/auth/refresh", wrapper.RefreshAccountSession)
 	router.POST(options.BaseURL+"/api/v1/auth/logout", wrapper.LogoutAccount)
+	router.GET(options.BaseURL+"/api/v1/conversations", wrapper.ListConversations)
+	router.DELETE(options.BaseURL+"/api/v1/conversations/:id", wrapper.DeleteConversation)
+	router.GET(options.BaseURL+"/api/v1/conversations/:id", wrapper.GetConversation)
+	router.PATCH(options.BaseURL+"/api/v1/conversations/:id", wrapper.UpdateConversation)
+	router.PATCH(options.BaseURL+"/api/v1/conversations/:id/pin", wrapper.PinConversation)
+	router.POST(options.BaseURL+"/api/v1/conversations/:id/title", wrapper.GenerateConversationTitle)
+	router.PUT(options.BaseURL+"/api/v1/conversations/:id/title", wrapper.RenameConversationTitle)
+	router.DELETE(options.BaseURL+"/api/v1/conversations/:id/share", wrapper.UnshareConversation)
+	router.POST(options.BaseURL+"/api/v1/conversations/:id/share", wrapper.ShareConversation)
+	router.GET(options.BaseURL+"/api/v1/conversations/share/:token", wrapper.GetSharedConversation)
+	router.GET(options.BaseURL+"/api/v1/conversations/:id/runs", wrapper.ListConversationRuns)
+	router.GET(options.BaseURL+"/api/v1/conversations/:id/runs/:runId/events", wrapper.ListRunEvents)
 }
 
 type BadGatewayJSONResponse ErrorEnvelope
@@ -5477,6 +6173,919 @@ func (response RecordClientDiagnostic500JSONResponse) VisitRecordClientDiagnosti
 	return err
 }
 
+type ListConversationsRequestObject struct {
+	Params ListConversationsParams
+}
+
+type ListConversationsResponseObject interface {
+	VisitListConversationsResponse(w http.ResponseWriter) error
+}
+
+type ListConversations200JSONResponse ConversationListResponse
+
+func (response ListConversations200JSONResponse) VisitListConversationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListConversations400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ListConversations400JSONResponse) VisitListConversationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListConversations401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListConversations401JSONResponse) VisitListConversationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListConversations500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListConversations500JSONResponse) VisitListConversationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSharedConversationRequestObject struct {
+	Token string `json:"token"`
+}
+
+type GetSharedConversationResponseObject interface {
+	VisitGetSharedConversationResponse(w http.ResponseWriter) error
+}
+
+type GetSharedConversation200JSONResponse SharedConversationResponse
+
+func (response GetSharedConversation200JSONResponse) VisitGetSharedConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSharedConversation400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response GetSharedConversation400JSONResponse) VisitGetSharedConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSharedConversation404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetSharedConversation404JSONResponse) VisitGetSharedConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSharedConversation500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetSharedConversation500JSONResponse) VisitGetSharedConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteConversationRequestObject struct {
+	Id ConversationId `json:"id"`
+}
+
+type DeleteConversationResponseObject interface {
+	VisitDeleteConversationResponse(w http.ResponseWriter) error
+}
+
+type DeleteConversation200JSONResponse ConversationMutationResponse
+
+func (response DeleteConversation200JSONResponse) VisitDeleteConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteConversation400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response DeleteConversation400JSONResponse) VisitDeleteConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteConversation401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteConversation401JSONResponse) VisitDeleteConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteConversation404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteConversation404JSONResponse) VisitDeleteConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteConversation500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response DeleteConversation500JSONResponse) VisitDeleteConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConversationRequestObject struct {
+	Id ConversationId `json:"id"`
+}
+
+type GetConversationResponseObject interface {
+	VisitGetConversationResponse(w http.ResponseWriter) error
+}
+
+type GetConversation200JSONResponse ConversationDetailResponse
+
+func (response GetConversation200JSONResponse) VisitGetConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConversation400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response GetConversation400JSONResponse) VisitGetConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConversation401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetConversation401JSONResponse) VisitGetConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConversation404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetConversation404JSONResponse) VisitGetConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConversation500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetConversation500JSONResponse) VisitGetConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConversationRequestObject struct {
+	Id   ConversationId `json:"id"`
+	Body *UpdateConversationJSONRequestBody
+}
+
+type UpdateConversationResponseObject interface {
+	VisitUpdateConversationResponse(w http.ResponseWriter) error
+}
+
+type UpdateConversation200JSONResponse ConversationMutationResponse
+
+func (response UpdateConversation200JSONResponse) VisitUpdateConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConversation400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response UpdateConversation400JSONResponse) VisitUpdateConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConversation401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateConversation401JSONResponse) VisitUpdateConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConversation404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateConversation404JSONResponse) VisitUpdateConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConversation500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UpdateConversation500JSONResponse) VisitUpdateConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PinConversationRequestObject struct {
+	Id   ConversationId `json:"id"`
+	Body *PinConversationJSONRequestBody
+}
+
+type PinConversationResponseObject interface {
+	VisitPinConversationResponse(w http.ResponseWriter) error
+}
+
+type PinConversation200JSONResponse ConversationMutationResponse
+
+func (response PinConversation200JSONResponse) VisitPinConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PinConversation400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response PinConversation400JSONResponse) VisitPinConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PinConversation401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response PinConversation401JSONResponse) VisitPinConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PinConversation404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response PinConversation404JSONResponse) VisitPinConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PinConversation500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response PinConversation500JSONResponse) VisitPinConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListConversationRunsRequestObject struct {
+	Id ConversationId `json:"id"`
+}
+
+type ListConversationRunsResponseObject interface {
+	VisitListConversationRunsResponse(w http.ResponseWriter) error
+}
+
+type ListConversationRuns200JSONResponse ConversationRunListResponse
+
+func (response ListConversationRuns200JSONResponse) VisitListConversationRunsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListConversationRuns400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ListConversationRuns400JSONResponse) VisitListConversationRunsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListConversationRuns401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListConversationRuns401JSONResponse) VisitListConversationRunsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListConversationRuns404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListConversationRuns404JSONResponse) VisitListConversationRunsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListConversationRuns500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListConversationRuns500JSONResponse) VisitListConversationRunsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListRunEventsRequestObject struct {
+	Id     ConversationId    `json:"id"`
+	RunId  ConversationRunId `json:"runId"`
+	Params ListRunEventsParams
+}
+
+type ListRunEventsResponseObject interface {
+	VisitListRunEventsResponse(w http.ResponseWriter) error
+}
+
+type ListRunEvents200JSONResponse RuntimeEventListResponse
+
+func (response ListRunEvents200JSONResponse) VisitListRunEventsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListRunEvents400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ListRunEvents400JSONResponse) VisitListRunEventsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListRunEvents401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListRunEvents401JSONResponse) VisitListRunEventsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListRunEvents404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListRunEvents404JSONResponse) VisitListRunEventsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListRunEvents500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListRunEvents500JSONResponse) VisitListRunEventsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnshareConversationRequestObject struct {
+	Id ConversationId `json:"id"`
+}
+
+type UnshareConversationResponseObject interface {
+	VisitUnshareConversationResponse(w http.ResponseWriter) error
+}
+
+type UnshareConversation200JSONResponse ConversationMutationResponse
+
+func (response UnshareConversation200JSONResponse) VisitUnshareConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnshareConversation400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response UnshareConversation400JSONResponse) VisitUnshareConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnshareConversation401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UnshareConversation401JSONResponse) VisitUnshareConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnshareConversation404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UnshareConversation404JSONResponse) VisitUnshareConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnshareConversation500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UnshareConversation500JSONResponse) VisitUnshareConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ShareConversationRequestObject struct {
+	Id ConversationId `json:"id"`
+}
+
+type ShareConversationResponseObject interface {
+	VisitShareConversationResponse(w http.ResponseWriter) error
+}
+
+type ShareConversation201JSONResponse ShareConversationResponse
+
+func (response ShareConversation201JSONResponse) VisitShareConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ShareConversation400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ShareConversation400JSONResponse) VisitShareConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ShareConversation401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ShareConversation401JSONResponse) VisitShareConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ShareConversation404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ShareConversation404JSONResponse) VisitShareConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ShareConversation500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ShareConversation500JSONResponse) VisitShareConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GenerateConversationTitleRequestObject struct {
+	Id ConversationId `json:"id"`
+}
+
+type GenerateConversationTitleResponseObject interface {
+	VisitGenerateConversationTitleResponse(w http.ResponseWriter) error
+}
+
+type GenerateConversationTitle202JSONResponse ConversationMutationResponse
+
+func (response GenerateConversationTitle202JSONResponse) VisitGenerateConversationTitleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GenerateConversationTitle400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response GenerateConversationTitle400JSONResponse) VisitGenerateConversationTitleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GenerateConversationTitle401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GenerateConversationTitle401JSONResponse) VisitGenerateConversationTitleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GenerateConversationTitle404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GenerateConversationTitle404JSONResponse) VisitGenerateConversationTitleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GenerateConversationTitle500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GenerateConversationTitle500JSONResponse) VisitGenerateConversationTitleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RenameConversationTitleRequestObject struct {
+	Id   ConversationId `json:"id"`
+	Body *RenameConversationTitleJSONRequestBody
+}
+
+type RenameConversationTitleResponseObject interface {
+	VisitRenameConversationTitleResponse(w http.ResponseWriter) error
+}
+
+type RenameConversationTitle200JSONResponse ConversationMutationResponse
+
+func (response RenameConversationTitle200JSONResponse) VisitRenameConversationTitleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RenameConversationTitle400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response RenameConversationTitle400JSONResponse) VisitRenameConversationTitleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RenameConversationTitle401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RenameConversationTitle401JSONResponse) VisitRenameConversationTitleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RenameConversationTitle404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response RenameConversationTitle404JSONResponse) VisitRenameConversationTitleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RenameConversationTitle500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response RenameConversationTitle500JSONResponse) VisitRenameConversationTitleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetInjuryHistoryRequestObject struct {
 }
 
@@ -6414,6 +8023,42 @@ type StrictServerInterface interface {
 	// RecordClientDiagnostic Record bounded privacy-safe browser operational telemetry.
 	// (POST /api/v1/client-diagnostics)
 	RecordClientDiagnostic(ctx context.Context, request RecordClientDiagnosticRequestObject) (RecordClientDiagnosticResponseObject, error)
+	// ListConversations List the authenticated user's conversations with cursor pagination.
+	// (GET /api/v1/conversations)
+	ListConversations(ctx context.Context, request ListConversationsRequestObject) (ListConversationsResponseObject, error)
+	// GetSharedConversation Read a shared conversation snapshot by public token.
+	// (GET /api/v1/conversations/share/{token})
+	GetSharedConversation(ctx context.Context, request GetSharedConversationRequestObject) (GetSharedConversationResponseObject, error)
+	// DeleteConversation Soft-delete a conversation and revoke its shares.
+	// (DELETE /api/v1/conversations/{id})
+	DeleteConversation(ctx context.Context, request DeleteConversationRequestObject) (DeleteConversationResponseObject, error)
+	// GetConversation Get one conversation with its ordered messages.
+	// (GET /api/v1/conversations/{id})
+	GetConversation(ctx context.Context, request GetConversationRequestObject) (GetConversationResponseObject, error)
+	// UpdateConversation Update conversation status (active, archived, or deleted).
+	// (PATCH /api/v1/conversations/{id})
+	UpdateConversation(ctx context.Context, request UpdateConversationRequestObject) (UpdateConversationResponseObject, error)
+	// PinConversation Pin or unpin a conversation.
+	// (PATCH /api/v1/conversations/{id}/pin)
+	PinConversation(ctx context.Context, request PinConversationRequestObject) (PinConversationResponseObject, error)
+	// ListConversationRuns List the recorded runs of a conversation.
+	// (GET /api/v1/conversations/{id}/runs)
+	ListConversationRuns(ctx context.Context, request ListConversationRunsRequestObject) (ListConversationRunsResponseObject, error)
+	// ListRunEvents Page through the durable runtime events of one conversation run.
+	// (GET /api/v1/conversations/{id}/runs/{runId}/events)
+	ListRunEvents(ctx context.Context, request ListRunEventsRequestObject) (ListRunEventsResponseObject, error)
+	// UnshareConversation Revoke a conversation share.
+	// (DELETE /api/v1/conversations/{id}/share)
+	UnshareConversation(ctx context.Context, request UnshareConversationRequestObject) (UnshareConversationResponseObject, error)
+	// ShareConversation Publish a share token and public URL for a conversation.
+	// (POST /api/v1/conversations/{id}/share)
+	ShareConversation(ctx context.Context, request ShareConversationRequestObject) (ShareConversationResponseObject, error)
+	// GenerateConversationTitle Queue asynchronous agent title generation for a conversation.
+	// (POST /api/v1/conversations/{id}/title)
+	GenerateConversationTitle(ctx context.Context, request GenerateConversationTitleRequestObject) (GenerateConversationTitleResponseObject, error)
+	// RenameConversationTitle Rename a conversation title directly.
+	// (PUT /api/v1/conversations/{id}/title)
+	RenameConversationTitle(ctx context.Context, request RenameConversationTitleRequestObject) (RenameConversationTitleResponseObject, error)
 	// GetInjuryHistory Get the current injury-history projection.
 	// (GET /api/v1/health-history/injury)
 	GetInjuryHistory(ctx context.Context, request GetInjuryHistoryRequestObject) (GetInjuryHistoryResponseObject, error)
@@ -7180,6 +8825,341 @@ func (sh *strictHandler) RecordClientDiagnostic(ctx *gin.Context) {
 	}
 }
 
+// ListConversations operation middleware
+func (sh *strictHandler) ListConversations(ctx *gin.Context, params ListConversationsParams) {
+	var request ListConversationsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListConversations(ctx, request.(ListConversationsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListConversations")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListConversationsResponseObject); ok {
+		if err := validResponse.VisitListConversationsResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetSharedConversation operation middleware
+func (sh *strictHandler) GetSharedConversation(ctx *gin.Context, token string) {
+	var request GetSharedConversationRequestObject
+
+	request.Token = token
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSharedConversation(ctx, request.(GetSharedConversationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSharedConversation")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetSharedConversationResponseObject); ok {
+		if err := validResponse.VisitGetSharedConversationResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteConversation operation middleware
+func (sh *strictHandler) DeleteConversation(ctx *gin.Context, id ConversationId) {
+	var request DeleteConversationRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteConversation(ctx, request.(DeleteConversationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteConversation")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(DeleteConversationResponseObject); ok {
+		if err := validResponse.VisitDeleteConversationResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetConversation operation middleware
+func (sh *strictHandler) GetConversation(ctx *gin.Context, id ConversationId) {
+	var request GetConversationRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetConversation(ctx, request.(GetConversationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetConversation")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetConversationResponseObject); ok {
+		if err := validResponse.VisitGetConversationResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateConversation operation middleware
+func (sh *strictHandler) UpdateConversation(ctx *gin.Context, id ConversationId) {
+	var request UpdateConversationRequestObject
+
+	request.Id = id
+
+	var body UpdateConversationJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateConversation(ctx, request.(UpdateConversationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateConversation")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(UpdateConversationResponseObject); ok {
+		if err := validResponse.VisitUpdateConversationResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PinConversation operation middleware
+func (sh *strictHandler) PinConversation(ctx *gin.Context, id ConversationId) {
+	var request PinConversationRequestObject
+
+	request.Id = id
+
+	var body PinConversationJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.PinConversation(ctx, request.(PinConversationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PinConversation")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(PinConversationResponseObject); ok {
+		if err := validResponse.VisitPinConversationResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListConversationRuns operation middleware
+func (sh *strictHandler) ListConversationRuns(ctx *gin.Context, id ConversationId) {
+	var request ListConversationRunsRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListConversationRuns(ctx, request.(ListConversationRunsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListConversationRuns")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListConversationRunsResponseObject); ok {
+		if err := validResponse.VisitListConversationRunsResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListRunEvents operation middleware
+func (sh *strictHandler) ListRunEvents(ctx *gin.Context, id ConversationId, runId ConversationRunId, params ListRunEventsParams) {
+	var request ListRunEventsRequestObject
+
+	request.Id = id
+	request.RunId = runId
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListRunEvents(ctx, request.(ListRunEventsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListRunEvents")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListRunEventsResponseObject); ok {
+		if err := validResponse.VisitListRunEventsResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UnshareConversation operation middleware
+func (sh *strictHandler) UnshareConversation(ctx *gin.Context, id ConversationId) {
+	var request UnshareConversationRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.UnshareConversation(ctx, request.(UnshareConversationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnshareConversation")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(UnshareConversationResponseObject); ok {
+		if err := validResponse.VisitUnshareConversationResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ShareConversation operation middleware
+func (sh *strictHandler) ShareConversation(ctx *gin.Context, id ConversationId) {
+	var request ShareConversationRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ShareConversation(ctx, request.(ShareConversationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ShareConversation")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ShareConversationResponseObject); ok {
+		if err := validResponse.VisitShareConversationResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GenerateConversationTitle operation middleware
+func (sh *strictHandler) GenerateConversationTitle(ctx *gin.Context, id ConversationId) {
+	var request GenerateConversationTitleRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GenerateConversationTitle(ctx, request.(GenerateConversationTitleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GenerateConversationTitle")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GenerateConversationTitleResponseObject); ok {
+		if err := validResponse.VisitGenerateConversationTitleResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RenameConversationTitle operation middleware
+func (sh *strictHandler) RenameConversationTitle(ctx *gin.Context, id ConversationId) {
+	var request RenameConversationTitleRequestObject
+
+	request.Id = id
+
+	var body RenameConversationTitleJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RenameConversationTitle(ctx, request.(RenameConversationTitleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RenameConversationTitle")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(RenameConversationTitleResponseObject); ok {
+		if err := validResponse.VisitRenameConversationTitleResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetInjuryHistory operation middleware
 func (sh *strictHandler) GetInjuryHistory(ctx *gin.Context) {
 	var request GetInjuryHistoryRequestObject
@@ -7550,159 +9530,181 @@ func (sh *strictHandler) UpdateUserProfile(ctx *gin.Context) {
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,
