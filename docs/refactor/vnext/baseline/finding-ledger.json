@@ -175,6 +175,39 @@
         "apps/web/vite.config.ts"
       ],
       "invariant": "Large intentional assets/chunks have an explicit loading/performance rationale or are split when that improves user-facing latency."
+    },
+    {
+      "id": "BS-Q-CONTRACT-001",
+      "severity": "P2",
+      "status": "OPEN",
+      "targetPhase": "02-rest-openapi",
+      "summary": "Orval forceSuccessResponse keeps non-2xx out of the success path, but generated error body typing is not sufficient authority for BodySense error semantics.",
+      "evidence": [
+        "tools/contracts/generated/openapi-web/client.ts",
+        "docs/architecture/contract-codegen-spike-results-2026-09-09.md"
+      ],
+      "invariant": "Generated REST clients validate successful transport values, while a handwritten stable error adapter owns ApiRequestError/error-envelope semantics for feature code."
+    },
+    {
+      "id": "BS-VNEXT-CONTRACT-002",
+      "priority": "P1",
+      "status": "FIXED",
+      "phase": "01",
+      "title": "Web contract imports depended on incidental workspace symlink",
+      "evidence": [
+        "apps/web/tsconfig.json",
+        "apps/web/vite.config.ts",
+        "apps/web/package.json"
+      ],
+      "root_cause": "apps/web tsconfig paths overrode the root @bodysense/* mapping and Vite had no explicit @bodysense/contracts alias, so successful resolution depended on node_modules workspace-link state.",
+      "repair": "Add explicit TypeScript and Vite aliases to the canonical packages/contracts source while retaining the workspace dependency for package graph ownership.",
+      "verification": [
+        "remove apps/web/node_modules",
+        "pnpm nx run @bodysense/web:typecheck",
+        "pnpm nx run @bodysense/web:test",
+        "pnpm nx run @bodysense/web:build"
+      ],
+      "notes": "Verified with the workspace package symlink intentionally absent; Web passed 212/212 tests and production build."
     }
   ]
 }

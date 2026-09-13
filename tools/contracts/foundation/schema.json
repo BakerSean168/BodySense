@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bodysense.local/schemas/contract-foundation-v1.json",
+  "title": "BodySense contract foundation smoke value",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "revision"],
+  "properties": {
+    "kind": { "const": "foundation" },
+    "revision": { "type": "integer", "minimum": 0 },
+    "note": { "type": ["string", "null"] }
+  }
+}

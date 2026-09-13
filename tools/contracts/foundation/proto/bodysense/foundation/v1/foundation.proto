@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package bodysense.foundation.v1;
+
+import "buf/validate/validate.proto";
+
+option go_package = "github.com/bodysense/contracts/foundation/v1;foundationv1";
+
+// FoundationCommand is non-serving. It exists only to prove deterministic
+// multi-language Proto/Buf/Protovalidate generation before Phase 04.
+message FoundationCommand {
+  string name = 1 [(buf.validate.field).string.min_len = 1];
+  uint64 expected_revision = 2;
+  optional string note = 3;
+}

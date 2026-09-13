@@ -38,6 +38,10 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(webRoot, "src"),
+      "@bodysense/contracts": path.resolve(
+        webRoot,
+        "../../packages/contracts/src/index.ts",
+      ),
     },
     dedupe: ["react", "react-dom"],
   },
