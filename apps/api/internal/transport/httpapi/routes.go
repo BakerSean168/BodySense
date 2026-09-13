@@ -151,4 +151,13 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.POST("/treatments/revisions/:revisionId/reject", wrapper.RejectTreatmentRevision)
 	protected.POST("/outcomes", wrapper.RecordOutcome)
 	protected.GET("/outcomes", wrapper.ListOutcomes)
+
+	// Training execution, adherence and reassessment surfaces.
+	protected.GET("/training", wrapper.ListTrainingPlans)
+	protected.GET("/training/:id", wrapper.GetTrainingPlan)
+	protected.GET("/training/:id/today", wrapper.GetTrainingTodayTask)
+	protected.POST("/training/:id/checkin", wrapper.CheckInTrainingPlan)
+	protected.PUT("/training/:id/log", wrapper.UpdateTrainingLog)
+	protected.GET("/training/:id/progress", wrapper.GetTrainingProgress)
+	protected.POST("/training/:id/reassess", wrapper.ReassessTrainingPlan)
 }

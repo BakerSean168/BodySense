@@ -252,12 +252,10 @@ func main() {
 		treatmentService,
 		database.NewTransactionManager(database.DB),
 	)
-	trainingHandler := handler.NewTrainingHandler(trainingService)
 	treatmentReplayService := service.NewTreatmentReplayService(treatmentRepo, aiClient)
 	treatmentRolloutRepo := repository.NewTreatmentRolloutRepository(database.DB)
 	treatmentRolloutService := service.NewTreatmentRolloutService(treatmentRolloutRepo, treatmentReplayService)
 	treatmentService.AttachRolloutObserver(treatmentRolloutService)
-	reassessmentHandler := handler.NewReassessmentHandler(trainingService)
 	knowledgeIngestionService := service.NewKnowledgeIngestionService(
 		knowledgeSourceRegistry,
 		jobRuntime,
@@ -385,14 +383,6 @@ func main() {
 
 		// Assessment routes
 
-		// Training routes
-		protected.GET("/training", trainingHandler.ListPlans)
-		protected.GET("/training/:id", trainingHandler.GetPlan)
-		protected.GET("/training/:id/today", trainingHandler.GetTodayTask)
-		protected.POST("/training/:id/checkin", trainingHandler.CheckIn)
-		protected.PUT("/training/:id/log", trainingHandler.UpdateLog)
-		protected.GET("/training/:id/progress", trainingHandler.GetProgress)
-		protected.POST("/training/:id/reassess", reassessmentHandler.SubmitReassessment)
 	}
 
 	// OpenAPI-authoritative public routes. Authentication, operator authority
@@ -404,7 +394,7 @@ func main() {
 	}
 	httpapi.RegisterRoutes(
 		r,
-		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure).WithAssessment(assessmentService, assessmentReplayService).WithAuth(authService, authSecurity).WithConversations(conversationService, shareService, runtimeEventService).WithConsultation(consultationRuntime, consultationService, interactionService, consultationReplayService, threadProjectionService, bodyStateService).WithDiagnosis(diagnosisApplicationService, diagnosisAnalysisService, diagnosisFreshnessService, diagnosisReplayService).WithTreatment(treatmentService, trainingService, treatmentReplayService)),
+		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure).WithAssessment(assessmentService, assessmentReplayService).WithAuth(authService, authSecurity).WithConversations(conversationService, shareService, runtimeEventService).WithConsultation(consultationRuntime, consultationService, interactionService, consultationReplayService, threadProjectionService, bodyStateService).WithDiagnosis(diagnosisApplicationService, diagnosisAnalysisService, diagnosisFreshnessService, diagnosisReplayService).WithTreatment(treatmentService, trainingService, treatmentReplayService).WithTraining(trainingService)),
 		httpapi.RouteSecurity{
 			Auth:      authMiddleware,
 			Operator:  middleware.RequireKnowledgeOperator(userRepo),

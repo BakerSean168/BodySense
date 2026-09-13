@@ -5,11 +5,11 @@
   "totals": {
     "baseline": 96,
     "browserFacingEligible": 95,
-    "openapi": 73,
-    "missing": 22,
+    "openapi": 80,
+    "missing": 15,
     "retired": 0,
     "excludedOperational": 1,
-    "coveragePercent": 76.84
+    "coveragePercent": 84.21
   },
   "routes": [
     {
@@ -653,43 +653,57 @@
       "method": "GET",
       "path": "/api/v1/training",
       "source": "apps/api/cmd/server/main.go:496",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "listTrainingPlans",
+      "openapiPath": "/api/v1/training"
     },
     {
       "method": "GET",
       "path": "/api/v1/training/:id",
       "source": "apps/api/cmd/server/main.go:497",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getTrainingPlan",
+      "openapiPath": "/api/v1/training/{id}"
     },
     {
       "method": "GET",
       "path": "/api/v1/training/:id/today",
       "source": "apps/api/cmd/server/main.go:498",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getTrainingTodayTask",
+      "openapiPath": "/api/v1/training/{id}/today"
     },
     {
       "method": "POST",
       "path": "/api/v1/training/:id/checkin",
       "source": "apps/api/cmd/server/main.go:499",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "checkInTrainingPlan",
+      "openapiPath": "/api/v1/training/{id}/checkin"
     },
     {
       "method": "PUT",
       "path": "/api/v1/training/:id/log",
       "source": "apps/api/cmd/server/main.go:500",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "updateTrainingLog",
+      "openapiPath": "/api/v1/training/{id}/log"
     },
     {
       "method": "GET",
       "path": "/api/v1/training/:id/progress",
       "source": "apps/api/cmd/server/main.go:501",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getTrainingProgress",
+      "openapiPath": "/api/v1/training/{id}/progress"
     },
     {
       "method": "POST",
       "path": "/api/v1/training/:id/reassess",
       "source": "apps/api/cmd/server/main.go:502",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "reassessTrainingPlan",
+      "openapiPath": "/api/v1/training/{id}/reassess"
     },
     {
       "method": "GET",

@@ -49,6 +49,13 @@ import {
   RuntimeEventListResponse,
   ShareConversationResponse,
   SharedConversationResponse,
+  TrainingCheckInResponse,
+  TrainingFeedbackResult,
+  TrainingLog,
+  TrainingLogUpdateResponse,
+  TrainingPlan,
+  TrainingPlanListResponse,
+  TrainingProgress,
   TreatmentProposalResponse,
   TreatmentReplayReport,
   TreatmentRevision,
@@ -129,6 +136,15 @@ import type {
   ShareConversationResponseOutput,
   SharedConversationResponseOutput,
   StartConsultationRunRequest,
+  TrainingCheckInResponseOutput,
+  TrainingFeedbackResultOutput,
+  TrainingLogOutput,
+  TrainingLogUpdateRequest,
+  TrainingLogUpdateResponseOutput,
+  TrainingPlanListResponseOutput,
+  TrainingPlanOutput,
+  TrainingProgressOutput,
+  TrainingReassessmentRequest,
   TreatmentProposalRequest,
   TreatmentProposalResponseOutput,
   TreatmentReplayReportOutput,
@@ -3525,5 +3541,308 @@ export const listOutcomes = async (params?: ListOutcomesParams, options?: Reques
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? OutcomeListResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListTrainingPlansUrl = () => {
+
+
+
+
+  return `/api/v1/training`
+}
+
+/**
+ * @summary List TrainingPlan execution projections for the authenticated user.
+ */
+export const listTrainingPlans = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingPlanListResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListTrainingPlansUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TrainingPlanListResponse, status?: number} = new globalThis.Error();
+    const data : TrainingPlanListResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TrainingPlanListResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetTrainingPlanUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/training/${id}`
+}
+
+/**
+ * @summary Get one owned TrainingPlan execution projection.
+ */
+export const getTrainingPlan = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingPlanOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetTrainingPlanUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TrainingPlan, status?: number} = new globalThis.Error();
+    const data : TrainingPlan = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TrainingPlan.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetTrainingTodayTaskUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/training/${id}/today`
+}
+
+/**
+ * @summary Materialize and read today training log for one active plan.
+ */
+export const getTrainingTodayTask = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingLogOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetTrainingTodayTaskUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TrainingLog, status?: number} = new globalThis.Error();
+    const data : TrainingLog = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TrainingLog.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getCheckInTrainingPlanUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/training/${id}/checkin`
+}
+
+/**
+ * @summary Mark today training log checked in and persist its adherence Outcome.
+ */
+export const checkInTrainingPlan = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingCheckInResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getCheckInTrainingPlanUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TrainingCheckInResponse, status?: number} = new globalThis.Error();
+    const data : TrainingCheckInResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TrainingCheckInResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getUpdateTrainingLogUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/training/${id}/log`
+}
+
+/**
+ * @summary Update today training log and persist structured feedback Outcome.
+ */
+export const updateTrainingLog = async (id: string,
+    trainingLogUpdateRequest: TrainingLogUpdateRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingLogUpdateResponseOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getUpdateTrainingLogUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(trainingLogUpdateRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TrainingLogUpdateResponse, status?: number} = new globalThis.Error();
+    const data : TrainingLogUpdateResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TrainingLogUpdateResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetTrainingProgressUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/training/${id}/progress`
+}
+
+/**
+ * @summary Read deterministic adherence progress for one TrainingPlan.
+ */
+export const getTrainingProgress = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingProgressOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetTrainingProgressUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TrainingProgress, status?: number} = new globalThis.Error();
+    const data : TrainingProgress = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TrainingProgress.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getReassessTrainingPlanUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/training/${id}/reassess`
+}
+
+/**
+ * @summary Reassess training feedback and optionally propose a new Treatment revision.
+ */
+export const reassessTrainingPlan = async (id: string,
+    trainingReassessmentRequest: TrainingReassessmentRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingFeedbackResultOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getReassessTrainingPlanUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(trainingReassessmentRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TrainingFeedbackResult, status?: number} = new globalThis.Error();
+    const data : TrainingFeedbackResult = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TrainingFeedbackResult.parse(parsedBody) : parsedBody
   return data
 }

@@ -836,3 +836,51 @@ atomic acceptance boundary                  PASS
 Treatment replay strict-schema regression   PASS
 git diff --check                            PASS
 ```
+
+## Checkpoint 13 — Training execution / feedback / reassessment REST boundary
+
+Status: COMPLETE ON PHASE BRANCH
+
+The complete Training execution REST family is now OpenAPI-authoritative:
+
+```text
+GET  /api/v1/training
+GET  /api/v1/training/{id}
+GET  /api/v1/training/{id}/today
+POST /api/v1/training/{id}/checkin
+PUT  /api/v1/training/{id}/log
+GET  /api/v1/training/{id}/progress
+POST /api/v1/training/{id}/reassess
+```
+
+The legacy `TrainingHandler` and `ReassessmentHandler` are deleted. The generated adapter maps validated transport inputs into `TrainingFeedbackInput` and preserves the existing service ownership for daily task materialization, check-in Outcome persistence, structured feedback, deterministic progress, and reassessment-driven Treatment proposal generation.
+
+### Public projection hardening
+
+TrainingPlan continues to use the public projection introduced with Treatment migration. TrainingLog now has its own explicit browser projection and does not expose persistence `user_id`. Feedback responses reuse the Treatment/Outcome public presenters, so a nested Outcome or Treatment proposal cannot reintroduce persistence identity through the Training API.
+
+The Web Training feature no longer contains handwritten `/api/v1/training` calls. List/get/today/check-in/log/progress/reassess all use generated Orval Fetch + Zod clients behind `openApiAuthFetch` while preserving the existing feature-level types.
+
+### Coverage after this batch
+
+```text
+Phase 00 routes               96
+operational exclusions         1
+browser-facing eligible       95
+OpenAPI-authoritative         80
+missing                       15
+coverage                   84.21%
+```
+
+### Verification
+
+```text
+pnpm contracts:verify                       PASS (same 2 known share-path ambiguity warnings)
+Go test ./...                               PASS
+Web Training service                        3/3 PASS
+Web typecheck                               PASS
+handwritten Training production URLs        NONE
+TrainingLog user_id leak                    BLOCKED BY PROJECTION TEST
+nested feedback Outcome/Proposal projection PASS
+git diff --check                            PASS
+```
