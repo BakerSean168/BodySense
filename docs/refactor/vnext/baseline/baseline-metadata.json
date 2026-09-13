@@ -1,0 +1,6 @@
+{
+  "baseCommit": "1b649ef43b80d6486d1127da706cbf4bfd7bf2f8",
+  "baseBranch": "refactor/bodysense-vnext",
+  "implementationBranch": "refactor/vnext-00-baseline",
+  "databaseRuntime": "pgvector/pgvector:pg18"
+}
