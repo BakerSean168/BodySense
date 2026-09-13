@@ -49,6 +49,63 @@ func (e BodyStateHypothesisInputLifecycleState) Valid() bool {
 	}
 }
 
+// Defines values for ClientDiagnosticCategory.
+const (
+	AppRuntime    ClientDiagnosticCategory = "app.runtime"
+	Body3dViewer  ClientDiagnosticCategory = "body3d.viewer"
+	ChatTransport ClientDiagnosticCategory = "chat.transport"
+)
+
+// Valid indicates whether the value is a known member of the ClientDiagnosticCategory enum.
+func (e ClientDiagnosticCategory) Valid() bool {
+	switch e {
+	case AppRuntime:
+		return true
+	case Body3dViewer:
+		return true
+	case ChatTransport:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ClientDiagnosticSchemaVersion.
+const (
+	ClientDiagnosticSchemaVersionN1 ClientDiagnosticSchemaVersion = 1
+)
+
+// Valid indicates whether the value is a known member of the ClientDiagnosticSchemaVersion enum.
+func (e ClientDiagnosticSchemaVersion) Valid() bool {
+	switch e {
+	case ClientDiagnosticSchemaVersionN1:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ClientDiagnosticSeverity.
+const (
+	Error ClientDiagnosticSeverity = "error"
+	Info  ClientDiagnosticSeverity = "info"
+	Warn  ClientDiagnosticSeverity = "warn"
+)
+
+// Valid indicates whether the value is a known member of the ClientDiagnosticSeverity enum.
+func (e ClientDiagnosticSeverity) Valid() bool {
+	switch e {
+	case Error:
+		return true
+	case Info:
+		return true
+	case Warn:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DiagnosisCandidateConfidence.
 const (
 	DiagnosisCandidateConfidenceEmpty DiagnosisCandidateConfidence = "高"
@@ -693,6 +750,48 @@ type BodyStateSnapshot struct {
 	UserId          openapi_types.UUID     `json:"user_id"`
 }
 
+// ClientDiagnostic defines model for ClientDiagnostic.
+type ClientDiagnostic struct {
+	AttemptId           *string                                                       `json:"attemptId,omitempty"`
+	Attributes          *map[string]*ClientDiagnostic_Attributes_AdditionalProperties `json:"attributes,omitempty"`
+	Category            ClientDiagnosticCategory                                      `json:"category"`
+	Code                *string                                                       `json:"code,omitempty"`
+	ConversationId      *string                                                       `json:"conversationId,omitempty"`
+	DiagnosticSessionId *string                                                       `json:"diagnosticSessionId,omitempty"`
+	ElapsedMs           *float64                                                      `json:"elapsedMs,omitempty"`
+	Event               string                                                        `json:"event"`
+	Message             *string                                                       `json:"message,omitempty"`
+	Phase               *string                                                       `json:"phase,omitempty"`
+	RequestId           *string                                                       `json:"requestId,omitempty"`
+	Resource            *string                                                       `json:"resource,omitempty"`
+	RunId               *string                                                       `json:"runId,omitempty"`
+	SchemaVersion       ClientDiagnosticSchemaVersion                                 `json:"schemaVersion"`
+	Severity            *ClientDiagnosticSeverity                                     `json:"severity,omitempty"`
+}
+
+// ClientDiagnosticAttributes0 defines model for ClientDiagnostic.Attributes.0.
+type ClientDiagnosticAttributes0 = string
+
+// ClientDiagnosticAttributes1 defines model for ClientDiagnostic.Attributes.1.
+type ClientDiagnosticAttributes1 = float64
+
+// ClientDiagnosticAttributes2 defines model for ClientDiagnostic.Attributes.2.
+type ClientDiagnosticAttributes2 = bool
+
+// ClientDiagnostic_Attributes_AdditionalProperties defines model for ClientDiagnostic.attributes.AdditionalProperties.
+type ClientDiagnostic_Attributes_AdditionalProperties struct {
+	union json.RawMessage
+}
+
+// ClientDiagnosticCategory defines model for ClientDiagnostic.Category.
+type ClientDiagnosticCategory string
+
+// ClientDiagnosticSchemaVersion defines model for ClientDiagnostic.SchemaVersion.
+type ClientDiagnosticSchemaVersion int
+
+// ClientDiagnosticSeverity defines model for ClientDiagnostic.Severity.
+type ClientDiagnosticSeverity string
+
 // CorrectBodyStateFactRequest defines model for CorrectBodyStateFactRequest.
 type CorrectBodyStateFactRequest struct {
 	ExpectedRevision int64              `json:"expected_revision"`
@@ -1312,6 +1411,9 @@ type ReviewBodyStateObservationJSONRequestBody = ReviewBodyStateObservationReque
 // ResolveBodyStateSafetyJSONRequestBody defines body for ResolveBodyStateSafety for application/json ContentType.
 type ResolveBodyStateSafetyJSONRequestBody = ResolveBodyStateSafetyRequest
 
+// RecordClientDiagnosticJSONRequestBody defines body for RecordClientDiagnostic for application/json ContentType.
+type RecordClientDiagnosticJSONRequestBody = ClientDiagnostic
+
 // UpdateInjuryHistoryJSONRequestBody defines body for UpdateInjuryHistory for application/json ContentType.
 type UpdateInjuryHistoryJSONRequestBody = UpdateInjuryHistoryRequest
 
@@ -1332,6 +1434,94 @@ type RequestPrivacyErasureJSONRequestBody = PrivacyErasureRequest
 
 // UpdateUserProfileJSONRequestBody defines body for UpdateUserProfile for application/json ContentType.
 type UpdateUserProfileJSONRequestBody = UpdateUserProfileRequest
+
+// AsClientDiagnosticAttributes0 returns the union data inside the ClientDiagnostic_Attributes_AdditionalProperties as a ClientDiagnosticAttributes0
+func (t ClientDiagnostic_Attributes_AdditionalProperties) AsClientDiagnosticAttributes0() (ClientDiagnosticAttributes0, error) {
+	var body ClientDiagnosticAttributes0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromClientDiagnosticAttributes0 overwrites any union data inside the ClientDiagnostic_Attributes_AdditionalProperties as the provided ClientDiagnosticAttributes0
+func (t *ClientDiagnostic_Attributes_AdditionalProperties) FromClientDiagnosticAttributes0(v ClientDiagnosticAttributes0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeClientDiagnosticAttributes0 performs a merge with any union data inside the ClientDiagnostic_Attributes_AdditionalProperties, using the provided ClientDiagnosticAttributes0
+func (t *ClientDiagnostic_Attributes_AdditionalProperties) MergeClientDiagnosticAttributes0(v ClientDiagnosticAttributes0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsClientDiagnosticAttributes1 returns the union data inside the ClientDiagnostic_Attributes_AdditionalProperties as a ClientDiagnosticAttributes1
+func (t ClientDiagnostic_Attributes_AdditionalProperties) AsClientDiagnosticAttributes1() (ClientDiagnosticAttributes1, error) {
+	var body ClientDiagnosticAttributes1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromClientDiagnosticAttributes1 overwrites any union data inside the ClientDiagnostic_Attributes_AdditionalProperties as the provided ClientDiagnosticAttributes1
+func (t *ClientDiagnostic_Attributes_AdditionalProperties) FromClientDiagnosticAttributes1(v ClientDiagnosticAttributes1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeClientDiagnosticAttributes1 performs a merge with any union data inside the ClientDiagnostic_Attributes_AdditionalProperties, using the provided ClientDiagnosticAttributes1
+func (t *ClientDiagnostic_Attributes_AdditionalProperties) MergeClientDiagnosticAttributes1(v ClientDiagnosticAttributes1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsClientDiagnosticAttributes2 returns the union data inside the ClientDiagnostic_Attributes_AdditionalProperties as a ClientDiagnosticAttributes2
+func (t ClientDiagnostic_Attributes_AdditionalProperties) AsClientDiagnosticAttributes2() (ClientDiagnosticAttributes2, error) {
+	var body ClientDiagnosticAttributes2
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromClientDiagnosticAttributes2 overwrites any union data inside the ClientDiagnostic_Attributes_AdditionalProperties as the provided ClientDiagnosticAttributes2
+func (t *ClientDiagnostic_Attributes_AdditionalProperties) FromClientDiagnosticAttributes2(v ClientDiagnosticAttributes2) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeClientDiagnosticAttributes2 performs a merge with any union data inside the ClientDiagnostic_Attributes_AdditionalProperties, using the provided ClientDiagnosticAttributes2
+func (t *ClientDiagnostic_Attributes_AdditionalProperties) MergeClientDiagnosticAttributes2(v ClientDiagnosticAttributes2) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ClientDiagnostic_Attributes_AdditionalProperties) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ClientDiagnostic_Attributes_AdditionalProperties) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -1374,6 +1564,9 @@ type ServerInterface interface {
 	// ResolveBodyStateSafety Resolve or monitor the durable safety projection.
 	// (POST /api/v1/body-state/safety/resolve)
 	ResolveBodyStateSafety(c *gin.Context)
+	// RecordClientDiagnostic Record bounded privacy-safe browser operational telemetry.
+	// (POST /api/v1/client-diagnostics)
+	RecordClientDiagnostic(c *gin.Context)
 	// GetInjuryHistory Get the current injury-history projection.
 	// (GET /api/v1/health-history/injury)
 	GetInjuryHistory(c *gin.Context)
@@ -1653,6 +1846,19 @@ func (siw *ServerInterfaceWrapper) ResolveBodyStateSafety(c *gin.Context) {
 	siw.Handler.ResolveBodyStateSafety(c)
 }
 
+// RecordClientDiagnostic operation middleware
+func (siw *ServerInterfaceWrapper) RecordClientDiagnostic(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RecordClientDiagnostic(c)
+}
+
 // GetInjuryHistory operation middleware
 func (siw *ServerInterfaceWrapper) GetInjuryHistory(c *gin.Context) {
 
@@ -1899,6 +2105,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.PUT(options.BaseURL+"/api/v1/profile", wrapper.UpdateUserProfile)
 	router.GET(options.BaseURL+"/api/v1/privacy/erasure-plan", wrapper.GetPrivacyErasurePlan)
 	router.POST(options.BaseURL+"/api/v1/privacy/erasure", wrapper.RequestPrivacyErasure)
+	router.POST(options.BaseURL+"/api/v1/client-diagnostics", wrapper.RecordClientDiagnostic)
 }
 
 type InternalErrorJSONResponse ErrorEnvelope
@@ -3231,6 +3438,64 @@ func (response ResolveBodyStateSafety503JSONResponse) VisitResolveBodyStateSafet
 	return err
 }
 
+type RecordClientDiagnosticRequestObject struct {
+	Body *RecordClientDiagnosticJSONRequestBody
+}
+
+type RecordClientDiagnosticResponseObject interface {
+	VisitRecordClientDiagnosticResponse(w http.ResponseWriter) error
+}
+
+type RecordClientDiagnostic204Response struct {
+}
+
+func (response RecordClientDiagnostic204Response) VisitRecordClientDiagnosticResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RecordClientDiagnostic400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response RecordClientDiagnostic400JSONResponse) VisitRecordClientDiagnosticResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordClientDiagnostic401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RecordClientDiagnostic401JSONResponse) VisitRecordClientDiagnosticResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordClientDiagnostic500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response RecordClientDiagnostic500JSONResponse) VisitRecordClientDiagnosticResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetInjuryHistoryRequestObject struct {
 }
 
@@ -4138,6 +4403,9 @@ type StrictServerInterface interface {
 	// ResolveBodyStateSafety Resolve or monitor the durable safety projection.
 	// (POST /api/v1/body-state/safety/resolve)
 	ResolveBodyStateSafety(ctx context.Context, request ResolveBodyStateSafetyRequestObject) (ResolveBodyStateSafetyResponseObject, error)
+	// RecordClientDiagnostic Record bounded privacy-safe browser operational telemetry.
+	// (POST /api/v1/client-diagnostics)
+	RecordClientDiagnostic(ctx context.Context, request RecordClientDiagnosticRequestObject) (RecordClientDiagnosticResponseObject, error)
 	// GetInjuryHistory Get the current injury-history projection.
 	// (GET /api/v1/health-history/injury)
 	GetInjuryHistory(ctx context.Context, request GetInjuryHistoryRequestObject) (GetInjuryHistoryResponseObject, error)
@@ -4628,6 +4896,37 @@ func (sh *strictHandler) ResolveBodyStateSafety(ctx *gin.Context) {
 	}
 }
 
+// RecordClientDiagnostic operation middleware
+func (sh *strictHandler) RecordClientDiagnostic(ctx *gin.Context) {
+	var request RecordClientDiagnosticRequestObject
+
+	var body RecordClientDiagnosticJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RecordClientDiagnostic(ctx, request.(RecordClientDiagnosticRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RecordClientDiagnostic")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(RecordClientDiagnosticResponseObject); ok {
+		if err := validResponse.VisitRecordClientDiagnosticResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetInjuryHistory operation middleware
 func (sh *strictHandler) GetInjuryHistory(ctx *gin.Context) {
 	var request GetInjuryHistoryRequestObject
@@ -4998,108 +5297,113 @@ func (sh *strictHandler) UpdateUserProfile(ctx *gin.Context) {
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
-	"d/8XAAD//w==",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

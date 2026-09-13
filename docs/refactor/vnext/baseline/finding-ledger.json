@@ -494,6 +494,26 @@
         "route coverage reaches complete without duplicate Gin registrations"
       ],
       "notes": "Do not solve this by registering the full generated server on both public and protected groups; that would duplicate routes and weaken security ownership."
+    },
+    {
+      "id": "BS-VNEXT-REST-014",
+      "priority": "P2",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "Unqualified OpenAPI number narrowed client-diagnostic telemetry from float64 to float32 in generated Go",
+      "evidence": [
+        "packages/contracts/openapi/bodysense.v1.openapi.yaml",
+        "apps/api/internal/generated/openapi/v1/bodysense.gen.go",
+        "apps/api/internal/transport/httpapi/client_diagnostics_test.go"
+      ],
+      "root_cause": "The first ClientDiagnostic schema used bare number for elapsedMs and numeric scalar attributes. oapi-codegen maps that form to float32, while the legacy telemetry boundary and JSON decoding used float64.",
+      "repair": "Declare format: double for elapsedMs and numeric diagnostic attributes, regenerate both clients, and lock generated precision with a transport test.",
+      "verification": [
+        "TestGeneratedClientDiagnosticRetainsFloat64TelemetryPrecision",
+        "pnpm contracts:verify",
+        "go test ./..."
+      ],
+      "notes": "This was caught before route ownership switched; no persisted data migration is required because diagnostics are operational logs, not stored domain records."
     }
   ]
 }

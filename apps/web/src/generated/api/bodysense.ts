@@ -33,6 +33,7 @@ import type {
   BodyStateObservationMutationResponseOutput,
   BodyStateRevisionMutationResponseOutput,
   BodyStateSnapshotOutput,
+  ClientDiagnostic,
   CorrectBodyStateFactRequest,
   CurrentUserOutput,
   HealthWorkspaceOutput,
@@ -1312,5 +1313,57 @@ const res = await (fetchFn ?? fetch)(getRequestPrivacyErasureUrl(),
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? PrivacyErasureAccepted.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getRecordClientDiagnosticUrl = () => {
+
+
+
+
+  return `/api/v1/client-diagnostics`
+}
+
+/**
+ * @summary Record bounded privacy-safe browser operational telemetry.
+ */
+export const recordClientDiagnostic = async (clientDiagnostic: ClientDiagnostic, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getRecordClientDiagnosticUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(clientDiagnostic)
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: void, status?: number} = new globalThis.Error();
+    const data : void = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
   return data
 }

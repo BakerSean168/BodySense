@@ -458,3 +458,65 @@ feature-source hardcoded privacy URLs  NONE
 ### Security-domain blocker discovered
 
 `BS-VNEXT-REST-013` records a Phase 02 architectural prerequisite: the generated server is currently mounted as one protected Gin group. The remaining login/register/refresh/logout routes, public share route and operator-only Knowledge routes require different middleware domains. They must not be migrated by registering the full generated server into multiple groups or by weakening existing guards.
+
+## Checkpoint 7 — Client diagnostics telemetry
+
+Status: COMPLETE ON PHASE BRANCH
+
+```text
+POST /api/v1/client-diagnostics
+```
+
+is now owned by the generated protected OpenAPI router. The legacy Gin `ClientDiagnosticHandler` and handwritten route were removed.
+
+### Privacy-safe request boundary
+
+The public request schema now makes the browser telemetry envelope explicit:
+
+- `schemaVersion` is exactly `1`;
+- category is one of `chat.transport`, `body3d.viewer`, `app.runtime`;
+- severity is one of `info`, `warn`, `error`;
+- event/message/id/resource fields retain bounded lengths;
+- `elapsedMs >= 0`;
+- at most 24 attributes are accepted;
+- attribute keys are bounded and values are scalar string/number/boolean/null only;
+- nested objects and arrays fail before logging.
+
+The existing Go sanitizer remains as defense in depth and continues stripping origin/query information from diagnostic resource URLs before logging. The strict adapter also preserves Gin request-id and User-Agent context by reading the concrete `*gin.Context` supplied by the generated Gin wrapper.
+
+### Numeric parity
+
+A first generation pass revealed that an unqualified OpenAPI `number` became Go `float32`. The schema now marks elapsed time and numeric scalar attributes as `format: double`, preserving the prior `float64` telemetry semantics.
+
+### Browser behavior preserved
+
+`reportClientDiagnostic` now calls the generated operation through `openApiAuthFetch`, but remains deliberately fire-and-forget. Failed telemetry responses are swallowed and cannot interfere with the user-facing path being observed. Browser-side finite-number filtering and 0.1 ms rounding remain intact.
+
+### Coverage after this batch
+
+```text
+Phase 00 routes               96
+operational exclusions         1
+browser-facing eligible       95
+OpenAPI-authoritative         27
+missing                       68
+coverage                   28.42%
+```
+
+### Verification
+
+```text
+pnpm contracts:verify                       PASS
+pnpm lint                                   PASS
+pnpm typecheck                              PASS
+pnpm test                                   PASS
+  contracts                                 12/12
+  Web                                       232/232
+  Python                                    475/475
+  Go                                        go test ./... PASS
+pnpm build                                  PASS
+git diff --check                            PASS
+legacy ClientDiagnosticHandler              DELETED
+handwritten client-diagnostics route        NONE
+feature hardcoded client-diagnostics URL    NONE
+```

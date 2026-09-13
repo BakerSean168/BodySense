@@ -291,7 +291,6 @@ func main() {
 		treatmentService,
 		trainingService,
 	)
-	clientDiagnosticHandler := handler.NewClientDiagnosticHandler()
 
 	// HTTP server. Host development defaults to loopback; container runtimes
 	// explicitly set API_HOST=0.0.0.0 so the Docker network can reach it.
@@ -380,7 +379,6 @@ func main() {
 	protected := r.Group("/api/v1")
 	protected.Use(authMiddleware)
 	{
-		protected.POST("/client-diagnostics", clientDiagnosticHandler.Record)
 
 		// Upload routes
 		protected.POST("/uploads", uploadHandler.Upload)

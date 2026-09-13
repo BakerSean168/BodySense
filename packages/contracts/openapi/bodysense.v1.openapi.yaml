@@ -722,6 +722,28 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /api/v1/client-diagnostics:
+    post:
+      operationId: recordClientDiagnostic
+      summary: Record bounded privacy-safe browser operational telemetry.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientDiagnostic'
+      responses:
+        '204':
+          description: Diagnostic accepted for operational logging.
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -729,6 +751,71 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    ClientDiagnostic:
+      type: object
+      additionalProperties: false
+      required: [schemaVersion, category, event]
+      properties:
+        schemaVersion:
+          type: integer
+          enum: [1]
+        category:
+          type: string
+          enum: [chat.transport, body3d.viewer, app.runtime]
+        event:
+          type: string
+          minLength: 1
+          maxLength: 96
+        severity:
+          type: string
+          enum: [info, warn, error]
+          default: info
+        code:
+          type: string
+          maxLength: 96
+        message:
+          type: string
+          maxLength: 512
+        phase:
+          type: string
+          maxLength: 96
+        conversationId:
+          type: string
+          maxLength: 128
+        runId:
+          type: string
+          maxLength: 128
+        requestId:
+          type: string
+          maxLength: 128
+        resource:
+          type: string
+          maxLength: 256
+        diagnosticSessionId:
+          type: string
+          maxLength: 128
+        attemptId:
+          type: string
+          maxLength: 128
+        elapsedMs:
+          type: number
+          format: double
+          minimum: 0
+        attributes:
+          type: object
+          maxProperties: 24
+          propertyNames:
+            type: string
+            minLength: 1
+            maxLength: 64
+          additionalProperties:
+            oneOf:
+            - type: string
+              maxLength: 256
+            - type: number
+              format: double
+            - type: boolean
+            - type: 'null'
     PrivacyDataCount:
       type: object
       additionalProperties: false

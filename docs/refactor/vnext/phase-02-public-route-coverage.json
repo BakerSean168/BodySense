@@ -5,11 +5,11 @@
   "totals": {
     "baseline": 96,
     "browserFacingEligible": 95,
-    "openapi": 26,
-    "missing": 69,
+    "openapi": 27,
+    "missing": 68,
     "retired": 0,
     "excludedOperational": 1,
-    "coveragePercent": 27.37
+    "coveragePercent": 28.42
   },
   "routes": [
     {
@@ -55,7 +55,9 @@
       "method": "POST",
       "path": "/api/v1/client-diagnostics",
       "source": "apps/api/cmd/server/main.go:388",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "recordClientDiagnostic",
+      "openapiPath": "/api/v1/client-diagnostics"
     },
     {
       "method": "GET",

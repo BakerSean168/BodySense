@@ -22,6 +22,7 @@ export * from './bodyStateObservationMutationResponse.zod';
 export * from './bodyStateRevision.zod';
 export * from './bodyStateRevisionMutationResponse.zod';
 export * from './bodyStateSnapshot.zod';
+export * from './clientDiagnostic.zod';
 export * from './correctBodyStateFactRequest.zod';
 export * from './currentUser.zod';
 export * from './diagnosisCandidate.zod';

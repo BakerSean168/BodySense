@@ -4,11 +4,11 @@
 
 - Phase 00 baseline routes: **96**
 - Browser-facing eligible routes: **95**
-- OpenAPI-authoritative routes: **26**
-- Missing migration routes: **69**
+- OpenAPI-authoritative routes: **27**
+- Missing migration routes: **68**
 - Retired routes: **0**
 - Operational exclusions: **1**
-- Coverage: **27.37%**
+- Coverage: **28.42%**
 
 ## Missing routes
 
@@ -16,7 +16,6 @@
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/refresh`
 - `POST /api/v1/auth/logout`
-- `POST /api/v1/client-diagnostics`
 - `POST /api/v1/uploads`
 - `GET /api/v1/uploads`
 - `GET /api/v1/uploads/posture-analysis`
