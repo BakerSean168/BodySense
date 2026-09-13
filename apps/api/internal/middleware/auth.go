@@ -31,29 +31,20 @@ func AuthMiddleware(jwtConfig auth.JWTConfig, userRepo *repository.UserRepositor
 
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
-				Error:   "unauthorized",
-				Message: "Authorization header is required",
-			})
+			c.JSON(http.StatusUnauthorized, dto.NewErrorResponse("UNAUTHORIZED", "Authorization header is required"))
 			c.Abort()
 			return
 		}
 
 		if !strings.HasPrefix(authHeader, "Bearer ") {
-			c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
-				Error:   "unauthorized",
-				Message: "Invalid authorization format. Use: Bearer <token>",
-			})
+			c.JSON(http.StatusUnauthorized, dto.NewErrorResponse("UNAUTHORIZED", "Invalid authorization format. Use: Bearer <token>"))
 			c.Abort()
 			return
 		}
 
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 		if tokenString == "" {
-			c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
-				Error:   "unauthorized",
-				Message: "Token is required",
-			})
+			c.JSON(http.StatusUnauthorized, dto.NewErrorResponse("UNAUTHORIZED", "Token is required"))
 			c.Abort()
 			return
 		}
@@ -62,10 +53,7 @@ func AuthMiddleware(jwtConfig auth.JWTConfig, userRepo *repository.UserRepositor
 
 		claims, err := auth.ValidateAccessToken(jwtConfig, tokenString)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
-				Error:   "unauthorized",
-				Message: "Invalid or expired token",
-			})
+			c.JSON(http.StatusUnauthorized, dto.NewErrorResponse("UNAUTHORIZED", "Invalid or expired token"))
 			c.Abort()
 			return
 		}
@@ -81,15 +69,9 @@ func AuthMiddleware(jwtConfig auth.JWTConfig, userRepo *repository.UserRepositor
 			// account remains authorized.
 			if err := verifyUserExistsNoCache(c, userID, userRepo); err != nil {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
-					c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
-						Error:   "unauthorized",
-						Message: "User no longer exists",
-					})
+					c.JSON(http.StatusUnauthorized, dto.NewErrorResponse("UNAUTHORIZED", "User no longer exists"))
 				} else {
-					c.JSON(http.StatusServiceUnavailable, dto.ErrorResponse{
-						Error:   "authentication_unavailable",
-						Message: "Authentication service is temporarily unavailable",
-					})
+					c.JSON(http.StatusServiceUnavailable, dto.NewErrorResponse("AUTHENTICATION_UNAVAILABLE", "Authentication service is temporarily unavailable"))
 				}
 				c.Abort()
 				return
@@ -99,18 +81,12 @@ func AuthMiddleware(jwtConfig auth.JWTConfig, userRepo *repository.UserRepositor
 			if cacheErr != nil {
 				// Session authority is the revocation boundary. Failing open here would
 				// let a previously revoked bearer token through during a Redis outage.
-				c.JSON(http.StatusServiceUnavailable, dto.ErrorResponse{
-					Error:   "authentication_unavailable",
-					Message: "Authentication service is temporarily unavailable",
-				})
+				c.JSON(http.StatusServiceUnavailable, dto.NewErrorResponse("AUTHENTICATION_UNAVAILABLE", "Authentication service is temporarily unavailable"))
 				c.Abort()
 				return
 			} else if !exists {
 				// Definitive miss: the session was revoked (logout / global sign-out).
-				c.JSON(http.StatusUnauthorized, dto.ErrorResponse{
-					Error:   "unauthorized",
-					Message: "Session has been revoked, please sign in again",
-				})
+				c.JSON(http.StatusUnauthorized, dto.NewErrorResponse("UNAUTHORIZED", "Session has been revoked, please sign in again"))
 				c.Abort()
 				return
 			}

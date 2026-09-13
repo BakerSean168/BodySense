@@ -208,6 +208,45 @@
         "pnpm nx run @bodysense/web:build"
       ],
       "notes": "Verified with the workspace package symlink intentionally absent; Web passed 212/212 tests and production build."
+    },
+    {
+      "id": "BS-VNEXT-REST-001",
+      "priority": "P1",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "Contract spike simplified BodyState mutation revision to an integer",
+      "evidence": [
+        "packages/contracts/openapi/bodysense.v1.openapi.yaml",
+        "apps/api/internal/dto/body_state.go",
+        "apps/api/internal/model/body_state.go"
+      ],
+      "root_cause": "The 2026-09-09 architecture spike intentionally measured a selected wire shape and did not preserve the full production mutation response; production returns a BodyStateRevision object.",
+      "repair": "The production OpenAPI authority models the full BodyStateRevision object and generated Go/Web boundaries derive from that corrected schema.",
+      "verification": [
+        "pnpm contracts:verify",
+        "go test ./internal/transport/httpapi -count=1",
+        "pnpm nx run @bodysense/web:typecheck"
+      ],
+      "notes": "Spike artifacts remain evidence only and are never promoted directly to production authority."
+    },
+    {
+      "id": "BS-VNEXT-REST-002",
+      "priority": "P1",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "Public auth middleware used a different error envelope from application handlers",
+      "evidence": [
+        "apps/api/internal/dto/auth.go",
+        "apps/api/internal/middleware/auth.go",
+        "apps/api/internal/handler/utils.go"
+      ],
+      "root_cause": "Authentication predated the nested structured error contract and emitted {error:string,message:string}, while domain handlers emitted {error:{code,message}}.",
+      "repair": "Unify public middleware and handlers on dto.NewErrorResponse(code,message) and describe the same ErrorEnvelope in OpenAPI.",
+      "verification": [
+        "go test ./internal/middleware ./internal/handler -count=1",
+        "pnpm test"
+      ],
+      "notes": "Legacy token acceptance remains a separate Phase 07 retirement item."
     }
   ]
 }

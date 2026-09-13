@@ -1,5 +1,7 @@
 import { authFetch } from "@/features/auth/services/authService";
 import { expectEmpty, expectJson } from "@/lib/api-client";
+import { addBodyStateFact } from "@/generated/api/bodysense";
+import { openApiAuthFetch, withOpenApiError } from "@/lib/openapi-client";
 import type { BodyStateFact } from "@/features/consultation/types/consultation";
 import type {
   HealthWorkspace,
@@ -38,11 +40,17 @@ export type LifestyleSectionKey =
 export const workspaceApi = {
   get: () => request<HealthWorkspace>("/api/v1/health-workspace"),
 
-  addFact: (expectedRevision: number, fact: AddFactInput) =>
-    request<{ fact: BodyStateFact }>("/api/v1/body-state/facts", {
-      method: "POST",
-      headers: jsonHeaders,
-      body: JSON.stringify({ expected_revision: expectedRevision, fact }),
+  addFact: async (
+    expectedRevision: number,
+    fact: AddFactInput,
+  ): Promise<{ fact: BodyStateFact }> =>
+    withOpenApiError(async () => {
+      const response = await addBodyStateFact(
+        { expected_revision: expectedRevision, fact },
+        undefined,
+        openApiAuthFetch,
+      );
+      return { fact: response.fact };
     }),
 
   reviewFact: (factId: string, expectedRevision: number, reviewState: string) =>

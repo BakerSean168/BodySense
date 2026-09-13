@@ -19,34 +19,34 @@ func RequireKnowledgeOperator(userRepo *repository.UserRepository) gin.HandlerFu
 	return func(c *gin.Context) {
 		rawUserID, ok := c.Get("user_id")
 		if !ok || userRepo == nil {
-			c.JSON(http.StatusServiceUnavailable, dto.ErrorResponse{Error: "authorization_unavailable", Message: "Authorization service is temporarily unavailable"})
+			c.JSON(http.StatusServiceUnavailable, dto.NewErrorResponse("AUTHORIZATION_UNAVAILABLE", "Authorization service is temporarily unavailable"))
 			c.Abort()
 			return
 		}
 		userIDText, ok := rawUserID.(string)
 		if !ok {
-			c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "unauthorized", Message: "Invalid authenticated user identity"})
+			c.JSON(http.StatusUnauthorized, dto.NewErrorResponse("UNAUTHORIZED", "Invalid authenticated user identity"))
 			c.Abort()
 			return
 		}
 		userID, err := uuid.Parse(userIDText)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "unauthorized", Message: "Invalid authenticated user identity"})
+			c.JSON(http.StatusUnauthorized, dto.NewErrorResponse("UNAUTHORIZED", "Invalid authenticated user identity"))
 			c.Abort()
 			return
 		}
 		user, err := userRepo.FindByID(c.Request.Context(), userID)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "unauthorized", Message: "Authenticated user no longer exists"})
+				c.JSON(http.StatusUnauthorized, dto.NewErrorResponse("UNAUTHORIZED", "Authenticated user no longer exists"))
 			} else {
-				c.JSON(http.StatusServiceUnavailable, dto.ErrorResponse{Error: "authorization_unavailable", Message: "Authorization service is temporarily unavailable"})
+				c.JSON(http.StatusServiceUnavailable, dto.NewErrorResponse("AUTHORIZATION_UNAVAILABLE", "Authorization service is temporarily unavailable"))
 			}
 			c.Abort()
 			return
 		}
 		if user.Role != model.UserRoleOperator {
-			c.JSON(http.StatusForbidden, dto.ErrorResponse{Error: "forbidden", Message: "Knowledge operator permission is required"})
+			c.JSON(http.StatusForbidden, dto.NewErrorResponse("FORBIDDEN", "Knowledge operator permission is required"))
 			c.Abort()
 			return
 		}

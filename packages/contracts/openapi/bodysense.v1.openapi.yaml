@@ -1,0 +1,269 @@
+openapi: 3.1.0
+info:
+  title: BodySense Public API
+  version: 1.0.0-vnext
+  license:
+    name: MIT
+    identifier: MIT
+  description: >-
+    Canonical browser-facing REST contract for BodySense vNext. During Phase 02
+    endpoints are added only when their production handler is migrated behind
+    the generated boundary; undocumented legacy routes remain temporary debt
+    until this specification reaches complete public-route coverage.
+servers:
+  - url: /
+paths:
+  /api/v1/body-state/facts:
+    post:
+      operationId: addBodyStateFact
+      summary: Add a durable BodyState fact with optimistic revision checking.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertBodyStateFactRequest'
+      responses:
+        '200':
+          description: Fact and immutable revision created by the mutation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyStateFactMutationResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    JsonObject:
+      type: object
+      additionalProperties: true
+    ErrorDetail:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          minLength: 1
+        message:
+          type: string
+    ErrorEnvelope:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorDetail'
+    BodyStateFactInput:
+      type: object
+      additionalProperties: false
+      required: [kind, value]
+      properties:
+        concern_key:
+          type: string
+        kind:
+          type: string
+          minLength: 1
+        body_region:
+          type: string
+        body_region_id:
+          type: [string, 'null']
+        value:
+          type: string
+        details:
+          $ref: '#/components/schemas/JsonObject'
+        origin:
+          type: string
+        review_state:
+          type: string
+        lifecycle_state:
+          type: string
+        trend:
+          type: string
+        source_key:
+          type: string
+        provenance:
+          $ref: '#/components/schemas/JsonObject'
+        observed_at:
+          type: [string, 'null']
+          format: date-time
+        valid_from:
+          type: [string, 'null']
+          format: date-time
+        valid_until:
+          type: [string, 'null']
+          format: date-time
+    UpsertBodyStateFactRequest:
+      type: object
+      additionalProperties: false
+      required: [expected_revision, fact]
+      properties:
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        fact:
+          $ref: '#/components/schemas/BodyStateFactInput'
+    BodyStateFact:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - user_id
+        - kind
+        - body_region_id
+        - value
+        - details
+        - origin
+        - review_state
+        - lifecycle_state
+        - trend
+        - provenance
+        - excluded_from_reasoning
+        - created_revision
+        - updated_revision
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        concern_key:
+          type: string
+        kind:
+          type: string
+        body_region:
+          type: string
+        body_region_id:
+          type: [string, 'null']
+        value:
+          type: string
+        details:
+          $ref: '#/components/schemas/JsonObject'
+        origin:
+          type: string
+        review_state:
+          type: string
+        lifecycle_state:
+          type: string
+        trend:
+          type: string
+        source_key:
+          type: string
+        provenance:
+          $ref: '#/components/schemas/JsonObject'
+        observed_at:
+          type: [string, 'null']
+          format: date-time
+        valid_from:
+          type: [string, 'null']
+          format: date-time
+        valid_until:
+          type: [string, 'null']
+          format: date-time
+        supersedes_fact_id:
+          type: string
+          format: uuid
+        excluded_from_reasoning:
+          type: boolean
+        created_revision:
+          type: integer
+          format: int64
+        updated_revision:
+          type: integer
+          format: int64
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    BodyStateRevision:
+      type: object
+      additionalProperties: false
+      required: [id, user_id, revision, change_type, source, changes, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        revision:
+          type: integer
+          format: int64
+        change_type:
+          type: string
+        source:
+          type: string
+        changes:
+          $ref: '#/components/schemas/JsonObject'
+        created_at:
+          type: string
+          format: date-time
+    BodyStateFactMutationResponse:
+      type: object
+      additionalProperties: false
+      required: [fact, revision]
+      properties:
+        fact:
+          $ref: '#/components/schemas/BodyStateFact'
+        revision:
+          $ref: '#/components/schemas/BodyStateRevision'
+  responses:
+    InvalidRequest:
+      description: Request body or BodyState fact is invalid.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Unauthorized:
+      description: Authentication is missing or invalid.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    NotFound:
+      description: Referenced BodyState item does not exist.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    RevisionConflict:
+      description: expected_revision does not match current BodyState revision.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    ValidationUnavailable:
+      description: Canonical body-region validation dependency is unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    InternalError:
+      description: Unexpected server failure.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'

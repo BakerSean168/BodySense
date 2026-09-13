@@ -14,12 +14,14 @@ import (
 	"github.com/bodysense/api/internal/cache"
 	consultationruntime "github.com/bodysense/api/internal/consultation"
 	"github.com/bodysense/api/internal/database"
+	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
 	"github.com/bodysense/api/internal/handler"
 	"github.com/bodysense/api/internal/middleware"
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/observability"
 	"github.com/bodysense/api/internal/repository"
 	"github.com/bodysense/api/internal/service"
+	"github.com/bodysense/api/internal/transport/httpapi"
 	"github.com/bodysense/api/internal/uploadstorage"
 	"github.com/gin-contrib/requestid"
 	ginslog "github.com/gin-contrib/slog"
@@ -380,9 +382,11 @@ func main() {
 		authGroup.POST("/logout", authHandler.Logout)
 	}
 
-	// Protected routes
+	// Protected routes. Keep one auth middleware instance so handwritten and
+	// generated OpenAPI routes share the exact same token/session authority.
+	authMiddleware := middleware.AuthMiddleware(jwtConfig, userRepo, sessionCache)
 	protected := r.Group("/api/v1")
-	protected.Use(middleware.AuthMiddleware(jwtConfig, userRepo, sessionCache))
+	protected.Use(authMiddleware)
 	{
 		protected.GET("/me", authHandler.Me)
 		protected.POST("/client-diagnostics", clientDiagnosticHandler.Record)
@@ -461,7 +465,6 @@ func main() {
 
 		// Longitudinal BodyState (ADR 0004)
 		protected.GET("/body-state", bodyStateHandler.GetCurrent)
-		protected.POST("/body-state/facts", bodyStateHandler.UpsertFact)
 		protected.POST("/body-state/facts/:id/correct", bodyStateHandler.CorrectFact)
 		protected.PATCH("/body-state/facts/:id/temporal", bodyStateHandler.UpdateFactTemporal)
 		protected.PATCH("/body-state/facts/:id/review", bodyStateHandler.ReviewFact)
@@ -501,6 +504,21 @@ func main() {
 		protected.GET("/training/:id/progress", trainingHandler.GetProgress)
 		protected.POST("/training/:id/reassess", reassessmentHandler.SubmitReassessment)
 	}
+
+	// OpenAPI-first public routes. Authentication remains owned by the existing
+	// middleware; request/schema validation and transport decoding are generated
+	// from packages/contracts/openapi/bodysense.v1.openapi.yaml.
+	publicAPISpec, err := openapiv1.GetSwagger()
+	if err != nil {
+		log.Fatalf("failed to load generated public OpenAPI spec: %v", err)
+	}
+	openAPIProtected := r.Group("")
+	openAPIProtected.Use(authMiddleware)
+	openAPIProtected.Use(httpapi.RequestValidator(publicAPISpec))
+	openapiv1.RegisterHandlers(
+		openAPIProtected,
+		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService)),
+	)
 
 	// Public share routes (no auth)
 	public := r.Group("/api/v1")
