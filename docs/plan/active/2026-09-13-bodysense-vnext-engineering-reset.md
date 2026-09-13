@@ -385,6 +385,14 @@ This gives each phase an auditable diff and prevents a single giant unreviewable
 
 ## 7. Phase plan
 
+### Execution status
+
+| Phase                    | Status       | Integration evidence                                                                                                               |
+| ------------------------ | ------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| 00 — Baseline            | **COMPLETE** | `a2c68a38d` merged baseline evidence, fresh PG18+pgvector schema snapshot, retirement/finding ledgers and self-contained typecheck |
+| 01 — Contract foundation | NEXT         | not started                                                                                                                        |
+| 02–11                    | QUEUED       | blocked by preceding dependency phases                                                                                             |
+
 ## Phase 00 — Freeze baseline and create the refactor ledger
 
 Branch: `refactor/vnext-00-baseline`
