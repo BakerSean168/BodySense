@@ -4,11 +4,11 @@
 
 - Phase 00 baseline routes: **96**
 - Browser-facing eligible routes: **95**
-- OpenAPI-authoritative routes: **62**
-- Missing migration routes: **33**
+- OpenAPI-authoritative routes: **73**
+- Missing migration routes: **22**
 - Retired routes: **0**
 - Operational exclusions: **1**
-- Coverage: **65.26%**
+- Coverage: **76.84%**
 
 ## Missing routes
 
@@ -21,17 +21,6 @@
 - `GET /api/v1/uploads/:id/extractions/:runId/reviews`
 - `POST /api/v1/uploads/:id/extractions/:runId/reviews`
 - `GET /api/v1/uploads/:id/extractions/:runId/source`
-- `POST /api/v1/treatments/proposals`
-- `GET /api/v1/treatments/current`
-- `POST /api/v1/treatments/current/review`
-- `GET /api/v1/treatments/revisions`
-- `GET /api/v1/treatments/revisions/:revisionId`
-- `POST /api/v1/treatments/revisions/:revisionId/replay`
-- `GET /api/v1/treatments/revisions/:revisionId/regression-export`
-- `POST /api/v1/treatments/revisions/:revisionId/accept`
-- `POST /api/v1/treatments/revisions/:revisionId/reject`
-- `POST /api/v1/outcomes`
-- `GET /api/v1/outcomes`
 - `GET /api/v1/training`
 - `GET /api/v1/training/:id`
 - `GET /api/v1/training/:id/today`

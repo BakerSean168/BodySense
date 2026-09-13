@@ -932,19 +932,19 @@ func (e OnboardingProfileInputGender) Valid() bool {
 
 // Defines values for OutcomeCausalityLevel.
 const (
-	AssociationOnly     OutcomeCausalityLevel = "association_only"
-	ClinicianAttributed OutcomeCausalityLevel = "clinician_attributed"
-	UserAttributed      OutcomeCausalityLevel = "user_attributed"
+	OutcomeCausalityLevelAssociationOnly     OutcomeCausalityLevel = "association_only"
+	OutcomeCausalityLevelClinicianAttributed OutcomeCausalityLevel = "clinician_attributed"
+	OutcomeCausalityLevelUserAttributed      OutcomeCausalityLevel = "user_attributed"
 )
 
 // Valid indicates whether the value is a known member of the OutcomeCausalityLevel enum.
 func (e OutcomeCausalityLevel) Valid() bool {
 	switch e {
-	case AssociationOnly:
+	case OutcomeCausalityLevelAssociationOnly:
 		return true
-	case ClinicianAttributed:
+	case OutcomeCausalityLevelClinicianAttributed:
 		return true
-	case UserAttributed:
+	case OutcomeCausalityLevelUserAttributed:
 		return true
 	default:
 		return false
@@ -1035,6 +1035,27 @@ func (e ProjectedToolCallStatus) Valid() bool {
 	case ProjectedToolCallStatusRunning:
 		return true
 	case ProjectedToolCallStatusSucceeded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecordOutcomeRequestCausalityLevel.
+const (
+	RecordOutcomeRequestCausalityLevelAssociationOnly     RecordOutcomeRequestCausalityLevel = "association_only"
+	RecordOutcomeRequestCausalityLevelClinicianAttributed RecordOutcomeRequestCausalityLevel = "clinician_attributed"
+	RecordOutcomeRequestCausalityLevelUserAttributed      RecordOutcomeRequestCausalityLevel = "user_attributed"
+)
+
+// Valid indicates whether the value is a known member of the RecordOutcomeRequestCausalityLevel enum.
+func (e RecordOutcomeRequestCausalityLevel) Valid() bool {
+	switch e {
+	case RecordOutcomeRequestCausalityLevelAssociationOnly:
+		return true
+	case RecordOutcomeRequestCausalityLevelClinicianAttributed:
+		return true
+	case RecordOutcomeRequestCausalityLevelUserAttributed:
 		return true
 	default:
 		return false
@@ -1140,6 +1161,42 @@ func (e TreatmentStatus) Valid() bool {
 	case TreatmentStatusReviewRecommended:
 		return true
 	case TreatmentStatusSuperseded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TreatmentReplayReportMode.
+const (
+	TreatmentReplayReportModeCounterfactual TreatmentReplayReportMode = "counterfactual"
+	TreatmentReplayReportModeHistorical     TreatmentReplayReportMode = "historical"
+)
+
+// Valid indicates whether the value is a known member of the TreatmentReplayReportMode enum.
+func (e TreatmentReplayReportMode) Valid() bool {
+	switch e {
+	case TreatmentReplayReportModeCounterfactual:
+		return true
+	case TreatmentReplayReportModeHistorical:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TreatmentReplayRequestMode.
+const (
+	TreatmentReplayRequestModeCounterfactual TreatmentReplayRequestMode = "counterfactual"
+	TreatmentReplayRequestModeHistorical     TreatmentReplayRequestMode = "historical"
+)
+
+// Valid indicates whether the value is a known member of the TreatmentReplayRequestMode enum.
+func (e TreatmentReplayRequestMode) Valid() bool {
+	switch e {
+	case TreatmentReplayRequestModeCounterfactual:
+		return true
+	case TreatmentReplayRequestModeHistorical:
 		return true
 	default:
 		return false
@@ -1258,6 +1315,17 @@ func (e UserProfileGender) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// AcceptTreatmentRevisionRequest defines model for AcceptTreatmentRevisionRequest.
+type AcceptTreatmentRevisionRequest struct {
+	ConsultationId *openapi_types.UUID `json:"consultation_id,omitempty"`
+}
+
+// AcceptTreatmentRevisionResponse defines model for AcceptTreatmentRevisionResponse.
+type AcceptTreatmentRevisionResponse struct {
+	TrainingPlan TrainingPlan `json:"training_plan"`
+	Treatment    Treatment    `json:"treatment"`
 }
 
 // AgentInteraction defines model for AgentInteraction.
@@ -2013,6 +2081,11 @@ type CorrectBodyStateFactRequest struct {
 	Replacement      BodyStateFactInput `json:"replacement"`
 }
 
+// CurrentTreatmentResponse defines model for CurrentTreatmentResponse.
+type CurrentTreatmentResponse struct {
+	Treatment *Treatment `json:"treatment"`
+}
+
 // CurrentUser defines model for CurrentUser.
 type CurrentUser struct {
 	Email openapi_types.Email `json:"email"`
@@ -2267,7 +2340,6 @@ type Intervention struct {
 	TreatmentId         openapi_types.UUID `json:"treatment_id"`
 	TreatmentRevisionId openapi_types.UUID `json:"treatment_revision_id"`
 	UpdatedAt           time.Time          `json:"updated_at"`
-	UserId              openapi_types.UUID `json:"user_id"`
 }
 
 // JsonObject defines model for JsonObject.
@@ -2405,12 +2477,22 @@ type Outcome struct {
 	SourceType           string                `json:"source_type"`
 	TreatmentId          *openapi_types.UUID   `json:"treatment_id,omitempty"`
 	TreatmentRevisionId  *openapi_types.UUID   `json:"treatment_revision_id,omitempty"`
-	UserId               openapi_types.UUID    `json:"user_id"`
 	Value                JsonObject            `json:"value"`
 }
 
 // OutcomeCausalityLevel defines model for Outcome.CausalityLevel.
 type OutcomeCausalityLevel string
+
+// OutcomeListResponse defines model for OutcomeListResponse.
+type OutcomeListResponse struct {
+	Outcomes []Outcome `json:"outcomes"`
+}
+
+// OutcomeMutationResponse defines model for OutcomeMutationResponse.
+type OutcomeMutationResponse struct {
+	Created bool    `json:"created"`
+	Outcome Outcome `json:"outcome"`
+}
 
 // PrivacyDataCount defines model for PrivacyDataCount.
 type PrivacyDataCount struct {
@@ -2469,6 +2551,27 @@ type ProjectedToolCall struct {
 
 // ProjectedToolCallStatus defines model for ProjectedToolCall.Status.
 type ProjectedToolCallStatus string
+
+// RecordOutcomeRequest defines model for RecordOutcomeRequest.
+type RecordOutcomeRequest struct {
+	AssociationStatement *string                             `json:"association_statement,omitempty"`
+	BodyRegion           *string                             `json:"body_region,omitempty"`
+	CausalityLevel       *RecordOutcomeRequestCausalityLevel `json:"causality_level,omitempty"`
+	ConcernKey           *string                             `json:"concern_key,omitempty"`
+	InterventionId       *openapi_types.UUID                 `json:"intervention_id,omitempty"`
+	Kind                 string                              `json:"kind"`
+	Notes                *string                             `json:"notes,omitempty"`
+	OccurredAt           *time.Time                          `json:"occurred_at,omitempty"`
+	Provenance           *JsonObject                         `json:"provenance,omitempty"`
+	SourceKey            string                              `json:"source_key"`
+	SourceType           string                              `json:"source_type"`
+	TreatmentId          *openapi_types.UUID                 `json:"treatment_id,omitempty"`
+	TreatmentRevisionId  *openapi_types.UUID                 `json:"treatment_revision_id,omitempty"`
+	Value                *JsonObject                         `json:"value,omitempty"`
+}
+
+// RecordOutcomeRequestCausalityLevel defines model for RecordOutcomeRequest.CausalityLevel.
+type RecordOutcomeRequestCausalityLevel string
 
 // ResolveBodyStateSafetyRequest defines model for ResolveBodyStateSafetyRequest.
 type ResolveBodyStateSafetyRequest struct {
@@ -2565,7 +2668,6 @@ type TrainingPlan struct {
 	Status              string              `json:"status"`
 	TreatmentId         *openapi_types.UUID `json:"treatment_id,omitempty"`
 	TreatmentRevisionId *openapi_types.UUID `json:"treatment_revision_id,omitempty"`
-	UserId              openapi_types.UUID  `json:"user_id"`
 }
 
 // Treatment defines model for Treatment.
@@ -2579,7 +2681,6 @@ type Treatment struct {
 	Status                    TreatmentStatus         `json:"status"`
 	StatusReasons             []TreatmentStatusReason `json:"status_reasons"`
 	UpdatedAt                 time.Time               `json:"updated_at"`
-	UserId                    openapi_types.UUID      `json:"user_id"`
 }
 
 // TreatmentStatus defines model for Treatment.Status.
@@ -2604,6 +2705,82 @@ type TreatmentPlanContent struct {
 	SafetyNotes      StringArray                  `json:"safety_notes"`
 	Summary          string                       `json:"summary"`
 	WarningSigns     StringArray                  `json:"warning_signs"`
+}
+
+// TreatmentProposalRequest defines model for TreatmentProposalRequest.
+type TreatmentProposalRequest struct {
+	ChangeReason        *string             `json:"change_reason,omitempty"`
+	DiagnosisAnalysisId *openapi_types.UUID `json:"diagnosis_analysis_id,omitempty"`
+	UserConstraints     *JsonObject         `json:"user_constraints,omitempty"`
+}
+
+// TreatmentProposalResponse defines model for TreatmentProposalResponse.
+type TreatmentProposalResponse struct {
+	Proposal TreatmentRevision `json:"proposal"`
+}
+
+// TreatmentReplayCheck defines model for TreatmentReplayCheck.
+type TreatmentReplayCheck struct {
+	Baseline  *string `json:"baseline,omitempty"`
+	Candidate *string `json:"candidate,omitempty"`
+	Match     bool    `json:"match"`
+	Name      string  `json:"name"`
+}
+
+// TreatmentReplayComparison defines model for TreatmentReplayComparison.
+type TreatmentReplayComparison struct {
+	Hard         TreatmentReplayLayer `json:"hard"`
+	Presentation TreatmentReplayLayer `json:"presentation"`
+	Semantic     TreatmentReplayLayer `json:"semantic"`
+}
+
+// TreatmentReplayLayer defines model for TreatmentReplayLayer.
+type TreatmentReplayLayer struct {
+	Checks []TreatmentReplayCheck `json:"checks"`
+	Match  bool                   `json:"match"`
+}
+
+// TreatmentReplayReport defines model for TreatmentReplayReport.
+type TreatmentReplayReport struct {
+	ArtifactIntegrity        TreatmentReplayLayer      `json:"artifact_integrity"`
+	Baseline                 TreatmentReplaySnapshot   `json:"baseline"`
+	Comparison               TreatmentReplayComparison `json:"comparison"`
+	GenerationDecision       JsonObject                `json:"generation_decision"`
+	InputFingerprint         string                    `json:"input_fingerprint"`
+	Mode                     TreatmentReplayReportMode `json:"mode"`
+	Output                   JsonObject                `json:"output"`
+	Replay                   TreatmentReplaySnapshot   `json:"replay"`
+	SourceConfigurationId    string                    `json:"source_configuration_id"`
+	SourceGenerationDecision JsonObject                `json:"source_generation_decision"`
+	SourceRevisionId         openapi_types.UUID        `json:"source_revision_id"`
+	TargetConfigurationId    string                    `json:"target_configuration_id"`
+}
+
+// TreatmentReplayReportMode defines model for TreatmentReplayReport.Mode.
+type TreatmentReplayReportMode string
+
+// TreatmentReplayRequest defines model for TreatmentReplayRequest.
+type TreatmentReplayRequest struct {
+	ConfigurationId *string                    `json:"configuration_id,omitempty"`
+	Mode            TreatmentReplayRequestMode `json:"mode"`
+}
+
+// TreatmentReplayRequestMode defines model for TreatmentReplayRequest.Mode.
+type TreatmentReplayRequestMode string
+
+// TreatmentReplaySnapshot defines model for TreatmentReplaySnapshot.
+type TreatmentReplaySnapshot struct {
+	DurationWeeks      int         `json:"duration_weeks"`
+	EvidenceIds        StringArray `json:"evidence_ids"`
+	Goal               string      `json:"goal"`
+	GovernanceVerdict  string      `json:"governance_verdict"`
+	InterventionCount  int         `json:"intervention_count"`
+	InterventionKinds  StringArray `json:"intervention_kinds"`
+	InterventionTitles StringArray `json:"intervention_titles"`
+	ReviewTriggerCount int         `json:"review_trigger_count"`
+	Status             string      `json:"status"`
+	Summary            string      `json:"summary"`
+	WarningSignCount   int         `json:"warning_sign_count"`
 }
 
 // TreatmentRevision defines model for TreatmentRevision.
@@ -2639,6 +2816,11 @@ type TreatmentRevisionAcceptanceState string
 
 // TreatmentRevisionLifecycleState defines model for TreatmentRevision.LifecycleState.
 type TreatmentRevisionLifecycleState string
+
+// TreatmentRevisionListResponse defines model for TreatmentRevisionListResponse.
+type TreatmentRevisionListResponse struct {
+	Revisions []TreatmentRevision `json:"revisions"`
+}
 
 // TreatmentStatusReason defines model for TreatmentStatusReason.
 type TreatmentStatusReason struct {
@@ -2790,6 +2972,9 @@ type DiagnosisAnalysisId = openapi_types.UUID
 // InteractionId defines model for InteractionId.
 type InteractionId = openapi_types.UUID
 
+// TreatmentRevisionId defines model for TreatmentRevisionId.
+type TreatmentRevisionId = openapi_types.UUID
+
 // BadGateway defines model for BadGateway.
 type BadGateway = ErrorEnvelope
 
@@ -2848,6 +3033,16 @@ type ListRunEventsParams struct {
 
 // ListDiagnosisAnalysesParams defines parameters for ListDiagnosisAnalyses.
 type ListDiagnosisAnalysesParams struct {
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListOutcomesParams defines parameters for ListOutcomes.
+type ListOutcomesParams struct {
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListTreatmentRevisionsParams defines parameters for ListTreatmentRevisions.
+type ListTreatmentRevisionsParams struct {
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
@@ -2935,11 +3130,23 @@ type RejectLifestyleCandidateJSONRequestBody = ReviewLifestyleCandidateRequest
 // SubmitOnboardingContextJSONRequestBody defines body for SubmitOnboardingContext for application/json ContentType.
 type SubmitOnboardingContextJSONRequestBody = OnboardingContextRequest
 
+// RecordOutcomeJSONRequestBody defines body for RecordOutcome for application/json ContentType.
+type RecordOutcomeJSONRequestBody = RecordOutcomeRequest
+
 // RequestPrivacyErasureJSONRequestBody defines body for RequestPrivacyErasure for application/json ContentType.
 type RequestPrivacyErasureJSONRequestBody = PrivacyErasureRequest
 
 // UpdateUserProfileJSONRequestBody defines body for UpdateUserProfile for application/json ContentType.
 type UpdateUserProfileJSONRequestBody = UpdateUserProfileRequest
+
+// GenerateTreatmentProposalJSONRequestBody defines body for GenerateTreatmentProposal for application/json ContentType.
+type GenerateTreatmentProposalJSONRequestBody = TreatmentProposalRequest
+
+// AcceptTreatmentRevisionJSONRequestBody defines body for AcceptTreatmentRevision for application/json ContentType.
+type AcceptTreatmentRevisionJSONRequestBody = AcceptTreatmentRevisionRequest
+
+// ReplayTreatmentRevisionJSONRequestBody defines body for ReplayTreatmentRevision for application/json ContentType.
+type ReplayTreatmentRevisionJSONRequestBody = TreatmentReplayRequest
 
 // Getter for additional properties for LegacyAssessmentObservation. Returns the specified
 // element and whether it was found
@@ -3604,6 +3811,12 @@ type ServerInterface interface {
 	// SubmitOnboardingContext Atomically establish stable profile identity and the initial BodyState context.
 	// (PUT /api/v1/onboarding/context)
 	SubmitOnboardingContext(c *gin.Context)
+	// ListOutcomes List post-intervention Outcomes.
+	// (GET /api/v1/outcomes)
+	ListOutcomes(c *gin.Context, params ListOutcomesParams)
+	// RecordOutcome Record an idempotent post-intervention outcome and project its BodyState effect.
+	// (POST /api/v1/outcomes)
+	RecordOutcome(c *gin.Context)
 	// RequestPrivacyErasure Accept an irreversible full-account and health-data erasure request.
 	// (POST /api/v1/privacy/erasure)
 	RequestPrivacyErasure(c *gin.Context)
@@ -3616,6 +3829,33 @@ type ServerInterface interface {
 	// UpdateUserProfile Replace the editable stable identity fields.
 	// (PUT /api/v1/profile)
 	UpdateUserProfile(c *gin.Context)
+	// GetCurrentTreatment Read the deterministic current Treatment review projection without mutating state.
+	// (GET /api/v1/treatments/current)
+	GetCurrentTreatment(c *gin.Context)
+	// ReviewCurrentTreatment Persist the latest deterministic current Treatment review state.
+	// (POST /api/v1/treatments/current/review)
+	ReviewCurrentTreatment(c *gin.Context)
+	// GenerateTreatmentProposal Generate a revisioned Treatment proposal from a reviewed DiagnosisAnalysis.
+	// (POST /api/v1/treatments/proposals)
+	GenerateTreatmentProposal(c *gin.Context)
+	// ListTreatmentRevisions List immutable Treatment revisions for the authenticated user.
+	// (GET /api/v1/treatments/revisions)
+	ListTreatmentRevisions(c *gin.Context, params ListTreatmentRevisionsParams)
+	// GetTreatmentRevision Get one immutable Treatment revision.
+	// (GET /api/v1/treatments/revisions/{revisionId})
+	GetTreatmentRevision(c *gin.Context, revisionId TreatmentRevisionId)
+	// AcceptTreatmentRevision Atomically accept one Treatment revision and project its TrainingPlan.
+	// (POST /api/v1/treatments/revisions/{revisionId}/accept)
+	AcceptTreatmentRevision(c *gin.Context, revisionId TreatmentRevisionId)
+	// ExportTreatmentRegressionCase Export one frozen Treatment developer regression case.
+	// (GET /api/v1/treatments/revisions/{revisionId}/regression-export)
+	ExportTreatmentRegressionCase(c *gin.Context, revisionId TreatmentRevisionId)
+	// RejectTreatmentRevision Reject one proposed Treatment revision.
+	// (POST /api/v1/treatments/revisions/{revisionId}/reject)
+	RejectTreatmentRevision(c *gin.Context, revisionId TreatmentRevisionId)
+	// ReplayTreatmentRevision Replay an immutable Treatment revision historically or counterfactually.
+	// (POST /api/v1/treatments/revisions/{revisionId}/replay)
+	ReplayTreatmentRevision(c *gin.Context, revisionId TreatmentRevisionId)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -4872,6 +5112,46 @@ func (siw *ServerInterfaceWrapper) SubmitOnboardingContext(c *gin.Context) {
 	siw.Handler.SubmitOnboardingContext(c)
 }
 
+// ListOutcomes operation middleware
+func (siw *ServerInterfaceWrapper) ListOutcomes(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListOutcomesParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", c.Request.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter limit: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListOutcomes(c, params)
+}
+
+// RecordOutcome operation middleware
+func (siw *ServerInterfaceWrapper) RecordOutcome(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RecordOutcome(c)
+}
+
 // RequestPrivacyErasure operation middleware
 func (siw *ServerInterfaceWrapper) RequestPrivacyErasure(c *gin.Context) {
 
@@ -4922,6 +5202,197 @@ func (siw *ServerInterfaceWrapper) UpdateUserProfile(c *gin.Context) {
 	}
 
 	siw.Handler.UpdateUserProfile(c)
+}
+
+// GetCurrentTreatment operation middleware
+func (siw *ServerInterfaceWrapper) GetCurrentTreatment(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetCurrentTreatment(c)
+}
+
+// ReviewCurrentTreatment operation middleware
+func (siw *ServerInterfaceWrapper) ReviewCurrentTreatment(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ReviewCurrentTreatment(c)
+}
+
+// GenerateTreatmentProposal operation middleware
+func (siw *ServerInterfaceWrapper) GenerateTreatmentProposal(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GenerateTreatmentProposal(c)
+}
+
+// ListTreatmentRevisions operation middleware
+func (siw *ServerInterfaceWrapper) ListTreatmentRevisions(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListTreatmentRevisionsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", c.Request.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter limit: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListTreatmentRevisions(c, params)
+}
+
+// GetTreatmentRevision operation middleware
+func (siw *ServerInterfaceWrapper) GetTreatmentRevision(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "revisionId" -------------
+	var revisionId TreatmentRevisionId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "revisionId", c.Param("revisionId"), &revisionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter revisionId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetTreatmentRevision(c, revisionId)
+}
+
+// AcceptTreatmentRevision operation middleware
+func (siw *ServerInterfaceWrapper) AcceptTreatmentRevision(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "revisionId" -------------
+	var revisionId TreatmentRevisionId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "revisionId", c.Param("revisionId"), &revisionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter revisionId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AcceptTreatmentRevision(c, revisionId)
+}
+
+// ExportTreatmentRegressionCase operation middleware
+func (siw *ServerInterfaceWrapper) ExportTreatmentRegressionCase(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "revisionId" -------------
+	var revisionId TreatmentRevisionId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "revisionId", c.Param("revisionId"), &revisionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter revisionId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ExportTreatmentRegressionCase(c, revisionId)
+}
+
+// RejectTreatmentRevision operation middleware
+func (siw *ServerInterfaceWrapper) RejectTreatmentRevision(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "revisionId" -------------
+	var revisionId TreatmentRevisionId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "revisionId", c.Param("revisionId"), &revisionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter revisionId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RejectTreatmentRevision(c, revisionId)
+}
+
+// ReplayTreatmentRevision operation middleware
+func (siw *ServerInterfaceWrapper) ReplayTreatmentRevision(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "revisionId" -------------
+	var revisionId TreatmentRevisionId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "revisionId", c.Param("revisionId"), &revisionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter revisionId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ReplayTreatmentRevision(c, revisionId)
 }
 
 // GinServerOptions provides options for the Gin server.
@@ -5013,6 +5484,17 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.PUT(options.BaseURL+"/api/v1/diagnosis-analyses/:analysisId/assessment", wrapper.AssessDiagnosisCandidates)
 	router.POST(options.BaseURL+"/api/v1/diagnosis-analyses/:analysisId/replay", wrapper.ReplayDiagnosisAnalysis)
 	router.GET(options.BaseURL+"/api/v1/diagnosis-analyses/:analysisId/regression-export", wrapper.ExportDiagnosisRegressionCase)
+	router.POST(options.BaseURL+"/api/v1/treatments/proposals", wrapper.GenerateTreatmentProposal)
+	router.GET(options.BaseURL+"/api/v1/treatments/current", wrapper.GetCurrentTreatment)
+	router.POST(options.BaseURL+"/api/v1/treatments/current/review", wrapper.ReviewCurrentTreatment)
+	router.GET(options.BaseURL+"/api/v1/treatments/revisions", wrapper.ListTreatmentRevisions)
+	router.GET(options.BaseURL+"/api/v1/treatments/revisions/:revisionId", wrapper.GetTreatmentRevision)
+	router.POST(options.BaseURL+"/api/v1/treatments/revisions/:revisionId/replay", wrapper.ReplayTreatmentRevision)
+	router.GET(options.BaseURL+"/api/v1/treatments/revisions/:revisionId/regression-export", wrapper.ExportTreatmentRegressionCase)
+	router.POST(options.BaseURL+"/api/v1/treatments/revisions/:revisionId/accept", wrapper.AcceptTreatmentRevision)
+	router.POST(options.BaseURL+"/api/v1/treatments/revisions/:revisionId/reject", wrapper.RejectTreatmentRevision)
+	router.GET(options.BaseURL+"/api/v1/outcomes", wrapper.ListOutcomes)
+	router.POST(options.BaseURL+"/api/v1/outcomes", wrapper.RecordOutcome)
 }
 
 type BadGatewayJSONResponse ErrorEnvelope
@@ -10154,6 +10636,162 @@ func (response SubmitOnboardingContext500JSONResponse) VisitSubmitOnboardingCont
 	return err
 }
 
+type ListOutcomesRequestObject struct {
+	Params ListOutcomesParams
+}
+
+type ListOutcomesResponseObject interface {
+	VisitListOutcomesResponse(w http.ResponseWriter) error
+}
+
+type ListOutcomes200JSONResponse OutcomeListResponse
+
+func (response ListOutcomes200JSONResponse) VisitListOutcomesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListOutcomes400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ListOutcomes400JSONResponse) VisitListOutcomesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListOutcomes401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListOutcomes401JSONResponse) VisitListOutcomesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListOutcomes500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListOutcomes500JSONResponse) VisitListOutcomesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordOutcomeRequestObject struct {
+	Body *RecordOutcomeJSONRequestBody
+}
+
+type RecordOutcomeResponseObject interface {
+	VisitRecordOutcomeResponse(w http.ResponseWriter) error
+}
+
+type RecordOutcome200JSONResponse OutcomeMutationResponse
+
+func (response RecordOutcome200JSONResponse) VisitRecordOutcomeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordOutcome201JSONResponse OutcomeMutationResponse
+
+func (response RecordOutcome201JSONResponse) VisitRecordOutcomeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordOutcome400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response RecordOutcome400JSONResponse) VisitRecordOutcomeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordOutcome401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RecordOutcome401JSONResponse) VisitRecordOutcomeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordOutcome409JSONResponse struct{ ConflictJSONResponse }
+
+func (response RecordOutcome409JSONResponse) VisitRecordOutcomeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordOutcome500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response RecordOutcome500JSONResponse) VisitRecordOutcomeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type RequestPrivacyErasureRequestObject struct {
 	Body *RequestPrivacyErasureJSONRequestBody
 }
@@ -10404,6 +11042,744 @@ func (response UpdateUserProfile500JSONResponse) VisitUpdateUserProfileResponse(
 	return err
 }
 
+type GetCurrentTreatmentRequestObject struct {
+}
+
+type GetCurrentTreatmentResponseObject interface {
+	VisitGetCurrentTreatmentResponse(w http.ResponseWriter) error
+}
+
+type GetCurrentTreatment200JSONResponse CurrentTreatmentResponse
+
+func (response GetCurrentTreatment200JSONResponse) VisitGetCurrentTreatmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCurrentTreatment401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetCurrentTreatment401JSONResponse) VisitGetCurrentTreatmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCurrentTreatment500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetCurrentTreatment500JSONResponse) VisitGetCurrentTreatmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReviewCurrentTreatmentRequestObject struct {
+}
+
+type ReviewCurrentTreatmentResponseObject interface {
+	VisitReviewCurrentTreatmentResponse(w http.ResponseWriter) error
+}
+
+type ReviewCurrentTreatment200JSONResponse CurrentTreatmentResponse
+
+func (response ReviewCurrentTreatment200JSONResponse) VisitReviewCurrentTreatmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReviewCurrentTreatment401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ReviewCurrentTreatment401JSONResponse) VisitReviewCurrentTreatmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReviewCurrentTreatment500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ReviewCurrentTreatment500JSONResponse) VisitReviewCurrentTreatmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GenerateTreatmentProposalRequestObject struct {
+	Body *GenerateTreatmentProposalJSONRequestBody
+}
+
+type GenerateTreatmentProposalResponseObject interface {
+	VisitGenerateTreatmentProposalResponse(w http.ResponseWriter) error
+}
+
+type GenerateTreatmentProposal201JSONResponse TreatmentProposalResponse
+
+func (response GenerateTreatmentProposal201JSONResponse) VisitGenerateTreatmentProposalResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GenerateTreatmentProposal400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response GenerateTreatmentProposal400JSONResponse) VisitGenerateTreatmentProposalResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GenerateTreatmentProposal401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GenerateTreatmentProposal401JSONResponse) VisitGenerateTreatmentProposalResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GenerateTreatmentProposal409JSONResponse struct{ ConflictJSONResponse }
+
+func (response GenerateTreatmentProposal409JSONResponse) VisitGenerateTreatmentProposalResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GenerateTreatmentProposal500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GenerateTreatmentProposal500JSONResponse) VisitGenerateTreatmentProposalResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GenerateTreatmentProposal503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response GenerateTreatmentProposal503JSONResponse) VisitGenerateTreatmentProposalResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListTreatmentRevisionsRequestObject struct {
+	Params ListTreatmentRevisionsParams
+}
+
+type ListTreatmentRevisionsResponseObject interface {
+	VisitListTreatmentRevisionsResponse(w http.ResponseWriter) error
+}
+
+type ListTreatmentRevisions200JSONResponse TreatmentRevisionListResponse
+
+func (response ListTreatmentRevisions200JSONResponse) VisitListTreatmentRevisionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListTreatmentRevisions400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ListTreatmentRevisions400JSONResponse) VisitListTreatmentRevisionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListTreatmentRevisions401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListTreatmentRevisions401JSONResponse) VisitListTreatmentRevisionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListTreatmentRevisions500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListTreatmentRevisions500JSONResponse) VisitListTreatmentRevisionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTreatmentRevisionRequestObject struct {
+	RevisionId TreatmentRevisionId `json:"revisionId"`
+}
+
+type GetTreatmentRevisionResponseObject interface {
+	VisitGetTreatmentRevisionResponse(w http.ResponseWriter) error
+}
+
+type GetTreatmentRevision200JSONResponse TreatmentRevision
+
+func (response GetTreatmentRevision200JSONResponse) VisitGetTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTreatmentRevision400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response GetTreatmentRevision400JSONResponse) VisitGetTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTreatmentRevision401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetTreatmentRevision401JSONResponse) VisitGetTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTreatmentRevision404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetTreatmentRevision404JSONResponse) VisitGetTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTreatmentRevision500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetTreatmentRevision500JSONResponse) VisitGetTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptTreatmentRevisionRequestObject struct {
+	RevisionId TreatmentRevisionId `json:"revisionId"`
+	Body       *AcceptTreatmentRevisionJSONRequestBody
+}
+
+type AcceptTreatmentRevisionResponseObject interface {
+	VisitAcceptTreatmentRevisionResponse(w http.ResponseWriter) error
+}
+
+type AcceptTreatmentRevision200JSONResponse AcceptTreatmentRevisionResponse
+
+func (response AcceptTreatmentRevision200JSONResponse) VisitAcceptTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptTreatmentRevision400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response AcceptTreatmentRevision400JSONResponse) VisitAcceptTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptTreatmentRevision401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response AcceptTreatmentRevision401JSONResponse) VisitAcceptTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptTreatmentRevision409JSONResponse struct{ ConflictJSONResponse }
+
+func (response AcceptTreatmentRevision409JSONResponse) VisitAcceptTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptTreatmentRevision500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response AcceptTreatmentRevision500JSONResponse) VisitAcceptTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptTreatmentRevision503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response AcceptTreatmentRevision503JSONResponse) VisitAcceptTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportTreatmentRegressionCaseRequestObject struct {
+	RevisionId TreatmentRevisionId `json:"revisionId"`
+}
+
+type ExportTreatmentRegressionCaseResponseObject interface {
+	VisitExportTreatmentRegressionCaseResponse(w http.ResponseWriter) error
+}
+
+type ExportTreatmentRegressionCase200JSONResponse JsonObject
+
+func (response ExportTreatmentRegressionCase200JSONResponse) VisitExportTreatmentRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportTreatmentRegressionCase400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ExportTreatmentRegressionCase400JSONResponse) VisitExportTreatmentRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportTreatmentRegressionCase401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ExportTreatmentRegressionCase401JSONResponse) VisitExportTreatmentRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportTreatmentRegressionCase404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ExportTreatmentRegressionCase404JSONResponse) VisitExportTreatmentRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportTreatmentRegressionCase409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ExportTreatmentRegressionCase409JSONResponse) VisitExportTreatmentRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportTreatmentRegressionCase422JSONResponse struct{ ReplayUnavailableJSONResponse }
+
+func (response ExportTreatmentRegressionCase422JSONResponse) VisitExportTreatmentRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportTreatmentRegressionCase502JSONResponse struct{ BadGatewayJSONResponse }
+
+func (response ExportTreatmentRegressionCase502JSONResponse) VisitExportTreatmentRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportTreatmentRegressionCase503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ExportTreatmentRegressionCase503JSONResponse) VisitExportTreatmentRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RejectTreatmentRevisionRequestObject struct {
+	RevisionId TreatmentRevisionId `json:"revisionId"`
+}
+
+type RejectTreatmentRevisionResponseObject interface {
+	VisitRejectTreatmentRevisionResponse(w http.ResponseWriter) error
+}
+
+type RejectTreatmentRevision204Response struct {
+}
+
+func (response RejectTreatmentRevision204Response) VisitRejectTreatmentRevisionResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RejectTreatmentRevision400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response RejectTreatmentRevision400JSONResponse) VisitRejectTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RejectTreatmentRevision401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RejectTreatmentRevision401JSONResponse) VisitRejectTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RejectTreatmentRevision409JSONResponse struct{ ConflictJSONResponse }
+
+func (response RejectTreatmentRevision409JSONResponse) VisitRejectTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RejectTreatmentRevision500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response RejectTreatmentRevision500JSONResponse) VisitRejectTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayTreatmentRevisionRequestObject struct {
+	RevisionId TreatmentRevisionId `json:"revisionId"`
+	Body       *ReplayTreatmentRevisionJSONRequestBody
+}
+
+type ReplayTreatmentRevisionResponseObject interface {
+	VisitReplayTreatmentRevisionResponse(w http.ResponseWriter) error
+}
+
+type ReplayTreatmentRevision200JSONResponse TreatmentReplayReport
+
+func (response ReplayTreatmentRevision200JSONResponse) VisitReplayTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayTreatmentRevision400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ReplayTreatmentRevision400JSONResponse) VisitReplayTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayTreatmentRevision401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ReplayTreatmentRevision401JSONResponse) VisitReplayTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayTreatmentRevision404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ReplayTreatmentRevision404JSONResponse) VisitReplayTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayTreatmentRevision409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ReplayTreatmentRevision409JSONResponse) VisitReplayTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayTreatmentRevision422JSONResponse struct{ ReplayUnavailableJSONResponse }
+
+func (response ReplayTreatmentRevision422JSONResponse) VisitReplayTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayTreatmentRevision502JSONResponse struct{ BadGatewayJSONResponse }
+
+func (response ReplayTreatmentRevision502JSONResponse) VisitReplayTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayTreatmentRevision503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ReplayTreatmentRevision503JSONResponse) VisitReplayTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// ListAssessments List immutable assessment reports for the authenticated user.
@@ -10580,6 +11956,12 @@ type StrictServerInterface interface {
 	// SubmitOnboardingContext Atomically establish stable profile identity and the initial BodyState context.
 	// (PUT /api/v1/onboarding/context)
 	SubmitOnboardingContext(ctx context.Context, request SubmitOnboardingContextRequestObject) (SubmitOnboardingContextResponseObject, error)
+	// ListOutcomes List post-intervention Outcomes.
+	// (GET /api/v1/outcomes)
+	ListOutcomes(ctx context.Context, request ListOutcomesRequestObject) (ListOutcomesResponseObject, error)
+	// RecordOutcome Record an idempotent post-intervention outcome and project its BodyState effect.
+	// (POST /api/v1/outcomes)
+	RecordOutcome(ctx context.Context, request RecordOutcomeRequestObject) (RecordOutcomeResponseObject, error)
 	// RequestPrivacyErasure Accept an irreversible full-account and health-data erasure request.
 	// (POST /api/v1/privacy/erasure)
 	RequestPrivacyErasure(ctx context.Context, request RequestPrivacyErasureRequestObject) (RequestPrivacyErasureResponseObject, error)
@@ -10592,6 +11974,33 @@ type StrictServerInterface interface {
 	// UpdateUserProfile Replace the editable stable identity fields.
 	// (PUT /api/v1/profile)
 	UpdateUserProfile(ctx context.Context, request UpdateUserProfileRequestObject) (UpdateUserProfileResponseObject, error)
+	// GetCurrentTreatment Read the deterministic current Treatment review projection without mutating state.
+	// (GET /api/v1/treatments/current)
+	GetCurrentTreatment(ctx context.Context, request GetCurrentTreatmentRequestObject) (GetCurrentTreatmentResponseObject, error)
+	// ReviewCurrentTreatment Persist the latest deterministic current Treatment review state.
+	// (POST /api/v1/treatments/current/review)
+	ReviewCurrentTreatment(ctx context.Context, request ReviewCurrentTreatmentRequestObject) (ReviewCurrentTreatmentResponseObject, error)
+	// GenerateTreatmentProposal Generate a revisioned Treatment proposal from a reviewed DiagnosisAnalysis.
+	// (POST /api/v1/treatments/proposals)
+	GenerateTreatmentProposal(ctx context.Context, request GenerateTreatmentProposalRequestObject) (GenerateTreatmentProposalResponseObject, error)
+	// ListTreatmentRevisions List immutable Treatment revisions for the authenticated user.
+	// (GET /api/v1/treatments/revisions)
+	ListTreatmentRevisions(ctx context.Context, request ListTreatmentRevisionsRequestObject) (ListTreatmentRevisionsResponseObject, error)
+	// GetTreatmentRevision Get one immutable Treatment revision.
+	// (GET /api/v1/treatments/revisions/{revisionId})
+	GetTreatmentRevision(ctx context.Context, request GetTreatmentRevisionRequestObject) (GetTreatmentRevisionResponseObject, error)
+	// AcceptTreatmentRevision Atomically accept one Treatment revision and project its TrainingPlan.
+	// (POST /api/v1/treatments/revisions/{revisionId}/accept)
+	AcceptTreatmentRevision(ctx context.Context, request AcceptTreatmentRevisionRequestObject) (AcceptTreatmentRevisionResponseObject, error)
+	// ExportTreatmentRegressionCase Export one frozen Treatment developer regression case.
+	// (GET /api/v1/treatments/revisions/{revisionId}/regression-export)
+	ExportTreatmentRegressionCase(ctx context.Context, request ExportTreatmentRegressionCaseRequestObject) (ExportTreatmentRegressionCaseResponseObject, error)
+	// RejectTreatmentRevision Reject one proposed Treatment revision.
+	// (POST /api/v1/treatments/revisions/{revisionId}/reject)
+	RejectTreatmentRevision(ctx context.Context, request RejectTreatmentRevisionRequestObject) (RejectTreatmentRevisionResponseObject, error)
+	// ReplayTreatmentRevision Replay an immutable Treatment revision historically or counterfactually.
+	// (POST /api/v1/treatments/revisions/{revisionId}/replay)
+	ReplayTreatmentRevision(ctx context.Context, request ReplayTreatmentRevisionRequestObject) (ReplayTreatmentRevisionResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx *gin.Context, request any) (any, error)
@@ -12317,6 +13726,63 @@ func (sh *strictHandler) SubmitOnboardingContext(ctx *gin.Context) {
 	}
 }
 
+// ListOutcomes operation middleware
+func (sh *strictHandler) ListOutcomes(ctx *gin.Context, params ListOutcomesParams) {
+	var request ListOutcomesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListOutcomes(ctx, request.(ListOutcomesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListOutcomes")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListOutcomesResponseObject); ok {
+		if err := validResponse.VisitListOutcomesResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RecordOutcome operation middleware
+func (sh *strictHandler) RecordOutcome(ctx *gin.Context) {
+	var request RecordOutcomeRequestObject
+
+	var body RecordOutcomeJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RecordOutcome(ctx, request.(RecordOutcomeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RecordOutcome")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(RecordOutcomeResponseObject); ok {
+		if err := validResponse.VisitRecordOutcomeResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // RequestPrivacyErasure operation middleware
 func (sh *strictHandler) RequestPrivacyErasure(ctx *gin.Context) {
 	var request RequestPrivacyErasureRequestObject
@@ -12427,224 +13893,492 @@ func (sh *strictHandler) UpdateUserProfile(ctx *gin.Context) {
 	}
 }
 
+// GetCurrentTreatment operation middleware
+func (sh *strictHandler) GetCurrentTreatment(ctx *gin.Context) {
+	var request GetCurrentTreatmentRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCurrentTreatment(ctx, request.(GetCurrentTreatmentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCurrentTreatment")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetCurrentTreatmentResponseObject); ok {
+		if err := validResponse.VisitGetCurrentTreatmentResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReviewCurrentTreatment operation middleware
+func (sh *strictHandler) ReviewCurrentTreatment(ctx *gin.Context) {
+	var request ReviewCurrentTreatmentRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ReviewCurrentTreatment(ctx, request.(ReviewCurrentTreatmentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReviewCurrentTreatment")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ReviewCurrentTreatmentResponseObject); ok {
+		if err := validResponse.VisitReviewCurrentTreatmentResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GenerateTreatmentProposal operation middleware
+func (sh *strictHandler) GenerateTreatmentProposal(ctx *gin.Context) {
+	var request GenerateTreatmentProposalRequestObject
+
+	var body GenerateTreatmentProposalJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GenerateTreatmentProposal(ctx, request.(GenerateTreatmentProposalRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GenerateTreatmentProposal")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GenerateTreatmentProposalResponseObject); ok {
+		if err := validResponse.VisitGenerateTreatmentProposalResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListTreatmentRevisions operation middleware
+func (sh *strictHandler) ListTreatmentRevisions(ctx *gin.Context, params ListTreatmentRevisionsParams) {
+	var request ListTreatmentRevisionsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListTreatmentRevisions(ctx, request.(ListTreatmentRevisionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListTreatmentRevisions")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListTreatmentRevisionsResponseObject); ok {
+		if err := validResponse.VisitListTreatmentRevisionsResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetTreatmentRevision operation middleware
+func (sh *strictHandler) GetTreatmentRevision(ctx *gin.Context, revisionId TreatmentRevisionId) {
+	var request GetTreatmentRevisionRequestObject
+
+	request.RevisionId = revisionId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTreatmentRevision(ctx, request.(GetTreatmentRevisionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTreatmentRevision")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetTreatmentRevisionResponseObject); ok {
+		if err := validResponse.VisitGetTreatmentRevisionResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AcceptTreatmentRevision operation middleware
+func (sh *strictHandler) AcceptTreatmentRevision(ctx *gin.Context, revisionId TreatmentRevisionId) {
+	var request AcceptTreatmentRevisionRequestObject
+
+	request.RevisionId = revisionId
+
+	var body AcceptTreatmentRevisionJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		if !errors.Is(err, io.EOF) {
+			sh.options.RequestErrorHandlerFunc(ctx, err)
+			return
+		}
+	} else {
+		request.Body = &body
+	}
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.AcceptTreatmentRevision(ctx, request.(AcceptTreatmentRevisionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AcceptTreatmentRevision")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(AcceptTreatmentRevisionResponseObject); ok {
+		if err := validResponse.VisitAcceptTreatmentRevisionResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ExportTreatmentRegressionCase operation middleware
+func (sh *strictHandler) ExportTreatmentRegressionCase(ctx *gin.Context, revisionId TreatmentRevisionId) {
+	var request ExportTreatmentRegressionCaseRequestObject
+
+	request.RevisionId = revisionId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ExportTreatmentRegressionCase(ctx, request.(ExportTreatmentRegressionCaseRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ExportTreatmentRegressionCase")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ExportTreatmentRegressionCaseResponseObject); ok {
+		if err := validResponse.VisitExportTreatmentRegressionCaseResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RejectTreatmentRevision operation middleware
+func (sh *strictHandler) RejectTreatmentRevision(ctx *gin.Context, revisionId TreatmentRevisionId) {
+	var request RejectTreatmentRevisionRequestObject
+
+	request.RevisionId = revisionId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RejectTreatmentRevision(ctx, request.(RejectTreatmentRevisionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RejectTreatmentRevision")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(RejectTreatmentRevisionResponseObject); ok {
+		if err := validResponse.VisitRejectTreatmentRevisionResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReplayTreatmentRevision operation middleware
+func (sh *strictHandler) ReplayTreatmentRevision(ctx *gin.Context, revisionId TreatmentRevisionId) {
+	var request ReplayTreatmentRevisionRequestObject
+
+	request.RevisionId = revisionId
+
+	var body ReplayTreatmentRevisionJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ReplayTreatmentRevision(ctx, request.(ReplayTreatmentRevisionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReplayTreatmentRevision")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ReplayTreatmentRevisionResponseObject); ok {
+		if err := validResponse.VisitReplayTreatmentRevisionResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // Base64 encoded, compressed with deflate, json marshaled OpenAPI spec.
 // Stored as a slice of fixed-width chunks rather than one concatenated
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"7H1dc+S2lthfYXW2KruV1mhmPL611/dlx5qxPZuxrUhjb6V8Z7sg8nQ3PGyABkBJfV16zlPynF+Ql1Te",
+	"U0ntv0mqsv8ihS8SJEESYH9ImqsX11gNAgfnCwcH5+P3WUo3BSVABJ999ftsDSgDpv75Az1D6RrOGVpt",
+	"kPxDBjxluBCYktlXs/ewQuk2IfQklcOSDDNIBb6GZElZkjLIgAiM8pMrQAyTVcKAF5Rw4M9m8xlP16Bn",
+	"TSnhYvbVzE40m8/EtoDZVzMu5Hezu7v57Ad6KSiDLhRnA+skm5KLhFCRXEGi5s56l+Zqet/SF7BkwNdn",
+	"lH7CHgC+E6L4keTbhOlxzs6TVH2T/C0HkUic5IAYZH/XBMK3omDb10sBrLvcJaSUZDwpicB5ItaQELgV",
+	"CSrFWi6aIjkuQULAphDJBm3l3hkIhtubb697N58ViKENCEP/15wD5xsg4gIKysS7TP4VSygKJNaz+Yyg",
+	"jZwCZ7P5jMFvJWaQzb4SrAR3oSVlGyTRXJZqZHfDZ5TwMhcK9uOsclEedqFrYPzw26lWGdoOU7/tttYb",
+	"jFaEcsxfE5RvOea9q6F6wG5LviMCGEqHcdgYs9t6HxggoZn9GvOhVVk9YJcl7+THRlPJ8V+j7Fsk4AZt",
+	"jWoSQIT8JyqK3Aj26a9caoHfnWX+hsFy9tXs35zWevxU/8pP3zJG2VtyDTktQC/Z1CY/FVwwQJtkBQQY",
+	"EpAltBRFKZIlwjlkSsEIVnL5iwNHIsGTmH8205y4zHEqjgf3BfxWggKKFhJuA5KCgic3WKwV5FnJ0FUu",
+	"9R+nJUsh4QIJUDB/Q9kVzjIgRwc6oQyvMJEHggaesqQAtsFcMlViGEpyYnKDuDq+pJDzpdLgVjIIytWC",
+	"R+QVArcFpBLpHNg1MMUjJQMD1DXKcWb2eHykXtFsK1H6Nc22l5LKyRKlIsE8wRoyBeUPVHxDS5IdE74l",
+	"MCApZA5oWMAmySho6sIt5lqQLqDI0fYngq4RziXnHg/O77C0gHCK8oSVJMlR+okneLMphZKggtFrIIik",
+	"YBk0U2YeUxAb4LVaPL42sHy5sJq5xu0GiXSdpCVjUp5qCtiRCvJLYNc4hXvB+4XFZkO7ogJd4RyLrWRg",
+	"acpRhhjOt0lZw6hA/0Dp94hsjRTw48H9gdJkg8i2x/Lkf1JG5zZB0oxVyhhl18AE5pAlGSimmbu3DWX0",
+	"nlRWrw84M/rUsY8VZD8RCQRl+C9wRMl+3dw45olS4WQl1ZCrdH6W/1KD7oXDzhChRAm21JEnDFYS3OsK",
+	"qCSDAkgGJFXc1uSwO2vR6BtBmkIhOpaSo/RRlmE5KcrPmTzdBJbGzRLlHOazwvmTvnxZc3yBFeEQ2f64",
+	"nH31y6jxNK+uL6TM89ndRwmo+Qu9+hVSIRHfC662uiLhFQxhgslqUeSIjFHlgxl8LsdK2CwQ4x/agdpA",
+	"tNblL84U8xYsH317XwERjg0duVlE+E2/IFpg/5FT8jPKS5Ar6k8gWyDRQ8sMCTgReAMhBJ1LBqkuOIZB",
+	"xthilkokVTAErSyPD8yA7w3uQFA3IFCGBApB8o8VXZWkGXqGf8XKYAxKE7lUPACk3EjGk9pB/liTeDaf",
+	"pdIWyHP1b43AzOHDejpBab5IUZ6b9f0D9M3K5wtxJUBfmfVWuuzRWsud2UFbtcEGrzjU8ApT5Ql5QzcI",
+	"kzN6DQytYjUIXGOpZmHBYKn+IO1A7seK/gNiDG39VKlPkvnMHDweArQwWO29Ccrwnt+asRN3XQG60Jew",
+	"5s6HeLgLwqWaoYOg+awk+LcS3ulZ5U1cHoOKVhNWeWM+9OJdzpCDkGgvEBMY5bP5DBNeLpc4xVI9h1Oh",
+	"i5oa6jCaaFAb0kq5KJUrE26BpZjLf+Z4CVxsFbMgItaMFnQjrShtg+VivWDKx6f28mvJtgu+3RSCbrhX",
+	"qvtxFnvMuLAEE6olhXfOXneYo4mIHSZqY3CHqWrC7TCJZYnJU7T494AsNsTr36Iikr0ahvDvsw0m74Gs",
+	"xHr21QsPU2d4A4QHnK29Yng3nxGADLJjq7qaOpUiUAipEXtFaQ7SFm3Rst608/fmFaKzqTBymQ04qkne",
+	"PxbKBacWM8xguGlhPccjCuc95mKiBZ/jDVaCvUG3eCNhevH8uTw9ifm/amFMBKzk9XI+o8slB2HYR497",
+	"7hun9zOF4vp1xXfqCypQ3rDaMBF/eDWbD8LSorAFzE43N3iotjZMzh+vOLBrNOEOocitr5teGydOOvuN",
+	"p5EPN+jWCMsLhbf6f9ro/oS1ZzCMbA5i/r38UGprdAV5CEgg1jQLGEjrNULtdwbXGG6MmI2t0GKV1nKt",
+	"yQyC5g3C2k23VYbZYpyl2UZp16xZoByviLkFV3/j2409aqpjaFEgIYAR55Ry/qSFYoFJhlMkKOscWsNK",
+	"6AJWDJS//gxFqyFMilLwuAtc6GXRB+L39ts7+4QVxxXmCmXADr4q1QC8vbUWVYx7CMVYcy2CVG6rhUBs",
+	"pdV3dXGqPlr8VqIcL43fbXH90kt1feotLMdkYc+JDXu/AYpnxrnebSg+v3eYIRKjixQJWFFtbFuMrCvf",
+	"/wmrFvHiImVYyHGOPq8Mi3nth0criV24hbQUkI0Mtk+Jlffee1hUwyt9khrzdFHf0QK+WqFikdKSBJzo",
+	"1ccDCyztM+JCv5sulhjyLPJyv8Fk4ahePg4aT4EghuliiTY43/b5VniO20bouKehyHFDXgZZosPpHbjm",
+	"Lb6zK1TQOVw1yBVdggzTt58fPRjvp+SYUBY52p6tIf0Uax0hDjkm4CVKikiGM3OCeywaka79UrWDftez",
+	"Bm2XbgrEMI+2CNeIZVF2cY6279FW83zBgAMRSETd0FqTcNggInA6cYIW5tR+nElbQIbgUk8cqcglu028",
+	"aVTc6tNDfXzV2rYeN7dwhGzzAiaYAIgJvJQ6QGk+hsV2Mt1daYuZ4JKggq+p2lPaYPsojNdf3hlDarHE",
+	"ZAWsYFgfRdY0/Wr2z788P/kjOll+/P0Pr+7+xvtyQDPwn9/KLV4SAUzirUS59xTXCi7yBUFtZBf0Gasn",
+	"pWSJVyVzLzX7sLnmM21fhSzQ5meJT69Z1gdz/2I+8s59nOzwZIXdBo9VdAqTr4lPsB1UjV1dd+I9H+JD",
+	"tlfxUfT+uqZlqJ8hyL50zI5IO8v4RFcMZf5THhPN8ZI08dO7V/lAe9f9RN70Yw1HtASxXRAqIHTFAczy",
+	"crNB+poyzEM+Q7GyD7tY8G3Tg+s2aX3bq4EcZWFz9mWYpwxvMFEuB+WILAq5KcnW1fgTLfcn1y9CfYc/",
+	"v5A6pjvBy+AJXmoLSwnP9gcd59rFrGQSAuZ5PMa5qeaP/OSFfk33/D3SilDGf0PVxR19ngn6zq3aw91Q",
+	"Of3uW6/L2au2uu4Lh08+7ikUonoNWPCUMhg1LXUOiPNwZL+/1J/79Oko+Tbo1v3rc49w9evdCJda5Rd+",
+	"3lVm+q4oEVFHPsZNbyKq5RQZpIqMC0nVyGnax4Rlg9ez+ezr2Xx2NpvP3njpH2g17e2YCadDm2vcJ4bh",
+	"g2XnqAn7ep+1Hu0XDhr8XsDe82g+KzmwSY5BNcR+7UameM60BiN4JNUnad1TrOX0sLvynoANvPeqQe8P",
+	"sx4JGhKLhsYKOVF/fvl0EnQO/H2dBF61HfeC3YjPmKSw/TEAdw9YXR9E6Q6eVJM0cK/urZd6+epJE/s1",
+	"8U569sEp1VKs39MVnhjEDRuEcxNSYW/VL798NXdv2V/MG96tf/6HP/+Zf/x3/2D/8ec/P7P/9Hq7CsT5",
+	"DdWOY2eVFy//fh7l5tagOvP1oeMCVpgLYI8dI3+/N4xcmvefyOM2TYHzhaCfIMjxYsKwMRlzHLS20Vin",
+	"MY9vP1/TbPs9CIZTHbketyct15FnaUn0i1rnh2sLQT0PLXVIbxVVvrnybFl/aGYe3iWf6Du72uAgyOYz",
+	"k10VaOd4HUFrwKv1qEe6Tbq7+exm2odtH1J7B30oVclj1haJdUZOSk1IgRV+5jlomoGuGBDL6MZd/gm2",
+	"Q159/ff+36+B9YYBDB3+AoscDmsWOBto7LYDu4XGPfotMR2atBA9elp3eHCHaEhw2DjIaOwKQMfQax8w",
+	"duDgXr5BqdhzaKHze+OC9osdM9f5OibNKAVGerl2itzabwZVYlcNZiAQziP9WHCb5mUG2WLJ6GbBAHFK",
+	"jE+5Gx8QqDRsJGTnhxwvId2mOdQBhj1Bi5EY00nx3vmmXunakZDR6qosgHHIgC/0213gMySDHuSVRRbN",
+	"SfabSE4K13jKCsGae8LB0t+oIjRRH5WhaV610u0Gneq/WxvICk3FQ52w1TbTWho1WKtfkDzi7KFLK5/M",
+	"ofWo8ntHzHP8A9WAk9SSVSEjVv9+FYpvdw9Qs/SriGBZ9O00XCh7vg6RTiOOevQoa39fmnpL02yUpTEN",
+	"gswSZUcY6lTX1SqbN2iKi/ql05dh7uJBgeYsNoiK77YFFWvgmMdHMAwbJ5QsazPO87MKyKi8UzgbleJL",
+	"9fFr67jbl/XTPaICT6cQBTFVjo2Y2syjmBRpsMn8PrOhoExgslrsgHdnFmN87DBDM68jdqJ9mS27WCnD",
+	"JoIrJS55fEe/D7GDyOqnqF++WlbFAW2HWqtMsSCmqBa/9bCrjunU75ngQfKoieqdTFWlVIzBlCUCRL06",
+	"3AD6ZP5ZEkNj0FlPoreewWRV4+qMEZvoM9MgbadAh9oudgIZfke7Yt04j4NMA+cIP5qN4YAZamkcLl1z",
+	"rz4VSjRccUJ0OGPkwTlR6hTR/fhXHoATZUIy60MwPZybUSjadnNo1MLRMiVG3Rr34sFwNM5Dd2RMVDv7",
+	"sE/26A7Zi2rwoW/Ha1Qf1ncVH5/BEO6FcNhzR6OBNo/WoMO+FV5zHLPBBTTUbrhwIYtJRUNkNfCkp3/n",
+	"hz/mI6ojRLjReVXD5GBviq76dZBZrV3jMPx10BJzR4Y/DreG8efUDKDdYxPk5YnHP5Jab2Qn78fY9DBh",
+	"zuYdZC+RgH2aqj05g9TF44QFHJboCyyszrxwXTFZDB3vUZtHWvBYFuhE9Tmk9PHumSqR2Oo6MC2oTJty",
+	"naiyP/g2GQrHNJUwpZCkbbPh1owMrJBn1vOiN8cq40R1JjAp3THRabpQ8TtvFF1nM0gIhq9KE/fqX+Z3",
+	"JzlqhEzzkMAqz9XTU220lS3z8lUzj4u3tveHV/MxG7SDaV/NkHSNxDPBEOGmjJe007/InskbCqhyOkXx",
+	"jJVEndfeoHSTSOrA9sc/eMe1m2mMEiureMIELgZ+BzkqOGTfc3/gm+eYqIPg4Nr69pr7Ga0ExbkJrnc+",
+	"/PLFS98Vfm1K4oyhjGkdE7hr2xwhQLvMTTORkGm1uv65juUynPPio9fQgmuwCf4ZLFGZ6wN6SeW11vCc",
+	"+d8bpKs6qfYHH8OK7/xcxWU5hUg0zby6xVGWZ42k5qOmW3dTXZvfj4H+boNWcI6iCy9g+d2iZLn//ok3",
+	"Axa//cEqfTWX30+TU5RNOruNhVzPMIaI77WYTfFPTIufLFBMLUAPqIpqdyMF6xjNG7iWNs0o8tRHFsJA",
+	"xFkeGkpg1oQO2GHNlfOZgFsR8s0HuBUWJa00ZQV/cGZyz6ThH9XQq+O3ZVa9MekXO2oGIAKL7WKg0E+V",
+	"51HQHKfbseJZu6ZHeWuWdE8oqWW5Kd80niOnq14szNyM/gWIf7MxVmdwlZG2WNi64v01P3pxPrjz+TB1",
+	"/WjoodmYuBp7Z6Jxf7SC+yTbY5sAuFUZWpCpzLGJyeBtzWpq3i+cDmMR2XXt3gu+BawxV+fD5TmkQrtk",
+	"GaBsu1hSVlfFnVet1RbqV69RHf9e0jUxWkX1NaAdNPegqP8NwSH7GBdXejmyQYc6SwJMEjUw0MZQY0cB",
+	"XkuSuA35jpAbYszkxYZmuuhsLUr7a1KRIy4W5pKyN4m18wVWiZlogWFC+mpP6t/2th9PcwYbcoJYusbX",
+	"pqS2Tnf1dsnoTV1RvyyGmnLY5E/3f9SCuoXfYfSE5hYXNidp1qC+kefSpHncU2NX1CYecJosC1EyslCX",
+	"v3CdfqFdGW/VldGjz92pa3Nlh4ZGbgmBCQ54p/LaSGudmMuJR9Eds1HPw7cbnMNwoUujbfdqNhgxirpa",
+	"VrQxl7nPyN6pOv6EA3vO6K/qOfkDpfkZktzQhfYAdlRD5AbMqkaThB4by8dlXhU096k8h4saGNzFdrtX",
+	"w2fqY7DHuAmD4MAWSWCy7ZPVMWp1RFoZFRe/URlPe7hGx6jnw+n3AeXkaoMxrOyQbOwuOW1z3rd0xL+n",
+	"DHpKYcOtOCsZ147KcHWtXnbNxGMY+b5+voksSwpELHovrEczqGwH6QMUOCpKoUtycH8A5jQd2q/zTdX2",
+	"oSULpN75rcYP3EqcK3/ErcToNc6A9WYxyR9bAPaPs+3je/2r5nnAam/zPIA4x1wgXcF0ywVsjB3gVdox",
+	"vlf4zY/47kHCy6sNFvrE0C3oTZyqUxXKnCTzGbrSmRl+C1CgfJDqyvQ5WLyx74TydKY0MMzt60t9fMFv",
+	"1WPMXo6uHWO+3AfpiKdJ+9kYdOdTC03VxlP1PGzGeYrVD4JwUca/zhimjEs8mKDED6eQK8U5EpAwqKFM",
+	"YEFYpXAuEBM727SsJGRANdQhRV7lECP6PKDI4ViQ/6Dk18hz5F/TpYGtj+MMvIMlxsqJBpiUmzHLUk0+",
+	"Bv8HacBP0wLVjcUNVDE9/IJ1lZ5kDMqflMqdBuauVzO/CmMMUtGIL51YoW4P6QzqzTKFkI7mnlIXIRH+",
+	"7gpeWumoTae7+8Su7k5j9jAfq9OifTS4uZ5+YA8/8egWMFWVwYputpjfNGeIT5npGX1wm6BLzF8bF90O",
+	"+kh7+SJuvNXi/0TZJ16gFIxLz3tJbNcKtKsNbuvMbb8U19MJ++uhql+m5uHqj3dL4q86SgXfJ6PSw62e",
+	"+9f//l9n89n/+Z//Q/73X/5LT+TnrgnjGV4uQUoORvlwXw6b8h0LI94UpvSIJ/xNNVtv1KmNA7+n2/18",
+	"VmXsLYbq3LWr8MZkdDthlhYd/+9f/vf//V//TWNE/+Nf/9N/lv/4eLDUdLEtcIryRofsEQeNy75z27LM",
+	"4UEjJTPP5B3p65Oo+EoPXYL5+aNFtDDlUxdpnqRSw+uZ6ELisdebWIUSU1yl+VBElphtqjoNqvE4oWKB",
+	"iiLHKbrKYTwKWL+FOHiZt1nKPrm4yIil06QyHLF4PAyCvNiI3f/EsGg70QQboJcIoz7wetH4Xe5g6IRL",
+	"ZU2RutD/fjAUaCV1BcUFZBBr3zDgawKcHxpHa0g/RXc2QHmpvWkrhAkXI5UCtI6fgPkKCRc6e6unLH5D",
+	"lpfyG9XaWmjzJlePwdZnGCLJTeJVpQH6d11vsYHQMAJfVJlp+8waplnfD8NGqSRQnzfc8WwOpgWPVBtP",
+	"dbPA3rTdIU9ohb6H2jZ2x0ax7f0dsk9sa61JbWL75gjtEuv/fvcmsd55D9oj1suZh20R21rySB1i+0ge",
+	"2iC29f20/rD9chKcavFwe8AOYGhqvcWIzrF7agLbOkQfahvYjgztKy3xnvq+9vHO1CtVYIR5/QGxKdMx",
+	"rrXaKIl2ZNmMIlqKlPZ4hSZ1Sa18GbuW66teqjqwzjuIbuGiCYPbCqGN8EFe8Pl5H27jt1jl1tMobohJ",
+	"D38fnO/nUu6dGIvIKLDhkJppNQEp5wvLq6YV02TZRaVY0xDbo7mRXdrMVW5IlP5WYq7kYNI8OyeGLt2b",
+	"fty1WLXdo9fAJuWjdhvoxfjBTX2XWn1GVDtLaTGmqH1N7gp5+qvjsrfdXQXYVU7lNTyy/92gI8CnZ9w4",
+	"JLUrr47WkeFeiRnqG+rMVIl8g+DR3e86ve162uENSMdoDa23jFGmw3+jzagMQhro97oh/I6GIX+CAvYt",
+	"uYbcsGTMC3JIqJGLjc6jfav+Rg3Wd6pVbXVsT0jSijkeqnVe9yafNDOphiZrgV7FLugjsUBXOMcW0CCg",
+	"ztyPJkaFZVZ17vo0XsXpx5aOXeIcTBqOP0FfVwczlmE47X40pqSHZoIhrF7WihyNWmsfzODzXMPTiOoI",
+	"jeWov5pQ5syJQ+kvc6b6fkzg7A+qX8iY175B3TbZWolFvq12yVhB3GL+eSWkAeJfy9DupfueqvP1ZNeZ",
+	"PLE9Y8NO+1dYWXCsQ2RvjcAmKTo1A70obfCdByM+KXtHfi3Z9jud/Xe/1TGD/XhDnZsnVPqOb1wWQFUD",
+	"ox/lVdql6a0a/bzJb4AtmOFFT4k5dFt1gx8sN6dngmzct4WuV4sbhMWCQ0rN6RNb20511N0H2HqmAKht",
+	"ouHoQJX/EdkwWH/jILEGbO6kOLrUaiLBg9VefrkGcrS8WJ4yXIjeKlBO+vxeiyr3NjooKMei9+guWBPg",
+	"qGYqO6QWxOTBVmZSePPHll113NSjBsB94FTl022PWpdzWnRxiOi2xY9ITnJI1ysDgpXQ86nt0n03n72H",
+	"FUq3td/yDd4AkZu6TCkDHh0GDyzFfFSlmfSCfqWG1Um8YJh/2nmuHC+Bi22+O1T0GhjK853nKSgXJdsV",
+	"nhav2knnNRXcvTdxWu/Fx15tpghqgKP5La4RxdSeNcMd+lpKe8R5FNpFAl0FJXuNdpKIclOMt4pxoo+D",
+	"mkzqfTSR5OUByzlTA/enHbcTuqLGmMu9x2qwB9iuVin82idbd80dcYhWuL2c9PR2f1gaZ8eHdh3pJVII",
+	"XabEHk8iTjD3DV2lauin3VxVPl3Ak1uHe+/m+7j1urZD7PKkFCzoHPF9bN0Hmj/DfSUeDel3xcijdhJW",
+	"eQ5QTPqwvOICkRR4/Nfj9/mKUSyEDZOjpkUDDgcTXZR72ZmuaClep58IvckhW8GErI3gh6GhF6EfyjxH",
+	"Vzn8xIGdawfwxHB14z4OT4t0lgxIjLTT+zbxI7miiEmkf02zrXG1TNFva8CrtVikmxHr9eWXrvX6pc8M",
+	"vtFTfVqNTPVFwxB+OWoJ1yC6awxj5YwSAbcTsy2Umbup3VeDzzP9hHDbovWEsETqVGPyO1XzvN3RqttR",
+	"GOCVzqjAdhg7bArD1COpy/73dbvYvIl372XH7jyQ+FwVwYin/Y6Eau3fN+XwBloUOc657zDttJO7mmDy",
+	"8V3NMPWUrSaYdNTWX08+b/0SsOsJO8wtDeGL5HbMxHqRdbzW5gW0rVxWQEzdExu9s9F5N0vYBCXemAnm",
+	"7sLezdWxnjGczzlNsb6QDzegD+qoGRZxWHKUY7Fd5HCtHQpVPQsHGkryrW1pV/VJUoljOSY4xYi4f/44",
+	"Jdf8cA0BseOj3/nKWaVkd90pqbJNj9Ozd6wlr/65v4PL8Zzee+ms6+6nsfnK7eHyV1M+6q67mnbzHjnr",
+	"CkOTpj1N/3t8KkYD7FA1Y3+RNu3eoXbiAbh3LDFmkOOPJHIC4YO24we/JoF3H+cMX6N0+wYJdGYzBKIi",
+	"/cw3kRauzbKLKVZUVTooe2rImL28ZYiXDF6nKRQGuQeo+tYuARbRBLBbQrYu7cVAsC3SN6k6ZHb0wO2p",
+	"qDVwPW4i69xElsXmyth412LNWkWt37x9//bD2+T1+/fJ1z+++Y/Jm9cfXvfXQIkpWt1iWI/zJgMuWKnr",
+	"TNUgCVbCx7k3ZE8grGoOlxkWDUj6OgL6NYa77tyLoGq7nVXHabRDSpNTnCWSPr6+a3Y2P8jtmuKxaYyr",
+	"skrnGDsK9YPoQ6wSW0G2xATz9R5r9Tcrou7UVWFa3VlWXbeDkRDXKnWvpRJ5maYA2Vg97qr2e28ypRwQ",
+	"lhvemMtXCLGqSO/Q0l1h7kiBo80N4i0XtkIPHMQ1uc6hs09gLyClLDNGxDQVs7/72IO5Zu1yFxoxGx7k",
+	"zWisgGnznjTWNffx3JrGLkx+ieE0v66DuS9V9Ov9FaCUDNXz7MtpXrYPfqbB1+ICSPLblW7gBzeqCivB",
+	"gqopRq0Bf7HKatEe5JUbaHSRrENJJ6ofFZwYdyANtQWOuZPUE9kgyZ5dS+w+mIKlzWiAqia6PKfwEkNW",
+	"G6+gy/Vqk24qQzjLBSDHiVp6wlETR92n6/vC0OievJtwG4fFl0kiQYFc0xykPLan8TanKIs8cft6AgQe",
+	"q9d1A3HTvvHFKGF0TX2Lvblt5aiLENhdjDrpXMLt4Knbc5+50ZYnr5cC2KUf620Gtv2ghtqdXK4Rg0Yd",
+	"8Gl44HKeD/QThMQ5qsE/sTzWW+Ys4kzSu61sD/s6VEe2vqB0bzHzkSY+l/Ka1OpUPdGxkmMgwrZTj7ck",
+	"mjfDd/u4zvOQwv29zeD3aRe1tjbvYGveMJ2GHJVuvYII19x81siEjXaaVTg6pD/JRmndAHzynw2ZLQYg",
+	"h/S0dVlRtFPzN9WAb19FSIaSS451L/Q+jVk3isJWB7EtWlRIGT0bPzSq5h82ztqAOCkBOyyHOK4MWfDz",
+	"uRlfZe/H1z3rbyNhbGcGKd1sVGKXMm1KrjsqlQUwbhyAQw8qdo1FbJHTCtuX6vv+Cqd76qjkSdRsNgBc",
+	"ODVMI5KTqn24uXpvGFrGh1IPJ9/158hNzoILtBDCc70GESQPlDPduC4WNQjn28UaXWERXWMp4CCormGS",
+	"nXpLo/YfFw7hJ/B/l2+8cdVKWgXDqxWwicWKJtX7H0hxuEFMV67HK7JbhbgqX6HvlGnieN7kCB8F29B1",
+	"URhQUb9mXUYLylE+0eTV5X1ZVejYNRGfP38+VLAlWuUr77666Eo7TvBIL28IDqZGg6vPJ5zC3cBvPdMg",
+	"yT7TAsnt/R2yQHJrrUkFkvvmCC2Q7P9+9wLJ3nkPWiDZy5mHLZDcWvJIBZL7SB5aILn1/bQCyf1yUlex",
+	"kgeMrQgXWzzwcVdYHkBxTKlkM3ZndJp5Yl8x91SpuVnY4KCVmgcQ5ufK3Yo7d+T/kRd37mPbyNtE50ow",
+	"kqo5vU1V752hLmK5uAaW4Z5OYY14isBS1I1v5NUtFujGBOrSFztD09QOBXxilWrXzg9bqq8+tYcoXhJ4",
+	"cdziEy9cPZjx3Hc6NyIfUUZEpPYsRaVHpVCoFJvFLuWFnWk6j8Haftd9uW2w8eBLcD0uyu13zJrdnSve",
+	"XvzcQc6LfRVynq7ldq8B7Tn6puwhQN0epDX2NA9Qo7iX5yKQ4yWk2zT3iND+vbhhNVI9nryR3keqX31O",
+	"S7HYMeLueE7z6PeWHV0uYyW4GrUIWmq1yyWDCBvBTr//TbGHZ6edU2+X6txTinH3a475wFnm5cq2Fm+9",
+	"AzSFPOjs3aXJ+iHqB3ei8IbKg/ofaB5Im7YdWrF1Nqr7tDv1Ce4vfu4RlJsIi1mrcVpFbn6ATUHZVB/6",
+	"PrDrOVB9yr/nmU0XZyqJaLVN71pwv9iv5jrM5ONecFgXh35v9zH1Qr9r9+wDEaNj3dje20CUBXMD6JP5",
+	"Z0lMYyBzdxAKtZOCSNuA9JOiUTD5/tg4uHyWb7dDJbX0Lqto2Ylh5fdeX2MvyQFPNTqmq6xG6agwHtpg",
+	"4v71xZRKHF21O16SYy5HfhxU3J5NcmDigWQlLFEqoqr0h5LXTO2lslOnK7qN2mILSAcw1KVfv3w+ts3I",
+	"SixTnC3x1VuC/QNTakGqq9bksD37dVws015rvgVXeouo69bu1BMpbwRd5X1lIwbCqzBt1Zzt9PYeaCS6",
+	"gzPAxF1VAMyrHVTrDiLprNVuKK4B5kJfnxeNTjhdvMmRKSUCk1K9mlUBwP3DIcNi0eyo1DNQOQQgBATb",
+	"uiZkLFO5u56OmZ1xujpEo3tS31DlhwsfOQKmYQPuOGpMquHwcBPSFDS2GSbsH96OT+8ltp+yfXjsQVov",
+	"Ked+huzjEi+Ze9Dfi7whIgxhcVAkP9jrZWzNveGy4sO1r0zoa//Vtu/LgbYMOCYlqbn9c/nxqHNKZxMP",
+	"1V2ypZka26tgGyeDhiNWL3Yy7Q+dqT5WbGvXXO5mEapmZreeu4tKFcCVlvJUupQrGEYFxIC9LsW6/r9v",
+	"7B7/8Z8+qCaRcrTUMOrXer9rIYrZ3Z1pzNmJh56dIUIJTlGeXDF6w4GdLFGKySq5eHv5IZE6iaFUJEvK",
+	"EmXuAuGQXP8At+JZ8qaUuErO14hD8vxlAiTTTJIgBgnKMsgSSvJtcrMGkog1YJYUjGalMjKSNSJZDizB",
+	"PNngleqPllzBGpNMjk2qpmnJFS1Jhtj2T0lJMpqqUhSQJbnqL5AwWgrgCYMNwiQR2hvGtkkGVyJRbqVE",
+	"rDFPeAEpXuJU6dWEAUrXwBP7epMU5VWO0xM1W6KumGgFz5QfIwVjsOEMiMBLLM3Z2ffvJOJ1+KH6nzrw",
+	"e1aj6lxNm7w+fzdzUiZnL549f/b85JrArRIgWgBBBZ59Nfvi2Ytnz9Vbk1gr4p+iAp9evzitWwvLvxoD",
+	"SIpQla81e4+5eO10IFadTdEGhIps/uX3GZZL/1bq6skG8hxvsLAchDSDLJEqqfLyeW8fCW+qp38Bulxy",
+	"6Flh5H5y91El8CuDWSHj5fPnJnSminYvitzQ9PRXYzHWCw2Jbo2pxnOCkpWmjJyjFSaKE2siJEwF/fFn",
+	"knyvNFi+1SrwT98R5em0V1r12Yvxz34ipovxX0A1GvwybC0BjKBcdQltqBXFB65C+eWjxHLl+1JMlODN",
+	"phTSJPbsWOkCKaASLikPqUKNvBk9U0t1OfbUyrK6ylDu4d1vzQin93WH9i8OQHsdu/nzSx/dX7f3nphL",
+	"37OjUk9+9XL8q69R9i0ScGPO/GCCW8wniGRJVjJ0lW+TQmoqLhJEEuvPPlkxqYd9UtBL999xdterrr4F",
+	"0aB2S1n5dlsP6ZDwXTY7krow4b4hDDOdUV49fzX+0Q9UfCNpcgy98C2IhBIYUg2DbHDKYMWAy/PvBG5t",
+	"wLSXMd6qn12E2y/PdNG6x8MpFnC9pRGe+a1EuWuh2I+TFHE4Iiu9ev7H8Q/OKFnmWNv/U7XaF+NfXQK7",
+	"xin8RNA1wqqBQhzbasQnSBp82YmyRpeM/gVIk33bqB7kYxsJ7j/JdAztITSbMhykaXkYpeZEMt81LzOC",
+	"lXB3LN1aJ1R4pOUDQ4Rjo3JytE3qkO2jW2J/1XKlCSXtA++BUMep59uEsqQZqi6vhFisaSmSjapYTFbG",
+	"8oBEObhaEliK9WlOV5j0S917+fPrtI4HPoCwlGKtlrkvKSnF+lKrKZ9omJ8S4JIaqt7in5LvhCh+lEqP",
+	"wZIBX0sLVl1iUZ5wEMk1RskliJMzSj9hdd1dA8pMJuyZvCKfnFEiGO3NLzTjT3+gl4Iy0EVX0ap/O/UH",
+	"an4z+G4+q+EY+/RCb8YMVrg4ruAHCNg3lF3hLAPlG371MkDyP1D6PSJWB/N7VwDNayFdJZioO0LFYAmy",
+	"TqOEG+Zbog3Ot37xpTrnqld+VZ+mWoAPJEX+hlAD8sTgmn6SsuQRIVOxcFiMduTrWF57ODxzoTCnfAXG",
+	"mWxxeNrkF8VWCpdqsGWqGtEehjIzDdlhaoBhKas4708/X3TZh1GhfCdN9vlTwteUiZMcX8vLdpoC542v",
+	"QJSMQPaotfWT2g0TIcUhSiqGjnIpP5otEpToXzt845WhFeZCB2f0CZEecXjLyq4UZVy9OJbwmv1bB+CT",
+	"YTVuWEULa+zt6DOQbsPzCUoI3EiRVUw2xci6otn2xGke2OdxdcLxD3kWOsvUSfAeG6tUWmpZ5kkF6bMH",
+	"+zTyLYjKkEFErBktqEZ5sgHVE0O9u6kNmAIDTfx3MiIOpE97My+OfGPdnQuOeakL0CY2BWhXJ00M12li",
+	"hjCecqoktBB4g7nAaZJSoj9LfdqiChIb0hWXJt7ooDyi69aHcUg1/l555RCev30xV+BZ9bPEhMLfZCeg",
+	"VIju7c768GoacUPUPvY7ta+Lg0EN1Xxv7ehjMKRdbCw84Ik5HyRzqkAGy5GWzaS5DlIhAk9KDllytXWI",
+	"poN/MVn1susSpTo+z39dep1ljaSAg53vvZkS93DCVzB0ug96hEWOUwZu/WxgUyPs5UrSRGqVjZnuSYLu",
+	"SYJeZ1mCPEpdCkHH1qipuIb006gM6bfUlDIG6YBb+EwPaAuVL66tQGJdR53hbNaWAzcCbSz140Dvrb7t",
+	"PBbJfTrmHqSQGpZKkBZLsUYiuUE8KaRA0pLn2+SG0TBxrPMVClssse0O7DQOesTSONAG6UkYn4RxUlSE",
+	"5KgEtQ7LENkzgev5gPQNFH94xFIYUNLiSRqfpHGCNBrPmZUsHVqkwteRezxKdhoW07UpEQKBV7+6pMiB",
+	"LoCelWz++VFfzTxwPMnLI7/v1RRZV0QNkAx9ilVFX8KPMU/9nc/nNBsoLnRfh9qTqH4+R1stoUkleaet",
+	"OlS9skvrzqaB55rTC/XQB5uzVMTJ9vyggDzJy2fnynRkIEhOpvlJmnLzmbhLPI2Rn2T0SUb36jwJEU9d",
+	"XeTU9JEfCmX09cmfHUpWhpry35ecWJ54EpJHLCSKsRLKkg0lWJhc/Cp7SvFZUjD6q6462BQb3fb2xNTd",
+	"ESZWsE9eUsqyM/XFm+qDA8lLZ5kgEXnVrWdST5HY5gbK41PtDeVJTlcr/UD5eZVu0BTT5VIgSwqGr1G6",
+	"PZE8UcWQungQkMMGBGsFh7n1p05YOXQ58LWvPhCHDHXKnqRPBdyKU9Vo/YQLBmjThKVtVHnyg9g1sBMO",
+	"RCRqmkRPU9XHsDLJyqfc1KPmpipWkRqSARICpWvH9HeZW1JGxaIYwukSQJqYfEQmTPwCIqmuVtUTvqB+",
+	"7wpIXEJ46/sD5oN74XWk7JBWSs/a/RbKRUnUS7cmQg6ZJLn8A8oZoGxbFTOpBjyJYfSZ8vZW0hOLCo0D",
+	"shQkMmHlEw4lMofi3eZyb2ybOQ/XvpEAbjCxUVMqjd620Tg+g758GWIlSyAb6viB1yaQ05Ymb+5bWqE3",
+	"MZsXW/MKWJcp2IWZT1uN+OJ4+6z58QM+HJyVmkDfa/GQCNlrQp1kT6J4XFGU9lYtiyuEiSoxRsUamBMQ",
+	"3Ohf1C+HfLS82Fmzku50wTrm+WGyUIcsn7NWvkVDd5kswYdv6xwjXc+9h/mwpMz/AkiGySpRnaiQcpvw",
+	"MbY7bZSk7nk6Iyjf/gXeOHWYHy4LNirZ9nOc3Yu9LDmepuS9LshaMDgBcg05LSCx7ScT3U63rtNaFXL6",
+	"x8sffzB1WlUxJ4FVbfVtorvPbICIJ7t9aiHII6n5qoYkZcYFeXKV0/ST68w/uULpJ8gcFrIt8kZlzRHM",
+	"kBznhtjUn9Y5tw9XCj3gDkijg5fE4KXp+n06ARJE+A2wU7gtMNtWWFIuYQIJvSGQNU6GMGZkZaECd2sC",
+	"vMvuTvVagz51Xm6ghz93Zsz56BfvXHhnh3soHtjlw/bZMgV6loiSPTlt4wXuvC4b7OomLRemSo1EsMI1",
+	"3KK0tmFfryQ5xJoBykZlUA8LPQM+6NGP5QKgwR0sSF7peHuoNmzbCol/5erfVtzSfIey/tvADWWfroCk",
+	"6/6XU0qugfE6Wq43Wf2sMfL4NfhbTvJvzr744os/JqZD1QlSJUw4ZcmS0Y0TCJ8Upt+BD0D9SQNCb9DR",
+	"4aSjQulYNn4D/WZTn2OJfn8F/n/Lkwan6jRdQ/FC9zEY5u1TvkYMTn8X9BOQQe/KpRyYufgOCm5TEw/G",
+	"t20wea/6k7o8fhRG625pMERGjW4g3C14sQPTHV2RtvQmyhKU8IHtJVdb6wFQ9BxiKOulyyAHXXCmyUpv",
+	"1N+H+Wj8qK4+PsJRXa0VEkjljk80Dp7O5tklXYoTjY0ENXlMH9eqdCgWXLOhLqo1YOw9Pt55AwLhPJhz",
+	"lCI37dn5E//YdhRpB0eSZyjLQOquBr4G05H2z0IHeYCrltFQ39+T23QVaCzRJxa2hd0a56tAouTJ3+pW",
+	"7fMEsXSNryGbJ5TZw+Pvxg7b08JUyvcz/Dkmj43bz++t6H4sq59jYvKMn/jcOoUwkdxbkgKT1lk/ysk2",
+	"/DTotn1REv5ojv+LMuoqm0hMPPFSdfXVTWghU3hJ6HIKY53+zkrlt9cRn4N8dlGSt9f+roqRDDaP+sKE",
+	"9PT0VkRLAWzB4bdp7RXnE9xRLX/UmEPqkOJ0URKBN6DoMiZLZqzx+t+LW+jhKWa0gkSsGS1X63bEeo0s",
+	"JV0dU9sXIdeWMXVzG7r5/0TUkM/26q8cRLaByBO/mX4greu+YgF9QfPnmByBRV7s14MY5UBsNRX9a9ZH",
+	"pa14r3hCexZ1hJZ2Nf508d4E7kad9aYr81jrWZdqH9Qn+2e0l/emi9SObFNtc9VkT2w3+2r2H0ooIUF8",
+	"S9I1o4SWPEH6MbqNMi/v9dT6vwBpTR2Ipw5721aAPpL7tmbrp7t2dcRKrmsfsZqRM8wgFe3GIVU43okO",
+	"x4Phe1AVzPrajj7yC/ch7bvW5jAfu1W86cQyJtJwzjF5HK/ORwoPbfWUb0eAQnhP+S63nv5uUf9uOBmg",
+	"Q9xoVdyZ4dD3jWrBf6LsEy9QCnXkTyA7PoWDDrUw78Yi6zekupMtV/aniiMiwHkUNzqto5X16TMTdOvj",
+	"inBniGRYnmX75M79WwtdeN0WzvdiOAyD1K/C9StMlqT2M5f4TzJjakpI3Wzii1RgZ8HAhM7RpSNFFRJ5",
+	"1eBZ+X4wWSUlkSjFlLjIjhSoulH7CeiO+n0KX/d9r5ii7sR/hjg8fM0/nI1T7+YkQwJxECd8jQrIEo2V",
+	"xKbffIYhzLukST7M5BnNqqpxJ/0LkCQDTTx2ouvMQZbUfJ+kiINL3yjpCUm9P6SddMCT6F5zkDtQKN00",
+	"mv1fK06TfMzUh09S+wikVgOrMh085mRdWCDfJpQlzQoB+bY6HnWTI7KqK3gJJFpyvQaUi/WJnnN7ismv",
+	"JdsOXXXeqRHf6fGzg6arOQt9Xo0+3b52GuOWAO071UCrzy4hDlVxurHSPWnBfXDDU8NPGxfWYjrze3iP",
+	"T6M1bqzrYEhhfKfGVl6GQ6qM9lID6a0V6F0vxiNQGjklKyzKDBOUJ5oYfTtyqJbjJXCxzQfJ9b4adEBC",
+	"VYt8vnq9QnaESm/i/lDqvFrlnlT5rsR/UuOzcyTS9Si7hevz6uvT2nui37d1odOBOiTq94qklYPs0dci",
+	"727pSVwedR3lqJL+iqvlBez1uxO4FQypOjO1kFViEipHulbNkH9E/v4kR09y9DnJkebqeDnaDJqoxob/",
+	"iQM7pJHqLuNhlded5+QEZ/IPYvvwrVQ0CLxDCUquKGIZJqtThdTb/ufGy/Jqg8WP1QdnZvxhtEtnnXtS",
+	"Kx44eJk/2bTxZ66gG+PUBC6QDtfk2vlZMLrEOVQ8qh7OJR9jggVGbhsJw6UtLi5FSjcj4Uc/2kG7Rh29",
+	"aCQyfHmvYUdmU2PBRmbY44owig4TkqbXiXpjvtbPxYml+UCMuH6lNgMP1tLFWeO+FJlePSQw8u2tvE+S",
+	"lZTHTUHl2haTCpH7DHqPAOsHuMm3NuS9AdCDU7DHNcJUmAUiLrm6omB0pI6J1z4Ele9eq1ZYLqHdydY0",
+	"AjkFhnjJBlskKbSe6/FvzfDDiFNzkSh5enkgIF6bhjFecdJDEoOKBPPqxU4SY4O26lTDpIREZeUlGeYp",
+	"JURRYz5bA8pMacAzlK7hRFoijOZNWIHI8+eXGaEnXFAGs4/dm+B8dgni5IzSTxi6/W/OckCMq3PXtnxh",
+	"pgxWykAdzShP8GYDGUYC8q2F1m5G4QCpvpHhNXnuPrOTqPYtYMbgGhjHEjnLMs9PUKoecxXZzRtLhgRK",
+	"oMkhgyJ4UuSIDF2fmox5Lkcf8FjxrDZUAxi4YKUqUFBtWu5nv2x+91B541xH5TQSJiUDnFhc8JQW0H3g",
+	"Vxc4ObDNGcpsHmIGebs9N8MOyAU/lLmKg3CWGylCKIeoyhSkzPPkCpaUQeLcRu2VQB33D/5lyNxjGhdt",
+	"e6sZexVqk+hQ70IN2tyLCRrIHTas1iDVi8/Pq/dakaPUFDbNsLCxPI3NLzHkWSvkVUjZUMHGp+adKMCt",
+	"9sF+dATfWrVWSEeCaje1WrhZA0kIJZCAvJLwZw+YhrZGaCNKzz7fVYhIzAnQesVraHtPGFeX0m4j4R6D",
+	"XP7+UIl+YcNT08+B+rZ2sWSAHAlp5AfywTCtC0YLylHOxzOQq5nPzTcHOks660SdJS8OCcdApmcD7SoW",
+	"2qL28/QfHLt3A6oQC5nD5BbJtmBwFZTeCfPuFQE777Bv19E5dvhnlFva2d2Yu9fD75+357eOo+5uPTxD",
+	"1Md2p7/bf47kiHaIFJ370Jnh0JlCXZCDeOkps62bDerFUgxrBUZiHZLL9m8s9MB8pK6wvav3K07rxnXo",
+	"iUiWwC2kFaERJpisznNE7jdD+vMxI5ynYS0FSrg8h1j77cIlRqy8xeaDOny0Uz7o0bV8aD5oYvJBnzJA",
+	"H2EGqBQYkwNay02VDdpOAo2XlZDoxqNZQK+6b1ceZWHbBz69EJswPckj+kbWOOCmGixhKcGPy2Bx1rrH",
+	"lOAOFGEpwS5Jn1KCH39KsEenjeUGP9NcwlWvOi1dJctnX81OZ3cf7/5/AAAA//8=",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

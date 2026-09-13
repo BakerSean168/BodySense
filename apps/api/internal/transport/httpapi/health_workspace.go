@@ -62,6 +62,26 @@ func healthWorkspaceToOpenAPI(workspace *dto.HealthWorkspace) (openapiv1.HealthW
 	if diagnosis, ok := projected["diagnosis"].(map[string]any); ok && len(diagnosis) > 0 {
 		projected["diagnosis"] = projectDiagnosisPayload(diagnosis)
 	}
+	if treatment, ok := projected["treatment"].(map[string]any); ok && len(treatment) > 0 {
+		sanitizeTreatmentMap(treatment)
+	}
+	if plan, ok := projected["training_plan"].(map[string]any); ok && len(plan) > 0 {
+		sanitizeTrainingPlanMap(plan)
+	}
+	if revisions, ok := projected["treatment_revisions"].([]any); ok {
+		for _, raw := range revisions {
+			if revision, ok := raw.(map[string]any); ok {
+				sanitizeTreatmentRevisionMap(revision)
+			}
+		}
+	}
+	if outcomes, ok := projected["recent_outcomes"].([]any); ok {
+		for _, raw := range outcomes {
+			if outcome, ok := raw.(map[string]any); ok {
+				sanitizeOutcomeMap(outcome)
+			}
+		}
+	}
 	return strictOpenAPIConvert[openapiv1.HealthWorkspace]("HealthWorkspace", projected)
 }
 

@@ -138,4 +138,17 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.PUT("/diagnosis-analyses/:analysisId/assessment", wrapper.AssessDiagnosisCandidates)
 	protected.POST("/diagnosis-analyses/:analysisId/replay", wrapper.ReplayDiagnosisAnalysis)
 	protected.GET("/diagnosis-analyses/:analysisId/regression-export", wrapper.ExportDiagnosisRegressionCase)
+
+	// Treatment, revision replay and Outcome feedback surfaces.
+	protected.POST("/treatments/proposals", wrapper.GenerateTreatmentProposal)
+	protected.GET("/treatments/current", wrapper.GetCurrentTreatment)
+	protected.POST("/treatments/current/review", wrapper.ReviewCurrentTreatment)
+	protected.GET("/treatments/revisions", wrapper.ListTreatmentRevisions)
+	protected.GET("/treatments/revisions/:revisionId", wrapper.GetTreatmentRevision)
+	protected.POST("/treatments/revisions/:revisionId/replay", wrapper.ReplayTreatmentRevision)
+	protected.GET("/treatments/revisions/:revisionId/regression-export", wrapper.ExportTreatmentRegressionCase)
+	protected.POST("/treatments/revisions/:revisionId/accept", wrapper.AcceptTreatmentRevision)
+	protected.POST("/treatments/revisions/:revisionId/reject", wrapper.RejectTreatmentRevision)
+	protected.POST("/outcomes", wrapper.RecordOutcome)
+	protected.GET("/outcomes", wrapper.ListOutcomes)
 }

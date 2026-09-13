@@ -1712,6 +1712,232 @@ paths:
           $ref: '#/components/responses/BadGateway'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/treatments/proposals:
+    post:
+      operationId: generateTreatmentProposal
+      summary: Generate a revisioned Treatment proposal from a reviewed DiagnosisAnalysis.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TreatmentProposalRequest'
+      responses:
+        '201':
+          description: Treatment revision proposal.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TreatmentProposalResponse'
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /api/v1/treatments/current:
+    get:
+      operationId: getCurrentTreatment
+      summary: Read the deterministic current Treatment review projection without mutating state.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Current treatment, or null when none exists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentTreatmentResponse'
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/treatments/current/review:
+    post:
+      operationId: reviewCurrentTreatment
+      summary: Persist the latest deterministic current Treatment review state.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Reviewed current treatment, or null when none exists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentTreatmentResponse'
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/treatments/revisions:
+    get:
+      operationId: listTreatmentRevisions
+      summary: List immutable Treatment revisions for the authenticated user.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+      responses:
+        '200':
+          description: Treatment revision timeline.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TreatmentRevisionListResponse'
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/treatments/revisions/{revisionId}:
+    get:
+      operationId: getTreatmentRevision
+      summary: Get one immutable Treatment revision.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/TreatmentRevisionId'
+      responses:
+        '200':
+          description: Treatment revision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TreatmentRevision'
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/treatments/revisions/{revisionId}/replay:
+    post:
+      operationId: replayTreatmentRevision
+      summary: Replay an immutable Treatment revision historically or counterfactually.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/TreatmentRevisionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TreatmentReplayRequest'
+      responses:
+        '200':
+          description: Deterministic Treatment replay report.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TreatmentReplayReport'
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ReplayUnavailable'}
+        '502': {$ref: '#/components/responses/BadGateway'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /api/v1/treatments/revisions/{revisionId}/regression-export:
+    get:
+      operationId: exportTreatmentRegressionCase
+      summary: Export one frozen Treatment developer regression case.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/TreatmentRevisionId'
+      responses:
+        '200':
+          description: Regression dataset envelope.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/JsonObject'}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ReplayUnavailable'}
+        '502': {$ref: '#/components/responses/BadGateway'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /api/v1/treatments/revisions/{revisionId}/accept:
+    post:
+      operationId: acceptTreatmentRevision
+      summary: Atomically accept one Treatment revision and project its TrainingPlan.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/TreatmentRevisionId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AcceptTreatmentRevisionRequest'}
+      responses:
+        '200':
+          description: Accepted Treatment and executable TrainingPlan projection.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AcceptTreatmentRevisionResponse'}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /api/v1/treatments/revisions/{revisionId}/reject:
+    post:
+      operationId: rejectTreatmentRevision
+      summary: Reject one proposed Treatment revision.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/TreatmentRevisionId'
+      responses:
+        '204': {description: Treatment revision rejected.}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/outcomes:
+    post:
+      operationId: recordOutcome
+      summary: Record an idempotent post-intervention outcome and project its BodyState effect.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RecordOutcomeRequest'}
+      responses:
+        '200':
+          description: Existing idempotent Outcome.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/OutcomeMutationResponse'}
+        '201':
+          description: Newly created Outcome.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/OutcomeMutationResponse'}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalError'}
+    get:
+      operationId: listOutcomes
+      summary: List post-intervention Outcomes.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema: {type: integer, minimum: 1, maximum: 500, default: 100}
+      responses:
+        '200':
+          description: Outcome timeline.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/OutcomeListResponse'}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '500': {$ref: '#/components/responses/InternalError'}
 components:
   parameters:
     ConversationId:
@@ -1751,6 +1977,13 @@ components:
         format: uuid
     DiagnosisAnalysisId:
       name: analysisId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    TreatmentRevisionId:
+      name: revisionId
       in: path
       required: true
       schema:
@@ -3032,12 +3265,158 @@ components:
           $ref: '#/components/schemas/StringArray'
         safety_notes:
           $ref: '#/components/schemas/StringArray'
+    TreatmentProposalRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        diagnosis_analysis_id:
+          type: string
+          format: uuid
+        user_constraints: {$ref: '#/components/schemas/JsonObject'}
+        change_reason: {type: string, maxLength: 1000}
+    TreatmentProposalResponse:
+      type: object
+      additionalProperties: false
+      required: [proposal]
+      properties:
+        proposal: {$ref: '#/components/schemas/TreatmentRevision'}
+    CurrentTreatmentResponse:
+      type: object
+      additionalProperties: false
+      required: [treatment]
+      properties:
+        treatment:
+          anyOf:
+          - {$ref: '#/components/schemas/Treatment'}
+          - {type: 'null'}
+    TreatmentRevisionListResponse:
+      type: object
+      additionalProperties: false
+      required: [revisions]
+      properties:
+        revisions:
+          type: array
+          items: {$ref: '#/components/schemas/TreatmentRevision'}
+    AcceptTreatmentRevisionRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        consultation_id:
+          anyOf:
+          - {type: string, format: uuid}
+          - {type: 'null'}
+    AcceptTreatmentRevisionResponse:
+      type: object
+      additionalProperties: false
+      required: [treatment, training_plan]
+      properties:
+        treatment: {$ref: '#/components/schemas/Treatment'}
+        training_plan: {$ref: '#/components/schemas/TrainingPlan'}
+    TreatmentReplayRequest:
+      type: object
+      additionalProperties: false
+      required: [mode]
+      properties:
+        mode: {type: string, enum: [historical, counterfactual]}
+        configuration_id: {type: string}
+    TreatmentReplayCheck:
+      type: object
+      additionalProperties: false
+      required: [name, match]
+      properties:
+        name: {type: string}
+        match: {type: boolean}
+        baseline: {type: string}
+        candidate: {type: string}
+    TreatmentReplayLayer:
+      type: object
+      additionalProperties: false
+      required: [match, checks]
+      properties:
+        match: {type: boolean}
+        checks:
+          type: array
+          items: {$ref: '#/components/schemas/TreatmentReplayCheck'}
+    TreatmentReplaySnapshot:
+      type: object
+      additionalProperties: false
+      required: [status, governance_verdict, intervention_count, intervention_kinds, evidence_ids, warning_sign_count, review_trigger_count, duration_weeks, summary, goal, intervention_titles]
+      properties:
+        status: {type: string}
+        governance_verdict: {type: string}
+        intervention_count: {type: integer, minimum: 0}
+        intervention_kinds: {$ref: '#/components/schemas/StringArray'}
+        evidence_ids: {$ref: '#/components/schemas/StringArray'}
+        warning_sign_count: {type: integer, minimum: 0}
+        review_trigger_count: {type: integer, minimum: 0}
+        duration_weeks: {type: integer, minimum: 0}
+        summary: {type: string}
+        goal: {type: string}
+        intervention_titles: {$ref: '#/components/schemas/StringArray'}
+    TreatmentReplayComparison:
+      type: object
+      additionalProperties: false
+      required: [hard, semantic, presentation]
+      properties:
+        hard: {$ref: '#/components/schemas/TreatmentReplayLayer'}
+        semantic: {$ref: '#/components/schemas/TreatmentReplayLayer'}
+        presentation: {$ref: '#/components/schemas/TreatmentReplayLayer'}
+    TreatmentReplayReport:
+      type: object
+      additionalProperties: false
+      required: [mode, source_revision_id, source_configuration_id, target_configuration_id, input_fingerprint, artifact_integrity, source_generation_decision, generation_decision, baseline, replay, comparison, output]
+      properties:
+        mode: {type: string, enum: [historical, counterfactual]}
+        source_revision_id: {type: string, format: uuid}
+        source_configuration_id: {type: string}
+        target_configuration_id: {type: string}
+        input_fingerprint: {type: string}
+        artifact_integrity: {$ref: '#/components/schemas/TreatmentReplayLayer'}
+        source_generation_decision: {$ref: '#/components/schemas/JsonObject'}
+        generation_decision: {$ref: '#/components/schemas/JsonObject'}
+        baseline: {$ref: '#/components/schemas/TreatmentReplaySnapshot'}
+        replay: {$ref: '#/components/schemas/TreatmentReplaySnapshot'}
+        comparison: {$ref: '#/components/schemas/TreatmentReplayComparison'}
+        output: {$ref: '#/components/schemas/JsonObject'}
+    RecordOutcomeRequest:
+      type: object
+      additionalProperties: false
+      required: [source_type, source_key, kind]
+      properties:
+        treatment_id: {type: string, format: uuid}
+        treatment_revision_id: {type: string, format: uuid}
+        intervention_id: {type: string, format: uuid}
+        source_type: {type: string, minLength: 1}
+        source_key: {type: string, minLength: 1}
+        kind: {type: string, minLength: 1}
+        concern_key: {type: string}
+        body_region: {type: string}
+        value: {$ref: '#/components/schemas/JsonObject'}
+        notes: {type: string}
+        association_statement: {type: string}
+        causality_level: {type: string, enum: [association_only, user_attributed, clinician_attributed]}
+        occurred_at: {type: string, format: date-time}
+        provenance: {$ref: '#/components/schemas/JsonObject'}
+    OutcomeMutationResponse:
+      type: object
+      additionalProperties: false
+      required: [outcome, created]
+      properties:
+        outcome: {$ref: '#/components/schemas/Outcome'}
+        created: {type: boolean}
+    OutcomeListResponse:
+      type: object
+      additionalProperties: false
+      required: [outcomes]
+      properties:
+        outcomes:
+          type: array
+          items: {$ref: '#/components/schemas/Outcome'}
     Intervention:
       type: object
       additionalProperties: false
       required:
       - id
-      - user_id
       - treatment_id
       - treatment_revision_id
       - kind
@@ -3050,7 +3429,6 @@ components:
       - updated_at
       properties:
         id: *id003
-        user_id: *id003
         treatment_id: *id003
         treatment_revision_id: *id003
         kind: *id004
@@ -3162,7 +3540,6 @@ components:
       additionalProperties: false
       required:
       - id
-      - user_id
       - current_revision
       - status
       - status_reasons
@@ -3170,7 +3547,6 @@ components:
       - updated_at
       properties:
         id: *id003
-        user_id: *id003
         current_revision: *id005
         status:
           type: string
@@ -3198,7 +3574,6 @@ components:
       additionalProperties: false
       required:
       - id
-      - user_id
       - status
       - goal
       - duration_weeks
@@ -3207,7 +3582,6 @@ components:
       - created_at
       properties:
         id: *id003
-        user_id: *id003
         consultation_id:
           type: string
           format: uuid
@@ -3231,7 +3605,6 @@ components:
       additionalProperties: false
       required:
       - id
-      - user_id
       - source_type
       - source_key
       - kind
@@ -3246,7 +3619,6 @@ components:
       - created_at
       properties:
         id: *id003
-        user_id: *id003
         treatment_id:
           type: string
           format: uuid

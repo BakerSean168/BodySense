@@ -5,11 +5,11 @@
   "totals": {
     "baseline": 96,
     "browserFacingEligible": 95,
-    "openapi": 62,
-    "missing": 33,
+    "openapi": 73,
+    "missing": 22,
     "retired": 0,
     "excludedOperational": 1,
-    "coveragePercent": 65.26
+    "coveragePercent": 76.84
   },
   "routes": [
     {
@@ -349,67 +349,89 @@
       "method": "POST",
       "path": "/api/v1/treatments/proposals",
       "source": "apps/api/cmd/server/main.go:447",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "generateTreatmentProposal",
+      "openapiPath": "/api/v1/treatments/proposals"
     },
     {
       "method": "GET",
       "path": "/api/v1/treatments/current",
       "source": "apps/api/cmd/server/main.go:448",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getCurrentTreatment",
+      "openapiPath": "/api/v1/treatments/current"
     },
     {
       "method": "POST",
       "path": "/api/v1/treatments/current/review",
       "source": "apps/api/cmd/server/main.go:449",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "reviewCurrentTreatment",
+      "openapiPath": "/api/v1/treatments/current/review"
     },
     {
       "method": "GET",
       "path": "/api/v1/treatments/revisions",
       "source": "apps/api/cmd/server/main.go:450",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "listTreatmentRevisions",
+      "openapiPath": "/api/v1/treatments/revisions"
     },
     {
       "method": "GET",
       "path": "/api/v1/treatments/revisions/:revisionId",
       "source": "apps/api/cmd/server/main.go:451",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getTreatmentRevision",
+      "openapiPath": "/api/v1/treatments/revisions/{revisionId}"
     },
     {
       "method": "POST",
       "path": "/api/v1/treatments/revisions/:revisionId/replay",
       "source": "apps/api/cmd/server/main.go:452",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "replayTreatmentRevision",
+      "openapiPath": "/api/v1/treatments/revisions/{revisionId}/replay"
     },
     {
       "method": "GET",
       "path": "/api/v1/treatments/revisions/:revisionId/regression-export",
       "source": "apps/api/cmd/server/main.go:453",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "exportTreatmentRegressionCase",
+      "openapiPath": "/api/v1/treatments/revisions/{revisionId}/regression-export"
     },
     {
       "method": "POST",
       "path": "/api/v1/treatments/revisions/:revisionId/accept",
       "source": "apps/api/cmd/server/main.go:454",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "acceptTreatmentRevision",
+      "openapiPath": "/api/v1/treatments/revisions/{revisionId}/accept"
     },
     {
       "method": "POST",
       "path": "/api/v1/treatments/revisions/:revisionId/reject",
       "source": "apps/api/cmd/server/main.go:455",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "rejectTreatmentRevision",
+      "openapiPath": "/api/v1/treatments/revisions/{revisionId}/reject"
     },
     {
       "method": "POST",
       "path": "/api/v1/outcomes",
       "source": "apps/api/cmd/server/main.go:456",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "recordOutcome",
+      "openapiPath": "/api/v1/outcomes"
     },
     {
       "method": "GET",
       "path": "/api/v1/outcomes",
       "source": "apps/api/cmd/server/main.go:457",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "listOutcomes",
+      "openapiPath": "/api/v1/outcomes"
     },
     {
       "method": "POST",

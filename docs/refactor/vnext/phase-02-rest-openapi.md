@@ -778,3 +778,61 @@ nested freshness/assessment user_id leak    BLOCKED BY PROJECTION TEST
 Diagnosis application characterizations     PASS
 git diff --check                            PASS
 ```
+
+## Checkpoint 12 — Treatment / TrainingPlan acceptance / Outcome REST boundary
+
+Status: COMPLETE ON PHASE BRANCH
+
+The complete revisioned Treatment + Outcome REST family is now OpenAPI-authoritative:
+
+```text
+POST /api/v1/treatments/proposals
+GET  /api/v1/treatments/current
+POST /api/v1/treatments/current/review
+GET  /api/v1/treatments/revisions
+GET  /api/v1/treatments/revisions/{revisionId}
+POST /api/v1/treatments/revisions/{revisionId}/replay
+GET  /api/v1/treatments/revisions/{revisionId}/regression-export
+POST /api/v1/treatments/revisions/{revisionId}/accept
+POST /api/v1/treatments/revisions/{revisionId}/reject
+POST /api/v1/outcomes
+GET  /api/v1/outcomes
+```
+
+The legacy `TreatmentHandler` is deleted. Read-only current-treatment preview remains separate from the mutating review command. Acceptance remains atomic: the generated adapter delegates exclusively to `TrainingService.AcceptTreatmentAndEnsurePlan`, preserving the treatment-acceptance + TrainingPlan projection transaction boundary.
+
+### Public projection hardening
+
+The old persistence-backed JSON exposed `user_id` on Treatment, Intervention, TrainingPlan and Outcome. Those fields have been removed from the public OpenAPI components. One transport presenter sanitizes those exact persistence identities and is reused by the standalone endpoints and Health Workspace, including nested revision interventions.
+
+The Web workspace feature no longer models these persistence identities and no longer contains handwritten Treatment/Outcome URLs. Proposal, accept/reject, current review and Outcome recording use generated Orval Fetch + Zod clients behind `openApiAuthFetch`.
+
+### Replay / feedback semantics
+
+Treatment replay has a structured generated report and a regression test proving the service report shape satisfies the public schema. Regression export remains an intentionally opaque developer dataset envelope. Outcome idempotency is preserved: an existing result returns 200, a new Outcome returns 201.
+
+### Coverage after this batch
+
+```text
+Phase 00 routes               96
+operational exclusions         1
+browser-facing eligible       95
+OpenAPI-authoritative         73
+missing                       22
+coverage                   76.84%
+```
+
+### Verification
+
+```text
+pnpm contracts:lint                         PASS (same 2 known share-path ambiguity warnings)
+pnpm contracts:check-generated              PASS
+Go test ./...                               PASS
+Web workspace OpenAPI tests                 10/10 PASS
+Web typecheck                               PASS
+handwritten treatment/outcome URLs          NONE
+Treatment/Intervention/Plan/Outcome user_id BLOCKED BY PROJECTION TEST
+atomic acceptance boundary                  PASS
+Treatment replay strict-schema regression   PASS
+git diff --check                            PASS
+```

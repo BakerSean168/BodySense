@@ -10,7 +10,6 @@ import { JsonObject } from './jsonObject.zod';
 
 export const TrainingPlan = /*#__PURE__*/ zod.strictObject({
   "id": /*#__PURE__*/ zod.uuid(),
-  "user_id": /*#__PURE__*/ zod.uuid(),
   "consultation_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid()),
   "treatment_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid()),
   "treatment_revision_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid()),

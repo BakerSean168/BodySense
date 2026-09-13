@@ -1,10 +1,13 @@
-import { authFetch } from "@/features/auth/services/authService";
-import { expectEmpty, expectJson } from "@/lib/api-client";
 import {
+  acceptTreatmentRevision,
   addBodyStateFact,
   correctBodyStateFact,
+  generateTreatmentProposal,
   getHealthWorkspace,
+  recordOutcome,
+  rejectTreatmentRevision,
   resolveBodyStateSafety,
+  reviewCurrentTreatment,
   reviewBodyStateFact,
   reviewBodyStateObservation,
   updateBodyStateFactTemporal,
@@ -19,17 +22,8 @@ import type {
   WorkspaceDiagnosis,
   Treatment,
   TreatmentRevision,
+  TrainingExecutionPlan,
 } from "../types/workspace";
-
-async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  return expectJson<T>(await authFetch(url, init));
-}
-
-async function requestEmpty(url: string, init?: RequestInit): Promise<void> {
-  return expectEmpty(await authFetch(url, init));
-}
-
-const jsonHeaders = { "Content-Type": "application/json" };
 
 export interface AddFactInput {
   concern_key?: string;
@@ -231,46 +225,59 @@ export const workspaceApi = {
       );
     }),
 
-  generateTreatmentProposal: (
+  generateTreatmentProposal: async (
     diagnosisAnalysisId: string,
     userConstraints: Record<string, unknown> = {},
-  ) =>
-    request<{ proposal: TreatmentRevision }>("/api/v1/treatments/proposals", {
-      method: "POST",
-      headers: jsonHeaders,
-      body: JSON.stringify({
-        diagnosis_analysis_id: diagnosisAnalysisId,
-        user_constraints: userConstraints,
-      }),
+  ): Promise<{ proposal: TreatmentRevision }> =>
+    withOpenApiError(async () => {
+      const response = await generateTreatmentProposal(
+        {
+          diagnosis_analysis_id: diagnosisAnalysisId,
+          user_constraints: userConstraints,
+        },
+        undefined,
+        openApiAuthFetch,
+      );
+      return { proposal: response.proposal };
     }),
 
-  acceptTreatmentRevision: (
+  acceptTreatmentRevision: async (
     revisionId: string,
     consultationId?: string | null,
-  ) =>
-    request<{ treatment: Treatment; training_plan?: { id: string } | null }>(
-      `/api/v1/treatments/revisions/${revisionId}/accept`,
-      {
-        method: "POST",
-        headers: jsonHeaders,
-        body: JSON.stringify({ consultation_id: consultationId || null }),
-      },
-    ),
-
-  rejectTreatmentRevision: (revisionId: string) =>
-    requestEmpty(`/api/v1/treatments/revisions/${revisionId}/reject`, {
-      method: "POST",
+  ): Promise<{
+    treatment: Treatment;
+    training_plan: TrainingExecutionPlan;
+  }> =>
+    withOpenApiError(async () => {
+      const response = await acceptTreatmentRevision(
+        revisionId,
+        { consultation_id: consultationId ?? null },
+        undefined,
+        openApiAuthFetch,
+      );
+      return {
+        treatment: response.treatment,
+        training_plan: response.training_plan,
+      };
     }),
 
-  reviewCurrentTreatment: () =>
-    request<{ treatment: Treatment | null }>(
-      "/api/v1/treatments/current/review",
-      {
-        method: "POST",
-      },
-    ),
+  rejectTreatmentRevision: async (revisionId: string): Promise<void> =>
+    withOpenApiError(async () => {
+      await rejectTreatmentRevision(revisionId, undefined, openApiAuthFetch);
+    }),
 
-  recordOutcome: (input: {
+  reviewCurrentTreatment: async (): Promise<{
+    treatment: Treatment | null;
+  }> =>
+    withOpenApiError(async () => {
+      const response = await reviewCurrentTreatment(
+        undefined,
+        openApiAuthFetch,
+      );
+      return { treatment: response.treatment };
+    }),
+
+  recordOutcome: async (input: {
     treatment_id?: string;
     treatment_revision_id?: string;
     intervention_id?: string;
@@ -281,11 +288,10 @@ export const workspaceApi = {
     body_region?: string;
     value: Record<string, unknown>;
     notes?: string;
-  }) =>
-    request<{ outcome: Outcome; created: boolean }>("/api/v1/outcomes", {
-      method: "POST",
-      headers: jsonHeaders,
-      body: JSON.stringify(input),
+  }): Promise<{ outcome: Outcome; created: boolean }> =>
+    withOpenApiError(async () => {
+      const response = await recordOutcome(input, undefined, openApiAuthFetch);
+      return { outcome: response.outcome, created: response.created };
     }),
 
   updateLifestyleCurrent: async (

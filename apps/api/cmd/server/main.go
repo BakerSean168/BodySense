@@ -257,7 +257,6 @@ func main() {
 	treatmentRolloutRepo := repository.NewTreatmentRolloutRepository(database.DB)
 	treatmentRolloutService := service.NewTreatmentRolloutService(treatmentRolloutRepo, treatmentReplayService)
 	treatmentService.AttachRolloutObserver(treatmentRolloutService)
-	treatmentHandler := handler.NewTreatmentHandler(treatmentService, trainingService, treatmentReplayService)
 	reassessmentHandler := handler.NewReassessmentHandler(trainingService)
 	knowledgeIngestionService := service.NewKnowledgeIngestionService(
 		knowledgeSourceRegistry,
@@ -378,19 +377,6 @@ func main() {
 		extractions.POST("/:runId/reviews", healthDocumentReviewHandler.AppendReview)
 		extractions.GET("/:runId/source", healthDocumentReviewHandler.SourceContext)
 
-		// Revisioned Treatment / Intervention / Outcome loop.
-		protected.POST("/treatments/proposals", treatmentHandler.GenerateProposal)
-		protected.GET("/treatments/current", treatmentHandler.GetCurrent)
-		protected.POST("/treatments/current/review", treatmentHandler.ReviewCurrent)
-		protected.GET("/treatments/revisions", treatmentHandler.ListRevisions)
-		protected.GET("/treatments/revisions/:revisionId", treatmentHandler.GetRevision)
-		protected.POST("/treatments/revisions/:revisionId/replay", treatmentHandler.ReplayRevision)
-		protected.GET("/treatments/revisions/:revisionId/regression-export", treatmentHandler.ExportRegressionCase)
-		protected.POST("/treatments/revisions/:revisionId/accept", treatmentHandler.AcceptRevision)
-		protected.POST("/treatments/revisions/:revisionId/reject", treatmentHandler.RejectRevision)
-		protected.POST("/outcomes", treatmentHandler.RecordOutcome)
-		protected.GET("/outcomes", treatmentHandler.ListOutcomes)
-
 		// Longitudinal BodyState (ADR 0004)
 
 		// User-facing projections backed exclusively by BodyState.
@@ -418,7 +404,7 @@ func main() {
 	}
 	httpapi.RegisterRoutes(
 		r,
-		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure).WithAssessment(assessmentService, assessmentReplayService).WithAuth(authService, authSecurity).WithConversations(conversationService, shareService, runtimeEventService).WithConsultation(consultationRuntime, consultationService, interactionService, consultationReplayService, threadProjectionService, bodyStateService).WithDiagnosis(diagnosisApplicationService, diagnosisAnalysisService, diagnosisFreshnessService, diagnosisReplayService)),
+		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure).WithAssessment(assessmentService, assessmentReplayService).WithAuth(authService, authSecurity).WithConversations(conversationService, shareService, runtimeEventService).WithConsultation(consultationRuntime, consultationService, interactionService, consultationReplayService, threadProjectionService, bodyStateService).WithDiagnosis(diagnosisApplicationService, diagnosisAnalysisService, diagnosisFreshnessService, diagnosisReplayService).WithTreatment(treatmentService, trainingService, treatmentReplayService)),
 		httpapi.RouteSecurity{
 			Auth:      authMiddleware,
 			Operator:  middleware.RequireKnowledgeOperator(userRepo),
