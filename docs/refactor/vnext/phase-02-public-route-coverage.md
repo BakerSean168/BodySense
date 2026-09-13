@@ -4,23 +4,14 @@
 
 - Phase 00 baseline routes: **96**
 - Browser-facing eligible routes: **95**
-- OpenAPI-authoritative routes: **80**
-- Missing migration routes: **15**
+- OpenAPI-authoritative routes: **89**
+- Missing migration routes: **6**
 - Retired routes: **0**
 - Operational exclusions: **1**
-- Coverage: **84.21%**
+- Coverage: **93.68%**
 
 ## Missing routes
 
-- `POST /api/v1/uploads`
-- `GET /api/v1/uploads`
-- `GET /api/v1/uploads/posture-analysis`
-- `GET /api/v1/uploads/:id`
-- `DELETE /api/v1/uploads/:id`
-- `GET /api/v1/uploads/:id/health-document-review`
-- `GET /api/v1/uploads/:id/extractions/:runId/reviews`
-- `POST /api/v1/uploads/:id/extractions/:runId/reviews`
-- `GET /api/v1/uploads/:id/extractions/:runId/source`
 - `POST /api/v1/knowledge/sources`
 - `GET /api/v1/knowledge/sources`
 - `POST /api/v1/knowledge/ingestions/video`

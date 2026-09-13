@@ -5,11 +5,11 @@
   "totals": {
     "baseline": 96,
     "browserFacingEligible": 95,
-    "openapi": 80,
-    "missing": 15,
+    "openapi": 89,
+    "missing": 6,
     "retired": 0,
     "excludedOperational": 1,
-    "coveragePercent": 84.21
+    "coveragePercent": 93.68
   },
   "routes": [
     {
@@ -111,55 +111,73 @@
       "method": "POST",
       "path": "/api/v1/uploads",
       "source": "apps/api/cmd/server/main.go:396",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "createUpload",
+      "openapiPath": "/api/v1/uploads"
     },
     {
       "method": "GET",
       "path": "/api/v1/uploads",
       "source": "apps/api/cmd/server/main.go:397",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "listUploads",
+      "openapiPath": "/api/v1/uploads"
     },
     {
       "method": "GET",
       "path": "/api/v1/uploads/posture-analysis",
       "source": "apps/api/cmd/server/main.go:400",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getPostureAnalysis",
+      "openapiPath": "/api/v1/uploads/posture-analysis"
     },
     {
       "method": "GET",
       "path": "/api/v1/uploads/:id",
       "source": "apps/api/cmd/server/main.go:401",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getUpload",
+      "openapiPath": "/api/v1/uploads/{id}"
     },
     {
       "method": "DELETE",
       "path": "/api/v1/uploads/:id",
       "source": "apps/api/cmd/server/main.go:402",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "deleteUpload",
+      "openapiPath": "/api/v1/uploads/{id}"
     },
     {
       "method": "GET",
       "path": "/api/v1/uploads/:id/health-document-review",
       "source": "apps/api/cmd/server/main.go:406",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getHealthDocumentReviewContext",
+      "openapiPath": "/api/v1/uploads/{id}/health-document-review"
     },
     {
       "method": "GET",
       "path": "/api/v1/uploads/:id/extractions/:runId/reviews",
       "source": "apps/api/cmd/server/main.go:409",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "listHealthDocumentReviewCandidates",
+      "openapiPath": "/api/v1/uploads/{id}/extractions/{runId}/reviews"
     },
     {
       "method": "POST",
       "path": "/api/v1/uploads/:id/extractions/:runId/reviews",
       "source": "apps/api/cmd/server/main.go:410",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "appendHealthDocumentReview",
+      "openapiPath": "/api/v1/uploads/{id}/extractions/{runId}/reviews"
     },
     {
       "method": "GET",
       "path": "/api/v1/uploads/:id/extractions/:runId/source",
       "source": "apps/api/cmd/server/main.go:411",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getHealthDocumentSource",
+      "openapiPath": "/api/v1/uploads/{id}/extractions/{runId}/source"
     },
     {
       "method": "GET",

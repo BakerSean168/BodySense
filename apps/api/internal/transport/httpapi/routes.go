@@ -152,6 +152,17 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.POST("/outcomes", wrapper.RecordOutcome)
 	protected.GET("/outcomes", wrapper.ListOutcomes)
 
+	// Private uploads, posture analysis and health-document review surfaces.
+	protected.POST("/uploads", wrapper.CreateUpload)
+	protected.GET("/uploads", wrapper.ListUploads)
+	protected.GET("/uploads/posture-analysis", wrapper.GetPostureAnalysis)
+	protected.GET("/uploads/:id", wrapper.GetUpload)
+	protected.DELETE("/uploads/:id", wrapper.DeleteUpload)
+	protected.GET("/uploads/:id/health-document-review", wrapper.GetHealthDocumentReviewContext)
+	protected.GET("/uploads/:id/extractions/:runId/reviews", wrapper.ListHealthDocumentReviewCandidates)
+	protected.POST("/uploads/:id/extractions/:runId/reviews", wrapper.AppendHealthDocumentReview)
+	protected.GET("/uploads/:id/extractions/:runId/source", wrapper.GetHealthDocumentSource)
+
 	// Training execution, adherence and reassessment surfaces.
 	protected.GET("/training", wrapper.ListTrainingPlans)
 	protected.GET("/training/:id", wrapper.GetTrainingPlan)

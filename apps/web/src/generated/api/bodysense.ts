@@ -34,6 +34,9 @@ import {
   DiagnosisCandidateAssessmentResponse,
   DiagnosisReplayReport,
   DiagnosisWorkspaceProjection,
+  DocumentIndicatorReviewRecord,
+  HealthDocumentReviewContext,
+  HealthDocumentReviewListResponse,
   HealthWorkspace,
   InjuryHistorySnapshot,
   InteractionMetrics,
@@ -44,6 +47,7 @@ import {
   OnboardingContextResult,
   OutcomeListResponse,
   OutcomeMutationResponse,
+  PostureAnalysisSummary,
   PrivacyErasureAccepted,
   PrivacyErasurePlan,
   RuntimeEventListResponse,
@@ -60,11 +64,15 @@ import {
   TreatmentReplayReport,
   TreatmentRevision,
   TreatmentRevisionListResponse,
-  UserProfileResponse
+  UploadDeleteResponse,
+  UploadListResponse,
+  UserProfileResponse,
+  UserUpload
 } from './model';
 import type {
   AcceptTreatmentRevisionRequest,
   AcceptTreatmentRevisionResponseOutput,
+  AppendHealthDocumentReviewRequest,
   AssessmentListResponseOutput,
   AssessmentRegressionExportOutput,
   AssessmentReplayReportOutput,
@@ -98,6 +106,7 @@ import type {
   ConversationTitleRequest,
   ConversationUpdateRequest,
   CorrectBodyStateFactRequest,
+  CreateUploadRequest,
   CurrentTreatmentResponseOutput,
   CurrentUserOutput,
   DiagnosisAnalysisListResponseOutput,
@@ -106,6 +115,9 @@ import type {
   DiagnosisReplayReportOutput,
   DiagnosisReplayRequest,
   DiagnosisWorkspaceProjectionOutput,
+  DocumentIndicatorReviewRecordOutput,
+  HealthDocumentReviewContextOutput,
+  HealthDocumentReviewListResponseOutput,
   HealthWorkspaceOutput,
   InjuryHistorySnapshotOutput,
   InteractionMetricsOutput,
@@ -123,6 +135,7 @@ import type {
   OnboardingContextResultOutput,
   OutcomeListResponseOutput,
   OutcomeMutationResponseOutput,
+  PostureAnalysisSummaryOutput,
   PrivacyErasureAcceptedOutput,
   PrivacyErasurePlanOutput,
   PrivacyErasureRequest,
@@ -157,8 +170,11 @@ import type {
   UpdateInjuryHistoryRequest,
   UpdateLifestyleRequest,
   UpdateUserProfileRequest,
+  UploadDeleteResponseOutput,
+  UploadListResponseOutput,
   UpsertBodyStateFactRequest,
-  UserProfileResponseOutput
+  UserProfileResponseOutput,
+  UserUploadOutput
 } from './model';
 
 export const getAddBodyStateFactUrl = () => {
@@ -3844,5 +3860,379 @@ const res = await (fetchFn ?? fetch)(getReassessTrainingPlanUrl(id),
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? TrainingFeedbackResult.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getCreateUploadUrl = () => {
+
+
+
+
+  return `/api/v1/uploads`
+}
+
+/**
+ * @summary Upload one private health document or posture image for authenticated processing.
+ */
+export const createUpload = async (createUploadRequest: CreateUploadRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<UserUploadOutput> => {
+    const formData = new FormData();
+formData.append(`file`, createUploadRequest.file);
+formData.append(`file_type`, createUploadRequest.file_type);
+
+  const res = await (fetchFn ?? fetch)(getCreateUploadUrl(),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: UserUpload, status?: number} = new globalThis.Error();
+    const data : UserUpload = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? UserUpload.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListUploadsUrl = () => {
+
+
+
+
+  return `/api/v1/uploads`
+}
+
+/**
+ * @summary List private upload manifests owned by the authenticated user.
+ */
+export const listUploads = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<UploadListResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListUploadsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: UploadListResponse, status?: number} = new globalThis.Error();
+    const data : UploadListResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? UploadListResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetPostureAnalysisUrl = () => {
+
+
+
+
+  return `/api/v1/uploads/posture-analysis`
+}
+
+/**
+ * @summary Read the latest completed posture-analysis projection for the authenticated user.
+ */
+export const getPostureAnalysis = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<PostureAnalysisSummaryOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetPostureAnalysisUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: PostureAnalysisSummary, status?: number} = new globalThis.Error();
+    const data : PostureAnalysisSummary = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? PostureAnalysisSummary.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetUploadUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/uploads/${id}`
+}
+
+/**
+ * @summary Get one private upload manifest owned by the authenticated user.
+ */
+export const getUpload = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<UserUploadOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetUploadUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: UserUpload, status?: number} = new globalThis.Error();
+    const data : UserUpload = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? UserUpload.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getDeleteUploadUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/uploads/${id}`
+}
+
+/**
+ * @summary Delete one owned private upload object and its manifest.
+ */
+export const deleteUpload = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<UploadDeleteResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getDeleteUploadUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: UploadDeleteResponse, status?: number} = new globalThis.Error();
+    const data : UploadDeleteResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? UploadDeleteResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetHealthDocumentReviewContextUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/uploads/${id}/health-document-review`
+}
+
+/**
+ * @summary Resolve the current server-owned health-document extraction run and its review projection.
+ */
+export const getHealthDocumentReviewContext = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<HealthDocumentReviewContextOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetHealthDocumentReviewContextUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: HealthDocumentReviewContext, status?: number} = new globalThis.Error();
+    const data : HealthDocumentReviewContext = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? HealthDocumentReviewContext.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListHealthDocumentReviewCandidatesUrl = (id: string,
+    runId: string,) => {
+
+
+
+
+  return `/api/v1/uploads/${id}/extractions/${runId}/reviews`
+}
+
+/**
+ * @summary List append-only review state for one exact owned extraction run.
+ */
+export const listHealthDocumentReviewCandidates = async (id: string,
+    runId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<HealthDocumentReviewListResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListHealthDocumentReviewCandidatesUrl(id,runId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: HealthDocumentReviewListResponse, status?: number} = new globalThis.Error();
+    const data : HealthDocumentReviewListResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? HealthDocumentReviewListResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getAppendHealthDocumentReviewUrl = (id: string,
+    runId: string,) => {
+
+
+
+
+  return `/api/v1/uploads/${id}/extractions/${runId}/reviews`
+}
+
+/**
+ * @summary Append one idempotent confirm, correct or reject action to an exact owned extraction candidate.
+ */
+export const appendHealthDocumentReview = async (id: string,
+    runId: string,
+    appendHealthDocumentReviewRequest: AppendHealthDocumentReviewRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<DocumentIndicatorReviewRecordOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getAppendHealthDocumentReviewUrl(id,runId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(appendHealthDocumentReviewRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: DocumentIndicatorReviewRecord, status?: number} = new globalThis.Error();
+    const data : DocumentIndicatorReviewRecord = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? DocumentIndicatorReviewRecord.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetHealthDocumentSourceUrl = (id: string,
+    runId: string,) => {
+
+
+
+
+  return `/api/v1/uploads/${id}/extractions/${runId}/source`
+}
+
+/**
+ * @summary Stream the authenticated private source document for one exact owned extraction run.
+ */
+export const getHealthDocumentSource = async (id: string,
+    runId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<Blob> => {
+
+  const res = await (fetchFn ?? fetch)(getGetHealthDocumentSourceUrl(id,runId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  if (!res.ok) {
+    const errorBody = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const err: globalThis.Error & {info?: Blob, status?: number} = new globalThis.Error();
+    const data : Blob = errorBody ? JSON.parse(errorBody) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const body = [204, 205, 304].includes(res.status) ? null : await res.blob();
+  const data: Blob = body as Blob
   return data
 }

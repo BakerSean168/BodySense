@@ -884,3 +884,65 @@ TrainingLog user_id leak                    BLOCKED BY PROJECTION TEST
 nested feedback Outcome/Proposal projection PASS
 git diff --check                            PASS
 ```
+
+## Checkpoint 14 — Upload / health-document review REST boundary
+
+Status: COMPLETE ON PHASE BRANCH
+
+The complete authenticated Upload and health-document human-review REST family is now OpenAPI-authoritative:
+
+```text
+POST   /api/v1/uploads
+GET    /api/v1/uploads
+GET    /api/v1/uploads/posture-analysis
+GET    /api/v1/uploads/{id}
+DELETE /api/v1/uploads/{id}
+GET    /api/v1/uploads/{id}/health-document-review
+GET    /api/v1/uploads/{id}/extractions/{runId}/reviews
+POST   /api/v1/uploads/{id}/extractions/{runId}/reviews
+GET    /api/v1/uploads/{id}/extractions/{runId}/source
+```
+
+The legacy `UploadHandler` and `HealthDocumentReviewHandler` are deleted. Multipart upload remains owned by `UploadService`: the generated strict boundary parses the OpenAPI multipart stream into a standard `multipart.FileHeader` and delegates validation, private-object storage, durable manifest creation and derived OCR/posture jobs to the existing application service. The private source endpoint remains streaming and preserves the stored PDF/JPEG/PNG/WebP media type with `X-Content-Type-Options: nosniff`.
+
+### Public projection hardening
+
+Pre-user vNext removes three compatibility/persistence identities that the browser never needed:
+
+- `UserUpload.user_id`
+- deprecated `file_path` (which was only a projection of private `storage_key`)
+- `DocumentIndicatorReviewRecord.reviewer_user_id`
+
+`storage_backend`, `storage_key` and `agent_configuration_id` remain server-private as well. Generated Zod schemas are strict: a nominal 200 response that reintroduces `user_id` or `file_path` fails closed in the Web boundary.
+
+`GET /uploads` now returns the explicit `{ uploads: [...] }` response component rather than a bare array so Orval applies generated Zod runtime validation to each upload manifest. This is an intentional pre-user contract reset, not a compatibility alias.
+
+### Web ownership
+
+`uploadStore` now uses generated list/create/delete clients through the central `openApiAuthFetch` authority. Multipart request input is parsed with the generated `CreateUploadRequest` Zod schema before transmission. Health-document review context/action/source operations also use generated clients; the append-review request is validated by the generated request schema, 404 context remains mapped to `null`, and Blob source loading keeps the existing UI behavior. Feature-level upload/review types remain handwritten application models and generated transport types do not leak into components.
+
+### Coverage after this batch
+
+```text
+Phase 00 routes               96
+operational exclusions         1
+browser-facing eligible       95
+OpenAPI-authoritative         89
+missing                        6
+coverage                   93.68%
+```
+
+### Verification
+
+```text
+pnpm contracts:verify                       PASS (same 2 known share-path ambiguity warnings)
+Go test ./...                               PASS
+Web UploadStore + Review UI                 9/9 PASS
+Web typecheck                               PASS
+handwritten Upload production URLs          NONE
+legacy Upload/Review handlers               REMOVED
+multipart -> FileHeader characterization    PASS
+private source MIME + nosniff                PASS
+upload/review persistence identity leaks     BLOCKED BY PROJECTION/ZOD TESTS
+git diff --check                            PASS
+```

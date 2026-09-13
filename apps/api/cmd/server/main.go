@@ -193,8 +193,6 @@ func main() {
 		WithDocumentExtractionRuns(documentExtractionRunRepo)
 	uploadService.StartUploadWorker(context.Background(), 10*time.Second, 10*time.Minute)
 	healthDocumentReviewService := service.NewHealthDocumentReviewService(documentExtractionRunRepo, documentIndicatorReviewRepo)
-	uploadHandler := handler.NewUploadHandler(uploadService)
-	healthDocumentReviewHandler := handler.NewHealthDocumentReviewHandler(healthDocumentReviewService, uploadService)
 	consultationRuntime := consultationruntime.NewRuntime(
 		conversationService,
 		consultationService,
@@ -357,24 +355,6 @@ func main() {
 	protected.Use(authMiddleware)
 	{
 
-		// Upload routes
-		protected.POST("/uploads", uploadHandler.Upload)
-		protected.GET("/uploads", uploadHandler.GetUploads)
-		// Static path must be registered before /uploads/:id so Gin does not
-		// treat "posture-analysis" as an upload id.
-		protected.GET("/uploads/posture-analysis", uploadHandler.GetPostureAnalysis)
-		protected.GET("/uploads/:id", uploadHandler.GetUpload)
-		protected.DELETE("/uploads/:id", uploadHandler.DeleteUpload)
-
-		// Health-document review context resolves the current server-owned run;
-		// action/source APIs stay bound to that exact run id.
-		protected.GET("/uploads/:id/health-document-review", healthDocumentReviewHandler.CurrentContext)
-		// Append-only indicator review APIs bound to one extraction run.
-		extractions := protected.Group("/uploads/:id/extractions")
-		extractions.GET("/:runId/reviews", healthDocumentReviewHandler.ListCandidates)
-		extractions.POST("/:runId/reviews", healthDocumentReviewHandler.AppendReview)
-		extractions.GET("/:runId/source", healthDocumentReviewHandler.SourceContext)
-
 		// Longitudinal BodyState (ADR 0004)
 
 		// User-facing projections backed exclusively by BodyState.
@@ -394,7 +374,7 @@ func main() {
 	}
 	httpapi.RegisterRoutes(
 		r,
-		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure).WithAssessment(assessmentService, assessmentReplayService).WithAuth(authService, authSecurity).WithConversations(conversationService, shareService, runtimeEventService).WithConsultation(consultationRuntime, consultationService, interactionService, consultationReplayService, threadProjectionService, bodyStateService).WithDiagnosis(diagnosisApplicationService, diagnosisAnalysisService, diagnosisFreshnessService, diagnosisReplayService).WithTreatment(treatmentService, trainingService, treatmentReplayService).WithTraining(trainingService)),
+		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure).WithAssessment(assessmentService, assessmentReplayService).WithAuth(authService, authSecurity).WithConversations(conversationService, shareService, runtimeEventService).WithConsultation(consultationRuntime, consultationService, interactionService, consultationReplayService, threadProjectionService, bodyStateService).WithDiagnosis(diagnosisApplicationService, diagnosisAnalysisService, diagnosisFreshnessService, diagnosisReplayService).WithTreatment(treatmentService, trainingService, treatmentReplayService).WithTraining(trainingService).WithUploads(uploadService, healthDocumentReviewService)),
 		httpapi.RouteSecurity{
 			Auth:      authMiddleware,
 			Operator:  middleware.RequireKnowledgeOperator(userRepo),

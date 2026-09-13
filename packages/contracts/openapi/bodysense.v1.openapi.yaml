@@ -2017,6 +2017,251 @@ paths:
         '400': {$ref: '#/components/responses/InvalidRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
+  /api/v1/uploads:
+    post:
+      operationId: createUpload
+      summary: Upload one private health document or posture image for authenticated processing.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateUploadRequest'
+      responses:
+        '201':
+          description: Upload manifest created after the private object is durably stored.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserUpload'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    get:
+      operationId: listUploads
+      summary: List private upload manifests owned by the authenticated user.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Owned upload manifests ordered by repository policy.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/uploads/posture-analysis:
+    get:
+      operationId: getPostureAnalysis
+      summary: Read the latest completed posture-analysis projection for the authenticated user.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Latest completed per-view posture analyses, or an empty summary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostureAnalysisSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/uploads/{id}:
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      operationId: getUpload
+      summary: Get one private upload manifest owned by the authenticated user.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Owned upload manifest.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserUpload'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      operationId: deleteUpload
+      summary: Delete one owned private upload object and its manifest.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Upload deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadDeleteResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/uploads/{id}/health-document-review:
+    get:
+      operationId: getHealthDocumentReviewContext
+      summary: Resolve the current server-owned health-document extraction run and its review projection.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Current review context for the owned upload.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthDocumentReviewContext'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/uploads/{id}/extractions/{runId}/reviews:
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: runId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      operationId: listHealthDocumentReviewCandidates
+      summary: List append-only review state for one exact owned extraction run.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Review candidates and their current/history projections.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthDocumentReviewListResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      operationId: appendHealthDocumentReview
+      summary: Append one idempotent confirm, correct or reject action to an exact owned extraction candidate.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppendHealthDocumentReviewRequest'
+      responses:
+        '201':
+          description: Immutable review record appended or idempotently replayed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentIndicatorReviewRecord'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/uploads/{id}/extractions/{runId}/source:
+    get:
+      operationId: getHealthDocumentSource
+      summary: Stream the authenticated private source document for one exact owned extraction run.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: runId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Private upload bytes. The server preserves the stored MIME type and adds nosniff.
+          content:
+            application/pdf:
+              schema: &privateUploadBinary
+                type: string
+                format: binary
+            image/jpeg:
+              schema: *privateUploadBinary
+            image/png:
+              schema: *privateUploadBinary
+            image/webp:
+              schema: *privateUploadBinary
+            application/octet-stream:
+              schema: *privateUploadBinary
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
 components:
   parameters:
     ConversationId:
@@ -5259,6 +5504,188 @@ components:
           type: boolean
         nextAfterSeq:
           type: integer
+    CreateUploadRequest:
+      type: object
+      additionalProperties: false
+      required: [file, file_type]
+      properties:
+        file:
+          type: string
+          format: binary
+        file_type:
+          type: string
+          enum: [consultation_photo, photo_front, photo_side, photo_back, report]
+    UserUpload:
+      type: object
+      additionalProperties: false
+      required: [id, file_type, original_name, file_size, mime_type, ocr_status, analysis_status, created_at, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        file_type:
+          type: string
+          enum: [consultation_photo, photo_front, photo_side, photo_back, report]
+        original_name: {type: string}
+        file_size: {type: integer, format: int64, minimum: 0}
+        mime_type: {type: string}
+        ocr_result:
+          $ref: '#/components/schemas/JsonObject'
+        ocr_status: {type: string, enum: [pending, processing, completed, failed]}
+        analysis_result:
+          $ref: '#/components/schemas/JsonObject'
+        analysis_status: {type: string, enum: [none, pending, processing, completed, failed]}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    UploadListResponse:
+      type: object
+      additionalProperties: false
+      required: [uploads]
+      properties:
+        uploads:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserUpload'
+    UploadDeleteResponse:
+      type: object
+      additionalProperties: false
+      required: [message]
+      properties:
+        message: {type: string}
+    PostureAnalysisView:
+      type: object
+      additionalProperties: false
+      required: [upload_id, view, file_type, analysis_status, analysis, created_at]
+      properties:
+        upload_id: {type: string, format: uuid}
+        view: {type: string}
+        file_type: {type: string}
+        analysis_status: {type: string}
+        analysis:
+          $ref: '#/components/schemas/JsonObject'
+        created_at: {type: string, format: date-time}
+    PostureAnalysisSummary:
+      type: object
+      additionalProperties: false
+      required: [has_analysis, views, findings, summaries]
+      properties:
+        has_analysis: {type: boolean}
+        views:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostureAnalysisView'
+        findings:
+          type: array
+          items:
+            $ref: '#/components/schemas/JsonValue'
+        summaries:
+          type: array
+          items: {type: string}
+    DocumentIndicatorSourceRegion:
+      type: object
+      additionalProperties: false
+      required: [source_ref]
+      properties:
+        source_ref: {type: string}
+        page_number: {type: integer}
+        bbox:
+          type: array
+          items: {type: number}
+    DocumentIndicatorEvidenceAdmissibility:
+      type: object
+      additionalProperties: false
+      required: [status, policy_revision]
+      properties:
+        status: {type: string, enum: [admissible, needs_review, rejected]}
+        policy_revision: {type: string}
+        reason_codes:
+          type: array
+          items: {type: string}
+    DocumentIndicatorCandidate:
+      type: object
+      additionalProperties: false
+      required: [indicator_index, indicator_id, name, evidence_admissibility]
+      properties:
+        indicator_index: {type: integer, minimum: 0}
+        indicator_id: {type: string}
+        name: {type: string}
+        value:
+          $ref: '#/components/schemas/JsonValue'
+        unit: {type: string}
+        reference_range: {type: string}
+        evidence_admissibility:
+          $ref: '#/components/schemas/DocumentIndicatorEvidenceAdmissibility'
+        source_refs:
+          type: array
+          items: {type: string}
+        source_regions:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentIndicatorSourceRegion'
+    DocumentIndicatorReviewRecord:
+      type: object
+      additionalProperties: false
+      required: [id, extraction_run_id, upload_id, indicator_index, indicator_id, action, created_at, idempotency_key]
+      properties:
+        id: {type: string, format: uuid}
+        extraction_run_id: {type: string, format: uuid}
+        upload_id: {type: string, format: uuid}
+        indicator_index: {type: integer, minimum: 0}
+        indicator_id: {type: string}
+        action: {type: string, enum: [confirm, correct, reject]}
+        reviewed_payload:
+          $ref: '#/components/schemas/JsonObject'
+        note: {type: string}
+        created_at: {type: string, format: date-time}
+        idempotency_key: {type: string, minLength: 1}
+    DocumentIndicatorReviewProjection:
+      type: object
+      additionalProperties: false
+      required: [indicator_index, indicator_id, candidate]
+      properties:
+        indicator_index: {type: integer, minimum: 0}
+        indicator_id: {type: string}
+        candidate:
+          $ref: '#/components/schemas/DocumentIndicatorCandidate'
+        effective_review:
+          $ref: '#/components/schemas/DocumentIndicatorReviewRecord'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentIndicatorReviewRecord'
+    HealthDocumentReviewContext:
+      type: object
+      additionalProperties: false
+      required: [extraction_run_id, upload_id, review_candidates]
+      properties:
+        extraction_run_id: {type: string, format: uuid}
+        upload_id: {type: string, format: uuid}
+        review_candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentIndicatorReviewProjection'
+    HealthDocumentReviewListResponse:
+      type: object
+      additionalProperties: false
+      required: [review_candidates]
+      properties:
+        review_candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentIndicatorReviewProjection'
+    AppendHealthDocumentReviewRequest:
+      type: object
+      additionalProperties: false
+      required: [indicator_index, indicator_id, action, source_refs, idempotency_key]
+      properties:
+        indicator_index: {type: integer, minimum: 0}
+        indicator_id: {type: string, minLength: 1}
+        action: {type: string, enum: [confirm, correct, reject]}
+        reviewed_payload:
+          $ref: '#/components/schemas/JsonObject'
+        source_refs:
+          type: array
+          items: {type: string}
+        idempotency_key: {type: string, minLength: 1}
+        note: {type: string}
   responses:
     InvalidRequest:
       description: Request body or BodyState fact is invalid.
