@@ -210,12 +210,18 @@ func (s *TrainingService) GetTodayTask(ctx context.Context, planID, userID uuid.
 		}
 		_ = json.Unmarshal(plan.Phases, &phases)
 		if len(phases) > 0 {
-			tasks := make([]map[string]any, 0, len(phases[0].Exercises))
+			tasks := make([]TrainingExerciseLogInput, 0, len(phases[0].Exercises))
 			for _, exercise := range phases[0].Exercises {
-				tasks = append(tasks, map[string]any{
-					"intervention_id": exercise["intervention_id"],
-					"name":            exercise["name"],
-					"completed":       false,
+				var interventionID *uuid.UUID
+				if rawID := strings.TrimSpace(stringValue(exercise["intervention_id"])); rawID != "" {
+					if parsed, parseErr := uuid.Parse(rawID); parseErr == nil {
+						interventionID = &parsed
+					}
+				}
+				tasks = append(tasks, TrainingExerciseLogInput{
+					InterventionID: interventionID,
+					Name:           stringValue(exercise["name"]),
+					Completed:      false,
 				})
 			}
 			log.Exercises = rawJSON(tasks, `[]`)
@@ -257,9 +263,15 @@ func (s *TrainingService) CheckIn(ctx context.Context, planID, userID uuid.UUID)
 	return err
 }
 
+type TrainingExerciseLogInput struct {
+	InterventionID *uuid.UUID `json:"intervention_id,omitempty"`
+	Name           string     `json:"name"`
+	Completed      bool       `json:"completed"`
+}
+
 type TrainingFeedbackInput struct {
 	Notes           string
-	Exercises       any
+	Exercises       *[]TrainingExerciseLogInput
 	SymptomChanges  string
 	TrainingFeeling string
 	Difficulties    string
@@ -269,8 +281,8 @@ type TrainingFeedbackInput struct {
 	FactID          *uuid.UUID
 }
 
-func (s *TrainingService) UpdateLog(ctx context.Context, planID, userID uuid.UUID, notes string, exercises any) (map[string]any, error) {
-	return s.UpdateLogWithFeedback(ctx, planID, userID, TrainingFeedbackInput{Notes: notes, Exercises: exercises})
+func (s *TrainingService) UpdateLog(ctx context.Context, planID, userID uuid.UUID, notes string, exercises []TrainingExerciseLogInput) (map[string]any, error) {
+	return s.UpdateLogWithFeedback(ctx, planID, userID, TrainingFeedbackInput{Notes: notes, Exercises: &exercises})
 }
 
 func (s *TrainingService) UpdateLogWithFeedback(
@@ -286,7 +298,9 @@ func (s *TrainingService) UpdateLogWithFeedback(
 	if err != nil {
 		return nil, err
 	}
-	log.Exercises = rawJSON(feedback.Exercises, `[]`)
+	if feedback.Exercises != nil {
+		log.Exercises = rawJSON(*feedback.Exercises, `[]`)
+	}
 	if strings.TrimSpace(feedback.Notes) != "" {
 		notes := strings.TrimSpace(feedback.Notes)
 		log.Notes = &notes
@@ -302,7 +316,9 @@ func (s *TrainingService) UpdateLogWithFeedback(
 	value := map[string]any{
 		"training_feeling": feedback.TrainingFeeling,
 		"difficulties":     feedback.Difficulties,
-		"exercises":        feedback.Exercises,
+	}
+	if feedback.Exercises != nil {
+		value["exercises"] = *feedback.Exercises
 	}
 	if strings.TrimSpace(feedback.SymptomChanges) != "" {
 		kind = "symptom_change"

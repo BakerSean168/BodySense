@@ -19,6 +19,8 @@ type fakeTrainingRepository struct {
 	createErr       error
 	supersedeErr    error
 	supersedeCalled bool
+	log             *model.TrainingLog
+	savedLog        *model.TrainingLog
 }
 
 func (r *fakeTrainingRepository) CreatePlan(_ context.Context, plan *model.TrainingPlan) error {
@@ -50,9 +52,17 @@ func (r *fakeTrainingRepository) SupersedePlansExcept(context.Context, uuid.UUID
 	return r.supersedeErr
 }
 func (r *fakeTrainingRepository) GetOrCreateLog(context.Context, *model.TrainingPlan, time.Time) (*model.TrainingLog, error) {
+	if r.log != nil {
+		copy := *r.log
+		return &copy, nil
+	}
 	return &model.TrainingLog{ID: uuid.New(), Exercises: json.RawMessage(`[]`)}, nil
 }
-func (r *fakeTrainingRepository) SaveLog(context.Context, *model.TrainingLog) error { return nil }
+func (r *fakeTrainingRepository) SaveLog(_ context.Context, log *model.TrainingLog) error {
+	copy := *log
+	r.savedLog = &copy
+	return nil
+}
 func (r *fakeTrainingRepository) CheckInAndGet(context.Context, *model.TrainingPlan, time.Time) (*model.TrainingLog, error) {
 	return &model.TrainingLog{ID: uuid.New()}, nil
 }
@@ -170,5 +180,26 @@ func TestEnsurePlanForTreatmentIsIdempotent(t *testing.T) {
 	}
 	if !repo.supersedeCalled {
 		t.Fatal("idempotent recovery must re-run superseding cleanup")
+	}
+}
+
+func TestUpdateLogWithFeedbackPreservesExercisesWhenReassessmentOmitsThem(t *testing.T) {
+	userID := uuid.New()
+	plan := &model.TrainingPlan{ID: uuid.New(), UserID: userID, Status: "active"}
+	original := json.RawMessage(`[{
+  "intervention_id":"11111111-1111-4111-8111-111111111111",
+  "name":"chin tuck",
+  "completed":true
+}]`)
+	repo := &fakeTrainingRepository{active: plan, log: &model.TrainingLog{ID: uuid.New(), UserID: userID, PlanID: plan.ID, Exercises: original}}
+	svc := NewTrainingService(repo, nil, testTreatmentUnitOfWork{})
+
+	if _, err := svc.UpdateLogWithFeedback(context.Background(), plan.ID, userID, TrainingFeedbackInput{
+		Notes: "复评反馈", TrainingFeeling: "更稳定",
+	}); err != nil {
+		t.Fatalf("UpdateLogWithFeedback returned error: %v", err)
+	}
+	if repo.savedLog == nil || string(repo.savedLog.Exercises) != string(original) {
+		t.Fatalf("reassessment overwrote exercises: got=%s want=%s", repo.savedLog.Exercises, original)
 	}
 }
