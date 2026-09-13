@@ -298,7 +298,6 @@ func main() {
 		treatmentService,
 		trainingService,
 	)
-	healthWorkspaceHandler := handler.NewHealthWorkspaceHandler(healthWorkspaceService)
 	clientDiagnosticHandler := handler.NewClientDiagnosticHandler()
 
 	// HTTP server. Host development defaults to loopback; container runtimes
@@ -486,7 +485,6 @@ func main() {
 		protected.PUT("/health-history/injury", healthHistoryHandler.UpdateInjuryHistory)
 
 		// Capability-based continuous health workspace.
-		protected.GET("/health-workspace", healthWorkspaceHandler.Get)
 
 		// Assessment routes
 		protected.POST("/assessment/generate", assessmentHandler.GenerateAssessment)
@@ -517,7 +515,7 @@ func main() {
 	openAPIProtected.Use(httpapi.RequestValidator(publicAPISpec))
 	openapiv1.RegisterHandlers(
 		openAPIProtected,
-		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService)),
+		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithHealthWorkspace(healthWorkspaceService)),
 	)
 
 	// Public share routes (no auth)

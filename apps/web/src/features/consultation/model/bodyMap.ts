@@ -1,4 +1,4 @@
-import type { BodyStateSnapshot } from "../types/consultation";
+import type { BodyStateProjection } from "../types/consultation";
 
 export type BodyZone = "head" | "neck" | "torso" | "pelvis" | "arms" | "legs";
 
@@ -52,7 +52,7 @@ export function bodyZoneFor(region: string, concernKey = ""): BodyZone {
 }
 
 export function selectBodyZoneSummaries(
-  snapshot: BodyStateSnapshot | null | undefined,
+  snapshot: BodyStateProjection | null | undefined,
 ): BodyZoneSummary[] {
   if (!snapshot) return [];
 

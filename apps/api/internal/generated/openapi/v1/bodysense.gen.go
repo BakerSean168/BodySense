@@ -21,6 +21,231 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for DiagnosisCandidateConfidence.
+const (
+	DiagnosisCandidateConfidenceEmpty DiagnosisCandidateConfidence = "高"
+	DiagnosisCandidateConfidenceN1    DiagnosisCandidateConfidence = "中"
+	DiagnosisCandidateConfidenceN2    DiagnosisCandidateConfidence = "低"
+)
+
+// Valid indicates whether the value is a known member of the DiagnosisCandidateConfidence enum.
+func (e DiagnosisCandidateConfidence) Valid() bool {
+	switch e {
+	case DiagnosisCandidateConfidenceEmpty:
+		return true
+	case DiagnosisCandidateConfidenceN1:
+		return true
+	case DiagnosisCandidateConfidenceN2:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DiagnosisCandidateEvidenceStrength.
+const (
+	DiagnosisCandidateEvidenceStrengthEmpty DiagnosisCandidateEvidenceStrength = "高"
+	DiagnosisCandidateEvidenceStrengthN1    DiagnosisCandidateEvidenceStrength = "中"
+	DiagnosisCandidateEvidenceStrengthN2    DiagnosisCandidateEvidenceStrength = "低"
+)
+
+// Valid indicates whether the value is a known member of the DiagnosisCandidateEvidenceStrength enum.
+func (e DiagnosisCandidateEvidenceStrength) Valid() bool {
+	switch e {
+	case DiagnosisCandidateEvidenceStrengthEmpty:
+		return true
+	case DiagnosisCandidateEvidenceStrengthN1:
+		return true
+	case DiagnosisCandidateEvidenceStrengthN2:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DiagnosisCandidateSeverity.
+const (
+	DiagnosisCandidateSeverityEmpty DiagnosisCandidateSeverity = "轻度"
+	DiagnosisCandidateSeverityN1    DiagnosisCandidateSeverity = "中度"
+	DiagnosisCandidateSeverityN2    DiagnosisCandidateSeverity = "重度"
+)
+
+// Valid indicates whether the value is a known member of the DiagnosisCandidateSeverity enum.
+func (e DiagnosisCandidateSeverity) Valid() bool {
+	switch e {
+	case DiagnosisCandidateSeverityEmpty:
+		return true
+	case DiagnosisCandidateSeverityN1:
+		return true
+	case DiagnosisCandidateSeverityN2:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DiagnosisCandidateAssessmentState.
+const (
+	Confirmed     DiagnosisCandidateAssessmentState = "confirmed"
+	NotApplicable DiagnosisCandidateAssessmentState = "not_applicable"
+	Unsure        DiagnosisCandidateAssessmentState = "unsure"
+)
+
+// Valid indicates whether the value is a known member of the DiagnosisCandidateAssessmentState enum.
+func (e DiagnosisCandidateAssessmentState) Valid() bool {
+	switch e {
+	case Confirmed:
+		return true
+	case NotApplicable:
+		return true
+	case Unsure:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DiagnosisFreshnessState.
+const (
+	Fresh            DiagnosisFreshnessState = "fresh"
+	PotentiallyStale DiagnosisFreshnessState = "potentially_stale"
+	Stale            DiagnosisFreshnessState = "stale"
+)
+
+// Valid indicates whether the value is a known member of the DiagnosisFreshnessState enum.
+func (e DiagnosisFreshnessState) Valid() bool {
+	switch e {
+	case Fresh:
+		return true
+	case PotentiallyStale:
+		return true
+	case Stale:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DiagnosisWorkspaceProjectionStatus.
+const (
+	DiagnosisWorkspaceProjectionStatusCompleted               DiagnosisWorkspaceProjectionStatus = "completed"
+	DiagnosisWorkspaceProjectionStatusInsufficientInformation DiagnosisWorkspaceProjectionStatus = "insufficient_information"
+	DiagnosisWorkspaceProjectionStatusPartial                 DiagnosisWorkspaceProjectionStatus = "partial"
+	DiagnosisWorkspaceProjectionStatusSafetyBlocked           DiagnosisWorkspaceProjectionStatus = "safety_blocked"
+)
+
+// Valid indicates whether the value is a known member of the DiagnosisWorkspaceProjectionStatus enum.
+func (e DiagnosisWorkspaceProjectionStatus) Valid() bool {
+	switch e {
+	case DiagnosisWorkspaceProjectionStatusCompleted:
+		return true
+	case DiagnosisWorkspaceProjectionStatusInsufficientInformation:
+		return true
+	case DiagnosisWorkspaceProjectionStatusPartial:
+		return true
+	case DiagnosisWorkspaceProjectionStatusSafetyBlocked:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OutcomeCausalityLevel.
+const (
+	AssociationOnly     OutcomeCausalityLevel = "association_only"
+	ClinicianAttributed OutcomeCausalityLevel = "clinician_attributed"
+	UserAttributed      OutcomeCausalityLevel = "user_attributed"
+)
+
+// Valid indicates whether the value is a known member of the OutcomeCausalityLevel enum.
+func (e OutcomeCausalityLevel) Valid() bool {
+	switch e {
+	case AssociationOnly:
+		return true
+	case ClinicianAttributed:
+		return true
+	case UserAttributed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TreatmentStatus.
+const (
+	TreatmentStatusActive            TreatmentStatus = "active"
+	TreatmentStatusCompleted         TreatmentStatus = "completed"
+	TreatmentStatusPaused            TreatmentStatus = "paused"
+	TreatmentStatusReviewRecommended TreatmentStatus = "review_recommended"
+	TreatmentStatusSuperseded        TreatmentStatus = "superseded"
+)
+
+// Valid indicates whether the value is a known member of the TreatmentStatus enum.
+func (e TreatmentStatus) Valid() bool {
+	switch e {
+	case TreatmentStatusActive:
+		return true
+	case TreatmentStatusCompleted:
+		return true
+	case TreatmentStatusPaused:
+		return true
+	case TreatmentStatusReviewRecommended:
+		return true
+	case TreatmentStatusSuperseded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TreatmentRevisionAcceptanceState.
+const (
+	Accepted TreatmentRevisionAcceptanceState = "accepted"
+	Proposed TreatmentRevisionAcceptanceState = "proposed"
+	Rejected TreatmentRevisionAcceptanceState = "rejected"
+)
+
+// Valid indicates whether the value is a known member of the TreatmentRevisionAcceptanceState enum.
+func (e TreatmentRevisionAcceptanceState) Valid() bool {
+	switch e {
+	case Accepted:
+		return true
+	case Proposed:
+		return true
+	case Rejected:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TreatmentRevisionLifecycleState.
+const (
+	TreatmentRevisionLifecycleStateActive            TreatmentRevisionLifecycleState = "active"
+	TreatmentRevisionLifecycleStateCompleted         TreatmentRevisionLifecycleState = "completed"
+	TreatmentRevisionLifecycleStatePaused            TreatmentRevisionLifecycleState = "paused"
+	TreatmentRevisionLifecycleStateReviewRecommended TreatmentRevisionLifecycleState = "review_recommended"
+	TreatmentRevisionLifecycleStateSuperseded        TreatmentRevisionLifecycleState = "superseded"
+)
+
+// Valid indicates whether the value is a known member of the TreatmentRevisionLifecycleState enum.
+func (e TreatmentRevisionLifecycleState) Valid() bool {
+	switch e {
+	case TreatmentRevisionLifecycleStateActive:
+		return true
+	case TreatmentRevisionLifecycleStateCompleted:
+		return true
+	case TreatmentRevisionLifecycleStatePaused:
+		return true
+	case TreatmentRevisionLifecycleStateReviewRecommended:
+		return true
+	case TreatmentRevisionLifecycleStateSuperseded:
+		return true
+	default:
+		return false
+	}
+}
+
 // BodyStateFact defines model for BodyStateFact.
 type BodyStateFact struct {
 	BodyRegion            *string             `json:"body_region,omitempty"`
@@ -73,6 +298,50 @@ type BodyStateFactMutationResponse struct {
 	Revision BodyStateRevision `json:"revision"`
 }
 
+// BodyStateHypothesis defines model for BodyStateHypothesis.
+type BodyStateHypothesis struct {
+	ConcernKey               string              `json:"concern_key"`
+	Confidence               *string             `json:"confidence,omitempty"`
+	CounterevidenceIds       StringArray         `json:"counterevidence_ids"`
+	CreatedAt                time.Time           `json:"created_at"`
+	CreatedRevision          int                 `json:"created_revision"`
+	Id                       openapi_types.UUID  `json:"id"`
+	LifecycleState           string              `json:"lifecycle_state"`
+	Provenance               JsonObject          `json:"provenance"`
+	SourceAnalysisId         *openapi_types.UUID `json:"source_analysis_id,omitempty"`
+	Statement                string              `json:"statement"`
+	SupportingEvidenceIds    StringArray         `json:"supporting_evidence_ids"`
+	SupportingFactIds        StringArray         `json:"supporting_fact_ids"`
+	SupportingObservationIds StringArray         `json:"supporting_observation_ids"`
+	UpdatedAt                time.Time           `json:"updated_at"`
+	UpdatedRevision          int                 `json:"updated_revision"`
+	UserId                   openapi_types.UUID  `json:"user_id"`
+}
+
+// BodyStateObservation defines model for BodyStateObservation.
+type BodyStateObservation struct {
+	BodyRegion              *string             `json:"body_region,omitempty"`
+	BodyRegionId            *string             `json:"body_region_id"`
+	ConcernKey              *string             `json:"concern_key,omitempty"`
+	Condition               JsonObject          `json:"condition"`
+	CreatedAt               time.Time           `json:"created_at"`
+	CreatedRevision         int                 `json:"created_revision"`
+	ExcludedFromReasoning   bool                `json:"excluded_from_reasoning"`
+	Id                      openapi_types.UUID  `json:"id"`
+	Kind                    string              `json:"kind"`
+	LifecycleState          string              `json:"lifecycle_state"`
+	Method                  *string             `json:"method,omitempty"`
+	ObservedAt              *time.Time          `json:"observed_at,omitempty"`
+	Provenance              JsonObject          `json:"provenance"`
+	ReviewState             string              `json:"review_state"`
+	SourceKey               *string             `json:"source_key,omitempty"`
+	SupersedesObservationId *openapi_types.UUID `json:"supersedes_observation_id,omitempty"`
+	UpdatedAt               time.Time           `json:"updated_at"`
+	UpdatedRevision         int                 `json:"updated_revision"`
+	UserId                  openapi_types.UUID  `json:"user_id"`
+	Value                   JsonObject          `json:"value"`
+}
+
 // BodyStateRevision defines model for BodyStateRevision.
 type BodyStateRevision struct {
 	ChangeType string             `json:"change_type"`
@@ -83,6 +352,99 @@ type BodyStateRevision struct {
 	Source     string             `json:"source"`
 	UserId     openapi_types.UUID `json:"user_id"`
 }
+
+// DiagnosisCandidate defines model for DiagnosisCandidate.
+type DiagnosisCandidate struct {
+	Basis                 string                              `json:"basis"`
+	BasisFactIds          StringArray                         `json:"basis_fact_ids"`
+	BasisObservationIds   StringArray                         `json:"basis_observation_ids"`
+	CandidateId           openapi_types.UUID                  `json:"candidate_id"`
+	ConcernKey            *string                             `json:"concern_key,omitempty"`
+	Confidence            DiagnosisCandidateConfidence        `json:"confidence"`
+	CounterevidenceIds    StringArray                         `json:"counterevidence_ids"`
+	Differential          *string                             `json:"differential,omitempty"`
+	EvidenceStrength      *DiagnosisCandidateEvidenceStrength `json:"evidence_strength,omitempty"`
+	Impact                *string                             `json:"impact,omitempty"`
+	MissingInformation    StringArray                         `json:"missing_information"`
+	Name                  string                              `json:"name"`
+	ReasoningSummary      string                              `json:"reasoning_summary"`
+	SafetyNotes           StringArray                         `json:"safety_notes"`
+	Severity              *DiagnosisCandidateSeverity         `json:"severity,omitempty"`
+	SupportingEvidenceIds StringArray                         `json:"supporting_evidence_ids"`
+	TypicalSymptoms       string                              `json:"typical_symptoms"`
+}
+
+// DiagnosisCandidateConfidence defines model for DiagnosisCandidate.Confidence.
+type DiagnosisCandidateConfidence string
+
+// DiagnosisCandidateEvidenceStrength defines model for DiagnosisCandidate.EvidenceStrength.
+type DiagnosisCandidateEvidenceStrength string
+
+// DiagnosisCandidateSeverity defines model for DiagnosisCandidate.Severity.
+type DiagnosisCandidateSeverity string
+
+// DiagnosisCandidateAssessment defines model for DiagnosisCandidateAssessment.
+type DiagnosisCandidateAssessment struct {
+	AnalysisId  openapi_types.UUID                `json:"analysis_id"`
+	AssessedAt  time.Time                         `json:"assessed_at"`
+	CandidateId openapi_types.UUID                `json:"candidate_id"`
+	Id          openapi_types.UUID                `json:"id"`
+	State       DiagnosisCandidateAssessmentState `json:"state"`
+	UserId      openapi_types.UUID                `json:"user_id"`
+}
+
+// DiagnosisCandidateAssessmentState defines model for DiagnosisCandidateAssessment.State.
+type DiagnosisCandidateAssessmentState string
+
+// DiagnosisFreshness defines model for DiagnosisFreshness.
+type DiagnosisFreshness struct {
+	AnalysisId               openapi_types.UUID         `json:"analysis_id"`
+	CheckedAt                time.Time                  `json:"checked_at"`
+	EvaluatedAgainstRevision int                        `json:"evaluated_against_revision"`
+	Reasons                  []DiagnosisFreshnessReason `json:"reasons"`
+	State                    DiagnosisFreshnessState    `json:"state"`
+	UserId                   openapi_types.UUID         `json:"user_id"`
+}
+
+// DiagnosisFreshnessState defines model for DiagnosisFreshness.State.
+type DiagnosisFreshnessState string
+
+// DiagnosisFreshnessReason defines model for DiagnosisFreshnessReason.
+type DiagnosisFreshnessReason struct {
+	ChangeType string  `json:"change_type"`
+	Code       string  `json:"code"`
+	ConcernKey *string `json:"concern_key,omitempty"`
+	ItemId     *string `json:"item_id,omitempty"`
+	Message    string  `json:"message"`
+	Revision   int     `json:"revision"`
+}
+
+// DiagnosisWorkspaceProjection defines model for DiagnosisWorkspaceProjection.
+type DiagnosisWorkspaceProjection struct {
+	AgentConfiguration       JsonObject                         `json:"agent_configuration"`
+	AgentConfigurationId     string                             `json:"agent_configuration_id"`
+	AnalysisId               openapi_types.UUID                 `json:"analysis_id"`
+	BodyStateRevision        int                                `json:"body_state_revision"`
+	CandidateAssessments     []DiagnosisCandidateAssessment     `json:"candidate_assessments"`
+	Candidates               []DiagnosisCandidate               `json:"candidates"`
+	Citations                []JsonObject                       `json:"citations"`
+	CreatedAt                time.Time                          `json:"created_at"`
+	CrossConcernPatterns     StringArray                        `json:"cross_concern_patterns"`
+	DecisionAuthority        *JsonObject                        `json:"decision_authority,omitempty"`
+	DecisionTrace            JsonObject                         `json:"decision_trace"`
+	EvidenceAcquisitionTrace JsonObject                         `json:"evidence_acquisition_trace"`
+	ExecutionProvenance      JsonObject                         `json:"execution_provenance"`
+	Freshness                DiagnosisFreshness                 `json:"freshness"`
+	Governance               JsonObject                         `json:"governance"`
+	InformationGaps          StringArray                        `json:"information_gaps"`
+	SafetySummary            JsonObject                         `json:"safety_summary"`
+	Scope                    string                             `json:"scope"`
+	Status                   DiagnosisWorkspaceProjectionStatus `json:"status"`
+	Summary                  string                             `json:"summary"`
+}
+
+// DiagnosisWorkspaceProjectionStatus defines model for DiagnosisWorkspaceProjection.Status.
+type DiagnosisWorkspaceProjectionStatus string
 
 // ErrorDetail defines model for ErrorDetail.
 type ErrorDetail struct {
@@ -95,13 +457,227 @@ type ErrorEnvelope struct {
 	Error ErrorDetail `json:"error"`
 }
 
+// HealthWorkspace defines model for HealthWorkspace.
+type HealthWorkspace struct {
+	Actions            []WorkspaceAction             `json:"actions"`
+	BodyState          HealthWorkspaceBodyState      `json:"body_state"`
+	Capabilities       WorkspaceCapabilities         `json:"capabilities"`
+	ConversationId     *openapi_types.UUID           `json:"conversation_id,omitempty"`
+	Diagnosis          *DiagnosisWorkspaceProjection `json:"diagnosis,omitempty"`
+	GeneratedAt        time.Time                     `json:"generated_at"`
+	ProfileReady       bool                          `json:"profile_ready"`
+	RecentOutcomes     []Outcome                     `json:"recent_outcomes"`
+	TrainingPlan       *TrainingPlan                 `json:"training_plan,omitempty"`
+	Treatment          *Treatment                    `json:"treatment,omitempty"`
+	TreatmentRevisions []TreatmentRevision           `json:"treatment_revisions"`
+	Trends             []WorkspaceTrend              `json:"trends"`
+}
+
+// HealthWorkspaceBodyState defines model for HealthWorkspaceBodyState.
+type HealthWorkspaceBodyState struct {
+	CurrentRevision     int                    `json:"current_revision"`
+	Facts               []BodyStateFact        `json:"facts"`
+	Hypotheses          []BodyStateHypothesis  `json:"hypotheses"`
+	Observations        []BodyStateObservation `json:"observations"`
+	PendingFacts        []BodyStateFact        `json:"pending_facts"`
+	PendingObservations []BodyStateObservation `json:"pending_observations"`
+	RecentRevisions     []BodyStateRevision    `json:"recent_revisions"`
+	SafetyState         JsonObject             `json:"safety_state"`
+}
+
+// Intervention defines model for Intervention.
+type Intervention struct {
+	CreatedAt           time.Time          `json:"created_at"`
+	Description         string             `json:"description"`
+	EndedAt             *time.Time         `json:"ended_at,omitempty"`
+	Id                  openapi_types.UUID `json:"id"`
+	Kind                string             `json:"kind"`
+	Position            int                `json:"position"`
+	Prescription        JsonObject         `json:"prescription"`
+	StartedAt           *time.Time         `json:"started_at,omitempty"`
+	Status              string             `json:"status"`
+	Title               string             `json:"title"`
+	TreatmentId         openapi_types.UUID `json:"treatment_id"`
+	TreatmentRevisionId openapi_types.UUID `json:"treatment_revision_id"`
+	UpdatedAt           time.Time          `json:"updated_at"`
+	UserId              openapi_types.UUID `json:"user_id"`
+}
+
 // JsonObject defines model for JsonObject.
 type JsonObject map[string]interface{}
+
+// Outcome defines model for Outcome.
+type Outcome struct {
+	AssociationStatement string                `json:"association_statement"`
+	BodyRegion           string                `json:"body_region"`
+	BodyStateRevision    *int                  `json:"body_state_revision,omitempty"`
+	CausalityLevel       OutcomeCausalityLevel `json:"causality_level"`
+	ConcernKey           string                `json:"concern_key"`
+	CreatedAt            time.Time             `json:"created_at"`
+	Id                   openapi_types.UUID    `json:"id"`
+	InterventionId       *openapi_types.UUID   `json:"intervention_id,omitempty"`
+	Kind                 string                `json:"kind"`
+	Notes                string                `json:"notes"`
+	OccurredAt           time.Time             `json:"occurred_at"`
+	Provenance           JsonObject            `json:"provenance"`
+	SourceKey            string                `json:"source_key"`
+	SourceType           string                `json:"source_type"`
+	TreatmentId          *openapi_types.UUID   `json:"treatment_id,omitempty"`
+	TreatmentRevisionId  *openapi_types.UUID   `json:"treatment_revision_id,omitempty"`
+	UserId               openapi_types.UUID    `json:"user_id"`
+	Value                JsonObject            `json:"value"`
+}
+
+// OutcomeCausalityLevel defines model for Outcome.CausalityLevel.
+type OutcomeCausalityLevel string
+
+// StringArray defines model for StringArray.
+type StringArray = []string
+
+// TrainingPlan defines model for TrainingPlan.
+type TrainingPlan struct {
+	ConsultationId      *openapi_types.UUID `json:"consultation_id,omitempty"`
+	CreatedAt           time.Time           `json:"created_at"`
+	CurrentWeek         int                 `json:"current_week"`
+	DurationWeeks       int                 `json:"duration_weeks"`
+	Goal                string              `json:"goal"`
+	Id                  openapi_types.UUID  `json:"id"`
+	Phases              []JsonObject        `json:"phases"`
+	Status              string              `json:"status"`
+	TreatmentId         *openapi_types.UUID `json:"treatment_id,omitempty"`
+	TreatmentRevisionId *openapi_types.UUID `json:"treatment_revision_id,omitempty"`
+	UserId              openapi_types.UUID  `json:"user_id"`
+}
+
+// Treatment defines model for Treatment.
+type Treatment struct {
+	CreatedAt                 time.Time               `json:"created_at"`
+	Current                   *TreatmentRevision      `json:"current,omitempty"`
+	CurrentRevision           int                     `json:"current_revision"`
+	Id                        openapi_types.UUID      `json:"id"`
+	SourceBodyStateRevision   *int                    `json:"source_body_state_revision,omitempty"`
+	SourceDiagnosisAnalysisId *openapi_types.UUID     `json:"source_diagnosis_analysis_id,omitempty"`
+	Status                    TreatmentStatus         `json:"status"`
+	StatusReasons             []TreatmentStatusReason `json:"status_reasons"`
+	UpdatedAt                 time.Time               `json:"updated_at"`
+	UserId                    openapi_types.UUID      `json:"user_id"`
+}
+
+// TreatmentStatus defines model for Treatment.Status.
+type TreatmentStatus string
+
+// TreatmentInterventionDraft defines model for TreatmentInterventionDraft.
+type TreatmentInterventionDraft struct {
+	Description  string     `json:"description"`
+	Kind         string     `json:"kind"`
+	Prescription JsonObject `json:"prescription"`
+	Title        string     `json:"title"`
+}
+
+// TreatmentPlanContent defines model for TreatmentPlanContent.
+type TreatmentPlanContent struct {
+	DailyHabits      StringArray                  `json:"daily_habits"`
+	DurationWeeks    int                          `json:"duration_weeks"`
+	ExpectedTimeline string                       `json:"expected_timeline"`
+	Goal             string                       `json:"goal"`
+	Interventions    []TreatmentInterventionDraft `json:"interventions"`
+	ReviewTriggers   StringArray                  `json:"review_triggers"`
+	SafetyNotes      StringArray                  `json:"safety_notes"`
+	Summary          string                       `json:"summary"`
+	WarningSigns     StringArray                  `json:"warning_signs"`
+}
+
+// TreatmentRevision defines model for TreatmentRevision.
+type TreatmentRevision struct {
+	AcceptanceDecisionTrace   JsonObject                       `json:"acceptance_decision_trace"`
+	AcceptanceState           TreatmentRevisionAcceptanceState `json:"acceptance_state"`
+	AcceptedAt                *time.Time                       `json:"accepted_at,omitempty"`
+	AgentConfiguration        JsonObject                       `json:"agent_configuration"`
+	AgentConfigurationId      string                           `json:"agent_configuration_id"`
+	ChangeReason              string                           `json:"change_reason"`
+	CreatedAt                 time.Time                        `json:"created_at"`
+	DurationWeeks             int                              `json:"duration_weeks"`
+	EvidenceAcquisitionTrace  JsonObject                       `json:"evidence_acquisition_trace"`
+	EvidenceIds               StringArray                      `json:"evidence_ids"`
+	ExecutionProvenance       JsonObject                       `json:"execution_provenance"`
+	GenerationDecisionTrace   JsonObject                       `json:"generation_decision_trace"`
+	Goal                      string                           `json:"goal"`
+	Governance                JsonObject                       `json:"governance"`
+	Id                        openapi_types.UUID               `json:"id"`
+	Interventions             []Intervention                   `json:"interventions"`
+	LifecycleState            TreatmentRevisionLifecycleState  `json:"lifecycle_state"`
+	Plan                      TreatmentPlanContent             `json:"plan"`
+	Revision                  int                              `json:"revision"`
+	RolloutProvenance         JsonObject                       `json:"rollout_provenance"`
+	SourceBodyStateRevision   int                              `json:"source_body_state_revision"`
+	SourceDiagnosisAnalysisId openapi_types.UUID               `json:"source_diagnosis_analysis_id"`
+	TreatmentId               openapi_types.UUID               `json:"treatment_id"`
+	UserConstraints           JsonObject                       `json:"user_constraints"`
+}
+
+// TreatmentRevisionAcceptanceState defines model for TreatmentRevision.AcceptanceState.
+type TreatmentRevisionAcceptanceState string
+
+// TreatmentRevisionLifecycleState defines model for TreatmentRevision.LifecycleState.
+type TreatmentRevisionLifecycleState string
+
+// TreatmentStatusReason defines model for TreatmentStatusReason.
+type TreatmentStatusReason struct {
+	ChangeType *string `json:"change_type,omitempty"`
+	Code       *string `json:"code,omitempty"`
+	ConcernKey *string `json:"concern_key,omitempty"`
+	Message    *string `json:"message,omitempty"`
+	Revision   *int    `json:"revision,omitempty"`
+}
 
 // UpsertBodyStateFactRequest defines model for UpsertBodyStateFactRequest.
 type UpsertBodyStateFactRequest struct {
 	ExpectedRevision int64              `json:"expected_revision"`
 	Fact             BodyStateFactInput `json:"fact"`
+}
+
+// WorkspaceAction defines model for WorkspaceAction.
+type WorkspaceAction struct {
+	Enabled  bool        `json:"enabled"`
+	Kind     string      `json:"kind"`
+	Priority int         `json:"priority"`
+	Reason   string      `json:"reason"`
+	Target   *JsonObject `json:"target,omitempty"`
+}
+
+// WorkspaceCapabilities defines model for WorkspaceCapabilities.
+type WorkspaceCapabilities struct {
+	CanAcceptTreatment      bool `json:"can_accept_treatment"`
+	CanContinueConsultation bool `json:"can_continue_consultation"`
+	CanEditBodyState        bool `json:"can_edit_body_state"`
+	CanExecuteTreatment     bool `json:"can_execute_treatment"`
+	CanGenerateTreatment    bool `json:"can_generate_treatment"`
+	CanRecordOutcome        bool `json:"can_record_outcome"`
+	CanRequestDiagnosis     bool `json:"can_request_diagnosis"`
+	CanReviewDiagnosis      bool `json:"can_review_diagnosis"`
+	CanReviewTreatment      bool `json:"can_review_treatment"`
+	RequiresDiagnosisReview bool `json:"requires_diagnosis_review"`
+	RequiresSafetyReview    bool `json:"requires_safety_review"`
+	RequiresTreatmentReview bool `json:"requires_treatment_review"`
+}
+
+// WorkspaceTrend defines model for WorkspaceTrend.
+type WorkspaceTrend struct {
+	BodyRegion   string                `json:"body_region"`
+	ConcernKey   string                `json:"concern_key"`
+	CurrentTrend string                `json:"current_trend"`
+	Key          string                `json:"key"`
+	Kind         string                `json:"kind"`
+	Points       []WorkspaceTrendPoint `json:"points"`
+}
+
+// WorkspaceTrendPoint defines model for WorkspaceTrendPoint.
+type WorkspaceTrendPoint struct {
+	CausalityLevel *string    `json:"causality_level,omitempty"`
+	Notes          *string    `json:"notes,omitempty"`
+	OccurredAt     time.Time  `json:"occurred_at"`
+	SourceType     string     `json:"source_type"`
+	Value          JsonObject `json:"value"`
 }
 
 // InternalError defines model for InternalError.
@@ -130,6 +706,9 @@ type ServerInterface interface {
 	// AddBodyStateFact Add a durable BodyState fact with optimistic revision checking.
 	// (POST /api/v1/body-state/facts)
 	AddBodyStateFact(c *gin.Context)
+	// GetHealthWorkspace Get the current longitudinal health workspace projection.
+	// (GET /api/v1/health-workspace)
+	GetHealthWorkspace(c *gin.Context)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -152,6 +731,19 @@ func (siw *ServerInterfaceWrapper) AddBodyStateFact(c *gin.Context) {
 	}
 
 	siw.Handler.AddBodyStateFact(c)
+}
+
+// GetHealthWorkspace operation middleware
+func (siw *ServerInterfaceWrapper) GetHealthWorkspace(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetHealthWorkspace(c)
 }
 
 // GinServerOptions provides options for the Gin server.
@@ -182,6 +774,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	}
 
 	router.POST(options.BaseURL+"/api/v1/body-state/facts", wrapper.AddBodyStateFact)
+	router.GET(options.BaseURL+"/api/v1/health-workspace", wrapper.GetHealthWorkspace)
 }
 
 type InternalErrorJSONResponse ErrorEnvelope
@@ -304,11 +897,63 @@ func (response AddBodyStateFact503JSONResponse) VisitAddBodyStateFactResponse(w 
 	return err
 }
 
+type GetHealthWorkspaceRequestObject struct {
+}
+
+type GetHealthWorkspaceResponseObject interface {
+	VisitGetHealthWorkspaceResponse(w http.ResponseWriter) error
+}
+
+type GetHealthWorkspace200JSONResponse HealthWorkspace
+
+func (response GetHealthWorkspace200JSONResponse) VisitGetHealthWorkspaceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetHealthWorkspace401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetHealthWorkspace401JSONResponse) VisitGetHealthWorkspaceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetHealthWorkspace500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetHealthWorkspace500JSONResponse) VisitGetHealthWorkspaceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// AddBodyStateFact Add a durable BodyState fact with optimistic revision checking.
 	// (POST /api/v1/body-state/facts)
 	AddBodyStateFact(ctx context.Context, request AddBodyStateFactRequestObject) (AddBodyStateFactResponseObject, error)
+	// GetHealthWorkspace Get the current longitudinal health workspace projection.
+	// (GET /api/v1/health-workspace)
+	GetHealthWorkspace(ctx context.Context, request GetHealthWorkspaceRequestObject) (GetHealthWorkspaceResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx *gin.Context, request any) (any, error)
@@ -399,34 +1044,94 @@ func (sh *strictHandler) AddBodyStateFact(ctx *gin.Context) {
 	}
 }
 
+// GetHealthWorkspace operation middleware
+func (sh *strictHandler) GetHealthWorkspace(ctx *gin.Context) {
+	var request GetHealthWorkspaceRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetHealthWorkspace(ctx, request.(GetHealthWorkspaceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetHealthWorkspace")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetHealthWorkspaceResponseObject); ok {
+		if err := validResponse.VisitGetHealthWorkspaceResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // Base64 encoded, compressed with deflate, json marshaled OpenAPI spec.
 // Stored as a slice of fixed-width chunks rather than one concatenated
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"zFxPj9y2Ff8qgtrjeNdO0gLdnrZ2nDhokoW9bg7GQuBQb0aMJVIhqVlPjT331J77CXopei9a5Nu0QPMt",
+	"CpKShpJISdTMbvZijFck9fj+/h7fEz/GmBUlo0CliC8+xhxEyagA/Z9XVAKnKP+cc8bVHzCjEqhUP1FZ",
+	"5gQjSRg9/14wqv4mcAYFUr9+yWETX8S/OD+sfm6einO92ud0BzkrIb67u1vFKQjMSakWiy/itxQ+lIAl",
+	"pJEAvgMebRDJKw5n8d0qfkV3KCfpa/ihAiEfjqr6hdGapfuI8eh3LN2/kUhCtEFYRkRExFCmqfyGyZes",
+	"oulD0rcBDhRDapFGJBRRykBElMkIPhAhNXmvYUcEYfQ5o5uc4AdkYyPahNckHMgrkMRZhCvOgUprE81I",
+	"TflbiiqZMU7+CA/I3MtKZkBlvboSdkGEIHSrNMGW+x/ULz3oLUU7RHK0zuHh6HyOKKMEo1yr6RMOW0Xu",
+	"riUqSqEEmgLFe7WJ6kDjWaxWq1+k6Gj5/xIZ/UBpStQaKL/irAQuifISG5QLWMWl9aePsXp5Yl6u/iv3",
+	"JcQXsZCc0K3ikvU8IelhyLtmzCqmVZ7HN3crxTgMnCbvYe9cC3NASp+QJnLDeKF+xSmS8ESSAuKVf06j",
+	"WZ2ZhMpff3aYRaiELfBY81oikospKX0lGP12/T1gqSbBB5xXKaTJhrMi4YAEo4qMw17WjOWAqBpsmNGS",
+	"UlUkddH/ntDUyYycbADvcQ6JUKJzjmFr7VXDOMY42RK3MEvOdkARxRDGGMV8uB0hVLCKY/AKXlQlcAEp",
+	"iER54GQm7yQHD/OqMg3WpGZOoCZVAvhcgrX1au2ZT5aZU1FJ8qBJlUsSWlY/VIQrj/su1lQ2G6h1cWDS",
+	"zWoHo2l1qCf5odI2Muqolt+QHObskEvHUXRkfdOygrW62XF+r2hZPWYPuMgtNS6kIPT3QLcyiy+ere7b",
+	"obh29wg9i99FzLZF107nG6Vn9hzrrM3RjJ5U7a8rqXHB6xr2B2r5poYGY6Lp4ohaOo2rnDWxAauDverX",
+	"WwuObvfLfclkBoKIwE1OAhBGN0RBKvA8rlQaBTszJiHppKW+0ZMvOUf7UyKcYRiaGYHmOIGltlqbIqIo",
+	"3wsi5gZFTUhRA2oXNCgZl4RukyP4bq1SA4wjVjBOUhvbgoVOBU2OQSLjMMC2Els8rvDuYuwos/wSddtX",
+	"DzncIz749kDpY86RGDV0hdnm/TmeR5cUFSAzlp4uX3oESVHXiGax8DG4GQvpzGXbcQnKwTh6bmMyTflZ",
+	"MpLXFp9DUEyG6BYSs67LRejn4v4dxEwlCEyojVm40/oTRThbcBYz23cfeNhhjEuYLwjaUiaIeI5oStLa",
+	"1kOCB6px7DBsqCdL8YqZfBxUwc2W5pp7GL4GWhVKOD/9/a/xKv7PP/+h/v3xLxabTwm9U7LRp+qSoNxJ",
+	"XLu2UEmjTqPDaCRFWSdRw5hkjpgTQg0PZ8TvHvkUFW6baH1VIqqiQNwTTNAG5D6hTEIw8oUdcCL3Njv+",
+	"9+O///uvvxmOmB8//enP6oeLL6eB8HJfEozyROyLUrJCTOfPHfWtOdjRwdpKYsfiA+vzWVQ4nh0KzK0f",
+	"PaHNcz6XQoAQTTYV4IZCszakXxSKKEMdSkgKaeunFjIvQLt9KiquyKFMJnXBZp2DU1WPCzA2D1d99TtE",
+	"nwZz2Cwcle5LDiKjIMQ9yxRngN8HihQU9jIBcosIFXICPRrt1+QRCcWkFxgy4bVeoXYJanXUeqq+GmzU",
+	"HIUFmTSOP98rxJeDkcKplaAr/6HAR3h1YExHDPPUoubIiVEkS30PxoO8Emsnze3kZkKgrS+Q+fWm79kV",
+	"bSMwrnnNKPu+Y/y9KBGGK87Uw3AgjrZAZaJ9zbbiKDwrdyzg41yoLescSSvehEEe3BRqY8cC83RFIIeJ",
+	"tm875hXOhYk5/p6/blcUg/UWHZgwIZLGPkokJXAajFMBa2kldXOEAV7zN9LOlxyFHlm0SAXhHyoitB0s",
+	"WucD4EpPXnp4srFDXlh8UNO3bAd8wWst/JVsURkMlQ1gs4B4wOk5Zh5PrKy4El14U5Q5SA1vSsR1SqOI",
+	"F9VmQzBRTsWJJNc5U5HFg9J92cNolHP5mZbkZleH1TsewGsxDkEMmGubfEfgXrfqfBAPLMajvqPW0TsA",
+	"cvtUW6tdkUm3BL3QFeDgupaJ1RMVYH/0dcfXsTDa7V8KIxeaJsTJBqmaG336zAIusr4ElMusDe2hAR2H",
+	"hZD2PZcGPjjiyME+phbrkd6eEpqwWaI1yUlD6CyintuTDHDbARdBx8hp415n+2EXrFIeGSjw4IhacrYh",
+	"uXItKN27SwocsDJqVknMigBY8a2Z4JKZ5IjoBL3M0SSiu64HX+WGHqkcQZOAj09sBtqzWi86fyftQofq",
+	"umtPQNMFmn2tGygGC/YMsiPdvtg6RuDe6lCMLcU95V+1RjrD/A82FOhPTePqBHLeIByAlAfNE30JZXVX",
+	"AyxY0+qIcKxsnVktWNuuizoWL4GmTfn3hNxolr1X2mulCzc5R0OL4ziiBixznP9IDWygjL2VG0Xsi6In",
+	"dw9LO3rn4IjLyvTHBDugC1LmJWlVpy/adXBP0/spXHnL0CUTRHr9Qsm7BAfkABLxUO4csoNh8xuROfja",
+	"4mofPL/Vtue077UQfaI6X2ebvk20ZWXDrq6+9aRpid5KckKKv5bAvZYjeQWOqQ1iCcS0QjBMDOgbb7Wa",
+	"1cYy70ipEigncp/ksIPczlxtahjN9424kJScrCuT0uKcUIIJovafb5bUG++vqE0sH5gc60/astywYwVr",
+	"9/8wHStTDSnmsffE+CGdys/Xg2JzocOy1o90++dsqzp0qhiJrzzWOTShriZ4muI8Lsc+pLIBzlAePQDT",
+	"SW2CO21FlcugXHPRkWsNjm4B3rudUdqcAKkhwj1myzw9ATMpLzMUAtvHT57HAvpjtLAJc2mCpObxQBw9",
+	"CbasnFTqazvNvmcAWpO4KA+fl0rOrXMbbzM7ENfj20OcRb3Z3aNnlX3vrJY6DpgVhYbg+jC6EvpH27xo",
+	"HGJzXH3jfUcSWhhuuf1Gz/dXhX9OAOrK3dqj8e6+w2Bku3s7F3vB0SbUHqaSK38OtDjL8aUl7s9fZqDy",
+	"UQap4PXc+mI3gDWI5PskQ2sig4t4M4JO+/m0UsKcUDeo8ocmS/ALrGaoN87zEW3jkpPtFvjCatiinrOR",
+	"VrZbxE33FNkGFld7CnaoJPliU5fHq65GuCTYp27IwhldXcM4ElrFwFBKhQ2TY4rB1jKDxhr1QmY8vRkG",
+	"pq32e80Pp5tvxgX54YfssKhbSHjbTHMSgDrLE5yq7L68u/L4in1dAlBLHKN1Xn+3uKQfns/Pd6edk1CH",
+	"A3V8r3J/QGpetcoRFiear1YxZ3nOKpkcebDwcLg1OFHSkE0lrbr2J8Wx5wW9k0cL/w3cqvOzOj/DJrjj",
+	"D2ZaPRw77fmN43oplrRO+D3HaiSWObWy78V7oLpr5KOxt5NVPJLOyiO6JwcbfVsK4LJThrPuYQpp5ujf",
+	"AuT8zKcglBTK8T1deSqpQRVDc4/DoC1kQEq9tEvS/d6NwF1TtM4hdbckjORMpO3o87VGuw9+EN+CPMIp",
+	"1clUS8Cq3UH73lEmPe81oISYA6KJMeOk0xsx5JsaiRmVhFaQ2CeI/uGQEpl0e2w8A7VjgjkkNM0Mc8aq",
+	"qM3Tpm1hbJy2raTTT+MbqvHA/JETZNZqIKyAYSZODK/zlFlju+eM7uHDr3M8wnZL1sdHD9O8oly5FdKn",
+	"JU4xe9jvZd6YEMa4OGqS183VJif8Un2yoFafZ/mvVfHNHKmlk5CG8+72r9Tkye4kU4gZK8s0lZvO9lra",
+	"psVg6Aj1i4Mq6X0XBqcqeMeWyro1qm6lzHeNjf7CEFcqKr1Rb6gVFRAHflmZrzDN/142e/zqu+u4vuBO",
+	"exj99LDfTMrS3KhH6IYNDjntm/U4uxXAn2wQJnQbvf78zXWkfBJHWEab5mZIoAKi3TfwQZ5FLyrFq+gq",
+	"QwKip59EQFOjJBHiEKE0hTRiNN9HtxnQSGZAeFRyllYaZEQZomkO3Nw6uNUdc9EaMkJTNTZq2+iiNato",
+	"ivj+t1FFU4Yr5RUgjXLYIryPOKskiIhDgQiNJBQl44jvoxTWMtK3EkUyIyISJWCyaa465IBwBiJqssio",
+	"rNY5wU/0ahFWqB9t4UwnJBjqK4QUbpdkQ4DHF/HXr66bDynNfw6nufGBVVd62ejy6pUSO3ADCuNnZ0/P",
+	"nj7ZUfigDYiVQFFJ4ov407NnZ091ziszLfxzVJLz3bNzffGh9v7nbXdZyQxCVZakt/UqjS/iyzTtdpQZ",
+	"vQShEe7JLm0cAc13XVuQvAL9B+sO1k+ePj0ZJeNXPzmuk1TjIkTTiBRFJRX0ay/jjOocKVrvtRYW9XL6",
+	"FszPDNEuWtrNnfcuctXTnk1P61wAqid9Nj2pvY5VT/jN9ITBBal3q/hX83Zl35mrZ306Pct9bajt5uKL",
+	"d10H9+7m7sY681baHKFIJfBKTL3baW+JzCJWSlIQIQm2pJgBfk/o1lz/2dhQpjtin9zaHfF1KtE1oS9A",
+	"9pvn71F/+69yXYBa3x7bkq4cad1RfrZYx5ZIPkR2X4DURtTcfZszuiWySglFeWSE4duReQ/f6UrLu49x",
+	"xfP4Ij6P727u/h8AAP//",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

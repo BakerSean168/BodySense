@@ -23,7 +23,7 @@ import {
 import type {
   BodyStateFact,
   BodyStateObservation,
-  BodyStateSnapshot,
+  BodyStateProjection,
 } from "@/features/consultation/types/consultation";
 import { errorMessage } from "@/lib/api-client";
 import {
@@ -33,7 +33,7 @@ import {
 import type { LifestyleSectionKey } from "../api/workspaceApi";
 
 interface BodyStateWorkbenchProps {
-  snapshot: BodyStateSnapshot;
+  snapshot: BodyStateProjection;
   selectedRegionId?: BodyRegionId | null;
   onSelectRegion?: (regionId: BodyRegionId | null) => void;
   onAskRegion?: (regionId: BodyRegionId) => void;
@@ -125,7 +125,7 @@ function factDetailsText(fact: BodyStateFact): string {
     .join(" · ");
 }
 
-function safetyState(snapshot: BodyStateSnapshot) {
+function safetyState(snapshot: BodyStateProjection) {
   const raw = snapshot.safety_state || {};
   return {
     active:

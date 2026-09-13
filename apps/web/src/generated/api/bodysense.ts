@@ -6,10 +6,12 @@
  * OpenAPI spec version: 1.0.0-vnext
  */
 import {
-  BodyStateFactMutationResponse
+  BodyStateFactMutationResponse,
+  HealthWorkspace
 } from './model';
 import type {
   BodyStateFactMutationResponseOutput,
+  HealthWorkspaceOutput,
   UpsertBodyStateFactRequest
 } from './model';
 
@@ -61,5 +63,44 @@ const res = await (fetchFn ?? fetch)(getAddBodyStateFactUrl(),
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? BodyStateFactMutationResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetHealthWorkspaceUrl = () => {
+
+
+
+
+  return `/api/v1/health-workspace`
+}
+
+/**
+ * @summary Get the current longitudinal health workspace projection.
+ */
+export const getHealthWorkspace = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<HealthWorkspaceOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetHealthWorkspaceUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: HealthWorkspace, status?: number} = new globalThis.Error();
+    const data : HealthWorkspace = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? HealthWorkspace.parse(parsedBody) : parsedBody
   return data
 }

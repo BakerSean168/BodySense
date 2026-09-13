@@ -1,7 +1,7 @@
 import { RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { BodyOverview } from "@/features/consultation/components/workbench/BodyOverview";
-import type { BodyStateSnapshot } from "@/features/consultation/types/consultation";
+import type { BodyStateProjection } from "@/features/consultation/types/consultation";
 import type { AnatomyViewerErrorState } from "../adapters/anatomyViewerPort";
 
 export function BodyExplorerFallback2D({
@@ -11,7 +11,7 @@ export function BodyExplorerFallback2D({
   onRetry,
   selectionRetained = false,
 }: {
-  snapshot: BodyStateSnapshot | null;
+  snapshot: BodyStateProjection | null;
   error?: AnatomyViewerErrorState | null;
   canRetry?: boolean;
   onRetry?: () => void;

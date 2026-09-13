@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { BodyStateSnapshot } from "../../types/consultation";
+import type { BodyStateProjection } from "../../types/consultation";
 import type { WorkspaceView } from "../../model/workbenchView";
 import {
   BodyExplorer,
@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 interface WorkspaceViewportProps {
   view: WorkspaceView;
-  bodyState: BodyStateSnapshot | null;
+  bodyState: BodyStateProjection | null;
   state: ReactNode;
   diagnosis: ReactNode;
   treatment: ReactNode;

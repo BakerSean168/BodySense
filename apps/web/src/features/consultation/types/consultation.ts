@@ -231,8 +231,7 @@ export interface BodyStateRevision {
   created_at: string;
 }
 
-export interface BodyStateSnapshot {
-  user_id: string;
+export interface BodyStateProjection {
   current_revision: number;
   safety_state: Record<string, unknown>;
   facts: BodyStateFact[];
@@ -241,6 +240,11 @@ export interface BodyStateSnapshot {
   pending_observations?: BodyStateObservation[];
   hypotheses?: BodyStateHypothesis[];
   recent_revisions?: BodyStateRevision[];
+}
+
+/** Full user-scoped snapshot returned by thread/body-state APIs. */
+export interface BodyStateSnapshot extends BodyStateProjection {
+  user_id: string;
 }
 
 export interface ConsultationSpatialContext {

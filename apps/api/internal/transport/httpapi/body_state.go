@@ -27,7 +27,8 @@ type bodyStateFactService interface {
 // HTTP transport types. Generated OpenAPI models stop here and are translated
 // into domain models before service execution.
 type PublicServer struct {
-	bodyState bodyStateFactService
+	bodyState       bodyStateFactService
+	healthWorkspace healthWorkspaceService
 }
 
 func NewPublicServer(bodyState bodyStateFactService) *PublicServer {

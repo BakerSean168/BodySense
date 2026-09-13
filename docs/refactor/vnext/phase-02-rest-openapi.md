@@ -93,8 +93,62 @@ Go generated imports in model/service/repo    NONE
 
 Known baseline test stderr noise and the existing BodyExplorer3D bundle warning are unchanged and tracked separately in the vNext finding ledger.
 
-## Next slice
+## Checkpoint 2 — GET /api/v1/health-workspace
 
-`GET /api/v1/health-workspace`.
+Status: COMPLETE ON PHASE BRANCH
 
-Unlike the architecture spike, the production schema must model the actual composite workspace projection closely enough that runtime response validation is meaningful; generic `object` placeholders will not be promoted merely to claim route coverage.
+### Contract audit before migration
+
+The generic pre-vNext Web request hid a real wire mismatch: `HealthWorkspace.body_state` was declared as the full `BodyStateSnapshot`, which requires `user_id`, but `dto.HealthWorkspaceBodyState` never sends `user_id`. The vNext contract does **not** add a fake field to preserve that TypeScript assumption.
+
+Instead:
+
+- `BodyStateProjection` now describes the minimum projection consumed by Body Explorer, Workbench and Diagnosis actions;
+- the full thread/body-state `BodyStateSnapshot extends BodyStateProjection` and still requires `user_id`;
+- `WorkspaceBodyState` models the actual health-workspace projection;
+- `WorkspaceDiagnosis` is a workspace-specific application read model instead of treating the composite endpoint as a generic `DiagnosisAnalysis`;
+- generated Zod validation rejects the old imaginary `body_state.user_id` field.
+
+### OpenAPI response authority
+
+The production schema now models the composite read surface rather than using generic `object` placeholders for known business structure. It includes BodyState facts/observations/hypotheses/revisions, Diagnosis candidates/freshness/assessments, Treatment/current revision/interventions, TrainingPlan, Outcome, trends, capabilities and actions. Metadata that is intentionally opaque remains `JsonObject`.
+
+Go pointer fields with `omitempty` are represented as optional response properties instead of falsely requiring JSON `null`. Diagnosis freshness reasons are explicitly modeled, including revision/change-type provenance.
+
+### Go boundary
+
+- the generated strict router owns `GET /api/v1/health-workspace`;
+- the old handwritten route registration and `HealthWorkspaceHandler` were deleted;
+- `httpapi.GetHealthWorkspace` calls the existing application service and presents the result as the generated `HealthWorkspace`;
+- a strict transitional presenter uses `json.Decoder.DisallowUnknownFields()` while the application read model still lives in `internal/dto`; this remaining package-ownership debt is tracked as `BS-VNEXT-REST-004` and must close before Phase 02 completes;
+- response tests run the actual JSON through kin-openapi `ValidateResponse`, not only Go compile-time typing.
+
+### Web boundary
+
+`workspaceApi.get` now calls the generated `getHealthWorkspace` with `openApiAuthFetch`. The generated Zod schema validates the network payload first; handwritten projection functions then expose only the application fields needed by workspace features. Generated transport types do not become feature-domain types.
+
+Citation metadata remains wire-opaque for now; the workspace adapter exposes a renderable `Citation` only when a string `title` exists and validates each optional known string field instead of asserting the object.
+
+### Verification
+
+```text
+pnpm contracts:verify                         PASS
+pnpm lint                                     PASS
+pnpm typecheck                                PASS
+pnpm test                                     PASS
+  contracts                                   12/12
+  Web                                         217/217
+  Python                                      475/475
+  Go                                          go test ./... PASS
+pnpm build                                    PASS
+git diff --check                              PASS
+OpenAPI response validation                   PASS
+old HealthWorkspaceHandler                    DELETED
+Go generated imports in model/service/repo    NONE
+```
+
+Known baseline test stderr noise and the existing BodyExplorer3D bundle warning remain unchanged.
+
+## Next batch
+
+Create a deterministic public-route coverage ledger, then migrate the remaining BodyState route family as one coherent contract batch. This reuses the BodyState schemas already proven by Checkpoint 1 and allows the legacy `BodyStateHandler` to be retired instead of leaving mixed ownership for the same aggregate.

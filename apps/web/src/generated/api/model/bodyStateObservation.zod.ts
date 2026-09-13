@@ -8,25 +8,22 @@
 import * as zod from 'zod/mini';
 import { JsonObject } from './jsonObject.zod';
 
-export const BodyStateFact = /*#__PURE__*/ zod.strictObject({
+export const BodyStateObservation = /*#__PURE__*/ zod.strictObject({
   "id": /*#__PURE__*/ zod.uuid(),
   "user_id": /*#__PURE__*/ zod.uuid(),
   "concern_key": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string()),
   "kind": /*#__PURE__*/ zod.string(),
   "body_region": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string()),
   "body_region_id": /*#__PURE__*/ zod.nullable(/*#__PURE__*/ zod.string()),
-  "value": /*#__PURE__*/ zod.string(),
-  "details": JsonObject,
-  "origin": /*#__PURE__*/ zod.string(),
-  "review_state": /*#__PURE__*/ zod.string(),
-  "lifecycle_state": /*#__PURE__*/ zod.string(),
-  "trend": /*#__PURE__*/ zod.string(),
+  "method": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string()),
+  "value": JsonObject,
+  "condition": JsonObject,
   "source_key": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string()),
   "provenance": JsonObject,
   "observed_at": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.iso.datetime({"offset":true})),
-  "valid_from": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.iso.datetime({"offset":true})),
-  "valid_until": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.iso.datetime({"offset":true})),
-  "supersedes_fact_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid()),
+  "supersedes_observation_id": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.uuid()),
+  "review_state": /*#__PURE__*/ zod.string(),
+  "lifecycle_state": /*#__PURE__*/ zod.string(),
   "excluded_from_reasoning": /*#__PURE__*/ zod.boolean(),
   "created_revision": /*#__PURE__*/ zod.int(),
   "updated_revision": /*#__PURE__*/ zod.int(),
@@ -34,5 +31,5 @@ export const BodyStateFact = /*#__PURE__*/ zod.strictObject({
   "updated_at": /*#__PURE__*/ zod.iso.datetime({"offset":true})
 });
 
-export type BodyStateFact = zod.input<typeof BodyStateFact>;
-export type BodyStateFactOutput = zod.output<typeof BodyStateFact>;
+export type BodyStateObservation = zod.input<typeof BodyStateObservation>;
+export type BodyStateObservationOutput = zod.output<typeof BodyStateObservation>;

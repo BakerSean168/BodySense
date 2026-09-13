@@ -1,7 +1,7 @@
 import type {
   BodyStateFact,
   BodyStateObservation,
-  BodyStateSnapshot,
+  BodyStateProjection,
 } from "@/features/consultation/types/consultation";
 import {
   BODY_REGION_IDS,
@@ -75,7 +75,7 @@ function observationIsActive(observation: BodyStateObservation): boolean {
   return observation.lifecycle_state === "active";
 }
 
-function explicitSafetyRegions(snapshot: BodyStateSnapshot): BodyRegionId[] {
+function explicitSafetyRegions(snapshot: BodyStateProjection): BodyRegionId[] {
   const safety = snapshot.safety_state;
   if (
     safety.has_red_flags !== true ||
@@ -93,7 +93,7 @@ function explicitSafetyRegions(snapshot: BodyStateSnapshot): BodyRegionId[] {
 }
 
 export function selectBodyRegionVisualSummaries(
-  snapshot: BodyStateSnapshot | null | undefined,
+  snapshot: BodyStateProjection | null | undefined,
 ): BodyRegionVisualSummary[] {
   const summaries = new Map<BodyRegionId, BodyRegionVisualSummary>(
     BODY_REGION_IDS.map((regionId) => [
@@ -167,7 +167,7 @@ export function selectBodyRegionVisualSummaries(
 }
 
 export function selectBodyRegionVisualState(
-  snapshot: BodyStateSnapshot | null | undefined,
+  snapshot: BodyStateProjection | null | undefined,
   regionId: BodyRegionId,
 ): BodyRegionVisualState {
   return (

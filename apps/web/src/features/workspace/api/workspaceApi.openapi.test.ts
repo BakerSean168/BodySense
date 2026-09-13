@@ -7,6 +7,39 @@ vi.mock("@/features/auth/services/authService", () => ({
 
 import { workspaceApi } from "./workspaceApi";
 
+const validWorkspaceResponse = {
+  generated_at: "2026-09-13T08:00:00Z",
+  profile_ready: true,
+  body_state: {
+    current_revision: 0,
+    safety_state: {},
+    facts: [],
+    pending_facts: [],
+    observations: [],
+    pending_observations: [],
+    hypotheses: [],
+    recent_revisions: [],
+  },
+  treatment_revisions: [],
+  recent_outcomes: [],
+  trends: [],
+  capabilities: {
+    can_continue_consultation: true,
+    can_edit_body_state: true,
+    can_request_diagnosis: false,
+    can_review_diagnosis: false,
+    can_generate_treatment: false,
+    can_accept_treatment: false,
+    can_execute_treatment: false,
+    can_record_outcome: false,
+    can_review_treatment: false,
+    requires_safety_review: false,
+    requires_diagnosis_review: false,
+    requires_treatment_review: false,
+  },
+  actions: [],
+};
+
 const validMutationResponse = {
   fact: {
     id: "4df4fc34-371e-49a3-8e74-06bad9dbe64e",
@@ -39,6 +72,41 @@ const validMutationResponse = {
 
 describe("workspaceApi OpenAPI boundary", () => {
   beforeEach(() => authFetchMock.mockReset());
+
+  it("loads the workspace through generated runtime validation without inventing user_id", async () => {
+    authFetchMock.mockResolvedValue(
+      new Response(JSON.stringify(validWorkspaceResponse), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const result = await workspaceApi.get();
+
+    expect(authFetchMock).toHaveBeenCalledWith(
+      "/api/v1/health-workspace",
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(result.body_state.current_revision).toBe(0);
+    expect("user_id" in result.body_state).toBe(false);
+  });
+
+  it("rejects the old imaginary workspace body_state.user_id shape", async () => {
+    authFetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          ...validWorkspaceResponse,
+          body_state: {
+            ...validWorkspaceResponse.body_state,
+            user_id: "legacy-lie",
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    await expect(workspaceApi.get()).rejects.toThrow();
+  });
 
   it("uses authFetch and validates a successful generated response", async () => {
     authFetchMock.mockResolvedValue(

@@ -247,6 +247,47 @@
         "pnpm test"
       ],
       "notes": "Legacy token acceptance remains a separate Phase 07 retirement item."
+    },
+    {
+      "id": "BS-VNEXT-REST-003",
+      "priority": "P1",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "Web health workspace asserted a body_state.user_id field that the wire never returned",
+      "evidence": [
+        "apps/api/internal/dto/health_workspace.go",
+        "apps/web/src/features/workspace/types/workspace.ts",
+        "apps/web/src/features/consultation/types/consultation.ts",
+        "apps/web/src/features/workspace/api/workspaceApi.openapi.test.ts"
+      ],
+      "root_cause": "The handwritten generic request<HealthWorkspace>() trusted a TypeScript assertion that reused the full Consultation BodyStateSnapshot type even though the health-workspace projection intentionally omits user_id.",
+      "repair": "Generate runtime validation from OpenAPI, introduce BodyStateProjection as the minimum UI contract, keep BodyStateSnapshot as the user-scoped extension requiring user_id, and give HealthWorkspace its own WorkspaceBodyState/WorkspaceDiagnosis read models.",
+      "verification": [
+        "workspaceApi OpenAPI test rejects body_state.user_id as an unknown field",
+        "pnpm nx run @bodysense/web:typecheck",
+        "pnpm test",
+        "pnpm build"
+      ],
+      "notes": "The repair removes a false static guarantee instead of making user_id optional or inventing it in the response."
+    },
+    {
+      "id": "BS-VNEXT-REST-004",
+      "priority": "P2",
+      "status": "OPEN",
+      "phase": "02",
+      "title": "HealthWorkspace application read projection still lives in the dto package",
+      "evidence": [
+        "apps/api/internal/dto/health_workspace.go",
+        "apps/api/internal/transport/httpapi/health_workspace.go"
+      ],
+      "root_cause": "The pre-vNext HTTP handler and application projection were colocated under internal/dto, so the service returns a type named for transport even though it is really an application read model.",
+      "target": "Move the HealthWorkspace application projection to an application/readmodel package and keep OpenAPI generated types + presenters solely in transport/httpapi before Phase 02 closes.",
+      "verification": [
+        "no service import of transport/generated OpenAPI types",
+        "HealthWorkspace service no longer returns internal/dto.HealthWorkspace",
+        "full OpenAPI response conformance tests remain green"
+      ],
+      "notes": "The temporary presenter bridge uses strict JSON decode with DisallowUnknownFields so contract drift fails closed while the package ownership cleanup is pending."
     }
   ]
 }
