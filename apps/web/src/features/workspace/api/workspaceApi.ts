@@ -9,6 +9,7 @@ import {
   reviewBodyStateObservation,
   updateBodyStateFactTemporal,
   updateBodyStateHypothesisLifecycle,
+  updateLifestyle,
 } from "@/generated/api/bodysense";
 import { openApiAuthFetch, withOpenApiError } from "@/lib/openapi-client";
 import type { BodyStateFact } from "@/features/consultation/types/consultation";
@@ -282,21 +283,20 @@ export const workspaceApi = {
       body: JSON.stringify(input),
     }),
 
-  updateLifestyleCurrent: (
+  updateLifestyleCurrent: async (
     expectedRevision: number,
     section: LifestyleSectionKey,
     summary: string,
     details: Record<string, unknown> = {},
-  ) =>
-    request("/api/v1/lifestyle", {
-      method: "PUT",
-      headers: jsonHeaders,
-      body: JSON.stringify({
-        expected_revision: expectedRevision,
-        [section]: {
-          summary,
-          details,
+  ): Promise<void> =>
+    withOpenApiError(async () => {
+      await updateLifestyle(
+        {
+          expected_revision: expectedRevision,
+          [section]: { summary, details },
         },
-      }),
+        undefined,
+        openApiAuthFetch,
+      );
     }),
 };

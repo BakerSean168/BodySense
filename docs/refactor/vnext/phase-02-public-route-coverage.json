@@ -5,11 +5,11 @@
   "totals": {
     "baseline": 96,
     "browserFacingEligible": 95,
-    "openapi": 12,
-    "missing": 83,
+    "openapi": 21,
+    "missing": 74,
     "retired": 0,
     "excludedOperational": 1,
-    "coveragePercent": 12.63
+    "coveragePercent": 22.11
   },
   "routes": [
     {
@@ -83,7 +83,9 @@
       "method": "PUT",
       "path": "/api/v1/onboarding/context",
       "source": "apps/api/cmd/server/main.go:393",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "submitOnboardingContext",
+      "openapiPath": "/api/v1/onboarding/context"
     },
     {
       "method": "POST",
@@ -447,49 +449,65 @@
       "method": "GET",
       "path": "/api/v1/lifestyle",
       "source": "apps/api/cmd/server/main.go:476",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getLifestyle",
+      "openapiPath": "/api/v1/lifestyle"
     },
     {
       "method": "PUT",
       "path": "/api/v1/lifestyle",
       "source": "apps/api/cmd/server/main.go:477",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "updateLifestyle",
+      "openapiPath": "/api/v1/lifestyle"
     },
     {
       "method": "POST",
       "path": "/api/v1/lifestyle/candidates/:id/accept",
       "source": "apps/api/cmd/server/main.go:478",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "acceptLifestyleCandidate",
+      "openapiPath": "/api/v1/lifestyle/candidates/{id}/accept"
     },
     {
       "method": "POST",
       "path": "/api/v1/lifestyle/candidates/:id/reject",
       "source": "apps/api/cmd/server/main.go:479",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "rejectLifestyleCandidate",
+      "openapiPath": "/api/v1/lifestyle/candidates/{id}/reject"
     },
     {
       "method": "GET",
       "path": "/api/v1/body-metrics",
       "source": "apps/api/cmd/server/main.go:480",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getBodyMetrics",
+      "openapiPath": "/api/v1/body-metrics"
     },
     {
       "method": "PUT",
       "path": "/api/v1/body-metrics",
       "source": "apps/api/cmd/server/main.go:481",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "updateBodyMetrics",
+      "openapiPath": "/api/v1/body-metrics"
     },
     {
       "method": "GET",
       "path": "/api/v1/health-history/injury",
       "source": "apps/api/cmd/server/main.go:482",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getInjuryHistory",
+      "openapiPath": "/api/v1/health-history/injury"
     },
     {
       "method": "PUT",
       "path": "/api/v1/health-history/injury",
       "source": "apps/api/cmd/server/main.go:483",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "updateInjuryHistory",
+      "openapiPath": "/api/v1/health-history/injury"
     },
     {
       "method": "GET",

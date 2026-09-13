@@ -384,6 +384,228 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ResolveBodyStateSafetyRequest'
+  /api/v1/lifestyle:
+    get:
+      operationId: getLifestyle
+      summary: Get the current lifestyle projection.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifestyleSnapshot'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    put:
+      operationId: updateLifestyle
+      summary: Patch the current lifestyle projection with optimistic concurrency.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifestyleSnapshot'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLifestyleRequest'
+  /api/v1/lifestyle/candidates/{id}/accept:
+    post:
+      operationId: acceptLifestyleCandidate
+      summary: Accept an AI-extracted lifestyle candidate.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifestyleSnapshot'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewLifestyleCandidateRequest'
+      parameters: &id002
+      - name: id
+        in: path
+        required: true
+        schema: &id010
+          type: string
+          format: uuid
+  /api/v1/lifestyle/candidates/{id}/reject:
+    post:
+      operationId: rejectLifestyleCandidate
+      summary: Reject an AI-extracted lifestyle candidate.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifestyleSnapshot'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewLifestyleCandidateRequest'
+      parameters: *id002
+  /api/v1/body-metrics:
+    get:
+      operationId: getBodyMetrics
+      summary: Get current anthropometric measurements.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyMetricsSnapshot'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    put:
+      operationId: updateBodyMetrics
+      summary: Update current anthropometric measurements with optimistic concurrency.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyMetricsSnapshot'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBodyMetricsRequest'
+  /api/v1/health-history/injury:
+    get:
+      operationId: getInjuryHistory
+      summary: Get the current injury-history projection.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InjuryHistorySnapshot'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    put:
+      operationId: updateInjuryHistory
+      summary: Update injury-history summary with optimistic concurrency.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InjuryHistorySnapshot'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateInjuryHistoryRequest'
+  /api/v1/onboarding/context:
+    put:
+      operationId: submitOnboardingContext
+      summary: Atomically establish stable profile identity and the initial BodyState context.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OnboardingContextResult'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OnboardingContextRequest'
 components:
   securitySchemes:
     bearerAuth:
@@ -594,7 +816,7 @@ components:
       properties:
         fact:
           $ref: '#/components/schemas/BodyStateFact'
-        revision: &id007
+        revision: &id008
           anyOf:
           - $ref: '#/components/schemas/BodyStateRevision'
           - type: 'null'
@@ -621,24 +843,24 @@ components:
       - created_at
       - updated_at
       properties:
-        id: &id002
+        id: &id003
           type: string
           format: uuid
-        user_id: *id002
-        concern_key: &id003
+        user_id: *id003
+        concern_key: &id004
           type: string
-        kind: *id003
-        body_region: *id003
+        kind: *id004
+        body_region: *id004
         body_region_id:
           type:
           - string
           - 'null'
-        method: *id003
+        method: *id004
         value:
           $ref: '#/components/schemas/JsonObject'
         condition:
           $ref: '#/components/schemas/JsonObject'
-        source_key: *id003
+        source_key: *id004
         provenance:
           $ref: '#/components/schemas/JsonObject'
         observed_at:
@@ -647,17 +869,17 @@ components:
         supersedes_observation_id:
           type: string
           format: uuid
-        review_state: *id003
-        lifecycle_state: *id003
-        excluded_from_reasoning: &id006
+        review_state: *id004
+        lifecycle_state: *id004
+        excluded_from_reasoning: &id007
           type: boolean
-        created_revision: &id004
+        created_revision: &id005
           type: integer
-        updated_revision: *id004
-        created_at: &id005
+        updated_revision: *id005
+        created_at: &id006
           type: string
           format: date-time
-        updated_at: *id005
+        updated_at: *id006
     BodyStateHypothesis:
       type: object
       additionalProperties: false
@@ -677,11 +899,11 @@ components:
       - created_at
       - updated_at
       properties:
-        id: *id002
-        user_id: *id002
-        concern_key: *id003
-        statement: *id003
-        lifecycle_state: *id003
+        id: *id003
+        user_id: *id003
+        concern_key: *id004
+        statement: *id004
+        lifecycle_state: *id004
         confidence:
           type: string
         supporting_fact_ids:
@@ -697,10 +919,10 @@ components:
           format: uuid
         provenance:
           $ref: '#/components/schemas/JsonObject'
-        created_revision: *id004
-        updated_revision: *id004
-        created_at: *id005
-        updated_at: *id005
+        created_revision: *id005
+        updated_revision: *id005
+        created_at: *id006
+        updated_at: *id006
     HealthWorkspaceBodyState:
       type: object
       additionalProperties: false
@@ -714,7 +936,7 @@ components:
       - hypotheses
       - recent_revisions
       properties:
-        current_revision: *id004
+        current_revision: *id005
         safety_state:
           $ref: '#/components/schemas/JsonObject'
         facts:
@@ -758,9 +980,9 @@ components:
       - missing_information
       - safety_notes
       properties:
-        candidate_id: *id002
-        concern_key: *id003
-        name: *id003
+        candidate_id: *id003
+        concern_key: *id004
+        name: *id004
         confidence:
           type: string
           enum:
@@ -781,8 +1003,8 @@ components:
           - 低
         impact:
           type: string
-        basis: *id003
-        typical_symptoms: *id003
+        basis: *id004
+        typical_symptoms: *id004
         differential:
           type: string
         basis_fact_ids:
@@ -793,7 +1015,7 @@ components:
           $ref: '#/components/schemas/StringArray'
         counterevidence_ids:
           $ref: '#/components/schemas/StringArray'
-        reasoning_summary: *id003
+        reasoning_summary: *id004
         missing_information:
           $ref: '#/components/schemas/StringArray'
         safety_notes:
@@ -809,17 +1031,17 @@ components:
       - state
       - assessed_at
       properties:
-        id: *id002
-        analysis_id: *id002
-        candidate_id: *id002
-        user_id: *id002
+        id: *id003
+        analysis_id: *id003
+        candidate_id: *id003
+        user_id: *id003
         state:
           type: string
           enum:
           - confirmed
           - unsure
           - not_applicable
-        assessed_at: *id005
+        assessed_at: *id006
     DiagnosisFreshness:
       type: object
       additionalProperties: false
@@ -831,20 +1053,20 @@ components:
       - reasons
       - checked_at
       properties:
-        analysis_id: *id002
-        user_id: *id002
+        analysis_id: *id003
+        user_id: *id003
         state:
           type: string
           enum:
           - fresh
           - potentially_stale
           - stale
-        evaluated_against_revision: *id004
+        evaluated_against_revision: *id005
         reasons:
           type: array
           items:
             $ref: '#/components/schemas/DiagnosisFreshnessReason'
-        checked_at: *id005
+        checked_at: *id006
     DiagnosisWorkspaceProjection:
       type: object
       additionalProperties: false
@@ -869,8 +1091,8 @@ components:
       - candidate_assessments
       - freshness
       properties:
-        analysis_id: *id002
-        body_state_revision: *id004
+        analysis_id: *id003
+        body_state_revision: *id005
         status:
           type: string
           enum:
@@ -878,8 +1100,8 @@ components:
           - partial
           - insufficient_information
           - safety_blocked
-        scope: *id003
-        summary: *id003
+        scope: *id004
+        summary: *id004
         candidates:
           type: array
           items:
@@ -896,7 +1118,7 @@ components:
             $ref: '#/components/schemas/JsonObject'
         governance:
           $ref: '#/components/schemas/JsonObject'
-        agent_configuration_id: *id003
+        agent_configuration_id: *id004
         agent_configuration:
           $ref: '#/components/schemas/JsonObject'
         decision_trace:
@@ -907,7 +1129,7 @@ components:
           $ref: '#/components/schemas/JsonObject'
         decision_authority:
           $ref: '#/components/schemas/JsonObject'
-        created_at: *id005
+        created_at: *id006
         candidate_assessments:
           type: array
           items:
@@ -923,9 +1145,9 @@ components:
       - description
       - prescription
       properties:
-        kind: *id003
-        title: *id003
-        description: *id003
+        kind: *id004
+        title: *id004
+        description: *id004
         prescription:
           $ref: '#/components/schemas/JsonObject'
     TreatmentPlanContent:
@@ -942,16 +1164,16 @@ components:
       - review_triggers
       - safety_notes
       properties:
-        summary: *id003
-        goal: *id003
-        duration_weeks: *id004
+        summary: *id004
+        goal: *id004
+        duration_weeks: *id005
         interventions:
           type: array
           items:
             $ref: '#/components/schemas/TreatmentInterventionDraft'
         daily_habits:
           $ref: '#/components/schemas/StringArray'
-        expected_timeline: *id003
+        expected_timeline: *id004
         warning_signs:
           $ref: '#/components/schemas/StringArray'
         review_triggers:
@@ -975,25 +1197,25 @@ components:
       - created_at
       - updated_at
       properties:
-        id: *id002
-        user_id: *id002
-        treatment_id: *id002
-        treatment_revision_id: *id002
-        kind: *id003
-        title: *id003
-        description: *id003
+        id: *id003
+        user_id: *id003
+        treatment_id: *id003
+        treatment_revision_id: *id003
+        kind: *id004
+        title: *id004
+        description: *id004
         prescription:
           $ref: '#/components/schemas/JsonObject'
-        position: *id004
-        status: *id003
+        position: *id005
+        status: *id004
         started_at:
           type: string
           format: date-time
         ended_at:
           type: string
           format: date-time
-        created_at: *id005
-        updated_at: *id005
+        created_at: *id006
+        updated_at: *id006
     TreatmentRevision:
       type: object
       additionalProperties: false
@@ -1022,9 +1244,9 @@ components:
       - created_at
       - interventions
       properties:
-        id: *id002
-        treatment_id: *id002
-        revision: *id004
+        id: *id003
+        treatment_id: *id003
+        revision: *id005
         acceptance_state:
           type: string
           enum:
@@ -1039,10 +1261,10 @@ components:
           - paused
           - superseded
           - completed
-        source_body_state_revision: *id004
-        source_diagnosis_analysis_id: *id002
-        goal: *id003
-        duration_weeks: *id004
+        source_body_state_revision: *id005
+        source_diagnosis_analysis_id: *id003
+        goal: *id004
+        duration_weeks: *id005
         plan:
           $ref: '#/components/schemas/TreatmentPlanContent'
         user_constraints:
@@ -1051,7 +1273,7 @@ components:
           $ref: '#/components/schemas/StringArray'
         governance:
           $ref: '#/components/schemas/JsonObject'
-        agent_configuration_id: *id003
+        agent_configuration_id: *id004
         agent_configuration:
           $ref: '#/components/schemas/JsonObject'
         execution_provenance:
@@ -1064,8 +1286,8 @@ components:
           $ref: '#/components/schemas/JsonObject'
         rollout_provenance:
           $ref: '#/components/schemas/JsonObject'
-        change_reason: *id003
-        created_at: *id005
+        change_reason: *id004
+        created_at: *id006
         accepted_at:
           type: string
           format: date-time
@@ -1078,11 +1300,11 @@ components:
       additionalProperties: false
       required: []
       properties:
-        code: *id003
-        revision: *id004
-        change_type: *id003
-        concern_key: *id003
-        message: *id003
+        code: *id004
+        revision: *id005
+        change_type: *id004
+        concern_key: *id004
+        message: *id004
     Treatment:
       type: object
       additionalProperties: false
@@ -1095,9 +1317,9 @@ components:
       - created_at
       - updated_at
       properties:
-        id: *id002
-        user_id: *id002
-        current_revision: *id004
+        id: *id003
+        user_id: *id003
+        current_revision: *id005
         status:
           type: string
           enum:
@@ -1115,8 +1337,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TreatmentStatusReason'
-        created_at: *id005
-        updated_at: *id005
+        created_at: *id006
+        updated_at: *id006
         current:
           $ref: '#/components/schemas/TreatmentRevision'
     TrainingPlan:
@@ -1132,8 +1354,8 @@ components:
       - phases
       - created_at
       properties:
-        id: *id002
-        user_id: *id002
+        id: *id003
+        user_id: *id003
         consultation_id:
           type: string
           format: uuid
@@ -1143,15 +1365,15 @@ components:
         treatment_revision_id:
           type: string
           format: uuid
-        status: *id003
-        goal: *id003
-        duration_weeks: *id004
-        current_week: *id004
+        status: *id004
+        goal: *id004
+        duration_weeks: *id005
+        current_week: *id005
         phases:
           type: array
           items:
             $ref: '#/components/schemas/JsonObject'
-        created_at: *id005
+        created_at: *id006
     Outcome:
       type: object
       additionalProperties: false
@@ -1171,8 +1393,8 @@ components:
       - provenance
       - created_at
       properties:
-        id: *id002
-        user_id: *id002
+        id: *id003
+        user_id: *id003
         treatment_id:
           type: string
           format: uuid
@@ -1182,27 +1404,27 @@ components:
         intervention_id:
           type: string
           format: uuid
-        source_type: *id003
-        source_key: *id003
-        kind: *id003
-        concern_key: *id003
-        body_region: *id003
+        source_type: *id004
+        source_key: *id004
+        kind: *id004
+        concern_key: *id004
+        body_region: *id004
         value:
           $ref: '#/components/schemas/JsonObject'
-        notes: *id003
-        association_statement: *id003
+        notes: *id004
+        association_statement: *id004
         causality_level:
           type: string
           enum:
           - association_only
           - user_attributed
           - clinician_attributed
-        occurred_at: *id005
+        occurred_at: *id006
         provenance:
           $ref: '#/components/schemas/JsonObject'
         body_state_revision:
           type: integer
-        created_at: *id005
+        created_at: *id006
     WorkspaceTrendPoint:
       type: object
       additionalProperties: false
@@ -1211,12 +1433,12 @@ components:
       - source_type
       - value
       properties:
-        occurred_at: *id005
-        source_type: *id003
+        occurred_at: *id006
+        source_type: *id004
         value:
           $ref: '#/components/schemas/JsonObject'
-        notes: *id003
-        causality_level: *id003
+        notes: *id004
+        causality_level: *id004
     WorkspaceTrend:
       type: object
       additionalProperties: false
@@ -1228,11 +1450,11 @@ components:
       - current_trend
       - points
       properties:
-        key: *id003
-        concern_key: *id003
-        body_region: *id003
-        kind: *id003
-        current_trend: *id003
+        key: *id004
+        concern_key: *id004
+        body_region: *id004
+        kind: *id004
+        current_trend: *id004
         points:
           type: array
           items:
@@ -1254,18 +1476,18 @@ components:
       - requires_diagnosis_review
       - requires_treatment_review
       properties:
-        can_continue_consultation: *id006
-        can_edit_body_state: *id006
-        can_request_diagnosis: *id006
-        can_review_diagnosis: *id006
-        can_generate_treatment: *id006
-        can_accept_treatment: *id006
-        can_execute_treatment: *id006
-        can_record_outcome: *id006
-        can_review_treatment: *id006
-        requires_safety_review: *id006
-        requires_diagnosis_review: *id006
-        requires_treatment_review: *id006
+        can_continue_consultation: *id007
+        can_edit_body_state: *id007
+        can_request_diagnosis: *id007
+        can_review_diagnosis: *id007
+        can_generate_treatment: *id007
+        can_accept_treatment: *id007
+        can_execute_treatment: *id007
+        can_record_outcome: *id007
+        can_review_treatment: *id007
+        requires_safety_review: *id007
+        requires_diagnosis_review: *id007
+        requires_treatment_review: *id007
     WorkspaceAction:
       type: object
       additionalProperties: false
@@ -1275,10 +1497,10 @@ components:
       - enabled
       - reason
       properties:
-        kind: *id003
-        priority: *id004
-        enabled: *id006
-        reason: *id003
+        kind: *id004
+        priority: *id005
+        enabled: *id007
+        reason: *id004
         target:
           $ref: '#/components/schemas/JsonObject'
     HealthWorkspace:
@@ -1294,11 +1516,11 @@ components:
       - capabilities
       - actions
       properties:
-        generated_at: *id005
+        generated_at: *id006
         conversation_id:
           type: string
           format: uuid
-        profile_ready: *id006
+        profile_ready: *id007
         body_state:
           $ref: '#/components/schemas/HealthWorkspaceBodyState'
         diagnosis:
@@ -1478,7 +1700,7 @@ components:
       properties:
         observation:
           $ref: '#/components/schemas/BodyStateObservation'
-        revision: *id007
+        revision: *id008
     ReviewBodyStateObservationRequest:
       type: object
       additionalProperties: false
@@ -1543,7 +1765,7 @@ components:
       properties:
         hypothesis:
           $ref: '#/components/schemas/BodyStateHypothesis'
-        revision: *id007
+        revision: *id008
     UpdateBodyStateHypothesisLifecycleRequest:
       type: object
       additionalProperties: false
@@ -1597,10 +1819,10 @@ components:
           type: string
         metadata:
           $ref: '#/components/schemas/JsonObject'
-        retrieved_at: &id008
+        retrieved_at: &id009
           type: string
           format: date-time
-        created_at: *id008
+        created_at: *id009
     BodyStateEvidenceListResponse:
       type: object
       additionalProperties: false
@@ -1636,7 +1858,261 @@ components:
       required:
       - revision
       properties:
-        revision: *id007
+        revision: *id008
+    LifestyleSection:
+      type: object
+      additionalProperties: false
+      required:
+      - kind
+      - summary
+      - details
+      properties:
+        kind:
+          type: string
+        fact_id: *id010
+        summary:
+          type: string
+        details:
+          $ref: '#/components/schemas/JsonObject'
+        valid_from: &id011
+          type: string
+          format: date-time
+        updated_at: *id011
+        review_state:
+          type: string
+    LifestyleCandidate:
+      type: object
+      additionalProperties: false
+      required:
+      - fact_id
+      - kind
+      - summary
+      - details
+      - created_at
+      properties:
+        fact_id: *id010
+        kind:
+          type: string
+        summary:
+          type: string
+        details:
+          $ref: '#/components/schemas/JsonObject'
+        created_at: *id011
+    LifestyleSnapshot:
+      type: object
+      additionalProperties: false
+      required:
+      - current_revision
+      - activity
+      - sleep
+      - exercise
+      - nutrition
+      - substances
+      - recovery
+      - pending_updates
+      properties:
+        current_revision: &id012
+          type: integer
+          format: int64
+          minimum: 0
+        activity:
+          $ref: '#/components/schemas/LifestyleSection'
+        sleep:
+          $ref: '#/components/schemas/LifestyleSection'
+        exercise:
+          $ref: '#/components/schemas/LifestyleSection'
+        nutrition:
+          $ref: '#/components/schemas/LifestyleSection'
+        substances:
+          $ref: '#/components/schemas/LifestyleSection'
+        recovery:
+          $ref: '#/components/schemas/LifestyleSection'
+        pending_updates:
+          type: array
+          items:
+            $ref: '#/components/schemas/LifestyleCandidate'
+    LifestyleSectionInput:
+      type: object
+      additionalProperties: false
+      required:
+      - summary
+      properties:
+        summary:
+          type: string
+        details:
+          $ref: '#/components/schemas/JsonObject'
+    UpdateLifestyleRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_revision
+      properties:
+        expected_revision: *id012
+        activity:
+          $ref: '#/components/schemas/LifestyleSectionInput'
+        sleep:
+          $ref: '#/components/schemas/LifestyleSectionInput'
+        exercise:
+          $ref: '#/components/schemas/LifestyleSectionInput'
+        nutrition:
+          $ref: '#/components/schemas/LifestyleSectionInput'
+        substances:
+          $ref: '#/components/schemas/LifestyleSectionInput'
+        recovery:
+          $ref: '#/components/schemas/LifestyleSectionInput'
+    ReviewLifestyleCandidateRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_revision
+      properties:
+        expected_revision: *id012
+    BodyMetricValue:
+      type: object
+      additionalProperties: false
+      required:
+      - value
+      - unit
+      properties:
+        value:
+          type: number
+          format: double
+        unit:
+          type: string
+        observed_at: *id011
+    BodyMetricsSnapshot:
+      type: object
+      additionalProperties: false
+      required:
+      - current_revision
+      properties:
+        current_revision: *id012
+        height:
+          $ref: '#/components/schemas/BodyMetricValue'
+        weight:
+          $ref: '#/components/schemas/BodyMetricValue'
+        bmi:
+          type: number
+          format: double
+    UpdateBodyMetricsRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_revision
+      properties:
+        expected_revision: *id012
+        height_cm:
+          type: number
+          minimum: 50
+          maximum: 250
+          format: double
+        weight_kg:
+          type: number
+          minimum: 20
+          maximum: 300
+          format: double
+    InjuryHistorySnapshot:
+      type: object
+      additionalProperties: false
+      required:
+      - current_revision
+      - summary
+      properties:
+        current_revision: *id012
+        fact_id: *id010
+        summary:
+          type: string
+        valid_from: *id011
+        updated_at: *id011
+    UpdateInjuryHistoryRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_revision
+      - summary
+      properties:
+        expected_revision: *id012
+        summary:
+          type: string
+    OnboardingProfileInput:
+      type: object
+      additionalProperties: false
+      required:
+      - gender
+      - birth_date
+      properties:
+        gender:
+          type: string
+          minLength: 1
+        birth_date:
+          type: string
+          format: date
+    OnboardingBodyMetricsInput:
+      type: object
+      additionalProperties: false
+      required:
+      - height_cm
+      - weight_kg
+      properties:
+        height_cm:
+          type: number
+          minimum: 50
+          maximum: 250
+          format: double
+        weight_kg:
+          type: number
+          minimum: 20
+          maximum: 300
+          format: double
+    OnboardingLifestyleInput:
+      type: object
+      additionalProperties: false
+      required:
+      - activity
+      - sleep
+      - exercise
+      - nutrition
+      - substances
+      - recovery
+      properties:
+        activity:
+          $ref: '#/components/schemas/LifestyleSectionInput'
+        sleep:
+          $ref: '#/components/schemas/LifestyleSectionInput'
+        exercise:
+          $ref: '#/components/schemas/LifestyleSectionInput'
+        nutrition:
+          $ref: '#/components/schemas/LifestyleSectionInput'
+        substances:
+          $ref: '#/components/schemas/LifestyleSectionInput'
+        recovery:
+          $ref: '#/components/schemas/LifestyleSectionInput'
+    OnboardingContextRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_body_state_revision
+      - profile
+      - body_metrics
+      - lifestyle
+      - injury_history
+      properties:
+        expected_body_state_revision: *id012
+        profile:
+          $ref: '#/components/schemas/OnboardingProfileInput'
+        body_metrics:
+          $ref: '#/components/schemas/OnboardingBodyMetricsInput'
+        lifestyle:
+          $ref: '#/components/schemas/OnboardingLifestyleInput'
+        injury_history:
+          type: string
+    OnboardingContextResult:
+      type: object
+      additionalProperties: false
+      required:
+      - body_state_revision
+      properties:
+        body_state_revision: *id012
   responses:
     InvalidRequest:
       description: Request body or BodyState fact is invalid.

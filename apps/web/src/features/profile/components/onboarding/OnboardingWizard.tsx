@@ -140,6 +140,7 @@ export function OnboardingWizard() {
       }
 
       await onboardingContextService.submit({
+        expected_body_state_revision: 0,
         profile: {
           gender: formData.gender,
           birth_date: formData.birth_date,

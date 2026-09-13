@@ -248,3 +248,77 @@ Go generated imports in domain     NONE
 ```
 
 The production build also shows the validated OpenAPI/Zod path adding measurable bytes to the ConsultationPage chunk. `BS-VNEXT-REST-007` tracks this as a Phase 02 bundle review item; runtime validation will not be weakened merely to improve bundle size.
+
+## Checkpoint 4 — Lifestyle, Body Metrics, Injury History and Onboarding Context
+
+Status: COMPLETE ON PHASE BRANCH
+
+Nine adjacent health-context routes now share the same OpenAPI-first boundary:
+
+```text
+GET   /api/v1/lifestyle
+PUT   /api/v1/lifestyle
+POST  /api/v1/lifestyle/candidates/{id}/accept
+POST  /api/v1/lifestyle/candidates/{id}/reject
+GET   /api/v1/body-metrics
+PUT   /api/v1/body-metrics
+GET   /api/v1/health-history/injury
+PUT   /api/v1/health-history/injury
+PUT   /api/v1/onboarding/context
+```
+
+### Public concurrency reset
+
+Pre-vNext request DTOs made revision guards optional, and onboarding omitted the BodyState revision entirely. The vNext browser contract is intentionally stricter:
+
+- lifestyle/body-metrics/injury-history mutations require `expected_revision`;
+- candidate accept/reject also require `expected_revision`;
+- onboarding requires `expected_body_state_revision`; the current first-use UI sends `0`;
+- range/schema failures (for example height above 250 cm) are rejected by OpenAPI middleware before the service;
+- there is no compatibility alias that silently turns a missing revision into an unconditional write.
+
+### Handler retirement
+
+The four legacy Gin handler files for Lifestyle, Body Metrics, Health History and Onboarding Context were deleted, and their route registrations were removed from `cmd/server`. Generated strict server methods now own all nine paths. The temporary `bodyStateHandleMutationError` utility also became unreferenced and was deleted from handler utilities.
+
+### Web runtime trust
+
+Profile services and the workspace lifestyle editor now call generated Orval clients through the shared auth/error adapter. Handwritten profile models remain presentation/application projections and are populated explicitly after generated Zod response validation.
+
+The new tests prove:
+
+- malformed Body Metrics response data fails closed;
+- lifestyle update sends the current revision;
+- onboarding sends explicit revision 0;
+- missing revision and invalid metric ranges never reach the Go application adapter.
+
+### Coverage after this batch
+
+```text
+Phase 00 routes               96
+operational exclusions         1
+browser-facing eligible       95
+OpenAPI-authoritative         21
+missing                       74
+coverage                   22.11%
+```
+
+### Verification
+
+```text
+pnpm contracts:verify                  PASS
+pnpm lint                              PASS
+pnpm typecheck                         PASS
+Web typecheck --skip-nx-cache          PASS
+pnpm test                              PASS
+  contracts                            12/12
+  Web                                  223/223
+  Python                               475/475
+  Go                                   go test ./... PASS
+pnpm build                             PASS
+git diff --check                       PASS
+legacy health-context handlers         DELETED
+handwritten route registrations        NONE
+```
+
+Bundle observation remains open under `BS-VNEXT-REST-007`: at this point ConsultationPage is ~355.71 kB / 105.27 kB gzip and Vite has extracted a generated/shared module of ~45.11 kB / 11.59 kB gzip. Runtime validation remains mandatory; feature/tag splitting is evaluated before Phase 02 closes.

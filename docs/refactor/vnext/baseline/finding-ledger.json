@@ -350,7 +350,52 @@
         "confirm no duplicated classic Zod runtime",
         "pnpm build"
       ],
-      "notes": "Observed during the BodyState batch: ConsultationPage grew from roughly 354.25 kB / 104.67 kB gzip at the earlier checkpoint to 391.55 kB / 114.48 kB gzip. This remains below the current warning threshold but is tracked before the spec expands further."
+      "notes": "After the 21-route health-context batch, Vite extracted much of the generated runtime into a shared chunk (~45.11 kB / 11.59 kB gzip) while ConsultationPage measured ~355.71 kB / 105.27 kB gzip. The final Phase 02 review must measure total loaded-route cost and split generated clients by feature/tag if the shared module continues to grow."
+    },
+    {
+      "id": "BS-VNEXT-REST-008",
+      "priority": "P1",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "Health-context public mutations allowed missing optimistic revision",
+      "evidence": [
+        "apps/api/internal/dto/lifestyle.go",
+        "apps/api/internal/dto/body_metrics.go",
+        "apps/api/internal/dto/health_history.go",
+        "apps/api/internal/dto/onboarding_context.go",
+        "packages/contracts/openapi/bodysense.v1.openapi.yaml"
+      ],
+      "root_cause": "Legacy request DTOs represented expected revision as optional pointers, and onboarding did not send one at all, so browser-facing commands could bypass the concurrency contract intentionally used by the services.",
+      "repair": "OpenAPI requires expected_revision on lifestyle/body-metrics/injury-history mutations and expected_body_state_revision on onboarding. The Web passes the current revision for edits and explicit 0 for first onboarding; malformed/missing values fail before the application adapter.",
+      "verification": [
+        "TestLifestyleOpenAPIRequiresExpectedRevisionBeforeAdapter",
+        "TestOnboardingOpenAPIRequiresInitialBodyStateRevision",
+        "profile health-context OpenAPI Web tests",
+        "pnpm contracts:verify"
+      ],
+      "notes": "Service-level pointer support remains an internal application detail; the public vNext contract no longer exposes an unconditional browser mutation path."
+    },
+    {
+      "id": "BS-VNEXT-REST-009",
+      "priority": "P2",
+      "status": "OPEN",
+      "phase": "02",
+      "title": "Health-context application commands/read models are still named and located as transport DTOs",
+      "evidence": [
+        "apps/api/internal/dto/lifestyle.go",
+        "apps/api/internal/dto/body_metrics.go",
+        "apps/api/internal/dto/health_history.go",
+        "apps/api/internal/dto/onboarding_context.go",
+        "apps/api/internal/transport/httpapi/health_context.go"
+      ],
+      "root_cause": "Pre-vNext Gin handlers and application services shared structs under internal/dto; after OpenAPI generation those structs remain useful application commands/read projections but their package ownership still suggests HTTP transport authority.",
+      "target": "Before Phase 02 closes, move surviving service command/read-model structures into explicit application/readmodel ownership and delete transport-era dto definitions that are no longer public authorities.",
+      "verification": [
+        "service layer does not import generated OpenAPI types",
+        "transport/httpapi maps generated models into application-owned types",
+        "obsolete internal/dto health-context files removed or reduced to true non-generated boundaries"
+      ],
+      "notes": "This is the same ownership class as BS-VNEXT-REST-004 and should be repaired as one package-boundary cleanup after more public handlers migrate."
     }
   ]
 }

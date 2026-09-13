@@ -364,6 +364,21 @@ func (e UpdateBodyStateHypothesisLifecycleRequestLifecycleState) Valid() bool {
 	}
 }
 
+// BodyMetricValue defines model for BodyMetricValue.
+type BodyMetricValue struct {
+	ObservedAt *time.Time `json:"observed_at,omitempty"`
+	Unit       string     `json:"unit"`
+	Value      float64    `json:"value"`
+}
+
+// BodyMetricsSnapshot defines model for BodyMetricsSnapshot.
+type BodyMetricsSnapshot struct {
+	Bmi             *float64         `json:"bmi,omitempty"`
+	CurrentRevision int64            `json:"current_revision"`
+	Height          *BodyMetricValue `json:"height,omitempty"`
+	Weight          *BodyMetricValue `json:"weight,omitempty"`
+}
+
 // BodyStateEvidence defines model for BodyStateEvidence.
 type BodyStateEvidence struct {
 	CreatedAt     time.Time          `json:"created_at"`
@@ -690,6 +705,15 @@ type HealthWorkspaceBodyState struct {
 	SafetyState         JsonObject             `json:"safety_state"`
 }
 
+// InjuryHistorySnapshot defines model for InjuryHistorySnapshot.
+type InjuryHistorySnapshot struct {
+	CurrentRevision int64               `json:"current_revision"`
+	FactId          *openapi_types.UUID `json:"fact_id,omitempty"`
+	Summary         string              `json:"summary"`
+	UpdatedAt       *time.Time          `json:"updated_at,omitempty"`
+	ValidFrom       *time.Time          `json:"valid_from,omitempty"`
+}
+
 // Intervention defines model for Intervention.
 type Intervention struct {
 	CreatedAt           time.Time          `json:"created_at"`
@@ -710,6 +734,80 @@ type Intervention struct {
 
 // JsonObject defines model for JsonObject.
 type JsonObject map[string]interface{}
+
+// LifestyleCandidate defines model for LifestyleCandidate.
+type LifestyleCandidate struct {
+	CreatedAt time.Time          `json:"created_at"`
+	Details   JsonObject         `json:"details"`
+	FactId    openapi_types.UUID `json:"fact_id"`
+	Kind      string             `json:"kind"`
+	Summary   string             `json:"summary"`
+}
+
+// LifestyleSection defines model for LifestyleSection.
+type LifestyleSection struct {
+	Details     JsonObject          `json:"details"`
+	FactId      *openapi_types.UUID `json:"fact_id,omitempty"`
+	Kind        string              `json:"kind"`
+	ReviewState *string             `json:"review_state,omitempty"`
+	Summary     string              `json:"summary"`
+	UpdatedAt   *time.Time          `json:"updated_at,omitempty"`
+	ValidFrom   *time.Time          `json:"valid_from,omitempty"`
+}
+
+// LifestyleSectionInput defines model for LifestyleSectionInput.
+type LifestyleSectionInput struct {
+	Details *JsonObject `json:"details,omitempty"`
+	Summary string      `json:"summary"`
+}
+
+// LifestyleSnapshot defines model for LifestyleSnapshot.
+type LifestyleSnapshot struct {
+	Activity        LifestyleSection     `json:"activity"`
+	CurrentRevision int64                `json:"current_revision"`
+	Exercise        LifestyleSection     `json:"exercise"`
+	Nutrition       LifestyleSection     `json:"nutrition"`
+	PendingUpdates  []LifestyleCandidate `json:"pending_updates"`
+	Recovery        LifestyleSection     `json:"recovery"`
+	Sleep           LifestyleSection     `json:"sleep"`
+	Substances      LifestyleSection     `json:"substances"`
+}
+
+// OnboardingBodyMetricsInput defines model for OnboardingBodyMetricsInput.
+type OnboardingBodyMetricsInput struct {
+	HeightCm float64 `json:"height_cm"`
+	WeightKg float64 `json:"weight_kg"`
+}
+
+// OnboardingContextRequest defines model for OnboardingContextRequest.
+type OnboardingContextRequest struct {
+	BodyMetrics               OnboardingBodyMetricsInput `json:"body_metrics"`
+	ExpectedBodyStateRevision int64                      `json:"expected_body_state_revision"`
+	InjuryHistory             string                     `json:"injury_history"`
+	Lifestyle                 OnboardingLifestyleInput   `json:"lifestyle"`
+	Profile                   OnboardingProfileInput     `json:"profile"`
+}
+
+// OnboardingContextResult defines model for OnboardingContextResult.
+type OnboardingContextResult struct {
+	BodyStateRevision int64 `json:"body_state_revision"`
+}
+
+// OnboardingLifestyleInput defines model for OnboardingLifestyleInput.
+type OnboardingLifestyleInput struct {
+	Activity   LifestyleSectionInput `json:"activity"`
+	Exercise   LifestyleSectionInput `json:"exercise"`
+	Nutrition  LifestyleSectionInput `json:"nutrition"`
+	Recovery   LifestyleSectionInput `json:"recovery"`
+	Sleep      LifestyleSectionInput `json:"sleep"`
+	Substances LifestyleSectionInput `json:"substances"`
+}
+
+// OnboardingProfileInput defines model for OnboardingProfileInput.
+type OnboardingProfileInput struct {
+	BirthDate openapi_types.Date `json:"birth_date"`
+	Gender    string             `json:"gender"`
+}
 
 // Outcome defines model for Outcome.
 type Outcome struct {
@@ -763,6 +861,11 @@ type ReviewBodyStateObservationRequest struct {
 
 // ReviewBodyStateObservationRequestReviewState defines model for ReviewBodyStateObservationRequest.ReviewState.
 type ReviewBodyStateObservationRequestReviewState string
+
+// ReviewLifestyleCandidateRequest defines model for ReviewLifestyleCandidateRequest.
+type ReviewLifestyleCandidateRequest struct {
+	ExpectedRevision int64 `json:"expected_revision"`
+}
 
 // StringArray defines model for StringArray.
 type StringArray = []string
@@ -863,6 +966,13 @@ type TreatmentStatusReason struct {
 	Revision   *int    `json:"revision,omitempty"`
 }
 
+// UpdateBodyMetricsRequest defines model for UpdateBodyMetricsRequest.
+type UpdateBodyMetricsRequest struct {
+	ExpectedRevision int64    `json:"expected_revision"`
+	HeightCm         *float64 `json:"height_cm,omitempty"`
+	WeightKg         *float64 `json:"weight_kg,omitempty"`
+}
+
 // UpdateBodyStateFactTemporalRequest defines model for UpdateBodyStateFactTemporalRequest.
 type UpdateBodyStateFactTemporalRequest struct {
 	ExpectedRevision int64      `json:"expected_revision"`
@@ -880,6 +990,23 @@ type UpdateBodyStateHypothesisLifecycleRequest struct {
 
 // UpdateBodyStateHypothesisLifecycleRequestLifecycleState defines model for UpdateBodyStateHypothesisLifecycleRequest.LifecycleState.
 type UpdateBodyStateHypothesisLifecycleRequestLifecycleState string
+
+// UpdateInjuryHistoryRequest defines model for UpdateInjuryHistoryRequest.
+type UpdateInjuryHistoryRequest struct {
+	ExpectedRevision int64  `json:"expected_revision"`
+	Summary          string `json:"summary"`
+}
+
+// UpdateLifestyleRequest defines model for UpdateLifestyleRequest.
+type UpdateLifestyleRequest struct {
+	Activity         *LifestyleSectionInput `json:"activity,omitempty"`
+	Exercise         *LifestyleSectionInput `json:"exercise,omitempty"`
+	ExpectedRevision int64                  `json:"expected_revision"`
+	Nutrition        *LifestyleSectionInput `json:"nutrition,omitempty"`
+	Recovery         *LifestyleSectionInput `json:"recovery,omitempty"`
+	Sleep            *LifestyleSectionInput `json:"sleep,omitempty"`
+	Substances       *LifestyleSectionInput `json:"substances,omitempty"`
+}
 
 // UpsertBodyStateFactRequest defines model for UpsertBodyStateFactRequest.
 type UpsertBodyStateFactRequest struct {
@@ -949,6 +1076,9 @@ type Unauthorized = ErrorEnvelope
 // ValidationUnavailable defines model for ValidationUnavailable.
 type ValidationUnavailable = ErrorEnvelope
 
+// UpdateBodyMetricsJSONRequestBody defines body for UpdateBodyMetrics for application/json ContentType.
+type UpdateBodyMetricsJSONRequestBody = UpdateBodyMetricsRequest
+
 // AddBodyStateFactJSONRequestBody defines body for AddBodyStateFact for application/json ContentType.
 type AddBodyStateFactJSONRequestBody = UpsertBodyStateFactRequest
 
@@ -976,8 +1106,29 @@ type ReviewBodyStateObservationJSONRequestBody = ReviewBodyStateObservationReque
 // ResolveBodyStateSafetyJSONRequestBody defines body for ResolveBodyStateSafety for application/json ContentType.
 type ResolveBodyStateSafetyJSONRequestBody = ResolveBodyStateSafetyRequest
 
+// UpdateInjuryHistoryJSONRequestBody defines body for UpdateInjuryHistory for application/json ContentType.
+type UpdateInjuryHistoryJSONRequestBody = UpdateInjuryHistoryRequest
+
+// UpdateLifestyleJSONRequestBody defines body for UpdateLifestyle for application/json ContentType.
+type UpdateLifestyleJSONRequestBody = UpdateLifestyleRequest
+
+// AcceptLifestyleCandidateJSONRequestBody defines body for AcceptLifestyleCandidate for application/json ContentType.
+type AcceptLifestyleCandidateJSONRequestBody = ReviewLifestyleCandidateRequest
+
+// RejectLifestyleCandidateJSONRequestBody defines body for RejectLifestyleCandidate for application/json ContentType.
+type RejectLifestyleCandidateJSONRequestBody = ReviewLifestyleCandidateRequest
+
+// SubmitOnboardingContextJSONRequestBody defines body for SubmitOnboardingContext for application/json ContentType.
+type SubmitOnboardingContextJSONRequestBody = OnboardingContextRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// GetBodyMetrics Get current anthropometric measurements.
+	// (GET /api/v1/body-metrics)
+	GetBodyMetrics(c *gin.Context)
+	// UpdateBodyMetrics Update current anthropometric measurements with optimistic concurrency.
+	// (PUT /api/v1/body-metrics)
+	UpdateBodyMetrics(c *gin.Context)
 	// GetBodyState Get the current durable BodyState snapshot.
 	// (GET /api/v1/body-state)
 	GetBodyState(c *gin.Context)
@@ -1011,9 +1162,30 @@ type ServerInterface interface {
 	// ResolveBodyStateSafety Resolve or monitor the durable safety projection.
 	// (POST /api/v1/body-state/safety/resolve)
 	ResolveBodyStateSafety(c *gin.Context)
+	// GetInjuryHistory Get the current injury-history projection.
+	// (GET /api/v1/health-history/injury)
+	GetInjuryHistory(c *gin.Context)
+	// UpdateInjuryHistory Update injury-history summary with optimistic concurrency.
+	// (PUT /api/v1/health-history/injury)
+	UpdateInjuryHistory(c *gin.Context)
 	// GetHealthWorkspace Get the current longitudinal health workspace projection.
 	// (GET /api/v1/health-workspace)
 	GetHealthWorkspace(c *gin.Context)
+	// GetLifestyle Get the current lifestyle projection.
+	// (GET /api/v1/lifestyle)
+	GetLifestyle(c *gin.Context)
+	// UpdateLifestyle Patch the current lifestyle projection with optimistic concurrency.
+	// (PUT /api/v1/lifestyle)
+	UpdateLifestyle(c *gin.Context)
+	// AcceptLifestyleCandidate Accept an AI-extracted lifestyle candidate.
+	// (POST /api/v1/lifestyle/candidates/{id}/accept)
+	AcceptLifestyleCandidate(c *gin.Context, id openapi_types.UUID)
+	// RejectLifestyleCandidate Reject an AI-extracted lifestyle candidate.
+	// (POST /api/v1/lifestyle/candidates/{id}/reject)
+	RejectLifestyleCandidate(c *gin.Context, id openapi_types.UUID)
+	// SubmitOnboardingContext Atomically establish stable profile identity and the initial BodyState context.
+	// (PUT /api/v1/onboarding/context)
+	SubmitOnboardingContext(c *gin.Context)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -1024,6 +1196,32 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(c *gin.Context)
+
+// GetBodyMetrics operation middleware
+func (siw *ServerInterfaceWrapper) GetBodyMetrics(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetBodyMetrics(c)
+}
+
+// UpdateBodyMetrics operation middleware
+func (siw *ServerInterfaceWrapper) UpdateBodyMetrics(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdateBodyMetrics(c)
+}
 
 // GetBodyState operation middleware
 func (siw *ServerInterfaceWrapper) GetBodyState(c *gin.Context) {
@@ -1228,6 +1426,32 @@ func (siw *ServerInterfaceWrapper) ResolveBodyStateSafety(c *gin.Context) {
 	siw.Handler.ResolveBodyStateSafety(c)
 }
 
+// GetInjuryHistory operation middleware
+func (siw *ServerInterfaceWrapper) GetInjuryHistory(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetInjuryHistory(c)
+}
+
+// UpdateInjuryHistory operation middleware
+func (siw *ServerInterfaceWrapper) UpdateInjuryHistory(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdateInjuryHistory(c)
+}
+
 // GetHealthWorkspace operation middleware
 func (siw *ServerInterfaceWrapper) GetHealthWorkspace(c *gin.Context) {
 
@@ -1239,6 +1463,95 @@ func (siw *ServerInterfaceWrapper) GetHealthWorkspace(c *gin.Context) {
 	}
 
 	siw.Handler.GetHealthWorkspace(c)
+}
+
+// GetLifestyle operation middleware
+func (siw *ServerInterfaceWrapper) GetLifestyle(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetLifestyle(c)
+}
+
+// UpdateLifestyle operation middleware
+func (siw *ServerInterfaceWrapper) UpdateLifestyle(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdateLifestyle(c)
+}
+
+// AcceptLifestyleCandidate operation middleware
+func (siw *ServerInterfaceWrapper) AcceptLifestyleCandidate(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AcceptLifestyleCandidate(c, id)
+}
+
+// RejectLifestyleCandidate operation middleware
+func (siw *ServerInterfaceWrapper) RejectLifestyleCandidate(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RejectLifestyleCandidate(c, id)
+}
+
+// SubmitOnboardingContext operation middleware
+func (siw *ServerInterfaceWrapper) SubmitOnboardingContext(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SubmitOnboardingContext(c)
 }
 
 // GinServerOptions provides options for the Gin server.
@@ -1280,6 +1593,15 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.PATCH(options.BaseURL+"/api/v1/body-state/hypotheses/:id/lifecycle", wrapper.UpdateBodyStateHypothesisLifecycle)
 	router.GET(options.BaseURL+"/api/v1/body-state/evidence", wrapper.ListBodyStateEvidence)
 	router.POST(options.BaseURL+"/api/v1/body-state/safety/resolve", wrapper.ResolveBodyStateSafety)
+	router.GET(options.BaseURL+"/api/v1/lifestyle", wrapper.GetLifestyle)
+	router.PUT(options.BaseURL+"/api/v1/lifestyle", wrapper.UpdateLifestyle)
+	router.POST(options.BaseURL+"/api/v1/lifestyle/candidates/:id/accept", wrapper.AcceptLifestyleCandidate)
+	router.POST(options.BaseURL+"/api/v1/lifestyle/candidates/:id/reject", wrapper.RejectLifestyleCandidate)
+	router.GET(options.BaseURL+"/api/v1/body-metrics", wrapper.GetBodyMetrics)
+	router.PUT(options.BaseURL+"/api/v1/body-metrics", wrapper.UpdateBodyMetrics)
+	router.GET(options.BaseURL+"/api/v1/health-history/injury", wrapper.GetInjuryHistory)
+	router.PUT(options.BaseURL+"/api/v1/health-history/injury", wrapper.UpdateInjuryHistory)
+	router.PUT(options.BaseURL+"/api/v1/onboarding/context", wrapper.SubmitOnboardingContext)
 }
 
 type InternalErrorJSONResponse ErrorEnvelope
@@ -1293,6 +1615,133 @@ type RevisionConflictJSONResponse ErrorEnvelope
 type UnauthorizedJSONResponse ErrorEnvelope
 
 type ValidationUnavailableJSONResponse ErrorEnvelope
+
+type GetBodyMetricsRequestObject struct {
+}
+
+type GetBodyMetricsResponseObject interface {
+	VisitGetBodyMetricsResponse(w http.ResponseWriter) error
+}
+
+type GetBodyMetrics200JSONResponse BodyMetricsSnapshot
+
+func (response GetBodyMetrics200JSONResponse) VisitGetBodyMetricsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBodyMetrics401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetBodyMetrics401JSONResponse) VisitGetBodyMetricsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBodyMetrics500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetBodyMetrics500JSONResponse) VisitGetBodyMetricsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBodyMetricsRequestObject struct {
+	Body *UpdateBodyMetricsJSONRequestBody
+}
+
+type UpdateBodyMetricsResponseObject interface {
+	VisitUpdateBodyMetricsResponse(w http.ResponseWriter) error
+}
+
+type UpdateBodyMetrics200JSONResponse BodyMetricsSnapshot
+
+func (response UpdateBodyMetrics200JSONResponse) VisitUpdateBodyMetricsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBodyMetrics400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response UpdateBodyMetrics400JSONResponse) VisitUpdateBodyMetricsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBodyMetrics401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateBodyMetrics401JSONResponse) VisitUpdateBodyMetricsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBodyMetrics409JSONResponse struct{ RevisionConflictJSONResponse }
+
+func (response UpdateBodyMetrics409JSONResponse) VisitUpdateBodyMetricsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBodyMetrics500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UpdateBodyMetrics500JSONResponse) VisitUpdateBodyMetricsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
 
 type GetBodyStateRequestObject struct {
 }
@@ -2485,6 +2934,133 @@ func (response ResolveBodyStateSafety503JSONResponse) VisitResolveBodyStateSafet
 	return err
 }
 
+type GetInjuryHistoryRequestObject struct {
+}
+
+type GetInjuryHistoryResponseObject interface {
+	VisitGetInjuryHistoryResponse(w http.ResponseWriter) error
+}
+
+type GetInjuryHistory200JSONResponse InjuryHistorySnapshot
+
+func (response GetInjuryHistory200JSONResponse) VisitGetInjuryHistoryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetInjuryHistory401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetInjuryHistory401JSONResponse) VisitGetInjuryHistoryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetInjuryHistory500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetInjuryHistory500JSONResponse) VisitGetInjuryHistoryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateInjuryHistoryRequestObject struct {
+	Body *UpdateInjuryHistoryJSONRequestBody
+}
+
+type UpdateInjuryHistoryResponseObject interface {
+	VisitUpdateInjuryHistoryResponse(w http.ResponseWriter) error
+}
+
+type UpdateInjuryHistory200JSONResponse InjuryHistorySnapshot
+
+func (response UpdateInjuryHistory200JSONResponse) VisitUpdateInjuryHistoryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateInjuryHistory400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response UpdateInjuryHistory400JSONResponse) VisitUpdateInjuryHistoryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateInjuryHistory401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateInjuryHistory401JSONResponse) VisitUpdateInjuryHistoryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateInjuryHistory409JSONResponse struct{ RevisionConflictJSONResponse }
+
+func (response UpdateInjuryHistory409JSONResponse) VisitUpdateInjuryHistoryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateInjuryHistory500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UpdateInjuryHistory500JSONResponse) VisitUpdateInjuryHistoryResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetHealthWorkspaceRequestObject struct {
 }
 
@@ -2534,8 +3110,405 @@ func (response GetHealthWorkspace500JSONResponse) VisitGetHealthWorkspaceRespons
 	return err
 }
 
+type GetLifestyleRequestObject struct {
+}
+
+type GetLifestyleResponseObject interface {
+	VisitGetLifestyleResponse(w http.ResponseWriter) error
+}
+
+type GetLifestyle200JSONResponse LifestyleSnapshot
+
+func (response GetLifestyle200JSONResponse) VisitGetLifestyleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetLifestyle401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetLifestyle401JSONResponse) VisitGetLifestyleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetLifestyle500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetLifestyle500JSONResponse) VisitGetLifestyleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateLifestyleRequestObject struct {
+	Body *UpdateLifestyleJSONRequestBody
+}
+
+type UpdateLifestyleResponseObject interface {
+	VisitUpdateLifestyleResponse(w http.ResponseWriter) error
+}
+
+type UpdateLifestyle200JSONResponse LifestyleSnapshot
+
+func (response UpdateLifestyle200JSONResponse) VisitUpdateLifestyleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateLifestyle400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response UpdateLifestyle400JSONResponse) VisitUpdateLifestyleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateLifestyle401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateLifestyle401JSONResponse) VisitUpdateLifestyleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateLifestyle409JSONResponse struct{ RevisionConflictJSONResponse }
+
+func (response UpdateLifestyle409JSONResponse) VisitUpdateLifestyleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateLifestyle500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UpdateLifestyle500JSONResponse) VisitUpdateLifestyleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptLifestyleCandidateRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *AcceptLifestyleCandidateJSONRequestBody
+}
+
+type AcceptLifestyleCandidateResponseObject interface {
+	VisitAcceptLifestyleCandidateResponse(w http.ResponseWriter) error
+}
+
+type AcceptLifestyleCandidate200JSONResponse LifestyleSnapshot
+
+func (response AcceptLifestyleCandidate200JSONResponse) VisitAcceptLifestyleCandidateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptLifestyleCandidate400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response AcceptLifestyleCandidate400JSONResponse) VisitAcceptLifestyleCandidateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptLifestyleCandidate401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response AcceptLifestyleCandidate401JSONResponse) VisitAcceptLifestyleCandidateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptLifestyleCandidate404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response AcceptLifestyleCandidate404JSONResponse) VisitAcceptLifestyleCandidateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptLifestyleCandidate409JSONResponse struct{ RevisionConflictJSONResponse }
+
+func (response AcceptLifestyleCandidate409JSONResponse) VisitAcceptLifestyleCandidateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptLifestyleCandidate500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response AcceptLifestyleCandidate500JSONResponse) VisitAcceptLifestyleCandidateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RejectLifestyleCandidateRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *RejectLifestyleCandidateJSONRequestBody
+}
+
+type RejectLifestyleCandidateResponseObject interface {
+	VisitRejectLifestyleCandidateResponse(w http.ResponseWriter) error
+}
+
+type RejectLifestyleCandidate200JSONResponse LifestyleSnapshot
+
+func (response RejectLifestyleCandidate200JSONResponse) VisitRejectLifestyleCandidateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RejectLifestyleCandidate400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response RejectLifestyleCandidate400JSONResponse) VisitRejectLifestyleCandidateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RejectLifestyleCandidate401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RejectLifestyleCandidate401JSONResponse) VisitRejectLifestyleCandidateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RejectLifestyleCandidate404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response RejectLifestyleCandidate404JSONResponse) VisitRejectLifestyleCandidateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RejectLifestyleCandidate409JSONResponse struct{ RevisionConflictJSONResponse }
+
+func (response RejectLifestyleCandidate409JSONResponse) VisitRejectLifestyleCandidateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RejectLifestyleCandidate500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response RejectLifestyleCandidate500JSONResponse) VisitRejectLifestyleCandidateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitOnboardingContextRequestObject struct {
+	Body *SubmitOnboardingContextJSONRequestBody
+}
+
+type SubmitOnboardingContextResponseObject interface {
+	VisitSubmitOnboardingContextResponse(w http.ResponseWriter) error
+}
+
+type SubmitOnboardingContext200JSONResponse OnboardingContextResult
+
+func (response SubmitOnboardingContext200JSONResponse) VisitSubmitOnboardingContextResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitOnboardingContext400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response SubmitOnboardingContext400JSONResponse) VisitSubmitOnboardingContextResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitOnboardingContext401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response SubmitOnboardingContext401JSONResponse) VisitSubmitOnboardingContextResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitOnboardingContext409JSONResponse struct{ RevisionConflictJSONResponse }
+
+func (response SubmitOnboardingContext409JSONResponse) VisitSubmitOnboardingContextResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitOnboardingContext500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response SubmitOnboardingContext500JSONResponse) VisitSubmitOnboardingContextResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// GetBodyMetrics Get current anthropometric measurements.
+	// (GET /api/v1/body-metrics)
+	GetBodyMetrics(ctx context.Context, request GetBodyMetricsRequestObject) (GetBodyMetricsResponseObject, error)
+	// UpdateBodyMetrics Update current anthropometric measurements with optimistic concurrency.
+	// (PUT /api/v1/body-metrics)
+	UpdateBodyMetrics(ctx context.Context, request UpdateBodyMetricsRequestObject) (UpdateBodyMetricsResponseObject, error)
 	// GetBodyState Get the current durable BodyState snapshot.
 	// (GET /api/v1/body-state)
 	GetBodyState(ctx context.Context, request GetBodyStateRequestObject) (GetBodyStateResponseObject, error)
@@ -2569,9 +3542,30 @@ type StrictServerInterface interface {
 	// ResolveBodyStateSafety Resolve or monitor the durable safety projection.
 	// (POST /api/v1/body-state/safety/resolve)
 	ResolveBodyStateSafety(ctx context.Context, request ResolveBodyStateSafetyRequestObject) (ResolveBodyStateSafetyResponseObject, error)
+	// GetInjuryHistory Get the current injury-history projection.
+	// (GET /api/v1/health-history/injury)
+	GetInjuryHistory(ctx context.Context, request GetInjuryHistoryRequestObject) (GetInjuryHistoryResponseObject, error)
+	// UpdateInjuryHistory Update injury-history summary with optimistic concurrency.
+	// (PUT /api/v1/health-history/injury)
+	UpdateInjuryHistory(ctx context.Context, request UpdateInjuryHistoryRequestObject) (UpdateInjuryHistoryResponseObject, error)
 	// GetHealthWorkspace Get the current longitudinal health workspace projection.
 	// (GET /api/v1/health-workspace)
 	GetHealthWorkspace(ctx context.Context, request GetHealthWorkspaceRequestObject) (GetHealthWorkspaceResponseObject, error)
+	// GetLifestyle Get the current lifestyle projection.
+	// (GET /api/v1/lifestyle)
+	GetLifestyle(ctx context.Context, request GetLifestyleRequestObject) (GetLifestyleResponseObject, error)
+	// UpdateLifestyle Patch the current lifestyle projection with optimistic concurrency.
+	// (PUT /api/v1/lifestyle)
+	UpdateLifestyle(ctx context.Context, request UpdateLifestyleRequestObject) (UpdateLifestyleResponseObject, error)
+	// AcceptLifestyleCandidate Accept an AI-extracted lifestyle candidate.
+	// (POST /api/v1/lifestyle/candidates/{id}/accept)
+	AcceptLifestyleCandidate(ctx context.Context, request AcceptLifestyleCandidateRequestObject) (AcceptLifestyleCandidateResponseObject, error)
+	// RejectLifestyleCandidate Reject an AI-extracted lifestyle candidate.
+	// (POST /api/v1/lifestyle/candidates/{id}/reject)
+	RejectLifestyleCandidate(ctx context.Context, request RejectLifestyleCandidateRequestObject) (RejectLifestyleCandidateResponseObject, error)
+	// SubmitOnboardingContext Atomically establish stable profile identity and the initial BodyState context.
+	// (PUT /api/v1/onboarding/context)
+	SubmitOnboardingContext(ctx context.Context, request SubmitOnboardingContextRequestObject) (SubmitOnboardingContextResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx *gin.Context, request any) (any, error)
@@ -2629,6 +3623,61 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictGinServerOptions
+}
+
+// GetBodyMetrics operation middleware
+func (sh *strictHandler) GetBodyMetrics(ctx *gin.Context) {
+	var request GetBodyMetricsRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetBodyMetrics(ctx, request.(GetBodyMetricsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetBodyMetrics")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetBodyMetricsResponseObject); ok {
+		if err := validResponse.VisitGetBodyMetricsResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateBodyMetrics operation middleware
+func (sh *strictHandler) UpdateBodyMetrics(ctx *gin.Context) {
+	var request UpdateBodyMetricsRequestObject
+
+	var body UpdateBodyMetricsJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateBodyMetrics(ctx, request.(UpdateBodyMetricsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateBodyMetrics")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(UpdateBodyMetricsResponseObject); ok {
+		if err := validResponse.VisitUpdateBodyMetricsResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // GetBodyState operation middleware
@@ -2968,6 +4017,61 @@ func (sh *strictHandler) ResolveBodyStateSafety(ctx *gin.Context) {
 	}
 }
 
+// GetInjuryHistory operation middleware
+func (sh *strictHandler) GetInjuryHistory(ctx *gin.Context) {
+	var request GetInjuryHistoryRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetInjuryHistory(ctx, request.(GetInjuryHistoryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetInjuryHistory")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetInjuryHistoryResponseObject); ok {
+		if err := validResponse.VisitGetInjuryHistoryResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateInjuryHistory operation middleware
+func (sh *strictHandler) UpdateInjuryHistory(ctx *gin.Context) {
+	var request UpdateInjuryHistoryRequestObject
+
+	var body UpdateInjuryHistoryJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateInjuryHistory(ctx, request.(UpdateInjuryHistoryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateInjuryHistory")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(UpdateInjuryHistoryResponseObject); ok {
+		if err := validResponse.VisitUpdateInjuryHistoryResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetHealthWorkspace operation middleware
 func (sh *strictHandler) GetHealthWorkspace(ctx *gin.Context) {
 	var request GetHealthWorkspaceRequestObject
@@ -2992,85 +4096,252 @@ func (sh *strictHandler) GetHealthWorkspace(ctx *gin.Context) {
 	}
 }
 
+// GetLifestyle operation middleware
+func (sh *strictHandler) GetLifestyle(ctx *gin.Context) {
+	var request GetLifestyleRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetLifestyle(ctx, request.(GetLifestyleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetLifestyle")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetLifestyleResponseObject); ok {
+		if err := validResponse.VisitGetLifestyleResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateLifestyle operation middleware
+func (sh *strictHandler) UpdateLifestyle(ctx *gin.Context) {
+	var request UpdateLifestyleRequestObject
+
+	var body UpdateLifestyleJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateLifestyle(ctx, request.(UpdateLifestyleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateLifestyle")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(UpdateLifestyleResponseObject); ok {
+		if err := validResponse.VisitUpdateLifestyleResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AcceptLifestyleCandidate operation middleware
+func (sh *strictHandler) AcceptLifestyleCandidate(ctx *gin.Context, id openapi_types.UUID) {
+	var request AcceptLifestyleCandidateRequestObject
+
+	request.Id = id
+
+	var body AcceptLifestyleCandidateJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.AcceptLifestyleCandidate(ctx, request.(AcceptLifestyleCandidateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AcceptLifestyleCandidate")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(AcceptLifestyleCandidateResponseObject); ok {
+		if err := validResponse.VisitAcceptLifestyleCandidateResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RejectLifestyleCandidate operation middleware
+func (sh *strictHandler) RejectLifestyleCandidate(ctx *gin.Context, id openapi_types.UUID) {
+	var request RejectLifestyleCandidateRequestObject
+
+	request.Id = id
+
+	var body RejectLifestyleCandidateJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RejectLifestyleCandidate(ctx, request.(RejectLifestyleCandidateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RejectLifestyleCandidate")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(RejectLifestyleCandidateResponseObject); ok {
+		if err := validResponse.VisitRejectLifestyleCandidateResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SubmitOnboardingContext operation middleware
+func (sh *strictHandler) SubmitOnboardingContext(ctx *gin.Context) {
+	var request SubmitOnboardingContextRequestObject
+
+	var body SubmitOnboardingContextJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.SubmitOnboardingContext(ctx, request.(SubmitOnboardingContextRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SubmitOnboardingContext")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(SubmitOnboardingContextResponseObject); ok {
+		if err := validResponse.VisitSubmitOnboardingContextResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // Base64 encoded, compressed with deflate, json marshaled OpenAPI spec.
 // Stored as a slice of fixed-width chunks rather than one concatenated
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
-	"0/D2+va/AQAA//8=",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

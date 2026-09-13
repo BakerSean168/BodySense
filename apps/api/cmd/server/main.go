@@ -236,10 +236,6 @@ func main() {
 	convHandler := handler.NewConversationHandler(conversationService, shareService)
 	runtimeEventHandler := handler.NewRuntimeEventHandler(runtimeEventService, conversationService)
 	threadProjectionHandler := handler.NewThreadProjectionHandler(threadProjectionService, bodyStateService)
-	lifestyleHandler := handler.NewLifestyleHandler(lifestyleService)
-	bodyMetricsHandler := handler.NewBodyMetricsHandler(bodyMetricsService)
-	healthHistoryHandler := handler.NewHealthHistoryHandler(healthHistoryService)
-	onboardingContextHandler := handler.NewOnboardingContextHandler(onboardingContextService)
 	consultationHandler := handler.NewConsultationHandler(
 		consultationService,
 		interactionService,
@@ -392,7 +388,6 @@ func main() {
 		protected.POST("/privacy/erasure", privacyHandler.RequestErasure)
 		protected.GET("/profile", profileHandler.GetProfile)
 		protected.PUT("/profile", profileHandler.CreateOrUpdateProfile)
-		protected.PUT("/onboarding/context", onboardingContextHandler.Submit)
 
 		// Upload routes
 		protected.POST("/uploads", uploadHandler.Upload)
@@ -464,14 +459,6 @@ func main() {
 		// Longitudinal BodyState (ADR 0004)
 
 		// User-facing projections backed exclusively by BodyState.
-		protected.GET("/lifestyle", lifestyleHandler.Get)
-		protected.PUT("/lifestyle", lifestyleHandler.Update)
-		protected.POST("/lifestyle/candidates/:id/accept", lifestyleHandler.AcceptCandidate)
-		protected.POST("/lifestyle/candidates/:id/reject", lifestyleHandler.RejectCandidate)
-		protected.GET("/body-metrics", bodyMetricsHandler.Get)
-		protected.PUT("/body-metrics", bodyMetricsHandler.Update)
-		protected.GET("/health-history/injury", healthHistoryHandler.GetInjuryHistory)
-		protected.PUT("/health-history/injury", healthHistoryHandler.UpdateInjuryHistory)
 
 		// Capability-based continuous health workspace.
 
@@ -504,7 +491,7 @@ func main() {
 	openAPIProtected.Use(httpapi.RequestValidator(publicAPISpec))
 	openapiv1.RegisterHandlers(
 		openAPIProtected,
-		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService)),
+		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService)),
 	)
 
 	// Public share routes (no auth)

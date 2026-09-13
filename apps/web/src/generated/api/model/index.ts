@@ -6,6 +6,8 @@
  * OpenAPI spec version: 1.0.0-vnext
  */
 
+export * from './bodyMetricValue.zod';
+export * from './bodyMetricsSnapshot.zod';
 export * from './bodyStateEvidence.zod';
 export * from './bodyStateEvidenceListResponse.zod';
 export * from './bodyStateFact.zod';
@@ -30,12 +32,23 @@ export * from './errorDetail.zod';
 export * from './errorEnvelope.zod';
 export * from './healthWorkspace.zod';
 export * from './healthWorkspaceBodyState.zod';
+export * from './injuryHistorySnapshot.zod';
 export * from './intervention.zod';
 export * from './jsonObject.zod';
+export * from './lifestyleCandidate.zod';
+export * from './lifestyleSection.zod';
+export * from './lifestyleSectionInput.zod';
+export * from './lifestyleSnapshot.zod';
+export * from './onboardingBodyMetricsInput.zod';
+export * from './onboardingContextRequest.zod';
+export * from './onboardingContextResult.zod';
+export * from './onboardingLifestyleInput.zod';
+export * from './onboardingProfileInput.zod';
 export * from './outcome.zod';
 export * from './resolveBodyStateSafetyRequest.zod';
 export * from './reviewBodyStateFactRequest.zod';
 export * from './reviewBodyStateObservationRequest.zod';
+export * from './reviewLifestyleCandidateRequest.zod';
 export * from './stringArray.zod';
 export * from './trainingPlan.zod';
 export * from './treatment.zod';
@@ -43,8 +56,11 @@ export * from './treatmentInterventionDraft.zod';
 export * from './treatmentPlanContent.zod';
 export * from './treatmentRevision.zod';
 export * from './treatmentStatusReason.zod';
+export * from './updateBodyMetricsRequest.zod';
 export * from './updateBodyStateFactTemporalRequest.zod';
 export * from './updateBodyStateHypothesisLifecycleRequest.zod';
+export * from './updateInjuryHistoryRequest.zod';
+export * from './updateLifestyleRequest.zod';
 export * from './upsertBodyStateFactRequest.zod';
 export * from './workspaceAction.zod';
 export * from './workspaceCapabilities.zod';

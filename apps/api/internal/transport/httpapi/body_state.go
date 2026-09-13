@@ -27,6 +27,10 @@ type PublicServer struct {
 	bodyState       bodyStateFactService
 	bodyStateRoutes bodyStateRouteService
 	healthWorkspace healthWorkspaceService
+	lifestyle       lifestyleApplication
+	bodyMetrics     bodyMetricsApplication
+	healthHistory   healthHistoryApplication
+	onboarding      onboardingContextApplication
 }
 
 func NewPublicServer(bodyState bodyStateFactService) *PublicServer {

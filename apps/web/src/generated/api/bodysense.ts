@@ -6,15 +6,20 @@
  * OpenAPI spec version: 1.0.0-vnext
  */
 import {
+  BodyMetricsSnapshot,
   BodyStateEvidenceListResponse,
   BodyStateFactMutationResponse,
   BodyStateHypothesisMutationResponse,
   BodyStateObservationMutationResponse,
   BodyStateRevisionMutationResponse,
   BodyStateSnapshot,
-  HealthWorkspace
+  HealthWorkspace,
+  InjuryHistorySnapshot,
+  LifestyleSnapshot,
+  OnboardingContextResult
 } from './model';
 import type {
+  BodyMetricsSnapshotOutput,
   BodyStateEvidenceListResponseOutput,
   BodyStateFactMutationResponseOutput,
   BodyStateHypothesisInput,
@@ -25,11 +30,19 @@ import type {
   BodyStateSnapshotOutput,
   CorrectBodyStateFactRequest,
   HealthWorkspaceOutput,
+  InjuryHistorySnapshotOutput,
+  LifestyleSnapshotOutput,
+  OnboardingContextRequest,
+  OnboardingContextResultOutput,
   ResolveBodyStateSafetyRequest,
   ReviewBodyStateFactRequest,
   ReviewBodyStateObservationRequest,
+  ReviewLifestyleCandidateRequest,
+  UpdateBodyMetricsRequest,
   UpdateBodyStateFactTemporalRequest,
   UpdateBodyStateHypothesisLifecycleRequest,
+  UpdateInjuryHistoryRequest,
+  UpdateLifestyleRequest,
   UpsertBodyStateFactRequest
 } from './model';
 
@@ -627,5 +640,442 @@ const res = await (fetchFn ?? fetch)(getResolveBodyStateSafetyUrl(),
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? BodyStateRevisionMutationResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetLifestyleUrl = () => {
+
+
+
+
+  return `/api/v1/lifestyle`
+}
+
+/**
+ * @summary Get the current lifestyle projection.
+ */
+export const getLifestyle = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<LifestyleSnapshotOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetLifestyleUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: LifestyleSnapshot, status?: number} = new globalThis.Error();
+    const data : LifestyleSnapshot = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? LifestyleSnapshot.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getUpdateLifestyleUrl = () => {
+
+
+
+
+  return `/api/v1/lifestyle`
+}
+
+/**
+ * @summary Patch the current lifestyle projection with optimistic concurrency.
+ */
+export const updateLifestyle = async (updateLifestyleRequest: UpdateLifestyleRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<LifestyleSnapshotOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getUpdateLifestyleUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateLifestyleRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: LifestyleSnapshot, status?: number} = new globalThis.Error();
+    const data : LifestyleSnapshot = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? LifestyleSnapshot.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getAcceptLifestyleCandidateUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/lifestyle/candidates/${id}/accept`
+}
+
+/**
+ * @summary Accept an AI-extracted lifestyle candidate.
+ */
+export const acceptLifestyleCandidate = async (id: string,
+    reviewLifestyleCandidateRequest: ReviewLifestyleCandidateRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<LifestyleSnapshotOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getAcceptLifestyleCandidateUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(reviewLifestyleCandidateRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: LifestyleSnapshot, status?: number} = new globalThis.Error();
+    const data : LifestyleSnapshot = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? LifestyleSnapshot.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getRejectLifestyleCandidateUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/lifestyle/candidates/${id}/reject`
+}
+
+/**
+ * @summary Reject an AI-extracted lifestyle candidate.
+ */
+export const rejectLifestyleCandidate = async (id: string,
+    reviewLifestyleCandidateRequest: ReviewLifestyleCandidateRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<LifestyleSnapshotOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getRejectLifestyleCandidateUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(reviewLifestyleCandidateRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: LifestyleSnapshot, status?: number} = new globalThis.Error();
+    const data : LifestyleSnapshot = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? LifestyleSnapshot.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetBodyMetricsUrl = () => {
+
+
+
+
+  return `/api/v1/body-metrics`
+}
+
+/**
+ * @summary Get current anthropometric measurements.
+ */
+export const getBodyMetrics = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyMetricsSnapshotOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetBodyMetricsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyMetricsSnapshot, status?: number} = new globalThis.Error();
+    const data : BodyMetricsSnapshot = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyMetricsSnapshot.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getUpdateBodyMetricsUrl = () => {
+
+
+
+
+  return `/api/v1/body-metrics`
+}
+
+/**
+ * @summary Update current anthropometric measurements with optimistic concurrency.
+ */
+export const updateBodyMetrics = async (updateBodyMetricsRequest: UpdateBodyMetricsRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<BodyMetricsSnapshotOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getUpdateBodyMetricsUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateBodyMetricsRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: BodyMetricsSnapshot, status?: number} = new globalThis.Error();
+    const data : BodyMetricsSnapshot = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? BodyMetricsSnapshot.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetInjuryHistoryUrl = () => {
+
+
+
+
+  return `/api/v1/health-history/injury`
+}
+
+/**
+ * @summary Get the current injury-history projection.
+ */
+export const getInjuryHistory = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<InjuryHistorySnapshotOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetInjuryHistoryUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: InjuryHistorySnapshot, status?: number} = new globalThis.Error();
+    const data : InjuryHistorySnapshot = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? InjuryHistorySnapshot.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getUpdateInjuryHistoryUrl = () => {
+
+
+
+
+  return `/api/v1/health-history/injury`
+}
+
+/**
+ * @summary Update injury-history summary with optimistic concurrency.
+ */
+export const updateInjuryHistory = async (updateInjuryHistoryRequest: UpdateInjuryHistoryRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<InjuryHistorySnapshotOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getUpdateInjuryHistoryUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateInjuryHistoryRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: InjuryHistorySnapshot, status?: number} = new globalThis.Error();
+    const data : InjuryHistorySnapshot = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? InjuryHistorySnapshot.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getSubmitOnboardingContextUrl = () => {
+
+
+
+
+  return `/api/v1/onboarding/context`
+}
+
+/**
+ * @summary Atomically establish stable profile identity and the initial BodyState context.
+ */
+export const submitOnboardingContext = async (onboardingContextRequest: OnboardingContextRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<OnboardingContextResultOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getSubmitOnboardingContextUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(onboardingContextRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: OnboardingContextResult, status?: number} = new globalThis.Error();
+    const data : OnboardingContextResult = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? OnboardingContextResult.parse(parsedBody) : parsedBody
   return data
 }
