@@ -5,11 +5,11 @@
   "totals": {
     "baseline": 96,
     "browserFacingEligible": 95,
-    "openapi": 48,
-    "missing": 47,
+    "openapi": 56,
+    "missing": 39,
     "retired": 0,
     "excludedOperational": 1,
-    "coveragePercent": 50.53
+    "coveragePercent": 58.95
   },
   "routes": [
     {
@@ -253,37 +253,49 @@
       "method": "POST",
       "path": "/api/v1/consultation-runs",
       "source": "apps/api/cmd/server/main.go:428",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "startConsultationRun",
+      "openapiPath": "/api/v1/consultation-runs"
     },
     {
       "method": "POST",
       "path": "/api/v1/consultation-runs/:id/cancel",
       "source": "apps/api/cmd/server/main.go:429",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "cancelConsultationRun",
+      "openapiPath": "/api/v1/consultation-runs/{id}/cancel"
     },
     {
       "method": "GET",
       "path": "/api/v1/consultations/:id",
       "source": "apps/api/cmd/server/main.go:431",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getConsultation",
+      "openapiPath": "/api/v1/consultations/{id}"
     },
     {
       "method": "GET",
       "path": "/api/v1/consultations/:id/thread",
       "source": "apps/api/cmd/server/main.go:432",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getConsultationThread",
+      "openapiPath": "/api/v1/consultations/{id}/thread"
     },
     {
       "method": "POST",
       "path": "/api/v1/consultation-runs/:id/replay",
       "source": "apps/api/cmd/server/main.go:434",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "replayConsultationRun",
+      "openapiPath": "/api/v1/consultation-runs/{id}/replay"
     },
     {
       "method": "POST",
       "path": "/api/v1/consultation-runs/:id/replay/counterfactual",
       "source": "apps/api/cmd/server/main.go:435",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "replayConsultationRunCounterfactual",
+      "openapiPath": "/api/v1/consultation-runs/{id}/replay/counterfactual"
     },
     {
       "method": "POST",
@@ -391,13 +403,17 @@
       "method": "POST",
       "path": "/api/v1/consultations/:id/interrupts/:interactionId/answers",
       "source": "apps/api/cmd/server/main.go:459",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "resumeConsultationInteraction",
+      "openapiPath": "/api/v1/consultations/{id}/interrupts/{interactionId}/answers"
     },
     {
       "method": "GET",
       "path": "/api/v1/consultations/:id/interaction-metrics",
       "source": "apps/api/cmd/server/main.go:460",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getConsultationInteractionMetrics",
+      "openapiPath": "/api/v1/consultations/{id}/interaction-metrics"
     },
     {
       "method": "GET",

@@ -4,11 +4,11 @@
 
 - Phase 00 baseline routes: **96**
 - Browser-facing eligible routes: **95**
-- OpenAPI-authoritative routes: **48**
-- Missing migration routes: **47**
+- OpenAPI-authoritative routes: **56**
+- Missing migration routes: **39**
 - Retired routes: **0**
 - Operational exclusions: **1**
-- Coverage: **50.53%**
+- Coverage: **58.95%**
 
 ## Missing routes
 
@@ -21,12 +21,6 @@
 - `GET /api/v1/uploads/:id/extractions/:runId/reviews`
 - `POST /api/v1/uploads/:id/extractions/:runId/reviews`
 - `GET /api/v1/uploads/:id/extractions/:runId/source`
-- `POST /api/v1/consultation-runs`
-- `POST /api/v1/consultation-runs/:id/cancel`
-- `GET /api/v1/consultations/:id`
-- `GET /api/v1/consultations/:id/thread`
-- `POST /api/v1/consultation-runs/:id/replay`
-- `POST /api/v1/consultation-runs/:id/replay/counterfactual`
 - `POST /api/v1/consultations/:id/diagnosis`
 - `GET /api/v1/diagnosis-analyses`
 - `GET /api/v1/diagnosis-analyses/:analysisId`
@@ -44,8 +38,6 @@
 - `POST /api/v1/treatments/revisions/:revisionId/reject`
 - `POST /api/v1/outcomes`
 - `GET /api/v1/outcomes`
-- `POST /api/v1/consultations/:id/interrupts/:interactionId/answers`
-- `GET /api/v1/consultations/:id/interaction-metrics`
 - `GET /api/v1/training`
 - `GET /api/v1/training/:id`
 - `GET /api/v1/training/:id/today`

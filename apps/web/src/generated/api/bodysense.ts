@@ -19,6 +19,10 @@ import {
   BodyStateObservationMutationResponse,
   BodyStateRevisionMutationResponse,
   BodyStateSnapshot,
+  CancelConsultationRunResponse,
+  ConsultationRunDecision,
+  ConsultationSessionResponse,
+  ConsultationThreadResponse,
   ConversationDetailResponse,
   ConversationListResponse,
   ConversationMutationResponse,
@@ -26,6 +30,7 @@ import {
   CurrentUser,
   HealthWorkspace,
   InjuryHistorySnapshot,
+  InteractionMetrics,
   LifestyleSnapshot,
   LogoutAcknowledgement,
   NullableUserProfileResponse,
@@ -56,7 +61,13 @@ import type {
   BodyStateObservationMutationResponseOutput,
   BodyStateRevisionMutationResponseOutput,
   BodyStateSnapshotOutput,
+  CancelConsultationRunRequest,
+  CancelConsultationRunResponseOutput,
   ClientDiagnostic,
+  ConsultationCounterfactualReplayRequest,
+  ConsultationRunDecisionOutput,
+  ConsultationSessionResponseOutput,
+  ConsultationThreadResponseOutput,
   ConversationDetailResponseOutput,
   ConversationListResponseOutput,
   ConversationMutationResponseOutput,
@@ -68,6 +79,7 @@ import type {
   CurrentUserOutput,
   HealthWorkspaceOutput,
   InjuryHistorySnapshotOutput,
+  InteractionMetricsOutput,
   LifestyleSnapshotOutput,
   ListAssessmentsParams,
   ListConversationsParams,
@@ -80,12 +92,14 @@ import type {
   PrivacyErasurePlanOutput,
   PrivacyErasureRequest,
   ResolveBodyStateSafetyRequest,
+  ResumeConsultationInteractionRequest,
   ReviewBodyStateFactRequest,
   ReviewBodyStateObservationRequest,
   ReviewLifestyleCandidateRequest,
   RuntimeEventListResponseOutput,
   ShareConversationResponseOutput,
   SharedConversationResponseOutput,
+  StartConsultationRunRequest,
   UpdateBodyMetricsRequest,
   UpdateBodyStateFactTemporalRequest,
   UpdateBodyStateHypothesisLifecycleRequest,
@@ -2334,5 +2348,376 @@ export const listRunEvents = async (id: string,
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? RuntimeEventListResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getStartConsultationRunUrl = () => {
+
+
+
+
+  return `/api/v1/consultation-runs`
+}
+
+/**
+ * @summary Start or reattach a durable consultation run and stream public events.
+ */
+export const startConsultationRun = async (startConsultationRunRequest: StartConsultationRunRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<string> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getStartConsultationRunUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(startConsultationRunRequest)
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: string, status?: number} = new globalThis.Error();
+    const data : string = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: string = body !== null ? body : ''
+  return data
+}
+
+
+
+export const getCancelConsultationRunUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/consultation-runs/${id}/cancel`
+}
+
+/**
+ * @summary Explicitly cancel a durable consultation run.
+ */
+export const cancelConsultationRun = async (id: string,
+    cancelConsultationRunRequest?: CancelConsultationRunRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<CancelConsultationRunResponseOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getCancelConsultationRunUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(cancelConsultationRunRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: CancelConsultationRunResponse, status?: number} = new globalThis.Error();
+    const data : CancelConsultationRunResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? CancelConsultationRunResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getReplayConsultationRunUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/consultation-runs/${id}/replay`
+}
+
+/**
+ * @summary Recompute the Go decision authority for a historical consultation run.
+ */
+export const replayConsultationRun = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ConsultationRunDecisionOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getReplayConsultationRunUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ConsultationRunDecision, status?: number} = new globalThis.Error();
+    const data : ConsultationRunDecision = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ConsultationRunDecision.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getReplayConsultationRunCounterfactualUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/consultation-runs/${id}/replay/counterfactual`
+}
+
+/**
+ * @summary Recompute the run decision against another immutable configuration.
+ */
+export const replayConsultationRunCounterfactual = async (id: string,
+    consultationCounterfactualReplayRequest: ConsultationCounterfactualReplayRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ConsultationRunDecisionOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getReplayConsultationRunCounterfactualUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(consultationCounterfactualReplayRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ConsultationRunDecision, status?: number} = new globalThis.Error();
+    const data : ConsultationRunDecision = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ConsultationRunDecision.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetConsultationUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/consultations/${id}`
+}
+
+/**
+ * @summary Get the durable consultation session and pending interactions.
+ */
+export const getConsultation = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ConsultationSessionResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetConsultationUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ConsultationSessionResponse, status?: number} = new globalThis.Error();
+    const data : ConsultationSessionResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ConsultationSessionResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetConsultationThreadUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/consultations/${id}/thread`
+}
+
+/**
+ * @summary Refresh and read the durable consultation workbench projection.
+ */
+export const getConsultationThread = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ConsultationThreadResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetConsultationThreadUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ConsultationThreadResponse, status?: number} = new globalThis.Error();
+    const data : ConsultationThreadResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ConsultationThreadResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getResumeConsultationInteractionUrl = (id: string,
+    interactionId: string,) => {
+
+
+
+
+  return `/api/v1/consultations/${id}/interrupts/${interactionId}/answers`
+}
+
+/**
+ * @summary Persist an interaction answer and resume the exact durable Agent thread.
+ */
+export const resumeConsultationInteraction = async (id: string,
+    interactionId: string,
+    resumeConsultationInteractionRequest: ResumeConsultationInteractionRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<string> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getResumeConsultationInteractionUrl(id,interactionId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(resumeConsultationInteractionRequest)
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: string, status?: number} = new globalThis.Error();
+    const data : string = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: string = body !== null ? body : ''
+  return data
+}
+
+
+
+export const getGetConsultationInteractionMetricsUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/consultations/${id}/interaction-metrics`
+}
+
+/**
+ * @summary Get answer/expiry metrics for one owned consultation.
+ */
+export const getConsultationInteractionMetrics = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<InteractionMetricsOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetConsultationInteractionMetricsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: InteractionMetrics, status?: number} = new globalThis.Error();
+    const data : InteractionMetrics = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? InteractionMetrics.parse(parsedBody) : parsedBody
   return data
 }

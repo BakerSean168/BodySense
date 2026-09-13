@@ -1318,6 +1318,225 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /api/v1/consultation-runs:
+    post:
+      operationId: startConsultationRun
+      summary: Start or reattach a durable consultation run and stream public events.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartConsultationRunRequest'
+      responses:
+        '200':
+          description: Server-sent event stream for the durable run.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/consultation-runs/{id}/cancel:
+    post:
+      operationId: cancelConsultationRun
+      summary: Explicitly cancel a durable consultation run.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/ConsultationRunId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelConsultationRunRequest'
+      responses:
+        '200':
+          description: Run was cancelled or was already durably cancelled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelConsultationRunResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/consultation-runs/{id}/replay:
+    post:
+      operationId: replayConsultationRun
+      summary: Recompute the Go decision authority for a historical consultation run.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/ConsultationRunId'
+      responses:
+        '200':
+          description: Deterministic replay decision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsultationRunDecision'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ReplayUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/consultation-runs/{id}/replay/counterfactual:
+    post:
+      operationId: replayConsultationRunCounterfactual
+      summary: Recompute the run decision against another immutable configuration.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/ConsultationRunId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsultationCounterfactualReplayRequest'
+      responses:
+        '200':
+          description: Counterfactual deterministic replay decision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsultationRunDecision'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ReplayUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/consultations/{id}:
+    get:
+      operationId: getConsultation
+      summary: Get the durable consultation session and pending interactions.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/ConsultationId'
+      responses:
+        '200':
+          description: Current durable consultation session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsultationSessionResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/consultations/{id}/thread:
+    get:
+      operationId: getConsultationThread
+      summary: Refresh and read the durable consultation workbench projection.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/ConsultationId'
+      responses:
+        '200':
+          description: Projection-backed consultation thread.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsultationThreadResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/consultations/{id}/interrupts/{interactionId}/answers:
+    post:
+      operationId: resumeConsultationInteraction
+      summary: Persist an interaction answer and resume the exact durable Agent thread.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/ConsultationId'
+      - $ref: '#/components/parameters/InteractionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResumeConsultationInteractionRequest'
+      responses:
+        '200':
+          description: Server-sent event stream for the resumed turn.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/consultations/{id}/interaction-metrics:
+    get:
+      operationId: getConsultationInteractionMetrics
+      summary: Get answer/expiry metrics for one owned consultation.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/ConsultationId'
+      responses:
+        '200':
+          description: Current interaction metrics projection.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InteractionMetrics'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
 components:
   parameters:
     ConversationId:
@@ -1329,6 +1548,27 @@ components:
         format: uuid
     ConversationRunId:
       name: runId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ConsultationRunId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ConsultationId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    InteractionId:
+      name: interactionId
       in: path
       required: true
       schema:
@@ -3508,6 +3748,371 @@ components:
       properties:
         profile:
           $ref: '#/components/schemas/UserProfile'
+    JsonValue: {}
+    ConsultationTextPart:
+      type: object
+      additionalProperties: false
+      required: [type, text]
+      properties:
+        type:
+          type: string
+          const: text
+        text:
+          type: string
+    ConsultationImagePart:
+      type: object
+      additionalProperties: false
+      required: [type, upload_id]
+      properties:
+        type:
+          type: string
+          const: image
+        upload_id:
+          type: string
+          format: uuid
+        mime_type:
+          type: string
+        image_url:
+          type: string
+    ConsultationMessagePart:
+      oneOf:
+      - $ref: '#/components/schemas/ConsultationTextPart'
+      - $ref: '#/components/schemas/ConsultationImagePart'
+      discriminator:
+        propertyName: type
+        mapping:
+          text: '#/components/schemas/ConsultationTextPart'
+          image: '#/components/schemas/ConsultationImagePart'
+    ConsultationMessageInput:
+      type: object
+      additionalProperties: false
+      required: [role, parts]
+      properties:
+        role:
+          type: string
+          const: user
+        parts:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ConsultationMessagePart'
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+    StartConsultationRunRequest:
+      type: object
+      additionalProperties: false
+      required: [conversationId, clientMessageId, requestId, message]
+      properties:
+        conversationId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        clientMessageId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        requestId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        message:
+          $ref: '#/components/schemas/ConsultationMessageInput'
+    CancelConsultationRunRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          maxLength: 256
+    CancelConsultationRunResponse:
+      type: object
+      additionalProperties: false
+      required: [status, run_id]
+      properties:
+        status:
+          type: string
+          const: cancelled
+        run_id:
+          type: string
+          format: uuid
+    ResumeConsultationInteractionRequest:
+      type: object
+      additionalProperties: false
+      required: [requestId, answer]
+      properties:
+        requestId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        answer:
+          $ref: '#/components/schemas/JsonValue'
+    ConsultationCounterfactualReplayRequest:
+      type: object
+      additionalProperties: false
+      required: [configuration_id]
+      properties:
+        configuration_id:
+          type: string
+          minLength: 1
+    ConsultationRunDecision:
+      type: object
+      additionalProperties: false
+      required:
+      - run_id
+      - source_configuration_id
+      - decision_policy_revision
+      - persisted_configuration_id
+      - configuration_identity_match
+      - replay_input_frozen
+      - execution_provenance
+      properties:
+        run_id:
+          type: string
+          format: uuid
+        source_configuration_id:
+          type: string
+        decision_policy_revision:
+          type: string
+        persisted_configuration_id:
+          type: string
+        configuration_identity_match:
+          type: boolean
+        replay_input_frozen:
+          type: boolean
+        execution_provenance:
+          $ref: '#/components/schemas/JsonObject'
+        input_fingerprint:
+          type: string
+    AgentInteraction:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - run_id
+      - conversation_id
+      - tool_call_id
+      - tool_name
+      - question
+      - status
+      - created_at
+      - metadata
+      properties:
+        id:
+          type: string
+          format: uuid
+        run_id:
+          type: string
+          format: uuid
+        conversation_id:
+          type: string
+          format: uuid
+        tool_call_id:
+          type: string
+        tool_name:
+          type: string
+        question:
+          $ref: '#/components/schemas/JsonObject'
+        answer:
+          $ref: '#/components/schemas/JsonValue'
+        status:
+          type: string
+          enum: [pending, answered, cancelled, expired]
+        created_at:
+          type: string
+          format: date-time
+        answered_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+    ConsultationSessionResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - conversation_id
+      - phase
+      - extracted_info
+      - pending_interactions
+      - created_at
+      - updated_at
+      - ended_at
+      properties:
+        conversation_id:
+          type: string
+          format: uuid
+        phase:
+          type: string
+          enum: [collecting, ready_for_analysis, analysis_ready]
+        extracted_info:
+          type: array
+          items:
+            $ref: '#/components/schemas/JsonObject'
+        pending_interactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentInteraction'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        ended_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+    InteractionMetrics:
+      type: object
+      additionalProperties: false
+      required: [total, answered, expired, pending, answer_rate, expire_rate, avg_wait_seconds]
+      properties:
+        total: {type: integer, minimum: 0}
+        answered: {type: integer, minimum: 0}
+        expired: {type: integer, minimum: 0}
+        pending: {type: integer, minimum: 0}
+        answer_rate: {type: number, format: double, minimum: 0, maximum: 1}
+        expire_rate: {type: number, format: double, minimum: 0, maximum: 1}
+        avg_wait_seconds: {type: number, format: double, minimum: 0}
+    ConsultationThreadConversation:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - title_status
+      - status
+      - pinned
+      - metadata
+      - message_count
+      - created_at
+      - updated_at
+      properties:
+        id: {type: string, format: uuid}
+        title: {type: string}
+        title_status: {type: string, enum: [pending, generating, generated, failed]}
+        status: {type: string, enum: [active, archived, deleted]}
+        pinned: {type: boolean}
+        pinned_at:
+          anyOf:
+          - {type: string, format: date-time}
+          - {type: 'null'}
+        default_model:
+          anyOf:
+          - {type: string}
+          - {type: 'null'}
+        last_message_at:
+          anyOf:
+          - {type: string, format: date-time}
+          - {type: 'null'}
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+        message_count: {type: integer, minimum: 0}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    ProjectedToolCall:
+      type: object
+      additionalProperties: false
+      required:
+      - tool_call_id
+      - conversation_id
+      - run_id
+      - message_id
+      - tool_name
+      - arguments
+      - status
+      - result
+      - error
+      - created_at
+      - started_at
+      - finished_at
+      - metadata
+      properties:
+        tool_call_id: {type: string}
+        conversation_id: {type: string, format: uuid}
+        run_id: {type: string, format: uuid}
+        message_id:
+          anyOf:
+          - {type: string, format: uuid}
+          - {type: 'null'}
+        tool_name: {type: string}
+        arguments:
+          $ref: '#/components/schemas/JsonValue'
+        status: {type: string, enum: [running, succeeded, failed]}
+        result:
+          $ref: '#/components/schemas/JsonValue'
+        error:
+          $ref: '#/components/schemas/JsonValue'
+        created_at: {type: string, format: date-time}
+        started_at: {type: string, format: date-time}
+        finished_at:
+          anyOf:
+          - {type: string, format: date-time}
+          - {type: 'null'}
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+    ConsultationThreadResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - conversation_id
+      - conversation
+      - phase
+      - extracted_info
+      - body_state
+      - pending_interactions
+      - interaction_history
+      - active_turn_run_id
+      - active_turn_events
+      - messages
+      - tool_calls
+      - created_at
+      - updated_at
+      - ended_at
+      properties:
+        conversation_id: {type: string, format: uuid}
+        conversation:
+          $ref: '#/components/schemas/ConsultationThreadConversation'
+        phase: {type: string, enum: [collecting, ready_for_analysis, analysis_ready]}
+        extracted_info:
+          type: array
+          items: {$ref: '#/components/schemas/JsonObject'}
+        body_state:
+          anyOf:
+          - {$ref: '#/components/schemas/BodyStateSnapshot'}
+          - {type: 'null'}
+        pending_interactions:
+          type: array
+          items: {$ref: '#/components/schemas/AgentInteraction'}
+        interaction_history:
+          type: array
+          items: {$ref: '#/components/schemas/AgentInteraction'}
+        active_turn_run_id:
+          anyOf:
+          - {type: string, format: uuid}
+          - {type: 'null'}
+        active_turn_events:
+          type: array
+          items: {$ref: '#/components/schemas/RuntimeEvent'}
+        messages:
+          type: array
+          items: {$ref: '#/components/schemas/ConversationMessage'}
+        tool_calls:
+          type: array
+          items: {$ref: '#/components/schemas/ProjectedToolCall'}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+        ended_at:
+          anyOf:
+          - {type: string, format: date-time}
+          - {type: 'null'}
     Conversation:
       type: object
       additionalProperties: false
@@ -3770,6 +4375,9 @@ components:
       - payload
       - created_at
       properties:
+        version:
+          type: integer
+          const: 1
         seq:
           type: integer
         channel:
@@ -3860,6 +4468,12 @@ components:
             $ref: '#/components/schemas/ErrorEnvelope'
     ServiceUnavailable:
       description: Required application capability is temporarily unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    ReplayUnavailable:
+      description: Historical run lacks immutable provenance required for replay.
       content:
         application/json:
           schema:

@@ -230,13 +230,7 @@ func main() {
 			knowledgeObservationRepo,
 		),
 	)
-	threadProjectionHandler := handler.NewThreadProjectionHandler(threadProjectionService, bodyStateService)
-	consultationHandler := handler.NewConsultationHandler(
-		consultationService,
-		interactionService,
-		consultationRuntime,
-		bodyStateService,
-	).WithReplayService(service.NewConsultationReplayService(runRepo))
+	consultationReplayService := service.NewConsultationReplayService(runRepo)
 	diagnosisReplayService := service.NewDiagnosisReplayService(diagnosisAnalysisService, aiClient)
 	diagnosisRolloutRepo := repository.NewDiagnosisRolloutRepository(database.DB)
 	diagnosisRolloutService := service.NewDiagnosisRolloutService(diagnosisRolloutRepo)
@@ -384,16 +378,9 @@ func main() {
 		extractions.POST("/:runId/reviews", healthDocumentReviewHandler.AppendReview)
 		extractions.GET("/:runId/source", healthDocumentReviewHandler.SourceContext)
 
-		// Consultation domain
-		protected.POST("/consultation-runs", consultationHandler.StartRun)
-		protected.POST("/consultation-runs/:id/cancel", consultationHandler.CancelRun)
+		// Diagnosis generation remains on the legacy handler until its application
+		// workflow is moved behind the generated boundary in this phase.
 		consultations := protected.Group("/consultations")
-		consultations.GET("/:id", consultationHandler.GetConsultation)
-		consultations.GET("/:id/thread", threadProjectionHandler.GetConsultationThread)
-
-		protected.POST("/consultation-runs/:id/replay", consultationHandler.ReplayRun)
-		protected.POST("/consultation-runs/:id/replay/counterfactual", consultationHandler.ReplayRunCounterfactual)
-
 		consultations.POST("/:id/diagnosis", diagnosisHandler.AnalyzeDiagnosis)
 
 		// Diagnosis history is user-scoped and pinned to BodyState revisions.
@@ -415,9 +402,6 @@ func main() {
 		protected.POST("/treatments/revisions/:revisionId/reject", treatmentHandler.RejectRevision)
 		protected.POST("/outcomes", treatmentHandler.RecordOutcome)
 		protected.GET("/outcomes", treatmentHandler.ListOutcomes)
-
-		consultations.POST("/:id/interrupts/:interactionId/answers", consultationHandler.ResumeInteraction)
-		consultations.GET("/:id/interaction-metrics", consultationHandler.GetInteractionMetrics)
 
 		// Longitudinal BodyState (ADR 0004)
 
@@ -446,7 +430,7 @@ func main() {
 	}
 	httpapi.RegisterRoutes(
 		r,
-		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure).WithAssessment(assessmentService, assessmentReplayService).WithAuth(authService, authSecurity).WithConversations(conversationService, shareService, runtimeEventService)),
+		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure).WithAssessment(assessmentService, assessmentReplayService).WithAuth(authService, authSecurity).WithConversations(conversationService, shareService, runtimeEventService).WithConsultation(consultationRuntime, consultationService, interactionService, consultationReplayService, threadProjectionService, bodyStateService)),
 		httpapi.RouteSecurity{
 			Auth:      authMiddleware,
 			Operator:  middleware.RequireKnowledgeOperator(userRepo),

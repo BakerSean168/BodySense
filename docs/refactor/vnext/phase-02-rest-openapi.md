@@ -665,3 +665,60 @@ git diff --check                            PASS
 ```
 
 The OpenAPI linter's two `no-ambiguous-paths` warnings describe the long-standing public share shape `/conversations/share/{token}` overlapping the `{id}` namespace in abstract OpenAPI routing. Gin's static-segment precedence is covered by the security-domain characterization test. The path remains unchanged in Phase 02 so the canonical 95-route baseline is not rewritten during migration.
+
+## Checkpoint 10 — Consultation runtime / SSE / thread REST boundary
+
+Status: COMPLETE ON PHASE BRANCH
+
+Eight durable consultation routes are now owned by the generated OpenAPI boundary:
+
+```text
+POST /api/v1/consultation-runs
+POST /api/v1/consultation-runs/{id}/cancel
+POST /api/v1/consultation-runs/{id}/replay
+POST /api/v1/consultation-runs/{id}/replay/counterfactual
+GET  /api/v1/consultations/{id}
+GET  /api/v1/consultations/{id}/thread
+POST /api/v1/consultations/{id}/interrupts/{interactionId}/answers
+GET  /api/v1/consultations/{id}/interaction-metrics
+```
+
+The old `ConsultationHandler`, `ThreadProjectionHandler`, and consultation HTTP DTO package are removed. Runtime commands now live under `internal/consultation`, so neither generated OpenAPI types nor legacy HTTP DTOs leak into the durable Agent runtime.
+
+### SSE boundary
+
+`startConsultationRun` and `resumeConsultationInteraction` remain true streaming operations. The strict OpenAPI adapter passes Gin's real `ResponseWriter` to the runtime, which writes and flushes SSE directly; the returned response object is a no-op visitor so the strict handler cannot buffer or write the stream a second time.
+
+A characterization test proves an emitted SSE frame is written exactly once. Contract-invalid image upload IDs are rejected by the OpenAPI request validator before the consultation runtime is invoked.
+
+On the Web, streaming calls use generated URL builders plus generated Zod request schemas while retaining raw `authFetch` responses for incremental SSE consumption. Non-streaming consultation reads/cancel/metrics use the generated Orval Fetch + Zod clients and map transport projections back to feature-domain types.
+
+### Public projection boundary
+
+The thread contract exposes the browser workbench projection, not the persistence model. Active turn events are projected as public RuntimeEvent v1 envelopes; tool calls explicitly normalize absent result/error to JSON null; body-state load failure remains non-fatal and is represented as `body_state: null`, preserving legacy semantics.
+
+### Coverage after this batch
+
+```text
+Phase 00 routes               96
+operational exclusions         1
+browser-facing eligible       95
+OpenAPI-authoritative         56
+missing                       39
+coverage                   58.95%
+```
+
+### Verification
+
+```text
+pnpm contracts:lint                         PASS (same 2 known share-path ambiguity warnings)
+pnpm contracts:check-generated              PASS
+Go consultation/httpapi/cmd-server tests    PASS
+Web consultation service                    21/21 PASS
+Web typecheck                               PASS
+SSE single-write characterization           PASS
+invalid image UUID rejected pre-runtime     PASS
+legacy Consultation/Thread handlers         REMOVED
+legacy consultation HTTP DTO                REMOVED
+git diff --check                            PASS
+```

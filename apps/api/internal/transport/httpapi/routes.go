@@ -120,4 +120,14 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.DELETE("/conversations/:id/share", wrapper.UnshareConversation)
 	protected.GET("/conversations/:id/runs", wrapper.ListConversationRuns)
 	protected.GET("/conversations/:id/runs/:runId/events", wrapper.ListRunEvents)
+
+	// Consultation runtime, durable thread and HITL surfaces.
+	protected.POST("/consultation-runs", wrapper.StartConsultationRun)
+	protected.POST("/consultation-runs/:id/cancel", wrapper.CancelConsultationRun)
+	protected.POST("/consultation-runs/:id/replay", wrapper.ReplayConsultationRun)
+	protected.POST("/consultation-runs/:id/replay/counterfactual", wrapper.ReplayConsultationRunCounterfactual)
+	protected.GET("/consultations/:id", wrapper.GetConsultation)
+	protected.GET("/consultations/:id/thread", wrapper.GetConsultationThread)
+	protected.POST("/consultations/:id/interrupts/:interactionId/answers", wrapper.ResumeConsultationInteraction)
+	protected.GET("/consultations/:id/interaction-metrics", wrapper.GetConsultationInteractionMetrics)
 }

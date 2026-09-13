@@ -213,7 +213,7 @@ func (r *Runtime) StartRun(
 	ctx context.Context,
 	w http.ResponseWriter,
 	uid uuid.UUID,
-	req dto.StartConsultationRunRequest,
+	req StartRunInput,
 ) *HTTPError {
 	// --- 1. Idempotency check (before any side effects) ---
 	existing, found, err := r.runService.CheckIdempotency(ctx, uid, req.RequestID)
@@ -391,7 +391,7 @@ func (r *Runtime) executeRunFlow(
 	assistantMsg *model.Message,
 	baseIDs dto.StreamEventIDs,
 	userText string,
-	parts []dto.PartDTO,
+	parts []PartInput,
 	session *model.ConsultationSession,
 	spatialContext *service.ConsultationSpatialContext,
 ) (streamResult, bool) {
@@ -561,7 +561,7 @@ func (r *Runtime) ResumeInteraction(
 	uid uuid.UUID,
 	conversationID uuid.UUID,
 	interactionID uuid.UUID,
-	req dto.ResumeConsultationInteractionRequest,
+	req ResumeInteractionInput,
 ) *HTTPError {
 	existing, found, err := r.runService.CheckIdempotency(ctx, uid, req.RequestID)
 	if err != nil {
@@ -1981,7 +1981,7 @@ func (r *Runtime) recordPublicEvent(ctx context.Context, event dto.StreamEvent) 
 	}
 }
 
-func messagePartsToImageUploadIDs(parts []dto.PartDTO) []string {
+func messagePartsToImageUploadIDs(parts []PartInput) []string {
 	ids := make([]string, 0)
 	seen := map[string]bool{}
 	for _, part := range parts {
@@ -2003,7 +2003,7 @@ func messagePartsToImageUploadIDs(parts []dto.PartDTO) []string {
 func (r *Runtime) resolveConsultationImages(
 	ctx context.Context,
 	uid uuid.UUID,
-	parts []dto.PartDTO,
+	parts []PartInput,
 ) []service.ConsultationImageRef {
 	if r.uploadService == nil {
 		return nil
@@ -2037,7 +2037,7 @@ func (r *Runtime) resolveConsultationImages(
 	return out
 }
 
-func messagePartsToText(parts []dto.PartDTO) string {
+func messagePartsToText(parts []PartInput) string {
 	texts := make([]string, 0, len(parts))
 	for _, part := range parts {
 		if part.Type == "text" && strings.TrimSpace(part.Text) != "" {

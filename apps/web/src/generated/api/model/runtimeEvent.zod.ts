@@ -13,6 +13,7 @@ import { JsonObject } from './jsonObject.zod';
 
 
 export const RuntimeEvent = /*#__PURE__*/ zod.strictObject({
+  "version": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.literal(1)),
   "seq": /*#__PURE__*/ zod.int(),
   "channel": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),
   "type": /*#__PURE__*/ zod.string().check(/*#__PURE__*/ zod.minLength(1)),

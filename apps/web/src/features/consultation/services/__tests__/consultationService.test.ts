@@ -50,7 +50,7 @@ describe("consultationApi", () => {
       const raw = new Response("stream");
       mockAuthFetch.mockResolvedValue(raw);
       const params = {
-        conversationId: "conv-1",
+        conversationId: conversationWire.id,
         clientMessageId: "client-1",
         requestId: "req-1",
         message: {
@@ -81,20 +81,28 @@ describe("consultationApi", () => {
   describe("cancelRun", () => {
     it("POSTs an explicit user cancellation command", async () => {
       mockAuthFetch.mockResolvedValue(
-        mockResponse({ status: "cancelled", run_id: "run-1" }),
+        mockResponse({
+          status: "cancelled",
+          run_id: "22222222-2222-4222-8222-222222222222",
+        }),
       );
 
-      const result = await consultationApi.cancelRun("run-1");
+      const result = await consultationApi.cancelRun(
+        "22222222-2222-4222-8222-222222222222",
+      );
 
       expect(mockAuthFetch).toHaveBeenCalledWith(
-        "/api/v1/consultation-runs/run-1/cancel",
+        "/api/v1/consultation-runs/22222222-2222-4222-8222-222222222222/cancel",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ reason: "cancelled_by_user" }),
         },
       );
-      expect(result).toEqual({ status: "cancelled", run_id: "run-1" });
+      expect(result).toEqual({
+        status: "cancelled",
+        run_id: "22222222-2222-4222-8222-222222222222",
+      });
     });
   });
 
@@ -362,16 +370,62 @@ describe("consultationApi", () => {
   // ===== Consultation Domain API =====
 
   describe("getConsultation", () => {
-    it("GETs /api/v1/consultations/:id", async () => {
-      const session = { conversationId: "conv-1", phase: "collecting" };
+    it("uses the generated client and maps the session projection", async () => {
+      const session = {
+        conversation_id: conversationWire.id,
+        phase: "collecting",
+        extracted_info: [],
+        pending_interactions: [],
+        created_at: "2026-09-13T12:00:00Z",
+        updated_at: "2026-09-13T12:01:00Z",
+        ended_at: null,
+      };
       mockAuthFetch.mockResolvedValue(mockResponse(session));
 
-      const result = await consultationApi.getConsultation("conv-1");
+      const result = await consultationApi.getConsultation(conversationWire.id);
 
       expect(mockAuthFetch).toHaveBeenCalledWith(
-        "/api/v1/consultations/conv-1",
+        `/api/v1/consultations/${conversationWire.id}`,
+        { method: "GET" },
       );
-      expect(result).toEqual(session);
+      expect(result).toEqual({
+        ...session,
+        diagnosis: null,
+      });
+    });
+  });
+
+  describe("getConsultationThread", () => {
+    it("validates and maps the durable thread projection", async () => {
+      const thread = {
+        conversation_id: conversationWire.id,
+        conversation: { ...conversationWire, message_count: 0 },
+        phase: "collecting",
+        extracted_info: [],
+        body_state: null,
+        pending_interactions: [],
+        interaction_history: [],
+        active_turn_run_id: null,
+        active_turn_events: [],
+        messages: [],
+        tool_calls: [],
+        created_at: "2026-09-13T12:00:00Z",
+        updated_at: "2026-09-13T12:01:00Z",
+        ended_at: null,
+      };
+      mockAuthFetch.mockResolvedValue(mockResponse(thread));
+
+      const result = await consultationApi.getConsultationThread(
+        conversationWire.id,
+      );
+
+      expect(mockAuthFetch).toHaveBeenCalledWith(
+        `/api/v1/consultations/${conversationWire.id}/thread`,
+        { method: "GET" },
+      );
+      expect(result.conversation.id).toBe(conversationWire.id);
+      expect(result.diagnosis).toBeNull();
+      expect(result.active_turn_events).toEqual([]);
     });
   });
 

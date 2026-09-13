@@ -1,8 +1,14 @@
 import { parseStreamEvent } from "@bodysense/contracts";
 import { authFetch } from "@/features/auth/services/authService";
 import {
+  cancelConsultationRun as cancelConsultationRunOpenApi,
   deleteConversation as deleteConversationOpenApi,
   generateConversationTitle as generateConversationTitleOpenApi,
+  getConsultation as getConsultationOpenApi,
+  getConsultationInteractionMetrics as getConsultationInteractionMetricsOpenApi,
+  getConsultationThread as getConsultationThreadOpenApi,
+  getResumeConsultationInteractionUrl,
+  getStartConsultationRunUrl,
   getConversation as getConversationOpenApi,
   getSharedConversation as getSharedConversationOpenApi,
   listConversations as listConversationsOpenApi,
@@ -12,7 +18,14 @@ import {
   shareConversation as shareConversationOpenApi,
   unshareConversation as unshareConversationOpenApi,
 } from "@/generated/api/bodysense";
+import {
+  ResumeConsultationInteractionRequest as ResumeConsultationInteractionRequestSchema,
+  StartConsultationRunRequest as StartConsultationRunRequestSchema,
+} from "@/generated/api/model";
 import type {
+  AgentInteractionOutput as PublicAgentInteraction,
+  ConsultationSessionResponseOutput as PublicConsultationSession,
+  ConsultationThreadResponseOutput as PublicConsultationThread,
   ConversationMessageOutput as PublicConversationMessage,
   ConversationOutput as PublicConversation,
 } from "@/generated/api/model";
@@ -33,6 +46,8 @@ import type {
   ConversationShare,
   SharedConversation,
   StreamEvent,
+  PendingInteraction,
+  ProjectedToolCall,
 } from "../types/consultation";
 
 const API_BASE = "/api/v1";
@@ -103,10 +118,109 @@ function toConversationMessage(input: PublicConversationMessage): Message {
   };
 }
 
+function toPendingInteraction(
+  input: PublicAgentInteraction,
+): PendingInteraction {
+  return {
+    id: input.id,
+    run_id: input.run_id,
+    conversation_id: input.conversation_id,
+    tool_call_id: input.tool_call_id,
+    tool_name: input.tool_name,
+    question: input.question as unknown as PendingInteraction["question"],
+    status: input.status,
+    answer: input.answer,
+    created_at: input.created_at,
+    answered_at: input.answered_at ?? null,
+    metadata: input.metadata,
+  };
+}
+
+function toConsultationSession(
+  input: PublicConsultationSession,
+): ConsultationSession {
+  return {
+    conversation_id: input.conversation_id,
+    phase: input.phase,
+    extracted_info:
+      input.extracted_info as unknown as ConsultationSession["extracted_info"],
+    diagnosis: null,
+    pending_interactions: input.pending_interactions.map(toPendingInteraction),
+    created_at: input.created_at,
+    updated_at: input.updated_at,
+    ended_at: input.ended_at ?? null,
+  };
+}
+
+function toProjectedToolCall(
+  input: PublicConsultationThread["tool_calls"][number],
+): ProjectedToolCall {
+  return {
+    tool_call_id: input.tool_call_id,
+    conversation_id: input.conversation_id,
+    run_id: input.run_id,
+    message_id: input.message_id ?? null,
+    tool_name: input.tool_name,
+    arguments: input.arguments,
+    status: input.status,
+    result: input.result ?? null,
+    error: input.error ?? null,
+    created_at: input.created_at,
+    started_at: input.started_at,
+    finished_at: input.finished_at ?? null,
+    metadata: input.metadata,
+  };
+}
+
+function toConsultationThread(
+  input: PublicConsultationThread,
+): ConsultationThread {
+  return {
+    conversation_id: input.conversation_id,
+    phase: input.phase,
+    extracted_info:
+      input.extracted_info as unknown as ConsultationThread["extracted_info"],
+    body_state: input.body_state as ConsultationThread["body_state"],
+    diagnosis: null,
+    pending_interactions: input.pending_interactions.map(toPendingInteraction),
+    interaction_history: input.interaction_history.map(toPendingInteraction),
+    created_at: input.created_at,
+    updated_at: input.updated_at,
+    ended_at: input.ended_at ?? null,
+    conversation: {
+      id: input.conversation.id,
+      title: input.conversation.title ?? null,
+      title_status: input.conversation.title_status,
+      status: input.conversation.status,
+      pinned: input.conversation.pinned,
+      pinned_at: input.conversation.pinned_at ?? null,
+      default_model: input.conversation.default_model ?? null,
+      last_message_at: input.conversation.last_message_at ?? null,
+      message_count: input.conversation.message_count,
+      metadata: input.conversation.metadata,
+      created_at: input.conversation.created_at,
+      updated_at: input.conversation.updated_at,
+    },
+    active_turn_run_id: input.active_turn_run_id ?? null,
+    active_turn_events: input.active_turn_events.map((item) =>
+      parseStreamEvent({
+        version: 1,
+        seq: item.seq,
+        channel: item.channel,
+        type: item.type,
+        ids: item.ids,
+        payload: item.payload,
+      }),
+    ),
+    messages: input.messages.map(toConversationMessage),
+    tool_calls: input.tool_calls.map(toProjectedToolCall),
+  };
+}
+
 export const consultationApi = {
   /**
-   * Start a unified consultation run (creates conversation if needed + sends message in one request).
-   * Returns raw Response for SSE streaming.
+   * Start a unified consultation run. The generated request schema owns runtime
+   * trust while authFetch keeps the Response body streaming for SSE consumers.
    */
   async startConsultationRun(params: {
     conversationId: string | null;
@@ -124,20 +238,24 @@ export const consultationApi = {
       metadata?: Record<string, unknown>;
     };
   }): Promise<Response> {
-    return authFetch(`${API_BASE}/consultation-runs`, {
+    const body = StartConsultationRunRequestSchema.parse(params);
+    return authFetch(getStartConsultationRunUrl(), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(params),
+      body: JSON.stringify(body),
     });
   },
 
   /** Explicitly cancel a running or waiting consultation run. */
   async cancelRun(runId: string): Promise<{ status: string; run_id: string }> {
-    return authFetch(`${API_BASE}/consultation-runs/${runId}/cancel`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reason: "cancelled_by_user" }),
-    }).then((res) => parseJson<{ status: string; run_id: string }>(res));
+    return withOpenApiError(() =>
+      cancelConsultationRunOpenApi(
+        runId,
+        { reason: "cancelled_by_user" },
+        undefined,
+        openApiAuthFetch,
+      ),
+    );
   },
 
   // ===== General Conversation API =====
@@ -226,22 +344,20 @@ export const consultationApi = {
 
   // ===== Consultation Domain API =====
 
-  /**
-   * Get the projection-backed consultation thread for a conversation.
-   */
+  /** Get the projection-backed consultation thread for a conversation. */
   async getConsultationThread(id: string): Promise<ConsultationThread> {
-    return authFetch(`${API_BASE}/consultations/${id}/thread`).then((res) =>
-      parseJson<ConsultationThread>(res),
+    const result = await withOpenApiError(() =>
+      getConsultationThreadOpenApi(id, undefined, openApiAuthFetch),
     );
+    return toConsultationThread(result);
   },
 
-  /**
-   * Get consultation details for a conversation.
-   */
+  /** Get durable consultation details for a conversation. */
   async getConsultation(id: string): Promise<ConsultationSession> {
-    return authFetch(`${API_BASE}/consultations/${id}`).then((res) =>
-      parseJson<ConsultationSession>(res),
+    const result = await withOpenApiError(() =>
+      getConsultationOpenApi(id, undefined, openApiAuthFetch),
     );
+    return toConsultationSession(result);
   },
 
   /**
@@ -329,9 +445,11 @@ export const consultationApi = {
     expire_rate: number;
     avg_wait_seconds: number;
   }> {
-    return expectJson(
-      await authFetch(
-        `${API_BASE}/consultations/${conversationId}/interaction-metrics`,
+    return withOpenApiError(() =>
+      getConsultationInteractionMetricsOpenApi(
+        conversationId,
+        undefined,
+        openApiAuthFetch,
       ),
     );
   },
@@ -344,12 +462,13 @@ export const consultationApi = {
       answer: unknown;
     },
   ): Promise<Response> {
+    const body = ResumeConsultationInteractionRequestSchema.parse(params);
     return authFetch(
-      `${API_BASE}/consultations/${conversationId}/interrupts/${interactionId}/answers`,
+      getResumeConsultationInteractionUrl(conversationId, interactionId),
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(params),
+        body: JSON.stringify(body),
       },
     );
   },
