@@ -18,8 +18,36 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/gin-gonic/gin"
+	"github.com/oapi-codegen/runtime"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
+
+// Defines values for BodyStateHypothesisInputLifecycleState.
+const (
+	BodyStateHypothesisInputLifecycleStateActive       BodyStateHypothesisInputLifecycleState = "active"
+	BodyStateHypothesisInputLifecycleStateRetired      BodyStateHypothesisInputLifecycleState = "retired"
+	BodyStateHypothesisInputLifecycleStateStrengthened BodyStateHypothesisInputLifecycleState = "strengthened"
+	BodyStateHypothesisInputLifecycleStateUnsupported  BodyStateHypothesisInputLifecycleState = "unsupported"
+	BodyStateHypothesisInputLifecycleStateWeakened     BodyStateHypothesisInputLifecycleState = "weakened"
+)
+
+// Valid indicates whether the value is a known member of the BodyStateHypothesisInputLifecycleState enum.
+func (e BodyStateHypothesisInputLifecycleState) Valid() bool {
+	switch e {
+	case BodyStateHypothesisInputLifecycleStateActive:
+		return true
+	case BodyStateHypothesisInputLifecycleStateRetired:
+		return true
+	case BodyStateHypothesisInputLifecycleStateStrengthened:
+		return true
+	case BodyStateHypothesisInputLifecycleStateUnsupported:
+		return true
+	case BodyStateHypothesisInputLifecycleStateWeakened:
+		return true
+	default:
+		return false
+	}
+}
 
 // Defines values for DiagnosisCandidateConfidence.
 const (
@@ -86,19 +114,19 @@ func (e DiagnosisCandidateSeverity) Valid() bool {
 
 // Defines values for DiagnosisCandidateAssessmentState.
 const (
-	Confirmed     DiagnosisCandidateAssessmentState = "confirmed"
-	NotApplicable DiagnosisCandidateAssessmentState = "not_applicable"
-	Unsure        DiagnosisCandidateAssessmentState = "unsure"
+	DiagnosisCandidateAssessmentStateConfirmed     DiagnosisCandidateAssessmentState = "confirmed"
+	DiagnosisCandidateAssessmentStateNotApplicable DiagnosisCandidateAssessmentState = "not_applicable"
+	DiagnosisCandidateAssessmentStateUnsure        DiagnosisCandidateAssessmentState = "unsure"
 )
 
 // Valid indicates whether the value is a known member of the DiagnosisCandidateAssessmentState enum.
 func (e DiagnosisCandidateAssessmentState) Valid() bool {
 	switch e {
-	case Confirmed:
+	case DiagnosisCandidateAssessmentStateConfirmed:
 		return true
-	case NotApplicable:
+	case DiagnosisCandidateAssessmentStateNotApplicable:
 		return true
-	case Unsure:
+	case DiagnosisCandidateAssessmentStateUnsure:
 		return true
 	default:
 		return false
@@ -171,6 +199,69 @@ func (e OutcomeCausalityLevel) Valid() bool {
 	}
 }
 
+// Defines values for ResolveBodyStateSafetyRequestResolution.
+const (
+	ClearedByReview ResolveBodyStateSafetyRequestResolution = "cleared_by_review"
+	Monitoring      ResolveBodyStateSafetyRequestResolution = "monitoring"
+	Resolved        ResolveBodyStateSafetyRequestResolution = "resolved"
+)
+
+// Valid indicates whether the value is a known member of the ResolveBodyStateSafetyRequestResolution enum.
+func (e ResolveBodyStateSafetyRequestResolution) Valid() bool {
+	switch e {
+	case ClearedByReview:
+		return true
+	case Monitoring:
+		return true
+	case Resolved:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReviewBodyStateFactRequestReviewState.
+const (
+	ReviewBodyStateFactRequestReviewStateConfirmed  ReviewBodyStateFactRequestReviewState = "confirmed"
+	ReviewBodyStateFactRequestReviewStateRejected   ReviewBodyStateFactRequestReviewState = "rejected"
+	ReviewBodyStateFactRequestReviewStateUnverified ReviewBodyStateFactRequestReviewState = "unverified"
+)
+
+// Valid indicates whether the value is a known member of the ReviewBodyStateFactRequestReviewState enum.
+func (e ReviewBodyStateFactRequestReviewState) Valid() bool {
+	switch e {
+	case ReviewBodyStateFactRequestReviewStateConfirmed:
+		return true
+	case ReviewBodyStateFactRequestReviewStateRejected:
+		return true
+	case ReviewBodyStateFactRequestReviewStateUnverified:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReviewBodyStateObservationRequestReviewState.
+const (
+	ReviewBodyStateObservationRequestReviewStateConfirmed  ReviewBodyStateObservationRequestReviewState = "confirmed"
+	ReviewBodyStateObservationRequestReviewStateRejected   ReviewBodyStateObservationRequestReviewState = "rejected"
+	ReviewBodyStateObservationRequestReviewStateUnverified ReviewBodyStateObservationRequestReviewState = "unverified"
+)
+
+// Valid indicates whether the value is a known member of the ReviewBodyStateObservationRequestReviewState enum.
+func (e ReviewBodyStateObservationRequestReviewState) Valid() bool {
+	switch e {
+	case ReviewBodyStateObservationRequestReviewStateConfirmed:
+		return true
+	case ReviewBodyStateObservationRequestReviewStateRejected:
+		return true
+	case ReviewBodyStateObservationRequestReviewStateUnverified:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TreatmentStatus.
 const (
 	TreatmentStatusActive            TreatmentStatus = "active"
@@ -200,19 +291,19 @@ func (e TreatmentStatus) Valid() bool {
 
 // Defines values for TreatmentRevisionAcceptanceState.
 const (
-	Accepted TreatmentRevisionAcceptanceState = "accepted"
-	Proposed TreatmentRevisionAcceptanceState = "proposed"
-	Rejected TreatmentRevisionAcceptanceState = "rejected"
+	TreatmentRevisionAcceptanceStateAccepted TreatmentRevisionAcceptanceState = "accepted"
+	TreatmentRevisionAcceptanceStateProposed TreatmentRevisionAcceptanceState = "proposed"
+	TreatmentRevisionAcceptanceStateRejected TreatmentRevisionAcceptanceState = "rejected"
 )
 
 // Valid indicates whether the value is a known member of the TreatmentRevisionAcceptanceState enum.
 func (e TreatmentRevisionAcceptanceState) Valid() bool {
 	switch e {
-	case Accepted:
+	case TreatmentRevisionAcceptanceStateAccepted:
 		return true
-	case Proposed:
+	case TreatmentRevisionAcceptanceStateProposed:
 		return true
-	case Rejected:
+	case TreatmentRevisionAcceptanceStateRejected:
 		return true
 	default:
 		return false
@@ -244,6 +335,53 @@ func (e TreatmentRevisionLifecycleState) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// Defines values for UpdateBodyStateHypothesisLifecycleRequestLifecycleState.
+const (
+	UpdateBodyStateHypothesisLifecycleRequestLifecycleStateActive       UpdateBodyStateHypothesisLifecycleRequestLifecycleState = "active"
+	UpdateBodyStateHypothesisLifecycleRequestLifecycleStateRetired      UpdateBodyStateHypothesisLifecycleRequestLifecycleState = "retired"
+	UpdateBodyStateHypothesisLifecycleRequestLifecycleStateStrengthened UpdateBodyStateHypothesisLifecycleRequestLifecycleState = "strengthened"
+	UpdateBodyStateHypothesisLifecycleRequestLifecycleStateUnsupported  UpdateBodyStateHypothesisLifecycleRequestLifecycleState = "unsupported"
+	UpdateBodyStateHypothesisLifecycleRequestLifecycleStateWeakened     UpdateBodyStateHypothesisLifecycleRequestLifecycleState = "weakened"
+)
+
+// Valid indicates whether the value is a known member of the UpdateBodyStateHypothesisLifecycleRequestLifecycleState enum.
+func (e UpdateBodyStateHypothesisLifecycleRequestLifecycleState) Valid() bool {
+	switch e {
+	case UpdateBodyStateHypothesisLifecycleRequestLifecycleStateActive:
+		return true
+	case UpdateBodyStateHypothesisLifecycleRequestLifecycleStateRetired:
+		return true
+	case UpdateBodyStateHypothesisLifecycleRequestLifecycleStateStrengthened:
+		return true
+	case UpdateBodyStateHypothesisLifecycleRequestLifecycleStateUnsupported:
+		return true
+	case UpdateBodyStateHypothesisLifecycleRequestLifecycleStateWeakened:
+		return true
+	default:
+		return false
+	}
+}
+
+// BodyStateEvidence defines model for BodyStateEvidence.
+type BodyStateEvidence struct {
+	CreatedAt     time.Time          `json:"created_at"`
+	Excerpt       string             `json:"excerpt"`
+	Id            openapi_types.UUID `json:"id"`
+	Metadata      JsonObject         `json:"metadata"`
+	RetrievedAt   time.Time          `json:"retrieved_at"`
+	SourceKey     string             `json:"source_key"`
+	SourceType    string             `json:"source_type"`
+	SourceVersion string             `json:"source_version"`
+	Summary       string             `json:"summary"`
+	Title         string             `json:"title"`
+	UserId        openapi_types.UUID `json:"user_id"`
+}
+
+// BodyStateEvidenceListResponse defines model for BodyStateEvidenceListResponse.
+type BodyStateEvidenceListResponse struct {
+	Evidence []BodyStateEvidence `json:"evidence"`
 }
 
 // BodyStateFact defines model for BodyStateFact.
@@ -294,8 +432,8 @@ type BodyStateFactInput struct {
 
 // BodyStateFactMutationResponse defines model for BodyStateFactMutationResponse.
 type BodyStateFactMutationResponse struct {
-	Fact     BodyStateFact     `json:"fact"`
-	Revision BodyStateRevision `json:"revision"`
+	Fact     BodyStateFact      `json:"fact"`
+	Revision *BodyStateRevision `json:"revision"`
 }
 
 // BodyStateHypothesis defines model for BodyStateHypothesis.
@@ -316,6 +454,29 @@ type BodyStateHypothesis struct {
 	UpdatedAt                time.Time           `json:"updated_at"`
 	UpdatedRevision          int                 `json:"updated_revision"`
 	UserId                   openapi_types.UUID  `json:"user_id"`
+}
+
+// BodyStateHypothesisInput defines model for BodyStateHypothesisInput.
+type BodyStateHypothesisInput struct {
+	ConcernKey               *string                                 `json:"concern_key,omitempty"`
+	Confidence               *string                                 `json:"confidence,omitempty"`
+	CounterevidenceIds       *StringArray                            `json:"counterevidence_ids,omitempty"`
+	ExpectedRevision         int64                                   `json:"expected_revision"`
+	LifecycleState           *BodyStateHypothesisInputLifecycleState `json:"lifecycle_state,omitempty"`
+	Provenance               *JsonObject                             `json:"provenance,omitempty"`
+	Statement                string                                  `json:"statement"`
+	SupportingEvidenceIds    *StringArray                            `json:"supporting_evidence_ids,omitempty"`
+	SupportingFactIds        *StringArray                            `json:"supporting_fact_ids,omitempty"`
+	SupportingObservationIds *StringArray                            `json:"supporting_observation_ids,omitempty"`
+}
+
+// BodyStateHypothesisInputLifecycleState defines model for BodyStateHypothesisInput.LifecycleState.
+type BodyStateHypothesisInputLifecycleState string
+
+// BodyStateHypothesisMutationResponse defines model for BodyStateHypothesisMutationResponse.
+type BodyStateHypothesisMutationResponse struct {
+	Hypothesis BodyStateHypothesis `json:"hypothesis"`
+	Revision   *BodyStateRevision  `json:"revision"`
 }
 
 // BodyStateObservation defines model for BodyStateObservation.
@@ -342,6 +503,28 @@ type BodyStateObservation struct {
 	Value                   JsonObject          `json:"value"`
 }
 
+// BodyStateObservationInput defines model for BodyStateObservationInput.
+type BodyStateObservationInput struct {
+	BodyRegion       *string     `json:"body_region,omitempty"`
+	BodyRegionId     *string     `json:"body_region_id,omitempty"`
+	ConcernKey       *string     `json:"concern_key,omitempty"`
+	Condition        *JsonObject `json:"condition,omitempty"`
+	ExpectedRevision int64       `json:"expected_revision"`
+	Kind             string      `json:"kind"`
+	LifecycleState   *string     `json:"lifecycle_state,omitempty"`
+	Method           *string     `json:"method,omitempty"`
+	ObservedAt       *time.Time  `json:"observed_at,omitempty"`
+	Provenance       *JsonObject `json:"provenance,omitempty"`
+	SourceKey        *string     `json:"source_key,omitempty"`
+	Value            JsonObject  `json:"value"`
+}
+
+// BodyStateObservationMutationResponse defines model for BodyStateObservationMutationResponse.
+type BodyStateObservationMutationResponse struct {
+	Observation BodyStateObservation `json:"observation"`
+	Revision    *BodyStateRevision   `json:"revision"`
+}
+
 // BodyStateRevision defines model for BodyStateRevision.
 type BodyStateRevision struct {
 	ChangeType string             `json:"change_type"`
@@ -351,6 +534,28 @@ type BodyStateRevision struct {
 	Revision   int64              `json:"revision"`
 	Source     string             `json:"source"`
 	UserId     openapi_types.UUID `json:"user_id"`
+}
+
+// BodyStateRevisionMutationResponse defines model for BodyStateRevisionMutationResponse.
+type BodyStateRevisionMutationResponse struct {
+	Revision *BodyStateRevision `json:"revision"`
+}
+
+// BodyStateSnapshot defines model for BodyStateSnapshot.
+type BodyStateSnapshot struct {
+	CurrentRevision int64                  `json:"current_revision"`
+	Facts           []BodyStateFact        `json:"facts"`
+	Hypotheses      []BodyStateHypothesis  `json:"hypotheses"`
+	Observations    []BodyStateObservation `json:"observations"`
+	RecentRevisions *[]BodyStateRevision   `json:"recent_revisions,omitempty"`
+	SafetyState     JsonObject             `json:"safety_state"`
+	UserId          openapi_types.UUID     `json:"user_id"`
+}
+
+// CorrectBodyStateFactRequest defines model for CorrectBodyStateFactRequest.
+type CorrectBodyStateFactRequest struct {
+	ExpectedRevision int64              `json:"expected_revision"`
+	Replacement      BodyStateFactInput `json:"replacement"`
 }
 
 // DiagnosisCandidate defines model for DiagnosisCandidate.
@@ -531,6 +736,34 @@ type Outcome struct {
 // OutcomeCausalityLevel defines model for Outcome.CausalityLevel.
 type OutcomeCausalityLevel string
 
+// ResolveBodyStateSafetyRequest defines model for ResolveBodyStateSafetyRequest.
+type ResolveBodyStateSafetyRequest struct {
+	ExpectedRevision int64                                   `json:"expected_revision"`
+	Note             *string                                 `json:"note,omitempty"`
+	Resolution       ResolveBodyStateSafetyRequestResolution `json:"resolution"`
+}
+
+// ResolveBodyStateSafetyRequestResolution defines model for ResolveBodyStateSafetyRequest.Resolution.
+type ResolveBodyStateSafetyRequestResolution string
+
+// ReviewBodyStateFactRequest defines model for ReviewBodyStateFactRequest.
+type ReviewBodyStateFactRequest struct {
+	ExpectedRevision int64                                 `json:"expected_revision"`
+	ReviewState      ReviewBodyStateFactRequestReviewState `json:"review_state"`
+}
+
+// ReviewBodyStateFactRequestReviewState defines model for ReviewBodyStateFactRequest.ReviewState.
+type ReviewBodyStateFactRequestReviewState string
+
+// ReviewBodyStateObservationRequest defines model for ReviewBodyStateObservationRequest.
+type ReviewBodyStateObservationRequest struct {
+	ExpectedRevision int64                                        `json:"expected_revision"`
+	ReviewState      ReviewBodyStateObservationRequestReviewState `json:"review_state"`
+}
+
+// ReviewBodyStateObservationRequestReviewState defines model for ReviewBodyStateObservationRequest.ReviewState.
+type ReviewBodyStateObservationRequestReviewState string
+
 // StringArray defines model for StringArray.
 type StringArray = []string
 
@@ -630,6 +863,24 @@ type TreatmentStatusReason struct {
 	Revision   *int    `json:"revision,omitempty"`
 }
 
+// UpdateBodyStateFactTemporalRequest defines model for UpdateBodyStateFactTemporalRequest.
+type UpdateBodyStateFactTemporalRequest struct {
+	ExpectedRevision int64      `json:"expected_revision"`
+	LifecycleState   *string    `json:"lifecycle_state,omitempty"`
+	Trend            *string    `json:"trend,omitempty"`
+	ValidUntil       *time.Time `json:"valid_until,omitempty"`
+}
+
+// UpdateBodyStateHypothesisLifecycleRequest defines model for UpdateBodyStateHypothesisLifecycleRequest.
+type UpdateBodyStateHypothesisLifecycleRequest struct {
+	CounterevidenceIds *StringArray                                            `json:"counterevidence_ids,omitempty"`
+	ExpectedRevision   int64                                                   `json:"expected_revision"`
+	LifecycleState     UpdateBodyStateHypothesisLifecycleRequestLifecycleState `json:"lifecycle_state"`
+}
+
+// UpdateBodyStateHypothesisLifecycleRequestLifecycleState defines model for UpdateBodyStateHypothesisLifecycleRequest.LifecycleState.
+type UpdateBodyStateHypothesisLifecycleRequestLifecycleState string
+
 // UpsertBodyStateFactRequest defines model for UpsertBodyStateFactRequest.
 type UpsertBodyStateFactRequest struct {
 	ExpectedRevision int64              `json:"expected_revision"`
@@ -701,11 +952,65 @@ type ValidationUnavailable = ErrorEnvelope
 // AddBodyStateFactJSONRequestBody defines body for AddBodyStateFact for application/json ContentType.
 type AddBodyStateFactJSONRequestBody = UpsertBodyStateFactRequest
 
+// CorrectBodyStateFactJSONRequestBody defines body for CorrectBodyStateFact for application/json ContentType.
+type CorrectBodyStateFactJSONRequestBody = CorrectBodyStateFactRequest
+
+// ReviewBodyStateFactJSONRequestBody defines body for ReviewBodyStateFact for application/json ContentType.
+type ReviewBodyStateFactJSONRequestBody = ReviewBodyStateFactRequest
+
+// UpdateBodyStateFactTemporalJSONRequestBody defines body for UpdateBodyStateFactTemporal for application/json ContentType.
+type UpdateBodyStateFactTemporalJSONRequestBody = UpdateBodyStateFactTemporalRequest
+
+// AddBodyStateHypothesisJSONRequestBody defines body for AddBodyStateHypothesis for application/json ContentType.
+type AddBodyStateHypothesisJSONRequestBody = BodyStateHypothesisInput
+
+// UpdateBodyStateHypothesisLifecycleJSONRequestBody defines body for UpdateBodyStateHypothesisLifecycle for application/json ContentType.
+type UpdateBodyStateHypothesisLifecycleJSONRequestBody = UpdateBodyStateHypothesisLifecycleRequest
+
+// AddBodyStateObservationJSONRequestBody defines body for AddBodyStateObservation for application/json ContentType.
+type AddBodyStateObservationJSONRequestBody = BodyStateObservationInput
+
+// ReviewBodyStateObservationJSONRequestBody defines body for ReviewBodyStateObservation for application/json ContentType.
+type ReviewBodyStateObservationJSONRequestBody = ReviewBodyStateObservationRequest
+
+// ResolveBodyStateSafetyJSONRequestBody defines body for ResolveBodyStateSafety for application/json ContentType.
+type ResolveBodyStateSafetyJSONRequestBody = ResolveBodyStateSafetyRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// GetBodyState Get the current durable BodyState snapshot.
+	// (GET /api/v1/body-state)
+	GetBodyState(c *gin.Context)
+	// ListBodyStateEvidence List durable evidence references used by BodyState reasoning.
+	// (GET /api/v1/body-state/evidence)
+	ListBodyStateEvidence(c *gin.Context)
 	// AddBodyStateFact Add a durable BodyState fact with optimistic revision checking.
 	// (POST /api/v1/body-state/facts)
 	AddBodyStateFact(c *gin.Context)
+	// CorrectBodyStateFact Correct a fact that was previously wrong.
+	// (POST /api/v1/body-state/facts/{id}/correct)
+	CorrectBodyStateFact(c *gin.Context, id openapi_types.UUID)
+	// ReviewBodyStateFact Review a BodyState fact.
+	// (PATCH /api/v1/body-state/facts/{id}/review)
+	ReviewBodyStateFact(c *gin.Context, id openapi_types.UUID)
+	// UpdateBodyStateFactTemporal Update temporal state for a previously true fact.
+	// (PATCH /api/v1/body-state/facts/{id}/temporal)
+	UpdateBodyStateFactTemporal(c *gin.Context, id openapi_types.UUID)
+	// AddBodyStateHypothesis Add a BodyState hypothesis.
+	// (POST /api/v1/body-state/hypotheses)
+	AddBodyStateHypothesis(c *gin.Context)
+	// UpdateBodyStateHypothesisLifecycle Update hypothesis lifecycle/counterevidence.
+	// (PATCH /api/v1/body-state/hypotheses/{id}/lifecycle)
+	UpdateBodyStateHypothesisLifecycle(c *gin.Context, id openapi_types.UUID)
+	// AddBodyStateObservation Add a durable BodyState observation.
+	// (POST /api/v1/body-state/observations)
+	AddBodyStateObservation(c *gin.Context)
+	// ReviewBodyStateObservation Review a BodyState observation.
+	// (PATCH /api/v1/body-state/observations/{id}/review)
+	ReviewBodyStateObservation(c *gin.Context, id openapi_types.UUID)
+	// ResolveBodyStateSafety Resolve or monitor the durable safety projection.
+	// (POST /api/v1/body-state/safety/resolve)
+	ResolveBodyStateSafety(c *gin.Context)
 	// GetHealthWorkspace Get the current longitudinal health workspace projection.
 	// (GET /api/v1/health-workspace)
 	GetHealthWorkspace(c *gin.Context)
@@ -720,6 +1025,32 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(c *gin.Context)
 
+// GetBodyState operation middleware
+func (siw *ServerInterfaceWrapper) GetBodyState(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetBodyState(c)
+}
+
+// ListBodyStateEvidence operation middleware
+func (siw *ServerInterfaceWrapper) ListBodyStateEvidence(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListBodyStateEvidence(c)
+}
+
 // AddBodyStateFact operation middleware
 func (siw *ServerInterfaceWrapper) AddBodyStateFact(c *gin.Context) {
 
@@ -731,6 +1062,170 @@ func (siw *ServerInterfaceWrapper) AddBodyStateFact(c *gin.Context) {
 	}
 
 	siw.Handler.AddBodyStateFact(c)
+}
+
+// CorrectBodyStateFact operation middleware
+func (siw *ServerInterfaceWrapper) CorrectBodyStateFact(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CorrectBodyStateFact(c, id)
+}
+
+// ReviewBodyStateFact operation middleware
+func (siw *ServerInterfaceWrapper) ReviewBodyStateFact(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ReviewBodyStateFact(c, id)
+}
+
+// UpdateBodyStateFactTemporal operation middleware
+func (siw *ServerInterfaceWrapper) UpdateBodyStateFactTemporal(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdateBodyStateFactTemporal(c, id)
+}
+
+// AddBodyStateHypothesis operation middleware
+func (siw *ServerInterfaceWrapper) AddBodyStateHypothesis(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AddBodyStateHypothesis(c)
+}
+
+// UpdateBodyStateHypothesisLifecycle operation middleware
+func (siw *ServerInterfaceWrapper) UpdateBodyStateHypothesisLifecycle(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdateBodyStateHypothesisLifecycle(c, id)
+}
+
+// AddBodyStateObservation operation middleware
+func (siw *ServerInterfaceWrapper) AddBodyStateObservation(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AddBodyStateObservation(c)
+}
+
+// ReviewBodyStateObservation operation middleware
+func (siw *ServerInterfaceWrapper) ReviewBodyStateObservation(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ReviewBodyStateObservation(c, id)
+}
+
+// ResolveBodyStateSafety operation middleware
+func (siw *ServerInterfaceWrapper) ResolveBodyStateSafety(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ResolveBodyStateSafety(c)
 }
 
 // GetHealthWorkspace operation middleware
@@ -775,6 +1270,16 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 
 	router.POST(options.BaseURL+"/api/v1/body-state/facts", wrapper.AddBodyStateFact)
 	router.GET(options.BaseURL+"/api/v1/health-workspace", wrapper.GetHealthWorkspace)
+	router.GET(options.BaseURL+"/api/v1/body-state", wrapper.GetBodyState)
+	router.POST(options.BaseURL+"/api/v1/body-state/facts/:id/correct", wrapper.CorrectBodyStateFact)
+	router.PATCH(options.BaseURL+"/api/v1/body-state/facts/:id/temporal", wrapper.UpdateBodyStateFactTemporal)
+	router.PATCH(options.BaseURL+"/api/v1/body-state/facts/:id/review", wrapper.ReviewBodyStateFact)
+	router.POST(options.BaseURL+"/api/v1/body-state/observations", wrapper.AddBodyStateObservation)
+	router.PATCH(options.BaseURL+"/api/v1/body-state/observations/:id/review", wrapper.ReviewBodyStateObservation)
+	router.POST(options.BaseURL+"/api/v1/body-state/hypotheses", wrapper.AddBodyStateHypothesis)
+	router.PATCH(options.BaseURL+"/api/v1/body-state/hypotheses/:id/lifecycle", wrapper.UpdateBodyStateHypothesisLifecycle)
+	router.GET(options.BaseURL+"/api/v1/body-state/evidence", wrapper.ListBodyStateEvidence)
+	router.POST(options.BaseURL+"/api/v1/body-state/safety/resolve", wrapper.ResolveBodyStateSafety)
 }
 
 type InternalErrorJSONResponse ErrorEnvelope
@@ -788,6 +1293,220 @@ type RevisionConflictJSONResponse ErrorEnvelope
 type UnauthorizedJSONResponse ErrorEnvelope
 
 type ValidationUnavailableJSONResponse ErrorEnvelope
+
+type GetBodyStateRequestObject struct {
+}
+
+type GetBodyStateResponseObject interface {
+	VisitGetBodyStateResponse(w http.ResponseWriter) error
+}
+
+type GetBodyState200JSONResponse BodyStateSnapshot
+
+func (response GetBodyState200JSONResponse) VisitGetBodyStateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBodyState400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response GetBodyState400JSONResponse) VisitGetBodyStateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBodyState401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetBodyState401JSONResponse) VisitGetBodyStateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBodyState404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetBodyState404JSONResponse) VisitGetBodyStateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBodyState409JSONResponse struct{ RevisionConflictJSONResponse }
+
+func (response GetBodyState409JSONResponse) VisitGetBodyStateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBodyState500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetBodyState500JSONResponse) VisitGetBodyStateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBodyState503JSONResponse struct {
+	ValidationUnavailableJSONResponse
+}
+
+func (response GetBodyState503JSONResponse) VisitGetBodyStateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBodyStateEvidenceRequestObject struct {
+}
+
+type ListBodyStateEvidenceResponseObject interface {
+	VisitListBodyStateEvidenceResponse(w http.ResponseWriter) error
+}
+
+type ListBodyStateEvidence200JSONResponse BodyStateEvidenceListResponse
+
+func (response ListBodyStateEvidence200JSONResponse) VisitListBodyStateEvidenceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBodyStateEvidence400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ListBodyStateEvidence400JSONResponse) VisitListBodyStateEvidenceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBodyStateEvidence401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListBodyStateEvidence401JSONResponse) VisitListBodyStateEvidenceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBodyStateEvidence404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListBodyStateEvidence404JSONResponse) VisitListBodyStateEvidenceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBodyStateEvidence409JSONResponse struct{ RevisionConflictJSONResponse }
+
+func (response ListBodyStateEvidence409JSONResponse) VisitListBodyStateEvidenceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBodyStateEvidence500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListBodyStateEvidence500JSONResponse) VisitListBodyStateEvidenceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBodyStateEvidence503JSONResponse struct {
+	ValidationUnavailableJSONResponse
+}
+
+func (response ListBodyStateEvidence503JSONResponse) VisitListBodyStateEvidenceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
 
 type AddBodyStateFactRequestObject struct {
 	Body *AddBodyStateFactJSONRequestBody
@@ -897,6 +1616,875 @@ func (response AddBodyStateFact503JSONResponse) VisitAddBodyStateFactResponse(w 
 	return err
 }
 
+type CorrectBodyStateFactRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *CorrectBodyStateFactJSONRequestBody
+}
+
+type CorrectBodyStateFactResponseObject interface {
+	VisitCorrectBodyStateFactResponse(w http.ResponseWriter) error
+}
+
+type CorrectBodyStateFact200JSONResponse BodyStateFactMutationResponse
+
+func (response CorrectBodyStateFact200JSONResponse) VisitCorrectBodyStateFactResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CorrectBodyStateFact400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response CorrectBodyStateFact400JSONResponse) VisitCorrectBodyStateFactResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CorrectBodyStateFact401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CorrectBodyStateFact401JSONResponse) VisitCorrectBodyStateFactResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CorrectBodyStateFact404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response CorrectBodyStateFact404JSONResponse) VisitCorrectBodyStateFactResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CorrectBodyStateFact409JSONResponse struct{ RevisionConflictJSONResponse }
+
+func (response CorrectBodyStateFact409JSONResponse) VisitCorrectBodyStateFactResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CorrectBodyStateFact500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response CorrectBodyStateFact500JSONResponse) VisitCorrectBodyStateFactResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CorrectBodyStateFact503JSONResponse struct {
+	ValidationUnavailableJSONResponse
+}
+
+func (response CorrectBodyStateFact503JSONResponse) VisitCorrectBodyStateFactResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReviewBodyStateFactRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *ReviewBodyStateFactJSONRequestBody
+}
+
+type ReviewBodyStateFactResponseObject interface {
+	VisitReviewBodyStateFactResponse(w http.ResponseWriter) error
+}
+
+type ReviewBodyStateFact200JSONResponse BodyStateFactMutationResponse
+
+func (response ReviewBodyStateFact200JSONResponse) VisitReviewBodyStateFactResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReviewBodyStateFact400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ReviewBodyStateFact400JSONResponse) VisitReviewBodyStateFactResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReviewBodyStateFact401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ReviewBodyStateFact401JSONResponse) VisitReviewBodyStateFactResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReviewBodyStateFact404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ReviewBodyStateFact404JSONResponse) VisitReviewBodyStateFactResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReviewBodyStateFact409JSONResponse struct{ RevisionConflictJSONResponse }
+
+func (response ReviewBodyStateFact409JSONResponse) VisitReviewBodyStateFactResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReviewBodyStateFact500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ReviewBodyStateFact500JSONResponse) VisitReviewBodyStateFactResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReviewBodyStateFact503JSONResponse struct {
+	ValidationUnavailableJSONResponse
+}
+
+func (response ReviewBodyStateFact503JSONResponse) VisitReviewBodyStateFactResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBodyStateFactTemporalRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *UpdateBodyStateFactTemporalJSONRequestBody
+}
+
+type UpdateBodyStateFactTemporalResponseObject interface {
+	VisitUpdateBodyStateFactTemporalResponse(w http.ResponseWriter) error
+}
+
+type UpdateBodyStateFactTemporal200JSONResponse BodyStateFactMutationResponse
+
+func (response UpdateBodyStateFactTemporal200JSONResponse) VisitUpdateBodyStateFactTemporalResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBodyStateFactTemporal400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response UpdateBodyStateFactTemporal400JSONResponse) VisitUpdateBodyStateFactTemporalResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBodyStateFactTemporal401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateBodyStateFactTemporal401JSONResponse) VisitUpdateBodyStateFactTemporalResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBodyStateFactTemporal404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateBodyStateFactTemporal404JSONResponse) VisitUpdateBodyStateFactTemporalResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBodyStateFactTemporal409JSONResponse struct{ RevisionConflictJSONResponse }
+
+func (response UpdateBodyStateFactTemporal409JSONResponse) VisitUpdateBodyStateFactTemporalResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBodyStateFactTemporal500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UpdateBodyStateFactTemporal500JSONResponse) VisitUpdateBodyStateFactTemporalResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBodyStateFactTemporal503JSONResponse struct {
+	ValidationUnavailableJSONResponse
+}
+
+func (response UpdateBodyStateFactTemporal503JSONResponse) VisitUpdateBodyStateFactTemporalResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddBodyStateHypothesisRequestObject struct {
+	Body *AddBodyStateHypothesisJSONRequestBody
+}
+
+type AddBodyStateHypothesisResponseObject interface {
+	VisitAddBodyStateHypothesisResponse(w http.ResponseWriter) error
+}
+
+type AddBodyStateHypothesis201JSONResponse BodyStateHypothesisMutationResponse
+
+func (response AddBodyStateHypothesis201JSONResponse) VisitAddBodyStateHypothesisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddBodyStateHypothesis400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response AddBodyStateHypothesis400JSONResponse) VisitAddBodyStateHypothesisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddBodyStateHypothesis401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response AddBodyStateHypothesis401JSONResponse) VisitAddBodyStateHypothesisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddBodyStateHypothesis404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response AddBodyStateHypothesis404JSONResponse) VisitAddBodyStateHypothesisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddBodyStateHypothesis409JSONResponse struct{ RevisionConflictJSONResponse }
+
+func (response AddBodyStateHypothesis409JSONResponse) VisitAddBodyStateHypothesisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddBodyStateHypothesis500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response AddBodyStateHypothesis500JSONResponse) VisitAddBodyStateHypothesisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddBodyStateHypothesis503JSONResponse struct {
+	ValidationUnavailableJSONResponse
+}
+
+func (response AddBodyStateHypothesis503JSONResponse) VisitAddBodyStateHypothesisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBodyStateHypothesisLifecycleRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *UpdateBodyStateHypothesisLifecycleJSONRequestBody
+}
+
+type UpdateBodyStateHypothesisLifecycleResponseObject interface {
+	VisitUpdateBodyStateHypothesisLifecycleResponse(w http.ResponseWriter) error
+}
+
+type UpdateBodyStateHypothesisLifecycle200JSONResponse BodyStateHypothesisMutationResponse
+
+func (response UpdateBodyStateHypothesisLifecycle200JSONResponse) VisitUpdateBodyStateHypothesisLifecycleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBodyStateHypothesisLifecycle400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response UpdateBodyStateHypothesisLifecycle400JSONResponse) VisitUpdateBodyStateHypothesisLifecycleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBodyStateHypothesisLifecycle401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateBodyStateHypothesisLifecycle401JSONResponse) VisitUpdateBodyStateHypothesisLifecycleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBodyStateHypothesisLifecycle404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateBodyStateHypothesisLifecycle404JSONResponse) VisitUpdateBodyStateHypothesisLifecycleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBodyStateHypothesisLifecycle409JSONResponse struct{ RevisionConflictJSONResponse }
+
+func (response UpdateBodyStateHypothesisLifecycle409JSONResponse) VisitUpdateBodyStateHypothesisLifecycleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBodyStateHypothesisLifecycle500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UpdateBodyStateHypothesisLifecycle500JSONResponse) VisitUpdateBodyStateHypothesisLifecycleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBodyStateHypothesisLifecycle503JSONResponse struct {
+	ValidationUnavailableJSONResponse
+}
+
+func (response UpdateBodyStateHypothesisLifecycle503JSONResponse) VisitUpdateBodyStateHypothesisLifecycleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddBodyStateObservationRequestObject struct {
+	Body *AddBodyStateObservationJSONRequestBody
+}
+
+type AddBodyStateObservationResponseObject interface {
+	VisitAddBodyStateObservationResponse(w http.ResponseWriter) error
+}
+
+type AddBodyStateObservation200JSONResponse BodyStateObservationMutationResponse
+
+func (response AddBodyStateObservation200JSONResponse) VisitAddBodyStateObservationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddBodyStateObservation400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response AddBodyStateObservation400JSONResponse) VisitAddBodyStateObservationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddBodyStateObservation401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response AddBodyStateObservation401JSONResponse) VisitAddBodyStateObservationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddBodyStateObservation404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response AddBodyStateObservation404JSONResponse) VisitAddBodyStateObservationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddBodyStateObservation409JSONResponse struct{ RevisionConflictJSONResponse }
+
+func (response AddBodyStateObservation409JSONResponse) VisitAddBodyStateObservationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddBodyStateObservation500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response AddBodyStateObservation500JSONResponse) VisitAddBodyStateObservationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddBodyStateObservation503JSONResponse struct {
+	ValidationUnavailableJSONResponse
+}
+
+func (response AddBodyStateObservation503JSONResponse) VisitAddBodyStateObservationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReviewBodyStateObservationRequestObject struct {
+	Id   openapi_types.UUID `json:"id"`
+	Body *ReviewBodyStateObservationJSONRequestBody
+}
+
+type ReviewBodyStateObservationResponseObject interface {
+	VisitReviewBodyStateObservationResponse(w http.ResponseWriter) error
+}
+
+type ReviewBodyStateObservation200JSONResponse BodyStateObservationMutationResponse
+
+func (response ReviewBodyStateObservation200JSONResponse) VisitReviewBodyStateObservationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReviewBodyStateObservation400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ReviewBodyStateObservation400JSONResponse) VisitReviewBodyStateObservationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReviewBodyStateObservation401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ReviewBodyStateObservation401JSONResponse) VisitReviewBodyStateObservationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReviewBodyStateObservation404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ReviewBodyStateObservation404JSONResponse) VisitReviewBodyStateObservationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReviewBodyStateObservation409JSONResponse struct{ RevisionConflictJSONResponse }
+
+func (response ReviewBodyStateObservation409JSONResponse) VisitReviewBodyStateObservationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReviewBodyStateObservation500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ReviewBodyStateObservation500JSONResponse) VisitReviewBodyStateObservationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReviewBodyStateObservation503JSONResponse struct {
+	ValidationUnavailableJSONResponse
+}
+
+func (response ReviewBodyStateObservation503JSONResponse) VisitReviewBodyStateObservationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveBodyStateSafetyRequestObject struct {
+	Body *ResolveBodyStateSafetyJSONRequestBody
+}
+
+type ResolveBodyStateSafetyResponseObject interface {
+	VisitResolveBodyStateSafetyResponse(w http.ResponseWriter) error
+}
+
+type ResolveBodyStateSafety200JSONResponse BodyStateRevisionMutationResponse
+
+func (response ResolveBodyStateSafety200JSONResponse) VisitResolveBodyStateSafetyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveBodyStateSafety400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ResolveBodyStateSafety400JSONResponse) VisitResolveBodyStateSafetyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveBodyStateSafety401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ResolveBodyStateSafety401JSONResponse) VisitResolveBodyStateSafetyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveBodyStateSafety404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ResolveBodyStateSafety404JSONResponse) VisitResolveBodyStateSafetyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveBodyStateSafety409JSONResponse struct{ RevisionConflictJSONResponse }
+
+func (response ResolveBodyStateSafety409JSONResponse) VisitResolveBodyStateSafetyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveBodyStateSafety500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ResolveBodyStateSafety500JSONResponse) VisitResolveBodyStateSafetyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResolveBodyStateSafety503JSONResponse struct {
+	ValidationUnavailableJSONResponse
+}
+
+func (response ResolveBodyStateSafety503JSONResponse) VisitResolveBodyStateSafetyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetHealthWorkspaceRequestObject struct {
 }
 
@@ -948,9 +2536,39 @@ func (response GetHealthWorkspace500JSONResponse) VisitGetHealthWorkspaceRespons
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// GetBodyState Get the current durable BodyState snapshot.
+	// (GET /api/v1/body-state)
+	GetBodyState(ctx context.Context, request GetBodyStateRequestObject) (GetBodyStateResponseObject, error)
+	// ListBodyStateEvidence List durable evidence references used by BodyState reasoning.
+	// (GET /api/v1/body-state/evidence)
+	ListBodyStateEvidence(ctx context.Context, request ListBodyStateEvidenceRequestObject) (ListBodyStateEvidenceResponseObject, error)
 	// AddBodyStateFact Add a durable BodyState fact with optimistic revision checking.
 	// (POST /api/v1/body-state/facts)
 	AddBodyStateFact(ctx context.Context, request AddBodyStateFactRequestObject) (AddBodyStateFactResponseObject, error)
+	// CorrectBodyStateFact Correct a fact that was previously wrong.
+	// (POST /api/v1/body-state/facts/{id}/correct)
+	CorrectBodyStateFact(ctx context.Context, request CorrectBodyStateFactRequestObject) (CorrectBodyStateFactResponseObject, error)
+	// ReviewBodyStateFact Review a BodyState fact.
+	// (PATCH /api/v1/body-state/facts/{id}/review)
+	ReviewBodyStateFact(ctx context.Context, request ReviewBodyStateFactRequestObject) (ReviewBodyStateFactResponseObject, error)
+	// UpdateBodyStateFactTemporal Update temporal state for a previously true fact.
+	// (PATCH /api/v1/body-state/facts/{id}/temporal)
+	UpdateBodyStateFactTemporal(ctx context.Context, request UpdateBodyStateFactTemporalRequestObject) (UpdateBodyStateFactTemporalResponseObject, error)
+	// AddBodyStateHypothesis Add a BodyState hypothesis.
+	// (POST /api/v1/body-state/hypotheses)
+	AddBodyStateHypothesis(ctx context.Context, request AddBodyStateHypothesisRequestObject) (AddBodyStateHypothesisResponseObject, error)
+	// UpdateBodyStateHypothesisLifecycle Update hypothesis lifecycle/counterevidence.
+	// (PATCH /api/v1/body-state/hypotheses/{id}/lifecycle)
+	UpdateBodyStateHypothesisLifecycle(ctx context.Context, request UpdateBodyStateHypothesisLifecycleRequestObject) (UpdateBodyStateHypothesisLifecycleResponseObject, error)
+	// AddBodyStateObservation Add a durable BodyState observation.
+	// (POST /api/v1/body-state/observations)
+	AddBodyStateObservation(ctx context.Context, request AddBodyStateObservationRequestObject) (AddBodyStateObservationResponseObject, error)
+	// ReviewBodyStateObservation Review a BodyState observation.
+	// (PATCH /api/v1/body-state/observations/{id}/review)
+	ReviewBodyStateObservation(ctx context.Context, request ReviewBodyStateObservationRequestObject) (ReviewBodyStateObservationResponseObject, error)
+	// ResolveBodyStateSafety Resolve or monitor the durable safety projection.
+	// (POST /api/v1/body-state/safety/resolve)
+	ResolveBodyStateSafety(ctx context.Context, request ResolveBodyStateSafetyRequestObject) (ResolveBodyStateSafetyResponseObject, error)
 	// GetHealthWorkspace Get the current longitudinal health workspace projection.
 	// (GET /api/v1/health-workspace)
 	GetHealthWorkspace(ctx context.Context, request GetHealthWorkspaceRequestObject) (GetHealthWorkspaceResponseObject, error)
@@ -1013,6 +2631,54 @@ type strictHandler struct {
 	options     StrictGinServerOptions
 }
 
+// GetBodyState operation middleware
+func (sh *strictHandler) GetBodyState(ctx *gin.Context) {
+	var request GetBodyStateRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetBodyState(ctx, request.(GetBodyStateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetBodyState")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetBodyStateResponseObject); ok {
+		if err := validResponse.VisitGetBodyStateResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListBodyStateEvidence operation middleware
+func (sh *strictHandler) ListBodyStateEvidence(ctx *gin.Context) {
+	var request ListBodyStateEvidenceRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListBodyStateEvidence(ctx, request.(ListBodyStateEvidenceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListBodyStateEvidence")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListBodyStateEvidenceResponseObject); ok {
+		if err := validResponse.VisitListBodyStateEvidenceResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // AddBodyStateFact operation middleware
 func (sh *strictHandler) AddBodyStateFact(ctx *gin.Context) {
 	var request AddBodyStateFactRequestObject
@@ -1037,6 +2703,264 @@ func (sh *strictHandler) AddBodyStateFact(ctx *gin.Context) {
 		sh.options.HandlerErrorFunc(ctx, err)
 	} else if validResponse, ok := response.(AddBodyStateFactResponseObject); ok {
 		if err := validResponse.VisitAddBodyStateFactResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CorrectBodyStateFact operation middleware
+func (sh *strictHandler) CorrectBodyStateFact(ctx *gin.Context, id openapi_types.UUID) {
+	var request CorrectBodyStateFactRequestObject
+
+	request.Id = id
+
+	var body CorrectBodyStateFactJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.CorrectBodyStateFact(ctx, request.(CorrectBodyStateFactRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CorrectBodyStateFact")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(CorrectBodyStateFactResponseObject); ok {
+		if err := validResponse.VisitCorrectBodyStateFactResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReviewBodyStateFact operation middleware
+func (sh *strictHandler) ReviewBodyStateFact(ctx *gin.Context, id openapi_types.UUID) {
+	var request ReviewBodyStateFactRequestObject
+
+	request.Id = id
+
+	var body ReviewBodyStateFactJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ReviewBodyStateFact(ctx, request.(ReviewBodyStateFactRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReviewBodyStateFact")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ReviewBodyStateFactResponseObject); ok {
+		if err := validResponse.VisitReviewBodyStateFactResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateBodyStateFactTemporal operation middleware
+func (sh *strictHandler) UpdateBodyStateFactTemporal(ctx *gin.Context, id openapi_types.UUID) {
+	var request UpdateBodyStateFactTemporalRequestObject
+
+	request.Id = id
+
+	var body UpdateBodyStateFactTemporalJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateBodyStateFactTemporal(ctx, request.(UpdateBodyStateFactTemporalRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateBodyStateFactTemporal")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(UpdateBodyStateFactTemporalResponseObject); ok {
+		if err := validResponse.VisitUpdateBodyStateFactTemporalResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AddBodyStateHypothesis operation middleware
+func (sh *strictHandler) AddBodyStateHypothesis(ctx *gin.Context) {
+	var request AddBodyStateHypothesisRequestObject
+
+	var body AddBodyStateHypothesisJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.AddBodyStateHypothesis(ctx, request.(AddBodyStateHypothesisRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AddBodyStateHypothesis")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(AddBodyStateHypothesisResponseObject); ok {
+		if err := validResponse.VisitAddBodyStateHypothesisResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateBodyStateHypothesisLifecycle operation middleware
+func (sh *strictHandler) UpdateBodyStateHypothesisLifecycle(ctx *gin.Context, id openapi_types.UUID) {
+	var request UpdateBodyStateHypothesisLifecycleRequestObject
+
+	request.Id = id
+
+	var body UpdateBodyStateHypothesisLifecycleJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateBodyStateHypothesisLifecycle(ctx, request.(UpdateBodyStateHypothesisLifecycleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateBodyStateHypothesisLifecycle")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(UpdateBodyStateHypothesisLifecycleResponseObject); ok {
+		if err := validResponse.VisitUpdateBodyStateHypothesisLifecycleResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AddBodyStateObservation operation middleware
+func (sh *strictHandler) AddBodyStateObservation(ctx *gin.Context) {
+	var request AddBodyStateObservationRequestObject
+
+	var body AddBodyStateObservationJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.AddBodyStateObservation(ctx, request.(AddBodyStateObservationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AddBodyStateObservation")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(AddBodyStateObservationResponseObject); ok {
+		if err := validResponse.VisitAddBodyStateObservationResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReviewBodyStateObservation operation middleware
+func (sh *strictHandler) ReviewBodyStateObservation(ctx *gin.Context, id openapi_types.UUID) {
+	var request ReviewBodyStateObservationRequestObject
+
+	request.Id = id
+
+	var body ReviewBodyStateObservationJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ReviewBodyStateObservation(ctx, request.(ReviewBodyStateObservationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReviewBodyStateObservation")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ReviewBodyStateObservationResponseObject); ok {
+		if err := validResponse.VisitReviewBodyStateObservationResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ResolveBodyStateSafety operation middleware
+func (sh *strictHandler) ResolveBodyStateSafety(ctx *gin.Context) {
+	var request ResolveBodyStateSafetyRequestObject
+
+	var body ResolveBodyStateSafetyJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ResolveBodyStateSafety(ctx, request.(ResolveBodyStateSafetyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ResolveBodyStateSafety")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ResolveBodyStateSafetyResponseObject); ok {
+		if err := validResponse.VisitResolveBodyStateSafetyResponse(ctx.Writer); err != nil {
 			sh.options.ResponseErrorHandlerFunc(ctx, err)
 		}
 	} else if response != nil {
@@ -1073,65 +2997,80 @@ func (sh *strictHandler) GetHealthWorkspace(ctx *gin.Context) {
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
-	"xfP4Ij6P727u/h8AAP//",
+	"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",
+	"0/D2+va/AQAA//8=",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

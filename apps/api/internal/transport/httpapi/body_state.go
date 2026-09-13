@@ -7,11 +7,8 @@ import (
 
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
 	"github.com/bodysense/api/internal/model"
-	"github.com/bodysense/api/internal/repository"
-	"github.com/bodysense/api/internal/service"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
-	"gorm.io/gorm"
 )
 
 type bodyStateFactService interface {
@@ -28,6 +25,7 @@ type bodyStateFactService interface {
 // into domain models before service execution.
 type PublicServer struct {
 	bodyState       bodyStateFactService
+	bodyStateRoutes bodyStateRouteService
 	healthWorkspace healthWorkspaceService
 }
 
@@ -56,7 +54,7 @@ func (s *PublicServer) AddBodyStateFact(
 	if err != nil {
 		return bodyStateFactErrorResponse(err), nil
 	}
-	if created == nil || revision == nil {
+	if created == nil {
 		return addFactError500("INTERNAL_ERROR", "failed to update body state"), nil
 	}
 
@@ -116,9 +114,13 @@ func factMutationResponseToOpenAPI(
 	if err != nil {
 		return openapiv1.BodyStateFactMutationResponse{}, err
 	}
-	changes, err := datatypesToJSONObject(revision.Changes)
-	if err != nil {
-		return openapiv1.BodyStateFactMutationResponse{}, err
+	var publicRevision *openapiv1.BodyStateRevision
+	if revision != nil {
+		converted, err := revisionToOpenAPI(revision)
+		if err != nil {
+			return openapiv1.BodyStateFactMutationResponse{}, err
+		}
+		publicRevision = &converted
 	}
 
 	return openapiv1.BodyStateFactMutationResponse{
@@ -147,15 +149,18 @@ func factMutationResponseToOpenAPI(
 			CreatedAt:             fact.CreatedAt,
 			UpdatedAt:             fact.UpdatedAt,
 		},
-		Revision: openapiv1.BodyStateRevision{
-			Id:         revision.ID,
-			UserId:     revision.UserID,
-			Revision:   revision.Revision,
-			ChangeType: revision.ChangeType,
-			Source:     revision.Source,
-			Changes:    changes,
-			CreatedAt:  revision.CreatedAt,
-		},
+		Revision: publicRevision,
+	}, nil
+}
+
+func revisionToOpenAPI(revision *model.BodyStateRevision) (openapiv1.BodyStateRevision, error) {
+	changes, err := datatypesToJSONObject(revision.Changes)
+	if err != nil {
+		return openapiv1.BodyStateRevision{}, err
+	}
+	return openapiv1.BodyStateRevision{
+		Id: revision.ID, UserId: revision.UserID, Revision: revision.Revision,
+		ChangeType: revision.ChangeType, Source: revision.Source, Changes: changes, CreatedAt: revision.CreatedAt,
 	}, nil
 }
 
@@ -199,17 +204,20 @@ func optionalString(value string) *string {
 }
 
 func bodyStateFactErrorResponse(err error) openapiv1.AddBodyStateFactResponseObject {
-	switch {
-	case errors.Is(err, repository.ErrBodyStateRevisionConflict):
-		return addFactError409("BODY_STATE_REVISION_CONFLICT", err.Error())
-	case errors.Is(err, service.ErrUnknownBodyRegionID):
-		return addFactError400("INVALID_BODY_REGION_ID", err.Error())
-	case errors.Is(err, service.ErrBodyRegionIDValidationUnavailable):
-		return addFactError503("BODY_REGION_VALIDATION_UNAVAILABLE", err.Error())
-	case errors.Is(err, gorm.ErrRecordNotFound):
-		return addFactError404("NOT_FOUND", "body state item not found")
+	classified := classifyBodyStatePublicError(err)
+	switch classified.status {
+	case 400:
+		return addFactError400(classified.code, classified.message)
+	case 401:
+		return addFactError401(classified.code, classified.message)
+	case 404:
+		return addFactError404(classified.code, classified.message)
+	case 409:
+		return addFactError409(classified.code, classified.message)
+	case 503:
+		return addFactError503(classified.code, classified.message)
 	default:
-		return addFactError500("INTERNAL_ERROR", "failed to update body state")
+		return addFactError500(classified.code, classified.message)
 	}
 }
 

@@ -236,7 +236,6 @@ func main() {
 	convHandler := handler.NewConversationHandler(conversationService, shareService)
 	runtimeEventHandler := handler.NewRuntimeEventHandler(runtimeEventService, conversationService)
 	threadProjectionHandler := handler.NewThreadProjectionHandler(threadProjectionService, bodyStateService)
-	bodyStateHandler := handler.NewBodyStateHandler(bodyStateService)
 	lifestyleHandler := handler.NewLifestyleHandler(lifestyleService)
 	bodyMetricsHandler := handler.NewBodyMetricsHandler(bodyMetricsService)
 	healthHistoryHandler := handler.NewHealthHistoryHandler(healthHistoryService)
@@ -463,16 +462,6 @@ func main() {
 		consultations.GET("/:id/interaction-metrics", consultationHandler.GetInteractionMetrics)
 
 		// Longitudinal BodyState (ADR 0004)
-		protected.GET("/body-state", bodyStateHandler.GetCurrent)
-		protected.POST("/body-state/facts/:id/correct", bodyStateHandler.CorrectFact)
-		protected.PATCH("/body-state/facts/:id/temporal", bodyStateHandler.UpdateFactTemporal)
-		protected.PATCH("/body-state/facts/:id/review", bodyStateHandler.ReviewFact)
-		protected.POST("/body-state/observations", bodyStateHandler.AddObservation)
-		protected.PATCH("/body-state/observations/:id/review", bodyStateHandler.ReviewObservation)
-		protected.POST("/body-state/hypotheses", bodyStateHandler.AddHypothesis)
-		protected.PATCH("/body-state/hypotheses/:id/lifecycle", bodyStateHandler.UpdateHypothesisLifecycle)
-		protected.GET("/body-state/evidence", bodyStateHandler.ListEvidence)
-		protected.POST("/body-state/safety/resolve", bodyStateHandler.ResolveSafety)
 
 		// User-facing projections backed exclusively by BodyState.
 		protected.GET("/lifestyle", lifestyleHandler.Get)
@@ -515,7 +504,7 @@ func main() {
 	openAPIProtected.Use(httpapi.RequestValidator(publicAPISpec))
 	openapiv1.RegisterHandlers(
 		openAPIProtected,
-		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithHealthWorkspace(healthWorkspaceService)),
+		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService)),
 	)
 
 	// Public share routes (no auth)

@@ -4,11 +4,11 @@
 
 - Phase 00 baseline routes: **96**
 - Browser-facing eligible routes: **95**
-- OpenAPI-authoritative routes: **2**
-- Missing migration routes: **93**
+- OpenAPI-authoritative routes: **12**
+- Missing migration routes: **83**
 - Retired routes: **0**
 - Operational exclusions: **1**
-- Coverage: **2.11%**
+- Coverage: **12.63%**
 
 ## Missing routes
 
@@ -68,16 +68,6 @@
 - `GET /api/v1/outcomes`
 - `POST /api/v1/consultations/:id/interrupts/:interactionId/answers`
 - `GET /api/v1/consultations/:id/interaction-metrics`
-- `GET /api/v1/body-state`
-- `POST /api/v1/body-state/facts/:id/correct`
-- `PATCH /api/v1/body-state/facts/:id/temporal`
-- `PATCH /api/v1/body-state/facts/:id/review`
-- `POST /api/v1/body-state/observations`
-- `PATCH /api/v1/body-state/observations/:id/review`
-- `POST /api/v1/body-state/hypotheses`
-- `PATCH /api/v1/body-state/hypotheses/:id/lifecycle`
-- `GET /api/v1/body-state/evidence`
-- `POST /api/v1/body-state/safety/resolve`
 - `GET /api/v1/lifestyle`
 - `PUT /api/v1/lifestyle`
 - `POST /api/v1/lifestyle/candidates/:id/accept`

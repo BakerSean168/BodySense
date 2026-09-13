@@ -6,13 +6,13 @@
  * OpenAPI spec version: 1.0.0-vnext
  */
 import * as zod from 'zod/mini';
-import { BodyStateFact } from './bodyStateFact.zod';
+import { BodyStateHypothesis } from './bodyStateHypothesis.zod';
 import { BodyStateRevision } from './bodyStateRevision.zod';
 
-export const BodyStateFactMutationResponse = /*#__PURE__*/ zod.strictObject({
-  "fact": BodyStateFact,
+export const BodyStateHypothesisMutationResponse = /*#__PURE__*/ zod.strictObject({
+  "hypothesis": BodyStateHypothesis,
   "revision": /*#__PURE__*/ zod.union([BodyStateRevision,/*#__PURE__*/ zod.null()])
 });
 
-export type BodyStateFactMutationResponse = zod.input<typeof BodyStateFactMutationResponse>;
-export type BodyStateFactMutationResponseOutput = zod.output<typeof BodyStateFactMutationResponse>;
+export type BodyStateHypothesisMutationResponse = zod.input<typeof BodyStateHypothesisMutationResponse>;
+export type BodyStateHypothesisMutationResponseOutput = zod.output<typeof BodyStateHypothesisMutationResponse>;

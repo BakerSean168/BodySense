@@ -55,7 +55,11 @@ func newOpenAPITestRouter(t *testing.T, svc bodyStateFactService) *gin.Engine {
 }
 
 func performJSON(r http.Handler, body string) *httptest.ResponseRecorder {
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/body-state/facts", bytes.NewBufferString(body))
+	return performJSONAt(r, http.MethodPost, "/api/v1/body-state/facts", body)
+}
+
+func performJSONAt(r http.Handler, method, path, body string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(method, path, bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer validated-by-auth-middleware")
 	rec := httptest.NewRecorder()
@@ -85,6 +89,47 @@ func TestAddBodyStateFactOpenAPIRejectsUnknownFieldBeforeService(t *testing.T) {
 		t.Fatalf("service calls=%d want=0", svc.calls)
 	}
 	assertErrorCode(t, rec, "INVALID_REQUEST")
+}
+
+func TestResolveSafetyOpenAPIRequiresExpectedRevisionBeforeAdapter(t *testing.T) {
+	svc := &fakeBodyStateFactService{}
+	rec := performJSONAt(
+		newOpenAPITestRouter(t, svc),
+		http.MethodPost,
+		"/api/v1/body-state/safety/resolve",
+		`{"resolution":"resolved","note":"reviewed"}`,
+	)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status=%d want=400 body=%s", rec.Code, rec.Body.String())
+	}
+	if svc.calls != 0 {
+		t.Fatalf("fact service calls=%d want=0", svc.calls)
+	}
+	assertErrorCode(t, rec, "INVALID_REQUEST")
+}
+
+func TestAddBodyStateFactAllowsIdempotentNilRevision(t *testing.T) {
+	now := time.Date(2026, 9, 13, 7, 0, 0, 0, time.UTC)
+	svc := &fakeBodyStateFactService{
+		resultFact: &model.BodyStateFact{
+			ID: uuid.New(), UserID: uuid.New(), Kind: "symptom", Value: "pain",
+			Details: []byte(`{}`), Origin: "user_reported", ReviewState: "confirmed",
+			LifecycleState: "active", Trend: "unknown", Provenance: []byte(`{}`),
+			CreatedRevision: 4, UpdatedRevision: 4, CreatedAt: now, UpdatedAt: now,
+		},
+		resultRevision: nil,
+	}
+	rec := performJSON(newOpenAPITestRouter(t, svc), `{"expected_revision":4,"fact":{"kind":"symptom","value":"pain"}}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d want=200 body=%s", rec.Code, rec.Body.String())
+	}
+	var response map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if revision, ok := response["revision"]; !ok || revision != nil {
+		t.Fatalf("revision=%#v want explicit null body=%s", response["revision"], rec.Body.String())
+	}
 }
 
 func TestAddBodyStateFactOpenAPIMappingAndResponse(t *testing.T) {

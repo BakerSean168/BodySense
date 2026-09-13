@@ -169,3 +169,82 @@ coverage                  2.11%
 ## Next batch
 
 Migrate the remaining BodyState route family as one coherent contract batch. This reuses the BodyState schemas already proven by Checkpoint 1 and allows the legacy `BodyStateHandler` to be retired instead of leaving mixed ownership for the same aggregate.
+
+## Checkpoint 3 — Complete BodyState public route family
+
+Status: COMPLETE ON PHASE BRANCH
+
+The remaining BodyState route family has moved behind the generated OpenAPI boundary. Together with Checkpoint 1, all eleven `/api/v1/body-state...` operations now have one transport authority:
+
+```text
+GET    /api/v1/body-state
+POST   /api/v1/body-state/facts
+POST   /api/v1/body-state/facts/{id}/correct
+PATCH  /api/v1/body-state/facts/{id}/temporal
+PATCH  /api/v1/body-state/facts/{id}/review
+POST   /api/v1/body-state/observations
+PATCH  /api/v1/body-state/observations/{id}/review
+POST   /api/v1/body-state/hypotheses
+PATCH  /api/v1/body-state/hypotheses/{id}/lifecycle
+GET    /api/v1/body-state/evidence
+POST   /api/v1/body-state/safety/resolve
+```
+
+### Runtime/ownership cleanup
+
+- all handwritten BodyState route registrations were removed from `cmd/server`;
+- `internal/handler/body_state_handler.go` and its handler tests were deleted;
+- the now-unused handwritten `internal/dto/body_state.go` request surface was deleted;
+- a hidden shared mutation-error helper that other non-OpenAPI handlers relied on was moved to `handler/utils.go` rather than keeping a dead BodyState handler as a utility container;
+- generated OpenAPI types remain absent from model/service/repository packages.
+
+### Concurrency contract repaired
+
+The legacy public safety endpoint accepted `expected_revision` in JSON but discarded it before persistence. vNext now threads the value through `ResolveSafetyState` to `SetSafetyState` and the repository revision lock. Internal detector-originated safety projection writes remain explicitly unconditional by passing `nil`; the two semantics are no longer accidentally conflated.
+
+### Idempotent mutation semantics
+
+BodyState repositories intentionally return `entity + nil revision` when a retry/no-op finds that the durable state is already current. The public mutation contract therefore models `revision` as **nullable**. A null revision means “successful command, no new durable revision created”; optimistic-lock conflict remains an explicit 409. Both Go transport and generated Web Zod tests cover this case.
+
+### Web command migration
+
+All existing workspace BodyState network commands now use generated Orval functions through `openApiAuthFetch` / `withOpenApiError`:
+
+- add/review/correct/temporal fact;
+- review observation;
+- hypothesis lifecycle update;
+- safety resolution.
+
+The feature boundary remains handwritten and narrower than transport: mutation methods return `{ fact }` or `void` where that is all the feature consumes. Review/lifecycle/safety command strings are finite TypeScript unions matching the OpenAPI enums rather than generic `string`.
+
+### Coverage after this batch
+
+```text
+Phase 00 routes               96
+operational exclusions         1
+browser-facing eligible       95
+OpenAPI-authoritative         12
+missing                       83
+coverage                   12.63%
+```
+
+### Verification
+
+```text
+pnpm contracts:verify              PASS
+pnpm lint                          PASS
+pnpm typecheck                     PASS
+pnpm test                          PASS
+  contracts                        12/12
+  Web                              219/219
+  Python                           475/475
+  Go                               go test ./... PASS
+pnpm build                         PASS
+git diff --check                   PASS
+old BodyState handler              DELETED
+old BodyState request DTO          DELETED
+handwritten BodyState route regs   NONE
+Go generated imports in domain     NONE
+```
+
+The production build also shows the validated OpenAPI/Zod path adding measurable bytes to the ConsultationPage chunk. `BS-VNEXT-REST-007` tracks this as a Phase 02 bundle review item; runtime validation will not be weakened merely to improve bundle size.

@@ -139,6 +139,48 @@ describe("workspaceApi OpenAPI boundary", () => {
     expect(result.fact.updated_revision).toBe(4);
   });
 
+  it("accepts an idempotent fact mutation with revision null", async () => {
+    authFetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({ ...validMutationResponse, revision: null }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+
+    const result = await workspaceApi.addFact(4, {
+      kind: "symptom",
+      value: "pain",
+    });
+
+    expect(result.fact.updated_revision).toBe(4);
+  });
+
+  it("sends expected_revision when resolving safety through the generated boundary", async () => {
+    authFetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ revision: null }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await workspaceApi.resolveSafety(9, "resolved", "reviewed by user");
+
+    expect(authFetchMock).toHaveBeenCalledWith(
+      "/api/v1/body-state/safety/resolve",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          expected_revision: 9,
+          resolution: "resolved",
+          note: "reviewed by user",
+        }),
+      }),
+    );
+  });
+
   it("normalizes generated non-2xx errors to ApiRequestError", async () => {
     authFetchMock.mockResolvedValue(
       new Response(

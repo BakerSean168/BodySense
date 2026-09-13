@@ -288,6 +288,69 @@
         "full OpenAPI response conformance tests remain green"
       ],
       "notes": "The temporary presenter bridge uses strict JSON decode with DisallowUnknownFields so contract drift fails closed while the package ownership cleanup is pending."
+    },
+    {
+      "id": "BS-VNEXT-REST-005",
+      "priority": "P1",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "Public safety resolution accepted expected_revision but discarded it before persistence",
+      "evidence": [
+        "apps/api/internal/service/body_state_service.go",
+        "apps/api/internal/repository/body_state_repository.go",
+        "apps/api/internal/service/body_state_service_test.go",
+        "packages/contracts/openapi/bodysense.v1.openapi.yaml"
+      ],
+      "root_cause": "The legacy ResolveSafety handler bound expected_revision but BodyStateService.ResolveSafetyState did not accept it and repository SetSafetyState always called the revision lock with nil.",
+      "repair": "Thread expected_revision through the public safety command into SetSafetyState/CAS; keep internal detector-originated safety updates explicit by passing nil. OpenAPI requires expected_revision for the public command and rejects its absence before application execution.",
+      "verification": [
+        "TestResolveSafetyStatePreservesExpectedRevision",
+        "TestResolveSafetyOpenAPIRequiresExpectedRevisionBeforeAdapter",
+        "go test ./...",
+        "pnpm contracts:verify"
+      ],
+      "notes": "This closes a real lost-update window rather than merely documenting the old behavior."
+    },
+    {
+      "id": "BS-VNEXT-REST-006",
+      "priority": "P1",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "BodyState mutation schema falsely required a new revision for idempotent no-op success",
+      "evidence": [
+        "apps/api/internal/repository/body_state_repository.go",
+        "apps/api/internal/transport/httpapi/body_state.go",
+        "packages/contracts/openapi/bodysense.v1.openapi.yaml",
+        "apps/web/src/features/workspace/api/workspaceApi.openapi.test.ts"
+      ],
+      "root_cause": "Repository idempotency intentionally returns the current entity with revision=nil when no durable change is needed, but the first production OpenAPI draft modeled revision as always present.",
+      "repair": "All BodyState mutation response schemas make revision explicitly nullable; transport adapters preserve explicit JSON null and generated Web Zod accepts it while revision conflicts remain HTTP 409.",
+      "verification": [
+        "TestAddBodyStateFactAllowsIdempotentNilRevision",
+        "workspaceApi idempotent fact mutation test",
+        "pnpm test",
+        "pnpm build"
+      ],
+      "notes": "null means successful no-op; it is not an error and it does not mean the current aggregate revision is unknown."
+    },
+    {
+      "id": "BS-VNEXT-REST-007",
+      "priority": "P2",
+      "status": "OPEN",
+      "phase": "02",
+      "title": "Validated OpenAPI workspace imports increased the ConsultationPage application chunk",
+      "evidence": [
+        "apps/web/orval.config.ts",
+        "apps/web/src/generated/api/bodysense.ts"
+      ],
+      "root_cause": "Runtime-validated generated REST clients bring Zod Mini schemas into the consultation/workspace execution path as intended; as the canonical API surface grows, a single generated client module can enlarge the route chunk.",
+      "target": "Before Phase 02 closes, measure the final generated-client bundle and split generated/public API imports by feature or lazy boundary if the growth remains material. Do not remove runtime response validation merely to reduce bytes.",
+      "verification": [
+        "compare production Vite chunk sizes before/after final Phase 02 generation",
+        "confirm no duplicated classic Zod runtime",
+        "pnpm build"
+      ],
+      "notes": "Observed during the BodyState batch: ConsultationPage grew from roughly 354.25 kB / 104.67 kB gzip at the earlier checkpoint to 391.55 kB / 114.48 kB gzip. This remains below the current warning threshold but is tracked before the spec expands further."
     }
   ]
 }

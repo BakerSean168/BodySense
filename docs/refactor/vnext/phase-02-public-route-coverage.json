@@ -5,11 +5,11 @@
   "totals": {
     "baseline": 96,
     "browserFacingEligible": 95,
-    "openapi": 2,
-    "missing": 93,
+    "openapi": 12,
+    "missing": 83,
     "retired": 0,
     "excludedOperational": 1,
-    "coveragePercent": 2.11
+    "coveragePercent": 12.63
   },
   "routes": [
     {
@@ -359,7 +359,9 @@
       "method": "GET",
       "path": "/api/v1/body-state",
       "source": "apps/api/cmd/server/main.go:463",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getBodyState",
+      "openapiPath": "/api/v1/body-state"
     },
     {
       "method": "POST",
@@ -373,55 +375,73 @@
       "method": "POST",
       "path": "/api/v1/body-state/facts/:id/correct",
       "source": "apps/api/cmd/server/main.go:465",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "correctBodyStateFact",
+      "openapiPath": "/api/v1/body-state/facts/{id}/correct"
     },
     {
       "method": "PATCH",
       "path": "/api/v1/body-state/facts/:id/temporal",
       "source": "apps/api/cmd/server/main.go:466",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "updateBodyStateFactTemporal",
+      "openapiPath": "/api/v1/body-state/facts/{id}/temporal"
     },
     {
       "method": "PATCH",
       "path": "/api/v1/body-state/facts/:id/review",
       "source": "apps/api/cmd/server/main.go:467",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "reviewBodyStateFact",
+      "openapiPath": "/api/v1/body-state/facts/{id}/review"
     },
     {
       "method": "POST",
       "path": "/api/v1/body-state/observations",
       "source": "apps/api/cmd/server/main.go:468",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "addBodyStateObservation",
+      "openapiPath": "/api/v1/body-state/observations"
     },
     {
       "method": "PATCH",
       "path": "/api/v1/body-state/observations/:id/review",
       "source": "apps/api/cmd/server/main.go:469",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "reviewBodyStateObservation",
+      "openapiPath": "/api/v1/body-state/observations/{id}/review"
     },
     {
       "method": "POST",
       "path": "/api/v1/body-state/hypotheses",
       "source": "apps/api/cmd/server/main.go:470",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "addBodyStateHypothesis",
+      "openapiPath": "/api/v1/body-state/hypotheses"
     },
     {
       "method": "PATCH",
       "path": "/api/v1/body-state/hypotheses/:id/lifecycle",
       "source": "apps/api/cmd/server/main.go:471",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "updateBodyStateHypothesisLifecycle",
+      "openapiPath": "/api/v1/body-state/hypotheses/{id}/lifecycle"
     },
     {
       "method": "GET",
       "path": "/api/v1/body-state/evidence",
       "source": "apps/api/cmd/server/main.go:472",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "listBodyStateEvidence",
+      "openapiPath": "/api/v1/body-state/evidence"
     },
     {
       "method": "POST",
       "path": "/api/v1/body-state/safety/resolve",
       "source": "apps/api/cmd/server/main.go:473",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "resolveBodyStateSafety",
+      "openapiPath": "/api/v1/body-state/safety/resolve"
     },
     {
       "method": "GET",

@@ -205,7 +205,7 @@ describe("BodyStateWorkbench observation review", () => {
   it("saves a lifestyle current-state update", async () => {
     const updateLifestyleCurrent = vi
       .spyOn(workspaceApi, "updateLifestyleCurrent")
-      .mockResolvedValue({});
+      .mockResolvedValue(undefined);
 
     const user = userEvent.setup();
 
@@ -275,7 +275,7 @@ describe("BodyStateWorkbench observation review", () => {
   it("keeps assessment observations pending until explicit confirmation", async () => {
     const review = vi
       .spyOn(workspaceApi, "reviewObservation")
-      .mockResolvedValue({});
+      .mockResolvedValue(undefined);
     const user = userEvent.setup();
 
     const queryClient = new QueryClient({

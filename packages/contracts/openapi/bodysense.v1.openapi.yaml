@@ -59,6 +59,331 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/body-state:
+    get:
+      operationId: getBodyState
+      summary: Get the current durable BodyState snapshot.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful BodyState operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyStateSnapshot'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/body-state/facts/{id}/correct:
+    post:
+      operationId: correctBodyStateFact
+      summary: Correct a fact that was previously wrong.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful BodyState operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyStateFactMutationResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CorrectBodyStateFactRequest'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: &id001
+          type: string
+          format: uuid
+  /api/v1/body-state/facts/{id}/temporal:
+    patch:
+      operationId: updateBodyStateFactTemporal
+      summary: Update temporal state for a previously true fact.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful BodyState operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyStateFactMutationResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBodyStateFactTemporalRequest'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+  /api/v1/body-state/facts/{id}/review:
+    patch:
+      operationId: reviewBodyStateFact
+      summary: Review a BodyState fact.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful BodyState operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyStateFactMutationResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewBodyStateFactRequest'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+  /api/v1/body-state/observations:
+    post:
+      operationId: addBodyStateObservation
+      summary: Add a durable BodyState observation.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful BodyState operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyStateObservationMutationResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BodyStateObservationInput'
+  /api/v1/body-state/observations/{id}/review:
+    patch:
+      operationId: reviewBodyStateObservation
+      summary: Review a BodyState observation.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful BodyState operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyStateObservationMutationResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewBodyStateObservationRequest'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+  /api/v1/body-state/hypotheses:
+    post:
+      operationId: addBodyStateHypothesis
+      summary: Add a BodyState hypothesis.
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          description: Successful BodyState operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyStateHypothesisMutationResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BodyStateHypothesisInput'
+  /api/v1/body-state/hypotheses/{id}/lifecycle:
+    patch:
+      operationId: updateBodyStateHypothesisLifecycle
+      summary: Update hypothesis lifecycle/counterevidence.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful BodyState operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyStateHypothesisMutationResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBodyStateHypothesisLifecycleRequest'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+  /api/v1/body-state/evidence:
+    get:
+      operationId: listBodyStateEvidence
+      summary: List durable evidence references used by BodyState reasoning.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful BodyState operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyStateEvidenceListResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/body-state/safety/resolve:
+    post:
+      operationId: resolveBodyStateSafety
+      summary: Resolve or monitor the durable safety projection.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful BodyState operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyStateRevisionMutationResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveBodyStateSafetyRequest'
 components:
   securitySchemes:
     bearerAuth:
@@ -269,8 +594,10 @@ components:
       properties:
         fact:
           $ref: '#/components/schemas/BodyStateFact'
-        revision:
-          $ref: '#/components/schemas/BodyStateRevision'
+        revision: &id007
+          anyOf:
+          - $ref: '#/components/schemas/BodyStateRevision'
+          - type: 'null'
     StringArray:
       type: array
       items:
@@ -294,24 +621,24 @@ components:
       - created_at
       - updated_at
       properties:
-        id: &id001
+        id: &id002
           type: string
           format: uuid
-        user_id: *id001
-        concern_key: &id002
+        user_id: *id002
+        concern_key: &id003
           type: string
-        kind: *id002
-        body_region: *id002
+        kind: *id003
+        body_region: *id003
         body_region_id:
           type:
           - string
           - 'null'
-        method: *id002
+        method: *id003
         value:
           $ref: '#/components/schemas/JsonObject'
         condition:
           $ref: '#/components/schemas/JsonObject'
-        source_key: *id002
+        source_key: *id003
         provenance:
           $ref: '#/components/schemas/JsonObject'
         observed_at:
@@ -320,17 +647,17 @@ components:
         supersedes_observation_id:
           type: string
           format: uuid
-        review_state: *id002
-        lifecycle_state: *id002
-        excluded_from_reasoning: &id005
+        review_state: *id003
+        lifecycle_state: *id003
+        excluded_from_reasoning: &id006
           type: boolean
-        created_revision: &id003
+        created_revision: &id004
           type: integer
-        updated_revision: *id003
-        created_at: &id004
+        updated_revision: *id004
+        created_at: &id005
           type: string
           format: date-time
-        updated_at: *id004
+        updated_at: *id005
     BodyStateHypothesis:
       type: object
       additionalProperties: false
@@ -350,11 +677,11 @@ components:
       - created_at
       - updated_at
       properties:
-        id: *id001
-        user_id: *id001
-        concern_key: *id002
-        statement: *id002
-        lifecycle_state: *id002
+        id: *id002
+        user_id: *id002
+        concern_key: *id003
+        statement: *id003
+        lifecycle_state: *id003
         confidence:
           type: string
         supporting_fact_ids:
@@ -370,10 +697,10 @@ components:
           format: uuid
         provenance:
           $ref: '#/components/schemas/JsonObject'
-        created_revision: *id003
-        updated_revision: *id003
-        created_at: *id004
-        updated_at: *id004
+        created_revision: *id004
+        updated_revision: *id004
+        created_at: *id005
+        updated_at: *id005
     HealthWorkspaceBodyState:
       type: object
       additionalProperties: false
@@ -387,7 +714,7 @@ components:
       - hypotheses
       - recent_revisions
       properties:
-        current_revision: *id003
+        current_revision: *id004
         safety_state:
           $ref: '#/components/schemas/JsonObject'
         facts:
@@ -431,9 +758,9 @@ components:
       - missing_information
       - safety_notes
       properties:
-        candidate_id: *id001
-        concern_key: *id002
-        name: *id002
+        candidate_id: *id002
+        concern_key: *id003
+        name: *id003
         confidence:
           type: string
           enum:
@@ -454,8 +781,8 @@ components:
           - 低
         impact:
           type: string
-        basis: *id002
-        typical_symptoms: *id002
+        basis: *id003
+        typical_symptoms: *id003
         differential:
           type: string
         basis_fact_ids:
@@ -466,7 +793,7 @@ components:
           $ref: '#/components/schemas/StringArray'
         counterevidence_ids:
           $ref: '#/components/schemas/StringArray'
-        reasoning_summary: *id002
+        reasoning_summary: *id003
         missing_information:
           $ref: '#/components/schemas/StringArray'
         safety_notes:
@@ -482,17 +809,17 @@ components:
       - state
       - assessed_at
       properties:
-        id: *id001
-        analysis_id: *id001
-        candidate_id: *id001
-        user_id: *id001
+        id: *id002
+        analysis_id: *id002
+        candidate_id: *id002
+        user_id: *id002
         state:
           type: string
           enum:
           - confirmed
           - unsure
           - not_applicable
-        assessed_at: *id004
+        assessed_at: *id005
     DiagnosisFreshness:
       type: object
       additionalProperties: false
@@ -504,20 +831,20 @@ components:
       - reasons
       - checked_at
       properties:
-        analysis_id: *id001
-        user_id: *id001
+        analysis_id: *id002
+        user_id: *id002
         state:
           type: string
           enum:
           - fresh
           - potentially_stale
           - stale
-        evaluated_against_revision: *id003
+        evaluated_against_revision: *id004
         reasons:
           type: array
           items:
             $ref: '#/components/schemas/DiagnosisFreshnessReason'
-        checked_at: *id004
+        checked_at: *id005
     DiagnosisWorkspaceProjection:
       type: object
       additionalProperties: false
@@ -542,8 +869,8 @@ components:
       - candidate_assessments
       - freshness
       properties:
-        analysis_id: *id001
-        body_state_revision: *id003
+        analysis_id: *id002
+        body_state_revision: *id004
         status:
           type: string
           enum:
@@ -551,8 +878,8 @@ components:
           - partial
           - insufficient_information
           - safety_blocked
-        scope: *id002
-        summary: *id002
+        scope: *id003
+        summary: *id003
         candidates:
           type: array
           items:
@@ -569,7 +896,7 @@ components:
             $ref: '#/components/schemas/JsonObject'
         governance:
           $ref: '#/components/schemas/JsonObject'
-        agent_configuration_id: *id002
+        agent_configuration_id: *id003
         agent_configuration:
           $ref: '#/components/schemas/JsonObject'
         decision_trace:
@@ -580,7 +907,7 @@ components:
           $ref: '#/components/schemas/JsonObject'
         decision_authority:
           $ref: '#/components/schemas/JsonObject'
-        created_at: *id004
+        created_at: *id005
         candidate_assessments:
           type: array
           items:
@@ -596,9 +923,9 @@ components:
       - description
       - prescription
       properties:
-        kind: *id002
-        title: *id002
-        description: *id002
+        kind: *id003
+        title: *id003
+        description: *id003
         prescription:
           $ref: '#/components/schemas/JsonObject'
     TreatmentPlanContent:
@@ -615,16 +942,16 @@ components:
       - review_triggers
       - safety_notes
       properties:
-        summary: *id002
-        goal: *id002
-        duration_weeks: *id003
+        summary: *id003
+        goal: *id003
+        duration_weeks: *id004
         interventions:
           type: array
           items:
             $ref: '#/components/schemas/TreatmentInterventionDraft'
         daily_habits:
           $ref: '#/components/schemas/StringArray'
-        expected_timeline: *id002
+        expected_timeline: *id003
         warning_signs:
           $ref: '#/components/schemas/StringArray'
         review_triggers:
@@ -648,25 +975,25 @@ components:
       - created_at
       - updated_at
       properties:
-        id: *id001
-        user_id: *id001
-        treatment_id: *id001
-        treatment_revision_id: *id001
-        kind: *id002
-        title: *id002
-        description: *id002
+        id: *id002
+        user_id: *id002
+        treatment_id: *id002
+        treatment_revision_id: *id002
+        kind: *id003
+        title: *id003
+        description: *id003
         prescription:
           $ref: '#/components/schemas/JsonObject'
-        position: *id003
-        status: *id002
+        position: *id004
+        status: *id003
         started_at:
           type: string
           format: date-time
         ended_at:
           type: string
           format: date-time
-        created_at: *id004
-        updated_at: *id004
+        created_at: *id005
+        updated_at: *id005
     TreatmentRevision:
       type: object
       additionalProperties: false
@@ -695,9 +1022,9 @@ components:
       - created_at
       - interventions
       properties:
-        id: *id001
-        treatment_id: *id001
-        revision: *id003
+        id: *id002
+        treatment_id: *id002
+        revision: *id004
         acceptance_state:
           type: string
           enum:
@@ -712,10 +1039,10 @@ components:
           - paused
           - superseded
           - completed
-        source_body_state_revision: *id003
-        source_diagnosis_analysis_id: *id001
-        goal: *id002
-        duration_weeks: *id003
+        source_body_state_revision: *id004
+        source_diagnosis_analysis_id: *id002
+        goal: *id003
+        duration_weeks: *id004
         plan:
           $ref: '#/components/schemas/TreatmentPlanContent'
         user_constraints:
@@ -724,7 +1051,7 @@ components:
           $ref: '#/components/schemas/StringArray'
         governance:
           $ref: '#/components/schemas/JsonObject'
-        agent_configuration_id: *id002
+        agent_configuration_id: *id003
         agent_configuration:
           $ref: '#/components/schemas/JsonObject'
         execution_provenance:
@@ -737,8 +1064,8 @@ components:
           $ref: '#/components/schemas/JsonObject'
         rollout_provenance:
           $ref: '#/components/schemas/JsonObject'
-        change_reason: *id002
-        created_at: *id004
+        change_reason: *id003
+        created_at: *id005
         accepted_at:
           type: string
           format: date-time
@@ -751,11 +1078,11 @@ components:
       additionalProperties: false
       required: []
       properties:
-        code: *id002
-        revision: *id003
-        change_type: *id002
-        concern_key: *id002
-        message: *id002
+        code: *id003
+        revision: *id004
+        change_type: *id003
+        concern_key: *id003
+        message: *id003
     Treatment:
       type: object
       additionalProperties: false
@@ -768,9 +1095,9 @@ components:
       - created_at
       - updated_at
       properties:
-        id: *id001
-        user_id: *id001
-        current_revision: *id003
+        id: *id002
+        user_id: *id002
+        current_revision: *id004
         status:
           type: string
           enum:
@@ -788,8 +1115,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TreatmentStatusReason'
-        created_at: *id004
-        updated_at: *id004
+        created_at: *id005
+        updated_at: *id005
         current:
           $ref: '#/components/schemas/TreatmentRevision'
     TrainingPlan:
@@ -805,8 +1132,8 @@ components:
       - phases
       - created_at
       properties:
-        id: *id001
-        user_id: *id001
+        id: *id002
+        user_id: *id002
         consultation_id:
           type: string
           format: uuid
@@ -816,15 +1143,15 @@ components:
         treatment_revision_id:
           type: string
           format: uuid
-        status: *id002
-        goal: *id002
-        duration_weeks: *id003
-        current_week: *id003
+        status: *id003
+        goal: *id003
+        duration_weeks: *id004
+        current_week: *id004
         phases:
           type: array
           items:
             $ref: '#/components/schemas/JsonObject'
-        created_at: *id004
+        created_at: *id005
     Outcome:
       type: object
       additionalProperties: false
@@ -844,8 +1171,8 @@ components:
       - provenance
       - created_at
       properties:
-        id: *id001
-        user_id: *id001
+        id: *id002
+        user_id: *id002
         treatment_id:
           type: string
           format: uuid
@@ -855,27 +1182,27 @@ components:
         intervention_id:
           type: string
           format: uuid
-        source_type: *id002
-        source_key: *id002
-        kind: *id002
-        concern_key: *id002
-        body_region: *id002
+        source_type: *id003
+        source_key: *id003
+        kind: *id003
+        concern_key: *id003
+        body_region: *id003
         value:
           $ref: '#/components/schemas/JsonObject'
-        notes: *id002
-        association_statement: *id002
+        notes: *id003
+        association_statement: *id003
         causality_level:
           type: string
           enum:
           - association_only
           - user_attributed
           - clinician_attributed
-        occurred_at: *id004
+        occurred_at: *id005
         provenance:
           $ref: '#/components/schemas/JsonObject'
         body_state_revision:
           type: integer
-        created_at: *id004
+        created_at: *id005
     WorkspaceTrendPoint:
       type: object
       additionalProperties: false
@@ -884,12 +1211,12 @@ components:
       - source_type
       - value
       properties:
-        occurred_at: *id004
-        source_type: *id002
+        occurred_at: *id005
+        source_type: *id003
         value:
           $ref: '#/components/schemas/JsonObject'
-        notes: *id002
-        causality_level: *id002
+        notes: *id003
+        causality_level: *id003
     WorkspaceTrend:
       type: object
       additionalProperties: false
@@ -901,11 +1228,11 @@ components:
       - current_trend
       - points
       properties:
-        key: *id002
-        concern_key: *id002
-        body_region: *id002
-        kind: *id002
-        current_trend: *id002
+        key: *id003
+        concern_key: *id003
+        body_region: *id003
+        kind: *id003
+        current_trend: *id003
         points:
           type: array
           items:
@@ -927,18 +1254,18 @@ components:
       - requires_diagnosis_review
       - requires_treatment_review
       properties:
-        can_continue_consultation: *id005
-        can_edit_body_state: *id005
-        can_request_diagnosis: *id005
-        can_review_diagnosis: *id005
-        can_generate_treatment: *id005
-        can_accept_treatment: *id005
-        can_execute_treatment: *id005
-        can_record_outcome: *id005
-        can_review_treatment: *id005
-        requires_safety_review: *id005
-        requires_diagnosis_review: *id005
-        requires_treatment_review: *id005
+        can_continue_consultation: *id006
+        can_edit_body_state: *id006
+        can_request_diagnosis: *id006
+        can_review_diagnosis: *id006
+        can_generate_treatment: *id006
+        can_accept_treatment: *id006
+        can_execute_treatment: *id006
+        can_record_outcome: *id006
+        can_review_treatment: *id006
+        requires_safety_review: *id006
+        requires_diagnosis_review: *id006
+        requires_treatment_review: *id006
     WorkspaceAction:
       type: object
       additionalProperties: false
@@ -948,10 +1275,10 @@ components:
       - enabled
       - reason
       properties:
-        kind: *id002
-        priority: *id003
-        enabled: *id005
-        reason: *id002
+        kind: *id003
+        priority: *id004
+        enabled: *id006
+        reason: *id003
         target:
           $ref: '#/components/schemas/JsonObject'
     HealthWorkspace:
@@ -967,11 +1294,11 @@ components:
       - capabilities
       - actions
       properties:
-        generated_at: *id004
+        generated_at: *id005
         conversation_id:
           type: string
           format: uuid
-        profile_ready: *id005
+        profile_ready: *id006
         body_state:
           $ref: '#/components/schemas/HealthWorkspaceBodyState'
         diagnosis:
@@ -1019,6 +1346,297 @@ components:
           type: string
         message:
           type: string
+    BodyStateSnapshot:
+      type: object
+      additionalProperties: false
+      required:
+      - user_id
+      - current_revision
+      - safety_state
+      - facts
+      - observations
+      - hypotheses
+      properties:
+        user_id: *id001
+        current_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        safety_state:
+          $ref: '#/components/schemas/JsonObject'
+        facts:
+          type: array
+          items:
+            $ref: '#/components/schemas/BodyStateFact'
+        observations:
+          type: array
+          items:
+            $ref: '#/components/schemas/BodyStateObservation'
+        hypotheses:
+          type: array
+          items:
+            $ref: '#/components/schemas/BodyStateHypothesis'
+        recent_revisions:
+          type: array
+          items:
+            $ref: '#/components/schemas/BodyStateRevision'
+    CorrectBodyStateFactRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_revision
+      - replacement
+      properties:
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        replacement:
+          $ref: '#/components/schemas/BodyStateFactInput'
+    UpdateBodyStateFactTemporalRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_revision
+      properties:
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        lifecycle_state:
+          type: string
+        trend:
+          type: string
+        valid_until:
+          type:
+          - string
+          - 'null'
+          format: date-time
+    ReviewBodyStateFactRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_revision
+      - review_state
+      properties:
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        review_state:
+          type: string
+          enum:
+          - unverified
+          - confirmed
+          - rejected
+    BodyStateObservationInput:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_revision
+      - kind
+      - value
+      properties:
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        concern_key:
+          type: string
+        kind:
+          type: string
+          minLength: 1
+        body_region:
+          type: string
+        body_region_id:
+          type:
+          - string
+          - 'null'
+        method:
+          type: string
+        value:
+          $ref: '#/components/schemas/JsonObject'
+        condition:
+          $ref: '#/components/schemas/JsonObject'
+        source_key:
+          type: string
+        provenance:
+          $ref: '#/components/schemas/JsonObject'
+        observed_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        lifecycle_state:
+          type: string
+    BodyStateObservationMutationResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - observation
+      - revision
+      properties:
+        observation:
+          $ref: '#/components/schemas/BodyStateObservation'
+        revision: *id007
+    ReviewBodyStateObservationRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_revision
+      - review_state
+      properties:
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        review_state:
+          type: string
+          enum:
+          - unverified
+          - confirmed
+          - rejected
+    BodyStateHypothesisInput:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_revision
+      - statement
+      properties:
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        concern_key:
+          type: string
+        statement:
+          type: string
+          minLength: 1
+        lifecycle_state:
+          type: string
+          enum:
+          - active
+          - strengthened
+          - weakened
+          - unsupported
+          - retired
+        confidence:
+          type:
+          - string
+          - 'null'
+        supporting_fact_ids:
+          $ref: '#/components/schemas/StringArray'
+        supporting_observation_ids:
+          $ref: '#/components/schemas/StringArray'
+        supporting_evidence_ids:
+          $ref: '#/components/schemas/StringArray'
+        counterevidence_ids:
+          $ref: '#/components/schemas/StringArray'
+        provenance:
+          $ref: '#/components/schemas/JsonObject'
+    BodyStateHypothesisMutationResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - hypothesis
+      - revision
+      properties:
+        hypothesis:
+          $ref: '#/components/schemas/BodyStateHypothesis'
+        revision: *id007
+    UpdateBodyStateHypothesisLifecycleRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_revision
+      - lifecycle_state
+      properties:
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        lifecycle_state:
+          type: string
+          enum:
+          - active
+          - strengthened
+          - weakened
+          - unsupported
+          - retired
+        counterevidence_ids:
+          $ref: '#/components/schemas/StringArray'
+    BodyStateEvidence:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - user_id
+      - source_type
+      - source_key
+      - source_version
+      - title
+      - summary
+      - excerpt
+      - metadata
+      - retrieved_at
+      - created_at
+      properties:
+        id: *id001
+        user_id: *id001
+        source_type:
+          type: string
+        source_key:
+          type: string
+        source_version:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+        excerpt:
+          type: string
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+        retrieved_at: &id008
+          type: string
+          format: date-time
+        created_at: *id008
+    BodyStateEvidenceListResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - evidence
+      properties:
+        evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/BodyStateEvidence'
+    ResolveBodyStateSafetyRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_revision
+      - resolution
+      properties:
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        resolution:
+          type: string
+          enum:
+          - resolved
+          - cleared_by_review
+          - monitoring
+        note:
+          type: string
+    BodyStateRevisionMutationResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - revision
+      properties:
+        revision: *id007
   responses:
     InvalidRequest:
       description: Request body or BodyState fact is invalid.

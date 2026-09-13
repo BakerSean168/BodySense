@@ -10,7 +10,7 @@ afterEach(() => vi.restoreAllMocks());
 
 describe("useBodyStateCommand", () => {
   it("invalidates the workspace projection after a successful command", async () => {
-    vi.spyOn(workspaceApi, "reviewObservation").mockResolvedValue({});
+    vi.spyOn(workspaceApi, "reviewObservation").mockResolvedValue(undefined);
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },

@@ -1,10 +1,7 @@
 package httpapi
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"errors"
 
 	"github.com/bodysense/api/internal/dto"
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
@@ -53,20 +50,7 @@ func (s *PublicServer) GetHealthWorkspace(
 // model with unknown-field rejection. The generated type never enters service or
 // domain packages.
 func healthWorkspaceToOpenAPI(workspace *dto.HealthWorkspace) (openapiv1.HealthWorkspace, error) {
-	encoded, err := json.Marshal(workspace)
-	if err != nil {
-		return openapiv1.HealthWorkspace{}, err
-	}
-	decoder := json.NewDecoder(bytes.NewReader(encoded))
-	decoder.DisallowUnknownFields()
-	var response openapiv1.HealthWorkspace
-	if err := decoder.Decode(&response); err != nil {
-		return openapiv1.HealthWorkspace{}, err
-	}
-	if decoder.More() {
-		return openapiv1.HealthWorkspace{}, errors.New("unexpected trailing health workspace JSON")
-	}
-	return response, nil
+	return strictJSONConvert[openapiv1.HealthWorkspace](workspace)
 }
 
 func getWorkspaceError401(code, message string) openapiv1.GetHealthWorkspace401JSONResponse {
