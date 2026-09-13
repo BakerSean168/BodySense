@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -21,6 +22,312 @@ import (
 	"github.com/oapi-codegen/runtime"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
+
+// Defines values for AssessmentDomainCoverageStatus.
+const (
+	Available AssessmentDomainCoverageStatus = "available"
+	Missing   AssessmentDomainCoverageStatus = "missing"
+)
+
+// Valid indicates whether the value is a known member of the AssessmentDomainCoverageStatus enum.
+func (e AssessmentDomainCoverageStatus) Valid() bool {
+	switch e {
+	case Available:
+		return true
+	case Missing:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssessmentEvidenceCoverageStatus.
+const (
+	AssessmentEvidenceCoverageStatusComplete     AssessmentEvidenceCoverageStatus = "complete"
+	AssessmentEvidenceCoverageStatusInsufficient AssessmentEvidenceCoverageStatus = "insufficient"
+	AssessmentEvidenceCoverageStatusPartial      AssessmentEvidenceCoverageStatus = "partial"
+)
+
+// Valid indicates whether the value is a known member of the AssessmentEvidenceCoverageStatus enum.
+func (e AssessmentEvidenceCoverageStatus) Valid() bool {
+	switch e {
+	case AssessmentEvidenceCoverageStatusComplete:
+		return true
+	case AssessmentEvidenceCoverageStatusInsufficient:
+		return true
+	case AssessmentEvidenceCoverageStatusPartial:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssessmentEvidenceDomain.
+const (
+	AssessmentEvidenceDomainAnthropometry  AssessmentEvidenceDomain = "anthropometry"
+	AssessmentEvidenceDomainExercise       AssessmentEvidenceDomain = "exercise"
+	AssessmentEvidenceDomainHealthReport   AssessmentEvidenceDomain = "health_report"
+	AssessmentEvidenceDomainInjurySymptoms AssessmentEvidenceDomain = "injury_symptoms"
+	AssessmentEvidenceDomainLifestyle      AssessmentEvidenceDomain = "lifestyle"
+	AssessmentEvidenceDomainPosture        AssessmentEvidenceDomain = "posture"
+)
+
+// Valid indicates whether the value is a known member of the AssessmentEvidenceDomain enum.
+func (e AssessmentEvidenceDomain) Valid() bool {
+	switch e {
+	case AssessmentEvidenceDomainAnthropometry:
+		return true
+	case AssessmentEvidenceDomainExercise:
+		return true
+	case AssessmentEvidenceDomainHealthReport:
+		return true
+	case AssessmentEvidenceDomainInjurySymptoms:
+		return true
+	case AssessmentEvidenceDomainLifestyle:
+		return true
+	case AssessmentEvidenceDomainPosture:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssessmentEvidenceGapRequired.
+const (
+	False AssessmentEvidenceGapRequired = false
+)
+
+// Valid indicates whether the value is a known member of the AssessmentEvidenceGapRequired enum.
+func (e AssessmentEvidenceGapRequired) Valid() bool {
+	switch e {
+	case False:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssessmentEvidenceSource.
+const (
+	BodyState       AssessmentEvidenceSource = "body_state"
+	PostureAnalysis AssessmentEvidenceSource = "posture_analysis"
+	Report          AssessmentEvidenceSource = "report"
+)
+
+// Valid indicates whether the value is a known member of the AssessmentEvidenceSource enum.
+func (e AssessmentEvidenceSource) Valid() bool {
+	switch e {
+	case BodyState:
+		return true
+	case PostureAnalysis:
+		return true
+	case Report:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssessmentObservationKind.
+const (
+	AssessmentObservationKindAnthropometry    AssessmentObservationKind = "anthropometry"
+	AssessmentObservationKindExercisePattern  AssessmentObservationKind = "exercise_pattern"
+	AssessmentObservationKindLifestylePattern AssessmentObservationKind = "lifestyle_pattern"
+	AssessmentObservationKindPostureAlignment AssessmentObservationKind = "posture_alignment"
+	AssessmentObservationKindPostureAsymmetry AssessmentObservationKind = "posture_asymmetry"
+	AssessmentObservationKindReportIndicator  AssessmentObservationKind = "report_indicator"
+)
+
+// Valid indicates whether the value is a known member of the AssessmentObservationKind enum.
+func (e AssessmentObservationKind) Valid() bool {
+	switch e {
+	case AssessmentObservationKindAnthropometry:
+		return true
+	case AssessmentObservationKindExercisePattern:
+		return true
+	case AssessmentObservationKindLifestylePattern:
+		return true
+	case AssessmentObservationKindPostureAlignment:
+		return true
+	case AssessmentObservationKindPostureAsymmetry:
+		return true
+	case AssessmentObservationKindReportIndicator:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssessmentRegressionExportSchemaTarget.
+const (
+	AssessmentQualificationV2 AssessmentRegressionExportSchemaTarget = "assessment_qualification_v2"
+)
+
+// Valid indicates whether the value is a known member of the AssessmentRegressionExportSchemaTarget enum.
+func (e AssessmentRegressionExportSchemaTarget) Valid() bool {
+	switch e {
+	case AssessmentQualificationV2:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssessmentRegressionMetadataCaseCategory.
+const (
+	HistoricalRegression AssessmentRegressionMetadataCaseCategory = "historical-regression"
+)
+
+// Valid indicates whether the value is a known member of the AssessmentRegressionMetadataCaseCategory enum.
+func (e AssessmentRegressionMetadataCaseCategory) Valid() bool {
+	switch e {
+	case HistoricalRegression:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssessmentRegressionMetadataSplit.
+const (
+	Regression AssessmentRegressionMetadataSplit = "regression"
+)
+
+// Valid indicates whether the value is a known member of the AssessmentRegressionMetadataSplit enum.
+func (e AssessmentRegressionMetadataSplit) Valid() bool {
+	switch e {
+	case Regression:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssessmentReplayReportMode.
+const (
+	AssessmentReplayReportModeCounterfactual AssessmentReplayReportMode = "counterfactual"
+	AssessmentReplayReportModeHistorical     AssessmentReplayReportMode = "historical"
+)
+
+// Valid indicates whether the value is a known member of the AssessmentReplayReportMode enum.
+func (e AssessmentReplayReportMode) Valid() bool {
+	switch e {
+	case AssessmentReplayReportModeCounterfactual:
+		return true
+	case AssessmentReplayReportModeHistorical:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssessmentReplayRequestMode.
+const (
+	AssessmentReplayRequestModeCounterfactual AssessmentReplayRequestMode = "counterfactual"
+	AssessmentReplayRequestModeHistorical     AssessmentReplayRequestMode = "historical"
+)
+
+// Valid indicates whether the value is a known member of the AssessmentReplayRequestMode enum.
+func (e AssessmentReplayRequestMode) Valid() bool {
+	switch e {
+	case AssessmentReplayRequestModeCounterfactual:
+		return true
+	case AssessmentReplayRequestModeHistorical:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssessmentReportV1ContractRevision.
+const (
+	AssessmentOutputV1 AssessmentReportV1ContractRevision = "assessment-output-v1"
+)
+
+// Valid indicates whether the value is a known member of the AssessmentReportV1ContractRevision enum.
+func (e AssessmentReportV1ContractRevision) Valid() bool {
+	switch e {
+	case AssessmentOutputV1:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssessmentReportV1HealthGrade.
+const (
+	A AssessmentReportV1HealthGrade = "A"
+	B AssessmentReportV1HealthGrade = "B"
+	C AssessmentReportV1HealthGrade = "C"
+	D AssessmentReportV1HealthGrade = "D"
+)
+
+// Valid indicates whether the value is a known member of the AssessmentReportV1HealthGrade enum.
+func (e AssessmentReportV1HealthGrade) Valid() bool {
+	switch e {
+	case A:
+		return true
+	case B:
+		return true
+	case C:
+		return true
+	case D:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssessmentReportV1Status.
+const (
+	AssessmentReportV1StatusCompleted               AssessmentReportV1Status = "completed"
+	AssessmentReportV1StatusInsufficientInformation AssessmentReportV1Status = "insufficient_information"
+)
+
+// Valid indicates whether the value is a known member of the AssessmentReportV1Status enum.
+func (e AssessmentReportV1Status) Valid() bool {
+	switch e {
+	case AssessmentReportV1StatusCompleted:
+		return true
+	case AssessmentReportV1StatusInsufficientInformation:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssessmentReportV2ContractRevision.
+const (
+	AssessmentOutputV2 AssessmentReportV2ContractRevision = "assessment-output-v2"
+)
+
+// Valid indicates whether the value is a known member of the AssessmentReportV2ContractRevision enum.
+func (e AssessmentReportV2ContractRevision) Valid() bool {
+	switch e {
+	case AssessmentOutputV2:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AssessmentReportV2Status.
+const (
+	AssessmentReportV2StatusCompleted               AssessmentReportV2Status = "completed"
+	AssessmentReportV2StatusInsufficientInformation AssessmentReportV2Status = "insufficient_information"
+)
+
+// Valid indicates whether the value is a known member of the AssessmentReportV2Status enum.
+func (e AssessmentReportV2Status) Valid() bool {
+	switch e {
+	case AssessmentReportV2StatusCompleted:
+		return true
+	case AssessmentReportV2StatusInsufficientInformation:
+		return true
+	default:
+		return false
+	}
+}
 
 // Defines values for BodyStateHypothesisInputLifecycleState.
 const (
@@ -547,6 +854,237 @@ func (e UserProfileGender) Valid() bool {
 	}
 }
 
+// AssessmentDomainCoverage defines model for AssessmentDomainCoverage.
+type AssessmentDomainCoverage struct {
+	EvidenceRefs []string                       `json:"evidence_refs"`
+	Status       AssessmentDomainCoverageStatus `json:"status"`
+}
+
+// AssessmentDomainCoverageStatus defines model for AssessmentDomainCoverage.Status.
+type AssessmentDomainCoverageStatus string
+
+// AssessmentEvidenceCoverage defines model for AssessmentEvidenceCoverage.
+type AssessmentEvidenceCoverage struct {
+	AvailableSources []AssessmentEvidenceSource       `json:"available_sources"`
+	Domains          AssessmentEvidenceDomains        `json:"domains"`
+	Status           AssessmentEvidenceCoverageStatus `json:"status"`
+}
+
+// AssessmentEvidenceCoverageStatus defines model for AssessmentEvidenceCoverage.Status.
+type AssessmentEvidenceCoverageStatus string
+
+// AssessmentEvidenceDomain defines model for AssessmentEvidenceDomain.
+type AssessmentEvidenceDomain string
+
+// AssessmentEvidenceDomains defines model for AssessmentEvidenceDomains.
+type AssessmentEvidenceDomains struct {
+	Anthropometry  AssessmentDomainCoverage `json:"anthropometry"`
+	Exercise       AssessmentDomainCoverage `json:"exercise"`
+	HealthReport   AssessmentDomainCoverage `json:"health_report"`
+	InjurySymptoms AssessmentDomainCoverage `json:"injury_symptoms"`
+	Lifestyle      AssessmentDomainCoverage `json:"lifestyle"`
+	Posture        AssessmentDomainCoverage `json:"posture"`
+}
+
+// AssessmentEvidenceGap defines model for AssessmentEvidenceGap.
+type AssessmentEvidenceGap struct {
+	Description   string                        `json:"description"`
+	Dimension     AssessmentEvidenceDomain      `json:"dimension"`
+	NeededSources []AssessmentEvidenceSource    `json:"needed_sources"`
+	Required      AssessmentEvidenceGapRequired `json:"required"`
+}
+
+// AssessmentEvidenceGapRequired defines model for AssessmentEvidenceGap.Required.
+type AssessmentEvidenceGapRequired bool
+
+// AssessmentEvidenceSource defines model for AssessmentEvidenceSource.
+type AssessmentEvidenceSource string
+
+// AssessmentListResponse defines model for AssessmentListResponse.
+type AssessmentListResponse struct {
+	Limit   int                `json:"limit"`
+	Offset  int                `json:"offset"`
+	Reports []AssessmentReport `json:"reports"`
+	Total   int64              `json:"total"`
+}
+
+// AssessmentObservation defines model for AssessmentObservation.
+type AssessmentObservation struct {
+	BodyRegion    string                    `json:"body_region"`
+	Description   string                    `json:"description"`
+	EvidenceRefs  []string                  `json:"evidence_refs"`
+	Kind          AssessmentObservationKind `json:"kind"`
+	Label         string                    `json:"label"`
+	Method        string                    `json:"method"`
+	ObservationId openapi_types.UUID        `json:"observation_id"`
+	ReviewState   string                    `json:"review_state"`
+}
+
+// AssessmentObservationKind defines model for AssessmentObservationKind.
+type AssessmentObservationKind string
+
+// AssessmentRegressionCase defines model for AssessmentRegressionCase.
+type AssessmentRegressionCase struct {
+	Inputs   JsonObject                   `json:"inputs"`
+	Metadata AssessmentRegressionMetadata `json:"metadata"`
+	Name     string                       `json:"name"`
+}
+
+// AssessmentRegressionExport defines model for AssessmentRegressionExport.
+type AssessmentRegressionExport struct {
+	Case           AssessmentRegressionCase               `json:"case"`
+	SchemaTarget   AssessmentRegressionExportSchemaTarget `json:"schema_target"`
+	SourceReportId openapi_types.UUID                     `json:"source_report_id"`
+}
+
+// AssessmentRegressionExportSchemaTarget defines model for AssessmentRegressionExport.SchemaTarget.
+type AssessmentRegressionExportSchemaTarget string
+
+// AssessmentRegressionMetadata defines model for AssessmentRegressionMetadata.
+type AssessmentRegressionMetadata struct {
+	CaseCategory                   AssessmentRegressionMetadataCaseCategory `json:"case_category"`
+	Critical                       bool                                     `json:"critical"`
+	ExpectedAgentExecuted          bool                                     `json:"expected_agent_executed"`
+	ExpectedContractRevision       string                                   `json:"expected_contract_revision"`
+	ExpectedEvidenceCoverageStatus *string                                  `json:"expected_evidence_coverage_status,omitempty"`
+	ExpectedEvidenceGapCount       int                                      `json:"expected_evidence_gap_count"`
+	ExpectedStatus                 string                                   `json:"expected_status"`
+	ForbiddenOutputFields          []string                                 `json:"forbidden_output_fields"`
+	MinObservations                int                                      `json:"min_observations"`
+	ScenarioFamilyId               string                                   `json:"scenario_family_id"`
+	Slices                         []string                                 `json:"slices"`
+	Split                          AssessmentRegressionMetadataSplit        `json:"split"`
+}
+
+// AssessmentRegressionMetadataCaseCategory defines model for AssessmentRegressionMetadata.CaseCategory.
+type AssessmentRegressionMetadataCaseCategory string
+
+// AssessmentRegressionMetadataSplit defines model for AssessmentRegressionMetadata.Split.
+type AssessmentRegressionMetadataSplit string
+
+// AssessmentReplayCheck defines model for AssessmentReplayCheck.
+type AssessmentReplayCheck struct {
+	Baseline  *string `json:"baseline,omitempty"`
+	Candidate *string `json:"candidate,omitempty"`
+	Match     bool    `json:"match"`
+	Name      string  `json:"name"`
+}
+
+// AssessmentReplayComparison defines model for AssessmentReplayComparison.
+type AssessmentReplayComparison struct {
+	Hard         AssessmentReplayLayer `json:"hard"`
+	Presentation AssessmentReplayLayer `json:"presentation"`
+	Semantic     AssessmentReplayLayer `json:"semantic"`
+}
+
+// AssessmentReplayLayer defines model for AssessmentReplayLayer.
+type AssessmentReplayLayer struct {
+	Checks []AssessmentReplayCheck `json:"checks"`
+	Match  bool                    `json:"match"`
+}
+
+// AssessmentReplayReport defines model for AssessmentReplayReport.
+type AssessmentReplayReport struct {
+	ArtifactIntegrity     AssessmentReplayLayer      `json:"artifact_integrity"`
+	Baseline              AssessmentReplaySnapshot   `json:"baseline"`
+	Comparison            AssessmentReplayComparison `json:"comparison"`
+	InputFingerprint      string                     `json:"input_fingerprint"`
+	Mode                  AssessmentReplayReportMode `json:"mode"`
+	Output                JsonObject                 `json:"output"`
+	Replay                AssessmentReplaySnapshot   `json:"replay"`
+	SourceConfigurationId string                     `json:"source_configuration_id"`
+	SourceReportId        openapi_types.UUID         `json:"source_report_id"`
+	TargetConfigurationId string                     `json:"target_configuration_id"`
+}
+
+// AssessmentReplayReportMode defines model for AssessmentReplayReport.Mode.
+type AssessmentReplayReportMode string
+
+// AssessmentReplayRequest defines model for AssessmentReplayRequest.
+type AssessmentReplayRequest struct {
+	ConfigurationId *string                     `json:"configuration_id,omitempty"`
+	Mode            AssessmentReplayRequestMode `json:"mode"`
+}
+
+// AssessmentReplayRequestMode defines model for AssessmentReplayRequest.Mode.
+type AssessmentReplayRequestMode string
+
+// AssessmentReplaySnapshot defines model for AssessmentReplaySnapshot.
+type AssessmentReplaySnapshot struct {
+	ContractRevision       string   `json:"contract_revision"`
+	EvidenceCoverageStatus *string  `json:"evidence_coverage_status,omitempty"`
+	EvidenceGaps           []string `json:"evidence_gaps"`
+	HealthGrade            *string  `json:"health_grade,omitempty"`
+	InformationGaps        []string `json:"information_gaps"`
+	ObservationCount       int      `json:"observation_count"`
+	ObservationKinds       []string `json:"observation_kinds"`
+	SafetyNoteCount        int      `json:"safety_note_count"`
+	Status                 string   `json:"status"`
+	Summary                string   `json:"summary"`
+}
+
+// AssessmentReport defines model for AssessmentReport.
+type AssessmentReport struct {
+	union json.RawMessage
+}
+
+// AssessmentReportV1 defines model for AssessmentReportV1.
+type AssessmentReportV1 struct {
+	AgentConfiguration      JsonObject                         `json:"agent_configuration"`
+	AgentConfigurationId    string                             `json:"agent_configuration_id"`
+	BodyStateRevision       *int64                             `json:"body_state_revision,omitempty"`
+	ContractRevision        AssessmentReportV1ContractRevision `json:"contract_revision"`
+	CreatedAt               time.Time                          `json:"created_at"`
+	DimensionScores         LegacyAssessmentDimensionScores    `json:"dimension_scores"`
+	EvidenceCoverage        map[string]interface{}             `json:"evidence_coverage"`
+	EvidenceGaps            []JsonObject                       `json:"evidence_gaps"`
+	ExecutionProvenance     JsonObject                         `json:"execution_provenance"`
+	GenerationDecisionTrace JsonObject                         `json:"generation_decision_trace"`
+	HealthGrade             AssessmentReportV1HealthGrade      `json:"health_grade"`
+	Id                      openapi_types.UUID                 `json:"id"`
+	InformationGaps         []string                           `json:"information_gaps"`
+	Observations            []LegacyAssessmentObservation      `json:"observations"`
+	SafetyNotes             []string                           `json:"safety_notes"`
+	Status                  AssessmentReportV1Status           `json:"status"`
+	Summary                 string                             `json:"summary"`
+	UserId                  openapi_types.UUID                 `json:"user_id"`
+}
+
+// AssessmentReportV1ContractRevision defines model for AssessmentReportV1.ContractRevision.
+type AssessmentReportV1ContractRevision string
+
+// AssessmentReportV1HealthGrade defines model for AssessmentReportV1.HealthGrade.
+type AssessmentReportV1HealthGrade string
+
+// AssessmentReportV1Status defines model for AssessmentReportV1.Status.
+type AssessmentReportV1Status string
+
+// AssessmentReportV2 defines model for AssessmentReportV2.
+type AssessmentReportV2 struct {
+	AgentConfiguration      JsonObject                         `json:"agent_configuration"`
+	AgentConfigurationId    string                             `json:"agent_configuration_id"`
+	BodyStateRevision       *int64                             `json:"body_state_revision,omitempty"`
+	ContractRevision        AssessmentReportV2ContractRevision `json:"contract_revision"`
+	CreatedAt               time.Time                          `json:"created_at"`
+	EvidenceCoverage        AssessmentEvidenceCoverage         `json:"evidence_coverage"`
+	EvidenceGaps            []AssessmentEvidenceGap            `json:"evidence_gaps"`
+	ExecutionProvenance     JsonObject                         `json:"execution_provenance"`
+	GenerationDecisionTrace JsonObject                         `json:"generation_decision_trace"`
+	Id                      openapi_types.UUID                 `json:"id"`
+	InformationGaps         *[]string                          `json:"information_gaps,omitempty"`
+	Observations            []AssessmentObservation            `json:"observations"`
+	SafetyNotes             []string                           `json:"safety_notes"`
+	Status                  AssessmentReportV2Status           `json:"status"`
+	Summary                 string                             `json:"summary"`
+	UserId                  openapi_types.UUID                 `json:"user_id"`
+}
+
+// AssessmentReportV2ContractRevision defines model for AssessmentReportV2.ContractRevision.
+type AssessmentReportV2ContractRevision string
+
+// AssessmentReportV2Status defines model for AssessmentReportV2.Status.
+type AssessmentReportV2Status string
+
 // BodyMetricValue defines model for BodyMetricValue.
 type BodyMetricValue struct {
 	ObservedAt *time.Time `json:"observed_at,omitempty"`
@@ -966,6 +1504,30 @@ type Intervention struct {
 // JsonObject defines model for JsonObject.
 type JsonObject map[string]interface{}
 
+// LegacyAssessmentDimensionScores defines model for LegacyAssessmentDimensionScores.
+type LegacyAssessmentDimensionScores struct {
+	Exercise   float64 `json:"exercise"`
+	InjuryRisk float64 `json:"injury_risk"`
+	Lifestyle  float64 `json:"lifestyle"`
+	Overall    float64 `json:"overall"`
+	Posture    float64 `json:"posture"`
+}
+
+// LegacyAssessmentObservation defines model for LegacyAssessmentObservation.
+type LegacyAssessmentObservation struct {
+	BodyRegion           *string                `json:"body_region,omitempty"`
+	Condition            *JsonObject            `json:"condition,omitempty"`
+	Confidence           *string                `json:"confidence,omitempty"`
+	Description          string                 `json:"description"`
+	Kind                 string                 `json:"kind"`
+	Label                string                 `json:"label"`
+	Method               *string                `json:"method,omitempty"`
+	ObservationId        *openapi_types.UUID    `json:"observation_id,omitempty"`
+	ReviewState          *string                `json:"review_state,omitempty"`
+	Severity             *string                `json:"severity,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
 // LifestyleCandidate defines model for LifestyleCandidate.
 type LifestyleCandidate struct {
 	CreatedAt time.Time          `json:"created_at"`
@@ -1363,6 +1925,15 @@ type WorkspaceTrendPoint struct {
 	Value          JsonObject `json:"value"`
 }
 
+// AssessmentReportId defines model for AssessmentReportId.
+type AssessmentReportId = openapi_types.UUID
+
+// BadGateway defines model for BadGateway.
+type BadGateway = ErrorEnvelope
+
+// Conflict defines model for Conflict.
+type Conflict = ErrorEnvelope
+
 // InternalError defines model for InternalError.
 type InternalError = ErrorEnvelope
 
@@ -1375,11 +1946,23 @@ type NotFound = ErrorEnvelope
 // RevisionConflict defines model for RevisionConflict.
 type RevisionConflict = ErrorEnvelope
 
+// ServiceUnavailable defines model for ServiceUnavailable.
+type ServiceUnavailable = ErrorEnvelope
+
 // Unauthorized defines model for Unauthorized.
 type Unauthorized = ErrorEnvelope
 
 // ValidationUnavailable defines model for ValidationUnavailable.
 type ValidationUnavailable = ErrorEnvelope
+
+// ListAssessmentsParams defines parameters for ListAssessments.
+type ListAssessmentsParams struct {
+	Limit  *int `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
+// ReplayAssessmentJSONRequestBody defines body for ReplayAssessment for application/json ContentType.
+type ReplayAssessmentJSONRequestBody = AssessmentReplayRequest
 
 // UpdateBodyMetricsJSONRequestBody defines body for UpdateBodyMetrics for application/json ContentType.
 type UpdateBodyMetricsJSONRequestBody = UpdateBodyMetricsRequest
@@ -1434,6 +2017,304 @@ type RequestPrivacyErasureJSONRequestBody = PrivacyErasureRequest
 
 // UpdateUserProfileJSONRequestBody defines body for UpdateUserProfile for application/json ContentType.
 type UpdateUserProfileJSONRequestBody = UpdateUserProfileRequest
+
+// Getter for additional properties for LegacyAssessmentObservation. Returns the specified
+// element and whether it was found
+func (a LegacyAssessmentObservation) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for LegacyAssessmentObservation
+func (a *LegacyAssessmentObservation) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for LegacyAssessmentObservation to handle AdditionalProperties
+func (a *LegacyAssessmentObservation) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["body_region"]; found {
+		err = json.Unmarshal(raw, &a.BodyRegion)
+		if err != nil {
+			return fmt.Errorf("error reading 'body_region': %w", err)
+		}
+		delete(object, "body_region")
+	}
+
+	if raw, found := object["condition"]; found {
+		err = json.Unmarshal(raw, &a.Condition)
+		if err != nil {
+			return fmt.Errorf("error reading 'condition': %w", err)
+		}
+		delete(object, "condition")
+	}
+
+	if raw, found := object["confidence"]; found {
+		err = json.Unmarshal(raw, &a.Confidence)
+		if err != nil {
+			return fmt.Errorf("error reading 'confidence': %w", err)
+		}
+		delete(object, "confidence")
+	}
+
+	if raw, found := object["description"]; found {
+		err = json.Unmarshal(raw, &a.Description)
+		if err != nil {
+			return fmt.Errorf("error reading 'description': %w", err)
+		}
+		delete(object, "description")
+	}
+
+	if raw, found := object["kind"]; found {
+		err = json.Unmarshal(raw, &a.Kind)
+		if err != nil {
+			return fmt.Errorf("error reading 'kind': %w", err)
+		}
+		delete(object, "kind")
+	}
+
+	if raw, found := object["label"]; found {
+		err = json.Unmarshal(raw, &a.Label)
+		if err != nil {
+			return fmt.Errorf("error reading 'label': %w", err)
+		}
+		delete(object, "label")
+	}
+
+	if raw, found := object["method"]; found {
+		err = json.Unmarshal(raw, &a.Method)
+		if err != nil {
+			return fmt.Errorf("error reading 'method': %w", err)
+		}
+		delete(object, "method")
+	}
+
+	if raw, found := object["observation_id"]; found {
+		err = json.Unmarshal(raw, &a.ObservationId)
+		if err != nil {
+			return fmt.Errorf("error reading 'observation_id': %w", err)
+		}
+		delete(object, "observation_id")
+	}
+
+	if raw, found := object["review_state"]; found {
+		err = json.Unmarshal(raw, &a.ReviewState)
+		if err != nil {
+			return fmt.Errorf("error reading 'review_state': %w", err)
+		}
+		delete(object, "review_state")
+	}
+
+	if raw, found := object["severity"]; found {
+		err = json.Unmarshal(raw, &a.Severity)
+		if err != nil {
+			return fmt.Errorf("error reading 'severity': %w", err)
+		}
+		delete(object, "severity")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for LegacyAssessmentObservation to handle AdditionalProperties
+func (a LegacyAssessmentObservation) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.BodyRegion != nil {
+		object["body_region"], err = json.Marshal(a.BodyRegion)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'body_region': %w", err)
+		}
+	}
+
+	if a.Condition != nil {
+		object["condition"], err = json.Marshal(a.Condition)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'condition': %w", err)
+		}
+	}
+
+	if a.Confidence != nil {
+		object["confidence"], err = json.Marshal(a.Confidence)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'confidence': %w", err)
+		}
+	}
+
+	object["description"], err = json.Marshal(a.Description)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'description': %w", err)
+	}
+
+	object["kind"], err = json.Marshal(a.Kind)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'kind': %w", err)
+	}
+
+	object["label"], err = json.Marshal(a.Label)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'label': %w", err)
+	}
+
+	if a.Method != nil {
+		object["method"], err = json.Marshal(a.Method)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'method': %w", err)
+		}
+	}
+
+	if a.ObservationId != nil {
+		object["observation_id"], err = json.Marshal(a.ObservationId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'observation_id': %w", err)
+		}
+	}
+
+	if a.ReviewState != nil {
+		object["review_state"], err = json.Marshal(a.ReviewState)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'review_state': %w", err)
+		}
+	}
+
+	if a.Severity != nil {
+		object["severity"], err = json.Marshal(a.Severity)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'severity': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// AsAssessmentReportV2 returns the union data inside the AssessmentReport as a AssessmentReportV2
+func (t AssessmentReport) AsAssessmentReportV2() (AssessmentReportV2, error) {
+	var body AssessmentReportV2
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAssessmentReportV2 overwrites any union data inside the AssessmentReport as the provided AssessmentReportV2
+func (t *AssessmentReport) FromAssessmentReportV2(v AssessmentReportV2) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"contract_revision":"assessment-output-v2"}`))
+	t.union = b
+	return err
+}
+
+// MergeAssessmentReportV2 performs a merge with any union data inside the AssessmentReport, using the provided AssessmentReportV2
+func (t *AssessmentReport) MergeAssessmentReportV2(v AssessmentReportV2) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"contract_revision":"assessment-output-v2"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsAssessmentReportV1 returns the union data inside the AssessmentReport as a AssessmentReportV1
+func (t AssessmentReport) AsAssessmentReportV1() (AssessmentReportV1, error) {
+	var body AssessmentReportV1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAssessmentReportV1 overwrites any union data inside the AssessmentReport as the provided AssessmentReportV1
+func (t *AssessmentReport) FromAssessmentReportV1(v AssessmentReportV1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"contract_revision":"assessment-output-v1"}`))
+	t.union = b
+	return err
+}
+
+// MergeAssessmentReportV1 performs a merge with any union data inside the AssessmentReport, using the provided AssessmentReportV1
+func (t *AssessmentReport) MergeAssessmentReportV1(v AssessmentReportV1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"contract_revision":"assessment-output-v1"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t AssessmentReport) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"contract_revision"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t AssessmentReport) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "assessment-output-v1":
+		return t.AsAssessmentReportV1()
+	case "assessment-output-v2":
+		return t.AsAssessmentReportV2()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t AssessmentReport) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *AssessmentReport) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
 
 // AsClientDiagnosticAttributes0 returns the union data inside the ClientDiagnostic_Attributes_AdditionalProperties as a ClientDiagnosticAttributes0
 func (t ClientDiagnostic_Attributes_AdditionalProperties) AsClientDiagnosticAttributes0() (ClientDiagnosticAttributes0, error) {
@@ -1525,6 +2406,21 @@ func (t *ClientDiagnostic_Attributes_AdditionalProperties) UnmarshalJSON(b []byt
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// ListAssessments List immutable assessment reports for the authenticated user.
+	// (GET /api/v1/assessment)
+	ListAssessments(c *gin.Context, params ListAssessmentsParams)
+	// GenerateAssessment Generate and durably persist an evidence-grounded assessment report.
+	// (POST /api/v1/assessment/generate)
+	GenerateAssessment(c *gin.Context)
+	// GetAssessment Get one immutable assessment report.
+	// (GET /api/v1/assessment/{id})
+	GetAssessment(c *gin.Context, id AssessmentReportId)
+	// ExportAssessmentRegressionCase Export a read-only frozen assessment regression case.
+	// (GET /api/v1/assessment/{id}/regression-export)
+	ExportAssessmentRegressionCase(c *gin.Context, id AssessmentReportId)
+	// ReplayAssessment Replay an immutable assessment historically or counterfactually without mutating durable state.
+	// (POST /api/v1/assessment/{id}/replay)
+	ReplayAssessment(c *gin.Context, id AssessmentReportId)
 	// GetBodyMetrics Get current anthropometric measurements.
 	// (GET /api/v1/body-metrics)
 	GetBodyMetrics(c *gin.Context)
@@ -1616,6 +2512,129 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(c *gin.Context)
+
+// ListAssessments operation middleware
+func (siw *ServerInterfaceWrapper) ListAssessments(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListAssessmentsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", c.Request.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter limit: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", c.Request.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter offset: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListAssessments(c, params)
+}
+
+// GenerateAssessment operation middleware
+func (siw *ServerInterfaceWrapper) GenerateAssessment(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GenerateAssessment(c)
+}
+
+// GetAssessment operation middleware
+func (siw *ServerInterfaceWrapper) GetAssessment(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id AssessmentReportId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetAssessment(c, id)
+}
+
+// ExportAssessmentRegressionCase operation middleware
+func (siw *ServerInterfaceWrapper) ExportAssessmentRegressionCase(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id AssessmentReportId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ExportAssessmentRegressionCase(c, id)
+}
+
+// ReplayAssessment operation middleware
+func (siw *ServerInterfaceWrapper) ReplayAssessment(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id AssessmentReportId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ReplayAssessment(c, id)
+}
 
 // GetBodyMetrics operation middleware
 func (siw *ServerInterfaceWrapper) GetBodyMetrics(c *gin.Context) {
@@ -2106,7 +3125,16 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/api/v1/privacy/erasure-plan", wrapper.GetPrivacyErasurePlan)
 	router.POST(options.BaseURL+"/api/v1/privacy/erasure", wrapper.RequestPrivacyErasure)
 	router.POST(options.BaseURL+"/api/v1/client-diagnostics", wrapper.RecordClientDiagnostic)
+	router.POST(options.BaseURL+"/api/v1/assessment/generate", wrapper.GenerateAssessment)
+	router.GET(options.BaseURL+"/api/v1/assessment", wrapper.ListAssessments)
+	router.GET(options.BaseURL+"/api/v1/assessment/:id", wrapper.GetAssessment)
+	router.POST(options.BaseURL+"/api/v1/assessment/:id/replay", wrapper.ReplayAssessment)
+	router.GET(options.BaseURL+"/api/v1/assessment/:id/regression-export", wrapper.ExportAssessmentRegressionCase)
 }
+
+type BadGatewayJSONResponse ErrorEnvelope
+
+type ConflictJSONResponse ErrorEnvelope
 
 type InternalErrorJSONResponse ErrorEnvelope
 
@@ -2116,9 +3144,409 @@ type NotFoundJSONResponse ErrorEnvelope
 
 type RevisionConflictJSONResponse ErrorEnvelope
 
+type ServiceUnavailableJSONResponse ErrorEnvelope
+
 type UnauthorizedJSONResponse ErrorEnvelope
 
 type ValidationUnavailableJSONResponse ErrorEnvelope
+
+type ListAssessmentsRequestObject struct {
+	Params ListAssessmentsParams
+}
+
+type ListAssessmentsResponseObject interface {
+	VisitListAssessmentsResponse(w http.ResponseWriter) error
+}
+
+type ListAssessments200JSONResponse AssessmentListResponse
+
+func (response ListAssessments200JSONResponse) VisitListAssessmentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAssessments400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ListAssessments400JSONResponse) VisitListAssessmentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAssessments401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListAssessments401JSONResponse) VisitListAssessmentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListAssessments500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListAssessments500JSONResponse) VisitListAssessmentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GenerateAssessmentRequestObject struct {
+}
+
+type GenerateAssessmentResponseObject interface {
+	VisitGenerateAssessmentResponse(w http.ResponseWriter) error
+}
+
+type GenerateAssessment201JSONResponse AssessmentReportV2
+
+func (response GenerateAssessment201JSONResponse) VisitGenerateAssessmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GenerateAssessment401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GenerateAssessment401JSONResponse) VisitGenerateAssessmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GenerateAssessment500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GenerateAssessment500JSONResponse) VisitGenerateAssessmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GenerateAssessment502JSONResponse struct{ BadGatewayJSONResponse }
+
+func (response GenerateAssessment502JSONResponse) VisitGenerateAssessmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAssessmentRequestObject struct {
+	Id AssessmentReportId `json:"id"`
+}
+
+type GetAssessmentResponseObject interface {
+	VisitGetAssessmentResponse(w http.ResponseWriter) error
+}
+
+type GetAssessment200JSONResponse AssessmentReport
+
+func (t GetAssessment200JSONResponse) MarshalJSON() ([]byte, error) {
+	return AssessmentReport(t).MarshalJSON()
+}
+
+func (t *GetAssessment200JSONResponse) UnmarshalJSON(b []byte) error {
+	return (*AssessmentReport)(t).UnmarshalJSON(b)
+}
+
+func (response GetAssessment200JSONResponse) VisitGetAssessmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAssessment401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetAssessment401JSONResponse) VisitGetAssessmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAssessment404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetAssessment404JSONResponse) VisitGetAssessmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAssessment500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetAssessment500JSONResponse) VisitGetAssessmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportAssessmentRegressionCaseRequestObject struct {
+	Id AssessmentReportId `json:"id"`
+}
+
+type ExportAssessmentRegressionCaseResponseObject interface {
+	VisitExportAssessmentRegressionCaseResponse(w http.ResponseWriter) error
+}
+
+type ExportAssessmentRegressionCase200JSONResponse AssessmentRegressionExport
+
+func (response ExportAssessmentRegressionCase200JSONResponse) VisitExportAssessmentRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportAssessmentRegressionCase401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ExportAssessmentRegressionCase401JSONResponse) VisitExportAssessmentRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportAssessmentRegressionCase404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ExportAssessmentRegressionCase404JSONResponse) VisitExportAssessmentRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportAssessmentRegressionCase409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ExportAssessmentRegressionCase409JSONResponse) VisitExportAssessmentRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportAssessmentRegressionCase500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ExportAssessmentRegressionCase500JSONResponse) VisitExportAssessmentRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportAssessmentRegressionCase503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ExportAssessmentRegressionCase503JSONResponse) VisitExportAssessmentRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayAssessmentRequestObject struct {
+	Id   AssessmentReportId `json:"id"`
+	Body *ReplayAssessmentJSONRequestBody
+}
+
+type ReplayAssessmentResponseObject interface {
+	VisitReplayAssessmentResponse(w http.ResponseWriter) error
+}
+
+type ReplayAssessment200JSONResponse AssessmentReplayReport
+
+func (response ReplayAssessment200JSONResponse) VisitReplayAssessmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayAssessment400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ReplayAssessment400JSONResponse) VisitReplayAssessmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayAssessment401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ReplayAssessment401JSONResponse) VisitReplayAssessmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayAssessment404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ReplayAssessment404JSONResponse) VisitReplayAssessmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayAssessment409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ReplayAssessment409JSONResponse) VisitReplayAssessmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayAssessment500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ReplayAssessment500JSONResponse) VisitReplayAssessmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayAssessment503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ReplayAssessment503JSONResponse) VisitReplayAssessmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
 
 type GetBodyMetricsRequestObject struct {
 }
@@ -4364,6 +5792,21 @@ func (response UpdateUserProfile500JSONResponse) VisitUpdateUserProfileResponse(
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// ListAssessments List immutable assessment reports for the authenticated user.
+	// (GET /api/v1/assessment)
+	ListAssessments(ctx context.Context, request ListAssessmentsRequestObject) (ListAssessmentsResponseObject, error)
+	// GenerateAssessment Generate and durably persist an evidence-grounded assessment report.
+	// (POST /api/v1/assessment/generate)
+	GenerateAssessment(ctx context.Context, request GenerateAssessmentRequestObject) (GenerateAssessmentResponseObject, error)
+	// GetAssessment Get one immutable assessment report.
+	// (GET /api/v1/assessment/{id})
+	GetAssessment(ctx context.Context, request GetAssessmentRequestObject) (GetAssessmentResponseObject, error)
+	// ExportAssessmentRegressionCase Export a read-only frozen assessment regression case.
+	// (GET /api/v1/assessment/{id}/regression-export)
+	ExportAssessmentRegressionCase(ctx context.Context, request ExportAssessmentRegressionCaseRequestObject) (ExportAssessmentRegressionCaseResponseObject, error)
+	// ReplayAssessment Replay an immutable assessment historically or counterfactually without mutating durable state.
+	// (POST /api/v1/assessment/{id}/replay)
+	ReplayAssessment(ctx context.Context, request ReplayAssessmentRequestObject) (ReplayAssessmentResponseObject, error)
 	// GetBodyMetrics Get current anthropometric measurements.
 	// (GET /api/v1/body-metrics)
 	GetBodyMetrics(ctx context.Context, request GetBodyMetricsRequestObject) (GetBodyMetricsResponseObject, error)
@@ -4502,6 +5945,141 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictGinServerOptions
+}
+
+// ListAssessments operation middleware
+func (sh *strictHandler) ListAssessments(ctx *gin.Context, params ListAssessmentsParams) {
+	var request ListAssessmentsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListAssessments(ctx, request.(ListAssessmentsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListAssessments")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListAssessmentsResponseObject); ok {
+		if err := validResponse.VisitListAssessmentsResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GenerateAssessment operation middleware
+func (sh *strictHandler) GenerateAssessment(ctx *gin.Context) {
+	var request GenerateAssessmentRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GenerateAssessment(ctx, request.(GenerateAssessmentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GenerateAssessment")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GenerateAssessmentResponseObject); ok {
+		if err := validResponse.VisitGenerateAssessmentResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetAssessment operation middleware
+func (sh *strictHandler) GetAssessment(ctx *gin.Context, id AssessmentReportId) {
+	var request GetAssessmentRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAssessment(ctx, request.(GetAssessmentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAssessment")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetAssessmentResponseObject); ok {
+		if err := validResponse.VisitGetAssessmentResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ExportAssessmentRegressionCase operation middleware
+func (sh *strictHandler) ExportAssessmentRegressionCase(ctx *gin.Context, id AssessmentReportId) {
+	var request ExportAssessmentRegressionCaseRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ExportAssessmentRegressionCase(ctx, request.(ExportAssessmentRegressionCaseRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ExportAssessmentRegressionCase")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ExportAssessmentRegressionCaseResponseObject); ok {
+		if err := validResponse.VisitExportAssessmentRegressionCaseResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReplayAssessment operation middleware
+func (sh *strictHandler) ReplayAssessment(ctx *gin.Context, id AssessmentReportId) {
+	var request ReplayAssessmentRequestObject
+
+	request.Id = id
+
+	var body ReplayAssessmentJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ReplayAssessment(ctx, request.(ReplayAssessmentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReplayAssessment")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ReplayAssessmentResponseObject); ok {
+		if err := validResponse.VisitReplayAssessmentResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // GetBodyMetrics operation middleware
@@ -5297,113 +6875,146 @@ func (sh *strictHandler) UpdateUserProfile(ctx *gin.Context) {
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

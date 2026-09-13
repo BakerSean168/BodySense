@@ -57,7 +57,7 @@ func (s *PublicServer) GetUserProfile(
 	if profile == nil {
 		return openapiv1.GetUserProfile200JSONResponse{Profile: nil}, nil
 	}
-	publicProfile, err := strictJSONConvert[openapiv1.UserProfile](profile)
+	publicProfile, err := strictOpenAPIConvert[openapiv1.UserProfile]("UserProfile", profile)
 	if err != nil {
 		return getUserProfileError(http.StatusInternalServerError, "INTERNAL_ERROR", "profile violates the public contract"), nil
 	}
@@ -99,7 +99,7 @@ func (s *PublicServer) UpdateUserProfile(
 	if err != nil || stored == nil {
 		return updateUserProfileError(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load updated profile"), nil
 	}
-	publicProfile, err := strictJSONConvert[openapiv1.UserProfile](stored)
+	publicProfile, err := strictOpenAPIConvert[openapiv1.UserProfile]("UserProfile", stored)
 	if err != nil {
 		return updateUserProfileError(http.StatusInternalServerError, "INTERNAL_ERROR", "profile violates the public contract"), nil
 	}

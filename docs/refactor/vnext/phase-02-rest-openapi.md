@@ -520,3 +520,86 @@ legacy ClientDiagnosticHandler              DELETED
 handwritten client-diagnostics route        NONE
 feature hardcoded client-diagnostics URL    NONE
 ```
+
+## Checkpoint 8 — Assessment REST boundary
+
+Status: COMPLETE ON PHASE BRANCH
+
+The full Assessment REST family now uses the generated protected OpenAPI router:
+
+```text
+POST /api/v1/assessment/generate
+GET  /api/v1/assessment
+GET  /api/v1/assessment/{id}
+POST /api/v1/assessment/{id}/replay
+GET  /api/v1/assessment/{id}/regression-export
+```
+
+The legacy `AssessmentHandler` was deleted. Assessment application and replay services retain domain/runtime ownership; the new transport adapter only validates, maps and classifies HTTP behavior.
+
+### Versioned report contract
+
+Current generation is explicit: `POST /assessment/generate` can return only `assessment-output-v2`. Historical reads remain a discriminated public union:
+
+```text
+AssessmentReport = AssessmentReportV2 | AssessmentReportV1
+                  discriminated by contract_revision
+```
+
+V2 now exposes its real evidence semantics rather than generic objects:
+
+- the six canonical coverage domains are required;
+- available sources use the fixed `body_state | report | posture_analysis` vocabulary;
+- evidence gaps have typed domains/sources and `required=false`;
+- evidence-grounded observations use the fixed observation-kind vocabulary and exactly one evidence reference;
+- new reports do not expose pseudo health grades or dimension scores.
+
+Historical v1 keeps the immutable A-D grade and five numeric dimension scores, while its non-reconstructable v2 coverage fields remain explicit empty compatibility structures instead of being invented during reads.
+
+### Replay and regression export
+
+Historical/counterfactual replay and regression export now have structured response schemas. Frozen regression `inputs` remain an intentional `JsonObject`: they are historical cross-version snapshots and must not be falsely normalized to the current input model.
+
+Counterfactual replay now distinguishes an invalid configuration selector from an internal failure. Unknown configuration ids are typed as `ErrAssessmentReplayConfiguration` and map to HTTP 400 `INVALID_CONFIGURATION`; unavailable frozen replay artifacts remain 409 conflicts.
+
+### Server-side response semantic validation
+
+While adding Assessment characterization tests, a missing-domain fixture proved that decoding into generated Go structs was not sufficient runtime validation: missing required nested fields were silently represented as Go zero values and could be returned as HTTP 200.
+
+`strictOpenAPIConvert` now validates application read models against the actual generated kin-openapi component schema before decoding into generated Go types. This enforces required fields, enums, bounds and collection constraints. The focused repair was applied to every complex response projection already migrated in Phase 02 (Assessment, HealthWorkspace, BodyState reads, stable Profile, Privacy and health-context projections), while request-to-application mapping remains behind the request validator.
+
+### Browser boundary
+
+The Web Assessment service now uses generated Fetch + Zod for generate/get/list and then projects into the existing feature model. The UI still receives its v1/v2 domain-facing union, not transport generator types. Tests prove a v2 response missing one canonical evidence domain fails closed, while list responses accept both immutable v1 history and current v2 reports.
+
+### Coverage after this batch
+
+```text
+Phase 00 routes               96
+operational exclusions         1
+browser-facing eligible       95
+OpenAPI-authoritative         32
+missing                       63
+coverage                   33.68%
+```
+
+### Verification
+
+```text
+pnpm contracts:verify                 PASS
+pnpm lint                             PASS
+pnpm typecheck                        PASS
+pnpm test                             PASS
+  contracts                           12/12
+  Web                                 236/236
+  Python                              475/475
+  Go                                  go test ./... PASS
+pnpm build                            PASS
+git diff --check                      PASS
+legacy AssessmentHandler              DELETED
+handwritten Assessment route regs     NONE
+feature-source Assessment URLs        NONE
+complex migrated response projections semantic-schema validated
+```
+
+Known baseline test stderr noise and the existing BodyExplorer3D bundle warning remain unchanged. `BS-VNEXT-REST-007` continues to track generated-client bundle review for the end of Phase 02.

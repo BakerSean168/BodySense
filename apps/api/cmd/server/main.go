@@ -268,8 +268,6 @@ func main() {
 	treatmentService.AttachRolloutObserver(treatmentRolloutService)
 	treatmentHandler := handler.NewTreatmentHandler(treatmentService, trainingService, treatmentReplayService)
 	reassessmentHandler := handler.NewReassessmentHandler(trainingService)
-	assessmentHandler := handler.NewAssessmentHandler(assessmentService).
-		WithAssessmentReplay(assessmentReplayService)
 	knowledgeIngestionService := service.NewKnowledgeIngestionService(
 		knowledgeSourceRegistry,
 		jobRuntime,
@@ -454,11 +452,6 @@ func main() {
 		// Capability-based continuous health workspace.
 
 		// Assessment routes
-		protected.POST("/assessment/generate", assessmentHandler.GenerateAssessment)
-		protected.GET("/assessment", assessmentHandler.ListReports)
-		protected.GET("/assessment/:id", assessmentHandler.GetReport)
-		protected.POST("/assessment/:id/replay", assessmentHandler.ReplayAssessment)
-		protected.GET("/assessment/:id/regression-export", assessmentHandler.ExportAssessmentRegressionCase)
 
 		// Training routes
 		protected.GET("/training", trainingHandler.ListPlans)
@@ -482,7 +475,7 @@ func main() {
 	openAPIProtected.Use(httpapi.RequestValidator(publicAPISpec))
 	openapiv1.RegisterHandlers(
 		openAPIProtected,
-		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure)),
+		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure).WithAssessment(assessmentService, assessmentReplayService)),
 	)
 
 	// Public share routes (no auth)

@@ -5,11 +5,11 @@
   "totals": {
     "baseline": 96,
     "browserFacingEligible": 95,
-    "openapi": 27,
-    "missing": 68,
+    "openapi": 32,
+    "missing": 63,
     "retired": 0,
     "excludedOperational": 1,
-    "coveragePercent": 28.42
+    "coveragePercent": 33.68
   },
   "routes": [
     {
@@ -533,31 +533,41 @@
       "method": "POST",
       "path": "/api/v1/assessment/generate",
       "source": "apps/api/cmd/server/main.go:489",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "generateAssessment",
+      "openapiPath": "/api/v1/assessment/generate"
     },
     {
       "method": "GET",
       "path": "/api/v1/assessment",
       "source": "apps/api/cmd/server/main.go:490",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "listAssessments",
+      "openapiPath": "/api/v1/assessment"
     },
     {
       "method": "GET",
       "path": "/api/v1/assessment/:id",
       "source": "apps/api/cmd/server/main.go:491",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getAssessment",
+      "openapiPath": "/api/v1/assessment/{id}"
     },
     {
       "method": "POST",
       "path": "/api/v1/assessment/:id/replay",
       "source": "apps/api/cmd/server/main.go:492",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "replayAssessment",
+      "openapiPath": "/api/v1/assessment/{id}/replay"
     },
     {
       "method": "GET",
       "path": "/api/v1/assessment/:id/regression-export",
       "source": "apps/api/cmd/server/main.go:493",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "exportAssessmentRegressionCase",
+      "openapiPath": "/api/v1/assessment/{id}/regression-export"
     },
     {
       "method": "GET",

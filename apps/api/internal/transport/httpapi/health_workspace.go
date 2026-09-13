@@ -50,7 +50,7 @@ func (s *PublicServer) GetHealthWorkspace(
 // model with unknown-field rejection. The generated type never enters service or
 // domain packages.
 func healthWorkspaceToOpenAPI(workspace *dto.HealthWorkspace) (openapiv1.HealthWorkspace, error) {
-	return strictJSONConvert[openapiv1.HealthWorkspace](workspace)
+	return strictOpenAPIConvert[openapiv1.HealthWorkspace]("HealthWorkspace", workspace)
 }
 
 func getWorkspaceError401(code, message string) openapiv1.GetHealthWorkspace401JSONResponse {

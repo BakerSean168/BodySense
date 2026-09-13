@@ -744,13 +744,548 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /api/v1/assessment/generate:
+    post:
+      operationId: generateAssessment
+      summary: Generate and durably persist an evidence-grounded assessment report.
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          description: Assessment report created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentReportV2'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/assessment:
+    get:
+      operationId: listAssessments
+      summary: List immutable assessment reports for the authenticated user.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      responses:
+        '200':
+          description: Paginated assessment reports.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentListResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/assessment/{id}:
+    get:
+      operationId: getAssessment
+      summary: Get one immutable assessment report.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/AssessmentReportId'
+      responses:
+        '200':
+          description: Assessment report.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentReport'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/assessment/{id}/replay:
+    post:
+      operationId: replayAssessment
+      summary: Replay an immutable assessment historically or counterfactually without mutating durable state.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/AssessmentReportId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssessmentReplayRequest'
+      responses:
+        '200':
+          description: Transient replay comparison.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentReplayReport'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/assessment/{id}/regression-export:
+    get:
+      operationId: exportAssessmentRegressionCase
+      summary: Export a read-only frozen assessment regression case.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/AssessmentReportId'
+      responses:
+        '200':
+          description: Assessment qualification regression case.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentRegressionExport'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
 components:
+  parameters:
+    AssessmentReportId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    AssessmentEvidenceSource:
+      type: string
+      enum: [body_state, report, posture_analysis]
+    AssessmentEvidenceDomain:
+      type: string
+      enum: [posture, exercise, lifestyle, anthropometry, health_report, injury_symptoms]
+    AssessmentDomainCoverage:
+      type: object
+      additionalProperties: false
+      required: [status, evidence_refs]
+      properties:
+        status:
+          type: string
+          enum: [available, missing]
+        evidence_refs:
+          type: array
+          items:
+            type: string
+    AssessmentEvidenceDomains:
+      type: object
+      additionalProperties: false
+      required: [posture, exercise, lifestyle, anthropometry, health_report, injury_symptoms]
+      properties:
+        posture:
+          $ref: '#/components/schemas/AssessmentDomainCoverage'
+        exercise:
+          $ref: '#/components/schemas/AssessmentDomainCoverage'
+        lifestyle:
+          $ref: '#/components/schemas/AssessmentDomainCoverage'
+        anthropometry:
+          $ref: '#/components/schemas/AssessmentDomainCoverage'
+        health_report:
+          $ref: '#/components/schemas/AssessmentDomainCoverage'
+        injury_symptoms:
+          $ref: '#/components/schemas/AssessmentDomainCoverage'
+    AssessmentEvidenceCoverage:
+      type: object
+      additionalProperties: false
+      required: [status, available_sources, domains]
+      properties:
+        status:
+          type: string
+          enum: [complete, partial, insufficient]
+        available_sources:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/AssessmentEvidenceSource'
+        domains:
+          $ref: '#/components/schemas/AssessmentEvidenceDomains'
+    AssessmentEvidenceGap:
+      type: object
+      additionalProperties: false
+      required: [dimension, required, description, needed_sources]
+      properties:
+        dimension:
+          $ref: '#/components/schemas/AssessmentEvidenceDomain'
+        required:
+          type: boolean
+          enum: [false]
+        description:
+          type: string
+          minLength: 1
+        needed_sources:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/AssessmentEvidenceSource'
+    AssessmentObservationKind:
+      type: string
+      enum: [posture_alignment, posture_asymmetry, lifestyle_pattern, exercise_pattern, report_indicator, anthropometry]
+    AssessmentObservation:
+      type: object
+      additionalProperties: false
+      required: [observation_id, review_state, kind, body_region, label, description, method, evidence_refs]
+      properties:
+        observation_id:
+          type: string
+          format: uuid
+        review_state:
+          type: string
+          minLength: 1
+        kind:
+          $ref: '#/components/schemas/AssessmentObservationKind'
+        body_region:
+          type: string
+        label:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+        method:
+          type: string
+          minLength: 1
+        evidence_refs:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: string
+            minLength: 1
+    LegacyAssessmentDimensionScores:
+      type: object
+      additionalProperties: false
+      required: [posture, exercise, lifestyle, injury_risk, overall]
+      properties:
+        posture: {type: number, format: double, minimum: 0, maximum: 100}
+        exercise: {type: number, format: double, minimum: 0, maximum: 100}
+        lifestyle: {type: number, format: double, minimum: 0, maximum: 100}
+        injury_risk: {type: number, format: double, minimum: 0, maximum: 100}
+        overall: {type: number, format: double, minimum: 0, maximum: 100}
+    LegacyAssessmentObservation:
+      type: object
+      additionalProperties: true
+      required: [kind, label, description]
+      properties:
+        observation_id:
+          type: string
+          format: uuid
+        review_state:
+          type: string
+        kind:
+          type: string
+          minLength: 1
+        body_region:
+          type: string
+        label:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+        method:
+          type: string
+        severity:
+          type: string
+        confidence:
+          type: string
+        condition:
+          $ref: '#/components/schemas/JsonObject'
+    AssessmentReportV2:
+      type: object
+      additionalProperties: false
+      required: [id, user_id, status, contract_revision, evidence_coverage, evidence_gaps, observations, summary, safety_notes, agent_configuration_id, agent_configuration, execution_provenance, generation_decision_trace, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        user_id: {type: string, format: uuid}
+        status:
+          type: string
+          enum: [completed, insufficient_information]
+        contract_revision:
+          type: string
+          enum: [assessment-output-v2]
+        evidence_coverage:
+          $ref: '#/components/schemas/AssessmentEvidenceCoverage'
+        evidence_gaps:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssessmentEvidenceGap'
+        observations:
+          type: array
+          maxItems: 24
+          items:
+            $ref: '#/components/schemas/AssessmentObservation'
+        summary:
+          type: string
+        information_gaps:
+          type: array
+          maxItems: 0
+          items:
+            type: string
+        safety_notes:
+          type: array
+          items:
+            type: string
+        body_state_revision:
+          type: integer
+          format: int64
+          minimum: 1
+        agent_configuration_id:
+          type: string
+        agent_configuration:
+          $ref: '#/components/schemas/JsonObject'
+        execution_provenance:
+          $ref: '#/components/schemas/JsonObject'
+        generation_decision_trace:
+          $ref: '#/components/schemas/JsonObject'
+        created_at:
+          type: string
+          format: date-time
+    AssessmentReportV1:
+      type: object
+      additionalProperties: false
+      required: [id, user_id, status, contract_revision, health_grade, dimension_scores, evidence_coverage, evidence_gaps, observations, summary, information_gaps, safety_notes, agent_configuration_id, agent_configuration, execution_provenance, generation_decision_trace, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        user_id: {type: string, format: uuid}
+        status:
+          type: string
+          enum: [completed, insufficient_information]
+        contract_revision:
+          type: string
+          enum: [assessment-output-v1]
+        health_grade:
+          type: string
+          enum: [A, B, C, D]
+        dimension_scores:
+          $ref: '#/components/schemas/LegacyAssessmentDimensionScores'
+        evidence_coverage:
+          type: object
+          additionalProperties: false
+          maxProperties: 0
+        evidence_gaps:
+          type: array
+          maxItems: 0
+          items:
+            $ref: '#/components/schemas/JsonObject'
+        observations:
+          type: array
+          items:
+            $ref: '#/components/schemas/LegacyAssessmentObservation'
+        summary:
+          type: string
+        information_gaps:
+          type: array
+          items:
+            type: string
+        safety_notes:
+          type: array
+          items:
+            type: string
+        body_state_revision:
+          type: integer
+          format: int64
+          minimum: 1
+        agent_configuration_id:
+          type: string
+        agent_configuration:
+          $ref: '#/components/schemas/JsonObject'
+        execution_provenance:
+          $ref: '#/components/schemas/JsonObject'
+        generation_decision_trace:
+          $ref: '#/components/schemas/JsonObject'
+        created_at:
+          type: string
+          format: date-time
+    AssessmentReport:
+      oneOf:
+      - $ref: '#/components/schemas/AssessmentReportV2'
+      - $ref: '#/components/schemas/AssessmentReportV1'
+      discriminator:
+        propertyName: contract_revision
+        mapping:
+          assessment-output-v2: '#/components/schemas/AssessmentReportV2'
+          assessment-output-v1: '#/components/schemas/AssessmentReportV1'
+    AssessmentListResponse:
+      type: object
+      additionalProperties: false
+      required: [reports, total, limit, offset]
+      properties:
+        reports:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssessmentReport'
+        total:
+          type: integer
+          format: int64
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        offset:
+          type: integer
+          minimum: 0
+    AssessmentReplayRequest:
+      type: object
+      additionalProperties: false
+      required: [mode]
+      properties:
+        mode:
+          type: string
+          enum: [historical, counterfactual]
+        configuration_id:
+          type: string
+          minLength: 1
+    AssessmentReplayCheck:
+      type: object
+      additionalProperties: false
+      required: [name, match]
+      properties:
+        name: {type: string, minLength: 1}
+        match: {type: boolean}
+        baseline: {type: string}
+        candidate: {type: string}
+    AssessmentReplayLayer:
+      type: object
+      additionalProperties: false
+      required: [match, checks]
+      properties:
+        match: {type: boolean}
+        checks:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssessmentReplayCheck'
+    AssessmentReplaySnapshot:
+      type: object
+      additionalProperties: false
+      required: [contract_revision, status, observation_count, observation_kinds, information_gaps, evidence_gaps, safety_note_count, summary]
+      properties:
+        contract_revision: {type: string, minLength: 1}
+        status: {type: string}
+        health_grade: {type: string}
+        evidence_coverage_status: {type: string}
+        observation_count: {type: integer, minimum: 0}
+        observation_kinds:
+          type: array
+          items: {type: string}
+        information_gaps:
+          type: array
+          items: {type: string}
+        evidence_gaps:
+          type: array
+          items: {type: string}
+        safety_note_count: {type: integer, minimum: 0}
+        summary: {type: string}
+    AssessmentReplayComparison:
+      type: object
+      additionalProperties: false
+      required: [hard, semantic, presentation]
+      properties:
+        hard: {$ref: '#/components/schemas/AssessmentReplayLayer'}
+        semantic: {$ref: '#/components/schemas/AssessmentReplayLayer'}
+        presentation: {$ref: '#/components/schemas/AssessmentReplayLayer'}
+    AssessmentReplayReport:
+      type: object
+      additionalProperties: false
+      required: [mode, source_report_id, source_configuration_id, target_configuration_id, input_fingerprint, artifact_integrity, baseline, replay, comparison, output]
+      properties:
+        mode:
+          type: string
+          enum: [historical, counterfactual]
+        source_report_id: {type: string, format: uuid}
+        source_configuration_id: {type: string}
+        target_configuration_id: {type: string}
+        input_fingerprint:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+        artifact_integrity: {$ref: '#/components/schemas/AssessmentReplayLayer'}
+        baseline: {$ref: '#/components/schemas/AssessmentReplaySnapshot'}
+        replay: {$ref: '#/components/schemas/AssessmentReplaySnapshot'}
+        comparison: {$ref: '#/components/schemas/AssessmentReplayComparison'}
+        output: {$ref: '#/components/schemas/JsonObject'}
+    AssessmentRegressionMetadata:
+      type: object
+      additionalProperties: false
+      required: [scenario_family_id, case_category, split, slices, critical, expected_contract_revision, expected_status, expected_evidence_gap_count, expected_agent_executed, min_observations, forbidden_output_fields]
+      properties:
+        scenario_family_id: {type: string}
+        case_category: {type: string, enum: [historical-regression]}
+        split: {type: string, enum: [regression]}
+        slices:
+          type: array
+          items: {type: string}
+        critical: {type: boolean}
+        expected_contract_revision: {type: string}
+        expected_status: {type: string}
+        expected_evidence_coverage_status: {type: string}
+        expected_evidence_gap_count: {type: integer, minimum: 0}
+        expected_agent_executed: {type: boolean}
+        min_observations: {type: integer, minimum: 0}
+        forbidden_output_fields:
+          type: array
+          items: {type: string}
+    AssessmentRegressionCase:
+      type: object
+      additionalProperties: false
+      required: [name, inputs, metadata]
+      properties:
+        name: {type: string, minLength: 1}
+        inputs: {$ref: '#/components/schemas/JsonObject'}
+        metadata: {$ref: '#/components/schemas/AssessmentRegressionMetadata'}
+    AssessmentRegressionExport:
+      type: object
+      additionalProperties: false
+      required: [schema_target, source_report_id, case]
+      properties:
+        schema_target:
+          type: string
+          enum: [assessment_qualification_v2]
+        source_report_id: {type: string, format: uuid}
+        case: {$ref: '#/components/schemas/AssessmentRegressionCase'}
     ClientDiagnostic:
       type: object
       additionalProperties: false
@@ -2474,6 +3009,24 @@ components:
             $ref: '#/components/schemas/ErrorEnvelope'
     ValidationUnavailable:
       description: Canonical body-region validation dependency is unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Conflict:
+      description: Requested operation conflicts with the durable resource state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    BadGateway:
+      description: Upstream generated output failed the trusted application contract.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    ServiceUnavailable:
+      description: Required application capability is temporarily unavailable.
       content:
         application/json:
           schema:

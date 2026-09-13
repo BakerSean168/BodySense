@@ -15,8 +15,9 @@ import (
 )
 
 var (
-	ErrAssessmentReplayUnavailable = errors.New("assessment replay input is unavailable")
-	ErrAssessmentReplayNotFound    = errors.New("assessment report not found for replay")
+	ErrAssessmentReplayUnavailable   = errors.New("assessment replay input is unavailable")
+	ErrAssessmentReplayNotFound      = errors.New("assessment report not found for replay")
+	ErrAssessmentReplayConfiguration = errors.New("assessment replay configuration is invalid")
 )
 
 const AssessmentRegressionExportSchema = "assessment_qualification_v2"
@@ -140,7 +141,7 @@ func (s *AssessmentReplayService) CounterfactualReplay(
 	}
 	registration, ok := knownAssessmentConfigurations[strings.TrimSpace(targetConfigurationID)]
 	if !ok {
-		return nil, fmt.Errorf("unknown Assessment Agent configuration id %q", targetConfigurationID)
+		return nil, fmt.Errorf("%w: unknown Assessment Agent configuration id %q", ErrAssessmentReplayConfiguration, targetConfigurationID)
 	}
 	if s.ai == nil {
 		return nil, errors.New("Assessment replay AI client is not configured")

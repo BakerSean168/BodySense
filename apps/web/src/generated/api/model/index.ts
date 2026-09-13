@@ -6,6 +6,27 @@
  * OpenAPI spec version: 1.0.0-vnext
  */
 
+export * from './assessmentDomainCoverage.zod';
+export * from './assessmentEvidenceCoverage.zod';
+export * from './assessmentEvidenceDomain.zod';
+export * from './assessmentEvidenceDomains.zod';
+export * from './assessmentEvidenceGap.zod';
+export * from './assessmentEvidenceSource.zod';
+export * from './assessmentListResponse.zod';
+export * from './assessmentObservation.zod';
+export * from './assessmentObservationKind.zod';
+export * from './assessmentRegressionCase.zod';
+export * from './assessmentRegressionExport.zod';
+export * from './assessmentRegressionMetadata.zod';
+export * from './assessmentReplayCheck.zod';
+export * from './assessmentReplayComparison.zod';
+export * from './assessmentReplayLayer.zod';
+export * from './assessmentReplayReport.zod';
+export * from './assessmentReplayRequest.zod';
+export * from './assessmentReplaySnapshot.zod';
+export * from './assessmentReport.zod';
+export * from './assessmentReportV1.zod';
+export * from './assessmentReportV2.zod';
 export * from './bodyMetricValue.zod';
 export * from './bodyMetricsSnapshot.zod';
 export * from './bodyStateEvidence.zod';
@@ -37,10 +58,13 @@ export * from './healthWorkspaceBodyState.zod';
 export * from './injuryHistorySnapshot.zod';
 export * from './intervention.zod';
 export * from './jsonObject.zod';
+export * from './legacyAssessmentDimensionScores.zod';
+export * from './legacyAssessmentObservation.zod';
 export * from './lifestyleCandidate.zod';
 export * from './lifestyleSection.zod';
 export * from './lifestyleSectionInput.zod';
 export * from './lifestyleSnapshot.zod';
+export * from './listAssessmentsParams.zod';
 export * from './nullableUserProfileResponse.zod';
 export * from './onboardingBodyMetricsInput.zod';
 export * from './onboardingContextRequest.zod';

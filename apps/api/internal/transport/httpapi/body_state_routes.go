@@ -49,7 +49,7 @@ func (s *PublicServer) GetBodyState(
 	if err != nil {
 		return getBodyStateError(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load body state"), nil
 	}
-	response, err := strictJSONConvert[openapiv1.BodyStateSnapshot](snapshot)
+	response, err := strictOpenAPIConvert[openapiv1.BodyStateSnapshot]("BodyStateSnapshot", snapshot)
 	if err != nil {
 		return getBodyStateError(http.StatusInternalServerError, "INTERNAL_ERROR", "body state violates the public contract"), nil
 	}
@@ -258,7 +258,7 @@ func (s *PublicServer) ListBodyStateEvidence(
 	if err != nil {
 		return listBodyStateEvidenceError(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load evidence"), nil
 	}
-	response, err := strictJSONConvert[openapiv1.BodyStateEvidenceListResponse](struct {
+	response, err := strictOpenAPIConvert[openapiv1.BodyStateEvidenceListResponse]("BodyStateEvidenceListResponse", struct {
 		Evidence []model.BodyStateEvidence `json:"evidence"`
 	}{Evidence: items})
 	if err != nil {
@@ -363,7 +363,7 @@ func observationMutationResponseToOpenAPI(
 	if observation == nil {
 		return openapiv1.BodyStateObservationMutationResponse{}, errors.New("missing observation result")
 	}
-	publicObservation, err := strictJSONConvert[openapiv1.BodyStateObservation](observation)
+	publicObservation, err := strictOpenAPIConvert[openapiv1.BodyStateObservation]("BodyStateObservation", observation)
 	if err != nil {
 		return openapiv1.BodyStateObservationMutationResponse{}, err
 	}
@@ -381,7 +381,7 @@ func hypothesisMutationResponseToOpenAPI(
 	if hypothesis == nil {
 		return openapiv1.BodyStateHypothesisMutationResponse{}, errors.New("missing hypothesis result")
 	}
-	publicHypothesis, err := strictJSONConvert[openapiv1.BodyStateHypothesis](hypothesis)
+	publicHypothesis, err := strictOpenAPIConvert[openapiv1.BodyStateHypothesis]("BodyStateHypothesis", hypothesis)
 	if err != nil {
 		return openapiv1.BodyStateHypothesisMutationResponse{}, err
 	}

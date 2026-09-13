@@ -49,7 +49,7 @@ func (s *PublicServer) GetPrivacyErasurePlan(
 	if err != nil {
 		return getPrivacyErasurePlanError(http.StatusInternalServerError, "PRIVACY_PLAN_FAILED", "unable to prepare data deletion plan"), nil
 	}
-	response, err := strictJSONConvert[openapiv1.PrivacyErasurePlan](plan)
+	response, err := strictOpenAPIConvert[openapiv1.PrivacyErasurePlan]("PrivacyErasurePlan", plan)
 	if err != nil {
 		return getPrivacyErasurePlanError(http.StatusInternalServerError, "INTERNAL_ERROR", "privacy erasure plan violates the public contract"), nil
 	}

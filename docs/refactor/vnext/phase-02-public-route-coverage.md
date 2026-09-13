@@ -4,11 +4,11 @@
 
 - Phase 00 baseline routes: **96**
 - Browser-facing eligible routes: **95**
-- OpenAPI-authoritative routes: **27**
-- Missing migration routes: **68**
+- OpenAPI-authoritative routes: **32**
+- Missing migration routes: **63**
 - Retired routes: **0**
 - Operational exclusions: **1**
-- Coverage: **28.42%**
+- Coverage: **33.68%**
 
 ## Missing routes
 
@@ -61,11 +61,6 @@
 - `GET /api/v1/outcomes`
 - `POST /api/v1/consultations/:id/interrupts/:interactionId/answers`
 - `GET /api/v1/consultations/:id/interaction-metrics`
-- `POST /api/v1/assessment/generate`
-- `GET /api/v1/assessment`
-- `GET /api/v1/assessment/:id`
-- `POST /api/v1/assessment/:id/replay`
-- `GET /api/v1/assessment/:id/regression-export`
 - `GET /api/v1/training`
 - `GET /api/v1/training/:id`
 - `GET /api/v1/training/:id/today`

@@ -514,6 +514,48 @@
         "go test ./..."
       ],
       "notes": "This was caught before route ownership switched; no persisted data migration is required because diagnostics are operational logs, not stored domain records."
+    },
+    {
+      "id": "BS-VNEXT-REST-015",
+      "priority": "P1",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "Generated Go response structs could zero-fill missing OpenAPI-required fields and emit contract-invalid JSON",
+      "evidence": [
+        "apps/api/internal/transport/httpapi/json_bridge.go",
+        "apps/api/internal/transport/httpapi/assessment_test.go",
+        "apps/api/internal/transport/httpapi/assessment.go"
+      ],
+      "root_cause": "strictJSONConvert used json.Decoder with DisallowUnknownFields, which rejects extra fields and type mismatches but does not enforce OpenAPI required fields, enum membership, numeric bounds or collection cardinality. Missing nested required fields therefore became Go zero values and could still be serialized as a 200 response.",
+      "repair": "Add strictOpenAPIConvert backed by the generated kin-openapi component schemas and Schema.VisitJSON, then use it for all migrated complex public read-model responses: Assessment, HealthWorkspace, BodyState reads, Profile, Privacy and health-context projections.",
+      "verification": [
+        "TestAssessmentReportFailsClosedWhenStoredV2JSONViolatesPublicSchema",
+        "all transport/httpapi tests",
+        "grep confirms no migrated openapiv1 response projection remains on strictJSONConvert",
+        "pnpm contracts:verify",
+        "go test ./..."
+      ],
+      "notes": "Generated Go types remain useful compile-time transport types, but schema validation is the runtime truth for required/enums/bounds. Request-to-application conversions may still use strictJSONConvert after RequestValidator has already validated the public body."
+    },
+    {
+      "id": "BS-VNEXT-REST-016",
+      "priority": "P2",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "Unknown Assessment replay configuration was classified as an internal server error",
+      "evidence": [
+        "apps/api/internal/service/assessment_replay_service.go",
+        "apps/api/internal/transport/httpapi/assessment.go",
+        "apps/api/internal/transport/httpapi/assessment_test.go"
+      ],
+      "root_cause": "Counterfactual replay returned a generic error for an unknown target configuration id, so the legacy handler fell through to HTTP 500 even though the client supplied an invalid configuration selector.",
+      "repair": "Introduce ErrAssessmentReplayConfiguration, wrap unknown configuration ids with it and map the typed error to canonical HTTP 400 INVALID_CONFIGURATION at the generated transport adapter.",
+      "verification": [
+        "TestAssessmentReplayMapsUnknownConfigurationToBadRequest",
+        "Assessment replay service tests",
+        "go test ./..."
+      ],
+      "notes": "Replay computation and immutability semantics are unchanged."
     }
   ]
 }

@@ -60,7 +60,7 @@ func (s *PublicServer) GetLifestyle(
 	if err != nil {
 		return getLifestyleError(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load lifestyle context"), nil
 	}
-	response, err := strictJSONConvert[openapiv1.LifestyleSnapshot](result)
+	response, err := strictOpenAPIConvert[openapiv1.LifestyleSnapshot]("LifestyleSnapshot", result)
 	if err != nil {
 		return getLifestyleError(http.StatusInternalServerError, "INTERNAL_ERROR", "lifestyle projection violates the public contract"), nil
 	}
@@ -87,7 +87,7 @@ func (s *PublicServer) UpdateLifestyle(
 		classified := classifyHealthContextPublicError(err)
 		return updateLifestyleError(classified.status, classified.code, classified.message), nil
 	}
-	response, err := strictJSONConvert[openapiv1.LifestyleSnapshot](result)
+	response, err := strictOpenAPIConvert[openapiv1.LifestyleSnapshot]("LifestyleSnapshot", result)
 	if err != nil {
 		return updateLifestyleError(http.StatusInternalServerError, "INTERNAL_ERROR", "lifestyle projection violates the public contract"), nil
 	}
@@ -111,7 +111,7 @@ func (s *PublicServer) AcceptLifestyleCandidate(
 		classified := classifyHealthContextPublicError(err)
 		return acceptLifestyleCandidateError(classified.status, classified.code, classified.message), nil
 	}
-	response, err := strictJSONConvert[openapiv1.LifestyleSnapshot](result)
+	response, err := strictOpenAPIConvert[openapiv1.LifestyleSnapshot]("LifestyleSnapshot", result)
 	if err != nil {
 		return acceptLifestyleCandidateError(http.StatusInternalServerError, "INTERNAL_ERROR", "lifestyle projection violates the public contract"), nil
 	}
@@ -135,7 +135,7 @@ func (s *PublicServer) RejectLifestyleCandidate(
 		classified := classifyHealthContextPublicError(err)
 		return rejectLifestyleCandidateError(classified.status, classified.code, classified.message), nil
 	}
-	response, err := strictJSONConvert[openapiv1.LifestyleSnapshot](result)
+	response, err := strictOpenAPIConvert[openapiv1.LifestyleSnapshot]("LifestyleSnapshot", result)
 	if err != nil {
 		return rejectLifestyleCandidateError(http.StatusInternalServerError, "INTERNAL_ERROR", "lifestyle projection violates the public contract"), nil
 	}
@@ -157,7 +157,7 @@ func (s *PublicServer) GetBodyMetrics(
 	if err != nil {
 		return getBodyMetricsError(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load body metrics"), nil
 	}
-	response, err := strictJSONConvert[openapiv1.BodyMetricsSnapshot](result)
+	response, err := strictOpenAPIConvert[openapiv1.BodyMetricsSnapshot]("BodyMetricsSnapshot", result)
 	if err != nil {
 		return getBodyMetricsError(http.StatusInternalServerError, "INTERNAL_ERROR", "body metrics projection violates the public contract"), nil
 	}
@@ -184,7 +184,7 @@ func (s *PublicServer) UpdateBodyMetrics(
 		classified := classifyHealthContextPublicError(err)
 		return updateBodyMetricsError(classified.status, classified.code, classified.message), nil
 	}
-	response, err := strictJSONConvert[openapiv1.BodyMetricsSnapshot](result)
+	response, err := strictOpenAPIConvert[openapiv1.BodyMetricsSnapshot]("BodyMetricsSnapshot", result)
 	if err != nil {
 		return updateBodyMetricsError(http.StatusInternalServerError, "INTERNAL_ERROR", "body metrics projection violates the public contract"), nil
 	}
@@ -206,7 +206,7 @@ func (s *PublicServer) GetInjuryHistory(
 	if err != nil {
 		return getInjuryHistoryError(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load injury history"), nil
 	}
-	response, err := strictJSONConvert[openapiv1.InjuryHistorySnapshot](result)
+	response, err := strictOpenAPIConvert[openapiv1.InjuryHistorySnapshot]("InjuryHistorySnapshot", result)
 	if err != nil {
 		return getInjuryHistoryError(http.StatusInternalServerError, "INTERNAL_ERROR", "injury history projection violates the public contract"), nil
 	}
@@ -233,7 +233,7 @@ func (s *PublicServer) UpdateInjuryHistory(
 		classified := classifyHealthContextPublicError(err)
 		return updateInjuryHistoryError(classified.status, classified.code, classified.message), nil
 	}
-	response, err := strictJSONConvert[openapiv1.InjuryHistorySnapshot](result)
+	response, err := strictOpenAPIConvert[openapiv1.InjuryHistorySnapshot]("InjuryHistorySnapshot", result)
 	if err != nil {
 		return updateInjuryHistoryError(http.StatusInternalServerError, "INTERNAL_ERROR", "injury history projection violates the public contract"), nil
 	}
