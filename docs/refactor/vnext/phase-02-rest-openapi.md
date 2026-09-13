@@ -149,6 +149,23 @@ Go generated imports in model/service/repo    NONE
 
 Known baseline test stderr noise and the existing BodyExplorer3D bundle warning remain unchanged.
 
+## Public-route coverage gate
+
+Phase 02 now has a deterministic migration ledger generated from the immutable Phase 00 route inventory plus the current OpenAPI authority:
+
+```text
+baseline Go routes          96
+operational exclusions       1  GET /api/health
+browser-facing eligible     95
+OpenAPI-authoritative        2
+missing                     93
+coverage                  2.11%
+```
+
+`contracts/public-route-policy.json` is the only place where a baseline route may be explicitly classified as operational, retired, or an approved new vNext route. The generated report refuses an OpenAPI operation that is absent from the Phase 00 baseline unless policy explicitly approves it.
+
+`pnpm contracts:verify` checks that the committed coverage JSON/Markdown are current. Final Phase 02 acceptance will run the same tool with `--require-complete`; during migration, missing routes are visible debt rather than an artificial CI failure that would force fake schemas.
+
 ## Next batch
 
-Create a deterministic public-route coverage ledger, then migrate the remaining BodyState route family as one coherent contract batch. This reuses the BodyState schemas already proven by Checkpoint 1 and allows the legacy `BodyStateHandler` to be retired instead of leaving mixed ownership for the same aggregate.
+Migrate the remaining BodyState route family as one coherent contract batch. This reuses the BodyState schemas already proven by Checkpoint 1 and allows the legacy `BodyStateHandler` to be retired instead of leaving mixed ownership for the same aggregate.

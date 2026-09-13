@@ -1,0 +1,597 @@
+{
+  "schemaVersion": 1,
+  "baselineCommit": "1b649ef43b80d6486d1127da706cbf4bfd7bf2f8",
+  "authority": "packages/contracts/openapi/bodysense.v1.openapi.yaml",
+  "totals": {
+    "baseline": 96,
+    "browserFacingEligible": 95,
+    "openapi": 2,
+    "missing": 93,
+    "retired": 0,
+    "excludedOperational": 1,
+    "coveragePercent": 2.11
+  },
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "source": "apps/api/cmd/server/main.go:347",
+      "status": "EXCLUDED_OPERATIONAL",
+      "reason": "Operational liveness endpoint, not a browser-facing product API. It remains tested/deployed but is outside the public v1 OpenAPI contract."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/register",
+      "source": "apps/api/cmd/server/main.go:377",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "source": "apps/api/cmd/server/main.go:378",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/refresh",
+      "source": "apps/api/cmd/server/main.go:379",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/logout",
+      "source": "apps/api/cmd/server/main.go:380",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "source": "apps/api/cmd/server/main.go:387",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/client-diagnostics",
+      "source": "apps/api/cmd/server/main.go:388",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/privacy/erasure-plan",
+      "source": "apps/api/cmd/server/main.go:389",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/privacy/erasure",
+      "source": "apps/api/cmd/server/main.go:390",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/profile",
+      "source": "apps/api/cmd/server/main.go:391",
+      "status": "MISSING"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/profile",
+      "source": "apps/api/cmd/server/main.go:392",
+      "status": "MISSING"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/onboarding/context",
+      "source": "apps/api/cmd/server/main.go:393",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/uploads",
+      "source": "apps/api/cmd/server/main.go:396",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/uploads",
+      "source": "apps/api/cmd/server/main.go:397",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/uploads/posture-analysis",
+      "source": "apps/api/cmd/server/main.go:400",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/uploads/:id",
+      "source": "apps/api/cmd/server/main.go:401",
+      "status": "MISSING"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/uploads/:id",
+      "source": "apps/api/cmd/server/main.go:402",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/uploads/:id/health-document-review",
+      "source": "apps/api/cmd/server/main.go:406",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/uploads/:id/extractions/:runId/reviews",
+      "source": "apps/api/cmd/server/main.go:409",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/uploads/:id/extractions/:runId/reviews",
+      "source": "apps/api/cmd/server/main.go:410",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/uploads/:id/extractions/:runId/source",
+      "source": "apps/api/cmd/server/main.go:411",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/conversations",
+      "source": "apps/api/cmd/server/main.go:415",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/conversations/:id",
+      "source": "apps/api/cmd/server/main.go:416",
+      "status": "MISSING"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/conversations/:id",
+      "source": "apps/api/cmd/server/main.go:417",
+      "status": "MISSING"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/conversations/:id",
+      "source": "apps/api/cmd/server/main.go:418",
+      "status": "MISSING"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/conversations/:id/pin",
+      "source": "apps/api/cmd/server/main.go:419",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/conversations/:id/runs",
+      "source": "apps/api/cmd/server/main.go:420",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/conversations/:id/runs/:runId/events",
+      "source": "apps/api/cmd/server/main.go:421",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/conversations/:id/title",
+      "source": "apps/api/cmd/server/main.go:422",
+      "status": "MISSING"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/conversations/:id/title",
+      "source": "apps/api/cmd/server/main.go:423",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/conversations/:id/share",
+      "source": "apps/api/cmd/server/main.go:424",
+      "status": "MISSING"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/conversations/:id/share",
+      "source": "apps/api/cmd/server/main.go:425",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/consultation-runs",
+      "source": "apps/api/cmd/server/main.go:428",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/consultation-runs/:id/cancel",
+      "source": "apps/api/cmd/server/main.go:429",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/consultations/:id",
+      "source": "apps/api/cmd/server/main.go:431",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/consultations/:id/thread",
+      "source": "apps/api/cmd/server/main.go:432",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/consultation-runs/:id/replay",
+      "source": "apps/api/cmd/server/main.go:434",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/consultation-runs/:id/replay/counterfactual",
+      "source": "apps/api/cmd/server/main.go:435",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/consultations/:id/diagnosis",
+      "source": "apps/api/cmd/server/main.go:437",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/diagnosis-analyses",
+      "source": "apps/api/cmd/server/main.go:440",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/diagnosis-analyses/:analysisId",
+      "source": "apps/api/cmd/server/main.go:441",
+      "status": "MISSING"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/diagnosis-analyses/:analysisId/assessment",
+      "source": "apps/api/cmd/server/main.go:442",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/diagnosis-analyses/:analysisId/replay",
+      "source": "apps/api/cmd/server/main.go:443",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/diagnosis-analyses/:analysisId/regression-export",
+      "source": "apps/api/cmd/server/main.go:444",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/treatments/proposals",
+      "source": "apps/api/cmd/server/main.go:447",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/treatments/current",
+      "source": "apps/api/cmd/server/main.go:448",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/treatments/current/review",
+      "source": "apps/api/cmd/server/main.go:449",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/treatments/revisions",
+      "source": "apps/api/cmd/server/main.go:450",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/treatments/revisions/:revisionId",
+      "source": "apps/api/cmd/server/main.go:451",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/treatments/revisions/:revisionId/replay",
+      "source": "apps/api/cmd/server/main.go:452",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/treatments/revisions/:revisionId/regression-export",
+      "source": "apps/api/cmd/server/main.go:453",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/treatments/revisions/:revisionId/accept",
+      "source": "apps/api/cmd/server/main.go:454",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/treatments/revisions/:revisionId/reject",
+      "source": "apps/api/cmd/server/main.go:455",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/outcomes",
+      "source": "apps/api/cmd/server/main.go:456",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/outcomes",
+      "source": "apps/api/cmd/server/main.go:457",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/consultations/:id/interrupts/:interactionId/answers",
+      "source": "apps/api/cmd/server/main.go:459",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/consultations/:id/interaction-metrics",
+      "source": "apps/api/cmd/server/main.go:460",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/body-state",
+      "source": "apps/api/cmd/server/main.go:463",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/body-state/facts",
+      "source": "apps/api/cmd/server/main.go:464",
+      "status": "OPENAPI",
+      "operationId": "addBodyStateFact",
+      "openapiPath": "/api/v1/body-state/facts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/body-state/facts/:id/correct",
+      "source": "apps/api/cmd/server/main.go:465",
+      "status": "MISSING"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/body-state/facts/:id/temporal",
+      "source": "apps/api/cmd/server/main.go:466",
+      "status": "MISSING"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/body-state/facts/:id/review",
+      "source": "apps/api/cmd/server/main.go:467",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/body-state/observations",
+      "source": "apps/api/cmd/server/main.go:468",
+      "status": "MISSING"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/body-state/observations/:id/review",
+      "source": "apps/api/cmd/server/main.go:469",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/body-state/hypotheses",
+      "source": "apps/api/cmd/server/main.go:470",
+      "status": "MISSING"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/body-state/hypotheses/:id/lifecycle",
+      "source": "apps/api/cmd/server/main.go:471",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/body-state/evidence",
+      "source": "apps/api/cmd/server/main.go:472",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/body-state/safety/resolve",
+      "source": "apps/api/cmd/server/main.go:473",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lifestyle",
+      "source": "apps/api/cmd/server/main.go:476",
+      "status": "MISSING"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/lifestyle",
+      "source": "apps/api/cmd/server/main.go:477",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifestyle/candidates/:id/accept",
+      "source": "apps/api/cmd/server/main.go:478",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/lifestyle/candidates/:id/reject",
+      "source": "apps/api/cmd/server/main.go:479",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/body-metrics",
+      "source": "apps/api/cmd/server/main.go:480",
+      "status": "MISSING"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/body-metrics",
+      "source": "apps/api/cmd/server/main.go:481",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/health-history/injury",
+      "source": "apps/api/cmd/server/main.go:482",
+      "status": "MISSING"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/health-history/injury",
+      "source": "apps/api/cmd/server/main.go:483",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/health-workspace",
+      "source": "apps/api/cmd/server/main.go:486",
+      "status": "OPENAPI",
+      "operationId": "getHealthWorkspace",
+      "openapiPath": "/api/v1/health-workspace"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/assessment/generate",
+      "source": "apps/api/cmd/server/main.go:489",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/assessment",
+      "source": "apps/api/cmd/server/main.go:490",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/assessment/:id",
+      "source": "apps/api/cmd/server/main.go:491",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/assessment/:id/replay",
+      "source": "apps/api/cmd/server/main.go:492",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/assessment/:id/regression-export",
+      "source": "apps/api/cmd/server/main.go:493",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/training",
+      "source": "apps/api/cmd/server/main.go:496",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/training/:id",
+      "source": "apps/api/cmd/server/main.go:497",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/training/:id/today",
+      "source": "apps/api/cmd/server/main.go:498",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/training/:id/checkin",
+      "source": "apps/api/cmd/server/main.go:499",
+      "status": "MISSING"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/training/:id/log",
+      "source": "apps/api/cmd/server/main.go:500",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/training/:id/progress",
+      "source": "apps/api/cmd/server/main.go:501",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/training/:id/reassess",
+      "source": "apps/api/cmd/server/main.go:502",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/conversations/share/:token",
+      "source": "apps/api/cmd/server/main.go:507",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/knowledge/sources",
+      "source": "apps/api/cmd/server/main.go:515",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/knowledge/sources",
+      "source": "apps/api/cmd/server/main.go:516",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/knowledge/ingestions/video",
+      "source": "apps/api/cmd/server/main.go:517",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/knowledge/ingestions/:jobID",
+      "source": "apps/api/cmd/server/main.go:518",
+      "status": "MISSING"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/knowledge/search",
+      "source": "apps/api/cmd/server/main.go:519",
+      "status": "MISSING"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/knowledge/stats",
+      "source": "apps/api/cmd/server/main.go:520",
+      "status": "MISSING"
+    }
+  ]
+}
