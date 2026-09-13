@@ -58,10 +58,20 @@
     "curriculum:placement": "node scripts/learning/generate-placement-status.mjs",
     "curriculum:select-track": "node scripts/learning/select-placement-track.mjs",
     "refactor:vnext:baseline": "node scripts/refactor/capture-vnext-baseline.mjs",
-    "refactor:vnext:schema": "bash scripts/refactor/capture-vnext-schema.sh"
+    "refactor:vnext:schema": "bash scripts/refactor/capture-vnext-schema.sh",
+    "contracts:bootstrap": "bash scripts/contracts/bootstrap-tools.sh",
+    "contracts:lint": "bash scripts/contracts/lint.sh",
+    "contracts:generate": "bash scripts/contracts/generate.sh",
+    "contracts:check-generated": "bash scripts/contracts/check-generated.sh",
+    "contracts:breaking": "bash scripts/contracts/breaking.sh",
+    "contracts:mutation": "bash scripts/contracts/mutation.sh",
+    "contracts:conformance": "bash scripts/contracts/conformance.sh",
+    "contracts:verify": "bash scripts/contracts/verify.sh"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.1118.0",
+    "@bufbuild/protobuf": "2.14.1",
+    "@bufbuild/protovalidate": "1.2.0",
     "@commitlint/cli": "^21.2.1",
     "@commitlint/config-conventional": "^21.2.0",
     "@eslint/js": "^10.0.1",
@@ -73,17 +83,23 @@
     "@nx/web": "23.1.0",
     "@nx/workspace": "23.1.0",
     "@playwright/test": "^1.62.1",
+    "@redocly/cli": "2.51.2",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
     "eslint": "^10.8.0",
     "husky": "^9.1.7",
     "jiti": "^2.6.1",
     "jsdom": "^30.0.0",
+    "json-schema-to-typescript": "16.0.0",
     "nx": "23.1.0",
     "nx-mcp": "0.25.0",
+    "orval": "8.30.0",
     "prettier": "^3.9.6",
     "typescript": "npm:@typescript/typescript6@6.0.2",
     "typescript-eslint": "^8.65.0",
     "typescript7": "npm:typescript@7.0.2",
     "vite": "^8.1.5",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "zod": "4.5.4"
   }
 }

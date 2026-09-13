@@ -18,3 +18,6 @@ apps/ai-service/.venv/
 
 # Lockfile formatting is owned by pnpm.
 pnpm-lock.yaml
+
+# Deterministic generated contract artifacts are owned by generators.
+**/generated/**

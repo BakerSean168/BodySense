@@ -9,6 +9,8 @@ export default tseslint.config(
       '**/node_modules/**',
       '**/.nx/**',
       '**/coverage/**',
+      '**/generated/**',
+      'tools/contracts/generated/**',
       '**/*.config.{js,mjs,cjs,ts,mts,cts}',
     ],
   },
