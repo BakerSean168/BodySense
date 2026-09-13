@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { getCurrentUser } from "@/generated/api/bodysense";
 import { apiUrl, safeJson } from "@/lib/api-url";
 
 interface User {
@@ -36,6 +37,36 @@ interface AuthState {
 let refreshPromise: Promise<boolean> | null = null;
 let verifySessionPromise: Promise<boolean> | null = null;
 let bootstrapPromise: Promise<void> | null = null;
+
+function generatedHttpStatus(error: unknown): number | undefined {
+  if (typeof error !== "object" || error === null || !("status" in error))
+    return undefined;
+  return typeof error.status === "number" ? error.status : undefined;
+}
+
+function bearerFetcher(accessToken: string): typeof globalThis.fetch {
+  return async (input, init) => {
+    const raw =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+    const target = /^https?:\/\//i.test(raw) ? raw : apiUrl(raw);
+    const inheritedHeaders = Object.fromEntries(
+      new Headers(init?.headers).entries(),
+    );
+    return fetch(target, {
+      ...init,
+      headers: { ...inheritedHeaders, Authorization: `Bearer ${accessToken}` },
+    });
+  };
+}
+
+async function requestCurrentUser(accessToken: string): Promise<User> {
+  const user = await getCurrentUser(undefined, bearerFetcher(accessToken));
+  return { id: user.id, email: user.email };
+}
 
 function clearAuthState(
   set: (partial: Partial<AuthState>) => void,
@@ -229,29 +260,21 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         }
       }
 
-      const requestMe = (accessToken: string) =>
-        fetch(apiUrl("/api/v1/me"), {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-
       try {
-        let response = await requestMe(token);
-        if (response.status === 401) {
+        let user: User;
+        try {
+          user = await requestCurrentUser(token);
+        } catch (error) {
+          if (generatedHttpStatus(error) !== 401) throw error;
           const refreshed = await get().refreshAccessToken();
           const nextToken = get().accessToken;
           if (!refreshed || !nextToken) {
             clearAuthState(set);
             return false;
           }
-          response = await requestMe(nextToken);
+          user = await requestCurrentUser(nextToken);
         }
 
-        if (!response.ok) {
-          clearAuthState(set);
-          return false;
-        }
-
-        const user = await safeJson<User>(response);
         set({
           user,
           isAuthenticated: true,
@@ -292,13 +315,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       return;
     }
 
-    const response = await fetch(apiUrl("/api/v1/me"), {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    if (!response.ok) {
-      throw new Error("failed to fetch current user");
-    }
-    const user = await safeJson<User>(response);
+    const user = await requestCurrentUser(accessToken);
     set({ user, isAuthResolved: true });
   },
 

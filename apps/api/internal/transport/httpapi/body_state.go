@@ -31,6 +31,7 @@ type PublicServer struct {
 	bodyMetrics     bodyMetricsApplication
 	healthHistory   healthHistoryApplication
 	onboarding      onboardingContextApplication
+	profile         profileApplication
 }
 
 func NewPublicServer(bodyState bodyStateFactService) *PublicServer {

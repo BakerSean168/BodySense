@@ -168,25 +168,6 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
 
-// Me returns the current authenticated user info.
-func (h *AuthHandler) Me(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		respondError(c, http.StatusUnauthorized, "UNAUTHORIZED", "authentication required")
-		return
-	}
-
-	uid, ok := userID.(string)
-	if !ok {
-		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "invalid user id type")
-		return
-	}
-
-	email, _ := c.Get("email")
-	emailStr, _ := email.(string)
-	c.JSON(http.StatusOK, dto.UserResponse{ID: uid, Email: emailStr})
-}
-
 func (h *AuthHandler) writeAuthResponse(c *gin.Context, status int, resp *dto.AuthResponse) {
 	h.setRefreshCookie(c, resp.RefreshToken)
 	c.Header("Cache-Control", "no-store")

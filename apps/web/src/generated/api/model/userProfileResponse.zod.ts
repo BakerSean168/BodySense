@@ -6,11 +6,11 @@
  * OpenAPI spec version: 1.0.0-vnext
  */
 import * as zod from 'zod/mini';
+import { UserProfile } from './userProfile.zod';
 
-export const OnboardingProfileInput = /*#__PURE__*/ zod.strictObject({
-  "gender": /*#__PURE__*/ zod.enum(['male', 'female']),
-  "birth_date": /*#__PURE__*/ zod.iso.date()
+export const UserProfileResponse = /*#__PURE__*/ zod.strictObject({
+  "profile": UserProfile
 });
 
-export type OnboardingProfileInput = zod.input<typeof OnboardingProfileInput>;
-export type OnboardingProfileInputOutput = zod.output<typeof OnboardingProfileInput>;
+export type UserProfileResponse = zod.input<typeof UserProfileResponse>;
+export type UserProfileResponseOutput = zod.output<typeof UserProfileResponse>;

@@ -322,3 +322,83 @@ handwritten route registrations        NONE
 ```
 
 Bundle observation remains open under `BS-VNEXT-REST-007`: at this point ConsultationPage is ~355.71 kB / 105.27 kB gzip and Vite has extracted a generated/shared module of ~45.11 kB / 11.59 kB gzip. Runtime validation remains mandatory; feature/tag splitting is evaluated before Phase 02 closes.
+
+## Checkpoint 5 — Current identity and stable profile
+
+Status: COMPLETE ON PHASE BRANCH
+
+Three identity/profile routes now use the generated OpenAPI boundary:
+
+```text
+GET  /api/v1/me
+GET  /api/v1/profile
+PUT  /api/v1/profile
+```
+
+### Stable-profile contract reset
+
+`UserProfile` is already reduced at the persistence/domain level to stable identity context: gender, birth date, derived age and persistence metadata. Migration 58 previously removed mutable health fields such as height, weight, occupation, sleep and injury history from `user_profiles`, so this checkpoint does not preserve those historical profile-as-health-record fields.
+
+The legacy `PUT /profile` handler decoded the request directly into `model.UserProfile`. vNext replaces that with an explicit generated command containing only:
+
+```text
+gender
+birth_date
+```
+
+Client-controlled `id`, `user_id`, `age_years`, `created_at` and `updated_at` are not accepted by the public schema. Gender is also one finite vocabulary (`male | female`) across profile editing and onboarding.
+
+### Explicit profile absence
+
+The original `GET /profile` returned a root JSON `null` for a new user. Although legal JSON/OpenAPI, the selected Go and Web generators represented root-level nullability differently. vNext uses an explicit read envelope instead:
+
+```json
+{ "profile": null }
+```
+
+or
+
+```json
+{ "profile": { "...": "validated profile" } }
+```
+
+`PUT /profile` similarly returns `{ "profile": ... }`. This removes generator-specific ambiguity and makes first-use absence an explicit read-model state.
+
+### Runtime trust and handler retirement
+
+- `/me` and `/profile` route ownership moved to the generated strict server;
+- legacy `ProfileHandler`, `AuthHandler.Me` and `dto.UserResponse` were removed from the production path;
+- Web profile state uses generated Zod validation before projecting into store state;
+- session verification/fetch-user validates `/me` through the generated response schema rather than `safeJson<User>` assertions;
+- malformed `/me` identity data fails closed and clears the session during verification;
+- profile editing exposes a narrow `UserProfileUpdate` instead of `Partial<UserProfile>`.
+
+### Coverage after this batch
+
+```text
+Phase 00 routes               96
+operational exclusions         1
+browser-facing eligible       95
+OpenAPI-authoritative         24
+missing                       71
+coverage                   25.26%
+```
+
+### Verification
+
+```text
+pnpm lint                              PASS
+pnpm typecheck                         PASS
+pnpm test                              PASS
+  contracts                            12/12
+  Web                                  227/227
+  Python                               475/475
+  Go                                   go test ./... PASS
+pnpm build                             PASS
+pnpm contracts:verify                  PASS
+git diff --check                       PASS
+legacy ProfileHandler                  DELETED
+handwritten /me + /profile routes      NONE
+```
+
+The generated-client bundle observation remains tracked by `BS-VNEXT-REST-007`; runtime response validation remains mandatory.

@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { X } from "lucide-react";
-import type { UserProfile } from "@/stores/profileStore";
-import { useProfileStore } from "@/stores/profileStore";
+import {
+  useProfileStore,
+  type UpdateUserProfileInput,
+} from "@/stores/profileStore";
 import { useUploadStore } from "@/stores/uploadStore";
 import { useAuthStore } from "@/stores/authStore";
 import { Button } from "@/components/ui/Button";
@@ -42,7 +44,7 @@ export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
     void fetchUploads();
   }, [open, fetchProfile, fetchUploads]);
 
-  const handleSave = async (data: Partial<UserProfile>) => {
+  const handleSave = async (data: UpdateUserProfileInput) => {
     await updateProfile(data);
     setIsEditing(false);
   };
@@ -72,13 +74,18 @@ export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
         </div>
 
         <div className="flex shrink-0 gap-1 border-b border-border px-4 py-2">
-          {([
-            ["profile", "基本档案"],
-            ["lifestyle", "生活方式"],
-            ["history", "健康历史"],
-            ["uploads", `文件管理${uploads.length ? ` · ${uploads.length}` : ""}`],
-            ["privacy", "数据与隐私"],
-          ] as const).map(([tab, label]) => (
+          {(
+            [
+              ["profile", "基本档案"],
+              ["lifestyle", "生活方式"],
+              ["history", "健康历史"],
+              [
+                "uploads",
+                `文件管理${uploads.length ? ` · ${uploads.length}` : ""}`,
+              ],
+              ["privacy", "数据与隐私"],
+            ] as const
+          ).map(([tab, label]) => (
             <button
               key={tab}
               type="button"
@@ -98,7 +105,11 @@ export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
           {error ? (
             <div className="mb-4 flex items-center justify-between rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
               <span>{error}</span>
-              <button type="button" className="font-medium" onClick={clearError}>
+              <button
+                type="button"
+                className="font-medium"
+                onClick={clearError}
+              >
                 关闭
               </button>
             </div>
@@ -118,7 +129,10 @@ export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
               />
             ) : profile ? (
               <div className="space-y-6">
-                <ProfileView profile={profile} onEdit={() => setIsEditing(true)} />
+                <ProfileView
+                  profile={profile}
+                  onEdit={() => setIsEditing(true)}
+                />
                 <BodyMetricsPanel />
               </div>
             ) : (

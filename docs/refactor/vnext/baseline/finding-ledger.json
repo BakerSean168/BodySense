@@ -50,7 +50,9 @@
       "status": "OPEN",
       "targetPhase": "05-runtime-trust",
       "summary": "Malformed model tool-call JSON is normalized to an empty object and can be emitted as a valid completed tool call.",
-      "evidence": ["apps/ai-service/src/ai/service.py"],
+      "evidence": [
+        "apps/ai-service/src/ai/service.py"
+      ],
       "invariant": "Invalid model output remains an explicit invalid/error state and is never executed as a valid tool call."
     },
     {
@@ -59,7 +61,9 @@
       "status": "OPEN",
       "targetPhase": "05-runtime-trust",
       "summary": "StreamEventFactory mutates caller-owned StreamEventIds while enriching identity.",
-      "evidence": ["apps/ai-service/src/models/stream_event.py"],
+      "evidence": [
+        "apps/ai-service/src/models/stream_event.py"
+      ],
       "invariant": "Factories return new values and do not introduce hidden aliasing through caller mutation."
     },
     {
@@ -68,7 +72,9 @@
       "status": "OPEN",
       "targetPhase": "05-runtime-trust",
       "summary": "ToolExecutor validation/normalization mutates caller-owned argument dictionaries.",
-      "evidence": ["apps/ai-service/src/services/agent/tool_executor.py"],
+      "evidence": [
+        "apps/ai-service/src/services/agent/tool_executor.py"
+      ],
       "invariant": "Validation is side-effect free; normalization returns an explicit new value."
     },
     {
@@ -113,7 +119,9 @@
       "status": "OPEN",
       "targetPhase": "06-durable-state-machines",
       "summary": "Authoritative Job lifecycle event append is best-effort after status mutation.",
-      "evidence": ["apps/api/internal/service/job_runtime.go"],
+      "evidence": [
+        "apps/api/internal/service/job_runtime.go"
+      ],
       "invariant": "When status and lifecycle event represent one durable fact they commit atomically."
     },
     {
@@ -149,7 +157,9 @@
       "status": "OPEN",
       "targetPhase": "10-quality-gates",
       "summary": "Web lint uses the deprecated @nx/eslint:lint executor and emits an Nx v24 migration warning.",
-      "evidence": ["apps/web/project.json"],
+      "evidence": [
+        "apps/web/project.json"
+      ],
       "invariant": "Quality gates use supported Nx target configuration without deprecation noise."
     },
     {
@@ -396,6 +406,50 @@
         "obsolete internal/dto health-context files removed or reduced to true non-generated boundaries"
       ],
       "notes": "This is the same ownership class as BS-VNEXT-REST-004 and should be repaired as one package-boundary cleanup after more public handlers migrate."
+    },
+    {
+      "id": "BS-VNEXT-REST-010",
+      "priority": "P1",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "Profile update bound the persistence model directly at the public HTTP boundary",
+      "evidence": [
+        "apps/api/internal/handler/profile_handler.go",
+        "apps/api/internal/model/user_profile.go",
+        "packages/contracts/openapi/bodysense.v1.openapi.yaml",
+        "apps/api/internal/transport/httpapi/identity_profile.go"
+      ],
+      "root_cause": "The legacy PUT /profile handler decoded JSON directly into model.UserProfile, so persistence-owned identity and metadata fields were structurally writable even though the service only intended to own stable profile inputs.",
+      "repair": "Retire the handwritten ProfileHandler and define an explicit OpenAPI UpdateUserProfileRequest containing only gender and birth_date. The generated strict server maps that command into the application model; Web callers expose the same narrow editable shape.",
+      "verification": [
+        "identity_profile OpenAPI tests",
+        "profileStore OpenAPI boundary tests",
+        "go test ./...",
+        "pnpm test",
+        "pnpm contracts:verify"
+      ],
+      "notes": "The database model remains an internal persistence/application type; the browser contract can no longer submit id, user_id, age_years, created_at or updated_at."
+    },
+    {
+      "id": "BS-VNEXT-REST-011",
+      "priority": "P2",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "Root-level nullable profile response was not portable across generated Go and Web clients",
+      "evidence": [
+        "packages/contracts/openapi/bodysense.v1.openapi.yaml",
+        "apps/api/internal/generated/openapi/v1/bodysense.gen.go",
+        "apps/web/src/generated/api/bodysense.ts"
+      ],
+      "root_cause": "OpenAPI 3.1 can describe a root JSON value of UserProfile or null, but the selected oapi-codegen response wrapper generated a non-pointer UserProfile while Orval/Zod represented the null correctly, creating cross-generator ambiguity.",
+      "repair": "Model profile absence explicitly as {profile: UserProfile | null} and profile update success as {profile: UserProfile}. This gives both generators the same structural contract and makes absence a named read-model state rather than a whole-response sentinel.",
+      "verification": [
+        "generated Go NullableUserProfileResponse contains *UserProfile",
+        "generated Web Zod validates profile|null envelope",
+        "profileStore first-use null-profile test",
+        "pnpm contracts:verify"
+      ],
+      "notes": "This is an intentional vNext breaking reset; no compatibility body-null alias is retained."
     }
   ]
 }

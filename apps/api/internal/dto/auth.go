@@ -24,12 +24,6 @@ type AuthResponse struct {
 	ExpiresIn    int64  `json:"expires_in"` // Access token expiry in seconds
 }
 
-// UserResponse is the response body for user data.
-type UserResponse struct {
-	ID    string `json:"id"`
-	Email string `json:"email"`
-}
-
 // ErrorDetail is the canonical public error payload.
 type ErrorDetail struct {
 	Code    string `json:"code"`

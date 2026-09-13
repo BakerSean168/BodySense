@@ -84,14 +84,4 @@ export const authApi = {
 
     return safeJson(response);
   },
-
-  getMe: async () => {
-    const response = await authFetch("/api/v1/me");
-
-    if (!response.ok) {
-      throw new Error(await extractErrorMessage(response));
-    }
-
-    return safeJson(response);
-  },
 };

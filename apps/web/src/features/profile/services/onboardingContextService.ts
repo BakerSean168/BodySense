@@ -5,7 +5,7 @@ import type { LifestyleSectionInput } from "./lifestyleService";
 export interface OnboardingContextPayload {
   expected_body_state_revision: number;
   profile: {
-    gender: string;
+    gender: "male" | "female";
     birth_date: string;
   };
   body_metrics: {

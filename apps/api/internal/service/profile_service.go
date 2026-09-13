@@ -3,12 +3,15 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/repository"
 	"github.com/google/uuid"
 )
+
+var ErrInvalidProfile = errors.New("invalid profile")
 
 // ProfileService owns stable identity context only. Health facts and
 // observations are deliberately excluded and belong to BodyState.
@@ -52,7 +55,7 @@ func validateBirthDate(birthDate time.Time, now time.Time) error {
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 	birthDate = birthDate.UTC()
 	if birthDate.IsZero() || birthDate.After(today) || birthDate.Before(today.AddDate(-150, 0, 0)) {
-		return errors.New("birth_date must be within the past 150 years")
+		return fmt.Errorf("%w: birth_date must be within the past 150 years", ErrInvalidProfile)
 	}
 	return nil
 }

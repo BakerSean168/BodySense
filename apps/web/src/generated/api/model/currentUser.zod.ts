@@ -7,10 +7,10 @@
  */
 import * as zod from 'zod/mini';
 
-export const OnboardingProfileInput = /*#__PURE__*/ zod.strictObject({
-  "gender": /*#__PURE__*/ zod.enum(['male', 'female']),
-  "birth_date": /*#__PURE__*/ zod.iso.date()
+export const CurrentUser = /*#__PURE__*/ zod.strictObject({
+  "id": /*#__PURE__*/ zod.uuid(),
+  "email": /*#__PURE__*/ zod.email()
 });
 
-export type OnboardingProfileInput = zod.input<typeof OnboardingProfileInput>;
-export type OnboardingProfileInputOutput = zod.output<typeof OnboardingProfileInput>;
+export type CurrentUser = zod.input<typeof CurrentUser>;
+export type CurrentUserOutput = zod.output<typeof CurrentUser>;

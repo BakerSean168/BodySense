@@ -5,11 +5,11 @@
   "totals": {
     "baseline": 96,
     "browserFacingEligible": 95,
-    "openapi": 21,
-    "missing": 74,
+    "openapi": 24,
+    "missing": 71,
     "retired": 0,
     "excludedOperational": 1,
-    "coveragePercent": 22.11
+    "coveragePercent": 25.26
   },
   "routes": [
     {
@@ -47,7 +47,9 @@
       "method": "GET",
       "path": "/api/v1/me",
       "source": "apps/api/cmd/server/main.go:387",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getCurrentUser",
+      "openapiPath": "/api/v1/me"
     },
     {
       "method": "POST",
@@ -71,13 +73,17 @@
       "method": "GET",
       "path": "/api/v1/profile",
       "source": "apps/api/cmd/server/main.go:391",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getUserProfile",
+      "openapiPath": "/api/v1/profile"
     },
     {
       "method": "PUT",
       "path": "/api/v1/profile",
       "source": "apps/api/cmd/server/main.go:392",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "updateUserProfile",
+      "openapiPath": "/api/v1/profile"
     },
     {
       "method": "PUT",

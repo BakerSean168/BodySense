@@ -173,7 +173,6 @@ func main() {
 		WithAssessmentReviews(documentIndicatorReviewRepo)
 	authHandler := handler.NewAuthHandler(authService, authSecurity)
 	privacyHandler := handler.NewPrivacyHandler(privacyErasureService, authHandler)
-	profileHandler := handler.NewProfileHandler(profileService)
 	agentToolRepo := repository.NewAgentToolCallRepository(database.DB)
 	agentToolService := service.NewAgentToolService(agentToolRepo)
 	interactionRepo := repository.NewAgentInteractionRepository(database.DB)
@@ -382,12 +381,9 @@ func main() {
 	protected := r.Group("/api/v1")
 	protected.Use(authMiddleware)
 	{
-		protected.GET("/me", authHandler.Me)
 		protected.POST("/client-diagnostics", clientDiagnosticHandler.Record)
 		protected.GET("/privacy/erasure-plan", privacyHandler.PlanErasure)
 		protected.POST("/privacy/erasure", privacyHandler.RequestErasure)
-		protected.GET("/profile", profileHandler.GetProfile)
-		protected.PUT("/profile", profileHandler.CreateOrUpdateProfile)
 
 		// Upload routes
 		protected.POST("/uploads", uploadHandler.Upload)
@@ -491,7 +487,7 @@ func main() {
 	openAPIProtected.Use(httpapi.RequestValidator(publicAPISpec))
 	openapiv1.RegisterHandlers(
 		openAPIProtected,
-		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService)),
+		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService)),
 	)
 
 	// Public share routes (no auth)

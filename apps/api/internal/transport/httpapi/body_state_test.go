@@ -47,6 +47,7 @@ func newOpenAPITestRouter(t *testing.T, svc bodyStateFactService) *gin.Engine {
 	g := r.Group("")
 	g.Use(func(c *gin.Context) {
 		c.Set("user_id", uuid.NewString())
+		c.Set("email", "user@example.com")
 		c.Next()
 	})
 	g.Use(RequestValidator(spec))

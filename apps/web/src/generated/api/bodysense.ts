@@ -13,10 +13,13 @@ import {
   BodyStateObservationMutationResponse,
   BodyStateRevisionMutationResponse,
   BodyStateSnapshot,
+  CurrentUser,
   HealthWorkspace,
   InjuryHistorySnapshot,
   LifestyleSnapshot,
-  OnboardingContextResult
+  NullableUserProfileResponse,
+  OnboardingContextResult,
+  UserProfileResponse
 } from './model';
 import type {
   BodyMetricsSnapshotOutput,
@@ -29,9 +32,11 @@ import type {
   BodyStateRevisionMutationResponseOutput,
   BodyStateSnapshotOutput,
   CorrectBodyStateFactRequest,
+  CurrentUserOutput,
   HealthWorkspaceOutput,
   InjuryHistorySnapshotOutput,
   LifestyleSnapshotOutput,
+  NullableUserProfileResponseOutput,
   OnboardingContextRequest,
   OnboardingContextResultOutput,
   ResolveBodyStateSafetyRequest,
@@ -43,7 +48,9 @@ import type {
   UpdateBodyStateHypothesisLifecycleRequest,
   UpdateInjuryHistoryRequest,
   UpdateLifestyleRequest,
-  UpsertBodyStateFactRequest
+  UpdateUserProfileRequest,
+  UpsertBodyStateFactRequest,
+  UserProfileResponseOutput
 } from './model';
 
 export const getAddBodyStateFactUrl = () => {
@@ -1077,5 +1084,136 @@ const res = await (fetchFn ?? fetch)(getSubmitOnboardingContextUrl(),
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? OnboardingContextResult.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetCurrentUserUrl = () => {
+
+
+
+
+  return `/api/v1/me`
+}
+
+/**
+ * @summary Get the authenticated user identity.
+ */
+export const getCurrentUser = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<CurrentUserOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetCurrentUserUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: CurrentUser, status?: number} = new globalThis.Error();
+    const data : CurrentUser = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? CurrentUser.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetUserProfileUrl = () => {
+
+
+
+
+  return `/api/v1/profile`
+}
+
+/**
+ * @summary Get stable user identity profile.
+ */
+export const getUserProfile = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<NullableUserProfileResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetUserProfileUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: NullableUserProfileResponse, status?: number} = new globalThis.Error();
+    const data : NullableUserProfileResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? NullableUserProfileResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getUpdateUserProfileUrl = () => {
+
+
+
+
+  return `/api/v1/profile`
+}
+
+/**
+ * @summary Replace the editable stable identity fields.
+ */
+export const updateUserProfile = async (updateUserProfileRequest: UpdateUserProfileRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<UserProfileResponseOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getUpdateUserProfileUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateUserProfileRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: UserProfileResponse, status?: number} = new globalThis.Error();
+    const data : UserProfileResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? UserProfileResponse.parse(parsedBody) : parsedBody
   return data
 }

@@ -1,7 +1,8 @@
 import { create } from "zustand";
-import { authFetch } from "@/features/auth/services/authService";
+import { getUserProfile, updateUserProfile } from "@/generated/api/bodysense";
+import { ApiRequestError } from "@/lib/api-client";
+import { openApiAuthFetch, withOpenApiError } from "@/lib/openapi-client";
 import { useAuthStore } from "./authStore";
-import { safeJson, extractErrorMessage } from "@/lib/api-url";
 
 // UserProfile intentionally contains stable identity context only. Mutable
 // health state lives in BodyState-backed projections such as body metrics and
@@ -9,11 +10,16 @@ import { safeJson, extractErrorMessage } from "@/lib/api-url";
 export interface UserProfile {
   id: string;
   user_id: string;
-  gender?: string;
+  gender?: "male" | "female";
   birth_date?: string;
   age_years?: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface UpdateUserProfileInput {
+  gender?: "male" | "female" | null;
+  birth_date?: string | null;
 }
 
 interface ProfileState {
@@ -21,8 +27,22 @@ interface ProfileState {
   isLoading: boolean;
   error: string | null;
   fetchProfile: () => Promise<void>;
-  updateProfile: (data: Partial<UserProfile>) => Promise<void>;
+  updateProfile: (data: UpdateUserProfileInput) => Promise<void>;
   clearError: () => void;
+}
+
+function projectProfile(
+  profile: NonNullable<Awaited<ReturnType<typeof getUserProfile>>["profile"]>,
+): UserProfile {
+  return {
+    id: profile.id,
+    user_id: profile.user_id,
+    gender: profile.gender,
+    birth_date: profile.birth_date,
+    age_years: profile.age_years,
+    created_at: profile.created_at,
+    updated_at: profile.updated_at,
+  };
 }
 
 export const useProfileStore = create<ProfileState>()((set) => ({
@@ -38,46 +58,45 @@ export const useProfileStore = create<ProfileState>()((set) => ({
         set({ profile: null, isLoading: false });
         return;
       }
-      const response = await authFetch("/api/v1/profile");
-      if (response.status === 401) {
+      const response = await withOpenApiError(() =>
+        getUserProfile(undefined, openApiAuthFetch),
+      );
+      set({
+        profile: response.profile ? projectProfile(response.profile) : null,
+        isLoading: false,
+      });
+    } catch (error) {
+      if (error instanceof ApiRequestError && error.status === 401) {
         set({ profile: null, isLoading: false });
         return;
       }
-      if (!response.ok) throw new Error("Failed to fetch profile");
-      const profile = await safeJson<UserProfile | null>(response);
-      set({ profile: profile || null, isLoading: false });
-    } catch (error) {
       console.error("Failed to fetch profile:", error);
       set({
         profile: null,
         isLoading: false,
-        error: error instanceof Error ? error.message : "Failed to fetch profile",
+        error:
+          error instanceof Error ? error.message : "Failed to fetch profile",
       });
     }
   },
 
-  updateProfile: async (data: Partial<UserProfile>) => {
+  updateProfile: async (data) => {
     set({ isLoading: true, error: null });
     try {
       const { isAuthenticated } = useAuthStore.getState();
       if (!isAuthenticated) throw new Error("Not authenticated");
-      const response = await authFetch("/api/v1/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (response.status === 401) {
-        set({ isLoading: false });
-        throw new Error("Session expired, please login again");
-      }
-      if (!response.ok) throw new Error(await extractErrorMessage(response));
-      const profile = await safeJson<UserProfile>(response);
-      set({ profile, isLoading: false });
+      const response = await withOpenApiError(() =>
+        updateUserProfile(data, undefined, openApiAuthFetch),
+      );
+      set({ profile: projectProfile(response.profile), isLoading: false });
     } catch (error) {
-      set({
-        isLoading: false,
-        error: error instanceof Error ? error.message : "Failed to update profile",
-      });
+      const message =
+        error instanceof ApiRequestError && error.status === 401
+          ? "Session expired, please login again"
+          : error instanceof Error
+            ? error.message
+            : "Failed to update profile";
+      set({ isLoading: false, error: message });
       throw error;
     }
   },
