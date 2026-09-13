@@ -1537,6 +1537,181 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/consultations/{id}/diagnosis:
+    post:
+      operationId: analyzeDiagnosis
+      summary: Generate or safety-block a BodyState-backed diagnosis analysis.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/ConsultationId'
+      responses:
+        '200':
+          description: Current diagnosis public projection. Legacy pre-envelope rejected outputs remain transient JSON until compatibility retirement.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/diagnosis-analyses:
+    get:
+      operationId: listDiagnosisAnalyses
+      summary: List immutable diagnosis analyses for the authenticated user.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      responses:
+        '200':
+          description: Diagnosis analysis timeline.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiagnosisAnalysisListResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/diagnosis-analyses/{analysisId}:
+    get:
+      operationId: getDiagnosisAnalysis
+      summary: Get one immutable diagnosis analysis with assessments and freshness.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/DiagnosisAnalysisId'
+      responses:
+        '200':
+          description: Diagnosis analysis projection.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiagnosisWorkspaceProjection'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/diagnosis-analyses/{analysisId}/assessment:
+    put:
+      operationId: assessDiagnosisCandidates
+      summary: Record the user's interpretation of diagnosis candidates without deleting unmentioned candidates.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/DiagnosisAnalysisId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiagnosisCandidateAssessmentRequest'
+      responses:
+        '200':
+          description: Updated candidate assessments.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiagnosisCandidateAssessmentResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/diagnosis-analyses/{analysisId}/replay:
+    post:
+      operationId: replayDiagnosisAnalysis
+      summary: Replay an immutable diagnosis historically or counterfactually without mutating durable state.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/DiagnosisAnalysisId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiagnosisReplayRequest'
+      responses:
+        '200':
+          description: Deterministic diagnosis replay report.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiagnosisReplayReport'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ReplayUnavailable'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/diagnosis-analyses/{analysisId}/regression-export:
+    get:
+      operationId: exportDiagnosisRegressionCase
+      summary: Export a frozen developer-reviewed regression case envelope.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/DiagnosisAnalysisId'
+      responses:
+        '200':
+          description: Regression-dataset-shaped export envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ReplayUnavailable'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 components:
   parameters:
     ConversationId:
@@ -1569,6 +1744,13 @@ components:
         format: uuid
     InteractionId:
       name: interactionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    DiagnosisAnalysisId:
+      name: analysisId
       in: path
       required: true
       schema:
@@ -2584,14 +2766,12 @@ components:
       - id
       - analysis_id
       - candidate_id
-      - user_id
       - state
       - assessed_at
       properties:
         id: *id003
         analysis_id: *id003
         candidate_id: *id003
-        user_id: *id003
         state:
           type: string
           enum:
@@ -2604,14 +2784,12 @@ components:
       additionalProperties: false
       required:
       - analysis_id
-      - user_id
       - state
       - evaluated_against_revision
       - reasons
       - checked_at
       properties:
         analysis_id: *id003
-        user_id: *id003
         state:
           type: string
           enum:
@@ -2645,8 +2823,6 @@ components:
       - execution_provenance
       - evidence_acquisition_trace
       - created_at
-      - candidate_assessments
-      - freshness
       properties:
         analysis_id: *id003
         body_state_revision: *id005
@@ -2693,6 +2869,125 @@ components:
             $ref: '#/components/schemas/DiagnosisCandidateAssessment'
         freshness:
           $ref: '#/components/schemas/DiagnosisFreshness'
+    DiagnosisAnalysisListResponse:
+      type: object
+      additionalProperties: false
+      required: [analyses]
+      properties:
+        analyses:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiagnosisWorkspaceProjection'
+    DiagnosisCandidateAssessmentInput:
+      type: object
+      additionalProperties: false
+      required: [candidate_id, state]
+      properties:
+        candidate_id:
+          type: string
+          format: uuid
+        state:
+          type: string
+          enum: [confirmed, unsure, not_applicable]
+    DiagnosisCandidateAssessmentRequest:
+      type: object
+      additionalProperties: false
+      required: [candidates]
+      properties:
+        candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiagnosisCandidateAssessmentInput'
+    DiagnosisCandidateAssessmentResponse:
+      type: object
+      additionalProperties: false
+      required: [analysis_id, candidate_assessments]
+      properties:
+        analysis_id:
+          type: string
+          format: uuid
+        candidate_assessments:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiagnosisCandidateAssessment'
+    DiagnosisReplayRequest:
+      type: object
+      additionalProperties: false
+      required: [mode]
+      properties:
+        mode:
+          type: string
+          enum: [historical, counterfactual]
+        configuration_id:
+          type: string
+    DiagnosisReplayCheck:
+      type: object
+      additionalProperties: false
+      required: [name, match]
+      properties:
+        name: {type: string}
+        match: {type: boolean}
+        baseline: {type: string}
+        candidate: {type: string}
+    DiagnosisReplayLayer:
+      type: object
+      additionalProperties: false
+      required: [match, checks]
+      properties:
+        match: {type: boolean}
+        checks:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiagnosisReplayCheck'
+    DiagnosisReplaySnapshot:
+      type: object
+      additionalProperties: false
+      required: [status, decision_outcome, candidate_count, concern_keys, support_ids, summary, candidate_names]
+      properties:
+        status: {type: string}
+        decision_outcome: {type: string}
+        candidate_count: {type: integer, minimum: 0}
+        concern_keys:
+          $ref: '#/components/schemas/StringArray'
+        support_ids:
+          $ref: '#/components/schemas/StringArray'
+        summary: {type: string}
+        candidate_names:
+          $ref: '#/components/schemas/StringArray'
+    DiagnosisReplayComparison:
+      type: object
+      additionalProperties: false
+      required: [hard, semantic, presentation]
+      properties:
+        hard: {$ref: '#/components/schemas/DiagnosisReplayLayer'}
+        semantic: {$ref: '#/components/schemas/DiagnosisReplayLayer'}
+        presentation: {$ref: '#/components/schemas/DiagnosisReplayLayer'}
+    DiagnosisReplayReport:
+      type: object
+      additionalProperties: false
+      required:
+      - mode
+      - source_analysis_id
+      - source_configuration_id
+      - target_configuration_id
+      - input_fingerprint
+      - artifact_integrity
+      - baseline
+      - replay
+      - comparison
+      - output
+      properties:
+        mode: {type: string, enum: [historical, counterfactual]}
+        source_analysis_id: {type: string, format: uuid}
+        source_configuration_id: {type: string}
+        target_configuration_id: {type: string}
+        input_fingerprint: {type: string}
+        artifact_integrity: {$ref: '#/components/schemas/DiagnosisReplayLayer'}
+        baseline: {$ref: '#/components/schemas/DiagnosisReplaySnapshot'}
+        replay: {$ref: '#/components/schemas/DiagnosisReplaySnapshot'}
+        comparison: {$ref: '#/components/schemas/DiagnosisReplayComparison'}
+        output:
+          $ref: '#/components/schemas/JsonObject'
     TreatmentInterventionDraft:
       type: object
       additionalProperties: false

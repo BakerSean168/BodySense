@@ -82,6 +82,11 @@ function projectWorkspaceDiagnosis(
   diagnosis: Awaited<ReturnType<typeof getHealthWorkspace>>["diagnosis"],
 ): WorkspaceDiagnosis | undefined {
   if (!diagnosis) return undefined;
+  if (!diagnosis.freshness || !diagnosis.candidate_assessments) {
+    throw new Error(
+      "health workspace diagnosis projection is missing review state",
+    );
+  }
   return {
     analysis_id: diagnosis.analysis_id,
     body_state_revision: diagnosis.body_state_revision,

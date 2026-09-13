@@ -6,14 +6,12 @@
  * OpenAPI spec version: 1.0.0-vnext
  */
 import * as zod from 'zod/mini';
+import { DiagnosisCandidateAssessment } from './diagnosisCandidateAssessment.zod';
 
-export const DiagnosisCandidateAssessment = /*#__PURE__*/ zod.strictObject({
-  "id": /*#__PURE__*/ zod.uuid(),
+export const DiagnosisCandidateAssessmentResponse = /*#__PURE__*/ zod.strictObject({
   "analysis_id": /*#__PURE__*/ zod.uuid(),
-  "candidate_id": /*#__PURE__*/ zod.uuid(),
-  "state": /*#__PURE__*/ zod.enum(['confirmed', 'unsure', 'not_applicable']),
-  "assessed_at": /*#__PURE__*/ zod.iso.datetime({"offset":true})
+  "candidate_assessments": /*#__PURE__*/ zod.array(DiagnosisCandidateAssessment)
 });
 
-export type DiagnosisCandidateAssessment = zod.input<typeof DiagnosisCandidateAssessment>;
-export type DiagnosisCandidateAssessmentOutput = zod.output<typeof DiagnosisCandidateAssessment>;
+export type DiagnosisCandidateAssessmentResponse = zod.input<typeof DiagnosisCandidateAssessmentResponse>;
+export type DiagnosisCandidateAssessmentResponseOutput = zod.output<typeof DiagnosisCandidateAssessmentResponse>;

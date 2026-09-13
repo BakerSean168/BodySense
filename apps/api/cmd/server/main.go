@@ -234,7 +234,7 @@ func main() {
 	diagnosisReplayService := service.NewDiagnosisReplayService(diagnosisAnalysisService, aiClient)
 	diagnosisRolloutRepo := repository.NewDiagnosisRolloutRepository(database.DB)
 	diagnosisRolloutService := service.NewDiagnosisRolloutService(diagnosisRolloutRepo)
-	diagnosisHandler := handler.NewDiagnosisHandler(
+	diagnosisApplicationService := service.NewDiagnosisApplicationService(
 		consultationService,
 		profileService,
 		aiClient,
@@ -378,18 +378,6 @@ func main() {
 		extractions.POST("/:runId/reviews", healthDocumentReviewHandler.AppendReview)
 		extractions.GET("/:runId/source", healthDocumentReviewHandler.SourceContext)
 
-		// Diagnosis generation remains on the legacy handler until its application
-		// workflow is moved behind the generated boundary in this phase.
-		consultations := protected.Group("/consultations")
-		consultations.POST("/:id/diagnosis", diagnosisHandler.AnalyzeDiagnosis)
-
-		// Diagnosis history is user-scoped and pinned to BodyState revisions.
-		protected.GET("/diagnosis-analyses", diagnosisHandler.ListDiagnosisHistory)
-		protected.GET("/diagnosis-analyses/:analysisId", diagnosisHandler.GetDiagnosisAnalysis)
-		protected.PUT("/diagnosis-analyses/:analysisId/assessment", diagnosisHandler.AssessDiagnosisCandidates)
-		protected.POST("/diagnosis-analyses/:analysisId/replay", diagnosisHandler.ReplayDiagnosisAnalysis)
-		protected.GET("/diagnosis-analyses/:analysisId/regression-export", diagnosisHandler.ExportDiagnosisRegressionCase)
-
 		// Revisioned Treatment / Intervention / Outcome loop.
 		protected.POST("/treatments/proposals", treatmentHandler.GenerateProposal)
 		protected.GET("/treatments/current", treatmentHandler.GetCurrent)
@@ -430,7 +418,7 @@ func main() {
 	}
 	httpapi.RegisterRoutes(
 		r,
-		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure).WithAssessment(assessmentService, assessmentReplayService).WithAuth(authService, authSecurity).WithConversations(conversationService, shareService, runtimeEventService).WithConsultation(consultationRuntime, consultationService, interactionService, consultationReplayService, threadProjectionService, bodyStateService)),
+		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure).WithAssessment(assessmentService, assessmentReplayService).WithAuth(authService, authSecurity).WithConversations(conversationService, shareService, runtimeEventService).WithConsultation(consultationRuntime, consultationService, interactionService, consultationReplayService, threadProjectionService, bodyStateService).WithDiagnosis(diagnosisApplicationService, diagnosisAnalysisService, diagnosisFreshnessService, diagnosisReplayService)),
 		httpapi.RouteSecurity{
 			Auth:      authMiddleware,
 			Operator:  middleware.RequireKnowledgeOperator(userRepo),

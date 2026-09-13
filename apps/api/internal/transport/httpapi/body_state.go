@@ -52,6 +52,10 @@ type PublicServer struct {
 	consultationReplay       consultationReplayApplication
 	consultationThreads      consultationThreadApplication
 	consultationBodyState    consultationBodyStateApplication
+	diagnosisApplication     diagnosisApplication
+	diagnosisAnalyses        diagnosisAnalysisApplication
+	diagnosisFreshness       diagnosisFreshnessApplication
+	diagnosisReplay          diagnosisReplayApplication
 }
 
 func NewPublicServer(bodyState bodyStateFactService) *PublicServer {

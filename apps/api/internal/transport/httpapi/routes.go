@@ -130,4 +130,12 @@ func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInt
 	protected.GET("/consultations/:id/thread", wrapper.GetConsultationThread)
 	protected.POST("/consultations/:id/interrupts/:interactionId/answers", wrapper.ResumeConsultationInteraction)
 	protected.GET("/consultations/:id/interaction-metrics", wrapper.GetConsultationInteractionMetrics)
+
+	// Diagnosis analysis, assessment and replay surfaces.
+	protected.POST("/consultations/:id/diagnosis", wrapper.AnalyzeDiagnosis)
+	protected.GET("/diagnosis-analyses", wrapper.ListDiagnosisAnalyses)
+	protected.GET("/diagnosis-analyses/:analysisId", wrapper.GetDiagnosisAnalysis)
+	protected.PUT("/diagnosis-analyses/:analysisId/assessment", wrapper.AssessDiagnosisCandidates)
+	protected.POST("/diagnosis-analyses/:analysisId/replay", wrapper.ReplayDiagnosisAnalysis)
+	protected.GET("/diagnosis-analyses/:analysisId/regression-export", wrapper.ExportDiagnosisRegressionCase)
 }

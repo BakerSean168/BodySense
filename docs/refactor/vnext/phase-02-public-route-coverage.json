@@ -5,11 +5,11 @@
   "totals": {
     "baseline": 96,
     "browserFacingEligible": 95,
-    "openapi": 56,
-    "missing": 39,
+    "openapi": 62,
+    "missing": 33,
     "retired": 0,
     "excludedOperational": 1,
-    "coveragePercent": 58.95
+    "coveragePercent": 65.26
   },
   "routes": [
     {
@@ -301,37 +301,49 @@
       "method": "POST",
       "path": "/api/v1/consultations/:id/diagnosis",
       "source": "apps/api/cmd/server/main.go:437",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "analyzeDiagnosis",
+      "openapiPath": "/api/v1/consultations/{id}/diagnosis"
     },
     {
       "method": "GET",
       "path": "/api/v1/diagnosis-analyses",
       "source": "apps/api/cmd/server/main.go:440",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "listDiagnosisAnalyses",
+      "openapiPath": "/api/v1/diagnosis-analyses"
     },
     {
       "method": "GET",
       "path": "/api/v1/diagnosis-analyses/:analysisId",
       "source": "apps/api/cmd/server/main.go:441",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getDiagnosisAnalysis",
+      "openapiPath": "/api/v1/diagnosis-analyses/{analysisId}"
     },
     {
       "method": "PUT",
       "path": "/api/v1/diagnosis-analyses/:analysisId/assessment",
       "source": "apps/api/cmd/server/main.go:442",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "assessDiagnosisCandidates",
+      "openapiPath": "/api/v1/diagnosis-analyses/{analysisId}/assessment"
     },
     {
       "method": "POST",
       "path": "/api/v1/diagnosis-analyses/:analysisId/replay",
       "source": "apps/api/cmd/server/main.go:443",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "replayDiagnosisAnalysis",
+      "openapiPath": "/api/v1/diagnosis-analyses/{analysisId}/replay"
     },
     {
       "method": "GET",
       "path": "/api/v1/diagnosis-analyses/:analysisId/regression-export",
       "source": "apps/api/cmd/server/main.go:444",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "exportDiagnosisRegressionCase",
+      "openapiPath": "/api/v1/diagnosis-analyses/{analysisId}/regression-export"
     },
     {
       "method": "POST",

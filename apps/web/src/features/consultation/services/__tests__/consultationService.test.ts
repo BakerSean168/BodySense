@@ -430,7 +430,7 @@ describe("consultationApi", () => {
   });
 
   describe("analyzeDiagnosis", () => {
-    it("POSTs to the diagnosis endpoint", async () => {
+    it("POSTs through the generated diagnosis client", async () => {
       const analysis: DiagnosisAnalysis = {
         candidates: [
           {
@@ -443,20 +443,122 @@ describe("consultationApi", () => {
       };
       mockAuthFetch.mockResolvedValue(mockResponse(analysis));
 
-      const result = await consultationApi.analyzeDiagnosis("conv-1");
+      const result = await consultationApi.analyzeDiagnosis(
+        conversationWire.id,
+      );
 
       expect(mockAuthFetch).toHaveBeenCalledWith(
-        "/api/v1/consultations/conv-1/diagnosis",
+        `/api/v1/consultations/${conversationWire.id}/diagnosis`,
         { method: "POST" },
       );
-      expect(result).toEqual(analysis);
+      expect(result.candidates).toEqual(analysis.candidates);
     });
 
     it("throws on non-ok response", async () => {
       mockAuthFetch.mockResolvedValue(mockResponse({}, false, 500));
-      await expect(consultationApi.analyzeDiagnosis("conv-1")).rejects.toThrow(
-        "API 500",
+      await expect(
+        consultationApi.analyzeDiagnosis(conversationWire.id),
+      ).rejects.toThrow("API 500");
+    });
+  });
+
+  describe("assessDiagnosisCandidates", () => {
+    it("PUTs the generated candidate-assessment request", async () => {
+      const analysisId = "33333333-3333-4333-8333-333333333333";
+      const candidateId = "44444444-4444-4444-8444-444444444444";
+      mockAuthFetch.mockResolvedValue(
+        mockResponse({
+          analysis_id: analysisId,
+          candidate_assessments: [
+            {
+              id: "55555555-5555-4555-8555-555555555555",
+              analysis_id: analysisId,
+              candidate_id: candidateId,
+              state: "confirmed",
+              assessed_at: "2026-09-13T12:20:00Z",
+            },
+          ],
+        }),
       );
+
+      await consultationApi.assessDiagnosisCandidates(analysisId, [
+        { candidate_id: candidateId, state: "confirmed" },
+      ]);
+
+      expect(mockAuthFetch).toHaveBeenCalledWith(
+        `/api/v1/diagnosis-analyses/${analysisId}/assessment`,
+        expect.objectContaining({
+          method: "PUT",
+          body: JSON.stringify({
+            candidates: [{ candidate_id: candidateId, state: "confirmed" }],
+          }),
+        }),
+      );
+    });
+  });
+
+  describe("listDiagnosisHistory", () => {
+    it("validates durable history with the generated projection", async () => {
+      const analysisId = "33333333-3333-4333-8333-333333333333";
+      const candidateId = "44444444-4444-4444-8444-444444444444";
+      mockAuthFetch.mockResolvedValue(
+        mockResponse({
+          analyses: [
+            {
+              analysis_id: analysisId,
+              body_state_revision: 7,
+              status: "completed",
+              scope: "full_body",
+              summary: "Shoulder pattern",
+              candidates: [
+                {
+                  candidate_id: candidateId,
+                  concern_key: "shoulder.right",
+                  name: "肩胛控制不足",
+                  confidence: "中",
+                  basis: "BodyState observations",
+                  typical_symptoms: "抬手不适",
+                  basis_fact_ids: [],
+                  basis_observation_ids: [],
+                  supporting_evidence_ids: [],
+                  counterevidence_ids: [],
+                  reasoning_summary: "pattern",
+                  missing_information: [],
+                  safety_notes: [],
+                },
+              ],
+              cross_concern_patterns: [],
+              information_gaps: [],
+              safety_summary: {},
+              citations: [],
+              governance: {},
+              agent_configuration_id: "diagnosis-v3",
+              agent_configuration: {},
+              decision_trace: {},
+              execution_provenance: {},
+              evidence_acquisition_trace: {},
+              created_at: "2026-09-13T12:00:00Z",
+              freshness: {
+                analysis_id: analysisId,
+                state: "fresh",
+                evaluated_against_revision: 7,
+                reasons: [],
+                checked_at: "2026-09-13T12:01:00Z",
+              },
+            },
+          ],
+        }),
+      );
+
+      const result = await consultationApi.listDiagnosisHistory(10);
+
+      expect(mockAuthFetch).toHaveBeenCalledWith(
+        "/api/v1/diagnosis-analyses?limit=10",
+        { method: "GET" },
+      );
+      expect(result.analyses[0]?.analysis_id).toBe(analysisId);
+      expect(result.analyses[0]?.freshness?.state).toBe("fresh");
+      expect(result.analyses[0]?.candidates[0]?.name).toBe("肩胛控制不足");
     });
   });
 });

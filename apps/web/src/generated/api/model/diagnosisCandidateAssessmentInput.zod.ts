@@ -7,13 +7,10 @@
  */
 import * as zod from 'zod/mini';
 
-export const DiagnosisCandidateAssessment = /*#__PURE__*/ zod.strictObject({
-  "id": /*#__PURE__*/ zod.uuid(),
-  "analysis_id": /*#__PURE__*/ zod.uuid(),
+export const DiagnosisCandidateAssessmentInput = /*#__PURE__*/ zod.strictObject({
   "candidate_id": /*#__PURE__*/ zod.uuid(),
-  "state": /*#__PURE__*/ zod.enum(['confirmed', 'unsure', 'not_applicable']),
-  "assessed_at": /*#__PURE__*/ zod.iso.datetime({"offset":true})
+  "state": /*#__PURE__*/ zod.enum(['confirmed', 'unsure', 'not_applicable'])
 });
 
-export type DiagnosisCandidateAssessment = zod.input<typeof DiagnosisCandidateAssessment>;
-export type DiagnosisCandidateAssessmentOutput = zod.output<typeof DiagnosisCandidateAssessment>;
+export type DiagnosisCandidateAssessmentInput = zod.input<typeof DiagnosisCandidateAssessmentInput>;
+export type DiagnosisCandidateAssessmentInputOutput = zod.output<typeof DiagnosisCandidateAssessmentInput>;

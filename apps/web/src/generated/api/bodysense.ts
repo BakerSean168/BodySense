@@ -28,9 +28,14 @@ import {
   ConversationMutationResponse,
   ConversationRunListResponse,
   CurrentUser,
+  DiagnosisAnalysisListResponse,
+  DiagnosisCandidateAssessmentResponse,
+  DiagnosisReplayReport,
+  DiagnosisWorkspaceProjection,
   HealthWorkspace,
   InjuryHistorySnapshot,
   InteractionMetrics,
+  JsonObject,
   LifestyleSnapshot,
   LogoutAcknowledgement,
   NullableUserProfileResponse,
@@ -77,12 +82,20 @@ import type {
   ConversationUpdateRequest,
   CorrectBodyStateFactRequest,
   CurrentUserOutput,
+  DiagnosisAnalysisListResponseOutput,
+  DiagnosisCandidateAssessmentRequest,
+  DiagnosisCandidateAssessmentResponseOutput,
+  DiagnosisReplayReportOutput,
+  DiagnosisReplayRequest,
+  DiagnosisWorkspaceProjectionOutput,
   HealthWorkspaceOutput,
   InjuryHistorySnapshotOutput,
   InteractionMetricsOutput,
+  JsonObjectOutput,
   LifestyleSnapshotOutput,
   ListAssessmentsParams,
   ListConversationsParams,
+  ListDiagnosisAnalysesParams,
   ListRunEventsParams,
   LogoutAcknowledgementOutput,
   NullableUserProfileResponseOutput,
@@ -2719,5 +2732,276 @@ export const getConsultationInteractionMetrics = async (id: string, options?: Re
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? InteractionMetrics.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getAnalyzeDiagnosisUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/consultations/${id}/diagnosis`
+}
+
+/**
+ * @summary Generate or safety-block a BodyState-backed diagnosis analysis.
+ */
+export const analyzeDiagnosis = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<JsonObjectOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getAnalyzeDiagnosisUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: JsonObject, status?: number} = new globalThis.Error();
+    const data : JsonObject = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? JsonObject.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListDiagnosisAnalysesUrl = (params?: ListDiagnosisAnalysesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/diagnosis-analyses?${stringifiedParams}` : `/api/v1/diagnosis-analyses`
+}
+
+/**
+ * @summary List immutable diagnosis analyses for the authenticated user.
+ */
+export const listDiagnosisAnalyses = async (params?: ListDiagnosisAnalysesParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<DiagnosisAnalysisListResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListDiagnosisAnalysesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: DiagnosisAnalysisListResponse, status?: number} = new globalThis.Error();
+    const data : DiagnosisAnalysisListResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? DiagnosisAnalysisListResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetDiagnosisAnalysisUrl = (analysisId: string,) => {
+
+
+
+
+  return `/api/v1/diagnosis-analyses/${analysisId}`
+}
+
+/**
+ * @summary Get one immutable diagnosis analysis with assessments and freshness.
+ */
+export const getDiagnosisAnalysis = async (analysisId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<DiagnosisWorkspaceProjectionOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetDiagnosisAnalysisUrl(analysisId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: DiagnosisWorkspaceProjection, status?: number} = new globalThis.Error();
+    const data : DiagnosisWorkspaceProjection = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? DiagnosisWorkspaceProjection.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getAssessDiagnosisCandidatesUrl = (analysisId: string,) => {
+
+
+
+
+  return `/api/v1/diagnosis-analyses/${analysisId}/assessment`
+}
+
+/**
+ * @summary Record the user's interpretation of diagnosis candidates without deleting unmentioned candidates.
+ */
+export const assessDiagnosisCandidates = async (analysisId: string,
+    diagnosisCandidateAssessmentRequest: DiagnosisCandidateAssessmentRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<DiagnosisCandidateAssessmentResponseOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getAssessDiagnosisCandidatesUrl(analysisId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(diagnosisCandidateAssessmentRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: DiagnosisCandidateAssessmentResponse, status?: number} = new globalThis.Error();
+    const data : DiagnosisCandidateAssessmentResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? DiagnosisCandidateAssessmentResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getReplayDiagnosisAnalysisUrl = (analysisId: string,) => {
+
+
+
+
+  return `/api/v1/diagnosis-analyses/${analysisId}/replay`
+}
+
+/**
+ * @summary Replay an immutable diagnosis historically or counterfactually without mutating durable state.
+ */
+export const replayDiagnosisAnalysis = async (analysisId: string,
+    diagnosisReplayRequest: DiagnosisReplayRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<DiagnosisReplayReportOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getReplayDiagnosisAnalysisUrl(analysisId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(diagnosisReplayRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: DiagnosisReplayReport, status?: number} = new globalThis.Error();
+    const data : DiagnosisReplayReport = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? DiagnosisReplayReport.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getExportDiagnosisRegressionCaseUrl = (analysisId: string,) => {
+
+
+
+
+  return `/api/v1/diagnosis-analyses/${analysisId}/regression-export`
+}
+
+/**
+ * @summary Export a frozen developer-reviewed regression case envelope.
+ */
+export const exportDiagnosisRegressionCase = async (analysisId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<JsonObjectOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getExportDiagnosisRegressionCaseUrl(analysisId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: JsonObject, status?: number} = new globalThis.Error();
+    const data : JsonObject = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? JsonObject.parse(parsedBody) : parsedBody
   return data
 }

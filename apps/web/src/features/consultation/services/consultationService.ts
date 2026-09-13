@@ -1,6 +1,8 @@
 import { parseStreamEvent } from "@bodysense/contracts";
 import { authFetch } from "@/features/auth/services/authService";
 import {
+  analyzeDiagnosis as analyzeDiagnosisOpenApi,
+  assessDiagnosisCandidates as assessDiagnosisCandidatesOpenApi,
   cancelConsultationRun as cancelConsultationRunOpenApi,
   deleteConversation as deleteConversationOpenApi,
   generateConversationTitle as generateConversationTitleOpenApi,
@@ -12,6 +14,7 @@ import {
   getConversation as getConversationOpenApi,
   getSharedConversation as getSharedConversationOpenApi,
   listConversations as listConversationsOpenApi,
+  listDiagnosisAnalyses as listDiagnosisAnalysesOpenApi,
   listRunEvents as listRunEventsOpenApi,
   pinConversation as pinConversationOpenApi,
   renameConversationTitle as renameConversationTitleOpenApi,
@@ -28,6 +31,8 @@ import type {
   ConsultationThreadResponseOutput as PublicConsultationThread,
   ConversationMessageOutput as PublicConversationMessage,
   ConversationOutput as PublicConversation,
+  DiagnosisWorkspaceProjectionOutput as PublicDiagnosisAnalysis,
+  JsonObjectOutput,
 } from "@/generated/api/model";
 import { expectJson } from "@/lib/api-client";
 import {
@@ -49,8 +54,6 @@ import type {
   PendingInteraction,
   ProjectedToolCall,
 } from "../types/consultation";
-
-const API_BASE = "/api/v1";
 
 /**
  * Parse a Response as JSON, throwing on non-ok status.
@@ -217,6 +220,58 @@ function toConsultationThread(
   };
 }
 
+function toDiagnosisAnalysis(
+  input: PublicDiagnosisAnalysis,
+): DiagnosisAnalysis {
+  return {
+    analysis_id: input.analysis_id,
+    body_state_revision: input.body_state_revision,
+    status: input.status,
+    scope: input.scope,
+    summary: input.summary,
+    candidates: input.candidates as unknown as DiagnosisAnalysis["candidates"],
+    citations: input.citations as unknown as DiagnosisAnalysis["citations"],
+    freshness: input.freshness as unknown as DiagnosisAnalysis["freshness"],
+    candidate_assessments: input.candidate_assessments?.map((item) => ({
+      candidate_id: item.candidate_id,
+      state: item.state,
+    })),
+    created_at: input.created_at,
+  };
+}
+
+// Phase-02 compatibility boundary: a legacy pre-envelope governance rejection
+// is intentionally returned transiently without a durable analysis id. Keep the
+// loose transport object confined here until that compatibility branch is
+// retired; durable history uses the strict mapper above.
+function toTransientDiagnosisAnalysis(
+  input: JsonObjectOutput,
+): DiagnosisAnalysis {
+  const value = input as Record<string, unknown>;
+  return {
+    analysis_id:
+      typeof value.analysis_id === "string" ? value.analysis_id : undefined,
+    body_state_revision:
+      typeof value.body_state_revision === "number"
+        ? value.body_state_revision
+        : undefined,
+    status:
+      typeof value.status === "string"
+        ? (value.status as DiagnosisAnalysis["status"])
+        : undefined,
+    scope: typeof value.scope === "string" ? value.scope : undefined,
+    summary: typeof value.summary === "string" ? value.summary : undefined,
+    candidates: Array.isArray(value.candidates)
+      ? (value.candidates as DiagnosisAnalysis["candidates"])
+      : [],
+    citations: Array.isArray(value.citations)
+      ? (value.citations as DiagnosisAnalysis["citations"])
+      : undefined,
+    created_at:
+      typeof value.created_at === "string" ? value.created_at : undefined,
+  };
+}
+
 export const consultationApi = {
   /**
    * Start a unified consultation run. The generated request schema owns runtime
@@ -360,13 +415,12 @@ export const consultationApi = {
     return toConsultationSession(result);
   },
 
-  /**
-   * Trigger AI diagnosis analysis.
-   */
+  /** Trigger BodyState-backed diagnosis analysis through the generated boundary. */
   async analyzeDiagnosis(id: string): Promise<DiagnosisAnalysis> {
-    return authFetch(`${API_BASE}/consultations/${id}/diagnosis`, {
-      method: "POST",
-    }).then((res) => parseJson<DiagnosisAnalysis>(res));
+    const result = await withOpenApiError(() =>
+      analyzeDiagnosisOpenApi(id, undefined, openApiAuthFetch),
+    );
+    return toTransientDiagnosisAnalysis(result);
   },
 
   /** Persist the user's interpretation of Diagnosis candidates without deleting any candidate. */
@@ -377,19 +431,23 @@ export const consultationApi = {
       state: DiagnosisCandidateAssessmentState;
     }>,
   ): Promise<void> {
-    await authFetch(`${API_BASE}/diagnosis-analyses/${analysisId}/assessment`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ candidates }),
-    }).then((res) => parseJson<void>(res));
+    await withOpenApiError(() =>
+      assessDiagnosisCandidatesOpenApi(
+        analysisId,
+        { candidates },
+        undefined,
+        openApiAuthFetch,
+      ),
+    );
   },
 
   async listDiagnosisHistory(
     limit = 20,
   ): Promise<{ analyses: DiagnosisAnalysis[] }> {
-    return authFetch(`${API_BASE}/diagnosis-analyses?limit=${limit}`).then(
-      (res) => parseJson<{ analyses: DiagnosisAnalysis[] }>(res),
+    const result = await withOpenApiError(() =>
+      listDiagnosisAnalysesOpenApi({ limit }, undefined, openApiAuthFetch),
     );
+    return { analyses: result.analyses.map(toDiagnosisAnalysis) };
   },
 
   /**

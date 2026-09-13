@@ -722,3 +722,59 @@ legacy Consultation/Thread handlers         REMOVED
 legacy consultation HTTP DTO                REMOVED
 git diff --check                            PASS
 ```
+
+## Checkpoint 11 — Diagnosis application / analysis / replay REST boundary
+
+Status: COMPLETE ON PHASE BRANCH
+
+The complete Diagnosis REST family is now OpenAPI-authoritative:
+
+```text
+POST /api/v1/consultations/{id}/diagnosis
+GET  /api/v1/diagnosis-analyses
+GET  /api/v1/diagnosis-analyses/{analysisId}
+PUT  /api/v1/diagnosis-analyses/{analysisId}/assessment
+POST /api/v1/diagnosis-analyses/{analysisId}/replay
+GET  /api/v1/diagnosis-analyses/{analysisId}/regression-export
+```
+
+### Application ownership
+
+The former `DiagnosisHandler` mixed HTTP concerns with BodyState readiness, safety gating, Agent configuration selection, immutable replay input, rollout observation, Evidence persistence, hypothesis projection, governance review and consultation phase transitions. That orchestration now lives in `service.DiagnosisApplicationService`, which exposes a transport-neutral `Analyze` use case and stable application error codes. The OpenAPI adapter owns only authentication, status-code mapping and public projection.
+
+The old `DiagnosisHandler` is deleted. Its three characterization tests were preserved at the application layer: selected Agent configuration identity, missing consultation session, and unavailable BodyState diagnosis domain.
+
+### Public projection hardening
+
+The previous read path embedded persistence models for freshness and candidate assessments, leaking `user_id` into browser JSON. The vNext public schema and adapter now remove that persistence identity. Health Workspace reuses the same diagnosis sanitizer so its strict generated response cannot regress to the old leak.
+
+`candidate_assessments` and `freshness` are optional augmentations of the base immutable analysis projection. This matches actual service semantics: Analyze does not inherently create candidate assessments, and freshness evaluation is best-effort on the direct analysis route. Health Workspace retains its stronger product invariant and fails closed if an existing diagnosis projection lacks review state.
+
+### Replay and compatibility boundary
+
+Historical/counterfactual replay has a structured generated report. Regression export remains an explicitly opaque developer-dataset envelope. Analyze temporarily returns a generated `JsonObject` because the characterized legacy pre-envelope governance-rejected branch returns a transient non-durable object without analysis identity; this looseness is confined to one compatibility mapper and is not used for durable history.
+
+### Coverage after this batch
+
+```text
+Phase 00 routes               96
+operational exclusions         1
+browser-facing eligible       95
+OpenAPI-authoritative         62
+missing                       33
+coverage                   65.26%
+```
+
+### Verification
+
+```text
+pnpm contracts:lint                         PASS (same 2 known share-path ambiguity warnings)
+pnpm contracts:check-generated              PASS
+Go test ./...                               PASS
+Web consultation service                    23/23 PASS
+Web typecheck                               PASS
+handwritten diagnosis feature URLs          NONE
+nested freshness/assessment user_id leak    BLOCKED BY PROJECTION TEST
+Diagnosis application characterizations     PASS
+git diff --check                            PASS
+```

@@ -10,7 +10,6 @@ import { DiagnosisFreshnessReason } from './diagnosisFreshnessReason.zod';
 
 export const DiagnosisFreshness = /*#__PURE__*/ zod.strictObject({
   "analysis_id": /*#__PURE__*/ zod.uuid(),
-  "user_id": /*#__PURE__*/ zod.uuid(),
   "state": /*#__PURE__*/ zod.enum(['fresh', 'potentially_stale', 'stale']),
   "evaluated_against_revision": /*#__PURE__*/ zod.int(),
   "reasons": /*#__PURE__*/ zod.array(DiagnosisFreshnessReason),

@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/bodysense/api/internal/dto"
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
@@ -50,7 +51,18 @@ func (s *PublicServer) GetHealthWorkspace(
 // model with unknown-field rejection. The generated type never enters service or
 // domain packages.
 func healthWorkspaceToOpenAPI(workspace *dto.HealthWorkspace) (openapiv1.HealthWorkspace, error) {
-	return strictOpenAPIConvert[openapiv1.HealthWorkspace]("HealthWorkspace", workspace)
+	encoded, err := json.Marshal(workspace)
+	if err != nil {
+		return openapiv1.HealthWorkspace{}, err
+	}
+	var projected map[string]any
+	if err := json.Unmarshal(encoded, &projected); err != nil {
+		return openapiv1.HealthWorkspace{}, err
+	}
+	if diagnosis, ok := projected["diagnosis"].(map[string]any); ok && len(diagnosis) > 0 {
+		projected["diagnosis"] = projectDiagnosisPayload(diagnosis)
+	}
+	return strictOpenAPIConvert[openapiv1.HealthWorkspace]("HealthWorkspace", projected)
 }
 
 func getWorkspaceError401(code, message string) openapiv1.GetHealthWorkspace401JSONResponse {
