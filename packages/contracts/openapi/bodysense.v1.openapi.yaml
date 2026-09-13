@@ -877,6 +877,130 @@ paths:
           $ref: '#/components/responses/ServiceUnavailable'
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/auth/register:
+    post:
+      operationId: registerAccount
+      summary: Register a new account and establish a browser session family.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRegisterRequest'
+      responses:
+        '201':
+          description: Account created; HttpOnly refresh credential set via Set-Cookie.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            Pragma:
+              $ref: '#/components/headers/NoCachePragma'
+            Set-Cookie:
+              $ref: '#/components/headers/RefreshCookie'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSession'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/auth/login:
+    post:
+      operationId: loginAccount
+      summary: Log in and establish a browser session family.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthLoginRequest'
+      responses:
+        '200':
+          description: Session established; HttpOnly refresh credential set via Set-Cookie.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            Pragma:
+              $ref: '#/components/headers/NoCachePragma'
+            Set-Cookie:
+              $ref: '#/components/headers/RefreshCookie'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSession'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/auth/refresh:
+    post:
+      operationId: refreshAccountSession
+      summary: Rotate the HttpOnly refresh credential and return a fresh access credential.
+      security: []
+      responses:
+        '200':
+          description: Refresh credential rotated via Set-Cookie; short-lived access credential returned.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            Pragma:
+              $ref: '#/components/headers/NoCachePragma'
+            Set-Cookie:
+              $ref: '#/components/headers/RefreshCookie'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSession'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/auth/logout:
+    post:
+      operationId: logoutAccount
+      summary: Revoke the current refresh/session family and clear the browser credential.
+      security: []
+      responses:
+        '200':
+          description: Session revoked; refresh credential cleared via Set-Cookie.
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/RefreshCookie'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutAcknowledgement'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
 
 components:
   parameters:
@@ -887,6 +1011,25 @@ components:
       schema:
         type: string
         format: uuid
+  headers:
+    NoStore:
+      description: Credential-bearing responses must not be cached.
+      schema:
+        type: string
+        const: no-store
+    NoCachePragma:
+      description: Legacy no-cache directive for credential-bearing responses.
+      schema:
+        type: string
+        const: no-cache
+    RefreshCookie:
+      description: HttpOnly refresh credential cookie (set or cleared).
+      schema:
+        type: string
+    RetryAfter:
+      description: Seconds until the next authentication attempt may be retried.
+      schema:
+        type: string
   securitySchemes:
     bearerAuth:
       type: http
@@ -896,6 +1039,59 @@ components:
     AssessmentEvidenceSource:
       type: string
       enum: [body_state, report, posture_analysis]
+    AuthRegisterRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - email
+      - password
+      properties:
+        email:
+          type: string
+          minLength: 3
+          maxLength: 254
+          pattern: "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+    AuthLoginRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - email
+      - password
+      properties:
+        email:
+          type: string
+          minLength: 3
+          maxLength: 254
+          pattern: "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+    AuthSession:
+      type: object
+      additionalProperties: false
+      required:
+      - access_token
+      - expires_in
+      properties:
+        access_token:
+          type: string
+          minLength: 1
+        expires_in:
+          type: integer
+          minimum: 0
+    LogoutAcknowledgement:
+      type: object
+      additionalProperties: false
+      required:
+      - message
+      properties:
+        message:
+          type: string
     AssessmentEvidenceDomain:
       type: string
       enum: [posture, exercise, lifestyle, anthropometry, health_report, injury_symptoms]
@@ -3015,6 +3211,21 @@ components:
             $ref: '#/components/schemas/ErrorEnvelope'
     Conflict:
       description: Requested operation conflicts with the durable resource state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Forbidden:
+      description: Request origin or operator permission requirement was not satisfied.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    TooManyRequests:
+      description: Too many authentication attempts; retry after the advertised delay.
+      headers:
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
       content:
         application/json:
           schema:

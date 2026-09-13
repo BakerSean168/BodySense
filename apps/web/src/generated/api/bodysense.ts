@@ -11,6 +11,7 @@ import {
   AssessmentReplayReport,
   AssessmentReport,
   AssessmentReportV2,
+  AuthSession,
   BodyMetricsSnapshot,
   BodyStateEvidenceListResponse,
   BodyStateFactMutationResponse,
@@ -22,6 +23,7 @@ import {
   HealthWorkspace,
   InjuryHistorySnapshot,
   LifestyleSnapshot,
+  LogoutAcknowledgement,
   NullableUserProfileResponse,
   OnboardingContextResult,
   PrivacyErasureAccepted,
@@ -35,6 +37,9 @@ import type {
   AssessmentReplayRequest,
   AssessmentReportOutput,
   AssessmentReportV2Output,
+  AuthLoginRequest,
+  AuthRegisterRequest,
+  AuthSessionOutput,
   BodyMetricsSnapshotOutput,
   BodyStateEvidenceListResponseOutput,
   BodyStateFactMutationResponseOutput,
@@ -51,6 +56,7 @@ import type {
   InjuryHistorySnapshotOutput,
   LifestyleSnapshotOutput,
   ListAssessmentsParams,
+  LogoutAcknowledgementOutput,
   NullableUserProfileResponseOutput,
   OnboardingContextRequest,
   OnboardingContextResultOutput,
@@ -1594,5 +1600,189 @@ export const exportAssessmentRegressionCase = async (id: string, options?: Reque
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? AssessmentRegressionExport.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getRegisterAccountUrl = () => {
+
+
+
+
+  return `/api/v1/auth/register`
+}
+
+/**
+ * @summary Register a new account and establish a browser session family.
+ */
+export const registerAccount = async (authRegisterRequest: AuthRegisterRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<AuthSessionOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getRegisterAccountUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(authRegisterRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: AuthSession, status?: number} = new globalThis.Error();
+    const data : AuthSession = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? AuthSession.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getLoginAccountUrl = () => {
+
+
+
+
+  return `/api/v1/auth/login`
+}
+
+/**
+ * @summary Log in and establish a browser session family.
+ */
+export const loginAccount = async (authLoginRequest: AuthLoginRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<AuthSessionOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getLoginAccountUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(authLoginRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: AuthSession, status?: number} = new globalThis.Error();
+    const data : AuthSession = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? AuthSession.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getRefreshAccountSessionUrl = () => {
+
+
+
+
+  return `/api/v1/auth/refresh`
+}
+
+/**
+ * @summary Rotate the HttpOnly refresh credential and return a fresh access credential.
+ */
+export const refreshAccountSession = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<AuthSessionOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getRefreshAccountSessionUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: AuthSession, status?: number} = new globalThis.Error();
+    const data : AuthSession = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? AuthSession.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getLogoutAccountUrl = () => {
+
+
+
+
+  return `/api/v1/auth/logout`
+}
+
+/**
+ * @summary Revoke the current refresh/session family and clear the browser credential.
+ */
+export const logoutAccount = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<LogoutAcknowledgementOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getLogoutAccountUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: LogoutAcknowledgement, status?: number} = new globalThis.Error();
+    const data : LogoutAcknowledgement = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? LogoutAcknowledgement.parse(parsedBody) : parsedBody
   return data
 }

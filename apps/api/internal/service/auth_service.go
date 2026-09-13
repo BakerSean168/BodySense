@@ -12,7 +12,6 @@ import (
 	"github.com/bodysense/api/internal/auth"
 	"github.com/bodysense/api/internal/cache"
 	"github.com/bodysense/api/internal/database"
-	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/repository"
 	"github.com/google/uuid"
@@ -52,10 +51,19 @@ func NewAuthService(userRepo *repository.UserRepository, jwtConfig auth.JWTConfi
 	}
 }
 
+// AuthSessionResult is the application-owned authentication session payload.
+// The refresh credential is deliberately non-transport: callers decide whether
+// it becomes an HttpOnly cookie or stays internal.
+type AuthSessionResult struct {
+	AccessToken  string
+	RefreshToken string
+	ExpiresIn    int64
+}
+
 // Register creates a new user account.
-func (s *AuthService) Register(ctx context.Context, req dto.RegisterRequest) (*dto.AuthResponse, error) {
+func (s *AuthService) Register(ctx context.Context, email, password string) (*AuthSessionResult, error) {
 	// Check if email already exists
-	exists, err := s.userRepo.EmailExists(ctx, req.Email)
+	exists, err := s.userRepo.EmailExists(ctx, email)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check email existence: %w", err)
 	}
@@ -64,7 +72,7 @@ func (s *AuthService) Register(ctx context.Context, req dto.RegisterRequest) (*d
 	}
 
 	// Hash password with bcrypt (cost >= 12)
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), 12)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 12)
 	if err != nil {
 		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
@@ -72,7 +80,7 @@ func (s *AuthService) Register(ctx context.Context, req dto.RegisterRequest) (*d
 	// Create user
 	user := &model.User{
 		ID:           uuid.New(),
-		Email:        req.Email,
+		Email:        email,
 		PasswordHash: string(hashedPassword),
 	}
 
@@ -85,9 +93,9 @@ func (s *AuthService) Register(ctx context.Context, req dto.RegisterRequest) (*d
 }
 
 // Login authenticates a user and returns tokens.
-func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest) (*dto.AuthResponse, error) {
+func (s *AuthService) Login(ctx context.Context, email, password string) (*AuthSessionResult, error) {
 	// Find user by email
-	user, err := s.userRepo.FindByEmail(ctx, req.Email)
+	user, err := s.userRepo.FindByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrInvalidCredentials
@@ -96,7 +104,7 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest) (*dto.Aut
 	}
 
 	// Verify password
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
 		return nil, ErrInvalidCredentials
 	}
 
@@ -110,20 +118,20 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest) (*dto.Aut
 	return s.generateTokens(ctx, user, uuid.New())
 }
 
-// RefreshToken refreshes an access token using a refresh token.
+// RefreshSession refreshes an access token using a refresh token.
 // The refresh token value is stored as "userID:sessionID" so rotation keeps the
 // same session alive, re-arms its TTL, and issues a new access token for it.
-func (s *AuthService) RefreshToken(ctx context.Context, req dto.RefreshRequest) (*dto.AuthResponse, error) {
+func (s *AuthService) RefreshSession(ctx context.Context, refreshToken string) (*AuthSessionResult, error) {
 	if s.redisClient == nil {
 		return nil, ErrAuthUnavailable
 	}
-	key := refreshTokenKey(req.RefreshToken)
+	key := refreshTokenKey(refreshToken)
 	stored, err := s.redisClient.Get(ctx, key).Result()
 	if err != nil {
 		if !errors.Is(err, redis.Nil) {
 			return nil, fmt.Errorf("%w: %v", ErrAuthUnavailable, err)
 		}
-		replayValue, replayErr := s.redisClient.Get(ctx, refreshReplayKey(req.RefreshToken)).Result()
+		replayValue, replayErr := s.redisClient.Get(ctx, refreshReplayKey(refreshToken)).Result()
 		if replayErr == nil {
 			if userID, sessionID, parseErr := parseRefreshValue(replayValue); parseErr == nil {
 				if revokeErr := s.revokeSessionFamily(ctx, userID, sessionID); revokeErr != nil {
@@ -164,7 +172,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, req dto.RefreshRequest) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate access token: %w", err)
 	}
-	result, err := s.rotateRefreshToken(ctx, req.RefreshToken, stored, newRefreshToken, userID, sessionID)
+	result, err := s.rotateRefreshToken(ctx, refreshToken, stored, newRefreshToken, userID, sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +190,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, req dto.RefreshRequest) 
 		}
 		return nil, fmt.Errorf("%w: failed to re-arm session: %v", ErrAuthUnavailable, err)
 	}
-	return &dto.AuthResponse{AccessToken: accessToken, RefreshToken: newRefreshToken, ExpiresIn: int64(s.jwtConfig.AccessTokenTTL.Seconds())}, nil
+	return &AuthSessionResult{AccessToken: accessToken, RefreshToken: newRefreshToken, ExpiresIn: int64(s.jwtConfig.AccessTokenTTL.Seconds())}, nil
 }
 
 // Logout invalidates a refresh token and revokes its session.
@@ -244,7 +252,7 @@ func (s *AuthService) DeleteUser(ctx context.Context, userID uuid.UUID) error {
 // generateTokens generates access and refresh tokens for a user within a session,
 // and writes the session cache entry. When sessionID is uuid.Nil a new session is
 // created; otherwise the existing session is re-armed (refresh rotation).
-func (s *AuthService) generateTokens(ctx context.Context, user *model.User, sessionID uuid.UUID) (*dto.AuthResponse, error) {
+func (s *AuthService) generateTokens(ctx context.Context, user *model.User, sessionID uuid.UUID) (*AuthSessionResult, error) {
 	// Generate access token bound to the session
 	accessToken, err := auth.GenerateAccessToken(s.jwtConfig, user.ID, sessionID, user.Email)
 	if err != nil {
@@ -291,7 +299,7 @@ func (s *AuthService) generateTokens(ctx context.Context, user *model.User, sess
 		return nil, fmt.Errorf("%w: failed to establish session authority: %v", ErrAuthUnavailable, err)
 	}
 
-	return &dto.AuthResponse{
+	return &AuthSessionResult{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		ExpiresIn:    int64(s.jwtConfig.AccessTokenTTL.Seconds()),

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/bodysense/api/internal/service"
@@ -108,23 +109,37 @@ func (h *TrainingHandler) UpdateLog(c *gin.Context) {
 	}
 
 	var req struct {
-		Notes           string     `json:"notes"`
-		Exercises       any        `json:"exercises"`
-		SymptomChanges  string     `json:"symptom_changes"`
-		TrainingFeeling string     `json:"training_feeling"`
-		Difficulties    string     `json:"difficulties"`
-		BodyRegion      string     `json:"body_region"`
-		ConcernKey      string     `json:"concern_key"`
-		Trend           string     `json:"trend"`
-		FactID          *uuid.UUID `json:"fact_id"`
+		Notes           string           `json:"notes"`
+		Exercises       []map[string]any `json:"exercises"`
+		SymptomChanges  string           `json:"symptom_changes"`
+		TrainingFeeling string           `json:"training_feeling"`
+		Difficulties    string           `json:"difficulties"`
+		BodyRegion      string           `json:"body_region"`
+		ConcernKey      string           `json:"concern_key"`
+		Trend           string           `json:"trend"`
+		FactID          *uuid.UUID       `json:"fact_id"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	logInput := make([]service.TrainingExerciseLogInput, 0, len(req.Exercises))
+	for _, exercise := range req.Exercises {
+		entry := service.TrainingExerciseLogInput{
+			Name:      fmt.Sprint(exercise["name"]),
+			Completed: exercise["completed"] == true,
+		}
+		if rawID, ok := exercise["intervention_id"].(string); ok && rawID != "" {
+			if id, err := uuid.Parse(rawID); err == nil {
+				entry.InterventionID = &id
+			}
+		}
+		logInput = append(logInput, entry)
+	}
+
 	result, err := h.trainingService.UpdateLogWithFeedback(c.Request.Context(), planID, uid, service.TrainingFeedbackInput{
-		Notes: req.Notes, Exercises: req.Exercises, SymptomChanges: req.SymptomChanges,
+		Notes: req.Notes, Exercises: &logInput, SymptomChanges: req.SymptomChanges,
 		TrainingFeeling: req.TrainingFeeling, Difficulties: req.Difficulties,
 		BodyRegion: req.BodyRegion, ConcernKey: req.ConcernKey, Trend: req.Trend, FactID: req.FactID,
 	})

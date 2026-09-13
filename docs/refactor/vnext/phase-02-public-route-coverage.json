@@ -5,11 +5,11 @@
   "totals": {
     "baseline": 96,
     "browserFacingEligible": 95,
-    "openapi": 32,
-    "missing": 63,
+    "openapi": 36,
+    "missing": 59,
     "retired": 0,
     "excludedOperational": 1,
-    "coveragePercent": 33.68
+    "coveragePercent": 37.89
   },
   "routes": [
     {
@@ -23,25 +23,33 @@
       "method": "POST",
       "path": "/api/v1/auth/register",
       "source": "apps/api/cmd/server/main.go:377",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "registerAccount",
+      "openapiPath": "/api/v1/auth/register"
     },
     {
       "method": "POST",
       "path": "/api/v1/auth/login",
       "source": "apps/api/cmd/server/main.go:378",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "loginAccount",
+      "openapiPath": "/api/v1/auth/login"
     },
     {
       "method": "POST",
       "path": "/api/v1/auth/refresh",
       "source": "apps/api/cmd/server/main.go:379",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "refreshAccountSession",
+      "openapiPath": "/api/v1/auth/refresh"
     },
     {
       "method": "POST",
       "path": "/api/v1/auth/logout",
       "source": "apps/api/cmd/server/main.go:380",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "logoutAccount",
+      "openapiPath": "/api/v1/auth/logout"
     },
     {
       "method": "GET",

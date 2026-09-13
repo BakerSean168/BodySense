@@ -5,11 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/bodysense/api/internal/auth"
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 )
+
+// authConfig mirrors the auth edge policy without exposing the limiter
+// implementation beyond the transport package.
+type authConfig = auth.SecurityConfig
 
 type bodyStateFactService interface {
 	UpsertFact(
@@ -36,6 +41,8 @@ type PublicServer struct {
 	privacyCookie    privacyRefreshCookiePolicy
 	assessment       assessmentApplication
 	assessmentReplay assessmentReplayApplication
+	accounts         authAccountApplication
+	authSecurity     authConfig
 }
 
 func NewPublicServer(bodyState bodyStateFactService) *PublicServer {

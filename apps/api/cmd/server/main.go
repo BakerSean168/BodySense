@@ -61,7 +61,7 @@ func main() {
 	// JWT + browser auth security configuration.
 	jwtConfig := auth.JWTConfigFromEnv()
 	corsOrigins := parseCORSOrigins()
-	authSecurity := handler.DefaultAuthSecurityConfig(jwtConfig.RefreshTokenTTL)
+	authSecurity := auth.DefaultSecurityConfig(jwtConfig.RefreshTokenTTL)
 	authSecurity.CookieSecure = strings.EqualFold(os.Getenv("APP_ENV"), "production")
 	authSecurity.RequireOrigin = authSecurity.CookieSecure
 	authSecurity.TrustedOrigins = corsOrigins
@@ -171,7 +171,6 @@ func main() {
 	).WithAssessmentDeployment(agentDeploymentPolicy).
 		WithAssessmentRollout(assessmentRolloutService).
 		WithAssessmentReviews(documentIndicatorReviewRepo)
-	authHandler := handler.NewAuthHandler(authService, authSecurity)
 	agentToolRepo := repository.NewAgentToolCallRepository(database.DB)
 	agentToolService := service.NewAgentToolService(agentToolRepo)
 	interactionRepo := repository.NewAgentInteractionRepository(database.DB)
@@ -362,15 +361,6 @@ func main() {
 		})
 	})
 
-	// Auth routes
-	authGroup := r.Group("/api/v1/auth")
-	{
-		authGroup.POST("/register", authHandler.Register)
-		authGroup.POST("/login", authHandler.Login)
-		authGroup.POST("/refresh", authHandler.RefreshToken)
-		authGroup.POST("/logout", authHandler.Logout)
-	}
-
 	// Protected routes. Keep one auth middleware instance so handwritten and
 	// generated OpenAPI routes share the exact same token/session authority.
 	authMiddleware := middleware.AuthMiddleware(jwtConfig, userRepo, sessionCache)
@@ -463,19 +453,21 @@ func main() {
 		protected.POST("/training/:id/reassess", reassessmentHandler.SubmitReassessment)
 	}
 
-	// OpenAPI-first public routes. Authentication remains owned by the existing
-	// middleware; request/schema validation and transport decoding are generated
-	// from packages/contracts/openapi/bodysense.v1.openapi.yaml.
+	// OpenAPI-authoritative public routes. Authentication, operator authority
+	// and request validation remain owned by middleware; request/response
+	// transport is generated from packages/contracts/openapi/bodysense.v1.openapi.yaml.
 	publicAPISpec, err := openapiv1.GetSwagger()
 	if err != nil {
 		log.Fatalf("failed to load generated public OpenAPI spec: %v", err)
 	}
-	openAPIProtected := r.Group("")
-	openAPIProtected.Use(authMiddleware)
-	openAPIProtected.Use(httpapi.RequestValidator(publicAPISpec))
-	openapiv1.RegisterHandlers(
-		openAPIProtected,
-		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure).WithAssessment(assessmentService, assessmentReplayService)),
+	httpapi.RegisterRoutes(
+		r,
+		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure).WithAssessment(assessmentService, assessmentReplayService).WithAuth(authService, authSecurity)),
+		httpapi.RouteSecurity{
+			Auth:      authMiddleware,
+			Operator:  middleware.RequireKnowledgeOperator(userRepo),
+			Validator: httpapi.RequestValidator(publicAPISpec),
+		},
 	)
 
 	// Public share routes (no auth)
