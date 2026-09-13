@@ -57,8 +57,24 @@ func RegisterRoutes(router gin.IRouter, si openapiv1.ServerInterface, security R
 	sharePublic := router.Group("/api/v1/conversations/share", security.Validator)
 	sharePublic.GET("/:token", wrapper.GetSharedConversation)
 
+	// Knowledge administration is a distinct authorization domain. Authenticate
+	// first, resolve durable operator role second, then validate the request.
+	// Unauthorized members therefore never reach either request binding or the
+	// generated Knowledge adapter.
+	knowledge := router.Group("/api/v1/knowledge", security.Auth, security.Operator, security.Validator)
+	registerKnowledgeRoutes(knowledge, wrapper)
+
 	protected := router.Group("/api/v1", security.Auth, security.Validator)
 	registerProtectedRoutes(protected, wrapper)
+}
+
+func registerKnowledgeRoutes(knowledge gin.IRoutes, wrapper *openapiv1.ServerInterfaceWrapper) {
+	knowledge.POST("/sources", wrapper.RegisterKnowledgeSource)
+	knowledge.GET("/sources", wrapper.ListKnowledgeSources)
+	knowledge.POST("/ingestions/video", wrapper.EnqueueKnowledgeVideoIngestion)
+	knowledge.GET("/ingestions/:jobID", wrapper.GetKnowledgeIngestionJob)
+	knowledge.POST("/search", wrapper.SearchKnowledge)
+	knowledge.GET("/stats", wrapper.GetKnowledgeStats)
 }
 
 func registerProtectedRoutes(protected gin.IRoutes, wrapper *openapiv1.ServerInterfaceWrapper) {

@@ -15,7 +15,6 @@ import (
 	consultationruntime "github.com/bodysense/api/internal/consultation"
 	"github.com/bodysense/api/internal/database"
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
-	"github.com/bodysense/api/internal/handler"
 	"github.com/bodysense/api/internal/middleware"
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/observability"
@@ -261,9 +260,7 @@ func main() {
 		os.Getenv("AI_SERVICE_URL"),
 	)
 	knowledgeIngestionService.StartWorker(context.Background(), 10*time.Second, 15*time.Minute)
-	knowledgeHandler := handler.NewKnowledgeHandler(agentDeploymentPolicy).
-		WithSourceRegistry(knowledgeSourceRegistry).
-		WithIngestionService(knowledgeIngestionService)
+	knowledgeQueryService := service.NewKnowledgeQueryService(os.Getenv("AI_SERVICE_URL"))
 
 	// Continuous health workspace is the single capability/read model for the product loop.
 	healthWorkspaceService := service.NewHealthWorkspaceService(
@@ -374,27 +371,13 @@ func main() {
 	}
 	httpapi.RegisterRoutes(
 		r,
-		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure).WithAssessment(assessmentService, assessmentReplayService).WithAuth(authService, authSecurity).WithConversations(conversationService, shareService, runtimeEventService).WithConsultation(consultationRuntime, consultationService, interactionService, consultationReplayService, threadProjectionService, bodyStateService).WithDiagnosis(diagnosisApplicationService, diagnosisAnalysisService, diagnosisFreshnessService, diagnosisReplayService).WithTreatment(treatmentService, trainingService, treatmentReplayService).WithTraining(trainingService).WithUploads(uploadService, healthDocumentReviewService)),
+		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure).WithAssessment(assessmentService, assessmentReplayService).WithAuth(authService, authSecurity).WithConversations(conversationService, shareService, runtimeEventService).WithConsultation(consultationRuntime, consultationService, interactionService, consultationReplayService, threadProjectionService, bodyStateService).WithDiagnosis(diagnosisApplicationService, diagnosisAnalysisService, diagnosisFreshnessService, diagnosisReplayService).WithTreatment(treatmentService, trainingService, treatmentReplayService).WithTraining(trainingService).WithUploads(uploadService, healthDocumentReviewService).WithKnowledge(knowledgeSourceRegistry, knowledgeIngestionService, knowledgeQueryService)),
 		httpapi.RouteSecurity{
 			Auth:      authMiddleware,
 			Operator:  middleware.RequireKnowledgeOperator(userRepo),
 			Validator: httpapi.RequestValidator(publicAPISpec),
 		},
 	)
-
-	// Global Knowledge administration is an explicit operator capability.
-	// Product Agents retrieve published Knowledge through the internal AI path;
-	// these HTTP surfaces are for governed operator workflows only.
-	knowledgeGroup := protected.Group("/knowledge")
-	knowledgeGroup.Use(middleware.RequireKnowledgeOperator(userRepo))
-	{
-		knowledgeGroup.POST("/sources", knowledgeHandler.RegisterSource)
-		knowledgeGroup.GET("/sources", knowledgeHandler.ListSources)
-		knowledgeGroup.POST("/ingestions/video", knowledgeHandler.IngestVideo)
-		knowledgeGroup.GET("/ingestions/:jobID", knowledgeHandler.GetIngestionJob)
-		knowledgeGroup.POST("/search", knowledgeHandler.SearchKnowledge)
-		knowledgeGroup.GET("/stats", knowledgeHandler.GetStats)
-	}
 
 	log.Printf("BodySense API starting on %s", listenAddress)
 	if err := r.Run(listenAddress); err != nil {

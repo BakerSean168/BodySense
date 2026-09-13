@@ -5,11 +5,11 @@
   "totals": {
     "baseline": 96,
     "browserFacingEligible": 95,
-    "openapi": 89,
-    "missing": 6,
+    "openapi": 95,
+    "missing": 0,
     "retired": 0,
     "excludedOperational": 1,
-    "coveragePercent": 93.68
+    "coveragePercent": 100
   },
   "routes": [
     {
@@ -735,37 +735,49 @@
       "method": "POST",
       "path": "/api/v1/knowledge/sources",
       "source": "apps/api/cmd/server/main.go:515",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "registerKnowledgeSource",
+      "openapiPath": "/api/v1/knowledge/sources"
     },
     {
       "method": "GET",
       "path": "/api/v1/knowledge/sources",
       "source": "apps/api/cmd/server/main.go:516",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "listKnowledgeSources",
+      "openapiPath": "/api/v1/knowledge/sources"
     },
     {
       "method": "POST",
       "path": "/api/v1/knowledge/ingestions/video",
       "source": "apps/api/cmd/server/main.go:517",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "enqueueKnowledgeVideoIngestion",
+      "openapiPath": "/api/v1/knowledge/ingestions/video"
     },
     {
       "method": "GET",
       "path": "/api/v1/knowledge/ingestions/:jobID",
       "source": "apps/api/cmd/server/main.go:518",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getKnowledgeIngestionJob",
+      "openapiPath": "/api/v1/knowledge/ingestions/{jobID}"
     },
     {
       "method": "POST",
       "path": "/api/v1/knowledge/search",
       "source": "apps/api/cmd/server/main.go:519",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "searchKnowledge",
+      "openapiPath": "/api/v1/knowledge/search"
     },
     {
       "method": "GET",
       "path": "/api/v1/knowledge/stats",
       "source": "apps/api/cmd/server/main.go:520",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getKnowledgeStats",
+      "openapiPath": "/api/v1/knowledge/stats"
     }
   ]
 }

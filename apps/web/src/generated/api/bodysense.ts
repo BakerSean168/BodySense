@@ -41,6 +41,12 @@ import {
   InjuryHistorySnapshot,
   InteractionMetrics,
   JsonObject,
+  KnowledgeIngestionEnqueueResponse,
+  KnowledgeIngestionJob,
+  KnowledgeSearchResponse,
+  KnowledgeSource,
+  KnowledgeSourceListResponse,
+  KnowledgeStats,
   LifestyleSnapshot,
   LogoutAcknowledgement,
   NullableUserProfileResponse,
@@ -122,6 +128,14 @@ import type {
   InjuryHistorySnapshotOutput,
   InteractionMetricsOutput,
   JsonObjectOutput,
+  KnowledgeIngestionEnqueueResponseOutput,
+  KnowledgeIngestionJobOutput,
+  KnowledgeSearchRequest,
+  KnowledgeSearchResponseOutput,
+  KnowledgeSourceListResponseOutput,
+  KnowledgeSourceOutput,
+  KnowledgeStatsOutput,
+  KnowledgeVideoIngestionRequest,
   LifestyleSnapshotOutput,
   ListAssessmentsParams,
   ListConversationsParams,
@@ -140,6 +154,7 @@ import type {
   PrivacyErasurePlanOutput,
   PrivacyErasureRequest,
   RecordOutcomeRequest,
+  RegisterKnowledgeSourceRequest,
   ResolveBodyStateSafetyRequest,
   ResumeConsultationInteractionRequest,
   ReviewBodyStateFactRequest,
@@ -4234,5 +4249,281 @@ export const getHealthDocumentSource = async (id: string,
   }
   const body = [204, 205, 304].includes(res.status) ? null : await res.blob();
   const data: Blob = body as Blob
+  return data
+}
+
+
+
+export const getRegisterKnowledgeSourceUrl = () => {
+
+
+
+
+  return `/api/v1/knowledge/sources`
+}
+
+/**
+ * @summary Register one governed Knowledge source identity as a Knowledge operator.
+ */
+export const registerKnowledgeSource = async (registerKnowledgeSourceRequest: RegisterKnowledgeSourceRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<KnowledgeSourceOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getRegisterKnowledgeSourceUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(registerKnowledgeSourceRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: KnowledgeSource, status?: number} = new globalThis.Error();
+    const data : KnowledgeSource = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? KnowledgeSource.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListKnowledgeSourcesUrl = () => {
+
+
+
+
+  return `/api/v1/knowledge/sources`
+}
+
+/**
+ * @summary List governed Knowledge source identities as a Knowledge operator.
+ */
+export const listKnowledgeSources = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<KnowledgeSourceListResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListKnowledgeSourcesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: KnowledgeSourceListResponse, status?: number} = new globalThis.Error();
+    const data : KnowledgeSourceListResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? KnowledgeSourceListResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getEnqueueKnowledgeVideoIngestionUrl = () => {
+
+
+
+
+  return `/api/v1/knowledge/ingestions/video`
+}
+
+/**
+ * @summary Enqueue one governed video ingestion using server-pinned Agent configurations.
+ */
+export const enqueueKnowledgeVideoIngestion = async (knowledgeVideoIngestionRequest: KnowledgeVideoIngestionRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<KnowledgeIngestionEnqueueResponseOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getEnqueueKnowledgeVideoIngestionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(knowledgeVideoIngestionRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: KnowledgeIngestionEnqueueResponse, status?: number} = new globalThis.Error();
+    const data : KnowledgeIngestionEnqueueResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? KnowledgeIngestionEnqueueResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetKnowledgeIngestionJobUrl = (jobID: string,) => {
+
+
+
+
+  return `/api/v1/knowledge/ingestions/${jobID}`
+}
+
+/**
+ * @summary Read one durable Knowledge ingestion lifecycle as a Knowledge operator.
+ */
+export const getKnowledgeIngestionJob = async (jobID: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<KnowledgeIngestionJobOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetKnowledgeIngestionJobUrl(jobID),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: KnowledgeIngestionJob, status?: number} = new globalThis.Error();
+    const data : KnowledgeIngestionJob = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? KnowledgeIngestionJob.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getSearchKnowledgeUrl = () => {
+
+
+
+
+  return `/api/v1/knowledge/search`
+}
+
+/**
+ * @summary Search normalized Knowledge as a Knowledge operator.
+ */
+export const searchKnowledge = async (knowledgeSearchRequest: KnowledgeSearchRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<KnowledgeSearchResponseOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getSearchKnowledgeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(knowledgeSearchRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: KnowledgeSearchResponse, status?: number} = new globalThis.Error();
+    const data : KnowledgeSearchResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? KnowledgeSearchResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetKnowledgeStatsUrl = () => {
+
+
+
+
+  return `/api/v1/knowledge/stats`
+}
+
+/**
+ * @summary Read normalized Knowledge library statistics as a Knowledge operator.
+ */
+export const getKnowledgeStats = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<KnowledgeStatsOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetKnowledgeStatsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: KnowledgeStats, status?: number} = new globalThis.Error();
+    const data : KnowledgeStats = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? KnowledgeStats.parse(parsedBody) : parsedBody
   return data
 }

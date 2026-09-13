@@ -2262,6 +2262,178 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/knowledge/sources:
+    post:
+      operationId: registerKnowledgeSource
+      summary: Register one governed Knowledge source identity as a Knowledge operator.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterKnowledgeSourceRequest'
+      responses:
+        '201':
+          description: Knowledge source registered.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeSource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    get:
+      operationId: listKnowledgeSources
+      summary: List governed Knowledge source identities as a Knowledge operator.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Registered Knowledge sources.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeSourceListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/knowledge/ingestions/video:
+    post:
+      operationId: enqueueKnowledgeVideoIngestion
+      summary: Enqueue one governed video ingestion using server-pinned Agent configurations.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KnowledgeVideoIngestionRequest'
+      responses:
+        '202':
+          description: Durable ingestion job accepted or idempotently recovered.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeIngestionEnqueueResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/knowledge/ingestions/{jobID}:
+    get:
+      operationId: getKnowledgeIngestionJob
+      summary: Read one durable Knowledge ingestion lifecycle as a Knowledge operator.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: jobID
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Public ingestion lifecycle projection.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeIngestionJob'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/knowledge/search:
+    post:
+      operationId: searchKnowledge
+      summary: Search normalized Knowledge as a Knowledge operator.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KnowledgeSearchRequest'
+      responses:
+        '200':
+          description: Normalized Knowledge search results without private filesystem paths.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeSearchResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '502':
+          description: Internal Knowledge search service is unavailable or violates its contract.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/knowledge/stats:
+    get:
+      operationId: getKnowledgeStats
+      summary: Read normalized Knowledge library statistics as a Knowledge operator.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Knowledge library statistics.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '502':
+          description: Internal Knowledge statistics service is unavailable or violates its contract.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 components:
   parameters:
     ConversationId:
@@ -5686,6 +5858,169 @@ components:
           items: {type: string}
         idempotency_key: {type: string, minLength: 1}
         note: {type: string}
+    RegisterKnowledgeSourceRequest:
+      type: object
+      additionalProperties: false
+      required: [source_key, source_type, title, author, problem_slug, problem_display_name, original_file_path, license_status, content_hash, provenance]
+      properties:
+        source_key: {type: string, minLength: 1, maxLength: 200}
+        source_type: {type: string, minLength: 1, maxLength: 50}
+        title: {type: string, minLength: 1, maxLength: 500}
+        author: {type: string, minLength: 1, maxLength: 255}
+        problem_slug: {type: string, minLength: 1, maxLength: 100}
+        problem_display_name: {type: string, minLength: 1, maxLength: 255}
+        original_file_path: {type: string, minLength: 1}
+        language: {type: string, minLength: 2, maxLength: 20, default: zh}
+        license_status:
+          type: string
+          enum: [verified_reuse, citation_only, owned, public_domain]
+        content_hash:
+          type: string
+          pattern: '^[0-9A-Fa-f]{64}$'
+        canonical_url: {type: string, format: uri}
+        source_version: {type: string, maxLength: 100, default: v1}
+        provenance:
+          $ref: '#/components/schemas/JsonObject'
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+    KnowledgeSource:
+      type: object
+      additionalProperties: false
+      required: [id, source_key, source_type, title, author, problem_slug, problem_display_name, original_file_path, language, ingest_status, metadata, license_status, content_hash, source_version, provenance, registered_at, created_at, updated_at]
+      properties:
+        id: {type: integer, format: int64, minimum: 1}
+        source_key: {type: string}
+        source_type: {type: string}
+        title: {type: string}
+        author: {type: string}
+        problem_slug: {type: string}
+        problem_display_name: {type: string}
+        original_file_path: {type: string}
+        language: {type: string}
+        ingest_status: {type: string}
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+        license_status: {type: string}
+        content_hash: {type: string}
+        canonical_url: {type: string, format: uri}
+        source_version: {type: string}
+        provenance:
+          $ref: '#/components/schemas/JsonObject'
+        registered_at: {type: string, format: date-time}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    KnowledgeSourceListResponse:
+      type: object
+      additionalProperties: false
+      required: [sources]
+      properties:
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/KnowledgeSource'
+    KnowledgeVideoIngestionRequest:
+      type: object
+      additionalProperties: false
+      required: [source_key]
+      properties:
+        source_key: {type: string, minLength: 1, maxLength: 200}
+        video_path: {type: string, minLength: 1}
+        transcript_provider: {type: string, minLength: 1, maxLength: 100}
+        transcript_model: {type: string, maxLength: 200}
+        whisper_model: {type: string, minLength: 1, maxLength: 100}
+        force_transcribe: {type: boolean, default: false}
+        export_clips: {type: boolean, default: true}
+        splitter_provider: {type: string, enum: [heuristic, llm], default: heuristic}
+        ai_refine: {type: boolean, default: false}
+    KnowledgeIngestionJob:
+      type: object
+      additionalProperties: false
+      required: [id, job_type, status, attempts, max_attempts, created_at, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        job_type: {type: string}
+        status: {type: string}
+        progress:
+          $ref: '#/components/schemas/JsonObject'
+        result:
+          $ref: '#/components/schemas/JsonObject'
+        error:
+          $ref: '#/components/schemas/JsonObject'
+        attempts: {type: integer, minimum: 0}
+        max_attempts: {type: integer, minimum: 1}
+        created_at: {type: string, format: date-time}
+        started_at: {type: string, format: date-time}
+        finished_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    KnowledgeIngestionEnqueueResponse:
+      type: object
+      additionalProperties: false
+      required: [job, idempotent_hit]
+      properties:
+        job:
+          $ref: '#/components/schemas/KnowledgeIngestionJob'
+        idempotent_hit: {type: boolean}
+    KnowledgeSearchRequest:
+      type: object
+      additionalProperties: false
+      required: [query]
+      properties:
+        query: {type: string, minLength: 1}
+        top_k: {type: integer, minimum: 1, maximum: 20, default: 5}
+        problem_slug: {type: string}
+        unit_type: {type: string}
+    KnowledgeSearchClip:
+      type: object
+      additionalProperties: false
+      required: [id, clip_key, clip_type, title, source_timestamp]
+      properties:
+        id: {type: integer, format: int64}
+        clip_key: {type: string}
+        clip_type: {type: string}
+        title: {type: string}
+        source_timestamp: {type: string}
+    KnowledgeSearchResult:
+      type: object
+      additionalProperties: false
+      required: [id, problem_slug, category, unit_type, title, summary, body_markdown, similarity, source_title, source_author, source_timestamp, tags, clips]
+      properties:
+        id: {type: integer, format: int64}
+        problem_slug: {type: string}
+        category: {type: string}
+        unit_type: {type: string}
+        title: {type: string}
+        summary: {type: string}
+        body_markdown: {type: string}
+        similarity: {type: number}
+        source_title: {type: string}
+        source_author: {type: string}
+        source_timestamp: {type: string}
+        tags:
+          type: array
+          items: {type: string}
+        clips:
+          type: array
+          items:
+            $ref: '#/components/schemas/KnowledgeSearchClip'
+    KnowledgeSearchResponse:
+      type: object
+      additionalProperties: false
+      required: [results, total]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/KnowledgeSearchResult'
+        total: {type: integer, minimum: 0}
+    KnowledgeStats:
+      type: object
+      additionalProperties: false
+      required: [knowledge_sources, knowledge_segments, knowledge_units, knowledge_clips]
+      properties:
+        knowledge_sources: {type: integer, minimum: 0}
+        knowledge_segments: {type: integer, minimum: 0}
+        knowledge_units: {type: integer, minimum: 0}
+        knowledge_clips: {type: integer, minimum: 0}
   responses:
     InvalidRequest:
       description: Request body or BodyState fact is invalid.

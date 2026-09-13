@@ -946,3 +946,60 @@ private source MIME + nosniff                PASS
 upload/review persistence identity leaks     BLOCKED BY PROJECTION/ZOD TESTS
 git diff --check                            PASS
 ```
+
+## Checkpoint 15 — Operator Knowledge REST boundary
+
+Status: COMPLETE ON PHASE BRANCH
+
+The final six browser-facing routes are now OpenAPI-authoritative and live in an explicit Knowledge operator security domain:
+
+```text
+POST /api/v1/knowledge/sources
+GET  /api/v1/knowledge/sources
+POST /api/v1/knowledge/ingestions/video
+GET  /api/v1/knowledge/ingestions/{jobID}
+POST /api/v1/knowledge/search
+GET  /api/v1/knowledge/stats
+```
+
+`RegisterRoutes` now has four explicit generated security domains: public auth, public capability-share, authenticated browser user, and authenticated Knowledge operator. Knowledge ordering is `Auth -> durable Operator role -> OpenAPI Validator -> generated adapter`. A characterization test proves that a non-operator member is rejected with 403 before request validation and before any Knowledge application method runs. This closes `BS-VNEXT-REST-013` without weakening the protected-user domain or duplicating the generated server registration.
+
+The legacy Gin `KnowledgeHandler` is deleted. Source registration and ingestion use the existing application services directly; `video_path` traversal protection now belongs to `KnowledgeIngestionService`, so CLI/internal callers cannot bypass it. Search/stats proxy behavior moved into a transport-neutral typed `KnowledgeQueryService` with request context, timeout, bounded body reads, strict upstream JSON decoding, and generic 502 mapping for internal AI-service failures.
+
+### Public projection hardening
+
+The operator contract intentionally does not expose:
+
+- `KnowledgeSource.registered_by`
+- ingestion Job `user_id`, raw `input`, `idempotency_key`, run/conversation linkage or metadata
+- Python Knowledge clip `file_path`
+- caller-controlled splitter/curator Agent configuration IDs
+
+Agent configuration remains server-pinned by `KnowledgeIngestionService`. The public ingestion request exposes only governed execution knobs; the durable job retains the authoritative pinned source/operator/Agent identities internally.
+
+### Final Phase 02 coverage
+
+```text
+Phase 00 routes               96
+operational exclusions         1  (GET /api/health)
+browser-facing eligible       95
+OpenAPI-authoritative         95
+missing                        0
+coverage                  100.00%
+```
+
+### Verification
+
+```text
+pnpm contracts:verify                       PASS (same 2 known share-path ambiguity warnings)
+Go test ./...                               PASS
+Web typecheck                               PASS
+handwritten Knowledge production URLs       NONE
+legacy Knowledge handler                    REMOVED
+member -> Knowledge adapter                  BLOCKED BEFORE VALIDATION/APPLICATION
+operator -> generated Knowledge adapter      PASS
+unsafe registered/requested video paths      REJECTED IN APPLICATION SERVICE
+source/job/search private-field projection   PASS
+public REST coverage                         95/95, missing=0
+git diff --check                            PASS
+```

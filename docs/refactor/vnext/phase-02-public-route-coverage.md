@@ -4,17 +4,12 @@
 
 - Phase 00 baseline routes: **96**
 - Browser-facing eligible routes: **95**
-- OpenAPI-authoritative routes: **89**
-- Missing migration routes: **6**
+- OpenAPI-authoritative routes: **95**
+- Missing migration routes: **0**
 - Retired routes: **0**
 - Operational exclusions: **1**
-- Coverage: **93.68%**
+- Coverage: **100%**
 
 ## Missing routes
 
-- `POST /api/v1/knowledge/sources`
-- `GET /api/v1/knowledge/sources`
-- `POST /api/v1/knowledge/ingestions/video`
-- `GET /api/v1/knowledge/ingestions/:jobID`
-- `POST /api/v1/knowledge/search`
-- `GET /api/v1/knowledge/stats`
+None.

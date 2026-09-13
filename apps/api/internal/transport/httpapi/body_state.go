@@ -62,6 +62,9 @@ type PublicServer struct {
 	training                 trainingApplication
 	uploads                  uploadApplication
 	healthDocumentReviews    healthDocumentReviewApplication
+	knowledgeSources         knowledgeSourceApplication
+	knowledgeIngestion       knowledgeIngestionApplication
+	knowledgeQuery           knowledgeQueryApplication
 }
 
 func NewPublicServer(bodyState bodyStateFactService) *PublicServer {
