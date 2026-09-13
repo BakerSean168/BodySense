@@ -664,6 +664,64 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/privacy/erasure-plan:
+    get:
+      operationId: getPrivacyErasurePlan
+      summary: Preview the durable data-erasure scope without mutating user data.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Current destructive erasure plan.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum: [no-store]
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrivacyErasurePlan'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/privacy/erasure:
+    post:
+      operationId: requestPrivacyErasure
+      summary: Accept an irreversible full-account and health-data erasure request.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrivacyErasureRequest'
+      responses:
+        '202':
+          description: Erasure request is durable and may continue after disconnect.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum: [no-store]
+            Set-Cookie:
+              description: Clears the browser refresh credential immediately after durable acceptance.
+              schema:
+                type: string
+                minLength: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrivacyErasureAccepted'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -671,6 +729,59 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    PrivacyDataCount:
+      type: object
+      additionalProperties: false
+      required: [name, count]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        count:
+          type: integer
+          format: int64
+          minimum: 0
+    PrivacyErasurePlan:
+      type: object
+      additionalProperties: false
+      required: [destructive, confirmation_phrase, counts, retained_audit]
+      properties:
+        destructive:
+          type: boolean
+          enum: [true]
+        confirmation_phrase:
+          type: string
+          enum: ['DELETE ALL BODY DATA']
+        counts:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrivacyDataCount'
+        retained_audit:
+          type: array
+          items:
+            type: string
+    PrivacyErasureRequest:
+      type: object
+      additionalProperties: false
+      required: [confirmation]
+      properties:
+        confirmation:
+          type: string
+          enum: ['DELETE ALL BODY DATA']
+    PrivacyErasureAccepted:
+      type: object
+      additionalProperties: false
+      required: [request_id, status, message]
+      properties:
+        request_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, running, retryable, completed]
+        message:
+          type: string
+          minLength: 1
     JsonObject:
       type: object
       additionalProperties: true

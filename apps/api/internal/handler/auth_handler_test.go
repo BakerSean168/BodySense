@@ -50,7 +50,7 @@ func TestAuthResponseSetsSecureHttpOnlyRefreshCookieAndHidesCredentialFromJSON(t
 		t.Fatalf("cookies=%d, want 1", len(cookies))
 	}
 	cookie := cookies[0]
-	if cookie.Name != defaultRefreshCookieName || cookie.Value != "refresh-secret" {
+	if cookie.Name != auth.DefaultRefreshCookieName || cookie.Value != "refresh-secret" {
 		t.Fatalf("unexpected refresh cookie: %+v", cookie)
 	}
 	if !cookie.HttpOnly || !cookie.Secure || cookie.SameSite != http.SameSiteStrictMode {

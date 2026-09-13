@@ -402,3 +402,59 @@ handwritten /me + /profile routes      NONE
 ```
 
 The generated-client bundle observation remains tracked by `BS-VNEXT-REST-007`; runtime response validation remains mandatory.
+
+## Checkpoint 6 — Privacy erasure boundary
+
+Status: COMPLETE ON PHASE BRANCH
+
+The destructive privacy workflow now uses the generated OpenAPI boundary:
+
+```text
+GET  /api/v1/privacy/erasure-plan
+POST /api/v1/privacy/erasure
+```
+
+### Safety semantics preserved and made explicit
+
+The old Gin handler performed two important transport side effects after a durable erasure request was accepted: `Cache-Control: no-store` and immediate clearing of the refresh cookie. The strict-server migration does not drop those behaviors. The 200 plan response and 202 acceptance response now model no-store headers, and the 202 contract also declares `Set-Cookie` for refresh credential removal.
+
+Refresh cookie construction/clearing moved into `internal/auth/refresh_cookie.go`, shared by the existing authentication handler and the OpenAPI privacy adapter. Cookie name, `/api/v1/auth` path, HttpOnly, Secure and SameSite=Strict therefore no longer have two handwritten implementations.
+
+### Confirmation is a boundary invariant
+
+The destructive phrase is modeled as the exact literal `DELETE ALL BODY DATA` in both plan and request schemas. Wrong phrases and unknown fields are rejected by OpenAPI validation before the erasure application service. The service retains its own confirmation guard as defense in depth for non-HTTP callers.
+
+The browser privacy service now uses generated Orval/Zod functions through the existing authenticated fetch seam; malformed plan/acceptance responses fail closed.
+
+### Coverage after this batch
+
+```text
+Phase 00 routes               96
+operational exclusions         1
+browser-facing eligible       95
+OpenAPI-authoritative         26
+missing                       69
+coverage                   27.37%
+```
+
+### Verification
+
+```text
+pnpm contracts:verify                  PASS
+pnpm lint                              PASS
+pnpm typecheck                         PASS
+pnpm test                              PASS
+  contracts                            12/12
+  Web                                  230/230
+  Python                               475/475
+  Go                                   go test ./... PASS
+pnpm build                             PASS
+git diff --check                       PASS
+legacy PrivacyHandler                  DELETED
+handwritten privacy route regs         NONE
+feature-source hardcoded privacy URLs  NONE
+```
+
+### Security-domain blocker discovered
+
+`BS-VNEXT-REST-013` records a Phase 02 architectural prerequisite: the generated server is currently mounted as one protected Gin group. The remaining login/register/refresh/logout routes, public share route and operator-only Knowledge routes require different middleware domains. They must not be migrated by registering the full generated server into multiple groups or by weakening existing guards.

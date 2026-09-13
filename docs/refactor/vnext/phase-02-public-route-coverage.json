@@ -5,11 +5,11 @@
   "totals": {
     "baseline": 96,
     "browserFacingEligible": 95,
-    "openapi": 24,
-    "missing": 71,
+    "openapi": 26,
+    "missing": 69,
     "retired": 0,
     "excludedOperational": 1,
-    "coveragePercent": 25.26
+    "coveragePercent": 27.37
   },
   "routes": [
     {
@@ -61,13 +61,17 @@
       "method": "GET",
       "path": "/api/v1/privacy/erasure-plan",
       "source": "apps/api/cmd/server/main.go:389",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getPrivacyErasurePlan",
+      "openapiPath": "/api/v1/privacy/erasure-plan"
     },
     {
       "method": "POST",
       "path": "/api/v1/privacy/erasure",
       "source": "apps/api/cmd/server/main.go:390",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "requestPrivacyErasure",
+      "openapiPath": "/api/v1/privacy/erasure"
     },
     {
       "method": "GET",

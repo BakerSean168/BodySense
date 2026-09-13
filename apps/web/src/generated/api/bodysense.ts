@@ -19,6 +19,8 @@ import {
   LifestyleSnapshot,
   NullableUserProfileResponse,
   OnboardingContextResult,
+  PrivacyErasureAccepted,
+  PrivacyErasurePlan,
   UserProfileResponse
 } from './model';
 import type {
@@ -39,6 +41,9 @@ import type {
   NullableUserProfileResponseOutput,
   OnboardingContextRequest,
   OnboardingContextResultOutput,
+  PrivacyErasureAcceptedOutput,
+  PrivacyErasurePlanOutput,
+  PrivacyErasureRequest,
   ResolveBodyStateSafetyRequest,
   ReviewBodyStateFactRequest,
   ReviewBodyStateObservationRequest,
@@ -1215,5 +1220,97 @@ const res = await (fetchFn ?? fetch)(getUpdateUserProfileUrl(),
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? UserProfileResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetPrivacyErasurePlanUrl = () => {
+
+
+
+
+  return `/api/v1/privacy/erasure-plan`
+}
+
+/**
+ * @summary Preview the durable data-erasure scope without mutating user data.
+ */
+export const getPrivacyErasurePlan = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<PrivacyErasurePlanOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetPrivacyErasurePlanUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: PrivacyErasurePlan, status?: number} = new globalThis.Error();
+    const data : PrivacyErasurePlan = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? PrivacyErasurePlan.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getRequestPrivacyErasureUrl = () => {
+
+
+
+
+  return `/api/v1/privacy/erasure`
+}
+
+/**
+ * @summary Accept an irreversible full-account and health-data erasure request.
+ */
+export const requestPrivacyErasure = async (privacyErasureRequest: PrivacyErasureRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<PrivacyErasureAcceptedOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getRequestPrivacyErasureUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(privacyErasureRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: PrivacyErasureAccepted, status?: number} = new globalThis.Error();
+    const data : PrivacyErasureAccepted = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? PrivacyErasureAccepted.parse(parsedBody) : parsedBody
   return data
 }

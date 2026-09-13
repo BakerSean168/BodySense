@@ -15,8 +15,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const defaultRefreshCookieName = "bodysense_refresh"
-
 // AuthSecurityConfig owns the browser/session edge policy. Keeping it explicit
 // prevents cookie, origin and abuse-control behavior from drifting across handlers.
 type AuthSecurityConfig struct {
@@ -33,7 +31,7 @@ type AuthSecurityConfig struct {
 
 func DefaultAuthSecurityConfig(refreshTTL time.Duration) AuthSecurityConfig {
 	return AuthSecurityConfig{
-		RefreshCookieName: defaultRefreshCookieName,
+		RefreshCookieName: auth.DefaultRefreshCookieName,
 		RefreshTTL:        refreshTTL,
 		LoginPolicy:       auth.RateLimitPolicy{Limit: 10, Window: 5 * time.Minute},
 		RegisterPolicy:    auth.RateLimitPolicy{Limit: 5, Window: 15 * time.Minute},
@@ -56,7 +54,7 @@ func NewAuthHandler(authService *service.AuthService, security ...AuthSecurityCo
 		cfg = security[0]
 	}
 	if cfg.RefreshCookieName == "" {
-		cfg.RefreshCookieName = defaultRefreshCookieName
+		cfg.RefreshCookieName = auth.DefaultRefreshCookieName
 	}
 	if cfg.RefreshTTL <= 0 {
 		cfg.RefreshTTL = 30 * 24 * time.Hour
@@ -176,34 +174,11 @@ func (h *AuthHandler) writeAuthResponse(c *gin.Context, status int, resp *dto.Au
 }
 
 func (h *AuthHandler) setRefreshCookie(c *gin.Context, token string) {
-	maxAge := int(h.security.RefreshTTL.Seconds())
-	http.SetCookie(c.Writer, &http.Cookie{
-		Name:     h.security.RefreshCookieName,
-		Value:    token,
-		Path:     "/api/v1/auth",
-		MaxAge:   maxAge,
-		Expires:  time.Now().Add(h.security.RefreshTTL),
-		HttpOnly: true,
-		Secure:   h.security.CookieSecure,
-		SameSite: http.SameSiteStrictMode,
-	})
-}
-
-func (h *AuthHandler) ClearRefreshCookie(c *gin.Context) {
-	h.clearRefreshCookie(c)
+	http.SetCookie(c.Writer, auth.NewRefreshCookie(h.security.RefreshCookieName, token, h.security.RefreshTTL, h.security.CookieSecure, time.Now()))
 }
 
 func (h *AuthHandler) clearRefreshCookie(c *gin.Context) {
-	http.SetCookie(c.Writer, &http.Cookie{
-		Name:     h.security.RefreshCookieName,
-		Value:    "",
-		Path:     "/api/v1/auth",
-		MaxAge:   -1,
-		Expires:  time.Unix(1, 0),
-		HttpOnly: true,
-		Secure:   h.security.CookieSecure,
-		SameSite: http.SameSiteStrictMode,
-	})
+	http.SetCookie(c.Writer, auth.NewClearedRefreshCookie(h.security.RefreshCookieName, h.security.CookieSecure))
 }
 
 func (h *AuthHandler) requireTrustedOrigin(c *gin.Context) bool {

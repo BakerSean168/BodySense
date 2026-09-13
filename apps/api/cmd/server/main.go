@@ -172,7 +172,6 @@ func main() {
 		WithAssessmentRollout(assessmentRolloutService).
 		WithAssessmentReviews(documentIndicatorReviewRepo)
 	authHandler := handler.NewAuthHandler(authService, authSecurity)
-	privacyHandler := handler.NewPrivacyHandler(privacyErasureService, authHandler)
 	agentToolRepo := repository.NewAgentToolCallRepository(database.DB)
 	agentToolService := service.NewAgentToolService(agentToolRepo)
 	interactionRepo := repository.NewAgentInteractionRepository(database.DB)
@@ -382,8 +381,6 @@ func main() {
 	protected.Use(authMiddleware)
 	{
 		protected.POST("/client-diagnostics", clientDiagnosticHandler.Record)
-		protected.GET("/privacy/erasure-plan", privacyHandler.PlanErasure)
-		protected.POST("/privacy/erasure", privacyHandler.RequestErasure)
 
 		// Upload routes
 		protected.POST("/uploads", uploadHandler.Upload)
@@ -487,7 +484,7 @@ func main() {
 	openAPIProtected.Use(httpapi.RequestValidator(publicAPISpec))
 	openapiv1.RegisterHandlers(
 		openAPIProtected,
-		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService)),
+		httpapi.StrictHandler(httpapi.NewPublicServer(bodyStateService).WithBodyStateRoutes(bodyStateService).WithHealthWorkspace(healthWorkspaceService).WithHealthContext(lifestyleService, bodyMetricsService, healthHistoryService, onboardingContextService).WithProfile(profileService).WithPrivacy(privacyErasureService, authSecurity.RefreshCookieName, authSecurity.CookieSecure)),
 	)
 
 	// Public share routes (no auth)

@@ -450,6 +450,50 @@
         "pnpm contracts:verify"
       ],
       "notes": "This is an intentional vNext breaking reset; no compatibility body-null alias is retained."
+    },
+    {
+      "id": "BS-VNEXT-REST-012",
+      "priority": "P1",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "Privacy erasure acceptance depended on an implicit handler-only refresh-cookie side effect",
+      "evidence": [
+        "apps/api/internal/handler/privacy_handler.go",
+        "apps/api/internal/transport/httpapi/privacy.go",
+        "apps/api/internal/auth/refresh_cookie.go",
+        "packages/contracts/openapi/bodysense.v1.openapi.yaml"
+      ],
+      "root_cause": "The legacy privacy handler cleared the refresh cookie directly after durable erasure acceptance, but that security effect was not represented in the public response contract and would have been easy to lose when moving behind the generated strict server.",
+      "repair": "Make Set-Cookie and Cache-Control response headers explicit on the OpenAPI 202 response, generate the clear-cookie header from a shared internal/auth cookie helper, and reuse the same helper in AuthHandler so cookie Path/HttpOnly/Secure/SameSite semantics have one implementation.",
+      "verification": [
+        "TestPrivacyErasureAcceptanceClearsRefreshCredentialAndIsNoStore",
+        "TestAuthResponseSetsSecureHttpOnlyRefreshCookieAndHidesCredentialFromJSON",
+        "pnpm contracts:verify",
+        "go test ./..."
+      ],
+      "notes": "The durable erasure worker semantics are unchanged; browser credential invalidation is now part of the transport contract rather than a hidden Gin handler side effect."
+    },
+    {
+      "id": "BS-VNEXT-REST-013",
+      "priority": "P1",
+      "status": "OPEN",
+      "phase": "02",
+      "title": "Generated REST registration currently assumes one authenticated Gin security domain",
+      "evidence": [
+        "apps/api/cmd/server/main.go",
+        "apps/api/internal/generated/openapi/v1/bodysense.gen.go",
+        "packages/contracts/openapi/bodysense.v1.openapi.yaml"
+      ],
+      "root_cause": "All generated operations are currently registered as one server under the protected AuthMiddleware group. Remaining public authentication endpoints, public share reads and operator-only Knowledge endpoints require different middleware/security ownership and cannot be safely added to the same registration blindly.",
+      "target": "Before migrating auth/share/operator operations, introduce deterministic generated-route registration partitions or equivalent policy-aware registration so each OpenAPI operation is mounted exactly once under its required security middleware without duplicating adapters or bypassing existing origin/rate-limit/operator guards.",
+      "verification": [
+        "public auth operations remain callable without bearer auth while preserving trusted-origin/rate-limit controls",
+        "protected operations still require AuthMiddleware",
+        "knowledge operations retain RequireKnowledgeOperator",
+        "public share remains unauthenticated",
+        "route coverage reaches complete without duplicate Gin registrations"
+      ],
+      "notes": "Do not solve this by registering the full generated server on both public and protected groups; that would duplicate routes and weaken security ownership."
     }
   ]
 }
