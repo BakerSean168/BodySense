@@ -97,7 +97,7 @@ function toTrainingPlan(input: PublicTrainingPlan): TrainingPlan {
     goal: input.goal,
     duration_weeks: input.duration_weeks,
     current_week: input.current_week,
-    phases: input.phases as unknown as TrainingPhase[],
+    phases: input.phases,
     created_at: input.created_at,
   };
 }
@@ -132,11 +132,11 @@ function toTrainingFeedbackResult(
   input: PublicTrainingFeedbackResult,
 ): TrainingFeedbackResult {
   return {
-    outcome: input.outcome as Outcome | undefined,
+    outcome: input.outcome,
     treatment_status: input.treatment_status,
     review_recommended: input.review_recommended,
     paused: input.paused,
-    proposal: input.proposal as TreatmentRevision | undefined,
+    proposal: input.proposal,
     has_proposal: input.has_proposal,
     requires_new_diagnosis: input.requires_new_diagnosis,
   };
@@ -149,7 +149,7 @@ function toTrainingLogUpdateResponse(
     message: input.message,
     has_proposal: input.has_proposal,
     result: toTrainingFeedbackResult(input.result),
-    proposal: input.proposal as TreatmentRevision | undefined,
+    proposal: input.proposal,
   };
 }
 

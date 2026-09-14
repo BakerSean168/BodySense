@@ -1,9 +1,7 @@
 import { extractErrorMessage, safeJson } from "./api-url";
 
-interface StructuredErrorBody {
-  error?: string | { code?: string; message?: string };
-  message?: string;
-  code?: string;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export class ApiRequestError extends Error {
@@ -27,16 +25,20 @@ export async function apiErrorFromResponse(
   let message: string | undefined;
 
   try {
-    const body = await safeJson<StructuredErrorBody>(clone);
-    if (body && typeof body === "object") {
-      if (typeof body.error === "object" && body.error) {
-        code = body.error.code;
-        message = body.error.message;
+    const body = await safeJson(clone);
+    if (isRecord(body)) {
+      const error = body.error;
+      if (isRecord(error)) {
+        code = typeof error.code === "string" ? error.code : undefined;
+        message = typeof error.message === "string" ? error.message : undefined;
       } else {
-        code = body.code;
+        code = typeof body.code === "string" ? body.code : undefined;
         message =
-          body.message ??
-          (typeof body.error === "string" ? body.error : undefined);
+          typeof body.message === "string"
+            ? body.message
+            : typeof error === "string"
+              ? error
+              : undefined;
       }
     }
   } catch {
@@ -50,9 +52,12 @@ export async function apiErrorFromResponse(
   return new ApiRequestError(normalizedMessage, response.status, code);
 }
 
-export async function expectJson<T>(response: Response): Promise<T> {
+export async function expectJson<T>(
+  response: Response,
+  parse: (input: unknown) => T,
+): Promise<T> {
   if (!response.ok) throw await apiErrorFromResponse(response);
-  return safeJson<T>(response);
+  return parse(await safeJson(response));
 }
 
 export async function expectEmpty(response: Response): Promise<void> {

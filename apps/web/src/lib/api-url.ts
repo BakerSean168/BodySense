@@ -28,21 +28,26 @@ export function apiUrl(path: string): string {
  * This avoids `Unexpected non-whitespace character after JSON` errors when
  * the server returns HTML (e.g. Caddy 404 page) or plain text.
  */
-export async function safeJson<T = unknown>(res: Response): Promise<T> {
+export async function safeJson(res: Response): Promise<unknown> {
   const ct = res.headers?.get?.("content-type") || "";
   if (ct.includes("application/json")) {
-    return res.json() as Promise<T>;
+    return res.json();
   }
   const text = await res.text();
   // Best-effort: some servers forget the content-type header.
   if (text.startsWith("{") || text.startsWith("[")) {
     try {
-      return JSON.parse(text) as T;
+      const parsed: unknown = JSON.parse(text);
+      return parsed;
     } catch {
       // fall through
     }
   }
-  return text as unknown as T;
+  return text;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /**
@@ -54,14 +59,10 @@ export async function safeJson<T = unknown>(res: Response): Promise<T> {
 export async function extractErrorMessage(res: Response): Promise<string> {
   const body: unknown = await safeJson(res);
 
-  if (body && typeof body === "object") {
-    const obj = body as Record<string, unknown>;
-    const msg = obj.message ?? obj.error;
+  if (isRecord(body)) {
+    const msg = body.message ?? body.error;
     if (typeof msg === "string") return msg;
-    if (msg && typeof msg === "object") {
-      const nested = msg as Record<string, unknown>;
-      if (typeof nested.message === "string") return nested.message;
-    }
+    if (isRecord(msg) && typeof msg.message === "string") return msg.message;
   }
 
   if (typeof body === "string" && body.length > 0) return body;

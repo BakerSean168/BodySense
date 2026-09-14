@@ -245,3 +245,29 @@ A package-private marker prevents arbitrary external types — including the eve
 - generic `ConsultationRuntimeEvent.Payload json.RawMessage` — **0**;
 - Proto default/presence characterization remains covered: `has_red_flags=false` and empty flags survive, absent `stream.done` message fields remain absent;
 - Agent-configuration handshake remains private and HITL public identity replacement remains unchanged.
+
+## TRUST-007 — Remaining Web transport and asset trust boundaries
+
+Status: **COMPLETE**
+
+The remaining obvious Web trust shortcuts outside Consultation were removed without turning legitimate compile-time assertions (`as const`, branded IDs, CSS/library interop) into a meaningless zero-cast target.
+
+### Generic HTTP JSON helper
+
+`safeJson()` now returns `unknown`; it never manufactures a caller-selected generic type. `expectJson()` requires an explicit parser function before returning `T`, and structured error parsing uses an `isRecord` type guard rather than `as Record<string, unknown>`. Production business requests remain on generated OpenAPI clients; the generic helper no longer provides a bypass around runtime validation.
+
+### Pinned anatomy registry
+
+The generated Vanatome 1.4.0 registry is parsed by a strict Zod schema before use. The parser also made an existing hidden field explicit: upstream source provenance (catalog/repository/commit/fixture URLs and SHA-256 digests) is now part of `AtlasRegistryInventory` instead of being silently ignored by a double assertion. Existing business consistency checks then verify the pinned release, hierarchy, geometry counts and laterality evidence. Invalid registry structure fails module initialization.
+
+### Training plan projection
+
+The canonical OpenAPI contract now defines `TrainingPhase` and `TrainingExercise` rather than exposing `TrainingPlan.phases` as `JsonObject[]`. Generated Zod therefore validates week/focus/exercises and their stable fields at the REST boundary. Training phases, Outcome and TreatmentRevision projections are structurally compatible with the feature domain and no longer use assertion-based conversion.
+
+### Evidence
+
+- `pnpm contracts:verify` — PASS; public REST remains **95/95**;
+- Web lint — PASS;
+- Web typecheck — PASS;
+- API helper + Atlas + Training focused tests — **7/7 PASS**;
+- production `as unknown as` / `as never` — **0**.

@@ -4170,6 +4170,42 @@ components:
       required: [feedback]
       properties:
         feedback: {$ref: '#/components/schemas/TrainingFeedbackInput'}
+    TrainingExercise:
+      type: object
+      additionalProperties: false
+      required: [name, description, sets, reps]
+      properties:
+        intervention_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        sets:
+          type: string
+        reps:
+          type: string
+        notes:
+          type: string
+    TrainingPhase:
+      type: object
+      additionalProperties: false
+      required: [week, focus, exercises]
+      properties:
+        week:
+          type: integer
+          minimum: 1
+        focus:
+          type: string
+        exercises:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrainingExercise'
+        source_treatment_revision_id:
+          type: string
+          format: uuid
     TrainingPlan:
       type: object
       additionalProperties: false
@@ -4199,7 +4235,7 @@ components:
         phases:
           type: array
           items:
-            $ref: '#/components/schemas/JsonObject'
+            $ref: '#/components/schemas/TrainingPhase'
         created_at: *id006
     Outcome:
       type: object
