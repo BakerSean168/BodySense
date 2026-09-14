@@ -392,7 +392,7 @@ This gives each phase an auditable diff and prevents a single giant unreviewable
 | 00 — Baseline            | **COMPLETE** | `a2c68a38d` merged baseline evidence, fresh PG18+pgvector schema snapshot, retirement/finding ledgers and self-contained typecheck                                     |
 | 01 — Contract foundation | **COMPLETE** | `100018dd3` merged contract authority foundation; see `docs/refactor/vnext/phase-01-contract-foundation.md`                                                            |
 | 02 — Public REST         | **COMPLETE** | `ea343d7c5` merged 95/95 eligible browser routes OpenAPI-authoritative; see `docs/refactor/vnext/phase-02-rest-openapi.md`                                             |
-| 03 — Public StreamEvent  | **COMPLETE** | JSON Schema-first generated TS/standalone validator, shared live/replay parser boundary, exhaustive Web consumers; see `docs/refactor/vnext/phase-03-public-stream.md` |
+| 03 — Public StreamEvent  | **COMPLETE** | `1125db479` merged JSON Schema-first generated TS/standalone validator, shared live/replay parser boundary and exhaustive Web consumers; see `docs/refactor/vnext/phase-03-public-stream.md` |
 | 04 — Internal runtime    | **NEXT**     | Proto/Buf authority for the internal Go↔Python Agent protocol; not implemented in Phase 03                                                                             |
 | 05–11                    | QUEUED       | blocked by preceding dependency phases                                                                                                                                 |
 

@@ -3,6 +3,7 @@
 - Status: COMPLETE
 - Branch: `refactor/vnext-03-public-stream`
 - Parent canonical vNext commit: `169df5c67`
+- Canonical vNext integration: `1125db479` (PR #175 merge commit)
 - Canonical authority: `packages/contracts/schemas/stream-event.v1.schema.json`
 - Wire version: StreamEvent v1; no public SSE/JSON wire-version change in this phase
 - Next: Phase 04 — internal Go/Python runtime reset to Proto IDL (not implemented here)
@@ -78,3 +79,11 @@ The active-turn reducer and SSE dispatcher use exhaustive generated-variant swit
 - `git diff --check`: PASS.
 
 Bundle impact is limited to the generated standalone validator in the shared consultation service chunk; the ConsultationPage chunk remained essentially flat in the prior comparison, with about 10.5 KiB gzip added to the shared chunk. Runtime validation was not weakened to reduce bundle size.
+
+## Phase 03 completion acceptance
+
+Status: **COMPLETE**
+
+Canonical vNext integration: `1125db479` (`Merge pull request #175 from BakerSean168/refactor/vnext-03-public-stream`).
+
+Phase 03 closes with the public StreamEvent v1 JSON Schema as the canonical public contract authority, deterministic generated TypeScript and standalone runtime validation, and the same `parseStreamEvent` trust boundary for live SSE and durable replay. Both Web consumers are exhaustive over all 34 public variants, generated TypeScript contains zero `any`, and Phase 04 internal Proto/runtime work remains intentionally unstarted.
