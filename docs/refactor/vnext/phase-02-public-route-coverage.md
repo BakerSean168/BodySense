@@ -4,74 +4,12 @@
 
 - Phase 00 baseline routes: **96**
 - Browser-facing eligible routes: **95**
-- OpenAPI-authoritative routes: **32**
-- Missing migration routes: **63**
+- OpenAPI-authoritative routes: **95**
+- Missing migration routes: **0**
 - Retired routes: **0**
 - Operational exclusions: **1**
-- Coverage: **33.68%**
+- Coverage: **100%**
 
 ## Missing routes
 
-- `POST /api/v1/auth/register`
-- `POST /api/v1/auth/login`
-- `POST /api/v1/auth/refresh`
-- `POST /api/v1/auth/logout`
-- `POST /api/v1/uploads`
-- `GET /api/v1/uploads`
-- `GET /api/v1/uploads/posture-analysis`
-- `GET /api/v1/uploads/:id`
-- `DELETE /api/v1/uploads/:id`
-- `GET /api/v1/uploads/:id/health-document-review`
-- `GET /api/v1/uploads/:id/extractions/:runId/reviews`
-- `POST /api/v1/uploads/:id/extractions/:runId/reviews`
-- `GET /api/v1/uploads/:id/extractions/:runId/source`
-- `GET /api/v1/conversations`
-- `GET /api/v1/conversations/:id`
-- `PATCH /api/v1/conversations/:id`
-- `DELETE /api/v1/conversations/:id`
-- `PATCH /api/v1/conversations/:id/pin`
-- `GET /api/v1/conversations/:id/runs`
-- `GET /api/v1/conversations/:id/runs/:runId/events`
-- `POST /api/v1/conversations/:id/title`
-- `PUT /api/v1/conversations/:id/title`
-- `POST /api/v1/conversations/:id/share`
-- `DELETE /api/v1/conversations/:id/share`
-- `POST /api/v1/consultation-runs`
-- `POST /api/v1/consultation-runs/:id/cancel`
-- `GET /api/v1/consultations/:id`
-- `GET /api/v1/consultations/:id/thread`
-- `POST /api/v1/consultation-runs/:id/replay`
-- `POST /api/v1/consultation-runs/:id/replay/counterfactual`
-- `POST /api/v1/consultations/:id/diagnosis`
-- `GET /api/v1/diagnosis-analyses`
-- `GET /api/v1/diagnosis-analyses/:analysisId`
-- `PUT /api/v1/diagnosis-analyses/:analysisId/assessment`
-- `POST /api/v1/diagnosis-analyses/:analysisId/replay`
-- `GET /api/v1/diagnosis-analyses/:analysisId/regression-export`
-- `POST /api/v1/treatments/proposals`
-- `GET /api/v1/treatments/current`
-- `POST /api/v1/treatments/current/review`
-- `GET /api/v1/treatments/revisions`
-- `GET /api/v1/treatments/revisions/:revisionId`
-- `POST /api/v1/treatments/revisions/:revisionId/replay`
-- `GET /api/v1/treatments/revisions/:revisionId/regression-export`
-- `POST /api/v1/treatments/revisions/:revisionId/accept`
-- `POST /api/v1/treatments/revisions/:revisionId/reject`
-- `POST /api/v1/outcomes`
-- `GET /api/v1/outcomes`
-- `POST /api/v1/consultations/:id/interrupts/:interactionId/answers`
-- `GET /api/v1/consultations/:id/interaction-metrics`
-- `GET /api/v1/training`
-- `GET /api/v1/training/:id`
-- `GET /api/v1/training/:id/today`
-- `POST /api/v1/training/:id/checkin`
-- `PUT /api/v1/training/:id/log`
-- `GET /api/v1/training/:id/progress`
-- `POST /api/v1/training/:id/reassess`
-- `GET /api/v1/conversations/share/:token`
-- `POST /api/v1/knowledge/sources`
-- `GET /api/v1/knowledge/sources`
-- `POST /api/v1/knowledge/ingestions/video`
-- `GET /api/v1/knowledge/ingestions/:jobID`
-- `POST /api/v1/knowledge/search`
-- `GET /api/v1/knowledge/stats`
+None.

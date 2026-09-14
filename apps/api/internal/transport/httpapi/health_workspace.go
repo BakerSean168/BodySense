@@ -2,14 +2,15 @@ package httpapi
 
 import (
 	"context"
+	"encoding/json"
 
-	"github.com/bodysense/api/internal/dto"
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
+	"github.com/bodysense/api/internal/service"
 	"github.com/google/uuid"
 )
 
 type healthWorkspaceService interface {
-	Get(ctx context.Context, userID uuid.UUID) (*dto.HealthWorkspace, error)
+	Get(ctx context.Context, userID uuid.UUID) (*service.HealthWorkspace, error)
 }
 
 func (s *PublicServer) WithHealthWorkspace(service healthWorkspaceService) *PublicServer {
@@ -49,8 +50,39 @@ func (s *PublicServer) GetHealthWorkspace(
 // encode the application projection, then decode it into the generated transport
 // model with unknown-field rejection. The generated type never enters service or
 // domain packages.
-func healthWorkspaceToOpenAPI(workspace *dto.HealthWorkspace) (openapiv1.HealthWorkspace, error) {
-	return strictOpenAPIConvert[openapiv1.HealthWorkspace]("HealthWorkspace", workspace)
+func healthWorkspaceToOpenAPI(workspace *service.HealthWorkspace) (openapiv1.HealthWorkspace, error) {
+	encoded, err := json.Marshal(workspace)
+	if err != nil {
+		return openapiv1.HealthWorkspace{}, err
+	}
+	var projected map[string]any
+	if err := json.Unmarshal(encoded, &projected); err != nil {
+		return openapiv1.HealthWorkspace{}, err
+	}
+	if diagnosis, ok := projected["diagnosis"].(map[string]any); ok && len(diagnosis) > 0 {
+		projected["diagnosis"] = projectDiagnosisPayload(diagnosis)
+	}
+	if treatment, ok := projected["treatment"].(map[string]any); ok && len(treatment) > 0 {
+		sanitizeTreatmentMap(treatment)
+	}
+	if plan, ok := projected["training_plan"].(map[string]any); ok && len(plan) > 0 {
+		sanitizeTrainingPlanMap(plan)
+	}
+	if revisions, ok := projected["treatment_revisions"].([]any); ok {
+		for _, raw := range revisions {
+			if revision, ok := raw.(map[string]any); ok {
+				sanitizeTreatmentRevisionMap(revision)
+			}
+		}
+	}
+	if outcomes, ok := projected["recent_outcomes"].([]any); ok {
+		for _, raw := range outcomes {
+			if outcome, ok := raw.(map[string]any); ok {
+				sanitizeOutcomeMap(outcome)
+			}
+		}
+	}
+	return strictOpenAPIConvert[openapiv1.HealthWorkspace]("HealthWorkspace", projected)
 }
 
 func getWorkspaceError401(code, message string) openapiv1.GetHealthWorkspace401JSONResponse {

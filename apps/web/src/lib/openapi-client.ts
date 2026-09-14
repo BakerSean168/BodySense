@@ -1,5 +1,6 @@
 import { authFetch } from "@/features/auth/services/authService";
 import { ApiRequestError } from "@/lib/api-client";
+import { apiUrl } from "@/lib/api-url";
 
 function requestPath(input: RequestInfo | URL): string {
   if (typeof input === "string") return input;
@@ -12,6 +13,13 @@ function requestPath(input: RequestInfo | URL): string {
 // letting Orval retain its generated response parsing and Zod validation.
 export const openApiAuthFetch: typeof globalThis.fetch = async (input, init) =>
   authFetch(requestPath(input), init);
+
+// Public (unauthenticated) generated OpenAPI fetch seam. Session establishment
+// is cookie-based: always send credentials and never attach a bearer token.
+export const openApiPublicFetch: typeof globalThis.fetch = async (
+  input,
+  init,
+) => fetch(apiUrl(requestPath(input)), { ...init, credentials: "include" });
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;

@@ -11,6 +11,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"path"
@@ -22,6 +24,51 @@ import (
 	"github.com/oapi-codegen/runtime"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
+
+// Defines values for AgentInteractionStatus.
+const (
+	AgentInteractionStatusAnswered  AgentInteractionStatus = "answered"
+	AgentInteractionStatusCancelled AgentInteractionStatus = "cancelled"
+	AgentInteractionStatusExpired   AgentInteractionStatus = "expired"
+	AgentInteractionStatusPending   AgentInteractionStatus = "pending"
+)
+
+// Valid indicates whether the value is a known member of the AgentInteractionStatus enum.
+func (e AgentInteractionStatus) Valid() bool {
+	switch e {
+	case AgentInteractionStatusAnswered:
+		return true
+	case AgentInteractionStatusCancelled:
+		return true
+	case AgentInteractionStatusExpired:
+		return true
+	case AgentInteractionStatusPending:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AppendHealthDocumentReviewRequestAction.
+const (
+	AppendHealthDocumentReviewRequestActionConfirm AppendHealthDocumentReviewRequestAction = "confirm"
+	AppendHealthDocumentReviewRequestActionCorrect AppendHealthDocumentReviewRequestAction = "correct"
+	AppendHealthDocumentReviewRequestActionReject  AppendHealthDocumentReviewRequestAction = "reject"
+)
+
+// Valid indicates whether the value is a known member of the AppendHealthDocumentReviewRequestAction enum.
+func (e AppendHealthDocumentReviewRequestAction) Valid() bool {
+	switch e {
+	case AppendHealthDocumentReviewRequestActionConfirm:
+		return true
+	case AppendHealthDocumentReviewRequestActionCorrect:
+		return true
+	case AppendHealthDocumentReviewRequestActionReject:
+		return true
+	default:
+		return false
+	}
+}
 
 // Defines values for AssessmentDomainCoverageStatus.
 const (
@@ -109,19 +156,19 @@ func (e AssessmentEvidenceGapRequired) Valid() bool {
 
 // Defines values for AssessmentEvidenceSource.
 const (
-	BodyState       AssessmentEvidenceSource = "body_state"
-	PostureAnalysis AssessmentEvidenceSource = "posture_analysis"
-	Report          AssessmentEvidenceSource = "report"
+	AssessmentEvidenceSourceBodyState       AssessmentEvidenceSource = "body_state"
+	AssessmentEvidenceSourcePostureAnalysis AssessmentEvidenceSource = "posture_analysis"
+	AssessmentEvidenceSourceReport          AssessmentEvidenceSource = "report"
 )
 
 // Valid indicates whether the value is a known member of the AssessmentEvidenceSource enum.
 func (e AssessmentEvidenceSource) Valid() bool {
 	switch e {
-	case BodyState:
+	case AssessmentEvidenceSourceBodyState:
 		return true
-	case PostureAnalysis:
+	case AssessmentEvidenceSourcePostureAnalysis:
 		return true
-	case Report:
+	case AssessmentEvidenceSourceReport:
 		return true
 	default:
 		return false
@@ -356,6 +403,21 @@ func (e BodyStateHypothesisInputLifecycleState) Valid() bool {
 	}
 }
 
+// Defines values for CancelConsultationRunResponseStatus.
+const (
+	CancelConsultationRunResponseStatusCancelled CancelConsultationRunResponseStatus = "cancelled"
+)
+
+// Valid indicates whether the value is a known member of the CancelConsultationRunResponseStatus enum.
+func (e CancelConsultationRunResponseStatus) Valid() bool {
+	switch e {
+	case CancelConsultationRunResponseStatusCancelled:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ClientDiagnosticCategory.
 const (
 	AppRuntime    ClientDiagnosticCategory = "app.runtime"
@@ -407,6 +469,306 @@ func (e ClientDiagnosticSeverity) Valid() bool {
 	case Info:
 		return true
 	case Warn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConsultationImagePartType.
+const (
+	Image ConsultationImagePartType = "image"
+)
+
+// Valid indicates whether the value is a known member of the ConsultationImagePartType enum.
+func (e ConsultationImagePartType) Valid() bool {
+	switch e {
+	case Image:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConsultationMessageInputRole.
+const (
+	ConsultationMessageInputRoleUser ConsultationMessageInputRole = "user"
+)
+
+// Valid indicates whether the value is a known member of the ConsultationMessageInputRole enum.
+func (e ConsultationMessageInputRole) Valid() bool {
+	switch e {
+	case ConsultationMessageInputRoleUser:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConsultationSessionResponsePhase.
+const (
+	ConsultationSessionResponsePhaseAnalysisReady    ConsultationSessionResponsePhase = "analysis_ready"
+	ConsultationSessionResponsePhaseCollecting       ConsultationSessionResponsePhase = "collecting"
+	ConsultationSessionResponsePhaseReadyForAnalysis ConsultationSessionResponsePhase = "ready_for_analysis"
+)
+
+// Valid indicates whether the value is a known member of the ConsultationSessionResponsePhase enum.
+func (e ConsultationSessionResponsePhase) Valid() bool {
+	switch e {
+	case ConsultationSessionResponsePhaseAnalysisReady:
+		return true
+	case ConsultationSessionResponsePhaseCollecting:
+		return true
+	case ConsultationSessionResponsePhaseReadyForAnalysis:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConsultationTextPartType.
+const (
+	Text ConsultationTextPartType = "text"
+)
+
+// Valid indicates whether the value is a known member of the ConsultationTextPartType enum.
+func (e ConsultationTextPartType) Valid() bool {
+	switch e {
+	case Text:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConsultationThreadConversationStatus.
+const (
+	ConsultationThreadConversationStatusActive   ConsultationThreadConversationStatus = "active"
+	ConsultationThreadConversationStatusArchived ConsultationThreadConversationStatus = "archived"
+	ConsultationThreadConversationStatusDeleted  ConsultationThreadConversationStatus = "deleted"
+)
+
+// Valid indicates whether the value is a known member of the ConsultationThreadConversationStatus enum.
+func (e ConsultationThreadConversationStatus) Valid() bool {
+	switch e {
+	case ConsultationThreadConversationStatusActive:
+		return true
+	case ConsultationThreadConversationStatusArchived:
+		return true
+	case ConsultationThreadConversationStatusDeleted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConsultationThreadConversationTitleStatus.
+const (
+	ConsultationThreadConversationTitleStatusFailed     ConsultationThreadConversationTitleStatus = "failed"
+	ConsultationThreadConversationTitleStatusGenerated  ConsultationThreadConversationTitleStatus = "generated"
+	ConsultationThreadConversationTitleStatusGenerating ConsultationThreadConversationTitleStatus = "generating"
+	ConsultationThreadConversationTitleStatusPending    ConsultationThreadConversationTitleStatus = "pending"
+)
+
+// Valid indicates whether the value is a known member of the ConsultationThreadConversationTitleStatus enum.
+func (e ConsultationThreadConversationTitleStatus) Valid() bool {
+	switch e {
+	case ConsultationThreadConversationTitleStatusFailed:
+		return true
+	case ConsultationThreadConversationTitleStatusGenerated:
+		return true
+	case ConsultationThreadConversationTitleStatusGenerating:
+		return true
+	case ConsultationThreadConversationTitleStatusPending:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConsultationThreadResponsePhase.
+const (
+	ConsultationThreadResponsePhaseAnalysisReady    ConsultationThreadResponsePhase = "analysis_ready"
+	ConsultationThreadResponsePhaseCollecting       ConsultationThreadResponsePhase = "collecting"
+	ConsultationThreadResponsePhaseReadyForAnalysis ConsultationThreadResponsePhase = "ready_for_analysis"
+)
+
+// Valid indicates whether the value is a known member of the ConsultationThreadResponsePhase enum.
+func (e ConsultationThreadResponsePhase) Valid() bool {
+	switch e {
+	case ConsultationThreadResponsePhaseAnalysisReady:
+		return true
+	case ConsultationThreadResponsePhaseCollecting:
+		return true
+	case ConsultationThreadResponsePhaseReadyForAnalysis:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConversationStatus.
+const (
+	ConversationStatusActive   ConversationStatus = "active"
+	ConversationStatusArchived ConversationStatus = "archived"
+	ConversationStatusDeleted  ConversationStatus = "deleted"
+)
+
+// Valid indicates whether the value is a known member of the ConversationStatus enum.
+func (e ConversationStatus) Valid() bool {
+	switch e {
+	case ConversationStatusActive:
+		return true
+	case ConversationStatusArchived:
+		return true
+	case ConversationStatusDeleted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConversationTitleStatus.
+const (
+	ConversationTitleStatusFailed     ConversationTitleStatus = "failed"
+	ConversationTitleStatusGenerated  ConversationTitleStatus = "generated"
+	ConversationTitleStatusGenerating ConversationTitleStatus = "generating"
+	ConversationTitleStatusPending    ConversationTitleStatus = "pending"
+)
+
+// Valid indicates whether the value is a known member of the ConversationTitleStatus enum.
+func (e ConversationTitleStatus) Valid() bool {
+	switch e {
+	case ConversationTitleStatusFailed:
+		return true
+	case ConversationTitleStatusGenerated:
+		return true
+	case ConversationTitleStatusGenerating:
+		return true
+	case ConversationTitleStatusPending:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConversationMessageRole.
+const (
+	ConversationMessageRoleAssistant ConversationMessageRole = "assistant"
+	ConversationMessageRoleSystem    ConversationMessageRole = "system"
+	ConversationMessageRoleTool      ConversationMessageRole = "tool"
+	ConversationMessageRoleUser      ConversationMessageRole = "user"
+)
+
+// Valid indicates whether the value is a known member of the ConversationMessageRole enum.
+func (e ConversationMessageRole) Valid() bool {
+	switch e {
+	case ConversationMessageRoleAssistant:
+		return true
+	case ConversationMessageRoleSystem:
+		return true
+	case ConversationMessageRoleTool:
+		return true
+	case ConversationMessageRoleUser:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConversationMessageStatus.
+const (
+	ConversationMessageStatusAborted   ConversationMessageStatus = "aborted"
+	ConversationMessageStatusCompleted ConversationMessageStatus = "completed"
+	ConversationMessageStatusFailed    ConversationMessageStatus = "failed"
+	ConversationMessageStatusStreaming ConversationMessageStatus = "streaming"
+	ConversationMessageStatusSubmitted ConversationMessageStatus = "submitted"
+)
+
+// Valid indicates whether the value is a known member of the ConversationMessageStatus enum.
+func (e ConversationMessageStatus) Valid() bool {
+	switch e {
+	case ConversationMessageStatusAborted:
+		return true
+	case ConversationMessageStatusCompleted:
+		return true
+	case ConversationMessageStatusFailed:
+		return true
+	case ConversationMessageStatusStreaming:
+		return true
+	case ConversationMessageStatusSubmitted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConversationRunStatus.
+const (
+	ConversationRunStatusCancelled ConversationRunStatus = "cancelled"
+	ConversationRunStatusCompleted ConversationRunStatus = "completed"
+	ConversationRunStatusFailed    ConversationRunStatus = "failed"
+	ConversationRunStatusRunning   ConversationRunStatus = "running"
+)
+
+// Valid indicates whether the value is a known member of the ConversationRunStatus enum.
+func (e ConversationRunStatus) Valid() bool {
+	switch e {
+	case ConversationRunStatusCancelled:
+		return true
+	case ConversationRunStatusCompleted:
+		return true
+	case ConversationRunStatusFailed:
+		return true
+	case ConversationRunStatusRunning:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConversationUpdateRequestStatus.
+const (
+	ConversationUpdateRequestStatusActive   ConversationUpdateRequestStatus = "active"
+	ConversationUpdateRequestStatusArchived ConversationUpdateRequestStatus = "archived"
+	ConversationUpdateRequestStatusDeleted  ConversationUpdateRequestStatus = "deleted"
+)
+
+// Valid indicates whether the value is a known member of the ConversationUpdateRequestStatus enum.
+func (e ConversationUpdateRequestStatus) Valid() bool {
+	switch e {
+	case ConversationUpdateRequestStatusActive:
+		return true
+	case ConversationUpdateRequestStatusArchived:
+		return true
+	case ConversationUpdateRequestStatusDeleted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateUploadRequestFileType.
+const (
+	CreateUploadRequestFileTypeConsultationPhoto CreateUploadRequestFileType = "consultation_photo"
+	CreateUploadRequestFileTypePhotoBack         CreateUploadRequestFileType = "photo_back"
+	CreateUploadRequestFileTypePhotoFront        CreateUploadRequestFileType = "photo_front"
+	CreateUploadRequestFileTypePhotoSide         CreateUploadRequestFileType = "photo_side"
+	CreateUploadRequestFileTypeReport            CreateUploadRequestFileType = "report"
+)
+
+// Valid indicates whether the value is a known member of the CreateUploadRequestFileType enum.
+func (e CreateUploadRequestFileType) Valid() bool {
+	switch e {
+	case CreateUploadRequestFileTypeConsultationPhoto:
+		return true
+	case CreateUploadRequestFileTypePhotoBack:
+		return true
+	case CreateUploadRequestFileTypePhotoFront:
+		return true
+	case CreateUploadRequestFileTypePhotoSide:
+		return true
+	case CreateUploadRequestFileTypeReport:
 		return true
 	default:
 		return false
@@ -497,6 +859,27 @@ func (e DiagnosisCandidateAssessmentState) Valid() bool {
 	}
 }
 
+// Defines values for DiagnosisCandidateAssessmentInputState.
+const (
+	DiagnosisCandidateAssessmentInputStateConfirmed     DiagnosisCandidateAssessmentInputState = "confirmed"
+	DiagnosisCandidateAssessmentInputStateNotApplicable DiagnosisCandidateAssessmentInputState = "not_applicable"
+	DiagnosisCandidateAssessmentInputStateUnsure        DiagnosisCandidateAssessmentInputState = "unsure"
+)
+
+// Valid indicates whether the value is a known member of the DiagnosisCandidateAssessmentInputState enum.
+func (e DiagnosisCandidateAssessmentInputState) Valid() bool {
+	switch e {
+	case DiagnosisCandidateAssessmentInputStateConfirmed:
+		return true
+	case DiagnosisCandidateAssessmentInputStateNotApplicable:
+		return true
+	case DiagnosisCandidateAssessmentInputStateUnsure:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DiagnosisFreshnessState.
 const (
 	Fresh            DiagnosisFreshnessState = "fresh"
@@ -512,6 +895,42 @@ func (e DiagnosisFreshnessState) Valid() bool {
 	case PotentiallyStale:
 		return true
 	case Stale:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DiagnosisReplayReportMode.
+const (
+	DiagnosisReplayReportModeCounterfactual DiagnosisReplayReportMode = "counterfactual"
+	DiagnosisReplayReportModeHistorical     DiagnosisReplayReportMode = "historical"
+)
+
+// Valid indicates whether the value is a known member of the DiagnosisReplayReportMode enum.
+func (e DiagnosisReplayReportMode) Valid() bool {
+	switch e {
+	case DiagnosisReplayReportModeCounterfactual:
+		return true
+	case DiagnosisReplayReportModeHistorical:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DiagnosisReplayRequestMode.
+const (
+	DiagnosisReplayRequestModeCounterfactual DiagnosisReplayRequestMode = "counterfactual"
+	DiagnosisReplayRequestModeHistorical     DiagnosisReplayRequestMode = "historical"
+)
+
+// Valid indicates whether the value is a known member of the DiagnosisReplayRequestMode enum.
+func (e DiagnosisReplayRequestMode) Valid() bool {
+	switch e {
+	case DiagnosisReplayRequestModeCounterfactual:
+		return true
+	case DiagnosisReplayRequestModeHistorical:
 		return true
 	default:
 		return false
@@ -542,6 +961,66 @@ func (e DiagnosisWorkspaceProjectionStatus) Valid() bool {
 	}
 }
 
+// Defines values for DocumentIndicatorEvidenceAdmissibilityStatus.
+const (
+	DocumentIndicatorEvidenceAdmissibilityStatusAdmissible  DocumentIndicatorEvidenceAdmissibilityStatus = "admissible"
+	DocumentIndicatorEvidenceAdmissibilityStatusNeedsReview DocumentIndicatorEvidenceAdmissibilityStatus = "needs_review"
+	DocumentIndicatorEvidenceAdmissibilityStatusRejected    DocumentIndicatorEvidenceAdmissibilityStatus = "rejected"
+)
+
+// Valid indicates whether the value is a known member of the DocumentIndicatorEvidenceAdmissibilityStatus enum.
+func (e DocumentIndicatorEvidenceAdmissibilityStatus) Valid() bool {
+	switch e {
+	case DocumentIndicatorEvidenceAdmissibilityStatusAdmissible:
+		return true
+	case DocumentIndicatorEvidenceAdmissibilityStatusNeedsReview:
+		return true
+	case DocumentIndicatorEvidenceAdmissibilityStatusRejected:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DocumentIndicatorReviewRecordAction.
+const (
+	DocumentIndicatorReviewRecordActionConfirm DocumentIndicatorReviewRecordAction = "confirm"
+	DocumentIndicatorReviewRecordActionCorrect DocumentIndicatorReviewRecordAction = "correct"
+	DocumentIndicatorReviewRecordActionReject  DocumentIndicatorReviewRecordAction = "reject"
+)
+
+// Valid indicates whether the value is a known member of the DocumentIndicatorReviewRecordAction enum.
+func (e DocumentIndicatorReviewRecordAction) Valid() bool {
+	switch e {
+	case DocumentIndicatorReviewRecordActionConfirm:
+		return true
+	case DocumentIndicatorReviewRecordActionCorrect:
+		return true
+	case DocumentIndicatorReviewRecordActionReject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for KnowledgeVideoIngestionRequestSplitterProvider.
+const (
+	Heuristic KnowledgeVideoIngestionRequestSplitterProvider = "heuristic"
+	Llm       KnowledgeVideoIngestionRequestSplitterProvider = "llm"
+)
+
+// Valid indicates whether the value is a known member of the KnowledgeVideoIngestionRequestSplitterProvider enum.
+func (e KnowledgeVideoIngestionRequestSplitterProvider) Valid() bool {
+	switch e {
+	case Heuristic:
+		return true
+	case Llm:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for OnboardingProfileInputGender.
 const (
 	OnboardingProfileInputGenderFemale OnboardingProfileInputGender = "female"
@@ -562,19 +1041,19 @@ func (e OnboardingProfileInputGender) Valid() bool {
 
 // Defines values for OutcomeCausalityLevel.
 const (
-	AssociationOnly     OutcomeCausalityLevel = "association_only"
-	ClinicianAttributed OutcomeCausalityLevel = "clinician_attributed"
-	UserAttributed      OutcomeCausalityLevel = "user_attributed"
+	OutcomeCausalityLevelAssociationOnly     OutcomeCausalityLevel = "association_only"
+	OutcomeCausalityLevelClinicianAttributed OutcomeCausalityLevel = "clinician_attributed"
+	OutcomeCausalityLevelUserAttributed      OutcomeCausalityLevel = "user_attributed"
 )
 
 // Valid indicates whether the value is a known member of the OutcomeCausalityLevel enum.
 func (e OutcomeCausalityLevel) Valid() bool {
 	switch e {
-	case AssociationOnly:
+	case OutcomeCausalityLevelAssociationOnly:
 		return true
-	case ClinicianAttributed:
+	case OutcomeCausalityLevelClinicianAttributed:
 		return true
-	case UserAttributed:
+	case OutcomeCausalityLevelUserAttributed:
 		return true
 	default:
 		return false
@@ -650,6 +1129,72 @@ func (e PrivacyErasureRequestConfirmation) Valid() bool {
 	}
 }
 
+// Defines values for ProjectedToolCallStatus.
+const (
+	ProjectedToolCallStatusFailed    ProjectedToolCallStatus = "failed"
+	ProjectedToolCallStatusRunning   ProjectedToolCallStatus = "running"
+	ProjectedToolCallStatusSucceeded ProjectedToolCallStatus = "succeeded"
+)
+
+// Valid indicates whether the value is a known member of the ProjectedToolCallStatus enum.
+func (e ProjectedToolCallStatus) Valid() bool {
+	switch e {
+	case ProjectedToolCallStatusFailed:
+		return true
+	case ProjectedToolCallStatusRunning:
+		return true
+	case ProjectedToolCallStatusSucceeded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecordOutcomeRequestCausalityLevel.
+const (
+	RecordOutcomeRequestCausalityLevelAssociationOnly     RecordOutcomeRequestCausalityLevel = "association_only"
+	RecordOutcomeRequestCausalityLevelClinicianAttributed RecordOutcomeRequestCausalityLevel = "clinician_attributed"
+	RecordOutcomeRequestCausalityLevelUserAttributed      RecordOutcomeRequestCausalityLevel = "user_attributed"
+)
+
+// Valid indicates whether the value is a known member of the RecordOutcomeRequestCausalityLevel enum.
+func (e RecordOutcomeRequestCausalityLevel) Valid() bool {
+	switch e {
+	case RecordOutcomeRequestCausalityLevelAssociationOnly:
+		return true
+	case RecordOutcomeRequestCausalityLevelClinicianAttributed:
+		return true
+	case RecordOutcomeRequestCausalityLevelUserAttributed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RegisterKnowledgeSourceRequestLicenseStatus.
+const (
+	CitationOnly  RegisterKnowledgeSourceRequestLicenseStatus = "citation_only"
+	Owned         RegisterKnowledgeSourceRequestLicenseStatus = "owned"
+	PublicDomain  RegisterKnowledgeSourceRequestLicenseStatus = "public_domain"
+	VerifiedReuse RegisterKnowledgeSourceRequestLicenseStatus = "verified_reuse"
+)
+
+// Valid indicates whether the value is a known member of the RegisterKnowledgeSourceRequestLicenseStatus enum.
+func (e RegisterKnowledgeSourceRequestLicenseStatus) Valid() bool {
+	switch e {
+	case CitationOnly:
+		return true
+	case Owned:
+		return true
+	case PublicDomain:
+		return true
+	case VerifiedReuse:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ResolveBodyStateSafetyRequestResolution.
 const (
 	ClearedByReview ResolveBodyStateSafetyRequestResolution = "cleared_by_review"
@@ -713,6 +1258,21 @@ func (e ReviewBodyStateObservationRequestReviewState) Valid() bool {
 	}
 }
 
+// Defines values for RuntimeEventVersion.
+const (
+	RuntimeEventVersionN1 RuntimeEventVersion = 1
+)
+
+// Valid indicates whether the value is a known member of the RuntimeEventVersion enum.
+func (e RuntimeEventVersion) Valid() bool {
+	switch e {
+	case RuntimeEventVersionN1:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TreatmentStatus.
 const (
 	TreatmentStatusActive            TreatmentStatus = "active"
@@ -734,6 +1294,42 @@ func (e TreatmentStatus) Valid() bool {
 	case TreatmentStatusReviewRecommended:
 		return true
 	case TreatmentStatusSuperseded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TreatmentReplayReportMode.
+const (
+	TreatmentReplayReportModeCounterfactual TreatmentReplayReportMode = "counterfactual"
+	TreatmentReplayReportModeHistorical     TreatmentReplayReportMode = "historical"
+)
+
+// Valid indicates whether the value is a known member of the TreatmentReplayReportMode enum.
+func (e TreatmentReplayReportMode) Valid() bool {
+	switch e {
+	case TreatmentReplayReportModeCounterfactual:
+		return true
+	case TreatmentReplayReportModeHistorical:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TreatmentReplayRequestMode.
+const (
+	TreatmentReplayRequestModeCounterfactual TreatmentReplayRequestMode = "counterfactual"
+	TreatmentReplayRequestModeHistorical     TreatmentReplayRequestMode = "historical"
+)
+
+// Valid indicates whether the value is a known member of the TreatmentReplayRequestMode enum.
+func (e TreatmentReplayRequestMode) Valid() bool {
+	switch e {
+	case TreatmentReplayRequestModeCounterfactual:
+		return true
+	case TreatmentReplayRequestModeHistorical:
 		return true
 	default:
 		return false
@@ -853,6 +1449,128 @@ func (e UserProfileGender) Valid() bool {
 		return false
 	}
 }
+
+// Defines values for UserUploadAnalysisStatus.
+const (
+	UserUploadAnalysisStatusCompleted  UserUploadAnalysisStatus = "completed"
+	UserUploadAnalysisStatusFailed     UserUploadAnalysisStatus = "failed"
+	UserUploadAnalysisStatusNone       UserUploadAnalysisStatus = "none"
+	UserUploadAnalysisStatusPending    UserUploadAnalysisStatus = "pending"
+	UserUploadAnalysisStatusProcessing UserUploadAnalysisStatus = "processing"
+)
+
+// Valid indicates whether the value is a known member of the UserUploadAnalysisStatus enum.
+func (e UserUploadAnalysisStatus) Valid() bool {
+	switch e {
+	case UserUploadAnalysisStatusCompleted:
+		return true
+	case UserUploadAnalysisStatusFailed:
+		return true
+	case UserUploadAnalysisStatusNone:
+		return true
+	case UserUploadAnalysisStatusPending:
+		return true
+	case UserUploadAnalysisStatusProcessing:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UserUploadFileType.
+const (
+	UserUploadFileTypeConsultationPhoto UserUploadFileType = "consultation_photo"
+	UserUploadFileTypePhotoBack         UserUploadFileType = "photo_back"
+	UserUploadFileTypePhotoFront        UserUploadFileType = "photo_front"
+	UserUploadFileTypePhotoSide         UserUploadFileType = "photo_side"
+	UserUploadFileTypeReport            UserUploadFileType = "report"
+)
+
+// Valid indicates whether the value is a known member of the UserUploadFileType enum.
+func (e UserUploadFileType) Valid() bool {
+	switch e {
+	case UserUploadFileTypeConsultationPhoto:
+		return true
+	case UserUploadFileTypePhotoBack:
+		return true
+	case UserUploadFileTypePhotoFront:
+		return true
+	case UserUploadFileTypePhotoSide:
+		return true
+	case UserUploadFileTypeReport:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UserUploadOcrStatus.
+const (
+	UserUploadOcrStatusCompleted  UserUploadOcrStatus = "completed"
+	UserUploadOcrStatusFailed     UserUploadOcrStatus = "failed"
+	UserUploadOcrStatusPending    UserUploadOcrStatus = "pending"
+	UserUploadOcrStatusProcessing UserUploadOcrStatus = "processing"
+)
+
+// Valid indicates whether the value is a known member of the UserUploadOcrStatus enum.
+func (e UserUploadOcrStatus) Valid() bool {
+	switch e {
+	case UserUploadOcrStatusCompleted:
+		return true
+	case UserUploadOcrStatusFailed:
+		return true
+	case UserUploadOcrStatusPending:
+		return true
+	case UserUploadOcrStatusProcessing:
+		return true
+	default:
+		return false
+	}
+}
+
+// AcceptTreatmentRevisionRequest defines model for AcceptTreatmentRevisionRequest.
+type AcceptTreatmentRevisionRequest struct {
+	ConsultationId *openapi_types.UUID `json:"consultation_id,omitempty"`
+}
+
+// AcceptTreatmentRevisionResponse defines model for AcceptTreatmentRevisionResponse.
+type AcceptTreatmentRevisionResponse struct {
+	TrainingPlan TrainingPlan `json:"training_plan"`
+	Treatment    Treatment    `json:"treatment"`
+}
+
+// AgentInteraction defines model for AgentInteraction.
+type AgentInteraction struct {
+	Answer         *JsonValue             `json:"answer,omitempty"`
+	AnsweredAt     *time.Time             `json:"answered_at,omitempty"`
+	ConversationId openapi_types.UUID     `json:"conversation_id"`
+	CreatedAt      time.Time              `json:"created_at"`
+	ExpiresAt      *time.Time             `json:"expires_at,omitempty"`
+	Id             openapi_types.UUID     `json:"id"`
+	Metadata       JsonObject             `json:"metadata"`
+	Question       JsonObject             `json:"question"`
+	RunId          openapi_types.UUID     `json:"run_id"`
+	Status         AgentInteractionStatus `json:"status"`
+	ToolCallId     string                 `json:"tool_call_id"`
+	ToolName       string                 `json:"tool_name"`
+}
+
+// AgentInteractionStatus defines model for AgentInteraction.Status.
+type AgentInteractionStatus string
+
+// AppendHealthDocumentReviewRequest defines model for AppendHealthDocumentReviewRequest.
+type AppendHealthDocumentReviewRequest struct {
+	Action          AppendHealthDocumentReviewRequestAction `json:"action"`
+	IdempotencyKey  string                                  `json:"idempotency_key"`
+	IndicatorId     string                                  `json:"indicator_id"`
+	IndicatorIndex  int                                     `json:"indicator_index"`
+	Note            *string                                 `json:"note,omitempty"`
+	ReviewedPayload *JsonObject                             `json:"reviewed_payload,omitempty"`
+	SourceRefs      []string                                `json:"source_refs"`
+}
+
+// AppendHealthDocumentReviewRequestAction defines model for AppendHealthDocumentReviewRequest.Action.
+type AppendHealthDocumentReviewRequestAction string
 
 // AssessmentDomainCoverage defines model for AssessmentDomainCoverage.
 type AssessmentDomainCoverage struct {
@@ -1085,6 +1803,24 @@ type AssessmentReportV2ContractRevision string
 // AssessmentReportV2Status defines model for AssessmentReportV2.Status.
 type AssessmentReportV2Status string
 
+// AuthLoginRequest defines model for AuthLoginRequest.
+type AuthLoginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+// AuthRegisterRequest defines model for AuthRegisterRequest.
+type AuthRegisterRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+// AuthSession defines model for AuthSession.
+type AuthSession struct {
+	AccessToken string `json:"access_token"`
+	ExpiresIn   int    `json:"expires_in"`
+}
+
 // BodyMetricValue defines model for BodyMetricValue.
 type BodyMetricValue struct {
 	ObservedAt *time.Time `json:"observed_at,omitempty"`
@@ -1288,6 +2024,20 @@ type BodyStateSnapshot struct {
 	UserId          openapi_types.UUID     `json:"user_id"`
 }
 
+// CancelConsultationRunRequest defines model for CancelConsultationRunRequest.
+type CancelConsultationRunRequest struct {
+	Reason *string `json:"reason,omitempty"`
+}
+
+// CancelConsultationRunResponse defines model for CancelConsultationRunResponse.
+type CancelConsultationRunResponse struct {
+	RunId  openapi_types.UUID                  `json:"run_id"`
+	Status CancelConsultationRunResponseStatus `json:"status"`
+}
+
+// CancelConsultationRunResponseStatus defines model for CancelConsultationRunResponse.Status.
+type CancelConsultationRunResponseStatus string
+
 // ClientDiagnostic defines model for ClientDiagnostic.
 type ClientDiagnostic struct {
 	AttemptId           *string                                                       `json:"attemptId,omitempty"`
@@ -1330,16 +2080,255 @@ type ClientDiagnosticSchemaVersion int
 // ClientDiagnosticSeverity defines model for ClientDiagnostic.Severity.
 type ClientDiagnosticSeverity string
 
+// ConsultationCounterfactualReplayRequest defines model for ConsultationCounterfactualReplayRequest.
+type ConsultationCounterfactualReplayRequest struct {
+	ConfigurationId string `json:"configuration_id"`
+}
+
+// ConsultationImagePart defines model for ConsultationImagePart.
+type ConsultationImagePart struct {
+	ImageUrl *string                   `json:"image_url,omitempty"`
+	MimeType *string                   `json:"mime_type,omitempty"`
+	Type     ConsultationImagePartType `json:"type"`
+	UploadId openapi_types.UUID        `json:"upload_id"`
+}
+
+// ConsultationImagePartType defines model for ConsultationImagePart.Type.
+type ConsultationImagePartType string
+
+// ConsultationMessageInput defines model for ConsultationMessageInput.
+type ConsultationMessageInput struct {
+	Metadata *JsonObject                  `json:"metadata,omitempty"`
+	Parts    []ConsultationMessagePart    `json:"parts"`
+	Role     ConsultationMessageInputRole `json:"role"`
+}
+
+// ConsultationMessageInputRole defines model for ConsultationMessageInput.Role.
+type ConsultationMessageInputRole string
+
+// ConsultationMessagePart defines model for ConsultationMessagePart.
+type ConsultationMessagePart struct {
+	union json.RawMessage
+}
+
+// ConsultationRunDecision defines model for ConsultationRunDecision.
+type ConsultationRunDecision struct {
+	ConfigurationIdentityMatch bool               `json:"configuration_identity_match"`
+	DecisionPolicyRevision     string             `json:"decision_policy_revision"`
+	ExecutionProvenance        JsonObject         `json:"execution_provenance"`
+	InputFingerprint           *string            `json:"input_fingerprint,omitempty"`
+	PersistedConfigurationId   string             `json:"persisted_configuration_id"`
+	ReplayInputFrozen          bool               `json:"replay_input_frozen"`
+	RunId                      openapi_types.UUID `json:"run_id"`
+	SourceConfigurationId      string             `json:"source_configuration_id"`
+}
+
+// ConsultationSessionResponse defines model for ConsultationSessionResponse.
+type ConsultationSessionResponse struct {
+	ConversationId      openapi_types.UUID               `json:"conversation_id"`
+	CreatedAt           time.Time                        `json:"created_at"`
+	EndedAt             *time.Time                       `json:"ended_at"`
+	ExtractedInfo       []JsonObject                     `json:"extracted_info"`
+	PendingInteractions []AgentInteraction               `json:"pending_interactions"`
+	Phase               ConsultationSessionResponsePhase `json:"phase"`
+	UpdatedAt           time.Time                        `json:"updated_at"`
+}
+
+// ConsultationSessionResponsePhase defines model for ConsultationSessionResponse.Phase.
+type ConsultationSessionResponsePhase string
+
+// ConsultationTextPart defines model for ConsultationTextPart.
+type ConsultationTextPart struct {
+	Text string                   `json:"text"`
+	Type ConsultationTextPartType `json:"type"`
+}
+
+// ConsultationTextPartType defines model for ConsultationTextPart.Type.
+type ConsultationTextPartType string
+
+// ConsultationThreadConversation defines model for ConsultationThreadConversation.
+type ConsultationThreadConversation struct {
+	CreatedAt     time.Time                                 `json:"created_at"`
+	DefaultModel  *string                                   `json:"default_model,omitempty"`
+	Id            openapi_types.UUID                        `json:"id"`
+	LastMessageAt *time.Time                                `json:"last_message_at,omitempty"`
+	MessageCount  int                                       `json:"message_count"`
+	Metadata      JsonObject                                `json:"metadata"`
+	Pinned        bool                                      `json:"pinned"`
+	PinnedAt      *time.Time                                `json:"pinned_at,omitempty"`
+	Status        ConsultationThreadConversationStatus      `json:"status"`
+	Title         *string                                   `json:"title,omitempty"`
+	TitleStatus   ConsultationThreadConversationTitleStatus `json:"title_status"`
+	UpdatedAt     time.Time                                 `json:"updated_at"`
+}
+
+// ConsultationThreadConversationStatus defines model for ConsultationThreadConversation.Status.
+type ConsultationThreadConversationStatus string
+
+// ConsultationThreadConversationTitleStatus defines model for ConsultationThreadConversation.TitleStatus.
+type ConsultationThreadConversationTitleStatus string
+
+// ConsultationThreadResponse defines model for ConsultationThreadResponse.
+type ConsultationThreadResponse struct {
+	ActiveTurnEvents    []RuntimeEvent                  `json:"active_turn_events"`
+	ActiveTurnRunId     *openapi_types.UUID             `json:"active_turn_run_id"`
+	BodyState           *BodyStateSnapshot              `json:"body_state"`
+	Conversation        ConsultationThreadConversation  `json:"conversation"`
+	ConversationId      openapi_types.UUID              `json:"conversation_id"`
+	CreatedAt           time.Time                       `json:"created_at"`
+	EndedAt             *time.Time                      `json:"ended_at"`
+	ExtractedInfo       []JsonObject                    `json:"extracted_info"`
+	InteractionHistory  []AgentInteraction              `json:"interaction_history"`
+	Messages            []ConversationMessage           `json:"messages"`
+	PendingInteractions []AgentInteraction              `json:"pending_interactions"`
+	Phase               ConsultationThreadResponsePhase `json:"phase"`
+	ToolCalls           []ProjectedToolCall             `json:"tool_calls"`
+	UpdatedAt           time.Time                       `json:"updated_at"`
+}
+
+// ConsultationThreadResponsePhase defines model for ConsultationThreadResponse.Phase.
+type ConsultationThreadResponsePhase string
+
+// Conversation defines model for Conversation.
+type Conversation struct {
+	CreatedAt     time.Time               `json:"created_at"`
+	DefaultModel  *string                 `json:"default_model,omitempty"`
+	Id            openapi_types.UUID      `json:"id"`
+	LastMessageAt *time.Time              `json:"last_message_at,omitempty"`
+	Metadata      JsonObject              `json:"metadata"`
+	Pinned        bool                    `json:"pinned"`
+	PinnedAt      *time.Time              `json:"pinned_at,omitempty"`
+	Status        ConversationStatus      `json:"status"`
+	Title         *string                 `json:"title,omitempty"`
+	TitleStatus   ConversationTitleStatus `json:"title_status"`
+	UpdatedAt     time.Time               `json:"updated_at"`
+}
+
+// ConversationStatus defines model for Conversation.Status.
+type ConversationStatus string
+
+// ConversationTitleStatus defines model for Conversation.TitleStatus.
+type ConversationTitleStatus string
+
+// ConversationDetailResponse defines model for ConversationDetailResponse.
+type ConversationDetailResponse struct {
+	Conversation Conversation          `json:"conversation"`
+	Messages     []ConversationMessage `json:"messages"`
+}
+
+// ConversationListResponse defines model for ConversationListResponse.
+type ConversationListResponse struct {
+	Conversations []Conversation `json:"conversations"`
+	HasMore       bool           `json:"hasMore"`
+	NextCursor    *string        `json:"nextCursor,omitempty"`
+}
+
+// ConversationMessage defines model for ConversationMessage.
+type ConversationMessage struct {
+	ContentText        *string                   `json:"content_text,omitempty"`
+	ConversationId     openapi_types.UUID        `json:"conversation_id"`
+	CreatedAt          time.Time                 `json:"created_at"`
+	Error              *JsonObject               `json:"error,omitempty"`
+	Id                 openapi_types.UUID        `json:"id"`
+	InputTokens        *int                      `json:"input_tokens,omitempty"`
+	Metadata           JsonObject                `json:"metadata"`
+	Model              *string                   `json:"model,omitempty"`
+	OutputTokens       *int                      `json:"output_tokens,omitempty"`
+	ParentMessageId    *openapi_types.UUID       `json:"parent_message_id,omitempty"`
+	Parts              []JsonObject              `json:"parts"`
+	Provider           *string                   `json:"provider,omitempty"`
+	ProviderMessageId  *string                   `json:"provider_message_id,omitempty"`
+	ProviderResponseId *string                   `json:"provider_response_id,omitempty"`
+	Role               ConversationMessageRole   `json:"role"`
+	RunId              *openapi_types.UUID       `json:"run_id,omitempty"`
+	Seq                int                       `json:"seq"`
+	Status             ConversationMessageStatus `json:"status"`
+	TotalTokens        *int                      `json:"total_tokens,omitempty"`
+	TurnId             openapi_types.UUID        `json:"turn_id"`
+	UpdatedAt          time.Time                 `json:"updated_at"`
+}
+
+// ConversationMessageRole defines model for ConversationMessage.Role.
+type ConversationMessageRole string
+
+// ConversationMessageStatus defines model for ConversationMessage.Status.
+type ConversationMessageStatus string
+
+// ConversationMutationResponse defines model for ConversationMutationResponse.
+type ConversationMutationResponse struct {
+	Message string `json:"message"`
+}
+
+// ConversationPinRequest defines model for ConversationPinRequest.
+type ConversationPinRequest struct {
+	Pinned *bool `json:"pinned,omitempty"`
+}
+
+// ConversationRun defines model for ConversationRun.
+type ConversationRun struct {
+	CompletedAt    *time.Time            `json:"completed_at,omitempty"`
+	ConversationId openapi_types.UUID    `json:"conversation_id"`
+	Error          *JsonObject           `json:"error,omitempty"`
+	Id             openapi_types.UUID    `json:"id"`
+	Model          string                `json:"model"`
+	Provider       *string               `json:"provider,omitempty"`
+	RequestId      string                `json:"request_id"`
+	StartedAt      time.Time             `json:"started_at"`
+	Status         ConversationRunStatus `json:"status"`
+	TurnId         openapi_types.UUID    `json:"turn_id"`
+	Usage          *JsonObject           `json:"usage,omitempty"`
+}
+
+// ConversationRunStatus defines model for ConversationRun.Status.
+type ConversationRunStatus string
+
+// ConversationRunListResponse defines model for ConversationRunListResponse.
+type ConversationRunListResponse struct {
+	Runs []ConversationRun `json:"runs"`
+}
+
+// ConversationTitleRequest defines model for ConversationTitleRequest.
+type ConversationTitleRequest struct {
+	Title string `json:"title"`
+}
+
+// ConversationUpdateRequest defines model for ConversationUpdateRequest.
+type ConversationUpdateRequest struct {
+	Status *ConversationUpdateRequestStatus `json:"status,omitempty"`
+}
+
+// ConversationUpdateRequestStatus defines model for ConversationUpdateRequest.Status.
+type ConversationUpdateRequestStatus string
+
 // CorrectBodyStateFactRequest defines model for CorrectBodyStateFactRequest.
 type CorrectBodyStateFactRequest struct {
 	ExpectedRevision int64              `json:"expected_revision"`
 	Replacement      BodyStateFactInput `json:"replacement"`
 }
 
+// CreateUploadRequest defines model for CreateUploadRequest.
+type CreateUploadRequest struct {
+	File     openapi_types.File          `json:"file"`
+	FileType CreateUploadRequestFileType `json:"file_type"`
+}
+
+// CreateUploadRequestFileType defines model for CreateUploadRequest.FileType.
+type CreateUploadRequestFileType string
+
+// CurrentTreatmentResponse defines model for CurrentTreatmentResponse.
+type CurrentTreatmentResponse struct {
+	Treatment *Treatment `json:"treatment"`
+}
+
 // CurrentUser defines model for CurrentUser.
 type CurrentUser struct {
 	Email openapi_types.Email `json:"email"`
 	Id    openapi_types.UUID  `json:"id"`
+}
+
+// DiagnosisAnalysisListResponse defines model for DiagnosisAnalysisListResponse.
+type DiagnosisAnalysisListResponse struct {
+	Analyses []DiagnosisWorkspaceProjection `json:"analyses"`
 }
 
 // DiagnosisCandidate defines model for DiagnosisCandidate.
@@ -1379,11 +2368,30 @@ type DiagnosisCandidateAssessment struct {
 	CandidateId openapi_types.UUID                `json:"candidate_id"`
 	Id          openapi_types.UUID                `json:"id"`
 	State       DiagnosisCandidateAssessmentState `json:"state"`
-	UserId      openapi_types.UUID                `json:"user_id"`
 }
 
 // DiagnosisCandidateAssessmentState defines model for DiagnosisCandidateAssessment.State.
 type DiagnosisCandidateAssessmentState string
+
+// DiagnosisCandidateAssessmentInput defines model for DiagnosisCandidateAssessmentInput.
+type DiagnosisCandidateAssessmentInput struct {
+	CandidateId openapi_types.UUID                     `json:"candidate_id"`
+	State       DiagnosisCandidateAssessmentInputState `json:"state"`
+}
+
+// DiagnosisCandidateAssessmentInputState defines model for DiagnosisCandidateAssessmentInput.State.
+type DiagnosisCandidateAssessmentInputState string
+
+// DiagnosisCandidateAssessmentRequest defines model for DiagnosisCandidateAssessmentRequest.
+type DiagnosisCandidateAssessmentRequest struct {
+	Candidates []DiagnosisCandidateAssessmentInput `json:"candidates"`
+}
+
+// DiagnosisCandidateAssessmentResponse defines model for DiagnosisCandidateAssessmentResponse.
+type DiagnosisCandidateAssessmentResponse struct {
+	AnalysisId           openapi_types.UUID             `json:"analysis_id"`
+	CandidateAssessments []DiagnosisCandidateAssessment `json:"candidate_assessments"`
+}
 
 // DiagnosisFreshness defines model for DiagnosisFreshness.
 type DiagnosisFreshness struct {
@@ -1392,7 +2400,6 @@ type DiagnosisFreshness struct {
 	EvaluatedAgainstRevision int                        `json:"evaluated_against_revision"`
 	Reasons                  []DiagnosisFreshnessReason `json:"reasons"`
 	State                    DiagnosisFreshnessState    `json:"state"`
-	UserId                   openapi_types.UUID         `json:"user_id"`
 }
 
 // DiagnosisFreshnessState defines model for DiagnosisFreshness.State.
@@ -1408,13 +2415,71 @@ type DiagnosisFreshnessReason struct {
 	Revision   int     `json:"revision"`
 }
 
+// DiagnosisReplayCheck defines model for DiagnosisReplayCheck.
+type DiagnosisReplayCheck struct {
+	Baseline  *string `json:"baseline,omitempty"`
+	Candidate *string `json:"candidate,omitempty"`
+	Match     bool    `json:"match"`
+	Name      string  `json:"name"`
+}
+
+// DiagnosisReplayComparison defines model for DiagnosisReplayComparison.
+type DiagnosisReplayComparison struct {
+	Hard         DiagnosisReplayLayer `json:"hard"`
+	Presentation DiagnosisReplayLayer `json:"presentation"`
+	Semantic     DiagnosisReplayLayer `json:"semantic"`
+}
+
+// DiagnosisReplayLayer defines model for DiagnosisReplayLayer.
+type DiagnosisReplayLayer struct {
+	Checks []DiagnosisReplayCheck `json:"checks"`
+	Match  bool                   `json:"match"`
+}
+
+// DiagnosisReplayReport defines model for DiagnosisReplayReport.
+type DiagnosisReplayReport struct {
+	ArtifactIntegrity     DiagnosisReplayLayer      `json:"artifact_integrity"`
+	Baseline              DiagnosisReplaySnapshot   `json:"baseline"`
+	Comparison            DiagnosisReplayComparison `json:"comparison"`
+	InputFingerprint      string                    `json:"input_fingerprint"`
+	Mode                  DiagnosisReplayReportMode `json:"mode"`
+	Output                JsonObject                `json:"output"`
+	Replay                DiagnosisReplaySnapshot   `json:"replay"`
+	SourceAnalysisId      openapi_types.UUID        `json:"source_analysis_id"`
+	SourceConfigurationId string                    `json:"source_configuration_id"`
+	TargetConfigurationId string                    `json:"target_configuration_id"`
+}
+
+// DiagnosisReplayReportMode defines model for DiagnosisReplayReport.Mode.
+type DiagnosisReplayReportMode string
+
+// DiagnosisReplayRequest defines model for DiagnosisReplayRequest.
+type DiagnosisReplayRequest struct {
+	ConfigurationId *string                    `json:"configuration_id,omitempty"`
+	Mode            DiagnosisReplayRequestMode `json:"mode"`
+}
+
+// DiagnosisReplayRequestMode defines model for DiagnosisReplayRequest.Mode.
+type DiagnosisReplayRequestMode string
+
+// DiagnosisReplaySnapshot defines model for DiagnosisReplaySnapshot.
+type DiagnosisReplaySnapshot struct {
+	CandidateCount  int         `json:"candidate_count"`
+	CandidateNames  StringArray `json:"candidate_names"`
+	ConcernKeys     StringArray `json:"concern_keys"`
+	DecisionOutcome string      `json:"decision_outcome"`
+	Status          string      `json:"status"`
+	Summary         string      `json:"summary"`
+	SupportIds      StringArray `json:"support_ids"`
+}
+
 // DiagnosisWorkspaceProjection defines model for DiagnosisWorkspaceProjection.
 type DiagnosisWorkspaceProjection struct {
 	AgentConfiguration       JsonObject                         `json:"agent_configuration"`
 	AgentConfigurationId     string                             `json:"agent_configuration_id"`
 	AnalysisId               openapi_types.UUID                 `json:"analysis_id"`
 	BodyStateRevision        int                                `json:"body_state_revision"`
-	CandidateAssessments     []DiagnosisCandidateAssessment     `json:"candidate_assessments"`
+	CandidateAssessments     *[]DiagnosisCandidateAssessment    `json:"candidate_assessments,omitempty"`
 	Candidates               []DiagnosisCandidate               `json:"candidates"`
 	Citations                []JsonObject                       `json:"citations"`
 	CreatedAt                time.Time                          `json:"created_at"`
@@ -1423,7 +2488,7 @@ type DiagnosisWorkspaceProjection struct {
 	DecisionTrace            JsonObject                         `json:"decision_trace"`
 	EvidenceAcquisitionTrace JsonObject                         `json:"evidence_acquisition_trace"`
 	ExecutionProvenance      JsonObject                         `json:"execution_provenance"`
-	Freshness                DiagnosisFreshness                 `json:"freshness"`
+	Freshness                *DiagnosisFreshness                `json:"freshness,omitempty"`
 	Governance               JsonObject                         `json:"governance"`
 	InformationGaps          StringArray                        `json:"information_gaps"`
 	SafetySummary            JsonObject                         `json:"safety_summary"`
@@ -1435,6 +2500,62 @@ type DiagnosisWorkspaceProjection struct {
 // DiagnosisWorkspaceProjectionStatus defines model for DiagnosisWorkspaceProjection.Status.
 type DiagnosisWorkspaceProjectionStatus string
 
+// DocumentIndicatorCandidate defines model for DocumentIndicatorCandidate.
+type DocumentIndicatorCandidate struct {
+	EvidenceAdmissibility DocumentIndicatorEvidenceAdmissibility `json:"evidence_admissibility"`
+	IndicatorId           string                                 `json:"indicator_id"`
+	IndicatorIndex        int                                    `json:"indicator_index"`
+	Name                  string                                 `json:"name"`
+	ReferenceRange        *string                                `json:"reference_range,omitempty"`
+	SourceRefs            *[]string                              `json:"source_refs,omitempty"`
+	SourceRegions         *[]DocumentIndicatorSourceRegion       `json:"source_regions,omitempty"`
+	Unit                  *string                                `json:"unit,omitempty"`
+	Value                 *JsonValue                             `json:"value,omitempty"`
+}
+
+// DocumentIndicatorEvidenceAdmissibility defines model for DocumentIndicatorEvidenceAdmissibility.
+type DocumentIndicatorEvidenceAdmissibility struct {
+	PolicyRevision string                                       `json:"policy_revision"`
+	ReasonCodes    *[]string                                    `json:"reason_codes,omitempty"`
+	Status         DocumentIndicatorEvidenceAdmissibilityStatus `json:"status"`
+}
+
+// DocumentIndicatorEvidenceAdmissibilityStatus defines model for DocumentIndicatorEvidenceAdmissibility.Status.
+type DocumentIndicatorEvidenceAdmissibilityStatus string
+
+// DocumentIndicatorReviewProjection defines model for DocumentIndicatorReviewProjection.
+type DocumentIndicatorReviewProjection struct {
+	Candidate       DocumentIndicatorCandidate       `json:"candidate"`
+	EffectiveReview *DocumentIndicatorReviewRecord   `json:"effective_review,omitempty"`
+	History         *[]DocumentIndicatorReviewRecord `json:"history,omitempty"`
+	IndicatorId     string                           `json:"indicator_id"`
+	IndicatorIndex  int                              `json:"indicator_index"`
+}
+
+// DocumentIndicatorReviewRecord defines model for DocumentIndicatorReviewRecord.
+type DocumentIndicatorReviewRecord struct {
+	Action          DocumentIndicatorReviewRecordAction `json:"action"`
+	CreatedAt       time.Time                           `json:"created_at"`
+	ExtractionRunId openapi_types.UUID                  `json:"extraction_run_id"`
+	Id              openapi_types.UUID                  `json:"id"`
+	IdempotencyKey  string                              `json:"idempotency_key"`
+	IndicatorId     string                              `json:"indicator_id"`
+	IndicatorIndex  int                                 `json:"indicator_index"`
+	Note            *string                             `json:"note,omitempty"`
+	ReviewedPayload *JsonObject                         `json:"reviewed_payload,omitempty"`
+	UploadId        openapi_types.UUID                  `json:"upload_id"`
+}
+
+// DocumentIndicatorReviewRecordAction defines model for DocumentIndicatorReviewRecord.Action.
+type DocumentIndicatorReviewRecordAction string
+
+// DocumentIndicatorSourceRegion defines model for DocumentIndicatorSourceRegion.
+type DocumentIndicatorSourceRegion struct {
+	Bbox       *[]float32 `json:"bbox,omitempty"`
+	PageNumber *int       `json:"page_number,omitempty"`
+	SourceRef  string     `json:"source_ref"`
+}
+
 // ErrorDetail defines model for ErrorDetail.
 type ErrorDetail struct {
 	Code    string `json:"code"`
@@ -1444,6 +2565,18 @@ type ErrorDetail struct {
 // ErrorEnvelope defines model for ErrorEnvelope.
 type ErrorEnvelope struct {
 	Error ErrorDetail `json:"error"`
+}
+
+// HealthDocumentReviewContext defines model for HealthDocumentReviewContext.
+type HealthDocumentReviewContext struct {
+	ExtractionRunId  openapi_types.UUID                  `json:"extraction_run_id"`
+	ReviewCandidates []DocumentIndicatorReviewProjection `json:"review_candidates"`
+	UploadId         openapi_types.UUID                  `json:"upload_id"`
+}
+
+// HealthDocumentReviewListResponse defines model for HealthDocumentReviewListResponse.
+type HealthDocumentReviewListResponse struct {
+	ReviewCandidates []DocumentIndicatorReviewProjection `json:"review_candidates"`
 }
 
 // HealthWorkspace defines model for HealthWorkspace.
@@ -1483,6 +2616,17 @@ type InjuryHistorySnapshot struct {
 	ValidFrom       *time.Time          `json:"valid_from,omitempty"`
 }
 
+// InteractionMetrics defines model for InteractionMetrics.
+type InteractionMetrics struct {
+	AnswerRate     float64 `json:"answer_rate"`
+	Answered       int     `json:"answered"`
+	AvgWaitSeconds float64 `json:"avg_wait_seconds"`
+	ExpireRate     float64 `json:"expire_rate"`
+	Expired        int     `json:"expired"`
+	Pending        int     `json:"pending"`
+	Total          int     `json:"total"`
+}
+
 // Intervention defines model for Intervention.
 type Intervention struct {
 	CreatedAt           time.Time          `json:"created_at"`
@@ -1498,11 +2642,127 @@ type Intervention struct {
 	TreatmentId         openapi_types.UUID `json:"treatment_id"`
 	TreatmentRevisionId openapi_types.UUID `json:"treatment_revision_id"`
 	UpdatedAt           time.Time          `json:"updated_at"`
-	UserId              openapi_types.UUID `json:"user_id"`
 }
 
 // JsonObject defines model for JsonObject.
 type JsonObject map[string]interface{}
+
+// JsonValue defines model for JsonValue.
+type JsonValue = interface{}
+
+// KnowledgeIngestionEnqueueResponse defines model for KnowledgeIngestionEnqueueResponse.
+type KnowledgeIngestionEnqueueResponse struct {
+	IdempotentHit bool                  `json:"idempotent_hit"`
+	Job           KnowledgeIngestionJob `json:"job"`
+}
+
+// KnowledgeIngestionJob defines model for KnowledgeIngestionJob.
+type KnowledgeIngestionJob struct {
+	Attempts    int                `json:"attempts"`
+	CreatedAt   time.Time          `json:"created_at"`
+	Error       *JsonObject        `json:"error,omitempty"`
+	FinishedAt  *time.Time         `json:"finished_at,omitempty"`
+	Id          openapi_types.UUID `json:"id"`
+	JobType     string             `json:"job_type"`
+	MaxAttempts int                `json:"max_attempts"`
+	Progress    *JsonObject        `json:"progress,omitempty"`
+	Result      *JsonObject        `json:"result,omitempty"`
+	StartedAt   *time.Time         `json:"started_at,omitempty"`
+	Status      string             `json:"status"`
+	UpdatedAt   time.Time          `json:"updated_at"`
+}
+
+// KnowledgeSearchClip defines model for KnowledgeSearchClip.
+type KnowledgeSearchClip struct {
+	ClipKey         string `json:"clip_key"`
+	ClipType        string `json:"clip_type"`
+	Id              int64  `json:"id"`
+	SourceTimestamp string `json:"source_timestamp"`
+	Title           string `json:"title"`
+}
+
+// KnowledgeSearchRequest defines model for KnowledgeSearchRequest.
+type KnowledgeSearchRequest struct {
+	ProblemSlug *string `json:"problem_slug,omitempty"`
+	Query       string  `json:"query"`
+	TopK        *int    `json:"top_k,omitempty"`
+	UnitType    *string `json:"unit_type,omitempty"`
+}
+
+// KnowledgeSearchResponse defines model for KnowledgeSearchResponse.
+type KnowledgeSearchResponse struct {
+	Results []KnowledgeSearchResult `json:"results"`
+	Total   int                     `json:"total"`
+}
+
+// KnowledgeSearchResult defines model for KnowledgeSearchResult.
+type KnowledgeSearchResult struct {
+	BodyMarkdown    string                `json:"body_markdown"`
+	Category        string                `json:"category"`
+	Clips           []KnowledgeSearchClip `json:"clips"`
+	Id              int64                 `json:"id"`
+	ProblemSlug     string                `json:"problem_slug"`
+	Similarity      float32               `json:"similarity"`
+	SourceAuthor    string                `json:"source_author"`
+	SourceTimestamp string                `json:"source_timestamp"`
+	SourceTitle     string                `json:"source_title"`
+	Summary         string                `json:"summary"`
+	Tags            []string              `json:"tags"`
+	Title           string                `json:"title"`
+	UnitType        string                `json:"unit_type"`
+}
+
+// KnowledgeSource defines model for KnowledgeSource.
+type KnowledgeSource struct {
+	Author             string     `json:"author"`
+	CanonicalUrl       *string    `json:"canonical_url,omitempty"`
+	ContentHash        string     `json:"content_hash"`
+	CreatedAt          time.Time  `json:"created_at"`
+	Id                 int64      `json:"id"`
+	IngestStatus       string     `json:"ingest_status"`
+	Language           string     `json:"language"`
+	LicenseStatus      string     `json:"license_status"`
+	Metadata           JsonObject `json:"metadata"`
+	OriginalFilePath   string     `json:"original_file_path"`
+	ProblemDisplayName string     `json:"problem_display_name"`
+	ProblemSlug        string     `json:"problem_slug"`
+	Provenance         JsonObject `json:"provenance"`
+	RegisteredAt       time.Time  `json:"registered_at"`
+	SourceKey          string     `json:"source_key"`
+	SourceType         string     `json:"source_type"`
+	SourceVersion      string     `json:"source_version"`
+	Title              string     `json:"title"`
+	UpdatedAt          time.Time  `json:"updated_at"`
+}
+
+// KnowledgeSourceListResponse defines model for KnowledgeSourceListResponse.
+type KnowledgeSourceListResponse struct {
+	Sources []KnowledgeSource `json:"sources"`
+}
+
+// KnowledgeStats defines model for KnowledgeStats.
+type KnowledgeStats struct {
+	KnowledgeClips    int `json:"knowledge_clips"`
+	KnowledgeSegments int `json:"knowledge_segments"`
+	KnowledgeSources  int `json:"knowledge_sources"`
+	KnowledgeUnits    int `json:"knowledge_units"`
+}
+
+// KnowledgeVideoIngestionRequest defines model for KnowledgeVideoIngestionRequest.
+type KnowledgeVideoIngestionRequest struct {
+	AiRefine           *bool                                           `json:"ai_refine,omitempty"`
+	ExportClips        *bool                                           `json:"export_clips,omitempty"`
+	ForceTranscribe    *bool                                           `json:"force_transcribe,omitempty"`
+	SourceKey          string                                          `json:"source_key"`
+	SplitterProvider   *KnowledgeVideoIngestionRequestSplitterProvider `json:"splitter_provider,omitempty"`
+	TranscriptModel    *string                                         `json:"transcript_model,omitempty"`
+	TranscriptProvider *string                                         `json:"transcript_provider,omitempty"`
+	VideoPath          *string                                         `json:"video_path,omitempty"`
+	WhisperModel       *string                                         `json:"whisper_model,omitempty"`
+}
+
+// KnowledgeVideoIngestionRequestSplitterProvider defines model for KnowledgeVideoIngestionRequest.SplitterProvider.
+type KnowledgeVideoIngestionRequestSplitterProvider string
 
 // LegacyAssessmentDimensionScores defines model for LegacyAssessmentDimensionScores.
 type LegacyAssessmentDimensionScores struct {
@@ -1564,6 +2824,11 @@ type LifestyleSnapshot struct {
 	Recovery        LifestyleSection     `json:"recovery"`
 	Sleep           LifestyleSection     `json:"sleep"`
 	Substances      LifestyleSection     `json:"substances"`
+}
+
+// LogoutAcknowledgement defines model for LogoutAcknowledgement.
+type LogoutAcknowledgement struct {
+	Message string `json:"message"`
 }
 
 // NullableUserProfileResponse defines model for NullableUserProfileResponse.
@@ -1628,12 +2893,40 @@ type Outcome struct {
 	SourceType           string                `json:"source_type"`
 	TreatmentId          *openapi_types.UUID   `json:"treatment_id,omitempty"`
 	TreatmentRevisionId  *openapi_types.UUID   `json:"treatment_revision_id,omitempty"`
-	UserId               openapi_types.UUID    `json:"user_id"`
 	Value                JsonObject            `json:"value"`
 }
 
 // OutcomeCausalityLevel defines model for Outcome.CausalityLevel.
 type OutcomeCausalityLevel string
+
+// OutcomeListResponse defines model for OutcomeListResponse.
+type OutcomeListResponse struct {
+	Outcomes []Outcome `json:"outcomes"`
+}
+
+// OutcomeMutationResponse defines model for OutcomeMutationResponse.
+type OutcomeMutationResponse struct {
+	Created bool    `json:"created"`
+	Outcome Outcome `json:"outcome"`
+}
+
+// PostureAnalysisSummary defines model for PostureAnalysisSummary.
+type PostureAnalysisSummary struct {
+	Findings    []JsonValue           `json:"findings"`
+	HasAnalysis bool                  `json:"has_analysis"`
+	Summaries   []string              `json:"summaries"`
+	Views       []PostureAnalysisView `json:"views"`
+}
+
+// PostureAnalysisView defines model for PostureAnalysisView.
+type PostureAnalysisView struct {
+	Analysis       JsonObject         `json:"analysis"`
+	AnalysisStatus string             `json:"analysis_status"`
+	CreatedAt      time.Time          `json:"created_at"`
+	FileType       string             `json:"file_type"`
+	UploadId       openapi_types.UUID `json:"upload_id"`
+	View           string             `json:"view"`
+}
 
 // PrivacyDataCount defines model for PrivacyDataCount.
 type PrivacyDataCount struct {
@@ -1673,6 +2966,68 @@ type PrivacyErasureRequest struct {
 // PrivacyErasureRequestConfirmation defines model for PrivacyErasureRequest.Confirmation.
 type PrivacyErasureRequestConfirmation string
 
+// ProjectedToolCall defines model for ProjectedToolCall.
+type ProjectedToolCall struct {
+	Arguments      JsonValue               `json:"arguments"`
+	ConversationId openapi_types.UUID      `json:"conversation_id"`
+	CreatedAt      time.Time               `json:"created_at"`
+	Error          JsonValue               `json:"error"`
+	FinishedAt     *time.Time              `json:"finished_at"`
+	MessageId      *openapi_types.UUID     `json:"message_id"`
+	Metadata       JsonObject              `json:"metadata"`
+	Result         JsonValue               `json:"result"`
+	RunId          openapi_types.UUID      `json:"run_id"`
+	StartedAt      time.Time               `json:"started_at"`
+	Status         ProjectedToolCallStatus `json:"status"`
+	ToolCallId     string                  `json:"tool_call_id"`
+	ToolName       string                  `json:"tool_name"`
+}
+
+// ProjectedToolCallStatus defines model for ProjectedToolCall.Status.
+type ProjectedToolCallStatus string
+
+// RecordOutcomeRequest defines model for RecordOutcomeRequest.
+type RecordOutcomeRequest struct {
+	AssociationStatement *string                             `json:"association_statement,omitempty"`
+	BodyRegion           *string                             `json:"body_region,omitempty"`
+	CausalityLevel       *RecordOutcomeRequestCausalityLevel `json:"causality_level,omitempty"`
+	ConcernKey           *string                             `json:"concern_key,omitempty"`
+	InterventionId       *openapi_types.UUID                 `json:"intervention_id,omitempty"`
+	Kind                 string                              `json:"kind"`
+	Notes                *string                             `json:"notes,omitempty"`
+	OccurredAt           *time.Time                          `json:"occurred_at,omitempty"`
+	Provenance           *JsonObject                         `json:"provenance,omitempty"`
+	SourceKey            string                              `json:"source_key"`
+	SourceType           string                              `json:"source_type"`
+	TreatmentId          *openapi_types.UUID                 `json:"treatment_id,omitempty"`
+	TreatmentRevisionId  *openapi_types.UUID                 `json:"treatment_revision_id,omitempty"`
+	Value                *JsonObject                         `json:"value,omitempty"`
+}
+
+// RecordOutcomeRequestCausalityLevel defines model for RecordOutcomeRequest.CausalityLevel.
+type RecordOutcomeRequestCausalityLevel string
+
+// RegisterKnowledgeSourceRequest defines model for RegisterKnowledgeSourceRequest.
+type RegisterKnowledgeSourceRequest struct {
+	Author             string                                      `json:"author"`
+	CanonicalUrl       *string                                     `json:"canonical_url,omitempty"`
+	ContentHash        string                                      `json:"content_hash"`
+	Language           *string                                     `json:"language,omitempty"`
+	LicenseStatus      RegisterKnowledgeSourceRequestLicenseStatus `json:"license_status"`
+	Metadata           *JsonObject                                 `json:"metadata,omitempty"`
+	OriginalFilePath   string                                      `json:"original_file_path"`
+	ProblemDisplayName string                                      `json:"problem_display_name"`
+	ProblemSlug        string                                      `json:"problem_slug"`
+	Provenance         JsonObject                                  `json:"provenance"`
+	SourceKey          string                                      `json:"source_key"`
+	SourceType         string                                      `json:"source_type"`
+	SourceVersion      *string                                     `json:"source_version,omitempty"`
+	Title              string                                      `json:"title"`
+}
+
+// RegisterKnowledgeSourceRequestLicenseStatus defines model for RegisterKnowledgeSourceRequest.LicenseStatus.
+type RegisterKnowledgeSourceRequestLicenseStatus string
+
 // ResolveBodyStateSafetyRequest defines model for ResolveBodyStateSafetyRequest.
 type ResolveBodyStateSafetyRequest struct {
 	ExpectedRevision int64                                   `json:"expected_revision"`
@@ -1682,6 +3037,12 @@ type ResolveBodyStateSafetyRequest struct {
 
 // ResolveBodyStateSafetyRequestResolution defines model for ResolveBodyStateSafetyRequest.Resolution.
 type ResolveBodyStateSafetyRequestResolution string
+
+// ResumeConsultationInteractionRequest defines model for ResumeConsultationInteractionRequest.
+type ResumeConsultationInteractionRequest struct {
+	Answer    JsonValue `json:"answer"`
+	RequestId string    `json:"requestId"`
+}
 
 // ReviewBodyStateFactRequest defines model for ReviewBodyStateFactRequest.
 type ReviewBodyStateFactRequest struct {
@@ -1706,8 +3067,118 @@ type ReviewLifestyleCandidateRequest struct {
 	ExpectedRevision int64 `json:"expected_revision"`
 }
 
+// RuntimeEvent defines model for RuntimeEvent.
+type RuntimeEvent struct {
+	Channel   string               `json:"channel"`
+	CreatedAt time.Time            `json:"created_at"`
+	Ids       JsonObject           `json:"ids"`
+	Payload   JsonObject           `json:"payload"`
+	Seq       int                  `json:"seq"`
+	Type      string               `json:"type"`
+	Version   *RuntimeEventVersion `json:"version,omitempty"`
+}
+
+// RuntimeEventVersion defines model for RuntimeEvent.Version.
+type RuntimeEventVersion int
+
+// RuntimeEventListResponse defines model for RuntimeEventListResponse.
+type RuntimeEventListResponse struct {
+	Events       []RuntimeEvent `json:"events"`
+	HasMore      bool           `json:"hasMore"`
+	NextAfterSeq *int           `json:"nextAfterSeq,omitempty"`
+}
+
+// ShareConversationResponse defines model for ShareConversationResponse.
+type ShareConversationResponse struct {
+	ShareToken string `json:"shareToken"`
+	ShareUrl   string `json:"shareUrl"`
+}
+
+// SharedConversationResponse defines model for SharedConversationResponse.
+type SharedConversationResponse struct {
+	Messages []ConversationMessage `json:"messages"`
+	Title    string                `json:"title"`
+}
+
+// StartConsultationRunRequest defines model for StartConsultationRunRequest.
+type StartConsultationRunRequest struct {
+	ClientMessageId string                   `json:"clientMessageId"`
+	ConversationId  *openapi_types.UUID      `json:"conversationId"`
+	Message         ConsultationMessageInput `json:"message"`
+	RequestId       string                   `json:"requestId"`
+}
+
 // StringArray defines model for StringArray.
 type StringArray = []string
+
+// TrainingCheckInResponse defines model for TrainingCheckInResponse.
+type TrainingCheckInResponse struct {
+	Message string `json:"message"`
+}
+
+// TrainingExerciseLogInput defines model for TrainingExerciseLogInput.
+type TrainingExerciseLogInput struct {
+	Completed      bool                `json:"completed"`
+	InterventionId *openapi_types.UUID `json:"intervention_id,omitempty"`
+	Name           string              `json:"name"`
+}
+
+// TrainingFeedbackInput defines model for TrainingFeedbackInput.
+type TrainingFeedbackInput struct {
+	BodyRegion      *string             `json:"body_region,omitempty"`
+	ConcernKey      *string             `json:"concern_key,omitempty"`
+	Difficulties    *string             `json:"difficulties,omitempty"`
+	FactId          *openapi_types.UUID `json:"fact_id,omitempty"`
+	SymptomChanges  *string             `json:"symptom_changes,omitempty"`
+	TrainingFeeling *string             `json:"training_feeling,omitempty"`
+	Trend           *string             `json:"trend,omitempty"`
+}
+
+// TrainingFeedbackResult defines model for TrainingFeedbackResult.
+type TrainingFeedbackResult struct {
+	HasProposal          *bool              `json:"has_proposal,omitempty"`
+	Outcome              *Outcome           `json:"outcome,omitempty"`
+	Paused               *bool              `json:"paused,omitempty"`
+	Proposal             *TreatmentRevision `json:"proposal,omitempty"`
+	RequiresNewDiagnosis *bool              `json:"requires_new_diagnosis,omitempty"`
+	ReviewRecommended    *bool              `json:"review_recommended,omitempty"`
+	TreatmentStatus      *string            `json:"treatment_status,omitempty"`
+}
+
+// TrainingLog defines model for TrainingLog.
+type TrainingLog struct {
+	CreatedAt           time.Time                  `json:"created_at"`
+	Date                time.Time                  `json:"date"`
+	Exercises           []TrainingExerciseLogInput `json:"exercises"`
+	Id                  openapi_types.UUID         `json:"id"`
+	InterventionId      *openapi_types.UUID        `json:"intervention_id,omitempty"`
+	IsCheckedIn         bool                       `json:"is_checked_in"`
+	Notes               *string                    `json:"notes,omitempty"`
+	OutcomeRecordedAt   *time.Time                 `json:"outcome_recorded_at,omitempty"`
+	PlanId              openapi_types.UUID         `json:"plan_id"`
+	TreatmentRevisionId *openapi_types.UUID        `json:"treatment_revision_id,omitempty"`
+}
+
+// TrainingLogUpdateRequest defines model for TrainingLogUpdateRequest.
+type TrainingLogUpdateRequest struct {
+	BodyRegion      *string                     `json:"body_region,omitempty"`
+	ConcernKey      *string                     `json:"concern_key,omitempty"`
+	Difficulties    *string                     `json:"difficulties,omitempty"`
+	Exercises       *[]TrainingExerciseLogInput `json:"exercises,omitempty"`
+	FactId          *openapi_types.UUID         `json:"fact_id,omitempty"`
+	Notes           *string                     `json:"notes,omitempty"`
+	SymptomChanges  *string                     `json:"symptom_changes,omitempty"`
+	TrainingFeeling *string                     `json:"training_feeling,omitempty"`
+	Trend           *string                     `json:"trend,omitempty"`
+}
+
+// TrainingLogUpdateResponse defines model for TrainingLogUpdateResponse.
+type TrainingLogUpdateResponse struct {
+	HasProposal bool                   `json:"has_proposal"`
+	Message     string                 `json:"message"`
+	Proposal    *TreatmentRevision     `json:"proposal,omitempty"`
+	Result      TrainingFeedbackResult `json:"result"`
+}
 
 // TrainingPlan defines model for TrainingPlan.
 type TrainingPlan struct {
@@ -1721,7 +3192,26 @@ type TrainingPlan struct {
 	Status              string              `json:"status"`
 	TreatmentId         *openapi_types.UUID `json:"treatment_id,omitempty"`
 	TreatmentRevisionId *openapi_types.UUID `json:"treatment_revision_id,omitempty"`
-	UserId              openapi_types.UUID  `json:"user_id"`
+}
+
+// TrainingPlanListResponse defines model for TrainingPlanListResponse.
+type TrainingPlanListResponse struct {
+	Plans []TrainingPlan `json:"plans"`
+}
+
+// TrainingProgress defines model for TrainingProgress.
+type TrainingProgress struct {
+	ConsecutiveDays     int                 `json:"consecutive_days"`
+	CurrentWeek         int                 `json:"current_week"`
+	PlanStatus          string              `json:"plan_status"`
+	TotalCheckins       int                 `json:"total_checkins"`
+	TotalWeeks          int                 `json:"total_weeks"`
+	TreatmentRevisionId *openapi_types.UUID `json:"treatment_revision_id,omitempty"`
+}
+
+// TrainingReassessmentRequest defines model for TrainingReassessmentRequest.
+type TrainingReassessmentRequest struct {
+	Feedback TrainingFeedbackInput `json:"feedback"`
 }
 
 // Treatment defines model for Treatment.
@@ -1735,7 +3225,6 @@ type Treatment struct {
 	Status                    TreatmentStatus         `json:"status"`
 	StatusReasons             []TreatmentStatusReason `json:"status_reasons"`
 	UpdatedAt                 time.Time               `json:"updated_at"`
-	UserId                    openapi_types.UUID      `json:"user_id"`
 }
 
 // TreatmentStatus defines model for Treatment.Status.
@@ -1760,6 +3249,82 @@ type TreatmentPlanContent struct {
 	SafetyNotes      StringArray                  `json:"safety_notes"`
 	Summary          string                       `json:"summary"`
 	WarningSigns     StringArray                  `json:"warning_signs"`
+}
+
+// TreatmentProposalRequest defines model for TreatmentProposalRequest.
+type TreatmentProposalRequest struct {
+	ChangeReason        *string             `json:"change_reason,omitempty"`
+	DiagnosisAnalysisId *openapi_types.UUID `json:"diagnosis_analysis_id,omitempty"`
+	UserConstraints     *JsonObject         `json:"user_constraints,omitempty"`
+}
+
+// TreatmentProposalResponse defines model for TreatmentProposalResponse.
+type TreatmentProposalResponse struct {
+	Proposal TreatmentRevision `json:"proposal"`
+}
+
+// TreatmentReplayCheck defines model for TreatmentReplayCheck.
+type TreatmentReplayCheck struct {
+	Baseline  *string `json:"baseline,omitempty"`
+	Candidate *string `json:"candidate,omitempty"`
+	Match     bool    `json:"match"`
+	Name      string  `json:"name"`
+}
+
+// TreatmentReplayComparison defines model for TreatmentReplayComparison.
+type TreatmentReplayComparison struct {
+	Hard         TreatmentReplayLayer `json:"hard"`
+	Presentation TreatmentReplayLayer `json:"presentation"`
+	Semantic     TreatmentReplayLayer `json:"semantic"`
+}
+
+// TreatmentReplayLayer defines model for TreatmentReplayLayer.
+type TreatmentReplayLayer struct {
+	Checks []TreatmentReplayCheck `json:"checks"`
+	Match  bool                   `json:"match"`
+}
+
+// TreatmentReplayReport defines model for TreatmentReplayReport.
+type TreatmentReplayReport struct {
+	ArtifactIntegrity        TreatmentReplayLayer      `json:"artifact_integrity"`
+	Baseline                 TreatmentReplaySnapshot   `json:"baseline"`
+	Comparison               TreatmentReplayComparison `json:"comparison"`
+	GenerationDecision       JsonObject                `json:"generation_decision"`
+	InputFingerprint         string                    `json:"input_fingerprint"`
+	Mode                     TreatmentReplayReportMode `json:"mode"`
+	Output                   JsonObject                `json:"output"`
+	Replay                   TreatmentReplaySnapshot   `json:"replay"`
+	SourceConfigurationId    string                    `json:"source_configuration_id"`
+	SourceGenerationDecision JsonObject                `json:"source_generation_decision"`
+	SourceRevisionId         openapi_types.UUID        `json:"source_revision_id"`
+	TargetConfigurationId    string                    `json:"target_configuration_id"`
+}
+
+// TreatmentReplayReportMode defines model for TreatmentReplayReport.Mode.
+type TreatmentReplayReportMode string
+
+// TreatmentReplayRequest defines model for TreatmentReplayRequest.
+type TreatmentReplayRequest struct {
+	ConfigurationId *string                    `json:"configuration_id,omitempty"`
+	Mode            TreatmentReplayRequestMode `json:"mode"`
+}
+
+// TreatmentReplayRequestMode defines model for TreatmentReplayRequest.Mode.
+type TreatmentReplayRequestMode string
+
+// TreatmentReplaySnapshot defines model for TreatmentReplaySnapshot.
+type TreatmentReplaySnapshot struct {
+	DurationWeeks      int         `json:"duration_weeks"`
+	EvidenceIds        StringArray `json:"evidence_ids"`
+	Goal               string      `json:"goal"`
+	GovernanceVerdict  string      `json:"governance_verdict"`
+	InterventionCount  int         `json:"intervention_count"`
+	InterventionKinds  StringArray `json:"intervention_kinds"`
+	InterventionTitles StringArray `json:"intervention_titles"`
+	ReviewTriggerCount int         `json:"review_trigger_count"`
+	Status             string      `json:"status"`
+	Summary            string      `json:"summary"`
+	WarningSignCount   int         `json:"warning_sign_count"`
 }
 
 // TreatmentRevision defines model for TreatmentRevision.
@@ -1795,6 +3360,11 @@ type TreatmentRevisionAcceptanceState string
 
 // TreatmentRevisionLifecycleState defines model for TreatmentRevision.LifecycleState.
 type TreatmentRevisionLifecycleState string
+
+// TreatmentRevisionListResponse defines model for TreatmentRevisionListResponse.
+type TreatmentRevisionListResponse struct {
+	Revisions []TreatmentRevision `json:"revisions"`
+}
 
 // TreatmentStatusReason defines model for TreatmentStatusReason.
 type TreatmentStatusReason struct {
@@ -1856,6 +3426,16 @@ type UpdateUserProfileRequest struct {
 // UpdateUserProfileRequestGender defines model for UpdateUserProfileRequest.Gender.
 type UpdateUserProfileRequestGender string
 
+// UploadDeleteResponse defines model for UploadDeleteResponse.
+type UploadDeleteResponse struct {
+	Message string `json:"message"`
+}
+
+// UploadListResponse defines model for UploadListResponse.
+type UploadListResponse struct {
+	Uploads []UserUpload `json:"uploads"`
+}
+
 // UpsertBodyStateFactRequest defines model for UpsertBodyStateFactRequest.
 type UpsertBodyStateFactRequest struct {
 	ExpectedRevision int64              `json:"expected_revision"`
@@ -1880,6 +3460,30 @@ type UserProfileGender string
 type UserProfileResponse struct {
 	Profile UserProfile `json:"profile"`
 }
+
+// UserUpload defines model for UserUpload.
+type UserUpload struct {
+	AnalysisResult *JsonObject              `json:"analysis_result,omitempty"`
+	AnalysisStatus UserUploadAnalysisStatus `json:"analysis_status"`
+	CreatedAt      time.Time                `json:"created_at"`
+	FileSize       int64                    `json:"file_size"`
+	FileType       UserUploadFileType       `json:"file_type"`
+	Id             openapi_types.UUID       `json:"id"`
+	MimeType       string                   `json:"mime_type"`
+	OcrResult      *JsonObject              `json:"ocr_result,omitempty"`
+	OcrStatus      UserUploadOcrStatus      `json:"ocr_status"`
+	OriginalName   string                   `json:"original_name"`
+	UpdatedAt      time.Time                `json:"updated_at"`
+}
+
+// UserUploadAnalysisStatus defines model for UserUpload.AnalysisStatus.
+type UserUploadAnalysisStatus string
+
+// UserUploadFileType defines model for UserUpload.FileType.
+type UserUploadFileType string
+
+// UserUploadOcrStatus defines model for UserUpload.OcrStatus.
+type UserUploadOcrStatus string
 
 // WorkspaceAction defines model for WorkspaceAction.
 type WorkspaceAction struct {
@@ -1928,11 +3532,38 @@ type WorkspaceTrendPoint struct {
 // AssessmentReportId defines model for AssessmentReportId.
 type AssessmentReportId = openapi_types.UUID
 
+// ConsultationId defines model for ConsultationId.
+type ConsultationId = openapi_types.UUID
+
+// ConsultationRunId defines model for ConsultationRunId.
+type ConsultationRunId = openapi_types.UUID
+
+// ConversationId defines model for ConversationId.
+type ConversationId = openapi_types.UUID
+
+// ConversationRunId defines model for ConversationRunId.
+type ConversationRunId = openapi_types.UUID
+
+// DiagnosisAnalysisId defines model for DiagnosisAnalysisId.
+type DiagnosisAnalysisId = openapi_types.UUID
+
+// InteractionId defines model for InteractionId.
+type InteractionId = openapi_types.UUID
+
+// TrainingPlanId defines model for TrainingPlanId.
+type TrainingPlanId = openapi_types.UUID
+
+// TreatmentRevisionId defines model for TreatmentRevisionId.
+type TreatmentRevisionId = openapi_types.UUID
+
 // BadGateway defines model for BadGateway.
 type BadGateway = ErrorEnvelope
 
 // Conflict defines model for Conflict.
 type Conflict = ErrorEnvelope
+
+// Forbidden defines model for Forbidden.
+type Forbidden = ErrorEnvelope
 
 // InternalError defines model for InternalError.
 type InternalError = ErrorEnvelope
@@ -1943,11 +3574,17 @@ type InvalidRequest = ErrorEnvelope
 // NotFound defines model for NotFound.
 type NotFound = ErrorEnvelope
 
+// ReplayUnavailable defines model for ReplayUnavailable.
+type ReplayUnavailable = ErrorEnvelope
+
 // RevisionConflict defines model for RevisionConflict.
 type RevisionConflict = ErrorEnvelope
 
 // ServiceUnavailable defines model for ServiceUnavailable.
 type ServiceUnavailable = ErrorEnvelope
+
+// TooManyRequests defines model for TooManyRequests.
+type TooManyRequests = ErrorEnvelope
 
 // Unauthorized defines model for Unauthorized.
 type Unauthorized = ErrorEnvelope
@@ -1961,8 +3598,43 @@ type ListAssessmentsParams struct {
 	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
+// ListConversationsParams defines parameters for ListConversations.
+type ListConversationsParams struct {
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor RFC3339 updated-at cursor from a previous page.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// ListRunEventsParams defines parameters for ListRunEvents.
+type ListRunEventsParams struct {
+	AfterSeq *int `form:"after_seq,omitempty" json:"after_seq,omitempty"`
+	Limit    *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListDiagnosisAnalysesParams defines parameters for ListDiagnosisAnalyses.
+type ListDiagnosisAnalysesParams struct {
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListOutcomesParams defines parameters for ListOutcomes.
+type ListOutcomesParams struct {
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListTreatmentRevisionsParams defines parameters for ListTreatmentRevisions.
+type ListTreatmentRevisionsParams struct {
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // ReplayAssessmentJSONRequestBody defines body for ReplayAssessment for application/json ContentType.
 type ReplayAssessmentJSONRequestBody = AssessmentReplayRequest
+
+// LoginAccountJSONRequestBody defines body for LoginAccount for application/json ContentType.
+type LoginAccountJSONRequestBody = AuthLoginRequest
+
+// RegisterAccountJSONRequestBody defines body for RegisterAccount for application/json ContentType.
+type RegisterAccountJSONRequestBody = AuthRegisterRequest
 
 // UpdateBodyMetricsJSONRequestBody defines body for UpdateBodyMetrics for application/json ContentType.
 type UpdateBodyMetricsJSONRequestBody = UpdateBodyMetricsRequest
@@ -1997,8 +3669,44 @@ type ResolveBodyStateSafetyJSONRequestBody = ResolveBodyStateSafetyRequest
 // RecordClientDiagnosticJSONRequestBody defines body for RecordClientDiagnostic for application/json ContentType.
 type RecordClientDiagnosticJSONRequestBody = ClientDiagnostic
 
+// StartConsultationRunJSONRequestBody defines body for StartConsultationRun for application/json ContentType.
+type StartConsultationRunJSONRequestBody = StartConsultationRunRequest
+
+// CancelConsultationRunJSONRequestBody defines body for CancelConsultationRun for application/json ContentType.
+type CancelConsultationRunJSONRequestBody = CancelConsultationRunRequest
+
+// ReplayConsultationRunCounterfactualJSONRequestBody defines body for ReplayConsultationRunCounterfactual for application/json ContentType.
+type ReplayConsultationRunCounterfactualJSONRequestBody = ConsultationCounterfactualReplayRequest
+
+// ResumeConsultationInteractionJSONRequestBody defines body for ResumeConsultationInteraction for application/json ContentType.
+type ResumeConsultationInteractionJSONRequestBody = ResumeConsultationInteractionRequest
+
+// UpdateConversationJSONRequestBody defines body for UpdateConversation for application/json ContentType.
+type UpdateConversationJSONRequestBody = ConversationUpdateRequest
+
+// PinConversationJSONRequestBody defines body for PinConversation for application/json ContentType.
+type PinConversationJSONRequestBody = ConversationPinRequest
+
+// RenameConversationTitleJSONRequestBody defines body for RenameConversationTitle for application/json ContentType.
+type RenameConversationTitleJSONRequestBody = ConversationTitleRequest
+
+// AssessDiagnosisCandidatesJSONRequestBody defines body for AssessDiagnosisCandidates for application/json ContentType.
+type AssessDiagnosisCandidatesJSONRequestBody = DiagnosisCandidateAssessmentRequest
+
+// ReplayDiagnosisAnalysisJSONRequestBody defines body for ReplayDiagnosisAnalysis for application/json ContentType.
+type ReplayDiagnosisAnalysisJSONRequestBody = DiagnosisReplayRequest
+
 // UpdateInjuryHistoryJSONRequestBody defines body for UpdateInjuryHistory for application/json ContentType.
 type UpdateInjuryHistoryJSONRequestBody = UpdateInjuryHistoryRequest
+
+// EnqueueKnowledgeVideoIngestionJSONRequestBody defines body for EnqueueKnowledgeVideoIngestion for application/json ContentType.
+type EnqueueKnowledgeVideoIngestionJSONRequestBody = KnowledgeVideoIngestionRequest
+
+// SearchKnowledgeJSONRequestBody defines body for SearchKnowledge for application/json ContentType.
+type SearchKnowledgeJSONRequestBody = KnowledgeSearchRequest
+
+// RegisterKnowledgeSourceJSONRequestBody defines body for RegisterKnowledgeSource for application/json ContentType.
+type RegisterKnowledgeSourceJSONRequestBody = RegisterKnowledgeSourceRequest
 
 // UpdateLifestyleJSONRequestBody defines body for UpdateLifestyle for application/json ContentType.
 type UpdateLifestyleJSONRequestBody = UpdateLifestyleRequest
@@ -2012,11 +3720,35 @@ type RejectLifestyleCandidateJSONRequestBody = ReviewLifestyleCandidateRequest
 // SubmitOnboardingContextJSONRequestBody defines body for SubmitOnboardingContext for application/json ContentType.
 type SubmitOnboardingContextJSONRequestBody = OnboardingContextRequest
 
+// RecordOutcomeJSONRequestBody defines body for RecordOutcome for application/json ContentType.
+type RecordOutcomeJSONRequestBody = RecordOutcomeRequest
+
 // RequestPrivacyErasureJSONRequestBody defines body for RequestPrivacyErasure for application/json ContentType.
 type RequestPrivacyErasureJSONRequestBody = PrivacyErasureRequest
 
 // UpdateUserProfileJSONRequestBody defines body for UpdateUserProfile for application/json ContentType.
 type UpdateUserProfileJSONRequestBody = UpdateUserProfileRequest
+
+// UpdateTrainingLogJSONRequestBody defines body for UpdateTrainingLog for application/json ContentType.
+type UpdateTrainingLogJSONRequestBody = TrainingLogUpdateRequest
+
+// ReassessTrainingPlanJSONRequestBody defines body for ReassessTrainingPlan for application/json ContentType.
+type ReassessTrainingPlanJSONRequestBody = TrainingReassessmentRequest
+
+// GenerateTreatmentProposalJSONRequestBody defines body for GenerateTreatmentProposal for application/json ContentType.
+type GenerateTreatmentProposalJSONRequestBody = TreatmentProposalRequest
+
+// AcceptTreatmentRevisionJSONRequestBody defines body for AcceptTreatmentRevision for application/json ContentType.
+type AcceptTreatmentRevisionJSONRequestBody = AcceptTreatmentRevisionRequest
+
+// ReplayTreatmentRevisionJSONRequestBody defines body for ReplayTreatmentRevision for application/json ContentType.
+type ReplayTreatmentRevisionJSONRequestBody = TreatmentReplayRequest
+
+// CreateUploadMultipartRequestBody defines body for CreateUpload for multipart/form-data ContentType.
+type CreateUploadMultipartRequestBody = CreateUploadRequest
+
+// AppendHealthDocumentReviewJSONRequestBody defines body for AppendHealthDocumentReview for application/json ContentType.
+type AppendHealthDocumentReviewJSONRequestBody = AppendHealthDocumentReviewRequest
 
 // Getter for additional properties for LegacyAssessmentObservation. Returns the specified
 // element and whether it was found
@@ -2404,6 +4136,107 @@ func (t *ClientDiagnostic_Attributes_AdditionalProperties) UnmarshalJSON(b []byt
 	return err
 }
 
+// AsConsultationTextPart returns the union data inside the ConsultationMessagePart as a ConsultationTextPart
+func (t ConsultationMessagePart) AsConsultationTextPart() (ConsultationTextPart, error) {
+	var body ConsultationTextPart
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromConsultationTextPart overwrites any union data inside the ConsultationMessagePart as the provided ConsultationTextPart
+func (t *ConsultationMessagePart) FromConsultationTextPart(v ConsultationTextPart) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"text"}`))
+	t.union = b
+	return err
+}
+
+// MergeConsultationTextPart performs a merge with any union data inside the ConsultationMessagePart, using the provided ConsultationTextPart
+func (t *ConsultationMessagePart) MergeConsultationTextPart(v ConsultationTextPart) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"text"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsConsultationImagePart returns the union data inside the ConsultationMessagePart as a ConsultationImagePart
+func (t ConsultationMessagePart) AsConsultationImagePart() (ConsultationImagePart, error) {
+	var body ConsultationImagePart
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromConsultationImagePart overwrites any union data inside the ConsultationMessagePart as the provided ConsultationImagePart
+func (t *ConsultationMessagePart) FromConsultationImagePart(v ConsultationImagePart) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"image"}`))
+	t.union = b
+	return err
+}
+
+// MergeConsultationImagePart performs a merge with any union data inside the ConsultationMessagePart, using the provided ConsultationImagePart
+func (t *ConsultationMessagePart) MergeConsultationImagePart(v ConsultationImagePart) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"type":"image"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ConsultationMessagePart) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"type"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t ConsultationMessagePart) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "image":
+		return t.AsConsultationImagePart()
+	case "text":
+		return t.AsConsultationTextPart()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t ConsultationMessagePart) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ConsultationMessagePart) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// ListAssessments List immutable assessment reports for the authenticated user.
@@ -2421,6 +4254,18 @@ type ServerInterface interface {
 	// ReplayAssessment Replay an immutable assessment historically or counterfactually without mutating durable state.
 	// (POST /api/v1/assessment/{id}/replay)
 	ReplayAssessment(c *gin.Context, id AssessmentReportId)
+	// LoginAccount Log in and establish a browser session family.
+	// (POST /api/v1/auth/login)
+	LoginAccount(c *gin.Context)
+	// LogoutAccount Revoke the current refresh/session family and clear the browser credential.
+	// (POST /api/v1/auth/logout)
+	LogoutAccount(c *gin.Context)
+	// RefreshAccountSession Rotate the HttpOnly refresh credential and return a fresh access credential.
+	// (POST /api/v1/auth/refresh)
+	RefreshAccountSession(c *gin.Context)
+	// RegisterAccount Register a new account and establish a browser session family.
+	// (POST /api/v1/auth/register)
+	RegisterAccount(c *gin.Context)
 	// GetBodyMetrics Get current anthropometric measurements.
 	// (GET /api/v1/body-metrics)
 	GetBodyMetrics(c *gin.Context)
@@ -2463,6 +4308,84 @@ type ServerInterface interface {
 	// RecordClientDiagnostic Record bounded privacy-safe browser operational telemetry.
 	// (POST /api/v1/client-diagnostics)
 	RecordClientDiagnostic(c *gin.Context)
+	// StartConsultationRun Start or reattach a durable consultation run and stream public events.
+	// (POST /api/v1/consultation-runs)
+	StartConsultationRun(c *gin.Context)
+	// CancelConsultationRun Explicitly cancel a durable consultation run.
+	// (POST /api/v1/consultation-runs/{id}/cancel)
+	CancelConsultationRun(c *gin.Context, id ConsultationRunId)
+	// ReplayConsultationRun Recompute the Go decision authority for a historical consultation run.
+	// (POST /api/v1/consultation-runs/{id}/replay)
+	ReplayConsultationRun(c *gin.Context, id ConsultationRunId)
+	// ReplayConsultationRunCounterfactual Recompute the run decision against another immutable configuration.
+	// (POST /api/v1/consultation-runs/{id}/replay/counterfactual)
+	ReplayConsultationRunCounterfactual(c *gin.Context, id ConsultationRunId)
+	// GetConsultation Get the durable consultation session and pending interactions.
+	// (GET /api/v1/consultations/{id})
+	GetConsultation(c *gin.Context, id ConsultationId)
+	// AnalyzeDiagnosis Generate or safety-block a BodyState-backed diagnosis analysis.
+	// (POST /api/v1/consultations/{id}/diagnosis)
+	AnalyzeDiagnosis(c *gin.Context, id ConsultationId)
+	// GetConsultationInteractionMetrics Get answer/expiry metrics for one owned consultation.
+	// (GET /api/v1/consultations/{id}/interaction-metrics)
+	GetConsultationInteractionMetrics(c *gin.Context, id ConsultationId)
+	// ResumeConsultationInteraction Persist an interaction answer and resume the exact durable Agent thread.
+	// (POST /api/v1/consultations/{id}/interrupts/{interactionId}/answers)
+	ResumeConsultationInteraction(c *gin.Context, id ConsultationId, interactionId InteractionId)
+	// GetConsultationThread Refresh and read the durable consultation workbench projection.
+	// (GET /api/v1/consultations/{id}/thread)
+	GetConsultationThread(c *gin.Context, id ConsultationId)
+	// ListConversations List the authenticated user's conversations with cursor pagination.
+	// (GET /api/v1/conversations)
+	ListConversations(c *gin.Context, params ListConversationsParams)
+	// GetSharedConversation Read a shared conversation snapshot by public token.
+	// (GET /api/v1/conversations/share/{token})
+	GetSharedConversation(c *gin.Context, token string)
+	// DeleteConversation Soft-delete a conversation and revoke its shares.
+	// (DELETE /api/v1/conversations/{id})
+	DeleteConversation(c *gin.Context, id ConversationId)
+	// GetConversation Get one conversation with its ordered messages.
+	// (GET /api/v1/conversations/{id})
+	GetConversation(c *gin.Context, id ConversationId)
+	// UpdateConversation Update conversation status (active, archived, or deleted).
+	// (PATCH /api/v1/conversations/{id})
+	UpdateConversation(c *gin.Context, id ConversationId)
+	// PinConversation Pin or unpin a conversation.
+	// (PATCH /api/v1/conversations/{id}/pin)
+	PinConversation(c *gin.Context, id ConversationId)
+	// ListConversationRuns List the recorded runs of a conversation.
+	// (GET /api/v1/conversations/{id}/runs)
+	ListConversationRuns(c *gin.Context, id ConversationId)
+	// ListRunEvents Page through the durable runtime events of one conversation run.
+	// (GET /api/v1/conversations/{id}/runs/{runId}/events)
+	ListRunEvents(c *gin.Context, id ConversationId, runId ConversationRunId, params ListRunEventsParams)
+	// UnshareConversation Revoke a conversation share.
+	// (DELETE /api/v1/conversations/{id}/share)
+	UnshareConversation(c *gin.Context, id ConversationId)
+	// ShareConversation Publish a share token and public URL for a conversation.
+	// (POST /api/v1/conversations/{id}/share)
+	ShareConversation(c *gin.Context, id ConversationId)
+	// GenerateConversationTitle Queue asynchronous agent title generation for a conversation.
+	// (POST /api/v1/conversations/{id}/title)
+	GenerateConversationTitle(c *gin.Context, id ConversationId)
+	// RenameConversationTitle Rename a conversation title directly.
+	// (PUT /api/v1/conversations/{id}/title)
+	RenameConversationTitle(c *gin.Context, id ConversationId)
+	// ListDiagnosisAnalyses List immutable diagnosis analyses for the authenticated user.
+	// (GET /api/v1/diagnosis-analyses)
+	ListDiagnosisAnalyses(c *gin.Context, params ListDiagnosisAnalysesParams)
+	// GetDiagnosisAnalysis Get one immutable diagnosis analysis with assessments and freshness.
+	// (GET /api/v1/diagnosis-analyses/{analysisId})
+	GetDiagnosisAnalysis(c *gin.Context, analysisId DiagnosisAnalysisId)
+	// AssessDiagnosisCandidates Record the user's interpretation of diagnosis candidates without deleting unmentioned candidates.
+	// (PUT /api/v1/diagnosis-analyses/{analysisId}/assessment)
+	AssessDiagnosisCandidates(c *gin.Context, analysisId DiagnosisAnalysisId)
+	// ExportDiagnosisRegressionCase Export a frozen developer-reviewed regression case envelope.
+	// (GET /api/v1/diagnosis-analyses/{analysisId}/regression-export)
+	ExportDiagnosisRegressionCase(c *gin.Context, analysisId DiagnosisAnalysisId)
+	// ReplayDiagnosisAnalysis Replay an immutable diagnosis historically or counterfactually without mutating durable state.
+	// (POST /api/v1/diagnosis-analyses/{analysisId}/replay)
+	ReplayDiagnosisAnalysis(c *gin.Context, analysisId DiagnosisAnalysisId)
 	// GetInjuryHistory Get the current injury-history projection.
 	// (GET /api/v1/health-history/injury)
 	GetInjuryHistory(c *gin.Context)
@@ -2472,6 +4395,24 @@ type ServerInterface interface {
 	// GetHealthWorkspace Get the current longitudinal health workspace projection.
 	// (GET /api/v1/health-workspace)
 	GetHealthWorkspace(c *gin.Context)
+	// EnqueueKnowledgeVideoIngestion Enqueue one governed video ingestion using server-pinned Agent configurations.
+	// (POST /api/v1/knowledge/ingestions/video)
+	EnqueueKnowledgeVideoIngestion(c *gin.Context)
+	// GetKnowledgeIngestionJob Read one durable Knowledge ingestion lifecycle as a Knowledge operator.
+	// (GET /api/v1/knowledge/ingestions/{jobID})
+	GetKnowledgeIngestionJob(c *gin.Context, jobID openapi_types.UUID)
+	// SearchKnowledge Search normalized Knowledge as a Knowledge operator.
+	// (POST /api/v1/knowledge/search)
+	SearchKnowledge(c *gin.Context)
+	// ListKnowledgeSources List governed Knowledge source identities as a Knowledge operator.
+	// (GET /api/v1/knowledge/sources)
+	ListKnowledgeSources(c *gin.Context)
+	// RegisterKnowledgeSource Register one governed Knowledge source identity as a Knowledge operator.
+	// (POST /api/v1/knowledge/sources)
+	RegisterKnowledgeSource(c *gin.Context)
+	// GetKnowledgeStats Read normalized Knowledge library statistics as a Knowledge operator.
+	// (GET /api/v1/knowledge/stats)
+	GetKnowledgeStats(c *gin.Context)
 	// GetLifestyle Get the current lifestyle projection.
 	// (GET /api/v1/lifestyle)
 	GetLifestyle(c *gin.Context)
@@ -2490,6 +4431,12 @@ type ServerInterface interface {
 	// SubmitOnboardingContext Atomically establish stable profile identity and the initial BodyState context.
 	// (PUT /api/v1/onboarding/context)
 	SubmitOnboardingContext(c *gin.Context)
+	// ListOutcomes List post-intervention Outcomes.
+	// (GET /api/v1/outcomes)
+	ListOutcomes(c *gin.Context, params ListOutcomesParams)
+	// RecordOutcome Record an idempotent post-intervention outcome and project its BodyState effect.
+	// (POST /api/v1/outcomes)
+	RecordOutcome(c *gin.Context)
 	// RequestPrivacyErasure Accept an irreversible full-account and health-data erasure request.
 	// (POST /api/v1/privacy/erasure)
 	RequestPrivacyErasure(c *gin.Context)
@@ -2502,6 +4449,81 @@ type ServerInterface interface {
 	// UpdateUserProfile Replace the editable stable identity fields.
 	// (PUT /api/v1/profile)
 	UpdateUserProfile(c *gin.Context)
+	// ListTrainingPlans List TrainingPlan execution projections for the authenticated user.
+	// (GET /api/v1/training)
+	ListTrainingPlans(c *gin.Context)
+	// GetTrainingPlan Get one owned TrainingPlan execution projection.
+	// (GET /api/v1/training/{id})
+	GetTrainingPlan(c *gin.Context, id TrainingPlanId)
+	// CheckInTrainingPlan Mark today training log checked in and persist its adherence Outcome.
+	// (POST /api/v1/training/{id}/checkin)
+	CheckInTrainingPlan(c *gin.Context, id TrainingPlanId)
+	// UpdateTrainingLog Update today training log and persist structured feedback Outcome.
+	// (PUT /api/v1/training/{id}/log)
+	UpdateTrainingLog(c *gin.Context, id TrainingPlanId)
+	// GetTrainingProgress Read deterministic adherence progress for one TrainingPlan.
+	// (GET /api/v1/training/{id}/progress)
+	GetTrainingProgress(c *gin.Context, id TrainingPlanId)
+	// ReassessTrainingPlan Reassess training feedback and optionally propose a new Treatment revision.
+	// (POST /api/v1/training/{id}/reassess)
+	ReassessTrainingPlan(c *gin.Context, id TrainingPlanId)
+	// GetTrainingTodayTask Materialize and read today training log for one active plan.
+	// (GET /api/v1/training/{id}/today)
+	GetTrainingTodayTask(c *gin.Context, id TrainingPlanId)
+	// GetCurrentTreatment Read the deterministic current Treatment review projection without mutating state.
+	// (GET /api/v1/treatments/current)
+	GetCurrentTreatment(c *gin.Context)
+	// ReviewCurrentTreatment Persist the latest deterministic current Treatment review state.
+	// (POST /api/v1/treatments/current/review)
+	ReviewCurrentTreatment(c *gin.Context)
+	// GenerateTreatmentProposal Generate a revisioned Treatment proposal from a reviewed DiagnosisAnalysis.
+	// (POST /api/v1/treatments/proposals)
+	GenerateTreatmentProposal(c *gin.Context)
+	// ListTreatmentRevisions List immutable Treatment revisions for the authenticated user.
+	// (GET /api/v1/treatments/revisions)
+	ListTreatmentRevisions(c *gin.Context, params ListTreatmentRevisionsParams)
+	// GetTreatmentRevision Get one immutable Treatment revision.
+	// (GET /api/v1/treatments/revisions/{revisionId})
+	GetTreatmentRevision(c *gin.Context, revisionId TreatmentRevisionId)
+	// AcceptTreatmentRevision Atomically accept one Treatment revision and project its TrainingPlan.
+	// (POST /api/v1/treatments/revisions/{revisionId}/accept)
+	AcceptTreatmentRevision(c *gin.Context, revisionId TreatmentRevisionId)
+	// ExportTreatmentRegressionCase Export one frozen Treatment developer regression case.
+	// (GET /api/v1/treatments/revisions/{revisionId}/regression-export)
+	ExportTreatmentRegressionCase(c *gin.Context, revisionId TreatmentRevisionId)
+	// RejectTreatmentRevision Reject one proposed Treatment revision.
+	// (POST /api/v1/treatments/revisions/{revisionId}/reject)
+	RejectTreatmentRevision(c *gin.Context, revisionId TreatmentRevisionId)
+	// ReplayTreatmentRevision Replay an immutable Treatment revision historically or counterfactually.
+	// (POST /api/v1/treatments/revisions/{revisionId}/replay)
+	ReplayTreatmentRevision(c *gin.Context, revisionId TreatmentRevisionId)
+	// ListUploads List private upload manifests owned by the authenticated user.
+	// (GET /api/v1/uploads)
+	ListUploads(c *gin.Context)
+	// CreateUpload Upload one private health document or posture image for authenticated processing.
+	// (POST /api/v1/uploads)
+	CreateUpload(c *gin.Context)
+	// GetPostureAnalysis Read the latest completed posture-analysis projection for the authenticated user.
+	// (GET /api/v1/uploads/posture-analysis)
+	GetPostureAnalysis(c *gin.Context)
+	// DeleteUpload Delete one owned private upload object and its manifest.
+	// (DELETE /api/v1/uploads/{id})
+	DeleteUpload(c *gin.Context, id openapi_types.UUID)
+	// GetUpload Get one private upload manifest owned by the authenticated user.
+	// (GET /api/v1/uploads/{id})
+	GetUpload(c *gin.Context, id openapi_types.UUID)
+	// ListHealthDocumentReviewCandidates List append-only review state for one exact owned extraction run.
+	// (GET /api/v1/uploads/{id}/extractions/{runId}/reviews)
+	ListHealthDocumentReviewCandidates(c *gin.Context, id openapi_types.UUID, runId openapi_types.UUID)
+	// AppendHealthDocumentReview Append one idempotent confirm, correct or reject action to an exact owned extraction candidate.
+	// (POST /api/v1/uploads/{id}/extractions/{runId}/reviews)
+	AppendHealthDocumentReview(c *gin.Context, id openapi_types.UUID, runId openapi_types.UUID)
+	// GetHealthDocumentSource Stream the authenticated private source document for one exact owned extraction run.
+	// (GET /api/v1/uploads/{id}/extractions/{runId}/source)
+	GetHealthDocumentSource(c *gin.Context, id openapi_types.UUID, runId openapi_types.UUID)
+	// GetHealthDocumentReviewContext Resolve the current server-owned health-document extraction run and its review projection.
+	// (GET /api/v1/uploads/{id}/health-document-review)
+	GetHealthDocumentReviewContext(c *gin.Context, id openapi_types.UUID)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -2634,6 +4656,58 @@ func (siw *ServerInterfaceWrapper) ReplayAssessment(c *gin.Context) {
 	}
 
 	siw.Handler.ReplayAssessment(c, id)
+}
+
+// LoginAccount operation middleware
+func (siw *ServerInterfaceWrapper) LoginAccount(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.LoginAccount(c)
+}
+
+// LogoutAccount operation middleware
+func (siw *ServerInterfaceWrapper) LogoutAccount(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.LogoutAccount(c)
+}
+
+// RefreshAccountSession operation middleware
+func (siw *ServerInterfaceWrapper) RefreshAccountSession(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RefreshAccountSession(c)
+}
+
+// RegisterAccount operation middleware
+func (siw *ServerInterfaceWrapper) RegisterAccount(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RegisterAccount(c)
 }
 
 // GetBodyMetrics operation middleware
@@ -2878,6 +4952,693 @@ func (siw *ServerInterfaceWrapper) RecordClientDiagnostic(c *gin.Context) {
 	siw.Handler.RecordClientDiagnostic(c)
 }
 
+// StartConsultationRun operation middleware
+func (siw *ServerInterfaceWrapper) StartConsultationRun(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.StartConsultationRun(c)
+}
+
+// CancelConsultationRun operation middleware
+func (siw *ServerInterfaceWrapper) CancelConsultationRun(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConsultationRunId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CancelConsultationRun(c, id)
+}
+
+// ReplayConsultationRun operation middleware
+func (siw *ServerInterfaceWrapper) ReplayConsultationRun(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConsultationRunId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ReplayConsultationRun(c, id)
+}
+
+// ReplayConsultationRunCounterfactual operation middleware
+func (siw *ServerInterfaceWrapper) ReplayConsultationRunCounterfactual(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConsultationRunId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ReplayConsultationRunCounterfactual(c, id)
+}
+
+// GetConsultation operation middleware
+func (siw *ServerInterfaceWrapper) GetConsultation(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConsultationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetConsultation(c, id)
+}
+
+// AnalyzeDiagnosis operation middleware
+func (siw *ServerInterfaceWrapper) AnalyzeDiagnosis(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConsultationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AnalyzeDiagnosis(c, id)
+}
+
+// GetConsultationInteractionMetrics operation middleware
+func (siw *ServerInterfaceWrapper) GetConsultationInteractionMetrics(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConsultationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetConsultationInteractionMetrics(c, id)
+}
+
+// ResumeConsultationInteraction operation middleware
+func (siw *ServerInterfaceWrapper) ResumeConsultationInteraction(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConsultationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "interactionId" -------------
+	var interactionId InteractionId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "interactionId", c.Param("interactionId"), &interactionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter interactionId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ResumeConsultationInteraction(c, id, interactionId)
+}
+
+// GetConsultationThread operation middleware
+func (siw *ServerInterfaceWrapper) GetConsultationThread(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConsultationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetConsultationThread(c, id)
+}
+
+// ListConversations operation middleware
+func (siw *ServerInterfaceWrapper) ListConversations(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListConversationsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", c.Request.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter limit: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", c.Request.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter cursor: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListConversations(c, params)
+}
+
+// GetSharedConversation operation middleware
+func (siw *ServerInterfaceWrapper) GetSharedConversation(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", c.Param("token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter token: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetSharedConversation(c, token)
+}
+
+// DeleteConversation operation middleware
+func (siw *ServerInterfaceWrapper) DeleteConversation(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConversationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.DeleteConversation(c, id)
+}
+
+// GetConversation operation middleware
+func (siw *ServerInterfaceWrapper) GetConversation(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConversationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetConversation(c, id)
+}
+
+// UpdateConversation operation middleware
+func (siw *ServerInterfaceWrapper) UpdateConversation(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConversationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdateConversation(c, id)
+}
+
+// PinConversation operation middleware
+func (siw *ServerInterfaceWrapper) PinConversation(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConversationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.PinConversation(c, id)
+}
+
+// ListConversationRuns operation middleware
+func (siw *ServerInterfaceWrapper) ListConversationRuns(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConversationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListConversationRuns(c, id)
+}
+
+// ListRunEvents operation middleware
+func (siw *ServerInterfaceWrapper) ListRunEvents(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConversationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "runId" -------------
+	var runId ConversationRunId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "runId", c.Param("runId"), &runId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter runId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListRunEventsParams
+
+	// ------------- Optional query parameter "after_seq" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "after_seq", c.Request.URL.Query(), &params.AfterSeq, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter after_seq: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", c.Request.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter limit: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListRunEvents(c, id, runId, params)
+}
+
+// UnshareConversation operation middleware
+func (siw *ServerInterfaceWrapper) UnshareConversation(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConversationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UnshareConversation(c, id)
+}
+
+// ShareConversation operation middleware
+func (siw *ServerInterfaceWrapper) ShareConversation(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConversationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ShareConversation(c, id)
+}
+
+// GenerateConversationTitle operation middleware
+func (siw *ServerInterfaceWrapper) GenerateConversationTitle(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConversationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GenerateConversationTitle(c, id)
+}
+
+// RenameConversationTitle operation middleware
+func (siw *ServerInterfaceWrapper) RenameConversationTitle(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ConversationId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RenameConversationTitle(c, id)
+}
+
+// ListDiagnosisAnalyses operation middleware
+func (siw *ServerInterfaceWrapper) ListDiagnosisAnalyses(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListDiagnosisAnalysesParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", c.Request.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter limit: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListDiagnosisAnalyses(c, params)
+}
+
+// GetDiagnosisAnalysis operation middleware
+func (siw *ServerInterfaceWrapper) GetDiagnosisAnalysis(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "analysisId" -------------
+	var analysisId DiagnosisAnalysisId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "analysisId", c.Param("analysisId"), &analysisId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter analysisId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetDiagnosisAnalysis(c, analysisId)
+}
+
+// AssessDiagnosisCandidates operation middleware
+func (siw *ServerInterfaceWrapper) AssessDiagnosisCandidates(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "analysisId" -------------
+	var analysisId DiagnosisAnalysisId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "analysisId", c.Param("analysisId"), &analysisId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter analysisId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AssessDiagnosisCandidates(c, analysisId)
+}
+
+// ExportDiagnosisRegressionCase operation middleware
+func (siw *ServerInterfaceWrapper) ExportDiagnosisRegressionCase(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "analysisId" -------------
+	var analysisId DiagnosisAnalysisId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "analysisId", c.Param("analysisId"), &analysisId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter analysisId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ExportDiagnosisRegressionCase(c, analysisId)
+}
+
+// ReplayDiagnosisAnalysis operation middleware
+func (siw *ServerInterfaceWrapper) ReplayDiagnosisAnalysis(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "analysisId" -------------
+	var analysisId DiagnosisAnalysisId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "analysisId", c.Param("analysisId"), &analysisId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter analysisId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ReplayDiagnosisAnalysis(c, analysisId)
+}
+
 // GetInjuryHistory operation middleware
 func (siw *ServerInterfaceWrapper) GetInjuryHistory(c *gin.Context) {
 
@@ -2915,6 +5676,96 @@ func (siw *ServerInterfaceWrapper) GetHealthWorkspace(c *gin.Context) {
 	}
 
 	siw.Handler.GetHealthWorkspace(c)
+}
+
+// EnqueueKnowledgeVideoIngestion operation middleware
+func (siw *ServerInterfaceWrapper) EnqueueKnowledgeVideoIngestion(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.EnqueueKnowledgeVideoIngestion(c)
+}
+
+// GetKnowledgeIngestionJob operation middleware
+func (siw *ServerInterfaceWrapper) GetKnowledgeIngestionJob(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "jobID" -------------
+	var jobID openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "jobID", c.Param("jobID"), &jobID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter jobID: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetKnowledgeIngestionJob(c, jobID)
+}
+
+// SearchKnowledge operation middleware
+func (siw *ServerInterfaceWrapper) SearchKnowledge(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SearchKnowledge(c)
+}
+
+// ListKnowledgeSources operation middleware
+func (siw *ServerInterfaceWrapper) ListKnowledgeSources(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListKnowledgeSources(c)
+}
+
+// RegisterKnowledgeSource operation middleware
+func (siw *ServerInterfaceWrapper) RegisterKnowledgeSource(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RegisterKnowledgeSource(c)
+}
+
+// GetKnowledgeStats operation middleware
+func (siw *ServerInterfaceWrapper) GetKnowledgeStats(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetKnowledgeStats(c)
 }
 
 // GetLifestyle operation middleware
@@ -3019,6 +5870,46 @@ func (siw *ServerInterfaceWrapper) SubmitOnboardingContext(c *gin.Context) {
 	siw.Handler.SubmitOnboardingContext(c)
 }
 
+// ListOutcomes operation middleware
+func (siw *ServerInterfaceWrapper) ListOutcomes(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListOutcomesParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", c.Request.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter limit: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListOutcomes(c, params)
+}
+
+// RecordOutcome operation middleware
+func (siw *ServerInterfaceWrapper) RecordOutcome(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RecordOutcome(c)
+}
+
 // RequestPrivacyErasure operation middleware
 func (siw *ServerInterfaceWrapper) RequestPrivacyErasure(c *gin.Context) {
 
@@ -3069,6 +5960,576 @@ func (siw *ServerInterfaceWrapper) UpdateUserProfile(c *gin.Context) {
 	}
 
 	siw.Handler.UpdateUserProfile(c)
+}
+
+// ListTrainingPlans operation middleware
+func (siw *ServerInterfaceWrapper) ListTrainingPlans(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListTrainingPlans(c)
+}
+
+// GetTrainingPlan operation middleware
+func (siw *ServerInterfaceWrapper) GetTrainingPlan(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id TrainingPlanId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetTrainingPlan(c, id)
+}
+
+// CheckInTrainingPlan operation middleware
+func (siw *ServerInterfaceWrapper) CheckInTrainingPlan(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id TrainingPlanId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CheckInTrainingPlan(c, id)
+}
+
+// UpdateTrainingLog operation middleware
+func (siw *ServerInterfaceWrapper) UpdateTrainingLog(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id TrainingPlanId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdateTrainingLog(c, id)
+}
+
+// GetTrainingProgress operation middleware
+func (siw *ServerInterfaceWrapper) GetTrainingProgress(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id TrainingPlanId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetTrainingProgress(c, id)
+}
+
+// ReassessTrainingPlan operation middleware
+func (siw *ServerInterfaceWrapper) ReassessTrainingPlan(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id TrainingPlanId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ReassessTrainingPlan(c, id)
+}
+
+// GetTrainingTodayTask operation middleware
+func (siw *ServerInterfaceWrapper) GetTrainingTodayTask(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id TrainingPlanId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetTrainingTodayTask(c, id)
+}
+
+// GetCurrentTreatment operation middleware
+func (siw *ServerInterfaceWrapper) GetCurrentTreatment(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetCurrentTreatment(c)
+}
+
+// ReviewCurrentTreatment operation middleware
+func (siw *ServerInterfaceWrapper) ReviewCurrentTreatment(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ReviewCurrentTreatment(c)
+}
+
+// GenerateTreatmentProposal operation middleware
+func (siw *ServerInterfaceWrapper) GenerateTreatmentProposal(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GenerateTreatmentProposal(c)
+}
+
+// ListTreatmentRevisions operation middleware
+func (siw *ServerInterfaceWrapper) ListTreatmentRevisions(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListTreatmentRevisionsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", c.Request.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter limit: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListTreatmentRevisions(c, params)
+}
+
+// GetTreatmentRevision operation middleware
+func (siw *ServerInterfaceWrapper) GetTreatmentRevision(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "revisionId" -------------
+	var revisionId TreatmentRevisionId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "revisionId", c.Param("revisionId"), &revisionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter revisionId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetTreatmentRevision(c, revisionId)
+}
+
+// AcceptTreatmentRevision operation middleware
+func (siw *ServerInterfaceWrapper) AcceptTreatmentRevision(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "revisionId" -------------
+	var revisionId TreatmentRevisionId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "revisionId", c.Param("revisionId"), &revisionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter revisionId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AcceptTreatmentRevision(c, revisionId)
+}
+
+// ExportTreatmentRegressionCase operation middleware
+func (siw *ServerInterfaceWrapper) ExportTreatmentRegressionCase(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "revisionId" -------------
+	var revisionId TreatmentRevisionId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "revisionId", c.Param("revisionId"), &revisionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter revisionId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ExportTreatmentRegressionCase(c, revisionId)
+}
+
+// RejectTreatmentRevision operation middleware
+func (siw *ServerInterfaceWrapper) RejectTreatmentRevision(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "revisionId" -------------
+	var revisionId TreatmentRevisionId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "revisionId", c.Param("revisionId"), &revisionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter revisionId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RejectTreatmentRevision(c, revisionId)
+}
+
+// ReplayTreatmentRevision operation middleware
+func (siw *ServerInterfaceWrapper) ReplayTreatmentRevision(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "revisionId" -------------
+	var revisionId TreatmentRevisionId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "revisionId", c.Param("revisionId"), &revisionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter revisionId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ReplayTreatmentRevision(c, revisionId)
+}
+
+// ListUploads operation middleware
+func (siw *ServerInterfaceWrapper) ListUploads(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListUploads(c)
+}
+
+// CreateUpload operation middleware
+func (siw *ServerInterfaceWrapper) CreateUpload(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CreateUpload(c)
+}
+
+// GetPostureAnalysis operation middleware
+func (siw *ServerInterfaceWrapper) GetPostureAnalysis(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetPostureAnalysis(c)
+}
+
+// DeleteUpload operation middleware
+func (siw *ServerInterfaceWrapper) DeleteUpload(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.DeleteUpload(c, id)
+}
+
+// GetUpload operation middleware
+func (siw *ServerInterfaceWrapper) GetUpload(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetUpload(c, id)
+}
+
+// ListHealthDocumentReviewCandidates operation middleware
+func (siw *ServerInterfaceWrapper) ListHealthDocumentReviewCandidates(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "runId" -------------
+	var runId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "runId", c.Param("runId"), &runId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter runId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListHealthDocumentReviewCandidates(c, id, runId)
+}
+
+// AppendHealthDocumentReview operation middleware
+func (siw *ServerInterfaceWrapper) AppendHealthDocumentReview(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "runId" -------------
+	var runId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "runId", c.Param("runId"), &runId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter runId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AppendHealthDocumentReview(c, id, runId)
+}
+
+// GetHealthDocumentSource operation middleware
+func (siw *ServerInterfaceWrapper) GetHealthDocumentSource(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "runId" -------------
+	var runId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "runId", c.Param("runId"), &runId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter runId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetHealthDocumentSource(c, id, runId)
+}
+
+// GetHealthDocumentReviewContext operation middleware
+func (siw *ServerInterfaceWrapper) GetHealthDocumentReviewContext(c *gin.Context) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetHealthDocumentReviewContext(c, id)
 }
 
 // GinServerOptions provides options for the Gin server.
@@ -3130,11 +6591,76 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/api/v1/assessment/:id", wrapper.GetAssessment)
 	router.POST(options.BaseURL+"/api/v1/assessment/:id/replay", wrapper.ReplayAssessment)
 	router.GET(options.BaseURL+"/api/v1/assessment/:id/regression-export", wrapper.ExportAssessmentRegressionCase)
+	router.POST(options.BaseURL+"/api/v1/auth/register", wrapper.RegisterAccount)
+	router.POST(options.BaseURL+"/api/v1/auth/login", wrapper.LoginAccount)
+	router.POST(options.BaseURL+"/api/v1/auth/refresh", wrapper.RefreshAccountSession)
+	router.POST(options.BaseURL+"/api/v1/auth/logout", wrapper.LogoutAccount)
+	router.GET(options.BaseURL+"/api/v1/conversations", wrapper.ListConversations)
+	router.DELETE(options.BaseURL+"/api/v1/conversations/:id", wrapper.DeleteConversation)
+	router.GET(options.BaseURL+"/api/v1/conversations/:id", wrapper.GetConversation)
+	router.PATCH(options.BaseURL+"/api/v1/conversations/:id", wrapper.UpdateConversation)
+	router.PATCH(options.BaseURL+"/api/v1/conversations/:id/pin", wrapper.PinConversation)
+	router.POST(options.BaseURL+"/api/v1/conversations/:id/title", wrapper.GenerateConversationTitle)
+	router.PUT(options.BaseURL+"/api/v1/conversations/:id/title", wrapper.RenameConversationTitle)
+	router.DELETE(options.BaseURL+"/api/v1/conversations/:id/share", wrapper.UnshareConversation)
+	router.POST(options.BaseURL+"/api/v1/conversations/:id/share", wrapper.ShareConversation)
+	router.GET(options.BaseURL+"/api/v1/conversations/share/:token", wrapper.GetSharedConversation)
+	router.GET(options.BaseURL+"/api/v1/conversations/:id/runs", wrapper.ListConversationRuns)
+	router.GET(options.BaseURL+"/api/v1/conversations/:id/runs/:runId/events", wrapper.ListRunEvents)
+	router.POST(options.BaseURL+"/api/v1/consultation-runs", wrapper.StartConsultationRun)
+	router.POST(options.BaseURL+"/api/v1/consultation-runs/:id/cancel", wrapper.CancelConsultationRun)
+	router.POST(options.BaseURL+"/api/v1/consultation-runs/:id/replay", wrapper.ReplayConsultationRun)
+	router.POST(options.BaseURL+"/api/v1/consultation-runs/:id/replay/counterfactual", wrapper.ReplayConsultationRunCounterfactual)
+	router.GET(options.BaseURL+"/api/v1/consultations/:id", wrapper.GetConsultation)
+	router.GET(options.BaseURL+"/api/v1/consultations/:id/thread", wrapper.GetConsultationThread)
+	router.POST(options.BaseURL+"/api/v1/consultations/:id/interrupts/:interactionId/answers", wrapper.ResumeConsultationInteraction)
+	router.GET(options.BaseURL+"/api/v1/consultations/:id/interaction-metrics", wrapper.GetConsultationInteractionMetrics)
+	router.POST(options.BaseURL+"/api/v1/consultations/:id/diagnosis", wrapper.AnalyzeDiagnosis)
+	router.GET(options.BaseURL+"/api/v1/diagnosis-analyses", wrapper.ListDiagnosisAnalyses)
+	router.GET(options.BaseURL+"/api/v1/diagnosis-analyses/:analysisId", wrapper.GetDiagnosisAnalysis)
+	router.PUT(options.BaseURL+"/api/v1/diagnosis-analyses/:analysisId/assessment", wrapper.AssessDiagnosisCandidates)
+	router.POST(options.BaseURL+"/api/v1/diagnosis-analyses/:analysisId/replay", wrapper.ReplayDiagnosisAnalysis)
+	router.GET(options.BaseURL+"/api/v1/diagnosis-analyses/:analysisId/regression-export", wrapper.ExportDiagnosisRegressionCase)
+	router.POST(options.BaseURL+"/api/v1/treatments/proposals", wrapper.GenerateTreatmentProposal)
+	router.GET(options.BaseURL+"/api/v1/treatments/current", wrapper.GetCurrentTreatment)
+	router.POST(options.BaseURL+"/api/v1/treatments/current/review", wrapper.ReviewCurrentTreatment)
+	router.GET(options.BaseURL+"/api/v1/treatments/revisions", wrapper.ListTreatmentRevisions)
+	router.GET(options.BaseURL+"/api/v1/treatments/revisions/:revisionId", wrapper.GetTreatmentRevision)
+	router.POST(options.BaseURL+"/api/v1/treatments/revisions/:revisionId/replay", wrapper.ReplayTreatmentRevision)
+	router.GET(options.BaseURL+"/api/v1/treatments/revisions/:revisionId/regression-export", wrapper.ExportTreatmentRegressionCase)
+	router.POST(options.BaseURL+"/api/v1/treatments/revisions/:revisionId/accept", wrapper.AcceptTreatmentRevision)
+	router.POST(options.BaseURL+"/api/v1/treatments/revisions/:revisionId/reject", wrapper.RejectTreatmentRevision)
+	router.GET(options.BaseURL+"/api/v1/outcomes", wrapper.ListOutcomes)
+	router.POST(options.BaseURL+"/api/v1/outcomes", wrapper.RecordOutcome)
+	router.GET(options.BaseURL+"/api/v1/training", wrapper.ListTrainingPlans)
+	router.GET(options.BaseURL+"/api/v1/training/:id", wrapper.GetTrainingPlan)
+	router.GET(options.BaseURL+"/api/v1/training/:id/today", wrapper.GetTrainingTodayTask)
+	router.POST(options.BaseURL+"/api/v1/training/:id/checkin", wrapper.CheckInTrainingPlan)
+	router.PUT(options.BaseURL+"/api/v1/training/:id/log", wrapper.UpdateTrainingLog)
+	router.GET(options.BaseURL+"/api/v1/training/:id/progress", wrapper.GetTrainingProgress)
+	router.POST(options.BaseURL+"/api/v1/training/:id/reassess", wrapper.ReassessTrainingPlan)
+	router.GET(options.BaseURL+"/api/v1/uploads", wrapper.ListUploads)
+	router.POST(options.BaseURL+"/api/v1/uploads", wrapper.CreateUpload)
+	router.GET(options.BaseURL+"/api/v1/uploads/posture-analysis", wrapper.GetPostureAnalysis)
+	router.DELETE(options.BaseURL+"/api/v1/uploads/:id", wrapper.DeleteUpload)
+	router.GET(options.BaseURL+"/api/v1/uploads/:id", wrapper.GetUpload)
+	router.GET(options.BaseURL+"/api/v1/uploads/:id/health-document-review", wrapper.GetHealthDocumentReviewContext)
+	router.GET(options.BaseURL+"/api/v1/uploads/:id/extractions/:runId/reviews", wrapper.ListHealthDocumentReviewCandidates)
+	router.POST(options.BaseURL+"/api/v1/uploads/:id/extractions/:runId/reviews", wrapper.AppendHealthDocumentReview)
+	router.GET(options.BaseURL+"/api/v1/uploads/:id/extractions/:runId/source", wrapper.GetHealthDocumentSource)
+	router.GET(options.BaseURL+"/api/v1/knowledge/sources", wrapper.ListKnowledgeSources)
+	router.POST(options.BaseURL+"/api/v1/knowledge/sources", wrapper.RegisterKnowledgeSource)
+	router.POST(options.BaseURL+"/api/v1/knowledge/ingestions/video", wrapper.EnqueueKnowledgeVideoIngestion)
+	router.GET(options.BaseURL+"/api/v1/knowledge/ingestions/:jobID", wrapper.GetKnowledgeIngestionJob)
+	router.POST(options.BaseURL+"/api/v1/knowledge/search", wrapper.SearchKnowledge)
+	router.GET(options.BaseURL+"/api/v1/knowledge/stats", wrapper.GetKnowledgeStats)
 }
 
 type BadGatewayJSONResponse ErrorEnvelope
 
 type ConflictJSONResponse ErrorEnvelope
+
+type ForbiddenJSONResponse ErrorEnvelope
 
 type InternalErrorJSONResponse ErrorEnvelope
 
@@ -3142,9 +6668,20 @@ type InvalidRequestJSONResponse ErrorEnvelope
 
 type NotFoundJSONResponse ErrorEnvelope
 
+type ReplayUnavailableJSONResponse ErrorEnvelope
+
 type RevisionConflictJSONResponse ErrorEnvelope
 
 type ServiceUnavailableJSONResponse ErrorEnvelope
+
+type TooManyRequestsResponseHeaders struct {
+	RetryAfter *string
+}
+type TooManyRequestsJSONResponse struct {
+	Body ErrorEnvelope
+
+	Headers TooManyRequestsResponseHeaders
+}
 
 type UnauthorizedJSONResponse ErrorEnvelope
 
@@ -3537,6 +7074,445 @@ func (response ReplayAssessment500JSONResponse) VisitReplayAssessmentResponse(w 
 type ReplayAssessment503JSONResponse struct{ ServiceUnavailableJSONResponse }
 
 func (response ReplayAssessment503JSONResponse) VisitReplayAssessmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LoginAccountRequestObject struct {
+	Body *LoginAccountJSONRequestBody
+}
+
+type LoginAccountResponseObject interface {
+	VisitLoginAccountResponse(w http.ResponseWriter) error
+}
+
+type LoginAccount200ResponseHeaders struct {
+	CacheControl *string
+	Pragma       *string
+	SetCookie    *string
+}
+
+type LoginAccount200JSONResponse struct {
+	Body    AuthSession
+	Headers LoginAccount200ResponseHeaders
+}
+
+func (response LoginAccount200JSONResponse) VisitLoginAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.CacheControl != nil {
+		w.Header().Set("Cache-Control", fmt.Sprint(*response.Headers.CacheControl))
+	}
+	if response.Headers.Pragma != nil {
+		w.Header().Set("Pragma", fmt.Sprint(*response.Headers.Pragma))
+	}
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LoginAccount400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response LoginAccount400JSONResponse) VisitLoginAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LoginAccount401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response LoginAccount401JSONResponse) VisitLoginAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LoginAccount403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response LoginAccount403JSONResponse) VisitLoginAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LoginAccount429JSONResponse struct{ TooManyRequestsJSONResponse }
+
+func (response LoginAccount429JSONResponse) VisitLoginAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LoginAccount500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response LoginAccount500JSONResponse) VisitLoginAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LoginAccount503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response LoginAccount503JSONResponse) VisitLoginAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LogoutAccountRequestObject struct {
+}
+
+type LogoutAccountResponseObject interface {
+	VisitLogoutAccountResponse(w http.ResponseWriter) error
+}
+
+type LogoutAccount200ResponseHeaders struct {
+	SetCookie *string
+}
+
+type LogoutAccount200JSONResponse struct {
+	Body    LogoutAcknowledgement
+	Headers LogoutAccount200ResponseHeaders
+}
+
+func (response LogoutAccount200JSONResponse) VisitLogoutAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LogoutAccount403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response LogoutAccount403JSONResponse) VisitLogoutAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LogoutAccount500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response LogoutAccount500JSONResponse) VisitLogoutAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type LogoutAccount503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response LogoutAccount503JSONResponse) VisitLogoutAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RefreshAccountSessionRequestObject struct {
+}
+
+type RefreshAccountSessionResponseObject interface {
+	VisitRefreshAccountSessionResponse(w http.ResponseWriter) error
+}
+
+type RefreshAccountSession200ResponseHeaders struct {
+	CacheControl *string
+	Pragma       *string
+	SetCookie    *string
+}
+
+type RefreshAccountSession200JSONResponse struct {
+	Body    AuthSession
+	Headers RefreshAccountSession200ResponseHeaders
+}
+
+func (response RefreshAccountSession200JSONResponse) VisitRefreshAccountSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.CacheControl != nil {
+		w.Header().Set("Cache-Control", fmt.Sprint(*response.Headers.CacheControl))
+	}
+	if response.Headers.Pragma != nil {
+		w.Header().Set("Pragma", fmt.Sprint(*response.Headers.Pragma))
+	}
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RefreshAccountSession401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RefreshAccountSession401JSONResponse) VisitRefreshAccountSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RefreshAccountSession403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RefreshAccountSession403JSONResponse) VisitRefreshAccountSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RefreshAccountSession429JSONResponse struct{ TooManyRequestsJSONResponse }
+
+func (response RefreshAccountSession429JSONResponse) VisitRefreshAccountSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RefreshAccountSession500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response RefreshAccountSession500JSONResponse) VisitRefreshAccountSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RefreshAccountSession503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response RefreshAccountSession503JSONResponse) VisitRefreshAccountSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RegisterAccountRequestObject struct {
+	Body *RegisterAccountJSONRequestBody
+}
+
+type RegisterAccountResponseObject interface {
+	VisitRegisterAccountResponse(w http.ResponseWriter) error
+}
+
+type RegisterAccount201ResponseHeaders struct {
+	CacheControl *string
+	Pragma       *string
+	SetCookie    *string
+}
+
+type RegisterAccount201JSONResponse struct {
+	Body    AuthSession
+	Headers RegisterAccount201ResponseHeaders
+}
+
+func (response RegisterAccount201JSONResponse) VisitRegisterAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.CacheControl != nil {
+		w.Header().Set("Cache-Control", fmt.Sprint(*response.Headers.CacheControl))
+	}
+	if response.Headers.Pragma != nil {
+		w.Header().Set("Pragma", fmt.Sprint(*response.Headers.Pragma))
+	}
+	if response.Headers.SetCookie != nil {
+		w.Header().Set("Set-Cookie", fmt.Sprint(*response.Headers.SetCookie))
+	}
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RegisterAccount400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response RegisterAccount400JSONResponse) VisitRegisterAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RegisterAccount403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RegisterAccount403JSONResponse) VisitRegisterAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RegisterAccount409JSONResponse struct{ ConflictJSONResponse }
+
+func (response RegisterAccount409JSONResponse) VisitRegisterAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RegisterAccount429JSONResponse struct{ TooManyRequestsJSONResponse }
+
+func (response RegisterAccount429JSONResponse) VisitRegisterAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RegisterAccount500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response RegisterAccount500JSONResponse) VisitRegisterAccountResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RegisterAccount503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response RegisterAccount503JSONResponse) VisitRegisterAccountResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -4924,6 +8900,2285 @@ func (response RecordClientDiagnostic500JSONResponse) VisitRecordClientDiagnosti
 	return err
 }
 
+type StartConsultationRunRequestObject struct {
+	Body *StartConsultationRunJSONRequestBody
+}
+
+type StartConsultationRunResponseObject interface {
+	VisitStartConsultationRunResponse(w http.ResponseWriter) error
+}
+
+type StartConsultationRun200TexteventStreamResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response StartConsultationRun200TexteventStreamResponse) VisitStartConsultationRunResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		// If w doesn't support flushing, fall back to io.Copy.
+		_, err := io.Copy(w, response.Body)
+		return err
+	}
+	// text/event-stream messages are typically small; use a
+	// modest buffer and flush after each chunk so clients see
+	// events immediately instead of waiting on OS buffering.
+	buf := make([]byte, 4096)
+	for {
+		n, err := response.Body.Read(buf)
+		if n > 0 {
+			if _, writeErr := w.Write(buf[:n]); writeErr != nil {
+				return writeErr
+			}
+			flusher.Flush()
+		}
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return err
+		}
+	}
+}
+
+type StartConsultationRun400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response StartConsultationRun400JSONResponse) VisitStartConsultationRunResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartConsultationRun401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response StartConsultationRun401JSONResponse) VisitStartConsultationRunResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartConsultationRun404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response StartConsultationRun404JSONResponse) VisitStartConsultationRunResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartConsultationRun409JSONResponse struct{ ConflictJSONResponse }
+
+func (response StartConsultationRun409JSONResponse) VisitStartConsultationRunResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartConsultationRun500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response StartConsultationRun500JSONResponse) VisitStartConsultationRunResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type StartConsultationRun503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response StartConsultationRun503JSONResponse) VisitStartConsultationRunResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CancelConsultationRunRequestObject struct {
+	Id   ConsultationRunId `json:"id"`
+	Body *CancelConsultationRunJSONRequestBody
+}
+
+type CancelConsultationRunResponseObject interface {
+	VisitCancelConsultationRunResponse(w http.ResponseWriter) error
+}
+
+type CancelConsultationRun200JSONResponse CancelConsultationRunResponse
+
+func (response CancelConsultationRun200JSONResponse) VisitCancelConsultationRunResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CancelConsultationRun400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response CancelConsultationRun400JSONResponse) VisitCancelConsultationRunResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CancelConsultationRun401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CancelConsultationRun401JSONResponse) VisitCancelConsultationRunResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CancelConsultationRun404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response CancelConsultationRun404JSONResponse) VisitCancelConsultationRunResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CancelConsultationRun409JSONResponse struct{ ConflictJSONResponse }
+
+func (response CancelConsultationRun409JSONResponse) VisitCancelConsultationRunResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CancelConsultationRun500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response CancelConsultationRun500JSONResponse) VisitCancelConsultationRunResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayConsultationRunRequestObject struct {
+	Id ConsultationRunId `json:"id"`
+}
+
+type ReplayConsultationRunResponseObject interface {
+	VisitReplayConsultationRunResponse(w http.ResponseWriter) error
+}
+
+type ReplayConsultationRun200JSONResponse ConsultationRunDecision
+
+func (response ReplayConsultationRun200JSONResponse) VisitReplayConsultationRunResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayConsultationRun400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ReplayConsultationRun400JSONResponse) VisitReplayConsultationRunResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayConsultationRun401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ReplayConsultationRun401JSONResponse) VisitReplayConsultationRunResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayConsultationRun422JSONResponse struct{ ReplayUnavailableJSONResponse }
+
+func (response ReplayConsultationRun422JSONResponse) VisitReplayConsultationRunResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayConsultationRun500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ReplayConsultationRun500JSONResponse) VisitReplayConsultationRunResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayConsultationRun503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ReplayConsultationRun503JSONResponse) VisitReplayConsultationRunResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayConsultationRunCounterfactualRequestObject struct {
+	Id   ConsultationRunId `json:"id"`
+	Body *ReplayConsultationRunCounterfactualJSONRequestBody
+}
+
+type ReplayConsultationRunCounterfactualResponseObject interface {
+	VisitReplayConsultationRunCounterfactualResponse(w http.ResponseWriter) error
+}
+
+type ReplayConsultationRunCounterfactual200JSONResponse ConsultationRunDecision
+
+func (response ReplayConsultationRunCounterfactual200JSONResponse) VisitReplayConsultationRunCounterfactualResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayConsultationRunCounterfactual400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ReplayConsultationRunCounterfactual400JSONResponse) VisitReplayConsultationRunCounterfactualResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayConsultationRunCounterfactual401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ReplayConsultationRunCounterfactual401JSONResponse) VisitReplayConsultationRunCounterfactualResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayConsultationRunCounterfactual422JSONResponse struct{ ReplayUnavailableJSONResponse }
+
+func (response ReplayConsultationRunCounterfactual422JSONResponse) VisitReplayConsultationRunCounterfactualResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayConsultationRunCounterfactual500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ReplayConsultationRunCounterfactual500JSONResponse) VisitReplayConsultationRunCounterfactualResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayConsultationRunCounterfactual503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ReplayConsultationRunCounterfactual503JSONResponse) VisitReplayConsultationRunCounterfactualResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConsultationRequestObject struct {
+	Id ConsultationId `json:"id"`
+}
+
+type GetConsultationResponseObject interface {
+	VisitGetConsultationResponse(w http.ResponseWriter) error
+}
+
+type GetConsultation200JSONResponse ConsultationSessionResponse
+
+func (response GetConsultation200JSONResponse) VisitGetConsultationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConsultation400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response GetConsultation400JSONResponse) VisitGetConsultationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConsultation401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetConsultation401JSONResponse) VisitGetConsultationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConsultation404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetConsultation404JSONResponse) VisitGetConsultationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConsultation500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetConsultation500JSONResponse) VisitGetConsultationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AnalyzeDiagnosisRequestObject struct {
+	Id ConsultationId `json:"id"`
+}
+
+type AnalyzeDiagnosisResponseObject interface {
+	VisitAnalyzeDiagnosisResponse(w http.ResponseWriter) error
+}
+
+type AnalyzeDiagnosis200JSONResponse JsonObject
+
+func (response AnalyzeDiagnosis200JSONResponse) VisitAnalyzeDiagnosisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AnalyzeDiagnosis400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response AnalyzeDiagnosis400JSONResponse) VisitAnalyzeDiagnosisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AnalyzeDiagnosis401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response AnalyzeDiagnosis401JSONResponse) VisitAnalyzeDiagnosisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AnalyzeDiagnosis404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response AnalyzeDiagnosis404JSONResponse) VisitAnalyzeDiagnosisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AnalyzeDiagnosis409JSONResponse struct{ ConflictJSONResponse }
+
+func (response AnalyzeDiagnosis409JSONResponse) VisitAnalyzeDiagnosisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AnalyzeDiagnosis500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response AnalyzeDiagnosis500JSONResponse) VisitAnalyzeDiagnosisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AnalyzeDiagnosis502JSONResponse struct{ BadGatewayJSONResponse }
+
+func (response AnalyzeDiagnosis502JSONResponse) VisitAnalyzeDiagnosisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AnalyzeDiagnosis503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response AnalyzeDiagnosis503JSONResponse) VisitAnalyzeDiagnosisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConsultationInteractionMetricsRequestObject struct {
+	Id ConsultationId `json:"id"`
+}
+
+type GetConsultationInteractionMetricsResponseObject interface {
+	VisitGetConsultationInteractionMetricsResponse(w http.ResponseWriter) error
+}
+
+type GetConsultationInteractionMetrics200JSONResponse InteractionMetrics
+
+func (response GetConsultationInteractionMetrics200JSONResponse) VisitGetConsultationInteractionMetricsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConsultationInteractionMetrics400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response GetConsultationInteractionMetrics400JSONResponse) VisitGetConsultationInteractionMetricsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConsultationInteractionMetrics401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetConsultationInteractionMetrics401JSONResponse) VisitGetConsultationInteractionMetricsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConsultationInteractionMetrics404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetConsultationInteractionMetrics404JSONResponse) VisitGetConsultationInteractionMetricsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConsultationInteractionMetrics500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetConsultationInteractionMetrics500JSONResponse) VisitGetConsultationInteractionMetricsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResumeConsultationInteractionRequestObject struct {
+	Id            ConsultationId `json:"id"`
+	InteractionId InteractionId  `json:"interactionId"`
+	Body          *ResumeConsultationInteractionJSONRequestBody
+}
+
+type ResumeConsultationInteractionResponseObject interface {
+	VisitResumeConsultationInteractionResponse(w http.ResponseWriter) error
+}
+
+type ResumeConsultationInteraction200TexteventStreamResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response ResumeConsultationInteraction200TexteventStreamResponse) VisitResumeConsultationInteractionResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		// If w doesn't support flushing, fall back to io.Copy.
+		_, err := io.Copy(w, response.Body)
+		return err
+	}
+	// text/event-stream messages are typically small; use a
+	// modest buffer and flush after each chunk so clients see
+	// events immediately instead of waiting on OS buffering.
+	buf := make([]byte, 4096)
+	for {
+		n, err := response.Body.Read(buf)
+		if n > 0 {
+			if _, writeErr := w.Write(buf[:n]); writeErr != nil {
+				return writeErr
+			}
+			flusher.Flush()
+		}
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return err
+		}
+	}
+}
+
+type ResumeConsultationInteraction400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ResumeConsultationInteraction400JSONResponse) VisitResumeConsultationInteractionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResumeConsultationInteraction401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ResumeConsultationInteraction401JSONResponse) VisitResumeConsultationInteractionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResumeConsultationInteraction404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ResumeConsultationInteraction404JSONResponse) VisitResumeConsultationInteractionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResumeConsultationInteraction409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ResumeConsultationInteraction409JSONResponse) VisitResumeConsultationInteractionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ResumeConsultationInteraction500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ResumeConsultationInteraction500JSONResponse) VisitResumeConsultationInteractionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConsultationThreadRequestObject struct {
+	Id ConsultationId `json:"id"`
+}
+
+type GetConsultationThreadResponseObject interface {
+	VisitGetConsultationThreadResponse(w http.ResponseWriter) error
+}
+
+type GetConsultationThread200JSONResponse ConsultationThreadResponse
+
+func (response GetConsultationThread200JSONResponse) VisitGetConsultationThreadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConsultationThread400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response GetConsultationThread400JSONResponse) VisitGetConsultationThreadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConsultationThread401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetConsultationThread401JSONResponse) VisitGetConsultationThreadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConsultationThread404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetConsultationThread404JSONResponse) VisitGetConsultationThreadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConsultationThread500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetConsultationThread500JSONResponse) VisitGetConsultationThreadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListConversationsRequestObject struct {
+	Params ListConversationsParams
+}
+
+type ListConversationsResponseObject interface {
+	VisitListConversationsResponse(w http.ResponseWriter) error
+}
+
+type ListConversations200JSONResponse ConversationListResponse
+
+func (response ListConversations200JSONResponse) VisitListConversationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListConversations400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ListConversations400JSONResponse) VisitListConversationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListConversations401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListConversations401JSONResponse) VisitListConversationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListConversations500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListConversations500JSONResponse) VisitListConversationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSharedConversationRequestObject struct {
+	Token string `json:"token"`
+}
+
+type GetSharedConversationResponseObject interface {
+	VisitGetSharedConversationResponse(w http.ResponseWriter) error
+}
+
+type GetSharedConversation200JSONResponse SharedConversationResponse
+
+func (response GetSharedConversation200JSONResponse) VisitGetSharedConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSharedConversation400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response GetSharedConversation400JSONResponse) VisitGetSharedConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSharedConversation404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetSharedConversation404JSONResponse) VisitGetSharedConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSharedConversation500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetSharedConversation500JSONResponse) VisitGetSharedConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteConversationRequestObject struct {
+	Id ConversationId `json:"id"`
+}
+
+type DeleteConversationResponseObject interface {
+	VisitDeleteConversationResponse(w http.ResponseWriter) error
+}
+
+type DeleteConversation200JSONResponse ConversationMutationResponse
+
+func (response DeleteConversation200JSONResponse) VisitDeleteConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteConversation400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response DeleteConversation400JSONResponse) VisitDeleteConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteConversation401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteConversation401JSONResponse) VisitDeleteConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteConversation404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteConversation404JSONResponse) VisitDeleteConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteConversation500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response DeleteConversation500JSONResponse) VisitDeleteConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConversationRequestObject struct {
+	Id ConversationId `json:"id"`
+}
+
+type GetConversationResponseObject interface {
+	VisitGetConversationResponse(w http.ResponseWriter) error
+}
+
+type GetConversation200JSONResponse ConversationDetailResponse
+
+func (response GetConversation200JSONResponse) VisitGetConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConversation400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response GetConversation400JSONResponse) VisitGetConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConversation401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetConversation401JSONResponse) VisitGetConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConversation404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetConversation404JSONResponse) VisitGetConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetConversation500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetConversation500JSONResponse) VisitGetConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConversationRequestObject struct {
+	Id   ConversationId `json:"id"`
+	Body *UpdateConversationJSONRequestBody
+}
+
+type UpdateConversationResponseObject interface {
+	VisitUpdateConversationResponse(w http.ResponseWriter) error
+}
+
+type UpdateConversation200JSONResponse ConversationMutationResponse
+
+func (response UpdateConversation200JSONResponse) VisitUpdateConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConversation400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response UpdateConversation400JSONResponse) VisitUpdateConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConversation401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateConversation401JSONResponse) VisitUpdateConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConversation404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateConversation404JSONResponse) VisitUpdateConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateConversation500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UpdateConversation500JSONResponse) VisitUpdateConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PinConversationRequestObject struct {
+	Id   ConversationId `json:"id"`
+	Body *PinConversationJSONRequestBody
+}
+
+type PinConversationResponseObject interface {
+	VisitPinConversationResponse(w http.ResponseWriter) error
+}
+
+type PinConversation200JSONResponse ConversationMutationResponse
+
+func (response PinConversation200JSONResponse) VisitPinConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PinConversation400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response PinConversation400JSONResponse) VisitPinConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PinConversation401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response PinConversation401JSONResponse) VisitPinConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PinConversation404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response PinConversation404JSONResponse) VisitPinConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PinConversation500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response PinConversation500JSONResponse) VisitPinConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListConversationRunsRequestObject struct {
+	Id ConversationId `json:"id"`
+}
+
+type ListConversationRunsResponseObject interface {
+	VisitListConversationRunsResponse(w http.ResponseWriter) error
+}
+
+type ListConversationRuns200JSONResponse ConversationRunListResponse
+
+func (response ListConversationRuns200JSONResponse) VisitListConversationRunsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListConversationRuns400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ListConversationRuns400JSONResponse) VisitListConversationRunsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListConversationRuns401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListConversationRuns401JSONResponse) VisitListConversationRunsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListConversationRuns404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListConversationRuns404JSONResponse) VisitListConversationRunsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListConversationRuns500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListConversationRuns500JSONResponse) VisitListConversationRunsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListRunEventsRequestObject struct {
+	Id     ConversationId    `json:"id"`
+	RunId  ConversationRunId `json:"runId"`
+	Params ListRunEventsParams
+}
+
+type ListRunEventsResponseObject interface {
+	VisitListRunEventsResponse(w http.ResponseWriter) error
+}
+
+type ListRunEvents200JSONResponse RuntimeEventListResponse
+
+func (response ListRunEvents200JSONResponse) VisitListRunEventsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListRunEvents400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ListRunEvents400JSONResponse) VisitListRunEventsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListRunEvents401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListRunEvents401JSONResponse) VisitListRunEventsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListRunEvents404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListRunEvents404JSONResponse) VisitListRunEventsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListRunEvents500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListRunEvents500JSONResponse) VisitListRunEventsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnshareConversationRequestObject struct {
+	Id ConversationId `json:"id"`
+}
+
+type UnshareConversationResponseObject interface {
+	VisitUnshareConversationResponse(w http.ResponseWriter) error
+}
+
+type UnshareConversation200JSONResponse ConversationMutationResponse
+
+func (response UnshareConversation200JSONResponse) VisitUnshareConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnshareConversation400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response UnshareConversation400JSONResponse) VisitUnshareConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnshareConversation401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UnshareConversation401JSONResponse) VisitUnshareConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnshareConversation404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UnshareConversation404JSONResponse) VisitUnshareConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnshareConversation500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UnshareConversation500JSONResponse) VisitUnshareConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ShareConversationRequestObject struct {
+	Id ConversationId `json:"id"`
+}
+
+type ShareConversationResponseObject interface {
+	VisitShareConversationResponse(w http.ResponseWriter) error
+}
+
+type ShareConversation201JSONResponse ShareConversationResponse
+
+func (response ShareConversation201JSONResponse) VisitShareConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ShareConversation400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ShareConversation400JSONResponse) VisitShareConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ShareConversation401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ShareConversation401JSONResponse) VisitShareConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ShareConversation404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ShareConversation404JSONResponse) VisitShareConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ShareConversation500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ShareConversation500JSONResponse) VisitShareConversationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GenerateConversationTitleRequestObject struct {
+	Id ConversationId `json:"id"`
+}
+
+type GenerateConversationTitleResponseObject interface {
+	VisitGenerateConversationTitleResponse(w http.ResponseWriter) error
+}
+
+type GenerateConversationTitle202JSONResponse ConversationMutationResponse
+
+func (response GenerateConversationTitle202JSONResponse) VisitGenerateConversationTitleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GenerateConversationTitle400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response GenerateConversationTitle400JSONResponse) VisitGenerateConversationTitleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GenerateConversationTitle401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GenerateConversationTitle401JSONResponse) VisitGenerateConversationTitleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GenerateConversationTitle404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GenerateConversationTitle404JSONResponse) VisitGenerateConversationTitleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GenerateConversationTitle500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GenerateConversationTitle500JSONResponse) VisitGenerateConversationTitleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RenameConversationTitleRequestObject struct {
+	Id   ConversationId `json:"id"`
+	Body *RenameConversationTitleJSONRequestBody
+}
+
+type RenameConversationTitleResponseObject interface {
+	VisitRenameConversationTitleResponse(w http.ResponseWriter) error
+}
+
+type RenameConversationTitle200JSONResponse ConversationMutationResponse
+
+func (response RenameConversationTitle200JSONResponse) VisitRenameConversationTitleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RenameConversationTitle400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response RenameConversationTitle400JSONResponse) VisitRenameConversationTitleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RenameConversationTitle401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RenameConversationTitle401JSONResponse) VisitRenameConversationTitleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RenameConversationTitle404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response RenameConversationTitle404JSONResponse) VisitRenameConversationTitleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RenameConversationTitle500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response RenameConversationTitle500JSONResponse) VisitRenameConversationTitleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDiagnosisAnalysesRequestObject struct {
+	Params ListDiagnosisAnalysesParams
+}
+
+type ListDiagnosisAnalysesResponseObject interface {
+	VisitListDiagnosisAnalysesResponse(w http.ResponseWriter) error
+}
+
+type ListDiagnosisAnalyses200JSONResponse DiagnosisAnalysisListResponse
+
+func (response ListDiagnosisAnalyses200JSONResponse) VisitListDiagnosisAnalysesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDiagnosisAnalyses400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ListDiagnosisAnalyses400JSONResponse) VisitListDiagnosisAnalysesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDiagnosisAnalyses401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListDiagnosisAnalyses401JSONResponse) VisitListDiagnosisAnalysesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDiagnosisAnalyses500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListDiagnosisAnalyses500JSONResponse) VisitListDiagnosisAnalysesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDiagnosisAnalyses503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ListDiagnosisAnalyses503JSONResponse) VisitListDiagnosisAnalysesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDiagnosisAnalysisRequestObject struct {
+	AnalysisId DiagnosisAnalysisId `json:"analysisId"`
+}
+
+type GetDiagnosisAnalysisResponseObject interface {
+	VisitGetDiagnosisAnalysisResponse(w http.ResponseWriter) error
+}
+
+type GetDiagnosisAnalysis200JSONResponse DiagnosisWorkspaceProjection
+
+func (response GetDiagnosisAnalysis200JSONResponse) VisitGetDiagnosisAnalysisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDiagnosisAnalysis400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response GetDiagnosisAnalysis400JSONResponse) VisitGetDiagnosisAnalysisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDiagnosisAnalysis401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetDiagnosisAnalysis401JSONResponse) VisitGetDiagnosisAnalysisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDiagnosisAnalysis404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetDiagnosisAnalysis404JSONResponse) VisitGetDiagnosisAnalysisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDiagnosisAnalysis500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetDiagnosisAnalysis500JSONResponse) VisitGetDiagnosisAnalysisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AssessDiagnosisCandidatesRequestObject struct {
+	AnalysisId DiagnosisAnalysisId `json:"analysisId"`
+	Body       *AssessDiagnosisCandidatesJSONRequestBody
+}
+
+type AssessDiagnosisCandidatesResponseObject interface {
+	VisitAssessDiagnosisCandidatesResponse(w http.ResponseWriter) error
+}
+
+type AssessDiagnosisCandidates200JSONResponse DiagnosisCandidateAssessmentResponse
+
+func (response AssessDiagnosisCandidates200JSONResponse) VisitAssessDiagnosisCandidatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AssessDiagnosisCandidates400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response AssessDiagnosisCandidates400JSONResponse) VisitAssessDiagnosisCandidatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AssessDiagnosisCandidates401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response AssessDiagnosisCandidates401JSONResponse) VisitAssessDiagnosisCandidatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AssessDiagnosisCandidates404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response AssessDiagnosisCandidates404JSONResponse) VisitAssessDiagnosisCandidatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AssessDiagnosisCandidates500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response AssessDiagnosisCandidates500JSONResponse) VisitAssessDiagnosisCandidatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportDiagnosisRegressionCaseRequestObject struct {
+	AnalysisId DiagnosisAnalysisId `json:"analysisId"`
+}
+
+type ExportDiagnosisRegressionCaseResponseObject interface {
+	VisitExportDiagnosisRegressionCaseResponse(w http.ResponseWriter) error
+}
+
+type ExportDiagnosisRegressionCase200JSONResponse JsonObject
+
+func (response ExportDiagnosisRegressionCase200JSONResponse) VisitExportDiagnosisRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportDiagnosisRegressionCase400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ExportDiagnosisRegressionCase400JSONResponse) VisitExportDiagnosisRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportDiagnosisRegressionCase401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ExportDiagnosisRegressionCase401JSONResponse) VisitExportDiagnosisRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportDiagnosisRegressionCase404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ExportDiagnosisRegressionCase404JSONResponse) VisitExportDiagnosisRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportDiagnosisRegressionCase409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ExportDiagnosisRegressionCase409JSONResponse) VisitExportDiagnosisRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportDiagnosisRegressionCase422JSONResponse struct{ ReplayUnavailableJSONResponse }
+
+func (response ExportDiagnosisRegressionCase422JSONResponse) VisitExportDiagnosisRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportDiagnosisRegressionCase502JSONResponse struct{ BadGatewayJSONResponse }
+
+func (response ExportDiagnosisRegressionCase502JSONResponse) VisitExportDiagnosisRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportDiagnosisRegressionCase503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ExportDiagnosisRegressionCase503JSONResponse) VisitExportDiagnosisRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayDiagnosisAnalysisRequestObject struct {
+	AnalysisId DiagnosisAnalysisId `json:"analysisId"`
+	Body       *ReplayDiagnosisAnalysisJSONRequestBody
+}
+
+type ReplayDiagnosisAnalysisResponseObject interface {
+	VisitReplayDiagnosisAnalysisResponse(w http.ResponseWriter) error
+}
+
+type ReplayDiagnosisAnalysis200JSONResponse DiagnosisReplayReport
+
+func (response ReplayDiagnosisAnalysis200JSONResponse) VisitReplayDiagnosisAnalysisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayDiagnosisAnalysis400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ReplayDiagnosisAnalysis400JSONResponse) VisitReplayDiagnosisAnalysisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayDiagnosisAnalysis401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ReplayDiagnosisAnalysis401JSONResponse) VisitReplayDiagnosisAnalysisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayDiagnosisAnalysis404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ReplayDiagnosisAnalysis404JSONResponse) VisitReplayDiagnosisAnalysisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayDiagnosisAnalysis409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ReplayDiagnosisAnalysis409JSONResponse) VisitReplayDiagnosisAnalysisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayDiagnosisAnalysis422JSONResponse struct{ ReplayUnavailableJSONResponse }
+
+func (response ReplayDiagnosisAnalysis422JSONResponse) VisitReplayDiagnosisAnalysisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayDiagnosisAnalysis502JSONResponse struct{ BadGatewayJSONResponse }
+
+func (response ReplayDiagnosisAnalysis502JSONResponse) VisitReplayDiagnosisAnalysisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayDiagnosisAnalysis503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ReplayDiagnosisAnalysis503JSONResponse) VisitReplayDiagnosisAnalysisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetInjuryHistoryRequestObject struct {
 }
 
@@ -5096,6 +11351,570 @@ func (response GetHealthWorkspace500JSONResponse) VisitGetHealthWorkspaceRespons
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type EnqueueKnowledgeVideoIngestionRequestObject struct {
+	Body *EnqueueKnowledgeVideoIngestionJSONRequestBody
+}
+
+type EnqueueKnowledgeVideoIngestionResponseObject interface {
+	VisitEnqueueKnowledgeVideoIngestionResponse(w http.ResponseWriter) error
+}
+
+type EnqueueKnowledgeVideoIngestion202JSONResponse KnowledgeIngestionEnqueueResponse
+
+func (response EnqueueKnowledgeVideoIngestion202JSONResponse) VisitEnqueueKnowledgeVideoIngestionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type EnqueueKnowledgeVideoIngestion400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response EnqueueKnowledgeVideoIngestion400JSONResponse) VisitEnqueueKnowledgeVideoIngestionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type EnqueueKnowledgeVideoIngestion401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response EnqueueKnowledgeVideoIngestion401JSONResponse) VisitEnqueueKnowledgeVideoIngestionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type EnqueueKnowledgeVideoIngestion403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response EnqueueKnowledgeVideoIngestion403JSONResponse) VisitEnqueueKnowledgeVideoIngestionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type EnqueueKnowledgeVideoIngestion409JSONResponse struct{ ConflictJSONResponse }
+
+func (response EnqueueKnowledgeVideoIngestion409JSONResponse) VisitEnqueueKnowledgeVideoIngestionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type EnqueueKnowledgeVideoIngestion500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response EnqueueKnowledgeVideoIngestion500JSONResponse) VisitEnqueueKnowledgeVideoIngestionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type EnqueueKnowledgeVideoIngestion503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response EnqueueKnowledgeVideoIngestion503JSONResponse) VisitEnqueueKnowledgeVideoIngestionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetKnowledgeIngestionJobRequestObject struct {
+	JobID openapi_types.UUID `json:"jobID"`
+}
+
+type GetKnowledgeIngestionJobResponseObject interface {
+	VisitGetKnowledgeIngestionJobResponse(w http.ResponseWriter) error
+}
+
+type GetKnowledgeIngestionJob200JSONResponse KnowledgeIngestionJob
+
+func (response GetKnowledgeIngestionJob200JSONResponse) VisitGetKnowledgeIngestionJobResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetKnowledgeIngestionJob400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response GetKnowledgeIngestionJob400JSONResponse) VisitGetKnowledgeIngestionJobResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetKnowledgeIngestionJob401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetKnowledgeIngestionJob401JSONResponse) VisitGetKnowledgeIngestionJobResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetKnowledgeIngestionJob403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetKnowledgeIngestionJob403JSONResponse) VisitGetKnowledgeIngestionJobResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetKnowledgeIngestionJob404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetKnowledgeIngestionJob404JSONResponse) VisitGetKnowledgeIngestionJobResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetKnowledgeIngestionJob500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetKnowledgeIngestionJob500JSONResponse) VisitGetKnowledgeIngestionJobResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetKnowledgeIngestionJob503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response GetKnowledgeIngestionJob503JSONResponse) VisitGetKnowledgeIngestionJobResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchKnowledgeRequestObject struct {
+	Body *SearchKnowledgeJSONRequestBody
+}
+
+type SearchKnowledgeResponseObject interface {
+	VisitSearchKnowledgeResponse(w http.ResponseWriter) error
+}
+
+type SearchKnowledge200JSONResponse KnowledgeSearchResponse
+
+func (response SearchKnowledge200JSONResponse) VisitSearchKnowledgeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchKnowledge400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response SearchKnowledge400JSONResponse) VisitSearchKnowledgeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchKnowledge401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response SearchKnowledge401JSONResponse) VisitSearchKnowledgeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchKnowledge403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SearchKnowledge403JSONResponse) VisitSearchKnowledgeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchKnowledge502JSONResponse ErrorEnvelope
+
+func (response SearchKnowledge502JSONResponse) VisitSearchKnowledgeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SearchKnowledge503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response SearchKnowledge503JSONResponse) VisitSearchKnowledgeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListKnowledgeSourcesRequestObject struct {
+}
+
+type ListKnowledgeSourcesResponseObject interface {
+	VisitListKnowledgeSourcesResponse(w http.ResponseWriter) error
+}
+
+type ListKnowledgeSources200JSONResponse KnowledgeSourceListResponse
+
+func (response ListKnowledgeSources200JSONResponse) VisitListKnowledgeSourcesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListKnowledgeSources401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListKnowledgeSources401JSONResponse) VisitListKnowledgeSourcesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListKnowledgeSources403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListKnowledgeSources403JSONResponse) VisitListKnowledgeSourcesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListKnowledgeSources500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListKnowledgeSources500JSONResponse) VisitListKnowledgeSourcesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListKnowledgeSources503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ListKnowledgeSources503JSONResponse) VisitListKnowledgeSourcesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RegisterKnowledgeSourceRequestObject struct {
+	Body *RegisterKnowledgeSourceJSONRequestBody
+}
+
+type RegisterKnowledgeSourceResponseObject interface {
+	VisitRegisterKnowledgeSourceResponse(w http.ResponseWriter) error
+}
+
+type RegisterKnowledgeSource201JSONResponse KnowledgeSource
+
+func (response RegisterKnowledgeSource201JSONResponse) VisitRegisterKnowledgeSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RegisterKnowledgeSource400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response RegisterKnowledgeSource400JSONResponse) VisitRegisterKnowledgeSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RegisterKnowledgeSource401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RegisterKnowledgeSource401JSONResponse) VisitRegisterKnowledgeSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RegisterKnowledgeSource403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RegisterKnowledgeSource403JSONResponse) VisitRegisterKnowledgeSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RegisterKnowledgeSource409JSONResponse struct{ ConflictJSONResponse }
+
+func (response RegisterKnowledgeSource409JSONResponse) VisitRegisterKnowledgeSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RegisterKnowledgeSource500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response RegisterKnowledgeSource500JSONResponse) VisitRegisterKnowledgeSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RegisterKnowledgeSource503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response RegisterKnowledgeSource503JSONResponse) VisitRegisterKnowledgeSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetKnowledgeStatsRequestObject struct {
+}
+
+type GetKnowledgeStatsResponseObject interface {
+	VisitGetKnowledgeStatsResponse(w http.ResponseWriter) error
+}
+
+type GetKnowledgeStats200JSONResponse KnowledgeStats
+
+func (response GetKnowledgeStats200JSONResponse) VisitGetKnowledgeStatsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetKnowledgeStats401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetKnowledgeStats401JSONResponse) VisitGetKnowledgeStatsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetKnowledgeStats403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetKnowledgeStats403JSONResponse) VisitGetKnowledgeStatsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetKnowledgeStats502JSONResponse ErrorEnvelope
+
+func (response GetKnowledgeStats502JSONResponse) VisitGetKnowledgeStatsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetKnowledgeStats503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response GetKnowledgeStats503JSONResponse) VisitGetKnowledgeStatsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -5540,6 +12359,162 @@ func (response SubmitOnboardingContext500JSONResponse) VisitSubmitOnboardingCont
 	return err
 }
 
+type ListOutcomesRequestObject struct {
+	Params ListOutcomesParams
+}
+
+type ListOutcomesResponseObject interface {
+	VisitListOutcomesResponse(w http.ResponseWriter) error
+}
+
+type ListOutcomes200JSONResponse OutcomeListResponse
+
+func (response ListOutcomes200JSONResponse) VisitListOutcomesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListOutcomes400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ListOutcomes400JSONResponse) VisitListOutcomesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListOutcomes401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListOutcomes401JSONResponse) VisitListOutcomesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListOutcomes500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListOutcomes500JSONResponse) VisitListOutcomesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordOutcomeRequestObject struct {
+	Body *RecordOutcomeJSONRequestBody
+}
+
+type RecordOutcomeResponseObject interface {
+	VisitRecordOutcomeResponse(w http.ResponseWriter) error
+}
+
+type RecordOutcome200JSONResponse OutcomeMutationResponse
+
+func (response RecordOutcome200JSONResponse) VisitRecordOutcomeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordOutcome201JSONResponse OutcomeMutationResponse
+
+func (response RecordOutcome201JSONResponse) VisitRecordOutcomeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordOutcome400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response RecordOutcome400JSONResponse) VisitRecordOutcomeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordOutcome401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RecordOutcome401JSONResponse) VisitRecordOutcomeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordOutcome409JSONResponse struct{ ConflictJSONResponse }
+
+func (response RecordOutcome409JSONResponse) VisitRecordOutcomeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordOutcome500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response RecordOutcome500JSONResponse) VisitRecordOutcomeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type RequestPrivacyErasureRequestObject struct {
 	Body *RequestPrivacyErasureJSONRequestBody
 }
@@ -5790,6 +12765,1927 @@ func (response UpdateUserProfile500JSONResponse) VisitUpdateUserProfileResponse(
 	return err
 }
 
+type ListTrainingPlansRequestObject struct {
+}
+
+type ListTrainingPlansResponseObject interface {
+	VisitListTrainingPlansResponse(w http.ResponseWriter) error
+}
+
+type ListTrainingPlans200JSONResponse TrainingPlanListResponse
+
+func (response ListTrainingPlans200JSONResponse) VisitListTrainingPlansResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListTrainingPlans401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListTrainingPlans401JSONResponse) VisitListTrainingPlansResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListTrainingPlans500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListTrainingPlans500JSONResponse) VisitListTrainingPlansResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTrainingPlanRequestObject struct {
+	Id TrainingPlanId `json:"id"`
+}
+
+type GetTrainingPlanResponseObject interface {
+	VisitGetTrainingPlanResponse(w http.ResponseWriter) error
+}
+
+type GetTrainingPlan200JSONResponse TrainingPlan
+
+func (response GetTrainingPlan200JSONResponse) VisitGetTrainingPlanResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTrainingPlan401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetTrainingPlan401JSONResponse) VisitGetTrainingPlanResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTrainingPlan404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetTrainingPlan404JSONResponse) VisitGetTrainingPlanResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CheckInTrainingPlanRequestObject struct {
+	Id TrainingPlanId `json:"id"`
+}
+
+type CheckInTrainingPlanResponseObject interface {
+	VisitCheckInTrainingPlanResponse(w http.ResponseWriter) error
+}
+
+type CheckInTrainingPlan200JSONResponse TrainingCheckInResponse
+
+func (response CheckInTrainingPlan200JSONResponse) VisitCheckInTrainingPlanResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CheckInTrainingPlan401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CheckInTrainingPlan401JSONResponse) VisitCheckInTrainingPlanResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CheckInTrainingPlan404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response CheckInTrainingPlan404JSONResponse) VisitCheckInTrainingPlanResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CheckInTrainingPlan500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response CheckInTrainingPlan500JSONResponse) VisitCheckInTrainingPlanResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateTrainingLogRequestObject struct {
+	Id   TrainingPlanId `json:"id"`
+	Body *UpdateTrainingLogJSONRequestBody
+}
+
+type UpdateTrainingLogResponseObject interface {
+	VisitUpdateTrainingLogResponse(w http.ResponseWriter) error
+}
+
+type UpdateTrainingLog200JSONResponse TrainingLogUpdateResponse
+
+func (response UpdateTrainingLog200JSONResponse) VisitUpdateTrainingLogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateTrainingLog400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response UpdateTrainingLog400JSONResponse) VisitUpdateTrainingLogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateTrainingLog401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateTrainingLog401JSONResponse) VisitUpdateTrainingLogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateTrainingLog404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateTrainingLog404JSONResponse) VisitUpdateTrainingLogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateTrainingLog500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response UpdateTrainingLog500JSONResponse) VisitUpdateTrainingLogResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTrainingProgressRequestObject struct {
+	Id TrainingPlanId `json:"id"`
+}
+
+type GetTrainingProgressResponseObject interface {
+	VisitGetTrainingProgressResponse(w http.ResponseWriter) error
+}
+
+type GetTrainingProgress200JSONResponse TrainingProgress
+
+func (response GetTrainingProgress200JSONResponse) VisitGetTrainingProgressResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTrainingProgress401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetTrainingProgress401JSONResponse) VisitGetTrainingProgressResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTrainingProgress404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetTrainingProgress404JSONResponse) VisitGetTrainingProgressResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReassessTrainingPlanRequestObject struct {
+	Id   TrainingPlanId `json:"id"`
+	Body *ReassessTrainingPlanJSONRequestBody
+}
+
+type ReassessTrainingPlanResponseObject interface {
+	VisitReassessTrainingPlanResponse(w http.ResponseWriter) error
+}
+
+type ReassessTrainingPlan200JSONResponse TrainingFeedbackResult
+
+func (response ReassessTrainingPlan200JSONResponse) VisitReassessTrainingPlanResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReassessTrainingPlan400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ReassessTrainingPlan400JSONResponse) VisitReassessTrainingPlanResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReassessTrainingPlan401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ReassessTrainingPlan401JSONResponse) VisitReassessTrainingPlanResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReassessTrainingPlan404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ReassessTrainingPlan404JSONResponse) VisitReassessTrainingPlanResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTrainingTodayTaskRequestObject struct {
+	Id TrainingPlanId `json:"id"`
+}
+
+type GetTrainingTodayTaskResponseObject interface {
+	VisitGetTrainingTodayTaskResponse(w http.ResponseWriter) error
+}
+
+type GetTrainingTodayTask200JSONResponse TrainingLog
+
+func (response GetTrainingTodayTask200JSONResponse) VisitGetTrainingTodayTaskResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTrainingTodayTask401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetTrainingTodayTask401JSONResponse) VisitGetTrainingTodayTaskResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTrainingTodayTask404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetTrainingTodayTask404JSONResponse) VisitGetTrainingTodayTaskResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCurrentTreatmentRequestObject struct {
+}
+
+type GetCurrentTreatmentResponseObject interface {
+	VisitGetCurrentTreatmentResponse(w http.ResponseWriter) error
+}
+
+type GetCurrentTreatment200JSONResponse CurrentTreatmentResponse
+
+func (response GetCurrentTreatment200JSONResponse) VisitGetCurrentTreatmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCurrentTreatment401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetCurrentTreatment401JSONResponse) VisitGetCurrentTreatmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCurrentTreatment500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetCurrentTreatment500JSONResponse) VisitGetCurrentTreatmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReviewCurrentTreatmentRequestObject struct {
+}
+
+type ReviewCurrentTreatmentResponseObject interface {
+	VisitReviewCurrentTreatmentResponse(w http.ResponseWriter) error
+}
+
+type ReviewCurrentTreatment200JSONResponse CurrentTreatmentResponse
+
+func (response ReviewCurrentTreatment200JSONResponse) VisitReviewCurrentTreatmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReviewCurrentTreatment401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ReviewCurrentTreatment401JSONResponse) VisitReviewCurrentTreatmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReviewCurrentTreatment500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ReviewCurrentTreatment500JSONResponse) VisitReviewCurrentTreatmentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GenerateTreatmentProposalRequestObject struct {
+	Body *GenerateTreatmentProposalJSONRequestBody
+}
+
+type GenerateTreatmentProposalResponseObject interface {
+	VisitGenerateTreatmentProposalResponse(w http.ResponseWriter) error
+}
+
+type GenerateTreatmentProposal201JSONResponse TreatmentProposalResponse
+
+func (response GenerateTreatmentProposal201JSONResponse) VisitGenerateTreatmentProposalResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GenerateTreatmentProposal400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response GenerateTreatmentProposal400JSONResponse) VisitGenerateTreatmentProposalResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GenerateTreatmentProposal401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GenerateTreatmentProposal401JSONResponse) VisitGenerateTreatmentProposalResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GenerateTreatmentProposal409JSONResponse struct{ ConflictJSONResponse }
+
+func (response GenerateTreatmentProposal409JSONResponse) VisitGenerateTreatmentProposalResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GenerateTreatmentProposal500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GenerateTreatmentProposal500JSONResponse) VisitGenerateTreatmentProposalResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GenerateTreatmentProposal503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response GenerateTreatmentProposal503JSONResponse) VisitGenerateTreatmentProposalResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListTreatmentRevisionsRequestObject struct {
+	Params ListTreatmentRevisionsParams
+}
+
+type ListTreatmentRevisionsResponseObject interface {
+	VisitListTreatmentRevisionsResponse(w http.ResponseWriter) error
+}
+
+type ListTreatmentRevisions200JSONResponse TreatmentRevisionListResponse
+
+func (response ListTreatmentRevisions200JSONResponse) VisitListTreatmentRevisionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListTreatmentRevisions400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ListTreatmentRevisions400JSONResponse) VisitListTreatmentRevisionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListTreatmentRevisions401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListTreatmentRevisions401JSONResponse) VisitListTreatmentRevisionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListTreatmentRevisions500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListTreatmentRevisions500JSONResponse) VisitListTreatmentRevisionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTreatmentRevisionRequestObject struct {
+	RevisionId TreatmentRevisionId `json:"revisionId"`
+}
+
+type GetTreatmentRevisionResponseObject interface {
+	VisitGetTreatmentRevisionResponse(w http.ResponseWriter) error
+}
+
+type GetTreatmentRevision200JSONResponse TreatmentRevision
+
+func (response GetTreatmentRevision200JSONResponse) VisitGetTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTreatmentRevision400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response GetTreatmentRevision400JSONResponse) VisitGetTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTreatmentRevision401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetTreatmentRevision401JSONResponse) VisitGetTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTreatmentRevision404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetTreatmentRevision404JSONResponse) VisitGetTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetTreatmentRevision500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetTreatmentRevision500JSONResponse) VisitGetTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptTreatmentRevisionRequestObject struct {
+	RevisionId TreatmentRevisionId `json:"revisionId"`
+	Body       *AcceptTreatmentRevisionJSONRequestBody
+}
+
+type AcceptTreatmentRevisionResponseObject interface {
+	VisitAcceptTreatmentRevisionResponse(w http.ResponseWriter) error
+}
+
+type AcceptTreatmentRevision200JSONResponse AcceptTreatmentRevisionResponse
+
+func (response AcceptTreatmentRevision200JSONResponse) VisitAcceptTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptTreatmentRevision400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response AcceptTreatmentRevision400JSONResponse) VisitAcceptTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptTreatmentRevision401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response AcceptTreatmentRevision401JSONResponse) VisitAcceptTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptTreatmentRevision409JSONResponse struct{ ConflictJSONResponse }
+
+func (response AcceptTreatmentRevision409JSONResponse) VisitAcceptTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptTreatmentRevision500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response AcceptTreatmentRevision500JSONResponse) VisitAcceptTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptTreatmentRevision503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response AcceptTreatmentRevision503JSONResponse) VisitAcceptTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportTreatmentRegressionCaseRequestObject struct {
+	RevisionId TreatmentRevisionId `json:"revisionId"`
+}
+
+type ExportTreatmentRegressionCaseResponseObject interface {
+	VisitExportTreatmentRegressionCaseResponse(w http.ResponseWriter) error
+}
+
+type ExportTreatmentRegressionCase200JSONResponse JsonObject
+
+func (response ExportTreatmentRegressionCase200JSONResponse) VisitExportTreatmentRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportTreatmentRegressionCase400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ExportTreatmentRegressionCase400JSONResponse) VisitExportTreatmentRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportTreatmentRegressionCase401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ExportTreatmentRegressionCase401JSONResponse) VisitExportTreatmentRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportTreatmentRegressionCase404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ExportTreatmentRegressionCase404JSONResponse) VisitExportTreatmentRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportTreatmentRegressionCase409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ExportTreatmentRegressionCase409JSONResponse) VisitExportTreatmentRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportTreatmentRegressionCase422JSONResponse struct{ ReplayUnavailableJSONResponse }
+
+func (response ExportTreatmentRegressionCase422JSONResponse) VisitExportTreatmentRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportTreatmentRegressionCase502JSONResponse struct{ BadGatewayJSONResponse }
+
+func (response ExportTreatmentRegressionCase502JSONResponse) VisitExportTreatmentRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportTreatmentRegressionCase503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ExportTreatmentRegressionCase503JSONResponse) VisitExportTreatmentRegressionCaseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RejectTreatmentRevisionRequestObject struct {
+	RevisionId TreatmentRevisionId `json:"revisionId"`
+}
+
+type RejectTreatmentRevisionResponseObject interface {
+	VisitRejectTreatmentRevisionResponse(w http.ResponseWriter) error
+}
+
+type RejectTreatmentRevision204Response struct {
+}
+
+func (response RejectTreatmentRevision204Response) VisitRejectTreatmentRevisionResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RejectTreatmentRevision400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response RejectTreatmentRevision400JSONResponse) VisitRejectTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RejectTreatmentRevision401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RejectTreatmentRevision401JSONResponse) VisitRejectTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RejectTreatmentRevision409JSONResponse struct{ ConflictJSONResponse }
+
+func (response RejectTreatmentRevision409JSONResponse) VisitRejectTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RejectTreatmentRevision500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response RejectTreatmentRevision500JSONResponse) VisitRejectTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayTreatmentRevisionRequestObject struct {
+	RevisionId TreatmentRevisionId `json:"revisionId"`
+	Body       *ReplayTreatmentRevisionJSONRequestBody
+}
+
+type ReplayTreatmentRevisionResponseObject interface {
+	VisitReplayTreatmentRevisionResponse(w http.ResponseWriter) error
+}
+
+type ReplayTreatmentRevision200JSONResponse TreatmentReplayReport
+
+func (response ReplayTreatmentRevision200JSONResponse) VisitReplayTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayTreatmentRevision400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ReplayTreatmentRevision400JSONResponse) VisitReplayTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayTreatmentRevision401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ReplayTreatmentRevision401JSONResponse) VisitReplayTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayTreatmentRevision404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ReplayTreatmentRevision404JSONResponse) VisitReplayTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayTreatmentRevision409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ReplayTreatmentRevision409JSONResponse) VisitReplayTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayTreatmentRevision422JSONResponse struct{ ReplayUnavailableJSONResponse }
+
+func (response ReplayTreatmentRevision422JSONResponse) VisitReplayTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayTreatmentRevision502JSONResponse struct{ BadGatewayJSONResponse }
+
+func (response ReplayTreatmentRevision502JSONResponse) VisitReplayTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplayTreatmentRevision503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ReplayTreatmentRevision503JSONResponse) VisitReplayTreatmentRevisionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListUploadsRequestObject struct {
+}
+
+type ListUploadsResponseObject interface {
+	VisitListUploadsResponse(w http.ResponseWriter) error
+}
+
+type ListUploads200JSONResponse UploadListResponse
+
+func (response ListUploads200JSONResponse) VisitListUploadsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListUploads401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListUploads401JSONResponse) VisitListUploadsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListUploads500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListUploads500JSONResponse) VisitListUploadsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateUploadRequestObject struct {
+	Body *multipart.Reader
+}
+
+type CreateUploadResponseObject interface {
+	VisitCreateUploadResponse(w http.ResponseWriter) error
+}
+
+type CreateUpload201JSONResponse UserUpload
+
+func (response CreateUpload201JSONResponse) VisitCreateUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateUpload400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response CreateUpload400JSONResponse) VisitCreateUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateUpload401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateUpload401JSONResponse) VisitCreateUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateUpload500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response CreateUpload500JSONResponse) VisitCreateUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPostureAnalysisRequestObject struct {
+}
+
+type GetPostureAnalysisResponseObject interface {
+	VisitGetPostureAnalysisResponse(w http.ResponseWriter) error
+}
+
+type GetPostureAnalysis200JSONResponse PostureAnalysisSummary
+
+func (response GetPostureAnalysis200JSONResponse) VisitGetPostureAnalysisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPostureAnalysis401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetPostureAnalysis401JSONResponse) VisitGetPostureAnalysisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetPostureAnalysis500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetPostureAnalysis500JSONResponse) VisitGetPostureAnalysisResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteUploadRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type DeleteUploadResponseObject interface {
+	VisitDeleteUploadResponse(w http.ResponseWriter) error
+}
+
+type DeleteUpload200JSONResponse UploadDeleteResponse
+
+func (response DeleteUpload200JSONResponse) VisitDeleteUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteUpload400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response DeleteUpload400JSONResponse) VisitDeleteUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteUpload401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteUpload401JSONResponse) VisitDeleteUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteUpload403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteUpload403JSONResponse) VisitDeleteUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteUpload404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteUpload404JSONResponse) VisitDeleteUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteUpload500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response DeleteUpload500JSONResponse) VisitDeleteUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetUploadRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type GetUploadResponseObject interface {
+	VisitGetUploadResponse(w http.ResponseWriter) error
+}
+
+type GetUpload200JSONResponse UserUpload
+
+func (response GetUpload200JSONResponse) VisitGetUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetUpload400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response GetUpload400JSONResponse) VisitGetUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetUpload401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetUpload401JSONResponse) VisitGetUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetUpload403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetUpload403JSONResponse) VisitGetUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetUpload404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetUpload404JSONResponse) VisitGetUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetUpload500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetUpload500JSONResponse) VisitGetUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListHealthDocumentReviewCandidatesRequestObject struct {
+	Id    openapi_types.UUID `json:"id"`
+	RunId openapi_types.UUID `json:"runId"`
+}
+
+type ListHealthDocumentReviewCandidatesResponseObject interface {
+	VisitListHealthDocumentReviewCandidatesResponse(w http.ResponseWriter) error
+}
+
+type ListHealthDocumentReviewCandidates200JSONResponse HealthDocumentReviewListResponse
+
+func (response ListHealthDocumentReviewCandidates200JSONResponse) VisitListHealthDocumentReviewCandidatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListHealthDocumentReviewCandidates400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response ListHealthDocumentReviewCandidates400JSONResponse) VisitListHealthDocumentReviewCandidatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListHealthDocumentReviewCandidates401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListHealthDocumentReviewCandidates401JSONResponse) VisitListHealthDocumentReviewCandidatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListHealthDocumentReviewCandidates403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListHealthDocumentReviewCandidates403JSONResponse) VisitListHealthDocumentReviewCandidatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListHealthDocumentReviewCandidates500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListHealthDocumentReviewCandidates500JSONResponse) VisitListHealthDocumentReviewCandidatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AppendHealthDocumentReviewRequestObject struct {
+	Id    openapi_types.UUID `json:"id"`
+	RunId openapi_types.UUID `json:"runId"`
+	Body  *AppendHealthDocumentReviewJSONRequestBody
+}
+
+type AppendHealthDocumentReviewResponseObject interface {
+	VisitAppendHealthDocumentReviewResponse(w http.ResponseWriter) error
+}
+
+type AppendHealthDocumentReview201JSONResponse DocumentIndicatorReviewRecord
+
+func (response AppendHealthDocumentReview201JSONResponse) VisitAppendHealthDocumentReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AppendHealthDocumentReview400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response AppendHealthDocumentReview400JSONResponse) VisitAppendHealthDocumentReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AppendHealthDocumentReview401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response AppendHealthDocumentReview401JSONResponse) VisitAppendHealthDocumentReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AppendHealthDocumentReview403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response AppendHealthDocumentReview403JSONResponse) VisitAppendHealthDocumentReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AppendHealthDocumentReview409JSONResponse struct{ ConflictJSONResponse }
+
+func (response AppendHealthDocumentReview409JSONResponse) VisitAppendHealthDocumentReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AppendHealthDocumentReview500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response AppendHealthDocumentReview500JSONResponse) VisitAppendHealthDocumentReviewResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetHealthDocumentSourceRequestObject struct {
+	Id    openapi_types.UUID `json:"id"`
+	RunId openapi_types.UUID `json:"runId"`
+}
+
+type GetHealthDocumentSourceResponseObject interface {
+	VisitGetHealthDocumentSourceResponse(w http.ResponseWriter) error
+}
+
+type GetHealthDocumentSource200ApplicationoctetStreamResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response GetHealthDocumentSource200ApplicationoctetStreamResponse) VisitGetHealthDocumentSourceResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetHealthDocumentSource200ApplicationpdfResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response GetHealthDocumentSource200ApplicationpdfResponse) VisitGetHealthDocumentSourceResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "application/pdf")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetHealthDocumentSource200ImagejpegResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response GetHealthDocumentSource200ImagejpegResponse) VisitGetHealthDocumentSourceResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "image/jpeg")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetHealthDocumentSource200ImagepngResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response GetHealthDocumentSource200ImagepngResponse) VisitGetHealthDocumentSourceResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "image/png")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetHealthDocumentSource200ImagewebpResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response GetHealthDocumentSource200ImagewebpResponse) VisitGetHealthDocumentSourceResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "image/webp")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetHealthDocumentSource400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response GetHealthDocumentSource400JSONResponse) VisitGetHealthDocumentSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetHealthDocumentSource401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetHealthDocumentSource401JSONResponse) VisitGetHealthDocumentSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetHealthDocumentSource403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetHealthDocumentSource403JSONResponse) VisitGetHealthDocumentSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetHealthDocumentSource404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetHealthDocumentSource404JSONResponse) VisitGetHealthDocumentSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetHealthDocumentSource500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetHealthDocumentSource500JSONResponse) VisitGetHealthDocumentSourceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetHealthDocumentReviewContextRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type GetHealthDocumentReviewContextResponseObject interface {
+	VisitGetHealthDocumentReviewContextResponse(w http.ResponseWriter) error
+}
+
+type GetHealthDocumentReviewContext200JSONResponse HealthDocumentReviewContext
+
+func (response GetHealthDocumentReviewContext200JSONResponse) VisitGetHealthDocumentReviewContextResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetHealthDocumentReviewContext400JSONResponse struct{ InvalidRequestJSONResponse }
+
+func (response GetHealthDocumentReviewContext400JSONResponse) VisitGetHealthDocumentReviewContextResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetHealthDocumentReviewContext401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetHealthDocumentReviewContext401JSONResponse) VisitGetHealthDocumentReviewContextResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetHealthDocumentReviewContext404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetHealthDocumentReviewContext404JSONResponse) VisitGetHealthDocumentReviewContextResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetHealthDocumentReviewContext500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetHealthDocumentReviewContext500JSONResponse) VisitGetHealthDocumentReviewContextResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// ListAssessments List immutable assessment reports for the authenticated user.
@@ -5807,6 +14703,18 @@ type StrictServerInterface interface {
 	// ReplayAssessment Replay an immutable assessment historically or counterfactually without mutating durable state.
 	// (POST /api/v1/assessment/{id}/replay)
 	ReplayAssessment(ctx context.Context, request ReplayAssessmentRequestObject) (ReplayAssessmentResponseObject, error)
+	// LoginAccount Log in and establish a browser session family.
+	// (POST /api/v1/auth/login)
+	LoginAccount(ctx context.Context, request LoginAccountRequestObject) (LoginAccountResponseObject, error)
+	// LogoutAccount Revoke the current refresh/session family and clear the browser credential.
+	// (POST /api/v1/auth/logout)
+	LogoutAccount(ctx context.Context, request LogoutAccountRequestObject) (LogoutAccountResponseObject, error)
+	// RefreshAccountSession Rotate the HttpOnly refresh credential and return a fresh access credential.
+	// (POST /api/v1/auth/refresh)
+	RefreshAccountSession(ctx context.Context, request RefreshAccountSessionRequestObject) (RefreshAccountSessionResponseObject, error)
+	// RegisterAccount Register a new account and establish a browser session family.
+	// (POST /api/v1/auth/register)
+	RegisterAccount(ctx context.Context, request RegisterAccountRequestObject) (RegisterAccountResponseObject, error)
 	// GetBodyMetrics Get current anthropometric measurements.
 	// (GET /api/v1/body-metrics)
 	GetBodyMetrics(ctx context.Context, request GetBodyMetricsRequestObject) (GetBodyMetricsResponseObject, error)
@@ -5849,6 +14757,84 @@ type StrictServerInterface interface {
 	// RecordClientDiagnostic Record bounded privacy-safe browser operational telemetry.
 	// (POST /api/v1/client-diagnostics)
 	RecordClientDiagnostic(ctx context.Context, request RecordClientDiagnosticRequestObject) (RecordClientDiagnosticResponseObject, error)
+	// StartConsultationRun Start or reattach a durable consultation run and stream public events.
+	// (POST /api/v1/consultation-runs)
+	StartConsultationRun(ctx context.Context, request StartConsultationRunRequestObject) (StartConsultationRunResponseObject, error)
+	// CancelConsultationRun Explicitly cancel a durable consultation run.
+	// (POST /api/v1/consultation-runs/{id}/cancel)
+	CancelConsultationRun(ctx context.Context, request CancelConsultationRunRequestObject) (CancelConsultationRunResponseObject, error)
+	// ReplayConsultationRun Recompute the Go decision authority for a historical consultation run.
+	// (POST /api/v1/consultation-runs/{id}/replay)
+	ReplayConsultationRun(ctx context.Context, request ReplayConsultationRunRequestObject) (ReplayConsultationRunResponseObject, error)
+	// ReplayConsultationRunCounterfactual Recompute the run decision against another immutable configuration.
+	// (POST /api/v1/consultation-runs/{id}/replay/counterfactual)
+	ReplayConsultationRunCounterfactual(ctx context.Context, request ReplayConsultationRunCounterfactualRequestObject) (ReplayConsultationRunCounterfactualResponseObject, error)
+	// GetConsultation Get the durable consultation session and pending interactions.
+	// (GET /api/v1/consultations/{id})
+	GetConsultation(ctx context.Context, request GetConsultationRequestObject) (GetConsultationResponseObject, error)
+	// AnalyzeDiagnosis Generate or safety-block a BodyState-backed diagnosis analysis.
+	// (POST /api/v1/consultations/{id}/diagnosis)
+	AnalyzeDiagnosis(ctx context.Context, request AnalyzeDiagnosisRequestObject) (AnalyzeDiagnosisResponseObject, error)
+	// GetConsultationInteractionMetrics Get answer/expiry metrics for one owned consultation.
+	// (GET /api/v1/consultations/{id}/interaction-metrics)
+	GetConsultationInteractionMetrics(ctx context.Context, request GetConsultationInteractionMetricsRequestObject) (GetConsultationInteractionMetricsResponseObject, error)
+	// ResumeConsultationInteraction Persist an interaction answer and resume the exact durable Agent thread.
+	// (POST /api/v1/consultations/{id}/interrupts/{interactionId}/answers)
+	ResumeConsultationInteraction(ctx context.Context, request ResumeConsultationInteractionRequestObject) (ResumeConsultationInteractionResponseObject, error)
+	// GetConsultationThread Refresh and read the durable consultation workbench projection.
+	// (GET /api/v1/consultations/{id}/thread)
+	GetConsultationThread(ctx context.Context, request GetConsultationThreadRequestObject) (GetConsultationThreadResponseObject, error)
+	// ListConversations List the authenticated user's conversations with cursor pagination.
+	// (GET /api/v1/conversations)
+	ListConversations(ctx context.Context, request ListConversationsRequestObject) (ListConversationsResponseObject, error)
+	// GetSharedConversation Read a shared conversation snapshot by public token.
+	// (GET /api/v1/conversations/share/{token})
+	GetSharedConversation(ctx context.Context, request GetSharedConversationRequestObject) (GetSharedConversationResponseObject, error)
+	// DeleteConversation Soft-delete a conversation and revoke its shares.
+	// (DELETE /api/v1/conversations/{id})
+	DeleteConversation(ctx context.Context, request DeleteConversationRequestObject) (DeleteConversationResponseObject, error)
+	// GetConversation Get one conversation with its ordered messages.
+	// (GET /api/v1/conversations/{id})
+	GetConversation(ctx context.Context, request GetConversationRequestObject) (GetConversationResponseObject, error)
+	// UpdateConversation Update conversation status (active, archived, or deleted).
+	// (PATCH /api/v1/conversations/{id})
+	UpdateConversation(ctx context.Context, request UpdateConversationRequestObject) (UpdateConversationResponseObject, error)
+	// PinConversation Pin or unpin a conversation.
+	// (PATCH /api/v1/conversations/{id}/pin)
+	PinConversation(ctx context.Context, request PinConversationRequestObject) (PinConversationResponseObject, error)
+	// ListConversationRuns List the recorded runs of a conversation.
+	// (GET /api/v1/conversations/{id}/runs)
+	ListConversationRuns(ctx context.Context, request ListConversationRunsRequestObject) (ListConversationRunsResponseObject, error)
+	// ListRunEvents Page through the durable runtime events of one conversation run.
+	// (GET /api/v1/conversations/{id}/runs/{runId}/events)
+	ListRunEvents(ctx context.Context, request ListRunEventsRequestObject) (ListRunEventsResponseObject, error)
+	// UnshareConversation Revoke a conversation share.
+	// (DELETE /api/v1/conversations/{id}/share)
+	UnshareConversation(ctx context.Context, request UnshareConversationRequestObject) (UnshareConversationResponseObject, error)
+	// ShareConversation Publish a share token and public URL for a conversation.
+	// (POST /api/v1/conversations/{id}/share)
+	ShareConversation(ctx context.Context, request ShareConversationRequestObject) (ShareConversationResponseObject, error)
+	// GenerateConversationTitle Queue asynchronous agent title generation for a conversation.
+	// (POST /api/v1/conversations/{id}/title)
+	GenerateConversationTitle(ctx context.Context, request GenerateConversationTitleRequestObject) (GenerateConversationTitleResponseObject, error)
+	// RenameConversationTitle Rename a conversation title directly.
+	// (PUT /api/v1/conversations/{id}/title)
+	RenameConversationTitle(ctx context.Context, request RenameConversationTitleRequestObject) (RenameConversationTitleResponseObject, error)
+	// ListDiagnosisAnalyses List immutable diagnosis analyses for the authenticated user.
+	// (GET /api/v1/diagnosis-analyses)
+	ListDiagnosisAnalyses(ctx context.Context, request ListDiagnosisAnalysesRequestObject) (ListDiagnosisAnalysesResponseObject, error)
+	// GetDiagnosisAnalysis Get one immutable diagnosis analysis with assessments and freshness.
+	// (GET /api/v1/diagnosis-analyses/{analysisId})
+	GetDiagnosisAnalysis(ctx context.Context, request GetDiagnosisAnalysisRequestObject) (GetDiagnosisAnalysisResponseObject, error)
+	// AssessDiagnosisCandidates Record the user's interpretation of diagnosis candidates without deleting unmentioned candidates.
+	// (PUT /api/v1/diagnosis-analyses/{analysisId}/assessment)
+	AssessDiagnosisCandidates(ctx context.Context, request AssessDiagnosisCandidatesRequestObject) (AssessDiagnosisCandidatesResponseObject, error)
+	// ExportDiagnosisRegressionCase Export a frozen developer-reviewed regression case envelope.
+	// (GET /api/v1/diagnosis-analyses/{analysisId}/regression-export)
+	ExportDiagnosisRegressionCase(ctx context.Context, request ExportDiagnosisRegressionCaseRequestObject) (ExportDiagnosisRegressionCaseResponseObject, error)
+	// ReplayDiagnosisAnalysis Replay an immutable diagnosis historically or counterfactually without mutating durable state.
+	// (POST /api/v1/diagnosis-analyses/{analysisId}/replay)
+	ReplayDiagnosisAnalysis(ctx context.Context, request ReplayDiagnosisAnalysisRequestObject) (ReplayDiagnosisAnalysisResponseObject, error)
 	// GetInjuryHistory Get the current injury-history projection.
 	// (GET /api/v1/health-history/injury)
 	GetInjuryHistory(ctx context.Context, request GetInjuryHistoryRequestObject) (GetInjuryHistoryResponseObject, error)
@@ -5858,6 +14844,24 @@ type StrictServerInterface interface {
 	// GetHealthWorkspace Get the current longitudinal health workspace projection.
 	// (GET /api/v1/health-workspace)
 	GetHealthWorkspace(ctx context.Context, request GetHealthWorkspaceRequestObject) (GetHealthWorkspaceResponseObject, error)
+	// EnqueueKnowledgeVideoIngestion Enqueue one governed video ingestion using server-pinned Agent configurations.
+	// (POST /api/v1/knowledge/ingestions/video)
+	EnqueueKnowledgeVideoIngestion(ctx context.Context, request EnqueueKnowledgeVideoIngestionRequestObject) (EnqueueKnowledgeVideoIngestionResponseObject, error)
+	// GetKnowledgeIngestionJob Read one durable Knowledge ingestion lifecycle as a Knowledge operator.
+	// (GET /api/v1/knowledge/ingestions/{jobID})
+	GetKnowledgeIngestionJob(ctx context.Context, request GetKnowledgeIngestionJobRequestObject) (GetKnowledgeIngestionJobResponseObject, error)
+	// SearchKnowledge Search normalized Knowledge as a Knowledge operator.
+	// (POST /api/v1/knowledge/search)
+	SearchKnowledge(ctx context.Context, request SearchKnowledgeRequestObject) (SearchKnowledgeResponseObject, error)
+	// ListKnowledgeSources List governed Knowledge source identities as a Knowledge operator.
+	// (GET /api/v1/knowledge/sources)
+	ListKnowledgeSources(ctx context.Context, request ListKnowledgeSourcesRequestObject) (ListKnowledgeSourcesResponseObject, error)
+	// RegisterKnowledgeSource Register one governed Knowledge source identity as a Knowledge operator.
+	// (POST /api/v1/knowledge/sources)
+	RegisterKnowledgeSource(ctx context.Context, request RegisterKnowledgeSourceRequestObject) (RegisterKnowledgeSourceResponseObject, error)
+	// GetKnowledgeStats Read normalized Knowledge library statistics as a Knowledge operator.
+	// (GET /api/v1/knowledge/stats)
+	GetKnowledgeStats(ctx context.Context, request GetKnowledgeStatsRequestObject) (GetKnowledgeStatsResponseObject, error)
 	// GetLifestyle Get the current lifestyle projection.
 	// (GET /api/v1/lifestyle)
 	GetLifestyle(ctx context.Context, request GetLifestyleRequestObject) (GetLifestyleResponseObject, error)
@@ -5876,6 +14880,12 @@ type StrictServerInterface interface {
 	// SubmitOnboardingContext Atomically establish stable profile identity and the initial BodyState context.
 	// (PUT /api/v1/onboarding/context)
 	SubmitOnboardingContext(ctx context.Context, request SubmitOnboardingContextRequestObject) (SubmitOnboardingContextResponseObject, error)
+	// ListOutcomes List post-intervention Outcomes.
+	// (GET /api/v1/outcomes)
+	ListOutcomes(ctx context.Context, request ListOutcomesRequestObject) (ListOutcomesResponseObject, error)
+	// RecordOutcome Record an idempotent post-intervention outcome and project its BodyState effect.
+	// (POST /api/v1/outcomes)
+	RecordOutcome(ctx context.Context, request RecordOutcomeRequestObject) (RecordOutcomeResponseObject, error)
 	// RequestPrivacyErasure Accept an irreversible full-account and health-data erasure request.
 	// (POST /api/v1/privacy/erasure)
 	RequestPrivacyErasure(ctx context.Context, request RequestPrivacyErasureRequestObject) (RequestPrivacyErasureResponseObject, error)
@@ -5888,6 +14898,81 @@ type StrictServerInterface interface {
 	// UpdateUserProfile Replace the editable stable identity fields.
 	// (PUT /api/v1/profile)
 	UpdateUserProfile(ctx context.Context, request UpdateUserProfileRequestObject) (UpdateUserProfileResponseObject, error)
+	// ListTrainingPlans List TrainingPlan execution projections for the authenticated user.
+	// (GET /api/v1/training)
+	ListTrainingPlans(ctx context.Context, request ListTrainingPlansRequestObject) (ListTrainingPlansResponseObject, error)
+	// GetTrainingPlan Get one owned TrainingPlan execution projection.
+	// (GET /api/v1/training/{id})
+	GetTrainingPlan(ctx context.Context, request GetTrainingPlanRequestObject) (GetTrainingPlanResponseObject, error)
+	// CheckInTrainingPlan Mark today training log checked in and persist its adherence Outcome.
+	// (POST /api/v1/training/{id}/checkin)
+	CheckInTrainingPlan(ctx context.Context, request CheckInTrainingPlanRequestObject) (CheckInTrainingPlanResponseObject, error)
+	// UpdateTrainingLog Update today training log and persist structured feedback Outcome.
+	// (PUT /api/v1/training/{id}/log)
+	UpdateTrainingLog(ctx context.Context, request UpdateTrainingLogRequestObject) (UpdateTrainingLogResponseObject, error)
+	// GetTrainingProgress Read deterministic adherence progress for one TrainingPlan.
+	// (GET /api/v1/training/{id}/progress)
+	GetTrainingProgress(ctx context.Context, request GetTrainingProgressRequestObject) (GetTrainingProgressResponseObject, error)
+	// ReassessTrainingPlan Reassess training feedback and optionally propose a new Treatment revision.
+	// (POST /api/v1/training/{id}/reassess)
+	ReassessTrainingPlan(ctx context.Context, request ReassessTrainingPlanRequestObject) (ReassessTrainingPlanResponseObject, error)
+	// GetTrainingTodayTask Materialize and read today training log for one active plan.
+	// (GET /api/v1/training/{id}/today)
+	GetTrainingTodayTask(ctx context.Context, request GetTrainingTodayTaskRequestObject) (GetTrainingTodayTaskResponseObject, error)
+	// GetCurrentTreatment Read the deterministic current Treatment review projection without mutating state.
+	// (GET /api/v1/treatments/current)
+	GetCurrentTreatment(ctx context.Context, request GetCurrentTreatmentRequestObject) (GetCurrentTreatmentResponseObject, error)
+	// ReviewCurrentTreatment Persist the latest deterministic current Treatment review state.
+	// (POST /api/v1/treatments/current/review)
+	ReviewCurrentTreatment(ctx context.Context, request ReviewCurrentTreatmentRequestObject) (ReviewCurrentTreatmentResponseObject, error)
+	// GenerateTreatmentProposal Generate a revisioned Treatment proposal from a reviewed DiagnosisAnalysis.
+	// (POST /api/v1/treatments/proposals)
+	GenerateTreatmentProposal(ctx context.Context, request GenerateTreatmentProposalRequestObject) (GenerateTreatmentProposalResponseObject, error)
+	// ListTreatmentRevisions List immutable Treatment revisions for the authenticated user.
+	// (GET /api/v1/treatments/revisions)
+	ListTreatmentRevisions(ctx context.Context, request ListTreatmentRevisionsRequestObject) (ListTreatmentRevisionsResponseObject, error)
+	// GetTreatmentRevision Get one immutable Treatment revision.
+	// (GET /api/v1/treatments/revisions/{revisionId})
+	GetTreatmentRevision(ctx context.Context, request GetTreatmentRevisionRequestObject) (GetTreatmentRevisionResponseObject, error)
+	// AcceptTreatmentRevision Atomically accept one Treatment revision and project its TrainingPlan.
+	// (POST /api/v1/treatments/revisions/{revisionId}/accept)
+	AcceptTreatmentRevision(ctx context.Context, request AcceptTreatmentRevisionRequestObject) (AcceptTreatmentRevisionResponseObject, error)
+	// ExportTreatmentRegressionCase Export one frozen Treatment developer regression case.
+	// (GET /api/v1/treatments/revisions/{revisionId}/regression-export)
+	ExportTreatmentRegressionCase(ctx context.Context, request ExportTreatmentRegressionCaseRequestObject) (ExportTreatmentRegressionCaseResponseObject, error)
+	// RejectTreatmentRevision Reject one proposed Treatment revision.
+	// (POST /api/v1/treatments/revisions/{revisionId}/reject)
+	RejectTreatmentRevision(ctx context.Context, request RejectTreatmentRevisionRequestObject) (RejectTreatmentRevisionResponseObject, error)
+	// ReplayTreatmentRevision Replay an immutable Treatment revision historically or counterfactually.
+	// (POST /api/v1/treatments/revisions/{revisionId}/replay)
+	ReplayTreatmentRevision(ctx context.Context, request ReplayTreatmentRevisionRequestObject) (ReplayTreatmentRevisionResponseObject, error)
+	// ListUploads List private upload manifests owned by the authenticated user.
+	// (GET /api/v1/uploads)
+	ListUploads(ctx context.Context, request ListUploadsRequestObject) (ListUploadsResponseObject, error)
+	// CreateUpload Upload one private health document or posture image for authenticated processing.
+	// (POST /api/v1/uploads)
+	CreateUpload(ctx context.Context, request CreateUploadRequestObject) (CreateUploadResponseObject, error)
+	// GetPostureAnalysis Read the latest completed posture-analysis projection for the authenticated user.
+	// (GET /api/v1/uploads/posture-analysis)
+	GetPostureAnalysis(ctx context.Context, request GetPostureAnalysisRequestObject) (GetPostureAnalysisResponseObject, error)
+	// DeleteUpload Delete one owned private upload object and its manifest.
+	// (DELETE /api/v1/uploads/{id})
+	DeleteUpload(ctx context.Context, request DeleteUploadRequestObject) (DeleteUploadResponseObject, error)
+	// GetUpload Get one private upload manifest owned by the authenticated user.
+	// (GET /api/v1/uploads/{id})
+	GetUpload(ctx context.Context, request GetUploadRequestObject) (GetUploadResponseObject, error)
+	// ListHealthDocumentReviewCandidates List append-only review state for one exact owned extraction run.
+	// (GET /api/v1/uploads/{id}/extractions/{runId}/reviews)
+	ListHealthDocumentReviewCandidates(ctx context.Context, request ListHealthDocumentReviewCandidatesRequestObject) (ListHealthDocumentReviewCandidatesResponseObject, error)
+	// AppendHealthDocumentReview Append one idempotent confirm, correct or reject action to an exact owned extraction candidate.
+	// (POST /api/v1/uploads/{id}/extractions/{runId}/reviews)
+	AppendHealthDocumentReview(ctx context.Context, request AppendHealthDocumentReviewRequestObject) (AppendHealthDocumentReviewResponseObject, error)
+	// GetHealthDocumentSource Stream the authenticated private source document for one exact owned extraction run.
+	// (GET /api/v1/uploads/{id}/extractions/{runId}/source)
+	GetHealthDocumentSource(ctx context.Context, request GetHealthDocumentSourceRequestObject) (GetHealthDocumentSourceResponseObject, error)
+	// GetHealthDocumentReviewContext Resolve the current server-owned health-document extraction run and its review projection.
+	// (GET /api/v1/uploads/{id}/health-document-review)
+	GetHealthDocumentReviewContext(ctx context.Context, request GetHealthDocumentReviewContextRequestObject) (GetHealthDocumentReviewContextResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx *gin.Context, request any) (any, error)
@@ -6075,6 +15160,116 @@ func (sh *strictHandler) ReplayAssessment(ctx *gin.Context, id AssessmentReportI
 		sh.options.HandlerErrorFunc(ctx, err)
 	} else if validResponse, ok := response.(ReplayAssessmentResponseObject); ok {
 		if err := validResponse.VisitReplayAssessmentResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// LoginAccount operation middleware
+func (sh *strictHandler) LoginAccount(ctx *gin.Context) {
+	var request LoginAccountRequestObject
+
+	var body LoginAccountJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.LoginAccount(ctx, request.(LoginAccountRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "LoginAccount")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(LoginAccountResponseObject); ok {
+		if err := validResponse.VisitLoginAccountResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// LogoutAccount operation middleware
+func (sh *strictHandler) LogoutAccount(ctx *gin.Context) {
+	var request LogoutAccountRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.LogoutAccount(ctx, request.(LogoutAccountRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "LogoutAccount")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(LogoutAccountResponseObject); ok {
+		if err := validResponse.VisitLogoutAccountResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RefreshAccountSession operation middleware
+func (sh *strictHandler) RefreshAccountSession(ctx *gin.Context) {
+	var request RefreshAccountSessionRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RefreshAccountSession(ctx, request.(RefreshAccountSessionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RefreshAccountSession")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(RefreshAccountSessionResponseObject); ok {
+		if err := validResponse.VisitRefreshAccountSessionResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RegisterAccount operation middleware
+func (sh *strictHandler) RegisterAccount(ctx *gin.Context) {
+	var request RegisterAccountRequestObject
+
+	var body RegisterAccountJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RegisterAccount(ctx, request.(RegisterAccountRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RegisterAccount")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(RegisterAccountResponseObject); ok {
+		if err := validResponse.VisitRegisterAccountResponse(ctx.Writer); err != nil {
 			sh.options.ResponseErrorHandlerFunc(ctx, err)
 		}
 	} else if response != nil {
@@ -6505,6 +15700,749 @@ func (sh *strictHandler) RecordClientDiagnostic(ctx *gin.Context) {
 	}
 }
 
+// StartConsultationRun operation middleware
+func (sh *strictHandler) StartConsultationRun(ctx *gin.Context) {
+	var request StartConsultationRunRequestObject
+
+	var body StartConsultationRunJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.StartConsultationRun(ctx, request.(StartConsultationRunRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "StartConsultationRun")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(StartConsultationRunResponseObject); ok {
+		if err := validResponse.VisitStartConsultationRunResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CancelConsultationRun operation middleware
+func (sh *strictHandler) CancelConsultationRun(ctx *gin.Context, id ConsultationRunId) {
+	var request CancelConsultationRunRequestObject
+
+	request.Id = id
+
+	var body CancelConsultationRunJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		if !errors.Is(err, io.EOF) {
+			sh.options.RequestErrorHandlerFunc(ctx, err)
+			return
+		}
+	} else {
+		request.Body = &body
+	}
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.CancelConsultationRun(ctx, request.(CancelConsultationRunRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CancelConsultationRun")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(CancelConsultationRunResponseObject); ok {
+		if err := validResponse.VisitCancelConsultationRunResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReplayConsultationRun operation middleware
+func (sh *strictHandler) ReplayConsultationRun(ctx *gin.Context, id ConsultationRunId) {
+	var request ReplayConsultationRunRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ReplayConsultationRun(ctx, request.(ReplayConsultationRunRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReplayConsultationRun")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ReplayConsultationRunResponseObject); ok {
+		if err := validResponse.VisitReplayConsultationRunResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReplayConsultationRunCounterfactual operation middleware
+func (sh *strictHandler) ReplayConsultationRunCounterfactual(ctx *gin.Context, id ConsultationRunId) {
+	var request ReplayConsultationRunCounterfactualRequestObject
+
+	request.Id = id
+
+	var body ReplayConsultationRunCounterfactualJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ReplayConsultationRunCounterfactual(ctx, request.(ReplayConsultationRunCounterfactualRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReplayConsultationRunCounterfactual")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ReplayConsultationRunCounterfactualResponseObject); ok {
+		if err := validResponse.VisitReplayConsultationRunCounterfactualResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetConsultation operation middleware
+func (sh *strictHandler) GetConsultation(ctx *gin.Context, id ConsultationId) {
+	var request GetConsultationRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetConsultation(ctx, request.(GetConsultationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetConsultation")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetConsultationResponseObject); ok {
+		if err := validResponse.VisitGetConsultationResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AnalyzeDiagnosis operation middleware
+func (sh *strictHandler) AnalyzeDiagnosis(ctx *gin.Context, id ConsultationId) {
+	var request AnalyzeDiagnosisRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.AnalyzeDiagnosis(ctx, request.(AnalyzeDiagnosisRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AnalyzeDiagnosis")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(AnalyzeDiagnosisResponseObject); ok {
+		if err := validResponse.VisitAnalyzeDiagnosisResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetConsultationInteractionMetrics operation middleware
+func (sh *strictHandler) GetConsultationInteractionMetrics(ctx *gin.Context, id ConsultationId) {
+	var request GetConsultationInteractionMetricsRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetConsultationInteractionMetrics(ctx, request.(GetConsultationInteractionMetricsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetConsultationInteractionMetrics")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetConsultationInteractionMetricsResponseObject); ok {
+		if err := validResponse.VisitGetConsultationInteractionMetricsResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ResumeConsultationInteraction operation middleware
+func (sh *strictHandler) ResumeConsultationInteraction(ctx *gin.Context, id ConsultationId, interactionId InteractionId) {
+	var request ResumeConsultationInteractionRequestObject
+
+	request.Id = id
+	request.InteractionId = interactionId
+
+	var body ResumeConsultationInteractionJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ResumeConsultationInteraction(ctx, request.(ResumeConsultationInteractionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ResumeConsultationInteraction")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ResumeConsultationInteractionResponseObject); ok {
+		if err := validResponse.VisitResumeConsultationInteractionResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetConsultationThread operation middleware
+func (sh *strictHandler) GetConsultationThread(ctx *gin.Context, id ConsultationId) {
+	var request GetConsultationThreadRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetConsultationThread(ctx, request.(GetConsultationThreadRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetConsultationThread")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetConsultationThreadResponseObject); ok {
+		if err := validResponse.VisitGetConsultationThreadResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListConversations operation middleware
+func (sh *strictHandler) ListConversations(ctx *gin.Context, params ListConversationsParams) {
+	var request ListConversationsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListConversations(ctx, request.(ListConversationsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListConversations")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListConversationsResponseObject); ok {
+		if err := validResponse.VisitListConversationsResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetSharedConversation operation middleware
+func (sh *strictHandler) GetSharedConversation(ctx *gin.Context, token string) {
+	var request GetSharedConversationRequestObject
+
+	request.Token = token
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSharedConversation(ctx, request.(GetSharedConversationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSharedConversation")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetSharedConversationResponseObject); ok {
+		if err := validResponse.VisitGetSharedConversationResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteConversation operation middleware
+func (sh *strictHandler) DeleteConversation(ctx *gin.Context, id ConversationId) {
+	var request DeleteConversationRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteConversation(ctx, request.(DeleteConversationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteConversation")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(DeleteConversationResponseObject); ok {
+		if err := validResponse.VisitDeleteConversationResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetConversation operation middleware
+func (sh *strictHandler) GetConversation(ctx *gin.Context, id ConversationId) {
+	var request GetConversationRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetConversation(ctx, request.(GetConversationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetConversation")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetConversationResponseObject); ok {
+		if err := validResponse.VisitGetConversationResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateConversation operation middleware
+func (sh *strictHandler) UpdateConversation(ctx *gin.Context, id ConversationId) {
+	var request UpdateConversationRequestObject
+
+	request.Id = id
+
+	var body UpdateConversationJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateConversation(ctx, request.(UpdateConversationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateConversation")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(UpdateConversationResponseObject); ok {
+		if err := validResponse.VisitUpdateConversationResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PinConversation operation middleware
+func (sh *strictHandler) PinConversation(ctx *gin.Context, id ConversationId) {
+	var request PinConversationRequestObject
+
+	request.Id = id
+
+	var body PinConversationJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.PinConversation(ctx, request.(PinConversationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PinConversation")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(PinConversationResponseObject); ok {
+		if err := validResponse.VisitPinConversationResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListConversationRuns operation middleware
+func (sh *strictHandler) ListConversationRuns(ctx *gin.Context, id ConversationId) {
+	var request ListConversationRunsRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListConversationRuns(ctx, request.(ListConversationRunsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListConversationRuns")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListConversationRunsResponseObject); ok {
+		if err := validResponse.VisitListConversationRunsResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListRunEvents operation middleware
+func (sh *strictHandler) ListRunEvents(ctx *gin.Context, id ConversationId, runId ConversationRunId, params ListRunEventsParams) {
+	var request ListRunEventsRequestObject
+
+	request.Id = id
+	request.RunId = runId
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListRunEvents(ctx, request.(ListRunEventsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListRunEvents")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListRunEventsResponseObject); ok {
+		if err := validResponse.VisitListRunEventsResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UnshareConversation operation middleware
+func (sh *strictHandler) UnshareConversation(ctx *gin.Context, id ConversationId) {
+	var request UnshareConversationRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.UnshareConversation(ctx, request.(UnshareConversationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnshareConversation")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(UnshareConversationResponseObject); ok {
+		if err := validResponse.VisitUnshareConversationResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ShareConversation operation middleware
+func (sh *strictHandler) ShareConversation(ctx *gin.Context, id ConversationId) {
+	var request ShareConversationRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ShareConversation(ctx, request.(ShareConversationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ShareConversation")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ShareConversationResponseObject); ok {
+		if err := validResponse.VisitShareConversationResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GenerateConversationTitle operation middleware
+func (sh *strictHandler) GenerateConversationTitle(ctx *gin.Context, id ConversationId) {
+	var request GenerateConversationTitleRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GenerateConversationTitle(ctx, request.(GenerateConversationTitleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GenerateConversationTitle")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GenerateConversationTitleResponseObject); ok {
+		if err := validResponse.VisitGenerateConversationTitleResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RenameConversationTitle operation middleware
+func (sh *strictHandler) RenameConversationTitle(ctx *gin.Context, id ConversationId) {
+	var request RenameConversationTitleRequestObject
+
+	request.Id = id
+
+	var body RenameConversationTitleJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RenameConversationTitle(ctx, request.(RenameConversationTitleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RenameConversationTitle")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(RenameConversationTitleResponseObject); ok {
+		if err := validResponse.VisitRenameConversationTitleResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListDiagnosisAnalyses operation middleware
+func (sh *strictHandler) ListDiagnosisAnalyses(ctx *gin.Context, params ListDiagnosisAnalysesParams) {
+	var request ListDiagnosisAnalysesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListDiagnosisAnalyses(ctx, request.(ListDiagnosisAnalysesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListDiagnosisAnalyses")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListDiagnosisAnalysesResponseObject); ok {
+		if err := validResponse.VisitListDiagnosisAnalysesResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetDiagnosisAnalysis operation middleware
+func (sh *strictHandler) GetDiagnosisAnalysis(ctx *gin.Context, analysisId DiagnosisAnalysisId) {
+	var request GetDiagnosisAnalysisRequestObject
+
+	request.AnalysisId = analysisId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetDiagnosisAnalysis(ctx, request.(GetDiagnosisAnalysisRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetDiagnosisAnalysis")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetDiagnosisAnalysisResponseObject); ok {
+		if err := validResponse.VisitGetDiagnosisAnalysisResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AssessDiagnosisCandidates operation middleware
+func (sh *strictHandler) AssessDiagnosisCandidates(ctx *gin.Context, analysisId DiagnosisAnalysisId) {
+	var request AssessDiagnosisCandidatesRequestObject
+
+	request.AnalysisId = analysisId
+
+	var body AssessDiagnosisCandidatesJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.AssessDiagnosisCandidates(ctx, request.(AssessDiagnosisCandidatesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AssessDiagnosisCandidates")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(AssessDiagnosisCandidatesResponseObject); ok {
+		if err := validResponse.VisitAssessDiagnosisCandidatesResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ExportDiagnosisRegressionCase operation middleware
+func (sh *strictHandler) ExportDiagnosisRegressionCase(ctx *gin.Context, analysisId DiagnosisAnalysisId) {
+	var request ExportDiagnosisRegressionCaseRequestObject
+
+	request.AnalysisId = analysisId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ExportDiagnosisRegressionCase(ctx, request.(ExportDiagnosisRegressionCaseRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ExportDiagnosisRegressionCase")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ExportDiagnosisRegressionCaseResponseObject); ok {
+		if err := validResponse.VisitExportDiagnosisRegressionCaseResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReplayDiagnosisAnalysis operation middleware
+func (sh *strictHandler) ReplayDiagnosisAnalysis(ctx *gin.Context, analysisId DiagnosisAnalysisId) {
+	var request ReplayDiagnosisAnalysisRequestObject
+
+	request.AnalysisId = analysisId
+
+	var body ReplayDiagnosisAnalysisJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ReplayDiagnosisAnalysis(ctx, request.(ReplayDiagnosisAnalysisRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReplayDiagnosisAnalysis")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ReplayDiagnosisAnalysisResponseObject); ok {
+		if err := validResponse.VisitReplayDiagnosisAnalysisResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetInjuryHistory operation middleware
 func (sh *strictHandler) GetInjuryHistory(ctx *gin.Context) {
 	var request GetInjuryHistoryRequestObject
@@ -6577,6 +16515,173 @@ func (sh *strictHandler) GetHealthWorkspace(ctx *gin.Context) {
 		sh.options.HandlerErrorFunc(ctx, err)
 	} else if validResponse, ok := response.(GetHealthWorkspaceResponseObject); ok {
 		if err := validResponse.VisitGetHealthWorkspaceResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// EnqueueKnowledgeVideoIngestion operation middleware
+func (sh *strictHandler) EnqueueKnowledgeVideoIngestion(ctx *gin.Context) {
+	var request EnqueueKnowledgeVideoIngestionRequestObject
+
+	var body EnqueueKnowledgeVideoIngestionJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.EnqueueKnowledgeVideoIngestion(ctx, request.(EnqueueKnowledgeVideoIngestionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "EnqueueKnowledgeVideoIngestion")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(EnqueueKnowledgeVideoIngestionResponseObject); ok {
+		if err := validResponse.VisitEnqueueKnowledgeVideoIngestionResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetKnowledgeIngestionJob operation middleware
+func (sh *strictHandler) GetKnowledgeIngestionJob(ctx *gin.Context, jobID openapi_types.UUID) {
+	var request GetKnowledgeIngestionJobRequestObject
+
+	request.JobID = jobID
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetKnowledgeIngestionJob(ctx, request.(GetKnowledgeIngestionJobRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetKnowledgeIngestionJob")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetKnowledgeIngestionJobResponseObject); ok {
+		if err := validResponse.VisitGetKnowledgeIngestionJobResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SearchKnowledge operation middleware
+func (sh *strictHandler) SearchKnowledge(ctx *gin.Context) {
+	var request SearchKnowledgeRequestObject
+
+	var body SearchKnowledgeJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.SearchKnowledge(ctx, request.(SearchKnowledgeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SearchKnowledge")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(SearchKnowledgeResponseObject); ok {
+		if err := validResponse.VisitSearchKnowledgeResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListKnowledgeSources operation middleware
+func (sh *strictHandler) ListKnowledgeSources(ctx *gin.Context) {
+	var request ListKnowledgeSourcesRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListKnowledgeSources(ctx, request.(ListKnowledgeSourcesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListKnowledgeSources")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListKnowledgeSourcesResponseObject); ok {
+		if err := validResponse.VisitListKnowledgeSourcesResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RegisterKnowledgeSource operation middleware
+func (sh *strictHandler) RegisterKnowledgeSource(ctx *gin.Context) {
+	var request RegisterKnowledgeSourceRequestObject
+
+	var body RegisterKnowledgeSourceJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RegisterKnowledgeSource(ctx, request.(RegisterKnowledgeSourceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RegisterKnowledgeSource")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(RegisterKnowledgeSourceResponseObject); ok {
+		if err := validResponse.VisitRegisterKnowledgeSourceResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetKnowledgeStats operation middleware
+func (sh *strictHandler) GetKnowledgeStats(ctx *gin.Context) {
+	var request GetKnowledgeStatsRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetKnowledgeStats(ctx, request.(GetKnowledgeStatsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetKnowledgeStats")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetKnowledgeStatsResponseObject); ok {
+		if err := validResponse.VisitGetKnowledgeStatsResponse(ctx.Writer); err != nil {
 			sh.options.ResponseErrorHandlerFunc(ctx, err)
 		}
 	} else if response != nil {
@@ -6760,6 +16865,63 @@ func (sh *strictHandler) SubmitOnboardingContext(ctx *gin.Context) {
 	}
 }
 
+// ListOutcomes operation middleware
+func (sh *strictHandler) ListOutcomes(ctx *gin.Context, params ListOutcomesParams) {
+	var request ListOutcomesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListOutcomes(ctx, request.(ListOutcomesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListOutcomes")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListOutcomesResponseObject); ok {
+		if err := validResponse.VisitListOutcomesResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RecordOutcome operation middleware
+func (sh *strictHandler) RecordOutcome(ctx *gin.Context) {
+	var request RecordOutcomeRequestObject
+
+	var body RecordOutcomeJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RecordOutcome(ctx, request.(RecordOutcomeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RecordOutcome")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(RecordOutcomeResponseObject); ok {
+		if err := validResponse.VisitRecordOutcomeResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // RequestPrivacyErasure operation middleware
 func (sh *strictHandler) RequestPrivacyErasure(ctx *gin.Context) {
 	var request RequestPrivacyErasureRequestObject
@@ -6870,151 +17032,995 @@ func (sh *strictHandler) UpdateUserProfile(ctx *gin.Context) {
 	}
 }
 
+// ListTrainingPlans operation middleware
+func (sh *strictHandler) ListTrainingPlans(ctx *gin.Context) {
+	var request ListTrainingPlansRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListTrainingPlans(ctx, request.(ListTrainingPlansRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListTrainingPlans")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListTrainingPlansResponseObject); ok {
+		if err := validResponse.VisitListTrainingPlansResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetTrainingPlan operation middleware
+func (sh *strictHandler) GetTrainingPlan(ctx *gin.Context, id TrainingPlanId) {
+	var request GetTrainingPlanRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTrainingPlan(ctx, request.(GetTrainingPlanRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTrainingPlan")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetTrainingPlanResponseObject); ok {
+		if err := validResponse.VisitGetTrainingPlanResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CheckInTrainingPlan operation middleware
+func (sh *strictHandler) CheckInTrainingPlan(ctx *gin.Context, id TrainingPlanId) {
+	var request CheckInTrainingPlanRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.CheckInTrainingPlan(ctx, request.(CheckInTrainingPlanRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CheckInTrainingPlan")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(CheckInTrainingPlanResponseObject); ok {
+		if err := validResponse.VisitCheckInTrainingPlanResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateTrainingLog operation middleware
+func (sh *strictHandler) UpdateTrainingLog(ctx *gin.Context, id TrainingPlanId) {
+	var request UpdateTrainingLogRequestObject
+
+	request.Id = id
+
+	var body UpdateTrainingLogJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateTrainingLog(ctx, request.(UpdateTrainingLogRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateTrainingLog")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(UpdateTrainingLogResponseObject); ok {
+		if err := validResponse.VisitUpdateTrainingLogResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetTrainingProgress operation middleware
+func (sh *strictHandler) GetTrainingProgress(ctx *gin.Context, id TrainingPlanId) {
+	var request GetTrainingProgressRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTrainingProgress(ctx, request.(GetTrainingProgressRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTrainingProgress")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetTrainingProgressResponseObject); ok {
+		if err := validResponse.VisitGetTrainingProgressResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReassessTrainingPlan operation middleware
+func (sh *strictHandler) ReassessTrainingPlan(ctx *gin.Context, id TrainingPlanId) {
+	var request ReassessTrainingPlanRequestObject
+
+	request.Id = id
+
+	var body ReassessTrainingPlanJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ReassessTrainingPlan(ctx, request.(ReassessTrainingPlanRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReassessTrainingPlan")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ReassessTrainingPlanResponseObject); ok {
+		if err := validResponse.VisitReassessTrainingPlanResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetTrainingTodayTask operation middleware
+func (sh *strictHandler) GetTrainingTodayTask(ctx *gin.Context, id TrainingPlanId) {
+	var request GetTrainingTodayTaskRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTrainingTodayTask(ctx, request.(GetTrainingTodayTaskRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTrainingTodayTask")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetTrainingTodayTaskResponseObject); ok {
+		if err := validResponse.VisitGetTrainingTodayTaskResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetCurrentTreatment operation middleware
+func (sh *strictHandler) GetCurrentTreatment(ctx *gin.Context) {
+	var request GetCurrentTreatmentRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCurrentTreatment(ctx, request.(GetCurrentTreatmentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCurrentTreatment")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetCurrentTreatmentResponseObject); ok {
+		if err := validResponse.VisitGetCurrentTreatmentResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReviewCurrentTreatment operation middleware
+func (sh *strictHandler) ReviewCurrentTreatment(ctx *gin.Context) {
+	var request ReviewCurrentTreatmentRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ReviewCurrentTreatment(ctx, request.(ReviewCurrentTreatmentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReviewCurrentTreatment")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ReviewCurrentTreatmentResponseObject); ok {
+		if err := validResponse.VisitReviewCurrentTreatmentResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GenerateTreatmentProposal operation middleware
+func (sh *strictHandler) GenerateTreatmentProposal(ctx *gin.Context) {
+	var request GenerateTreatmentProposalRequestObject
+
+	var body GenerateTreatmentProposalJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GenerateTreatmentProposal(ctx, request.(GenerateTreatmentProposalRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GenerateTreatmentProposal")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GenerateTreatmentProposalResponseObject); ok {
+		if err := validResponse.VisitGenerateTreatmentProposalResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListTreatmentRevisions operation middleware
+func (sh *strictHandler) ListTreatmentRevisions(ctx *gin.Context, params ListTreatmentRevisionsParams) {
+	var request ListTreatmentRevisionsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListTreatmentRevisions(ctx, request.(ListTreatmentRevisionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListTreatmentRevisions")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListTreatmentRevisionsResponseObject); ok {
+		if err := validResponse.VisitListTreatmentRevisionsResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetTreatmentRevision operation middleware
+func (sh *strictHandler) GetTreatmentRevision(ctx *gin.Context, revisionId TreatmentRevisionId) {
+	var request GetTreatmentRevisionRequestObject
+
+	request.RevisionId = revisionId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTreatmentRevision(ctx, request.(GetTreatmentRevisionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTreatmentRevision")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetTreatmentRevisionResponseObject); ok {
+		if err := validResponse.VisitGetTreatmentRevisionResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AcceptTreatmentRevision operation middleware
+func (sh *strictHandler) AcceptTreatmentRevision(ctx *gin.Context, revisionId TreatmentRevisionId) {
+	var request AcceptTreatmentRevisionRequestObject
+
+	request.RevisionId = revisionId
+
+	var body AcceptTreatmentRevisionJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		if !errors.Is(err, io.EOF) {
+			sh.options.RequestErrorHandlerFunc(ctx, err)
+			return
+		}
+	} else {
+		request.Body = &body
+	}
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.AcceptTreatmentRevision(ctx, request.(AcceptTreatmentRevisionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AcceptTreatmentRevision")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(AcceptTreatmentRevisionResponseObject); ok {
+		if err := validResponse.VisitAcceptTreatmentRevisionResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ExportTreatmentRegressionCase operation middleware
+func (sh *strictHandler) ExportTreatmentRegressionCase(ctx *gin.Context, revisionId TreatmentRevisionId) {
+	var request ExportTreatmentRegressionCaseRequestObject
+
+	request.RevisionId = revisionId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ExportTreatmentRegressionCase(ctx, request.(ExportTreatmentRegressionCaseRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ExportTreatmentRegressionCase")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ExportTreatmentRegressionCaseResponseObject); ok {
+		if err := validResponse.VisitExportTreatmentRegressionCaseResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RejectTreatmentRevision operation middleware
+func (sh *strictHandler) RejectTreatmentRevision(ctx *gin.Context, revisionId TreatmentRevisionId) {
+	var request RejectTreatmentRevisionRequestObject
+
+	request.RevisionId = revisionId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RejectTreatmentRevision(ctx, request.(RejectTreatmentRevisionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RejectTreatmentRevision")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(RejectTreatmentRevisionResponseObject); ok {
+		if err := validResponse.VisitRejectTreatmentRevisionResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReplayTreatmentRevision operation middleware
+func (sh *strictHandler) ReplayTreatmentRevision(ctx *gin.Context, revisionId TreatmentRevisionId) {
+	var request ReplayTreatmentRevisionRequestObject
+
+	request.RevisionId = revisionId
+
+	var body ReplayTreatmentRevisionJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ReplayTreatmentRevision(ctx, request.(ReplayTreatmentRevisionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReplayTreatmentRevision")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ReplayTreatmentRevisionResponseObject); ok {
+		if err := validResponse.VisitReplayTreatmentRevisionResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListUploads operation middleware
+func (sh *strictHandler) ListUploads(ctx *gin.Context) {
+	var request ListUploadsRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListUploads(ctx, request.(ListUploadsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListUploads")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListUploadsResponseObject); ok {
+		if err := validResponse.VisitListUploadsResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateUpload operation middleware
+func (sh *strictHandler) CreateUpload(ctx *gin.Context) {
+	var request CreateUploadRequestObject
+
+	if reader, err := ctx.Request.MultipartReader(); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	} else {
+		request.Body = reader
+	}
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateUpload(ctx, request.(CreateUploadRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateUpload")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(CreateUploadResponseObject); ok {
+		if err := validResponse.VisitCreateUploadResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetPostureAnalysis operation middleware
+func (sh *strictHandler) GetPostureAnalysis(ctx *gin.Context) {
+	var request GetPostureAnalysisRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetPostureAnalysis(ctx, request.(GetPostureAnalysisRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetPostureAnalysis")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetPostureAnalysisResponseObject); ok {
+		if err := validResponse.VisitGetPostureAnalysisResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteUpload operation middleware
+func (sh *strictHandler) DeleteUpload(ctx *gin.Context, id openapi_types.UUID) {
+	var request DeleteUploadRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteUpload(ctx, request.(DeleteUploadRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteUpload")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(DeleteUploadResponseObject); ok {
+		if err := validResponse.VisitDeleteUploadResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetUpload operation middleware
+func (sh *strictHandler) GetUpload(ctx *gin.Context, id openapi_types.UUID) {
+	var request GetUploadRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetUpload(ctx, request.(GetUploadRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetUpload")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetUploadResponseObject); ok {
+		if err := validResponse.VisitGetUploadResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListHealthDocumentReviewCandidates operation middleware
+func (sh *strictHandler) ListHealthDocumentReviewCandidates(ctx *gin.Context, id openapi_types.UUID, runId openapi_types.UUID) {
+	var request ListHealthDocumentReviewCandidatesRequestObject
+
+	request.Id = id
+	request.RunId = runId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListHealthDocumentReviewCandidates(ctx, request.(ListHealthDocumentReviewCandidatesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListHealthDocumentReviewCandidates")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(ListHealthDocumentReviewCandidatesResponseObject); ok {
+		if err := validResponse.VisitListHealthDocumentReviewCandidatesResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AppendHealthDocumentReview operation middleware
+func (sh *strictHandler) AppendHealthDocumentReview(ctx *gin.Context, id openapi_types.UUID, runId openapi_types.UUID) {
+	var request AppendHealthDocumentReviewRequestObject
+
+	request.Id = id
+	request.RunId = runId
+
+	var body AppendHealthDocumentReviewJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(ctx, err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.AppendHealthDocumentReview(ctx, request.(AppendHealthDocumentReviewRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AppendHealthDocumentReview")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(AppendHealthDocumentReviewResponseObject); ok {
+		if err := validResponse.VisitAppendHealthDocumentReviewResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetHealthDocumentSource operation middleware
+func (sh *strictHandler) GetHealthDocumentSource(ctx *gin.Context, id openapi_types.UUID, runId openapi_types.UUID) {
+	var request GetHealthDocumentSourceRequestObject
+
+	request.Id = id
+	request.RunId = runId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetHealthDocumentSource(ctx, request.(GetHealthDocumentSourceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetHealthDocumentSource")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetHealthDocumentSourceResponseObject); ok {
+		if err := validResponse.VisitGetHealthDocumentSourceResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetHealthDocumentReviewContext operation middleware
+func (sh *strictHandler) GetHealthDocumentReviewContext(ctx *gin.Context, id openapi_types.UUID) {
+	var request GetHealthDocumentReviewContextRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetHealthDocumentReviewContext(ctx, request.(GetHealthDocumentReviewContextRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetHealthDocumentReviewContext")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		sh.options.HandlerErrorFunc(ctx, err)
+	} else if validResponse, ok := response.(GetHealthDocumentReviewContextResponseObject); ok {
+		if err := validResponse.VisitGetHealthDocumentReviewContextResponse(ctx.Writer); err != nil {
+			sh.options.ResponseErrorHandlerFunc(ctx, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(ctx, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // Base64 encoded, compressed with deflate, json marshaled OpenAPI spec.
 // Stored as a slice of fixed-width chunks rather than one concatenated
 // const string: with thousands of chunks the chained `+` fold is several
 // times slower for the Go compiler than parsing a slice literal.
 var swaggerSpec = []string{
-	"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",
+	"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",
 }
 
 // decodeSpec returns the embedded OpenAPI spec as raw JSON bytes,

@@ -1,6 +1,6 @@
 # vNext Phase 02 — Public REST / OpenAPI-first
 
-- Status: IN PROGRESS
+- Status: COMPLETE
 - Branch: `refactor/vnext-02-rest-openapi`
 - Parent: `refactor/bodysense-vnext`
 - Canonical authority: `packages/contracts/openapi/bodysense.v1.openapi.yaml`
@@ -603,3 +603,415 @@ complex migrated response projections semantic-schema validated
 ```
 
 Known baseline test stderr noise and the existing BodyExplorer3D bundle warning remain unchanged. `BS-VNEXT-REST-007` continues to track generated-client bundle review for the end of Phase 02.
+
+## Checkpoint 9 — Conversation / share / durable-event REST boundary
+
+Status: COMPLETE ON PHASE BRANCH
+
+The conversation browser surface is now owned by the generated OpenAPI router:
+
+```text
+GET    /api/v1/conversations
+GET    /api/v1/conversations/{id}
+PATCH  /api/v1/conversations/{id}
+DELETE /api/v1/conversations/{id}
+PATCH  /api/v1/conversations/{id}/pin
+PUT    /api/v1/conversations/{id}/title
+POST   /api/v1/conversations/{id}/title
+POST   /api/v1/conversations/{id}/share
+DELETE /api/v1/conversations/{id}/share
+GET    /api/v1/conversations/share/{token}
+GET    /api/v1/conversations/{id}/runs
+GET    /api/v1/conversations/{id}/runs/{runId}/events
+```
+
+The legacy ConversationHandler and RuntimeEventHandler are deleted. The public share read is registered in the unauthenticated capability-URL partition; all user-owned conversation, run and event operations stay in the authenticated partition.
+
+### Public projection boundary
+
+The first handoff draft mirrored persistence models directly into OpenAPI. That would have frozen internal fields such as `user_id`, provider conversation identifiers, active execution pointers and frozen agent configuration/provenance into the browser contract. The final adapter instead projects explicit public transport types before strict schema validation.
+
+Characterization tests prove the conversation list omits persistence-only identity/provider/agent fields while preserving the browser fields required by the consultation UI. Shared snapshots are validated as public `ConversationMessage` objects rather than arbitrary JSON objects.
+
+### Browser boundary
+
+The consultation feature no longer constructs handwritten URLs for migrated conversation operations. It calls the generated Orval Fetch + Zod operations through `openApiAuthFetch` or `openApiPublicFetch`, then maps transport output into the existing feature-domain model. Pagination naming is deliberately normalized from transport `hasMore/nextCursor` to feature `has_more/next_cursor`; generated transport types do not leak into React state.
+
+Durable run-event reads now validate the OpenAPI response first and then pass each event through the canonical `parseStreamEvent` runtime contract before it reaches recovery logic.
+
+### Coverage after this batch
+
+```text
+Phase 00 routes               96
+operational exclusions         1
+browser-facing eligible       95
+OpenAPI-authoritative         48
+missing                       47
+coverage                   50.53%
+```
+
+### Verification
+
+```text
+pnpm contracts:lint                         PASS (2 known route-ambiguity warnings for static share vs {id})
+pnpm contracts:check-generated              PASS
+Go httpapi + cmd/server tests                PASS
+Web consultation service                    20/20 PASS
+Web typecheck                               PASS
+public share bypasses bearer auth           PASS
+conversation public-projection leak test    PASS
+feature handwritten /api/v1/conversations  NONE
+git diff --check                            PASS
+```
+
+The OpenAPI linter's two `no-ambiguous-paths` warnings describe the long-standing public share shape `/conversations/share/{token}` overlapping the `{id}` namespace in abstract OpenAPI routing. Gin's static-segment precedence is covered by the security-domain characterization test. The path remains unchanged in Phase 02 so the canonical 95-route baseline is not rewritten during migration.
+
+## Checkpoint 10 — Consultation runtime / SSE / thread REST boundary
+
+Status: COMPLETE ON PHASE BRANCH
+
+Eight durable consultation routes are now owned by the generated OpenAPI boundary:
+
+```text
+POST /api/v1/consultation-runs
+POST /api/v1/consultation-runs/{id}/cancel
+POST /api/v1/consultation-runs/{id}/replay
+POST /api/v1/consultation-runs/{id}/replay/counterfactual
+GET  /api/v1/consultations/{id}
+GET  /api/v1/consultations/{id}/thread
+POST /api/v1/consultations/{id}/interrupts/{interactionId}/answers
+GET  /api/v1/consultations/{id}/interaction-metrics
+```
+
+The old `ConsultationHandler`, `ThreadProjectionHandler`, and consultation HTTP DTO package are removed. Runtime commands now live under `internal/consultation`, so neither generated OpenAPI types nor legacy HTTP DTOs leak into the durable Agent runtime.
+
+### SSE boundary
+
+`startConsultationRun` and `resumeConsultationInteraction` remain true streaming operations. The strict OpenAPI adapter passes Gin's real `ResponseWriter` to the runtime, which writes and flushes SSE directly; the returned response object is a no-op visitor so the strict handler cannot buffer or write the stream a second time.
+
+A characterization test proves an emitted SSE frame is written exactly once. Contract-invalid image upload IDs are rejected by the OpenAPI request validator before the consultation runtime is invoked.
+
+On the Web, streaming calls use generated URL builders plus generated Zod request schemas while retaining raw `authFetch` responses for incremental SSE consumption. Non-streaming consultation reads/cancel/metrics use the generated Orval Fetch + Zod clients and map transport projections back to feature-domain types.
+
+### Public projection boundary
+
+The thread contract exposes the browser workbench projection, not the persistence model. Active turn events are projected as public RuntimeEvent v1 envelopes; tool calls explicitly normalize absent result/error to JSON null; body-state load failure remains non-fatal and is represented as `body_state: null`, preserving legacy semantics.
+
+### Coverage after this batch
+
+```text
+Phase 00 routes               96
+operational exclusions         1
+browser-facing eligible       95
+OpenAPI-authoritative         56
+missing                       39
+coverage                   58.95%
+```
+
+### Verification
+
+```text
+pnpm contracts:lint                         PASS (same 2 known share-path ambiguity warnings)
+pnpm contracts:check-generated              PASS
+Go consultation/httpapi/cmd-server tests    PASS
+Web consultation service                    21/21 PASS
+Web typecheck                               PASS
+SSE single-write characterization           PASS
+invalid image UUID rejected pre-runtime     PASS
+legacy Consultation/Thread handlers         REMOVED
+legacy consultation HTTP DTO                REMOVED
+git diff --check                            PASS
+```
+
+## Checkpoint 11 — Diagnosis application / analysis / replay REST boundary
+
+Status: COMPLETE ON PHASE BRANCH
+
+The complete Diagnosis REST family is now OpenAPI-authoritative:
+
+```text
+POST /api/v1/consultations/{id}/diagnosis
+GET  /api/v1/diagnosis-analyses
+GET  /api/v1/diagnosis-analyses/{analysisId}
+PUT  /api/v1/diagnosis-analyses/{analysisId}/assessment
+POST /api/v1/diagnosis-analyses/{analysisId}/replay
+GET  /api/v1/diagnosis-analyses/{analysisId}/regression-export
+```
+
+### Application ownership
+
+The former `DiagnosisHandler` mixed HTTP concerns with BodyState readiness, safety gating, Agent configuration selection, immutable replay input, rollout observation, Evidence persistence, hypothesis projection, governance review and consultation phase transitions. That orchestration now lives in `service.DiagnosisApplicationService`, which exposes a transport-neutral `Analyze` use case and stable application error codes. The OpenAPI adapter owns only authentication, status-code mapping and public projection.
+
+The old `DiagnosisHandler` is deleted. Its three characterization tests were preserved at the application layer: selected Agent configuration identity, missing consultation session, and unavailable BodyState diagnosis domain.
+
+### Public projection hardening
+
+The previous read path embedded persistence models for freshness and candidate assessments, leaking `user_id` into browser JSON. The vNext public schema and adapter now remove that persistence identity. Health Workspace reuses the same diagnosis sanitizer so its strict generated response cannot regress to the old leak.
+
+`candidate_assessments` and `freshness` are optional augmentations of the base immutable analysis projection. This matches actual service semantics: Analyze does not inherently create candidate assessments, and freshness evaluation is best-effort on the direct analysis route. Health Workspace retains its stronger product invariant and fails closed if an existing diagnosis projection lacks review state.
+
+### Replay and compatibility boundary
+
+Historical/counterfactual replay has a structured generated report. Regression export remains an explicitly opaque developer-dataset envelope. Analyze temporarily returns a generated `JsonObject` because the characterized legacy pre-envelope governance-rejected branch returns a transient non-durable object without analysis identity; this looseness is confined to one compatibility mapper and is not used for durable history.
+
+### Coverage after this batch
+
+```text
+Phase 00 routes               96
+operational exclusions         1
+browser-facing eligible       95
+OpenAPI-authoritative         62
+missing                       33
+coverage                   65.26%
+```
+
+### Verification
+
+```text
+pnpm contracts:lint                         PASS (same 2 known share-path ambiguity warnings)
+pnpm contracts:check-generated              PASS
+Go test ./...                               PASS
+Web consultation service                    23/23 PASS
+Web typecheck                               PASS
+handwritten diagnosis feature URLs          NONE
+nested freshness/assessment user_id leak    BLOCKED BY PROJECTION TEST
+Diagnosis application characterizations     PASS
+git diff --check                            PASS
+```
+
+## Checkpoint 12 — Treatment / TrainingPlan acceptance / Outcome REST boundary
+
+Status: COMPLETE ON PHASE BRANCH
+
+The complete revisioned Treatment + Outcome REST family is now OpenAPI-authoritative:
+
+```text
+POST /api/v1/treatments/proposals
+GET  /api/v1/treatments/current
+POST /api/v1/treatments/current/review
+GET  /api/v1/treatments/revisions
+GET  /api/v1/treatments/revisions/{revisionId}
+POST /api/v1/treatments/revisions/{revisionId}/replay
+GET  /api/v1/treatments/revisions/{revisionId}/regression-export
+POST /api/v1/treatments/revisions/{revisionId}/accept
+POST /api/v1/treatments/revisions/{revisionId}/reject
+POST /api/v1/outcomes
+GET  /api/v1/outcomes
+```
+
+The legacy `TreatmentHandler` is deleted. Read-only current-treatment preview remains separate from the mutating review command. Acceptance remains atomic: the generated adapter delegates exclusively to `TrainingService.AcceptTreatmentAndEnsurePlan`, preserving the treatment-acceptance + TrainingPlan projection transaction boundary.
+
+### Public projection hardening
+
+The old persistence-backed JSON exposed `user_id` on Treatment, Intervention, TrainingPlan and Outcome. Those fields have been removed from the public OpenAPI components. One transport presenter sanitizes those exact persistence identities and is reused by the standalone endpoints and Health Workspace, including nested revision interventions.
+
+The Web workspace feature no longer models these persistence identities and no longer contains handwritten Treatment/Outcome URLs. Proposal, accept/reject, current review and Outcome recording use generated Orval Fetch + Zod clients behind `openApiAuthFetch`.
+
+### Replay / feedback semantics
+
+Treatment replay has a structured generated report and a regression test proving the service report shape satisfies the public schema. Regression export remains an intentionally opaque developer dataset envelope. Outcome idempotency is preserved: an existing result returns 200, a new Outcome returns 201.
+
+### Coverage after this batch
+
+```text
+Phase 00 routes               96
+operational exclusions         1
+browser-facing eligible       95
+OpenAPI-authoritative         73
+missing                       22
+coverage                   76.84%
+```
+
+### Verification
+
+```text
+pnpm contracts:lint                         PASS (same 2 known share-path ambiguity warnings)
+pnpm contracts:check-generated              PASS
+Go test ./...                               PASS
+Web workspace OpenAPI tests                 10/10 PASS
+Web typecheck                               PASS
+handwritten treatment/outcome URLs          NONE
+Treatment/Intervention/Plan/Outcome user_id BLOCKED BY PROJECTION TEST
+atomic acceptance boundary                  PASS
+Treatment replay strict-schema regression   PASS
+git diff --check                            PASS
+```
+
+## Checkpoint 13 — Training execution / feedback / reassessment REST boundary
+
+Status: COMPLETE ON PHASE BRANCH
+
+The complete Training execution REST family is now OpenAPI-authoritative:
+
+```text
+GET  /api/v1/training
+GET  /api/v1/training/{id}
+GET  /api/v1/training/{id}/today
+POST /api/v1/training/{id}/checkin
+PUT  /api/v1/training/{id}/log
+GET  /api/v1/training/{id}/progress
+POST /api/v1/training/{id}/reassess
+```
+
+The legacy `TrainingHandler` and `ReassessmentHandler` are deleted. The generated adapter maps validated transport inputs into `TrainingFeedbackInput` and preserves the existing service ownership for daily task materialization, check-in Outcome persistence, structured feedback, deterministic progress, and reassessment-driven Treatment proposal generation.
+
+### Public projection hardening
+
+TrainingPlan continues to use the public projection introduced with Treatment migration. TrainingLog now has its own explicit browser projection and does not expose persistence `user_id`. Feedback responses reuse the Treatment/Outcome public presenters, so a nested Outcome or Treatment proposal cannot reintroduce persistence identity through the Training API.
+
+The Web Training feature no longer contains handwritten `/api/v1/training` calls. List/get/today/check-in/log/progress/reassess all use generated Orval Fetch + Zod clients behind `openApiAuthFetch` while preserving the existing feature-level types.
+
+### Coverage after this batch
+
+```text
+Phase 00 routes               96
+operational exclusions         1
+browser-facing eligible       95
+OpenAPI-authoritative         80
+missing                       15
+coverage                   84.21%
+```
+
+### Verification
+
+```text
+pnpm contracts:verify                       PASS (same 2 known share-path ambiguity warnings)
+Go test ./...                               PASS
+Web Training service                        3/3 PASS
+Web typecheck                               PASS
+handwritten Training production URLs        NONE
+TrainingLog user_id leak                    BLOCKED BY PROJECTION TEST
+nested feedback Outcome/Proposal projection PASS
+git diff --check                            PASS
+```
+
+## Checkpoint 14 — Upload / health-document review REST boundary
+
+Status: COMPLETE ON PHASE BRANCH
+
+The complete authenticated Upload and health-document human-review REST family is now OpenAPI-authoritative:
+
+```text
+POST   /api/v1/uploads
+GET    /api/v1/uploads
+GET    /api/v1/uploads/posture-analysis
+GET    /api/v1/uploads/{id}
+DELETE /api/v1/uploads/{id}
+GET    /api/v1/uploads/{id}/health-document-review
+GET    /api/v1/uploads/{id}/extractions/{runId}/reviews
+POST   /api/v1/uploads/{id}/extractions/{runId}/reviews
+GET    /api/v1/uploads/{id}/extractions/{runId}/source
+```
+
+The legacy `UploadHandler` and `HealthDocumentReviewHandler` are deleted. Multipart upload remains owned by `UploadService`: the generated strict boundary parses the OpenAPI multipart stream into a standard `multipart.FileHeader` and delegates validation, private-object storage, durable manifest creation and derived OCR/posture jobs to the existing application service. The private source endpoint remains streaming and preserves the stored PDF/JPEG/PNG/WebP media type with `X-Content-Type-Options: nosniff`.
+
+### Public projection hardening
+
+Pre-user vNext removes three compatibility/persistence identities that the browser never needed:
+
+- `UserUpload.user_id`
+- deprecated `file_path` (which was only a projection of private `storage_key`)
+- `DocumentIndicatorReviewRecord.reviewer_user_id`
+
+`storage_backend`, `storage_key` and `agent_configuration_id` remain server-private as well. Generated Zod schemas are strict: a nominal 200 response that reintroduces `user_id` or `file_path` fails closed in the Web boundary.
+
+`GET /uploads` now returns the explicit `{ uploads: [...] }` response component rather than a bare array so Orval applies generated Zod runtime validation to each upload manifest. This is an intentional pre-user contract reset, not a compatibility alias.
+
+### Web ownership
+
+`uploadStore` now uses generated list/create/delete clients through the central `openApiAuthFetch` authority. Multipart request input is parsed with the generated `CreateUploadRequest` Zod schema before transmission. Health-document review context/action/source operations also use generated clients; the append-review request is validated by the generated request schema, 404 context remains mapped to `null`, and Blob source loading keeps the existing UI behavior. Feature-level upload/review types remain handwritten application models and generated transport types do not leak into components.
+
+### Coverage after this batch
+
+```text
+Phase 00 routes               96
+operational exclusions         1
+browser-facing eligible       95
+OpenAPI-authoritative         89
+missing                        6
+coverage                   93.68%
+```
+
+### Verification
+
+```text
+pnpm contracts:verify                       PASS (same 2 known share-path ambiguity warnings)
+Go test ./...                               PASS
+Web UploadStore + Review UI                 9/9 PASS
+Web typecheck                               PASS
+handwritten Upload production URLs          NONE
+legacy Upload/Review handlers               REMOVED
+multipart -> FileHeader characterization    PASS
+private source MIME + nosniff                PASS
+upload/review persistence identity leaks     BLOCKED BY PROJECTION/ZOD TESTS
+git diff --check                            PASS
+```
+
+## Checkpoint 15 — Operator Knowledge REST boundary
+
+Status: COMPLETE ON PHASE BRANCH
+
+The final six browser-facing routes are now OpenAPI-authoritative and live in an explicit Knowledge operator security domain:
+
+```text
+POST /api/v1/knowledge/sources
+GET  /api/v1/knowledge/sources
+POST /api/v1/knowledge/ingestions/video
+GET  /api/v1/knowledge/ingestions/{jobID}
+POST /api/v1/knowledge/search
+GET  /api/v1/knowledge/stats
+```
+
+`RegisterRoutes` now has four explicit generated security domains: public auth, public capability-share, authenticated browser user, and authenticated Knowledge operator. Knowledge ordering is `Auth -> durable Operator role -> OpenAPI Validator -> generated adapter`. A characterization test proves that a non-operator member is rejected with 403 before request validation and before any Knowledge application method runs. This closes `BS-VNEXT-REST-013` without weakening the protected-user domain or duplicating the generated server registration.
+
+The legacy Gin `KnowledgeHandler` is deleted. Source registration and ingestion use the existing application services directly; `video_path` traversal protection now belongs to `KnowledgeIngestionService`, so CLI/internal callers cannot bypass it. Search/stats proxy behavior moved into a transport-neutral typed `KnowledgeQueryService` with request context, timeout, bounded body reads, strict upstream JSON decoding, and generic 502 mapping for internal AI-service failures.
+
+### Public projection hardening
+
+The operator contract intentionally does not expose:
+
+- `KnowledgeSource.registered_by`
+- ingestion Job `user_id`, raw `input`, `idempotency_key`, run/conversation linkage or metadata
+- Python Knowledge clip `file_path`
+- caller-controlled splitter/curator Agent configuration IDs
+
+Agent configuration remains server-pinned by `KnowledgeIngestionService`. The public ingestion request exposes only governed execution knobs; the durable job retains the authoritative pinned source/operator/Agent identities internally.
+
+### Final Phase 02 coverage
+
+```text
+Phase 00 routes               96
+operational exclusions         1  (GET /api/health)
+browser-facing eligible       95
+OpenAPI-authoritative         95
+missing                        0
+coverage                  100.00%
+```
+
+### Verification
+
+```text
+pnpm contracts:verify                       PASS (same 2 known share-path ambiguity warnings)
+Go test ./...                               PASS
+Web typecheck                               PASS
+handwritten Knowledge production URLs       NONE
+legacy Knowledge handler                    REMOVED
+member -> Knowledge adapter                  BLOCKED BEFORE VALIDATION/APPLICATION
+operator -> generated Knowledge adapter      PASS
+unsafe registered/requested video paths      REJECTED IN APPLICATION SERVICE
+source/job/search private-field projection   PASS
+public REST coverage                         95/95, missing=0
+git diff --check                            PASS
+```
+
+## Phase 02 completion acceptance
+
+Status: **COMPLETE**
+
+Phase 02 closes with the canonical OpenAPI authority covering all **95 / 95** eligible browser-facing REST operations. `GET /api/health` remains the single intentional operational exclusion. The final implementation has four explicit generated security domains (auth-public, share-public, authenticated user, Knowledge operator), no missing migration routes and no duplicate generated registrations.
+
+The end-of-phase ownership review also closes the two application-model package debts discovered during migration: HealthWorkspace and the Lifestyle/BodyMetrics/InjuryHistory/Onboarding command/read-model families now live under `internal/service`, not `internal/dto`. Generated OpenAPI types remain confined to `internal/generated/openapi/v1` and `transport/httpapi`.
+
+Final bundle review closes `BS-VNEXT-REST-007` without weakening runtime validation: ConsultationPage is **357.21 kB / 105.61 kB gzip**, effectively flat versus the earlier **355.71 kB / 105.27 kB gzip** checkpoint; the earlier ~45.11 kB generated/shared chunk no longer appears, while the generated consultation service is **12.02 kB / 3.45 kB gzip**. The remaining large-chunk warning is dominated by the pre-existing BodyExplorer3D asset, not OpenAPI/Zod.
+
+Phase 03 is **not started** by this completion.

@@ -11,7 +11,6 @@ export const DiagnosisCandidateAssessment = /*#__PURE__*/ zod.strictObject({
   "id": /*#__PURE__*/ zod.uuid(),
   "analysis_id": /*#__PURE__*/ zod.uuid(),
   "candidate_id": /*#__PURE__*/ zod.uuid(),
-  "user_id": /*#__PURE__*/ zod.uuid(),
   "state": /*#__PURE__*/ zod.enum(['confirmed', 'unsure', 'not_applicable']),
   "assessed_at": /*#__PURE__*/ zod.iso.datetime({"offset":true})
 });

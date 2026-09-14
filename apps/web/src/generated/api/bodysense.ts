@@ -6,11 +6,13 @@
  * OpenAPI spec version: 1.0.0-vnext
  */
 import {
+  AcceptTreatmentRevisionResponse,
   AssessmentListResponse,
   AssessmentRegressionExport,
   AssessmentReplayReport,
   AssessmentReport,
   AssessmentReportV2,
+  AuthSession,
   BodyMetricsSnapshot,
   BodyStateEvidenceListResponse,
   BodyStateFactMutationResponse,
@@ -18,23 +20,74 @@ import {
   BodyStateObservationMutationResponse,
   BodyStateRevisionMutationResponse,
   BodyStateSnapshot,
+  CancelConsultationRunResponse,
+  ConsultationRunDecision,
+  ConsultationSessionResponse,
+  ConsultationThreadResponse,
+  ConversationDetailResponse,
+  ConversationListResponse,
+  ConversationMutationResponse,
+  ConversationRunListResponse,
+  CurrentTreatmentResponse,
   CurrentUser,
+  DiagnosisAnalysisListResponse,
+  DiagnosisCandidateAssessmentResponse,
+  DiagnosisReplayReport,
+  DiagnosisWorkspaceProjection,
+  DocumentIndicatorReviewRecord,
+  HealthDocumentReviewContext,
+  HealthDocumentReviewListResponse,
   HealthWorkspace,
   InjuryHistorySnapshot,
+  InteractionMetrics,
+  JsonObject,
+  KnowledgeIngestionEnqueueResponse,
+  KnowledgeIngestionJob,
+  KnowledgeSearchResponse,
+  KnowledgeSource,
+  KnowledgeSourceListResponse,
+  KnowledgeStats,
   LifestyleSnapshot,
+  LogoutAcknowledgement,
   NullableUserProfileResponse,
   OnboardingContextResult,
+  OutcomeListResponse,
+  OutcomeMutationResponse,
+  PostureAnalysisSummary,
   PrivacyErasureAccepted,
   PrivacyErasurePlan,
-  UserProfileResponse
+  RuntimeEventListResponse,
+  ShareConversationResponse,
+  SharedConversationResponse,
+  TrainingCheckInResponse,
+  TrainingFeedbackResult,
+  TrainingLog,
+  TrainingLogUpdateResponse,
+  TrainingPlan,
+  TrainingPlanListResponse,
+  TrainingProgress,
+  TreatmentProposalResponse,
+  TreatmentReplayReport,
+  TreatmentRevision,
+  TreatmentRevisionListResponse,
+  UploadDeleteResponse,
+  UploadListResponse,
+  UserProfileResponse,
+  UserUpload
 } from './model';
 import type {
+  AcceptTreatmentRevisionRequest,
+  AcceptTreatmentRevisionResponseOutput,
+  AppendHealthDocumentReviewRequest,
   AssessmentListResponseOutput,
   AssessmentRegressionExportOutput,
   AssessmentReplayReportOutput,
   AssessmentReplayRequest,
   AssessmentReportOutput,
   AssessmentReportV2Output,
+  AuthLoginRequest,
+  AuthRegisterRequest,
+  AuthSessionOutput,
   BodyMetricsSnapshotOutput,
   BodyStateEvidenceListResponseOutput,
   BodyStateFactMutationResponseOutput,
@@ -44,31 +97,99 @@ import type {
   BodyStateObservationMutationResponseOutput,
   BodyStateRevisionMutationResponseOutput,
   BodyStateSnapshotOutput,
+  CancelConsultationRunRequest,
+  CancelConsultationRunResponseOutput,
   ClientDiagnostic,
+  ConsultationCounterfactualReplayRequest,
+  ConsultationRunDecisionOutput,
+  ConsultationSessionResponseOutput,
+  ConsultationThreadResponseOutput,
+  ConversationDetailResponseOutput,
+  ConversationListResponseOutput,
+  ConversationMutationResponseOutput,
+  ConversationPinRequest,
+  ConversationRunListResponseOutput,
+  ConversationTitleRequest,
+  ConversationUpdateRequest,
   CorrectBodyStateFactRequest,
+  CreateUploadRequest,
+  CurrentTreatmentResponseOutput,
   CurrentUserOutput,
+  DiagnosisAnalysisListResponseOutput,
+  DiagnosisCandidateAssessmentRequest,
+  DiagnosisCandidateAssessmentResponseOutput,
+  DiagnosisReplayReportOutput,
+  DiagnosisReplayRequest,
+  DiagnosisWorkspaceProjectionOutput,
+  DocumentIndicatorReviewRecordOutput,
+  HealthDocumentReviewContextOutput,
+  HealthDocumentReviewListResponseOutput,
   HealthWorkspaceOutput,
   InjuryHistorySnapshotOutput,
+  InteractionMetricsOutput,
+  JsonObjectOutput,
+  KnowledgeIngestionEnqueueResponseOutput,
+  KnowledgeIngestionJobOutput,
+  KnowledgeSearchRequest,
+  KnowledgeSearchResponseOutput,
+  KnowledgeSourceListResponseOutput,
+  KnowledgeSourceOutput,
+  KnowledgeStatsOutput,
+  KnowledgeVideoIngestionRequest,
   LifestyleSnapshotOutput,
   ListAssessmentsParams,
+  ListConversationsParams,
+  ListDiagnosisAnalysesParams,
+  ListOutcomesParams,
+  ListRunEventsParams,
+  ListTreatmentRevisionsParams,
+  LogoutAcknowledgementOutput,
   NullableUserProfileResponseOutput,
   OnboardingContextRequest,
   OnboardingContextResultOutput,
+  OutcomeListResponseOutput,
+  OutcomeMutationResponseOutput,
+  PostureAnalysisSummaryOutput,
   PrivacyErasureAcceptedOutput,
   PrivacyErasurePlanOutput,
   PrivacyErasureRequest,
+  RecordOutcomeRequest,
+  RegisterKnowledgeSourceRequest,
   ResolveBodyStateSafetyRequest,
+  ResumeConsultationInteractionRequest,
   ReviewBodyStateFactRequest,
   ReviewBodyStateObservationRequest,
   ReviewLifestyleCandidateRequest,
+  RuntimeEventListResponseOutput,
+  ShareConversationResponseOutput,
+  SharedConversationResponseOutput,
+  StartConsultationRunRequest,
+  TrainingCheckInResponseOutput,
+  TrainingFeedbackResultOutput,
+  TrainingLogOutput,
+  TrainingLogUpdateRequest,
+  TrainingLogUpdateResponseOutput,
+  TrainingPlanListResponseOutput,
+  TrainingPlanOutput,
+  TrainingProgressOutput,
+  TrainingReassessmentRequest,
+  TreatmentProposalRequest,
+  TreatmentProposalResponseOutput,
+  TreatmentReplayReportOutput,
+  TreatmentReplayRequest,
+  TreatmentRevisionListResponseOutput,
+  TreatmentRevisionOutput,
   UpdateBodyMetricsRequest,
   UpdateBodyStateFactTemporalRequest,
   UpdateBodyStateHypothesisLifecycleRequest,
   UpdateInjuryHistoryRequest,
   UpdateLifestyleRequest,
   UpdateUserProfileRequest,
+  UploadDeleteResponseOutput,
+  UploadListResponseOutput,
   UpsertBodyStateFactRequest,
-  UserProfileResponseOutput
+  UserProfileResponseOutput,
+  UserUploadOutput
 } from './model';
 
 export const getAddBodyStateFactUrl = () => {
@@ -1594,5 +1715,2815 @@ export const exportAssessmentRegressionCase = async (id: string, options?: Reque
   }
   const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
   const data = contentType.includes('json') ? AssessmentRegressionExport.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getRegisterAccountUrl = () => {
+
+
+
+
+  return `/api/v1/auth/register`
+}
+
+/**
+ * @summary Register a new account and establish a browser session family.
+ */
+export const registerAccount = async (authRegisterRequest: AuthRegisterRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<AuthSessionOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getRegisterAccountUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(authRegisterRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: AuthSession, status?: number} = new globalThis.Error();
+    const data : AuthSession = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? AuthSession.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getLoginAccountUrl = () => {
+
+
+
+
+  return `/api/v1/auth/login`
+}
+
+/**
+ * @summary Log in and establish a browser session family.
+ */
+export const loginAccount = async (authLoginRequest: AuthLoginRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<AuthSessionOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getLoginAccountUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(authLoginRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: AuthSession, status?: number} = new globalThis.Error();
+    const data : AuthSession = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? AuthSession.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getRefreshAccountSessionUrl = () => {
+
+
+
+
+  return `/api/v1/auth/refresh`
+}
+
+/**
+ * @summary Rotate the HttpOnly refresh credential and return a fresh access credential.
+ */
+export const refreshAccountSession = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<AuthSessionOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getRefreshAccountSessionUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: AuthSession, status?: number} = new globalThis.Error();
+    const data : AuthSession = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? AuthSession.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getLogoutAccountUrl = () => {
+
+
+
+
+  return `/api/v1/auth/logout`
+}
+
+/**
+ * @summary Revoke the current refresh/session family and clear the browser credential.
+ */
+export const logoutAccount = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<LogoutAcknowledgementOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getLogoutAccountUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: LogoutAcknowledgement, status?: number} = new globalThis.Error();
+    const data : LogoutAcknowledgement = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? LogoutAcknowledgement.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListConversationsUrl = (params?: ListConversationsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/conversations?${stringifiedParams}` : `/api/v1/conversations`
+}
+
+/**
+ * @summary List the authenticated user's conversations with cursor pagination.
+ */
+export const listConversations = async (params?: ListConversationsParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ConversationListResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListConversationsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ConversationListResponse, status?: number} = new globalThis.Error();
+    const data : ConversationListResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ConversationListResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetConversationUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/conversations/${id}`
+}
+
+/**
+ * @summary Get one conversation with its ordered messages.
+ */
+export const getConversation = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ConversationDetailResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetConversationUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ConversationDetailResponse, status?: number} = new globalThis.Error();
+    const data : ConversationDetailResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ConversationDetailResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getUpdateConversationUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/conversations/${id}`
+}
+
+/**
+ * @summary Update conversation status (active, archived, or deleted).
+ */
+export const updateConversation = async (id: string,
+    conversationUpdateRequest: ConversationUpdateRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ConversationMutationResponseOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getUpdateConversationUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(conversationUpdateRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ConversationMutationResponse, status?: number} = new globalThis.Error();
+    const data : ConversationMutationResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ConversationMutationResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getDeleteConversationUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/conversations/${id}`
+}
+
+/**
+ * @summary Soft-delete a conversation and revoke its shares.
+ */
+export const deleteConversation = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ConversationMutationResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getDeleteConversationUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ConversationMutationResponse, status?: number} = new globalThis.Error();
+    const data : ConversationMutationResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ConversationMutationResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getPinConversationUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/conversations/${id}/pin`
+}
+
+/**
+ * @summary Pin or unpin a conversation.
+ */
+export const pinConversation = async (id: string,
+    conversationPinRequest: ConversationPinRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ConversationMutationResponseOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getPinConversationUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(conversationPinRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ConversationMutationResponse, status?: number} = new globalThis.Error();
+    const data : ConversationMutationResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ConversationMutationResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getRenameConversationTitleUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/conversations/${id}/title`
+}
+
+/**
+ * @summary Rename a conversation title directly.
+ */
+export const renameConversationTitle = async (id: string,
+    conversationTitleRequest: ConversationTitleRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ConversationMutationResponseOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getRenameConversationTitleUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(conversationTitleRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ConversationMutationResponse, status?: number} = new globalThis.Error();
+    const data : ConversationMutationResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ConversationMutationResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGenerateConversationTitleUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/conversations/${id}/title`
+}
+
+/**
+ * @summary Queue asynchronous agent title generation for a conversation.
+ */
+export const generateConversationTitle = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ConversationMutationResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGenerateConversationTitleUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ConversationMutationResponse, status?: number} = new globalThis.Error();
+    const data : ConversationMutationResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ConversationMutationResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getShareConversationUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/conversations/${id}/share`
+}
+
+/**
+ * @summary Publish a share token and public URL for a conversation.
+ */
+export const shareConversation = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ShareConversationResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getShareConversationUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ShareConversationResponse, status?: number} = new globalThis.Error();
+    const data : ShareConversationResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ShareConversationResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getUnshareConversationUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/conversations/${id}/share`
+}
+
+/**
+ * @summary Revoke a conversation share.
+ */
+export const unshareConversation = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ConversationMutationResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getUnshareConversationUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ConversationMutationResponse, status?: number} = new globalThis.Error();
+    const data : ConversationMutationResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ConversationMutationResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetSharedConversationUrl = (token: string,) => {
+
+
+
+
+  return `/api/v1/conversations/share/${token}`
+}
+
+/**
+ * @summary Read a shared conversation snapshot by public token.
+ */
+export const getSharedConversation = async (token: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<SharedConversationResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetSharedConversationUrl(token),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: SharedConversationResponse, status?: number} = new globalThis.Error();
+    const data : SharedConversationResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? SharedConversationResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListConversationRunsUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/conversations/${id}/runs`
+}
+
+/**
+ * @summary List the recorded runs of a conversation.
+ */
+export const listConversationRuns = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ConversationRunListResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListConversationRunsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ConversationRunListResponse, status?: number} = new globalThis.Error();
+    const data : ConversationRunListResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ConversationRunListResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListRunEventsUrl = (id: string,
+    runId: string,
+    params?: ListRunEventsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/conversations/${id}/runs/${runId}/events?${stringifiedParams}` : `/api/v1/conversations/${id}/runs/${runId}/events`
+}
+
+/**
+ * @summary Page through the durable runtime events of one conversation run.
+ */
+export const listRunEvents = async (id: string,
+    runId: string,
+    params?: ListRunEventsParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<RuntimeEventListResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListRunEventsUrl(id,runId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: RuntimeEventListResponse, status?: number} = new globalThis.Error();
+    const data : RuntimeEventListResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? RuntimeEventListResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getStartConsultationRunUrl = () => {
+
+
+
+
+  return `/api/v1/consultation-runs`
+}
+
+/**
+ * @summary Start or reattach a durable consultation run and stream public events.
+ */
+export const startConsultationRun = async (startConsultationRunRequest: StartConsultationRunRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<string> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getStartConsultationRunUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(startConsultationRunRequest)
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: string, status?: number} = new globalThis.Error();
+    const data : string = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: string = body !== null ? body : ''
+  return data
+}
+
+
+
+export const getCancelConsultationRunUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/consultation-runs/${id}/cancel`
+}
+
+/**
+ * @summary Explicitly cancel a durable consultation run.
+ */
+export const cancelConsultationRun = async (id: string,
+    cancelConsultationRunRequest?: CancelConsultationRunRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<CancelConsultationRunResponseOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getCancelConsultationRunUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(cancelConsultationRunRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: CancelConsultationRunResponse, status?: number} = new globalThis.Error();
+    const data : CancelConsultationRunResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? CancelConsultationRunResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getReplayConsultationRunUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/consultation-runs/${id}/replay`
+}
+
+/**
+ * @summary Recompute the Go decision authority for a historical consultation run.
+ */
+export const replayConsultationRun = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ConsultationRunDecisionOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getReplayConsultationRunUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ConsultationRunDecision, status?: number} = new globalThis.Error();
+    const data : ConsultationRunDecision = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ConsultationRunDecision.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getReplayConsultationRunCounterfactualUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/consultation-runs/${id}/replay/counterfactual`
+}
+
+/**
+ * @summary Recompute the run decision against another immutable configuration.
+ */
+export const replayConsultationRunCounterfactual = async (id: string,
+    consultationCounterfactualReplayRequest: ConsultationCounterfactualReplayRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ConsultationRunDecisionOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getReplayConsultationRunCounterfactualUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(consultationCounterfactualReplayRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ConsultationRunDecision, status?: number} = new globalThis.Error();
+    const data : ConsultationRunDecision = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ConsultationRunDecision.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetConsultationUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/consultations/${id}`
+}
+
+/**
+ * @summary Get the durable consultation session and pending interactions.
+ */
+export const getConsultation = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ConsultationSessionResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetConsultationUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ConsultationSessionResponse, status?: number} = new globalThis.Error();
+    const data : ConsultationSessionResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ConsultationSessionResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetConsultationThreadUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/consultations/${id}/thread`
+}
+
+/**
+ * @summary Refresh and read the durable consultation workbench projection.
+ */
+export const getConsultationThread = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<ConsultationThreadResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetConsultationThreadUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: ConsultationThreadResponse, status?: number} = new globalThis.Error();
+    const data : ConsultationThreadResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? ConsultationThreadResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getResumeConsultationInteractionUrl = (id: string,
+    interactionId: string,) => {
+
+
+
+
+  return `/api/v1/consultations/${id}/interrupts/${interactionId}/answers`
+}
+
+/**
+ * @summary Persist an interaction answer and resume the exact durable Agent thread.
+ */
+export const resumeConsultationInteraction = async (id: string,
+    interactionId: string,
+    resumeConsultationInteractionRequest: ResumeConsultationInteractionRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<string> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getResumeConsultationInteractionUrl(id,interactionId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(resumeConsultationInteractionRequest)
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: string, status?: number} = new globalThis.Error();
+    const data : string = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: string = body !== null ? body : ''
+  return data
+}
+
+
+
+export const getGetConsultationInteractionMetricsUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/consultations/${id}/interaction-metrics`
+}
+
+/**
+ * @summary Get answer/expiry metrics for one owned consultation.
+ */
+export const getConsultationInteractionMetrics = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<InteractionMetricsOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetConsultationInteractionMetricsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: InteractionMetrics, status?: number} = new globalThis.Error();
+    const data : InteractionMetrics = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? InteractionMetrics.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getAnalyzeDiagnosisUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/consultations/${id}/diagnosis`
+}
+
+/**
+ * @summary Generate or safety-block a BodyState-backed diagnosis analysis.
+ */
+export const analyzeDiagnosis = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<JsonObjectOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getAnalyzeDiagnosisUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: JsonObject, status?: number} = new globalThis.Error();
+    const data : JsonObject = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? JsonObject.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListDiagnosisAnalysesUrl = (params?: ListDiagnosisAnalysesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/diagnosis-analyses?${stringifiedParams}` : `/api/v1/diagnosis-analyses`
+}
+
+/**
+ * @summary List immutable diagnosis analyses for the authenticated user.
+ */
+export const listDiagnosisAnalyses = async (params?: ListDiagnosisAnalysesParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<DiagnosisAnalysisListResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListDiagnosisAnalysesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: DiagnosisAnalysisListResponse, status?: number} = new globalThis.Error();
+    const data : DiagnosisAnalysisListResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? DiagnosisAnalysisListResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetDiagnosisAnalysisUrl = (analysisId: string,) => {
+
+
+
+
+  return `/api/v1/diagnosis-analyses/${analysisId}`
+}
+
+/**
+ * @summary Get one immutable diagnosis analysis with assessments and freshness.
+ */
+export const getDiagnosisAnalysis = async (analysisId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<DiagnosisWorkspaceProjectionOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetDiagnosisAnalysisUrl(analysisId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: DiagnosisWorkspaceProjection, status?: number} = new globalThis.Error();
+    const data : DiagnosisWorkspaceProjection = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? DiagnosisWorkspaceProjection.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getAssessDiagnosisCandidatesUrl = (analysisId: string,) => {
+
+
+
+
+  return `/api/v1/diagnosis-analyses/${analysisId}/assessment`
+}
+
+/**
+ * @summary Record the user's interpretation of diagnosis candidates without deleting unmentioned candidates.
+ */
+export const assessDiagnosisCandidates = async (analysisId: string,
+    diagnosisCandidateAssessmentRequest: DiagnosisCandidateAssessmentRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<DiagnosisCandidateAssessmentResponseOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getAssessDiagnosisCandidatesUrl(analysisId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(diagnosisCandidateAssessmentRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: DiagnosisCandidateAssessmentResponse, status?: number} = new globalThis.Error();
+    const data : DiagnosisCandidateAssessmentResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? DiagnosisCandidateAssessmentResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getReplayDiagnosisAnalysisUrl = (analysisId: string,) => {
+
+
+
+
+  return `/api/v1/diagnosis-analyses/${analysisId}/replay`
+}
+
+/**
+ * @summary Replay an immutable diagnosis historically or counterfactually without mutating durable state.
+ */
+export const replayDiagnosisAnalysis = async (analysisId: string,
+    diagnosisReplayRequest: DiagnosisReplayRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<DiagnosisReplayReportOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getReplayDiagnosisAnalysisUrl(analysisId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(diagnosisReplayRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: DiagnosisReplayReport, status?: number} = new globalThis.Error();
+    const data : DiagnosisReplayReport = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? DiagnosisReplayReport.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getExportDiagnosisRegressionCaseUrl = (analysisId: string,) => {
+
+
+
+
+  return `/api/v1/diagnosis-analyses/${analysisId}/regression-export`
+}
+
+/**
+ * @summary Export a frozen developer-reviewed regression case envelope.
+ */
+export const exportDiagnosisRegressionCase = async (analysisId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<JsonObjectOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getExportDiagnosisRegressionCaseUrl(analysisId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: JsonObject, status?: number} = new globalThis.Error();
+    const data : JsonObject = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? JsonObject.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGenerateTreatmentProposalUrl = () => {
+
+
+
+
+  return `/api/v1/treatments/proposals`
+}
+
+/**
+ * @summary Generate a revisioned Treatment proposal from a reviewed DiagnosisAnalysis.
+ */
+export const generateTreatmentProposal = async (treatmentProposalRequest: TreatmentProposalRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TreatmentProposalResponseOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getGenerateTreatmentProposalUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(treatmentProposalRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TreatmentProposalResponse, status?: number} = new globalThis.Error();
+    const data : TreatmentProposalResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TreatmentProposalResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetCurrentTreatmentUrl = () => {
+
+
+
+
+  return `/api/v1/treatments/current`
+}
+
+/**
+ * @summary Read the deterministic current Treatment review projection without mutating state.
+ */
+export const getCurrentTreatment = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<CurrentTreatmentResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetCurrentTreatmentUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: CurrentTreatmentResponse, status?: number} = new globalThis.Error();
+    const data : CurrentTreatmentResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? CurrentTreatmentResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getReviewCurrentTreatmentUrl = () => {
+
+
+
+
+  return `/api/v1/treatments/current/review`
+}
+
+/**
+ * @summary Persist the latest deterministic current Treatment review state.
+ */
+export const reviewCurrentTreatment = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<CurrentTreatmentResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getReviewCurrentTreatmentUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: CurrentTreatmentResponse, status?: number} = new globalThis.Error();
+    const data : CurrentTreatmentResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? CurrentTreatmentResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListTreatmentRevisionsUrl = (params?: ListTreatmentRevisionsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/treatments/revisions?${stringifiedParams}` : `/api/v1/treatments/revisions`
+}
+
+/**
+ * @summary List immutable Treatment revisions for the authenticated user.
+ */
+export const listTreatmentRevisions = async (params?: ListTreatmentRevisionsParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TreatmentRevisionListResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListTreatmentRevisionsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TreatmentRevisionListResponse, status?: number} = new globalThis.Error();
+    const data : TreatmentRevisionListResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TreatmentRevisionListResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetTreatmentRevisionUrl = (revisionId: string,) => {
+
+
+
+
+  return `/api/v1/treatments/revisions/${revisionId}`
+}
+
+/**
+ * @summary Get one immutable Treatment revision.
+ */
+export const getTreatmentRevision = async (revisionId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TreatmentRevisionOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetTreatmentRevisionUrl(revisionId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TreatmentRevision, status?: number} = new globalThis.Error();
+    const data : TreatmentRevision = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TreatmentRevision.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getReplayTreatmentRevisionUrl = (revisionId: string,) => {
+
+
+
+
+  return `/api/v1/treatments/revisions/${revisionId}/replay`
+}
+
+/**
+ * @summary Replay an immutable Treatment revision historically or counterfactually.
+ */
+export const replayTreatmentRevision = async (revisionId: string,
+    treatmentReplayRequest: TreatmentReplayRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TreatmentReplayReportOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getReplayTreatmentRevisionUrl(revisionId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(treatmentReplayRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TreatmentReplayReport, status?: number} = new globalThis.Error();
+    const data : TreatmentReplayReport = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TreatmentReplayReport.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getExportTreatmentRegressionCaseUrl = (revisionId: string,) => {
+
+
+
+
+  return `/api/v1/treatments/revisions/${revisionId}/regression-export`
+}
+
+/**
+ * @summary Export one frozen Treatment developer regression case.
+ */
+export const exportTreatmentRegressionCase = async (revisionId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<JsonObjectOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getExportTreatmentRegressionCaseUrl(revisionId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: JsonObject, status?: number} = new globalThis.Error();
+    const data : JsonObject = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? JsonObject.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getAcceptTreatmentRevisionUrl = (revisionId: string,) => {
+
+
+
+
+  return `/api/v1/treatments/revisions/${revisionId}/accept`
+}
+
+/**
+ * @summary Atomically accept one Treatment revision and project its TrainingPlan.
+ */
+export const acceptTreatmentRevision = async (revisionId: string,
+    acceptTreatmentRevisionRequest?: AcceptTreatmentRevisionRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<AcceptTreatmentRevisionResponseOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getAcceptTreatmentRevisionUrl(revisionId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(acceptTreatmentRevisionRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: AcceptTreatmentRevisionResponse, status?: number} = new globalThis.Error();
+    const data : AcceptTreatmentRevisionResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? AcceptTreatmentRevisionResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getRejectTreatmentRevisionUrl = (revisionId: string,) => {
+
+
+
+
+  return `/api/v1/treatments/revisions/${revisionId}/reject`
+}
+
+/**
+ * @summary Reject one proposed Treatment revision.
+ */
+export const rejectTreatmentRevision = async (revisionId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<void> => {
+
+  const res = await (fetchFn ?? fetch)(getRejectTreatmentRevisionUrl(revisionId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: void, status?: number} = new globalThis.Error();
+    const data : void = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const data: void = body ? JSON.parse(body) : undefined
+  return data
+}
+
+
+
+export const getRecordOutcomeUrl = () => {
+
+
+
+
+  return `/api/v1/outcomes`
+}
+
+/**
+ * @summary Record an idempotent post-intervention outcome and project its BodyState effect.
+ */
+export const recordOutcome = async (recordOutcomeRequest: RecordOutcomeRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<OutcomeMutationResponseOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getRecordOutcomeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(recordOutcomeRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: OutcomeMutationResponse, status?: number} = new globalThis.Error();
+    const data : OutcomeMutationResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? OutcomeMutationResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListOutcomesUrl = (params?: ListOutcomesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/outcomes?${stringifiedParams}` : `/api/v1/outcomes`
+}
+
+/**
+ * @summary List post-intervention Outcomes.
+ */
+export const listOutcomes = async (params?: ListOutcomesParams, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<OutcomeListResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListOutcomesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: OutcomeListResponse, status?: number} = new globalThis.Error();
+    const data : OutcomeListResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? OutcomeListResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListTrainingPlansUrl = () => {
+
+
+
+
+  return `/api/v1/training`
+}
+
+/**
+ * @summary List TrainingPlan execution projections for the authenticated user.
+ */
+export const listTrainingPlans = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingPlanListResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListTrainingPlansUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TrainingPlanListResponse, status?: number} = new globalThis.Error();
+    const data : TrainingPlanListResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TrainingPlanListResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetTrainingPlanUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/training/${id}`
+}
+
+/**
+ * @summary Get one owned TrainingPlan execution projection.
+ */
+export const getTrainingPlan = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingPlanOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetTrainingPlanUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TrainingPlan, status?: number} = new globalThis.Error();
+    const data : TrainingPlan = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TrainingPlan.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetTrainingTodayTaskUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/training/${id}/today`
+}
+
+/**
+ * @summary Materialize and read today training log for one active plan.
+ */
+export const getTrainingTodayTask = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingLogOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetTrainingTodayTaskUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TrainingLog, status?: number} = new globalThis.Error();
+    const data : TrainingLog = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TrainingLog.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getCheckInTrainingPlanUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/training/${id}/checkin`
+}
+
+/**
+ * @summary Mark today training log checked in and persist its adherence Outcome.
+ */
+export const checkInTrainingPlan = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingCheckInResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getCheckInTrainingPlanUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TrainingCheckInResponse, status?: number} = new globalThis.Error();
+    const data : TrainingCheckInResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TrainingCheckInResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getUpdateTrainingLogUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/training/${id}/log`
+}
+
+/**
+ * @summary Update today training log and persist structured feedback Outcome.
+ */
+export const updateTrainingLog = async (id: string,
+    trainingLogUpdateRequest: TrainingLogUpdateRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingLogUpdateResponseOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getUpdateTrainingLogUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(trainingLogUpdateRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TrainingLogUpdateResponse, status?: number} = new globalThis.Error();
+    const data : TrainingLogUpdateResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TrainingLogUpdateResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetTrainingProgressUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/training/${id}/progress`
+}
+
+/**
+ * @summary Read deterministic adherence progress for one TrainingPlan.
+ */
+export const getTrainingProgress = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingProgressOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetTrainingProgressUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TrainingProgress, status?: number} = new globalThis.Error();
+    const data : TrainingProgress = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TrainingProgress.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getReassessTrainingPlanUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/training/${id}/reassess`
+}
+
+/**
+ * @summary Reassess training feedback and optionally propose a new Treatment revision.
+ */
+export const reassessTrainingPlan = async (id: string,
+    trainingReassessmentRequest: TrainingReassessmentRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<TrainingFeedbackResultOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getReassessTrainingPlanUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(trainingReassessmentRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: TrainingFeedbackResult, status?: number} = new globalThis.Error();
+    const data : TrainingFeedbackResult = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? TrainingFeedbackResult.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getCreateUploadUrl = () => {
+
+
+
+
+  return `/api/v1/uploads`
+}
+
+/**
+ * @summary Upload one private health document or posture image for authenticated processing.
+ */
+export const createUpload = async (createUploadRequest: CreateUploadRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<UserUploadOutput> => {
+    const formData = new FormData();
+formData.append(`file`, createUploadRequest.file);
+formData.append(`file_type`, createUploadRequest.file_type);
+
+  const res = await (fetchFn ?? fetch)(getCreateUploadUrl(),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: UserUpload, status?: number} = new globalThis.Error();
+    const data : UserUpload = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? UserUpload.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListUploadsUrl = () => {
+
+
+
+
+  return `/api/v1/uploads`
+}
+
+/**
+ * @summary List private upload manifests owned by the authenticated user.
+ */
+export const listUploads = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<UploadListResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListUploadsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: UploadListResponse, status?: number} = new globalThis.Error();
+    const data : UploadListResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? UploadListResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetPostureAnalysisUrl = () => {
+
+
+
+
+  return `/api/v1/uploads/posture-analysis`
+}
+
+/**
+ * @summary Read the latest completed posture-analysis projection for the authenticated user.
+ */
+export const getPostureAnalysis = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<PostureAnalysisSummaryOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetPostureAnalysisUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: PostureAnalysisSummary, status?: number} = new globalThis.Error();
+    const data : PostureAnalysisSummary = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? PostureAnalysisSummary.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetUploadUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/uploads/${id}`
+}
+
+/**
+ * @summary Get one private upload manifest owned by the authenticated user.
+ */
+export const getUpload = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<UserUploadOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetUploadUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: UserUpload, status?: number} = new globalThis.Error();
+    const data : UserUpload = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? UserUpload.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getDeleteUploadUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/uploads/${id}`
+}
+
+/**
+ * @summary Delete one owned private upload object and its manifest.
+ */
+export const deleteUpload = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<UploadDeleteResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getDeleteUploadUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: UploadDeleteResponse, status?: number} = new globalThis.Error();
+    const data : UploadDeleteResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? UploadDeleteResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetHealthDocumentReviewContextUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/uploads/${id}/health-document-review`
+}
+
+/**
+ * @summary Resolve the current server-owned health-document extraction run and its review projection.
+ */
+export const getHealthDocumentReviewContext = async (id: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<HealthDocumentReviewContextOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetHealthDocumentReviewContextUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: HealthDocumentReviewContext, status?: number} = new globalThis.Error();
+    const data : HealthDocumentReviewContext = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? HealthDocumentReviewContext.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListHealthDocumentReviewCandidatesUrl = (id: string,
+    runId: string,) => {
+
+
+
+
+  return `/api/v1/uploads/${id}/extractions/${runId}/reviews`
+}
+
+/**
+ * @summary List append-only review state for one exact owned extraction run.
+ */
+export const listHealthDocumentReviewCandidates = async (id: string,
+    runId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<HealthDocumentReviewListResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListHealthDocumentReviewCandidatesUrl(id,runId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: HealthDocumentReviewListResponse, status?: number} = new globalThis.Error();
+    const data : HealthDocumentReviewListResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? HealthDocumentReviewListResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getAppendHealthDocumentReviewUrl = (id: string,
+    runId: string,) => {
+
+
+
+
+  return `/api/v1/uploads/${id}/extractions/${runId}/reviews`
+}
+
+/**
+ * @summary Append one idempotent confirm, correct or reject action to an exact owned extraction candidate.
+ */
+export const appendHealthDocumentReview = async (id: string,
+    runId: string,
+    appendHealthDocumentReviewRequest: AppendHealthDocumentReviewRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<DocumentIndicatorReviewRecordOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getAppendHealthDocumentReviewUrl(id,runId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(appendHealthDocumentReviewRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: DocumentIndicatorReviewRecord, status?: number} = new globalThis.Error();
+    const data : DocumentIndicatorReviewRecord = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? DocumentIndicatorReviewRecord.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetHealthDocumentSourceUrl = (id: string,
+    runId: string,) => {
+
+
+
+
+  return `/api/v1/uploads/${id}/extractions/${runId}/source`
+}
+
+/**
+ * @summary Stream the authenticated private source document for one exact owned extraction run.
+ */
+export const getHealthDocumentSource = async (id: string,
+    runId: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<Blob> => {
+
+  const res = await (fetchFn ?? fetch)(getGetHealthDocumentSourceUrl(id,runId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  if (!res.ok) {
+    const errorBody = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const err: globalThis.Error & {info?: Blob, status?: number} = new globalThis.Error();
+    const data : Blob = errorBody ? JSON.parse(errorBody) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const body = [204, 205, 304].includes(res.status) ? null : await res.blob();
+  const data: Blob = body as Blob
+  return data
+}
+
+
+
+export const getRegisterKnowledgeSourceUrl = () => {
+
+
+
+
+  return `/api/v1/knowledge/sources`
+}
+
+/**
+ * @summary Register one governed Knowledge source identity as a Knowledge operator.
+ */
+export const registerKnowledgeSource = async (registerKnowledgeSourceRequest: RegisterKnowledgeSourceRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<KnowledgeSourceOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getRegisterKnowledgeSourceUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(registerKnowledgeSourceRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: KnowledgeSource, status?: number} = new globalThis.Error();
+    const data : KnowledgeSource = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? KnowledgeSource.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getListKnowledgeSourcesUrl = () => {
+
+
+
+
+  return `/api/v1/knowledge/sources`
+}
+
+/**
+ * @summary List governed Knowledge source identities as a Knowledge operator.
+ */
+export const listKnowledgeSources = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<KnowledgeSourceListResponseOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getListKnowledgeSourcesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: KnowledgeSourceListResponse, status?: number} = new globalThis.Error();
+    const data : KnowledgeSourceListResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? KnowledgeSourceListResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getEnqueueKnowledgeVideoIngestionUrl = () => {
+
+
+
+
+  return `/api/v1/knowledge/ingestions/video`
+}
+
+/**
+ * @summary Enqueue one governed video ingestion using server-pinned Agent configurations.
+ */
+export const enqueueKnowledgeVideoIngestion = async (knowledgeVideoIngestionRequest: KnowledgeVideoIngestionRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<KnowledgeIngestionEnqueueResponseOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getEnqueueKnowledgeVideoIngestionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(knowledgeVideoIngestionRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: KnowledgeIngestionEnqueueResponse, status?: number} = new globalThis.Error();
+    const data : KnowledgeIngestionEnqueueResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? KnowledgeIngestionEnqueueResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetKnowledgeIngestionJobUrl = (jobID: string,) => {
+
+
+
+
+  return `/api/v1/knowledge/ingestions/${jobID}`
+}
+
+/**
+ * @summary Read one durable Knowledge ingestion lifecycle as a Knowledge operator.
+ */
+export const getKnowledgeIngestionJob = async (jobID: string, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<KnowledgeIngestionJobOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetKnowledgeIngestionJobUrl(jobID),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: KnowledgeIngestionJob, status?: number} = new globalThis.Error();
+    const data : KnowledgeIngestionJob = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? KnowledgeIngestionJob.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getSearchKnowledgeUrl = () => {
+
+
+
+
+  return `/api/v1/knowledge/search`
+}
+
+/**
+ * @summary Search normalized Knowledge as a Knowledge operator.
+ */
+export const searchKnowledge = async (knowledgeSearchRequest: KnowledgeSearchRequest, options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<KnowledgeSearchResponseOutput> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+const res = await (fetchFn ?? fetch)(getSearchKnowledgeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(knowledgeSearchRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: KnowledgeSearchResponse, status?: number} = new globalThis.Error();
+    const data : KnowledgeSearchResponse = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? KnowledgeSearchResponse.parse(parsedBody) : parsedBody
+  return data
+}
+
+
+
+export const getGetKnowledgeStatsUrl = () => {
+
+
+
+
+  return `/api/v1/knowledge/stats`
+}
+
+/**
+ * @summary Read normalized Knowledge library statistics as a Knowledge operator.
+ */
+export const getKnowledgeStats = async ( options?: RequestInit, fetchFn?: typeof globalThis.fetch): Promise<KnowledgeStatsOutput> => {
+
+  const res = await (fetchFn ?? fetch)(getGetKnowledgeStatsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+  if (!res.ok) {
+
+    const err: globalThis.Error & {info?: KnowledgeStats, status?: number} = new globalThis.Error();
+    const data : KnowledgeStats = body ? JSON.parse(body) : {}
+    err.info = data;
+    err.status = res.status;
+    throw err;
+  }
+  const parsedBody = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  const data = contentType.includes('json') ? KnowledgeStats.parse(parsedBody) : parsedBody
   return data
 }

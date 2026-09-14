@@ -31,8 +31,8 @@ export const DiagnosisWorkspaceProjection = /*#__PURE__*/ zod.strictObject({
   "evidence_acquisition_trace": JsonObject,
   "decision_authority": /*#__PURE__*/ zod.optional(JsonObject),
   "created_at": /*#__PURE__*/ zod.iso.datetime({"offset":true}),
-  "candidate_assessments": /*#__PURE__*/ zod.array(DiagnosisCandidateAssessment),
-  "freshness": DiagnosisFreshness
+  "candidate_assessments": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.array(DiagnosisCandidateAssessment)),
+  "freshness": /*#__PURE__*/ zod.optional(DiagnosisFreshness)
 });
 
 export type DiagnosisWorkspaceProjection = zod.input<typeof DiagnosisWorkspaceProjection>;

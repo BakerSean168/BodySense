@@ -302,11 +302,27 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   };
   expect(blockedAcceptError.error?.code).toBe("TREATMENT_SAFETY_BLOCKED");
 
+  const bodyStateAfterSafety = await request.get(
+    `${apiBase}/api/v1/body-state`,
+    {
+      headers,
+    },
+  );
+  expect(bodyStateAfterSafety.ok()).toBeTruthy();
+  const safetySnapshot = (await bodyStateAfterSafety.json()) as {
+    current_revision: number;
+  };
+  expect(Number.isInteger(safetySnapshot.current_revision)).toBeTruthy();
+
   const resolveSafety = await request.post(
     `${apiBase}/api/v1/body-state/safety/resolve`,
     {
       headers,
-      data: { resolution: "cleared_by_review", note: "E2E reviewed" },
+      data: {
+        expected_revision: safetySnapshot.current_revision,
+        resolution: "cleared_by_review",
+        note: "E2E reviewed",
+      },
     },
   );
   expect(resolveSafety.ok()).toBeTruthy();

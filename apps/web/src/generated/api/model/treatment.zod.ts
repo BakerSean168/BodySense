@@ -11,7 +11,6 @@ import { TreatmentStatusReason } from './treatmentStatusReason.zod';
 
 export const Treatment = /*#__PURE__*/ zod.strictObject({
   "id": /*#__PURE__*/ zod.uuid(),
-  "user_id": /*#__PURE__*/ zod.uuid(),
   "current_revision": /*#__PURE__*/ zod.int(),
   "status": /*#__PURE__*/ zod.enum(['active', 'review_recommended', 'paused', 'superseded', 'completed']),
   "source_body_state_revision": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.int()),

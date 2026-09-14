@@ -1,15 +1,17 @@
 import { create } from "zustand";
-import { getCurrentUser } from "@/generated/api/bodysense";
-import { apiUrl, safeJson } from "@/lib/api-url";
+import {
+  getCurrentUser,
+  loginAccount,
+  logoutAccount,
+  refreshAccountSession,
+  registerAccount,
+} from "@/generated/api/bodysense";
+import { apiUrl } from "@/lib/api-url";
+import { openApiPublicFetch } from "@/lib/openapi-client";
 
 interface User {
   id: string;
   email: string;
-}
-
-interface AuthPayload {
-  access_token: string;
-  expires_in: number;
 }
 
 interface AuthState {
@@ -85,27 +87,18 @@ async function doRefresh(
   set: (partial: Partial<AuthState>) => void,
 ): Promise<boolean> {
   try {
-    const response = await fetch(apiUrl("/api/v1/auth/refresh"), {
-      method: "POST",
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        clearAuthState(set);
-      }
-      return false;
-    }
-
-    const data = await safeJson<AuthPayload>(response);
+    const session = await refreshAccountSession(undefined, openApiPublicFetch);
     set({
-      accessToken: data.access_token,
+      accessToken: session.access_token,
       isAuthenticated: true,
       isAuthResolved: true,
       error: null,
     });
     return true;
-  } catch {
+  } catch (error) {
+    if (generatedHttpStatus(error) === 401) {
+      clearAuthState(set);
+    }
     return false;
   }
 }
@@ -161,19 +154,14 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const response = await fetch(apiUrl("/api/v1/auth/login"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await safeJson<AuthPayload & { message?: string }>(response);
-      if (!response.ok) {
-        throw new Error(data?.message || "登录失败");
-      }
+      const session = await loginAccount(
+        { email, password },
+        undefined,
+        openApiPublicFetch,
+      );
 
       set({
-        accessToken: data.access_token,
+        accessToken: session.access_token,
         isAuthenticated: true,
         hasHydrated: true,
         isAuthResolved: true,
@@ -182,12 +170,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         error: null,
       });
       await get().fetchUser();
-    } catch (error) {
-      set({
-        isLoading: false,
-        error: error instanceof Error ? error.message : "登录失败",
-      });
-      throw error;
+    } catch {
+      set({ isLoading: false, error: "登录失败" });
+      throw new Error("登录失败");
     }
   },
 
@@ -195,19 +180,14 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const response = await fetch(apiUrl("/api/v1/auth/register"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await safeJson<AuthPayload & { message?: string }>(response);
-      if (!response.ok) {
-        throw new Error(data?.message || "注册失败");
-      }
+      const session = await registerAccount(
+        { email, password },
+        undefined,
+        openApiPublicFetch,
+      );
 
       set({
-        accessToken: data.access_token,
+        accessToken: session.access_token,
         isAuthenticated: true,
         hasHydrated: true,
         isAuthResolved: true,
@@ -216,21 +196,18 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         error: null,
       });
       await get().fetchUser();
-    } catch (error) {
-      set({
-        isLoading: false,
-        error: error instanceof Error ? error.message : "注册失败",
-      });
-      throw error;
+    } catch {
+      set({ isLoading: false, error: "注册失败" });
+      throw new Error("注册失败");
     }
   },
 
   logout: async () => {
     try {
-      await fetch(apiUrl("/api/v1/auth/logout"), {
-        method: "POST",
-        credentials: "include",
-      });
+      await logoutAccount(undefined, openApiPublicFetch);
+    } catch {
+      // Server-side revocation may be temporarily unavailable; the local
+      // session clears regardless so the browser never stays signed in.
     } finally {
       clearAuthState(set);
       set({ hasHydrated: true, error: null });

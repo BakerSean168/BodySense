@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bodysense/api/internal/dto"
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
 	"github.com/bodysense/api/internal/model"
+	"github.com/bodysense/api/internal/service"
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/getkin/kin-openapi/routers/gorillamux"
 	"github.com/gin-gonic/gin"
@@ -20,20 +20,20 @@ import (
 
 type fakeHealthWorkspaceService struct {
 	calls     int
-	workspace *dto.HealthWorkspace
+	workspace *service.HealthWorkspace
 	err       error
 }
 
-func (f *fakeHealthWorkspaceService) Get(_ context.Context, _ uuid.UUID) (*dto.HealthWorkspace, error) {
+func (f *fakeHealthWorkspaceService) Get(_ context.Context, _ uuid.UUID) (*service.HealthWorkspace, error) {
 	f.calls++
 	return f.workspace, f.err
 }
 
-func minimalWorkspace() *dto.HealthWorkspace {
-	return &dto.HealthWorkspace{
+func minimalWorkspace() *service.HealthWorkspace {
+	return &service.HealthWorkspace{
 		GeneratedAt:  time.Date(2026, 9, 13, 8, 0, 0, 0, time.UTC),
 		ProfileReady: true,
-		BodyState: &dto.HealthWorkspaceBodyState{
+		BodyState: &service.HealthWorkspaceBodyState{
 			CurrentRevision:     0,
 			SafetyState:         json.RawMessage(`{}`),
 			Facts:               []model.BodyStateFact{},
@@ -45,8 +45,8 @@ func minimalWorkspace() *dto.HealthWorkspace {
 		},
 		TreatmentRevisions: []model.TreatmentRevision{},
 		RecentOutcomes:     []model.Outcome{},
-		Trends:             []dto.HealthWorkspaceTrend{},
-		Actions:            []dto.HealthWorkspaceAction{},
+		Trends:             []service.HealthWorkspaceTrend{},
+		Actions:            []service.HealthWorkspaceAction{},
 	}
 }
 

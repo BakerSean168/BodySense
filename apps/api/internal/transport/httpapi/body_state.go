@@ -5,11 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/bodysense/api/internal/auth"
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
 )
+
+// authConfig mirrors the auth edge policy without exposing the limiter
+// implementation beyond the transport package.
+type authConfig = auth.SecurityConfig
 
 type bodyStateFactService interface {
 	UpsertFact(
@@ -24,18 +29,42 @@ type bodyStateFactService interface {
 // HTTP transport types. Generated OpenAPI models stop here and are translated
 // into domain models before service execution.
 type PublicServer struct {
-	bodyState        bodyStateFactService
-	bodyStateRoutes  bodyStateRouteService
-	healthWorkspace  healthWorkspaceService
-	lifestyle        lifestyleApplication
-	bodyMetrics      bodyMetricsApplication
-	healthHistory    healthHistoryApplication
-	onboarding       onboardingContextApplication
-	profile          profileApplication
-	privacy          privacyErasureApplication
-	privacyCookie    privacyRefreshCookiePolicy
-	assessment       assessmentApplication
-	assessmentReplay assessmentReplayApplication
+	bodyState                bodyStateFactService
+	bodyStateRoutes          bodyStateRouteService
+	healthWorkspace          healthWorkspaceService
+	lifestyle                lifestyleApplication
+	bodyMetrics              bodyMetricsApplication
+	healthHistory            healthHistoryApplication
+	onboarding               onboardingContextApplication
+	profile                  profileApplication
+	privacy                  privacyErasureApplication
+	privacyCookie            privacyRefreshCookiePolicy
+	assessment               assessmentApplication
+	assessmentReplay         assessmentReplayApplication
+	accounts                 authAccountApplication
+	authSecurity             authConfig
+	conversations            conversationApplication
+	shares                   conversationShareApplication
+	runtimeEvents            runtimeEventApplication
+	consultationRuntime      consultationRuntimeApplication
+	consultationSessions     consultationSessionApplication
+	consultationInteractions consultationInteractionApplication
+	consultationReplay       consultationReplayApplication
+	consultationThreads      consultationThreadApplication
+	consultationBodyState    consultationBodyStateApplication
+	diagnosisApplication     diagnosisApplication
+	diagnosisAnalyses        diagnosisAnalysisApplication
+	diagnosisFreshness       diagnosisFreshnessApplication
+	diagnosisReplay          diagnosisReplayApplication
+	treatments               treatmentApplication
+	treatmentTraining        treatmentTrainingApplication
+	treatmentReplay          treatmentReplayApplication
+	training                 trainingApplication
+	uploads                  uploadApplication
+	healthDocumentReviews    healthDocumentReviewApplication
+	knowledgeSources         knowledgeSourceApplication
+	knowledgeIngestion       knowledgeIngestionApplication
+	knowledgeQuery           knowledgeQueryApplication
 }
 
 func NewPublicServer(bodyState bodyStateFactService) *PublicServer {

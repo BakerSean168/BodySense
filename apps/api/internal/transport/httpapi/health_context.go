@@ -5,31 +5,30 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/bodysense/api/internal/dto"
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
 	"github.com/bodysense/api/internal/service"
 	"github.com/google/uuid"
 )
 
 type lifestyleApplication interface {
-	Get(context.Context, uuid.UUID) (*dto.LifestyleSnapshot, error)
-	Update(context.Context, uuid.UUID, dto.UpdateLifestyleRequest) (*dto.LifestyleSnapshot, error)
-	AcceptCandidate(context.Context, uuid.UUID, *int64, uuid.UUID) (*dto.LifestyleSnapshot, error)
-	RejectCandidate(context.Context, uuid.UUID, *int64, uuid.UUID) (*dto.LifestyleSnapshot, error)
+	Get(context.Context, uuid.UUID) (*service.LifestyleSnapshot, error)
+	Update(context.Context, uuid.UUID, service.UpdateLifestyleRequest) (*service.LifestyleSnapshot, error)
+	AcceptCandidate(context.Context, uuid.UUID, *int64, uuid.UUID) (*service.LifestyleSnapshot, error)
+	RejectCandidate(context.Context, uuid.UUID, *int64, uuid.UUID) (*service.LifestyleSnapshot, error)
 }
 
 type bodyMetricsApplication interface {
-	Get(context.Context, uuid.UUID) (*dto.BodyMetricsSnapshot, error)
-	Update(context.Context, uuid.UUID, dto.UpdateBodyMetricsRequest) (*dto.BodyMetricsSnapshot, error)
+	Get(context.Context, uuid.UUID) (*service.BodyMetricsSnapshot, error)
+	Update(context.Context, uuid.UUID, service.UpdateBodyMetricsRequest) (*service.BodyMetricsSnapshot, error)
 }
 
 type healthHistoryApplication interface {
-	GetInjuryHistory(context.Context, uuid.UUID) (*dto.InjuryHistorySnapshot, error)
-	UpdateInjuryHistory(context.Context, uuid.UUID, dto.UpdateInjuryHistoryRequest) (*dto.InjuryHistorySnapshot, error)
+	GetInjuryHistory(context.Context, uuid.UUID) (*service.InjuryHistorySnapshot, error)
+	UpdateInjuryHistory(context.Context, uuid.UUID, service.UpdateInjuryHistoryRequest) (*service.InjuryHistorySnapshot, error)
 }
 
 type onboardingContextApplication interface {
-	Submit(context.Context, uuid.UUID, dto.OnboardingContextRequest) (*dto.OnboardingContextResult, error)
+	Submit(context.Context, uuid.UUID, service.OnboardingContextRequest) (*service.OnboardingContextResult, error)
 }
 
 func (s *PublicServer) WithHealthContext(
@@ -78,7 +77,7 @@ func (s *PublicServer) UpdateLifestyle(
 	if s.lifestyle == nil || request.Body == nil {
 		return updateLifestyleError(http.StatusBadRequest, "INVALID_REQUEST", "request body is required"), nil
 	}
-	command, err := strictJSONConvert[dto.UpdateLifestyleRequest](request.Body)
+	command, err := strictJSONConvert[service.UpdateLifestyleRequest](request.Body)
 	if err != nil {
 		return updateLifestyleError(http.StatusBadRequest, "INVALID_REQUEST", "invalid lifestyle request"), nil
 	}
@@ -175,7 +174,7 @@ func (s *PublicServer) UpdateBodyMetrics(
 	if s.bodyMetrics == nil || request.Body == nil {
 		return updateBodyMetricsError(http.StatusBadRequest, "INVALID_REQUEST", "request body is required"), nil
 	}
-	command, err := strictJSONConvert[dto.UpdateBodyMetricsRequest](request.Body)
+	command, err := strictJSONConvert[service.UpdateBodyMetricsRequest](request.Body)
 	if err != nil {
 		return updateBodyMetricsError(http.StatusBadRequest, "INVALID_REQUEST", "invalid body metrics request"), nil
 	}
@@ -224,7 +223,7 @@ func (s *PublicServer) UpdateInjuryHistory(
 	if s.healthHistory == nil || request.Body == nil {
 		return updateInjuryHistoryError(http.StatusBadRequest, "INVALID_REQUEST", "request body is required"), nil
 	}
-	command, err := strictJSONConvert[dto.UpdateInjuryHistoryRequest](request.Body)
+	command, err := strictJSONConvert[service.UpdateInjuryHistoryRequest](request.Body)
 	if err != nil {
 		return updateInjuryHistoryError(http.StatusBadRequest, "INVALID_REQUEST", "invalid injury history request"), nil
 	}
@@ -251,7 +250,7 @@ func (s *PublicServer) SubmitOnboardingContext(
 	if s.onboarding == nil || request.Body == nil {
 		return submitOnboardingContextError(http.StatusBadRequest, "INVALID_REQUEST", "request body is required"), nil
 	}
-	command, err := strictJSONConvert[dto.OnboardingContextRequest](request.Body)
+	command, err := strictJSONConvert[service.OnboardingContextRequest](request.Body)
 	if err != nil {
 		return submitOnboardingContextError(http.StatusBadRequest, "INVALID_REQUEST", "invalid onboarding context"), nil
 	}

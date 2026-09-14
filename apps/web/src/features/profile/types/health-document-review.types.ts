@@ -31,7 +31,6 @@ export interface DocumentIndicatorReviewRecord {
   action: HealthDocumentReviewAction;
   reviewed_payload?: Record<string, unknown>;
   note?: string;
-  reviewer_user_id: string;
   created_at: string;
   idempotency_key: string;
 }

@@ -17,7 +17,6 @@ export type TreatmentAcceptanceState = "proposed" | "accepted" | "rejected";
 
 export interface Intervention {
   id: string;
-  user_id: string;
   treatment_id: string;
   treatment_revision_id: string;
   kind: string;
@@ -71,7 +70,6 @@ export interface TreatmentRevision {
 
 export interface Treatment {
   id: string;
-  user_id: string;
   current_revision: number;
   status: TreatmentStatus;
   source_body_state_revision?: number | null;
@@ -90,7 +88,6 @@ export interface Treatment {
 
 export interface TrainingExecutionPlan {
   id: string;
-  user_id: string;
   consultation_id?: string | null;
   treatment_id?: string | null;
   treatment_revision_id?: string | null;

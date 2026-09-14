@@ -5,11 +5,11 @@
   "totals": {
     "baseline": 96,
     "browserFacingEligible": 95,
-    "openapi": 32,
-    "missing": 63,
+    "openapi": 95,
+    "missing": 0,
     "retired": 0,
     "excludedOperational": 1,
-    "coveragePercent": 33.68
+    "coveragePercent": 100
   },
   "routes": [
     {
@@ -23,25 +23,33 @@
       "method": "POST",
       "path": "/api/v1/auth/register",
       "source": "apps/api/cmd/server/main.go:377",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "registerAccount",
+      "openapiPath": "/api/v1/auth/register"
     },
     {
       "method": "POST",
       "path": "/api/v1/auth/login",
       "source": "apps/api/cmd/server/main.go:378",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "loginAccount",
+      "openapiPath": "/api/v1/auth/login"
     },
     {
       "method": "POST",
       "path": "/api/v1/auth/refresh",
       "source": "apps/api/cmd/server/main.go:379",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "refreshAccountSession",
+      "openapiPath": "/api/v1/auth/refresh"
     },
     {
       "method": "POST",
       "path": "/api/v1/auth/logout",
       "source": "apps/api/cmd/server/main.go:380",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "logoutAccount",
+      "openapiPath": "/api/v1/auth/logout"
     },
     {
       "method": "GET",
@@ -103,271 +111,361 @@
       "method": "POST",
       "path": "/api/v1/uploads",
       "source": "apps/api/cmd/server/main.go:396",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "createUpload",
+      "openapiPath": "/api/v1/uploads"
     },
     {
       "method": "GET",
       "path": "/api/v1/uploads",
       "source": "apps/api/cmd/server/main.go:397",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "listUploads",
+      "openapiPath": "/api/v1/uploads"
     },
     {
       "method": "GET",
       "path": "/api/v1/uploads/posture-analysis",
       "source": "apps/api/cmd/server/main.go:400",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getPostureAnalysis",
+      "openapiPath": "/api/v1/uploads/posture-analysis"
     },
     {
       "method": "GET",
       "path": "/api/v1/uploads/:id",
       "source": "apps/api/cmd/server/main.go:401",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getUpload",
+      "openapiPath": "/api/v1/uploads/{id}"
     },
     {
       "method": "DELETE",
       "path": "/api/v1/uploads/:id",
       "source": "apps/api/cmd/server/main.go:402",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "deleteUpload",
+      "openapiPath": "/api/v1/uploads/{id}"
     },
     {
       "method": "GET",
       "path": "/api/v1/uploads/:id/health-document-review",
       "source": "apps/api/cmd/server/main.go:406",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getHealthDocumentReviewContext",
+      "openapiPath": "/api/v1/uploads/{id}/health-document-review"
     },
     {
       "method": "GET",
       "path": "/api/v1/uploads/:id/extractions/:runId/reviews",
       "source": "apps/api/cmd/server/main.go:409",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "listHealthDocumentReviewCandidates",
+      "openapiPath": "/api/v1/uploads/{id}/extractions/{runId}/reviews"
     },
     {
       "method": "POST",
       "path": "/api/v1/uploads/:id/extractions/:runId/reviews",
       "source": "apps/api/cmd/server/main.go:410",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "appendHealthDocumentReview",
+      "openapiPath": "/api/v1/uploads/{id}/extractions/{runId}/reviews"
     },
     {
       "method": "GET",
       "path": "/api/v1/uploads/:id/extractions/:runId/source",
       "source": "apps/api/cmd/server/main.go:411",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getHealthDocumentSource",
+      "openapiPath": "/api/v1/uploads/{id}/extractions/{runId}/source"
     },
     {
       "method": "GET",
       "path": "/api/v1/conversations",
       "source": "apps/api/cmd/server/main.go:415",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "listConversations",
+      "openapiPath": "/api/v1/conversations"
     },
     {
       "method": "GET",
       "path": "/api/v1/conversations/:id",
       "source": "apps/api/cmd/server/main.go:416",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getConversation",
+      "openapiPath": "/api/v1/conversations/{id}"
     },
     {
       "method": "PATCH",
       "path": "/api/v1/conversations/:id",
       "source": "apps/api/cmd/server/main.go:417",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "updateConversation",
+      "openapiPath": "/api/v1/conversations/{id}"
     },
     {
       "method": "DELETE",
       "path": "/api/v1/conversations/:id",
       "source": "apps/api/cmd/server/main.go:418",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "deleteConversation",
+      "openapiPath": "/api/v1/conversations/{id}"
     },
     {
       "method": "PATCH",
       "path": "/api/v1/conversations/:id/pin",
       "source": "apps/api/cmd/server/main.go:419",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "pinConversation",
+      "openapiPath": "/api/v1/conversations/{id}/pin"
     },
     {
       "method": "GET",
       "path": "/api/v1/conversations/:id/runs",
       "source": "apps/api/cmd/server/main.go:420",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "listConversationRuns",
+      "openapiPath": "/api/v1/conversations/{id}/runs"
     },
     {
       "method": "GET",
       "path": "/api/v1/conversations/:id/runs/:runId/events",
       "source": "apps/api/cmd/server/main.go:421",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "listRunEvents",
+      "openapiPath": "/api/v1/conversations/{id}/runs/{runId}/events"
     },
     {
       "method": "POST",
       "path": "/api/v1/conversations/:id/title",
       "source": "apps/api/cmd/server/main.go:422",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "generateConversationTitle",
+      "openapiPath": "/api/v1/conversations/{id}/title"
     },
     {
       "method": "PUT",
       "path": "/api/v1/conversations/:id/title",
       "source": "apps/api/cmd/server/main.go:423",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "renameConversationTitle",
+      "openapiPath": "/api/v1/conversations/{id}/title"
     },
     {
       "method": "POST",
       "path": "/api/v1/conversations/:id/share",
       "source": "apps/api/cmd/server/main.go:424",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "shareConversation",
+      "openapiPath": "/api/v1/conversations/{id}/share"
     },
     {
       "method": "DELETE",
       "path": "/api/v1/conversations/:id/share",
       "source": "apps/api/cmd/server/main.go:425",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "unshareConversation",
+      "openapiPath": "/api/v1/conversations/{id}/share"
     },
     {
       "method": "POST",
       "path": "/api/v1/consultation-runs",
       "source": "apps/api/cmd/server/main.go:428",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "startConsultationRun",
+      "openapiPath": "/api/v1/consultation-runs"
     },
     {
       "method": "POST",
       "path": "/api/v1/consultation-runs/:id/cancel",
       "source": "apps/api/cmd/server/main.go:429",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "cancelConsultationRun",
+      "openapiPath": "/api/v1/consultation-runs/{id}/cancel"
     },
     {
       "method": "GET",
       "path": "/api/v1/consultations/:id",
       "source": "apps/api/cmd/server/main.go:431",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getConsultation",
+      "openapiPath": "/api/v1/consultations/{id}"
     },
     {
       "method": "GET",
       "path": "/api/v1/consultations/:id/thread",
       "source": "apps/api/cmd/server/main.go:432",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getConsultationThread",
+      "openapiPath": "/api/v1/consultations/{id}/thread"
     },
     {
       "method": "POST",
       "path": "/api/v1/consultation-runs/:id/replay",
       "source": "apps/api/cmd/server/main.go:434",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "replayConsultationRun",
+      "openapiPath": "/api/v1/consultation-runs/{id}/replay"
     },
     {
       "method": "POST",
       "path": "/api/v1/consultation-runs/:id/replay/counterfactual",
       "source": "apps/api/cmd/server/main.go:435",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "replayConsultationRunCounterfactual",
+      "openapiPath": "/api/v1/consultation-runs/{id}/replay/counterfactual"
     },
     {
       "method": "POST",
       "path": "/api/v1/consultations/:id/diagnosis",
       "source": "apps/api/cmd/server/main.go:437",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "analyzeDiagnosis",
+      "openapiPath": "/api/v1/consultations/{id}/diagnosis"
     },
     {
       "method": "GET",
       "path": "/api/v1/diagnosis-analyses",
       "source": "apps/api/cmd/server/main.go:440",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "listDiagnosisAnalyses",
+      "openapiPath": "/api/v1/diagnosis-analyses"
     },
     {
       "method": "GET",
       "path": "/api/v1/diagnosis-analyses/:analysisId",
       "source": "apps/api/cmd/server/main.go:441",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getDiagnosisAnalysis",
+      "openapiPath": "/api/v1/diagnosis-analyses/{analysisId}"
     },
     {
       "method": "PUT",
       "path": "/api/v1/diagnosis-analyses/:analysisId/assessment",
       "source": "apps/api/cmd/server/main.go:442",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "assessDiagnosisCandidates",
+      "openapiPath": "/api/v1/diagnosis-analyses/{analysisId}/assessment"
     },
     {
       "method": "POST",
       "path": "/api/v1/diagnosis-analyses/:analysisId/replay",
       "source": "apps/api/cmd/server/main.go:443",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "replayDiagnosisAnalysis",
+      "openapiPath": "/api/v1/diagnosis-analyses/{analysisId}/replay"
     },
     {
       "method": "GET",
       "path": "/api/v1/diagnosis-analyses/:analysisId/regression-export",
       "source": "apps/api/cmd/server/main.go:444",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "exportDiagnosisRegressionCase",
+      "openapiPath": "/api/v1/diagnosis-analyses/{analysisId}/regression-export"
     },
     {
       "method": "POST",
       "path": "/api/v1/treatments/proposals",
       "source": "apps/api/cmd/server/main.go:447",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "generateTreatmentProposal",
+      "openapiPath": "/api/v1/treatments/proposals"
     },
     {
       "method": "GET",
       "path": "/api/v1/treatments/current",
       "source": "apps/api/cmd/server/main.go:448",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getCurrentTreatment",
+      "openapiPath": "/api/v1/treatments/current"
     },
     {
       "method": "POST",
       "path": "/api/v1/treatments/current/review",
       "source": "apps/api/cmd/server/main.go:449",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "reviewCurrentTreatment",
+      "openapiPath": "/api/v1/treatments/current/review"
     },
     {
       "method": "GET",
       "path": "/api/v1/treatments/revisions",
       "source": "apps/api/cmd/server/main.go:450",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "listTreatmentRevisions",
+      "openapiPath": "/api/v1/treatments/revisions"
     },
     {
       "method": "GET",
       "path": "/api/v1/treatments/revisions/:revisionId",
       "source": "apps/api/cmd/server/main.go:451",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getTreatmentRevision",
+      "openapiPath": "/api/v1/treatments/revisions/{revisionId}"
     },
     {
       "method": "POST",
       "path": "/api/v1/treatments/revisions/:revisionId/replay",
       "source": "apps/api/cmd/server/main.go:452",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "replayTreatmentRevision",
+      "openapiPath": "/api/v1/treatments/revisions/{revisionId}/replay"
     },
     {
       "method": "GET",
       "path": "/api/v1/treatments/revisions/:revisionId/regression-export",
       "source": "apps/api/cmd/server/main.go:453",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "exportTreatmentRegressionCase",
+      "openapiPath": "/api/v1/treatments/revisions/{revisionId}/regression-export"
     },
     {
       "method": "POST",
       "path": "/api/v1/treatments/revisions/:revisionId/accept",
       "source": "apps/api/cmd/server/main.go:454",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "acceptTreatmentRevision",
+      "openapiPath": "/api/v1/treatments/revisions/{revisionId}/accept"
     },
     {
       "method": "POST",
       "path": "/api/v1/treatments/revisions/:revisionId/reject",
       "source": "apps/api/cmd/server/main.go:455",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "rejectTreatmentRevision",
+      "openapiPath": "/api/v1/treatments/revisions/{revisionId}/reject"
     },
     {
       "method": "POST",
       "path": "/api/v1/outcomes",
       "source": "apps/api/cmd/server/main.go:456",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "recordOutcome",
+      "openapiPath": "/api/v1/outcomes"
     },
     {
       "method": "GET",
       "path": "/api/v1/outcomes",
       "source": "apps/api/cmd/server/main.go:457",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "listOutcomes",
+      "openapiPath": "/api/v1/outcomes"
     },
     {
       "method": "POST",
       "path": "/api/v1/consultations/:id/interrupts/:interactionId/answers",
       "source": "apps/api/cmd/server/main.go:459",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "resumeConsultationInteraction",
+      "openapiPath": "/api/v1/consultations/{id}/interrupts/{interactionId}/answers"
     },
     {
       "method": "GET",
       "path": "/api/v1/consultations/:id/interaction-metrics",
       "source": "apps/api/cmd/server/main.go:460",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getConsultationInteractionMetrics",
+      "openapiPath": "/api/v1/consultations/{id}/interaction-metrics"
     },
     {
       "method": "GET",
@@ -573,85 +671,113 @@
       "method": "GET",
       "path": "/api/v1/training",
       "source": "apps/api/cmd/server/main.go:496",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "listTrainingPlans",
+      "openapiPath": "/api/v1/training"
     },
     {
       "method": "GET",
       "path": "/api/v1/training/:id",
       "source": "apps/api/cmd/server/main.go:497",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getTrainingPlan",
+      "openapiPath": "/api/v1/training/{id}"
     },
     {
       "method": "GET",
       "path": "/api/v1/training/:id/today",
       "source": "apps/api/cmd/server/main.go:498",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getTrainingTodayTask",
+      "openapiPath": "/api/v1/training/{id}/today"
     },
     {
       "method": "POST",
       "path": "/api/v1/training/:id/checkin",
       "source": "apps/api/cmd/server/main.go:499",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "checkInTrainingPlan",
+      "openapiPath": "/api/v1/training/{id}/checkin"
     },
     {
       "method": "PUT",
       "path": "/api/v1/training/:id/log",
       "source": "apps/api/cmd/server/main.go:500",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "updateTrainingLog",
+      "openapiPath": "/api/v1/training/{id}/log"
     },
     {
       "method": "GET",
       "path": "/api/v1/training/:id/progress",
       "source": "apps/api/cmd/server/main.go:501",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getTrainingProgress",
+      "openapiPath": "/api/v1/training/{id}/progress"
     },
     {
       "method": "POST",
       "path": "/api/v1/training/:id/reassess",
       "source": "apps/api/cmd/server/main.go:502",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "reassessTrainingPlan",
+      "openapiPath": "/api/v1/training/{id}/reassess"
     },
     {
       "method": "GET",
       "path": "/api/v1/conversations/share/:token",
       "source": "apps/api/cmd/server/main.go:507",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getSharedConversation",
+      "openapiPath": "/api/v1/conversations/share/{token}"
     },
     {
       "method": "POST",
       "path": "/api/v1/knowledge/sources",
       "source": "apps/api/cmd/server/main.go:515",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "registerKnowledgeSource",
+      "openapiPath": "/api/v1/knowledge/sources"
     },
     {
       "method": "GET",
       "path": "/api/v1/knowledge/sources",
       "source": "apps/api/cmd/server/main.go:516",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "listKnowledgeSources",
+      "openapiPath": "/api/v1/knowledge/sources"
     },
     {
       "method": "POST",
       "path": "/api/v1/knowledge/ingestions/video",
       "source": "apps/api/cmd/server/main.go:517",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "enqueueKnowledgeVideoIngestion",
+      "openapiPath": "/api/v1/knowledge/ingestions/video"
     },
     {
       "method": "GET",
       "path": "/api/v1/knowledge/ingestions/:jobID",
       "source": "apps/api/cmd/server/main.go:518",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getKnowledgeIngestionJob",
+      "openapiPath": "/api/v1/knowledge/ingestions/{jobID}"
     },
     {
       "method": "POST",
       "path": "/api/v1/knowledge/search",
       "source": "apps/api/cmd/server/main.go:519",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "searchKnowledge",
+      "openapiPath": "/api/v1/knowledge/search"
     },
     {
       "method": "GET",
       "path": "/api/v1/knowledge/stats",
       "source": "apps/api/cmd/server/main.go:520",
-      "status": "MISSING"
+      "status": "OPENAPI",
+      "operationId": "getKnowledgeStats",
+      "openapiPath": "/api/v1/knowledge/stats"
     }
   ]
 }

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -270,5 +271,25 @@ func TestKnowledgeIngestionStaleRunningRequeuesThenTimesOutAtBudget(t *testing.T
 	}
 	if stored.Status != "timed_out" {
 		t.Fatalf("exhausted stale job should time out, got %s", stored.Status)
+	}
+}
+
+func TestKnowledgeIngestionRejectsUnsafeRegisteredAndRequestedVideoPaths(t *testing.T) {
+	registry, source := registeredKnowledgeRegistry(t)
+	jobs := newKnowledgeJobRuntimeStub()
+	svc := NewKnowledgeIngestionService(registry, jobs, knowledgeDeploymentForTest(), "http://unused")
+
+	for _, value := range []string{"../video.mp4", "nested/../video.mp4", `nested\..\video.mp4`, "/tmp/video.mp4", "."} {
+		if _, _, err := svc.EnqueueVideo(context.Background(), uuid.New(), KnowledgeVideoIngestionRequest{
+			SourceKey: source.SourceKey,
+			VideoPath: value,
+		}); !errors.Is(err, ErrKnowledgeIngestionUnsafePath) {
+			t.Fatalf("requested path %q err=%v want unsafe path", value, err)
+		}
+	}
+
+	source.OriginalFilePath = "../outside.mp4"
+	if _, _, err := svc.EnqueueVideo(context.Background(), uuid.New(), KnowledgeVideoIngestionRequest{SourceKey: source.SourceKey}); !errors.Is(err, ErrKnowledgeIngestionUnsafePath) {
+		t.Fatalf("registered unsafe path err=%v", err)
 	}
 }

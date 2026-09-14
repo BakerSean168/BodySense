@@ -283,21 +283,23 @@
     {
       "id": "BS-VNEXT-REST-004",
       "priority": "P2",
-      "status": "OPEN",
+      "status": "FIXED",
       "phase": "02",
       "title": "HealthWorkspace application read projection still lives in the dto package",
       "evidence": [
-        "apps/api/internal/dto/health_workspace.go",
+        "apps/api/internal/service/health_workspace_projection.go",
+        "apps/api/internal/service/health_workspace_service.go",
         "apps/api/internal/transport/httpapi/health_workspace.go"
       ],
       "root_cause": "The pre-vNext HTTP handler and application projection were colocated under internal/dto, so the service returns a type named for transport even though it is really an application read model.",
       "target": "Move the HealthWorkspace application projection to an application/readmodel package and keep OpenAPI generated types + presenters solely in transport/httpapi before Phase 02 closes.",
       "verification": [
-        "no service import of transport/generated OpenAPI types",
-        "HealthWorkspace service no longer returns internal/dto.HealthWorkspace",
-        "full OpenAPI response conformance tests remain green"
+        "HealthWorkspace service no longer imports or returns internal/dto.HealthWorkspace",
+        "no generated OpenAPI imports outside transport/httpapi/generated",
+        "HealthWorkspace service + transport tests and full go test ./... pass"
       ],
-      "notes": "The temporary presenter bridge uses strict JSON decode with DisallowUnknownFields so contract drift fails closed while the package ownership cleanup is pending."
+      "notes": "The strict presenter remains intentionally fail-closed, but the transitional dto package ownership debt is removed.",
+      "repair": "Move the HealthWorkspace application read projection from internal/dto into internal/service application ownership; keep OpenAPI generated types and the strict public presenter solely in transport/httpapi."
     },
     {
       "id": "BS-VNEXT-REST-005",
@@ -346,21 +348,24 @@
     {
       "id": "BS-VNEXT-REST-007",
       "priority": "P2",
-      "status": "OPEN",
+      "status": "FIXED",
       "phase": "02",
       "title": "Validated OpenAPI workspace imports increased the ConsultationPage application chunk",
       "evidence": [
         "apps/web/orval.config.ts",
-        "apps/web/src/generated/api/bodysense.ts"
+        "apps/web/src/generated/api/bodysense.ts",
+        "docs/refactor/vnext/phase-02-rest-openapi.md"
       ],
       "root_cause": "Runtime-validated generated REST clients bring Zod Mini schemas into the consultation/workspace execution path as intended; as the canonical API surface grows, a single generated client module can enlarge the route chunk.",
       "target": "Before Phase 02 closes, measure the final generated-client bundle and split generated/public API imports by feature or lazy boundary if the growth remains material. Do not remove runtime response validation merely to reduce bytes.",
       "verification": [
-        "compare production Vite chunk sizes before/after final Phase 02 generation",
-        "confirm no duplicated classic Zod runtime",
-        "pnpm build"
+        "final pnpm nx build @bodysense/web --skip-nx-cache",
+        "ConsultationPage 357.21 kB / 105.61 kB gzip versus prior 355.71 kB / 105.27 kB gzip",
+        "consultationService feature chunk 12.02 kB / 3.45 kB gzip",
+        "no separate ~45.11 kB generated/shared chunk in final build"
       ],
-      "notes": "After the 21-route health-context batch, Vite extracted much of the generated runtime into a shared chunk (~45.11 kB / 11.59 kB gzip) while ConsultationPage measured ~355.71 kB / 105.27 kB gzip. The final Phase 02 review must measure total loaded-route cost and split generated clients by feature/tag if the shared module continues to grow."
+      "notes": "The remaining >500 kB warning is dominated by the existing BodyExplorer3D chunk (1,234.32 kB / 285.75 kB gzip), not OpenAPI validation. Runtime validation is retained.",
+      "repair": "Measure the final production bundle after all 95 browser routes are generated. Keep Zod runtime validation. No additional generated-client split is warranted because the prior ~45.11 kB shared generated chunk no longer exists and the ConsultationPage route stayed effectively flat."
     },
     {
       "id": "BS-VNEXT-REST-008",
@@ -388,24 +393,26 @@
     {
       "id": "BS-VNEXT-REST-009",
       "priority": "P2",
-      "status": "OPEN",
+      "status": "FIXED",
       "phase": "02",
       "title": "Health-context application commands/read models are still named and located as transport DTOs",
       "evidence": [
-        "apps/api/internal/dto/lifestyle.go",
-        "apps/api/internal/dto/body_metrics.go",
-        "apps/api/internal/dto/health_history.go",
-        "apps/api/internal/dto/onboarding_context.go",
+        "apps/api/internal/service/lifestyle_projection.go",
+        "apps/api/internal/service/body_metrics_projection.go",
+        "apps/api/internal/service/health_history_projection.go",
+        "apps/api/internal/service/onboarding_context_projection.go",
         "apps/api/internal/transport/httpapi/health_context.go"
       ],
       "root_cause": "Pre-vNext Gin handlers and application services shared structs under internal/dto; after OpenAPI generation those structs remain useful application commands/read projections but their package ownership still suggests HTTP transport authority.",
       "target": "Before Phase 02 closes, move surviving service command/read-model structures into explicit application/readmodel ownership and delete transport-era dto definitions that are no longer public authorities.",
       "verification": [
-        "service layer does not import generated OpenAPI types",
-        "transport/httpapi maps generated models into application-owned types",
-        "obsolete internal/dto health-context files removed or reduced to true non-generated boundaries"
+        "no remaining dto.Lifestyle/BodyMetrics/InjuryHistory/Onboarding references",
+        "service layer imports no generated OpenAPI types",
+        "health-context service and transport tests pass",
+        "full go test ./... pass"
       ],
-      "notes": "This is the same ownership class as BS-VNEXT-REST-004 and should be repaired as one package-boundary cleanup after more public handlers migrate."
+      "notes": "This closes the same package-ownership class as BS-VNEXT-REST-004 without turning generated transport types into application models.",
+      "repair": "Move surviving Lifestyle, BodyMetrics, InjuryHistory and Onboarding application commands/read models from internal/dto into internal/service ownership; delete the transport-era dto files and keep generated request/response mapping in transport/httpapi."
     },
     {
       "id": "BS-VNEXT-REST-010",
@@ -476,24 +483,26 @@
     {
       "id": "BS-VNEXT-REST-013",
       "priority": "P1",
-      "status": "OPEN",
+      "status": "FIXED",
       "phase": "02",
       "title": "Generated REST registration currently assumes one authenticated Gin security domain",
       "evidence": [
-        "apps/api/cmd/server/main.go",
-        "apps/api/internal/generated/openapi/v1/bodysense.gen.go",
-        "packages/contracts/openapi/bodysense.v1.openapi.yaml"
+        "apps/api/internal/transport/httpapi/routes.go",
+        "apps/api/internal/transport/httpapi/auth_test.go",
+        "apps/api/internal/transport/httpapi/conversations_test.go",
+        "apps/api/internal/transport/httpapi/knowledge_test.go"
       ],
       "root_cause": "All generated operations are currently registered as one server under the protected AuthMiddleware group. Remaining public authentication endpoints, public share reads and operator-only Knowledge endpoints require different middleware/security ownership and cannot be safely added to the same registration blindly.",
       "target": "Before migrating auth/share/operator operations, introduce deterministic generated-route registration partitions or equivalent policy-aware registration so each OpenAPI operation is mounted exactly once under its required security middleware without duplicating adapters or bypassing existing origin/rate-limit/operator guards.",
       "verification": [
-        "public auth operations remain callable without bearer auth while preserving trusted-origin/rate-limit controls",
-        "protected operations still require AuthMiddleware",
-        "knowledge operations retain RequireKnowledgeOperator",
+        "public auth routes preserve trusted-origin/rate-limit/session controls without bearer auth",
         "public share remains unauthenticated",
-        "route coverage reaches complete without duplicate Gin registrations"
+        "protected routes use AuthMiddleware",
+        "Knowledge routes execute Auth -> durable Operator -> Validator and member test proves validator/application are not reached",
+        "public REST coverage 95/95 with no duplicate Gin registrations"
       ],
-      "notes": "Do not solve this by registering the full generated server on both public and protected groups; that would duplicate routes and weaken security ownership."
+      "notes": "The operator characterization closes the final multi-security-domain blocker; the generated server is not blindly mounted multiple times.",
+      "repair": "Partition generated registration into auth-public, capability-share-public, authenticated browser-user and authenticated Knowledge-operator groups. Register every operation exactly once under its required middleware authority."
     },
     {
       "id": "BS-VNEXT-REST-014",

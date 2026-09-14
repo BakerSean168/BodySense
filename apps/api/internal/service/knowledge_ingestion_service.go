@@ -11,6 +11,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -28,6 +29,8 @@ const (
 var (
 	ErrKnowledgeIngestionSourceMismatch = errors.New("knowledge ingestion source identity mismatch")
 	ErrKnowledgeIngestionNotFound       = errors.New("knowledge ingestion job not found")
+	ErrKnowledgeIngestionUnsafePath     = errors.New("knowledge ingestion video path is unsafe")
+	ErrKnowledgeSourceNotRegistered     = errors.New("knowledge source is not registered")
 )
 
 type knowledgeIngestionDeployment interface {
@@ -144,10 +147,19 @@ func (s *KnowledgeIngestionService) EnqueueVideo(
 	}
 	source, err := s.registry.FindIngestible(ctx, strings.TrimSpace(req.SourceKey))
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, false, ErrKnowledgeSourceNotRegistered
+		}
 		return nil, false, err
 	}
 	if source.SourceType != "video" {
 		return nil, false, fmt.Errorf("%w: registered source is not video", ErrKnowledgeIngestionSourceMismatch)
+	}
+	if !isSafeKnowledgeRelativePath(source.OriginalFilePath) {
+		return nil, false, fmt.Errorf("%w: registered source path", ErrKnowledgeIngestionUnsafePath)
+	}
+	if strings.TrimSpace(req.VideoPath) != "" && !isSafeKnowledgeRelativePath(req.VideoPath) {
+		return nil, false, fmt.Errorf("%w: requested video path", ErrKnowledgeIngestionUnsafePath)
 	}
 	if strings.TrimSpace(req.VideoPath) != "" && cleanKnowledgePath(req.VideoPath) != cleanKnowledgePath(source.OriginalFilePath) {
 		return nil, false, fmt.Errorf("%w: video path differs from registered source", ErrKnowledgeIngestionSourceMismatch)
@@ -442,6 +454,20 @@ func defaultString(value, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func isSafeKnowledgeRelativePath(value string) bool {
+	normalized := strings.ReplaceAll(strings.TrimSpace(value), "\\", "/")
+	if normalized == "" || strings.HasPrefix(normalized, "/") {
+		return false
+	}
+	for _, part := range strings.Split(normalized, "/") {
+		if part == ".." {
+			return false
+		}
+	}
+	cleaned := filepath.Clean(normalized)
+	return !filepath.IsAbs(cleaned) && cleaned != "." && cleaned != ".."
 }
 
 func cleanKnowledgePath(value string) string {
