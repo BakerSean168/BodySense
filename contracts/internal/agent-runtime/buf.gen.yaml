@@ -1,0 +1,12 @@
+version: v2
+plugins:
+  - local: protoc-gen-go
+    out: ../../../apps/api/internal/generated/runtimeproto
+    opt:
+      - paths=import
+      - module=github.com/bodysense/api/internal/generated/runtimeproto
+  - protoc_builtin: python
+    out: ../../../apps/ai-service/src/generated/runtimeproto
+    include_imports: true
+  - protoc_builtin: pyi
+    out: ../../../apps/ai-service/src/generated/runtimeproto

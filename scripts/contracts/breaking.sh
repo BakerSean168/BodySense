@@ -14,3 +14,8 @@ BIN="$ROOT/.tools/contracts/bin"
   cd "$ROOT/tools/contracts/foundation/proto"
   "$BIN/buf" breaking . --against "$ROOT/tools/contracts/baselines/proto"
 )
+
+(
+  cd "$ROOT/contracts/internal/agent-runtime"
+  "$BIN/buf" breaking . --against "$ROOT/tools/contracts/baselines/runtime-proto"
+)

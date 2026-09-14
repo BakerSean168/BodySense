@@ -7,6 +7,12 @@ const apiBase = process.env.E2E_API_BASE_URL || "http://127.0.0.1:8080";
 
 const execFileAsync = promisify(execFile);
 
+// These recovery scenarios intentionally include a long-running Agent turn,
+// reload and/or API process restart. The default 30s Playwright budget is too
+// tight on the single-worker full validation suite even when every recovery
+// assertion succeeds.
+test.setTimeout(60_000);
+
 async function registerBrowser(page: Page): Promise<void> {
   const email = `runtime-${Date.now()}-${Math.random().toString(16).slice(2)}@example.com`;
   const password = "BodySenseE2E!123";

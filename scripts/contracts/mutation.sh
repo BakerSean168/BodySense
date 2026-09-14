@@ -59,3 +59,4 @@ if (
 fi
 
 node "$ROOT/scripts/contracts/schema-mutation.mjs"
+node "$ROOT/scripts/contracts/runtime-proto-mutation.mjs"

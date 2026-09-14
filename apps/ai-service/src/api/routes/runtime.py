@@ -13,19 +13,25 @@ yield one JSON record at a time instead of materializing the whole reply.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import os
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from ...models.stream_event import StreamChannel, StreamEvent, StreamEventIds
 from ...runtime.consultation_thread import (
     get_consultation_manifest,
     resume_thread_interrupt,
     stream_thread_turn,
+)
+from ..runtime_proto_adapter import (
+    RuntimeCommandError,
+    parse_resume_interrupt_command,
+    parse_start_turn_command,
+    serialize_runtime_event,
 )
 
 logger = logging.getLogger(__name__)
@@ -43,33 +49,20 @@ def _e2e_stub_enabled() -> bool:
 def _stub_event(
     *,
     seq: int,
-    channel: str,
+    channel: StreamChannel,
     event_type: str,
     run_id: str,
     conversation_id: str,
     payload: dict[str, Any],
 ) -> str:
-    return (
-        json.dumps(
-            {
-                "version": 1,
-                "seq": seq,
-                "channel": channel,
-                "type": event_type,
-                "ids": {
-                    "conversation_id": conversation_id,
-                    "run_id": run_id,
-                    "turn_id": None,
-                    "message_id": None,
-                    "tool_call_id": None,
-                    "interaction_id": None,
-                    "job_id": None,
-                },
-                "payload": payload,
-            },
-            ensure_ascii=False,
+    return serialize_runtime_event(
+        StreamEvent(
+            seq=seq,
+            channel=channel,
+            type=event_type,
+            ids=StreamEventIds(conversation_id=conversation_id, run_id=run_id),
+            payload=payload,
         )
-        + "\n"
     )
 
 
@@ -137,7 +130,12 @@ class ResumeInterruptRequest(BaseModel):
 
 
 @router.post("/threads/{thread_id}/turns")
-async def start_turn(thread_id: str, request: StartTurnRequest):
+async def start_turn(thread_id: str, payload: dict[str, Any]):
+    try:
+        request = StartTurnRequest.model_validate(parse_start_turn_command(thread_id, payload))
+    except RuntimeCommandError as exc:
+        logger.warning("Rejected invalid start-turn runtime command: %s", exc)
+        raise HTTPException(status_code=422, detail="invalid private runtime command") from exc
     if _e2e_stub_enabled():
 
         async def e2e_generator():
@@ -246,30 +244,23 @@ async def start_turn(thread_id: str, request: StartTurnRequest):
                 ),
                 configuration_id=request.configuration_id,
             ):
-                # NDJSON uses a real newline as the record boundary. Any newline
-                # inside a JSON string is escaped by json.dumps.
-                yield json.dumps(event.model_dump(exclude_none=True), ensure_ascii=False) + "\n"
+                yield serialize_runtime_event(event)
         except Exception:
             # The HTTP headers may already be sent, so raising an HTTPException
             # cannot reliably replace the response. Emit a protocol-level error
             # record and log the original exception server-side instead.
             logger.exception("Error in runtime thread turn")
-            yield (
-                json.dumps(
-                    {
-                        "version": 1,
-                        "seq": 1,
-                        "channel": "stream",
-                        "type": "stream.error",
-                        "ids": {
-                            "run_id": request.run_id,
-                            "conversation_id": request.conversation_id,
-                        },
-                        "payload": {"message": "Internal runtime error."},
-                    },
-                    ensure_ascii=False,
+            yield serialize_runtime_event(
+                StreamEvent(
+                    seq=1,
+                    channel="stream",
+                    type="stream.error",
+                    ids=StreamEventIds(
+                        run_id=request.run_id,
+                        conversation_id=request.conversation_id,
+                    ),
+                    payload={"message": "Internal runtime error."},
                 )
-                + "\n"
             )
 
     return StreamingResponse(
@@ -282,7 +273,14 @@ async def start_turn(thread_id: str, request: StartTurnRequest):
 
 
 @router.post("/threads/{thread_id}/interrupts/{interrupt_id}/resume")
-async def resume_interrupt(thread_id: str, interrupt_id: str, request: ResumeInterruptRequest):
+async def resume_interrupt(thread_id: str, interrupt_id: str, payload: dict[str, Any]):
+    try:
+        request = ResumeInterruptRequest.model_validate(
+            parse_resume_interrupt_command(thread_id, interrupt_id, payload)
+        )
+    except RuntimeCommandError as exc:
+        logger.warning("Rejected invalid resume runtime command: %s", exc)
+        raise HTTPException(status_code=422, detail="invalid private runtime command") from exc
     async def ndjson_generator():
         try:
             async for event in resume_thread_interrupt(
@@ -303,26 +301,20 @@ async def resume_interrupt(thread_id: str, interrupt_id: str, request: ResumeInt
                     else None
                 ),
             ):
-                yield json.dumps(event.model_dump(exclude_none=True), ensure_ascii=False) + "\n"
+                yield serialize_runtime_event(event)
         except Exception:
             logger.exception("Error in runtime interrupt resume")
-            yield (
-                json.dumps(
-                    {
-                        "version": 1,
-                        "seq": 1,
-                        "channel": "stream",
-                        "type": "stream.error",
-                        "ids": {
-                            "run_id": request.run_id,
-                            "conversation_id": request.conversation_id,
-                            "interaction_id": interrupt_id,
-                        },
-                        "payload": {"message": "Internal runtime resume error."},
-                    },
-                    ensure_ascii=False,
+            yield serialize_runtime_event(
+                StreamEvent(
+                    seq=1,
+                    channel="stream",
+                    type="stream.error",
+                    ids=StreamEventIds(
+                        run_id=request.run_id,
+                        conversation_id=request.conversation_id,
+                    ),
+                    payload={"message": "Internal runtime resume error."},
                 )
-                + "\n"
             )
 
     return StreamingResponse(
