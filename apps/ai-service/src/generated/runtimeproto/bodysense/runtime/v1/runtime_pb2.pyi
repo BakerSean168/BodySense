@@ -173,7 +173,7 @@ class AgentConfigurationHandshake(_message.Message):
     def __init__(self, agent_configuration: _Optional[_Union[AgentConfiguration, _Mapping]] = ..., execution_provenance: _Optional[_Union[ExecutionProvenance, _Mapping]] = ...) -> None: ...
 
 class AgentConfiguration(_message.Message):
-    __slots__ = ("id", "role", "manifest_revision", "logical_model", "model_group_revision", "prompt_revision", "tool_policy_revision", "governance_policy_revision", "decision_policy_revision")
+    __slots__ = ("id", "role", "manifest_revision", "logical_model", "model_group_revision", "prompt_revision", "tool_policy_revision", "governance_policy_revision", "decision_policy_revision", "intake")
     ID_FIELD_NUMBER: _ClassVar[int]
     ROLE_FIELD_NUMBER: _ClassVar[int]
     MANIFEST_REVISION_FIELD_NUMBER: _ClassVar[int]
@@ -183,6 +183,7 @@ class AgentConfiguration(_message.Message):
     TOOL_POLICY_REVISION_FIELD_NUMBER: _ClassVar[int]
     GOVERNANCE_POLICY_REVISION_FIELD_NUMBER: _ClassVar[int]
     DECISION_POLICY_REVISION_FIELD_NUMBER: _ClassVar[int]
+    INTAKE_FIELD_NUMBER: _ClassVar[int]
     id: str
     role: str
     manifest_revision: str
@@ -192,7 +193,32 @@ class AgentConfiguration(_message.Message):
     tool_policy_revision: str
     governance_policy_revision: str
     decision_policy_revision: str
-    def __init__(self, id: _Optional[str] = ..., role: _Optional[str] = ..., manifest_revision: _Optional[str] = ..., logical_model: _Optional[str] = ..., model_group_revision: _Optional[str] = ..., prompt_revision: _Optional[str] = ..., tool_policy_revision: _Optional[str] = ..., governance_policy_revision: _Optional[str] = ..., decision_policy_revision: _Optional[str] = ...) -> None: ...
+    intake: ConsultationIntakeConfiguration
+    def __init__(self, id: _Optional[str] = ..., role: _Optional[str] = ..., manifest_revision: _Optional[str] = ..., logical_model: _Optional[str] = ..., model_group_revision: _Optional[str] = ..., prompt_revision: _Optional[str] = ..., tool_policy_revision: _Optional[str] = ..., governance_policy_revision: _Optional[str] = ..., decision_policy_revision: _Optional[str] = ..., intake: _Optional[_Union[ConsultationIntakeConfiguration, _Mapping]] = ...) -> None: ...
+
+class ConsultationIntakeConfiguration(_message.Message):
+    __slots__ = ("logical_model", "model_group_revision", "prompt_revision", "output_schema_revision", "policy_revision", "generation")
+    LOGICAL_MODEL_FIELD_NUMBER: _ClassVar[int]
+    MODEL_GROUP_REVISION_FIELD_NUMBER: _ClassVar[int]
+    PROMPT_REVISION_FIELD_NUMBER: _ClassVar[int]
+    OUTPUT_SCHEMA_REVISION_FIELD_NUMBER: _ClassVar[int]
+    POLICY_REVISION_FIELD_NUMBER: _ClassVar[int]
+    GENERATION_FIELD_NUMBER: _ClassVar[int]
+    logical_model: str
+    model_group_revision: str
+    prompt_revision: str
+    output_schema_revision: str
+    policy_revision: str
+    generation: ConsultationGenerationConfiguration
+    def __init__(self, logical_model: _Optional[str] = ..., model_group_revision: _Optional[str] = ..., prompt_revision: _Optional[str] = ..., output_schema_revision: _Optional[str] = ..., policy_revision: _Optional[str] = ..., generation: _Optional[_Union[ConsultationGenerationConfiguration, _Mapping]] = ...) -> None: ...
+
+class ConsultationGenerationConfiguration(_message.Message):
+    __slots__ = ("temperature", "max_tokens")
+    TEMPERATURE_FIELD_NUMBER: _ClassVar[int]
+    MAX_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    temperature: float
+    max_tokens: int
+    def __init__(self, temperature: _Optional[float] = ..., max_tokens: _Optional[int] = ...) -> None: ...
 
 class ExecutionProvenance(_message.Message):
     __slots__ = ("status", "runtime", "logical_model", "model_group_revision", "usage")

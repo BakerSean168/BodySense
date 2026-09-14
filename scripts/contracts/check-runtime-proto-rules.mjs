@@ -13,6 +13,10 @@ export function assertRuntimeProtoValidationRules(source) {
     ['conversation uuid', 'string conversation_id = 3 [(buf.validate.field).string.uuid = true];'],
     ['user uuid', 'string user_id = 4 [(buf.validate.field).string.uuid = true];'],
     ['resume interrupt uuid', 'string interrupt_id = 6 [(buf.validate.field).string.uuid = true];'],
+    ['runtime interrupt id', 'optional string interaction_id = 4 [(buf.validate.field).string.pattern = "^[0-9a-f]{32}$"];'],
+    ['interaction required id', 'string interaction_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{32}$"];'],
+    ['message delta presence', 'optional string delta = 1 [(buf.validate.field).required = true];'],
+    ['red-flag boolean presence', 'optional bool has_red_flags = 1 [(buf.validate.field).required = true];'],
   ];
   for (const [name, needle] of required) {
     if (!source.includes(needle)) throw new Error(`runtime Proto validation rule missing: ${name}`);

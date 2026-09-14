@@ -138,7 +138,7 @@ message ExecutionProvenance {
 }
 
 message MessageTextDelta {
-  string delta = 1;
+  optional string delta = 1 [(buf.validate.field).required = true];
 }
 
 message ToolCall {
@@ -184,7 +184,7 @@ message KnowledgeGap {
 }
 
 message RedFlagDetected {
-  bool has_red_flags = 1;
+  optional bool has_red_flags = 1 [(buf.validate.field).required = true];
   repeated google.protobuf.Struct flags = 2;
 }
 

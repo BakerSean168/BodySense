@@ -1,4 +1,4 @@
-"""Structured stream event contract shared across Python, Go, and Web.
+"""In-process Python runtime event model used inside consultation execution.
 
 Learning path (Thought Forest note filenames):
 - python-typing-basics.md
@@ -6,9 +6,11 @@ Learning path (Thought Forest note filenames):
 - python-mutability-identity-and-copying.md
 - typescript-static-types-and-runtime-validation.md
 
-Unlike TypeScript-only declarations, Pydantic models validate data at runtime.
-They protect this Python boundary, while shared schema fixtures keep the Go,
-Python, and TypeScript representations aligned.
+This model does not cross the Go boundary. The private Go/Python HTTP+NDJSON
+seam is owned by the generated runtime Proto contract and its adapter; the
+public Go/Web SSE stream is separately owned by the public JSON Schema. Phase
+05 may further type this in-process Python vocabulary without changing either
+wire authority.
 """
 
 from __future__ import annotations

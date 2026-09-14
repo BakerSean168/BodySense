@@ -78,7 +78,7 @@ message RuntimeEventIds {
   string conversation_id = 1 [(buf.validate.field).string.uuid = true];
   string run_id = 2 [(buf.validate.field).string.uuid = true];
   optional string tool_call_id = 3 [(buf.validate.field).string.min_len = 1];
-  optional string interaction_id = 4 [(buf.validate.field).string.uuid = true];
+  optional string interaction_id = 4 [(buf.validate.field).string.pattern = "^[0-9a-f]{32}$"];
 }
 
 // RuntimeEvent is internal only. Public StreamEvent channel/type/payload is
@@ -127,6 +127,28 @@ message AgentConfiguration {
   string tool_policy_revision = 7 [(buf.validate.field).string.min_len = 1];
   string governance_policy_revision = 8 [(buf.validate.field).string.min_len = 1];
   string decision_policy_revision = 9 [(buf.validate.field).string.min_len = 1];
+  ConsultationIntakeConfiguration intake = 10;
+}
+
+// ConsultationIntakeConfiguration preserves the complete immutable provenance
+// of the optional structured intake sub-agent. It is nested exactly as emitted
+// by ConsultationAgentManifest.provenance(); the runtime boundary must not
+// flatten or silently drop these behavior-significant fields.
+message ConsultationIntakeConfiguration {
+  string logical_model = 1 [(buf.validate.field).string.min_len = 1];
+  string model_group_revision = 2 [(buf.validate.field).string.min_len = 1];
+  string prompt_revision = 3 [(buf.validate.field).string.min_len = 1];
+  string output_schema_revision = 4 [(buf.validate.field).string.min_len = 1];
+  string policy_revision = 5 [(buf.validate.field).string.min_len = 1];
+  ConsultationGenerationConfiguration generation = 6 [(buf.validate.field).required = true];
+}
+
+message ConsultationGenerationConfiguration {
+  double temperature = 1 [
+    (buf.validate.field).double.gte = 0.0,
+    (buf.validate.field).double.lte = 2.0
+  ];
+  uint32 max_tokens = 2 [(buf.validate.field).uint32.gt = 0];
 }
 
 message ExecutionProvenance {
@@ -138,7 +160,7 @@ message ExecutionProvenance {
 }
 
 message MessageTextDelta {
-  string delta = 1;
+  optional string delta = 1 [(buf.validate.field).required = true];
 }
 
 message ToolCall {
@@ -160,7 +182,7 @@ message LifestyleContextUpsert {
 }
 
 message InteractionRequired {
-  string interaction_id = 1 [(buf.validate.field).string.uuid = true];
+  string interaction_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{32}$"];
   google.protobuf.Struct question = 2 [(buf.validate.field).required = true];
 }
 
@@ -184,7 +206,7 @@ message KnowledgeGap {
 }
 
 message RedFlagDetected {
-  bool has_red_flags = 1;
+  optional bool has_red_flags = 1 [(buf.validate.field).required = true];
   repeated google.protobuf.Struct flags = 2;
 }
 

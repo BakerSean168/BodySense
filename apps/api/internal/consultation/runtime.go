@@ -994,10 +994,65 @@ type streamResult struct {
 	ExecutionIdentity  ConsultationExecutionIdentity
 }
 
+func projectConsultationRuntimeEvent(event service.ConsultationRuntimeEvent) (dto.StreamEvent, error) {
+	var channel, eventType string
+	switch event.Kind {
+	case service.ConsultationRuntimeTextDelta:
+		channel, eventType = "message", "message.text.delta"
+	case service.ConsultationRuntimeToolCall:
+		channel, eventType = "tool", "tool.call"
+	case service.ConsultationRuntimeToolResult:
+		channel, eventType = "tool", "tool.result"
+	case service.ConsultationRuntimeExtractedInfo:
+		channel, eventType = "state", "state.extracted_info.upsert"
+	case service.ConsultationRuntimeLifestyleContext:
+		channel, eventType = "state", "state.lifestyle_context.upsert"
+	case service.ConsultationRuntimeInteraction:
+		channel, eventType = "state", "state.interaction.required"
+	case service.ConsultationRuntimePhaseChanged:
+		channel, eventType = "state", "state.phase.changed"
+	case service.ConsultationRuntimeCitationAdded:
+		channel, eventType = "source", "source.citation.added"
+	case service.ConsultationRuntimeAttributionAdded:
+		channel, eventType = "source", "source.answer_attribution.added"
+	case service.ConsultationRuntimeKnowledgeGap:
+		channel, eventType = "source", "source.knowledge_gap"
+	case service.ConsultationRuntimeRedFlagDetected:
+		channel, eventType = "safety", "safety.red_flag.detected"
+	case service.ConsultationRuntimeOutputReviewed:
+		channel, eventType = "safety", "safety.output_reviewed"
+	case service.ConsultationRuntimeOutputRejected:
+		channel, eventType = "safety", "safety.output_rejected"
+	case service.ConsultationRuntimeUsageReported:
+		channel, eventType = "usage", "usage.reported"
+	case service.ConsultationRuntimeDone:
+		channel, eventType = "stream", "stream.done"
+	case service.ConsultationRuntimeError:
+		channel, eventType = "stream", "stream.error"
+	case service.ConsultationRuntimeAgentConfiguration:
+		return dto.StreamEvent{}, errors.New("runtime Agent configuration is private control-plane state")
+	default:
+		return dto.StreamEvent{}, fmt.Errorf("unsupported internal runtime event kind %q", event.Kind)
+	}
+
+	return dto.StreamEvent{
+		Version: 1,
+		Seq:     event.Seq,
+		Channel: channel,
+		Type:    eventType,
+		IDs: dto.StreamEventIDs{
+			ConversationID: event.IDs.ConversationID,
+			RunID:          event.IDs.RunID,
+			ToolCallID:     event.IDs.ToolCallID,
+		},
+		Payload: append(json.RawMessage(nil), event.Payload...),
+	}, nil
+}
+
 func (r *Runtime) streamAIEvents(
 	ctx context.Context,
 	sw *stream.StreamWriter,
-	events <-chan dto.StreamEvent,
+	events <-chan service.ConsultationRuntimeEvent,
 	state streamState,
 ) (streamResult, bool) {
 	result := streamResult{}
@@ -1036,11 +1091,11 @@ func (r *Runtime) streamAIEvents(
 			// The immutable execution identity is a control-plane handshake, not
 			// ordinary semantic output. Nothing else is trusted until it is the
 			// first event and has been validated/persisted by Go.
-			if !handshakeAccepted && event.Type != "runtime.agent_configuration" {
+			if !handshakeAccepted && event.Kind != service.ConsultationRuntimeAgentConfiguration {
 				r.failActiveStream(ctx, sw, state, "runtime Agent configuration handshake must be the first event")
 				return result, true
 			}
-			if handshakeAccepted && event.Type == "runtime.agent_configuration" {
+			if handshakeAccepted && event.Kind == service.ConsultationRuntimeAgentConfiguration {
 				r.failActiveStream(ctx, sw, state, "duplicate runtime Agent configuration handshake")
 				return result, true
 			}
@@ -1048,7 +1103,7 @@ func (r *Runtime) streamAIEvents(
 			if r.handleAIEvent(ctx, sw, event, state, &result, &phase) {
 				return result, true
 			}
-			if event.Type == "runtime.agent_configuration" {
+			if event.Kind == service.ConsultationRuntimeAgentConfiguration {
 				handshakeAccepted = result.ExecutionIdentity.ConfigurationID != ""
 				if !handshakeAccepted {
 					r.failActiveStream(ctx, sw, state, "invalid runtime Agent configuration handshake")
@@ -1071,11 +1126,11 @@ type consultationExecutionProvenanceEnvelope struct {
 }
 
 func validateConsultationExecutionIdentity(
-	event dto.StreamEvent,
+	event service.ConsultationRuntimeEvent,
 	expectedConfigurationID string,
 ) (ConsultationExecutionIdentity, error) {
-	if event.Type != "runtime.agent_configuration" || event.Channel != "runtime" {
-		return ConsultationExecutionIdentity{}, fmt.Errorf("unexpected handshake event %s/%s", event.Channel, event.Type)
+	if event.Kind != service.ConsultationRuntimeAgentConfiguration {
+		return ConsultationExecutionIdentity{}, fmt.Errorf("unexpected handshake event kind %q", event.Kind)
 	}
 	expectedConfigurationID = strings.TrimSpace(expectedConfigurationID)
 	if expectedConfigurationID == "" {
@@ -1136,13 +1191,19 @@ func validateConsultationExecutionIdentity(
 func (r *Runtime) handleAIEvent(
 	ctx context.Context,
 	sw *stream.StreamWriter,
-	event dto.StreamEvent,
+	event service.ConsultationRuntimeEvent,
 	state streamState,
 	result *streamResult,
 	phase *string,
 ) bool {
-	switch event.Type {
-	case "message.text.delta":
+	publicEvent, projectionErr := projectConsultationRuntimeEvent(event)
+	if projectionErr != nil && event.Kind != service.ConsultationRuntimeAgentConfiguration {
+		r.failActiveStream(ctx, sw, state, "invalid internal runtime event projection")
+		return true
+	}
+
+	switch event.Kind {
+	case service.ConsultationRuntimeTextDelta:
 		var payload struct {
 			Delta string `json:"delta"`
 		}
@@ -1150,13 +1211,13 @@ func (r *Runtime) handleAIEvent(
 			r.failActiveStream(ctx, sw, state, "invalid message delta payload")
 			return true
 		}
-		r.sendEvent(ctx, sw, event, state.AssistantMsgID, "text.delta")
+		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, "text.delta")
 		result.AssistantParts = append(
 			result.AssistantParts,
 			map[string]any{"type": "text", "text": payload.Delta},
 		)
 
-	case "tool.call":
+	case service.ConsultationRuntimeToolCall:
 		var payload struct {
 			Tool string          `json:"tool"`
 			Args json.RawMessage `json:"args"`
@@ -1165,7 +1226,7 @@ func (r *Runtime) handleAIEvent(
 			r.failActiveStream(ctx, sw, state, "invalid tool.call payload")
 			return true
 		}
-		r.sendEvent(ctx, sw, event, state.AssistantMsgID, "tool.call")
+		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, "tool.call")
 		result.AssistantParts = append(
 			result.AssistantParts,
 			map[string]any{
@@ -1186,7 +1247,7 @@ func (r *Runtime) handleAIEvent(
 			datatypes.JSON(payload.Args),
 		)
 
-	case "tool.result":
+	case service.ConsultationRuntimeToolResult:
 		var payload struct {
 			Tool   string          `json:"tool"`
 			Result json.RawMessage `json:"result"`
@@ -1195,7 +1256,7 @@ func (r *Runtime) handleAIEvent(
 			r.failActiveStream(ctx, sw, state, "invalid tool.result payload")
 			return true
 		}
-		r.sendEvent(ctx, sw, event, state.AssistantMsgID, "tool.result")
+		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, "tool.result")
 		result.AssistantParts = append(
 			result.AssistantParts,
 			map[string]any{
@@ -1213,7 +1274,7 @@ func (r *Runtime) handleAIEvent(
 			toolResultIsError(payload.Result),
 		)
 
-	case "state.extracted_info.upsert":
+	case service.ConsultationRuntimeExtractedInfo:
 		var payload struct {
 			Info json.RawMessage `json:"info"`
 		}
@@ -1226,9 +1287,9 @@ func (r *Runtime) handleAIEvent(
 			r.failActiveStream(ctx, sw, state, "failed to persist durable health state")
 			return true
 		}
-		r.sendEvent(ctx, sw, event, state.AssistantMsgID, event.Type)
+		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, publicEvent.Type)
 
-	case "state.lifestyle_context.upsert":
+	case service.ConsultationRuntimeLifestyleContext:
 		var payload struct {
 			Context json.RawMessage `json:"context"`
 		}
@@ -1241,40 +1302,40 @@ func (r *Runtime) handleAIEvent(
 			r.failActiveStream(ctx, sw, state, "failed to persist durable lifestyle state")
 			return true
 		}
-		r.sendEvent(ctx, sw, event, state.AssistantMsgID, event.Type)
+		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, publicEvent.Type)
 
-	case "source.citation.added":
-		r.sendEvent(ctx, sw, event, state.AssistantMsgID, event.Type)
+	case service.ConsultationRuntimeCitationAdded:
+		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, publicEvent.Type)
 		result.AssistantParts = append(result.AssistantParts, citationPart(event.Payload))
 
-	case "source.answer_attribution.added":
+	case service.ConsultationRuntimeAttributionAdded:
 		if _, err := service.ParseConsultationAnswerAttributionPayload(event.Payload); err != nil {
 			r.failActiveStream(ctx, sw, state, "invalid answer attribution payload")
 			return true
 		}
-		r.sendEvent(ctx, sw, event, state.AssistantMsgID, event.Type)
+		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, publicEvent.Type)
 		result.AssistantParts = append(result.AssistantParts, dataPart("answer_attribution", event.Payload))
 
-	case "source.knowledge_gap":
-		r.sendEvent(ctx, sw, event, state.AssistantMsgID, event.Type)
+	case service.ConsultationRuntimeKnowledgeGap:
+		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, publicEvent.Type)
 		result.AssistantParts = append(result.AssistantParts, dataPart("knowledge_gap", event.Payload))
 
-	case "safety.red_flag.detected":
+	case service.ConsultationRuntimeRedFlagDetected:
 		if err := r.persistSafetyEvent(ctx, state.UID, event.Payload); err != nil {
 			log.Printf("failed to persist BodyState safety event for run %s: %v", state.Run.ID, err)
 			r.failActiveStream(ctx, sw, state, "failed to persist safety state")
 			return true
 		}
-		r.sendEvent(ctx, sw, event, state.AssistantMsgID, event.Type)
+		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, publicEvent.Type)
 		result.AssistantParts = append(result.AssistantParts, dataPart("red_flag", event.Payload))
 
-	case "safety.output_reviewed", "safety.output_rejected":
-		r.handleSafetyOutputEvent(ctx, sw, event, state, result)
+	case service.ConsultationRuntimeOutputReviewed, service.ConsultationRuntimeOutputRejected:
+		r.handleSafetyOutputEvent(ctx, sw, publicEvent, state, result)
 
-	case "state.interaction.required":
-		return r.handleInteractionRequired(ctx, sw, event, state, result)
+	case service.ConsultationRuntimeInteraction:
+		return r.handleInteractionRequired(ctx, sw, publicEvent, state, result)
 
-	case "state.phase.changed":
+	case service.ConsultationRuntimePhaseChanged:
 		var payload struct {
 			From   string `json:"from,omitempty"`
 			To     string `json:"to"`
@@ -1288,15 +1349,15 @@ func (r *Runtime) handleAIEvent(
 			payload.From = *phase
 		}
 		if patched, err := json.Marshal(payload); err == nil {
-			event.Payload = patched
+			publicEvent.Payload = patched
 		}
-		r.sendEvent(ctx, sw, event, state.AssistantMsgID, "phase_change")
+		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, "phase_change")
 		*phase = payload.To
 		if err := r.consultationService.UpdatePhase(ctx, state.ConversationID, state.UID, payload.To); err != nil {
 			log.Printf("failed to update phase for conversation %s: %v", state.ConversationID, err)
 		}
 
-	case "usage.reported":
+	case service.ConsultationRuntimeUsageReported:
 		var payload struct {
 			Usage json.RawMessage `json:"usage"`
 		}
@@ -1305,9 +1366,9 @@ func (r *Runtime) handleAIEvent(
 			return true
 		}
 		result.Usage = payload.Usage
-		r.sendEvent(ctx, sw, event, state.AssistantMsgID, "usage.reported")
+		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, "usage.reported")
 
-	case "runtime.agent_configuration":
+	case service.ConsultationRuntimeAgentConfiguration:
 		identity, err := validateConsultationExecutionIdentity(event, state.ExpectedConfigurationID)
 		if err != nil {
 			log.Printf("rejected Consultation runtime identity for run %s: %v", state.Run.ID, err)
@@ -1331,7 +1392,7 @@ func (r *Runtime) handleAIEvent(
 		}
 		result.ExecutionIdentity = identity
 
-	case "stream.done":
+	case service.ConsultationRuntimeDone:
 		var payload struct {
 			ResponseID string          `json:"response_id"`
 			Usage      json.RawMessage `json:"usage"`
@@ -1351,14 +1412,14 @@ func (r *Runtime) handleAIEvent(
 			result.GovernanceResult = datatypes.JSON(payload.Governance)
 		}
 
-	case "stream.error":
+	case service.ConsultationRuntimeError:
 		var payload struct {
 			Message string `json:"message"`
 		}
 		if err := event.PayloadAs(&payload); err != nil {
 			payload.Message = "AI runtime protocol error"
 		}
-		r.sendEvent(ctx, sw, event, state.AssistantMsgID, "stream.error")
+		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, "stream.error")
 		r.failActiveStream(ctx, sw, state, payload.Message)
 		return true
 	}

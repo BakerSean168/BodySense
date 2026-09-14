@@ -118,7 +118,18 @@
           "prompt_revision": "prompt-v1",
           "tool_policy_revision": "tools-v1",
           "governance_policy_revision": "governance-v1",
-          "decision_policy_revision": "decision-v1"
+          "decision_policy_revision": "decision-v1",
+          "intake": {
+            "logical_model": "bodysense-structured",
+            "model_group_revision": "consultation-intake-model-group-v1",
+            "prompt_revision": "consultation-intake-prompt-v1",
+            "output_schema_revision": "consultation-intake-output-v1",
+            "policy_revision": "consultation-state-acquisition-v1",
+            "generation": {
+              "temperature": 0.1,
+              "max_tokens": 1200
+            }
+          }
         },
         "execution_provenance": {
           "status": "executed",
@@ -204,10 +215,10 @@
         "conversation_id": "33333333-3333-4333-8333-333333333333",
         "run_id": "22222222-2222-4222-8222-222222222222",
         "tool_call_id": "tool-ask",
-        "interaction_id": "55555555-5555-4555-8555-555555555555"
+        "interaction_id": "45fda8478b2ef754419799e10992af06"
       },
       "interaction_required": {
-        "interaction_id": "55555555-5555-4555-8555-555555555555",
+        "interaction_id": "45fda8478b2ef754419799e10992af06",
         "question": {
           "type": "single_choice",
           "prompt": "Continue?"
@@ -616,6 +627,61 @@
         },
         "stream_error": {
           "message": ""
+        }
+      }
+    },
+    {
+      "name": "invalid_runtime_interrupt_id",
+      "message": "runtime_event",
+      "value": {
+        "version": 1,
+        "seq": "7",
+        "ids": {
+          "conversation_id": "33333333-3333-4333-8333-333333333333",
+          "run_id": "22222222-2222-4222-8222-222222222222",
+          "tool_call_id": "tool-ask",
+          "interaction_id": "55555555-5555-4555-8555-555555555555"
+        },
+        "interaction_required": {
+          "interaction_id": "55555555-5555-4555-8555-555555555555",
+          "question": {
+            "type": "single_choice",
+            "prompt": "Continue?"
+          }
+        }
+      }
+    },
+    {
+      "name": "missing_text_delta",
+      "message": "runtime_event",
+      "value": {
+        "version": 1,
+        "seq": "2",
+        "ids": {
+          "conversation_id": "33333333-3333-4333-8333-333333333333",
+          "run_id": "22222222-2222-4222-8222-222222222222"
+        },
+        "text_delta": {}
+      }
+    },
+    {
+      "name": "missing_red_flag_boolean",
+      "message": "runtime_event",
+      "value": {
+        "version": 1,
+        "seq": "12",
+        "ids": {
+          "conversation_id": "33333333-3333-4333-8333-333333333333",
+          "run_id": "22222222-2222-4222-8222-222222222222"
+        },
+        "red_flag_detected": {
+          "flags": [
+            {
+              "category": "weakness",
+              "severity": "high",
+              "message": "signal"
+            }
+          ]
         }
       }
     }

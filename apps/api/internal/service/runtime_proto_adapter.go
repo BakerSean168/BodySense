@@ -13,6 +13,7 @@ import (
 )
 
 var runtimeProtoJSON = protojson.MarshalOptions{UseProtoNames: true}
+var runtimeProtoPayloadJSON = protojson.MarshalOptions{UseProtoNames: true, EmitDefaultValues: true}
 
 func marshalStartTurnCommand(threadID string, req StartConsultationTurnRequest) ([]byte, error) {
 	businessContext, err := consultationBusinessContextToProto(req.BusinessContext)

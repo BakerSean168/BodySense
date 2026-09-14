@@ -7,8 +7,6 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
-
-	"github.com/bodysense/api/internal/dto"
 )
 
 const (
@@ -39,7 +37,7 @@ func validStartConsultationTurnRequest() StartConsultationTurnRequest {
 	}
 }
 
-func TestChatStreamSendsFlatPythonRequestAndParsesStreamEvent(t *testing.T) {
+func TestChatStreamSendsProtoCommandAndParsesProtoRuntimeEvent(t *testing.T) {
 	var captured map[string]any
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -50,7 +48,7 @@ func TestChatStreamSendsFlatPythonRequestAndParsesStreamEvent(t *testing.T) {
 			t.Fatalf("decode request: %v", err)
 		}
 		w.Header().Set("Content-Type", "application/x-ndjson")
-		_, _ = w.Write([]byte(`{"version":1,"seq":1,"channel":"message","type":"message.text.delta","ids":{"conversation_id":"s1"},"payload":{"delta":"hello"}}` + "\n"))
+		_, _ = w.Write([]byte(`{"version":1,"seq":"1","ids":{"conversation_id":"` + testRuntimeConversationID + `","run_id":"` + testRuntimeRunID + `"},"text_delta":{"delta":"hello"}}` + "\n"))
 	}))
 	defer server.Close()
 
@@ -92,8 +90,8 @@ func TestChatStreamSendsFlatPythonRequestAndParsesStreamEvent(t *testing.T) {
 
 	select {
 	case event := <-events:
-		if event.Type != "message.text.delta" {
-			t.Fatalf("expected message.text.delta event, got %s", event.Type)
+		if event.Kind != ConsultationRuntimeTextDelta {
+			t.Fatalf("expected text_delta runtime event, got %s", event.Kind)
 		}
 		if string(event.Payload) != `{"delta":"hello"}` {
 			t.Fatalf("unexpected payload: %s", event.Payload)
@@ -145,7 +143,7 @@ func TestConsultationResumeSendsValidatedThreadAndInterruptIdentity(t *testing.T
 			t.Fatal(err)
 		}
 		w.Header().Set("Content-Type", "application/x-ndjson")
-		_, _ = w.Write([]byte(`{"version":1,"seq":1,"channel":"stream","type":"stream.done","ids":{"conversation_id":"` + testRuntimeConversationID + `","run_id":"` + testRuntimeRunID + `"},"payload":{}}` + "\n"))
+		_, _ = w.Write([]byte(`{"version":1,"seq":"1","ids":{"conversation_id":"` + testRuntimeConversationID + `","run_id":"` + testRuntimeRunID + `"},"stream_done":{}}` + "\n"))
 	}))
 	defer server.Close()
 	client := &AIClient{httpClient: server.Client(), baseURL: server.URL}
@@ -163,8 +161,8 @@ func TestConsultationResumeSendsValidatedThreadAndInterruptIdentity(t *testing.T
 	if err != nil {
 		t.Fatalf("ResumeConsultationInterrupt: %v", err)
 	}
-	if event := <-events; event.Type != "stream.done" {
-		t.Fatalf("event type = %q, want stream.done", event.Type)
+	if event := <-events; event.Kind != ConsultationRuntimeDone {
+		t.Fatalf("event kind = %q, want done", event.Kind)
 	}
 	if captured["thread_id"] != testRuntimeThreadID || captured["interrupt_id"] != testRuntimeInterruptID {
 		t.Fatalf("runtime command lost path identities: %#v", captured)
@@ -243,8 +241,8 @@ func TestConsultationStreamConvertsMalformedNDJSONToProtocolError(t *testing.T) 
 		t.Fatal(err)
 	}
 	event := <-events
-	if event.Type != "stream.error" || event.Channel != "stream" {
-		t.Fatalf("expected protocol stream.error, got %#v", event)
+	if event.Kind != ConsultationRuntimeError {
+		t.Fatalf("expected private runtime protocol error, got %#v", event)
 	}
 	var payload struct {
 		Message string `json:"message"`
@@ -266,21 +264,28 @@ func TestConsultationStreamRejectsUnknownInternalEventType(t *testing.T) {
 		t.Fatal(err)
 	}
 	event := <-events
-	if event.Type != "stream.error" {
-		t.Fatalf("expected protocol stream.error, got %#v", event)
+	if event.Kind != ConsultationRuntimeError {
+		t.Fatalf("expected private runtime protocol error, got %#v", event)
 	}
 }
 
-func TestValidateConsultationInternalEventRejectsMalformedRedFlag(t *testing.T) {
-	event, _ := dto.NewStreamEvent(1, "safety", "safety.red_flag.detected", dto.StreamEventIDs{}, map[string]any{
-		"has_red_flags": "yes", "flags": []any{},
-	})
-	if err := validateConsultationInternalEvent(event); err == nil {
-		t.Fatal("malformed authority payload must be rejected")
+func applicationRuntimeEvent(t *testing.T, kind ConsultationRuntimeEventKind, payload any) ConsultationRuntimeEvent {
+	t.Helper()
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ConsultationRuntimeEvent{Kind: kind, Payload: raw}
+}
+
+func TestRuntimeProtoDecoderRejectsMalformedRedFlagType(t *testing.T) {
+	line := []byte(`{"version":1,"seq":"1","ids":{"conversation_id":"` + testRuntimeConversationID + `","run_id":"` + testRuntimeRunID + `"},"red_flag_detected":{"has_red_flags":"yes","flags":[]}}`)
+	if _, err := decodeConsultationRuntimeProtoEvent(line); err == nil {
+		t.Fatal("malformed typed red-flag payload must be rejected at Proto boundary")
 	}
 }
 
-func TestValidateConsultationInternalEventRequiresPublishedThoughtForestCitationIdentity(t *testing.T) {
+func TestRuntimeApplicationPayloadRequiresPublishedThoughtForestCitationIdentity(t *testing.T) {
 	validCitation := map[string]any{
 		"source_type":           "thought_forest_note",
 		"unit_key":              "tfu-pain",
@@ -300,73 +305,43 @@ func TestValidateConsultationInternalEventRequiresPublishedThoughtForestCitation
 			"line_end":     23,
 		},
 	}
-	event, _ := dto.NewStreamEvent(
-		1,
-		"source",
-		"source.citation.added",
-		dto.StreamEventIDs{},
-		map[string]any{"citation": validCitation},
-	)
-	if err := validateConsultationInternalEvent(event); err != nil {
+	event := applicationRuntimeEvent(t, ConsultationRuntimeCitationAdded, map[string]any{"citation": validCitation})
+	if err := validateConsultationRuntimeApplicationPayload(event); err != nil {
 		t.Fatalf("valid published Thought Forest citation rejected: %v", err)
 	}
 
 	delete(validCitation, "publication_id")
-	invalid, _ := dto.NewStreamEvent(
-		1,
-		"source",
-		"source.citation.added",
-		dto.StreamEventIDs{},
-		map[string]any{"citation": validCitation},
-	)
-	if err := validateConsultationInternalEvent(invalid); err == nil {
+	invalid := applicationRuntimeEvent(t, ConsultationRuntimeCitationAdded, map[string]any{"citation": validCitation})
+	if err := validateConsultationRuntimeApplicationPayload(invalid); err == nil {
 		t.Fatal("published Thought Forest citation without publication identity must be rejected")
 	}
 }
 
-func TestValidateConsultationInternalEventKeepsLegacyVideoCitationCompatible(t *testing.T) {
-	event, _ := dto.NewStreamEvent(
-		1,
-		"source",
-		"source.citation.added",
-		dto.StreamEventIDs{},
-		map[string]any{"citation": map[string]any{
-			"title":       "Legacy video citation",
-			"source_type": "video",
-		}},
-	)
-	if err := validateConsultationInternalEvent(event); err != nil {
-		t.Fatalf("legacy video citation must remain compatible: %v", err)
+func TestRuntimeApplicationPayloadAllowsNonThoughtForestCitation(t *testing.T) {
+	event := applicationRuntimeEvent(t, ConsultationRuntimeCitationAdded, map[string]any{"citation": map[string]any{
+		"title":       "Video citation",
+		"source_type": "video",
+	}})
+	if err := validateConsultationRuntimeApplicationPayload(event); err != nil {
+		t.Fatalf("non-Thought-Forest citation should use its own application contract: %v", err)
 	}
 }
 
-func TestValidateConsultationInternalEventAcceptsValidatedAnswerAttribution(t *testing.T) {
+func TestRuntimeApplicationPayloadValidatesAnswerAttribution(t *testing.T) {
 	var payload map[string]any
 	if err := json.Unmarshal(validAnswerAttributionPayload(), &payload); err != nil {
 		t.Fatal(err)
 	}
-	event, _ := dto.NewStreamEvent(
-		1,
-		"source",
-		"source.answer_attribution.added",
-		dto.StreamEventIDs{},
-		payload,
-	)
-	if err := validateConsultationInternalEvent(event); err != nil {
+	event := applicationRuntimeEvent(t, ConsultationRuntimeAttributionAdded, payload)
+	if err := validateConsultationRuntimeApplicationPayload(event); err != nil {
 		t.Fatalf("valid answer attribution rejected: %v", err)
 	}
 
 	attribution := payload["attribution"].(map[string]any)
 	bindings := attribution["bindings"].([]any)
 	bindings[0].(map[string]any)["publication_id"] = "not-a-uuid"
-	invalid, _ := dto.NewStreamEvent(
-		1,
-		"source",
-		"source.answer_attribution.added",
-		dto.StreamEventIDs{},
-		payload,
-	)
-	if err := validateConsultationInternalEvent(invalid); err == nil {
+	invalid := applicationRuntimeEvent(t, ConsultationRuntimeAttributionAdded, payload)
+	if err := validateConsultationRuntimeApplicationPayload(invalid); err == nil {
 		t.Fatal("invalid answer attribution publication identity must be rejected")
 	}
 }

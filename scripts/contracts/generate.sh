@@ -35,8 +35,7 @@ gofmt -w "$ROOT/tools/contracts/generated/openapi-go/foundation.gen.go"
 
 (
   cd "$ROOT/tools/contracts/foundation/proto"
-  "$BIN/buf" dep update
-  "$BIN/buf" generate --template buf.gen.yaml
+  PATH="$BIN:$PATH" "$BIN/buf" generate --template buf.gen.yaml
 )
 
 # Production internal Go/Python runtime artifacts are generated from the canonical Proto IDL.
@@ -48,9 +47,8 @@ mkdir -p \
   "$ROOT/apps/ai-service/src/generated/runtimeproto"
 (
   cd "$ROOT/contracts/internal/agent-runtime"
-  "$BIN/buf" dep update
   "$BIN/buf" lint
-  "$BIN/buf" generate --template buf.gen.yaml
+  PATH="$BIN:$PATH" "$BIN/buf" generate --template buf.gen.yaml
 )
 (
   cd "$ROOT"
