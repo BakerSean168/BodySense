@@ -1,9 +1,10 @@
 # Phase 04 — Internal Go/Python runtime Proto authority
 
-Status: **COMPLETE ON BRANCH — awaiting canonical integration**
+Status: **COMPLETE — integrated into canonical vNext**
 
 - Branch: `refactor/vnext-04-internal-runtime-proto`
 - Parent canonical vNext commit: `6e84ae4ff`
+- Canonical integration merge: `9488fa345` (PR #177)
 - Public StreamEvent remains owned by `packages/contracts/schemas/stream-event.v1.schema.json` and is not reused as the internal runtime protocol.
 - Transport remains HTTP + NDJSON for this phase; gRPC/Connect is an explicit non-goal.
 
@@ -179,4 +180,4 @@ The recovery E2E file now carries an explicit 60s budget. The prior 30s default 
 - **Generated Proto classes do not leak into LangGraph state or Go domain services** — PASS via automated architecture guard and direct import audit.
 - **Disconnect/cancel semantics remain unchanged** — PASS via full local browser characterization, including explicit cancel and API restart recovery.
 
-Canonical integration SHA is intentionally recorded only after the Phase 04 PR is merged into `refactor/bodysense-vnext`.
+Canonical integration: PR #177 merged into `refactor/bodysense-vnext` as `9488fa345`.

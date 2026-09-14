@@ -1,6 +1,6 @@
 # BodySense vNext Engineering Reset — Master Refactor Plan
 
-- Status: ACTIVE MASTER PLAN — Phases 00–03 complete; Phase 04 is IN PROGRESS
+- Status: ACTIVE MASTER PLAN — Phases 00–04 complete; Phase 05 is NEXT
 - Date: 2026-09-13
 - Integration branch: `refactor/bodysense-vnext`
 - Integration worktree: `/home/dev/projects/bodysense-vnext-refactor`
@@ -387,14 +387,15 @@ This gives each phase an auditable diff and prevents a single giant unreviewable
 
 ### Execution status
 
-| Phase                    | Status       | Integration evidence                                                                                                                                                   |
-| ------------------------ | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 00 — Baseline            | **COMPLETE** | `a2c68a38d` merged baseline evidence, fresh PG18+pgvector schema snapshot, retirement/finding ledgers and self-contained typecheck                                     |
-| 01 — Contract foundation | **COMPLETE** | `100018dd3` merged contract authority foundation; see `docs/refactor/vnext/phase-01-contract-foundation.md`                                                            |
-| 02 — Public REST         | **COMPLETE** | `ea343d7c5` merged 95/95 eligible browser routes OpenAPI-authoritative; see `docs/refactor/vnext/phase-02-rest-openapi.md`                                             |
-| 03 — Public StreamEvent  | **COMPLETE** | `1125db479` merged JSON Schema-first generated TS/standalone validator, shared live/replay parser boundary and exhaustive Web consumers; see `docs/refactor/vnext/phase-03-public-stream.md` |
-| 04 — Internal runtime    | **IN PROGRESS** | RUNTIME-001 canonical Proto/Buf/Protovalidate authority + deterministic Go/Python generation complete; serving adapter cutover is next; see `docs/refactor/vnext/phase-04-internal-runtime-proto.md` |
-| 05–11                    | QUEUED       | blocked by preceding dependency phases                                                                                                                                 |
+| Phase                    | Status       | Integration evidence                                                                                                                                                                                                                                     |
+| ------------------------ | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 00 — Baseline            | **COMPLETE** | `a2c68a38d` merged baseline evidence, fresh PG18+pgvector schema snapshot, retirement/finding ledgers and self-contained typecheck                                                                                                                       |
+| 01 — Contract foundation | **COMPLETE** | `100018dd3` merged contract authority foundation; see `docs/refactor/vnext/phase-01-contract-foundation.md`                                                                                                                                              |
+| 02 — Public REST         | **COMPLETE** | `ea343d7c5` merged 95/95 eligible browser routes OpenAPI-authoritative; see `docs/refactor/vnext/phase-02-rest-openapi.md`                                                                                                                               |
+| 03 — Public StreamEvent  | **COMPLETE** | `1125db479` merged JSON Schema-first generated TS/standalone validator, shared live/replay parser boundary and exhaustive Web consumers; see `docs/refactor/vnext/phase-03-public-stream.md`                                                             |
+| 04 — Internal runtime    | **COMPLETE** | `9488fa345` merged private Proto/Protovalidate command + typed `oneof` event authority, boundary-only generated types, deterministic local codegen and unchanged cancel/recovery semantics; see `docs/refactor/vnext/phase-04-internal-runtime-proto.md` |
+| 05 — Runtime trust       | **NEXT**     | runtime-validation/error-semantics phase; see Phase 05 below                                                                                                                                                                                             |
+| 06–11                    | QUEUED       | blocked by preceding dependency phases                                                                                                                                                                                                                   |
 
 ## Phase 00 — Freeze baseline and create the refactor ledger
 
@@ -518,6 +519,8 @@ Make the public event schema the only static/runtime authority and make every co
 ## Phase 04 — Internal Go/Python runtime reset to Proto IDL
 
 Branch: `refactor/vnext-04-internal-runtime-proto`
+
+**Status: COMPLETE — integrated as `9488fa345` (PR #177).**
 
 ### Goal
 
