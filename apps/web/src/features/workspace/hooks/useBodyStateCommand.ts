@@ -1,6 +1,12 @@
 import { useMutation } from "@tanstack/react-query";
 import { ApiRequestError } from "@/lib/api-client";
-import type { AddFactInput, LifestyleSectionKey } from "../api/workspaceApi";
+import type {
+  AddFactInput,
+  BodyStateHypothesisLifecycleState,
+  BodyStateReviewState,
+  BodyStateSafetyResolution,
+  LifestyleSectionKey,
+} from "../api/workspaceApi";
 import { workspaceApi } from "../api/workspaceApi";
 import { useWorkspaceInvalidation } from "./useWorkspaceInvalidation";
 
@@ -10,7 +16,7 @@ export type BodyStateCommand =
       type: "reviewFact";
       factId: string;
       expectedRevision: number;
-      reviewState: string;
+      reviewState: BodyStateReviewState;
     }
   | {
       type: "correctFact";
@@ -32,18 +38,18 @@ export type BodyStateCommand =
       type: "reviewObservation";
       observationId: string;
       expectedRevision: number;
-      reviewState: "confirmed" | "rejected";
+      reviewState: BodyStateReviewState;
     }
   | {
       type: "updateHypothesisLifecycle";
       hypothesisId: string;
       expectedRevision: number;
-      lifecycleState: string;
+      lifecycleState: BodyStateHypothesisLifecycleState;
     }
   | {
       type: "resolveSafety";
       expectedRevision: number;
-      resolution: string;
+      resolution: BodyStateSafetyResolution;
       note: string;
     }
   | {

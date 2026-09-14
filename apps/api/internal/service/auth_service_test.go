@@ -12,7 +12,6 @@ import (
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/bodysense/api/internal/auth"
-	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
@@ -149,7 +148,7 @@ func TestRotateRefreshTokenSingleWinnerAndReplayRevokesFamily(t *testing.T) {
 
 	// A replay of the consumed credential must revoke the whole family, including
 	// whichever replacement won the race.
-	if _, err := svc.RefreshToken(ctx, dto.RefreshRequest{RefreshToken: oldToken}); err == nil || !strings.Contains(err.Error(), "reuse") {
+	if _, err := svc.RefreshSession(ctx, oldToken); err == nil || !strings.Contains(err.Error(), "reuse") {
 		t.Fatalf("RefreshToken(replay) error = %v, want reuse detection", err)
 	}
 	for _, token := range newTokens {

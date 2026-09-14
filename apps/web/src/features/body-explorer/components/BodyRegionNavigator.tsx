@@ -1,4 +1,4 @@
-import type { BodyStateSnapshot } from "@/features/consultation/types/consultation";
+import type { BodyStateProjection } from "@/features/consultation/types/consultation";
 import { selectBodyRegionVisualSummaries } from "../model/bodyExplorerSelectors";
 import {
   bodyRegionDefinitions,
@@ -20,7 +20,7 @@ export function BodyRegionNavigator({
   selectedRegionId,
   onSelectRegion,
 }: {
-  snapshot: BodyStateSnapshot | null;
+  snapshot: BodyStateProjection | null;
   selectedRegionId: BodyRegionId | null;
   onSelectRegion: (regionId: BodyRegionId | null) => void;
 }) {

@@ -7,7 +7,7 @@ import { consultationApi } from "../services/consultationService";
 import { consultationKeys } from "../services/consultationQueryKeys";
 import { diagnosisHistoryQueryOptions } from "../services/consultationQueryOptions";
 import type {
-  BodyStateSnapshot,
+  BodyStateProjection,
   ConsultationThread,
   DiagnosisAnalysis,
   DiagnosisCandidateAssessmentState,
@@ -15,7 +15,7 @@ import type {
 
 interface UseDiagnosisActionsOptions {
   conversationId: string | null;
-  bodyState: BodyStateSnapshot | null;
+  bodyState: BodyStateProjection | null;
   analysis: DiagnosisAnalysis | null;
 }
 

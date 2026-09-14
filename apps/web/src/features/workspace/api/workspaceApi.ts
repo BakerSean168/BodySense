@@ -1,22 +1,29 @@
-import { authFetch } from "@/features/auth/services/authService";
-import { expectEmpty, expectJson } from "@/lib/api-client";
+import {
+  acceptTreatmentRevision,
+  addBodyStateFact,
+  correctBodyStateFact,
+  generateTreatmentProposal,
+  getHealthWorkspace,
+  recordOutcome,
+  rejectTreatmentRevision,
+  resolveBodyStateSafety,
+  reviewCurrentTreatment,
+  reviewBodyStateFact,
+  reviewBodyStateObservation,
+  updateBodyStateFactTemporal,
+  updateBodyStateHypothesisLifecycle,
+  updateLifestyle,
+} from "@/generated/api/bodysense";
+import { openApiAuthFetch, withOpenApiError } from "@/lib/openapi-client";
 import type { BodyStateFact } from "@/features/consultation/types/consultation";
 import type {
   HealthWorkspace,
   Outcome,
+  WorkspaceDiagnosis,
   Treatment,
   TreatmentRevision,
+  TrainingExecutionPlan,
 } from "../types/workspace";
-
-async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  return expectJson<T>(await authFetch(url, init));
-}
-
-async function requestEmpty(url: string, init?: RequestInit): Promise<void> {
-  return expectEmpty(await authFetch(url, init));
-}
-
-const jsonHeaders = { "Content-Type": "application/json" };
 
 export interface AddFactInput {
   concern_key?: string;
@@ -35,140 +42,242 @@ export interface AddFactInput {
 export type LifestyleSectionKey =
   "activity" | "sleep" | "exercise" | "nutrition" | "substances" | "recovery";
 
-export const workspaceApi = {
-  get: () => request<HealthWorkspace>("/api/v1/health-workspace"),
+export type BodyStateReviewState = "unverified" | "confirmed" | "rejected";
+export type BodyStateHypothesisLifecycleState =
+  "active" | "strengthened" | "weakened" | "unsupported" | "retired";
+export type BodyStateSafetyResolution =
+  "resolved" | "cleared_by_review" | "monitoring";
 
-  addFact: (expectedRevision: number, fact: AddFactInput) =>
-    request<{ fact: BodyStateFact }>("/api/v1/body-state/facts", {
-      method: "POST",
-      headers: jsonHeaders,
-      body: JSON.stringify({ expected_revision: expectedRevision, fact }),
+function projectWorkspaceCitations(
+  citations: Array<Record<string, unknown>>,
+): WorkspaceDiagnosis["citations"] {
+  return citations.flatMap((citation) => {
+    const title = typeof citation.title === "string" ? citation.title : null;
+    if (!title) return [];
+    const optionalString = (key: string) =>
+      typeof citation[key] === "string" ? citation[key] : undefined;
+    return [
+      {
+        title,
+        summary: optionalString("summary"),
+        content: optionalString("content"),
+        category: optionalString("category"),
+        snippet: optionalString("snippet"),
+        body_markdown: optionalString("body_markdown"),
+        source_title: optionalString("source_title"),
+        source_author: optionalString("source_author"),
+        problem_slug: optionalString("problem_slug"),
+      },
+    ];
+  });
+}
+
+function projectWorkspaceDiagnosis(
+  diagnosis: Awaited<ReturnType<typeof getHealthWorkspace>>["diagnosis"],
+): WorkspaceDiagnosis | undefined {
+  if (!diagnosis) return undefined;
+  if (!diagnosis.freshness || !diagnosis.candidate_assessments) {
+    throw new Error(
+      "health workspace diagnosis projection is missing review state",
+    );
+  }
+  return {
+    analysis_id: diagnosis.analysis_id,
+    body_state_revision: diagnosis.body_state_revision,
+    status: diagnosis.status,
+    scope: diagnosis.scope,
+    summary: diagnosis.summary,
+    candidates: diagnosis.candidates,
+    citations: projectWorkspaceCitations(diagnosis.citations),
+    freshness: diagnosis.freshness,
+    candidate_assessments: diagnosis.candidate_assessments.map(
+      ({ candidate_id, state }) => ({
+        candidate_id,
+        state,
+      }),
+    ),
+    created_at: diagnosis.created_at,
+  };
+}
+
+export const workspaceApi = {
+  get: async (): Promise<HealthWorkspace> =>
+    withOpenApiError(async () => {
+      const response = await getHealthWorkspace(undefined, openApiAuthFetch);
+      return {
+        generated_at: response.generated_at,
+        conversation_id: response.conversation_id,
+        profile_ready: response.profile_ready,
+        body_state: response.body_state,
+        diagnosis: response.diagnosis
+          ? projectWorkspaceDiagnosis(response.diagnosis)
+          : undefined,
+        treatment: response.treatment,
+        training_plan: response.training_plan,
+        treatment_revisions: response.treatment_revisions,
+        recent_outcomes: response.recent_outcomes,
+        trends: response.trends,
+        capabilities: response.capabilities,
+        actions: response.actions,
+      };
     }),
 
-  reviewFact: (factId: string, expectedRevision: number, reviewState: string) =>
-    request<{ fact: BodyStateFact }>(
-      `/api/v1/body-state/facts/${factId}/review`,
-      {
-        method: "PATCH",
-        headers: jsonHeaders,
-        body: JSON.stringify({
-          expected_revision: expectedRevision,
-          review_state: reviewState,
-        }),
-      },
-    ),
+  addFact: async (
+    expectedRevision: number,
+    fact: AddFactInput,
+  ): Promise<{ fact: BodyStateFact }> =>
+    withOpenApiError(async () => {
+      const response = await addBodyStateFact(
+        { expected_revision: expectedRevision, fact },
+        undefined,
+        openApiAuthFetch,
+      );
+      return { fact: response.fact };
+    }),
 
-  correctFact: (
+  reviewFact: async (
+    factId: string,
+    expectedRevision: number,
+    reviewState: BodyStateReviewState,
+  ): Promise<{ fact: BodyStateFact }> =>
+    withOpenApiError(async () => {
+      const response = await reviewBodyStateFact(
+        factId,
+        { expected_revision: expectedRevision, review_state: reviewState },
+        undefined,
+        openApiAuthFetch,
+      );
+      return { fact: response.fact };
+    }),
+
+  correctFact: async (
     factId: string,
     expectedRevision: number,
     replacement: AddFactInput,
-  ) =>
-    request<{ fact: BodyStateFact }>(
-      `/api/v1/body-state/facts/${factId}/correct`,
-      {
-        method: "POST",
-        headers: jsonHeaders,
-        body: JSON.stringify({
-          expected_revision: expectedRevision,
-          replacement,
-        }),
-      },
-    ),
+  ): Promise<{ fact: BodyStateFact }> =>
+    withOpenApiError(async () => {
+      const response = await correctBodyStateFact(
+        factId,
+        { expected_revision: expectedRevision, replacement },
+        undefined,
+        openApiAuthFetch,
+      );
+      return { fact: response.fact };
+    }),
 
-  updateFactTemporal: (
+  updateFactTemporal: async (
     factId: string,
     expectedRevision: number,
     input: { lifecycle_state?: string; trend?: string; valid_until?: string },
-  ) =>
-    request<{ fact: BodyStateFact }>(
-      `/api/v1/body-state/facts/${factId}/temporal`,
-      {
-        method: "PATCH",
-        headers: jsonHeaders,
-        body: JSON.stringify({ expected_revision: expectedRevision, ...input }),
-      },
-    ),
+  ): Promise<{ fact: BodyStateFact }> =>
+    withOpenApiError(async () => {
+      const response = await updateBodyStateFactTemporal(
+        factId,
+        { expected_revision: expectedRevision, ...input },
+        undefined,
+        openApiAuthFetch,
+      );
+      return { fact: response.fact };
+    }),
 
-  reviewObservation: (
+  reviewObservation: async (
     observationId: string,
     expectedRevision: number,
-    reviewState: "confirmed" | "rejected",
-  ) =>
-    request(`/api/v1/body-state/observations/${observationId}/review`, {
-      method: "PATCH",
-      headers: jsonHeaders,
-      body: JSON.stringify({
-        expected_revision: expectedRevision,
-        review_state: reviewState,
-      }),
+    reviewState: BodyStateReviewState,
+  ): Promise<void> =>
+    withOpenApiError(async () => {
+      await reviewBodyStateObservation(
+        observationId,
+        { expected_revision: expectedRevision, review_state: reviewState },
+        undefined,
+        openApiAuthFetch,
+      );
     }),
 
-  updateHypothesisLifecycle: (
+  updateHypothesisLifecycle: async (
     hypothesisId: string,
     expectedRevision: number,
-    lifecycleState: string,
-  ) =>
-    request(`/api/v1/body-state/hypotheses/${hypothesisId}/lifecycle`, {
-      method: "PATCH",
-      headers: jsonHeaders,
-      body: JSON.stringify({
-        expected_revision: expectedRevision,
-        lifecycle_state: lifecycleState,
-        counterevidence_ids: [],
-      }),
+    lifecycleState: BodyStateHypothesisLifecycleState,
+  ): Promise<void> =>
+    withOpenApiError(async () => {
+      await updateBodyStateHypothesisLifecycle(
+        hypothesisId,
+        {
+          expected_revision: expectedRevision,
+          lifecycle_state: lifecycleState,
+          counterevidence_ids: [],
+        },
+        undefined,
+        openApiAuthFetch,
+      );
     }),
 
-  resolveSafety: (expectedRevision: number, resolution: string, note: string) =>
-    request("/api/v1/body-state/safety/resolve", {
-      method: "POST",
-      headers: jsonHeaders,
-      body: JSON.stringify({
-        expected_revision: expectedRevision,
-        resolution,
-        note,
-      }),
+  resolveSafety: async (
+    expectedRevision: number,
+    resolution: BodyStateSafetyResolution,
+    note: string,
+  ): Promise<void> =>
+    withOpenApiError(async () => {
+      await resolveBodyStateSafety(
+        { expected_revision: expectedRevision, resolution, note },
+        undefined,
+        openApiAuthFetch,
+      );
     }),
 
-  generateTreatmentProposal: (
+  generateTreatmentProposal: async (
     diagnosisAnalysisId: string,
     userConstraints: Record<string, unknown> = {},
-  ) =>
-    request<{ proposal: TreatmentRevision }>("/api/v1/treatments/proposals", {
-      method: "POST",
-      headers: jsonHeaders,
-      body: JSON.stringify({
-        diagnosis_analysis_id: diagnosisAnalysisId,
-        user_constraints: userConstraints,
-      }),
+  ): Promise<{ proposal: TreatmentRevision }> =>
+    withOpenApiError(async () => {
+      const response = await generateTreatmentProposal(
+        {
+          diagnosis_analysis_id: diagnosisAnalysisId,
+          user_constraints: userConstraints,
+        },
+        undefined,
+        openApiAuthFetch,
+      );
+      return { proposal: response.proposal };
     }),
 
-  acceptTreatmentRevision: (
+  acceptTreatmentRevision: async (
     revisionId: string,
     consultationId?: string | null,
-  ) =>
-    request<{ treatment: Treatment; training_plan?: { id: string } | null }>(
-      `/api/v1/treatments/revisions/${revisionId}/accept`,
-      {
-        method: "POST",
-        headers: jsonHeaders,
-        body: JSON.stringify({ consultation_id: consultationId || null }),
-      },
-    ),
-
-  rejectTreatmentRevision: (revisionId: string) =>
-    requestEmpty(`/api/v1/treatments/revisions/${revisionId}/reject`, {
-      method: "POST",
+  ): Promise<{
+    treatment: Treatment;
+    training_plan: TrainingExecutionPlan;
+  }> =>
+    withOpenApiError(async () => {
+      const response = await acceptTreatmentRevision(
+        revisionId,
+        { consultation_id: consultationId ?? null },
+        undefined,
+        openApiAuthFetch,
+      );
+      return {
+        treatment: response.treatment,
+        training_plan: response.training_plan,
+      };
     }),
 
-  reviewCurrentTreatment: () =>
-    request<{ treatment: Treatment | null }>(
-      "/api/v1/treatments/current/review",
-      {
-        method: "POST",
-      },
-    ),
+  rejectTreatmentRevision: async (revisionId: string): Promise<void> =>
+    withOpenApiError(async () => {
+      await rejectTreatmentRevision(revisionId, undefined, openApiAuthFetch);
+    }),
 
-  recordOutcome: (input: {
+  reviewCurrentTreatment: async (): Promise<{
+    treatment: Treatment | null;
+  }> =>
+    withOpenApiError(async () => {
+      const response = await reviewCurrentTreatment(
+        undefined,
+        openApiAuthFetch,
+      );
+      return { treatment: response.treatment };
+    }),
+
+  recordOutcome: async (input: {
     treatment_id?: string;
     treatment_revision_id?: string;
     intervention_id?: string;
@@ -179,28 +288,26 @@ export const workspaceApi = {
     body_region?: string;
     value: Record<string, unknown>;
     notes?: string;
-  }) =>
-    request<{ outcome: Outcome; created: boolean }>("/api/v1/outcomes", {
-      method: "POST",
-      headers: jsonHeaders,
-      body: JSON.stringify(input),
+  }): Promise<{ outcome: Outcome; created: boolean }> =>
+    withOpenApiError(async () => {
+      const response = await recordOutcome(input, undefined, openApiAuthFetch);
+      return { outcome: response.outcome, created: response.created };
     }),
 
-  updateLifestyleCurrent: (
+  updateLifestyleCurrent: async (
     expectedRevision: number,
     section: LifestyleSectionKey,
     summary: string,
     details: Record<string, unknown> = {},
-  ) =>
-    request("/api/v1/lifestyle", {
-      method: "PUT",
-      headers: jsonHeaders,
-      body: JSON.stringify({
-        expected_revision: expectedRevision,
-        [section]: {
-          summary,
-          details,
+  ): Promise<void> =>
+    withOpenApiError(async () => {
+      await updateLifestyle(
+        {
+          expected_revision: expectedRevision,
+          [section]: { summary, details },
         },
-      }),
+        undefined,
+        openApiAuthFetch,
+      );
     }),
 };

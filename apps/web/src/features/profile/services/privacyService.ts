@@ -1,5 +1,8 @@
-import { authFetch } from "@/features/auth/services/authService";
-import { extractErrorMessage, safeJson } from "@/lib/api-url";
+import {
+  getPrivacyErasurePlan,
+  requestPrivacyErasure,
+} from "@/generated/api/bodysense";
+import { openApiAuthFetch, withOpenApiError } from "@/lib/openapi-client";
 
 export interface PrivacyDataCount {
   name: string;
@@ -8,7 +11,7 @@ export interface PrivacyDataCount {
 
 export interface PrivacyErasurePlan {
   destructive: true;
-  confirmation_phrase: string;
+  confirmation_phrase: "DELETE ALL BODY DATA";
   counts: PrivacyDataCount[];
   retained_audit: string[];
 }
@@ -19,29 +22,48 @@ export interface PrivacyErasureRequestResult {
   message: string;
 }
 
-export const privacyApi = {
-  async getErasurePlan(): Promise<PrivacyErasurePlan> {
-    const response = await authFetch("/api/v1/privacy/erasure-plan", {
-      cache: "no-store",
-    });
-    if (!response.ok) {
-      throw new Error(await extractErrorMessage(response));
-    }
-    return safeJson<PrivacyErasurePlan>(response);
-  },
+type GeneratedPrivacyPlan = Awaited<ReturnType<typeof getPrivacyErasurePlan>>;
+type GeneratedPrivacyAccepted = Awaited<
+  ReturnType<typeof requestPrivacyErasure>
+>;
 
-  async requestErasure(
-    confirmation: string,
-  ): Promise<PrivacyErasureRequestResult> {
-    const response = await authFetch("/api/v1/privacy/erasure", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ confirmation }),
-      cache: "no-store",
-    });
-    if (!response.ok) {
-      throw new Error(await extractErrorMessage(response));
-    }
-    return safeJson<PrivacyErasureRequestResult>(response);
-  },
+function projectPlan(plan: GeneratedPrivacyPlan): PrivacyErasurePlan {
+  return {
+    destructive: plan.destructive,
+    confirmation_phrase: plan.confirmation_phrase,
+    counts: plan.counts.map((item) => ({ name: item.name, count: item.count })),
+    retained_audit: [...plan.retained_audit],
+  };
+}
+
+function projectAccepted(
+  result: GeneratedPrivacyAccepted,
+): PrivacyErasureRequestResult {
+  return {
+    request_id: result.request_id,
+    status: result.status,
+    message: result.message,
+  };
+}
+
+export const privacyApi = {
+  getErasurePlan: async (): Promise<PrivacyErasurePlan> =>
+    withOpenApiError(async () =>
+      projectPlan(
+        await getPrivacyErasurePlan({ cache: "no-store" }, openApiAuthFetch),
+      ),
+    ),
+
+  requestErasure: async (
+    confirmation: PrivacyErasurePlan["confirmation_phrase"],
+  ): Promise<PrivacyErasureRequestResult> =>
+    withOpenApiError(async () =>
+      projectAccepted(
+        await requestPrivacyErasure(
+          { confirmation },
+          { cache: "no-store" },
+          openApiAuthFetch,
+        ),
+      ),
+    ),
 };

@@ -1,0 +1,8 @@
+package: openapiv1
+generate:
+  gin-server: true
+  strict-server: true
+  models: true
+  embedded-spec: true
+output-options:
+  skip-prune: false

@@ -66,7 +66,9 @@
     "contracts:breaking": "bash scripts/contracts/breaking.sh",
     "contracts:mutation": "bash scripts/contracts/mutation.sh",
     "contracts:conformance": "bash scripts/contracts/conformance.sh",
-    "contracts:verify": "bash scripts/contracts/verify.sh"
+    "contracts:verify": "bash scripts/contracts/verify.sh",
+    "contracts:route-coverage": "node scripts/contracts/public-route-coverage.mjs",
+    "contracts:route-coverage:check": "node scripts/contracts/public-route-coverage.mjs --check"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.1118.0",
@@ -100,6 +102,7 @@
     "typescript7": "npm:typescript@7.0.2",
     "vite": "^8.1.5",
     "vitest": "^4.1.10",
+    "yaml": "2.9.0",
     "zod": "4.5.4"
   }
 }

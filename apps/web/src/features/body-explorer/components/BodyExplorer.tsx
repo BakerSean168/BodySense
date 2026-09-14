@@ -9,7 +9,7 @@ import {
   type ErrorInfo,
   type ReactNode,
 } from "react";
-import type { BodyStateSnapshot } from "@/features/consultation/types/consultation";
+import type { BodyStateProjection } from "@/features/consultation/types/consultation";
 import { cn } from "@/lib/utils";
 import {
   createClientDiagnosticId,
@@ -42,7 +42,7 @@ export interface BodyExplorerSemanticBridge {
 }
 
 export interface BodyExplorerProps {
-  snapshot: BodyStateSnapshot | null;
+  snapshot: BodyStateProjection | null;
   className?: string;
   semanticBridge?: BodyExplorerSemanticBridge;
 }

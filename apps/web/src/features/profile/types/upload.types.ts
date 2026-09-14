@@ -62,7 +62,6 @@ export interface PostureAnalysis {
 
 export interface UserUpload {
   id: string;
-  user_id: string;
   file_type:
     | "photo_front"
     | "photo_side"
@@ -70,7 +69,6 @@ export interface UserUpload {
     | "report"
     | "consultation_photo";
   original_name: string;
-  file_path: string;
   file_size: number;
   mime_type: string;
   ocr_result: OCRResult | null;

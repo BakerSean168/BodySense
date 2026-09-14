@@ -50,7 +50,9 @@
       "status": "OPEN",
       "targetPhase": "05-runtime-trust",
       "summary": "Malformed model tool-call JSON is normalized to an empty object and can be emitted as a valid completed tool call.",
-      "evidence": ["apps/ai-service/src/ai/service.py"],
+      "evidence": [
+        "apps/ai-service/src/ai/service.py"
+      ],
       "invariant": "Invalid model output remains an explicit invalid/error state and is never executed as a valid tool call."
     },
     {
@@ -59,7 +61,9 @@
       "status": "OPEN",
       "targetPhase": "05-runtime-trust",
       "summary": "StreamEventFactory mutates caller-owned StreamEventIds while enriching identity.",
-      "evidence": ["apps/ai-service/src/models/stream_event.py"],
+      "evidence": [
+        "apps/ai-service/src/models/stream_event.py"
+      ],
       "invariant": "Factories return new values and do not introduce hidden aliasing through caller mutation."
     },
     {
@@ -68,7 +72,9 @@
       "status": "OPEN",
       "targetPhase": "05-runtime-trust",
       "summary": "ToolExecutor validation/normalization mutates caller-owned argument dictionaries.",
-      "evidence": ["apps/ai-service/src/services/agent/tool_executor.py"],
+      "evidence": [
+        "apps/ai-service/src/services/agent/tool_executor.py"
+      ],
       "invariant": "Validation is side-effect free; normalization returns an explicit new value."
     },
     {
@@ -113,7 +119,9 @@
       "status": "OPEN",
       "targetPhase": "06-durable-state-machines",
       "summary": "Authoritative Job lifecycle event append is best-effort after status mutation.",
-      "evidence": ["apps/api/internal/service/job_runtime.go"],
+      "evidence": [
+        "apps/api/internal/service/job_runtime.go"
+      ],
       "invariant": "When status and lifecycle event represent one durable fact they commit atomically."
     },
     {
@@ -149,7 +157,9 @@
       "status": "OPEN",
       "targetPhase": "10-quality-gates",
       "summary": "Web lint uses the deprecated @nx/eslint:lint executor and emits an Nx v24 migration warning.",
-      "evidence": ["apps/web/project.json"],
+      "evidence": [
+        "apps/web/project.json"
+      ],
       "invariant": "Quality gates use supported Nx target configuration without deprecation noise."
     },
     {
@@ -208,6 +218,353 @@
         "pnpm nx run @bodysense/web:build"
       ],
       "notes": "Verified with the workspace package symlink intentionally absent; Web passed 212/212 tests and production build."
+    },
+    {
+      "id": "BS-VNEXT-REST-001",
+      "priority": "P1",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "Contract spike simplified BodyState mutation revision to an integer",
+      "evidence": [
+        "packages/contracts/openapi/bodysense.v1.openapi.yaml",
+        "apps/api/internal/dto/body_state.go",
+        "apps/api/internal/model/body_state.go"
+      ],
+      "root_cause": "The 2026-09-09 architecture spike intentionally measured a selected wire shape and did not preserve the full production mutation response; production returns a BodyStateRevision object.",
+      "repair": "The production OpenAPI authority models the full BodyStateRevision object and generated Go/Web boundaries derive from that corrected schema.",
+      "verification": [
+        "pnpm contracts:verify",
+        "go test ./internal/transport/httpapi -count=1",
+        "pnpm nx run @bodysense/web:typecheck"
+      ],
+      "notes": "Spike artifacts remain evidence only and are never promoted directly to production authority."
+    },
+    {
+      "id": "BS-VNEXT-REST-002",
+      "priority": "P1",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "Public auth middleware used a different error envelope from application handlers",
+      "evidence": [
+        "apps/api/internal/dto/auth.go",
+        "apps/api/internal/middleware/auth.go",
+        "apps/api/internal/handler/utils.go"
+      ],
+      "root_cause": "Authentication predated the nested structured error contract and emitted {error:string,message:string}, while domain handlers emitted {error:{code,message}}.",
+      "repair": "Unify public middleware and handlers on dto.NewErrorResponse(code,message) and describe the same ErrorEnvelope in OpenAPI.",
+      "verification": [
+        "go test ./internal/middleware ./internal/handler -count=1",
+        "pnpm test"
+      ],
+      "notes": "Legacy token acceptance remains a separate Phase 07 retirement item."
+    },
+    {
+      "id": "BS-VNEXT-REST-003",
+      "priority": "P1",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "Web health workspace asserted a body_state.user_id field that the wire never returned",
+      "evidence": [
+        "apps/api/internal/dto/health_workspace.go",
+        "apps/web/src/features/workspace/types/workspace.ts",
+        "apps/web/src/features/consultation/types/consultation.ts",
+        "apps/web/src/features/workspace/api/workspaceApi.openapi.test.ts"
+      ],
+      "root_cause": "The handwritten generic request<HealthWorkspace>() trusted a TypeScript assertion that reused the full Consultation BodyStateSnapshot type even though the health-workspace projection intentionally omits user_id.",
+      "repair": "Generate runtime validation from OpenAPI, introduce BodyStateProjection as the minimum UI contract, keep BodyStateSnapshot as the user-scoped extension requiring user_id, and give HealthWorkspace its own WorkspaceBodyState/WorkspaceDiagnosis read models.",
+      "verification": [
+        "workspaceApi OpenAPI test rejects body_state.user_id as an unknown field",
+        "pnpm nx run @bodysense/web:typecheck",
+        "pnpm test",
+        "pnpm build"
+      ],
+      "notes": "The repair removes a false static guarantee instead of making user_id optional or inventing it in the response."
+    },
+    {
+      "id": "BS-VNEXT-REST-004",
+      "priority": "P2",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "HealthWorkspace application read projection still lives in the dto package",
+      "evidence": [
+        "apps/api/internal/service/health_workspace_projection.go",
+        "apps/api/internal/service/health_workspace_service.go",
+        "apps/api/internal/transport/httpapi/health_workspace.go"
+      ],
+      "root_cause": "The pre-vNext HTTP handler and application projection were colocated under internal/dto, so the service returns a type named for transport even though it is really an application read model.",
+      "target": "Move the HealthWorkspace application projection to an application/readmodel package and keep OpenAPI generated types + presenters solely in transport/httpapi before Phase 02 closes.",
+      "verification": [
+        "HealthWorkspace service no longer imports or returns internal/dto.HealthWorkspace",
+        "no generated OpenAPI imports outside transport/httpapi/generated",
+        "HealthWorkspace service + transport tests and full go test ./... pass"
+      ],
+      "notes": "The strict presenter remains intentionally fail-closed, but the transitional dto package ownership debt is removed.",
+      "repair": "Move the HealthWorkspace application read projection from internal/dto into internal/service application ownership; keep OpenAPI generated types and the strict public presenter solely in transport/httpapi."
+    },
+    {
+      "id": "BS-VNEXT-REST-005",
+      "priority": "P1",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "Public safety resolution accepted expected_revision but discarded it before persistence",
+      "evidence": [
+        "apps/api/internal/service/body_state_service.go",
+        "apps/api/internal/repository/body_state_repository.go",
+        "apps/api/internal/service/body_state_service_test.go",
+        "packages/contracts/openapi/bodysense.v1.openapi.yaml"
+      ],
+      "root_cause": "The legacy ResolveSafety handler bound expected_revision but BodyStateService.ResolveSafetyState did not accept it and repository SetSafetyState always called the revision lock with nil.",
+      "repair": "Thread expected_revision through the public safety command into SetSafetyState/CAS; keep internal detector-originated safety updates explicit by passing nil. OpenAPI requires expected_revision for the public command and rejects its absence before application execution.",
+      "verification": [
+        "TestResolveSafetyStatePreservesExpectedRevision",
+        "TestResolveSafetyOpenAPIRequiresExpectedRevisionBeforeAdapter",
+        "go test ./...",
+        "pnpm contracts:verify"
+      ],
+      "notes": "This closes a real lost-update window rather than merely documenting the old behavior."
+    },
+    {
+      "id": "BS-VNEXT-REST-006",
+      "priority": "P1",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "BodyState mutation schema falsely required a new revision for idempotent no-op success",
+      "evidence": [
+        "apps/api/internal/repository/body_state_repository.go",
+        "apps/api/internal/transport/httpapi/body_state.go",
+        "packages/contracts/openapi/bodysense.v1.openapi.yaml",
+        "apps/web/src/features/workspace/api/workspaceApi.openapi.test.ts"
+      ],
+      "root_cause": "Repository idempotency intentionally returns the current entity with revision=nil when no durable change is needed, but the first production OpenAPI draft modeled revision as always present.",
+      "repair": "All BodyState mutation response schemas make revision explicitly nullable; transport adapters preserve explicit JSON null and generated Web Zod accepts it while revision conflicts remain HTTP 409.",
+      "verification": [
+        "TestAddBodyStateFactAllowsIdempotentNilRevision",
+        "workspaceApi idempotent fact mutation test",
+        "pnpm test",
+        "pnpm build"
+      ],
+      "notes": "null means successful no-op; it is not an error and it does not mean the current aggregate revision is unknown."
+    },
+    {
+      "id": "BS-VNEXT-REST-007",
+      "priority": "P2",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "Validated OpenAPI workspace imports increased the ConsultationPage application chunk",
+      "evidence": [
+        "apps/web/orval.config.ts",
+        "apps/web/src/generated/api/bodysense.ts",
+        "docs/refactor/vnext/phase-02-rest-openapi.md"
+      ],
+      "root_cause": "Runtime-validated generated REST clients bring Zod Mini schemas into the consultation/workspace execution path as intended; as the canonical API surface grows, a single generated client module can enlarge the route chunk.",
+      "target": "Before Phase 02 closes, measure the final generated-client bundle and split generated/public API imports by feature or lazy boundary if the growth remains material. Do not remove runtime response validation merely to reduce bytes.",
+      "verification": [
+        "final pnpm nx build @bodysense/web --skip-nx-cache",
+        "ConsultationPage 357.21 kB / 105.61 kB gzip versus prior 355.71 kB / 105.27 kB gzip",
+        "consultationService feature chunk 12.02 kB / 3.45 kB gzip",
+        "no separate ~45.11 kB generated/shared chunk in final build"
+      ],
+      "notes": "The remaining >500 kB warning is dominated by the existing BodyExplorer3D chunk (1,234.32 kB / 285.75 kB gzip), not OpenAPI validation. Runtime validation is retained.",
+      "repair": "Measure the final production bundle after all 95 browser routes are generated. Keep Zod runtime validation. No additional generated-client split is warranted because the prior ~45.11 kB shared generated chunk no longer exists and the ConsultationPage route stayed effectively flat."
+    },
+    {
+      "id": "BS-VNEXT-REST-008",
+      "priority": "P1",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "Health-context public mutations allowed missing optimistic revision",
+      "evidence": [
+        "apps/api/internal/dto/lifestyle.go",
+        "apps/api/internal/dto/body_metrics.go",
+        "apps/api/internal/dto/health_history.go",
+        "apps/api/internal/dto/onboarding_context.go",
+        "packages/contracts/openapi/bodysense.v1.openapi.yaml"
+      ],
+      "root_cause": "Legacy request DTOs represented expected revision as optional pointers, and onboarding did not send one at all, so browser-facing commands could bypass the concurrency contract intentionally used by the services.",
+      "repair": "OpenAPI requires expected_revision on lifestyle/body-metrics/injury-history mutations and expected_body_state_revision on onboarding. The Web passes the current revision for edits and explicit 0 for first onboarding; malformed/missing values fail before the application adapter.",
+      "verification": [
+        "TestLifestyleOpenAPIRequiresExpectedRevisionBeforeAdapter",
+        "TestOnboardingOpenAPIRequiresInitialBodyStateRevision",
+        "profile health-context OpenAPI Web tests",
+        "pnpm contracts:verify"
+      ],
+      "notes": "Service-level pointer support remains an internal application detail; the public vNext contract no longer exposes an unconditional browser mutation path."
+    },
+    {
+      "id": "BS-VNEXT-REST-009",
+      "priority": "P2",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "Health-context application commands/read models are still named and located as transport DTOs",
+      "evidence": [
+        "apps/api/internal/service/lifestyle_projection.go",
+        "apps/api/internal/service/body_metrics_projection.go",
+        "apps/api/internal/service/health_history_projection.go",
+        "apps/api/internal/service/onboarding_context_projection.go",
+        "apps/api/internal/transport/httpapi/health_context.go"
+      ],
+      "root_cause": "Pre-vNext Gin handlers and application services shared structs under internal/dto; after OpenAPI generation those structs remain useful application commands/read projections but their package ownership still suggests HTTP transport authority.",
+      "target": "Before Phase 02 closes, move surviving service command/read-model structures into explicit application/readmodel ownership and delete transport-era dto definitions that are no longer public authorities.",
+      "verification": [
+        "no remaining dto.Lifestyle/BodyMetrics/InjuryHistory/Onboarding references",
+        "service layer imports no generated OpenAPI types",
+        "health-context service and transport tests pass",
+        "full go test ./... pass"
+      ],
+      "notes": "This closes the same package-ownership class as BS-VNEXT-REST-004 without turning generated transport types into application models.",
+      "repair": "Move surviving Lifestyle, BodyMetrics, InjuryHistory and Onboarding application commands/read models from internal/dto into internal/service ownership; delete the transport-era dto files and keep generated request/response mapping in transport/httpapi."
+    },
+    {
+      "id": "BS-VNEXT-REST-010",
+      "priority": "P1",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "Profile update bound the persistence model directly at the public HTTP boundary",
+      "evidence": [
+        "apps/api/internal/handler/profile_handler.go",
+        "apps/api/internal/model/user_profile.go",
+        "packages/contracts/openapi/bodysense.v1.openapi.yaml",
+        "apps/api/internal/transport/httpapi/identity_profile.go"
+      ],
+      "root_cause": "The legacy PUT /profile handler decoded JSON directly into model.UserProfile, so persistence-owned identity and metadata fields were structurally writable even though the service only intended to own stable profile inputs.",
+      "repair": "Retire the handwritten ProfileHandler and define an explicit OpenAPI UpdateUserProfileRequest containing only gender and birth_date. The generated strict server maps that command into the application model; Web callers expose the same narrow editable shape.",
+      "verification": [
+        "identity_profile OpenAPI tests",
+        "profileStore OpenAPI boundary tests",
+        "go test ./...",
+        "pnpm test",
+        "pnpm contracts:verify"
+      ],
+      "notes": "The database model remains an internal persistence/application type; the browser contract can no longer submit id, user_id, age_years, created_at or updated_at."
+    },
+    {
+      "id": "BS-VNEXT-REST-011",
+      "priority": "P2",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "Root-level nullable profile response was not portable across generated Go and Web clients",
+      "evidence": [
+        "packages/contracts/openapi/bodysense.v1.openapi.yaml",
+        "apps/api/internal/generated/openapi/v1/bodysense.gen.go",
+        "apps/web/src/generated/api/bodysense.ts"
+      ],
+      "root_cause": "OpenAPI 3.1 can describe a root JSON value of UserProfile or null, but the selected oapi-codegen response wrapper generated a non-pointer UserProfile while Orval/Zod represented the null correctly, creating cross-generator ambiguity.",
+      "repair": "Model profile absence explicitly as {profile: UserProfile | null} and profile update success as {profile: UserProfile}. This gives both generators the same structural contract and makes absence a named read-model state rather than a whole-response sentinel.",
+      "verification": [
+        "generated Go NullableUserProfileResponse contains *UserProfile",
+        "generated Web Zod validates profile|null envelope",
+        "profileStore first-use null-profile test",
+        "pnpm contracts:verify"
+      ],
+      "notes": "This is an intentional vNext breaking reset; no compatibility body-null alias is retained."
+    },
+    {
+      "id": "BS-VNEXT-REST-012",
+      "priority": "P1",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "Privacy erasure acceptance depended on an implicit handler-only refresh-cookie side effect",
+      "evidence": [
+        "apps/api/internal/handler/privacy_handler.go",
+        "apps/api/internal/transport/httpapi/privacy.go",
+        "apps/api/internal/auth/refresh_cookie.go",
+        "packages/contracts/openapi/bodysense.v1.openapi.yaml"
+      ],
+      "root_cause": "The legacy privacy handler cleared the refresh cookie directly after durable erasure acceptance, but that security effect was not represented in the public response contract and would have been easy to lose when moving behind the generated strict server.",
+      "repair": "Make Set-Cookie and Cache-Control response headers explicit on the OpenAPI 202 response, generate the clear-cookie header from a shared internal/auth cookie helper, and reuse the same helper in AuthHandler so cookie Path/HttpOnly/Secure/SameSite semantics have one implementation.",
+      "verification": [
+        "TestPrivacyErasureAcceptanceClearsRefreshCredentialAndIsNoStore",
+        "TestAuthResponseSetsSecureHttpOnlyRefreshCookieAndHidesCredentialFromJSON",
+        "pnpm contracts:verify",
+        "go test ./..."
+      ],
+      "notes": "The durable erasure worker semantics are unchanged; browser credential invalidation is now part of the transport contract rather than a hidden Gin handler side effect."
+    },
+    {
+      "id": "BS-VNEXT-REST-013",
+      "priority": "P1",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "Generated REST registration currently assumes one authenticated Gin security domain",
+      "evidence": [
+        "apps/api/internal/transport/httpapi/routes.go",
+        "apps/api/internal/transport/httpapi/auth_test.go",
+        "apps/api/internal/transport/httpapi/conversations_test.go",
+        "apps/api/internal/transport/httpapi/knowledge_test.go"
+      ],
+      "root_cause": "All generated operations are currently registered as one server under the protected AuthMiddleware group. Remaining public authentication endpoints, public share reads and operator-only Knowledge endpoints require different middleware/security ownership and cannot be safely added to the same registration blindly.",
+      "target": "Before migrating auth/share/operator operations, introduce deterministic generated-route registration partitions or equivalent policy-aware registration so each OpenAPI operation is mounted exactly once under its required security middleware without duplicating adapters or bypassing existing origin/rate-limit/operator guards.",
+      "verification": [
+        "public auth routes preserve trusted-origin/rate-limit/session controls without bearer auth",
+        "public share remains unauthenticated",
+        "protected routes use AuthMiddleware",
+        "Knowledge routes execute Auth -> durable Operator -> Validator and member test proves validator/application are not reached",
+        "public REST coverage 95/95 with no duplicate Gin registrations"
+      ],
+      "notes": "The operator characterization closes the final multi-security-domain blocker; the generated server is not blindly mounted multiple times.",
+      "repair": "Partition generated registration into auth-public, capability-share-public, authenticated browser-user and authenticated Knowledge-operator groups. Register every operation exactly once under its required middleware authority."
+    },
+    {
+      "id": "BS-VNEXT-REST-014",
+      "priority": "P2",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "Unqualified OpenAPI number narrowed client-diagnostic telemetry from float64 to float32 in generated Go",
+      "evidence": [
+        "packages/contracts/openapi/bodysense.v1.openapi.yaml",
+        "apps/api/internal/generated/openapi/v1/bodysense.gen.go",
+        "apps/api/internal/transport/httpapi/client_diagnostics_test.go"
+      ],
+      "root_cause": "The first ClientDiagnostic schema used bare number for elapsedMs and numeric scalar attributes. oapi-codegen maps that form to float32, while the legacy telemetry boundary and JSON decoding used float64.",
+      "repair": "Declare format: double for elapsedMs and numeric diagnostic attributes, regenerate both clients, and lock generated precision with a transport test.",
+      "verification": [
+        "TestGeneratedClientDiagnosticRetainsFloat64TelemetryPrecision",
+        "pnpm contracts:verify",
+        "go test ./..."
+      ],
+      "notes": "This was caught before route ownership switched; no persisted data migration is required because diagnostics are operational logs, not stored domain records."
+    },
+    {
+      "id": "BS-VNEXT-REST-015",
+      "priority": "P1",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "Generated Go response structs could zero-fill missing OpenAPI-required fields and emit contract-invalid JSON",
+      "evidence": [
+        "apps/api/internal/transport/httpapi/json_bridge.go",
+        "apps/api/internal/transport/httpapi/assessment_test.go",
+        "apps/api/internal/transport/httpapi/assessment.go"
+      ],
+      "root_cause": "strictJSONConvert used json.Decoder with DisallowUnknownFields, which rejects extra fields and type mismatches but does not enforce OpenAPI required fields, enum membership, numeric bounds or collection cardinality. Missing nested required fields therefore became Go zero values and could still be serialized as a 200 response.",
+      "repair": "Add strictOpenAPIConvert backed by the generated kin-openapi component schemas and Schema.VisitJSON, then use it for all migrated complex public read-model responses: Assessment, HealthWorkspace, BodyState reads, Profile, Privacy and health-context projections.",
+      "verification": [
+        "TestAssessmentReportFailsClosedWhenStoredV2JSONViolatesPublicSchema",
+        "all transport/httpapi tests",
+        "grep confirms no migrated openapiv1 response projection remains on strictJSONConvert",
+        "pnpm contracts:verify",
+        "go test ./..."
+      ],
+      "notes": "Generated Go types remain useful compile-time transport types, but schema validation is the runtime truth for required/enums/bounds. Request-to-application conversions may still use strictJSONConvert after RequestValidator has already validated the public body."
+    },
+    {
+      "id": "BS-VNEXT-REST-016",
+      "priority": "P2",
+      "status": "FIXED",
+      "phase": "02",
+      "title": "Unknown Assessment replay configuration was classified as an internal server error",
+      "evidence": [
+        "apps/api/internal/service/assessment_replay_service.go",
+        "apps/api/internal/transport/httpapi/assessment.go",
+        "apps/api/internal/transport/httpapi/assessment_test.go"
+      ],
+      "root_cause": "Counterfactual replay returned a generic error for an unknown target configuration id, so the legacy handler fell through to HTTP 500 even though the client supplied an invalid configuration selector.",
+      "repair": "Introduce ErrAssessmentReplayConfiguration, wrap unknown configuration ids with it and map the typed error to canonical HTTP 400 INVALID_CONFIGURATION at the generated transport adapter.",
+      "verification": [
+        "TestAssessmentReplayMapsUnknownConfigurationToBadRequest",
+        "Assessment replay service tests",
+        "go test ./..."
+      ],
+      "notes": "Replay computation and immutability semantics are unchanged."
     }
   ]
 }

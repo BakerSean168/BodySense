@@ -34,7 +34,7 @@ type bodyStateRepository interface {
 	TransitionObservation(ctx context.Context, userID uuid.UUID, expectedRevision *int64, targetObservationID uuid.UUID, replacement model.BodyStateObservation, source string) (*model.BodyStateObservation, *model.BodyStateRevision, error)
 	ApplyCurrentContextPatch(ctx context.Context, userID uuid.UUID, expectedRevision *int64, patch model.BodyStateCurrentContextPatch, source string) (*model.BodyStateRevision, error)
 	UpdateObservationReviewState(ctx context.Context, userID uuid.UUID, expectedRevision *int64, observationID uuid.UUID, reviewState, source string) (*model.BodyStateObservation, *model.BodyStateRevision, error)
-	SetSafetyState(ctx context.Context, userID uuid.UUID, safetyState datatypes.JSON, source string) (*model.BodyStateRevision, error)
+	SetSafetyState(ctx context.Context, userID uuid.UUID, expectedRevision *int64, safetyState datatypes.JSON, source string) (*model.BodyStateRevision, error)
 	UpsertEvidence(ctx context.Context, userID uuid.UUID, evidence model.BodyStateEvidence) (*model.BodyStateEvidence, error)
 	ListEvidence(ctx context.Context, userID uuid.UUID, limit int) ([]model.BodyStateEvidence, error)
 	GetEvidenceByIDs(ctx context.Context, userID uuid.UUID, ids []uuid.UUID) ([]model.BodyStateEvidence, error)
@@ -662,7 +662,7 @@ func (s *BodyStateService) RecordOutcome(ctx context.Context, userID uuid.UUID, 
 // resolution needs an explicit business policy/review path.
 // ResolveSafetyState is the explicit review path. Negative detector output never
 // calls this method automatically.
-func (s *BodyStateService) ResolveSafetyState(ctx context.Context, userID uuid.UUID, resolution, note string) (*model.BodyStateRevision, error) {
+func (s *BodyStateService) ResolveSafetyState(ctx context.Context, userID uuid.UUID, expectedRevision *int64, resolution, note string) (*model.BodyStateRevision, error) {
 	resolution = strings.TrimSpace(resolution)
 	if resolution != "resolved" && resolution != "cleared_by_review" && resolution != "monitoring" {
 		return nil, fmt.Errorf("invalid safety resolution %q", resolution)
@@ -675,7 +675,7 @@ func (s *BodyStateService) ResolveSafetyState(ctx context.Context, userID uuid.U
 		"resolution_note": strings.TrimSpace(note),
 		"resolved_at":     time.Now().UTC(),
 	}))
-	return s.repo.SetSafetyState(ctx, userID, state, "safety_review")
+	return s.repo.SetSafetyState(ctx, userID, expectedRevision, state, "safety_review")
 }
 
 func (s *BodyStateService) RecordSafetyEvent(ctx context.Context, userID uuid.UUID, payload json.RawMessage) error {
@@ -695,7 +695,7 @@ func (s *BodyStateService) RecordSafetyEvent(ctx context.Context, userID uuid.UU
 		"flags":         json.RawMessage(flags),
 		"status":        "requires_review",
 	}))
-	_, err := s.repo.SetSafetyState(ctx, userID, state, "consultation")
+	_, err := s.repo.SetSafetyState(ctx, userID, nil, state, "consultation")
 	return err
 }
 

@@ -36,7 +36,7 @@ export function HealthDocumentReviewPanel({
     }
     setError(null);
     try {
-      setContext(await fetchHealthDocumentReviewContext(uploadId, accessToken));
+      setContext(await fetchHealthDocumentReviewContext(uploadId));
     } catch (loadError) {
       setError(
         loadError instanceof Error ? loadError.message : "复核信息加载失败",
@@ -51,7 +51,7 @@ export function HealthDocumentReviewPanel({
       return;
     }
     setError(null);
-    void fetchHealthDocumentReviewContext(uploadId, accessToken)
+    void fetchHealthDocumentReviewContext(uploadId)
       .then((value) => {
         if (active) setContext(value);
       })
@@ -104,19 +104,14 @@ export function HealthDocumentReviewPanel({
     setSubmittingIndex(projection.indicator_index);
     setError(null);
     try {
-      await appendHealthDocumentReview(
-        uploadId,
-        context.extraction_run_id,
-        {
-          indicator_index: projection.indicator_index,
-          indicator_id: projection.indicator_id,
-          action,
-          reviewed_payload: reviewedPayload,
-          source_refs: sourceRefs,
-          idempotency_key: crypto.randomUUID(),
-        },
-        accessToken,
-      );
+      await appendHealthDocumentReview(uploadId, context.extraction_run_id, {
+        indicator_index: projection.indicator_index,
+        indicator_id: projection.indicator_id,
+        action,
+        reviewed_payload: reviewedPayload,
+        source_refs: sourceRefs,
+        idempotency_key: crypto.randomUUID(),
+      });
       setEditingIndex(null);
       setCorrectedValue("");
       setCorrectedUnit("");
@@ -139,7 +134,6 @@ export function HealthDocumentReviewPanel({
       const blob = await fetchHealthDocumentSource(
         uploadId,
         context.extraction_run_id,
-        accessToken,
       );
       const objectUrl = URL.createObjectURL(blob);
       const page = projection.candidate.source_regions?.find(

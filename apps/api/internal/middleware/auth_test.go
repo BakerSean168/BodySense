@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -188,8 +189,21 @@ func TestAuthMiddlewareLegacyTokenDBFailureFailsClosed(t *testing.T) {
 func TestAuthMiddlewareMissingHeaderRejects(t *testing.T) {
 	cfg := auth.JWTConfig{SecretKey: "test-secret", AccessTokenTTL: 15 * time.Minute}
 	mw := AuthMiddleware(cfg, nil, &fakeSessionCache{live: map[uuid.UUID]bool{}})
-	if rec := performRequest(mw, ""); rec.Code != http.StatusUnauthorized {
+	rec := performRequest(mw, "")
+	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want 401", rec.Code)
+	}
+	var body struct {
+		Error struct {
+			Code    string `json:"code"`
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode canonical error envelope: %v body=%s", err, rec.Body.String())
+	}
+	if body.Error.Code != "UNAUTHORIZED" || body.Error.Message == "" {
+		t.Fatalf("unexpected canonical error envelope: %+v", body)
 	}
 }
 

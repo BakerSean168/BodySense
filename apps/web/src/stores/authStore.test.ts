@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuthStore } from "./authStore";
 
+const USER_ID_1 = "11111111-1111-4111-8111-111111111111";
+const USER_ID_2 = "22222222-2222-4222-8222-222222222222";
+const USER_ID_3 = "33333333-3333-4333-8333-333333333333";
+
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -35,7 +39,7 @@ describe("authStore secure browser session", () => {
         jsonResponse({ access_token: "access-1", expires_in: 900 }),
       )
       .mockResolvedValueOnce(
-        jsonResponse({ id: "user-1", email: "user@example.com" }),
+        jsonResponse({ id: USER_ID_1, email: "user@example.com" }),
       );
 
     await useAuthStore.getState().bootstrapSession();
@@ -57,7 +61,7 @@ describe("authStore secure browser session", () => {
       isAuthenticated: true,
       hasHydrated: true,
       isAuthResolved: true,
-      user: { id: "user-1", email: "user@example.com" },
+      user: { id: USER_ID_1, email: "user@example.com" },
     });
     expect(localStorage.getItem("auth-storage")).toBeNull();
   });
@@ -84,11 +88,30 @@ describe("authStore secure browser session", () => {
     });
     expect(useAuthStore.getState().user).toBeNull();
 
-    resolveUser?.(jsonResponse({ id: "user-fast", email: "fast@example.com" }));
+    resolveUser?.(jsonResponse({ id: USER_ID_2, email: "fast@example.com" }));
     await bootstrap;
     expect(useAuthStore.getState().user).toEqual({
-      id: "user-fast",
+      id: USER_ID_2,
       email: "fast@example.com",
+    });
+  });
+
+  it("fails closed when /me violates the generated identity schema", async () => {
+    useAuthStore.setState({
+      accessToken: "access-invalid-user",
+      isAuthenticated: true,
+      hasHydrated: true,
+      isAuthResolved: true,
+    });
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      jsonResponse({ id: "not-a-uuid", email: "user@example.com" }),
+    );
+
+    await expect(useAuthStore.getState().verifySession()).resolves.toBe(false);
+    expect(useAuthStore.getState()).toMatchObject({
+      accessToken: null,
+      isAuthenticated: false,
+      user: null,
     });
   });
 
@@ -97,11 +120,15 @@ describe("authStore secure browser session", () => {
     const responsePromise = new Promise<Response>((resolve) => {
       resolveResponse = resolve;
     });
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockReturnValue(responsePromise);
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockReturnValue(responsePromise);
 
     const first = useAuthStore.getState().refreshAccessToken();
     const second = useAuthStore.getState().refreshAccessToken();
-    resolveResponse?.(jsonResponse({ access_token: "access-2", expires_in: 900 }));
+    resolveResponse?.(
+      jsonResponse({ access_token: "access-2", expires_in: 900 }),
+    );
 
     await expect(first).resolves.toBe(true);
     await expect(second).resolves.toBe(true);
@@ -115,7 +142,7 @@ describe("authStore secure browser session", () => {
         jsonResponse({ access_token: "access-login", expires_in: 900 }),
       )
       .mockResolvedValueOnce(
-        jsonResponse({ id: "user-2", email: "user@example.com" }),
+        jsonResponse({ id: USER_ID_2, email: "user@example.com" }),
       );
 
     await useAuthStore.getState().login("user@example.com", "password123");
@@ -138,7 +165,7 @@ describe("authStore secure browser session", () => {
       isAuthenticated: true,
       hasHydrated: true,
       isAuthResolved: true,
-      user: { id: "user-3", email: "user@example.com" },
+      user: { id: USER_ID_3, email: "user@example.com" },
     });
     const fetchMock = vi
       .spyOn(globalThis, "fetch")

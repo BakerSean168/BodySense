@@ -25,6 +25,7 @@ type fakeBodyStateRepository struct {
 	transitionedObservations []model.BodyStateObservation
 	appliedPatches           []model.BodyStateCurrentContextPatch
 	safetyStates             []datatypes.JSON
+	safetyExpectedRevisions  []*int64
 	returnExistingFact       bool
 	returnExistingObs        bool
 }
@@ -175,8 +176,14 @@ func (r *fakeBodyStateRepository) ApplyCurrentContextPatch(_ context.Context, us
 	return &model.BodyStateRevision{Revision: r.current.CurrentRevision}, nil
 }
 
-func (r *fakeBodyStateRepository) SetSafetyState(_ context.Context, _ uuid.UUID, state datatypes.JSON, _ string) (*model.BodyStateRevision, error) {
+func (r *fakeBodyStateRepository) SetSafetyState(_ context.Context, _ uuid.UUID, expectedRevision *int64, state datatypes.JSON, _ string) (*model.BodyStateRevision, error) {
 	r.safetyStates = append(r.safetyStates, state)
+	if expectedRevision == nil {
+		r.safetyExpectedRevisions = append(r.safetyExpectedRevisions, nil)
+	} else {
+		value := *expectedRevision
+		r.safetyExpectedRevisions = append(r.safetyExpectedRevisions, &value)
+	}
 	return &model.BodyStateRevision{Revision: int64(len(r.safetyStates))}, nil
 }
 func (r *fakeBodyStateRepository) UpsertEvidence(_ context.Context, userID uuid.UUID, evidence model.BodyStateEvidence) (*model.BodyStateEvidence, error) {
@@ -297,6 +304,18 @@ func TestModelAuthoredAskUserCannotPromoteSymptomCapture(t *testing.T) {
 	}
 }
 
+func TestResolveSafetyStatePreservesExpectedRevision(t *testing.T) {
+	repo := &fakeBodyStateRepository{}
+	svc := NewBodyStateService(repo)
+	expected := int64(7)
+	if _, err := svc.ResolveSafetyState(context.Background(), uuid.New(), &expected, "resolved", "reviewed"); err != nil {
+		t.Fatalf("ResolveSafetyState returned error: %v", err)
+	}
+	if len(repo.safetyExpectedRevisions) != 1 || repo.safetyExpectedRevisions[0] == nil || *repo.safetyExpectedRevisions[0] != expected {
+		t.Fatalf("expected revision was not preserved: %#v", repo.safetyExpectedRevisions)
+	}
+}
+
 func TestBodyStateSafetyOnlyPersistsPositiveSignals(t *testing.T) {
 	repo := &fakeBodyStateRepository{}
 	svc := NewBodyStateService(repo)
@@ -314,6 +333,9 @@ func TestBodyStateSafetyOnlyPersistsPositiveSignals(t *testing.T) {
 	}
 	if len(repo.safetyStates) != 1 {
 		t.Fatalf("expected one durable safety state, got %d", len(repo.safetyStates))
+	}
+	if len(repo.safetyExpectedRevisions) != 1 || repo.safetyExpectedRevisions[0] != nil {
+		t.Fatalf("internal detector safety update must remain unconditional, got %#v", repo.safetyExpectedRevisions)
 	}
 }
 

@@ -19,7 +19,7 @@ import { toast } from "sonner";
 const TOTAL_STEPS = 9;
 
 interface FormData {
-  gender: string;
+  gender: "" | "male" | "female";
   birth_date: string;
   height_cm: number | undefined;
   weight_kg: number | undefined;
@@ -132,6 +132,9 @@ export function OnboardingWizard() {
         .filter(Boolean)
         .join("；");
 
+      if (!formData.gender || !formData.birth_date) {
+        throw new Error("请先填写性别和出生日期");
+      }
       if (
         formData.height_cm === undefined ||
         formData.weight_kg === undefined
@@ -140,6 +143,7 @@ export function OnboardingWizard() {
       }
 
       await onboardingContextService.submit({
+        expected_body_state_revision: 0,
         profile: {
           gender: formData.gender,
           birth_date: formData.birth_date,

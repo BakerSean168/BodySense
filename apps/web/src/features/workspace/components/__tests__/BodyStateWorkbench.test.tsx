@@ -24,7 +24,6 @@ describe("BodyStateWorkbench observation review", () => {
       <QueryClientProvider client={queryClient}>
         <BodyStateWorkbench
           snapshot={{
-            user_id: "user-1",
             current_revision: 10,
             safety_state: {},
             facts: [
@@ -80,7 +79,6 @@ describe("BodyStateWorkbench observation review", () => {
       <QueryClientProvider client={queryClient}>
         <BodyStateWorkbench
           snapshot={{
-            user_id: "user-1",
             current_revision: 10,
             safety_state: {},
             facts: [
@@ -133,7 +131,6 @@ describe("BodyStateWorkbench observation review", () => {
       <QueryClientProvider client={queryClient}>
         <BodyStateWorkbench
           snapshot={{
-            user_id: "user-1",
             current_revision: 10,
             safety_state: {},
             facts: [
@@ -208,7 +205,7 @@ describe("BodyStateWorkbench observation review", () => {
   it("saves a lifestyle current-state update", async () => {
     const updateLifestyleCurrent = vi
       .spyOn(workspaceApi, "updateLifestyleCurrent")
-      .mockResolvedValue({});
+      .mockResolvedValue(undefined);
 
     const user = userEvent.setup();
 
@@ -222,7 +219,6 @@ describe("BodyStateWorkbench observation review", () => {
       <QueryClientProvider client={queryClient}>
         <BodyStateWorkbench
           snapshot={{
-            user_id: "user-1",
             current_revision: 10,
             safety_state: {},
             facts: [
@@ -279,7 +275,7 @@ describe("BodyStateWorkbench observation review", () => {
   it("keeps assessment observations pending until explicit confirmation", async () => {
     const review = vi
       .spyOn(workspaceApi, "reviewObservation")
-      .mockResolvedValue({});
+      .mockResolvedValue(undefined);
     const user = userEvent.setup();
 
     const queryClient = new QueryClient({
@@ -289,7 +285,6 @@ describe("BodyStateWorkbench observation review", () => {
       <QueryClientProvider client={queryClient}>
         <BodyStateWorkbench
           snapshot={{
-            user_id: "user-1",
             current_revision: 5,
             safety_state: {},
             facts: [],
@@ -340,7 +335,6 @@ describe("BodyStateWorkbench observation review", () => {
       <QueryClientProvider client={queryClient}>
         <BodyStateWorkbench
           snapshot={{
-            user_id: "user-1",
             current_revision: 9,
             safety_state: {},
             facts: [],
@@ -389,7 +383,6 @@ describe("BodyStateWorkbench observation review", () => {
         <BodyStateWorkbench
           selectedRegionId="shoulder.right"
           snapshot={{
-            user_id: "user-1",
             current_revision: 7,
             safety_state: {},
             facts: [

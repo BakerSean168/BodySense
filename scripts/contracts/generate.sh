@@ -38,3 +38,6 @@ gofmt -w "$ROOT/tools/contracts/generated/openapi-go/foundation.gen.go"
   "$BIN/buf" dep update
   "$BIN/buf" generate --template buf.gen.yaml
 )
+
+# Production public REST artifacts are generated from the canonical OpenAPI authority.
+"$ROOT/scripts/contracts/generate-public-rest.sh"
