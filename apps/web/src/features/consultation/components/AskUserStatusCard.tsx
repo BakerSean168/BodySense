@@ -4,18 +4,22 @@ interface AskUserStatusCardProps {
   interaction: PendingInteraction;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function formatAnswer(answer: unknown): string | null {
   if (typeof answer === "string" && answer.trim().length > 0) {
     return answer.trim();
   }
 
-  if (answer && typeof answer === "object") {
-    const record = answer as Record<string, unknown>;
+  if (isRecord(answer)) {
+    const record = answer;
     if (typeof record.text === "string" && record.text.trim().length > 0) {
       return record.text.trim();
     }
-    if (record.fields && typeof record.fields === "object") {
-      const fields = record.fields as Record<string, unknown>;
+    if (isRecord(record.fields)) {
+      const fields = record.fields;
       const parts = Object.entries(fields)
         .filter(
           ([, value]) =>

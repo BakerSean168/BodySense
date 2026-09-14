@@ -88,10 +88,14 @@ const hypothesisStateLabels: Record<string, string> = {
   retired: "不再考虑",
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function observationValueText(value: unknown): string {
   if (typeof value === "string") return value;
-  if (!value || typeof value !== "object") return String(value ?? "");
-  const record = value as Record<string, unknown>;
+  if (!isRecord(value)) return String(value ?? "");
+  const record = value;
   const label = typeof record.label === "string" ? record.label : "";
   const description =
     typeof record.description === "string" ? record.description : "";

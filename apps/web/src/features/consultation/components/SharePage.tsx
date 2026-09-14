@@ -54,13 +54,9 @@ export function SharePage() {
                   : "bg-gray-100 text-gray-900"
               }`}
             >
-              {message.parts
-                .filter((part) => part.type === "text")
-                .map((part, index) => (
-                  <p key={index}>
-                    {(part as { type: "text"; text: string }).text}
-                  </p>
-                ))}
+              {message.parts.map((part, index) =>
+                part.type === "text" ? <p key={index}>{part.text}</p> : null,
+              )}
             </div>
           </div>
         ))}

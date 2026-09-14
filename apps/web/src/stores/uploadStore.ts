@@ -2,10 +2,12 @@ import { create } from "zustand";
 import { useAuthStore } from "./authStore";
 import type {
   FileType,
-  OCRResult,
-  PostureAnalysis,
   UserUpload,
 } from "@/features/profile/types/upload.types";
+import {
+  parseOCRResult,
+  parsePostureAnalysis,
+} from "@/features/profile/types/upload.parsers";
 import {
   createUpload,
   deleteUpload,
@@ -23,11 +25,10 @@ function toUserUpload(upload: UploadWire): UserUpload {
     original_name: upload.original_name,
     file_size: upload.file_size,
     mime_type: upload.mime_type,
-    ocr_result: (upload.ocr_result as OCRResult | undefined) ?? null,
+    ocr_result: parseOCRResult(upload.ocr_result),
     ocr_status: upload.ocr_status,
     analysis_status: upload.analysis_status,
-    analysis_result:
-      (upload.analysis_result as PostureAnalysis | undefined) ?? null,
+    analysis_result: parsePostureAnalysis(upload.analysis_result),
     created_at: upload.created_at,
     updated_at: upload.updated_at,
   };

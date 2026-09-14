@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   parseCitation,
   parseExtractedInfo,
@@ -183,7 +184,7 @@ function toConsultationThread(
     extracted_info: input.extracted_info.map((item) =>
       parseExtractedInfo(item),
     ),
-    body_state: input.body_state as ConsultationThread["body_state"],
+    body_state: input.body_state,
     diagnosis: null,
     pending_interactions: input.pending_interactions.map(toPendingInteraction),
     interaction_history: input.interaction_history.map(toPendingInteraction),
@@ -242,34 +243,105 @@ function toDiagnosisAnalysis(
 
 // Phase-02 compatibility boundary: a legacy pre-envelope governance rejection
 // is intentionally returned transiently without a durable analysis id. Keep the
-// loose transport object confined here until that compatibility branch is
-// retired; durable history uses the strict mapper above.
+// parser confined here until Phase 07 retires that compatibility branch.
 function toTransientDiagnosisAnalysis(
   input: JsonObjectOutput,
 ): DiagnosisAnalysis {
-  const value = input as Record<string, unknown>;
+  const status = parseTransientDiagnosisStatus(input.status);
+  const candidates = parseTransientDiagnosisCandidates(input.candidates);
+  const citations = parseTransientDiagnosisCitations(input.citations);
+
   return {
-    analysis_id:
-      typeof value.analysis_id === "string" ? value.analysis_id : undefined,
-    body_state_revision:
-      typeof value.body_state_revision === "number"
-        ? value.body_state_revision
-        : undefined,
-    status:
-      typeof value.status === "string"
-        ? (value.status as DiagnosisAnalysis["status"])
-        : undefined,
-    scope: typeof value.scope === "string" ? value.scope : undefined,
-    summary: typeof value.summary === "string" ? value.summary : undefined,
-    candidates: Array.isArray(value.candidates)
-      ? (value.candidates as DiagnosisAnalysis["candidates"])
-      : [],
-    citations: Array.isArray(value.citations)
-      ? (value.citations as DiagnosisAnalysis["citations"])
-      : undefined,
-    created_at:
-      typeof value.created_at === "string" ? value.created_at : undefined,
+    analysis_id: optionalString(input.analysis_id, "analysis_id"),
+    body_state_revision: optionalNumber(
+      input.body_state_revision,
+      "body_state_revision",
+    ),
+    status,
+    scope: optionalString(input.scope, "scope"),
+    summary: optionalString(input.summary, "summary"),
+    candidates,
+    citations,
+    created_at: optionalString(input.created_at, "created_at"),
   };
+}
+
+function optionalString(input: unknown, field: string): string | undefined {
+  if (input === undefined) return undefined;
+  if (typeof input !== "string") {
+    throw new TypeError(`Legacy diagnosis ${field} must be a string`);
+  }
+  return input;
+}
+
+function optionalNumber(input: unknown, field: string): number | undefined {
+  if (input === undefined) return undefined;
+  if (typeof input !== "number" || !Number.isFinite(input)) {
+    throw new TypeError(`Legacy diagnosis ${field} must be a finite number`);
+  }
+  return input;
+}
+
+const legacyDiagnosisCandidateSchema = z
+  .object({
+    candidate_id: z.string().uuid().optional(),
+    concern_key: z.string().optional(),
+    name: z.string(),
+    confidence: z.enum(["高", "中", "低"]),
+    severity: z.enum(["轻度", "中度", "重度"]).optional(),
+    evidence_strength: z.enum(["高", "中", "低"]).optional(),
+    impact: z.string().optional(),
+    basis: z.string(),
+    typical_symptoms: z.string().optional(),
+    differential: z.string().optional(),
+    reasoning_summary: z.string().optional(),
+    basis_fact_ids: z.array(z.string()).optional(),
+    basis_observation_ids: z.array(z.string()).optional(),
+    supporting_evidence_ids: z.array(z.string()).optional(),
+    counterevidence_ids: z.array(z.string()).optional(),
+    missing_information: z.array(z.string()).optional(),
+    safety_notes: z.array(z.string()).optional(),
+  })
+  .strip();
+
+function parseTransientDiagnosisStatus(
+  input: unknown,
+): DiagnosisAnalysis["status"] {
+  if (input === undefined) return undefined;
+  if (typeof input !== "string") {
+    throw new TypeError("Legacy diagnosis status must be a string");
+  }
+  switch (input) {
+    case "completed":
+    case "partial":
+    case "insufficient_information":
+    case "safety_blocked":
+      return input;
+    default:
+      throw new TypeError(`Legacy diagnosis status is invalid: ${input}`);
+  }
+}
+
+function parseTransientDiagnosisCandidates(
+  input: unknown,
+): DiagnosisAnalysis["candidates"] {
+  if (input === undefined) return [];
+  if (!Array.isArray(input)) {
+    throw new TypeError("Legacy diagnosis candidates must be an array");
+  }
+  return input.map((candidate) =>
+    legacyDiagnosisCandidateSchema.parse(candidate),
+  );
+}
+
+function parseTransientDiagnosisCitations(
+  input: unknown,
+): DiagnosisAnalysis["citations"] {
+  if (input === undefined) return undefined;
+  if (!Array.isArray(input)) {
+    throw new TypeError("Legacy diagnosis citations must be an array");
+  }
+  return input.map((citation) => parseCitation(citation));
 }
 
 export const consultationApi = {

@@ -3,6 +3,7 @@ import { selectBodyRegionVisualSummaries } from "../model/bodyExplorerSelectors"
 import {
   bodyRegionDefinitions,
   getBodyRegionDefinition,
+  parseBodyRegionId,
   type BodyRegionId,
 } from "../model/bodyRegionOntology";
 
@@ -40,7 +41,7 @@ export function BodyRegionNavigator({
           value={selectedRegionId ?? ""}
           onChange={(event) =>
             onSelectRegion(
-              event.target.value ? (event.target.value as BodyRegionId) : null,
+              event.target.value ? parseBodyRegionId(event.target.value) : null,
             )
           }
           className="h-8 max-w-full rounded-lg border border-border/70 bg-background/45 px-2.5 text-xs text-foreground outline-none transition-colors focus:border-primary/55 focus:ring-2 focus:ring-primary/15"

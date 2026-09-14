@@ -271,3 +271,33 @@ The canonical OpenAPI contract now defines `TrainingPhase` and `TrainingExercise
 - Web typecheck — PASS;
 - API helper + Atlas + Training focused tests — **7/7 PASS**;
 - production `as unknown as` / `as never` — **0**.
+
+## TRUST-008 — Web runtime projection and static-asset trust
+
+Status: **COMPLETE**
+
+The next Web trust pass removes assertion-based trust from runtime projections that sit outside the generated REST envelope while preserving intentionally narrow compatibility seams for later deletion.
+
+### Body-region ontology and anatomy mapping
+
+The generated BodyRegion ontology and Vanatome region map now follow the same two-stage rule as the pinned Atlas registry: strict Zod parsing establishes structural trust first, then the existing domain validators enforce canonical IDs, laterality, parent/group vocabulary, atlas release identity, reverse ownership and registry membership. JSON imports no longer become trusted values through `as Type` or array assertions.
+
+### Consultation compatibility projection
+
+`ConsultationThread.body_state` now consumes the generated `BodyStateSnapshot` directly instead of asserting the feature type. The still-live pre-envelope Diagnosis rejection branch remains isolated until Phase 07, but its `JsonObject` response is now parsed field-by-field through a finite compatibility schema: status and confidence/severity enums are closed, candidate and citation arrays are validated explicitly, malformed values fail closed, and the branch no longer casts arbitrary records into `DiagnosisAnalysis`.
+
+### Upload UI projection
+
+`UserUpload` still intentionally exposes OCR and posture internals as public `JsonObject` values because the browser must not own the full OCR mechanism/provenance schema. A feature-local Zod projection now validates only the fields the UI consumes before they enter Zustand state. Unsupported provenance fields are dropped rather than silently trusted. Malformed nested posture/OCR data fails the load instead of being asserted into `OCRResult` / `PostureAnalysis`.
+
+### UI unknown-value guards
+
+User-selected body-region values use the canonical BodyRegion parser; ask-user answers, tool arguments and workspace JSON observations use record guards; shared message text relies on the `MessagePart` discriminant; treatment mutation results are narrowed through a structural guard; the SSE network failure holder has an explicit mutable `Error | null` type rather than an assertion inserted to defeat closure control-flow analysis.
+
+### Evidence
+
+- Web lint — PASS;
+- Web typecheck — PASS;
+- BodyRegion ontology + anatomy mapping + consultation service + upload store + assistant message projection focused tests — **44/44 PASS**;
+- malformed legacy Diagnosis and malformed nested upload projections are covered by fail-closed tests;
+- production `as unknown as` / `as never` remain **0**.
