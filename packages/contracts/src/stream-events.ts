@@ -44,6 +44,8 @@ export type MessageFailedEvent = EventOf<"message.failed">;
 export type ToolCallEvent = EventOf<"tool.call">;
 export type ToolResultEvent = EventOf<"tool.result">;
 export type ExtractedInfoUpsertEvent = EventOf<"state.extracted_info.upsert">;
+export type LifestyleContextUpsertEvent =
+  EventOf<"state.lifestyle_context.upsert">;
 export type PhaseChangedEvent = EventOf<"state.phase.changed">;
 export type InteractionRequiredEvent = EventOf<"state.interaction.required">;
 export type InteractionAnsweredEvent = EventOf<"state.interaction.answered">;
