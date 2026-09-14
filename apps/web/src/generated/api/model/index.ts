@@ -131,6 +131,7 @@ export * from './listRunEventsParams.zod';
 export * from './listTreatmentRevisionsParams.zod';
 export * from './logoutAcknowledgement.zod';
 export * from './messageDataPart.zod';
+export * from './messageImagePart.zod';
 export * from './messagePart.zod';
 export * from './messageSourcePart.zod';
 export * from './messageTextPart.zod';

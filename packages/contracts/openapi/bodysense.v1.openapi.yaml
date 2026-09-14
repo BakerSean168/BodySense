@@ -5461,6 +5461,7 @@ components:
     MessagePart:
       oneOf:
       - $ref: '#/components/schemas/MessageTextPart'
+      - $ref: '#/components/schemas/MessageImagePart'
       - $ref: '#/components/schemas/MessageSourcePart'
       - $ref: '#/components/schemas/MessageDataPart'
       - $ref: '#/components/schemas/MessageToolCallPart'
@@ -5469,6 +5470,7 @@ components:
         propertyName: type
         mapping:
           text: '#/components/schemas/MessageTextPart'
+          image: '#/components/schemas/MessageImagePart'
           source: '#/components/schemas/MessageSourcePart'
           data: '#/components/schemas/MessageDataPart'
           tool-call: '#/components/schemas/MessageToolCallPart'
@@ -5482,6 +5484,21 @@ components:
           type: string
           const: text
         text:
+          type: string
+    MessageImagePart:
+      type: object
+      additionalProperties: false
+      required: [type, upload_id]
+      properties:
+        type:
+          type: string
+          const: image
+        upload_id:
+          type: string
+          format: uuid
+        mime_type:
+          type: string
+        image_url:
           type: string
     MessageSourcePart:
       type: object

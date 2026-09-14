@@ -7,12 +7,13 @@
  */
 import * as zod from 'zod/mini';
 import { MessageDataPart } from './messageDataPart.zod';
+import { MessageImagePart } from './messageImagePart.zod';
 import { MessageSourcePart } from './messageSourcePart.zod';
 import { MessageTextPart } from './messageTextPart.zod';
 import { MessageToolCallPart } from './messageToolCallPart.zod';
 import { MessageToolResultPart } from './messageToolResultPart.zod';
 
-export const MessagePart = /*#__PURE__*/ zod.union([MessageTextPart,MessageSourcePart,MessageDataPart,MessageToolCallPart,MessageToolResultPart]);
+export const MessagePart = /*#__PURE__*/ zod.union([MessageTextPart,MessageImagePart,MessageSourcePart,MessageDataPart,MessageToolCallPart,MessageToolResultPart]);
 
 export type MessagePart = zod.input<typeof MessagePart>;
 export type MessagePartOutput = zod.output<typeof MessagePart>;

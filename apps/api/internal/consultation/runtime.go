@@ -269,9 +269,9 @@ func (r *Runtime) StartRun(
 		userText = "请结合我附上的照片，分析与体态/不适相关的可见信息，并给出谨慎建议。"
 	}
 
-	userPartsJSON, err := json.Marshal(req.Message.Parts)
+	userPartsJSON, err := marshalDurableMessageParts(req.Message.Parts)
 	if err != nil {
-		return httpErr(http.StatusInternalServerError, ConsultationErrorInternal, "failed to marshal message parts")
+		return httpErr(http.StatusBadRequest, ConsultationErrorInvalidRequest, err.Error())
 	}
 	userMetadata, spatialContext, metadataErr := normalizeSpatialContextMetadata(req.Message.Metadata)
 	if metadataErr != nil {
@@ -1902,6 +1902,34 @@ func (r *Runtime) recordPublicEvent(ctx context.Context, event dto.StreamEvent) 
 	if err := r.runtimeEventService.RecordPublicEvent(ctx, conversationID, runID, turnID, event); err != nil {
 		log.Printf("failed to persist runtime event %s for run %s: %v", event.Type, runID, err)
 	}
+}
+
+type durableMessagePart struct {
+	Type     string `json:"type"`
+	Text     string `json:"text,omitempty"`
+	UploadID string `json:"upload_id,omitempty"`
+	MimeType string `json:"mime_type,omitempty"`
+	ImageURL string `json:"image_url,omitempty"`
+}
+
+func marshalDurableMessageParts(parts []PartInput) ([]byte, error) {
+	projected := make([]durableMessagePart, 0, len(parts))
+	for _, part := range parts {
+		switch part.Type {
+		case "text":
+			projected = append(projected, durableMessagePart{Type: "text", Text: part.Text})
+		case "image":
+			projected = append(projected, durableMessagePart{
+				Type:     "image",
+				UploadID: part.UploadID,
+				MimeType: part.MimeType,
+				ImageURL: part.ImageURL,
+			})
+		default:
+			return nil, fmt.Errorf("unsupported message part type %q", part.Type)
+		}
+	}
+	return json.Marshal(projected)
 }
 
 func messagePartsToImageUploadIDs(parts []PartInput) []string {

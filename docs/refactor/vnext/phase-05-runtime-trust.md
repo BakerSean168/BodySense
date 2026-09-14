@@ -1,6 +1,6 @@
 # Phase 05 — Runtime trust and explicit error semantics
 
-Status: **IN PROGRESS**
+Status: **COMPLETE**
 
 - Branch: `refactor/vnext-05-runtime-trust`
 - Parent canonical vNext commit: `ab8256260`
@@ -338,3 +338,44 @@ A TypeScript AST audit over production Web sources, excluding generated files, t
 - Vanatome adapter, Body Explorer store, workspace-view parser, pending-interaction projection, assistant thread mapping, consultation service/page and upload-store focused tests — **50/50 PASS**;
 - production `as unknown as` / `as never` — **0**;
 - production ordinary assertions outside the intentional brand constructor — **0**.
+
+## TRUST-010 — Durable MessagePart producer alignment
+
+Status: **COMPLETE**
+
+The production-shaped recovery E2E exposed one final trust violation that focused transport tests did not cover: Consultation runtime input parts were being persisted by directly marshaling the handwritten `PartInput` Go struct. Go therefore emitted legacy field names such as `Type`, `Text`, `UploadID`, `MimeType` and `ImageURL`, while the now-strict public `ConversationMessage.parts` contract accepts lowercase discriminated variants. A newly created thread consequently failed strict OpenAPI projection with HTTP 500, which removed the live cancel control from the Web workbench.
+
+The runtime no longer treats its application command shape as a durable/public shape. `marshalDurableMessageParts()` is the explicit application -> durable projection:
+
+- text input becomes `{type, text}`;
+- image input becomes `{type, upload_id, mime_type?, image_url?}`;
+- unknown part kinds fail closed before persistence;
+- legacy Go field names cannot leak into JSON.
+
+The canonical public `MessagePart` union now includes the already-supported durable user `image` variant, so image turns remain representable after reload instead of becoming a latent strict-projection failure. Generated Go and Orval/Zod artifacts were regenerated from that single OpenAPI authority.
+
+### Evidence
+
+- dedicated Go projection characterization covers lowercase text shape, canonical image identity and unknown-variant rejection;
+- Consultation + HTTP transport focused Go tests — PASS;
+- generated-contract determinism — PASS;
+- Consultation recovery E2E after rebuilding current API/Web images — **2/2 PASS** (`cancel` 16.9s, `execution_lost` restart recovery 10.6s).
+
+## Final Phase 05 acceptance
+
+All Phase 05 trust boundaries now satisfy the target rule:
+
+```text
+untrusted input -> one explicit parser/validator -> trusted typed value
+```
+
+Final evidence on the completed branch:
+
+- `pnpm contracts:verify` — PASS; public REST **95/95**, generated artifacts deterministic; Redocly retains only the two pre-existing ambiguous-path warnings;
+- Python: Ruff PASS, Pyright **0 errors / 0 warnings**, pytest **505/505 PASS**;
+- Go: `go test ./...` + `go vet ./...` — PASS;
+- Web: lint/typecheck PASS, Vitest **52 files / 263 tests PASS**, production build PASS;
+- root `pnpm lint && pnpm typecheck && pnpm test && pnpm build` — PASS;
+- production-shaped local-deploy sequence — PASS. Because the execution harness has a 90-second call ceiling, the repository's `validate:local-deploy` sequence was continued in the same disposable stack after its quality/build segments were externally terminated by that ceiling: API/AI/Web health, posture mechanism identity, fresh PG18 migration/domain validation, knowledge publication, all **10/10 Playwright E2E**, Diagnosis/Treatment baseline assertions, decision trace and replay-input assertions all passed; the validator containers, network and volumes were then removed;
+- TypeScript production AST audit: `as unknown as` / `as never` **0**; ordinary runtime assertions outside the intentional `asAnatomyStructureId()` brand constructor **0**;
+- private Go runtime reparse debt: private `PayloadAs()` **0**, generic private `ConsultationRuntimeEvent.Payload json.RawMessage` **0**; intentionally opaque Proto `Struct/ListValue` fields remain explicit leaf `json.RawMessage` values only.
