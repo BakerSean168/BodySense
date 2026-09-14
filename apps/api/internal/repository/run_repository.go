@@ -17,8 +17,6 @@ type RunRepository struct {
 	db *gorm.DB
 }
 
-const runLeaseErrorJSON = `{"message":"run execution lost; lease expired"}`
-
 // NewRunRepository creates a new RunRepository.
 func NewRunRepository(db *gorm.DB) *RunRepository {
 	return &RunRepository{db: db}
@@ -119,6 +117,26 @@ func (r *RunRepository) MarkWaitingUser(ctx context.Context, id uuid.UUID) (bool
 	return result.RowsAffected == 1, result.Error
 }
 
+// FailWaitingUser performs exactly waiting_user -> failed for an internal HITL
+// terminal condition such as interaction expiry. Ownership was established
+// when the interaction/run relationship was created, so this internal CAS is
+// keyed by run id rather than a new user-supplied identifier.
+func (r *RunRepository) FailWaitingUser(ctx context.Context, id uuid.UUID, errJSON any) (bool, error) {
+	now := time.Now()
+	result := database.FromContext(ctx, r.db).
+		Model(&model.Run{}).
+		Where("id = ? AND status = ?", id, model.RunStatusWaitingUser).
+		Updates(map[string]any{
+			"status":             model.RunStatusFailed,
+			"error":              errJSON,
+			"completed_at":       now,
+			"lease_owner":        "",
+			"lease_expires_at":   nil,
+			"lease_heartbeat_at": nil,
+		})
+	return result.RowsAffected == 1, result.Error
+}
+
 // ResumeRunning transitions exactly waiting_user -> running and establishes a
 // new execution lease for the resuming API process.
 func (r *RunRepository) ResumeRunning(ctx context.Context, id uuid.UUID, owner string, expiresAt time.Time) (bool, error) {
@@ -145,48 +163,36 @@ func (r *RunRepository) RenewLease(ctx context.Context, id, userID uuid.UUID, ow
 	return result.RowsAffected == 1, result.Error
 }
 
-// ReclaimExpiredRuns atomically claims and fails expired running executions.
-// SKIP LOCKED lets multiple API instances reconcile concurrently without
-// producing duplicate terminal transitions.
-func (r *RunRepository) ReclaimExpiredRuns(ctx context.Context, now time.Time, limit int) ([]model.Run, error) {
+// ListExpiredRuns returns stale running executions that are candidates for
+// lifecycle reconciliation. The terminal winner is decided by FailExpiredRun;
+// callers must not treat this read as a claim.
+func (r *RunRepository) ListExpiredRuns(ctx context.Context, now time.Time, limit int) ([]model.Run, error) {
 	if limit <= 0 {
 		limit = 100
 	}
-	var reclaimed []model.Run
-	err := database.FromContext(ctx, r.db).Transaction(func(tx *gorm.DB) error {
-		var candidates []model.Run
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE", Options: "SKIP LOCKED"}).
-			Where("status = ? AND lease_expires_at IS NOT NULL AND lease_expires_at <= ?", model.RunStatusRunning, now).
-			Order("lease_expires_at ASC").Limit(limit).Find(&candidates).Error; err != nil {
-			return err
-		}
-		for _, candidate := range candidates {
-			result := tx.Model(&model.Run{}).
-				Where("id = ? AND status = ? AND lease_expires_at <= ?", candidate.ID, model.RunStatusRunning, now).
-				Updates(map[string]any{
-					"status":             model.RunStatusFailed,
-					"error":              datatypes.JSON([]byte(runLeaseErrorJSON)),
-					"completed_at":       now,
-					"lease_owner":        "",
-					"lease_expires_at":   nil,
-					"lease_heartbeat_at": nil,
-				})
-			if result.Error != nil {
-				return result.Error
-			}
-			if result.RowsAffected == 1 {
-				candidate.Status = model.RunStatusFailed
-				candidate.Error = datatypes.JSON([]byte(runLeaseErrorJSON))
-				candidate.CompletedAt = &now
-				candidate.LeaseOwner = ""
-				candidate.LeaseExpiresAt = nil
-				candidate.LeaseHeartbeatAt = nil
-				reclaimed = append(reclaimed, candidate)
-			}
-		}
-		return nil
-	})
-	return reclaimed, err
+	var candidates []model.Run
+	err := database.FromContext(ctx, r.db).
+		Where("status = ? AND lease_expires_at IS NOT NULL AND lease_expires_at <= ?", model.RunStatusRunning, now).
+		Order("lease_expires_at ASC").
+		Limit(limit).
+		Find(&candidates).Error
+	return candidates, err
+}
+
+// FailExpiredRun performs the authoritative execution_lost CAS. A false result
+// means another instance renewed or terminally transitioned the run first.
+func (r *RunRepository) FailExpiredRun(ctx context.Context, id uuid.UUID, now time.Time, errJSON any) (bool, error) {
+	result := database.FromContext(ctx, r.db).Model(&model.Run{}).
+		Where("id = ? AND status = ? AND lease_expires_at IS NOT NULL AND lease_expires_at <= ?", id, model.RunStatusRunning, now).
+		Updates(map[string]any{
+			"status":             model.RunStatusFailed,
+			"error":              errJSON,
+			"completed_at":       now,
+			"lease_owner":        "",
+			"lease_expires_at":   nil,
+			"lease_heartbeat_at": nil,
+		})
+	return result.RowsAffected == 1, result.Error
 }
 
 // CompleteRun marks a run as completed only from an active lifecycle state.

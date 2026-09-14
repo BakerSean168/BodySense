@@ -17,7 +17,7 @@ type fakeTreatmentRepo struct {
 	proposal                        *model.TreatmentRevision
 	interventions                   []model.Intervention
 	current                         *model.Treatment
-	status                          string
+	status                          model.TreatmentStatus
 	statusReasons                   datatypes.JSON
 	statusUpdates                   int
 	acceptCalled                    bool
@@ -59,7 +59,7 @@ func (r *fakeTreatmentRepo) AcceptRevision(_ context.Context, userID, revisionID
 	return r.current, &copy, true, nil
 }
 func (r *fakeTreatmentRepo) RejectRevision(context.Context, uuid.UUID, uuid.UUID) error { return nil }
-func (r *fakeTreatmentRepo) SetStatus(_ context.Context, userID uuid.UUID, status string, reasons datatypes.JSON) (*model.Treatment, error) {
+func (r *fakeTreatmentRepo) SetStatus(_ context.Context, userID uuid.UUID, status model.TreatmentStatus, reasons datatypes.JSON) (*model.Treatment, error) {
 	r.status = status
 	r.statusReasons = reasons
 	r.statusUpdates++

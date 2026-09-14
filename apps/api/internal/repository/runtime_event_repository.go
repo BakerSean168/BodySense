@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 
+	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -21,7 +22,7 @@ func NewRuntimeEventRepository(db *gorm.DB) *RuntimeEventRepository {
 
 // Create appends a new runtime event.
 func (r *RuntimeEventRepository) Create(ctx context.Context, event *model.RuntimeEvent) error {
-	return r.db.WithContext(ctx).Create(event).Error
+	return database.FromContext(ctx, r.db).Create(event).Error
 }
 
 // CreateBatch appends multiple runtime events in one statement.
@@ -31,14 +32,14 @@ func (r *RuntimeEventRepository) CreateBatch(ctx context.Context, events []*mode
 	if len(events) == 0 {
 		return nil
 	}
-	return r.db.WithContext(ctx).Create(&events).Error
+	return database.FromContext(ctx, r.db).Create(&events).Error
 }
 
 // CreateWithNextSequence serializes out-of-band allocation on the owning run
 // row, then appends MAX(seq)+1 inside the same transaction. Live stream events
 // have their own writer; this method is reserved for waiting/inactive runs.
 func (r *RuntimeEventRepository) CreateWithNextSequence(ctx context.Context, event *model.RuntimeEvent) error {
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return database.FromContext(ctx, r.db).Transaction(func(tx *gorm.DB) error {
 		var lockedRun model.Run
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 			Select("id").
@@ -68,7 +69,7 @@ func (r *RuntimeEventRepository) ListByRunID(
 ) ([]model.RuntimeEvent, bool, error) {
 	var events []model.RuntimeEvent
 
-	err := r.db.WithContext(ctx).
+	err := database.FromContext(ctx, r.db).
 		Where("conversation_id = ? AND run_id = ? AND seq > ?", conversationID, runID, afterSeq).
 		Order("seq ASC").
 		Limit(limit + 1).
@@ -91,7 +92,7 @@ func (r *RuntimeEventRepository) ListByConversationID(
 	conversationID uuid.UUID,
 ) ([]model.RuntimeEvent, error) {
 	var events []model.RuntimeEvent
-	err := r.db.WithContext(ctx).
+	err := database.FromContext(ctx, r.db).
 		Where("conversation_id = ?", conversationID).
 		Order("created_at ASC, seq ASC").
 		Find(&events).Error

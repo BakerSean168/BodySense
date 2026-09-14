@@ -246,7 +246,7 @@ func (r *TreatmentRepository) RejectRevision(
 func (r *TreatmentRepository) SetStatus(
 	ctx context.Context,
 	userID uuid.UUID,
-	status string,
+	status model.TreatmentStatus,
 	reasons datatypes.JSON,
 ) (*model.Treatment, error) {
 	if len(reasons) == 0 {
@@ -264,12 +264,12 @@ func (r *TreatmentRepository) SetStatus(
 			Updates(map[string]any{"status": status, "status_reasons": reasons, "updated_at": now}).Error; err != nil {
 			return err
 		}
-		interventionStatus := "active"
+		interventionStatus := string(model.TreatmentStatusActive)
 		if status == model.TreatmentStatusPaused {
 			interventionStatus = "paused"
 		}
 		if status == model.TreatmentStatusCompleted || status == model.TreatmentStatusSuperseded {
-			interventionStatus = status
+			interventionStatus = string(status)
 		}
 		if status != model.TreatmentStatusReviewRecommended {
 			if err := tx.WithContext(ctx).Model(&model.Intervention{}).

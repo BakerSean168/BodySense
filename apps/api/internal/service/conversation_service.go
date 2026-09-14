@@ -52,13 +52,15 @@ type runRepo interface {
 	ListByConversationID(ctx context.Context, conversationID uuid.UUID) ([]model.Run, error)
 	MarkWaitingUser(ctx context.Context, id uuid.UUID) (bool, error)
 	ResumeRunning(ctx context.Context, id uuid.UUID, owner string, expiresAt time.Time) (bool, error)
+	FailWaitingUser(ctx context.Context, id uuid.UUID, errJSON any) (bool, error)
 	CompleteRun(ctx context.Context, id, userID uuid.UUID, usage any, providerResponseID string) error
 	TryCompleteRun(ctx context.Context, id, userID uuid.UUID, usage any, providerResponseID string) (bool, error)
 	CancelRun(ctx context.Context, id, userID uuid.UUID, reason any) (bool, error)
 	FailRun(ctx context.Context, id, userID uuid.UUID, errJSON any) (bool, error)
 	UpdateAgentConfiguration(ctx context.Context, id uuid.UUID, configurationID string, configuration datatypes.JSON, provenance datatypes.JSON) error
 	RenewLease(ctx context.Context, id, userID uuid.UUID, owner string, expiresAt, heartbeatAt time.Time) (bool, error)
-	ReclaimExpiredRuns(ctx context.Context, now time.Time, limit int) ([]model.Run, error)
+	ListExpiredRuns(ctx context.Context, now time.Time, limit int) ([]model.Run, error)
+	FailExpiredRun(ctx context.Context, id uuid.UUID, now time.Time, errJSON any) (bool, error)
 }
 
 type shareRepo interface {

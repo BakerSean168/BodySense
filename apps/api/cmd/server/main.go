@@ -16,7 +16,6 @@ import (
 	"github.com/bodysense/api/internal/database"
 	openapiv1 "github.com/bodysense/api/internal/generated/openapi/v1"
 	"github.com/bodysense/api/internal/middleware"
-	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/observability"
 	"github.com/bodysense/api/internal/repository"
 	"github.com/bodysense/api/internal/service"
@@ -127,6 +126,7 @@ func main() {
 	contextRetrievalService := service.NewContextRetrievalService(messageContextRepo)
 	runService := service.NewRunService(runRepo, leaseOwner)
 	runtimeEventService := service.NewRuntimeEventService(runtimeEventRepo)
+	runService.WithLifecycleEvents(runtimeEventService, database.NewTransactionManager(database.DB))
 	conversationService := service.NewConversationService(conversationRepo, messageRepo, runRepo, shareRepo, aiClient, database.NewTransactionManager(database.DB)).WithAgentDeployment(agentDeploymentPolicy)
 	shareService := service.NewShareService(conversationRepo, messageRepo, shareRepo)
 	consultationService := service.NewConsultationService(consultationRepo, conversationRepo)
@@ -173,16 +173,8 @@ func main() {
 	agentToolRepo := repository.NewAgentToolCallRepository(database.DB)
 	agentToolService := service.NewAgentToolService(agentToolRepo)
 	interactionRepo := repository.NewAgentInteractionRepository(database.DB)
-	interactionService := service.NewAgentInteractionService(interactionRepo, runService, conversationRepo, database.NewTransactionManager(database.DB))
-	interactionService.StartInteractionExpiryWorker(
-		context.Background(),
-		time.Minute,
-		func(ctx context.Context, interaction model.AgentInteraction) {
-			if err := runtimeEventService.RecordInteractionExpired(ctx, &interaction); err != nil {
-				log.Printf("record interaction expired event %s: %v", interaction.ID, err)
-			}
-		},
-	)
+	interactionService := service.NewAgentInteractionService(interactionRepo, runService, conversationRepo, database.NewTransactionManager(database.DB)).WithLifecycleEvents(runtimeEventService)
+	interactionService.StartInteractionExpiryWorker(context.Background(), time.Minute, nil)
 	threadProjectionService := service.NewThreadProjectionService(conversationRepo, consultationRepo, messageRepo, interactionRepo, runtimeEventService, threadProjectionRepo)
 	outputReviewRepo := repository.NewAIOutputReviewRepository(database.DB)
 	outputReviewService := service.NewOutputReviewService(outputReviewRepo)
@@ -415,9 +407,6 @@ func startRunLeaseReconciler(
 			failedMessage, err := conversationService.FinalizeExecutionLostProjection(ctx, run)
 			if err != nil {
 				log.Printf("finalize execution-lost projection for run %s: %v", run.ID, err)
-			}
-			if err := runtimeEventService.RecordRunExecutionLost(ctx, run); err != nil {
-				log.Printf("record execution-lost event for run %s: %v", run.ID, err)
 			}
 			if err := runtimeEventService.RecordMessageExecutionLost(ctx, run, failedMessage); err != nil {
 				log.Printf("record execution-lost message event for run %s: %v", run.ID, err)

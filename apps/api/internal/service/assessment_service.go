@@ -244,10 +244,14 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 		payload.EvidencePolicyRevision,
 	)
 
+	reportStatus, ok := model.ParseAssessmentReportStatus(evidenceProjection.Status)
+	if !ok {
+		return nil, fmt.Errorf("invalid evidence-derived assessment status %q", evidenceProjection.Status)
+	}
 	report := &model.AssessmentReport{
 		ID:                      uuid.New(),
 		UserID:                  userID,
-		Status:                  evidenceProjection.Status,
+		Status:                  reportStatus,
 		ContractRevision:        payload.ContractRevision,
 		HealthGrade:             nil,
 		DimensionScores:         nil,

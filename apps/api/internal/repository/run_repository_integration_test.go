@@ -59,6 +59,25 @@ VALUES (?,?,?,?,?,?,?,?,?,?)`,
 	return userID, runID
 }
 
+func reclaimExpiredRunsForRepositoryTest(ctx context.Context, repo *RunRepository, now time.Time, limit int) ([]model.Run, error) {
+	candidates, err := repo.ListExpiredRuns(ctx, now, limit)
+	if err != nil {
+		return nil, err
+	}
+	reclaimed := make([]model.Run, 0, len(candidates))
+	for _, candidate := range candidates {
+		won, err := repo.FailExpiredRun(ctx, candidate.ID, now, []byte(`{"message":"run execution lost; lease expired"}`))
+		if err != nil {
+			return nil, err
+		}
+		if won {
+			candidate.Status = model.RunStatusFailed
+			reclaimed = append(reclaimed, candidate)
+		}
+	}
+	return reclaimed, nil
+}
+
 func TestRunLeaseConcurrentReconciliationPostgres(t *testing.T) {
 	db := openRunLeaseIntegrationDB(t)
 	ctx := context.Background()
@@ -74,7 +93,7 @@ func TestRunLeaseConcurrentReconciliationPostgres(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			<-start
-			runs, err := NewRunRepository(db).ReclaimExpiredRuns(ctx, time.Now().UTC(), 10)
+			runs, err := reclaimExpiredRunsForRepositoryTest(ctx, NewRunRepository(db), time.Now().UTC(), 10)
 			results <- len(runs)
 			errs <- err
 		}()
@@ -126,7 +145,7 @@ func TestRunLeaseCompletionVsReconcilerSingleTerminalWinnerPostgres(t *testing.T
 		defer wg.Done()
 		<-start
 		var runs []model.Run
-		runs, reclaimErr = repo.ReclaimExpiredRuns(ctx, time.Now().UTC(), 10)
+		runs, reclaimErr = reclaimExpiredRunsForRepositoryTest(ctx, repo, time.Now().UTC(), 10)
 		reclaimed = len(runs)
 	}()
 	close(start)
@@ -156,7 +175,7 @@ func TestRunLeaseWaitingUserIsNeverReclaimedPostgres(t *testing.T) {
 	ctx := context.Background()
 	_, runID := seedLeaseRun(t, db, "waiting_user", time.Now().UTC().Add(-time.Hour))
 
-	runs, err := NewRunRepository(db).ReclaimExpiredRuns(ctx, time.Now().UTC(), 10)
+	runs, err := reclaimExpiredRunsForRepositoryTest(ctx, NewRunRepository(db), time.Now().UTC(), 10)
 	if err != nil {
 		t.Fatalf("ReclaimExpiredRuns: %v", err)
 	}

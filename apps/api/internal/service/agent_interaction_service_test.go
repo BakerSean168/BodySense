@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
@@ -159,6 +160,11 @@ func (r *fakeRunStatusRepo) MarkWaitingUser(_ context.Context, id uuid.UUID) err
 	r.lastRunID = id
 	r.last = model.RunStatusWaitingUser
 	return r.err
+}
+func (r *fakeRunStatusRepo) FailWaitingUser(_ context.Context, id uuid.UUID, _ any) (bool, error) {
+	r.lastRunID = id
+	r.last = model.RunStatusFailed
+	return true, r.err
 }
 
 type fakeInteractionTransactionManager struct {
@@ -334,5 +340,140 @@ func TestAgentInteractionServiceGetInteractionMetricsRejectsMissingConversation(
 	_, err := svc.GetInteractionMetrics(context.Background(), uuid.New(), &conversationID)
 	if !errors.Is(err, ErrConversationNotFound) {
 		t.Fatalf("expected ErrConversationNotFound, got %v", err)
+	}
+}
+
+type fakeInteractionLifecycleEvents struct {
+	events []dto.StreamEvent
+}
+
+func (f *fakeInteractionLifecycleEvents) Flush(context.Context) error { return nil }
+
+func (f *fakeInteractionLifecycleEvents) PersistPreparedMilestone(
+	_ context.Context,
+	_, _ uuid.UUID,
+	_ *uuid.UUID,
+	event dto.StreamEvent,
+) error {
+	f.events = append(f.events, event)
+	return nil
+}
+
+func (f *fakeInteractionLifecycleEvents) PersistOutOfBandMilestone(
+	_ context.Context,
+	conversationID, runID uuid.UUID,
+	_ *uuid.UUID,
+	channel, eventType string,
+	ids dto.StreamEventIDs,
+	payload any,
+) (dto.StreamEvent, error) {
+	event, err := dto.NewStreamEvent(len(f.events)+1, channel, eventType, ids, payload)
+	if err != nil {
+		return dto.StreamEvent{}, err
+	}
+	if event.IDs.ConversationID == "" {
+		event.IDs.ConversationID = conversationID.String()
+	}
+	if event.IDs.RunID == "" {
+		event.IDs.RunID = runID.String()
+	}
+	f.events = append(f.events, event)
+	return event, nil
+}
+
+func TestCreatePendingInteractionWithEventsPersistsRequiredAndInterrupted(t *testing.T) {
+	repo := newFakeInteractionRepo()
+	runRepo := &fakeRunStatusRepo{}
+	events := &fakeInteractionLifecycleEvents{}
+	svc := NewAgentInteractionService(repo, runRepo, newFakeConversationOwnership(), fakeInteractionTransactionManager{}).
+		WithLifecycleEvents(events)
+	runID := uuid.New()
+	conversationID := uuid.New()
+	turnID := uuid.New()
+
+	interaction, prepared, err := svc.CreatePendingInteractionWithEvents(
+		context.Background(), runID, conversationID, "call-required", datatypes.JSON(`{"prompt":"where?"}`),
+		func(interaction *model.AgentInteraction) ([]dto.StreamEvent, error) {
+			required, err := dto.NewStreamEvent(5, "state", "state.interaction.required", dto.StreamEventIDs{
+				ConversationID: conversationID.String(), RunID: runID.String(), TurnID: turnID.String(), InteractionID: interaction.ID.String(), ToolCallID: interaction.ToolCallID,
+			}, map[string]any{"interaction_id": interaction.ID.String(), "question": map[string]any{"prompt": "where?"}, "created_at": interaction.CreatedAt.Format(time.RFC3339Nano)})
+			if err != nil {
+				return nil, err
+			}
+			interrupted, err := dto.NewStreamEvent(6, "run", "run.interrupted", dto.StreamEventIDs{
+				ConversationID: conversationID.String(), RunID: runID.String(), TurnID: turnID.String(), InteractionID: interaction.ID.String(),
+			}, map[string]any{"status": "waiting_user", "interaction_id": interaction.ID.String()})
+			return []dto.StreamEvent{required, interrupted}, err
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if interaction == nil || interaction.Status != model.AgentInteractionPending {
+		t.Fatalf("interaction=%+v, want pending", interaction)
+	}
+	if runRepo.last != model.RunStatusWaitingUser {
+		t.Fatalf("run status=%q, want waiting_user", runRepo.last)
+	}
+	if len(prepared) != 2 || len(events.events) != 2 {
+		t.Fatalf("prepared=%d durable=%d, want 2/2", len(prepared), len(events.events))
+	}
+	if events.events[0].Type != "state.interaction.required" || events.events[1].Type != "run.interrupted" {
+		t.Fatalf("unexpected event order: %q, %q", events.events[0].Type, events.events[1].Type)
+	}
+}
+
+func TestResumeInteractionWithEventPersistsAnsweredOnSourceRun(t *testing.T) {
+	repo := newFakeInteractionRepo()
+	runRepo := &fakeRunStatusRepo{}
+	events := &fakeInteractionLifecycleEvents{}
+	svc := NewAgentInteractionService(repo, runRepo, newFakeConversationOwnership(), fakeInteractionTransactionManager{}).
+		WithLifecycleEvents(events)
+	runID := uuid.New()
+	conversationID := uuid.New()
+	interaction, err := svc.CreatePendingInteraction(context.Background(), runID, conversationID, "call-answer", datatypes.JSON(`{"prompt":"pain?"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	answer := datatypes.JSON(`{"text":"yes"}`)
+	if err := svc.ResumeInteractionWithEvent(context.Background(), interaction.ID, answer); err != nil {
+		t.Fatal(err)
+	}
+	stored, _ := repo.GetByID(context.Background(), interaction.ID)
+	if stored == nil || stored.Status != model.AgentInteractionAnswered {
+		t.Fatalf("stored=%+v, want answered", stored)
+	}
+	if len(events.events) != 1 || events.events[0].Type != "state.interaction.answered" {
+		t.Fatalf("events=%+v, want one interaction.answered", events.events)
+	}
+	if events.events[0].IDs.RunID != runID.String() {
+		t.Fatalf("answered event run=%q, want source run %s", events.events[0].IDs.RunID, runID)
+	}
+}
+
+func TestExpireInteractionWithEventsFailsWaitingRunAndPersistsBothMilestones(t *testing.T) {
+	repo := newFakeInteractionRepo()
+	runRepo := &fakeRunStatusRepo{}
+	events := &fakeInteractionLifecycleEvents{}
+	svc := NewAgentInteractionService(repo, runRepo, newFakeConversationOwnership(), fakeInteractionTransactionManager{}).
+		WithLifecycleEvents(events)
+	runID := uuid.New()
+	conversationID := uuid.New()
+	interaction, err := svc.CreatePendingInteraction(context.Background(), runID, conversationID, "call-expire", datatypes.JSON(`{"prompt":"later?"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	past := time.Now().Add(-time.Minute)
+	repo.byID[interaction.ID].ExpiresAt = &past
+
+	expired, err := svc.ExpireExpiredInteractions(context.Background(), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(expired) != 1 || runRepo.last != model.RunStatusFailed {
+		t.Fatalf("expired=%d run=%q, want 1/failed", len(expired), runRepo.last)
+	}
+	if len(events.events) != 2 || events.events[0].Type != "state.interaction.expired" || events.events[1].Type != "run.failed" {
+		t.Fatalf("unexpected expiry events: %+v", events.events)
 	}
 }

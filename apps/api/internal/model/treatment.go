@@ -7,31 +7,35 @@ import (
 	"gorm.io/datatypes"
 )
 
-const (
-	TreatmentStatusActive            = "active"
-	TreatmentStatusReviewRecommended = "review_recommended"
-	TreatmentStatusPaused            = "paused"
-	TreatmentStatusSuperseded        = "superseded"
-	TreatmentStatusCompleted         = "completed"
+type TreatmentStatus string
 
-	TreatmentAcceptanceProposed = "proposed"
-	TreatmentAcceptanceAccepted = "accepted"
-	TreatmentAcceptanceRejected = "rejected"
+type TreatmentAcceptanceState string
+
+const (
+	TreatmentStatusActive            TreatmentStatus = "active"
+	TreatmentStatusReviewRecommended TreatmentStatus = "review_recommended"
+	TreatmentStatusPaused            TreatmentStatus = "paused"
+	TreatmentStatusSuperseded        TreatmentStatus = "superseded"
+	TreatmentStatusCompleted         TreatmentStatus = "completed"
+
+	TreatmentAcceptanceProposed TreatmentAcceptanceState = "proposed"
+	TreatmentAcceptanceAccepted TreatmentAcceptanceState = "accepted"
+	TreatmentAcceptanceRejected TreatmentAcceptanceState = "rejected"
 )
 
 // Treatment is the one current user-scoped intervention strategy aggregate.
 // Accepted revisions are immutable; this row only points at the current revision
 // and carries mutable lifecycle/review state.
 type Treatment struct {
-	ID                        uuid.UUID      `gorm:"type:uuid;primaryKey" json:"id"`
-	UserID                    uuid.UUID      `gorm:"type:uuid;not null;uniqueIndex" json:"user_id"`
-	CurrentRevision           int            `gorm:"not null;default:0" json:"current_revision"`
-	Status                    string         `gorm:"type:varchar(30);not null" json:"status"`
-	SourceBodyStateRevision   *int64         `json:"source_body_state_revision,omitempty"`
-	SourceDiagnosisAnalysisID *uuid.UUID     `gorm:"type:uuid" json:"source_diagnosis_analysis_id,omitempty"`
-	StatusReasons             datatypes.JSON `gorm:"type:jsonb;not null;default:'[]'" json:"status_reasons"`
-	CreatedAt                 time.Time      `gorm:"not null;default:now()" json:"created_at"`
-	UpdatedAt                 time.Time      `gorm:"not null;default:now()" json:"updated_at"`
+	ID                        uuid.UUID       `gorm:"type:uuid;primaryKey" json:"id"`
+	UserID                    uuid.UUID       `gorm:"type:uuid;not null;uniqueIndex" json:"user_id"`
+	CurrentRevision           int             `gorm:"not null;default:0" json:"current_revision"`
+	Status                    TreatmentStatus `gorm:"type:varchar(30);not null" json:"status"`
+	SourceBodyStateRevision   *int64          `json:"source_body_state_revision,omitempty"`
+	SourceDiagnosisAnalysisID *uuid.UUID      `gorm:"type:uuid" json:"source_diagnosis_analysis_id,omitempty"`
+	StatusReasons             datatypes.JSON  `gorm:"type:jsonb;not null;default:'[]'" json:"status_reasons"`
+	CreatedAt                 time.Time       `gorm:"not null;default:now()" json:"created_at"`
+	UpdatedAt                 time.Time       `gorm:"not null;default:now()" json:"updated_at"`
 
 	Current *TreatmentRevision `gorm:"-" json:"current,omitempty"`
 }
@@ -41,30 +45,30 @@ func (Treatment) TableName() string { return "treatments" }
 // TreatmentRevision is an immutable proposed or accepted plan pinned to exact
 // DiagnosisAnalysis and BodyState identities.
 type TreatmentRevision struct {
-	ID                        uuid.UUID      `gorm:"type:uuid;primaryKey" json:"id"`
-	TreatmentID               uuid.UUID      `gorm:"type:uuid;not null;index" json:"treatment_id"`
-	Revision                  int            `gorm:"not null" json:"revision"`
-	AcceptanceState           string         `gorm:"type:varchar(20);not null" json:"acceptance_state"`
-	LifecycleState            string         `gorm:"type:varchar(30);not null" json:"lifecycle_state"`
-	SourceBodyStateRevision   int64          `gorm:"not null" json:"source_body_state_revision"`
-	SourceDiagnosisAnalysisID uuid.UUID      `gorm:"type:uuid;not null;index" json:"source_diagnosis_analysis_id"`
-	Goal                      string         `gorm:"type:text;not null" json:"goal"`
-	DurationWeeks             int            `gorm:"not null" json:"duration_weeks"`
-	Plan                      datatypes.JSON `gorm:"type:jsonb;not null" json:"plan"`
-	UserConstraints           datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"user_constraints"`
-	EvidenceIDs               datatypes.JSON `gorm:"type:jsonb;not null;default:'[]'" json:"evidence_ids"`
-	Governance                datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"governance"`
-	AgentConfigurationID      string         `gorm:"type:varchar(80);not null;default:'';index" json:"agent_configuration_id"`
-	AgentConfiguration        datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"agent_configuration"`
-	ExecutionProvenance       datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"execution_provenance"`
-	EvidenceAcquisitionTrace  datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"evidence_acquisition_trace"`
-	GenerationDecisionTrace   datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"generation_decision_trace"`
-	AcceptanceDecisionTrace   datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"acceptance_decision_trace"`
-	ReplayInput               datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"-"`
-	RolloutProvenance         datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"rollout_provenance"`
-	ChangeReason              string         `gorm:"type:text;not null;default:''" json:"change_reason"`
-	CreatedAt                 time.Time      `gorm:"not null;default:now()" json:"created_at"`
-	AcceptedAt                *time.Time     `json:"accepted_at,omitempty"`
+	ID                        uuid.UUID                `gorm:"type:uuid;primaryKey" json:"id"`
+	TreatmentID               uuid.UUID                `gorm:"type:uuid;not null;index" json:"treatment_id"`
+	Revision                  int                      `gorm:"not null" json:"revision"`
+	AcceptanceState           TreatmentAcceptanceState `gorm:"type:varchar(20);not null" json:"acceptance_state"`
+	LifecycleState            TreatmentStatus          `gorm:"type:varchar(30);not null" json:"lifecycle_state"`
+	SourceBodyStateRevision   int64                    `gorm:"not null" json:"source_body_state_revision"`
+	SourceDiagnosisAnalysisID uuid.UUID                `gorm:"type:uuid;not null;index" json:"source_diagnosis_analysis_id"`
+	Goal                      string                   `gorm:"type:text;not null" json:"goal"`
+	DurationWeeks             int                      `gorm:"not null" json:"duration_weeks"`
+	Plan                      datatypes.JSON           `gorm:"type:jsonb;not null" json:"plan"`
+	UserConstraints           datatypes.JSON           `gorm:"type:jsonb;not null;default:'{}'" json:"user_constraints"`
+	EvidenceIDs               datatypes.JSON           `gorm:"type:jsonb;not null;default:'[]'" json:"evidence_ids"`
+	Governance                datatypes.JSON           `gorm:"type:jsonb;not null;default:'{}'" json:"governance"`
+	AgentConfigurationID      string                   `gorm:"type:varchar(80);not null;default:'';index" json:"agent_configuration_id"`
+	AgentConfiguration        datatypes.JSON           `gorm:"type:jsonb;not null;default:'{}'" json:"agent_configuration"`
+	ExecutionProvenance       datatypes.JSON           `gorm:"type:jsonb;not null;default:'{}'" json:"execution_provenance"`
+	EvidenceAcquisitionTrace  datatypes.JSON           `gorm:"type:jsonb;not null;default:'{}'" json:"evidence_acquisition_trace"`
+	GenerationDecisionTrace   datatypes.JSON           `gorm:"type:jsonb;not null;default:'{}'" json:"generation_decision_trace"`
+	AcceptanceDecisionTrace   datatypes.JSON           `gorm:"type:jsonb;not null;default:'{}'" json:"acceptance_decision_trace"`
+	ReplayInput               datatypes.JSON           `gorm:"type:jsonb;not null;default:'{}'" json:"-"`
+	RolloutProvenance         datatypes.JSON           `gorm:"type:jsonb;not null;default:'{}'" json:"rollout_provenance"`
+	ChangeReason              string                   `gorm:"type:text;not null;default:''" json:"change_reason"`
+	CreatedAt                 time.Time                `gorm:"not null;default:now()" json:"created_at"`
+	AcceptedAt                *time.Time               `json:"accepted_at,omitempty"`
 
 	Interventions []Intervention `gorm:"-" json:"interventions"`
 }

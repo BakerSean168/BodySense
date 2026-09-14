@@ -3,11 +3,13 @@ package service
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"time"
 
+	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
@@ -30,6 +32,7 @@ type AgentInteractionService struct {
 	runLifecycle     interactionRunLifecycle
 	conversationRepo conversationOwnershipChecker
 	transactions     interactionTransactionManager
+	lifecycleEvents  interactionLifecycleEventStore
 }
 
 type agentInteractionRepo interface {
@@ -46,7 +49,16 @@ type agentInteractionRepo interface {
 
 type interactionRunLifecycle interface {
 	MarkWaitingUser(ctx context.Context, id uuid.UUID) error
+	FailWaitingUser(ctx context.Context, id uuid.UUID, errJSON any) (bool, error)
 }
+
+type interactionLifecycleEventStore interface {
+	Flush(ctx context.Context) error
+	PersistPreparedMilestone(ctx context.Context, conversationID, runID uuid.UUID, turnID *uuid.UUID, event dto.StreamEvent) error
+	PersistOutOfBandMilestone(ctx context.Context, conversationID, runID uuid.UUID, turnID *uuid.UUID, channel, eventType string, ids dto.StreamEventIDs, payload any) (dto.StreamEvent, error)
+}
+
+type interactionPreparedEventsBuilder func(interaction *model.AgentInteraction) ([]dto.StreamEvent, error)
 
 type interactionTransactionManager interface {
 	WithinTransaction(ctx context.Context, fn func(context.Context) error) error
@@ -69,28 +81,76 @@ func NewAgentInteractionService(
 	}
 }
 
+func (s *AgentInteractionService) WithLifecycleEvents(events interactionLifecycleEventStore) *AgentInteractionService {
+	s.lifecycleEvents = events
+	return s
+}
+
 // CreatePendingInteraction creates a pending interaction from an ask_user event.
+// Tests and non-stream callers may use this state-only form; the production
+// consultation stream uses CreatePendingInteractionWithEvents so the public
+// lifecycle milestones share the same transaction.
 func (s *AgentInteractionService) CreatePendingInteraction(
 	ctx context.Context,
 	runID, conversationID uuid.UUID,
 	toolCallID string,
 	question datatypes.JSON,
 ) (*model.AgentInteraction, error) {
-	if s.transactions == nil {
-		return nil, errors.New("create pending interaction: transaction manager is not configured")
+	interaction, _, err := s.createPendingInteraction(ctx, runID, conversationID, toolCallID, question, nil)
+	return interaction, err
+}
+
+// CreatePendingInteractionWithEvents commits pending interaction state,
+// running->waiting_user and the prepared interaction.required/run.interrupted
+// milestones as one unit. Returned events are already durable and must only be
+// written to SSE after commit.
+func (s *AgentInteractionService) CreatePendingInteractionWithEvents(
+	ctx context.Context,
+	runID, conversationID uuid.UUID,
+	toolCallID string,
+	question datatypes.JSON,
+	prepare interactionPreparedEventsBuilder,
+) (*model.AgentInteraction, []dto.StreamEvent, error) {
+	if prepare == nil {
+		return nil, nil, errors.New("create pending interaction: prepared event builder is required")
 	}
-	expires := time.Now().UTC().Add(DefaultInteractionTTL)
+	return s.createPendingInteraction(ctx, runID, conversationID, toolCallID, question, prepare)
+}
+
+func (s *AgentInteractionService) createPendingInteraction(
+	ctx context.Context,
+	runID, conversationID uuid.UUID,
+	toolCallID string,
+	question datatypes.JSON,
+	prepare interactionPreparedEventsBuilder,
+) (*model.AgentInteraction, []dto.StreamEvent, error) {
+	if s.transactions == nil {
+		return nil, nil, errors.New("create pending interaction: transaction manager is not configured")
+	}
+	if prepare != nil {
+		if s.lifecycleEvents == nil {
+			return nil, nil, errors.New("create pending interaction: lifecycle event store is not configured")
+		}
+		if err := s.lifecycleEvents.Flush(ctx); err != nil {
+			return nil, nil, fmt.Errorf("flush runtime events before interaction required: %w", err)
+		}
+	}
+	now := time.Now().UTC()
+	expires := now.Add(DefaultInteractionTTL)
 	interaction := &model.AgentInteraction{
+		ID:             uuid.New(),
 		RunID:          runID,
 		ConversationID: conversationID,
 		ToolCallID:     toolCallID,
 		ToolName:       "ask_user",
 		Question:       question,
 		Status:         model.AgentInteractionPending,
+		CreatedAt:      now,
 		ExpiresAt:      &expires,
 	}
 
 	var created *model.AgentInteraction
+	var prepared []dto.StreamEvent
 	err := s.transactions.WithinTransaction(ctx, func(txCtx context.Context) error {
 		if err := s.repo.CreatePending(txCtx, interaction); err != nil {
 			return fmt.Errorf("create pending interaction: %w", err)
@@ -106,12 +166,32 @@ func (s *AgentInteractionService) CreatePendingInteraction(
 		if err := s.runLifecycle.MarkWaitingUser(txCtx, runID); err != nil {
 			return fmt.Errorf("mark run waiting_user: %w", err)
 		}
+		if prepare == nil {
+			return nil
+		}
+		prepared, err = prepare(created)
+		if err != nil {
+			return fmt.Errorf("prepare interaction lifecycle events: %w", err)
+		}
+		for _, event := range prepared {
+			var turnID *uuid.UUID
+			if event.IDs.TurnID != "" {
+				parsed, parseErr := uuid.Parse(event.IDs.TurnID)
+				if parseErr != nil {
+					return fmt.Errorf("parse interaction lifecycle turn id: %w", parseErr)
+				}
+				turnID = &parsed
+			}
+			if err := s.lifecycleEvents.PersistPreparedMilestone(txCtx, conversationID, runID, turnID, event); err != nil {
+				return err
+			}
+		}
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return created, nil
+	return created, prepared, nil
 }
 
 // ResumeInteraction marks an interaction as answered. It is idempotent for
@@ -164,6 +244,92 @@ func (s *AgentInteractionService) ResumeInteraction(
 	}
 
 	return nil
+}
+
+// ResumeInteractionWithEvent is the production answer transition. The
+// pending->answered CAS and state.interaction.answered milestone share one
+// transaction on the original interrupted run.
+func (s *AgentInteractionService) ResumeInteractionWithEvent(
+	ctx context.Context,
+	interactionID uuid.UUID,
+	answer datatypes.JSON,
+) error {
+	interaction, err := s.repo.GetByID(ctx, interactionID)
+	if err != nil {
+		return fmt.Errorf("get interaction: %w", err)
+	}
+	if interaction == nil {
+		return ErrInteractionNotFound
+	}
+	if interaction.Status == model.AgentInteractionAnswered {
+		if jsonEqual(interaction.Answer, answer) {
+			return nil
+		}
+		return ErrInteractionConflict
+	}
+	if interaction.Status == model.AgentInteractionExpired {
+		return ErrInteractionExpired
+	}
+	if interaction.Status != model.AgentInteractionPending {
+		return fmt.Errorf("%w: %s", ErrInteractionClosed, interaction.Status)
+	}
+	if interaction.ExpiresAt != nil && !interaction.ExpiresAt.After(time.Now().UTC()) {
+		if _, expErr := s.expireInteractionWithEvent(ctx, *interaction); expErr != nil {
+			return fmt.Errorf("expire overdue interaction: %w", expErr)
+		}
+		return ErrInteractionExpired
+	}
+	if s.transactions == nil || s.lifecycleEvents == nil {
+		return errors.New("answer interaction: lifecycle coordinator is not configured")
+	}
+	if err := s.lifecycleEvents.Flush(ctx); err != nil {
+		return fmt.Errorf("flush runtime events before interaction answer: %w", err)
+	}
+
+	updated := false
+	err = s.transactions.WithinTransaction(ctx, func(txCtx context.Context) error {
+		won, err := s.repo.MarkAnswered(txCtx, interactionID, answer)
+		if err != nil {
+			return fmt.Errorf("mark answered: %w", err)
+		}
+		if !won {
+			return nil
+		}
+		updated = true
+		_, err = s.lifecycleEvents.PersistOutOfBandMilestone(
+			txCtx,
+			interaction.ConversationID,
+			interaction.RunID,
+			nil,
+			"state",
+			"state.interaction.answered",
+			dto.StreamEventIDs{
+				ConversationID: interaction.ConversationID.String(),
+				RunID:          interaction.RunID.String(),
+				InteractionID:  interaction.ID.String(),
+				ToolCallID:     interaction.ToolCallID,
+			},
+			map[string]any{
+				"interaction_id": interaction.ID.String(),
+				"answer":         json.RawMessage(answer),
+			},
+		)
+		return err
+	})
+	if err != nil {
+		return fmt.Errorf("answer interaction with lifecycle event: %w", err)
+	}
+	if updated {
+		return nil
+	}
+	latest, latestErr := s.repo.GetByID(ctx, interactionID)
+	if latestErr != nil {
+		return fmt.Errorf("reload interaction after answer race: %w", latestErr)
+	}
+	if latest != nil && latest.Status == model.AgentInteractionAnswered && jsonEqual(latest.Answer, answer) {
+		return nil
+	}
+	return ErrInteractionConflict
 }
 
 // CancelInteraction marks a pending interaction as cancelled.
@@ -219,8 +385,10 @@ func jsonEqual(a, b datatypes.JSON) bool {
 	return bytes.Equal(a, b)
 }
 
-// ExpireExpiredInteractions marks due pending interactions as expired.
-// Returns the interactions that transitioned to expired (for event emission).
+// ExpireExpiredInteractions closes due pending interactions. When lifecycle
+// events are configured (production), interaction.expired and the waiting Run's
+// run.failed transition are committed atomically. Tests may still exercise the
+// repository-only form by leaving the event store unset.
 func (s *AgentInteractionService) ExpireExpiredInteractions(
 	ctx context.Context,
 	limit int,
@@ -231,7 +399,13 @@ func (s *AgentInteractionService) ExpireExpiredInteractions(
 	}
 	expired := make([]model.AgentInteraction, 0, len(due))
 	for _, item := range due {
-		updated, expErr := s.repo.ExpirePending(ctx, item.ID)
+		var updated bool
+		var expErr error
+		if s.lifecycleEvents != nil {
+			updated, expErr = s.expireInteractionWithEvent(ctx, item)
+		} else {
+			updated, expErr = s.repo.ExpirePending(ctx, item.ID)
+		}
 		if expErr != nil {
 			log.Printf("expire interaction %s: %v", item.ID, expErr)
 			continue
@@ -242,6 +416,78 @@ func (s *AgentInteractionService) ExpireExpiredInteractions(
 		}
 	}
 	return expired, nil
+}
+
+func (s *AgentInteractionService) expireInteractionWithEvent(ctx context.Context, interaction model.AgentInteraction) (bool, error) {
+	if s.transactions == nil || s.lifecycleEvents == nil {
+		return false, errors.New("expire interaction: lifecycle coordinator is not configured")
+	}
+	if err := s.lifecycleEvents.Flush(ctx); err != nil {
+		return false, fmt.Errorf("flush runtime events before interaction expiry: %w", err)
+	}
+	expiredAt := time.Now().UTC()
+	updated := false
+	err := s.transactions.WithinTransaction(ctx, func(txCtx context.Context) error {
+		won, err := s.repo.ExpirePending(txCtx, interaction.ID)
+		if err != nil {
+			return err
+		}
+		if !won {
+			return nil
+		}
+		updated = true
+		runFailed, err := s.runLifecycle.FailWaitingUser(
+			txCtx,
+			interaction.RunID,
+			datatypes.JSON(`{"message":"interaction expired"}`),
+		)
+		if err != nil {
+			return err
+		}
+		_, err = s.lifecycleEvents.PersistOutOfBandMilestone(
+			txCtx,
+			interaction.ConversationID,
+			interaction.RunID,
+			nil,
+			"state",
+			"state.interaction.expired",
+			dto.StreamEventIDs{
+				ConversationID: interaction.ConversationID.String(),
+				RunID:          interaction.RunID.String(),
+				InteractionID:  interaction.ID.String(),
+				ToolCallID:     interaction.ToolCallID,
+			},
+			map[string]any{
+				"interaction_id": interaction.ID.String(),
+				"expired_at":     expiredAt.Format(time.RFC3339Nano),
+				"reason":         "ttl_elapsed",
+			},
+		)
+		if err != nil {
+			return err
+		}
+		if runFailed {
+			_, err = s.lifecycleEvents.PersistOutOfBandMilestone(
+				txCtx,
+				interaction.ConversationID,
+				interaction.RunID,
+				nil,
+				"run",
+				"run.failed",
+				dto.StreamEventIDs{
+					ConversationID: interaction.ConversationID.String(),
+					RunID:          interaction.RunID.String(),
+					InteractionID:  interaction.ID.String(),
+				},
+				map[string]any{"status": "failed", "reason": "interaction_expired"},
+			)
+		}
+		return err
+	})
+	if err != nil {
+		return false, fmt.Errorf("expire interaction with lifecycle events: %w", err)
+	}
+	return updated, nil
 }
 
 // InteractionExpiredHandler is called after an interaction is marked expired.

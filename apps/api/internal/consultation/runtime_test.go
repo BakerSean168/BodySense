@@ -24,6 +24,17 @@ type fakeRuntimeEventRepo struct {
 	events []model.RuntimeEvent
 }
 
+type immediateRunTransaction struct{}
+
+func (immediateRunTransaction) WithinTransaction(ctx context.Context, fn func(context.Context) error) error {
+	return fn(ctx)
+}
+
+func testRunService(repo *fakeConsultationRunRepo) *service.RunService {
+	events := service.NewRuntimeEventService(&fakeRuntimeEventRepo{})
+	return service.NewRunService(repo).WithLifecycleEvents(events, immediateRunTransaction{})
+}
+
 type fakeConsultationRunRepo struct {
 	mu                     sync.Mutex
 	run                    *model.Run
@@ -55,7 +66,15 @@ func (r *fakeConsultationRunRepo) MarkWaitingUser(context.Context, uuid.UUID) (b
 func (r *fakeConsultationRunRepo) ResumeRunning(context.Context, uuid.UUID, string, time.Time) (bool, error) {
 	return true, nil
 }
-func (r *fakeConsultationRunRepo) UpdateStatus(context.Context, uuid.UUID, string) error { return nil }
+func (r *fakeConsultationRunRepo) FailWaitingUser(context.Context, uuid.UUID, any) (bool, error) {
+	return true, nil
+}
+func (r *fakeConsultationRunRepo) ListExpiredRuns(context.Context, time.Time, int) ([]model.Run, error) {
+	return nil, nil
+}
+func (r *fakeConsultationRunRepo) FailExpiredRun(context.Context, uuid.UUID, time.Time, any) (bool, error) {
+	return false, nil
+}
 func (r *fakeConsultationRunRepo) CompleteRun(context.Context, uuid.UUID, uuid.UUID, any, string) error {
 	return nil
 }
@@ -85,10 +104,6 @@ func (r *fakeConsultationRunRepo) UpdateAgentConfiguration(
 
 func (r *fakeConsultationRunRepo) RenewLease(context.Context, uuid.UUID, uuid.UUID, string, time.Time, time.Time) (bool, error) {
 	return true, nil
-}
-
-func (r *fakeConsultationRunRepo) ReclaimExpiredRuns(context.Context, time.Time, int) ([]model.Run, error) {
-	return nil, nil
 }
 
 func (r *fakeRuntimeEventRepo) Create(ctx context.Context, event *model.RuntimeEvent) error {
@@ -275,11 +290,13 @@ func privateRuntimeEvent(
 }
 
 func TestHandleAIEventFailsClosedWhenExtractedBodyStateWriteFails(t *testing.T) {
+	state := testStreamState()
+	repo := &fakeConsultationRunRepo{run: state.Run}
 	runtime := &Runtime{
 		bodyStateService: &fakeRuntimeBodyState{extractedErr: errors.New("db unavailable")},
+		runService:       testRunService(repo),
 		streamRuntime:    stream.NewRuntime(),
 	}
-	state := testStreamState()
 	recorder := httptest.NewRecorder()
 	sw := runtime.streamRuntime.NewWriter(recorder, state.BaseIDs)
 	phase := "collecting"
@@ -301,11 +318,13 @@ func TestHandleAIEventFailsClosedWhenExtractedBodyStateWriteFails(t *testing.T) 
 }
 
 func TestHandleAIEventFailsClosedWhenSafetyWriteFails(t *testing.T) {
+	state := testStreamState()
+	repo := &fakeConsultationRunRepo{run: state.Run}
 	runtime := &Runtime{
 		bodyStateService: &fakeRuntimeBodyState{safetyErr: errors.New("db unavailable")},
+		runService:       testRunService(repo),
 		streamRuntime:    stream.NewRuntime(),
 	}
-	state := testStreamState()
 	recorder := httptest.NewRecorder()
 	sw := runtime.streamRuntime.NewWriter(recorder, state.BaseIDs)
 	phase := "collecting"
@@ -573,8 +592,9 @@ func TestValidateConsultationExecutionIdentityRejectsMismatch(t *testing.T) {
 }
 
 func TestStreamAIEventsFailsClosedBeforeFirstSemanticEventWithoutHandshake(t *testing.T) {
-	runtime := &Runtime{streamRuntime: stream.NewRuntime()}
 	state := testStreamState()
+	repo := &fakeConsultationRunRepo{run: state.Run}
+	runtime := &Runtime{runService: testRunService(repo), streamRuntime: stream.NewRuntime()}
 	state.ExpectedConfigurationID = "consult-config-2bd9b46735dd693c"
 	recorder := httptest.NewRecorder()
 	sw := runtime.streamRuntime.NewWriter(recorder, state.BaseIDs)

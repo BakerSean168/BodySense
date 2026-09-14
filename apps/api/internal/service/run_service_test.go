@@ -78,6 +78,16 @@ func (m *mockRunRepo) MarkWaitingUser(_ context.Context, id uuid.UUID) (bool, er
 	return true, nil
 }
 
+func (m *mockRunRepo) FailWaitingUser(_ context.Context, id uuid.UUID, _ any) (bool, error) {
+	run, ok := m.runs[id]
+	if !ok || run.Status != model.RunStatusWaitingUser {
+		return false, nil
+	}
+	run.Status = model.RunStatusFailed
+	m.lastStatus = model.RunStatusFailed
+	return true, nil
+}
+
 func (m *mockRunRepo) ResumeRunning(_ context.Context, id uuid.UUID, owner string, expiresAt time.Time) (bool, error) {
 	run, ok := m.runs[id]
 	if !ok || run.Status != model.RunStatusWaitingUser {
@@ -142,8 +152,11 @@ func (m *mockRunRepo) RenewLease(context.Context, uuid.UUID, uuid.UUID, string, 
 	return true, nil
 }
 
-func (m *mockRunRepo) ReclaimExpiredRuns(context.Context, time.Time, int) ([]model.Run, error) {
+func (m *mockRunRepo) ListExpiredRuns(context.Context, time.Time, int) ([]model.Run, error) {
 	return nil, nil
+}
+func (m *mockRunRepo) FailExpiredRun(context.Context, uuid.UUID, time.Time, any) (bool, error) {
+	return false, nil
 }
 
 func TestMarkWaitingUser(t *testing.T) {
