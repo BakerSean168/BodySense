@@ -12,6 +12,40 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+type RuntimeProtocolErrorCode string
+
+const (
+	RuntimeProtocolDecodeFailed              RuntimeProtocolErrorCode = "RUNTIME_PROTOCOL_DECODE_FAILED"
+	RuntimeProtocolValidationFailed          RuntimeProtocolErrorCode = "RUNTIME_PROTOCOL_VALIDATION_FAILED"
+	RuntimeProtocolSequenceInvalid           RuntimeProtocolErrorCode = "RUNTIME_PROTOCOL_SEQUENCE_INVALID"
+	RuntimeProtocolUnsupportedEvent          RuntimeProtocolErrorCode = "RUNTIME_PROTOCOL_UNSUPPORTED_EVENT"
+	RuntimeProtocolPayloadMarshalFailed      RuntimeProtocolErrorCode = "RUNTIME_PROTOCOL_PAYLOAD_MARSHAL_FAILED"
+	RuntimeProtocolApplicationPayloadInvalid RuntimeProtocolErrorCode = "RUNTIME_PROTOCOL_APPLICATION_PAYLOAD_INVALID"
+)
+
+type RuntimeProtocolError struct {
+	Code  RuntimeProtocolErrorCode
+	Cause error
+}
+
+func (e *RuntimeProtocolError) Error() string {
+	if e == nil {
+		return ""
+	}
+	return fmt.Sprintf("%s: %v", e.Code, e.Cause)
+}
+
+func (e *RuntimeProtocolError) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+	return e.Cause
+}
+
+func runtimeProtocolError(code RuntimeProtocolErrorCode, cause error) error {
+	return &RuntimeProtocolError{Code: code, Cause: cause}
+}
+
 type ConsultationRuntimeEventKind string
 
 const (
@@ -121,13 +155,13 @@ func validateConsultationRuntimeApplicationPayload(event ConsultationRuntimeEven
 func decodeConsultationRuntimeProtoEvent(line []byte) (ConsultationRuntimeEvent, error) {
 	var wire runtimev1.RuntimeEvent
 	if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(line, &wire); err != nil {
-		return ConsultationRuntimeEvent{}, fmt.Errorf("decode runtime Proto event: %w", err)
+		return ConsultationRuntimeEvent{}, runtimeProtocolError(RuntimeProtocolDecodeFailed, err)
 	}
 	if err := protovalidate.Validate(&wire); err != nil {
-		return ConsultationRuntimeEvent{}, fmt.Errorf("validate runtime Proto event: %w", err)
+		return ConsultationRuntimeEvent{}, runtimeProtocolError(RuntimeProtocolValidationFailed, err)
 	}
 	if wire.Seq > uint64(math.MaxInt) {
-		return ConsultationRuntimeEvent{}, fmt.Errorf("runtime event sequence exceeds platform int")
+		return ConsultationRuntimeEvent{}, runtimeProtocolError(RuntimeProtocolSequenceInvalid, fmt.Errorf("runtime event sequence exceeds platform int"))
 	}
 
 	ids := ConsultationRuntimeEventIDs{}
@@ -148,7 +182,7 @@ func decodeConsultationRuntimeProtoEvent(line []byte) (ConsultationRuntimeEvent,
 	}
 	event := ConsultationRuntimeEvent{Seq: int(wire.Seq), Kind: kind, IDs: ids, Payload: payload}
 	if err := validateConsultationRuntimeApplicationPayload(event); err != nil {
-		return ConsultationRuntimeEvent{}, fmt.Errorf("validate runtime application payload: %w", err)
+		return ConsultationRuntimeEvent{}, runtimeProtocolError(RuntimeProtocolApplicationPayloadInvalid, err)
 	}
 	return event, nil
 }
@@ -192,11 +226,11 @@ func runtimeEventOneofPayload(event *runtimev1.RuntimeEvent) (ConsultationRuntim
 	case *runtimev1.RuntimeEvent_StreamError:
 		kind, message = ConsultationRuntimeError, value.StreamError
 	default:
-		return "", nil, fmt.Errorf("runtime Proto event has no supported oneof variant")
+		return "", nil, runtimeProtocolError(RuntimeProtocolUnsupportedEvent, fmt.Errorf("runtime Proto event has no supported oneof variant"))
 	}
 	payload, err := runtimeProtoPayloadJSON.Marshal(message)
 	if err != nil {
-		return "", nil, fmt.Errorf("marshal runtime event payload: %w", err)
+		return "", nil, runtimeProtocolError(RuntimeProtocolPayloadMarshalFailed, err)
 	}
 	return kind, json.RawMessage(payload), nil
 }

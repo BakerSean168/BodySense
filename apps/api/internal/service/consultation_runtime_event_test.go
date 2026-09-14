@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 )
@@ -68,7 +69,30 @@ func TestDecodeConsultationRuntimeProtoEventPreservesNestedIntakeProvenance(t *t
 
 func TestDecodeConsultationRuntimeProtoEventRejectsLegacyGenericWire(t *testing.T) {
 	line := []byte(`{"version":1,"seq":1,"channel":"message","type":"message.text.delta","ids":{"conversation_id":"33333333-3333-4333-8333-333333333333","run_id":"22222222-2222-4222-8222-222222222222"},"payload":{"delta":"legacy"}}`)
-	if _, err := decodeConsultationRuntimeProtoEvent(line); err == nil {
+	_, err := decodeConsultationRuntimeProtoEvent(line)
+	if err == nil {
 		t.Fatal("legacy channel/type/payload wire must not be accepted after Proto cutover")
+	}
+	var protocolErr *RuntimeProtocolError
+	if !errors.As(err, &protocolErr) {
+		t.Fatalf("expected RuntimeProtocolError, got %T: %v", err, err)
+	}
+	if protocolErr.Code != RuntimeProtocolDecodeFailed {
+		t.Fatalf("unexpected protocol error code: %s", protocolErr.Code)
+	}
+}
+
+func TestDecodeConsultationRuntimeProtoEventClassifiesApplicationPayloadFailure(t *testing.T) {
+	line := []byte(`{"version":1,"seq":"1","ids":{"conversation_id":"33333333-3333-4333-8333-333333333333","run_id":"22222222-2222-4222-8222-222222222222"},"citation_added":{"citation":{"source_type":"thought_forest_note","title":"Incomplete citation"}}}`)
+	_, err := decodeConsultationRuntimeProtoEvent(line)
+	if err == nil {
+		t.Fatal("incomplete Thought Forest citation must fail application payload validation")
+	}
+	var protocolErr *RuntimeProtocolError
+	if !errors.As(err, &protocolErr) {
+		t.Fatalf("expected RuntimeProtocolError, got %T: %v", err, err)
+	}
+	if protocolErr.Code != RuntimeProtocolApplicationPayloadInvalid {
+		t.Fatalf("unexpected protocol error code: %s", protocolErr.Code)
 	}
 }

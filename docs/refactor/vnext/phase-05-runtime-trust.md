@@ -191,3 +191,29 @@ Diagnosis projection cleanup follows the same rule: generated candidates/freshne
 - Go HTTP transport + consultation focused tests — PASS;
 - `pnpm contracts:check-generated` — PASS;
 - production Consultation feature trust casts (`as unknown as`, `as Message["parts"]`, `as StreamEvent`, `as never`) — **0**.
+
+## TRUST-005 — Structured Go runtime errors
+
+Status: **COMPLETE**
+
+The private Go runtime parser now reports finite machine-readable failure classes instead of collapsing every trust-boundary problem into formatted strings.
+
+`RuntimeProtocolErrorCode` distinguishes:
+
+- Proto JSON decode failure;
+- Protovalidate failure;
+- invalid sequence representation;
+- unsupported/missing oneof variants;
+- Proto payload serialization failure;
+- application-owned opaque payload validation failure.
+
+`RuntimeProtocolError` preserves the underlying cause through `Unwrap()`, so callers/tests can use `errors.As` without branching on message text. Characterization covers both malformed legacy/generic wire and a Proto-valid but application-invalid Thought Forest citation.
+
+Consultation application HTTP errors now use the finite `ConsultationErrorCode` vocabulary rather than an unconstrained `string`. All runtime constructors use named constants; the generated/public HTTP adapter converts the code back to its wire string only at the final response boundary.
+
+### Evidence
+
+- Go `go test ./...` — PASS;
+- runtime protocol focused tests — PASS;
+- consultation/httpapi focused tests — PASS;
+- Consultation runtime raw error-code literals outside the constant declarations — **0**.

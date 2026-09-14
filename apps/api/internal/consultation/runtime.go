@@ -30,9 +30,24 @@ func durableExecutionContext(parent context.Context) (context.Context, context.C
 	return context.WithTimeout(context.WithoutCancel(parent), sseTimeout)
 }
 
+type ConsultationErrorCode string
+
+const (
+	ConsultationErrorBodyStatePersistenceFailed ConsultationErrorCode = "BODY_STATE_PERSISTENCE_FAILED"
+	ConsultationErrorInteractionClosed          ConsultationErrorCode = "INTERACTION_CLOSED"
+	ConsultationErrorInteractionExpired         ConsultationErrorCode = "INTERACTION_EXPIRED"
+	ConsultationErrorInteractionNotResumable    ConsultationErrorCode = "INTERACTION_NOT_RESUMABLE"
+	ConsultationErrorInternal                   ConsultationErrorCode = "INTERNAL_ERROR"
+	ConsultationErrorInvalidID                  ConsultationErrorCode = "INVALID_ID"
+	ConsultationErrorInvalidRequest             ConsultationErrorCode = "INVALID_REQUEST"
+	ConsultationErrorInvalidSpatialContext      ConsultationErrorCode = "INVALID_SPATIAL_CONTEXT"
+	ConsultationErrorNotFound                   ConsultationErrorCode = "NOT_FOUND"
+	ConsultationErrorRunTerminal                ConsultationErrorCode = "RUN_TERMINAL"
+)
+
 type HTTPError struct {
 	Status  int
-	Code    string
+	Code    ConsultationErrorCode
 	Message string
 }
 
@@ -171,23 +186,23 @@ func (r *Runtime) CancelRun(ctx context.Context, uid, runID uuid.UUID, reason st
 	run, transitioned, err := r.runService.CancelRun(ctx, runID, uid, reason)
 	if err != nil {
 		if errors.Is(err, service.ErrRunTerminal) {
-			return httpErr(http.StatusConflict, "RUN_TERMINAL", "run is already terminal")
+			return httpErr(http.StatusConflict, ConsultationErrorRunTerminal, "run is already terminal")
 		}
-		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to cancel run")
+		return httpErr(http.StatusInternalServerError, ConsultationErrorInternal, "failed to cancel run")
 	}
 	if run == nil {
-		return httpErr(http.StatusNotFound, "NOT_FOUND", "run not found")
+		return httpErr(http.StatusNotFound, ConsultationErrorNotFound, "run not found")
 	}
 
 	// Pending HITL belongs to the cancelled run and must not remain answerable.
 	pending, pendingErr := r.interactionService.GetPendingInteractions(ctx, run.ConversationID)
 	if pendingErr != nil {
-		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load pending interactions")
+		return httpErr(http.StatusInternalServerError, ConsultationErrorInternal, "failed to load pending interactions")
 	}
 	for i := range pending {
 		if pending[i].RunID == runID {
 			if cancelErr := r.interactionService.CancelInteraction(ctx, pending[i].ID); cancelErr != nil && !errors.Is(cancelErr, service.ErrInteractionClosed) {
-				return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to cancel pending interaction")
+				return httpErr(http.StatusInternalServerError, ConsultationErrorInternal, "failed to cancel pending interaction")
 			}
 		}
 	}
@@ -198,7 +213,7 @@ func (r *Runtime) CancelRun(ctx context.Context, uid, runID uuid.UUID, reason st
 	active := r.cancelRegisteredRun(runID)
 	if transitioned && !active && r.runtimeEventService != nil {
 		if err := r.runtimeEventService.RecordRunCancelled(ctx, run, reason); err != nil {
-			return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to persist cancellation event")
+			return httpErr(http.StatusInternalServerError, ConsultationErrorInternal, "failed to persist cancellation event")
 		}
 		r.clearActiveRun(ctx, run.ConversationID, uid)
 		r.refreshThreadProjection(ctx, run.ConversationID, uid)
@@ -218,7 +233,7 @@ func (r *Runtime) StartRun(
 	// --- 1. Idempotency check (before any side effects) ---
 	existing, found, err := r.runService.CheckIdempotency(ctx, uid, req.RequestID)
 	if err != nil {
-		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to check idempotency")
+		return httpErr(http.StatusInternalServerError, ConsultationErrorInternal, "failed to check idempotency")
 	}
 	if found {
 		if existing.Status == "running" || existing.Status == "waiting_user" {
@@ -239,7 +254,7 @@ func (r *Runtime) StartRun(
 	if !conversationIDMissing {
 		parsed, err := uuid.Parse(*req.ConversationID)
 		if err != nil {
-			return httpErr(http.StatusBadRequest, "INVALID_ID", "invalid conversation id")
+			return httpErr(http.StatusBadRequest, ConsultationErrorInvalidID, "invalid conversation id")
 		}
 		requestedConversationID = &parsed
 	}
@@ -248,7 +263,7 @@ func (r *Runtime) StartRun(
 	userText := messagePartsToText(req.Message.Parts)
 	imageIDs := messagePartsToImageUploadIDs(req.Message.Parts)
 	if strings.TrimSpace(userText) == "" && len(imageIDs) == 0 {
-		return httpErr(http.StatusBadRequest, "INVALID_REQUEST", "message text or image is required")
+		return httpErr(http.StatusBadRequest, ConsultationErrorInvalidRequest, "message text or image is required")
 	}
 	if strings.TrimSpace(userText) == "" {
 		userText = "请结合我附上的照片，分析与体态/不适相关的可见信息，并给出谨慎建议。"
@@ -256,11 +271,11 @@ func (r *Runtime) StartRun(
 
 	userPartsJSON, err := json.Marshal(req.Message.Parts)
 	if err != nil {
-		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to marshal message parts")
+		return httpErr(http.StatusInternalServerError, ConsultationErrorInternal, "failed to marshal message parts")
 	}
 	userMetadata, spatialContext, metadataErr := normalizeSpatialContextMetadata(req.Message.Metadata)
 	if metadataErr != nil {
-		return httpErr(http.StatusBadRequest, "INVALID_SPATIAL_CONTEXT", "invalid Body Explorer context")
+		return httpErr(http.StatusBadRequest, ConsultationErrorInvalidSpatialContext, "invalid Body Explorer context")
 	}
 
 	// --- 4. Create turn envelope (conversation/session + run + messages) ---
@@ -567,7 +582,7 @@ func (r *Runtime) ResumeInteraction(
 	if err != nil {
 		return httpErr(
 			http.StatusInternalServerError,
-			"INTERNAL_ERROR",
+			ConsultationErrorInternal,
 			"failed to check idempotency",
 		)
 	}
@@ -585,18 +600,18 @@ func (r *Runtime) ResumeInteraction(
 
 	session, err := r.consultationService.GetConsultation(ctx, conversationID, uid)
 	if err != nil {
-		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load consultation")
+		return httpErr(http.StatusInternalServerError, ConsultationErrorInternal, "failed to load consultation")
 	}
 	if session == nil {
-		return httpErr(http.StatusNotFound, "NOT_FOUND", "consultation not found")
+		return httpErr(http.StatusNotFound, ConsultationErrorNotFound, "consultation not found")
 	}
 
 	interaction, err := r.interactionService.GetInteractionByID(ctx, interactionID)
 	if err != nil {
-		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load interaction")
+		return httpErr(http.StatusInternalServerError, ConsultationErrorInternal, "failed to load interaction")
 	}
 	if interaction == nil || interaction.ConversationID != conversationID {
-		return httpErr(http.StatusNotFound, "NOT_FOUND", "interaction not found")
+		return httpErr(http.StatusNotFound, ConsultationErrorNotFound, "interaction not found")
 	}
 
 	// Resume is continuation of the exact logical Agent thread. Pin it to the
@@ -604,34 +619,34 @@ func (r *Runtime) ResumeInteraction(
 	// silently switching to the current Champion while the user was waiting.
 	sourceRun, err := r.runService.GetRunForUser(ctx, interaction.RunID, uid)
 	if err != nil {
-		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load interrupted run")
+		return httpErr(http.StatusInternalServerError, ConsultationErrorInternal, "failed to load interrupted run")
 	}
 	if sourceRun == nil || sourceRun.ConversationID != conversationID {
-		return httpErr(http.StatusNotFound, "NOT_FOUND", "interrupted run not found")
+		return httpErr(http.StatusNotFound, ConsultationErrorNotFound, "interrupted run not found")
 	}
 	pinnedConfigurationID := strings.TrimSpace(sourceRun.AgentConfigurationID)
 	if pinnedConfigurationID == "" {
 		return httpErr(
 			http.StatusConflict,
-			"INTERACTION_NOT_RESUMABLE",
+			ConsultationErrorInteractionNotResumable,
 			"interrupted run predates durable Agent configuration identity; start a new run",
 		)
 	}
 	if _, err := service.ConsultationDecisionPolicyRevisionForConfiguration(pinnedConfigurationID); err != nil {
-		return httpErr(http.StatusConflict, "INTERACTION_NOT_RESUMABLE", "interrupted run configuration is no longer repository-authorized")
+		return httpErr(http.StatusConflict, ConsultationErrorInteractionNotResumable, "interrupted run configuration is no longer repository-authorized")
 	}
 
 	// The interaction answer is a durable health input, not merely a chat message.
 	// Commit it before closing the interaction so a persistence failure remains
 	// retryable and never resumes the Agent from an unrecorded health answer.
 	if err := r.persistInteractionAnswer(ctx, uid, interactionID, interaction.ToolCallID, interaction.Question, req.Answer); err != nil {
-		return httpErr(http.StatusInternalServerError, "BODY_STATE_PERSISTENCE_FAILED", "failed to persist interaction answer")
+		return httpErr(http.StatusInternalServerError, ConsultationErrorBodyStatePersistenceFailed, "failed to persist interaction answer")
 	}
 
 	if err := r.interactionService.ResumeInteraction(ctx, interactionID, datatypes.JSON(req.Answer)); err != nil {
 		switch {
 		case err == service.ErrInteractionNotFound:
-			return httpErr(http.StatusNotFound, "NOT_FOUND", "interaction not found")
+			return httpErr(http.StatusNotFound, ConsultationErrorNotFound, "interaction not found")
 		case err == service.ErrInteractionConflict:
 			return httpErr(
 				http.StatusConflict,
@@ -639,20 +654,20 @@ func (r *Runtime) ResumeInteraction(
 				"interaction was already answered differently",
 			)
 		case err == service.ErrInteractionClosed:
-			return httpErr(http.StatusConflict, "INTERACTION_CLOSED", err.Error())
+			return httpErr(http.StatusConflict, ConsultationErrorInteractionClosed, err.Error())
 		case err == service.ErrInteractionExpired:
-			return httpErr(http.StatusConflict, "INTERACTION_EXPIRED", "interaction has expired; start a new question")
+			return httpErr(http.StatusConflict, ConsultationErrorInteractionExpired, "interaction has expired; start a new question")
 		default:
-			return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+			return httpErr(http.StatusInternalServerError, ConsultationErrorInternal, err.Error())
 		}
 	}
 
 	closedSourceRun, err := r.runService.TryCompleteRun(ctx, interaction.RunID, uid, nil, "")
 	if err != nil {
-		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to close interrupted run")
+		return httpErr(http.StatusInternalServerError, ConsultationErrorInternal, "failed to close interrupted run")
 	}
 	if !closedSourceRun {
-		return httpErr(http.StatusConflict, "RUN_TERMINAL", "interrupted run was cancelled or already closed")
+		return httpErr(http.StatusConflict, ConsultationErrorRunTerminal, "interrupted run was cancelled or already closed")
 	}
 
 	answerPartsJSON, answerMetadata := interactionAnswerParts(req.Answer, interactionID.String())
@@ -727,7 +742,7 @@ func (r *Runtime) ResumeInteraction(
 
 	profileJSON, profileErr := r.loadProfileJSON(executionCtx, uid)
 	if profileErr != nil {
-		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load profile")
+		return httpErr(http.StatusInternalServerError, ConsultationErrorInternal, "failed to load profile")
 	}
 
 	events, err := r.aiClient.ResumeConsultationInterrupt(
@@ -812,7 +827,7 @@ func (r *Runtime) createTurnEnvelope(
 		}
 		return nil, uuid.Nil, nil, nil, nil, dto.StreamEventIDs{}, false, httpErr(
 			http.StatusInternalServerError,
-			"INTERNAL_ERROR",
+			ConsultationErrorInternal,
 			"failed to create run envelope",
 		)
 	}
@@ -2415,6 +2430,6 @@ func toolResultIsError(result json.RawMessage) bool {
 	return parsed.Status == "error" || parsed.Error != ""
 }
 
-func httpErr(status int, code string, message string) *HTTPError {
+func httpErr(status int, code ConsultationErrorCode, message string) *HTTPError {
 	return &HTTPError{Status: status, Code: code, Message: message}
 }
