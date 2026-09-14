@@ -10,7 +10,7 @@
  *
  * ===== 几个值得注意的设计点 =====
  * - 用 `Record<id, T>` 做天然 upsert（toolCalls / citations / knowledgeGaps）。
- * - 用 `event.type` 可辨识联合做 switch，未覆盖的类型走 default（见底部）。
+ * - 用 `event.type` 可辨识联合做穷尽 switch；每个合法 variant 必须处理或显式 no-op，default 仅作 `assertNever` 编译期保护。
  * - 用 `(run_id, seq)` 做幂等守卫；后端是每个 run 的唯一公共序号所有者。
  * - 所有更新都是不可变展开（{ ...current, ... }），不原地改对象。
  *
