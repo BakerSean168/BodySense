@@ -17,7 +17,7 @@ Phase 03 does **not** replace the internal Go↔Python Agent protocol. Internal 
 
 Status: **COMPLETE ON PHASE BRANCH**
 
-The 2026-09-09 contract-codegen spike proved that the checked-in JSON Schema and the fail-closed handwritten parser agreed on all 34 real fixtures and 10 basic malformed cases, but disagreed on five targeted semantics. The canonical schema was still byte-identical to that spike baseline when Phase 03 started, so the spike-proven candidate delta could be promoted without overwriting later schema work.
+The 2026-09-09 contract-codegen spike proved that the checked-in JSON Schema and the fail-closed parser agreed on all 34 real fixtures and 10 basic malformed cases, but disagreed on five targeted semantics. The canonical schema was still byte-identical to that spike baseline when Phase 03 started, so the spike-proven candidate delta could be promoted without overwriting later schema work.
 
 The canonical schema now matches the handwritten parser for the five known drifts:
 
@@ -33,10 +33,10 @@ The same repair also records parser semantics needed for strict schema compilati
 
 The spike matrix is now repository-owned rather than experimental:
 
-- `stream-events.v1.json`: 34 real events / 33 event variants;
+- `stream-events.v1.json`: 35 real events / 34 event variants;
 - `stream-events.invalid.v1.json`: 10 malformed boundary cases;
 - `stream-events.semantic-probes.v1.json`: the five known semantic-drift probes;
-- `stream-event-schema-parity.test.ts`: compares the current handwritten parser with a strict Ajv 2020-12 compile of the canonical schema;
+- `stream-event-schema-parity.test.ts`: exercises generated validation and the stable parser facade against the repository-owned fixture matrix;
 - `check-stream-event-schema.mjs`: makes strict + `strictRequired` schema compilation part of `contracts:lint`, and therefore `contracts:verify`.
 
 Verification on this checkpoint:
@@ -44,7 +44,7 @@ Verification on this checkpoint:
 ```text
 public StreamEvent schema strict compile      PASS
 TS parser + schema parity                     16/16 PASS
-  real fixtures                               34/34 agree and accept
+  real fixtures                               35/35 agree and accept
   malformed corpus                            10/10 agree and reject
   semantic probes                             5/5 agree with expected outcome
 Go StreamEvent parity                         PASS
@@ -62,7 +62,7 @@ The canonical schema now generates both the public TypeScript union and a determ
 
 The stable `@bodysense/contracts` facade exports the generated event aliases and parser. `parseStreamEvent` is a thin wrapper around the generated validator and exposes validation diagnostics without exposing Ajv. Live SSE parsing and durable run replay both pass through that same parser before reducer or state use.
 
-The active-turn reducer and SSE dispatcher use exhaustive generated-variant switches with explicit no-op cases for valid events that have no current UI projection. Test event builders are parser-backed, and the 34 real fixtures, 10 malformed fixtures, and five semantic probes pass generated-validator/parser parity. Public StreamEvent v1 wire fields remain unchanged; Phase 04 internal runtime/Proto work is not part of this phase.
+The active-turn reducer and SSE dispatcher use exhaustive generated-variant switches with explicit no-op cases for valid events that have no current UI projection. Test event builders are parser-backed, and the 35 real fixtures, 10 malformed fixtures, and five semantic probes pass generated-validator/parser parity. Public StreamEvent v1 wire fields remain unchanged; Phase 04 internal runtime/Proto work is not part of this phase.
 
 ### Completion evidence
 
