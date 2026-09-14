@@ -1,10 +1,11 @@
 # vNext Phase 03 — Public StreamEvent / JSON Schema-first
 
-- Status: IN PROGRESS
+- Status: COMPLETE
 - Branch: `refactor/vnext-03-public-stream`
 - Parent canonical vNext commit: `169df5c67`
-- Canonical authority target: `packages/contracts/schemas/stream-event.v1.schema.json`
+- Canonical authority: `packages/contracts/schemas/stream-event.v1.schema.json`
 - Wire version: StreamEvent v1; no public SSE/JSON wire-version change in this phase
+- Next: Phase 04 — internal Go/Python runtime reset to Proto IDL (not implemented here)
 
 ## Goal
 
@@ -53,12 +54,27 @@ pnpm contracts:verify                         PASS
 git diff --check                              PASS
 ```
 
-The handwritten TypeScript contract and runtime parser remain primary at this checkpoint. STREAM-002 will introduce deterministic generated TypeScript plus a compiled runtime validator in shadow/parity mode before any trust-boundary cutover.
+## STREAM-002 — Generated contract and validator cutover
 
-## Next — STREAM-002
+Status: **COMPLETE**
 
-- generate the TypeScript discriminated union from the canonical schema;
-- compile the canonical schema into a deterministic standalone runtime validator;
-- expose both behind the stable `@bodysense/contracts` facade;
-- run generated validation in parity/shadow mode against the handwritten parser;
-- do not delete the handwritten parser until generated parity and consumer migration are complete.
+The canonical schema now generates both the public TypeScript union and a deterministic standalone Ajv validator. The generated artifacts are checked in under `packages/contracts/generated/`; `contracts:generate` and `contracts:check-generated` verify deterministic regeneration. Generated public TypeScript contains zero `any`; extensibility remains `unknown` only where the schema intentionally leaves a field open.
+
+The stable `@bodysense/contracts` facade exports the generated event aliases and parser. `parseStreamEvent` is a thin wrapper around the generated validator and exposes validation diagnostics without exposing Ajv. Live SSE parsing and durable run replay both pass through that same parser before reducer or state use.
+
+The active-turn reducer and SSE dispatcher use exhaustive generated-variant switches with explicit no-op cases for valid events that have no current UI projection. Test event builders are parser-backed, and the 34 real fixtures, 10 malformed fixtures, and five semantic probes pass generated-validator/parser parity. Public StreamEvent v1 wire fields remain unchanged; Phase 04 internal runtime/Proto work is not part of this phase.
+
+### Completion evidence
+
+- `pnpm contracts:verify`: PASS;
+- `pnpm contracts:check-generated`: PASS after repeated generation;
+- generated TypeScript: zero `any` tokens;
+- focused contracts and consultation tests: PASS (16 contract parity tests; 68 Web consultation tests);
+- full lint: PASS;
+- full typecheck: PASS;
+- production build: PASS; ConsultationPage remained essentially flat, while the standalone validator is primarily carried by the shared consultation service chunk (about 10.5 KiB gzip increase in the prior comparison);
+- isolated atlas-metadata fallback E2E: PASS (1/1, 10.8s); the earlier `net::ERR_NETWORK_CHANGED` failure is classified as infrastructure flake, with no Body Explorer changes;
+- full local-deploy validation: PASS; all 10 browser E2E cases passed, including the atlas fallback, and all deployment/database gates passed;
+- `git diff --check`: PASS.
+
+Bundle impact is limited to the generated standalone validator in the shared consultation service chunk; the ConsultationPage chunk remained essentially flat in the prior comparison, with about 10.5 KiB gzip added to the shared chunk. Runtime validation was not weakened to reduce bundle size.

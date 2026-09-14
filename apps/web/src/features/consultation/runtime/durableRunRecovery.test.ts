@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { StreamEvent } from "../types/consultation";
+import { parseStreamEvent, type StreamEvent } from "@bodysense/contracts";
 import { recoverDurableRunEvents } from "./durableRunRecovery";
 
 function event(
@@ -7,7 +7,7 @@ function event(
   type: StreamEvent["type"],
   payload: StreamEvent["payload"],
 ): StreamEvent {
-  return {
+  return parseStreamEvent({
     version: 1,
     seq,
     channel: type.startsWith("stream.")
@@ -25,7 +25,7 @@ function event(
       interaction_id: null,
     },
     payload,
-  } as StreamEvent;
+  });
 }
 
 describe("recoverDurableRunEvents", () => {

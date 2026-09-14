@@ -248,7 +248,8 @@
               "properties": {
                 "status": {
                   "const": "completed"
-                }
+                },
+                "usage": {}
               }
             }
           },
@@ -276,16 +277,7 @@
                   "const": "failed"
                 },
                 "error": {
-                  "type": "object",
-                  "required": [
-                    "message"
-                  ],
-                  "properties": {
-                    "message": {
-                      "type": "string",
-                      "minLength": 1
-                    }
-                  }
+                  "$ref": "#/$defs/StreamFailureError"
                 },
                 "reason": {
                   "type": "string",
@@ -307,16 +299,7 @@
                 {
                   "properties": {
                     "error": {
-                      "type": "object",
-                      "required": [
-                        "message"
-                      ],
-                      "properties": {
-                        "message": {
-                          "type": "string",
-                          "minLength": 1
-                        }
-                      }
+                      "$ref": "#/$defs/StreamFailureError"
                     }
                   },
                   "required": [
@@ -474,7 +457,8 @@
                 "finish_reason": {
                   "type": "string",
                   "minLength": 1
-                }
+                },
+                "usage": {}
               }
             }
           },
@@ -503,16 +487,7 @@
                   "const": "failed"
                 },
                 "error": {
-                  "type": "object",
-                  "required": [
-                    "message"
-                  ],
-                  "properties": {
-                    "message": {
-                      "type": "string",
-                      "minLength": 1
-                    }
-                  }
+                  "$ref": "#/$defs/StreamFailureError"
                 }
               }
             }
@@ -595,7 +570,9 @@
                 "info"
               ],
               "properties": {
-                "info": {}
+                "info": {
+                  "$ref": "#/$defs/ExtractedInfo"
+                }
               }
             }
           },
@@ -627,6 +604,9 @@
                 "reason": {
                   "type": "string",
                   "minLength": 1
+                },
+                "from": {
+                  "type": "string"
                 }
               }
             }
@@ -658,43 +638,7 @@
                   "minLength": 1
                 },
                 "question": {
-                  "type": "object",
-                  "required": [
-                    "question"
-                  ],
-                  "properties": {
-                    "question": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "options": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
-                    },
-                    "fields": {
-                      "type": "array",
-                      "maxItems": 3,
-                      "items": {
-                        "type": "object",
-                        "required": [
-                          "key",
-                          "label"
-                        ],
-                        "properties": {
-                          "key": {
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "label": {
-                            "type": "string",
-                            "minLength": 1
-                          }
-                        }
-                      }
-                    }
-                  }
+                  "$ref": "#/$defs/InteractionQuestion"
                 },
                 "created_at": {
                   "type": "string",
@@ -760,6 +704,9 @@
                 "expired_at": {
                   "type": "string",
                   "minLength": 1
+                },
+                "reason": {
+                  "type": "string"
                 }
               }
             }
@@ -784,7 +731,9 @@
                 "citation"
               ],
               "properties": {
-                "citation": {}
+                "citation": {
+                  "$ref": "#/$defs/Citation"
+                }
               }
             }
           },
@@ -809,7 +758,7 @@
               ],
               "properties": {
                 "attribution": {
-                  "type": "object"
+                  "$ref": "#/$defs/ConsultationAnswerAttribution"
                 }
               }
             }
@@ -871,7 +820,10 @@
                   "type": "boolean"
                 },
                 "flags": {
-                  "type": "array"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/RedFlag"
+                  }
                 }
               }
             }
@@ -914,6 +866,9 @@
                   "items": {
                     "type": "string"
                   }
+                },
+                "issues": {
+                  "type": "array"
                 }
               }
             }
@@ -951,6 +906,9 @@
                   "items": {
                     "type": "string"
                   }
+                },
+                "safety_fallback": {
+                  "type": "string"
                 }
               }
             }
@@ -1077,6 +1035,9 @@
                 "job_type": {
                   "type": "string",
                   "minLength": 1
+                },
+                "status": {
+                  "type": "string"
                 }
               }
             }
@@ -1098,7 +1059,17 @@
             "payload": {
               "type": "object",
               "required": [],
-              "properties": {}
+              "properties": {
+                "progress": {},
+                "stage": {
+                  "type": "string"
+                },
+                "percent": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
             }
           },
           "required": [
@@ -1118,7 +1089,9 @@
             "payload": {
               "type": "object",
               "required": [],
-              "properties": {}
+              "properties": {
+                "result": {}
+              }
             }
           },
           "required": [
@@ -1153,5 +1126,470 @@
         }
       ]
     }
-  ]
+  ],
+  "$defs": {
+    "StreamFailureError": {
+      "type": "object",
+      "required": [
+        "message"
+      ],
+      "properties": {
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "ExtractedInfo": {
+      "type": "object",
+      "required": [
+        "body_part",
+        "symptom_type"
+      ],
+      "properties": {
+        "body_part": {
+          "type": "string",
+          "minLength": 1
+        },
+        "symptom_type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "severity": {
+          "type": "string"
+        },
+        "duration": {
+          "type": "string"
+        },
+        "trigger": {
+          "type": "string"
+        },
+        "relief": {
+          "type": "string"
+        },
+        "radiation": {
+          "type": "string"
+        },
+        "functional_impact": {
+          "type": "string"
+        },
+        "neurological_signs": {
+          "type": "string"
+        },
+        "onset": {
+          "type": "string"
+        },
+        "additional_notes": {
+          "type": "string"
+        },
+        "capture_id": {
+          "type": "string"
+        },
+        "confirmed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "InteractionQuestionField": {
+      "type": "object",
+      "required": [
+        "key",
+        "label"
+      ],
+      "properties": {
+        "key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "answer_type": {
+          "type": "string",
+          "enum": [
+            "text",
+            "single_choice",
+            "multi_choice",
+            "number",
+            "date",
+            "scale",
+            "select"
+          ]
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "required": {
+          "type": "boolean"
+        }
+      }
+    },
+    "InteractionStateBinding": {
+      "type": "object",
+      "required": [
+        "revision",
+        "capture_id",
+        "seed_info",
+        "field_map"
+      ],
+      "properties": {
+        "revision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "capture_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "seed_info": {
+          "type": "object"
+        },
+        "field_map": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "InteractionQuestion": {
+      "type": "object",
+      "required": [
+        "question"
+      ],
+      "properties": {
+        "question": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string"
+        },
+        "answer_type": {
+          "type": "string",
+          "enum": [
+            "text",
+            "single_choice",
+            "multi_choice",
+            "number",
+            "date",
+            "scale",
+            "select"
+          ]
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "context": {
+          "type": "string"
+        },
+        "allow_custom_input": {
+          "type": "boolean"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "fields": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "$ref": "#/$defs/InteractionQuestionField"
+          }
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "state_binding": {
+          "$ref": "#/$defs/InteractionStateBinding"
+        }
+      }
+    },
+    "Citation": {
+      "type": "object",
+      "required": [
+        "title"
+      ],
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "snippet": {
+          "type": "string"
+        },
+        "body_markdown": {
+          "type": "string"
+        },
+        "source_title": {
+          "type": "string"
+        },
+        "source_author": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "problem_slug": {
+          "type": "string"
+        },
+        "unit_type": {
+          "type": "string"
+        },
+        "unit_key": {
+          "type": "string"
+        },
+        "source_key": {
+          "type": "string"
+        },
+        "source_type": {
+          "type": "string"
+        },
+        "lifecycle_status": {
+          "type": "string"
+        },
+        "review_status": {
+          "type": "string"
+        },
+        "publication_id": {
+          "type": "string"
+        },
+        "publication_key": {
+          "type": "string"
+        },
+        "publication_batch_key": {
+          "type": "string"
+        },
+        "quality_score": {
+          "type": "number"
+        },
+        "published_version": {
+          "type": "integer"
+        },
+        "source_locator": {
+          "type": "object"
+        },
+        "claim_id": {
+          "type": "string"
+        },
+        "claim_kind": {
+          "type": "string"
+        },
+        "claim_review_id": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "clips": {
+          "type": "array"
+        }
+      }
+    },
+    "AnswerAttributionSourceLocator": {
+      "type": "object",
+      "required": [
+        "locator_type",
+        "repository",
+        "git_commit",
+        "path",
+        "line_start",
+        "line_end"
+      ],
+      "properties": {
+        "locator_type": {
+          "const": "markdown_lines"
+        },
+        "repository": {
+          "type": "string",
+          "minLength": 1
+        },
+        "git_commit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "line_start": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "line_end": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "AnswerAttributionBinding": {
+      "type": "object",
+      "required": [
+        "evidence_ref",
+        "publication_id",
+        "publication_key",
+        "publication_batch_key",
+        "published_version",
+        "unit_key",
+        "claim_id",
+        "claim_review_id",
+        "source_locator"
+      ],
+      "properties": {
+        "evidence_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "publication_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "publication_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "publication_batch_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "published_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "unit_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "claim_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "claim_review_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "claim_kind": {
+          "type": "string"
+        },
+        "grounding_status": {
+          "type": "string",
+          "enum": [
+            "supported",
+            "degraded",
+            "rejected"
+          ]
+        },
+        "reason_codes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "source_locator": {
+          "$ref": "#/$defs/AnswerAttributionSourceLocator"
+        }
+      }
+    },
+    "ConsultationAnswerAttribution": {
+      "type": "object",
+      "required": [
+        "attribution_id",
+        "policy_revision",
+        "claim_text",
+        "evidence_refs",
+        "grounding_status",
+        "reason_codes",
+        "bindings"
+      ],
+      "properties": {
+        "attribution_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policy_revision": {
+          "const": "consultation-answer-attribution-v1"
+        },
+        "claim_text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "grounding_status": {
+          "type": "string",
+          "enum": [
+            "supported",
+            "degraded",
+            "rejected"
+          ]
+        },
+        "reason_codes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "bindings": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": {
+            "$ref": "#/$defs/AnswerAttributionBinding"
+          }
+        }
+      }
+    },
+    "RedFlag": {
+      "type": "object",
+      "required": [
+        "category",
+        "message"
+      ],
+      "properties": {
+        "category": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "matched_text": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        }
+      }
+    }
+  }
 }

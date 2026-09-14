@@ -24,27 +24,33 @@
 import { parseStreamEvent } from "@bodysense/contracts";
 
 // ======================== 类型导入 ========================
-// 从 consultation 类型文件中导入所有 SSE 事件的 TypeScript 类型。
-// 这些类型定义了每个事件的 data 结构（有哪些字段、字段是什么类型）。
 import type {
-  SSEConversationCreated, // conversation.created 事件的数据类型（新会话创建）
-  SSEMessagePersisted, // message.persisted 事件的数据类型（用户消息持久化完成）
-  SSEMessageCreated, // message.created 事件的数据类型（AI 回复消息创建）
-  SSETextDelta, // message.text.delta 事件的数据类型（AI 逐字输出的片段）
-  SSEToolCall, // tool.call 事件的数据类型（AI 调用工具）
-  SSEToolResult, // tool.result 事件的数据类型（工具返回结果）
-  SSEExtractedInfo, // state.extracted_info.upsert 事件的数据类型（提取的用户信息）
-  SSEPhaseChange, // state.phase.changed 事件的数据类型（对话阶段变化）
-  SSECitation, // source.citation.added 事件的数据类型（引用来源）
-  SSEKnowledgeGap, // source.knowledge_gap 事件的数据类型（知识缺口提示）
-  SSERedFlag, // safety.red_flag.detected 事件的数据类型（安全风险标记）
-  SSEMessageCompleted, // message.completed 事件的数据类型（AI 回复完成）
-  SSEMessageFailed, // message.failed 事件的数据类型（AI 回复失败）
-  SSETitleGenerated, // title.generated 事件的数据类型（会话标题生成完成）
-  SSEStreamDone, // stream.done 事件的数据类型（整个 SSE 流结束）
-  SSEStreamError, // stream.error 事件的数据类型（流级别错误）
-  StreamEvent, // 所有 SSE 事件的基础类型（通用结构）
-} from "../types/consultation";
+  ConversationCreatedEvent,
+  MessagePersistedEvent,
+  MessageCreatedEvent,
+  MessageTextDeltaEvent,
+  ToolCallEvent,
+  ToolResultEvent,
+  ExtractedInfoUpsertEvent,
+  PhaseChangedEvent,
+  CitationAddedEvent,
+  KnowledgeGapEvent,
+  RedFlagDetectedEvent,
+  MessageCompletedEvent,
+  MessageFailedEvent,
+  TitleGeneratedEvent,
+  StreamDoneEvent,
+  StreamErrorEvent,
+  RunStartedEvent,
+  RunResumedEvent,
+  RunInterruptedEvent,
+  RunCompletedEvent,
+  RunFailedEvent,
+  RunCancelledEvent,
+  InteractionRequiredEvent,
+  InteractionAnsweredEvent,
+  StreamEvent,
+} from "@bodysense/contracts";
 
 // ======================== SSEHandlers 接口 ========================
 // 这个接口定义了所有可能的 SSE 事件回调函数。
@@ -56,72 +62,135 @@ import type {
 //     onDone: () => { console.log('流结束了') },
 //   };
 export interface SSEHandlers {
-  onConversationCreated?: (data: SSEConversationCreated) => void; // 新会话被创建时触发
-  onRunStarted?: (data: StreamEvent) => void; // 一次 consultation run 开始时触发
-  onRunResumed?: (data: StreamEvent) => void; // 被中断的 run 恢复时触发
-  onRunInterrupted?: (data: StreamEvent) => void; // run 被中断时触发
-  onRunCompleted?: (data: StreamEvent) => void; // run 完成时触发
-  onRunFailed?: (data: StreamEvent) => void; // run 失败时触发
-  onRunCancelled?: (data: StreamEvent) => void; // 用户显式取消 run 时触发
-  onMessagePersisted?: (data: SSEMessagePersisted) => void; // 用户消息持久化完成时触发
-  onMessageCreated?: (data: SSEMessageCreated) => void; // AI 回复消息（空占位）创建时触发
-  onTextDelta?: (data: SSETextDelta) => void; // AI 输出一个文字片段时触发（高频，用于打字机效果）
-  onToolCall?: (data: SSEToolCall) => void; // AI 决定调用工具时触发
-  onToolResult?: (data: SSEToolResult) => void; // 工具返回结果时触发
-  onExtractedInfo?: (data: SSEExtractedInfo) => void; // 从对话中提取出用户信息时触发
-  onPhaseChange?: (data: SSEPhaseChange) => void; // 对话阶段切换时触发（如：问诊 → 建议）
-  onCitation?: (data: SSECitation) => void; // AI 引用了知识来源时触发
-  onKnowledgeGap?: (data: SSEKnowledgeGap) => void; // 发现知识缺口时触发
-  onRedFlag?: (data: SSERedFlag) => void; // 检测到安全风险时触发
-  onMessageCompleted?: (data: SSEMessageCompleted) => void; // AI 回复完整结束时触发
-  onMessageFailed?: (data: SSEMessageFailed) => void; // AI 回复失败时触发
-  onTitleGenerated?: (data: SSETitleGenerated) => void; // 会话标题生成完成时触发
-  onInteractionRequired?: (data: StreamEvent) => void; // 需要用户交互（如确认）时触发
-  onInteractionAnswered?: (data: StreamEvent) => void; // 用户回答了交互请求时触发
-  onDone?: (data: SSEStreamDone) => void; // 整个 SSE 流正常结束时触发
-  onStreamError?: (data: SSEStreamError) => void; // 流级别错误发生时触发
+  onConversationCreated?: (data: ConversationCreatedEvent) => void; // 新会话被创建时触发
+  onRunStarted?: (data: RunStartedEvent) => void; // 一次 consultation run 开始时触发
+  onRunResumed?: (data: RunResumedEvent) => void; // 被中断的 run 恢复时触发
+  onRunInterrupted?: (data: RunInterruptedEvent) => void; // run 被中断时触发
+  onRunCompleted?: (data: RunCompletedEvent) => void; // run 完成时触发
+  onRunFailed?: (data: RunFailedEvent) => void; // run 失败时触发
+  onRunCancelled?: (data: RunCancelledEvent) => void; // 用户显式取消 run 时触发
+  onMessagePersisted?: (data: MessagePersistedEvent) => void; // 用户消息持久化完成时触发
+  onMessageCreated?: (data: MessageCreatedEvent) => void; // AI 回复消息（空占位）创建时触发
+  onTextDelta?: (data: MessageTextDeltaEvent) => void; // AI 输出一个文字片段时触发（高频，用于打字机效果）
+  onToolCall?: (data: ToolCallEvent) => void; // AI 决定调用工具时触发
+  onToolResult?: (data: ToolResultEvent) => void; // 工具返回结果时触发
+  onExtractedInfo?: (data: ExtractedInfoUpsertEvent) => void; // 从对话中提取出用户信息时触发
+  onPhaseChange?: (data: PhaseChangedEvent) => void; // 对话阶段切换时触发（如：问诊 → 建议）
+  onCitation?: (data: CitationAddedEvent) => void; // AI 引用了知识来源时触发
+  onKnowledgeGap?: (data: KnowledgeGapEvent) => void; // 发现知识缺口时触发
+  onRedFlag?: (data: RedFlagDetectedEvent) => void; // 检测到安全风险时触发
+  onMessageCompleted?: (data: MessageCompletedEvent) => void; // AI 回复完整结束时触发
+  onMessageFailed?: (data: MessageFailedEvent) => void; // AI 回复失败时触发
+  onTitleGenerated?: (data: TitleGeneratedEvent) => void; // 会话标题生成完成时触发
+  onInteractionRequired?: (data: InteractionRequiredEvent) => void; // 需要用户交互（如确认）时触发
+  onInteractionAnswered?: (data: InteractionAnsweredEvent) => void; // 用户回答了交互请求时触发
+  onDone?: (data: StreamDoneEvent) => void; // 整个 SSE 流正常结束时触发
+  onStreamError?: (data: StreamErrorEvent) => void; // 流级别错误发生时触发
   onError?: (error: Error) => void; // 本地解析/网络错误时触发（非服务端事件）
 }
 
-// ======================== EVENT_MAP 事件映射表 ========================
-// 这是一个"翻译字典"：把后端发来的事件类型字符串（左边）
-// 映射到 SSEHandlers 接口中的回调函数名（右边）。
+// ======================== Exhaustive event dispatch ========================
 //
-// 例如后端发来 "event: message.text.delta"，查表得到 'onTextDelta'，
-// 然后就会调用 handlers.onTextDelta(data)。
-//
-// 为什么需要这个映射？
-// 因为后端用的是带点号的事件名（如 message.text.delta），
-// 而前端回调用的是驼峰命名（如 onTextDelta），风格不同，需要翻译。
-const EVENT_MAP: Record<string, keyof SSEHandlers> = {
-  "conversation.created": "onConversationCreated", // 新会话创建
-  "run.started": "onRunStarted", // run 开始
-  "run.resumed": "onRunResumed", // run 恢复
-  "run.interrupted": "onRunInterrupted", // run 中断
-  "run.completed": "onRunCompleted", // run 完成
-  "run.failed": "onRunFailed", // run 失败
-  "run.cancelled": "onRunCancelled", // run 显式取消
-  "message.persisted": "onMessagePersisted", // 用户消息已持久化
-  "message.created": "onMessageCreated", // AI 消息占位已创建
-  "message.text.delta": "onTextDelta", // AI 文字片段（高频）
-  "tool.call": "onToolCall", // 工具调用
-  "tool.result": "onToolResult", // 工具结果
-  "state.extracted_info.upsert": "onExtractedInfo", // 提取信息
-  "state.phase.changed": "onPhaseChange", // 阶段变化
-  "source.citation.added": "onCitation", // 引用来源
-  "source.knowledge_gap": "onKnowledgeGap", // 知识缺口
-  "safety.red_flag.detected": "onRedFlag", // 安全风险
-  "message.completed": "onMessageCompleted", // 消息完成
-  "message.failed": "onMessageFailed", // 消息失败
-  "title.generated": "onTitleGenerated", // 标题生成
-  "state.interaction.required": "onInteractionRequired", // 需要交互
-  "state.interaction.answered": "onInteractionAnswered", // 交互已回答
-  "stream.done": "onDone", // 流结束
-  "stream.error": "onStreamError", // 流错误
-};
+// StreamEvent is generated from the canonical JSON Schema. Keeping dispatch as
+// an exhaustive switch means a newly-added protocol variant cannot silently
+// bypass the live/replay consumer: TypeScript must see either a handler or an
+// explicit intentional no-op before the build is green.
+function assertNever(event: never): never {
+  throw new Error(`Unhandled validated StreamEvent: ${JSON.stringify(event)}`);
+}
 
-// 回调函数的统一类型签名：接收一个 StreamEvent，无返回值。
-type HandlerFn = (data: StreamEvent) => void;
+function dispatchStreamEvent(event: StreamEvent, handlers: SSEHandlers): void {
+  switch (event.type) {
+    case "conversation.created":
+      handlers.onConversationCreated?.(event);
+      return;
+    case "run.started":
+      handlers.onRunStarted?.(event);
+      return;
+    case "run.resumed":
+      handlers.onRunResumed?.(event);
+      return;
+    case "run.interrupted":
+      handlers.onRunInterrupted?.(event);
+      return;
+    case "run.completed":
+      handlers.onRunCompleted?.(event);
+      return;
+    case "run.failed":
+      handlers.onRunFailed?.(event);
+      return;
+    case "run.cancelled":
+      handlers.onRunCancelled?.(event);
+      return;
+    case "message.persisted":
+      handlers.onMessagePersisted?.(event);
+      return;
+    case "message.created":
+      handlers.onMessageCreated?.(event);
+      return;
+    case "message.text.delta":
+      handlers.onTextDelta?.(event);
+      return;
+    case "message.completed":
+      handlers.onMessageCompleted?.(event);
+      return;
+    case "message.failed":
+      handlers.onMessageFailed?.(event);
+      return;
+    case "tool.call":
+      handlers.onToolCall?.(event);
+      return;
+    case "tool.result":
+      handlers.onToolResult?.(event);
+      return;
+    case "state.extracted_info.upsert":
+      handlers.onExtractedInfo?.(event);
+      return;
+    case "state.phase.changed":
+      handlers.onPhaseChange?.(event);
+      return;
+    case "state.interaction.required":
+      handlers.onInteractionRequired?.(event);
+      return;
+    case "state.interaction.answered":
+      handlers.onInteractionAnswered?.(event);
+      return;
+    case "source.citation.added":
+      handlers.onCitation?.(event);
+      return;
+    case "source.knowledge_gap":
+      handlers.onKnowledgeGap?.(event);
+      return;
+    case "safety.red_flag.detected":
+      handlers.onRedFlag?.(event);
+      return;
+    case "title.generated":
+      handlers.onTitleGenerated?.(event);
+      return;
+    case "stream.done":
+      handlers.onDone?.(event);
+      return;
+    case "stream.error":
+      handlers.onStreamError?.(event);
+      return;
+
+    // Valid public events intentionally not projected by this dispatcher yet.
+    // They remain visible in the exhaustive switch so protocol growth cannot be
+    // mistaken for an unknown-event fallback.
+    case "source.answer_attribution.added":
+    case "safety.output_reviewed":
+    case "safety.output_rejected":
+    case "usage.reported":
+    case "state.interaction.expired":
+    case "job.created":
+    case "job.progress":
+    case "job.completed":
+    case "job.failed":
+      return;
+    default:
+      return assertNever(event);
+  }
+}
 
 // ======================== processSSELine 函数 ========================
 // 作用：处理 SSE 流中的**单行文本**，判断它是 event 行还是 data 行，然后做相应处理。
@@ -194,46 +263,16 @@ export function processSSELine(
         state.maxSeq = event.seq;
       }
 
-      // 用事件类型在映射表中查找对应的回调函数名
-      // 例如 "message.text.delta" → "onTextDelta"
-      const handlerKey = EVENT_MAP[eventType];
-
-      if (handlerKey) {
-        // 用回调函数名从 handlers 对象中取出实际的函数
-        const handler = handlers[handlerKey];
-        if (handler) {
-          // 🔍 追踪 conversation.created 和 title.generated 事件
-          if (
-            eventType === "conversation.created" ||
-            eventType === "title.generated"
-          ) {
-            console.debug(`[SSE] ② data 行解析成功 → 分发事件: ${eventType}`, {
-              handlerKey,
-              conversation_id: event.ids?.conversation_id,
-              payload: event.payload,
-            });
-          }
-          // 调用回调函数，把事件数据传进去
-          // 类型断言为 HandlerFn 是因为 TypeScript 无法自动推断这里调用的安全性
-          (handler as HandlerFn)(event);
-        } else if (
-          eventType === "conversation.created" ||
-          eventType === "title.generated"
-        ) {
-          console.warn(
-            `[SSE] ⚠️ 事件 ${eventType} 的 handlerKey="${handlerKey}" 在 handlers 中为 ${handler}!`,
-          );
-        }
-      } else if (
+      if (
         eventType === "conversation.created" ||
         eventType === "title.generated"
       ) {
-        console.warn(
-          `[SSE] ⚠️ 事件 ${eventType} 在 EVENT_MAP 中未找到 handlerKey!`,
-        );
+        console.debug(`[SSE] ② data 行解析成功 → 分发事件: ${eventType}`, {
+          conversation_id: event.ids.conversation_id,
+          payload: event.payload,
+        });
       }
-      // 如果 handlerKey 为 undefined（事件类型不在映射表中），
-      // 说明这是一个我们不认识的事件，静默忽略即可。
+      dispatchStreamEvent(event, handlers);
     } catch (err) {
       const protocolError = new Error(
         `Invalid consultation SSE event: ${err instanceof Error ? err.message : String(err)}`,
@@ -368,13 +407,7 @@ export function dispatchReplayEvents(
     if (typeof event.seq === "number" && event.seq > state.maxSeq) {
       state.maxSeq = event.seq;
     }
-    const eventType = event.type;
-    const handlerKey = EVENT_MAP[eventType];
-    if (!handlerKey) continue;
-    const handler = handlers[handlerKey];
-    if (handler) {
-      (handler as HandlerFn)(event);
-    }
+    dispatchStreamEvent(event, handlers);
   }
   return state;
 }

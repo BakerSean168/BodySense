@@ -41,3 +41,9 @@ gofmt -w "$ROOT/tools/contracts/generated/openapi-go/foundation.gen.go"
 
 # Production public REST artifacts are generated from the canonical OpenAPI authority.
 "$ROOT/scripts/contracts/generate-public-rest.sh"
+
+# Production public StreamEvent artifacts are generated from the canonical JSON Schema.
+(
+  cd "$ROOT"
+  node scripts/contracts/generate-public-stream.mjs
+)

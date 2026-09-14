@@ -101,7 +101,6 @@ export type ActiveTurnEffect =
   | {
       type: "conversation_created";
       conversationId: string;
-      replacesDraftId?: string;
     }
   | { type: "message_persisted"; clientMessageId: string; messageId: string }
   | { type: "extracted_info_updated"; info: ExtractedInfo }
@@ -110,7 +109,10 @@ export type ActiveTurnEffect =
   | { type: "citation_added"; citation: Citation }
   | { type: "interaction_required"; interaction: PendingInteraction }
   | { type: "interaction_answered"; interactionId: string }
-  | { type: "message_completed"; data: unknown }
+  | {
+      type: "message_completed";
+      data: Extract<StreamEvent, { type: "message.completed" }>;
+    }
   | { type: "title_generated"; title: string }
   | { type: "stream_error"; message: string };
 
@@ -139,13 +141,9 @@ export function reduceActiveTurnEvent(
 
   const effects: ActiveTurnEffect[] = [];
   let next = current;
-  let processed = false;
-
   switch (event.type) {
     // --- Lifecycle ---------------------------------------------------------
     case "conversation.created": {
-      processed = true;
-      const payload = event.payload as { replaces_draft_id?: string };
       const conversationId = event.ids.conversation_id || "";
       next = {
         ...current,
@@ -157,14 +155,12 @@ export function reduceActiveTurnEvent(
       effects.push({
         type: "conversation_created",
         conversationId,
-        replacesDraftId: payload.replaces_draft_id,
       });
       break;
     }
 
     case "run.started":
     case "run.resumed": {
-      processed = true;
       next = {
         ...current,
         conversationId: event.ids.conversation_id || current.conversationId,
@@ -178,23 +174,17 @@ export function reduceActiveTurnEvent(
     }
 
     case "run.interrupted": {
-      processed = true;
       next = { ...current, status: "interrupted" };
       break;
     }
 
     case "run.completed": {
-      processed = true;
       next = { ...current, runId: event.ids.run_id || current.runId };
       break;
     }
 
     case "run.failed": {
-      processed = true;
-      const payload = event.payload as {
-        reason?: string;
-        error?: { message?: string };
-      };
+      const payload = event.payload;
       const executionLost = payload.reason === "execution_lost";
       next = {
         ...current,
@@ -211,8 +201,7 @@ export function reduceActiveTurnEvent(
     }
 
     case "run.cancelled": {
-      processed = true;
-      const payload = event.payload as { reason: string };
+      const payload = event.payload;
       next = {
         ...current,
         runId: event.ids.run_id || current.runId,
@@ -224,8 +213,7 @@ export function reduceActiveTurnEvent(
     }
 
     case "message.persisted": {
-      processed = true;
-      const payload = event.payload as { client_message_id: string };
+      const payload = event.payload;
       const messageId = event.ids.message_id || "";
       next = { ...current };
       effects.push({
@@ -237,7 +225,6 @@ export function reduceActiveTurnEvent(
     }
 
     case "message.created": {
-      processed = true;
       const messageId = event.ids.message_id || "";
       next = { ...current, assistantMessageId: messageId, status: "streaming" };
       break;
@@ -245,16 +232,14 @@ export function reduceActiveTurnEvent(
 
     // --- Text streaming ----------------------------------------------------
     case "message.text.delta": {
-      processed = true;
-      const payload = event.payload as { delta: string };
+      const payload = event.payload;
       next = { ...current, text: current.text + payload.delta };
       break;
     }
 
     // --- State events ------------------------------------------------------
     case "state.extracted_info.upsert": {
-      processed = true;
-      const payload = event.payload as { info: ExtractedInfo };
+      const payload = event.payload;
       const info = payload.info;
       const prev = current.extractedInfoByBodyPart[info.body_part] || {};
       next = {
@@ -269,8 +254,7 @@ export function reduceActiveTurnEvent(
     }
 
     case "state.phase.changed": {
-      processed = true;
-      const payload = event.payload as { from?: string; to: string };
+      const payload = event.payload;
       effects.push({
         type: "phase_changed",
         from: payload.from || "",
@@ -281,8 +265,7 @@ export function reduceActiveTurnEvent(
 
     // --- Source events ------------------------------------------------------
     case "source.citation.added": {
-      processed = true;
-      const payload = event.payload as { citation: Citation };
+      const payload = event.payload;
       const citation = payload.citation;
       const key = citation.title;
       if (!current.citationsByKey[key]) {
@@ -296,8 +279,7 @@ export function reduceActiveTurnEvent(
     }
 
     case "source.knowledge_gap": {
-      processed = true;
-      const payload = event.payload as { query: string; message: string };
+      const payload = event.payload;
       const key = payload.query;
       if (!current.knowledgeGapsByKey[key]) {
         next = {
@@ -313,14 +295,11 @@ export function reduceActiveTurnEvent(
 
     // --- Safety events -----------------------------------------------------
     case "safety.red_flag.detected": {
-      processed = true;
-      const payload = event.payload as {
-        has_red_flags: boolean;
-        flags: unknown[];
+      const payload = event.payload;
+      const redFlagEvent: RedFlagEvent = {
+        has_red_flags: payload.has_red_flags,
+        flags: payload.flags,
       };
-      // 运行时边界：契约只保证 payload 是 unknown，把“已确认形状”的类型断言收口到
-      // 这一处，避免到处 as。详见 typescript-unknown-vs-any / static-types-and-runtime-validation。
-      const redFlagEvent = payload as unknown as RedFlagEvent;
       next = { ...current, redFlag: redFlagEvent };
       effects.push({ type: "red_flag", flags: redFlagEvent });
       break;
@@ -328,22 +307,17 @@ export function reduceActiveTurnEvent(
 
     // --- Completion --------------------------------------------------------
     case "message.completed": {
-      processed = true;
       next = {
         ...current,
         status: "completed",
         finalParts: buildFinalMessageParts(current),
       };
-      effects.push({ type: "message_completed", data: event.payload });
+      effects.push({ type: "message_completed", data: event });
       break;
     }
 
     case "message.failed": {
-      processed = true;
-      const payload = event.payload as {
-        status: "failed";
-        error: { code?: string; message: string };
-      };
+      const payload = event.payload;
       next = {
         ...current,
         status: "failed",
@@ -356,7 +330,6 @@ export function reduceActiveTurnEvent(
     }
 
     case "stream.done": {
-      processed = true;
       if (current.status === "interrupted") {
         next = current;
         break;
@@ -376,15 +349,13 @@ export function reduceActiveTurnEvent(
     }
 
     case "title.generated": {
-      processed = true;
-      const payload = event.payload as { title: string };
+      const payload = event.payload;
       effects.push({ type: "title_generated", title: payload.title });
       break;
     }
 
     case "stream.error": {
-      processed = true;
-      const payload = event.payload as { message: string };
+      const payload = event.payload;
       next = { ...current, status: "failed", error: payload.message };
       effects.push({ type: "stream_error", message: payload.message });
       break;
@@ -392,19 +363,14 @@ export function reduceActiveTurnEvent(
 
     // --- Interaction events ------------------------------------------------
     case "state.interaction.required": {
-      processed = true;
-      const payload = event.payload as {
-        interaction_id: string;
-        question: AskUserQuestion;
-        created_at: string;
-      };
+      const payload = event.payload;
       const interaction: PendingInteraction = {
         id: payload.interaction_id,
         run_id: event.ids.run_id || "",
         conversation_id: event.ids.conversation_id || "",
         tool_call_id: event.ids.tool_call_id || "",
         tool_name: "ask_user",
-        question: payload.question,
+        question: normalizeAskUserQuestion(payload.question),
         status: "pending",
         created_at: payload.created_at,
       };
@@ -418,11 +384,7 @@ export function reduceActiveTurnEvent(
     }
 
     case "state.interaction.answered": {
-      processed = true;
-      const payload = event.payload as {
-        interaction_id: string;
-        answer?: unknown;
-      };
+      const payload = event.payload;
       next = {
         ...current,
         pendingInteraction: current.pendingInteraction
@@ -442,8 +404,7 @@ export function reduceActiveTurnEvent(
 
     // --- Tool events ---------------------------------------------------------
     case "tool.call": {
-      processed = true;
-      const payload = event.payload as { tool: string; args: unknown };
+      const payload = event.payload;
       const toolCallId =
         event.ids.tool_call_id || `tc_${eventRunId || "run"}_${event.seq}`;
       const toolName = payload.tool.trim();
@@ -465,8 +426,7 @@ export function reduceActiveTurnEvent(
     }
 
     case "tool.result": {
-      processed = true;
-      const payload = event.payload as { tool: string; result: unknown };
+      const payload = event.payload;
       const toolCallId = event.ids.tool_call_id || "";
       const toolName = payload.tool.trim();
 
@@ -528,20 +488,31 @@ export function reduceActiveTurnEvent(
       break;
     }
 
-    // --- Unknown events ----------------------------------------------------
-    // default 分支处理“契约之外”的事件：保持幂等，不抛错、也不丢失已累积状态。
-    // 可辨识联合要求穷尽所有已知类型；未知类型属于运行时边界，交给上层决定。
-    default:
+    // --- Explicitly observed/no-op protocol events -------------------------
+    // These are valid public events that this reducer does not project into UI
+    // state today. They still advance the canonical sequence watermark.
+    case "source.answer_attribution.added":
+    case "safety.output_reviewed":
+    case "safety.output_rejected":
+    case "usage.reported":
+    case "state.interaction.expired":
+    case "job.created":
+    case "job.progress":
+    case "job.completed":
+    case "job.failed": {
+      next = current;
       break;
+    }
+
+    default:
+      return assertNever(event);
   }
 
-  if (processed) {
-    next = {
-      ...next,
-      sequenceRunId: eventRunId,
-      lastSeq: event.seq,
-    };
-  }
+  next = {
+    ...next,
+    sequenceRunId: eventRunId,
+    lastSeq: event.seq,
+  };
 
   return { state: next, effects };
 }
@@ -549,6 +520,52 @@ export function reduceActiveTurnEvent(
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+type InteractionRequiredQuestion = Extract<
+  StreamEvent,
+  { type: "state.interaction.required" }
+>["payload"]["question"];
+type InteractionRequiredField = NonNullable<
+  InteractionRequiredQuestion["fields"]
+>[number];
+
+function normalizeAnswerType(
+  answerType:
+    | InteractionRequiredQuestion["answer_type"]
+    | InteractionRequiredField["answer_type"],
+): AskUserQuestion["answer_type"] {
+  switch (answerType) {
+    case "single_choice":
+    case "multi_choice":
+    case "number":
+    case "date":
+    case "text":
+      return answerType;
+    case "select":
+      return "single_choice";
+    case "scale":
+      return "number";
+    case undefined:
+      return "text";
+  }
+}
+
+function normalizeAskUserQuestion(
+  question: InteractionRequiredQuestion,
+): AskUserQuestion {
+  return {
+    ...question,
+    answer_type: normalizeAnswerType(question.answer_type),
+    fields: question.fields?.map((field) => ({
+      ...field,
+      answer_type: normalizeAnswerType(field.answer_type),
+    })),
+  };
+}
+
+function assertNever(event: never): never {
+  throw new Error(`Unhandled validated StreamEvent: ${JSON.stringify(event)}`);
+}
 
 /** Build final message parts from the accumulated active turn state. */
 function buildFinalMessageParts(
@@ -572,7 +589,7 @@ function buildFinalMessageParts(
       type: "source",
       sourceType: "url",
       id: `src_${crypto.randomUUID().slice(0, 8)}`,
-      url: (citation as { url?: string }).url || "",
+      url: citation.url || "",
       title: citation.title,
       providerMetadata:
         Object.keys(bodysenseMetadata).length > 0
