@@ -18,8 +18,8 @@ function parserAccepts(event: unknown): boolean {
 }
 
 describe("canonical generated StreamEvent authority", () => {
-  it("accepts all 34 real fixtures through both the generated validator and stable parser facade", () => {
-    expect(realEvents).toHaveLength(34);
+  it("accepts all real fixtures through both the generated validator and stable parser facade", () => {
+    expect(realEvents).toHaveLength(35);
     for (const event of realEvents) {
       expect(validateGeneratedStreamEvent(event)).toBe(true);
       expect(parserAccepts(event)).toBe(true);

@@ -168,6 +168,15 @@ export type BodySenseStreamEventV1 = (
       [k: string]: unknown;
     }
   | {
+      type: "state.lifestyle_context.upsert";
+      channel: "state";
+      payload: {
+        context: LifestyleContext;
+        [k: string]: unknown;
+      };
+      [k: string]: unknown;
+    }
+  | {
       type: "state.phase.changed";
       channel: "state";
       payload: {
@@ -385,6 +394,14 @@ export interface ExtractedInfo {
   additional_notes?: string;
   capture_id?: string;
   confirmed?: boolean;
+  [k: string]: unknown;
+}
+export interface LifestyleContext {
+  section: "activity" | "sleep" | "exercise" | "nutrition" | "substances" | "recovery";
+  summary: string;
+  details: {
+    [k: string]: unknown;
+  };
   [k: string]: unknown;
 }
 export interface InteractionQuestion {

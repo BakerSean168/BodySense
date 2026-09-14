@@ -585,6 +585,32 @@
         {
           "properties": {
             "type": {
+              "const": "state.lifestyle_context.upsert"
+            },
+            "channel": {
+              "const": "state"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "context"
+              ],
+              "properties": {
+                "context": {
+                  "$ref": "#/$defs/LifestyleContext"
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
               "const": "state.phase.changed"
             },
             "channel": {
@@ -1141,6 +1167,34 @@
         "code": {
           "type": "string",
           "minLength": 1
+        }
+      }
+    },
+    "LifestyleContext": {
+      "type": "object",
+      "required": [
+        "section",
+        "summary",
+        "details"
+      ],
+      "properties": {
+        "section": {
+          "type": "string",
+          "enum": [
+            "activity",
+            "sleep",
+            "exercise",
+            "nutrition",
+            "substances",
+            "recovery"
+          ]
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "details": {
+          "type": "object"
         }
       }
     },

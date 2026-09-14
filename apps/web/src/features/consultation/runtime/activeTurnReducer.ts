@@ -491,6 +491,7 @@ export function reduceActiveTurnEvent(
     // --- Explicitly observed/no-op protocol events -------------------------
     // These are valid public events that this reducer does not project into UI
     // state today. They still advance the canonical sequence watermark.
+    case "state.lifestyle_context.upsert":
     case "source.answer_attribution.added":
     case "safety.output_reviewed":
     case "safety.output_rejected":

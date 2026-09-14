@@ -75,6 +75,9 @@ export interface SSEHandlers {
   onToolCall?: (data: ToolCallEvent) => void; // AI 决定调用工具时触发
   onToolResult?: (data: ToolResultEvent) => void; // 工具返回结果时触发
   onExtractedInfo?: (data: ExtractedInfoUpsertEvent) => void; // 从对话中提取出用户信息时触发
+  onLifestyleContext?: (
+    data: Extract<StreamEvent, { type: "state.lifestyle_context.upsert" }>,
+  ) => void;
   onPhaseChange?: (data: PhaseChangedEvent) => void; // 对话阶段切换时触发（如：问诊 → 建议）
   onCitation?: (data: CitationAddedEvent) => void; // AI 引用了知识来源时触发
   onKnowledgeGap?: (data: KnowledgeGapEvent) => void; // 发现知识缺口时触发
@@ -145,6 +148,9 @@ function dispatchStreamEvent(event: StreamEvent, handlers: SSEHandlers): void {
       return;
     case "state.extracted_info.upsert":
       handlers.onExtractedInfo?.(event);
+      return;
+    case "state.lifestyle_context.upsert":
+      handlers.onLifestyleContext?.(event);
       return;
     case "state.phase.changed":
       handlers.onPhaseChange?.(event);

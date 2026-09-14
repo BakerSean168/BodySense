@@ -5,6 +5,7 @@ import type {
   ConsultationAnswerAttribution,
   ExtractedInfo,
   InteractionQuestion,
+  LifestyleContext,
   RedFlag,
 } from "../generated/stream-event.v1";
 import type { StreamEventValidationError } from "../generated/stream-event-validator.v1";
@@ -19,6 +20,7 @@ export type GeneratedConsultationAnswerAttribution =
   ConsultationAnswerAttribution;
 export type GeneratedExtractedInfo = ExtractedInfo;
 export type GeneratedInteractionQuestion = InteractionQuestion;
+export type GeneratedLifestyleContext = LifestyleContext;
 export type GeneratedRedFlag = RedFlag;
 
 /**
