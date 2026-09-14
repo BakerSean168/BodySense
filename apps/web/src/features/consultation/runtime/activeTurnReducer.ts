@@ -402,6 +402,22 @@ export function reduceActiveTurnEvent(
       break;
     }
 
+    case "state.interaction.expired": {
+      const payload = event.payload;
+      if (current.pendingInteraction?.id === payload.interaction_id) {
+        next = {
+          ...current,
+          pendingInteraction: {
+            ...current.pendingInteraction,
+            status: "expired",
+          },
+          status: "failed",
+          error: payload.reason || "interaction expired",
+        };
+      }
+      break;
+    }
+
     // --- Tool events ---------------------------------------------------------
     case "tool.call": {
       const payload = event.payload;
@@ -496,7 +512,6 @@ export function reduceActiveTurnEvent(
     case "safety.output_reviewed":
     case "safety.output_rejected":
     case "usage.reported":
-    case "state.interaction.expired":
     case "job.created":
     case "job.progress":
     case "job.completed":

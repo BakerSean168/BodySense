@@ -272,6 +272,7 @@ export function useAssistantChatRuntime(
         onKnowledgeGap: (data) => dispatch(data),
         onInteractionRequired: (data) => dispatch(data),
         onInteractionAnswered: (data) => dispatch(data),
+        onInteractionExpired: (data) => dispatch(data),
         onMessageCompleted: (data) => dispatch(data),
         onMessageFailed: (data) => dispatch(data),
         onDone: (data) => {

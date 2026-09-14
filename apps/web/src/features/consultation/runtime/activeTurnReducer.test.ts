@@ -99,6 +99,15 @@ const TEST_EVENT_DEFAULTS = {
       answer: { text: "test" },
     },
   ),
+  "state.interaction.expired": eventDefault(
+    "state.interaction.expired",
+    "state",
+    {
+      interaction_id: "interaction-1",
+      expired_at: "2026-08-23T00:05:00Z",
+      reason: "ttl_elapsed",
+    },
+  ),
   "state.phase.changed": eventDefault("state.phase.changed", "state", {
     to: "collecting",
     reason: "test",
@@ -734,6 +743,42 @@ describe("ActiveTurnReducer", () => {
       expect(effects[0].type).toBe("interaction_answered");
       expect(resumed.status).toBe("streaming");
       expect(resumed.pendingInteraction).toBeNull();
+    });
+  });
+  describe("state.interaction.expired", () => {
+    it("marks the matching pending interaction expired and unlocks the composer", () => {
+      const current: ActiveTurnState = {
+        ...INITIAL_ACTIVE_TURN_STATE,
+        status: "interrupted",
+        pendingInteraction: {
+          id: "int-1",
+          run_id: "run-1",
+          conversation_id: "conv-1",
+          tool_call_id: "tc-1",
+          tool_name: "ask_user",
+          question: { question: "Age?", answer_type: "number", required: true },
+          status: "pending",
+          created_at: "2026-08-23T00:00:00Z",
+        },
+      };
+
+      const { state } = reduceActiveTurnEvent(
+        current,
+        makeEvent(
+          "state.interaction.expired",
+          {
+            interaction_id: "int-1",
+            expired_at: "2026-08-23T00:05:00Z",
+            reason: "ttl_elapsed",
+          },
+          { interaction_id: "int-1" },
+          "state",
+        ),
+      );
+
+      expect(state.pendingInteraction?.status).toBe("expired");
+      expect(state.status).toBe("failed");
+      expect(state.error).toBe("ttl_elapsed");
     });
   });
   describe("state.interaction.answered", () => {

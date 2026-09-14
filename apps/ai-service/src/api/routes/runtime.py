@@ -177,7 +177,7 @@ async def start_turn(thread_id: str, request: StartTurnRequest):
                         "has_red_flags": True,
                         "flags": [
                             {
-                                "type": "weakness",
+                                "category": "weakness",
                                 "severity": "high",
                                 "message": "E2E deterministic safety signal",
                             }

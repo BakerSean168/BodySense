@@ -1201,8 +1201,7 @@
     "ExtractedInfo": {
       "type": "object",
       "required": [
-        "body_part",
-        "symptom_type"
+        "body_part"
       ],
       "properties": {
         "body_part": {

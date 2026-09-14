@@ -50,6 +50,7 @@ import type {
   RunCancelledEvent,
   InteractionRequiredEvent,
   InteractionAnsweredEvent,
+  InteractionExpiredEvent,
   StreamEvent,
 } from "@bodysense/contracts";
 
@@ -86,6 +87,7 @@ export interface SSEHandlers {
   onTitleGenerated?: (data: TitleGeneratedEvent) => void; // 会话标题生成完成时触发
   onInteractionRequired?: (data: InteractionRequiredEvent) => void; // 需要用户交互（如确认）时触发
   onInteractionAnswered?: (data: InteractionAnsweredEvent) => void; // 用户回答了交互请求时触发
+  onInteractionExpired?: (data: InteractionExpiredEvent) => void;
   onDone?: (data: StreamDoneEvent) => void; // 整个 SSE 流正常结束时触发
   onStreamError?: (data: StreamErrorEvent) => void; // 流级别错误发生时触发
   onError?: (error: Error) => void; // 本地解析/网络错误时触发（非服务端事件）
@@ -160,6 +162,9 @@ function dispatchStreamEvent(event: StreamEvent, handlers: SSEHandlers): void {
     case "state.interaction.answered":
       handlers.onInteractionAnswered?.(event);
       return;
+    case "state.interaction.expired":
+      handlers.onInteractionExpired?.(event);
+      return;
     case "source.citation.added":
       handlers.onCitation?.(event);
       return;
@@ -186,7 +191,6 @@ function dispatchStreamEvent(event: StreamEvent, handlers: SSEHandlers): void {
     case "safety.output_reviewed":
     case "safety.output_rejected":
     case "usage.reported":
-    case "state.interaction.expired":
     case "job.created":
     case "job.progress":
     case "job.completed":

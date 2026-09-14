@@ -382,7 +382,7 @@ export interface StreamFailureError {
 }
 export interface ExtractedInfo {
   body_part: string;
-  symptom_type: string;
+  symptom_type?: string;
   severity?: string;
   duration?: string;
   trigger?: string;

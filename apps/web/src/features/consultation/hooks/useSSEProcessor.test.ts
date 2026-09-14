@@ -87,6 +87,30 @@ describe("seq tracking and replay", () => {
 
   const replayEvent = (input: unknown) => parseStreamEvent(input);
 
+  it("dispatches interaction expiry through the live/replay handler map", () => {
+    const onInteractionExpired = vi.fn();
+    const state = dispatchReplayEvents(
+      [
+        replayEvent({
+          version: 1,
+          seq: 8,
+          channel: "state",
+          type: "state.interaction.expired",
+          ids: { interaction_id: "interaction-1" },
+          payload: {
+            interaction_id: "interaction-1",
+            expired_at: "2026-09-13T12:00:00Z",
+            reason: "ttl_elapsed",
+          },
+        }),
+      ],
+      { onInteractionExpired },
+    );
+
+    expect(onInteractionExpired).toHaveBeenCalledTimes(1);
+    expect(state.maxSeq).toBe(8);
+  });
+
   it("dispatches run.cancelled through the live/replay handler map", () => {
     const onRunCancelled = vi.fn();
     const state = dispatchReplayEvents(
