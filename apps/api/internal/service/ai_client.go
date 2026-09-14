@@ -158,7 +158,11 @@ func (c *AIClient) StartConsultationTurn(
 	threadID string,
 	req StartConsultationTurnRequest,
 ) (<-chan dto.StreamEvent, error) {
-	return c.streamNDJSON(ctx, "/runtime/threads/"+threadID+"/turns", req)
+	body, err := marshalStartTurnCommand(threadID, req)
+	if err != nil {
+		return nil, err
+	}
+	return c.streamNDJSON(ctx, "/runtime/threads/"+threadID+"/turns", body)
 }
 
 func (c *AIClient) ResumeConsultationInterrupt(
@@ -167,22 +171,22 @@ func (c *AIClient) ResumeConsultationInterrupt(
 	interruptID string,
 	req ResumeConsultationInterruptRequest,
 ) (<-chan dto.StreamEvent, error) {
+	body, err := marshalResumeInterruptCommand(threadID, interruptID, req)
+	if err != nil {
+		return nil, err
+	}
 	return c.streamNDJSON(
 		ctx,
 		"/runtime/threads/"+threadID+"/interrupts/"+interruptID+"/resume",
-		req,
+		body,
 	)
 }
 
 func (c *AIClient) streamNDJSON(
 	ctx context.Context,
 	path string,
-	req any,
+	body []byte,
 ) (<-chan dto.StreamEvent, error) {
-	body, err := json.Marshal(req)
-	if err != nil {
-		return nil, fmt.Errorf("marshal request: %w", err)
-	}
 
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.baseURL+path, bytes.NewReader(body))
 	if err != nil {

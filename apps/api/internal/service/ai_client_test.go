@@ -11,11 +11,39 @@ import (
 	"github.com/bodysense/api/internal/dto"
 )
 
+const (
+	testRuntimeThreadID       = "11111111-1111-4111-8111-111111111111"
+	testRuntimeRunID          = "22222222-2222-4222-8222-222222222222"
+	testRuntimeConversationID = "33333333-3333-4333-8333-333333333333"
+	testRuntimeUserID         = "44444444-4444-4444-8444-444444444444"
+	testRuntimeInterruptID    = "55555555-5555-4555-8555-555555555555"
+)
+
+func validStartConsultationTurnRequest() StartConsultationTurnRequest {
+	return StartConsultationTurnRequest{
+		RunID:           testRuntimeRunID,
+		ConversationID:  testRuntimeConversationID,
+		UserID:          testRuntimeUserID,
+		ConfigurationID: defaultConsultationConfigurationID,
+		Input: ConsultationUserInput{
+			Type: "user_message",
+			Text: "hello",
+		},
+		BusinessContext: ConsultationBusinessContext{
+			Profile: json.RawMessage(`{}`),
+			RuntimeState: ConsultationRuntimeState{
+				Phase:         "collecting",
+				ExtractedInfo: json.RawMessage(`[]`),
+			},
+		},
+	}
+}
+
 func TestChatStreamSendsFlatPythonRequestAndParsesStreamEvent(t *testing.T) {
 	var captured map[string]any
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/runtime/threads/thread-1/turns" {
+		if r.URL.Path != "/runtime/threads/"+testRuntimeThreadID+"/turns" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		if err := json.NewDecoder(r.Body).Decode(&captured); err != nil {
@@ -33,11 +61,11 @@ func TestChatStreamSendsFlatPythonRequestAndParsesStreamEvent(t *testing.T) {
 
 	events, err := client.StartConsultationTurn(
 		context.Background(),
-		"thread-1",
+		testRuntimeThreadID,
 		StartConsultationTurnRequest{
-			RunID:           "run-1",
-			ConversationID:  "conv-1",
-			UserID:          "u1",
+			RunID:           testRuntimeRunID,
+			ConversationID:  testRuntimeConversationID,
+			UserID:          testRuntimeUserID,
 			ConfigurationID: defaultConsultationConfigurationID,
 			Input: ConsultationUserInput{
 				Type: "user_message",
@@ -74,7 +102,7 @@ func TestChatStreamSendsFlatPythonRequestAndParsesStreamEvent(t *testing.T) {
 		t.Fatal("timed out waiting for stream event")
 	}
 
-	for _, key := range []string{"run_id", "conversation_id", "user_id", "configuration_id", "input", "business_context"} {
+	for _, key := range []string{"thread_id", "run_id", "conversation_id", "user_id", "configuration_id", "input", "business_context"} {
 		if _, ok := captured[key]; !ok {
 			t.Fatalf("missing top-level key %q in request: %#v", key, captured)
 		}
@@ -86,6 +114,60 @@ func TestChatStreamSendsFlatPythonRequestAndParsesStreamEvent(t *testing.T) {
 	spatialContext, ok := businessContext["spatial_context"].(map[string]any)
 	if !ok || spatialContext["body_region_id"] != "shoulder.right" || spatialContext["anatomy_id"] != "appendicular-skeleton-clavicle-right" {
 		t.Fatalf("unexpected spatial_context payload: %#v", businessContext["spatial_context"])
+	}
+}
+
+func TestConsultationStartRejectsInvalidProtoCommandBeforeHTTP(t *testing.T) {
+	called := false
+	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		called = true
+	}))
+	defer server.Close()
+	client := &AIClient{httpClient: server.Client(), baseURL: server.URL}
+
+	_, err := client.StartConsultationTurn(context.Background(), "not-a-uuid", validStartConsultationTurnRequest())
+	if err == nil {
+		t.Fatal("expected invalid runtime command to fail before HTTP")
+	}
+	if called {
+		t.Fatal("invalid runtime command reached AI HTTP boundary")
+	}
+}
+
+func TestConsultationResumeSendsValidatedThreadAndInterruptIdentity(t *testing.T) {
+	var captured map[string]any
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		wantPath := "/runtime/threads/" + testRuntimeThreadID + "/interrupts/" + testRuntimeInterruptID + "/resume"
+		if r.URL.Path != wantPath {
+			t.Fatalf("path = %q, want %q", r.URL.Path, wantPath)
+		}
+		if err := json.NewDecoder(r.Body).Decode(&captured); err != nil {
+			t.Fatal(err)
+		}
+		w.Header().Set("Content-Type", "application/x-ndjson")
+		_, _ = w.Write([]byte(`{"version":1,"seq":1,"channel":"stream","type":"stream.done","ids":{"conversation_id":"` + testRuntimeConversationID + `","run_id":"` + testRuntimeRunID + `"},"payload":{}}` + "\n"))
+	}))
+	defer server.Close()
+	client := &AIClient{httpClient: server.Client(), baseURL: server.URL}
+
+	req := ResumeConsultationInterruptRequest{
+		RunID:           testRuntimeRunID,
+		ConversationID:  testRuntimeConversationID,
+		UserID:          testRuntimeUserID,
+		ConfigurationID: defaultConsultationConfigurationID,
+		InterruptID:     testRuntimeInterruptID,
+		Answer:          json.RawMessage(`{"value":"yes"}`),
+		BusinessContext: validStartConsultationTurnRequest().BusinessContext,
+	}
+	events, err := client.ResumeConsultationInterrupt(context.Background(), testRuntimeThreadID, testRuntimeInterruptID, req)
+	if err != nil {
+		t.Fatalf("ResumeConsultationInterrupt: %v", err)
+	}
+	if event := <-events; event.Type != "stream.done" {
+		t.Fatalf("event type = %q, want stream.done", event.Type)
+	}
+	if captured["thread_id"] != testRuntimeThreadID || captured["interrupt_id"] != testRuntimeInterruptID {
+		t.Fatalf("runtime command lost path identities: %#v", captured)
 	}
 }
 
@@ -156,7 +238,7 @@ func TestConsultationStreamConvertsMalformedNDJSONToProtocolError(t *testing.T) 
 	}))
 	defer server.Close()
 	client := &AIClient{httpClient: server.Client(), baseURL: server.URL}
-	events, err := client.StartConsultationTurn(context.Background(), "thread-1", StartConsultationTurnRequest{})
+	events, err := client.StartConsultationTurn(context.Background(), testRuntimeThreadID, validStartConsultationTurnRequest())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,7 +261,7 @@ func TestConsultationStreamRejectsUnknownInternalEventType(t *testing.T) {
 	}))
 	defer server.Close()
 	client := &AIClient{httpClient: server.Client(), baseURL: server.URL}
-	events, err := client.StartConsultationTurn(context.Background(), "thread-1", StartConsultationTurnRequest{})
+	events, err := client.StartConsultationTurn(context.Background(), testRuntimeThreadID, validStartConsultationTurnRequest())
 	if err != nil {
 		t.Fatal(err)
 	}

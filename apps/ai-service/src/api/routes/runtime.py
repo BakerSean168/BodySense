@@ -18,7 +18,7 @@ import logging
 import os
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -26,6 +26,11 @@ from ...runtime.consultation_thread import (
     get_consultation_manifest,
     resume_thread_interrupt,
     stream_thread_turn,
+)
+from ..runtime_proto_adapter import (
+    RuntimeCommandError,
+    parse_resume_interrupt_command,
+    parse_start_turn_command,
 )
 
 logger = logging.getLogger(__name__)
@@ -137,7 +142,12 @@ class ResumeInterruptRequest(BaseModel):
 
 
 @router.post("/threads/{thread_id}/turns")
-async def start_turn(thread_id: str, request: StartTurnRequest):
+async def start_turn(thread_id: str, payload: dict[str, Any]):
+    try:
+        request = StartTurnRequest.model_validate(parse_start_turn_command(thread_id, payload))
+    except RuntimeCommandError as exc:
+        logger.warning("Rejected invalid start-turn runtime command: %s", exc)
+        raise HTTPException(status_code=422, detail="invalid private runtime command") from exc
     if _e2e_stub_enabled():
 
         async def e2e_generator():
@@ -282,7 +292,14 @@ async def start_turn(thread_id: str, request: StartTurnRequest):
 
 
 @router.post("/threads/{thread_id}/interrupts/{interrupt_id}/resume")
-async def resume_interrupt(thread_id: str, interrupt_id: str, request: ResumeInterruptRequest):
+async def resume_interrupt(thread_id: str, interrupt_id: str, payload: dict[str, Any]):
+    try:
+        request = ResumeInterruptRequest.model_validate(
+            parse_resume_interrupt_command(thread_id, interrupt_id, payload)
+        )
+    except RuntimeCommandError as exc:
+        logger.warning("Rejected invalid resume runtime command: %s", exc)
+        raise HTTPException(status_code=422, detail="invalid private runtime command") from exc
     async def ndjson_generator():
         try:
             async for event in resume_thread_interrupt(

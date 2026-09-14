@@ -82,17 +82,32 @@ The fixture corpus covers start, resume, every oneof variant and invalid configu
 - Go runtime Proto corpus — PASS
 - Python runtime Proto corpus — 9/9 PASS
 
+## RUNTIME-002 — Control-command serving cutover
+
+Status: **COMPLETE**
+
+The start-turn and resume-control paths now use generated Proto as the serving authority while preserving HTTP transport and handwritten application inputs:
+
+- Go maps the existing `StartConsultationTurnRequest` / `ResumeConsultationInterruptRequest` into generated commands, validates them with Protovalidate, and only then emits Proto JSON over HTTP.
+- `thread_id` and `interrupt_id` are present in the validated command as well as the route. Python rejects any path/body identity mismatch before LangGraph execution.
+- Python parses the incoming object into generated Proto, runs Protovalidate, then immediately projects it back into the existing Pydantic/runtime input. Generated messages never enter LangGraph state.
+- Invalid UUID/configuration/input commands fail before the AI HTTP boundary; route mismatch tests fail closed with 422.
+
+Focused evidence:
+
+- Go AI-client/runtime Proto tests — PASS
+- Python Proto/adapter/route tests — 15/15 PASS
+- focused Ruff — PASS
+
 ## Serving cutover status
 
-**Not started in RUNTIME-001.** The current Go AI client still sends handwritten JSON request structs and decodes the legacy `{channel,type,payload}` NDJSON envelope; Python still exposes Pydantic request models and its generic `StreamEvent` model.
+Control commands are Proto-authoritative. Internal event streaming is **not yet cut over**: Python still emits its generic internal `StreamEvent` as `{channel,type,payload}` NDJSON and Go still decodes it through handwritten channel/type validation before the Consultation application layer.
 
-The next checkpoint must introduce handwritten boundary adapters around generated Proto messages before deleting any legacy serving code. No generated type may leak into `internal/consultation` application state or LangGraph state.
+## Next — RUNTIME-003
 
-## Next — RUNTIME-002
-
-1. Build Go application↔Proto command adapters and validate before HTTP send.
-2. Build Python Proto↔runtime adapters and validate before LangGraph execution.
-3. Emit Proto JSON mapping over the existing NDJSON framing.
-4. Decode + validate Proto JSON in Go before application handling.
-5. Preserve exact `thread_id + configuration_id` resume semantics.
-6. Characterize disconnect/cancel behavior before and after cutover.
+1. Map Python runtime events to generated `RuntimeEvent` oneof at the HTTP boundary.
+2. Validate every generated event and emit Proto JSON mapping over the existing NDJSON framing.
+3. Decode + validate Proto JSON in Go before application handling.
+4. Map generated event variants into a handwritten internal application event type; generated classes must stop at the AI-client adapter.
+5. Delete the legacy channel/type allowlist and payload-shape validator once parity tests prove the cutover.
+6. Re-run disconnect/cancel/recovery characterization unchanged.
