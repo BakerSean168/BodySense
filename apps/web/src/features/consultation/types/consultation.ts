@@ -19,6 +19,9 @@ import type {
   InteractionAnsweredEvent,
   InteractionExpiredEvent,
   StreamEvent,
+  ExtractedInfo as StreamExtractedInfo,
+  Citation as StreamCitation,
+  RedFlag as StreamRedFlag,
 } from "@bodysense/contracts";
 
 export type {
@@ -148,16 +151,7 @@ export interface ConsultationThread extends ConsultationSession {
 export type ConsultationPhase =
   "collecting" | "ready_for_analysis" | "analysis_ready";
 
-export interface ExtractedInfo {
-  body_part: string;
-  symptom_type?: string;
-  duration?: string;
-  trigger?: string;
-  relief?: string;
-  severity?: string;
-  additional_notes?: string;
-  confirmed?: boolean;
-}
+export type ExtractedInfo = StreamExtractedInfo;
 
 export interface BodyStateFact {
   id: string;
@@ -310,17 +304,7 @@ export interface DiagnosisAnalysis {
   created_at?: string;
 }
 
-export interface Citation {
-  title: string;
-  summary?: string;
-  content?: string;
-  category?: string;
-  snippet?: string;
-  body_markdown?: string;
-  source_title?: string;
-  source_author?: string;
-  problem_slug?: string;
-}
+export type Citation = StreamCitation;
 
 export interface ConversationShare {
   shareToken: string;
@@ -424,14 +408,6 @@ export interface ConversationListResponse {
   has_more: boolean;
 }
 
-export interface RedFlag {
-  category: string;
-  message: string;
-  matched_text: string;
-  source: string;
-}
+export type RedFlag = StreamRedFlag;
 
-export interface RedFlagEvent {
-  has_red_flags: boolean;
-  flags: RedFlag[];
-}
+export type RedFlagEvent = RedFlagDetectedEvent["payload"];

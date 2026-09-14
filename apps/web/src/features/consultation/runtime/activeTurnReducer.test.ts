@@ -3,6 +3,7 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { parseStreamEvent } from "@bodysense/contracts";
 import {
   reduceActiveTurnEvent,
   resetActiveTurnState,
@@ -17,26 +18,147 @@ import type { StreamEvent } from "../types/consultation";
 
 let _seq = 0;
 
-function makeEvent(
-  type: string,
+type EventOf<TType extends StreamEvent["type"]> = Extract<
+  StreamEvent,
+  { type: TType }
+>;
+
+function eventDefault<TType extends StreamEvent["type"]>(
+  type: TType,
+  channel: EventOf<TType>["channel"],
+  payload: EventOf<TType>["payload"],
+) {
+  return { type, channel, payload };
+}
+
+const TEST_EVENT_DEFAULTS = {
+  "conversation.created": eventDefault("conversation.created", "conversation", {
+    title: "",
+    title_status: "pending",
+    status: "active",
+    last_message_at: "2026-08-23T00:00:00Z",
+    created_at: "2026-08-23T00:00:00Z",
+  }),
+  "run.started": eventDefault("run.started", "run", {
+    status: "running",
+    source: "start_turn",
+  }),
+  "run.resumed": eventDefault("run.resumed", "run", {
+    status: "running",
+    interaction_id: "interaction-1",
+  }),
+  "run.interrupted": eventDefault("run.interrupted", "run", {
+    status: "waiting_user",
+    interaction_id: "interaction-1",
+  }),
+  "run.failed": eventDefault("run.failed", "run", {
+    status: "failed",
+    reason: "test_failure",
+  }),
+  "run.cancelled": eventDefault("run.cancelled", "run", {
+    status: "cancelled",
+    reason: "cancelled_by_user",
+  }),
+  "message.created": eventDefault("message.created", "message", {
+    role: "assistant",
+    status: "streaming",
+  }),
+  "message.text.delta": eventDefault("message.text.delta", "message", {
+    delta: "",
+  }),
+  "message.completed": eventDefault("message.completed", "message", {
+    status: "completed",
+    finish_reason: "stop",
+  }),
+  "message.failed": eventDefault("message.failed", "message", {
+    status: "failed",
+    error: { message: "generation failed" },
+  }),
+  "tool.call": eventDefault("tool.call", "tool", {
+    tool: "test_tool",
+    args: {},
+  }),
+  "tool.result": eventDefault("tool.result", "tool", {
+    tool: "test_tool",
+    result: {},
+  }),
+  "state.interaction.required": eventDefault(
+    "state.interaction.required",
+    "state",
+    {
+      interaction_id: "interaction-1",
+      question: { question: "Test question?", answer_type: "text" },
+      created_at: "2026-08-23T00:00:00Z",
+    },
+  ),
+  "state.interaction.answered": eventDefault(
+    "state.interaction.answered",
+    "state",
+    {
+      interaction_id: "interaction-1",
+      answer: { text: "test" },
+    },
+  ),
+  "state.interaction.expired": eventDefault(
+    "state.interaction.expired",
+    "state",
+    {
+      interaction_id: "interaction-1",
+      expired_at: "2026-08-23T00:05:00Z",
+      reason: "ttl_elapsed",
+    },
+  ),
+  "state.phase.changed": eventDefault("state.phase.changed", "state", {
+    to: "collecting",
+    reason: "test",
+  }),
+  "source.citation.added": eventDefault("source.citation.added", "source", {
+    citation: { title: "Test source" },
+  }),
+  "source.knowledge_gap": eventDefault("source.knowledge_gap", "source", {
+    query: "test query",
+    message: "test gap",
+  }),
+  "safety.red_flag.detected": eventDefault(
+    "safety.red_flag.detected",
+    "safety",
+    {
+      has_red_flags: false,
+      flags: [],
+    },
+  ),
+  "usage.reported": eventDefault("usage.reported", "usage", { usage: {} }),
+  "stream.done": eventDefault("stream.done", "stream", {}),
+  "stream.error": eventDefault("stream.error", "stream", {
+    message: "stream error",
+  }),
+};
+
+type TestEventType = keyof typeof TEST_EVENT_DEFAULTS;
+
+function makeEvent<TType extends TestEventType>(
+  type: TType,
   payload: Record<string, unknown> = {},
-  ids: Record<string, string> = {},
-  channel = "message",
+  ids: Partial<StreamEvent["ids"]> = {},
+  channel?: StreamEvent["channel"],
 ): StreamEvent {
-  return {
+  const defaults = TEST_EVENT_DEFAULTS[type];
+  return parseStreamEvent({
     version: 1,
     seq: ++_seq,
-    channel: channel as StreamEvent["channel"],
+    channel: channel ?? defaults.channel,
     type,
     ids: {
-      conversation_id: ids.conversation_id || "conv-1",
-      run_id: ids.run_id || "run-1",
-      turn_id: ids.turn_id || "turn-1",
-      message_id: ids.message_id || "msg-1",
-      tool_call_id: ids.tool_call_id || null,
+      conversation_id: ids.conversation_id ?? "conv-1",
+      run_id: ids.run_id ?? "run-1",
+      turn_id: ids.turn_id ?? "turn-1",
+      message_id: ids.message_id ?? "msg-1",
+      tool_call_id: ids.tool_call_id ?? null,
+      interaction_id: ids.interaction_id ?? null,
+      job_id: ids.job_id ?? null,
     },
-    payload,
-  } as StreamEvent;
+    payload: { ...defaults.payload, ...payload },
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -428,7 +550,11 @@ describe("ActiveTurnReducer", () => {
       };
 
       const { state } = reduceActiveTurnEvent(current, {
-        ...makeEvent("message.text.delta", { delta: "stale" }, { run_id: "run-1" }),
+        ...makeEvent(
+          "message.text.delta",
+          { delta: "stale" },
+          { run_id: "run-1" },
+        ),
         seq: 5,
       });
       expect(state).toBe(current);
@@ -443,7 +569,11 @@ describe("ActiveTurnReducer", () => {
       };
 
       const { state } = reduceActiveTurnEvent(current, {
-        ...makeEvent("message.text.delta", { delta: "fresh" }, { run_id: "run-1" }),
+        ...makeEvent(
+          "message.text.delta",
+          { delta: "fresh" },
+          { run_id: "run-1" },
+        ),
         seq: 15,
       });
       expect(state.text).toBe("fresh");
@@ -458,7 +588,12 @@ describe("ActiveTurnReducer", () => {
         lastSeq: 3,
       };
       const { state } = reduceActiveTurnEvent(current, {
-        ...makeEvent("source.citation.added", { citation: { title: "Guide" } }, { run_id: "run-1" }, "source"),
+        ...makeEvent(
+          "source.citation.added",
+          { citation: { title: "Guide" } },
+          { run_id: "run-1" },
+          "source",
+        ),
         seq: 1,
       });
       expect(state).toBe(current);
@@ -473,7 +608,12 @@ describe("ActiveTurnReducer", () => {
         lastSeq: 99,
       };
       const { state } = reduceActiveTurnEvent(current, {
-        ...makeEvent("run.resumed", { status: "running", interaction_id: "i" }, { run_id: "run-new" }, "run"),
+        ...makeEvent(
+          "run.resumed",
+          { status: "running", interaction_id: "i" },
+          { run_id: "run-new" },
+          "run",
+        ),
         seq: 1,
       });
       expect(state.runId).toBe("run-new");
@@ -510,7 +650,12 @@ describe("ActiveTurnReducer", () => {
     it("keeps execution_lost user copy when message.failed follows run.failed", () => {
       const started = reduceActiveTurnEvent(
         INITIAL_ACTIVE_TURN_STATE,
-        makeEvent("run.started", { status: "running" }, { run_id: "run-lost-message" }, "run"),
+        makeEvent(
+          "run.started",
+          { status: "running" },
+          { run_id: "run-lost-message" },
+          "run",
+        ),
       ).state;
       const runFailed = reduceActiveTurnEvent(
         started,
@@ -600,6 +745,42 @@ describe("ActiveTurnReducer", () => {
       expect(resumed.pendingInteraction).toBeNull();
     });
   });
+  describe("state.interaction.expired", () => {
+    it("marks the matching pending interaction expired and unlocks the composer", () => {
+      const current: ActiveTurnState = {
+        ...INITIAL_ACTIVE_TURN_STATE,
+        status: "interrupted",
+        pendingInteraction: {
+          id: "int-1",
+          run_id: "run-1",
+          conversation_id: "conv-1",
+          tool_call_id: "tc-1",
+          tool_name: "ask_user",
+          question: { question: "Age?", answer_type: "number", required: true },
+          status: "pending",
+          created_at: "2026-08-23T00:00:00Z",
+        },
+      };
+
+      const { state } = reduceActiveTurnEvent(
+        current,
+        makeEvent(
+          "state.interaction.expired",
+          {
+            interaction_id: "int-1",
+            expired_at: "2026-08-23T00:05:00Z",
+            reason: "ttl_elapsed",
+          },
+          { interaction_id: "int-1" },
+          "state",
+        ),
+      );
+
+      expect(state.pendingInteraction?.status).toBe("expired");
+      expect(state.status).toBe("failed");
+      expect(state.error).toBe("ttl_elapsed");
+    });
+  });
   describe("state.interaction.answered", () => {
     it("updates pendingInteraction status to answered", () => {
       const stateWithInteraction: ActiveTurnState = {
@@ -629,6 +810,32 @@ describe("ActiveTurnReducer", () => {
       expect(state.pendingInteraction?.status).toBe("answered");
       expect(effects).toHaveLength(1);
       expect(effects[0].type).toBe("interaction_answered");
+    });
+  });
+
+  describe("explicit no-op public events", () => {
+    it("advances the sequence watermark for validated events with no UI projection", () => {
+      const current: ActiveTurnState = {
+        ...INITIAL_ACTIVE_TURN_STATE,
+        runId: "run-1",
+        sequenceRunId: "run-1",
+        lastSeq: 10,
+      };
+      const event = {
+        ...makeEvent(
+          "usage.reported",
+          { usage: { input_tokens: 10 } },
+          { run_id: "run-1" },
+          "usage",
+        ),
+        seq: 11,
+      };
+
+      const { state, effects } = reduceActiveTurnEvent(current, event);
+
+      expect(state.lastSeq).toBe(11);
+      expect(state.sequenceRunId).toBe("run-1");
+      expect(effects).toEqual([]);
     });
   });
 
@@ -679,34 +886,64 @@ describe("ActiveTurnReducer", () => {
   });
 });
 
-
 describe("ActiveTurnReducer deterministic replay", () => {
   it("produces deep-equal state for identical public history", () => {
     const history = [
-      makeEvent("run.started", { status: "running", source: "start_turn" }, { run_id: "run-det" }, "run"),
-      makeEvent("message.created", { role: "assistant", status: "streaming" }, { run_id: "run-det", message_id: "m-det" }, "message"),
-      makeEvent("tool.call", { tool: "search_knowledge", args: { query: "hip" } }, { run_id: "run-det" }, "tool"),
-      makeEvent("state.interaction.required", {
-        interaction_id: "int-det",
-        created_at: "2026-08-23T00:00:00Z",
-        question: { question: "Where?", answer_type: "text" },
-      }, { run_id: "run-det" }, "state"),
+      makeEvent(
+        "run.started",
+        { status: "running", source: "start_turn" },
+        { run_id: "run-det" },
+        "run",
+      ),
+      makeEvent(
+        "message.created",
+        { role: "assistant", status: "streaming" },
+        { run_id: "run-det", message_id: "m-det" },
+        "message",
+      ),
+      makeEvent(
+        "tool.call",
+        { tool: "search_knowledge", args: { query: "hip" } },
+        { run_id: "run-det" },
+        "tool",
+      ),
+      makeEvent(
+        "state.interaction.required",
+        {
+          interaction_id: "int-det",
+          created_at: "2026-08-23T00:00:00Z",
+          question: { question: "Where?", answer_type: "text" },
+        },
+        { run_id: "run-det" },
+        "state",
+      ),
     ];
 
-    const replay = () => history.reduce(
-      (state, event) => reduceActiveTurnEvent(state, event).state,
-      resetActiveTurnState(),
-    );
+    const replay = () =>
+      history.reduce(
+        (state, event) => reduceActiveTurnEvent(state, event).state,
+        resetActiveTurnState(),
+      );
     expect(replay()).toEqual(replay());
   });
 
   it("resets sequence comparison when run identity changes", () => {
-    const run1 = makeEvent("run.started", { status: "running", source: "start_turn" }, { run_id: "run-a" }, "run");
+    const run1 = makeEvent(
+      "run.started",
+      { status: "running", source: "start_turn" },
+      { run_id: "run-a" },
+      "run",
+    );
     const first = reduceActiveTurnEvent(resetActiveTurnState(), run1).state;
     const run2: StreamEvent = {
-      ...makeEvent("run.resumed", { status: "running", interaction_id: "i" }, { run_id: "run-b" }, "run"),
+      ...makeEvent(
+        "run.resumed",
+        { status: "running", interaction_id: "i" },
+        { run_id: "run-b" },
+        "run",
+      ),
       seq: 1,
-    } as StreamEvent;
+    };
     const second = reduceActiveTurnEvent(first, run2).state;
     expect(second.runId).toBe("run-b");
     expect(second.sequenceRunId).toBe("run-b");
@@ -716,42 +953,51 @@ describe("ActiveTurnReducer deterministic replay", () => {
   it("keeps cancelled terminal state after stream.done", () => {
     const cancelled = reduceActiveTurnEvent(
       resetActiveTurnState(),
-      makeEvent("run.cancelled", { status: "cancelled", reason: "cancelled_by_user" }, { run_id: "run-c" }, "run"),
+      makeEvent(
+        "run.cancelled",
+        { status: "cancelled", reason: "cancelled_by_user" },
+        { run_id: "run-c" },
+        "run",
+      ),
     ).state;
-    const done = reduceActiveTurnEvent(cancelled, makeEvent("stream.done", {}, { run_id: "run-c" }, "stream")).state;
+    const done = reduceActiveTurnEvent(
+      cancelled,
+      makeEvent("stream.done", {}, { run_id: "run-c" }, "stream"),
+    ).state;
     expect(done.status).toBe("cancelled");
   });
   it("surfaces execution_lost as a recoverable failed state", () => {
     const started = reduceActiveTurnEvent(INITIAL_ACTIVE_TURN_STATE, {
-      version: 1,
+      ...makeEvent(
+        "run.started",
+        { status: "running", source: "start_turn" },
+        {
+          conversation_id: "conversation-1",
+          run_id: "run-lost",
+          turn_id: "turn-1",
+        },
+        "run",
+      ),
       seq: 1,
-      channel: "run",
-      type: "run.started",
-      ids: {
-        conversation_id: "conversation-1",
-        run_id: "run-lost",
-        turn_id: "turn-1",
-      },
-      payload: { status: "running" },
-    } as never).state;
+    }).state;
 
     const result = reduceActiveTurnEvent(started, {
-      version: 1,
+      ...makeEvent(
+        "run.failed",
+        { status: "failed", reason: "execution_lost" },
+        {
+          conversation_id: "conversation-1",
+          run_id: "run-lost",
+          turn_id: "turn-1",
+        },
+        "run",
+      ),
       seq: 2,
-      channel: "run",
-      type: "run.failed",
-      ids: {
-        conversation_id: "conversation-1",
-        run_id: "run-lost",
-        turn_id: "turn-1",
-      },
-      payload: { status: "failed", reason: "execution_lost" },
-    } as never);
+    });
 
     expect(result.state.status).toBe("failed");
     expect(result.state.runId).toBe("run-lost");
     expect(result.state.error).toContain("安全回收");
     expect(result.state.pendingInteraction).toBeNull();
   });
-
 });

@@ -365,6 +365,35 @@ describe("consultationApi", () => {
       expect(result.nextAfterSeq).toBe(3);
       expect(result.events[0]?.seq).toBe(3);
     });
+
+    it("rejects schema-invalid durable replay events through the shared StreamEvent boundary", async () => {
+      mockAuthFetch.mockResolvedValue(
+        mockResponse({
+          events: [
+            {
+              seq: 4,
+              channel: "message",
+              type: "message.text.delta",
+              ids: {
+                conversation_id: conversationWire.id,
+                run_id: "22222222-2222-4222-8222-222222222222",
+              },
+              payload: {},
+              created_at: "2026-09-13T12:00:00Z",
+            },
+          ],
+          hasMore: false,
+          nextAfterSeq: 4,
+        }),
+      );
+
+      await expect(
+        consultationApi.listRunEvents(
+          conversationWire.id,
+          "22222222-2222-4222-8222-222222222222",
+        ),
+      ).rejects.toThrow("canonical v1 schema");
+    });
   });
 
   // ===== Consultation Domain API =====

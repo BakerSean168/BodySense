@@ -117,16 +117,19 @@
                   "type": "string"
                 },
                 "title_status": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 },
                 "status": {
                   "const": "active"
                 },
                 "last_message_at": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 },
                 "created_at": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }
@@ -186,7 +189,8 @@
                   "const": "running"
                 },
                 "interaction_id": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }
@@ -216,7 +220,8 @@
                   "const": "waiting_user"
                 },
                 "interaction_id": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }
@@ -243,7 +248,8 @@
               "properties": {
                 "status": {
                   "const": "completed"
-                }
+                },
+                "usage": {}
               }
             }
           },
@@ -264,25 +270,43 @@
             "payload": {
               "type": "object",
               "required": [
-                "status",
-                "error"
+                "status"
               ],
               "properties": {
                 "status": {
                   "const": "failed"
                 },
                 "error": {
-                  "type": "object",
-                  "required": [
-                    "message"
-                  ],
-                  "properties": {
-                    "message": {
-                      "type": "string"
-                    }
-                  }
+                  "$ref": "#/$defs/StreamFailureError"
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
                 }
-              }
+              },
+              "anyOf": [
+                {
+                  "properties": {
+                    "reason": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "reason"
+                  ]
+                },
+                {
+                  "properties": {
+                    "error": {
+                      "$ref": "#/$defs/StreamFailureError"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              ]
             }
           },
           "required": [
@@ -310,7 +334,8 @@
                   "const": "cancelled"
                 },
                 "reason": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }
@@ -337,10 +362,12 @@
               ],
               "properties": {
                 "client_message_id": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 },
                 "role": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }
@@ -367,10 +394,12 @@
               ],
               "properties": {
                 "role": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 },
                 "status": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }
@@ -426,8 +455,10 @@
                   "const": "completed"
                 },
                 "finish_reason": {
-                  "type": "string"
-                }
+                  "type": "string",
+                  "minLength": 1
+                },
+                "usage": {}
               }
             }
           },
@@ -456,15 +487,7 @@
                   "const": "failed"
                 },
                 "error": {
-                  "type": "object",
-                  "required": [
-                    "message"
-                  ],
-                  "properties": {
-                    "message": {
-                      "type": "string"
-                    }
-                  }
+                  "$ref": "#/$defs/StreamFailureError"
                 }
               }
             }
@@ -491,8 +514,10 @@
               ],
               "properties": {
                 "tool": {
-                  "type": "string"
-                }
+                  "type": "string",
+                  "minLength": 1
+                },
+                "args": {}
               }
             }
           },
@@ -518,8 +543,10 @@
               ],
               "properties": {
                 "tool": {
-                  "type": "string"
-                }
+                  "type": "string",
+                  "minLength": 1
+                },
+                "result": {}
               }
             }
           },
@@ -542,7 +569,37 @@
               "required": [
                 "info"
               ],
-              "properties": {}
+              "properties": {
+                "info": {
+                  "$ref": "#/$defs/ExtractedInfo"
+                }
+              }
+            }
+          },
+          "required": [
+            "type",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "state.lifestyle_context.upsert"
+            },
+            "channel": {
+              "const": "state"
+            },
+            "payload": {
+              "type": "object",
+              "required": [
+                "context"
+              ],
+              "properties": {
+                "context": {
+                  "$ref": "#/$defs/LifestyleContext"
+                }
+              }
             }
           },
           "required": [
@@ -567,9 +624,14 @@
               ],
               "properties": {
                 "to": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 },
                 "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "from": {
                   "type": "string"
                 }
               }
@@ -598,21 +660,15 @@
               ],
               "properties": {
                 "interaction_id": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 },
                 "question": {
-                  "type": "object",
-                  "required": [
-                    "question"
-                  ],
-                  "properties": {
-                    "question": {
-                      "type": "string"
-                    }
-                  }
+                  "$ref": "#/$defs/InteractionQuestion"
                 },
                 "created_at": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }
@@ -639,8 +695,10 @@
               ],
               "properties": {
                 "interaction_id": {
-                  "type": "string"
-                }
+                  "type": "string",
+                  "minLength": 1
+                },
+                "answer": {}
               }
             }
           },
@@ -666,9 +724,14 @@
               ],
               "properties": {
                 "interaction_id": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 },
                 "expired_at": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "reason": {
                   "type": "string"
                 }
               }
@@ -693,7 +756,11 @@
               "required": [
                 "citation"
               ],
-              "properties": {}
+              "properties": {
+                "citation": {
+                  "$ref": "#/$defs/Citation"
+                }
+              }
             }
           },
           "required": [
@@ -717,7 +784,7 @@
               ],
               "properties": {
                 "attribution": {
-                  "type": "object"
+                  "$ref": "#/$defs/ConsultationAnswerAttribution"
                 }
               }
             }
@@ -744,10 +811,12 @@
               ],
               "properties": {
                 "query": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 },
                 "message": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }
@@ -777,7 +846,10 @@
                   "type": "boolean"
                 },
                 "flags": {
-                  "type": "array"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/RedFlag"
+                  }
                 }
               }
             }
@@ -804,10 +876,25 @@
               ],
               "properties": {
                 "kind": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 },
                 "verdict": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "accepted",
+                    "degraded",
+                    "rejected"
+                  ]
+                },
+                "reasons": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "issues": {
+                  "type": "array"
                 }
               }
             }
@@ -834,10 +921,20 @@
               ],
               "properties": {
                 "kind": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 },
                 "verdict": {
                   "const": "rejected"
+                },
+                "reasons": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "safety_fallback": {
+                  "type": "string"
                 }
               }
             }
@@ -861,7 +958,9 @@
               "required": [
                 "usage"
               ],
-              "properties": {}
+              "properties": {
+                "usage": {}
+              }
             }
           },
           "required": [
@@ -885,7 +984,8 @@
               ],
               "properties": {
                 "title": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }
@@ -932,7 +1032,8 @@
               ],
               "properties": {
                 "message": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }
@@ -958,6 +1059,10 @@
               ],
               "properties": {
                 "job_type": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
                   "type": "string"
                 }
               }
@@ -980,7 +1085,17 @@
             "payload": {
               "type": "object",
               "required": [],
-              "properties": {}
+              "properties": {
+                "progress": {},
+                "stage": {
+                  "type": "string"
+                },
+                "percent": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
             }
           },
           "required": [
@@ -1000,7 +1115,9 @@
             "payload": {
               "type": "object",
               "required": [],
-              "properties": {}
+              "properties": {
+                "result": {}
+              }
             }
           },
           "required": [
@@ -1022,7 +1139,9 @@
               "required": [
                 "error"
               ],
-              "properties": {}
+              "properties": {
+                "error": {}
+              }
             }
           },
           "required": [
@@ -1033,5 +1152,497 @@
         }
       ]
     }
-  ]
+  ],
+  "$defs": {
+    "StreamFailureError": {
+      "type": "object",
+      "required": [
+        "message"
+      ],
+      "properties": {
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "LifestyleContext": {
+      "type": "object",
+      "required": [
+        "section",
+        "summary",
+        "details"
+      ],
+      "properties": {
+        "section": {
+          "type": "string",
+          "enum": [
+            "activity",
+            "sleep",
+            "exercise",
+            "nutrition",
+            "substances",
+            "recovery"
+          ]
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "details": {
+          "type": "object"
+        }
+      }
+    },
+    "ExtractedInfo": {
+      "type": "object",
+      "required": [
+        "body_part"
+      ],
+      "properties": {
+        "body_part": {
+          "type": "string",
+          "minLength": 1
+        },
+        "symptom_type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "severity": {
+          "type": "string"
+        },
+        "duration": {
+          "type": "string"
+        },
+        "trigger": {
+          "type": "string"
+        },
+        "relief": {
+          "type": "string"
+        },
+        "radiation": {
+          "type": "string"
+        },
+        "functional_impact": {
+          "type": "string"
+        },
+        "neurological_signs": {
+          "type": "string"
+        },
+        "onset": {
+          "type": "string"
+        },
+        "additional_notes": {
+          "type": "string"
+        },
+        "capture_id": {
+          "type": "string"
+        },
+        "confirmed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "InteractionQuestionField": {
+      "type": "object",
+      "required": [
+        "key",
+        "label"
+      ],
+      "properties": {
+        "key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "answer_type": {
+          "type": "string",
+          "enum": [
+            "text",
+            "single_choice",
+            "multi_choice",
+            "number",
+            "date",
+            "scale",
+            "select"
+          ]
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "required": {
+          "type": "boolean"
+        }
+      }
+    },
+    "InteractionStateBinding": {
+      "type": "object",
+      "required": [
+        "revision",
+        "capture_id",
+        "seed_info",
+        "field_map"
+      ],
+      "properties": {
+        "revision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "capture_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "seed_info": {
+          "type": "object"
+        },
+        "field_map": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "InteractionQuestion": {
+      "type": "object",
+      "required": [
+        "question"
+      ],
+      "properties": {
+        "question": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string"
+        },
+        "answer_type": {
+          "type": "string",
+          "enum": [
+            "text",
+            "single_choice",
+            "multi_choice",
+            "number",
+            "date",
+            "scale",
+            "select"
+          ]
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "context": {
+          "type": "string"
+        },
+        "allow_custom_input": {
+          "type": "boolean"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "fields": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "$ref": "#/$defs/InteractionQuestionField"
+          }
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "state_binding": {
+          "$ref": "#/$defs/InteractionStateBinding"
+        }
+      }
+    },
+    "Citation": {
+      "type": "object",
+      "required": [
+        "title"
+      ],
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "snippet": {
+          "type": "string"
+        },
+        "body_markdown": {
+          "type": "string"
+        },
+        "source_title": {
+          "type": "string"
+        },
+        "source_author": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "problem_slug": {
+          "type": "string"
+        },
+        "unit_type": {
+          "type": "string"
+        },
+        "unit_key": {
+          "type": "string"
+        },
+        "source_key": {
+          "type": "string"
+        },
+        "source_type": {
+          "type": "string"
+        },
+        "lifecycle_status": {
+          "type": "string"
+        },
+        "review_status": {
+          "type": "string"
+        },
+        "publication_id": {
+          "type": "string"
+        },
+        "publication_key": {
+          "type": "string"
+        },
+        "publication_batch_key": {
+          "type": "string"
+        },
+        "quality_score": {
+          "type": "number"
+        },
+        "published_version": {
+          "type": "integer"
+        },
+        "source_locator": {
+          "type": "object"
+        },
+        "claim_id": {
+          "type": "string"
+        },
+        "claim_kind": {
+          "type": "string"
+        },
+        "claim_review_id": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "clips": {
+          "type": "array"
+        }
+      }
+    },
+    "AnswerAttributionSourceLocator": {
+      "type": "object",
+      "required": [
+        "locator_type",
+        "repository",
+        "git_commit",
+        "path",
+        "line_start",
+        "line_end"
+      ],
+      "properties": {
+        "locator_type": {
+          "const": "markdown_lines"
+        },
+        "repository": {
+          "type": "string",
+          "minLength": 1
+        },
+        "git_commit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "line_start": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "line_end": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "AnswerAttributionBinding": {
+      "type": "object",
+      "required": [
+        "evidence_ref",
+        "publication_id",
+        "publication_key",
+        "publication_batch_key",
+        "published_version",
+        "unit_key",
+        "claim_id",
+        "claim_review_id",
+        "source_locator"
+      ],
+      "properties": {
+        "evidence_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "publication_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "publication_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "publication_batch_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "published_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "unit_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "claim_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "claim_review_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "claim_kind": {
+          "type": "string"
+        },
+        "grounding_status": {
+          "type": "string",
+          "enum": [
+            "supported",
+            "degraded",
+            "rejected"
+          ]
+        },
+        "reason_codes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "source_locator": {
+          "$ref": "#/$defs/AnswerAttributionSourceLocator"
+        }
+      }
+    },
+    "ConsultationAnswerAttribution": {
+      "type": "object",
+      "required": [
+        "attribution_id",
+        "policy_revision",
+        "claim_text",
+        "evidence_refs",
+        "grounding_status",
+        "reason_codes",
+        "bindings"
+      ],
+      "properties": {
+        "attribution_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policy_revision": {
+          "const": "consultation-answer-attribution-v1"
+        },
+        "claim_text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "grounding_status": {
+          "type": "string",
+          "enum": [
+            "supported",
+            "degraded",
+            "rejected"
+          ]
+        },
+        "reason_codes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "bindings": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": {
+            "$ref": "#/$defs/AnswerAttributionBinding"
+          }
+        }
+      }
+    },
+    "RedFlag": {
+      "type": "object",
+      "required": [
+        "category",
+        "message"
+      ],
+      "properties": {
+        "category": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "matched_text": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        }
+      }
+    }
+  }
 }

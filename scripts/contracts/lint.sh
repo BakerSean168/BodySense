@@ -10,6 +10,7 @@ node scripts/contracts/check-toolchain.mjs
 pnpm exec redocly lint tools/contracts/foundation/openapi.yaml
 pnpm exec redocly lint packages/contracts/openapi/bodysense.v1.openapi.yaml
 node -e 'const fs=require("fs"); JSON.parse(fs.readFileSync("tools/contracts/foundation/schema.json","utf8"));'
+node scripts/contracts/check-stream-event-schema.mjs
 (
   cd tools/contracts/foundation/proto
   "$BIN/buf" lint

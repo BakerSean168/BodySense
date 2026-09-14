@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { parseStreamEvent } from "@bodysense/contracts";
 import {
   processSSELine,
   dispatchReplayEvents,
@@ -24,6 +25,28 @@ describe("processSSELine", () => {
         payload: { delta: "hello" },
       }),
     );
+  });
+
+  it("rejects schema-invalid live SSE before dispatch", () => {
+    const onTextDelta = vi.fn();
+    const onError = vi.fn();
+    const handlers: SSEHandlers = { onTextDelta, onError };
+    const state = { currentEvent: "", maxSeq: 0 };
+
+    processSSELine("event: message.text.delta", state, handlers);
+    processSSELine(
+      'data: {"version":1,"seq":1,"channel":"message","type":"message.text.delta","ids":{},"payload":{}}',
+      state,
+      handlers,
+    );
+
+    expect(onTextDelta).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError.mock.calls[0]?.[0]).toBeInstanceOf(Error);
+    expect((onError.mock.calls[0]?.[0] as Error).message).toContain(
+      "canonical v1 schema",
+    );
+    expect(state.maxSeq).toBe(0);
   });
 
   it("dispatches stream.done as a structured event", () => {
@@ -62,11 +85,37 @@ describe("seq tracking and replay", () => {
     expect(state.maxSeq).toBe(5);
   });
 
+  const replayEvent = (input: unknown) => parseStreamEvent(input);
+
+  it("dispatches interaction expiry through the live/replay handler map", () => {
+    const onInteractionExpired = vi.fn();
+    const state = dispatchReplayEvents(
+      [
+        replayEvent({
+          version: 1,
+          seq: 8,
+          channel: "state",
+          type: "state.interaction.expired",
+          ids: { interaction_id: "interaction-1" },
+          payload: {
+            interaction_id: "interaction-1",
+            expired_at: "2026-09-13T12:00:00Z",
+            reason: "ttl_elapsed",
+          },
+        }),
+      ],
+      { onInteractionExpired },
+    );
+
+    expect(onInteractionExpired).toHaveBeenCalledTimes(1);
+    expect(state.maxSeq).toBe(8);
+  });
+
   it("dispatches run.cancelled through the live/replay handler map", () => {
     const onRunCancelled = vi.fn();
     const state = dispatchReplayEvents(
       [
-        {
+        replayEvent({
           version: 1,
           seq: 9,
           channel: "run",
@@ -77,7 +126,7 @@ describe("seq tracking and replay", () => {
             turn_id: "turn-1",
           },
           payload: { status: "cancelled", reason: "cancelled_by_user" },
-        } as never,
+        }),
       ],
       { onRunCancelled },
     );
@@ -91,22 +140,22 @@ describe("seq tracking and replay", () => {
     const handlers: SSEHandlers = { onTextDelta };
     const state = dispatchReplayEvents(
       [
-        {
+        replayEvent({
           version: 1,
           seq: 3,
           channel: "message",
           type: "message.text.delta",
           ids: {},
           payload: { delta: "old" },
-        } as never,
-        {
+        }),
+        replayEvent({
           version: 1,
           seq: 4,
           channel: "message",
           type: "message.text.delta",
           ids: {},
           payload: { delta: "new" },
-        } as never,
+        }),
       ],
       handlers,
       { currentEvent: "", maxSeq: 3 },
