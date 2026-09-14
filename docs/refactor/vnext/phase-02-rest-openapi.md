@@ -1008,6 +1008,8 @@ git diff --check                            PASS
 
 Status: **COMPLETE**
 
+Canonical vNext integration: `ea343d7c5` (`refactor: merge vnext phase 02 OpenAPI authority`).
+
 Phase 02 closes with the canonical OpenAPI authority covering all **95 / 95** eligible browser-facing REST operations. `GET /api/health` remains the single intentional operational exclusion. The final implementation has four explicit generated security domains (auth-public, share-public, authenticated user, Knowledge operator), no missing migration routes and no duplicate generated registrations.
 
 The end-of-phase ownership review also closes the two application-model package debts discovered during migration: HealthWorkspace and the Lifestyle/BodyMetrics/InjuryHistory/Onboarding command/read-model families now live under `internal/service`, not `internal/dto`. Generated OpenAPI types remain confined to `internal/generated/openapi/v1` and `transport/httpapi`.
