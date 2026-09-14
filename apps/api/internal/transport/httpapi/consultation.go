@@ -237,7 +237,7 @@ func (s *PublicServer) GetConsultation(
 	}
 	wire := consultationSessionWire{
 		ConversationID:      session.ConversationID,
-		Phase:               session.Phase,
+		Phase:               string(session.Phase),
 		ExtractedInfo:       rawJSONArray(session.ExtractedInfo),
 		PendingInteractions: pending,
 		CreatedAt:           session.CreatedAt,
@@ -410,7 +410,7 @@ func (s *PublicServer) GetConsultationThread(
 			CreatedAt:     projection.ConversationCreatedAt,
 			UpdatedAt:     projection.ConversationUpdatedAt,
 		},
-		Phase:               projection.Phase,
+		Phase:               string(projection.Phase),
 		ExtractedInfo:       rawJSONArray(projection.ExtractedInfo),
 		BodyState:           bodyState,
 		PendingInteractions: rawJSONArray(projection.PendingInteractions),

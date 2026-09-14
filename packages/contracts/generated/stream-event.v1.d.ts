@@ -180,9 +180,9 @@ export type BodySenseStreamEventV1 = (
       type: "state.phase.changed";
       channel: "state";
       payload: {
-        to: string;
+        to: "collecting" | "ready_for_analysis";
         reason: string;
-        from?: string;
+        from?: "collecting" | "ready_for_analysis";
         [k: string]: unknown;
       };
       [k: string]: unknown;

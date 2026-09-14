@@ -59,17 +59,57 @@ func (r *fakeUploadRepository) Delete(_ context.Context, id, userID uuid.UUID) e
 	r.deleted = append(r.deleted, id)
 	return nil
 }
-func (*fakeUploadRepository) UpdateOCRResult(context.Context, uuid.UUID, uuid.UUID, string, json.RawMessage) error {
-	return nil
+func (r *fakeUploadRepository) BeginOCR(_ context.Context, id, userID uuid.UUID) (bool, error) {
+	upload := r.byID[id]
+	if upload == nil || upload.UserID != userID || upload.OCRStatus != model.UploadOCRPending {
+		return false, nil
+	}
+	upload.OCRStatus = model.UploadOCRProcessing
+	return true, nil
 }
-func (*fakeUploadRepository) UpdateOCRStatus(context.Context, uuid.UUID, uuid.UUID, string) error {
-	return nil
+func (r *fakeUploadRepository) CompleteOCR(_ context.Context, id, userID uuid.UUID, result json.RawMessage) (bool, error) {
+	upload := r.byID[id]
+	if upload == nil || upload.UserID != userID || upload.OCRStatus != model.UploadOCRProcessing {
+		return false, nil
+	}
+	upload.OCRStatus = model.UploadOCRCompleted
+	upload.OCRResult = result
+	return true, nil
 }
-func (*fakeUploadRepository) UpdateAnalysisStatus(context.Context, uuid.UUID, uuid.UUID, string) error {
-	return nil
+func (r *fakeUploadRepository) FailOCR(_ context.Context, id, userID uuid.UUID, result json.RawMessage) (bool, error) {
+	upload := r.byID[id]
+	if upload == nil || upload.UserID != userID || upload.OCRStatus.IsTerminal() {
+		return false, nil
+	}
+	upload.OCRStatus = model.UploadOCRFailed
+	upload.OCRResult = result
+	return true, nil
 }
-func (*fakeUploadRepository) UpdateAnalysisResult(context.Context, uuid.UUID, uuid.UUID, string, json.RawMessage) error {
-	return nil
+func (r *fakeUploadRepository) BeginAnalysis(_ context.Context, id, userID uuid.UUID) (bool, error) {
+	upload := r.byID[id]
+	if upload == nil || upload.UserID != userID || upload.AnalysisStatus != model.UploadAnalysisPending {
+		return false, nil
+	}
+	upload.AnalysisStatus = model.UploadAnalysisProcessing
+	return true, nil
+}
+func (r *fakeUploadRepository) CompleteAnalysis(_ context.Context, id, userID uuid.UUID, result json.RawMessage) (bool, error) {
+	upload := r.byID[id]
+	if upload == nil || upload.UserID != userID || upload.AnalysisStatus != model.UploadAnalysisProcessing {
+		return false, nil
+	}
+	upload.AnalysisStatus = model.UploadAnalysisCompleted
+	upload.AnalysisResult = result
+	return true, nil
+}
+func (r *fakeUploadRepository) FailAnalysis(_ context.Context, id, userID uuid.UUID, result json.RawMessage) (bool, error) {
+	upload := r.byID[id]
+	if upload == nil || upload.UserID != userID || upload.AnalysisStatus.IsTerminal() || upload.AnalysisStatus == model.UploadAnalysisNone {
+		return false, nil
+	}
+	upload.AnalysisStatus = model.UploadAnalysisFailed
+	upload.AnalysisResult = result
+	return true, nil
 }
 func (*fakeUploadRepository) UpdateAgentConfiguration(context.Context, uuid.UUID, string) error {
 	return nil

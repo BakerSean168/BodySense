@@ -224,11 +224,6 @@ func (s *DiagnosisApplicationService) analyzeFromBodyState(
 	}
 
 	payload := s.publicPayload(ctx, userID, analysis)
-	if analysis.Status == "completed" || analysis.Status == "partial" {
-		if err := s.consultations.UpdatePhase(ctx, conversationID, userID, "analysis_ready"); err != nil {
-			log.Printf("failed to update consultation analysis phase for consultation %s: %v", conversationID, err)
-		}
-	}
 	return payload, nil
 }
 

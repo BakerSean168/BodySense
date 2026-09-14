@@ -422,7 +422,7 @@
     },
     "payload": {
       "from": "collecting",
-      "to": "analysis_ready",
+      "to": "ready_for_analysis",
       "reason": "enough_info"
     }
   },

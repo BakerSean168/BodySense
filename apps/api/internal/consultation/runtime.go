@@ -446,7 +446,7 @@ func (r *Runtime) executeRunFlow(
 		Run:                     run,
 		AssistantMsg:            assistantMsg,
 		BaseIDs:                 baseIDs,
-		CurrentPhase:            session.Phase,
+		CurrentPhase:            string(session.Phase),
 		AssistantMsgID:          assistantMsg.ID.String(),
 		ConversationStr:         conversationID.String(),
 		ExpectedConfigurationID: r.deployment.ConsultationConfigurationID(),
@@ -771,7 +771,7 @@ func (r *Runtime) ResumeInteraction(
 		Run:                     run,
 		AssistantMsg:            assistantMsg,
 		BaseIDs:                 baseIDs,
-		CurrentPhase:            session.Phase,
+		CurrentPhase:            string(session.Phase),
 		AssistantMsgID:          assistantMsg.ID.String(),
 		ConversationStr:         conversationID.String(),
 		ExpectedConfigurationID: pinnedConfigurationID,
@@ -915,7 +915,7 @@ func (r *Runtime) buildBusinessContext(
 		Profile:        profileJSON,
 		SpatialContext: spatialContext,
 		RuntimeState: service.ConsultationRuntimeState{
-			Phase:         session.Phase,
+			Phase:         string(session.Phase),
 			ExtractedInfo: json.RawMessage(session.ExtractedInfo),
 		},
 	}
@@ -1278,15 +1278,24 @@ func (r *Runtime) handleAIEvent(
 		return r.handleInteractionRequired(ctx, sw, publicEvent, payload, state, result)
 
 	case service.ConsultationRuntimePhaseChangedPayload:
+		nextPhase, ok := model.ParseConsultationPhase(payload.To)
+		if !ok {
+			r.failActiveStream(ctx, sw, state, "runtime emitted unsupported consultation phase")
+			return true
+		}
 		if payload.From == "" {
 			payload.From = *phase
+		} else if _, ok := model.ParseConsultationPhase(payload.From); !ok {
+			r.failActiveStream(ctx, sw, state, "runtime emitted unsupported previous consultation phase")
+			return true
 		}
+		payload.To = string(nextPhase)
 		if patched, err := json.Marshal(payload); err == nil {
 			publicEvent.Payload = patched
 		}
 		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, "phase_change")
-		*phase = payload.To
-		if err := r.consultationService.UpdatePhase(ctx, state.ConversationID, state.UID, payload.To); err != nil {
+		*phase = string(nextPhase)
+		if err := r.consultationService.UpdatePhase(ctx, state.ConversationID, state.UID, nextPhase); err != nil {
 			log.Printf("failed to update phase for conversation %s: %v", state.ConversationID, err)
 		}
 

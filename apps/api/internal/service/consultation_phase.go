@@ -1,25 +1,13 @@
 package service
 
-// ConsultationPhaseRank orders the only phases owned by Consultation.
-// Diagnosis assessment, Treatment and longitudinal monitoring are separate
-// durable domains and must not be encoded as later consultation phases.
-var ConsultationPhaseRank = map[string]int{
-	"":                   -1,
-	"collecting":         0,
-	"ready_for_analysis": 1,
-	"analysis_ready":     2,
-}
+import "github.com/bodysense/api/internal/model"
 
-// ShouldAdvancePhase returns true when transitioning from current to next
-// is a valid forward (or same-rank) phase change.
-func ShouldAdvancePhase(current string, next string) bool {
-	currentRank, ok := ConsultationPhaseRank[current]
-	if !ok {
-		currentRank = 0
+// ShouldAdvancePhase enforces the complete Consultation state machine. The only
+// forward transition is collecting -> ready_for_analysis; repeating the current
+// phase is idempotent. Diagnosis/Treatment states are not Consultation phases.
+func ShouldAdvancePhase(current, next model.ConsultationPhase) bool {
+	if current == next {
+		return true
 	}
-	nextRank, ok := ConsultationPhaseRank[next]
-	if !ok {
-		return false
-	}
-	return nextRank >= currentRank
+	return current == model.ConsultationPhaseCollecting && next == model.ConsultationPhaseReadyForAnalysis
 }

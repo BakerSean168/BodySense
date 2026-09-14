@@ -65,7 +65,6 @@ function parseConsultationPhase(value: string): ConsultationPhase | null {
   switch (value) {
     case "collecting":
     case "ready_for_analysis":
-    case "analysis_ready":
       return value;
     default:
       return null;

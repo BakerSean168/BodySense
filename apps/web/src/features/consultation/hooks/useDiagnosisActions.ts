@@ -44,10 +44,6 @@ export function useDiagnosisActions({
               ? {
                   ...old,
                   diagnosis: result,
-                  phase:
-                    result.status === "completed" || result.status === "partial"
-                      ? "analysis_ready"
-                      : old.phase,
                 }
               : old,
         );

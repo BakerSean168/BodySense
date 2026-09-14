@@ -29,7 +29,7 @@ func (r *diagnosisApplicationConsultationRepo) ListByConversationIDs(context.Con
 	return nil, nil
 }
 func (r *diagnosisApplicationConsultationRepo) Delete(context.Context, uuid.UUID) error { return nil }
-func (r *diagnosisApplicationConsultationRepo) UpdatePhase(context.Context, uuid.UUID, string) error {
+func (r *diagnosisApplicationConsultationRepo) UpdatePhase(context.Context, uuid.UUID, model.ConsultationPhase) error {
 	return nil
 }
 func (r *diagnosisApplicationConsultationRepo) UpdateDiagnosis(context.Context, uuid.UUID, any) error {
@@ -112,7 +112,7 @@ func TestDiagnosisApplicationRequiresBodyStateDomainServices(t *testing.T) {
 	conversationID := uuid.New()
 	session := &model.ConsultationSession{
 		ConversationID: conversationID,
-		Phase:          "ready_for_analysis",
+		Phase:          model.ConsultationPhaseReadyForAnalysis,
 		ExtractedInfo:  datatypes.JSON(`[]`),
 	}
 	application := NewDiagnosisApplicationService(

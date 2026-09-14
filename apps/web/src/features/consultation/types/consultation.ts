@@ -154,8 +154,7 @@ export interface ConsultationThread extends ConsultationSession {
   tool_calls: ProjectedToolCall[];
 }
 
-export type ConsultationPhase =
-  "collecting" | "ready_for_analysis" | "analysis_ready";
+export type ConsultationPhase = "collecting" | "ready_for_analysis";
 
 export type ExtractedInfo = StreamExtractedInfo;
 

@@ -625,14 +625,15 @@
               "properties": {
                 "to": {
                   "type": "string",
-                  "minLength": 1
+                  "enum": ["collecting", "ready_for_analysis"]
                 },
                 "reason": {
                   "type": "string",
                   "minLength": 1
                 },
                 "from": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": ["collecting", "ready_for_analysis"]
                 }
               }
             }
