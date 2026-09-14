@@ -217,3 +217,31 @@ Consultation application HTTP errors now use the finite `ConsultationErrorCode` 
 - runtime protocol focused tests — PASS;
 - consultation/httpapi focused tests — PASS;
 - Consultation runtime raw error-code literals outside the constant declarations — **0**.
+
+## TRUST-006 — Typed Go private runtime payloads
+
+Status: **COMPLETE**
+
+The Phase 04 Proto boundary no longer collapses a validated `oneof` back into `Kind + json.RawMessage` for application code to reconstruct later.
+
+`ConsultationRuntimeEvent` now carries a closed handwritten payload interface whose concrete variants mirror the private runtime facts while remaining independent of generated Proto classes. The event kind is derived from the concrete payload variant rather than stored as a second string tag, so a `tool_call` kind cannot coexist with a `stream_done` payload.
+
+Proto scalar/list/optional fields become normal Go fields at the AI boundary. `google.protobuf.Struct` / `ListValue` data remains `json.RawMessage` only on the specific fields whose application contract is intentionally opaque JSON (tool args/results, extracted/lifestyle state, citation/attribution, interaction question, usage/governance, etc.). Thought Forest citation and answer-attribution semantics are still validated once before the event becomes trusted application input.
+
+The Consultation application consumes the typed payload directly:
+
+- no private `PayloadAs()` reparse remains;
+- Agent configuration uses its typed control-plane payload;
+- phase/text/tool/state/safety/done/error facts use concrete structs;
+- interaction handling receives the typed private question and only creates the public payload after replacing the LangGraph interrupt id with the durable Go interaction UUID;
+- public StreamEvent JSON is marshalled exactly once at the Go→Web projection boundary.
+
+A package-private marker prevents arbitrary external types — including the event envelope itself — from satisfying the private payload interface accidentally.
+
+### Evidence
+
+- Go `go test ./... -count=1` — PASS;
+- private runtime `PayloadAs()` usages — **0**;
+- generic `ConsultationRuntimeEvent.Payload json.RawMessage` — **0**;
+- Proto default/presence characterization remains covered: `has_red_flags=false` and empty flags survive, absent `stream.done` message fields remain absent;
+- Agent-configuration handshake remains private and HITL public identity replacement remains unchanged.

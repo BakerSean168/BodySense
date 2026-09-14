@@ -90,11 +90,12 @@ func TestChatStreamSendsProtoCommandAndParsesProtoRuntimeEvent(t *testing.T) {
 
 	select {
 	case event := <-events:
-		if event.Kind != ConsultationRuntimeTextDelta {
-			t.Fatalf("expected text_delta runtime event, got %s", event.Kind)
+		if event.Kind() != ConsultationRuntimeTextDelta {
+			t.Fatalf("expected text_delta runtime event, got %s", event.Kind())
 		}
-		if string(event.Payload) != `{"delta":"hello"}` {
-			t.Fatalf("unexpected payload: %s", event.Payload)
+		payload, ok := event.Payload.(ConsultationRuntimeTextDeltaPayload)
+		if !ok || payload.Delta != "hello" {
+			t.Fatalf("unexpected payload: %#v", event.Payload)
 		}
 	case <-time.After(time.Second):
 		t.Fatal("timed out waiting for stream event")
@@ -161,8 +162,8 @@ func TestConsultationResumeSendsValidatedThreadAndInterruptIdentity(t *testing.T
 	if err != nil {
 		t.Fatalf("ResumeConsultationInterrupt: %v", err)
 	}
-	if event := <-events; event.Kind != ConsultationRuntimeDone {
-		t.Fatalf("event kind = %q, want done", event.Kind)
+	if event := <-events; event.Kind() != ConsultationRuntimeDone {
+		t.Fatalf("event kind = %q, want done", event.Kind())
 	}
 	if captured["thread_id"] != testRuntimeThreadID || captured["interrupt_id"] != testRuntimeInterruptID {
 		t.Fatalf("runtime command lost path identities: %#v", captured)
@@ -241,14 +242,12 @@ func TestConsultationStreamConvertsMalformedNDJSONToProtocolError(t *testing.T) 
 		t.Fatal(err)
 	}
 	event := <-events
-	if event.Kind != ConsultationRuntimeError {
+	if event.Kind() != ConsultationRuntimeError {
 		t.Fatalf("expected private runtime protocol error, got %#v", event)
 	}
-	var payload struct {
-		Message string `json:"message"`
-	}
-	if err := event.PayloadAs(&payload); err != nil || payload.Message == "" {
-		t.Fatalf("expected sanitized protocol error payload, got %s (%v)", event.Payload, err)
+	payload, ok := event.Payload.(ConsultationRuntimeErrorPayload)
+	if !ok || payload.Message == "" {
+		t.Fatalf("expected sanitized protocol error payload, got %#v", event.Payload)
 	}
 }
 
@@ -264,7 +263,7 @@ func TestConsultationStreamRejectsUnknownInternalEventType(t *testing.T) {
 		t.Fatal(err)
 	}
 	event := <-events
-	if event.Kind != ConsultationRuntimeError {
+	if event.Kind() != ConsultationRuntimeError {
 		t.Fatalf("expected private runtime protocol error, got %#v", event)
 	}
 }
@@ -275,7 +274,27 @@ func applicationRuntimeEvent(t *testing.T, kind ConsultationRuntimeEventKind, pa
 	if err != nil {
 		t.Fatal(err)
 	}
-	return ConsultationRuntimeEvent{Kind: kind, Payload: raw}
+	switch kind {
+	case ConsultationRuntimeCitationAdded:
+		var value struct {
+			Citation json.RawMessage `json:"citation"`
+		}
+		if err := json.Unmarshal(raw, &value); err != nil {
+			t.Fatal(err)
+		}
+		return ConsultationRuntimeEvent{Payload: ConsultationRuntimeCitationAddedPayload{Citation: value.Citation}}
+	case ConsultationRuntimeAttributionAdded:
+		var value struct {
+			Attribution json.RawMessage `json:"attribution"`
+		}
+		if err := json.Unmarshal(raw, &value); err != nil {
+			t.Fatal(err)
+		}
+		return ConsultationRuntimeEvent{Payload: ConsultationRuntimeAttributionAddedPayload{Attribution: value.Attribution}}
+	default:
+		t.Fatalf("unsupported application runtime test kind %q", kind)
+		return ConsultationRuntimeEvent{}
+	}
 }
 
 func TestRuntimeProtoDecoderRejectsMalformedRedFlagType(t *testing.T) {
@@ -306,13 +325,13 @@ func TestRuntimeApplicationPayloadRequiresPublishedThoughtForestCitationIdentity
 		},
 	}
 	event := applicationRuntimeEvent(t, ConsultationRuntimeCitationAdded, map[string]any{"citation": validCitation})
-	if err := validateConsultationRuntimeApplicationPayload(event); err != nil {
+	if err := validateConsultationRuntimeApplicationPayload(event.Payload); err != nil {
 		t.Fatalf("valid published Thought Forest citation rejected: %v", err)
 	}
 
 	delete(validCitation, "publication_id")
 	invalid := applicationRuntimeEvent(t, ConsultationRuntimeCitationAdded, map[string]any{"citation": validCitation})
-	if err := validateConsultationRuntimeApplicationPayload(invalid); err == nil {
+	if err := validateConsultationRuntimeApplicationPayload(invalid.Payload); err == nil {
 		t.Fatal("published Thought Forest citation without publication identity must be rejected")
 	}
 }
@@ -322,7 +341,7 @@ func TestRuntimeApplicationPayloadAllowsNonThoughtForestCitation(t *testing.T) {
 		"title":       "Video citation",
 		"source_type": "video",
 	}})
-	if err := validateConsultationRuntimeApplicationPayload(event); err != nil {
+	if err := validateConsultationRuntimeApplicationPayload(event.Payload); err != nil {
 		t.Fatalf("non-Thought-Forest citation should use its own application contract: %v", err)
 	}
 }
@@ -333,7 +352,7 @@ func TestRuntimeApplicationPayloadValidatesAnswerAttribution(t *testing.T) {
 		t.Fatal(err)
 	}
 	event := applicationRuntimeEvent(t, ConsultationRuntimeAttributionAdded, payload)
-	if err := validateConsultationRuntimeApplicationPayload(event); err != nil {
+	if err := validateConsultationRuntimeApplicationPayload(event.Payload); err != nil {
 		t.Fatalf("valid answer attribution rejected: %v", err)
 	}
 
@@ -341,7 +360,7 @@ func TestRuntimeApplicationPayloadValidatesAnswerAttribution(t *testing.T) {
 	bindings := attribution["bindings"].([]any)
 	bindings[0].(map[string]any)["publication_id"] = "not-a-uuid"
 	invalid := applicationRuntimeEvent(t, ConsultationRuntimeAttributionAdded, payload)
-	if err := validateConsultationRuntimeApplicationPayload(invalid); err == nil {
+	if err := validateConsultationRuntimeApplicationPayload(invalid.Payload); err == nil {
 		t.Fatal("invalid answer attribution publication identity must be rejected")
 	}
 }
