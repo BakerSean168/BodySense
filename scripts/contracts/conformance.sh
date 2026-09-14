@@ -7,6 +7,7 @@ BIN="$ROOT/.tools/contracts/bin"
 
 node "$ROOT/scripts/contracts/conformance.mjs"
 node "$ROOT/scripts/contracts/check-architecture.mjs"
+node "$ROOT/scripts/contracts/check-runtime-proto-rules.mjs"
 node "$ROOT/node_modules/typescript7/bin/tsc" -p "$ROOT/tools/contracts/tsconfig.json" --noEmit
 go test "$ROOT/tools/contracts/generated/openapi-go/foundation.gen.go"
 PYCACHE="$(mktemp -d)"

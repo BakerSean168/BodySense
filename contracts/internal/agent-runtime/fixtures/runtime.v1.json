@@ -1,0 +1,623 @@
+{
+  "start_turn": {
+    "thread_id": "33333333-3333-4333-8333-333333333333",
+    "run_id": "22222222-2222-4222-8222-222222222222",
+    "conversation_id": "33333333-3333-4333-8333-333333333333",
+    "user_id": "44444444-4444-4444-8444-444444444444",
+    "configuration_id": "consult-config-0123456789abcdef",
+    "input": {
+      "type": "user_message",
+      "text": "hello",
+      "images": [
+        {
+          "upload_id": "66666666-6666-4666-8666-666666666666",
+          "mime_type": "image/jpeg",
+          "data_url": "data:image/jpeg;base64,AA=="
+        }
+      ]
+    },
+    "business_context": {
+      "profile": {
+        "gender": "male"
+      },
+      "body_state": {
+        "current_revision": 3
+      },
+      "runtime_state": {
+        "phase": "collecting",
+        "extracted_info": [
+          {
+            "symptom_type": "pain"
+          }
+        ]
+      },
+      "relevant_history": [
+        {
+          "role": "user",
+          "text": "history"
+        }
+      ],
+      "current_diagnosis": {},
+      "current_treatment": {},
+      "recent_outcomes": [
+        {
+          "status": "improved"
+        }
+      ],
+      "spatial_context": {
+        "body_region_id": "right_shoulder",
+        "body_region_label": "右肩"
+      },
+      "posture_analysis": {
+        "has_analysis": false
+      }
+    }
+  },
+  "resume_interrupt": {
+    "thread_id": "33333333-3333-4333-8333-333333333333",
+    "run_id": "22222222-2222-4222-8222-222222222222",
+    "conversation_id": "33333333-3333-4333-8333-333333333333",
+    "user_id": "44444444-4444-4444-8444-444444444444",
+    "configuration_id": "consult-config-0123456789abcdef",
+    "interrupt_id": "55555555-5555-4555-8555-555555555555",
+    "answer": {
+      "value": "yes"
+    },
+    "business_context": {
+      "profile": {
+        "gender": "male"
+      },
+      "body_state": {
+        "current_revision": 3
+      },
+      "runtime_state": {
+        "phase": "collecting",
+        "extracted_info": [
+          {
+            "symptom_type": "pain"
+          }
+        ]
+      },
+      "relevant_history": [
+        {
+          "role": "user",
+          "text": "history"
+        }
+      ],
+      "current_diagnosis": {},
+      "current_treatment": {},
+      "recent_outcomes": [
+        {
+          "status": "improved"
+        }
+      ],
+      "spatial_context": {
+        "body_region_id": "right_shoulder",
+        "body_region_label": "右肩"
+      },
+      "posture_analysis": {
+        "has_analysis": false
+      }
+    }
+  },
+  "events": [
+    {
+      "version": 1,
+      "seq": "1",
+      "ids": {
+        "conversation_id": "33333333-3333-4333-8333-333333333333",
+        "run_id": "22222222-2222-4222-8222-222222222222"
+      },
+      "agent_configuration": {
+        "agent_configuration": {
+          "id": "consult-config-0123456789abcdef",
+          "role": "consultation",
+          "manifest_revision": "consultation-manifest-v1",
+          "logical_model": "reasoning",
+          "model_group_revision": "models-v1",
+          "prompt_revision": "prompt-v1",
+          "tool_policy_revision": "tools-v1",
+          "governance_policy_revision": "governance-v1",
+          "decision_policy_revision": "decision-v1"
+        },
+        "execution_provenance": {
+          "status": "executed",
+          "runtime": "langgraph",
+          "logical_model": "reasoning",
+          "model_group_revision": "models-v1",
+          "usage": {}
+        }
+      }
+    },
+    {
+      "version": 1,
+      "seq": "2",
+      "ids": {
+        "conversation_id": "33333333-3333-4333-8333-333333333333",
+        "run_id": "22222222-2222-4222-8222-222222222222"
+      },
+      "text_delta": {
+        "delta": "hello"
+      }
+    },
+    {
+      "version": 1,
+      "seq": "3",
+      "ids": {
+        "conversation_id": "33333333-3333-4333-8333-333333333333",
+        "run_id": "22222222-2222-4222-8222-222222222222",
+        "tool_call_id": "tool-1"
+      },
+      "tool_call": {
+        "tool": "lookup",
+        "args": {
+          "query": "neck"
+        }
+      }
+    },
+    {
+      "version": 1,
+      "seq": "4",
+      "ids": {
+        "conversation_id": "33333333-3333-4333-8333-333333333333",
+        "run_id": "22222222-2222-4222-8222-222222222222",
+        "tool_call_id": "tool-1"
+      },
+      "tool_result": {
+        "tool": "lookup",
+        "result": {
+          "ok": true
+        }
+      }
+    },
+    {
+      "version": 1,
+      "seq": "5",
+      "ids": {
+        "conversation_id": "33333333-3333-4333-8333-333333333333",
+        "run_id": "22222222-2222-4222-8222-222222222222"
+      },
+      "extracted_info": {
+        "info": {
+          "symptom_type": "pain",
+          "body_part": "neck"
+        }
+      }
+    },
+    {
+      "version": 1,
+      "seq": "6",
+      "ids": {
+        "conversation_id": "33333333-3333-4333-8333-333333333333",
+        "run_id": "22222222-2222-4222-8222-222222222222"
+      },
+      "lifestyle_context": {
+        "context": {
+          "activity": "sedentary"
+        }
+      }
+    },
+    {
+      "version": 1,
+      "seq": "7",
+      "ids": {
+        "conversation_id": "33333333-3333-4333-8333-333333333333",
+        "run_id": "22222222-2222-4222-8222-222222222222",
+        "tool_call_id": "tool-ask",
+        "interaction_id": "55555555-5555-4555-8555-555555555555"
+      },
+      "interaction_required": {
+        "interaction_id": "55555555-5555-4555-8555-555555555555",
+        "question": {
+          "type": "single_choice",
+          "prompt": "Continue?"
+        }
+      }
+    },
+    {
+      "version": 1,
+      "seq": "8",
+      "ids": {
+        "conversation_id": "33333333-3333-4333-8333-333333333333",
+        "run_id": "22222222-2222-4222-8222-222222222222"
+      },
+      "phase_changed": {
+        "from": "collecting",
+        "to": "ready_for_analysis",
+        "reason": "enough information"
+      }
+    },
+    {
+      "version": 1,
+      "seq": "9",
+      "ids": {
+        "conversation_id": "33333333-3333-4333-8333-333333333333",
+        "run_id": "22222222-2222-4222-8222-222222222222"
+      },
+      "citation_added": {
+        "citation": {
+          "source_type": "knowledge",
+          "title": "note"
+        }
+      }
+    },
+    {
+      "version": 1,
+      "seq": "10",
+      "ids": {
+        "conversation_id": "33333333-3333-4333-8333-333333333333",
+        "run_id": "22222222-2222-4222-8222-222222222222"
+      },
+      "answer_attribution_added": {
+        "attribution": {
+          "answer_span": "hello",
+          "citation_ids": [
+            "c1"
+          ]
+        }
+      }
+    },
+    {
+      "version": 1,
+      "seq": "11",
+      "ids": {
+        "conversation_id": "33333333-3333-4333-8333-333333333333",
+        "run_id": "22222222-2222-4222-8222-222222222222"
+      },
+      "knowledge_gap": {
+        "query": "q",
+        "message": "no source"
+      }
+    },
+    {
+      "version": 1,
+      "seq": "12",
+      "ids": {
+        "conversation_id": "33333333-3333-4333-8333-333333333333",
+        "run_id": "22222222-2222-4222-8222-222222222222"
+      },
+      "red_flag_detected": {
+        "has_red_flags": true,
+        "flags": [
+          {
+            "category": "weakness",
+            "severity": "high",
+            "message": "signal"
+          }
+        ]
+      }
+    },
+    {
+      "version": 1,
+      "seq": "13",
+      "ids": {
+        "conversation_id": "33333333-3333-4333-8333-333333333333",
+        "run_id": "22222222-2222-4222-8222-222222222222"
+      },
+      "output_reviewed": {
+        "kind": "assistant_text",
+        "verdict": "accepted",
+        "reasons": [],
+        "issues": []
+      }
+    },
+    {
+      "version": 1,
+      "seq": "14",
+      "ids": {
+        "conversation_id": "33333333-3333-4333-8333-333333333333",
+        "run_id": "22222222-2222-4222-8222-222222222222"
+      },
+      "output_rejected": {
+        "kind": "assistant_text",
+        "verdict": "rejected",
+        "reasons": [
+          "unsafe"
+        ],
+        "issues": [
+          {
+            "code": "unsafe"
+          }
+        ],
+        "safety_fallback": "seek care"
+      }
+    },
+    {
+      "version": 1,
+      "seq": "15",
+      "ids": {
+        "conversation_id": "33333333-3333-4333-8333-333333333333",
+        "run_id": "22222222-2222-4222-8222-222222222222"
+      },
+      "usage_reported": {
+        "usage": {
+          "input_tokens": 1,
+          "output_tokens": 2,
+          "total_tokens": 3
+        }
+      }
+    },
+    {
+      "version": 1,
+      "seq": "16",
+      "ids": {
+        "conversation_id": "33333333-3333-4333-8333-333333333333",
+        "run_id": "22222222-2222-4222-8222-222222222222"
+      },
+      "stream_done": {}
+    },
+    {
+      "version": 1,
+      "seq": "17",
+      "ids": {
+        "conversation_id": "33333333-3333-4333-8333-333333333333",
+        "run_id": "22222222-2222-4222-8222-222222222222"
+      },
+      "stream_error": {
+        "message": "runtime failure"
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "name": "empty_configuration",
+      "message": "start_turn",
+      "value": {
+        "thread_id": "33333333-3333-4333-8333-333333333333",
+        "run_id": "22222222-2222-4222-8222-222222222222",
+        "conversation_id": "33333333-3333-4333-8333-333333333333",
+        "user_id": "44444444-4444-4444-8444-444444444444",
+        "configuration_id": "",
+        "input": {
+          "type": "user_message",
+          "text": "hello",
+          "images": [
+            {
+              "upload_id": "66666666-6666-4666-8666-666666666666",
+              "mime_type": "image/jpeg",
+              "data_url": "data:image/jpeg;base64,AA=="
+            }
+          ]
+        },
+        "business_context": {
+          "profile": {
+            "gender": "male"
+          },
+          "body_state": {
+            "current_revision": 3
+          },
+          "runtime_state": {
+            "phase": "collecting",
+            "extracted_info": [
+              {
+                "symptom_type": "pain"
+              }
+            ]
+          },
+          "relevant_history": [
+            {
+              "role": "user",
+              "text": "history"
+            }
+          ],
+          "current_diagnosis": {},
+          "current_treatment": {},
+          "recent_outcomes": [
+            {
+              "status": "improved"
+            }
+          ],
+          "spatial_context": {
+            "body_region_id": "right_shoulder",
+            "body_region_label": "右肩"
+          },
+          "posture_analysis": {
+            "has_analysis": false
+          }
+        }
+      }
+    },
+    {
+      "name": "invalid_thread_uuid",
+      "message": "start_turn",
+      "value": {
+        "thread_id": "not-a-uuid",
+        "run_id": "22222222-2222-4222-8222-222222222222",
+        "conversation_id": "33333333-3333-4333-8333-333333333333",
+        "user_id": "44444444-4444-4444-8444-444444444444",
+        "configuration_id": "consult-config-0123456789abcdef",
+        "input": {
+          "type": "user_message",
+          "text": "hello",
+          "images": [
+            {
+              "upload_id": "66666666-6666-4666-8666-666666666666",
+              "mime_type": "image/jpeg",
+              "data_url": "data:image/jpeg;base64,AA=="
+            }
+          ]
+        },
+        "business_context": {
+          "profile": {
+            "gender": "male"
+          },
+          "body_state": {
+            "current_revision": 3
+          },
+          "runtime_state": {
+            "phase": "collecting",
+            "extracted_info": [
+              {
+                "symptom_type": "pain"
+              }
+            ]
+          },
+          "relevant_history": [
+            {
+              "role": "user",
+              "text": "history"
+            }
+          ],
+          "current_diagnosis": {},
+          "current_treatment": {},
+          "recent_outcomes": [
+            {
+              "status": "improved"
+            }
+          ],
+          "spatial_context": {
+            "body_region_id": "right_shoulder",
+            "body_region_label": "右肩"
+          },
+          "posture_analysis": {
+            "has_analysis": false
+          }
+        }
+      }
+    },
+    {
+      "name": "invalid_interrupt_uuid",
+      "message": "resume_interrupt",
+      "value": {
+        "thread_id": "33333333-3333-4333-8333-333333333333",
+        "run_id": "22222222-2222-4222-8222-222222222222",
+        "conversation_id": "33333333-3333-4333-8333-333333333333",
+        "user_id": "44444444-4444-4444-8444-444444444444",
+        "configuration_id": "consult-config-0123456789abcdef",
+        "interrupt_id": "bad",
+        "answer": {
+          "value": "yes"
+        },
+        "business_context": {
+          "profile": {
+            "gender": "male"
+          },
+          "body_state": {
+            "current_revision": 3
+          },
+          "runtime_state": {
+            "phase": "collecting",
+            "extracted_info": [
+              {
+                "symptom_type": "pain"
+              }
+            ]
+          },
+          "relevant_history": [
+            {
+              "role": "user",
+              "text": "history"
+            }
+          ],
+          "current_diagnosis": {},
+          "current_treatment": {},
+          "recent_outcomes": [
+            {
+              "status": "improved"
+            }
+          ],
+          "spatial_context": {
+            "body_region_id": "right_shoulder",
+            "body_region_label": "右肩"
+          },
+          "posture_analysis": {
+            "has_analysis": false
+          }
+        }
+      }
+    },
+    {
+      "name": "zero_event_sequence",
+      "message": "runtime_event",
+      "value": {
+        "version": 1,
+        "seq": "0",
+        "ids": {
+          "conversation_id": "33333333-3333-4333-8333-333333333333",
+          "run_id": "22222222-2222-4222-8222-222222222222"
+        },
+        "text_delta": {
+          "delta": "hello"
+        }
+      }
+    },
+    {
+      "name": "missing_event_oneof",
+      "message": "runtime_event",
+      "value": {
+        "version": 1,
+        "seq": "1",
+        "ids": {
+          "conversation_id": "33333333-3333-4333-8333-333333333333",
+          "run_id": "22222222-2222-4222-8222-222222222222"
+        }
+      }
+    },
+    {
+      "name": "empty_tool_name",
+      "message": "runtime_event",
+      "value": {
+        "version": 1,
+        "seq": "3",
+        "ids": {
+          "conversation_id": "33333333-3333-4333-8333-333333333333",
+          "run_id": "22222222-2222-4222-8222-222222222222",
+          "tool_call_id": "tool-1"
+        },
+        "tool_call": {
+          "tool": "",
+          "args": {
+            "query": "neck"
+          }
+        }
+      }
+    },
+    {
+      "name": "invalid_handshake_configuration_id",
+      "message": "runtime_event",
+      "value": {
+        "version": 1,
+        "seq": "1",
+        "ids": {
+          "conversation_id": "33333333-3333-4333-8333-333333333333",
+          "run_id": "22222222-2222-4222-8222-222222222222"
+        },
+        "agent_configuration": {
+          "agent_configuration": {
+            "id": "consult-config-wrong",
+            "role": "consultation",
+            "manifest_revision": "consultation-manifest-v1",
+            "logical_model": "reasoning",
+            "model_group_revision": "models-v1",
+            "prompt_revision": "prompt-v1",
+            "tool_policy_revision": "tools-v1",
+            "governance_policy_revision": "governance-v1",
+            "decision_policy_revision": "decision-v1"
+          },
+          "execution_provenance": {
+            "status": "executed",
+            "runtime": "langgraph",
+            "logical_model": "reasoning",
+            "model_group_revision": "models-v1",
+            "usage": {}
+          }
+        }
+      }
+    },
+    {
+      "name": "empty_stream_error",
+      "message": "runtime_event",
+      "value": {
+        "version": 1,
+        "seq": "17",
+        "ids": {
+          "conversation_id": "33333333-3333-4333-8333-333333333333",
+          "run_id": "22222222-2222-4222-8222-222222222222"
+        },
+        "stream_error": {
+          "message": ""
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+version: v2
+plugins:
+  - remote: buf.build/protocolbuffers/go:v1.36.12
+    out: ../../../apps/api/internal/generated/runtimeproto
+    opt:
+      - paths=import
+      - module=github.com/bodysense/api/internal/generated/runtimeproto
+  - remote: buf.build/protocolbuffers/python:v32.1
+    out: ../../../apps/ai-service/src/generated/runtimeproto
+    include_imports: true
+  - remote: buf.build/protocolbuffers/pyi:v32.1
+    out: ../../../apps/ai-service/src/generated/runtimeproto
+    include_imports: true

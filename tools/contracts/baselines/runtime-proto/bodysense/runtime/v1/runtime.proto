@@ -1,0 +1,211 @@
+syntax = "proto3";
+
+package bodysense.runtime.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/bodysense/api/internal/generated/runtimeproto/v1;runtimev1";
+
+// StartTurnCommand is the canonical Go -> Python control contract. The HTTP
+// adapter supplies thread_id from the route and the remaining fields from the
+// request body before validation, so the existing HTTP shape does not need to
+// duplicate path identity.
+message StartTurnCommand {
+  string thread_id = 1 [(buf.validate.field).string.uuid = true];
+  string run_id = 2 [(buf.validate.field).string.uuid = true];
+  string conversation_id = 3 [(buf.validate.field).string.uuid = true];
+  string user_id = 4 [(buf.validate.field).string.uuid = true];
+  string configuration_id = 5 [(buf.validate.field).string.pattern = "^consult-config-[0-9a-f]{16}$"];
+  ConsultationUserInput input = 6 [(buf.validate.field).required = true];
+  ConsultationBusinessContext business_context = 7 [(buf.validate.field).required = true];
+}
+
+// ResumeInterruptCommand represents continuation of the same checkpointed
+// LangGraph thread. Both thread and immutable configuration identity are part
+// of the validated command rather than implicit transport state.
+message ResumeInterruptCommand {
+  string thread_id = 1 [(buf.validate.field).string.uuid = true];
+  string run_id = 2 [(buf.validate.field).string.uuid = true];
+  string conversation_id = 3 [(buf.validate.field).string.uuid = true];
+  string user_id = 4 [(buf.validate.field).string.uuid = true];
+  string configuration_id = 5 [(buf.validate.field).string.pattern = "^consult-config-[0-9a-f]{16}$"];
+  string interrupt_id = 6 [(buf.validate.field).string.uuid = true];
+  google.protobuf.Struct answer = 7 [(buf.validate.field).required = true];
+  ConsultationBusinessContext business_context = 8 [(buf.validate.field).required = true];
+}
+
+message ConsultationImageRef {
+  optional string upload_id = 1 [(buf.validate.field).string.uuid = true];
+  optional string mime_type = 2 [(buf.validate.field).string.min_len = 1];
+  string data_url = 3 [(buf.validate.field).string.min_len = 1];
+}
+
+message ConsultationUserInput {
+  string type = 1 [(buf.validate.field).string.const = "user_message"];
+  string text = 2 [(buf.validate.field).string.min_len = 1];
+  repeated ConsultationImageRef images = 3;
+}
+
+message ConsultationRuntimeState {
+  string phase = 1 [(buf.validate.field).string.min_len = 1];
+  repeated google.protobuf.Struct extracted_info = 2;
+}
+
+message ConsultationSpatialContext {
+  optional string body_region_id = 1 [(buf.validate.field).string.min_len = 1];
+  optional string body_region_label = 2 [(buf.validate.field).string.min_len = 1];
+  optional string anatomy_id = 3 [(buf.validate.field).string.min_len = 1];
+  optional string anatomy_name = 4 [(buf.validate.field).string.min_len = 1];
+}
+
+// Complex durable business projections remain opaque at this transport IDL.
+// Their own application contracts remain authoritative; Proto owns only the
+// cross-language runtime seam.
+message ConsultationBusinessContext {
+  google.protobuf.Struct profile = 1;
+  google.protobuf.Struct body_state = 2;
+  ConsultationRuntimeState runtime_state = 3 [(buf.validate.field).required = true];
+  repeated google.protobuf.Struct relevant_history = 4;
+  google.protobuf.Struct current_diagnosis = 5;
+  google.protobuf.Struct current_treatment = 6;
+  repeated google.protobuf.Struct recent_outcomes = 7;
+  optional ConsultationSpatialContext spatial_context = 8;
+  google.protobuf.Struct posture_analysis = 9;
+}
+
+message RuntimeEventIds {
+  string conversation_id = 1 [(buf.validate.field).string.uuid = true];
+  string run_id = 2 [(buf.validate.field).string.uuid = true];
+  optional string tool_call_id = 3 [(buf.validate.field).string.min_len = 1];
+  optional string interaction_id = 4 [(buf.validate.field).string.uuid = true];
+}
+
+// RuntimeEvent is internal only. Public StreamEvent channel/type/payload is
+// deliberately absent; Go maps these typed facts into the public JSON Schema
+// vocabulary after validation.
+message RuntimeEvent {
+  uint32 version = 1 [(buf.validate.field).uint32.const = 1];
+  uint64 seq = 2 [(buf.validate.field).uint64.gte = 1];
+  RuntimeEventIds ids = 3 [(buf.validate.field).required = true];
+
+  oneof event {
+    option (buf.validate.oneof).required = true;
+
+    AgentConfigurationHandshake agent_configuration = 10;
+    MessageTextDelta text_delta = 11;
+    ToolCall tool_call = 12;
+    ToolResult tool_result = 13;
+    ExtractedInfoUpsert extracted_info = 14;
+    LifestyleContextUpsert lifestyle_context = 15;
+    InteractionRequired interaction_required = 16;
+    PhaseChanged phase_changed = 17;
+    CitationAdded citation_added = 18;
+    AnswerAttributionAdded answer_attribution_added = 19;
+    KnowledgeGap knowledge_gap = 20;
+    RedFlagDetected red_flag_detected = 21;
+    SafetyOutputEvent output_reviewed = 22;
+    SafetyOutputEvent output_rejected = 23;
+    UsageReported usage_reported = 24;
+    StreamDone stream_done = 25;
+    StreamError stream_error = 26;
+  }
+}
+
+message AgentConfigurationHandshake {
+  AgentConfiguration agent_configuration = 1 [(buf.validate.field).required = true];
+  ExecutionProvenance execution_provenance = 2 [(buf.validate.field).required = true];
+}
+
+message AgentConfiguration {
+  string id = 1 [(buf.validate.field).string.pattern = "^consult-config-[0-9a-f]{16}$"];
+  string role = 2 [(buf.validate.field).string.const = "consultation"];
+  string manifest_revision = 3 [(buf.validate.field).string.min_len = 1];
+  string logical_model = 4 [(buf.validate.field).string.min_len = 1];
+  string model_group_revision = 5 [(buf.validate.field).string.min_len = 1];
+  string prompt_revision = 6 [(buf.validate.field).string.min_len = 1];
+  string tool_policy_revision = 7 [(buf.validate.field).string.min_len = 1];
+  string governance_policy_revision = 8 [(buf.validate.field).string.min_len = 1];
+  string decision_policy_revision = 9 [(buf.validate.field).string.min_len = 1];
+}
+
+message ExecutionProvenance {
+  string status = 1 [(buf.validate.field).string.const = "executed"];
+  string runtime = 2 [(buf.validate.field).string.min_len = 1];
+  string logical_model = 3 [(buf.validate.field).string.min_len = 1];
+  string model_group_revision = 4 [(buf.validate.field).string.min_len = 1];
+  google.protobuf.Struct usage = 5;
+}
+
+message MessageTextDelta {
+  string delta = 1;
+}
+
+message ToolCall {
+  string tool = 1 [(buf.validate.field).string.min_len = 1];
+  google.protobuf.Struct args = 2 [(buf.validate.field).required = true];
+}
+
+message ToolResult {
+  string tool = 1 [(buf.validate.field).string.min_len = 1];
+  google.protobuf.Struct result = 2 [(buf.validate.field).required = true];
+}
+
+message ExtractedInfoUpsert {
+  google.protobuf.Struct info = 1 [(buf.validate.field).required = true];
+}
+
+message LifestyleContextUpsert {
+  google.protobuf.Struct context = 1 [(buf.validate.field).required = true];
+}
+
+message InteractionRequired {
+  string interaction_id = 1 [(buf.validate.field).string.uuid = true];
+  google.protobuf.Struct question = 2 [(buf.validate.field).required = true];
+}
+
+message PhaseChanged {
+  optional string from = 1 [(buf.validate.field).string.min_len = 1];
+  string to = 2 [(buf.validate.field).string.min_len = 1];
+  string reason = 3 [(buf.validate.field).string.min_len = 1];
+}
+
+message CitationAdded {
+  google.protobuf.Struct citation = 1 [(buf.validate.field).required = true];
+}
+
+message AnswerAttributionAdded {
+  google.protobuf.Struct attribution = 1 [(buf.validate.field).required = true];
+}
+
+message KnowledgeGap {
+  string query = 1 [(buf.validate.field).string.min_len = 1];
+  string message = 2 [(buf.validate.field).string.min_len = 1];
+}
+
+message RedFlagDetected {
+  bool has_red_flags = 1;
+  repeated google.protobuf.Struct flags = 2;
+}
+
+message SafetyOutputEvent {
+  string kind = 1 [(buf.validate.field).string.min_len = 1];
+  string verdict = 2 [(buf.validate.field).string.min_len = 1];
+  repeated string reasons = 3;
+  google.protobuf.ListValue issues = 4;
+  optional string safety_fallback = 5;
+}
+
+message UsageReported {
+  google.protobuf.Struct usage = 1 [(buf.validate.field).required = true];
+}
+
+message StreamDone {
+  optional string response_id = 1 [(buf.validate.field).string.min_len = 1];
+  google.protobuf.Struct usage = 2;
+  google.protobuf.Struct governance = 3;
+}
+
+message StreamError {
+  string message = 1 [(buf.validate.field).string.min_len = 1];
+}
