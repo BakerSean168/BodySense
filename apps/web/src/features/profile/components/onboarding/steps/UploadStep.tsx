@@ -172,8 +172,7 @@ export function UploadStep() {
             </div>
 
             {(() => {
-              const status = (photo.analysis_status ??
-                "none") as AnalysisStatus;
+              const status = photo.analysis_status ?? "none";
               const badge = ANALYSIS_BADGE[status];
               const findings = photo.analysis_result?.findings ?? [];
               return (
@@ -245,13 +244,12 @@ export function UploadStep() {
   // Completed per-view posture analyses, ordered front → side → back.
   const postureAnalyses: PostureAnalysis[] = (
     ["photo_front", "photo_side", "photo_back"] as const
-  )
-    .map((t) => getPhotoByType(t))
-    .filter(
-      (u): u is NonNullable<typeof u> =>
-        !!u && u.analysis_status === "completed" && !!u.analysis_result,
-    )
-    .map((u) => u.analysis_result as PostureAnalysis);
+  ).flatMap((type) => {
+    const upload = getPhotoByType(type);
+    return upload?.analysis_status === "completed" && upload.analysis_result
+      ? [upload.analysis_result]
+      : [];
+  });
 
   return (
     <div className="space-y-6">

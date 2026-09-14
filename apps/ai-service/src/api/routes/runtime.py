@@ -21,7 +21,16 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from ...models.stream_event import StreamChannel, StreamEvent, StreamEventIds
+from ...models.consultation_runtime_event import (
+    AgentConfigurationRuntimeEvent,
+    ConsultationRuntimeEvent,
+    ConsultationRuntimeEventPayload,
+    PhaseChangedRuntimeEvent,
+    RedFlagDetectedRuntimeEvent,
+    StreamDoneRuntimeEvent,
+    StreamErrorRuntimeEvent,
+    TextDeltaRuntimeEvent,
+)
 from ...runtime.consultation_thread import (
     get_consultation_manifest,
     resume_thread_interrupt,
@@ -49,19 +58,16 @@ def _e2e_stub_enabled() -> bool:
 def _stub_event(
     *,
     seq: int,
-    channel: StreamChannel,
-    event_type: str,
     run_id: str,
     conversation_id: str,
-    payload: dict[str, Any],
+    event: ConsultationRuntimeEventPayload,
 ) -> str:
     return serialize_runtime_event(
-        StreamEvent(
+        ConsultationRuntimeEvent(
             seq=seq,
-            channel=channel,
-            type=event_type,
-            ids=StreamEventIds(conversation_id=conversation_id, run_id=run_id),
-            payload=payload,
+            conversation_id=conversation_id,
+            run_id=run_id,
+            event=event,
         )
     )
 
@@ -148,70 +154,62 @@ async def start_turn(thread_id: str, payload: dict[str, Any]):
             manifest = get_consultation_manifest(request.configuration_id)
             yield _stub_event(
                 seq=seq,
-                channel="runtime",
-                event_type="runtime.agent_configuration",
                 run_id=request.run_id,
                 conversation_id=request.conversation_id,
-                payload={
-                    "agent_configuration": manifest.provenance(),
-                    "execution_provenance": {
+                event=AgentConfigurationRuntimeEvent(
+                    agent_configuration=manifest.provenance(),
+                    execution_provenance={
                         "status": "executed",
                         "runtime": "langgraph-e2e-stub",
                         "logical_model": manifest.logical_model,
                         "model_group_revision": manifest.model_group_revision,
                         "usage": {},
                     },
-                },
+                ),
             )
             seq += 1
             if trigger_safety:
                 yield _stub_event(
                     seq=seq,
-                    channel="safety",
-                    event_type="safety.red_flag.detected",
                     run_id=request.run_id,
                     conversation_id=request.conversation_id,
-                    payload={
-                        "has_red_flags": True,
-                        "flags": [
+                    event=RedFlagDetectedRuntimeEvent(
+                        has_red_flags=True,
+                        flags=[
                             {
                                 "category": "weakness",
                                 "severity": "high",
                                 "message": "E2E deterministic safety signal",
                             }
                         ],
-                    },
+                    ),
                 )
                 seq += 1
             yield _stub_event(
                 seq=seq,
-                channel="message",
-                event_type="message.text.delta",
                 run_id=request.run_id,
                 conversation_id=request.conversation_id,
-                payload={"delta": "E2E consultation completed."},
+                event=TextDeltaRuntimeEvent(delta="E2E consultation completed."),
             )
             seq += 1
             yield _stub_event(
                 seq=seq,
-                channel="state",
-                event_type="state.phase.changed",
                 run_id=request.run_id,
                 conversation_id=request.conversation_id,
-                payload={
-                    "from": request.business_context.runtime_state.phase,
-                    "to": "ready_for_analysis",
-                    "reason": "e2e deterministic completion",
-                },
+                event=PhaseChangedRuntimeEvent(
+                    from_phase=request.business_context.runtime_state.phase,
+                    to="ready_for_analysis",
+                    reason="e2e deterministic completion",
+                ),
             )
             seq += 1
             yield _stub_event(
                 seq=seq,
-                channel="stream",
-                event_type="stream.done",
                 run_id=request.run_id,
                 conversation_id=request.conversation_id,
-                payload={"usage": {"input_tokens": 1, "output_tokens": 1, "total_tokens": 2}},
+                event=StreamDoneRuntimeEvent(
+                    usage={"input_tokens": 1, "output_tokens": 1, "total_tokens": 2}
+                ),
             )
 
         return StreamingResponse(e2e_generator(), media_type="application/x-ndjson")
@@ -251,15 +249,11 @@ async def start_turn(thread_id: str, payload: dict[str, Any]):
             # record and log the original exception server-side instead.
             logger.exception("Error in runtime thread turn")
             yield serialize_runtime_event(
-                StreamEvent(
+                ConsultationRuntimeEvent(
                     seq=1,
-                    channel="stream",
-                    type="stream.error",
-                    ids=StreamEventIds(
-                        run_id=request.run_id,
-                        conversation_id=request.conversation_id,
-                    ),
-                    payload={"message": "Internal runtime error."},
+                    conversation_id=request.conversation_id,
+                    run_id=request.run_id,
+                    event=StreamErrorRuntimeEvent(message="Internal runtime error."),
                 )
             )
 
@@ -305,15 +299,11 @@ async def resume_interrupt(thread_id: str, interrupt_id: str, payload: dict[str,
         except Exception:
             logger.exception("Error in runtime interrupt resume")
             yield serialize_runtime_event(
-                StreamEvent(
+                ConsultationRuntimeEvent(
                     seq=1,
-                    channel="stream",
-                    type="stream.error",
-                    ids=StreamEventIds(
-                        run_id=request.run_id,
-                        conversation_id=request.conversation_id,
-                    ),
-                    payload={"message": "Internal runtime resume error."},
+                    conversation_id=request.conversation_id,
+                    run_id=request.run_id,
+                    event=StreamErrorRuntimeEvent(message="Internal runtime resume error."),
                 )
             )
 

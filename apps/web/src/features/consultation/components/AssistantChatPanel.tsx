@@ -44,6 +44,7 @@ import {
   consultationSpatialContextBuffer,
 } from "../hooks/useAssistantChatRuntime";
 import { consultationApi } from "../services/consultationService";
+import { parsePendingInteraction } from "../runtime/pendingInteractionProjection";
 import { StreamingAssistantTurn } from "./StreamingAssistantTurn";
 import { FailedRunStatusCard } from "./FailedRunStatusCard";
 import { CancelledRunStatusCard } from "./CancelledRunStatusCard";
@@ -57,6 +58,42 @@ import {
   MessageResponse,
 } from "@/components/ai-elements/message";
 import { Source, SourceList, Sources } from "@/components/ai-elements/sources";
+
+const EMPTY_ASSISTANT_CONTENT: readonly ThreadAssistantMessagePart[] = [];
+
+function parseConsultationPhase(value: string): ConsultationPhase | null {
+  switch (value) {
+    case "collecting":
+    case "ready_for_analysis":
+    case "analysis_ready":
+      return value;
+    default:
+      return null;
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readConsultationError(value: unknown): {
+  code?: string;
+  message?: string;
+} | null {
+  if (!isRecord(value)) return null;
+  const code = typeof value.code === "string" ? value.code : undefined;
+  const message = typeof value.message === "string" ? value.message : undefined;
+  return code || message ? { code, message } : null;
+}
+
+function readHistoricalInteraction(value: unknown) {
+  try {
+    return parsePendingInteraction(value);
+  } catch (error) {
+    console.error("Invalid assistant-ui interaction metadata", error);
+    return null;
+  }
+}
 
 interface AssistantChatPanelProps {
   conversationId: string;
@@ -143,7 +180,12 @@ export function AssistantChatPanel({
         onExtractedInfoUpdate?.(extractedInfoRef.current);
       },
       onPhaseChange: (_from: string, to: string) => {
-        onPhaseChange?.(to as ConsultationPhase);
+        const phase = parseConsultationPhase(to);
+        if (!phase) {
+          console.error(`Ignoring invalid consultation phase: ${to}`);
+          return;
+        }
+        onPhaseChange?.(phase);
       },
       onCitation,
       onTitleGenerated: onTitleGenerated
@@ -720,11 +762,10 @@ function ChatContent({
   );
 }
 function CustomUserMessage() {
-  const metadata = useAuiState((state) => state.message.metadata) as
-    { custom?: { is_interaction_answer?: boolean } } | undefined;
+  const customMetadata = useAuiState((state) => state.message.metadata.custom);
 
-  // If this message has metadata indicating it's an interaction answer, hide it!
-  const isInteractionAnswer = metadata?.custom?.is_interaction_answer === true;
+  // If this message has metadata indicating it's an interaction answer, hide it.
+  const isInteractionAnswer = customMetadata.is_interaction_answer === true;
   if (isInteractionAnswer) {
     return null;
   }
@@ -747,20 +788,13 @@ function CustomUserMessage() {
  * Streaming display is handled by StreamingAssistantTurn separately.
  */
 function CustomAssistantMessage() {
-  const content = useAuiState(
-    (state) => state.message.content,
-  ) as readonly ThreadAssistantMessagePart[];
+  const content = useAuiState((state) =>
+    state.message.role === "assistant"
+      ? state.message.content
+      : EMPTY_ASSISTANT_CONTENT,
+  );
   const isLast = useAuiState((state) => state.message.isLast);
-  const metadata = useAuiState((state) => state.message.metadata) as
-    | {
-        custom?: {
-          interaction_history?: boolean;
-          interaction?: import("../types/consultation").InteractionHistoryItem;
-          consultation_status?: string;
-          consultation_error?: { code?: string; message?: string } | null;
-        };
-      }
-    | undefined;
+  const customMetadata = useAuiState((state) => state.message.metadata.custom);
   const activeTurn = useActiveTurnState();
 
   const viewModel = useMemo(
@@ -781,19 +815,30 @@ function CustomAssistantMessage() {
     return null;
   }
 
-  const historicalInteraction = metadata?.custom?.interaction;
-  if (metadata?.custom?.interaction_history && historicalInteraction) {
+  const historicalInteraction =
+    customMetadata.interaction_history === true
+      ? readHistoricalInteraction(customMetadata.interaction)
+      : null;
+  if (historicalInteraction) {
     return <AskUserStatusCard interaction={historicalInteraction} />;
   }
 
+  const consultationStatus =
+    typeof customMetadata.consultation_status === "string"
+      ? customMetadata.consultation_status
+      : undefined;
+  const consultationError = readConsultationError(
+    customMetadata.consultation_error,
+  );
+
   if (
-    metadata?.custom?.consultation_status === "failed" &&
-    metadata.custom.consultation_error?.code === "execution_lost"
+    consultationStatus === "failed" &&
+    consultationError?.code === "execution_lost"
   ) {
     return <FailedRunStatusCard message={EXECUTION_LOST_USER_MESSAGE} />;
   }
 
-  if (metadata?.custom?.consultation_status === "aborted") {
+  if (consultationStatus === "aborted") {
     return <CancelledRunStatusCard />;
   }
 
@@ -818,15 +863,11 @@ function CustomAssistantMessage() {
                 ),
                 Source: () => null,
                 File: () => null,
-                Image: (props) => {
-                  const src =
-                    (props as { image?: string }).image ||
-                    (props as { src?: string }).src ||
-                    "";
-                  if (!src) return null;
+                Image: ({ image }) => {
+                  if (!image) return null;
                   return (
                     <img
-                      src={src}
+                      src={image}
                       alt="用户上传"
                       className="mt-2 max-h-48 rounded-xl border border-white/10 object-contain"
                     />

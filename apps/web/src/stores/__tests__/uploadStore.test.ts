@@ -85,6 +85,36 @@ describe("uploadStore OpenAPI boundary", () => {
     expect(useUploadStore.getState().error).toBeTruthy();
   });
 
+  it("fails closed when nested analysis data is malformed", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          uploads: [
+            {
+              ...uploadWire,
+              analysis_status: "completed",
+              analysis_result: {
+                schema_version: 1,
+                view: "diagonal",
+                overall_confidence: "high",
+                findings: [],
+                red_flags: [],
+                summary_markdown: "",
+                disclaimer: "test",
+              },
+            },
+          ],
+        }),
+      ),
+    );
+
+    await useUploadStore.getState().fetchUploads();
+
+    expect(useUploadStore.getState().uploads).toEqual([]);
+    expect(useUploadStore.getState().error).toBeTruthy();
+  });
+
   it("uploads multipart data through the generated client", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(uploadWire, 201));
     vi.stubGlobal("fetch", fetchMock);

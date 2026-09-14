@@ -100,7 +100,7 @@ export function useAssistantChatRuntime(
     let reducerState: ActiveTurnState = INITIAL_ACTIVE_TURN_STATE;
     let maxSeq = 0;
     let sawStreamDone = false;
-    let networkError: Error | null = null;
+    const networkFailure: { current: Error | null } = { current: null };
     let startDurableWatcher: (() => void) | null = null;
     let durableWatcherController: AbortController | null = null;
     let liveReaderController: AbortController | null = null;
@@ -287,7 +287,7 @@ export function useAssistantChatRuntime(
         },
         onError: (err: Error) => {
           // Network/read failure — attempt durable after_seq resume below.
-          networkError = err;
+          networkFailure.current = err;
           reportClientDiagnostic({
             category: "chat.transport",
             event: "sse_read_failed",
@@ -409,7 +409,7 @@ export function useAssistantChatRuntime(
       if (!sawStreamDone && !streamError) {
         if (durableWatcherPromise) {
           await durableWatcherPromise;
-          networkError = null;
+          networkFailure.current = null;
         } else {
           const convId =
             reducerState.conversationId ||
@@ -418,7 +418,7 @@ export function useAssistantChatRuntime(
           if (convId && runId) {
             const fallbackController = new AbortController();
             durableWatcherController = fallbackController;
-            const disconnectError = networkError as Error | null;
+            const disconnectError = networkFailure.current;
             reportClientDiagnostic({
               category: "chat.transport",
               event: "fallback_recovery_started",
@@ -445,7 +445,7 @@ export function useAssistantChatRuntime(
             })
               .then((recovered) => {
                 maxSeq = Math.max(maxSeq, recovered.maxSeq);
-                networkError = null;
+                networkFailure.current = null;
                 reportClientDiagnostic({
                   category: "chat.transport",
                   event: "fallback_recovery_terminal",
@@ -487,8 +487,8 @@ export function useAssistantChatRuntime(
               if (nextResult) yield nextResult;
             }
             await durableWatcherPromise;
-          } else if (networkError) {
-            streamError = networkError;
+          } else if (networkFailure.current) {
+            streamError = networkFailure.current;
           } else {
             streamError = new Error(
               "实时连接在终态确认前结束，且没有可恢复的运行标识",

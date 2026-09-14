@@ -12,7 +12,12 @@ interface ProfileEditProps {
   isLoading: boolean;
 }
 
-const GENDER_OPTIONS = [
+type EditableGender = "" | "male" | "female";
+
+const GENDER_OPTIONS: ReadonlyArray<{
+  value: Exclude<EditableGender, "">;
+  label: string;
+}> = [
   { value: "male", label: "男" },
   { value: "female", label: "女" },
 ];
@@ -34,7 +39,7 @@ export function ProfileEdit({
   today.setHours(0, 0, 0, 0);
   const earliestBirthDate = new Date(today);
   earliestBirthDate.setFullYear(earliestBirthDate.getFullYear() - 150);
-  const [gender, setGender] = useState(profile.gender || "");
+  const [gender, setGender] = useState<EditableGender>(profile.gender ?? "");
   const [birthDate, setBirthDate] = useState(profile.birth_date || "");
   const [error, setError] = useState<string | null>(null);
 
@@ -53,7 +58,7 @@ export function ProfileEdit({
     }
     setError(null);
     await onSave({
-      gender: gender ? (gender as "male" | "female") : null,
+      gender: gender || null,
       birth_date: birthDate || null,
     });
   };

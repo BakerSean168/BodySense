@@ -8,7 +8,13 @@ export const workspaceViews = [
 export type WorkspaceView = (typeof workspaceViews)[number];
 
 export function parseWorkspaceView(value: string | null): WorkspaceView {
-  return workspaceViews.includes(value as WorkspaceView)
-    ? (value as WorkspaceView)
-    : "state";
+  switch (value) {
+    case "state":
+    case "diagnosis":
+    case "treatment":
+    case "progress":
+      return value;
+    default:
+      return "state";
+  }
 }

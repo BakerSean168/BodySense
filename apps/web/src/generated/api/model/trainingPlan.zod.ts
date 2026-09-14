@@ -6,7 +6,7 @@
  * OpenAPI spec version: 1.0.0-vnext
  */
 import * as zod from 'zod/mini';
-import { JsonObject } from './jsonObject.zod';
+import { TrainingPhase } from './trainingPhase.zod';
 
 export const TrainingPlan = /*#__PURE__*/ zod.strictObject({
   "id": /*#__PURE__*/ zod.uuid(),
@@ -17,7 +17,7 @@ export const TrainingPlan = /*#__PURE__*/ zod.strictObject({
   "goal": /*#__PURE__*/ zod.string(),
   "duration_weeks": /*#__PURE__*/ zod.int(),
   "current_week": /*#__PURE__*/ zod.int(),
-  "phases": /*#__PURE__*/ zod.array(JsonObject),
+  "phases": /*#__PURE__*/ zod.array(TrainingPhase),
   "created_at": /*#__PURE__*/ zod.iso.datetime({"offset":true})
 });
 

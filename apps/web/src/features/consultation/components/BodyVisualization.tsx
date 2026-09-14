@@ -28,6 +28,7 @@ const BODY_PART_MAP: Record<string, string[]> = {
 };
 
 type ViewType = "front" | "side" | "back";
+const VIEW_TYPES: readonly ViewType[] = ["front", "side", "back"];
 
 export function BodyVisualization({
   highlightedParts,
@@ -52,7 +53,7 @@ export function BodyVisualization({
     <div className="flex flex-col items-center">
       {/* View selector */}
       <div className="flex gap-2.5 mb-5 bg-[#F7F5F0] p-1 rounded-full border border-[#E5E3DF]">
-        {(["front", "side", "back"] as ViewType[]).map((view) => (
+        {VIEW_TYPES.map((view) => (
           <button
             key={view}
             onClick={() => setActiveView(view)}

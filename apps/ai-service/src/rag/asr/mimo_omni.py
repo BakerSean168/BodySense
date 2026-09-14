@@ -18,7 +18,7 @@ from pathlib import Path
 import httpx
 
 from ..knowledge_pack import TranscriptSegment
-from .base import ASRProvider
+from .base import ASRProvider, ASRTranscriptionError
 
 logger = logging.getLogger(__name__)
 
@@ -72,15 +72,21 @@ class MiMoOmniASRProvider(ASRProvider):
         all_segments: list[TranscriptSegment] = []
         segment_index = 0
 
-        for i, chunk_path in enumerate(chunk_paths):
-            offset_sec = i * _CHUNK_DURATION_SEC
-            try:
-                chunk_bytes = chunk_path.read_bytes()
-                segments = await self._transcribe_chunk(
-                    chunk_bytes,
-                    language,
-                    offset_sec=offset_sec,
-                )
+        try:
+            for i, chunk_path in enumerate(chunk_paths):
+                offset_sec = i * _CHUNK_DURATION_SEC
+                try:
+                    chunk_bytes = chunk_path.read_bytes()
+                    segments = await self._transcribe_chunk(
+                        chunk_bytes,
+                        language,
+                        offset_sec=offset_sec,
+                    )
+                except Exception as exc:
+                    raise ASRTranscriptionError(
+                        f"MiMo Omni ASR chunk {i + 1}/{len(chunk_paths)} failed"
+                    ) from exc
+
                 for seg in segments:
                     all_segments.append(
                         TranscriptSegment(
@@ -92,13 +98,12 @@ class MiMoOmniASRProvider(ASRProvider):
                     )
                     segment_index += 1
                 logger.info(f"Chunk {i + 1}/{len(chunk_paths)} done: {len(segments)} segments")
-            except Exception as e:
-                logger.error(f"Chunk {i + 1}/{len(chunk_paths)} failed: {e}")
-            finally:
+        finally:
+            for chunk_path in chunk_paths:
                 chunk_path.unlink(missing_ok=True)
 
         if not all_segments:
-            raise RuntimeError("MiMo Omni ASR returned no transcript segments")
+            raise ASRTranscriptionError("MiMo Omni ASR returned no transcript segments")
 
         # Write JSONL for pipeline compatibility
         _write_jsonl(all_segments, audio_path.parent / "transcript.raw.jsonl")

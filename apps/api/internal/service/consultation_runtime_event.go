@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"reflect"
 	"strings"
 
 	protovalidate "buf.build/go/protovalidate"
@@ -11,6 +12,40 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
+
+type RuntimeProtocolErrorCode string
+
+const (
+	RuntimeProtocolDecodeFailed              RuntimeProtocolErrorCode = "RUNTIME_PROTOCOL_DECODE_FAILED"
+	RuntimeProtocolValidationFailed          RuntimeProtocolErrorCode = "RUNTIME_PROTOCOL_VALIDATION_FAILED"
+	RuntimeProtocolSequenceInvalid           RuntimeProtocolErrorCode = "RUNTIME_PROTOCOL_SEQUENCE_INVALID"
+	RuntimeProtocolUnsupportedEvent          RuntimeProtocolErrorCode = "RUNTIME_PROTOCOL_UNSUPPORTED_EVENT"
+	RuntimeProtocolPayloadMarshalFailed      RuntimeProtocolErrorCode = "RUNTIME_PROTOCOL_PAYLOAD_MARSHAL_FAILED"
+	RuntimeProtocolApplicationPayloadInvalid RuntimeProtocolErrorCode = "RUNTIME_PROTOCOL_APPLICATION_PAYLOAD_INVALID"
+)
+
+type RuntimeProtocolError struct {
+	Code  RuntimeProtocolErrorCode
+	Cause error
+}
+
+func (e *RuntimeProtocolError) Error() string {
+	if e == nil {
+		return ""
+	}
+	return fmt.Sprintf("%s: %v", e.Code, e.Cause)
+}
+
+func (e *RuntimeProtocolError) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+	return e.Cause
+}
+
+func runtimeProtocolError(code RuntimeProtocolErrorCode, cause error) error {
+	return &RuntimeProtocolError{Code: code, Cause: cause}
+}
 
 type ConsultationRuntimeEventKind string
 
@@ -41,22 +76,189 @@ type ConsultationRuntimeEventIDs struct {
 	InteractionID  string
 }
 
-// ConsultationRuntimeEvent is an application-facing private runtime fact. It is
-// intentionally distinct from the public dto.StreamEvent vocabulary. Generated
-// Proto messages are validated and projected into this type inside AIClient.
-type ConsultationRuntimeEvent struct {
-	Seq     int
-	Kind    ConsultationRuntimeEventKind
-	IDs     ConsultationRuntimeEventIDs
-	Payload json.RawMessage
+type ConsultationRuntimeEventPayload interface {
+	Kind() ConsultationRuntimeEventKind
+	isConsultationRuntimeEventPayload()
 }
 
-func (e ConsultationRuntimeEvent) PayloadAs(target any) error {
-	payload := e.Payload
-	if len(payload) == 0 {
-		payload = json.RawMessage(`{}`)
+type consultationRuntimePayloadMarker struct{}
+
+func (consultationRuntimePayloadMarker) isConsultationRuntimeEventPayload() {}
+
+type ConsultationRuntimeAgentConfigurationPayload struct {
+	consultationRuntimePayloadMarker
+	AgentConfiguration  json.RawMessage `json:"agent_configuration"`
+	ExecutionProvenance json.RawMessage `json:"execution_provenance"`
+}
+
+func (ConsultationRuntimeAgentConfigurationPayload) Kind() ConsultationRuntimeEventKind {
+	return ConsultationRuntimeAgentConfiguration
+}
+
+type ConsultationRuntimeTextDeltaPayload struct {
+	consultationRuntimePayloadMarker
+	Delta string `json:"delta"`
+}
+
+func (ConsultationRuntimeTextDeltaPayload) Kind() ConsultationRuntimeEventKind {
+	return ConsultationRuntimeTextDelta
+}
+
+type ConsultationRuntimeToolCallPayload struct {
+	consultationRuntimePayloadMarker
+	Tool string          `json:"tool"`
+	Args json.RawMessage `json:"args"`
+}
+
+func (ConsultationRuntimeToolCallPayload) Kind() ConsultationRuntimeEventKind {
+	return ConsultationRuntimeToolCall
+}
+
+type ConsultationRuntimeToolResultPayload struct {
+	consultationRuntimePayloadMarker
+	Tool   string          `json:"tool"`
+	Result json.RawMessage `json:"result"`
+}
+
+func (ConsultationRuntimeToolResultPayload) Kind() ConsultationRuntimeEventKind {
+	return ConsultationRuntimeToolResult
+}
+
+type ConsultationRuntimeExtractedInfoPayload struct {
+	consultationRuntimePayloadMarker
+	Info json.RawMessage `json:"info"`
+}
+
+func (ConsultationRuntimeExtractedInfoPayload) Kind() ConsultationRuntimeEventKind {
+	return ConsultationRuntimeExtractedInfo
+}
+
+type ConsultationRuntimeLifestyleContextPayload struct {
+	consultationRuntimePayloadMarker
+	Context json.RawMessage `json:"context"`
+}
+
+func (ConsultationRuntimeLifestyleContextPayload) Kind() ConsultationRuntimeEventKind {
+	return ConsultationRuntimeLifestyleContext
+}
+
+type ConsultationRuntimeInteractionPayload struct {
+	consultationRuntimePayloadMarker
+	InteractionID string          `json:"interaction_id"`
+	Question      json.RawMessage `json:"question"`
+}
+
+func (ConsultationRuntimeInteractionPayload) Kind() ConsultationRuntimeEventKind {
+	return ConsultationRuntimeInteraction
+}
+
+type ConsultationRuntimePhaseChangedPayload struct {
+	consultationRuntimePayloadMarker
+	From   string `json:"from,omitempty"`
+	To     string `json:"to"`
+	Reason string `json:"reason"`
+}
+
+func (ConsultationRuntimePhaseChangedPayload) Kind() ConsultationRuntimeEventKind {
+	return ConsultationRuntimePhaseChanged
+}
+
+type ConsultationRuntimeCitationAddedPayload struct {
+	consultationRuntimePayloadMarker
+	Citation json.RawMessage `json:"citation"`
+}
+
+func (ConsultationRuntimeCitationAddedPayload) Kind() ConsultationRuntimeEventKind {
+	return ConsultationRuntimeCitationAdded
+}
+
+type ConsultationRuntimeAttributionAddedPayload struct {
+	consultationRuntimePayloadMarker
+	Attribution json.RawMessage `json:"attribution"`
+}
+
+func (ConsultationRuntimeAttributionAddedPayload) Kind() ConsultationRuntimeEventKind {
+	return ConsultationRuntimeAttributionAdded
+}
+
+type ConsultationRuntimeKnowledgeGapPayload struct {
+	consultationRuntimePayloadMarker
+	Query   string `json:"query"`
+	Message string `json:"message"`
+}
+
+func (ConsultationRuntimeKnowledgeGapPayload) Kind() ConsultationRuntimeEventKind {
+	return ConsultationRuntimeKnowledgeGap
+}
+
+type ConsultationRuntimeRedFlagDetectedPayload struct {
+	consultationRuntimePayloadMarker
+	HasRedFlags bool              `json:"has_red_flags"`
+	Flags       []json.RawMessage `json:"flags"`
+}
+
+func (ConsultationRuntimeRedFlagDetectedPayload) Kind() ConsultationRuntimeEventKind {
+	return ConsultationRuntimeRedFlagDetected
+}
+
+type ConsultationRuntimeSafetyOutputPayload struct {
+	consultationRuntimePayloadMarker
+	EventKind      ConsultationRuntimeEventKind `json:"-"`
+	OutputKind     string                       `json:"kind"`
+	Verdict        string                       `json:"verdict"`
+	Reasons        []string                     `json:"reasons"`
+	Issues         json.RawMessage              `json:"issues,omitempty"`
+	SafetyFallback string                       `json:"safety_fallback,omitempty"`
+}
+
+func (p ConsultationRuntimeSafetyOutputPayload) Kind() ConsultationRuntimeEventKind {
+	return p.EventKind
+}
+
+type ConsultationRuntimeUsageReportedPayload struct {
+	consultationRuntimePayloadMarker
+	Usage json.RawMessage `json:"usage"`
+}
+
+func (ConsultationRuntimeUsageReportedPayload) Kind() ConsultationRuntimeEventKind {
+	return ConsultationRuntimeUsageReported
+}
+
+type ConsultationRuntimeDonePayload struct {
+	consultationRuntimePayloadMarker
+	ResponseID string          `json:"response_id,omitempty"`
+	Usage      json.RawMessage `json:"usage,omitempty"`
+	Governance json.RawMessage `json:"governance,omitempty"`
+}
+
+func (ConsultationRuntimeDonePayload) Kind() ConsultationRuntimeEventKind {
+	return ConsultationRuntimeDone
+}
+
+type ConsultationRuntimeErrorPayload struct {
+	consultationRuntimePayloadMarker
+	Message string `json:"message"`
+}
+
+func (ConsultationRuntimeErrorPayload) Kind() ConsultationRuntimeEventKind {
+	return ConsultationRuntimeError
+}
+
+// ConsultationRuntimeEvent is an application-facing private runtime fact. It is
+// intentionally distinct from the public dto.StreamEvent vocabulary. Generated
+// Proto messages are validated and projected into one handwritten typed payload
+// variant inside the AI boundary; the application never re-parses the wire shape.
+type ConsultationRuntimeEvent struct {
+	Seq     int
+	IDs     ConsultationRuntimeEventIDs
+	Payload ConsultationRuntimeEventPayload
+}
+
+func (e ConsultationRuntimeEvent) Kind() ConsultationRuntimeEventKind {
+	if e.Payload == nil {
+		return ""
 	}
-	return json.Unmarshal(payload, target)
+	return e.Payload.Kind()
 }
 
 func validateCitationPayload(raw json.RawMessage) error {
@@ -100,18 +302,36 @@ func validateCitationPayload(raw json.RawMessage) error {
 	return nil
 }
 
-func validateConsultationRuntimeApplicationPayload(event ConsultationRuntimeEvent) error {
-	switch event.Kind {
-	case ConsultationRuntimeCitationAdded:
-		var payload struct {
-			Citation json.RawMessage `json:"citation"`
-		}
-		if err := event.PayloadAs(&payload); err != nil || len(payload.Citation) == 0 {
+func marshalRuntimeOpaque(message proto.Message) (json.RawMessage, error) {
+	if message == nil {
+		return nil, nil
+	}
+	value := reflect.ValueOf(message)
+	if value.Kind() == reflect.Ptr && value.IsNil() {
+		return nil, nil
+	}
+	payload, err := runtimeProtoPayloadJSON.Marshal(message)
+	if err != nil {
+		return nil, runtimeProtocolError(RuntimeProtocolPayloadMarshalFailed, err)
+	}
+	return json.RawMessage(payload), nil
+}
+
+func validateConsultationRuntimeApplicationPayload(payload ConsultationRuntimeEventPayload) error {
+	switch value := payload.(type) {
+	case ConsultationRuntimeCitationAddedPayload:
+		if len(value.Citation) == 0 {
 			return fmt.Errorf("citation payload is malformed")
 		}
-		return validateCitationPayload(payload.Citation)
-	case ConsultationRuntimeAttributionAdded:
-		if _, err := ParseConsultationAnswerAttributionPayload(event.Payload); err != nil {
+		return validateCitationPayload(value.Citation)
+	case ConsultationRuntimeAttributionAddedPayload:
+		wrapper, err := json.Marshal(struct {
+			Attribution json.RawMessage `json:"attribution"`
+		}{Attribution: value.Attribution})
+		if err != nil {
+			return err
+		}
+		if _, err := ParseConsultationAnswerAttributionPayload(wrapper); err != nil {
 			return err
 		}
 	}
@@ -121,13 +341,13 @@ func validateConsultationRuntimeApplicationPayload(event ConsultationRuntimeEven
 func decodeConsultationRuntimeProtoEvent(line []byte) (ConsultationRuntimeEvent, error) {
 	var wire runtimev1.RuntimeEvent
 	if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(line, &wire); err != nil {
-		return ConsultationRuntimeEvent{}, fmt.Errorf("decode runtime Proto event: %w", err)
+		return ConsultationRuntimeEvent{}, runtimeProtocolError(RuntimeProtocolDecodeFailed, err)
 	}
 	if err := protovalidate.Validate(&wire); err != nil {
-		return ConsultationRuntimeEvent{}, fmt.Errorf("validate runtime Proto event: %w", err)
+		return ConsultationRuntimeEvent{}, runtimeProtocolError(RuntimeProtocolValidationFailed, err)
 	}
 	if wire.Seq > uint64(math.MaxInt) {
-		return ConsultationRuntimeEvent{}, fmt.Errorf("runtime event sequence exceeds platform int")
+		return ConsultationRuntimeEvent{}, runtimeProtocolError(RuntimeProtocolSequenceInvalid, fmt.Errorf("runtime event sequence exceeds platform int"))
 	}
 
 	ids := ConsultationRuntimeEventIDs{}
@@ -142,66 +362,152 @@ func decodeConsultationRuntimeProtoEvent(line []byte) (ConsultationRuntimeEvent,
 		}
 	}
 
-	kind, payload, err := runtimeEventOneofPayload(&wire)
+	payload, err := runtimeEventOneofPayload(&wire)
 	if err != nil {
 		return ConsultationRuntimeEvent{}, err
 	}
-	event := ConsultationRuntimeEvent{Seq: int(wire.Seq), Kind: kind, IDs: ids, Payload: payload}
-	if err := validateConsultationRuntimeApplicationPayload(event); err != nil {
-		return ConsultationRuntimeEvent{}, fmt.Errorf("validate runtime application payload: %w", err)
+	if err := validateConsultationRuntimeApplicationPayload(payload); err != nil {
+		return ConsultationRuntimeEvent{}, runtimeProtocolError(RuntimeProtocolApplicationPayloadInvalid, err)
 	}
-	return event, nil
+	return ConsultationRuntimeEvent{Seq: int(wire.Seq), IDs: ids, Payload: payload}, nil
 }
 
-func runtimeEventOneofPayload(event *runtimev1.RuntimeEvent) (ConsultationRuntimeEventKind, json.RawMessage, error) {
-	var kind ConsultationRuntimeEventKind
-	var message proto.Message
+func runtimeEventOneofPayload(event *runtimev1.RuntimeEvent) (ConsultationRuntimeEventPayload, error) {
 	switch value := event.Event.(type) {
 	case *runtimev1.RuntimeEvent_AgentConfiguration:
-		kind, message = ConsultationRuntimeAgentConfiguration, value.AgentConfiguration
+		configuration, err := marshalRuntimeOpaque(value.AgentConfiguration.AgentConfiguration)
+		if err != nil {
+			return nil, err
+		}
+		provenance, err := marshalRuntimeOpaque(value.AgentConfiguration.ExecutionProvenance)
+		if err != nil {
+			return nil, err
+		}
+		return ConsultationRuntimeAgentConfigurationPayload{
+			AgentConfiguration:  configuration,
+			ExecutionProvenance: provenance,
+		}, nil
 	case *runtimev1.RuntimeEvent_TextDelta:
-		kind, message = ConsultationRuntimeTextDelta, value.TextDelta
+		return ConsultationRuntimeTextDeltaPayload{Delta: value.TextDelta.GetDelta()}, nil
 	case *runtimev1.RuntimeEvent_ToolCall:
-		kind, message = ConsultationRuntimeToolCall, value.ToolCall
+		args, err := marshalRuntimeOpaque(value.ToolCall.Args)
+		if err != nil {
+			return nil, err
+		}
+		return ConsultationRuntimeToolCallPayload{Tool: value.ToolCall.Tool, Args: args}, nil
 	case *runtimev1.RuntimeEvent_ToolResult:
-		kind, message = ConsultationRuntimeToolResult, value.ToolResult
+		result, err := marshalRuntimeOpaque(value.ToolResult.Result)
+		if err != nil {
+			return nil, err
+		}
+		return ConsultationRuntimeToolResultPayload{Tool: value.ToolResult.Tool, Result: result}, nil
 	case *runtimev1.RuntimeEvent_ExtractedInfo:
-		kind, message = ConsultationRuntimeExtractedInfo, value.ExtractedInfo
+		info, err := marshalRuntimeOpaque(value.ExtractedInfo.Info)
+		if err != nil {
+			return nil, err
+		}
+		return ConsultationRuntimeExtractedInfoPayload{Info: info}, nil
 	case *runtimev1.RuntimeEvent_LifestyleContext:
-		kind, message = ConsultationRuntimeLifestyleContext, value.LifestyleContext
+		contextPayload, err := marshalRuntimeOpaque(value.LifestyleContext.Context)
+		if err != nil {
+			return nil, err
+		}
+		return ConsultationRuntimeLifestyleContextPayload{Context: contextPayload}, nil
 	case *runtimev1.RuntimeEvent_InteractionRequired:
-		kind, message = ConsultationRuntimeInteraction, value.InteractionRequired
+		question, err := marshalRuntimeOpaque(value.InteractionRequired.Question)
+		if err != nil {
+			return nil, err
+		}
+		return ConsultationRuntimeInteractionPayload{
+			InteractionID: value.InteractionRequired.InteractionId,
+			Question:      question,
+		}, nil
 	case *runtimev1.RuntimeEvent_PhaseChanged:
-		kind, message = ConsultationRuntimePhaseChanged, value.PhaseChanged
+		return ConsultationRuntimePhaseChangedPayload{
+			From:   value.PhaseChanged.GetFrom(),
+			To:     value.PhaseChanged.To,
+			Reason: value.PhaseChanged.Reason,
+		}, nil
 	case *runtimev1.RuntimeEvent_CitationAdded:
-		kind, message = ConsultationRuntimeCitationAdded, value.CitationAdded
+		citation, err := marshalRuntimeOpaque(value.CitationAdded.Citation)
+		if err != nil {
+			return nil, err
+		}
+		return ConsultationRuntimeCitationAddedPayload{Citation: citation}, nil
 	case *runtimev1.RuntimeEvent_AnswerAttributionAdded:
-		kind, message = ConsultationRuntimeAttributionAdded, value.AnswerAttributionAdded
+		attribution, err := marshalRuntimeOpaque(value.AnswerAttributionAdded.Attribution)
+		if err != nil {
+			return nil, err
+		}
+		return ConsultationRuntimeAttributionAddedPayload{Attribution: attribution}, nil
 	case *runtimev1.RuntimeEvent_KnowledgeGap:
-		kind, message = ConsultationRuntimeKnowledgeGap, value.KnowledgeGap
+		return ConsultationRuntimeKnowledgeGapPayload{
+			Query:   value.KnowledgeGap.Query,
+			Message: value.KnowledgeGap.Message,
+		}, nil
 	case *runtimev1.RuntimeEvent_RedFlagDetected:
-		kind, message = ConsultationRuntimeRedFlagDetected, value.RedFlagDetected
+		flags := make([]json.RawMessage, 0, len(value.RedFlagDetected.Flags))
+		for _, flag := range value.RedFlagDetected.Flags {
+			raw, err := marshalRuntimeOpaque(flag)
+			if err != nil {
+				return nil, err
+			}
+			flags = append(flags, raw)
+		}
+		return ConsultationRuntimeRedFlagDetectedPayload{
+			HasRedFlags: value.RedFlagDetected.GetHasRedFlags(),
+			Flags:       flags,
+		}, nil
 	case *runtimev1.RuntimeEvent_OutputReviewed:
-		kind, message = ConsultationRuntimeOutputReviewed, value.OutputReviewed
+		return runtimeSafetyOutputPayload(ConsultationRuntimeOutputReviewed, value.OutputReviewed)
 	case *runtimev1.RuntimeEvent_OutputRejected:
-		kind, message = ConsultationRuntimeOutputRejected, value.OutputRejected
+		return runtimeSafetyOutputPayload(ConsultationRuntimeOutputRejected, value.OutputRejected)
 	case *runtimev1.RuntimeEvent_UsageReported:
-		kind, message = ConsultationRuntimeUsageReported, value.UsageReported
+		usage, err := marshalRuntimeOpaque(value.UsageReported.Usage)
+		if err != nil {
+			return nil, err
+		}
+		return ConsultationRuntimeUsageReportedPayload{Usage: usage}, nil
 	case *runtimev1.RuntimeEvent_StreamDone:
-		kind, message = ConsultationRuntimeDone, value.StreamDone
+		usage, err := marshalRuntimeOpaque(value.StreamDone.Usage)
+		if err != nil {
+			return nil, err
+		}
+		governance, err := marshalRuntimeOpaque(value.StreamDone.Governance)
+		if err != nil {
+			return nil, err
+		}
+		return ConsultationRuntimeDonePayload{
+			ResponseID: value.StreamDone.GetResponseId(),
+			Usage:      usage,
+			Governance: governance,
+		}, nil
 	case *runtimev1.RuntimeEvent_StreamError:
-		kind, message = ConsultationRuntimeError, value.StreamError
+		return ConsultationRuntimeErrorPayload{Message: value.StreamError.Message}, nil
 	default:
-		return "", nil, fmt.Errorf("runtime Proto event has no supported oneof variant")
+		return nil, runtimeProtocolError(RuntimeProtocolUnsupportedEvent, fmt.Errorf("runtime Proto event has no supported oneof variant"))
 	}
-	payload, err := runtimeProtoPayloadJSON.Marshal(message)
+}
+
+func runtimeSafetyOutputPayload(
+	kind ConsultationRuntimeEventKind,
+	value *runtimev1.SafetyOutputEvent,
+) (ConsultationRuntimeEventPayload, error) {
+	issues, err := marshalRuntimeOpaque(value.Issues)
 	if err != nil {
-		return "", nil, fmt.Errorf("marshal runtime event payload: %w", err)
+		return nil, err
 	}
-	return kind, json.RawMessage(payload), nil
+	reasons := append([]string{}, value.Reasons...)
+	return ConsultationRuntimeSafetyOutputPayload{
+		EventKind:      kind,
+		OutputKind:     value.Kind,
+		Verdict:        value.Verdict,
+		Reasons:        reasons,
+		Issues:         issues,
+		SafetyFallback: value.GetSafetyFallback(),
+	}, nil
 }
 
 func consultationProtocolError(message string) ConsultationRuntimeEvent {
-	payload, _ := json.Marshal(map[string]string{"message": message})
-	return ConsultationRuntimeEvent{Seq: 1, Kind: ConsultationRuntimeError, Payload: payload}
+	return ConsultationRuntimeEvent{Seq: 1, Payload: ConsultationRuntimeErrorPayload{Message: message}}
 }

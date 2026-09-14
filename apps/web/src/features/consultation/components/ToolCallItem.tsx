@@ -12,10 +12,14 @@ const TOOL_LABELS: Record<string, string> = {
   extract_symptom_info: "提取症状信息",
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 /** Extract a human-readable summary from tool args. */
 export function getToolSummary(tool: string, args: unknown): string {
-  if (!args || typeof args !== "object") return "";
-  const a = args as Record<string, unknown>;
+  if (!isRecord(args)) return "";
+  const a = args;
   if (tool === "search_knowledge" && typeof a.query === "string") {
     return a.query;
   }

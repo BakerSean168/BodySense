@@ -12,7 +12,7 @@ import json
 import logging
 from typing import Any
 
-from ..ai import AiRequest, AIService
+from ..ai import AIError, AiRequest, AIService
 from ..ai.gateway import KNOWLEDGE_CURATOR_ROUTE
 from ..ai.types import ChatMessage
 from ..configuration.knowledge_agent_config import (
@@ -99,11 +99,11 @@ class AICurator:
         unit: KnowledgeUnitCandidate,
         problem_display_name: str,
     ) -> KnowledgeUnitCandidate:
-        """Refine a single unit with error handling (never raises)."""
+        """Degrade expected model/protocol failures; unexpected defects still raise."""
         try:
             async with self._semaphore:
                 return await self._refine_unit(unit, problem_display_name)
-        except Exception:
+        except (AIError, ValueError):
             self._failed_units += 1
             logger.warning(
                 "AI refinement failed for unit %s, keeping original",

@@ -53,3 +53,96 @@ export function safeParseStreamEvent(
     };
   }
 }
+
+/**
+ * Parse one InteractionQuestion through the canonical StreamEvent validator.
+ * These sub-structure helpers intentionally reuse the full generated validator
+ * so feature code never grows a second handwritten schema for shared payloads.
+ */
+export function parseInteractionQuestion(input: unknown) {
+  const event = parseStreamEvent({
+    version: 1,
+    seq: 1,
+    channel: "state",
+    type: "state.interaction.required",
+    ids: {},
+    payload: {
+      interaction_id: "contract-substructure-probe",
+      question: input,
+      created_at: "1970-01-01T00:00:00Z",
+    },
+  });
+  if (event.type !== "state.interaction.required") {
+    throw new StreamEventParseError(
+      "InteractionQuestion probe resolved to wrong variant",
+    );
+  }
+  return event.payload.question;
+}
+
+export function parseExtractedInfo(input: unknown) {
+  const event = parseStreamEvent({
+    version: 1,
+    seq: 1,
+    channel: "state",
+    type: "state.extracted_info.upsert",
+    ids: {},
+    payload: { info: input },
+  });
+  if (event.type !== "state.extracted_info.upsert") {
+    throw new StreamEventParseError(
+      "ExtractedInfo probe resolved to wrong variant",
+    );
+  }
+  return event.payload.info;
+}
+
+export function parseCitation(input: unknown) {
+  const event = parseStreamEvent({
+    version: 1,
+    seq: 1,
+    channel: "source",
+    type: "source.citation.added",
+    ids: {},
+    payload: { citation: input },
+  });
+  if (event.type !== "source.citation.added") {
+    throw new StreamEventParseError("Citation probe resolved to wrong variant");
+  }
+  return event.payload.citation;
+}
+
+export function parseRedFlag(input: unknown) {
+  const event = parseStreamEvent({
+    version: 1,
+    seq: 1,
+    channel: "safety",
+    type: "safety.red_flag.detected",
+    ids: {},
+    payload: { has_red_flags: true, flags: [input] },
+  });
+  if (
+    event.type !== "safety.red_flag.detected" ||
+    event.payload.flags.length !== 1
+  ) {
+    throw new StreamEventParseError("RedFlag probe resolved to wrong variant");
+  }
+  return event.payload.flags[0];
+}
+
+export function parseRedFlagEvent(input: unknown) {
+  const event = parseStreamEvent({
+    version: 1,
+    seq: 1,
+    channel: "safety",
+    type: "safety.red_flag.detected",
+    ids: {},
+    payload: input,
+  });
+  if (event.type !== "safety.red_flag.detected") {
+    throw new StreamEventParseError(
+      "RedFlag event probe resolved to wrong variant",
+    );
+  }
+  return event.payload;
+}

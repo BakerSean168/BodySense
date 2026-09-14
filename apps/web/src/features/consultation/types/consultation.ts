@@ -73,6 +73,12 @@ export interface Message {
 export type MessagePart =
   | { type: "text"; text: string }
   | {
+      type: "image";
+      upload_id: string;
+      mime_type?: string;
+      image_url?: string;
+    }
+  | {
       type: "source";
       title?: string;
       snippet?: string;

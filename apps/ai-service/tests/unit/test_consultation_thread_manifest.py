@@ -2,6 +2,11 @@ from unittest.mock import patch
 
 import pytest
 
+from src.models.consultation_runtime_event import (
+    AgentConfigurationRuntimeEvent,
+    InteractionRequiredRuntimeEvent,
+    StreamDoneRuntimeEvent,
+)
 from src.runtime.consultation_thread import _format_spatial_context, get_consultation_manifest
 
 
@@ -83,19 +88,18 @@ def test_stream_thread_turn_emits_agent_configuration_event() -> None:
 
     asyncio.run(run())
 
-    assert captured_events[0].channel == "runtime"
-    assert captured_events[0].type == "runtime.agent_configuration"
+    assert isinstance(captured_events[0].event, AgentConfigurationRuntimeEvent)
     config_events = [
-        e
-        for e in captured_events
-        if e.channel == "runtime" and e.type == "runtime.agent_configuration"
+        event
+        for event in captured_events
+        if isinstance(event.event, AgentConfigurationRuntimeEvent)
     ]
     assert len(config_events) == 1
-    payload = config_events[0].payload
-    assert payload["agent_configuration"]["role"] == "consultation"
-    assert payload["agent_configuration"]["id"] == "consult-config-7feb8ca2d5bfad5a"
-    assert payload["execution_provenance"]["runtime"] == "langgraph"
-    assert payload["execution_provenance"]["logical_model"] == "bodysense-consultation"
+    payload = config_events[0].event
+    assert payload.agent_configuration["role"] == "consultation"
+    assert payload.agent_configuration["id"] == "consult-config-7feb8ca2d5bfad5a"
+    assert payload.execution_provenance["runtime"] == "langgraph"
+    assert payload.execution_provenance["logical_model"] == "bodysense-consultation"
 
 
 def test_stream_thread_turn_emits_identity_before_interrupt() -> None:
@@ -105,7 +109,7 @@ def test_stream_thread_turn_emits_identity_before_interrupt() -> None:
     captured_events = []
 
     class FakeInterrupt:
-        id = "interrupt-1"
+        id = "45fda8478b2ef754419799e10992af06"
         value = {"question": {"text": "哪里疼？"}, "tool_call_id": "tool-1"}
 
     class FakeGraph:
@@ -140,13 +144,14 @@ def test_stream_thread_turn_emits_identity_before_interrupt() -> None:
     import asyncio
 
     asyncio.run(run())
-    assert [event.type for event in captured_events] == [
-        "runtime.agent_configuration",
-        "state.interaction.required",
-    ]
-    assert captured_events[0].payload["agent_configuration"]["id"] == (
+    assert len(captured_events) == 2
+    assert isinstance(captured_events[0].event, AgentConfigurationRuntimeEvent)
+    assert isinstance(captured_events[1].event, InteractionRequiredRuntimeEvent)
+    assert captured_events[0].event.agent_configuration["id"] == (
         "consult-config-2bd9b46735dd693c"
     )
+    assert captured_events[1].event.interaction_id == "45fda8478b2ef754419799e10992af06"
+    assert captured_events[1].tool_call_id == "tool-1"
 
 
 def test_resume_thread_interrupt_emits_pinned_identity_first() -> None:
@@ -184,9 +189,9 @@ def test_resume_thread_interrupt_emits_pinned_identity_first() -> None:
     import asyncio
 
     asyncio.run(run())
-    assert captured_events[0].type == "runtime.agent_configuration"
-    assert captured_events[0].payload["agent_configuration"]["id"] == manifest.configuration_id
-    assert captured_events[-1].type == "stream.done"
+    assert isinstance(captured_events[0].event, AgentConfigurationRuntimeEvent)
+    assert captured_events[0].event.agent_configuration["id"] == manifest.configuration_id
+    assert isinstance(captured_events[-1].event, StreamDoneRuntimeEvent)
 
 
 def test_resume_thread_interrupt_rejects_checkpoint_configuration_mismatch() -> None:

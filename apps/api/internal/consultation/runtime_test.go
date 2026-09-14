@@ -208,15 +208,63 @@ func privateRuntimeEvent(
 	if err != nil {
 		t.Fatalf("marshal private runtime event payload: %v", err)
 	}
+	var typed service.ConsultationRuntimeEventPayload
+	switch kind {
+	case service.ConsultationRuntimeAgentConfiguration:
+		var value struct {
+			AgentConfiguration  json.RawMessage `json:"agent_configuration"`
+			ExecutionProvenance json.RawMessage `json:"execution_provenance"`
+		}
+		if err := json.Unmarshal(raw, &value); err != nil {
+			t.Fatal(err)
+		}
+		typed = service.ConsultationRuntimeAgentConfigurationPayload{AgentConfiguration: value.AgentConfiguration, ExecutionProvenance: value.ExecutionProvenance}
+	case service.ConsultationRuntimeTextDelta:
+		var value service.ConsultationRuntimeTextDeltaPayload
+		if err := json.Unmarshal(raw, &value); err != nil {
+			t.Fatal(err)
+		}
+		typed = value
+	case service.ConsultationRuntimeExtractedInfo:
+		var value struct {
+			Info json.RawMessage `json:"info"`
+		}
+		if err := json.Unmarshal(raw, &value); err != nil {
+			t.Fatal(err)
+		}
+		typed = service.ConsultationRuntimeExtractedInfoPayload{Info: value.Info}
+	case service.ConsultationRuntimeRedFlagDetected:
+		var value struct {
+			HasRedFlags bool              `json:"has_red_flags"`
+			Flags       []json.RawMessage `json:"flags"`
+		}
+		if err := json.Unmarshal(raw, &value); err != nil {
+			t.Fatal(err)
+		}
+		if value.Flags == nil {
+			value.Flags = []json.RawMessage{}
+		}
+		typed = service.ConsultationRuntimeRedFlagDetectedPayload{HasRedFlags: value.HasRedFlags, Flags: value.Flags}
+	case service.ConsultationRuntimeInteraction:
+		var value struct {
+			InteractionID string          `json:"interaction_id"`
+			Question      json.RawMessage `json:"question"`
+		}
+		if err := json.Unmarshal(raw, &value); err != nil {
+			t.Fatal(err)
+		}
+		typed = service.ConsultationRuntimeInteractionPayload{InteractionID: value.InteractionID, Question: value.Question}
+	default:
+		t.Fatalf("unsupported private runtime test event kind %q", kind)
+	}
 	return service.ConsultationRuntimeEvent{
-		Seq:  seq,
-		Kind: kind,
+		Seq: seq,
 		IDs: service.ConsultationRuntimeEventIDs{
 			ConversationID: state.BaseIDs.ConversationID,
 			RunID:          state.BaseIDs.RunID,
 			ToolCallID:     state.BaseIDs.ToolCallID,
 		},
-		Payload: raw,
+		Payload: typed,
 	}
 }
 

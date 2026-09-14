@@ -31,6 +31,11 @@ function walk(rel) {
       continue;
     }
     if (!/\.(go|py|ts|tsx)$/.test(entry.name)) continue;
+    if (child === "apps/ai-service/src/models/stream_event.py") {
+      violations.push(
+        `${child}: retired generic Python runtime StreamEvent authority resurfaced`,
+      );
+    }
     const text = fs.readFileSync(path.join(root, child), "utf8");
     if (text.includes("experiments/contract-codegen")) {
       violations.push(`${child}: references spike experiment path`);
@@ -40,20 +45,27 @@ function walk(rel) {
       text.includes("internal/generated/runtimeproto") &&
       !allowedGoRuntimeProtoConsumers.has(child)
     ) {
-      violations.push(`${child}: generated runtime Proto leaked past Go boundary adapter`);
+      violations.push(
+        `${child}: generated runtime Proto leaked past Go boundary adapter`,
+      );
     }
     if (
       child.endsWith(".py") &&
       text.includes("generated.runtimeproto") &&
       !allowedPythonRuntimeProtoConsumers.has(child)
     ) {
-      violations.push(`${child}: generated runtime Proto leaked past Python boundary adapter`);
+      violations.push(
+        `${child}: generated runtime Proto leaked past Python boundary adapter`,
+      );
     }
     if (
       text.includes("consultationInternalEventChannels") ||
-      text.includes("validateConsultationInternalEvent")
+      text.includes("validateConsultationInternalEvent") ||
+      text.includes("_RUNTIME_EVENT_FIELD_BY_TYPE")
     ) {
-      violations.push(`${child}: retired generic internal runtime authority resurfaced`);
+      violations.push(
+        `${child}: retired generic internal runtime authority resurfaced`,
+      );
     }
   }
 }

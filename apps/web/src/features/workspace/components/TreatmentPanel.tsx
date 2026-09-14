@@ -31,6 +31,25 @@ const statusLabels: Record<string, string> = {
   completed: "已结束",
 };
 
+function hasTrainingPlan(
+  value: unknown,
+): value is { training_plan: { id: string } } {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    !("training_plan" in value)
+  ) {
+    return false;
+  }
+  const plan = value.training_plan;
+  return (
+    typeof plan === "object" &&
+    plan !== null &&
+    "id" in plan &&
+    typeof plan.id === "string"
+  );
+}
+
 function prescriptionText(value: Record<string, unknown>) {
   return Object.entries(value)
     .filter(([, item]) => item !== "" && item !== null && item !== undefined)
@@ -44,7 +63,9 @@ function prescriptionText(value: Record<string, unknown>) {
 export function TreatmentPanel({ workspace }: TreatmentPanelProps) {
   const treatmentCommand = useTreatmentCommand();
   const [busyKey, setBusyKey] = useState<string | null>(null);
-  const [acceptedTrainingPlanId, setAcceptedTrainingPlanId] = useState<string | null>(null);
+  const [acceptedTrainingPlanId, setAcceptedTrainingPlanId] = useState<
+    string | null
+  >(null);
   const [showTrainingExecution, setShowTrainingExecution] = useState(false);
   const [showOutcome, setShowOutcome] = useState(false);
   const [outcomeDescription, setOutcomeDescription] = useState("");
@@ -101,11 +122,8 @@ export function TreatmentPanel({ workspace }: TreatmentPanelProps) {
       },
       "已采用当前方案",
     );
-    const accepted = result as {
-      training_plan?: { id?: string } | null;
-    } | null;
-    if (accepted?.training_plan?.id) {
-      setAcceptedTrainingPlanId(accepted.training_plan.id);
+    if (hasTrainingPlan(result)) {
+      setAcceptedTrainingPlanId(result.training_plan.id);
     }
   };
 
@@ -158,7 +176,8 @@ export function TreatmentPanel({ workspace }: TreatmentPanelProps) {
             isLoading={busyKey === "generate"}
             onClick={generateProposal}
           >
-            <Sparkles className="h-3.5 w-3.5" />生成方案建议
+            <Sparkles className="h-3.5 w-3.5" />
+            生成方案建议
           </Button>
         )}
       </div>
@@ -258,7 +277,9 @@ export function TreatmentPanel({ workspace }: TreatmentPanelProps) {
         </div>
       ) : (
         <div className="py-10 text-center">
-          <p className="text-sm font-medium text-foreground/85">还没有当前方案</p>
+          <p className="text-sm font-medium text-foreground/85">
+            还没有当前方案
+          </p>
           <p className="mt-1 text-xs text-muted-foreground">
             生成方案建议后，你可以先查看再决定是否采用。
           </p>

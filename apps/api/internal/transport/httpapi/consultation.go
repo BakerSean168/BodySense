@@ -111,7 +111,7 @@ func (r consultationHTTPErrorResponse) VisitGetConsultationInteractionMetricsRes
 }
 
 func runtimeHTTPError(err *consultationruntime.HTTPError) consultationHTTPErrorResponse {
-	return consultationHTTPErrorResponse{status: err.Status, code: err.Code, message: err.Message}
+	return consultationHTTPErrorResponse{status: err.Status, code: string(err.Code), message: err.Message}
 }
 
 func internalConsultationError(message string) consultationHTTPErrorResponse {

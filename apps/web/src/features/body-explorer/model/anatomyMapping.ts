@@ -1,5 +1,10 @@
+import { z } from "zod";
 import mappingData from "../data/vanatome-region-map.v1.json";
-import type { AtlasRegistryInventory, AtlasRegistryStructure, AnatomyStructureId } from "./anatomyTypes";
+import type {
+  AtlasRegistryInventory,
+  AtlasRegistryStructure,
+  AnatomyStructureId,
+} from "./anatomyTypes";
 import { asAnatomyStructureId } from "./anatomyTypes";
 import {
   BODY_REGION_IDS,
@@ -38,7 +43,49 @@ export interface VanatomeRegionMappingData {
   regions: Record<string, RegionAnatomyMapping>;
 }
 
-const rawMapping = mappingData as VanatomeRegionMappingData;
+const regionAnatomyMappingSchema = z
+  .object({
+    preferredFocusAnatomyId: z.string().min(1),
+    anatomyIds: z.array(z.string().min(1)).min(1),
+    verification: z
+      .object({
+        registry_verified: z.boolean(),
+        visual_review: z.enum(["pending", "verified"]),
+        basis: z.string().min(1),
+        note: z.string(),
+      })
+      .strict(),
+  })
+  .strict();
+
+const vanatomeRegionMappingSchema = z
+  .object({
+    schemaVersion: z.number().int(),
+    mappingVersion: z.number().int(),
+    ontologyVersion: z.number().int(),
+    atlas: z
+      .object({
+        provider: z.string().min(1),
+        release: z.string().min(1),
+        atlasId: z.string().min(1),
+        catalogBuildId: z.string().min(1),
+        upstreamCommit: z.string().regex(/^[0-9a-f]{40}$/),
+      })
+      .strict(),
+    verificationPolicy: z
+      .object({ registry: z.string().min(1), visual: z.string().min(1) })
+      .strict(),
+    regions: z.record(z.string(), regionAnatomyMappingSchema),
+  })
+  .strict();
+
+export function parseVanatomeRegionMapping(
+  input: unknown,
+): VanatomeRegionMappingData {
+  return vanatomeRegionMappingSchema.parse(input);
+}
+
+const rawMapping = parseVanatomeRegionMapping(mappingData);
 
 export const VANATOME_MAPPING_VERSION = rawMapping.mappingVersion;
 export const VANATOME_ATLAS_RELEASE = rawMapping.atlas.release;
@@ -53,27 +100,37 @@ for (const id of BODY_REGION_IDS) {
   for (const anatomyId of mapping?.anatomyIds ?? []) {
     const existing = reverseOwnership.get(anatomyId);
     if (existing && existing !== id) {
-      throw new Error(`Anatomy ID ${anatomyId} has duplicate BodyRegion ownership: ${existing}, ${id}`);
+      throw new Error(
+        `Anatomy ID ${anatomyId} has duplicate BodyRegion ownership: ${existing}, ${id}`,
+      );
     }
     reverseOwnership.set(anatomyId, id);
   }
 }
 
-export function getAnatomyMappingForRegion(id: BodyRegionId): RegionAnatomyMapping {
+export function getAnatomyMappingForRegion(
+  id: BodyRegionId,
+): RegionAnatomyMapping {
   const mapping = mappingByRegion.get(id);
   if (!mapping) throw new Error(`No Vanatome mapping for BodyRegionId ${id}`);
   return mapping;
 }
 
-export function getPreferredAnatomyIdForRegion(id: BodyRegionId): AnatomyStructureId {
-  return asAnatomyStructureId(getAnatomyMappingForRegion(id).preferredFocusAnatomyId);
+export function getPreferredAnatomyIdForRegion(
+  id: BodyRegionId,
+): AnatomyStructureId {
+  return asAnatomyStructureId(
+    getAnatomyMappingForRegion(id).preferredFocusAnatomyId,
+  );
 }
 
 export function getAnatomyIdsForRegion(id: BodyRegionId): AnatomyStructureId[] {
   return getAnatomyMappingForRegion(id).anatomyIds.map(asAnatomyStructureId);
 }
 
-export function getBodyRegionForAnatomy(anatomyId: string): BodyRegionId | null {
+export function getBodyRegionForAnatomy(
+  anatomyId: string,
+): BodyRegionId | null {
   return reverseOwnership.get(anatomyId) ?? null;
 }
 
@@ -84,7 +141,9 @@ export function resolveBodyRegionForAnatomy(
   const exact = getBodyRegionForAnatomy(anatomyId);
   if (exact || !registry) return exact;
 
-  const byId = new Map(registry.structures.map((structure) => [structure.anatomyId, structure]));
+  const byId = new Map(
+    registry.structures.map((structure) => [structure.anatomyId, structure]),
+  );
   const visited = new Set<string>();
   let current: AtlasRegistryStructure | undefined = byId.get(anatomyId);
 
@@ -102,7 +161,8 @@ export function validateVanatomeRegionMapping(
   mapping: VanatomeRegionMappingData = rawMapping,
 ): string[] {
   const errors: string[] = [];
-  if (mapping.schemaVersion !== 1) errors.push("mapping schemaVersion must be 1");
+  if (mapping.schemaVersion !== 1)
+    errors.push("mapping schemaVersion must be 1");
   if (mapping.mappingVersion !== 1) errors.push("mappingVersion must be 1");
   if (mapping.ontologyVersion !== BODY_REGION_ONTOLOGY_VERSION) {
     errors.push(
@@ -110,13 +170,19 @@ export function validateVanatomeRegionMapping(
     );
   }
   if (mapping.atlas.provider !== registry.atlasProvider) {
-    errors.push(`mapping atlas provider ${mapping.atlas.provider} does not match registry ${registry.atlasProvider}`);
+    errors.push(
+      `mapping atlas provider ${mapping.atlas.provider} does not match registry ${registry.atlasProvider}`,
+    );
   }
   if (mapping.atlas.release !== registry.atlasRelease) {
-    errors.push(`mapping atlas release ${mapping.atlas.release} does not match registry ${registry.atlasRelease}`);
+    errors.push(
+      `mapping atlas release ${mapping.atlas.release} does not match registry ${registry.atlasRelease}`,
+    );
   }
   if (mapping.atlas.atlasId !== registry.atlasId) {
-    errors.push(`mapping atlas ID ${mapping.atlas.atlasId} does not match registry ${registry.atlasId}`);
+    errors.push(
+      `mapping atlas ID ${mapping.atlas.atlasId} does not match registry ${registry.atlasId}`,
+    );
   }
   if (mapping.atlas.catalogBuildId !== registry.catalogBuildId) {
     errors.push(
@@ -124,7 +190,9 @@ export function validateVanatomeRegionMapping(
     );
   }
 
-  const registryById = new Map(registry.structures.map((structure) => [structure.anatomyId, structure]));
+  const registryById = new Map(
+    registry.structures.map((structure) => [structure.anatomyId, structure]),
+  );
   const reverse = new Map<string, BodyRegionId>();
 
   for (const regionId of BODY_REGION_IDS) {
@@ -136,8 +204,12 @@ export function validateVanatomeRegionMapping(
     if (regionMapping.anatomyIds.length === 0) {
       errors.push(`mapping ${regionId} must contain at least one anatomy ID`);
     }
-    if (!regionMapping.anatomyIds.includes(regionMapping.preferredFocusAnatomyId)) {
-      errors.push(`preferred focus ID for ${regionId} must be included in anatomyIds`);
+    if (
+      !regionMapping.anatomyIds.includes(regionMapping.preferredFocusAnatomyId)
+    ) {
+      errors.push(
+        `preferred focus ID for ${regionId} must be included in anatomyIds`,
+      );
     }
     if (!regionMapping.verification.registry_verified) {
       errors.push(`mapping ${regionId} is not registry_verified`);
@@ -147,12 +219,16 @@ export function validateVanatomeRegionMapping(
     for (const anatomyId of regionMapping.anatomyIds) {
       const structure = registryById.get(anatomyId);
       if (!structure) {
-        errors.push(`mapping ${regionId} references unknown atlas anatomy ID ${anatomyId}`);
+        errors.push(
+          `mapping ${regionId} references unknown atlas anatomy ID ${anatomyId}`,
+        );
         continue;
       }
       if (region.side) {
         if (!structure.laterality) {
-          errors.push(`mapping ${regionId} uses anatomy ID ${anatomyId} without proven laterality`);
+          errors.push(
+            `mapping ${regionId} uses anatomy ID ${anatomyId} without proven laterality`,
+          );
         } else if (structure.laterality !== region.side) {
           errors.push(
             `mapping ${regionId} uses ${structure.laterality}-sided anatomy ID ${anatomyId}`,
@@ -162,7 +238,9 @@ export function validateVanatomeRegionMapping(
 
       const existing = reverse.get(anatomyId);
       if (existing && existing !== regionId) {
-        errors.push(`anatomy ID ${anatomyId} is owned by both ${existing} and ${regionId}`);
+        errors.push(
+          `anatomy ID ${anatomyId} is owned by both ${existing} and ${regionId}`,
+        );
       } else {
         reverse.set(anatomyId, regionId);
       }
@@ -170,7 +248,8 @@ export function validateVanatomeRegionMapping(
   }
 
   for (const regionId of Object.keys(mapping.regions)) {
-    if (!isBodyRegionId(regionId)) errors.push(`mapping contains unknown BodyRegionId ${regionId}`);
+    if (!isBodyRegionId(regionId))
+      errors.push(`mapping contains unknown BodyRegionId ${regionId}`);
   }
 
   return errors;

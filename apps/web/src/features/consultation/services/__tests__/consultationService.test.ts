@@ -483,6 +483,19 @@ describe("consultationApi", () => {
       expect(result.candidates).toEqual(analysis.candidates);
     });
 
+    it("rejects malformed legacy transient diagnosis payloads", async () => {
+      mockAuthFetch.mockResolvedValue(
+        mockResponse({
+          status: "mystery",
+          candidates: [{ name: "Test", confidence: "certain", basis: "" }],
+        }),
+      );
+
+      await expect(
+        consultationApi.analyzeDiagnosis(conversationWire.id),
+      ).rejects.toThrow("Legacy diagnosis status is invalid");
+    });
+
     it("throws on non-ok response", async () => {
       mockAuthFetch.mockResolvedValue(mockResponse({}, false, 500));
       await expect(

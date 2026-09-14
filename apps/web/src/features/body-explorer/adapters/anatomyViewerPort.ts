@@ -1,6 +1,9 @@
-export type AnatomyStructureId = string & {
-  readonly __brand: "AnatomyStructureId";
-};
+import {
+  asAnatomyStructureId,
+  type AnatomyStructureId,
+} from "../model/anatomyTypes";
+
+export type { AnatomyStructureId } from "../model/anatomyTypes";
 
 export type AnatomyDisplayMode = "normal" | "xray" | "ghost";
 export type AnatomyIsolationMode = "selected" | "parent" | "parent-context";
@@ -31,15 +34,12 @@ export interface AnatomyViewerPort {
   select(id: AnatomyStructureId | null): void;
   hover(id: AnatomyStructureId | null): void;
   focus(id: AnatomyStructureId): void;
-  isolate(
-    id: AnatomyStructureId | null,
-    mode?: AnatomyIsolationMode,
-  ): void;
+  isolate(id: AnatomyStructureId | null, mode?: AnatomyIsolationMode): void;
   resetView(): void;
   setVisibleSystems(systemIds: readonly string[]): void;
   setDisplayMode(mode: AnatomyDisplayMode): void;
 }
 
 export function anatomyStructureId(value: string): AnatomyStructureId {
-  return value as AnatomyStructureId;
+  return asAnatomyStructureId(value);
 }

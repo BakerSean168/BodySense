@@ -9,6 +9,7 @@ const prioritySystems = [
   "skeletal",
   "nervous",
 ] as const;
+const prioritySystemIds = new Set<string>(prioritySystems);
 
 const systemLabels: Record<string, string> = {
   "regional-anatomy": "区域",
@@ -16,6 +17,8 @@ const systemLabels: Record<string, string> = {
   skeletal: "骨骼",
   nervous: "神经",
 };
+
+const displayModes: readonly AnatomyDisplayMode[] = ["normal", "xray", "ghost"];
 
 const displayModeLabels: Record<AnatomyDisplayMode, string> = {
   normal: "正常",
@@ -46,9 +49,7 @@ export function AnatomyLayerControls({
   const primary = prioritySystems
     .map((id) => available.get(id))
     .filter((system): system is AnatomySystemOption => Boolean(system));
-  const more = systems.filter(
-    (system) => !prioritySystems.includes(system.id as (typeof prioritySystems)[number]),
-  );
+  const more = systems.filter((system) => !prioritySystemIds.has(system.id));
 
   return (
     <div className="space-y-2" aria-label="解剖显示控制">
@@ -86,7 +87,9 @@ export function AnatomyLayerControls({
             <Button
               key={system.id}
               size="xs"
-              variant={visibleSystems.includes(system.id) ? "secondary" : "ghost"}
+              variant={
+                visibleSystems.includes(system.id) ? "secondary" : "ghost"
+              }
               aria-pressed={visibleSystems.includes(system.id)}
               onClick={() => onSelectSystem(system.id)}
             >
@@ -98,7 +101,7 @@ export function AnatomyLayerControls({
 
       <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
         <span className="mr-1">显示</span>
-        {(Object.keys(displayModeLabels) as AnatomyDisplayMode[]).map((mode) => (
+        {displayModes.map((mode) => (
           <button
             key={mode}
             type="button"

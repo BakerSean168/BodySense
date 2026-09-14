@@ -19,7 +19,8 @@ const sections: Array<{
     key: "activity",
     label: "日常活动",
     hint: "久坐、久站、走动、搬抬、重复动作、轮班等身体使用模式。",
-    placeholder: "例如：工作日久坐为主，每次连续坐 2-3 小时；每天步行约 40 分钟。",
+    placeholder:
+      "例如：工作日久坐为主，每次连续坐 2-3 小时；每天步行约 40 分钟。",
   },
   {
     key: "sleep",
@@ -81,11 +82,11 @@ export function LifestylePanel() {
 
   const syncSnapshot = (data: LifestyleSnapshot) => {
     setSnapshot(data);
-    setDraft(
-      Object.fromEntries(
-        sections.map(({ key }) => [key, data[key].summary || ""]),
-      ) as Draft,
-    );
+    const nextDraft = emptyDraft();
+    for (const { key } of sections) {
+      nextDraft[key] = data[key].summary || "";
+    }
+    setDraft(nextDraft);
   };
 
   const load = async () => {
@@ -120,7 +121,10 @@ export function LifestylePanel() {
         ...Object.fromEntries(
           sections.map(({ key }) => [
             key,
-            { summary: draft[key].trim(), details: snapshot[key].details ?? {} },
+            {
+              summary: draft[key].trim(),
+              details: snapshot[key].details ?? {},
+            },
           ]),
         ),
       });
@@ -133,25 +137,43 @@ export function LifestylePanel() {
     }
   };
 
-  const reviewCandidate = async (candidate: LifestyleCandidate, action: "accept" | "reject") => {
+  const reviewCandidate = async (
+    candidate: LifestyleCandidate,
+    action: "accept" | "reject",
+  ) => {
     if (!snapshot) return;
     setReviewingId(candidate.fact_id);
     setError(null);
     try {
       const next =
         action === "accept"
-          ? await lifestyleService.acceptCandidate(candidate.fact_id, snapshot.current_revision)
-          : await lifestyleService.rejectCandidate(candidate.fact_id, snapshot.current_revision);
+          ? await lifestyleService.acceptCandidate(
+              candidate.fact_id,
+              snapshot.current_revision,
+            )
+          : await lifestyleService.rejectCandidate(
+              candidate.fact_id,
+              snapshot.current_revision,
+            );
       syncSnapshot(next);
     } catch (cause) {
-      setError(errorMessage(cause, action === "accept" ? "确认更新失败" : "忽略更新失败"));
+      setError(
+        errorMessage(
+          cause,
+          action === "accept" ? "确认更新失败" : "忽略更新失败",
+        ),
+      );
     } finally {
       setReviewingId(null);
     }
   };
 
   if (loading) {
-    return <div className="py-12 text-center text-sm text-muted-foreground">正在读取生活方式…</div>;
+    return (
+      <div className="py-12 text-center text-sm text-muted-foreground">
+        正在读取生活方式…
+      </div>
+    );
   }
 
   return (
@@ -160,7 +182,8 @@ export function LifestylePanel() {
         <div>
           <h2 className="text-lg font-semibold text-foreground">生活方式</h2>
           <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
-            这里展示当前已确认的 BodyState 生活方式。您直接编辑会立即形成长期记录；对话中由 AI
+            这里展示当前已确认的 BodyState
+            生活方式。您直接编辑会立即形成长期记录；对话中由 AI
             整理出的变化会先作为待确认候选保存，只有您确认后才会替换当前状态并进入推理。
           </p>
         </div>
@@ -180,13 +203,19 @@ export function LifestylePanel() {
 
       {snapshot?.pending_updates?.length ? (
         <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
-          <div className="text-sm font-semibold text-foreground">对话中识别到的待确认更新</div>
+          <div className="text-sm font-semibold text-foreground">
+            对话中识别到的待确认更新
+          </div>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            BodySense 从对话中整理出了这些生活方式信息。它们已经持久保存，但目前不会进入健康推理，也不会覆盖当前长期记录。
+            BodySense
+            从对话中整理出了这些生活方式信息。它们已经持久保存，但目前不会进入健康推理，也不会覆盖当前长期记录。
           </p>
           <div className="mt-3 space-y-3">
             {snapshot.pending_updates.map((candidate) => (
-              <div key={candidate.fact_id} className="rounded-xl border border-border bg-background p-3">
+              <div
+                key={candidate.fact_id}
+                className="rounded-xl border border-border bg-background p-3"
+              >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="text-xs font-semibold text-primary">
@@ -196,7 +225,8 @@ export function LifestylePanel() {
                       {candidate.summary}
                     </p>
                     <p className="mt-1 text-[11px] text-muted-foreground">
-                      来自对话整理 · {new Date(candidate.created_at).toLocaleString()}
+                      来自对话整理 ·{" "}
+                      {new Date(candidate.created_at).toLocaleString()}
                     </p>
                   </div>
                   <div className="flex shrink-0 gap-2">
@@ -226,17 +256,28 @@ export function LifestylePanel() {
       {editing ? (
         <div className="space-y-4">
           {sections.map((section) => (
-            <div key={section.key} className="rounded-2xl border border-border p-4">
-              <label className="text-sm font-semibold text-foreground" htmlFor={`lifestyle-${section.key}`}>
+            <div
+              key={section.key}
+              className="rounded-2xl border border-border p-4"
+            >
+              <label
+                className="text-sm font-semibold text-foreground"
+                htmlFor={`lifestyle-${section.key}`}
+              >
                 {section.label}
               </label>
-              <p className="mt-1 text-xs text-muted-foreground">{section.hint}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {section.hint}
+              </p>
               <textarea
                 id={`lifestyle-${section.key}`}
                 rows={3}
                 value={draft[section.key]}
                 onChange={(event) =>
-                  setDraft((current) => ({ ...current, [section.key]: event.target.value }))
+                  setDraft((current) => ({
+                    ...current,
+                    [section.key]: event.target.value,
+                  }))
                 }
                 placeholder={section.placeholder}
                 className="mt-3 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
@@ -244,7 +285,11 @@ export function LifestylePanel() {
             </div>
           ))}
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" disabled={saving} onClick={() => setEditing(false)}>
+            <Button
+              variant="ghost"
+              disabled={saving}
+              onClick={() => setEditing(false)}
+            >
               取消
             </Button>
             <Button isLoading={saving} onClick={() => void save()}>
@@ -257,14 +302,20 @@ export function LifestylePanel() {
           {sections.map((section) => {
             const value = snapshot?.[section.key];
             return (
-              <div key={section.key} className="rounded-2xl border border-border bg-muted/20 p-4">
-                <div className="text-sm font-semibold text-foreground">{section.label}</div>
+              <div
+                key={section.key}
+                className="rounded-2xl border border-border bg-muted/20 p-4"
+              >
+                <div className="text-sm font-semibold text-foreground">
+                  {section.label}
+                </div>
                 <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
                   {value?.summary || "尚未记录"}
                 </p>
                 {value?.valid_from ? (
                   <p className="mt-3 text-[11px] text-muted-foreground/70">
-                    当前状态自 {new Date(value.valid_from).toLocaleDateString()} 起记录
+                    当前状态自 {new Date(value.valid_from).toLocaleDateString()}{" "}
+                    起记录
                   </p>
                 ) : null}
               </div>
@@ -272,7 +323,8 @@ export function LifestylePanel() {
           })}
           {!hasAny ? (
             <p className="sm:col-span-2 text-xs text-muted-foreground">
-              可以先留空；后续直接在对话里自然描述，BodySense 也可以逐步补全这里。
+              可以先留空；后续直接在对话里自然描述，BodySense
+              也可以逐步补全这里。
             </p>
           ) : null}
         </div>

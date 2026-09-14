@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import registryData from "../data/vanatome-1.4.0-registry.generated.json";
-import type { AtlasRegistryInventory } from "./anatomyTypes";
-import { validateAtlasRegistryInventory } from "./atlasRegistry";
+import {
+  parseAtlasRegistryInventory,
+  validateAtlasRegistryInventory,
+} from "./atlasRegistry";
 
-const registry = registryData as unknown as AtlasRegistryInventory;
+const registry = parseAtlasRegistryInventory(registryData);
 
 describe("Vanatome 1.4.0 registry inventory", () => {
   it("matches the pinned full-body registry and geometry evidence", () => {
@@ -16,6 +18,15 @@ describe("Vanatome 1.4.0 registry inventory", () => {
       mappedNodeCount: 984,
       fullBodyNodeCount: 984,
     });
+  });
+
+  it("rejects malformed registry input before business validation", () => {
+    expect(() =>
+      parseAtlasRegistryInventory({
+        ...registryData,
+        structures: [{ anatomyId: 42 }],
+      }),
+    ).toThrow();
   });
 
   it("preserves hierarchy, focus, and explicit laterality evidence", () => {
