@@ -30,6 +30,25 @@ from ..configuration.consultation_agent_config import (
     get_consultation_configuration,
     get_default_consultation_configuration,
 )
+from ..models.consultation_runtime_event import (
+    AgentConfigurationRuntimeEvent,
+    AnswerAttributionAddedRuntimeEvent,
+    CitationAddedRuntimeEvent,
+    ConsultationRuntimeEvent,
+    ConsultationRuntimeEventFactory,
+    ExtractedInfoRuntimeEvent,
+    InteractionRequiredRuntimeEvent,
+    KnowledgeGapRuntimeEvent,
+    LifestyleContextRuntimeEvent,
+    PhaseChangedRuntimeEvent,
+    RedFlagDetectedRuntimeEvent,
+    StreamDoneRuntimeEvent,
+    StreamErrorRuntimeEvent,
+    TextDeltaRuntimeEvent,
+    ToolCallRuntimeEvent,
+    ToolResultRuntimeEvent,
+    UsageReportedRuntimeEvent,
+)
 from ..models.consultation_writer_event import (
     AnswerAttributionWriterEvent,
     CitationWriterEvent,
@@ -46,7 +65,6 @@ from ..models.consultation_writer_event import (
     UsageWriterEvent,
     parse_consultation_writer_event,
 )
-from ..models.stream_event import StreamEvent, StreamEventFactory, StreamEventIds
 from ..prompts.consultation import format_profile_context, get_system_prompt
 from ..services.agent.answer_attribution import (
     build_published_evidence_binding,
@@ -1125,125 +1143,85 @@ async def get_runtime_graph():
 
 
 def _map_internal_event(
-    factory: StreamEventFactory,
+    factory: ConsultationRuntimeEventFactory,
     event_data: Any,
     *,
     run_id: str,
-) -> StreamEvent | None:
+) -> ConsultationRuntimeEvent | None:
     event = parse_consultation_writer_event(event_data)
-    base_ids = StreamEventIds(run_id=run_id)
 
     if isinstance(event, TextDeltaWriterEvent):
-        return factory.next(
-            channel="message",
-            event_type="message.text.delta",
-            payload={"delta": event.delta},
-            ids=base_ids,
-        )
+        return factory.next(TextDeltaRuntimeEvent(delta=event.delta), run_id=run_id)
     if isinstance(event, ToolCallWriterEvent):
         return factory.next(
-            channel="tool",
-            event_type="tool.call",
-            payload={"tool": event.tool, "args": event.args},
-            ids=StreamEventIds(run_id=run_id, tool_call_id=event.id),
+            ToolCallRuntimeEvent(tool=event.tool, args=event.args),
+            run_id=run_id,
+            tool_call_id=event.id,
         )
     if isinstance(event, ToolResultWriterEvent):
         return factory.next(
-            channel="tool",
-            event_type="tool.result",
-            payload={"tool": event.tool, "result": event.result},
-            ids=StreamEventIds(run_id=run_id, tool_call_id=event.id),
+            ToolResultRuntimeEvent(tool=event.tool, result=event.result),
+            run_id=run_id,
+            tool_call_id=event.id,
         )
     if isinstance(event, ExtractedInfoWriterEvent):
-        return factory.next(
-            channel="state",
-            event_type="state.extracted_info.upsert",
-            payload={"info": event.info},
-            ids=base_ids,
-        )
+        return factory.next(ExtractedInfoRuntimeEvent(info=event.info), run_id=run_id)
     if isinstance(event, LifestyleContextWriterEvent):
-        return factory.next(
-            channel="state",
-            event_type="state.lifestyle_context.upsert",
-            payload={"context": event.context},
-            ids=base_ids,
-        )
+        return factory.next(LifestyleContextRuntimeEvent(context=event.context), run_id=run_id)
     if isinstance(event, PhaseChangeWriterEvent):
         return factory.next(
-            channel="state",
-            event_type="state.phase.changed",
-            payload={"to": event.phase, "reason": event.reason},
-            ids=base_ids,
+            PhaseChangedRuntimeEvent(to=event.phase, reason=event.reason),
+            run_id=run_id,
         )
     if isinstance(event, CitationWriterEvent):
-        return factory.next(
-            channel="source",
-            event_type="source.citation.added",
-            payload={"citation": event.citation},
-            ids=base_ids,
-        )
+        return factory.next(CitationAddedRuntimeEvent(citation=event.citation), run_id=run_id)
     if isinstance(event, AnswerAttributionWriterEvent):
         return factory.next(
-            channel="source",
-            event_type="source.answer_attribution.added",
-            payload={"attribution": event.attribution},
-            ids=base_ids,
+            AnswerAttributionAddedRuntimeEvent(attribution=event.attribution),
+            run_id=run_id,
         )
     if isinstance(event, KnowledgeGapWriterEvent):
         return factory.next(
-            channel="source",
-            event_type="source.knowledge_gap",
-            payload={"query": event.query, "message": event.message},
-            ids=base_ids,
+            KnowledgeGapRuntimeEvent(query=event.query, message=event.message),
+            run_id=run_id,
         )
     if isinstance(event, RedFlagWriterEvent):
         return factory.next(
-            channel="safety",
-            event_type="safety.red_flag.detected",
-            payload={"has_red_flags": event.has_red_flags, "flags": event.flags},
-            ids=base_ids,
+            RedFlagDetectedRuntimeEvent(
+                has_red_flags=event.has_red_flags,
+                flags=event.flags,
+            ),
+            run_id=run_id,
         )
     if isinstance(event, UsageWriterEvent):
-        return factory.next(
-            channel="usage",
-            event_type="usage.reported",
-            payload={"usage": event.usage},
-            ids=base_ids,
-        )
+        return factory.next(UsageReportedRuntimeEvent(usage=event.usage), run_id=run_id)
     if isinstance(event, StreamErrorWriterEvent):
-        return factory.next(
-            channel="stream",
-            event_type="stream.error",
-            payload={"message": event.message},
-            ids=base_ids,
-        )
+        return factory.next(StreamErrorRuntimeEvent(message=event.message), run_id=run_id)
     if isinstance(event, DoneWriterSentinel):
         return None
     assert_never(event)
 
 
 def _runtime_agent_configuration_event(
-    factory: StreamEventFactory,
+    factory: ConsultationRuntimeEventFactory,
     *,
     manifest: ConsultationAgentManifest,
     run_id: str,
     usage: dict[str, Any] | None = None,
-) -> StreamEvent:
+) -> ConsultationRuntimeEvent:
     """Build the internal control-plane identity handshake for Go."""
     return factory.next(
-        channel="runtime",
-        event_type="runtime.agent_configuration",
-        payload={
-            "agent_configuration": manifest.provenance(),
-            "execution_provenance": {
+        AgentConfigurationRuntimeEvent(
+            agent_configuration=manifest.provenance(),
+            execution_provenance={
                 "status": "executed",
                 "runtime": "langgraph",
                 "logical_model": manifest.logical_model,
                 "model_group_revision": manifest.model_group_revision,
                 "usage": usage or {},
             },
-        },
-        ids=StreamEventIds(run_id=run_id),
+        ),
+        run_id=run_id,
     )
 
 
@@ -1274,10 +1252,10 @@ async def stream_thread_turn(
     recent_outcomes: list[dict[str, Any]] | None = None,
     spatial_context: dict[str, Any] | None = None,
     configuration_id: str | None = None,
-) -> AsyncIterator[StreamEvent]:
+) -> AsyncIterator[ConsultationRuntimeEvent]:
     graph = await get_runtime_graph()
     config = cast(RunnableConfig, {"configurable": {"thread_id": thread_id}})
-    factory = StreamEventFactory(conversation_id=conversation_id)
+    factory = ConsultationRuntimeEventFactory(conversation_id=conversation_id)
 
     # Resolve the exact immutable Agent configuration (North-Star identity).
     manifest = get_consultation_manifest(configuration_id)
@@ -1322,27 +1300,17 @@ async def stream_thread_turn(
         pending_interrupt = snapshot.interrupts[0]
         payload = pending_interrupt.value
         event = factory.next(
-            channel="state",
-            event_type="state.interaction.required",
-            payload={
-                "interaction_id": pending_interrupt.id,
-                "question": payload.get("question", {}),
-            },
-            ids=StreamEventIds(
-                run_id=run_id,
-                tool_call_id=payload.get("tool_call_id") or None,
+            InteractionRequiredRuntimeEvent(
                 interaction_id=pending_interrupt.id,
+                question=payload.get("question", {}),
             ),
+            run_id=run_id,
+            tool_call_id=payload.get("tool_call_id") or None,
         )
         yield event
         return
 
-    yield factory.next(
-        channel="stream",
-        event_type="stream.done",
-        payload={},
-        ids=StreamEventIds(run_id=run_id),
-    )
+    yield factory.next(StreamDoneRuntimeEvent(), run_id=run_id)
 
 
 async def resume_thread_interrupt(
@@ -1359,10 +1327,10 @@ async def resume_thread_interrupt(
     current_treatment: dict[str, Any] | None = None,
     recent_outcomes: list[dict[str, Any]] | None = None,
     spatial_context: dict[str, Any] | None = None,
-) -> AsyncIterator[StreamEvent]:
+) -> AsyncIterator[ConsultationRuntimeEvent]:
     graph = await get_runtime_graph()
     config = cast(RunnableConfig, {"configurable": {"thread_id": thread_id}})
-    factory = StreamEventFactory(conversation_id=conversation_id)
+    factory = ConsultationRuntimeEventFactory(conversation_id=conversation_id)
 
     # A HITL resume is continuation of the same logical LangGraph thread. The
     # Go source run supplies its durable configuration id; reconcile that with
@@ -1411,27 +1379,17 @@ async def resume_thread_interrupt(
         pending_interrupt = snapshot.interrupts[0]
         payload = pending_interrupt.value
         event = factory.next(
-            channel="state",
-            event_type="state.interaction.required",
-            payload={
-                "interaction_id": pending_interrupt.id,
-                "question": payload.get("question", {}),
-            },
-            ids=StreamEventIds(
-                run_id=run_id,
-                tool_call_id=payload.get("tool_call_id") or None,
+            InteractionRequiredRuntimeEvent(
                 interaction_id=pending_interrupt.id,
+                question=payload.get("question", {}),
             ),
+            run_id=run_id,
+            tool_call_id=payload.get("tool_call_id") or None,
         )
         yield event
         return
 
-    yield factory.next(
-        channel="stream",
-        event_type="stream.done",
-        payload={},
-        ids=StreamEventIds(run_id=run_id),
-    )
+    yield factory.next(StreamDoneRuntimeEvent(), run_id=run_id)
 
 
 def _chunk_text(text: str, chunk_size: int = 120) -> list[str]:

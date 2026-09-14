@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import pytest
 
+from src.models.consultation_runtime_event import (
+    ConsultationRuntimeEventFactory,
+    StreamErrorRuntimeEvent,
+)
 from src.models.consultation_writer_event import (
     ConsultationWriterProtocolError,
     DoneWriterSentinel,
     StreamErrorWriterEvent,
     parse_consultation_writer_event,
 )
-from src.models.stream_event import StreamEventFactory
 from src.runtime.consultation_thread import _map_internal_event
 
 
@@ -27,17 +30,16 @@ def test_stream_error_is_not_silently_dropped() -> None:
     assert isinstance(parsed, StreamErrorWriterEvent)
 
     event = _map_internal_event(
-        StreamEventFactory(conversation_id="conversation-1"),
+        ConsultationRuntimeEventFactory(conversation_id="conversation-1"),
         {"type": "stream_error", "message": "tool loop exceeded"},
         run_id="run-1",
     )
 
     assert event is not None
-    assert event.type == "stream.error"
-    assert event.channel == "stream"
-    assert event.ids.conversation_id == "conversation-1"
-    assert event.ids.run_id == "run-1"
-    assert event.payload == {"message": "tool loop exceeded"}
+    assert isinstance(event.event, StreamErrorRuntimeEvent)
+    assert event.conversation_id == "conversation-1"
+    assert event.run_id == "run-1"
+    assert event.event.message == "tool loop exceeded"
 
 
 def test_done_writer_value_is_an_explicit_non_protocol_sentinel() -> None:
@@ -53,7 +55,7 @@ def test_done_writer_value_is_an_explicit_non_protocol_sentinel() -> None:
 
     assert (
         _map_internal_event(
-            StreamEventFactory(conversation_id="conversation-1"),
+            ConsultationRuntimeEventFactory(conversation_id="conversation-1"),
             raw,
             run_id="run-1",
         )

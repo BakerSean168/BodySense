@@ -68,16 +68,48 @@ Unknown variants and malformed payloads raise `ConsultationWriterProtocolError`.
 
 - AI-service Ruff — PASS;
 - AI-service Pyright — **0 errors**;
-- AI-service pytest — **503/503 PASS**;
+- AI-service pytest — **503/503 PASS** at the TRUST-001 checkpoint;
 - provider-stream + gateway routing focused tests — PASS;
-- writer-boundary / stream-event focused tests — PASS;
+- writer-boundary focused tests — PASS;
 - ToolExecutor ownership tests — PASS.
+
+## TRUST-002 — Typed Python private runtime events
+
+Status: **COMPLETE**
+
+The remaining Python application seam no longer reconstitutes the private wire from a generic `StreamEvent(channel + type + payload)` object. That model and its duplicate public-schema parity tests have been retired.
+
+The application seam is now:
+
+```text
+LangGraph writer value
+  -> strict ConsultationWriterEvent parser
+  -> handwritten ConsultationRuntimeEvent variant
+  -> exhaustive Proto adapter
+  -> generated RuntimeEvent oneof + Protovalidate
+```
+
+`ConsultationRuntimeEvent.event` is a finite union covering all 17 canonical private Proto variants. The application variants carry direct fields instead of a generic payload dictionary, and the envelope owns only sequence plus runtime identities. There is no public StreamEvent channel in the Python private runtime model.
+
+`runtime_proto_adapter.py` now maps each handwritten class directly into its corresponding generated Proto message and ends in `assert_never`. The `_RUNTIME_EVENT_FIELD_BY_TYPE` string lookup table has been deleted. Complex application-owned JSON still enters only the specific Proto `Struct` field that owns it.
+
+The 17-variant fixture corpus now checks both oneof payload parity and exact runtime IDs. This caught and fixed a protobuf-copy regression where the LangGraph 32-hex `interaction_id` was present in the payload but missing from `RuntimeEvent.ids`.
+
+Architecture governance now fails if either the retired Python `models/stream_event.py` or `_RUNTIME_EVENT_FIELD_BY_TYPE` authority reappears.
+
+Evidence after TRUST-002:
+
+- AI-service Ruff — PASS;
+- AI-service Pyright — **0 errors**;
+- AI-service pytest — **497/497 PASS**;
+- typed runtime + Proto adapter focused tests — PASS;
+- 17/17 private Proto variant corpus parity — PASS;
+- generic Python `StreamEvent` references under AI-service — **0**.
 
 ## Remaining Phase 05 work
 
 ### Python
 
-- replace the remaining in-process `StreamEvent(type + payload)` seam between Consultation runtime and the Proto adapter with typed variants so `runtime_proto_adapter.py` no longer reconstructs event payload shape from a string discriminator;
 - audit broad `except Exception` fallbacks and distinguish infrastructure/protocol failures from valid domain output where the distinction affects behavior;
 - continue reducing `Any` only where an upstream parser has already established a narrower type.
 
