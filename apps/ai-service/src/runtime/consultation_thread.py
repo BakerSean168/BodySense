@@ -13,7 +13,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, StreamWriter, interrupt
 
-from ..ai import AiRequest, AIService
+from ..ai import AiRequest, AIService, GatewayUnavailableError
 from ..ai.consultation_gateway_model import (
     consultation_model_settings,
 )
@@ -679,7 +679,7 @@ async def llm_turn(state: ConsultationThreadState, *, writer: StreamWriter) -> d
 
     try:
         ai = _get_ai_service()
-    except Exception:
+    except GatewayUnavailableError:
         user_message = ""
         for message in reversed(state.get("runtime_messages", [])):
             if message.get("role") == "user":

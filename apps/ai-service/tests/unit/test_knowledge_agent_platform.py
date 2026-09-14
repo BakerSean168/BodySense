@@ -200,3 +200,74 @@ async def test_video_pipeline_carries_splitter_lineage_into_source_metadata(
     )
     execution = pack.source.metadata["agent_execution"]
     assert execution["knowledge_splitter"]["agent_configuration"]["id"] == SPLITTER_ID
+
+
+class _FailingAI:
+    def __init__(self, error: Exception) -> None:
+        self.error = error
+
+    async def generate(self, _request):
+        raise self.error
+
+
+@pytest.mark.asyncio
+async def test_splitter_degrades_expected_model_failures_but_not_programming_errors() -> None:
+    from src.ai.errors import GatewayUnavailableError
+
+    segments = [TranscriptSegment(segment_index=0, start_sec=0, end_sec=5, text="头前移说明")]
+    degraded = LLMSplitter(
+        configuration_id=SPLITTER_ID,
+        ai=_FailingAI(GatewayUnavailableError("gateway unavailable")),
+    )
+    units = await degraded.split(segments, "forward-head", "头前移")
+    assert units
+    assert degraded.execution_record["execution_provenance"]["fallback"] == "heuristic"
+
+    broken = LLMSplitter(
+        configuration_id=SPLITTER_ID,
+        ai=_FailingAI(RuntimeError("programming defect")),
+    )
+    with pytest.raises(RuntimeError, match="programming defect"):
+        await broken.split(segments, "forward-head", "头前移")
+
+
+@pytest.mark.asyncio
+async def test_curator_degrades_expected_model_or_output_failures_only() -> None:
+    from src.ai.errors import GatewayProtocolError
+
+    source = SourceVideoMetadata(
+        source_key="source-errors",
+        source_type="video",
+        title="source",
+        author="tester",
+        problem_slug="forward-head",
+        problem_display_name="头前移",
+        original_file_path="video.mp4",
+    )
+    pack = GeneratedKnowledgePack(
+        source=source,
+        artifact_dir=".",
+        transcript_segments=[],
+        units=[_unit()],
+        clips=[],
+    )
+
+    degraded = AICurator(
+        configuration_id=CURATOR_ID,
+        ai=_FailingAI(GatewayProtocolError("malformed provider payload")),
+    )
+    refined = await degraded.refine_pack(pack)
+    assert refined.units[0] == pack.units[0]
+    assert degraded.execution_record["execution_provenance"]["failed_units"] == 1
+
+    malformed = AICurator(configuration_id=CURATOR_ID, ai=_FakeAI("not-json"))
+    refined_malformed = await malformed.refine_pack(pack)
+    assert refined_malformed.units[0] == pack.units[0]
+    assert malformed.execution_record["execution_provenance"]["failed_units"] == 1
+
+    broken = AICurator(
+        configuration_id=CURATOR_ID,
+        ai=_FailingAI(RuntimeError("programming defect")),
+    )
+    with pytest.raises(RuntimeError, match="programming defect"):
+        await broken.refine_pack(pack)

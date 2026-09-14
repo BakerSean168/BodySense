@@ -106,12 +106,33 @@ Evidence after TRUST-002:
 - 17/17 private Proto variant corpus parity — PASS;
 - generic Python `StreamEvent` references under AI-service — **0**.
 
+## TRUST-003 — Explicit Python degradation and failure semantics
+
+Status: **COMPLETE**
+
+Broad fallbacks were classified by behavior rather than mechanically removed. Paths that already wrap an exception into an explicit failure (`stream.error`, domain infrastructure error, retry-then-rethrow, or opt-in ephemeral CI fallback) remain broad where the boundary must contain unknown failures. Paths that returned apparently valid business data were narrowed.
+
+- Consultation reply fallback now catches only `GatewayUnavailableError`; unexpected runtime/programming errors propagate to the streaming boundary and become explicit `stream.error`.
+- Consultation intake degrades only for `AgentRunError` or `GatewayUnavailableError`; unexpected runtime errors propagate.
+- Knowledge splitter/curator degrade only for `AIError` or their explicit malformed-model-output `ValueError`; implementation defects no longer silently become heuristic/original output.
+- Pose extraction preserves legitimate no-person/no-decode empty results but converts unexpected detector/runtime exceptions into `PoseMechanismError` instead of an empty metric set.
+- MiMo Omni ASR fails the entire transcription if any chunk errors. It never publishes an unmarked partial transcript; every temporary chunk is still cleaned in `finally`.
+
+Evidence after TRUST-003:
+
+- AI-service Ruff — PASS;
+- AI-service Pyright — **0 errors**;
+- AI-service pytest — **505/505 PASS**;
+- consultation model/intake error-semantic tests — PASS;
+- Knowledge splitter/curator expected-degradation tests — PASS;
+- posture mechanism tests — PASS;
+- MiMo partial-transcript fail-closed test — PASS.
+
 ## Remaining Phase 05 work
 
 ### Python
 
-- audit broad `except Exception` fallbacks and distinguish infrastructure/protocol failures from valid domain output where the distinction affects behavior;
-- continue reducing `Any` only where an upstream parser has already established a narrower type.
+- continue reducing `Any` only where an upstream parser has already established a narrower type; no broad-fallback cleanup remains unless later review finds another path that returns valid-looking data without explicit degraded/failed semantics.
 
 ### TypeScript
 

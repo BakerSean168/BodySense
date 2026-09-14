@@ -11,7 +11,7 @@ import logging
 import re
 from typing import Any
 
-from ..ai import AiRequest, AIService
+from ..ai import AIError, AiRequest, AIService
 from ..ai.gateway import KNOWLEDGE_SPLITTER_ROUTE
 from ..ai.types import ChatMessage
 from ..configuration.knowledge_agent_config import (
@@ -86,7 +86,7 @@ class LLMSplitter:
             return await self._split_with_llm(
                 transcript_segments, problem_slug, problem_display_name
             )
-        except Exception:
+        except (AIError, ValueError):
             self._fallback_used = True
             logger.warning("LLM splitting failed, falling back to heuristic", exc_info=True)
             fallback = HeuristicSplitter()

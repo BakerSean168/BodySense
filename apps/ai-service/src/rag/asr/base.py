@@ -8,6 +8,10 @@ from typing import Protocol
 from ..knowledge_pack import TranscriptSegment
 
 
+class ASRTranscriptionError(RuntimeError):
+    """An ASR provider could not produce a trustworthy complete transcript."""
+
+
 class ASRProvider(Protocol):
     """Protocol for ASR (Automatic Speech Recognition) providers.
 
