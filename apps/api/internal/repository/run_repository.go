@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
@@ -25,7 +26,7 @@ func NewRunRepository(db *gorm.DB) *RunRepository {
 
 // Create creates a new run.
 func (r *RunRepository) Create(ctx context.Context, run *model.Run) error {
-	return r.db.WithContext(ctx).Create(run).Error
+	return database.FromContext(ctx, r.db).Create(run).Error
 }
 
 // CreateWithIdempotency inserts a run atomically using the database unique
@@ -37,7 +38,7 @@ func (r *RunRepository) CreateWithIdempotency(ctx context.Context, run *model.Ru
 	}
 
 	var existed bool
-	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	err := database.FromContext(ctx, r.db).Transaction(func(tx *gorm.DB) error {
 		result := tx.Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "user_id"}, {Name: "request_id"}},
 			DoNothing: true,
@@ -66,7 +67,7 @@ func (r *RunRepository) CreateWithIdempotency(ctx context.Context, run *model.Ru
 // GetByID retrieves a run by ID.
 func (r *RunRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.Run, error) {
 	var run model.Run
-	err := r.db.WithContext(ctx).
+	err := database.FromContext(ctx, r.db).
 		Where("id = ?", id).
 		First(&run).Error
 	if err == gorm.ErrRecordNotFound {
@@ -81,7 +82,7 @@ func (r *RunRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.Run, 
 // GetByRequestID retrieves a run by user ID and request ID (idempotency check).
 func (r *RunRepository) GetByRequestID(ctx context.Context, userID uuid.UUID, requestID string) (*model.Run, error) {
 	var run model.Run
-	err := r.db.WithContext(ctx).
+	err := database.FromContext(ctx, r.db).
 		Where("user_id = ? AND request_id = ?", userID, requestID).
 		First(&run).Error
 	if err == gorm.ErrRecordNotFound {
@@ -96,27 +97,50 @@ func (r *RunRepository) GetByRequestID(ctx context.Context, userID uuid.UUID, re
 // ListByConversationID retrieves all runs for a conversation.
 func (r *RunRepository) ListByConversationID(ctx context.Context, conversationID uuid.UUID) ([]model.Run, error) {
 	var runs []model.Run
-	err := r.db.WithContext(ctx).
+	err := database.FromContext(ctx, r.db).
 		Where("conversation_id = ?", conversationID).
 		Order("started_at ASC").
 		Find(&runs).Error
 	return runs, err
 }
 
-// UpdateStatus updates the status of a run.
-func (r *RunRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status string) error {
-	return r.db.WithContext(ctx).
+// MarkWaitingUser transitions exactly running -> waiting_user and releases the
+// execution lease. A false result means another lifecycle transition won.
+func (r *RunRepository) MarkWaitingUser(ctx context.Context, id uuid.UUID) (bool, error) {
+	result := database.FromContext(ctx, r.db).
 		Model(&model.Run{}).
-		Where("id = ? AND status NOT IN ?", id, []string{"completed", "failed", "cancelled"}).
-		Update("status", status).Error
+		Where("id = ? AND status = ?", id, model.RunStatusRunning).
+		Updates(map[string]any{
+			"status":             model.RunStatusWaitingUser,
+			"lease_owner":        "",
+			"lease_expires_at":   nil,
+			"lease_heartbeat_at": nil,
+		})
+	return result.RowsAffected == 1, result.Error
+}
+
+// ResumeRunning transitions exactly waiting_user -> running and establishes a
+// new execution lease for the resuming API process.
+func (r *RunRepository) ResumeRunning(ctx context.Context, id uuid.UUID, owner string, expiresAt time.Time) (bool, error) {
+	now := time.Now()
+	result := database.FromContext(ctx, r.db).
+		Model(&model.Run{}).
+		Where("id = ? AND status = ?", id, model.RunStatusWaitingUser).
+		Updates(map[string]any{
+			"status":             model.RunStatusRunning,
+			"lease_owner":        owner,
+			"lease_expires_at":   expiresAt,
+			"lease_heartbeat_at": now,
+		})
+	return result.RowsAffected == 1, result.Error
 }
 
 // RenewLease extends only the lease owned by this API process. A false result
 // means another terminal transition or reconciler already won the race.
 func (r *RunRepository) RenewLease(ctx context.Context, id, userID uuid.UUID, owner string, expiresAt, heartbeatAt time.Time) (bool, error) {
-	result := r.db.WithContext(ctx).
+	result := database.FromContext(ctx, r.db).
 		Model(&model.Run{}).
-		Where("id = ? AND user_id = ? AND status = ? AND lease_owner = ?", id, userID, "running", owner).
+		Where("id = ? AND user_id = ? AND status = ? AND lease_owner = ?", id, userID, model.RunStatusRunning, owner).
 		Updates(map[string]any{"lease_expires_at": expiresAt, "lease_heartbeat_at": heartbeatAt})
 	return result.RowsAffected == 1, result.Error
 }
@@ -129,18 +153,18 @@ func (r *RunRepository) ReclaimExpiredRuns(ctx context.Context, now time.Time, l
 		limit = 100
 	}
 	var reclaimed []model.Run
-	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	err := database.FromContext(ctx, r.db).Transaction(func(tx *gorm.DB) error {
 		var candidates []model.Run
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE", Options: "SKIP LOCKED"}).
-			Where("status = ? AND lease_expires_at IS NOT NULL AND lease_expires_at <= ?", "running", now).
+			Where("status = ? AND lease_expires_at IS NOT NULL AND lease_expires_at <= ?", model.RunStatusRunning, now).
 			Order("lease_expires_at ASC").Limit(limit).Find(&candidates).Error; err != nil {
 			return err
 		}
 		for _, candidate := range candidates {
 			result := tx.Model(&model.Run{}).
-				Where("id = ? AND status = ? AND lease_expires_at <= ?", candidate.ID, "running", now).
+				Where("id = ? AND status = ? AND lease_expires_at <= ?", candidate.ID, model.RunStatusRunning, now).
 				Updates(map[string]any{
-					"status":             "failed",
+					"status":             model.RunStatusFailed,
 					"error":              datatypes.JSON([]byte(runLeaseErrorJSON)),
 					"completed_at":       now,
 					"lease_owner":        "",
@@ -151,7 +175,7 @@ func (r *RunRepository) ReclaimExpiredRuns(ctx context.Context, now time.Time, l
 				return result.Error
 			}
 			if result.RowsAffected == 1 {
-				candidate.Status = "failed"
+				candidate.Status = model.RunStatusFailed
 				candidate.Error = datatypes.JSON([]byte(runLeaseErrorJSON))
 				candidate.CompletedAt = &now
 				candidate.LeaseOwner = ""
@@ -175,11 +199,11 @@ func (r *RunRepository) CompleteRun(ctx context.Context, id, userID uuid.UUID, u
 // false when cancellation/failure/completion won the race first.
 func (r *RunRepository) TryCompleteRun(ctx context.Context, id, userID uuid.UUID, usage any, providerResponseID string) (bool, error) {
 	now := time.Now()
-	result := r.db.WithContext(ctx).
+	result := database.FromContext(ctx, r.db).
 		Model(&model.Run{}).
-		Where("id = ? AND user_id = ? AND status IN ?", id, userID, []string{"running", "waiting_user"}).
+		Where("id = ? AND user_id = ? AND status IN ?", id, userID, []model.RunStatus{model.RunStatusRunning, model.RunStatusWaitingUser}).
 		Updates(map[string]any{
-			"status":               "completed",
+			"status":               model.RunStatusCompleted,
 			"usage":                usage,
 			"provider_response_id": providerResponseID,
 			"completed_at":         now,
@@ -193,11 +217,11 @@ func (r *RunRepository) TryCompleteRun(ctx context.Context, id, userID uuid.UUID
 // CancelRun atomically transitions an active/waiting run to cancelled.
 func (r *RunRepository) CancelRun(ctx context.Context, id, userID uuid.UUID, reason any) (bool, error) {
 	now := time.Now()
-	result := r.db.WithContext(ctx).
+	result := database.FromContext(ctx, r.db).
 		Model(&model.Run{}).
-		Where("id = ? AND user_id = ? AND status IN ?", id, userID, []string{"running", "waiting_user"}).
+		Where("id = ? AND user_id = ? AND status IN ?", id, userID, []model.RunStatus{model.RunStatusRunning, model.RunStatusWaitingUser}).
 		Updates(map[string]any{
-			"status":             "cancelled",
+			"status":             model.RunStatusCancelled,
 			"error":              reason,
 			"completed_at":       now,
 			"lease_owner":        "",
@@ -208,19 +232,20 @@ func (r *RunRepository) CancelRun(ctx context.Context, id, userID uuid.UUID, rea
 }
 
 // FailRun marks a run as failed with an error JSON payload.
-func (r *RunRepository) FailRun(ctx context.Context, id, userID uuid.UUID, errJSON any) error {
+func (r *RunRepository) FailRun(ctx context.Context, id, userID uuid.UUID, errJSON any) (bool, error) {
 	now := time.Now()
-	return r.db.WithContext(ctx).
+	result := database.FromContext(ctx, r.db).
 		Model(&model.Run{}).
-		Where("id = ? AND user_id = ? AND status IN ?", id, userID, []string{"running", "waiting_user"}).
+		Where("id = ? AND user_id = ? AND status IN ?", id, userID, []model.RunStatus{model.RunStatusRunning, model.RunStatusWaitingUser}).
 		Updates(map[string]any{
-			"status":             "failed",
+			"status":             model.RunStatusFailed,
 			"error":              errJSON,
 			"completed_at":       now,
 			"lease_owner":        "",
 			"lease_expires_at":   nil,
 			"lease_heartbeat_at": nil,
-		}).Error
+		})
+	return result.RowsAffected == 1, result.Error
 }
 
 // UpdateAgentConfiguration persists the immutable Agent configuration +
@@ -232,7 +257,7 @@ func (r *RunRepository) UpdateAgentConfiguration(
 	configuration datatypes.JSON,
 	provenance datatypes.JSON,
 ) error {
-	return r.db.WithContext(ctx).
+	return database.FromContext(ctx, r.db).
 		Model(&model.Run{}).
 		Where("id = ?", id).
 		Updates(map[string]any{

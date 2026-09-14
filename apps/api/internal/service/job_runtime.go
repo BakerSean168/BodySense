@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/bodysense/api/internal/model"
@@ -13,16 +12,29 @@ import (
 	"gorm.io/datatypes"
 )
 
-// Legal job status transitions.
-var jobTransitions = map[string][]string{
-	"pending":      {"running", "cancelled"},
-	"running":      {"pending", "completed", "failed", "cancelled", "waiting_user", "timed_out"},
-	"waiting_user": {"running", "cancelled"},
-	"completed":    {},
-	"succeeded":    {},
-	"failed":       {},
-	"cancelled":    {},
-	"timed_out":    {},
+// Legal job status transitions. The graph is intentionally finite: callers
+// cannot invent a new state by passing an arbitrary string.
+var jobTransitions = map[model.JobStatus]map[model.JobStatus]struct{}{
+	model.JobStatusPending: {
+		model.JobStatusRunning:   {},
+		model.JobStatusCancelled: {},
+	},
+	model.JobStatusRunning: {
+		model.JobStatusPending:     {},
+		model.JobStatusCompleted:   {},
+		model.JobStatusFailed:      {},
+		model.JobStatusCancelled:   {},
+		model.JobStatusWaitingUser: {},
+		model.JobStatusTimedOut:    {},
+	},
+	model.JobStatusWaitingUser: {
+		model.JobStatusRunning:   {},
+		model.JobStatusCancelled: {},
+	},
+	model.JobStatusCompleted: {},
+	model.JobStatusFailed:    {},
+	model.JobStatusCancelled: {},
+	model.JobStatusTimedOut:  {},
 }
 
 // JobRuntime manages durable job lifecycle.
@@ -48,22 +60,26 @@ func (r *JobRuntime) CreateJob(
 		ConversationID: conversationID,
 		UserID:         userID,
 		JobType:        jobType,
-		Status:         "pending",
+		Status:         model.JobStatusPending,
 		Input:          input,
 	}
-	if err := r.repo.Create(ctx, job); err != nil {
+	event, err := newJobEvent("job.created", map[string]any{"job_type": jobType})
+	if err != nil {
+		return nil, err
+	}
+	if err := r.repo.CreateWithEvent(ctx, job, event); err != nil {
 		return nil, fmt.Errorf("create job: %w", err)
 	}
-
-	r.appendEvent(ctx, job.ID, "job.created", map[string]any{"job_type": jobType})
 	return job, nil
 }
 
-// TransitionTo transitions a job to a new status if the transition is legal.
+// TransitionTo moves a job through the finite lifecycle graph. The repository
+// performs the compare-and-set and authoritative lifecycle event append in the
+// same transaction, so a stale reader cannot overwrite a transition winner.
 func (r *JobRuntime) TransitionTo(
 	ctx context.Context,
 	jobID uuid.UUID,
-	newStatus string,
+	newStatus model.JobStatus,
 	result, errData any,
 ) error {
 	job, err := r.repo.GetByID(ctx, jobID)
@@ -73,27 +89,24 @@ func (r *JobRuntime) TransitionTo(
 	if job == nil {
 		return fmt.Errorf("job not found: %s", jobID)
 	}
-
-	allowed := jobTransitions[job.Status]
-	legal := false
-	for _, s := range allowed {
-		if s == newStatus {
-			legal = true
-			break
-		}
-	}
-	if !legal {
+	if !ValidateTransition(job.Status, newStatus) {
 		return fmt.Errorf("illegal transition: %s -> %s", job.Status, newStatus)
 	}
 
-	if err := r.repo.UpdateStatus(ctx, jobID, newStatus, result, errData); err != nil {
-		return fmt.Errorf("update status: %w", err)
-	}
-
-	r.appendEvent(ctx, jobID, jobEventTypeForStatus(newStatus), map[string]any{
+	event, err := newJobEvent(jobEventTypeForStatus(newStatus), map[string]any{
 		"from": job.Status,
 		"to":   newStatus,
 	})
+	if err != nil {
+		return err
+	}
+	transitioned, err := r.repo.TransitionStatus(ctx, jobID, job.Status, newStatus, result, errData, event)
+	if err != nil {
+		return fmt.Errorf("transition job: %w", err)
+	}
+	if !transitioned {
+		return fmt.Errorf("job transition lost race: %s -> %s", job.Status, newStatus)
+	}
 	return nil
 }
 
@@ -102,7 +115,7 @@ func (r *JobRuntime) UpdateProgress(ctx context.Context, jobID uuid.UUID, progre
 	if err := r.repo.UpdateProgress(ctx, jobID, progress); err != nil {
 		return fmt.Errorf("update progress: %w", err)
 	}
-	r.appendEvent(ctx, jobID, "job.progress", progress)
+	r.appendTelemetryEvent(ctx, jobID, "job.progress", progress)
 	return nil
 }
 
@@ -160,27 +173,33 @@ func (r *JobRuntime) CreateJobWithIdempotencyAttempts(
 		ConversationID: conversationID,
 		UserID:         userID,
 		JobType:        jobType,
-		Status:         "pending",
+		Status:         model.JobStatusPending,
 		Input:          input,
 		IdempotencyKey: &idempotencyKey,
 		MaxAttempts:    maxAttempts,
 	}
-	job, existed, err := r.repo.CreateWithIdempotency(ctx, job)
+	event, err := newJobEvent("job.created", map[string]any{"job_type": jobType})
+	if err != nil {
+		return nil, false, err
+	}
+	job, existed, err := r.repo.CreateWithIdempotencyEvent(ctx, job, event)
 	if err != nil {
 		return nil, false, fmt.Errorf("create job: %w", err)
 	}
-	if existed {
-		return job, true, nil
-	}
-
-	r.appendEvent(ctx, job.ID, "job.created", map[string]any{"job_type": jobType})
-	return job, false, nil
+	return job, existed, nil
 }
 
 // ClaimPending atomically transitions a pending job to running. The returned
 // job reflects the incremented attempt count.
 func (r *JobRuntime) ClaimPending(ctx context.Context, jobID uuid.UUID) (*model.Job, bool, error) {
-	claimed, err := r.repo.ClaimPending(ctx, jobID)
+	event, err := newJobEvent("job.running", map[string]any{
+		"from": model.JobStatusPending,
+		"to":   model.JobStatusRunning,
+	})
+	if err != nil {
+		return nil, false, err
+	}
+	claimed, err := r.repo.ClaimPending(ctx, jobID, event)
 	if err != nil {
 		return nil, false, fmt.Errorf("claim pending job: %w", err)
 	}
@@ -194,51 +213,52 @@ func (r *JobRuntime) ClaimPending(ctx context.Context, jobID uuid.UUID) (*model.
 	if job == nil {
 		return nil, false, fmt.Errorf("claimed job disappeared: %s", jobID)
 	}
-	r.appendEvent(ctx, jobID, "job.running", map[string]any{
-		"from":    "pending",
-		"to":      "running",
-		"attempt": job.Attempts,
-	})
 	return job, true, nil
 }
 
-func (r *JobRuntime) appendEvent(ctx context.Context, jobID uuid.UUID, eventType string, payload any) {
-	event := &model.JobEvent{
-		JobID:     jobID,
-		EventType: eventType,
+func newJobEvent(eventType string, payload any) (*model.JobEvent, error) {
+	event := &model.JobEvent{EventType: eventType}
+	if payload == nil {
+		event.Payload = datatypes.JSON(`{}`)
+		return event, nil
 	}
-	if payload != nil {
-		if data, err := json.Marshal(payload); err == nil {
-			event.Payload = data
-		}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("marshal job lifecycle event %s: %w", eventType, err)
 	}
-	if err := r.repo.AppendEvent(ctx, event); err != nil {
-		log.Printf("failed to append job event %s for job %s: %v", eventType, jobID, err)
+	event.Payload = datatypes.JSON(data)
+	return event, nil
+}
+
+// appendTelemetryEvent is intentionally best-effort. Unlike lifecycle events,
+// progress telemetry is not the authority for job state and may be dropped if
+// its append fails; the durable jobs.progress column remains the source of truth.
+func (r *JobRuntime) appendTelemetryEvent(ctx context.Context, jobID uuid.UUID, eventType string, payload any) {
+	event, err := newJobEvent(eventType, payload)
+	if err != nil {
+		return
 	}
+	event.JobID = jobID
+	_ = r.repo.AppendEvent(ctx, event)
 }
 
 // ValidateTransition checks if a transition is legal without executing it.
-func ValidateTransition(from, to string) bool {
-	allowed := jobTransitions[from]
-	for _, s := range allowed {
-		if s == to {
-			return true
-		}
-	}
-	return false
+func ValidateTransition(from, to model.JobStatus) bool {
+	_, ok := jobTransitions[from][to]
+	return ok
 }
 
-func jobEventTypeForStatus(status string) string {
+func jobEventTypeForStatus(status model.JobStatus) string {
 	switch status {
-	case "completed", "succeeded":
+	case model.JobStatusCompleted:
 		return "job.completed"
-	case "failed":
+	case model.JobStatusFailed:
 		return "job.failed"
-	case "cancelled":
+	case model.JobStatusCancelled:
 		return "job.cancelled"
-	case "timed_out":
+	case model.JobStatusTimedOut:
 		return "job.timed_out"
 	default:
-		return "job." + status
+		return "job." + string(status)
 	}
 }

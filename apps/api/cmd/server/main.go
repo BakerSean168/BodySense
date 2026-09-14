@@ -173,7 +173,7 @@ func main() {
 	agentToolRepo := repository.NewAgentToolCallRepository(database.DB)
 	agentToolService := service.NewAgentToolService(agentToolRepo)
 	interactionRepo := repository.NewAgentInteractionRepository(database.DB)
-	interactionService := service.NewAgentInteractionService(interactionRepo, runRepo, conversationRepo)
+	interactionService := service.NewAgentInteractionService(interactionRepo, runService, conversationRepo, database.NewTransactionManager(database.DB))
 	interactionService.StartInteractionExpiryWorker(
 		context.Background(),
 		time.Minute,

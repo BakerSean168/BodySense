@@ -14,10 +14,10 @@ import (
 )
 
 var (
-	ErrInteractionNotFound = errors.New("interaction not found")
-	ErrInteractionConflict = errors.New("interaction answer conflicts with existing answer")
-	ErrInteractionClosed   = errors.New("interaction is not pending")
-	ErrInteractionExpired  = errors.New("interaction has expired")
+	ErrInteractionNotFound  = errors.New("interaction not found")
+	ErrInteractionConflict  = errors.New("interaction answer conflicts with existing answer")
+	ErrInteractionClosed    = errors.New("interaction is not pending")
+	ErrInteractionExpired   = errors.New("interaction has expired")
 	ErrConversationNotFound = errors.New("conversation not found or access denied")
 )
 
@@ -26,9 +26,10 @@ const DefaultInteractionTTL = 24 * time.Hour
 
 // AgentInteractionService handles user interaction persistence and resume.
 type AgentInteractionService struct {
-	repo            agentInteractionRepo
-	runRepo         runStatusRepo
+	repo             agentInteractionRepo
+	runLifecycle     interactionRunLifecycle
 	conversationRepo conversationOwnershipChecker
+	transactions     interactionTransactionManager
 }
 
 type agentInteractionRepo interface {
@@ -43,8 +44,12 @@ type agentInteractionRepo interface {
 	AggregateInteractionMetrics(ctx context.Context, userID uuid.UUID, conversationID *uuid.UUID) (answered, expired, pending int, avgWaitSeconds float64, err error)
 }
 
-type runStatusRepo interface {
-	UpdateStatus(ctx context.Context, id uuid.UUID, status string) error
+type interactionRunLifecycle interface {
+	MarkWaitingUser(ctx context.Context, id uuid.UUID) error
+}
+
+type interactionTransactionManager interface {
+	WithinTransaction(ctx context.Context, fn func(context.Context) error) error
 }
 
 // NewAgentInteractionService creates a new AgentInteractionService.
@@ -52,13 +57,15 @@ type runStatusRepo interface {
 // interaction data (including metrics) is exposed.
 func NewAgentInteractionService(
 	repo agentInteractionRepo,
-	runRepo runStatusRepo,
+	runLifecycle interactionRunLifecycle,
 	conversationRepo conversationOwnershipChecker,
+	transactions interactionTransactionManager,
 ) *AgentInteractionService {
 	return &AgentInteractionService{
-		repo:            repo,
-		runRepo:         runRepo,
+		repo:             repo,
+		runLifecycle:     runLifecycle,
 		conversationRepo: conversationRepo,
+		transactions:     transactions,
 	}
 }
 
@@ -69,6 +76,9 @@ func (s *AgentInteractionService) CreatePendingInteraction(
 	toolCallID string,
 	question datatypes.JSON,
 ) (*model.AgentInteraction, error) {
+	if s.transactions == nil {
+		return nil, errors.New("create pending interaction: transaction manager is not configured")
+	}
 	expires := time.Now().UTC().Add(DefaultInteractionTTL)
 	interaction := &model.AgentInteraction{
 		RunID:          runID,
@@ -76,24 +86,31 @@ func (s *AgentInteractionService) CreatePendingInteraction(
 		ToolCallID:     toolCallID,
 		ToolName:       "ask_user",
 		Question:       question,
-		Status:         "pending",
+		Status:         model.AgentInteractionPending,
 		ExpiresAt:      &expires,
 	}
-	if err := s.repo.CreatePending(ctx, interaction); err != nil {
-		return nil, fmt.Errorf("create pending interaction: %w", err)
-	}
-	created, err := s.repo.GetByRunAndToolCall(ctx, runID, toolCallID)
+
+	var created *model.AgentInteraction
+	err := s.transactions.WithinTransaction(ctx, func(txCtx context.Context) error {
+		if err := s.repo.CreatePending(txCtx, interaction); err != nil {
+			return fmt.Errorf("create pending interaction: %w", err)
+		}
+		loaded, err := s.repo.GetByRunAndToolCall(txCtx, runID, toolCallID)
+		if err != nil {
+			return fmt.Errorf("load pending interaction: %w", err)
+		}
+		if loaded == nil {
+			return fmt.Errorf("load pending interaction: %w", ErrInteractionNotFound)
+		}
+		created = loaded
+		if err := s.runLifecycle.MarkWaitingUser(txCtx, runID); err != nil {
+			return fmt.Errorf("mark run waiting_user: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("load pending interaction: %w", err)
+		return nil, err
 	}
-	if created == nil {
-		return nil, fmt.Errorf("load pending interaction: %w", ErrInteractionNotFound)
-	}
-
-	if err := s.runRepo.UpdateStatus(ctx, runID, "waiting_user"); err != nil {
-		return nil, fmt.Errorf("mark run waiting_user: %w", err)
-	}
-
 	return created, nil
 }
 
@@ -111,16 +128,16 @@ func (s *AgentInteractionService) ResumeInteraction(
 	if interaction == nil {
 		return ErrInteractionNotFound
 	}
-	if interaction.Status == "answered" {
+	if interaction.Status == model.AgentInteractionAnswered {
 		if jsonEqual(interaction.Answer, answer) {
 			return nil
 		}
 		return ErrInteractionConflict
 	}
-	if interaction.Status == "expired" {
+	if interaction.Status == model.AgentInteractionExpired {
 		return ErrInteractionExpired
 	}
-	if interaction.Status != "pending" {
+	if interaction.Status != model.AgentInteractionPending {
 		return fmt.Errorf("%w: %s", ErrInteractionClosed, interaction.Status)
 	}
 	// Soft-expire if the TTL elapsed but the sweeper has not yet run.
@@ -140,7 +157,7 @@ func (s *AgentInteractionService) ResumeInteraction(
 		if latestErr != nil {
 			return fmt.Errorf("reload interaction after answer race: %w", latestErr)
 		}
-		if latest != nil && latest.Status == "answered" && jsonEqual(latest.Answer, answer) {
+		if latest != nil && latest.Status == model.AgentInteractionAnswered && jsonEqual(latest.Answer, answer) {
 			return nil
 		}
 		return ErrInteractionConflict
@@ -158,10 +175,10 @@ func (s *AgentInteractionService) CancelInteraction(ctx context.Context, interac
 	if interaction == nil {
 		return ErrInteractionNotFound
 	}
-	if interaction.Status == "cancelled" {
+	if interaction.Status == model.AgentInteractionCancelled {
 		return nil
 	}
-	if interaction.Status != "pending" {
+	if interaction.Status != model.AgentInteractionPending {
 		return fmt.Errorf("%w: %s", ErrInteractionClosed, interaction.Status)
 	}
 	updated, err := s.repo.CancelPending(ctx, interactionID)
@@ -220,7 +237,7 @@ func (s *AgentInteractionService) ExpireExpiredInteractions(
 			continue
 		}
 		if updated {
-			item.Status = "expired"
+			item.Status = model.AgentInteractionExpired
 			expired = append(expired, item)
 		}
 	}

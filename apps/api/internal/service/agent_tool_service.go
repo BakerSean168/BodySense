@@ -12,8 +12,8 @@ import (
 // AgentToolCallRepo defines the repository interface for tool call persistence.
 type AgentToolCallRepo interface {
 	UpsertStarted(ctx context.Context, tc *model.AgentToolCall) error
-	MarkSucceeded(ctx context.Context, runID uuid.UUID, toolCallID string, result any) error
-	MarkFailed(ctx context.Context, runID uuid.UUID, toolCallID string, errData any) error
+	MarkSucceeded(ctx context.Context, runID uuid.UUID, toolCallID string, result any) (bool, error)
+	MarkFailed(ctx context.Context, runID uuid.UUID, toolCallID string, errData any) (bool, error)
 }
 
 // AgentToolService handles tool call audit persistence.
@@ -47,7 +47,7 @@ func (s *AgentToolService) RecordToolCall(
 		ToolCallID:     toolCallID,
 		ToolName:       toolName,
 		Arguments:      arguments,
-		Status:         "running",
+		Status:         model.AgentToolCallRunning,
 	}
 
 	if err := s.repo.UpsertStarted(ctx, tc); err != nil {
@@ -69,12 +69,18 @@ func (s *AgentToolService) RecordToolResult(
 	}
 
 	if isError {
-		if err := s.repo.MarkFailed(ctx, runID, toolCallID, result); err != nil {
+		updated, err := s.repo.MarkFailed(ctx, runID, toolCallID, result)
+		if err != nil {
 			log.Printf("failed to mark tool call %s as failed for run %s: %v", toolCallID, runID, err)
+		} else if !updated {
+			log.Printf("ignored stale failed result for terminal tool call %s on run %s", toolCallID, runID)
 		}
 	} else {
-		if err := s.repo.MarkSucceeded(ctx, runID, toolCallID, result); err != nil {
+		updated, err := s.repo.MarkSucceeded(ctx, runID, toolCallID, result)
+		if err != nil {
 			log.Printf("failed to mark tool call %s as succeeded for run %s: %v", toolCallID, runID, err)
+		} else if !updated {
+			log.Printf("ignored stale succeeded result for terminal tool call %s on run %s", toolCallID, runID)
 		}
 	}
 }

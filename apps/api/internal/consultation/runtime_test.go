@@ -49,6 +49,12 @@ func (r *fakeConsultationRunRepo) GetByRequestID(context.Context, uuid.UUID, str
 func (r *fakeConsultationRunRepo) ListByConversationID(context.Context, uuid.UUID) ([]model.Run, error) {
 	return nil, nil
 }
+func (r *fakeConsultationRunRepo) MarkWaitingUser(context.Context, uuid.UUID) (bool, error) {
+	return true, nil
+}
+func (r *fakeConsultationRunRepo) ResumeRunning(context.Context, uuid.UUID, string, time.Time) (bool, error) {
+	return true, nil
+}
 func (r *fakeConsultationRunRepo) UpdateStatus(context.Context, uuid.UUID, string) error { return nil }
 func (r *fakeConsultationRunRepo) CompleteRun(context.Context, uuid.UUID, uuid.UUID, any, string) error {
 	return nil
@@ -59,8 +65,8 @@ func (r *fakeConsultationRunRepo) TryCompleteRun(context.Context, uuid.UUID, uui
 func (r *fakeConsultationRunRepo) CancelRun(context.Context, uuid.UUID, uuid.UUID, any) (bool, error) {
 	return true, nil
 }
-func (r *fakeConsultationRunRepo) FailRun(context.Context, uuid.UUID, uuid.UUID, any) error {
-	return nil
+func (r *fakeConsultationRunRepo) FailRun(context.Context, uuid.UUID, uuid.UUID, any) (bool, error) {
+	return true, nil
 }
 func (r *fakeConsultationRunRepo) UpdateAgentConfiguration(
 	_ context.Context,

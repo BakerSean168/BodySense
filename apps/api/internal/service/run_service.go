@@ -48,7 +48,7 @@ func (s *RunService) CreateRun(
 		TurnID:         turnID,
 		RequestID:      requestID,
 		UserID:         userID,
-		Status:         "running",
+		Status:         model.RunStatusRunning,
 		Model:          modelStr,
 		LeaseOwner:     s.leaseOwner,
 	}
@@ -76,7 +76,7 @@ func (s *RunService) CreateRunWithIdempotency(
 		TurnID:         turnID,
 		RequestID:      requestID,
 		UserID:         userID,
-		Status:         "running",
+		Status:         model.RunStatusRunning,
 		Model:          modelStr,
 		LeaseOwner:     s.leaseOwner,
 	}
@@ -145,10 +145,10 @@ func (s *RunService) CancelRun(ctx context.Context, id, userID uuid.UUID, reason
 	if err != nil || run == nil {
 		return run, false, err
 	}
-	if run.Status == "cancelled" {
+	if run.Status == model.RunStatusCancelled {
 		return run, false, nil
 	}
-	if run.Status == "completed" || run.Status == "failed" {
+	if run.Status == model.RunStatusCompleted || run.Status == model.RunStatusFailed {
 		return run, false, ErrRunTerminal
 	}
 	if reason == "" {
@@ -163,35 +163,63 @@ func (s *RunService) CancelRun(ctx context.Context, id, userID uuid.UUID, reason
 		if getErr != nil {
 			return nil, false, getErr
 		}
-		if latest != nil && latest.Status == "cancelled" {
+		if latest != nil && latest.Status == model.RunStatusCancelled {
 			return latest, false, nil
 		}
 		return latest, false, ErrRunTerminal
 	}
-	run.Status = "cancelled"
+	run.Status = model.RunStatusCancelled
 	return run, true, nil
 }
 
-// FailRun marks a run as failed with an error JSON payload.
+// FailRun marks a run as failed only if it is still active.
 func (s *RunService) FailRun(ctx context.Context, id, userID uuid.UUID, errJSON any) error {
-	if err := s.runRepo.FailRun(ctx, id, userID, errJSON); err != nil {
+	failed, err := s.runRepo.FailRun(ctx, id, userID, errJSON)
+	if err != nil {
 		return fmt.Errorf("fail run: %w", err)
 	}
-	return nil
-}
-
-// MarkWaitingUser transitions a run from running to waiting_user.
-func (s *RunService) MarkWaitingUser(ctx context.Context, id uuid.UUID) error {
-	if err := s.runRepo.UpdateStatus(ctx, id, "waiting_user"); err != nil {
-		return fmt.Errorf("mark waiting_user: %w", err)
+	if !failed {
+		return ErrRunTerminal
 	}
 	return nil
 }
 
-// ResumeRunning transitions a run from waiting_user back to running.
+// MarkWaitingUser transitions exactly running -> waiting_user.
+func (s *RunService) MarkWaitingUser(ctx context.Context, id uuid.UUID) error {
+	transitioned, err := s.runRepo.MarkWaitingUser(ctx, id)
+	if err != nil {
+		return fmt.Errorf("mark waiting_user: %w", err)
+	}
+	if !transitioned {
+		run, loadErr := s.runRepo.GetByID(ctx, id)
+		if loadErr != nil {
+			return fmt.Errorf("reload waiting_user run: %w", loadErr)
+		}
+		if run != nil && run.Status == model.RunStatusWaitingUser {
+			return nil
+		}
+		return ErrRunTerminal
+	}
+	return nil
+}
+
+// ResumeRunning transitions exactly waiting_user -> running and establishes a
+// fresh lease owned by this API process.
 func (s *RunService) ResumeRunning(ctx context.Context, id uuid.UUID) error {
-	if err := s.runRepo.UpdateStatus(ctx, id, "running"); err != nil {
+	expires := time.Now().Add(runLeaseDuration)
+	transitioned, err := s.runRepo.ResumeRunning(ctx, id, s.leaseOwner, expires)
+	if err != nil {
 		return fmt.Errorf("resume running: %w", err)
+	}
+	if !transitioned {
+		run, loadErr := s.runRepo.GetByID(ctx, id)
+		if loadErr != nil {
+			return fmt.Errorf("reload running run: %w", loadErr)
+		}
+		if run != nil && run.Status == model.RunStatusRunning {
+			return nil
+		}
+		return ErrRunTerminal
 	}
 	return nil
 }
