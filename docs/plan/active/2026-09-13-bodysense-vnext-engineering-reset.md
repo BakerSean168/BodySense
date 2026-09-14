@@ -1,6 +1,6 @@
 # BodySense vNext Engineering Reset — Master Refactor Plan
 
-- Status: ACTIVE MASTER PLAN — Phases 00–02 complete; Phase 03 next and not started
+- Status: ACTIVE MASTER PLAN — Phases 00–02 complete; Phase 03 in progress
 - Date: 2026-09-13
 - Integration branch: `refactor/bodysense-vnext`
 - Integration worktree: `/home/dev/projects/bodysense-vnext-refactor`
@@ -387,13 +387,13 @@ This gives each phase an auditable diff and prevents a single giant unreviewable
 
 ### Execution status
 
-| Phase                    | Status       | Integration evidence                                                                                                               |
-| ------------------------ | ------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| 00 — Baseline            | **COMPLETE** | `a2c68a38d` merged baseline evidence, fresh PG18+pgvector schema snapshot, retirement/finding ledgers and self-contained typecheck |
-| 01 — Contract foundation | **COMPLETE** | `100018dd3` merged contract authority foundation; see `docs/refactor/vnext/phase-01-contract-foundation.md`                        |
-| 02 — Public REST         | **COMPLETE** | `ea343d7c5` merged 95/95 eligible browser routes OpenAPI-authoritative; see `docs/refactor/vnext/phase-02-rest-openapi.md`         |
-| 03 — Public StreamEvent  | NEXT         | not started                                                                                                                        |
-| 04–11                    | QUEUED       | blocked by preceding dependency phases                                                                                             |
+| Phase                    | Status          | Integration evidence                                                                                                               |
+| ------------------------ | --------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| 00 — Baseline            | **COMPLETE**    | `a2c68a38d` merged baseline evidence, fresh PG18+pgvector schema snapshot, retirement/finding ledgers and self-contained typecheck |
+| 01 — Contract foundation | **COMPLETE**    | `100018dd3` merged contract authority foundation; see `docs/refactor/vnext/phase-01-contract-foundation.md`                        |
+| 02 — Public REST         | **COMPLETE**    | `ea343d7c5` merged 95/95 eligible browser routes OpenAPI-authoritative; see `docs/refactor/vnext/phase-02-rest-openapi.md`         |
+| 03 — Public StreamEvent  | **IN PROGRESS** | STREAM-001 schema/parser parity complete on `refactor/vnext-03-public-stream`                                                      |
+| 04–11                    | QUEUED          | blocked by preceding dependency phases                                                                                             |
 
 ## Phase 00 — Freeze baseline and create the refactor ledger
 

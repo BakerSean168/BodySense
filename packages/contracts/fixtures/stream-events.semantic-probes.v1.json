@@ -1,0 +1,86 @@
+[
+  {
+    "name": "run_failed_reason_only",
+    "should_accept": true,
+    "event": {
+      "version": 1,
+      "seq": 1,
+      "channel": "run",
+      "type": "run.failed",
+      "ids": { "conversation_id": "conv-1", "run_id": "run-1" },
+      "payload": { "status": "failed", "reason": "execution_lost" }
+    }
+  },
+  {
+    "name": "safety_review_invalid_verdict",
+    "should_accept": false,
+    "event": {
+      "version": 1,
+      "seq": 1,
+      "channel": "safety",
+      "type": "safety.output_reviewed",
+      "ids": { "conversation_id": "conv-1", "run_id": "run-1" },
+      "payload": { "kind": "diagnosis", "verdict": "impossible" }
+    }
+  },
+  {
+    "name": "safety_reasons_non_string",
+    "should_accept": false,
+    "event": {
+      "version": 1,
+      "seq": 1,
+      "channel": "safety",
+      "type": "safety.output_reviewed",
+      "ids": { "conversation_id": "conv-1", "run_id": "run-1" },
+      "payload": { "kind": "diagnosis", "verdict": "accepted", "reasons": [42] }
+    }
+  },
+  {
+    "name": "interaction_too_many_fields",
+    "should_accept": false,
+    "event": {
+      "version": 1,
+      "seq": 1,
+      "channel": "state",
+      "type": "state.interaction.required",
+      "ids": {
+        "conversation_id": "conv-1",
+        "run_id": "run-1",
+        "interaction_id": "i"
+      },
+      "payload": {
+        "interaction_id": "i",
+        "created_at": "2026-09-09T00:00:00Z",
+        "question": {
+          "question": "q",
+          "fields": [
+            { "key": "a", "label": "A" },
+            { "key": "b", "label": "B" },
+            { "key": "c", "label": "C" },
+            { "key": "d", "label": "D" }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "interaction_option_non_string",
+    "should_accept": false,
+    "event": {
+      "version": 1,
+      "seq": 1,
+      "channel": "state",
+      "type": "state.interaction.required",
+      "ids": {
+        "conversation_id": "conv-1",
+        "run_id": "run-1",
+        "interaction_id": "i"
+      },
+      "payload": {
+        "interaction_id": "i",
+        "created_at": "2026-09-09T00:00:00Z",
+        "question": { "question": "q", "options": ["yes", 1] }
+      }
+    }
+  }
+]

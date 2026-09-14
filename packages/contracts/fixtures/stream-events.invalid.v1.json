@@ -1,0 +1,141 @@
+[
+  {
+    "name": "version",
+    "event": {
+      "version": 2,
+      "seq": 1,
+      "channel": "message",
+      "type": "message.text.delta",
+      "ids": {
+        "conversation_id": "conv-1",
+        "run_id": "run-1",
+        "message_id": "msg-1"
+      },
+      "payload": { "delta": "hello" }
+    }
+  },
+  {
+    "name": "seq",
+    "event": {
+      "version": 1,
+      "seq": 0,
+      "channel": "message",
+      "type": "message.text.delta",
+      "ids": {
+        "conversation_id": "conv-1",
+        "run_id": "run-1",
+        "message_id": "msg-1"
+      },
+      "payload": { "delta": "hello" }
+    }
+  },
+  {
+    "name": "channel",
+    "event": {
+      "version": 1,
+      "seq": 1,
+      "channel": "runtime",
+      "type": "message.text.delta",
+      "ids": {
+        "conversation_id": "conv-1",
+        "run_id": "run-1",
+        "message_id": "msg-1"
+      },
+      "payload": { "delta": "hello" }
+    }
+  },
+  {
+    "name": "unsupported_type",
+    "event": {
+      "version": 1,
+      "seq": 1,
+      "channel": "runtime",
+      "type": "runtime.agent_configuration",
+      "ids": {
+        "conversation_id": "conv-1",
+        "run_id": "run-1",
+        "message_id": "msg-1"
+      },
+      "payload": { "delta": "hello" }
+    }
+  },
+  {
+    "name": "channel_mismatch",
+    "event": {
+      "version": 1,
+      "seq": 1,
+      "channel": "run",
+      "type": "message.text.delta",
+      "ids": {
+        "conversation_id": "conv-1",
+        "run_id": "run-1",
+        "message_id": "msg-1"
+      },
+      "payload": { "delta": "hello" }
+    }
+  },
+  {
+    "name": "missing_delta",
+    "event": {
+      "version": 1,
+      "seq": 1,
+      "channel": "message",
+      "type": "message.text.delta",
+      "ids": {
+        "conversation_id": "conv-1",
+        "run_id": "run-1",
+        "message_id": "msg-1"
+      },
+      "payload": {}
+    }
+  },
+  {
+    "name": "bad_id",
+    "event": {
+      "version": 1,
+      "seq": 1,
+      "channel": "message",
+      "type": "message.text.delta",
+      "ids": { "conversation_id": 42 },
+      "payload": { "delta": "hello" }
+    }
+  },
+  {
+    "name": "extra_top_level",
+    "event": {
+      "version": 1,
+      "seq": 1,
+      "channel": "message",
+      "type": "message.text.delta",
+      "ids": {
+        "conversation_id": "conv-1",
+        "run_id": "run-1",
+        "message_id": "msg-1"
+      },
+      "payload": { "delta": "hello" },
+      "extra": true
+    }
+  },
+  {
+    "name": "run_failed_missing_reason",
+    "event": {
+      "version": 1,
+      "seq": 1,
+      "channel": "run",
+      "type": "run.failed",
+      "ids": { "conversation_id": "conv-1", "run_id": "run-1" },
+      "payload": { "status": "failed" }
+    }
+  },
+  {
+    "name": "bad_safety_flag",
+    "event": {
+      "version": 1,
+      "seq": 1,
+      "channel": "safety",
+      "type": "safety.red_flag.detected",
+      "ids": { "conversation_id": "conv-1", "run_id": "run-1" },
+      "payload": { "has_red_flags": "yes", "flags": [] }
+    }
+  }
+]

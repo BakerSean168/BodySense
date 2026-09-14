@@ -117,16 +117,19 @@
                   "type": "string"
                 },
                 "title_status": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 },
                 "status": {
                   "const": "active"
                 },
                 "last_message_at": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 },
                 "created_at": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }
@@ -186,7 +189,8 @@
                   "const": "running"
                 },
                 "interaction_id": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }
@@ -216,7 +220,8 @@
                   "const": "waiting_user"
                 },
                 "interaction_id": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }
@@ -264,8 +269,7 @@
             "payload": {
               "type": "object",
               "required": [
-                "status",
-                "error"
+                "status"
               ],
               "properties": {
                 "status": {
@@ -278,11 +282,48 @@
                   ],
                   "properties": {
                     "message": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   }
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
                 }
-              }
+              },
+              "anyOf": [
+                {
+                  "properties": {
+                    "reason": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "reason"
+                  ]
+                },
+                {
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "message"
+                      ],
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              ]
             }
           },
           "required": [
@@ -310,7 +351,8 @@
                   "const": "cancelled"
                 },
                 "reason": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }
@@ -337,10 +379,12 @@
               ],
               "properties": {
                 "client_message_id": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 },
                 "role": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }
@@ -367,10 +411,12 @@
               ],
               "properties": {
                 "role": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 },
                 "status": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }
@@ -426,7 +472,8 @@
                   "const": "completed"
                 },
                 "finish_reason": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }
@@ -462,7 +509,8 @@
                   ],
                   "properties": {
                     "message": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
                     }
                   }
                 }
@@ -491,8 +539,10 @@
               ],
               "properties": {
                 "tool": {
-                  "type": "string"
-                }
+                  "type": "string",
+                  "minLength": 1
+                },
+                "args": {}
               }
             }
           },
@@ -518,8 +568,10 @@
               ],
               "properties": {
                 "tool": {
-                  "type": "string"
-                }
+                  "type": "string",
+                  "minLength": 1
+                },
+                "result": {}
               }
             }
           },
@@ -542,7 +594,9 @@
               "required": [
                 "info"
               ],
-              "properties": {}
+              "properties": {
+                "info": {}
+              }
             }
           },
           "required": [
@@ -567,10 +621,12 @@
               ],
               "properties": {
                 "to": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 },
                 "reason": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }
@@ -598,7 +654,8 @@
               ],
               "properties": {
                 "interaction_id": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 },
                 "question": {
                   "type": "object",
@@ -607,12 +664,41 @@
                   ],
                   "properties": {
                     "question": {
-                      "type": "string"
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "options": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "fields": {
+                      "type": "array",
+                      "maxItems": 3,
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "key",
+                          "label"
+                        ],
+                        "properties": {
+                          "key": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "label": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        }
+                      }
                     }
                   }
                 },
                 "created_at": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }
@@ -639,8 +725,10 @@
               ],
               "properties": {
                 "interaction_id": {
-                  "type": "string"
-                }
+                  "type": "string",
+                  "minLength": 1
+                },
+                "answer": {}
               }
             }
           },
@@ -666,10 +754,12 @@
               ],
               "properties": {
                 "interaction_id": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 },
                 "expired_at": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }
@@ -693,7 +783,9 @@
               "required": [
                 "citation"
               ],
-              "properties": {}
+              "properties": {
+                "citation": {}
+              }
             }
           },
           "required": [
@@ -744,10 +836,12 @@
               ],
               "properties": {
                 "query": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 },
                 "message": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }
@@ -804,10 +898,22 @@
               ],
               "properties": {
                 "kind": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 },
                 "verdict": {
-                  "type": "string"
+                  "type": "string",
+                  "enum": [
+                    "accepted",
+                    "degraded",
+                    "rejected"
+                  ]
+                },
+                "reasons": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
                 }
               }
             }
@@ -834,10 +940,17 @@
               ],
               "properties": {
                 "kind": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 },
                 "verdict": {
                   "const": "rejected"
+                },
+                "reasons": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
                 }
               }
             }
@@ -861,7 +974,9 @@
               "required": [
                 "usage"
               ],
-              "properties": {}
+              "properties": {
+                "usage": {}
+              }
             }
           },
           "required": [
@@ -885,7 +1000,8 @@
               ],
               "properties": {
                 "title": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }
@@ -932,7 +1048,8 @@
               ],
               "properties": {
                 "message": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }
@@ -958,7 +1075,8 @@
               ],
               "properties": {
                 "job_type": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }
@@ -1022,7 +1140,9 @@
               "required": [
                 "error"
               ],
-              "properties": {}
+              "properties": {
+                "error": {}
+              }
             }
           },
           "required": [
