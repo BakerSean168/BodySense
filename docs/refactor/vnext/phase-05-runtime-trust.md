@@ -301,3 +301,40 @@ User-selected body-region values use the canonical BodyRegion parser; ask-user a
 - BodyRegion ontology + anatomy mapping + consultation service + upload store + assistant message projection focused tests — **44/44 PASS**;
 - malformed legacy Diagnosis and malformed nested upload projections are covered by fail-closed tests;
 - production `as unknown as` / `as never` remain **0**.
+
+## TRUST-009 — Third-party runtime interop and assertion closure
+
+Status: **COMPLETE**
+
+The final TypeScript trust pass closes assertion-based interop around assistant-ui, Vanatome and several UI/state inference shortcuts without treating legitimate branded-type construction as a defect.
+
+### assistant-ui
+
+assistant-ui already exposes message state as a role-discriminated union and `metadata.custom` as `Record<string, unknown>`. BodySense now consumes those native types instead of asserting its own message-content/metadata shapes:
+
+- assistant content is selected only after `role === "assistant"` narrowing;
+- historical interaction metadata is re-established through the generated `AgentInteraction` Zod parser, canonical `InteractionQuestion` parser and the shared AskUser UI normalizer;
+- malformed widened custom metadata fails closed instead of rendering a forged interaction card;
+- consultation status/error metadata uses field guards;
+- image rendering consumes the library-declared `image: string` prop directly;
+- phase callbacks accept only the three canonical consultation phases.
+
+The REST interaction mapper and assistant-ui metadata round-trip share `projectPendingInteraction()` / `parsePendingInteraction()` rather than maintaining parallel shape assumptions.
+
+### Vanatome and local UI state
+
+Vanatome display/isolation modes are structurally identical to the BodySense port vocabulary and now flow directly without casts. The viewer-error guard validates code, message and model URL before claiming the third-party error type. The duplicate `AnatomyStructureId` brand definition in the viewer port was removed; the model-level brand is the single authority.
+
+Static display/view lists, Body Explorer initial state, workspace-view parsing, profile gender state, lifestyle draft construction, file-type iteration and Vite API-base access are explicitly typed at their source rather than repaired later with assertions.
+
+### Assertion audit
+
+A TypeScript AST audit over production Web sources, excluding generated files, tests, `as const` literals and React CSS typing, now finds exactly **one** ordinary assertion: the centralized `asAnatomyStructureId(value)` brand constructor. That assertion is intentional and required to construct the opaque TypeScript brand; no untrusted payload becomes trusted through it.
+
+### Evidence
+
+- Web typecheck — PASS;
+- Web lint — PASS;
+- Vanatome adapter, Body Explorer store, workspace-view parser, pending-interaction projection, assistant thread mapping, consultation service/page and upload-store focused tests — **50/50 PASS**;
+- production `as unknown as` / `as never` — **0**;
+- production ordinary assertions outside the intentional brand constructor — **0**.

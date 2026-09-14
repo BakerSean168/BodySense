@@ -2,7 +2,6 @@ import { z } from "zod";
 import {
   parseCitation,
   parseExtractedInfo,
-  parseInteractionQuestion,
   parseStreamEvent,
 } from "@bodysense/contracts";
 import { authFetch } from "@/features/auth/services/authService";
@@ -32,7 +31,6 @@ import {
   StartConsultationRunRequest as StartConsultationRunRequestSchema,
 } from "@/generated/api/model";
 import type {
-  AgentInteractionOutput as PublicAgentInteraction,
   ConsultationSessionResponseOutput as PublicConsultationSession,
   ConsultationThreadResponseOutput as PublicConsultationThread,
   ConversationMessageOutput as PublicConversationMessage,
@@ -56,10 +54,9 @@ import type {
   ConversationShare,
   SharedConversation,
   StreamEvent,
-  PendingInteraction,
   ProjectedToolCall,
 } from "../types/consultation";
-import { normalizeAskUserQuestion } from "../runtime/askUserQuestion";
+import { projectPendingInteraction } from "../runtime/pendingInteractionProjection";
 
 function toConversation(input: PublicConversation): Conversation {
   return {
@@ -118,26 +115,6 @@ function toConversationMessage(input: PublicConversationMessage): Message {
   };
 }
 
-function toPendingInteraction(
-  input: PublicAgentInteraction,
-): PendingInteraction {
-  return {
-    id: input.id,
-    run_id: input.run_id,
-    conversation_id: input.conversation_id,
-    tool_call_id: input.tool_call_id,
-    tool_name: input.tool_name,
-    question: normalizeAskUserQuestion(
-      parseInteractionQuestion(input.question),
-    ),
-    status: input.status,
-    answer: input.answer,
-    created_at: input.created_at,
-    answered_at: input.answered_at ?? null,
-    metadata: input.metadata,
-  };
-}
-
 function toConsultationSession(
   input: PublicConsultationSession,
 ): ConsultationSession {
@@ -148,7 +125,9 @@ function toConsultationSession(
       parseExtractedInfo(item),
     ),
     diagnosis: null,
-    pending_interactions: input.pending_interactions.map(toPendingInteraction),
+    pending_interactions: input.pending_interactions.map(
+      projectPendingInteraction,
+    ),
     created_at: input.created_at,
     updated_at: input.updated_at,
     ended_at: input.ended_at ?? null,
@@ -186,8 +165,12 @@ function toConsultationThread(
     ),
     body_state: input.body_state,
     diagnosis: null,
-    pending_interactions: input.pending_interactions.map(toPendingInteraction),
-    interaction_history: input.interaction_history.map(toPendingInteraction),
+    pending_interactions: input.pending_interactions.map(
+      projectPendingInteraction,
+    ),
+    interaction_history: input.interaction_history.map(
+      projectPendingInteraction,
+    ),
     created_at: input.created_at,
     updated_at: input.updated_at,
     ended_at: input.ended_at ?? null,

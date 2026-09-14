@@ -12,8 +12,7 @@
  */
 
 /** Backend origin — empty string for same-origin deployments. */
-export const API_BASE_URL: string =
-  (import.meta.env.VITE_API_BASE_URL as string) || "";
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 /** Build a full URL from a backend path. */
 export function apiUrl(path: string): string {

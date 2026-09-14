@@ -81,6 +81,14 @@ export interface UserUpload {
 
 export type FileType = UserUpload["file_type"];
 
+export const FILE_TYPES: readonly FileType[] = [
+  "photo_front",
+  "photo_side",
+  "photo_back",
+  "report",
+  "consultation_photo",
+];
+
 export const FILE_TYPE_LABELS: Record<FileType, string> = {
   photo_front: "正面照片",
   photo_side: "侧面照片",

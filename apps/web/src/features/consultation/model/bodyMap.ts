@@ -58,11 +58,11 @@ export function selectBodyZoneSummaries(
 
   const zones = new Map<BodyZone, BodyZoneSummary>();
   const add = (zone: BodyZone, region: string, trend: NormalizedTrend) => {
-    const current = zones.get(zone) ?? {
+    const current: BodyZoneSummary = zones.get(zone) ?? {
       zone,
       label: zoneLabels[zone],
       count: 0,
-      trend: "unknown" as NormalizedTrend,
+      trend: "unknown",
       regions: [],
     };
     current.count += 1;
