@@ -63,6 +63,20 @@ describe("assistantMessagePartsViewModel", () => {
     expect(vm.hasRenderableContent).toBe(true);
   });
 
+  it("rejects malformed persisted shared payloads instead of casting them", () => {
+    const invalidRedFlag: ThreadAssistantMessagePart[] = [
+      {
+        type: "data",
+        name: "red_flag",
+        data: { has_red_flags: true, flags: [{ category: "emergency" }] },
+      },
+    ];
+
+    expect(() => buildAssistantMessagePartsViewModel(invalidRedFlag)).toThrow(
+      "StreamEvent does not match the canonical v1 schema",
+    );
+  });
+
   it("treats ask_user-only assistant parts as non-renderable", () => {
     const parts: ThreadAssistantMessagePart[] = [
       {

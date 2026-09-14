@@ -28,9 +28,9 @@ import type {
   Citation,
   RedFlagEvent,
   PendingInteraction,
-  AskUserQuestion,
   ToolCallInfo,
 } from "../types/consultation";
+import { normalizeAskUserQuestion } from "./askUserQuestion";
 import type { ThreadAssistantMessagePart } from "@assistant-ui/react";
 
 // ---------------------------------------------------------------------------
@@ -536,48 +536,6 @@ export function reduceActiveTurnEvent(
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-type InteractionRequiredQuestion = Extract<
-  StreamEvent,
-  { type: "state.interaction.required" }
->["payload"]["question"];
-type InteractionRequiredField = NonNullable<
-  InteractionRequiredQuestion["fields"]
->[number];
-
-function normalizeAnswerType(
-  answerType:
-    | InteractionRequiredQuestion["answer_type"]
-    | InteractionRequiredField["answer_type"],
-): AskUserQuestion["answer_type"] {
-  switch (answerType) {
-    case "single_choice":
-    case "multi_choice":
-    case "number":
-    case "date":
-    case "text":
-      return answerType;
-    case "select":
-      return "single_choice";
-    case "scale":
-      return "number";
-    case undefined:
-      return "text";
-  }
-}
-
-function normalizeAskUserQuestion(
-  question: InteractionRequiredQuestion,
-): AskUserQuestion {
-  return {
-    ...question,
-    answer_type: normalizeAnswerType(question.answer_type),
-    fields: question.fields?.map((field) => ({
-      ...field,
-      answer_type: normalizeAnswerType(field.answer_type),
-    })),
-  };
-}
 
 function assertNever(event: never): never {
   throw new Error(`Unhandled validated StreamEvent: ${JSON.stringify(event)}`);

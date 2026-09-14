@@ -5422,6 +5422,101 @@ components:
         updated_at:
           type: string
           format: date-time
+    MessagePart:
+      oneOf:
+      - $ref: '#/components/schemas/MessageTextPart'
+      - $ref: '#/components/schemas/MessageSourcePart'
+      - $ref: '#/components/schemas/MessageDataPart'
+      - $ref: '#/components/schemas/MessageToolCallPart'
+      - $ref: '#/components/schemas/MessageToolResultPart'
+      discriminator:
+        propertyName: type
+        mapping:
+          text: '#/components/schemas/MessageTextPart'
+          source: '#/components/schemas/MessageSourcePart'
+          data: '#/components/schemas/MessageDataPart'
+          tool-call: '#/components/schemas/MessageToolCallPart'
+          tool-result: '#/components/schemas/MessageToolResultPart'
+    MessageTextPart:
+      type: object
+      additionalProperties: false
+      required: [type, text]
+      properties:
+        type:
+          type: string
+          const: text
+        text:
+          type: string
+    MessageSourcePart:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type:
+          type: string
+          const: source
+        title:
+          type: string
+        snippet:
+          type: string
+        url:
+          type: string
+        id:
+          type: string
+        sourceType:
+          type: string
+          enum: [url, document]
+        providerMetadata:
+          $ref: '#/components/schemas/JsonObject'
+    MessageDataPart:
+      type: object
+      additionalProperties: false
+      required: [type, name, data]
+      properties:
+        type:
+          type: string
+          const: data
+        name:
+          type: string
+          minLength: 1
+        data:
+          $ref: '#/components/schemas/JsonValue'
+    MessageToolCallPart:
+      type: object
+      additionalProperties: false
+      required: [type, toolName, args, toolCallId]
+      properties:
+        type:
+          type: string
+          const: tool-call
+        toolName:
+          type: string
+          minLength: 1
+        args:
+          $ref: '#/components/schemas/JsonValue'
+        argsText:
+          type: string
+        toolCallId:
+          type: string
+          minLength: 1
+        result:
+          $ref: '#/components/schemas/JsonValue'
+    MessageToolResultPart:
+      type: object
+      additionalProperties: false
+      required: [type, toolName, result, toolCallId]
+      properties:
+        type:
+          type: string
+          const: tool-result
+        toolName:
+          type: string
+          minLength: 1
+        result:
+          $ref: '#/components/schemas/JsonValue'
+        toolCallId:
+          type: string
+          minLength: 1
     ConversationMessage:
       type: object
       additionalProperties: false
@@ -5463,7 +5558,7 @@ components:
         parts:
           type: array
           items:
-            $ref: '#/components/schemas/JsonObject'
+            $ref: '#/components/schemas/MessagePart'
         content_text:
           type: string
         model:

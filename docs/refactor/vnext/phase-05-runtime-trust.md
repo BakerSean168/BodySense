@@ -147,3 +147,47 @@ Evidence after TRUST-003:
 - keep canonical Proto/OpenAPI/JSON-Schema parsing as the single authority rather than re-parsing downstream.
 
 Phase 05 is not complete until the remaining language-specific trust debt is closed and final repo/local-deploy validation passes.
+
+## TRUST-004 — TypeScript public payload trust
+
+Status: **COMPLETE**
+
+The Consultation Web feature no longer reconstructs validated public payloads with trust-consuming casts.
+
+### Shared StreamEvent sub-structures
+
+The canonical StreamEvent validator now exposes narrow helpers for shared structures that also appear in REST/durable projections:
+
+- `InteractionQuestion`;
+- `ExtractedInfo`;
+- `Citation`;
+- red-flag payloads.
+
+`consultationService` parses pending-interaction questions and extracted-info projections before feature state usage. Historical assistant-message rendering parses persisted citation/red-flag data before constructing its view model. Malformed persisted data fails with the same `StreamEventParseError` used by live SSE and durable replay instead of being cast into validity.
+
+The UI-specific AskUser vocabulary remains an explicit domain projection rather than a second wire schema. `normalizeAskUserQuestion()` is shared by the live reducer and REST session/thread mapper and owns only the deliberate UI normalization (`select -> single_choice`, `scale -> number`, missing answer type -> `text`).
+
+### Persisted message parts
+
+`ConversationMessage.parts` is no longer `JsonObject[]` in the canonical OpenAPI contract. It is a five-variant discriminated `MessagePart` union:
+
+- text;
+- source;
+- data;
+- tool-call;
+- tool-result.
+
+Generated Go/OpenAPI and Web/Zod artifacts therefore validate the discriminant and required fields at the public REST boundary. `consultationService` can pass the already-validated generated union directly into the feature-domain message model; the former `as Message["parts"]` cast is gone.
+
+Diagnosis projection cleanup follows the same rule: generated candidates/freshness flow directly where structurally compatible, while citations are parsed through the canonical Citation validator rather than double-asserted.
+
+### Evidence
+
+- Web typecheck — PASS;
+- Web lint — PASS;
+- Consultation focused tests — **61/61 PASS**;
+- contract parser/parity tests — **18/18 PASS**;
+- `pnpm contracts:verify` — PASS, public REST remains **95/95**;
+- Go HTTP transport + consultation focused tests — PASS;
+- `pnpm contracts:check-generated` — PASS;
+- production Consultation feature trust casts (`as unknown as`, `as Message["parts"]`, `as StreamEvent`, `as never`) — **0**.

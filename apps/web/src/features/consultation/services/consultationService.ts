@@ -1,4 +1,9 @@
-import { parseStreamEvent } from "@bodysense/contracts";
+import {
+  parseCitation,
+  parseExtractedInfo,
+  parseInteractionQuestion,
+  parseStreamEvent,
+} from "@bodysense/contracts";
 import { authFetch } from "@/features/auth/services/authService";
 import {
   analyzeDiagnosis as analyzeDiagnosisOpenApi,
@@ -53,6 +58,7 @@ import type {
   PendingInteraction,
   ProjectedToolCall,
 } from "../types/consultation";
+import { normalizeAskUserQuestion } from "../runtime/askUserQuestion";
 
 function toConversation(input: PublicConversation): Conversation {
   return {
@@ -95,7 +101,7 @@ function toConversationMessage(input: PublicConversationMessage): Message {
     // MessagePart remains a feature-domain union. The public OpenAPI transport
     // intentionally validates the envelope while keeping part payloads as JSON
     // objects until the StreamEvent/MessagePart contract is unified in Phase 03.
-    parts: input.parts as Message["parts"],
+    parts: input.parts,
     content_text: input.content_text ?? "",
     model: input.model ?? null,
     provider: input.provider ?? null,
@@ -120,7 +126,9 @@ function toPendingInteraction(
     conversation_id: input.conversation_id,
     tool_call_id: input.tool_call_id,
     tool_name: input.tool_name,
-    question: input.question as unknown as PendingInteraction["question"],
+    question: normalizeAskUserQuestion(
+      parseInteractionQuestion(input.question),
+    ),
     status: input.status,
     answer: input.answer,
     created_at: input.created_at,
@@ -135,8 +143,9 @@ function toConsultationSession(
   return {
     conversation_id: input.conversation_id,
     phase: input.phase,
-    extracted_info:
-      input.extracted_info as unknown as ConsultationSession["extracted_info"],
+    extracted_info: input.extracted_info.map((item) =>
+      parseExtractedInfo(item),
+    ),
     diagnosis: null,
     pending_interactions: input.pending_interactions.map(toPendingInteraction),
     created_at: input.created_at,
@@ -171,8 +180,9 @@ function toConsultationThread(
   return {
     conversation_id: input.conversation_id,
     phase: input.phase,
-    extracted_info:
-      input.extracted_info as unknown as ConsultationThread["extracted_info"],
+    extracted_info: input.extracted_info.map((item) =>
+      parseExtractedInfo(item),
+    ),
     body_state: input.body_state as ConsultationThread["body_state"],
     diagnosis: null,
     pending_interactions: input.pending_interactions.map(toPendingInteraction),
@@ -219,9 +229,9 @@ function toDiagnosisAnalysis(
     status: input.status,
     scope: input.scope,
     summary: input.summary,
-    candidates: input.candidates as unknown as DiagnosisAnalysis["candidates"],
-    citations: input.citations as unknown as DiagnosisAnalysis["citations"],
-    freshness: input.freshness as unknown as DiagnosisAnalysis["freshness"],
+    candidates: input.candidates,
+    citations: input.citations.map((citation) => parseCitation(citation)),
+    freshness: input.freshness,
     candidate_assessments: input.candidate_assessments?.map((item) => ({
       candidate_id: item.candidate_id,
       state: item.state,

@@ -7,6 +7,7 @@
  */
 import * as zod from 'zod/mini';
 import { JsonObject } from './jsonObject.zod';
+import { MessagePart } from './messagePart.zod';
 
 export const ConversationMessage = /*#__PURE__*/ zod.strictObject({
   "id": /*#__PURE__*/ zod.uuid(),
@@ -17,7 +18,7 @@ export const ConversationMessage = /*#__PURE__*/ zod.strictObject({
   "role": /*#__PURE__*/ zod.enum(['user', 'assistant', 'system', 'tool']),
   "status": /*#__PURE__*/ zod.enum(['submitted', 'streaming', 'completed', 'failed', 'aborted']),
   "seq": /*#__PURE__*/ zod.int(),
-  "parts": /*#__PURE__*/ zod.array(JsonObject),
+  "parts": /*#__PURE__*/ zod.array(MessagePart),
   "content_text": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string()),
   "model": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string()),
   "provider": /*#__PURE__*/ zod.optional(/*#__PURE__*/ zod.string()),
