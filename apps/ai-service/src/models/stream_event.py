@@ -83,9 +83,9 @@ class StreamEventFactory:
         self._seq += 1
         # `or` is safe here because BaseModel instances are truthy. The caller's
         # ids object is intentionally enriched with the conversation id.
-        event_ids = ids or StreamEventIds()
+        event_ids = (ids or StreamEventIds()).model_copy(deep=True)
         if not event_ids.conversation_id:
-            event_ids.conversation_id = self._conversation_id
+            event_ids = event_ids.model_copy(update={"conversation_id": self._conversation_id})
         return StreamEvent(
             seq=self._seq,
             channel=channel,

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import logging
 from collections.abc import AsyncIterator
 from typing import Any, cast
 
@@ -14,11 +13,24 @@ from ..testing_support.deterministic_ai import (
     deterministic_text_for,
     deterministic_usage,
 )
-from .errors import GatewayError, GatewayRateLimitError, GatewayUnavailableError
+from .errors import (
+    GatewayError,
+    GatewayProtocolError,
+    GatewayRateLimitError,
+    GatewayUnavailableError,
+)
 from .gateway import gateway_credentials, gateway_route
-from .types import AiRequest, AiResponse, AiStreamEvent, TokenUsage, ToolCall
-
-logger = logging.getLogger(__name__)
+from .types import (
+    AiDoneEvent,
+    AiRequest,
+    AiResponse,
+    AiStreamEvent,
+    AiTextDeltaEvent,
+    AiToolCallDoneEvent,
+    AiUsageEvent,
+    TokenUsage,
+    ToolCall,
+)
 
 
 class AIService:
@@ -77,9 +89,9 @@ class AIService:
             midpoint = max(1, len(text) // 2)
             for chunk in (text[:midpoint], text[midpoint:]):
                 if chunk:
-                    yield AiStreamEvent(type="text_delta", text=chunk)
-            yield AiStreamEvent(type="usage", usage=TokenUsage(**deterministic_usage()))
-            yield AiStreamEvent(type="done", finish_reason="stop")
+                    yield AiTextDeltaEvent(text=chunk)
+            yield AiUsageEvent(usage=TokenUsage(**deterministic_usage()))
+            yield AiDoneEvent(finish_reason="stop")
             return
 
         route = gateway_route(req.use_case)
@@ -103,8 +115,7 @@ class AIService:
             async for chunk in cast(Any, stream):
                 if not chunk.choices:
                     if chunk.usage:
-                        yield AiStreamEvent(
-                            type="usage",
+                        yield AiUsageEvent(
                             usage=TokenUsage(
                                 input_tokens=chunk.usage.prompt_tokens,
                                 output_tokens=chunk.usage.completion_tokens,
@@ -115,7 +126,7 @@ class AIService:
                 choice = chunk.choices[0]
                 delta = choice.delta
                 if delta.content:
-                    yield AiStreamEvent(type="text_delta", text=delta.content)
+                    yield AiTextDeltaEvent(text=delta.content)
                 if delta.tool_calls:
                     for tc_delta in delta.tool_calls:
                         accumulator = tool_call_accumulators.setdefault(
@@ -133,22 +144,16 @@ class AIService:
                     finish_reason_emitted = True
                     for index in sorted(tool_call_accumulators):
                         accumulator = tool_call_accumulators[index]
-                        arguments: dict[str, Any] = {}
-                        if accumulator["arguments"]:
-                            try:
-                                arguments = json.loads(accumulator["arguments"])
-                            except json.JSONDecodeError:
-                                logger.warning(
-                                    "Failed to parse tool call arguments for %s",
-                                    accumulator["name"],
-                                )
-                        yield AiStreamEvent(
-                            type="tool_call_done",
+                        arguments = self._decode_tool_arguments(
+                            accumulator["arguments"],
+                            accumulator["name"],
+                        )
+                        yield AiToolCallDoneEvent(
                             tool_call_id=accumulator["id"],
                             tool_name=accumulator["name"],
                             tool_arguments=arguments,
                         )
-                    yield AiStreamEvent(type="done", finish_reason=choice.finish_reason)
+                    yield AiDoneEvent(finish_reason=choice.finish_reason)
         except openai.RateLimitError as exc:
             raise GatewayRateLimitError(str(exc)) from exc
         except openai.APIError as exc:
@@ -239,25 +244,37 @@ class AIService:
         ]
 
     @staticmethod
-    def _parse_tool_calls(tool_calls: Any) -> list[ToolCall] | None:
+    def _decode_tool_arguments(raw_arguments: str, tool_name: str) -> dict[str, Any]:
+        if not raw_arguments:
+            return {}
+        try:
+            decoded = json.loads(raw_arguments)
+        except json.JSONDecodeError as exc:
+            raise GatewayProtocolError(
+                "provider returned malformed tool-call arguments "
+                f"for {tool_name or '<unnamed>'}"
+            ) from exc
+        if not isinstance(decoded, dict):
+            raise GatewayProtocolError(
+                "provider returned non-object tool-call arguments "
+                f"for {tool_name or '<unnamed>'}"
+            )
+        return decoded
+
+    @classmethod
+    def _parse_tool_calls(cls, tool_calls: Any) -> list[ToolCall] | None:
         if not tool_calls:
             return None
         result: list[ToolCall] = []
         for tool_call in tool_calls:
-            arguments: dict[str, Any] = {}
-            if tool_call.function.arguments:
-                try:
-                    arguments = json.loads(tool_call.function.arguments)
-                except json.JSONDecodeError:
-                    logger.warning(
-                        "Failed to parse tool call arguments for %s",
-                        tool_call.function.name,
-                    )
             result.append(
                 ToolCall(
                     id=tool_call.id,
                     name=tool_call.function.name,
-                    arguments=arguments,
+                    arguments=cls._decode_tool_arguments(
+                        tool_call.function.arguments,
+                        tool_call.function.name,
+                    ),
                 )
             )
         return result

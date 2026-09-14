@@ -7,7 +7,7 @@ import json
 import logging
 import re
 from collections.abc import AsyncIterator
-from typing import Annotated, Any, Literal, TypedDict, cast
+from typing import Annotated, Any, Literal, TypedDict, assert_never, cast
 
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
@@ -17,11 +17,34 @@ from ..ai import AiRequest, AIService
 from ..ai.consultation_gateway_model import (
     consultation_model_settings,
 )
-from ..ai.types import ChatMessage, ToolCall
+from ..ai.types import (
+    AiDoneEvent,
+    AiTextDeltaEvent,
+    AiToolCallDoneEvent,
+    AiUsageEvent,
+    ChatMessage,
+    ToolCall,
+)
 from ..configuration.consultation_agent_config import (
     ConsultationAgentManifest,
     get_consultation_configuration,
     get_default_consultation_configuration,
+)
+from ..models.consultation_writer_event import (
+    AnswerAttributionWriterEvent,
+    CitationWriterEvent,
+    DoneWriterSentinel,
+    ExtractedInfoWriterEvent,
+    KnowledgeGapWriterEvent,
+    LifestyleContextWriterEvent,
+    PhaseChangeWriterEvent,
+    RedFlagWriterEvent,
+    StreamErrorWriterEvent,
+    TextDeltaWriterEvent,
+    ToolCallWriterEvent,
+    ToolResultWriterEvent,
+    UsageWriterEvent,
+    parse_consultation_writer_event,
 )
 from ..models.stream_event import StreamEvent, StreamEventFactory, StreamEventIds
 from ..prompts.consultation import format_profile_context, get_system_prompt
@@ -676,7 +699,9 @@ async def llm_turn(state: ConsultationThreadState, *, writer: StreamWriter) -> d
             model_settings=consultation_model_settings(manifest),
         )
     ):
-        if event.type == "text_delta" and event.text:
+        if isinstance(event, AiTextDeltaEvent):
+            if not event.text:
+                continue
             raw_text += event.text
             safe_end = max(0, len(raw_text) - STREAM_TAIL_HOLD_CHARS)
             if safe_end > emitted_text_length:
@@ -684,17 +709,16 @@ async def llm_turn(state: ConsultationThreadState, *, writer: StreamWriter) -> d
                 emitted_text_length = safe_end
                 writer({"type": "text_delta", "delta": delta})
                 await asyncio.sleep(0)
-        elif event.type == "tool_call_done" and event.tool_name:
-            tool_call_id = event.tool_call_id or ""
-            if not any(existing["id"] == tool_call_id for existing in completed_tool_calls):
+        elif isinstance(event, AiToolCallDoneEvent):
+            if not any(existing["id"] == event.tool_call_id for existing in completed_tool_calls):
                 completed_tool_calls.append(
                     {
-                        "id": tool_call_id,
+                        "id": event.tool_call_id,
                         "name": event.tool_name,
-                        "arguments": event.tool_arguments or {},
+                        "arguments": dict(event.tool_arguments),
                     }
                 )
-        elif event.type == "usage" and event.usage:
+        elif isinstance(event, AiUsageEvent):
             writer(
                 {
                     "type": "usage",
@@ -705,6 +729,10 @@ async def llm_turn(state: ConsultationThreadState, *, writer: StreamWriter) -> d
                     },
                 }
             )
+        elif isinstance(event, AiDoneEvent):
+            continue
+        else:
+            assert_never(event)
 
     accumulated_text, guarded_question = _guard_final_assistant_text(raw_text)
     # Do not synthesize a question on an intermediate tool round; the model gets
@@ -1098,90 +1126,100 @@ async def get_runtime_graph():
 
 def _map_internal_event(
     factory: StreamEventFactory,
-    event_data: dict[str, Any],
+    event_data: Any,
+    *,
+    run_id: str,
 ) -> StreamEvent | None:
-    event_type = event_data.get("type")
-    if event_type == "text_delta":
+    event = parse_consultation_writer_event(event_data)
+    base_ids = StreamEventIds(run_id=run_id)
+
+    if isinstance(event, TextDeltaWriterEvent):
         return factory.next(
             channel="message",
             event_type="message.text.delta",
-            payload={"delta": event_data.get("delta", "")},
+            payload={"delta": event.delta},
+            ids=base_ids,
         )
-    if event_type == "tool_call":
+    if isinstance(event, ToolCallWriterEvent):
         return factory.next(
             channel="tool",
             event_type="tool.call",
-            payload={
-                "tool": event_data.get("tool", ""),
-                "args": event_data.get("args", {}),
-            },
-            ids=StreamEventIds(tool_call_id=event_data.get("id") or None),
+            payload={"tool": event.tool, "args": event.args},
+            ids=StreamEventIds(run_id=run_id, tool_call_id=event.id),
         )
-    if event_type == "tool_result":
+    if isinstance(event, ToolResultWriterEvent):
         return factory.next(
             channel="tool",
             event_type="tool.result",
-            payload={
-                "tool": event_data.get("tool", ""),
-                "result": event_data.get("result", {}),
-            },
-            ids=StreamEventIds(tool_call_id=event_data.get("id") or None),
+            payload={"tool": event.tool, "result": event.result},
+            ids=StreamEventIds(run_id=run_id, tool_call_id=event.id),
         )
-    if event_type == "extracted_info":
+    if isinstance(event, ExtractedInfoWriterEvent):
         return factory.next(
             channel="state",
             event_type="state.extracted_info.upsert",
-            payload={"info": event_data.get("info", {})},
+            payload={"info": event.info},
+            ids=base_ids,
         )
-    if event_type == "lifestyle_context":
+    if isinstance(event, LifestyleContextWriterEvent):
         return factory.next(
             channel="state",
             event_type="state.lifestyle_context.upsert",
-            payload={"context": event_data.get("context", {})},
+            payload={"context": event.context},
+            ids=base_ids,
         )
-    if event_type == "phase_change":
+    if isinstance(event, PhaseChangeWriterEvent):
         return factory.next(
             channel="state",
             event_type="state.phase.changed",
-            payload={"to": event_data.get("phase", ""), "reason": event_data.get("reason", "")},
+            payload={"to": event.phase, "reason": event.reason},
+            ids=base_ids,
         )
-    if event_type == "citation":
+    if isinstance(event, CitationWriterEvent):
         return factory.next(
             channel="source",
             event_type="source.citation.added",
-            payload={"citation": event_data.get("citation", {})},
+            payload={"citation": event.citation},
+            ids=base_ids,
         )
-    if event_type == "answer_attribution":
+    if isinstance(event, AnswerAttributionWriterEvent):
         return factory.next(
             channel="source",
             event_type="source.answer_attribution.added",
-            payload={"attribution": event_data.get("attribution", {})},
+            payload={"attribution": event.attribution},
+            ids=base_ids,
         )
-    if event_type == "knowledge_gap":
+    if isinstance(event, KnowledgeGapWriterEvent):
         return factory.next(
             channel="source",
             event_type="source.knowledge_gap",
-            payload={
-                "query": event_data.get("query", ""),
-                "message": event_data.get("message", ""),
-            },
+            payload={"query": event.query, "message": event.message},
+            ids=base_ids,
         )
-    if event_type == "red_flag":
+    if isinstance(event, RedFlagWriterEvent):
         return factory.next(
             channel="safety",
             event_type="safety.red_flag.detected",
-            payload={
-                "has_red_flags": bool(event_data.get("has_red_flags", False)),
-                "flags": event_data.get("flags", []),
-            },
+            payload={"has_red_flags": event.has_red_flags, "flags": event.flags},
+            ids=base_ids,
         )
-    if event_type == "usage":
+    if isinstance(event, UsageWriterEvent):
         return factory.next(
             channel="usage",
             event_type="usage.reported",
-            payload={"usage": event_data.get("usage", {})},
+            payload={"usage": event.usage},
+            ids=base_ids,
         )
-    return None
+    if isinstance(event, StreamErrorWriterEvent):
+        return factory.next(
+            channel="stream",
+            event_type="stream.error",
+            payload={"message": event.message},
+            ids=base_ids,
+        )
+    if isinstance(event, DoneWriterSentinel):
+        return None
+    assert_never(event)
 
 
 def _runtime_agent_configuration_event(
@@ -1276,9 +1314,8 @@ async def stream_thread_turn(
         config=config,
         stream_mode="custom",
     ):
-        event = _map_internal_event(factory, chunk)
+        event = _map_internal_event(factory, chunk, run_id=run_id)
         if event is not None:
-            event.ids.run_id = run_id
             yield event
     snapshot = await graph.aget_state(config)
     if snapshot.interrupts:
@@ -1365,9 +1402,8 @@ async def resume_thread_interrupt(
         config=config,
         stream_mode="custom",
     ):
-        event = _map_internal_event(factory, chunk)
+        event = _map_internal_event(factory, chunk, run_id=run_id)
         if event is not None:
-            event.ids.run_id = run_id
             yield event
 
     snapshot = await graph.aget_state(config)

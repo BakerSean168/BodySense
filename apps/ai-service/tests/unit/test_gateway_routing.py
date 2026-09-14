@@ -220,3 +220,159 @@ def test_go_owned_internal_http_boundaries_require_configuration_identity() -> N
                 "input": {"type": "user_message", "text": "hello"},
             }
         )
+
+
+@pytest.mark.asyncio
+async def test_ai_stream_tool_call_arguments_are_typed_objects() -> None:
+    from types import SimpleNamespace
+
+    from src.ai.service import AIService
+    from src.ai.types import AiDoneEvent, AiRequest, AiToolCallDoneEvent, ChatMessage
+
+    class _Stream:
+        def __init__(self, chunks: list[object]) -> None:
+            self._chunks = iter(chunks)
+
+        def __aiter__(self):
+            return self
+
+        async def __anext__(self):
+            try:
+                return next(self._chunks)
+            except StopIteration as exc:
+                raise StopAsyncIteration from exc
+
+    class _Completions:
+        async def create(self, **_kwargs):
+            return _Stream(
+                [
+                    SimpleNamespace(
+                        choices=[
+                            SimpleNamespace(
+                                delta=SimpleNamespace(
+                                    content=None,
+                                    tool_calls=[
+                                        SimpleNamespace(
+                                            index=0,
+                                            id="call-1",
+                                            function=SimpleNamespace(
+                                                name="search_knowledge",
+                                                arguments='{"query":"neck pain"}',
+                                            ),
+                                        )
+                                    ],
+                                ),
+                                finish_reason=None,
+                            )
+                        ],
+                        usage=None,
+                    ),
+                    SimpleNamespace(
+                        choices=[
+                            SimpleNamespace(
+                                delta=SimpleNamespace(content=None, tool_calls=None),
+                                finish_reason="tool_calls",
+                            )
+                        ],
+                        usage=None,
+                    ),
+                ]
+            )
+
+    service = object.__new__(AIService)
+    service._client = SimpleNamespace(chat=SimpleNamespace(completions=_Completions()))
+
+    events = [
+        event
+        async for event in service.generate_stream(
+            AiRequest(
+                use_case=CONSULTATION_ROUTE,
+                messages=[ChatMessage(role="user", content="hello")],
+            )
+        )
+    ]
+
+    assert events == [
+        AiToolCallDoneEvent(
+            tool_call_id="call-1",
+            tool_name="search_knowledge",
+            tool_arguments={"query": "neck pain"},
+        ),
+        AiDoneEvent(finish_reason="tool_calls"),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_ai_stream_rejects_malformed_tool_call_arguments() -> None:
+    from types import SimpleNamespace
+
+    from src.ai.errors import GatewayProtocolError
+    from src.ai.service import AIService
+    from src.ai.types import AiRequest, ChatMessage
+
+    class _Stream:
+        def __init__(self, chunks: list[object]) -> None:
+            self._chunks = iter(chunks)
+
+        def __aiter__(self):
+            return self
+
+        async def __anext__(self):
+            try:
+                return next(self._chunks)
+            except StopIteration as exc:
+                raise StopAsyncIteration from exc
+
+    class _Completions:
+        async def create(self, **_kwargs):
+            return _Stream(
+                [
+                    SimpleNamespace(
+                        choices=[
+                            SimpleNamespace(
+                                delta=SimpleNamespace(
+                                    content=None,
+                                    tool_calls=[
+                                        SimpleNamespace(
+                                            index=0,
+                                            id="call-1",
+                                            function=SimpleNamespace(
+                                                name="search_knowledge",
+                                                arguments='{"query":',
+                                            ),
+                                        )
+                                    ],
+                                ),
+                                finish_reason=None,
+                            )
+                        ],
+                        usage=None,
+                    ),
+                    SimpleNamespace(
+                        choices=[
+                            SimpleNamespace(
+                                delta=SimpleNamespace(content=None, tool_calls=None),
+                                finish_reason="tool_calls",
+                            )
+                        ],
+                        usage=None,
+                    ),
+                ]
+            )
+
+    service = object.__new__(AIService)
+    service._client = SimpleNamespace(chat=SimpleNamespace(completions=_Completions()))
+
+    with pytest.raises(GatewayProtocolError, match="malformed tool-call arguments"):
+        _ = [
+            event
+            async for event in service.generate_stream(
+                AiRequest(
+                    use_case=CONSULTATION_ROUTE,
+                    messages=[ChatMessage(role="user", content="hello")],
+                )
+            )
+        ]
+
+    with pytest.raises(GatewayProtocolError, match="non-object tool-call arguments"):
+        AIService._decode_tool_arguments('["not", "an", "object"]', "search_knowledge")

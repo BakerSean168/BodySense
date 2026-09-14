@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from src.ai import AiRequest, AIService
-from src.ai.types import ChatMessage
+from src.ai.types import AiDoneEvent, AiTextDeltaEvent, AiUsageEvent, ChatMessage
 from src.configuration.diagnosis_agent_config import get_default_diagnosis_configuration
 from src.configuration.treatment_agent_config import get_default_treatment_configuration
 from src.services.assessment_service import AssessmentService
@@ -33,9 +33,11 @@ async def test_generic_ai_service_streams_without_provider_calls(
             )
         )
     ]
-    assert "BodyState" in "".join(event.text or "" for event in events)
-    assert events[-1].type == "done"
-    assert any(event.type == "usage" for event in events)
+    assert "BodyState" in "".join(
+        event.text for event in events if isinstance(event, AiTextDeltaEvent)
+    )
+    assert isinstance(events[-1], AiDoneEvent)
+    assert any(isinstance(event, AiUsageEvent) for event in events)
 
 
 @pytest.mark.asyncio

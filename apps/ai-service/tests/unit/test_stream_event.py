@@ -80,6 +80,23 @@ def test_stream_event_factory_increments_seq():
     assert second.seq == 2
 
 
+def test_stream_event_factory_does_not_mutate_caller_owned_ids():
+    factory = StreamEventFactory(conversation_id="conv-1")
+    ids = StreamEventIds(message_id="msg-1")
+
+    event = factory.next(
+        channel="message",
+        event_type="message.text.delta",
+        payload={"delta": "hello"},
+        ids=ids,
+    )
+
+    assert ids.conversation_id is None
+    assert event.ids is not ids
+    assert event.ids.conversation_id == "conv-1"
+    assert event.ids.message_id == "msg-1"
+
+
 def test_stream_event_fixture_parity():
     data = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
     parsed = [StreamEvent.model_validate(item) for item in data]

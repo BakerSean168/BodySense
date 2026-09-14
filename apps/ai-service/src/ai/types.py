@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any
+from dataclasses import dataclass, field
+from typing import Any, Literal, TypeAlias
 
 
 @dataclass
@@ -34,7 +34,7 @@ class ChatMessage:
     tool_call_id: str | None = None
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class TokenUsage:
     input_tokens: int = 0
     output_tokens: int = 0
@@ -68,13 +68,38 @@ class AiResponse:
     raw: Any = None
 
 
-@dataclass
-class AiStreamEvent:
-    type: str  # "text_delta" | "tool_call_done" | "usage" | "done" | "error"
-    text: str | None = None
-    tool_call_id: str | None = None
-    tool_name: str | None = None
-    tool_arguments: dict | None = None
-    usage: TokenUsage | None = None
-    finish_reason: str | None = None
-    error: str | None = None
+@dataclass(frozen=True, slots=True)
+class AiTextDeltaEvent:
+    """A validated text fragment from the provider stream."""
+
+    text: str
+    type: Literal["text_delta"] = field(init=False, default="text_delta")
+
+
+@dataclass(frozen=True, slots=True)
+class AiToolCallDoneEvent:
+    """A complete tool call with provider JSON already parsed as an object."""
+
+    tool_call_id: str
+    tool_name: str
+    tool_arguments: dict[str, Any]
+    type: Literal["tool_call_done"] = field(init=False, default="tool_call_done")
+
+
+@dataclass(frozen=True, slots=True)
+class AiUsageEvent:
+    """Token usage reported by the provider stream."""
+
+    usage: TokenUsage
+    type: Literal["usage"] = field(init=False, default="usage")
+
+
+@dataclass(frozen=True, slots=True)
+class AiDoneEvent:
+    """Provider stream completion marker."""
+
+    finish_reason: str | None
+    type: Literal["done"] = field(init=False, default="done")
+
+
+AiStreamEvent: TypeAlias = AiTextDeltaEvent | AiToolCallDoneEvent | AiUsageEvent | AiDoneEvent
