@@ -448,7 +448,7 @@ Turn ADR 0014 from design evidence into repository infrastructure.
 
 ## Phase 02 — Public REST reset to OpenAPI 3.1 spec-first
 
-**Status: COMPLETE — 95/95 eligible browser-facing routes; Phase 03 not started.**
+**Status: COMPLETE — 95/95 eligible browser-facing routes; integrated into canonical vNext before Phase 03.**
 
 Branch: `refactor/vnext-02-rest-openapi`
 
