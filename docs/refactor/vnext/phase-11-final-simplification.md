@@ -225,3 +225,32 @@ LOCAL_DEPLOY_VALIDATION=PASS
 ```
 
 This closes the vNext engineering reset implementation: the current repository has one intended contract/transport owner per boundary, the temporary reset machinery has been removed or promoted to permanent tooling, current documentation no longer describes completed contract migration phases as future work, and the full longitudinal product loop has been re-proven from a fresh PostgreSQL 18 database and production-shaped runtime.
+
+## Final merge-readiness closeout
+
+A final whole-branch review before the `main` PR found four governance/quality gaps that did not invalidate the architecture but did block a clean merge. They are now closed rather than deferred:
+
+1. **Commitlint topology** — the vNext history contains one legitimate two-parent merge with subject `merge: vnext phase 00 baseline`. `merge` is now an allowed Conventional Commit type, and `scripts/quality/lint-commit-range.sh` additionally rejects `merge:` on any non-merge commit before running one normal range commitlint pass.
+2. **Committed diff hygiene** — Governance no longer runs the ineffective clean-checkout `git diff --check`. It downloads the canonical delivery manifest, resolves its exact base/head SHAs, fetches full history and validates the committed `base...head` diff.
+3. **Baseline finding ledger drift** — every original `BS-Q-*` finding now records its actual terminal disposition and verification; unresolved count is zero.
+4. **Three remaining P3 warnings** — Web lint moved to Nx inferred ESLint, unit-test network/`act()` noise was removed, and BodyExplorer3D received an explicit lazy-viewer bundle budget instead of suppressing the warning globally.
+5. **Ambiguous public share URL** — the Phase 02 migration checkpoint deliberately tolerated two Redocly `no-ambiguous-paths` warnings for `/conversations/share/{token}`. Final closeout moves the unauthenticated capability read to `/api/v1/shared-conversations/{token}` while keeping authenticated create/revoke at `/api/v1/conversations/{id}/share`; OpenAPI lint is now warning-free without an ignore rule.
+
+Final focused evidence:
+
+```text
+Web inferred lint=PASS, no Nx executor deprecation warning
+Web tests=52 files / 266 tests PASS
+Web test ECONNREFUSED=0
+Web React act warnings=0
+BodyExplorer3D=1,237.65 kB raw / 286.73 kB gzip
+BodyExplorer3D explicit budget=1.30 MB raw / 300 kB gzip
+all other JS chunks explicit raw budget=500 kB
+Vite generic oversize warning=0
+OpenAPI lint warnings=0
+public REST route count=95
+commitlint range=PASS, legitimate merge-typed commits=1
+finding ledger unresolved=0
+```
+
+The contract-codegen north-star document has also been promoted from `IMPLEMENTATION NOT STARTED` to the implemented vNext state, eliminating the final current-architecture status drift.

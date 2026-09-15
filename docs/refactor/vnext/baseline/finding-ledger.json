@@ -14,120 +14,130 @@
     {
       "id": "BS-Q-TS-001",
       "severity": "P1",
-      "status": "OPEN",
+      "status": "FIXED",
       "targetPhase": "03-public-stream",
       "summary": "Validated StreamEvent payloads are re-cast in activeTurnReducer instead of staying narrowed downstream.",
       "evidence": [
         "apps/web/src/features/consultation/runtime/activeTurnReducer.ts"
       ],
-      "invariant": "Validate once at the public event trust boundary; downstream reducer code consumes trusted discriminated variants without reconstructing types by assertion."
+      "invariant": "Validate once at the public event trust boundary; downstream reducer code consumes trusted discriminated variants without reconstructing types by assertion.",
+      "verification": "Phase 03 made parseStreamEvent the single public trust boundary; activeTurnReducer consumes the generated discriminated union directly without payload recasts."
     },
     {
       "id": "BS-Q-TS-002",
       "severity": "P1",
-      "status": "OPEN",
+      "status": "FIXED",
       "targetPhase": "03-public-stream",
       "summary": "activeTurnReducer is not exhaustive; legal variants can fall through default and not advance sequence bookkeeping.",
       "evidence": [
         "apps/web/src/features/consultation/runtime/activeTurnReducer.ts"
       ],
-      "invariant": "Every legal public event is either state-changing or an explicit no-op and all legal events preserve ordered sequence accounting."
+      "invariant": "Every legal public event is either state-changing or an explicit no-op and all legal events preserve ordered sequence accounting.",
+      "verification": "Phase 03 made activeTurnReducer exhaustive across the generated StreamEvent union with explicit no-op cases and assertNever; ordered sequence accounting is covered by reducer tests."
     },
     {
       "id": "BS-Q-TEST-001",
       "severity": "P1",
-      "status": "OPEN",
+      "status": "FIXED",
       "targetPhase": "03-public-stream",
       "summary": "Reducer tests can create StreamEvent values through casts that the production parser would reject.",
       "evidence": [
         "apps/web/src/features/consultation/runtime/activeTurnReducer.test.ts"
       ],
-      "invariant": "Protocol tests use type-directed builders or parser-backed fixtures and cannot claim coverage with impossible wire values."
+      "invariant": "Protocol tests use type-directed builders or parser-backed fixtures and cannot claim coverage with impossible wire values.",
+      "verification": "Phase 03 replaced impossible cast-built protocol cases with parser-backed builders/fixtures; canonical valid, malformed and semantic-probe corpora drive reducer/parser parity."
     },
     {
       "id": "BS-Q-PY-001",
       "severity": "P1",
-      "status": "OPEN",
+      "status": "FIXED",
       "targetPhase": "05-runtime-trust",
       "summary": "Malformed model tool-call JSON is normalized to an empty object and can be emitted as a valid completed tool call.",
       "evidence": [
         "apps/ai-service/src/ai/service.py"
       ],
-      "invariant": "Invalid model output remains an explicit invalid/error state and is never executed as a valid tool call."
+      "invariant": "Invalid model output remains an explicit invalid/error state and is never executed as a valid tool call.",
+      "verification": "Phase 05 routes streaming and non-streaming tool-call arguments through _decode_tool_arguments(); malformed/non-object JSON raises GatewayProtocolError and is never normalized to {}."
     },
     {
       "id": "BS-Q-PY-002",
       "severity": "P2",
-      "status": "OPEN",
+      "status": "FIXED",
       "targetPhase": "05-runtime-trust",
       "summary": "StreamEventFactory mutates caller-owned StreamEventIds while enriching identity.",
       "evidence": [
         "apps/ai-service/src/models/stream_event.py"
       ],
-      "invariant": "Factories return new values and do not introduce hidden aliasing through caller mutation."
+      "invariant": "Factories return new values and do not introduce hidden aliasing through caller mutation.",
+      "verification": "Phase 05 changed StreamEventFactory to copy caller-owned StreamEventIds before enrichment; later private-runtime simplification preserved value semantics."
     },
     {
       "id": "BS-Q-PY-003",
       "severity": "P2",
-      "status": "OPEN",
+      "status": "FIXED",
       "targetPhase": "05-runtime-trust",
       "summary": "ToolExecutor validation/normalization mutates caller-owned argument dictionaries.",
       "evidence": [
         "apps/ai-service/src/services/agent/tool_executor.py"
       ],
-      "invariant": "Validation is side-effect free; normalization returns an explicit new value."
+      "invariant": "Validation is side-effect free; normalization returns an explicit new value.",
+      "verification": "Phase 05 changed ToolExecutor._validate() to normalize a dict copy and return it explicitly; caller/provider argument dictionaries are not mutated."
     },
     {
       "id": "BS-Q-GO-001",
       "severity": "P1",
-      "status": "OPEN",
+      "status": "FIXED",
       "targetPhase": "06-durable-state-machines",
       "summary": "Job.Status is a raw string instead of a finite domain type.",
       "evidence": [
         "apps/api/internal/model/job.go",
         "apps/api/internal/service/job_runtime.go"
       ],
-      "invariant": "Durable lifecycle state has one typed vocabulary shared by model, repository and service transitions."
+      "invariant": "Durable lifecycle state has one typed vocabulary shared by model, repository and service transitions.",
+      "verification": "Phase 06 introduced finite typed durable status vocabularies including JobStatus across model/repository/service boundaries."
     },
     {
       "id": "BS-Q-GO-002",
       "severity": "P1",
-      "status": "OPEN",
+      "status": "FIXED",
       "targetPhase": "06-durable-state-machines",
       "summary": "Job runtime treats completed and succeeded as duplicate successful terminal states.",
       "evidence": [
         "apps/api/internal/service/job_runtime.go",
         "apps/api/internal/repository/job_repository.go"
       ],
-      "invariant": "One semantic state has one canonical spelling; successful Job terminal state is completed."
+      "invariant": "One semantic state has one canonical spelling; successful Job terminal state is completed.",
+      "verification": "Phase 06 retired the Job succeeded alias; completed is the only canonical successful Job terminal state."
     },
     {
       "id": "BS-Q-GO-003",
       "severity": "P1",
-      "status": "OPEN",
+      "status": "FIXED",
       "targetPhase": "06-durable-state-machines",
       "summary": "Job transition uses read-check-write rather than an invariant-bearing compare-and-set mutation.",
       "evidence": [
         "apps/api/internal/service/job_runtime.go",
         "apps/api/internal/repository/job_repository.go"
       ],
-      "invariant": "Concurrent lifecycle transitions cannot both succeed from the same expected state."
+      "invariant": "Concurrent lifecycle transitions cannot both succeed from the same expected state.",
+      "verification": "Phase 06 converted racing Job/Run/Interaction/ToolCall/Upload/Treatment transitions to conditional compare-and-set semantics with single-winner regression coverage."
     },
     {
       "id": "BS-Q-GO-004",
       "severity": "P1",
-      "status": "OPEN",
+      "status": "FIXED",
       "targetPhase": "06-durable-state-machines",
       "summary": "Authoritative Job lifecycle event append is best-effort after status mutation.",
       "evidence": [
         "apps/api/internal/service/job_runtime.go"
       ],
-      "invariant": "When status and lifecycle event represent one durable fact they commit atomically."
+      "invariant": "When status and lifecycle event represent one durable fact they commit atomically.",
+      "verification": "Phase 06 persists authoritative Job/Run lifecycle events transactionally with their state mutation and proves event-insert failure rolls the transition back."
     },
     {
       "id": "BS-Q-X-001",
       "severity": "P1",
-      "status": "OPEN",
+      "status": "FIXED",
       "targetPhase": "04-internal-runtime-proto",
       "summary": "Python internal runtime protocol and public StreamEvent reuse an overly generic event envelope/vocabulary.",
       "evidence": [
@@ -136,7 +146,8 @@
         "apps/api/internal/service/ai_client.go",
         "packages/contracts/src/stream-events.ts"
       ],
-      "invariant": "Internal Agent control/runtime protocol is distinct from Go-owned public projection protocol."
+      "invariant": "Internal Agent control/runtime protocol is distinct from Go-owned public projection protocol.",
+      "verification": "Phase 04 established private Proto/Buf/Protovalidate RuntimeEvent authority for Go/Python while public StreamEvent remains JSON-Schema-owned; the shared generic wire was removed."
     },
     {
       "id": "BS-Q-TOOL-001",
@@ -154,49 +165,53 @@
     {
       "id": "BS-Q-TOOL-002",
       "severity": "P3",
-      "status": "OPEN",
+      "status": "FIXED",
       "targetPhase": "10-quality-gates",
       "summary": "Web lint uses the deprecated @nx/eslint:lint executor and emits an Nx v24 migration warning.",
       "evidence": [
         "apps/web/project.json"
       ],
-      "invariant": "Quality gates use supported Nx target configuration without deprecation noise."
+      "invariant": "Quality gates use supported Nx target configuration without deprecation noise.",
+      "verification": "Removed the explicit deprecated @nx/eslint:lint Web target. @nx/eslint/plugin now infers `eslint .`; the previous src-only scope is preserved by excluding apps/web/e2e, and the lint run is warning-free."
     },
     {
       "id": "BS-Q-TEST-002",
       "severity": "P3",
-      "status": "OPEN",
+      "status": "FIXED",
       "targetPhase": "10-quality-gates",
       "summary": "Passing Web unit tests emit repeated localhost:3000 ECONNREFUSED diagnostics and one React act warning.",
       "evidence": [
         "apps/web/src/components/layout/AppUserMenu.test.tsx",
         "apps/web/src"
       ],
-      "invariant": "A green unit suite is quiet enough that new actionable warnings are visible."
+      "invariant": "A green unit suite is quiet enough that new actionable warnings are visible.",
+      "verification": "Unit tests now isolate best-effort client diagnostics instead of making real localhost requests, and the Zustand reset is wrapped in act(). Full Web suite: 52 files / 266 tests PASS with ECONNREFUSED=0 and React act warnings=0."
     },
     {
       "id": "BS-Q-BUILD-001",
       "severity": "P3",
-      "status": "OPEN",
+      "status": "FIXED",
       "targetPhase": "11-final-simplification",
       "summary": "Production build reports BodyExplorer3D chunk above the configured 500 kB warning threshold.",
       "evidence": [
         "apps/web/src/features/body-explorer",
         "apps/web/vite.config.ts"
       ],
-      "invariant": "Large intentional assets/chunks have an explicit loading/performance rationale or are split when that improves user-facing latency."
+      "invariant": "Large intentional assets/chunks have an explicit loading/performance rationale or are split when that improves user-facing latency.",
+      "verification": "BodyExplorer3D remains a React.lazy dynamic entry and now has an explicit 1.30 MB raw / 300 kB gzip production budget while every other JS chunk keeps a 500 kB raw budget. Current build is 1,237.65 kB raw / 286.73 kB gzip with no generic Vite oversize warning."
     },
     {
       "id": "BS-Q-CONTRACT-001",
       "severity": "P2",
-      "status": "OPEN",
+      "status": "FIXED",
       "targetPhase": "02-rest-openapi",
       "summary": "Orval forceSuccessResponse keeps non-2xx out of the success path, but generated error body typing is not sufficient authority for BodySense error semantics.",
       "evidence": [
         "tools/contracts/generated/openapi-web/client.ts",
         "docs/architecture/contract-codegen-spike-results-2026-09-09.md"
       ],
-      "invariant": "Generated REST clients validate successful transport values, while a handwritten stable error adapter owns ApiRequestError/error-envelope semantics for feature code."
+      "invariant": "Generated REST clients validate successful transport values, while a handwritten stable error adapter owns ApiRequestError/error-envelope semantics for feature code.",
+      "verification": "Phase 02 keeps generated clients responsible for validated successful transport values while normalizeOpenApiError/withOpenApiError remain the handwritten ApiRequestError authority for feature code."
     },
     {
       "id": "BS-VNEXT-CONTRACT-002",

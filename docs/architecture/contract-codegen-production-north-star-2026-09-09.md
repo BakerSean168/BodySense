@@ -1,10 +1,11 @@
 # BodySense Contract Codegen Production North-Star Architecture
 
-> Status: **DESIGN COMPLETE / IMPLEMENTATION NOT STARTED**  
-> Date: 2026-09-09  
-> Evidence base: `docs/architecture/contract-codegen-spike-results-2026-09-09.md`  
-> Prior decision: `docs/adr/0014-adopt-boundary-specific-contract-codegen-strategy.md`  
-> Scope: production architecture, compatibility policy, migration sequencing, CI gates and execution tickets only. **No production code migration is authorized by this document.**
+> Status: **IMPLEMENTED — vNext engineering reset complete**
+> Date: 2026-09-09; implementation completed 2026-09-15
+> Evidence base: `docs/architecture/contract-codegen-spike-results-2026-09-09.md`
+> Prior decision: `docs/adr/0014-adopt-boundary-specific-contract-codegen-strategy.md`
+> Implementation record: `docs/plan/archive/2026-09-13-bodysense-vnext-engineering-reset.md` and `docs/refactor/vnext/phase-01-contract-foundation.md` through `phase-11-final-simplification.md`
+> Scope: implemented production architecture, compatibility policy, migration sequencing and CI gates. The execution-ticket sections below are retained as the decision/history record for the completed migration.
 
 ---
 
@@ -869,162 +870,162 @@ These tickets are deliberately scoped so future implementation can be reviewed i
 
 ## CONTRACT-001 - Freeze canonical contract ownership map
 
-**Goal:** every existing cross-process/public contract has exactly one declared future authority.  
-**Why now:** prevents OpenAPI/JSON Schema/Proto overlap before code is generated.  
-**Scope:** REST, public stream, internal Agent runtime; current duplicate definitions and consumers.  
-**Out of scope:** code generation.  
-**Protected contracts:** all current routes, event semantics, domain ownership.  
-**Implementation:** create a contract registry table/doc; classify each current type as canonical, generated target, adapter, domain model or legacy-to-retire.  
-**Tests:** documentation/reference validation where available.  
-**Acceptance:** no important cross-boundary type is owned by more than one canonical schema family.  
-**Dependencies:** none.  
+**Goal:** every existing cross-process/public contract has exactly one declared future authority.
+**Why now:** prevents OpenAPI/JSON Schema/Proto overlap before code is generated.
+**Scope:** REST, public stream, internal Agent runtime; current duplicate definitions and consumers.
+**Out of scope:** code generation.
+**Protected contracts:** all current routes, event semantics, domain ownership.
+**Implementation:** create a contract registry table/doc; classify each current type as canonical, generated target, adapter, domain model or legacy-to-retire.
+**Tests:** documentation/reference validation where available.
+**Acceptance:** no important cross-boundary type is owned by more than one canonical schema family.
+**Dependencies:** none.
 **Risks:** hidden contracts embedded in handler structs/tests.
 
 ## CONTRACT-002 - Prove asymmetric Orval response trust policy
 
-**Goal:** known malformed fields fail while unknown additive fields are stripped/ignored.  
-**Why now:** stale-client compatibility changes the spike's strict-response production shape.  
-**Scope:** isolated OpenAPI/Orval fixture only.  
-**Out of scope:** real route migration.  
-**Protected contracts:** current error normalization.  
-**Implementation:** derive exact Orval 8.30.0 config/override; test valid response, malformed known nested field, unknown top-level/nested additive field and 409.  
-**Tests:** focused runtime fixtures + Web typecheck.  
-**Acceptance:** valid/known-malformed/additive/409 matrix behaves exactly as section 5 defines.  
-**Dependencies:** CONTRACT-001.  
+**Goal:** known malformed fields fail while unknown additive fields are stripped/ignored.
+**Why now:** stale-client compatibility changes the spike's strict-response production shape.
+**Scope:** isolated OpenAPI/Orval fixture only.
+**Out of scope:** real route migration.
+**Protected contracts:** current error normalization.
+**Implementation:** derive exact Orval 8.30.0 config/override; test valid response, malformed known nested field, unknown top-level/nested additive field and 409.
+**Tests:** focused runtime fixtures + Web typecheck.
+**Acceptance:** valid/known-malformed/additive/409 matrix behaves exactly as section 5 defines.
+**Dependencies:** CONTRACT-001.
 **Risks:** Orval config may not express the desired policy cleanly; fallback is generated schema override or re-evaluating Hey API.
 
 ## CONTRACT-003 - Establish contract generation and no-diff CI
 
-**Goal:** generation is deterministic and reviewed as a derived artifact.  
-**Why now:** every later migration depends on trustworthy regeneration.  
-**Scope:** pinned toolchains, commands, generated directories, CI gates.  
-**Out of scope:** broad endpoint conversion.  
-**Protected contracts:** normal `pnpm`/Go/Python developer workflow.  
-**Implementation:** add generation targets; no-diff check; generated context exclusions; exact version pins.  
-**Tests:** run generation twice from clean checkout and compare hashes/diff.  
-**Acceptance:** second generation produces no diff and normal builds consume committed generated output.  
-**Dependencies:** CONTRACT-002.  
+**Goal:** generation is deterministic and reviewed as a derived artifact.
+**Why now:** every later migration depends on trustworthy regeneration.
+**Scope:** pinned toolchains, commands, generated directories, CI gates.
+**Out of scope:** broad endpoint conversion.
+**Protected contracts:** normal `pnpm`/Go/Python developer workflow.
+**Implementation:** add generation targets; no-diff check; generated context exclusions; exact version pins.
+**Tests:** run generation twice from clean checkout and compare hashes/diff.
+**Acceptance:** second generation produces no diff and normal builds consume committed generated output.
+**Dependencies:** CONTRACT-002.
 **Risks:** platform-specific generator output.
 
 ## REST-001 - Create canonical OpenAPI 3.1 production spec
 
-**Goal:** public REST wire facts have one spec-first authority.  
-**Why now:** prerequisite for real Go/Web migration.  
-**Scope:** common auth/error components plus HealthWorkspace and one BodyState mutation first.  
-**Out of scope:** every endpoint.  
-**Protected contracts:** current `/api/v1` routes and response/error semantics.  
-**Implementation:** encode current behavior from code/tests; lint; add breaking baseline and mutation corpus.  
-**Tests:** Redocly, oasdiff, M5 nullable, enum expansion, additive response compatibility.  
-**Acceptance:** spec describes current selected endpoints without behavior invention.  
-**Dependencies:** CONTRACT-003.  
+**Goal:** public REST wire facts have one spec-first authority.
+**Why now:** prerequisite for real Go/Web migration.
+**Scope:** common auth/error components plus HealthWorkspace and one BodyState mutation first.
+**Out of scope:** every endpoint.
+**Protected contracts:** current `/api/v1` routes and response/error semantics.
+**Implementation:** encode current behavior from code/tests; lint; add breaking baseline and mutation corpus.
+**Tests:** Redocly, oasdiff, M5 nullable, enum expansion, additive response compatibility.
+**Acceptance:** spec describes current selected endpoints without behavior invention.
+**Dependencies:** CONTRACT-003.
 **Risks:** existing undocumented edge/error response requires characterization rather than guessing.
 
 ## REST-002 - Add Go generated HTTP boundary and request validator
 
-**Goal:** malformed HTTP input cannot reach the selected service merely because JSON decoding succeeded.  
-**Why now:** establishes server trust boundary before vertical switch.  
-**Scope:** generated models/server surface for selected endpoints; request-validation middleware; adapters.  
-**Out of scope:** domain service refactor.  
-**Protected contracts:** service ownership, authentication, optimistic concurrency.  
-**Tests:** missing required, unknown request key, range/minLength, malformed enum, valid request.  
-**Acceptance:** invalid requests stop before application logic; valid current requests behave identically.  
-**Dependencies:** REST-001.  
+**Goal:** malformed HTTP input cannot reach the selected service merely because JSON decoding succeeded.
+**Why now:** establishes server trust boundary before vertical switch.
+**Scope:** generated models/server surface for selected endpoints; request-validation middleware; adapters.
+**Out of scope:** domain service refactor.
+**Protected contracts:** service ownership, authentication, optimistic concurrency.
+**Tests:** missing required, unknown request key, range/minLength, malformed enum, valid request.
+**Acceptance:** invalid requests stop before application logic; valid current requests behave identically.
+**Dependencies:** REST-001.
 **Risks:** generated types leaking into service signatures.
 
 ## REST-003 - Migrate HealthWorkspace browser read path
 
-**Goal:** browser uses generated+validated contract without handwritten duplicate transport type.  
-**Why now:** highest-value read duplication hotspot.  
-**Scope:** `GET /api/v1/health-workspace`, Orval Fetch/Zod Mini, handwritten TanStack adapter.  
-**Out of scope:** unrelated workspace mutations.  
-**Protected contracts:** `useHealthWorkspaceQuery`, query cache semantics, selectors/components behavior.  
-**Tests:** valid response, malformed known field, unknown additive field, E2E workspace load/reload.  
-**Acceptance:** trusted parsed data enters query cache; components behave unchanged.  
-**Dependencies:** REST-002.  
+**Goal:** browser uses generated+validated contract without handwritten duplicate transport type.
+**Why now:** highest-value read duplication hotspot.
+**Scope:** `GET /api/v1/health-workspace`, Orval Fetch/Zod Mini, handwritten TanStack adapter.
+**Out of scope:** unrelated workspace mutations.
+**Protected contracts:** `useHealthWorkspaceQuery`, query cache semantics, selectors/components behavior.
+**Tests:** valid response, malformed known field, unknown additive field, E2E workspace load/reload.
+**Acceptance:** trusted parsed data enters query cache; components behave unchanged.
+**Dependencies:** REST-002.
 **Risks:** accidental replacement of intentional Web view types.
 
 ## REST-004 - Migrate BodyState fact mutation and 409 path
 
-**Goal:** prove request + domain revision + error behavior end to end.  
-**Why now:** read-only success would not validate the architecture.  
-**Scope:** `POST /api/v1/body-state/facts`.  
-**Out of scope:** all BodyState mutations.  
-**Protected contracts:** optimistic revision, error code/details, invalidation behavior.  
-**Tests:** valid command, invalid input, stale revision 409, future additive error metadata.  
-**Acceptance:** Web receives normalized conflict behavior identical to current UX; server validation is schema-driven at ingress.  
-**Dependencies:** REST-003.  
+**Goal:** prove request + domain revision + error behavior end to end.
+**Why now:** read-only success would not validate the architecture.
+**Scope:** `POST /api/v1/body-state/facts`.
+**Out of scope:** all BodyState mutations.
+**Protected contracts:** optimistic revision, error code/details, invalidation behavior.
+**Tests:** valid command, invalid input, stale revision 409, future additive error metadata.
+**Acceptance:** Web receives normalized conflict behavior identical to current UX; server validation is schema-driven at ingress.
+**Dependencies:** REST-003.
 **Risks:** generated error aliases conflicting with existing `ApiRequestError` normalization.
 
 ## STREAM-001 - Repair canonical StreamEvent schema semantics
 
-**Goal:** schema matches current fail-closed parser semantics before authority migration.  
-**Why now:** five verified drifts exist.  
-**Scope:** exactly the five spike findings plus strictRequired cleanup.  
-**Out of scope:** new event variants.  
-**Protected contracts:** StreamEvent v1 wire, replay, safety behavior.  
-**Tests:** 34 real fixtures, malformed corpus, five semantic probes.  
-**Acceptance:** old parser and candidate schema agree on all committed evidence.  
-**Dependencies:** CONTRACT-003.  
+**Goal:** schema matches current fail-closed parser semantics before authority migration.
+**Why now:** five verified drifts exist.
+**Scope:** exactly the five spike findings plus strictRequired cleanup.
+**Out of scope:** new event variants.
+**Protected contracts:** StreamEvent v1 wire, replay, safety behavior.
+**Tests:** 34 real fixtures, malformed corpus, five semantic probes.
+**Acceptance:** old parser and candidate schema agree on all committed evidence.
+**Dependencies:** CONTRACT-003.
 **Risks:** a schema fix accidentally changes live behavior instead of documenting it.
 
 ## STREAM-002 - Generate public TS contract and validator in shadow mode
 
-**Goal:** schema becomes mechanically capable of owning static/runtime Web trust.  
-**Why now:** authority cannot move before generated output proves parity.  
-**Scope:** generated TS union + runtime validator + stable facade.  
-**Out of scope:** handwritten parser deletion.  
-**Protected contracts:** package exports, SSE/replay behavior.  
-**Tests:** deterministic generation, parity corpus, stream E2E.  
-**Acceptance:** generated validator has zero unexplained accept/reject drift.  
-**Dependencies:** STREAM-001.  
+**Goal:** schema becomes mechanically capable of owning static/runtime Web trust.
+**Why now:** authority cannot move before generated output proves parity.
+**Scope:** generated TS union + runtime validator + stable facade.
+**Out of scope:** handwritten parser deletion.
+**Protected contracts:** package exports, SSE/replay behavior.
+**Tests:** deterministic generation, parity corpus, stream E2E.
+**Acceptance:** generated validator has zero unexplained accept/reject drift.
+**Dependencies:** STREAM-001.
 **Risks:** bundle regression; measurable but likely non-blocking.
 
 ## STREAM-003 - Switch trust boundary and retire parser after rollback window
 
-**Goal:** JSON Schema becomes actual public stream authority.  
-**Why now:** only after shadow evidence.  
-**Scope:** live/replay parser entrypoint switch; later handwritten parser removal.  
-**Out of scope:** StreamEvent v2/new variants.  
-**Protected contracts:** fail-closed unknown event/version, sequence/replay/cancel semantics.  
-**Tests:** live SSE, recovery after disconnect, malformed public event, terminal events.  
-**Acceptance:** generated validator is primary; rollback path exercised; legacy parser removed only after agreed window.  
-**Dependencies:** STREAM-002.  
+**Goal:** JSON Schema becomes actual public stream authority.
+**Why now:** only after shadow evidence.
+**Scope:** live/replay parser entrypoint switch; later handwritten parser removal.
+**Out of scope:** StreamEvent v2/new variants.
+**Protected contracts:** fail-closed unknown event/version, sequence/replay/cancel semantics.
+**Tests:** live SSE, recovery after disconnect, malformed public event, terminal events.
+**Acceptance:** generated validator is primary; rollback path exercised; legacy parser removed only after agreed window.
+**Dependencies:** STREAM-002.
 **Risks:** hidden parser normalization behavior not captured by accept/reject parity alone.
 
 ## RUNTIME-001 - Define Proto v1 for Start/Resume control contracts
 
-**Goal:** one Go/Python source of truth for bounded internal runtime requests.  
-**Why now:** high duplication reduction with low transport blast radius.  
-**Scope:** start-turn, resume-interrupt, required identity/configuration fields.  
-**Out of scope:** public StreamEvent and full internal event stream.  
-**Protected contracts:** thread identity, immutable configuration handshake, HITL continuation semantics.  
-**Tests:** Buf lint/breaking, Protovalidate invalid fixtures, Go/Python parity.  
-**Acceptance:** generated types represent current semantics without introducing a new product/runtime behavior.  
-**Dependencies:** CONTRACT-003.  
+**Goal:** one Go/Python source of truth for bounded internal runtime requests.
+**Why now:** high duplication reduction with low transport blast radius.
+**Scope:** start-turn, resume-interrupt, required identity/configuration fields.
+**Out of scope:** public StreamEvent and full internal event stream.
+**Protected contracts:** thread identity, immutable configuration handshake, HITL continuation semantics.
+**Tests:** Buf lint/breaking, Protovalidate invalid fixtures, Go/Python parity.
+**Acceptance:** generated types represent current semantics without introducing a new product/runtime behavior.
+**Dependencies:** CONTRACT-003.
 **Risks:** proto3 presence/default semantics differ from current JSON/Pydantic behavior.
 
 ## RUNTIME-002 - Insert generated internal adapters behind existing transport
 
-**Goal:** adopt Proto IDL without a transport rewrite.  
-**Why now:** separates codegen benefit from gRPC risk.  
-**Scope:** Go/Python boundary adapters; current HTTP/NDJSON remains.  
-**Out of scope:** Connect/gRPC production cutover.  
-**Protected contracts:** runtime endpoints, NDJSON framing, cancellation, configuration-first event invariant.  
-**Tests:** start, resume, invalid identity/config, malformed internal event, current consultation integration.  
-**Acceptance:** no observable transport behavior changes while handwritten duplicate request models are retired where safe.  
-**Dependencies:** RUNTIME-001.  
+**Goal:** adopt Proto IDL without a transport rewrite.
+**Why now:** separates codegen benefit from gRPC risk.
+**Scope:** Go/Python boundary adapters; current HTTP/NDJSON remains.
+**Out of scope:** Connect/gRPC production cutover.
+**Protected contracts:** runtime endpoints, NDJSON framing, cancellation, configuration-first event invariant.
+**Tests:** start, resume, invalid identity/config, malformed internal event, current consultation integration.
+**Acceptance:** no observable transport behavior changes while handwritten duplicate request models are retired where safe.
+**Dependencies:** RUNTIME-001.
 **Risks:** transitional JSON/proto mapping becomes permanent accidental complexity; must be bounded and documented.
 
 ## TRANSPORT-001 - Re-benchmark only selected coarse/unary calls
 
-**Goal:** determine whether any real internal call benefits from Connect/gRPC.  
-**Why now:** only after Proto IDL exists and current transport remains stable.  
-**Scope:** selected unary/coarse candidate.  
-**Out of scope:** fine-grained stream rewrite by default.  
-**Protected contracts:** existing request semantics and operational observability.  
-**Tests:** latency, throughput, concurrency, cancellation, deadline, wire bytes, CPU/memory.  
-**Acceptance:** migration only proceeds if measured end-to-end benefit exceeds operational complexity.  
-**Dependencies:** RUNTIME-002.  
+**Goal:** determine whether any real internal call benefits from Connect/gRPC.
+**Why now:** only after Proto IDL exists and current transport remains stable.
+**Scope:** selected unary/coarse candidate.
+**Out of scope:** fine-grained stream rewrite by default.
+**Protected contracts:** existing request semantics and operational observability.
+**Tests:** latency, throughput, concurrency, cancellation, deadline, wire bytes, CPU/memory.
+**Acceptance:** migration only proceeds if measured end-to-end benefit exceeds operational complexity.
+**Dependencies:** RUNTIME-002.
 **Risks:** benchmark optimism from localhost/synthetic payloads.
 
 ---
@@ -1077,50 +1078,50 @@ A green compile is not enough to close a contract migration.
 
 ### R1 - Hybrid contract stack becomes a maintenance burden
 
-**Likelihood:** medium.  
-**Impact:** high if ownership is ambiguous.  
+**Likelihood:** medium.
+**Impact:** high if ownership is ambiguous.
 **Containment:** contract registry + one-authority rule + no schema copy/paste across boundaries.
 
 ### R2 - Generator upgrade silently changes runtime semantics
 
-**Likelihood:** medium.  
-**Impact:** high at trust boundaries.  
+**Likelihood:** medium.
+**Impact:** high at trust boundaries.
 **Containment:** exact version pins; generator upgrade is a dedicated PR; replay spike fixture matrix before upgrade acceptance.
 
 ### R3 - Strict response validation breaks stale Web bundles
 
-**Likelihood:** high if strict unknown rejection is used.  
-**Impact:** high.  
+**Likelihood:** high if strict unknown rejection is used.
+**Impact:** high.
 **Containment:** asymmetric policy; strip unknown additive response fields; old-client CI fixture.
 
 ### R4 - "Additive" enum or event evolution is actually client-breaking
 
-**Likelihood:** medium.  
-**Impact:** high.  
+**Likelihood:** medium.
+**Impact:** high.
 **Containment:** custom enum-expansion test; StreamEvent explicit versioning; no reliance on generic diff classification alone.
 
 ### R5 - Generated DTO becomes domain model
 
-**Likelihood:** medium during migration.  
-**Impact:** high long term.  
+**Likelihood:** medium during migration.
+**Impact:** high long term.
 **Containment:** handwritten adapter boundary; architecture review rejects generator types in core service/domain APIs unless explicitly justified.
 
 ### R6 - Agent token/context cost explodes
 
-**Likelihood:** high if generated output is searchable by default.  
-**Impact:** medium/high for autonomous development quality and cost.  
+**Likelihood:** high if generated output is searchable by default.
+**Impact:** medium/high for autonomous development quality and cost.
 **Containment:** generated directory exclusion from ForgeFlow/Agent/search/review defaults.
 
 ### R7 - Proto is interpreted as permission to rewrite transport
 
-**Likelihood:** medium.  
-**Impact:** high performance/operational risk.  
+**Likelihood:** medium.
+**Impact:** high performance/operational risk.
 **Containment:** IDL and transport are separate ADR/tickets; no gRPC cutover without workload-specific acceptance benchmark.
 
 ### R8 - Transitional dual definitions never get retired
 
-**Likelihood:** medium.  
-**Impact:** medium/high.  
+**Likelihood:** medium.
+**Impact:** medium/high.
 **Containment:** every migration ticket names exact legacy surface to retire and the parity evidence required before deletion.
 
 ---
@@ -1200,19 +1201,19 @@ public StreamEvent unknown variants: fail-closed + explicit versioning
 
 That asymmetry is intentional: REST objects need additive stale-client compatibility; public runtime events can carry semantics that are unsafe to silently ignore.
 
-### Implementation trigger
+### Implementation status
 
-No production implementation should begin until CONTRACT-001 and CONTRACT-002 are reviewed, because CONTRACT-002 decides the exact Orval runtime-validation configuration that the first real REST slice will depend on.
+The implementation trigger has been satisfied by the completed vNext engineering reset. CONTRACT-001/002/003 established the authority map, asymmetric browser trust policy and deterministic generation pipeline; the migration then expanded beyond the original first-slice sequence to the full repository-current public REST surface.
 
-Once those two design-foundation tickets are closed, the recommended first production sequence is:
+The implemented sequence is now:
 
 ```text
-OpenAPI foundation
-  -> HealthWorkspace read
-  -> BodyState fact mutation + 409
-  -> StreamEvent schema cleanup/shadow migration
-  -> internal Start/Resume Proto IDL
-  -> only then consider additional migration or transport experiments
+OpenAPI 3.1 public REST authority
+  -> generated Go request/response boundary + request validation
+  -> generated/validated Web clients behind handwritten adapters
+  -> JSON Schema public StreamEvent authority + generated validator
+  -> Proto/Buf/Protovalidate private Go/Python runtime authority
+  -> permanent contract drift/mutation/conformance gates
 ```
 
-This sequence maximizes learning while keeping every rollback local and preserving BodySense's existing domain/runtime ownership.
+Transport ownership remains intentionally unchanged: HTTP/JSON/SSE/NDJSON stay in place, generated transport types do not become domain models, and future transport experiments still require separate evidence. The completed implementation and acceptance evidence are recorded in `docs/refactor/vnext/` and the archived vNext master plan.

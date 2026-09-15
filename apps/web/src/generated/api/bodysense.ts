@@ -2310,7 +2310,7 @@ export const getGetSharedConversationUrl = (token: string,) => {
 
 
 
-  return `/api/v1/conversations/share/${token}`
+  return `/api/v1/shared-conversations/${token}`
 }
 
 /**

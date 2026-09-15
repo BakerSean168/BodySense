@@ -309,7 +309,7 @@ describe("consultationApi", () => {
 
       const result = await consultationApi.getSharedConversation("tok-123");
       expect(fetchSpy).toHaveBeenCalledWith(
-        "/api/v1/conversations/share/tok-123",
+        "/api/v1/shared-conversations/tok-123",
         { credentials: "include", method: "GET" },
       );
       expect(mockAuthFetch).not.toHaveBeenCalled();

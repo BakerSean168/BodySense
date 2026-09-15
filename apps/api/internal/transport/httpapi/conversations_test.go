@@ -180,7 +180,7 @@ func TestSharedConversationRouteIsPublicAndDoesNotInvokeBearerAuth(t *testing.T)
 	)
 
 	rec := httptest.NewRecorder()
-	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/conversations/share/public-token", nil))
+	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/shared-conversations/public-token", nil))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
 	}

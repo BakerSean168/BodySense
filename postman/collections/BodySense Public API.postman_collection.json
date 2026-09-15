@@ -16138,19 +16138,56 @@
                 }
               ],
               "event": []
+            }
+          ],
+          "event": []
+        },
+        {
+          "id": "b162ce21-86aa-5357-b73d-e106ba8ce80c",
+          "name": "Read a shared conversation snapshot by public token.",
+          "request": {
+            "name": "Read a shared conversation snapshot by public token.",
+            "description": {},
+            "url": {
+              "path": [
+                "api",
+                "v1",
+                "shared-conversations",
+                ":token"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": [
+                {
+                  "disabled": false,
+                  "type": "any",
+                  "value": "<string>",
+                  "key": "token",
+                  "description": "(Required) "
+                }
+              ]
             },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "method": "GET",
+            "auth": null
+          },
+          "response": [
             {
-              "id": "f10579da-27bf-50c8-8a46-8448f6a2dbd2",
-              "name": "Read a shared conversation snapshot by public token.",
-              "request": {
-                "name": "Read a shared conversation snapshot by public token.",
-                "description": {},
+              "id": "8726d4ea-86ed-5462-9322-8b76a1d456ff",
+              "name": "Shared conversation snapshot.",
+              "originalRequest": {
                 "url": {
                   "path": [
                     "api",
                     "v1",
-                    "conversations",
-                    "share",
+                    "shared-conversations",
                     ":token"
                   ],
                   "host": [
@@ -16174,205 +16211,163 @@
                   }
                 ],
                 "method": "GET",
-                "auth": null
+                "body": {}
               },
-              "response": [
+              "status": "OK",
+              "code": 200,
+              "header": [
                 {
-                  "id": "06e39d80-9343-5ace-884f-1e7910bd5812",
-                  "name": "Shared conversation snapshot.",
-                  "originalRequest": {
-                    "url": {
-                      "path": [
-                        "api",
-                        "v1",
-                        "conversations",
-                        "share",
-                        ":token"
-                      ],
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "query": [],
-                      "variable": [
-                        {
-                          "disabled": false,
-                          "type": "any",
-                          "value": "<string>",
-                          "key": "token",
-                          "description": "(Required) "
-                        }
-                      ]
-                    },
-                    "header": [
-                      {
-                        "key": "Accept",
-                        "value": "application/json"
-                      }
-                    ],
-                    "method": "GET",
-                    "body": {}
-                  },
-                  "status": "OK",
-                  "code": 200,
-                  "header": [
-                    {
-                      "key": "Content-Type",
-                      "value": "application/json"
-                    }
-                  ],
-                  "body": "{\n  \"title\": \"string\",\n  \"messages\": [\n    {\n      \"id\": \"44bc7426-53ad-9985-b95d-d06f62ef1b94\",\n      \"conversation_id\": \"b684e052-dfe2-cbc2-1a2f-007965d27888\",\n      \"turn_id\": \"706b6f74-0553-bfeb-adbe-5f635c003c95\",\n      \"role\": \"user\",\n      \"status\": \"streaming\",\n      \"seq\": 6628,\n      \"parts\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ],\n      \"metadata\": {\n        \"key_0\": false,\n        \"key_1\": false\n      },\n      \"created_at\": \"1957-12-06T11:30:46.926Z\",\n      \"updated_at\": \"1975-09-22T04:52:18.365Z\",\n      \"run_id\": \"1984ecf0-255e-f0bc-6d23-93dbf9fe4f1e\",\n      \"parent_message_id\": \"d5f6c86b-f1f1-7218-6aa2-55a160af36e5\",\n      \"content_text\": \"string\",\n      \"model\": \"string\",\n      \"provider\": \"string\",\n      \"provider_message_id\": \"string\",\n      \"provider_response_id\": \"string\",\n      \"input_tokens\": 3142,\n      \"output_tokens\": 444,\n      \"total_tokens\": 5309,\n      \"error\": {\n        \"key_0\": false,\n        \"key_1\": \"string\"\n      }\n    },\n    {\n      \"id\": \"fdeeedfb-0661-f08f-1f9c-edd1ae8d7d79\",\n      \"conversation_id\": \"647409de-c333-e935-8221-e3e929809da7\",\n      \"turn_id\": \"6ada58d5-4b2d-5060-411c-757ae6126285\",\n      \"role\": \"user\",\n      \"status\": \"failed\",\n      \"seq\": 862,\n      \"parts\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ],\n      \"metadata\": {\n        \"key_0\": 4938.656447920948\n      },\n      \"created_at\": \"1959-08-12T13:07:41.308Z\",\n      \"updated_at\": \"1998-08-04T22:05:16.097Z\",\n      \"run_id\": \"ae2f64b7-66ee-452c-0a8a-83dec6b1a98c\",\n      \"parent_message_id\": \"c067cfea-3b52-a92a-acf7-12375dfd0b19\",\n      \"content_text\": \"string\",\n      \"model\": \"string\",\n      \"provider\": \"string\",\n      \"provider_message_id\": \"string\",\n      \"provider_response_id\": \"string\",\n      \"input_tokens\": 3083,\n      \"output_tokens\": 5561,\n      \"total_tokens\": 2908,\n      \"error\": {\n        \"key_0\": false,\n        \"key_1\": \"string\"\n      }\n    }\n  ]\n}",
-                  "cookie": [],
-                  "_postman_previewlanguage": "json"
-                },
-                {
-                  "id": "6445db81-3292-5b96-b4b4-a7690d178b7c",
-                  "name": "Request body or BodyState fact is invalid.",
-                  "originalRequest": {
-                    "url": {
-                      "path": [
-                        "api",
-                        "v1",
-                        "conversations",
-                        "share",
-                        ":token"
-                      ],
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "query": [],
-                      "variable": [
-                        {
-                          "disabled": false,
-                          "type": "any",
-                          "value": "<string>",
-                          "key": "token",
-                          "description": "(Required) "
-                        }
-                      ]
-                    },
-                    "header": [
-                      {
-                        "key": "Accept",
-                        "value": "application/json"
-                      }
-                    ],
-                    "method": "GET",
-                    "body": {}
-                  },
-                  "status": "Bad Request",
-                  "code": 400,
-                  "header": [
-                    {
-                      "key": "Content-Type",
-                      "value": "application/json"
-                    }
-                  ],
-                  "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
-                  "cookie": [],
-                  "_postman_previewlanguage": "json"
-                },
-                {
-                  "id": "54ec9d00-5e79-51b3-9497-e766322f9527",
-                  "name": "Referenced BodyState item does not exist.",
-                  "originalRequest": {
-                    "url": {
-                      "path": [
-                        "api",
-                        "v1",
-                        "conversations",
-                        "share",
-                        ":token"
-                      ],
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "query": [],
-                      "variable": [
-                        {
-                          "disabled": false,
-                          "type": "any",
-                          "value": "<string>",
-                          "key": "token",
-                          "description": "(Required) "
-                        }
-                      ]
-                    },
-                    "header": [
-                      {
-                        "key": "Accept",
-                        "value": "application/json"
-                      }
-                    ],
-                    "method": "GET",
-                    "body": {}
-                  },
-                  "status": "Not Found",
-                  "code": 404,
-                  "header": [
-                    {
-                      "key": "Content-Type",
-                      "value": "application/json"
-                    }
-                  ],
-                  "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
-                  "cookie": [],
-                  "_postman_previewlanguage": "json"
-                },
-                {
-                  "id": "a4361453-d0c0-50ea-bca0-5d6276baa812",
-                  "name": "Unexpected server failure.",
-                  "originalRequest": {
-                    "url": {
-                      "path": [
-                        "api",
-                        "v1",
-                        "conversations",
-                        "share",
-                        ":token"
-                      ],
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "query": [],
-                      "variable": [
-                        {
-                          "disabled": false,
-                          "type": "any",
-                          "value": "<string>",
-                          "key": "token",
-                          "description": "(Required) "
-                        }
-                      ]
-                    },
-                    "header": [
-                      {
-                        "key": "Accept",
-                        "value": "application/json"
-                      }
-                    ],
-                    "method": "GET",
-                    "body": {}
-                  },
-                  "status": "Internal Server Error",
-                  "code": 500,
-                  "header": [
-                    {
-                      "key": "Content-Type",
-                      "value": "application/json"
-                    }
-                  ],
-                  "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
-                  "cookie": [],
-                  "_postman_previewlanguage": "json"
+                  "key": "Content-Type",
+                  "value": "application/json"
                 }
               ],
-              "event": [],
-              "protocolProfileBehavior": {
-                "disableBodyPruning": true
-              }
+              "body": "{\n  \"title\": \"string\",\n  \"messages\": [\n    {\n      \"id\": \"44bc7426-53ad-9985-b95d-d06f62ef1b94\",\n      \"conversation_id\": \"b684e052-dfe2-cbc2-1a2f-007965d27888\",\n      \"turn_id\": \"706b6f74-0553-bfeb-adbe-5f635c003c95\",\n      \"role\": \"user\",\n      \"status\": \"streaming\",\n      \"seq\": 6628,\n      \"parts\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ],\n      \"metadata\": {\n        \"key_0\": false,\n        \"key_1\": false\n      },\n      \"created_at\": \"1957-12-06T11:30:46.926Z\",\n      \"updated_at\": \"1975-09-22T04:52:18.365Z\",\n      \"run_id\": \"1984ecf0-255e-f0bc-6d23-93dbf9fe4f1e\",\n      \"parent_message_id\": \"d5f6c86b-f1f1-7218-6aa2-55a160af36e5\",\n      \"content_text\": \"string\",\n      \"model\": \"string\",\n      \"provider\": \"string\",\n      \"provider_message_id\": \"string\",\n      \"provider_response_id\": \"string\",\n      \"input_tokens\": 3142,\n      \"output_tokens\": 444,\n      \"total_tokens\": 5309,\n      \"error\": {\n        \"key_0\": false,\n        \"key_1\": \"string\"\n      }\n    },\n    {\n      \"id\": \"fdeeedfb-0661-f08f-1f9c-edd1ae8d7d79\",\n      \"conversation_id\": \"647409de-c333-e935-8221-e3e929809da7\",\n      \"turn_id\": \"6ada58d5-4b2d-5060-411c-757ae6126285\",\n      \"role\": \"user\",\n      \"status\": \"failed\",\n      \"seq\": 862,\n      \"parts\": [\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        },\n        {\n          \"value\": \"<Error: Too many levels of nesting to fake this schema>\"\n        }\n      ],\n      \"metadata\": {\n        \"key_0\": 4938.656447920948\n      },\n      \"created_at\": \"1959-08-12T13:07:41.308Z\",\n      \"updated_at\": \"1998-08-04T22:05:16.097Z\",\n      \"run_id\": \"ae2f64b7-66ee-452c-0a8a-83dec6b1a98c\",\n      \"parent_message_id\": \"c067cfea-3b52-a92a-acf7-12375dfd0b19\",\n      \"content_text\": \"string\",\n      \"model\": \"string\",\n      \"provider\": \"string\",\n      \"provider_message_id\": \"string\",\n      \"provider_response_id\": \"string\",\n      \"input_tokens\": 3083,\n      \"output_tokens\": 5561,\n      \"total_tokens\": 2908,\n      \"error\": {\n        \"key_0\": false,\n        \"key_1\": \"string\"\n      }\n    }\n  ]\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "758155a4-940c-5297-85a6-c060f7b42ac4",
+              "name": "Request body or BodyState fact is invalid.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "shared-conversations",
+                    ":token"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "<string>",
+                      "key": "token",
+                      "description": "(Required) "
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "dc2a87ba-9822-5a77-b62f-6d140483b3c1",
+              "name": "Referenced BodyState item does not exist.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "shared-conversations",
+                    ":token"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "<string>",
+                      "key": "token",
+                      "description": "(Required) "
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "id": "1fc90027-a0fd-5e43-af3d-ca32ffea5cab",
+              "name": "Unexpected server failure.",
+              "originalRequest": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v1",
+                    "shared-conversations",
+                    ":token"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": [
+                    {
+                      "disabled": false,
+                      "type": "any",
+                      "value": "<string>",
+                      "key": "token",
+                      "description": "(Required) "
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "GET",
+                "body": {}
+              },
+              "status": "Internal Server Error",
+              "code": 500,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"code\": \"string\",\n    \"message\": \"string\"\n  }\n}",
+              "cookie": [],
+              "_postman_previewlanguage": "json"
             }
           ],
-          "event": []
+          "event": [],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          }
         },
         {
           "id": "a8122415-0cf6-5065-9dbc-16f7087c09b8",

@@ -8,14 +8,6 @@
     "type:app"
   ],
   "targets": {
-    "lint": {
-      "executor": "@nx/eslint:lint",
-      "options": {
-        "lintFilePatterns": [
-          "apps/web/src/**/*.{ts,tsx}"
-        ]
-      }
-    },
     "typecheck": {
       "executor": "nx:run-commands",
       "cache": true,

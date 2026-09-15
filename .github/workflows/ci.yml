@@ -65,6 +65,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
@@ -75,8 +77,15 @@ jobs:
       - run: node scripts/delivery/validate-manifest.mjs "$DELIVERY_MANIFEST_PATH"
       - name: Validate delivery policy contracts
         run: node --test scripts/delivery/*.test.mjs
-      - name: Validate repository diff hygiene
-        run: git diff --check
+      - name: Validate committed repository diff hygiene
+        shell: bash
+        run: |
+          set -euo pipefail
+          base_sha="$(jq -r .baseSha "$DELIVERY_MANIFEST_PATH")"
+          head_sha="$(jq -r .headSha "$DELIVERY_MANIFEST_PATH")"
+          git cat-file -e "${base_sha}^{commit}"
+          git cat-file -e "${head_sha}^{commit}"
+          git diff --check "${base_sha}...${head_sha}"
 
   quality-child:
     name: Affected quality child
@@ -473,4 +482,8 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }}
+      - name: Lint authored PR commits
+        run: >-
+          bash scripts/quality/lint-commit-range.sh
+          "${{ github.event.pull_request.base.sha }}"
+          "${{ github.event.pull_request.head.sha }}"

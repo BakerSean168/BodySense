@@ -2,6 +2,12 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+vi.mock("@/lib/clientDiagnostics", () => ({
+  createClientDiagnosticId: () => "consultation-test-session",
+  reportClientDiagnostic: vi.fn(),
+}));
+
 import { ConsultationPage } from "../ConsultationPage";
 import type {
   ConsultationThread,

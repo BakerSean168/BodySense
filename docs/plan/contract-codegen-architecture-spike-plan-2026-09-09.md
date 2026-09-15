@@ -1295,4 +1295,3 @@ Spike 只有在以下全部完成时才算结束：
 - [x] 没有任何 production transport/behavior change 混进 Spike。
 
 AI token/context 项使用计划 §9.2 允许的 context-surface proxy：Pixel Control Plane 在最终测量时未监听 `127.0.0.1:8320`，因此没有伪造真实 Agent input/output telemetry。
-

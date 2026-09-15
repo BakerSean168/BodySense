@@ -155,6 +155,23 @@ test('every selected delivery quality lane runs architecture boundaries', () => 
   assert.match(contents, /run\(["']pnpm["'], \[["']quality:architecture["']\]\)/);
 });
 
+test('CI governance validates the committed manifest base-to-head diff', () => {
+  const contents = fs.readFileSync('.github/workflows/ci.yml', 'utf8');
+  assert.match(contents, /governance-child:[\s\S]*fetch-depth: 0/);
+  assert.match(contents, /base_sha="\$\(jq -r \.baseSha "\$DELIVERY_MANIFEST_PATH"\)"/);
+  assert.match(contents, /head_sha="\$\(jq -r \.headSha "\$DELIVERY_MANIFEST_PATH"\)"/);
+  assert.match(contents, /git diff --check "\$\{base_sha\}\.\.\.\$\{head_sha\}"/);
+});
+
+test('PR commit lint keeps merge type tied to real Git merge topology', () => {
+  const workflow = fs.readFileSync('.github/workflows/ci.yml', 'utf8');
+  const guard = fs.readFileSync('scripts/quality/lint-commit-range.sh', 'utf8');
+  assert.match(workflow, /bash scripts\/quality\/lint-commit-range\.sh/);
+  assert.match(guard, /subject.*merge:\*/s);
+  assert.match(guard, /parent_count.*-le 1/s);
+  assert.match(guard, /pnpm exec commitlint --from "\$base_sha" --to "\$head_sha"/);
+});
+
 test('CI, Docker, release and unknown paths fail safe to full', () => {
   for (const path of [
     '.github/workflows/ci.yml',

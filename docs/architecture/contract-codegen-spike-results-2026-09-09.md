@@ -1,7 +1,7 @@
 # BodySense Contract Codegen Architecture Spike Results
 
-> Date: 2026-09-09  
-> Base commit: `19957109cc9cf6692f2beec8c6afd249011e0bdb`  
+> Date: 2026-09-09
+> Base commit: `19957109cc9cf6692f2beec8c6afd249011e0bdb`
 > Scope: isolated experiment only; no production transport or application behavior changed.
 
 ## Executive decision

@@ -24,10 +24,12 @@ A first disposable-DB probe with plain `postgres:18` failed because the image do
   - Go: `go test ./...` all packages green.
 - `pnpm build` — PASS for Go API and Web production build.
 
-## Recorded non-blocking baseline warnings
+## Recorded non-blocking baseline warnings — closed during vNext
 
-These are not Phase 00 failures and are tracked in `finding-ledger.json`:
+Phase 00 intentionally recorded these as non-blocking findings rather than hiding them. Final merge-readiness closeout has now resolved all three in `finding-ledger.json`:
 
-- `BS-Q-TOOL-002`: Nx reports `@nx/eslint:lint` as deprecated for a future Nx v24 migration.
-- `BS-Q-TEST-002`: passing Web tests contain repeated `127.0.0.1:3000 ECONNREFUSED` diagnostics plus one React `act(...)` warning.
-- `BS-Q-BUILD-001`: Vite reports the BodyExplorer3D production chunk at roughly 1.23 MB before gzip, above the 500 kB warning threshold.
+- `BS-Q-TOOL-002` — Web lint now uses the `@nx/eslint/plugin` inferred target; the deprecated `@nx/eslint:lint` executor is gone and lint is warning-free.
+- `BS-Q-TEST-002` — unit tests isolate best-effort client diagnostics and wrap the mounted Zustand reset in `act()`; the full 52-file / 266-test Web suite passes with `ECONNREFUSED=0` and React `act(...)` warnings `=0`.
+- `BS-Q-BUILD-001` — BodyExplorer3D remains a lazy dynamic entry with an explicit 1.30 MB raw / 300 kB gzip budget, while every other JS chunk retains a 500 kB raw budget. The current 1,237.65 kB / 286.73 kB gzip viewer build passes without the generic Vite oversize warning.
+
+The original Phase 00 measurements above remain historical baseline evidence; this section records their final disposition rather than rewriting the starting point.

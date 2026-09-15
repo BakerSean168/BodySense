@@ -54,7 +54,7 @@ func RegisterRoutes(router gin.IRouter, si openapiv1.ServerInterface, security R
 	authPublic.POST("/logout", wrapper.LogoutAccount)
 
 	// Share tokens are capability URLs: public read without authentication.
-	sharePublic := router.Group("/api/v1/conversations/share", security.Validator)
+	sharePublic := router.Group("/api/v1/shared-conversations", security.Validator)
 	sharePublic.GET("/:token", wrapper.GetSharedConversation)
 
 	// Knowledge administration is a distinct authorization domain. Authenticate

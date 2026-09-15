@@ -11,6 +11,7 @@ export default tseslint.config(
       '**/coverage/**',
       '**/generated/**',
       'tools/contracts/generated/**',
+      'apps/web/e2e/**',
       '**/*.config.{js,mjs,cjs,ts,mts,cts}',
     ],
   },

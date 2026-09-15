@@ -664,7 +664,9 @@ feature handwritten /api/v1/conversations  NONE
 git diff --check                            PASS
 ```
 
-The OpenAPI linter's two `no-ambiguous-paths` warnings describe the long-standing public share shape `/conversations/share/{token}` overlapping the `{id}` namespace in abstract OpenAPI routing. Gin's static-segment precedence is covered by the security-domain characterization test. The path remains unchanged in Phase 02 so the canonical 95-route baseline is not rewritten during migration.
+The OpenAPI linter's two `no-ambiguous-paths` warnings at the Phase 02 checkpoint described the then-existing public share shape `/conversations/share/{token}` overlapping the `{id}` namespace in abstract OpenAPI routing. Gin's static-segment precedence was covered by the security-domain characterization test, so Phase 02 intentionally preserved the 95-route migration baseline instead of mixing a public-URL change into authority migration.
+
+Final vNext merge-readiness closeout later removed that routing debt rather than suppressing the linter: the public capability read now uses `GET /api/v1/shared-conversations/{token}`, while authenticated create/revoke remain `POST|DELETE /api/v1/conversations/{id}/share`. Route count remains 95 and current OpenAPI lint is warning-free. The Phase 02 coverage JSON remains frozen historical evidence of the migration checkpoint.
 
 ## Checkpoint 10 — Consultation runtime / SSE / thread REST boundary
 
