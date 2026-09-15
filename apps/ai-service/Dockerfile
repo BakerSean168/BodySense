@@ -24,10 +24,6 @@ FROM python:3.13-slim
 
 ARG BUILD_DATE
 ARG VCS_REF
-LABEL org.opencontainers.image.title="bodysense-ai-service" \
-      org.opencontainers.image.description="BodySense AI service (FastAPI + LangChain)" \
-      org.opencontainers.image.created="${BUILD_DATE}" \
-      org.opencontainers.image.revision="${VCS_REF}"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr \
@@ -42,6 +38,10 @@ COPY --from=builder /app/models /app/models
 ENV PATH="/app/.venv/bin:$PATH" \
     BODYSENSE_POSE_MODEL_PATH="/app/models/pose_landmarker_lite-float16-v1.task" \
     BODYSENSE_HEALTH_DOCUMENT_MODEL_ROOT="/app/models/health-document/ppocrv6-small-v1"
+LABEL org.opencontainers.image.title="bodysense-ai-service" \
+      org.opencontainers.image.description="BodySense AI service (FastAPI + LangChain)" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.revision="${VCS_REF}"
 EXPOSE 8100
 HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=3 \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8100/health')" || exit 1
