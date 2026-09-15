@@ -23,7 +23,7 @@ type JWTConfig struct {
 // JWTConfigFromEnv reads JWT config from environment variables.
 // Panics if JWT_SECRET_KEY is not set, to prevent running with a publicly known key.
 func JWTConfigFromEnv() JWTConfig {
-	accessTTL := getEnvAsDuration("JWT_ACCESS_TTL_HOURS", 0.25) // 15 minutes default for a health app
+	accessTTL := getEnvAsDuration("JWT_ACCESS_TTL_HOURS", 0.25)    // 15 minutes default for a health app
 	refreshTTL := getEnvAsDuration("JWT_REFRESH_TTL_HOURS", 30*24) // 30 days
 
 	secret := os.Getenv("JWT_SECRET_KEY")
@@ -50,6 +50,9 @@ type Claims struct {
 // sessionID ties the token to a single login session so logout (or account
 // deletion) can revoke the whole session family via the session cache.
 func GenerateAccessToken(cfg JWTConfig, userID, sessionID uuid.UUID, email string) (string, error) {
+	if sessionID == uuid.Nil {
+		return "", fmt.Errorf("session id is required for access tokens")
+	}
 	claims := Claims{
 		UserID:    userID,
 		Email:     email,

@@ -132,6 +132,28 @@ func TestWorkspaceCapabilitiesRequireActiveTrainingProjectionForExecution(t *tes
 	}
 }
 
+func TestWorkspaceActionsOpenTrainingTargetsCanonicalTreatmentView(t *testing.T) {
+	conversationID := uuid.New()
+	workspace := &HealthWorkspace{
+		ConversationID: &conversationID,
+		TrainingPlan:   &model.TrainingPlan{ID: uuid.New(), Status: "active"},
+		Capabilities:   HealthWorkspaceCapabilities{CanExecuteTreatment: true},
+	}
+
+	actions := deriveWorkspaceActions(workspace)
+	for _, action := range actions {
+		if action.Kind != "open_training" {
+			continue
+		}
+		want := "/consultation/" + conversationID.String() + "?view=treatment"
+		if got, _ := action.Target["route"].(string); got != want {
+			t.Fatalf("open_training route=%q want=%q", got, want)
+		}
+		return
+	}
+	t.Fatal("open_training action missing")
+}
+
 func TestWorkspaceTrendsPreserveAssociationOnlyOutcome(t *testing.T) {
 	now := time.Now().UTC()
 	trends := deriveWorkspaceTrends(

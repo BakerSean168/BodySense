@@ -144,8 +144,8 @@ func TestParseOCRJobInput(t *testing.T) {
 	if input.UploadID != "upload-1" {
 		t.Fatalf("unexpected input: %+v", input)
 	}
-	if input.ConfigurationID != legacyTesseractConfigurationID {
-		t.Fatalf("legacy job configuration = %q, want %q", input.ConfigurationID, legacyTesseractConfigurationID)
+	if input.ConfigurationID != tesseractChampionConfigurationID {
+		t.Fatalf("tesseract champion job configuration = %q, want %q", input.ConfigurationID, tesseractChampionConfigurationID)
 	}
 }
 

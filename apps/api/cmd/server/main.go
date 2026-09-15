@@ -33,7 +33,7 @@ func main() {
 	_ = godotenv.Load("../../.env")
 
 	// Structured process logger must be installed before service initialization so startup
-	// failures and legacy log.Printf calls share the same JSON log stream.
+	// failures and standard-library log.Printf calls share the same JSON log stream.
 	observability.ConfigureLogger()
 
 	// Database connection
@@ -339,7 +339,7 @@ func main() {
 
 	// Protected routes. Keep one auth middleware instance so handwritten and
 	// generated OpenAPI routes share the exact same token/session authority.
-	authMiddleware := middleware.AuthMiddleware(jwtConfig, userRepo, sessionCache)
+	authMiddleware := middleware.AuthMiddleware(jwtConfig, sessionCache)
 	protected := r.Group("/api/v1")
 	protected.Use(authMiddleware)
 	{

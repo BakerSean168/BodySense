@@ -8,8 +8,8 @@ import (
 	"strings"
 )
 
-// This file is the Go durable-defense implementation of Assessment evidence
-// contract v2. AssessmentService owns orchestration; this module owns exact
+// This file is the Go durable-defense implementation of the current Assessment
+// evidence contract. AssessmentService owns orchestration; this module owns exact
 // evidence identity, source/kind policy, deterministic rendering and coverage.
 
 type assessmentEvidenceItem struct {
@@ -35,7 +35,7 @@ func validateAssessmentEvidencePayload(
 	payload *assessmentAgentPayload,
 	req AssessmentGenerationRequest,
 ) (*assessmentEvidenceProjection, error) {
-	catalog := buildAssessmentEvidenceCatalog(req, payload.EvidencePolicyRevision)
+	catalog := buildAssessmentEvidenceCatalog(req)
 	rendered := make([]assessmentObservationDraft, 0, len(payload.Observations))
 	usedRefs := map[string]bool{}
 	for index, observation := range payload.Observations {
@@ -164,7 +164,7 @@ func assessmentReportIndicatorAdmissible(value any) bool {
 	return policyRevision == "ocr-indicator-admissibility-v1" && status == "admissible"
 }
 
-func buildAssessmentEvidenceCatalog(req AssessmentGenerationRequest, evidencePolicyRevision string) map[string]assessmentEvidenceItem {
+func buildAssessmentEvidenceCatalog(req AssessmentGenerationRequest) map[string]assessmentEvidenceItem {
 	catalog := map[string]assessmentEvidenceItem{}
 
 	var bodyState map[string]any
@@ -209,31 +209,22 @@ func buildAssessmentEvidenceCatalog(req AssessmentGenerationRequest, evidencePol
 					value = nested
 				}
 			}
-			if evidencePolicyRevision == assessmentEvidencePolicyV3 || evidencePolicyRevision == assessmentEvidencePolicyV4 {
-				// Both the legacy Machine-admissible Champion lane and the v4
-				// reviewed-aware policy keep this admission rule: a nagging report
-				// indicator only enters when it carries the exact supported byte
-				// admissibility (ocr-indicator-admissibility-v1 + admissible).
-				if !assessmentReportIndicatorAdmissible(value) {
-					continue
-				}
+			// Current Assessment admits machine-extracted report indicators only
+			// when the OCR admissibility contract marks the exact indicator admissible.
+			if !assessmentReportIndicatorAdmissible(value) {
+				continue
 			}
 			catalog[ref] = assessmentEvidenceItem{Source: "report", Kind: "report_indicator", Value: value}
 		}
 	}
 
 	// Reviewed report evidence is a separate durable lane assembled only from
-	// the append-only review projection. Under v3 the machine admissibility
-	// policy remains the sole authority so these entries do not change replay;
-	// under v4 confirmed/corrected latest reviews may supply the reviewed
-	// payload with exact provenance. Rejected or unresolved candidates and
-	// unknown/missing provenance fail closed.
+	// the append-only review projection. Confirmed/corrected latest reviews may
+	// supply the reviewed payload with exact provenance. Rejected or unresolved
+	// candidates and unknown/missing provenance fail closed.
 	for index, raw := range assessmentReviewedReportIndicators(req) {
 		item, ok := raw.(map[string]any)
 		if !ok || !assessmentReviewedProvenanceComplete(item) {
-			continue
-		}
-		if evidencePolicyRevision != assessmentEvidencePolicyV4 {
 			continue
 		}
 		if ref, ok := assessmentReviewedRef(item, index); ok {

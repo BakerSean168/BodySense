@@ -66,12 +66,10 @@ fi
 # environments serve the current Champions without operator overrides.
 export DIAGNOSIS_CHAMPION_CONFIGURATION_ID="diag-config-5a4a13627e14b4cf"
 export DIAGNOSIS_CHALLENGER_CONFIGURATION_ID=""
-export DIAGNOSIS_ROLLBACK_CONFIGURATION_ID="diag-config-f492eb1c0c6676ae"
 export DIAGNOSIS_ROLLOUT_STAGE="champion"
 export DIAGNOSIS_PROMOTION_RECORD=""
 export TREATMENT_CHAMPION_CONFIGURATION_ID="treat-config-f68eec9846664596"
 export TREATMENT_CHALLENGER_CONFIGURATION_ID=""
-export TREATMENT_ROLLBACK_CONFIGURATION_ID="treat-config-85718f8e90ac9d80"
 export TREATMENT_ROLLOUT_STAGE="champion"
 export TREATMENT_PROMOTION_RECORD=""
 export DB_USER="bodysense"
@@ -133,23 +131,23 @@ E2E_API_BASE_URL="http://127.0.0.1:${API_PORT}" \
 E2E_RESTART_API_COMMAND="$repo_root/scripts/e2e-expire-run-and-restart-api.sh" \
 pnpm e2e
 
-diagnosis_latest_analyses="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM diagnosis_analyses WHERE agent_configuration_id='diag-config-5a4a13627e14b4cf';")"
-diagnosis_legacy_analyses="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM diagnosis_analyses WHERE agent_configuration_id='diag-config-f492eb1c0c6676ae';")"
+diagnosis_current_analyses="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM diagnosis_analyses WHERE agent_configuration_id='diag-config-5a4a13627e14b4cf';")"
+diagnosis_non_current_analyses="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM diagnosis_analyses WHERE agent_configuration_id<>'diag-config-5a4a13627e14b4cf';")"
 diagnosis_rollout_observations="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM diagnosis_rollout_observations;")"
-if [[ "$diagnosis_latest_analyses" -lt 1 || "$diagnosis_legacy_analyses" -ne 0 || "$diagnosis_rollout_observations" -ne 0 ]]; then
-  echo "DIAGNOSIS_BASELINE_VALIDATION=FAIL latest=${diagnosis_latest_analyses} legacy=${diagnosis_legacy_analyses} rollout_observations=${diagnosis_rollout_observations}" >&2
+if [[ "$diagnosis_current_analyses" -lt 1 || "$diagnosis_non_current_analyses" -ne 0 || "$diagnosis_rollout_observations" -ne 0 ]]; then
+  echo "DIAGNOSIS_BASELINE_VALIDATION=FAIL current=${diagnosis_current_analyses} non_current=${diagnosis_non_current_analyses} rollout_observations=${diagnosis_rollout_observations}" >&2
   exit 1
 fi
-echo "DIAGNOSIS_BASELINE_VALIDATION=PASS latest=${diagnosis_latest_analyses} legacy=${diagnosis_legacy_analyses} rollout_observations=${diagnosis_rollout_observations}"
+echo "DIAGNOSIS_BASELINE_VALIDATION=PASS current=${diagnosis_current_analyses} non_current=${diagnosis_non_current_analyses} rollout_observations=${diagnosis_rollout_observations}"
 
-treatment_latest_revisions="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_revisions WHERE agent_configuration_id='treat-config-f68eec9846664596';")"
-treatment_legacy_revisions="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_revisions WHERE agent_configuration_id='treat-config-85718f8e90ac9d80';")"
+treatment_current_revisions="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_revisions WHERE agent_configuration_id='treat-config-f68eec9846664596';")"
+treatment_non_current_revisions="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_revisions WHERE agent_configuration_id<>'treat-config-f68eec9846664596';")"
 treatment_rollout_observations="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_rollout_observations;")"
-if [[ "$treatment_latest_revisions" -lt 1 || "$treatment_legacy_revisions" -ne 0 || "$treatment_rollout_observations" -ne 0 ]]; then
-  echo "TREATMENT_BASELINE_VALIDATION=FAIL latest=${treatment_latest_revisions} legacy=${treatment_legacy_revisions} rollout_observations=${treatment_rollout_observations}" >&2
+if [[ "$treatment_current_revisions" -lt 1 || "$treatment_non_current_revisions" -ne 0 || "$treatment_rollout_observations" -ne 0 ]]; then
+  echo "TREATMENT_BASELINE_VALIDATION=FAIL current=${treatment_current_revisions} non_current=${treatment_non_current_revisions} rollout_observations=${treatment_rollout_observations}" >&2
   exit 1
 fi
-echo "TREATMENT_BASELINE_VALIDATION=PASS latest=${treatment_latest_revisions} legacy=${treatment_legacy_revisions} rollout_observations=${treatment_rollout_observations}"
+echo "TREATMENT_BASELINE_VALIDATION=PASS current=${treatment_current_revisions} non_current=${treatment_non_current_revisions} rollout_observations=${treatment_rollout_observations}"
 
 treatment_decision_traces="$("${compose[@]}" exec -T postgres-dev psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT count(*) FROM treatment_revisions WHERE generation_decision_trace <> '{}'::jsonb AND acceptance_state='accepted' AND acceptance_decision_trace <> '{}'::jsonb;")"
 if [[ "$treatment_decision_traces" -lt 1 ]]; then

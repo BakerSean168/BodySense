@@ -64,14 +64,14 @@ func currentHealthDocumentResponseBody(t *testing.T) []byte {
 	return encoded
 }
 
-func legacyHealthDocumentResponseBody(t *testing.T) []byte {
+func tesseractChampionResponseBody(t *testing.T) []byte {
 	t.Helper()
-	reg := knownHealthDocumentConfigurations[legacyTesseractConfigurationID]
+	reg := knownHealthDocumentConfigurations[tesseractChampionConfigurationID]
 	body := map[string]any{"status": "completed", "result": map[string]any{
 		"raw_text":   "legacy",
 		"indicators": []any{},
 		"mechanism_provenance": map[string]any{
-			"status": "verified", "configuration_id": legacyTesseractConfigurationID,
+			"status": "verified", "configuration_id": tesseractChampionConfigurationID,
 			"mechanism_revision": reg.MechanismRevision, "execution_topology_revision": reg.ExecutionTopologyRevision,
 			"engine": reg.OCREngine, "engine_version": reg.OCREngineVersion,
 			"wrapper": reg.Wrapper, "wrapper_version": reg.WrapperVersion,
@@ -132,7 +132,7 @@ func TestValidateCurrentHealthDocumentResponseRejectsUngroundedIndicator(t *test
 }
 
 func TestValidateLegacyTesseractResponseSupportsDurableRecovery(t *testing.T) {
-	if _, err := validateHealthDocumentResponse(legacyHealthDocumentResponseBody(t), legacyTesseractConfigurationID); err != nil {
+	if _, err := validateHealthDocumentResponse(tesseractChampionResponseBody(t), tesseractChampionConfigurationID); err != nil {
 		t.Fatal(err)
 	}
 }

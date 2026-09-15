@@ -1,7 +1,8 @@
 import copy
 from pathlib import Path
 
-from src.configuration.diagnosis_agent_config import CONFIG_ROOT, load_manifest
+from src.configuration.diagnosis_agent_config import load_manifest
+from src.evals.agent_config_archive import ARCHIVED_AGENT_CONFIG_ROOT
 from src.evals.diagnosis_qualification import (
     DATASET_SCHEMA_PATH,
     DEFAULT_DATASET_PATH,
@@ -82,7 +83,9 @@ def test_evidence_gap_challenger_is_paired_non_inferior_to_v1_champion() -> None
     champion = report_summary(
         run_diagnosis_qualification(configuration_id="diag-config-f492eb1c0c6676ae")
     )
-    challenger_config = load_manifest(CONFIG_ROOT / "diagnosis-v2-evidence-gap.yaml")
+    challenger_config = load_manifest(
+        ARCHIVED_AGENT_CONFIG_ROOT / "diagnosis-v2-evidence-gap.yaml"
+    )
     challenger = report_summary(
         run_diagnosis_qualification(configuration_id=challenger_config.configuration_id)
     )

@@ -121,7 +121,11 @@ func (s *PublicServer) AnalyzeDiagnosis(
 	if appErr != nil {
 		return diagnosisApplicationHTTPError(appErr), nil
 	}
-	return openapiv1.AnalyzeDiagnosis200JSONResponse(projectDiagnosisPayload(payload)), nil
+	projected, err := strictDiagnosisProjection(payload)
+	if err != nil {
+		return nil, err
+	}
+	return openapiv1.AnalyzeDiagnosis200JSONResponse(projected), nil
 }
 
 func (s *PublicServer) ListDiagnosisAnalyses(

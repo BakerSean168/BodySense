@@ -1,5 +1,5 @@
 /**
- * Public StreamEvent compatibility facade.
+ * Public StreamEvent facade.
  *
  * Static authority lives in packages/contracts/schemas/stream-event.v1.schema.json
  * and packages/contracts/generated/stream-event.v1.d.ts is generated from it.

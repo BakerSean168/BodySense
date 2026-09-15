@@ -10,6 +10,7 @@ from src.configuration.diagnosis_agent_config import (
     get_diagnosis_configuration,
     load_manifest,
 )
+from src.evals.agent_config_archive import ARCHIVED_AGENT_CONFIG_ROOT
 
 
 def test_default_diagnosis_configuration_is_repository_versioned_and_stable() -> None:
@@ -22,7 +23,9 @@ def test_default_diagnosis_configuration_is_repository_versioned_and_stable() ->
 
 
 def test_behavior_significant_revision_changes_configuration_id(tmp_path: Path) -> None:
-    data = yaml.safe_load((CONFIG_ROOT / "diagnosis-v1.yaml").read_text(encoding="utf-8"))
+    data = yaml.safe_load(
+        (ARCHIVED_AGENT_CONFIG_ROOT / "diagnosis-v1.yaml").read_text(encoding="utf-8")
+    )
     baseline = DiagnosisAgentManifest.model_validate(data)
     data["prompt_revision"] = "diagnosis-prompt-v4"
     path = tmp_path / "changed.yaml"
@@ -57,7 +60,9 @@ def test_go_control_plane_registers_every_repository_diagnosis_manifest() -> Non
 
 
 def test_manifest_format_revision_does_not_change_behavior_identity() -> None:
-    data = yaml.safe_load((CONFIG_ROOT / "diagnosis-v1.yaml").read_text(encoding="utf-8"))
+    data = yaml.safe_load(
+        (ARCHIVED_AGENT_CONFIG_ROOT / "diagnosis-v1.yaml").read_text(encoding="utf-8")
+    )
     baseline = DiagnosisAgentManifest.model_validate(data)
     data["manifest_revision"] = "diagnosis-agent-manifest-v2"
     changed = DiagnosisAgentManifest.model_validate(data)

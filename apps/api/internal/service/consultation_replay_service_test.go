@@ -14,7 +14,7 @@ import (
 func consultationReplayTestRun() *model.Run {
 	now := time.Now().UTC()
 	replay := ConsultationReplayInput{
-		ConfigurationID:   consultationV1ConfigurationID,
+		ConfigurationID:   defaultConsultationConfigurationID,
 		ConversationID:    uuid.New().String(),
 		UserMessage:       "我最近肩膀疼",
 		Profile:           json.RawMessage(`{"gender":"female","birth_date":"1996-08-27","age_years":30}`),
@@ -32,14 +32,14 @@ func consultationReplayTestRun() *model.Run {
 		Status:               "completed",
 		Model:                "bodysense-consultation",
 		StartedAt:            now,
-		AgentConfigurationID: consultationV1ConfigurationID,
-		AgentConfiguration:   datatypes.JSON(`{"id":"consult-config-2bd9b46735dd693c","role":"consultation"}`),
+		AgentConfigurationID: defaultConsultationConfigurationID,
+		AgentConfiguration:   datatypes.JSON(`{"id":"consult-config-7feb8ca2d5bfad5a","role":"consultation"}`),
 		ExecutionProvenance:  datatypes.JSON(`{"status":"executed","runtime":"langgraph"}`),
 		ReplayInput:          datatypes.JSON(replayJSON),
 	}
 }
 
-func TestConsultationHistoricalReplayRecomputesDecisionAuthorityWithoutModel(t *testing.T) {
+func TestConsultationReplayRecomputesCurrentDecisionAuthorityWithoutModel(t *testing.T) {
 	repo := &mockRunRepo{runs: map[uuid.UUID]*model.Run{}}
 	run := consultationReplayTestRun()
 	repo.runs[run.ID] = run
@@ -49,10 +49,10 @@ func TestConsultationHistoricalReplayRecomputesDecisionAuthorityWithoutModel(t *
 	if err != nil {
 		t.Fatalf("HistoricalReplay: %v", err)
 	}
-	if decision.SourceConfigurationID != consultationV1ConfigurationID {
+	if decision.SourceConfigurationID != defaultConsultationConfigurationID {
 		t.Fatalf("unexpected source config: %q", decision.SourceConfigurationID)
 	}
-	if decision.DecisionPolicyRevision != ConsultationDecisionPolicyV1 {
+	if decision.DecisionPolicyRevision != ConsultationDecisionPolicyV2 {
 		t.Fatalf("unexpected policy revision: %q", decision.DecisionPolicyRevision)
 	}
 	if !decision.ConfigurationIdentityMatch {

@@ -29,8 +29,6 @@ export const VANATOME_ATLAS_CATALOG_URL = OFFICIAL_HUMAN_ATLAS.catalogUrl;
 export const VANATOME_INITIAL_SYSTEM_ID = "regional-anatomy" as const;
 
 export interface LoadedVanatomeAtlas {
-  /** Initial lightweight body-shell atlas kept for compatibility with callers. */
-  atlas: VanatomeViewerAtlas;
   /** Atlases already prepared for composition. Models remain lazy in VanatomeViewer. */
   atlases: readonly VanatomeViewerAtlas[];
   catalog: AtlasCatalog;
@@ -75,7 +73,6 @@ export async function loadPinnedVanatomeAtlas(options?: {
   });
 
   return {
-    atlas: initialBundle.atlas,
     atlases: [initialBundle.atlas],
     catalog,
     catalogUrl,

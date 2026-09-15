@@ -30,6 +30,6 @@ func TestConfigProductionOSSRequiresECSRAMRole(t *testing.T) {
 func TestConfigLocalBackendDoesNotRequireOSSProvisioning(t *testing.T) {
 	cfg := Config{Environment: "production", Backend: "local", LocalRoot: "uploads"}
 	if err := cfg.Validate(); err != nil {
-		t.Fatalf("local compatibility backend should remain available before cutover: %v", err)
+		t.Fatalf("current local backend should not require OSS provisioning: %v", err)
 	}
 }

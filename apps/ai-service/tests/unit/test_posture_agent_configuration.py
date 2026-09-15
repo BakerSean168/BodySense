@@ -10,6 +10,7 @@ from src.configuration.posture_agent_config import (
     get_posture_configuration,
     load_manifest,
 )
+from src.evals.agent_config_archive import ARCHIVED_AGENT_CONFIG_ROOT
 
 
 def test_default_posture_configuration_is_repository_versioned_and_stable() -> None:
@@ -18,7 +19,7 @@ def test_default_posture_configuration_is_repository_versioned_and_stable() -> N
     assert config.logical_model == "bodysense-posture"
     assert config.configuration_id.startswith("posture-config-")
     assert len(config.configuration_id) == len("posture-config-") + 16
-    assert (CONFIG_ROOT / "posture-v1.yaml").exists()
+    assert not (CONFIG_ROOT / "posture-v1.yaml").exists()
     assert (CONFIG_ROOT / "posture-v2.yaml").exists()
     assert config.configuration_id == "posture-config-efa3a84622818772"
     assert config.geometry_mechanism is not None
@@ -28,10 +29,12 @@ def test_default_posture_configuration_is_repository_versioned_and_stable() -> N
     assert get_default_posture_configuration().configuration_id == config.configuration_id
 
 
-def test_historical_v1_identity_remains_stable() -> None:
-    legacy = load_manifest(CONFIG_ROOT / "posture-v1.yaml")
+def test_historical_v1_identity_is_offline_only_and_remains_stable() -> None:
+    legacy = load_manifest(ARCHIVED_AGENT_CONFIG_ROOT / "posture-v1.yaml")
     assert legacy.configuration_id == "posture-config-3a774008db422a31"
     assert legacy.geometry_mechanism is None
+    with pytest.raises(ValueError, match="unknown Posture configuration_id"):
+        get_posture_configuration(legacy.configuration_id)
 
 
 def test_behavior_significant_revision_changes_posture_configuration_id(

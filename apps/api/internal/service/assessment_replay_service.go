@@ -43,7 +43,6 @@ type AssessmentReplayComparison struct {
 type AssessmentReplaySnapshot struct {
 	ContractRevision       string   `json:"contract_revision"`
 	Status                 string   `json:"status"`
-	HealthGrade            string   `json:"health_grade,omitempty"`
 	EvidenceCoverageStatus string   `json:"evidence_coverage_status,omitempty"`
 	ObservationCount       int      `json:"observation_count"`
 	ObservationKinds       []string `json:"observation_kinds"`
@@ -85,6 +84,27 @@ func (s *AssessmentReplayService) getReport(ctx context.Context, id, userID uuid
 	return s.assessments.GetByID(ctx, id, userID)
 }
 
+func validateCurrentAssessmentReplaySource(report *model.AssessmentReport) error {
+	if report.ContractRevision != assessmentOutputContractV2 {
+		return fmt.Errorf(
+			"%w: report %s uses retired contract revision %q",
+			ErrAssessmentReplayConfiguration,
+			report.ID,
+			report.ContractRevision,
+		)
+	}
+	registration, ok := knownAssessmentConfigurations[report.AgentConfigurationID]
+	if !ok || registration.OutputContractRevision != assessmentOutputContractV2 {
+		return fmt.Errorf(
+			"%w: report %s uses retired Agent configuration %q",
+			ErrAssessmentReplayConfiguration,
+			report.ID,
+			report.AgentConfigurationID,
+		)
+	}
+	return nil
+}
+
 // HistoricalReplay recomputes the deterministic generation authority and
 // reconstructs the immutable baseline report from its frozen input without any
 // model call. It is an integrity check, not a re-run.
@@ -102,6 +122,9 @@ func (s *AssessmentReplayService) HistoricalReplay(
 	}
 	if report == nil {
 		return nil, ErrAssessmentReplayNotFound
+	}
+	if err := validateCurrentAssessmentReplaySource(report); err != nil {
+		return nil, err
 	}
 	input, err := decodeAssessmentReplayInput(json.RawMessage(report.ReplayInput))
 	if err != nil {
@@ -134,6 +157,9 @@ func (s *AssessmentReplayService) CounterfactualReplay(
 	}
 	if report == nil {
 		return nil, ErrAssessmentReplayNotFound
+	}
+	if err := validateCurrentAssessmentReplaySource(report); err != nil {
+		return nil, err
 	}
 	input, err := decodeAssessmentReplayInput(json.RawMessage(report.ReplayInput))
 	if err != nil {
@@ -168,28 +194,26 @@ func (s *AssessmentReplayService) CounterfactualReplay(
 	if !assessmentReplayConfigurationMatches(replayed, targetConfigurationID) {
 		return nil, errors.New("counterfactual Assessment replay returned the wrong Agent configuration")
 	}
-	if registration.OutputContractRevision == assessmentOutputContractV2 {
-		payload, err := parseAssessmentAgentPayload(result, registration.EvidencePolicyRevision)
-		if err != nil {
-			return nil, fmt.Errorf("counterfactual Assessment evidence contract: %w", err)
-		}
-		request := AssessmentGenerationRequest{
-			ConfigurationID: targetConfigurationID, Profile: input.Profile, BodyState: input.BodyState,
-			ReportIndicators:       input.ReportIndicators,
-			ReviewedReportEvidence: input.ReviewedReportEvidence,
-			PostureAnalysis:        input.PostureAnalysis,
-		}
-		projection, err := validateAssessmentEvidencePayload(payload, request)
-		if err != nil {
-			return nil, fmt.Errorf("counterfactual Assessment evidence contract: %w", err)
-		}
-		replayed["status"] = projection.Status
-		replayed["observations"] = projection.Observations
-		replayed["evidence_coverage"] = projection.Coverage
-		replayed["evidence_gaps"] = projection.Gaps
-		replayed["summary"] = projection.Summary
-		result, _ = json.Marshal(replayed)
+	payload, err := parseAssessmentAgentPayload(result, registration.EvidencePolicyRevision)
+	if err != nil {
+		return nil, fmt.Errorf("counterfactual Assessment evidence contract: %w", err)
 	}
+	request := AssessmentGenerationRequest{
+		ConfigurationID: targetConfigurationID, Profile: input.Profile, BodyState: input.BodyState,
+		ReportIndicators:       input.ReportIndicators,
+		ReviewedReportEvidence: input.ReviewedReportEvidence,
+		PostureAnalysis:        input.PostureAnalysis,
+	}
+	projection, err := validateAssessmentEvidencePayload(payload, request)
+	if err != nil {
+		return nil, fmt.Errorf("counterfactual Assessment evidence contract: %w", err)
+	}
+	replayed["status"] = projection.Status
+	replayed["observations"] = projection.Observations
+	replayed["evidence_coverage"] = projection.Coverage
+	replayed["evidence_gaps"] = projection.Gaps
+	replayed["summary"] = projection.Summary
+	result, _ = json.Marshal(replayed)
 	baseline := assessmentReplayBaseline(report)
 	return buildAssessmentReplayReport(
 		"counterfactual", report, input, targetConfigurationID,
@@ -208,6 +232,9 @@ func (s *AssessmentReplayService) ExportRegressionCase(
 	}
 	if report == nil {
 		return nil, ErrAssessmentReplayNotFound
+	}
+	if err := validateCurrentAssessmentReplaySource(report); err != nil {
+		return nil, err
 	}
 	input, err := decodeAssessmentReplayInput(json.RawMessage(report.ReplayInput))
 	if err != nil {
@@ -247,26 +274,15 @@ func (s *AssessmentReplayService) ExportRegressionCase(
 	}, nil
 }
 
-func assessmentRegressionForbiddenFields(contractRevision string) []string {
-	fields := []string{"treatment", "training_plan", "prescription"}
-	if contractRevision == assessmentOutputContractV2 {
-		fields = append(fields, "health_grade", "dimension_scores")
-	}
-	return fields
+func assessmentRegressionForbiddenFields(_ string) []string {
+	return []string{"treatment", "training_plan", "prescription", "health_grade", "dimension_scores"}
 }
 
 func assessmentReplayBaseline(report *model.AssessmentReport) map[string]any {
-	contractRevision := report.ContractRevision
-	if contractRevision == "" {
-		contractRevision = "assessment-output-v1"
-	}
 	baseline := map[string]any{
-		"contract_revision": contractRevision,
+		"contract_revision": assessmentOutputContractV2,
 		"status":            string(report.Status),
 		"summary":           report.Summary,
-	}
-	if report.HealthGrade != nil {
-		baseline["health_grade"] = *report.HealthGrade
 	}
 	if len(report.EvidenceCoverage) > 0 {
 		var coverage map[string]any
@@ -312,9 +328,8 @@ func assessmentReplaySnapshot(payload map[string]any) AssessmentReplaySnapshot {
 	sort.Strings(gaps)
 	evidenceGapDescriptions := assessmentReplayEvidenceGapDescriptions(payload["evidence_gaps"])
 	return AssessmentReplaySnapshot{
-		ContractRevision:       firstString(payload["contract_revision"], "assessment-output-v1"),
+		ContractRevision:       firstString(payload["contract_revision"], assessmentOutputContractV2),
 		Status:                 firstString(payload["status"], ""),
-		HealthGrade:            firstString(payload["health_grade"], ""),
 		EvidenceCoverageStatus: assessmentReplayCoverageStatus(payload["evidence_coverage"]),
 		ObservationCount:       len(obs),
 		ObservationKinds:       kinds,
@@ -475,9 +490,6 @@ func compareAssessmentReplayOutputs(baseline, replayed map[string]any) Assessmen
 		{Name: "information_gaps", Match: equalStringSlices(bSnap.InformationGaps, rSnap.InformationGaps), Baseline: strings.Join(bSnap.InformationGaps, "|"), Candidate: strings.Join(rSnap.InformationGaps, "|")},
 		{Name: "evidence_coverage_status", Match: bSnap.EvidenceCoverageStatus == rSnap.EvidenceCoverageStatus, Baseline: bSnap.EvidenceCoverageStatus, Candidate: rSnap.EvidenceCoverageStatus},
 		{Name: "evidence_gaps", Match: equalStringSlices(bSnap.EvidenceGaps, rSnap.EvidenceGaps), Baseline: strings.Join(bSnap.EvidenceGaps, "|"), Candidate: strings.Join(rSnap.EvidenceGaps, "|")},
-	}
-	if bSnap.HealthGrade != "" || rSnap.HealthGrade != "" {
-		semanticChecks = append(semanticChecks, AssessmentReplayCheck{Name: "legacy_health_grade", Match: bSnap.HealthGrade == rSnap.HealthGrade, Baseline: bSnap.HealthGrade, Candidate: rSnap.HealthGrade})
 	}
 	presentationChecks := []AssessmentReplayCheck{
 		{Name: "summary", Match: bSnap.Summary == rSnap.Summary, Baseline: bSnap.Summary, Candidate: rSnap.Summary},

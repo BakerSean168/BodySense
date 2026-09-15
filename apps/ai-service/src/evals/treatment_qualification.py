@@ -18,8 +18,8 @@ from src.agents.treatment_agent import treatment_tool_names
 from src.configuration.treatment_agent_config import (
     TreatmentAgentManifest,
     get_default_treatment_configuration,
-    get_treatment_configuration,
 )
+from src.evals.agent_config_archive import get_treatment_evaluation_configuration
 from src.services.treatment_agent_service import TreatmentAgentService
 from src.testing_support.deterministic_ai import deterministic_treatment_model
 
@@ -164,7 +164,7 @@ class PinnedContext(Evaluator[TreatmentEvalInputs, TreatmentEvalExecution, Treat
 @dataclass
 class ToolTrace(Evaluator[TreatmentEvalInputs, TreatmentEvalExecution, TreatmentEvalMetadata]):
     def evaluate(self, ctx: EvalContext) -> bool:
-        config = get_treatment_configuration(ctx.output.configuration_id)
+        config = get_treatment_evaluation_configuration(ctx.output.configuration_id)
         expected = treatment_tool_names(config.tool_policy_revision)
         return (
             sorted(ctx.output.trace.available_tools) == sorted(expected)
@@ -208,7 +208,7 @@ def load_treatment_dataset(
 
 def build_deterministic_task(configuration_id: str | None = None) -> Any:
     config = (
-        get_treatment_configuration(configuration_id)
+        get_treatment_evaluation_configuration(configuration_id)
         if configuration_id is not None
         else get_default_treatment_configuration()
     )
@@ -257,7 +257,7 @@ def run_treatment_qualification(
     configuration_id: str | None = None,
 ) -> TreatmentQualificationRun:
     config = (
-        get_treatment_configuration(configuration_id)
+        get_treatment_evaluation_configuration(configuration_id)
         if configuration_id is not None
         else get_default_treatment_configuration()
     )

@@ -202,7 +202,7 @@ func (p testTreatmentDeploymentPolicy) SelectTreatmentRoute(_ string) TreatmentR
 		ServedDecisionPolicyRevision: registration.DecisionPolicyRevision,
 		ShadowConfigurationID:        p.shadowConfigurationID,
 		ChampionConfigurationID:      champion, ChallengerConfigurationID: challenger,
-		RollbackConfigurationID: treatmentV1ConfigurationID, CanaryBPS: p.canaryBPS,
+		CanaryBPS: p.canaryBPS,
 	}
 	if route.ShadowConfigurationID != "" {
 		route.ShadowDecisionPolicyRevision = knownTreatmentConfigurations[route.ShadowConfigurationID].DecisionPolicyRevision
@@ -1077,9 +1077,10 @@ func TestTreatmentGenerationPersistsRolloutRouteAndShadowFailureDoesNotFailServe
 	}
 	repo := &fakeTreatmentRepo{}
 	observer := &fakeTreatmentRolloutObserver{err: errors.New("shadow storage unavailable")}
+	const offlineShadowConfigurationID = "treat-config-offline-shadow"
 	deployment := testTreatmentDeploymentPolicy{
-		configurationID:       treatmentV1ConfigurationID,
-		shadowConfigurationID: treatmentEvidenceGapConfigurationID,
+		configurationID:       defaultTreatmentConfigurationID,
+		shadowConfigurationID: offlineShadowConfigurationID,
 		stage:                 TreatmentRolloutShadow,
 		subjectBucket:         2468,
 		canaryBPS:             500,
@@ -1102,20 +1103,20 @@ func TestTreatmentGenerationPersistsRolloutRouteAndShadowFailureDoesNotFailServe
 	if err != nil {
 		t.Fatalf("served Treatment proposal must survive shadow observation failure: %v", err)
 	}
-	if revision.AgentConfigurationID != treatmentV1ConfigurationID {
-		t.Fatalf("historical shadow must not replace served v1 Champion: %#v", revision)
+	if revision.AgentConfigurationID != defaultTreatmentConfigurationID {
+		t.Fatalf("offline shadow observation must not replace the served Champion: %#v", revision)
 	}
 	var provenance TreatmentRouteSelection
 	if err := json.Unmarshal(revision.RolloutProvenance, &provenance); err != nil {
 		t.Fatalf("decode rollout provenance: %v", err)
 	}
 	if provenance.Stage != TreatmentRolloutShadow || provenance.SubjectBucket != 2468 ||
-		provenance.ServedConfigurationID != treatmentV1ConfigurationID ||
-		provenance.ShadowConfigurationID != treatmentEvidenceGapConfigurationID {
+		provenance.ServedConfigurationID != defaultTreatmentConfigurationID ||
+		provenance.ShadowConfigurationID != offlineShadowConfigurationID {
 		t.Fatalf("unexpected durable Treatment rollout provenance: %#v", provenance)
 	}
 	if observer.calls != 1 || observer.userID != userID || observer.revisionID != revision.ID ||
-		observer.route.ShadowConfigurationID != treatmentEvidenceGapConfigurationID {
+		observer.route.ShadowConfigurationID != offlineShadowConfigurationID {
 		t.Fatalf("served proposal was not paired exactly once: %#v", observer)
 	}
 }

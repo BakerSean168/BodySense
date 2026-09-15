@@ -10,60 +10,43 @@ import (
 )
 
 const (
-	diagnosisV1ConfigurationID          = "diag-config-f492eb1c0c6676ae"
-	diagnosisEvidenceGapConfigurationID = "diag-config-20fbfc23ca09cbab"
-	diagnosisDecisionAuthorityConfigID  = "diag-config-5a4a13627e14b4cf"
-	defaultDiagnosisConfigurationID     = diagnosisDecisionAuthorityConfigID
-	diagnosisRollbackConfigurationID    = diagnosisV1ConfigurationID
+	diagnosisDecisionAuthorityConfigID = "diag-config-5a4a13627e14b4cf"
+	defaultDiagnosisConfigurationID    = diagnosisDecisionAuthorityConfigID
 
 	DiagnosisRolloutChampion = "champion"
 	DiagnosisRolloutShadow   = "shadow"
 	DiagnosisRolloutCanary   = "canary"
 	DiagnosisRolloutPromoted = "promoted"
-	DiagnosisRolloutRollback = "rollback"
 
 	defaultDiagnosisCanaryBPS   = 1000
 	defaultDiagnosisRolloutSalt = "diagnosis-rollout-v1"
-	DiagnosisPromotionRecordV1  = "diagnosis_promotion_v1"
 
 	AssessmentRolloutChampion = "champion"
 	AssessmentRolloutShadow   = "shadow"
 	AssessmentRolloutCanary   = "canary"
 	AssessmentRolloutPromoted = "promoted"
-	AssessmentRolloutRollback = "rollback"
 
 	defaultAssessmentCanaryBPS   = 500
 	defaultAssessmentRolloutSalt = "assessment-rollout-v1"
-	AssessmentPromotionRecordV1  = "assessment_promotion_v1"
 
-	treatmentV1ConfigurationID          = "treat-config-85718f8e90ac9d80"
 	treatmentEvidenceGapConfigurationID = "treat-config-f68eec9846664596"
 	defaultTreatmentConfigurationID     = treatmentEvidenceGapConfigurationID
-	treatmentRollbackConfigurationID    = treatmentV1ConfigurationID
 	treatmentLogicalModelV1             = "bodysense-structured"
 
 	TreatmentRolloutChampion = "champion"
 	TreatmentRolloutShadow   = "shadow"
 	TreatmentRolloutCanary   = "canary"
 	TreatmentRolloutPromoted = "promoted"
-	TreatmentRolloutRollback = "rollback"
 
 	defaultTreatmentCanaryBPS   = 500
 	defaultTreatmentRolloutSalt = "treatment-rollout-v1"
-	TreatmentPromotionRecordV1  = "treatment_promotion_v1"
 
-	historicalAssessmentV1ConfigurationID = "assess-config-fbff8155337b388d"
-	historicalAssessmentV2ConfigurationID = "assess-config-cae55474253e1601"
-	historicalAssessmentV3ConfigurationID = "assess-config-c6cfff22aa362fff"
-	historicalAssessmentV4ConfigurationID = "assess-config-e579030c2b8b540c"
-	defaultAssessmentConfigurationID      = "assess-config-617534e4b17c512a"
-	assessmentLogicalModelV1              = "bodysense-structured"
+	defaultAssessmentConfigurationID = "assess-config-617534e4b17c512a"
+	assessmentLogicalModelV1         = "bodysense-structured"
 
-	consultationV1ConfigurationID      = "consult-config-2bd9b46735dd693c"
 	defaultConsultationConfigurationID = "consult-config-7feb8ca2d5bfad5a"
 
-	historicalPostureV1ConfigurationID = "posture-config-3a774008db422a31"
-	defaultPostureConfigurationID      = "posture-config-efa3a84622818772"
+	defaultPostureConfigurationID = "posture-config-efa3a84622818772"
 
 	defaultTitleConfigurationID = "title-config-bcc5f3a39bc98200"
 	titleLogicalModelV1         = "bodysense-text"
@@ -87,7 +70,6 @@ type assessmentConfigurationRegistration struct {
 	EvidencePolicyRevision string
 	LogicalModel           string
 	OutputContractRevision string
-	ServingAllowed         bool
 }
 
 type consultationConfigurationRegistration struct {
@@ -105,7 +87,6 @@ type postureConfigurationRegistration struct {
 	ModelSHA256            string
 	ThresholdRevision      string
 	ThresholdSHA256        string
-	ServingAllowed         bool
 }
 
 type titleConfigurationRegistration struct {
@@ -119,76 +100,26 @@ type knowledgeConfigurationRegistration struct {
 }
 
 var knownTreatmentConfigurations = map[string]treatmentConfigurationRegistration{
-	treatmentV1ConfigurationID: {
-		DecisionPolicyRevision: TreatmentDecisionPolicyV1,
-		LogicalModel:           treatmentLogicalModelV1,
-	},
 	treatmentEvidenceGapConfigurationID: {
 		DecisionPolicyRevision: TreatmentDecisionPolicyV1,
 		LogicalModel:           treatmentLogicalModelV1,
 	},
 }
 
-// Assessment v1/v2 remain registered for immutable historical replay only.
-// V2 decision authority is the first serving contract that requires exact
-// evidence refs and removes model-authored health grades / pseudo scores.
-const (
-	AssessmentDecisionPolicyV1 = "assessment-go-generation-v1"
-	AssessmentDecisionPolicyV2 = "assessment-go-generation-v2"
-)
+const AssessmentDecisionPolicyV2 = "assessment-go-generation-v2"
 
 var knownAssessmentConfigurations = map[string]assessmentConfigurationRegistration{
-	historicalAssessmentV1ConfigurationID: {
-		DecisionPolicyRevision: AssessmentDecisionPolicyV1,
-		EvidencePolicyRevision: "assessment-evidence-reuse-v1",
-		LogicalModel:           assessmentLogicalModelV1,
-		OutputContractRevision: "assessment-output-v1",
-		ServingAllowed:         false,
-	},
-	historicalAssessmentV2ConfigurationID: {
-		DecisionPolicyRevision: AssessmentDecisionPolicyV1,
-		EvidencePolicyRevision: "assessment-evidence-reuse-v1",
-		LogicalModel:           assessmentLogicalModelV1,
-		OutputContractRevision: "assessment-output-v1",
-		ServingAllowed:         false,
-	},
-	historicalAssessmentV3ConfigurationID: {
-		DecisionPolicyRevision: AssessmentDecisionPolicyV2,
-		EvidencePolicyRevision: assessmentEvidencePolicyV2,
-		LogicalModel:           assessmentLogicalModelV1,
-		OutputContractRevision: assessmentOutputContractV2,
-		ServingAllowed:         false,
-	},
-	historicalAssessmentV4ConfigurationID: {
-		DecisionPolicyRevision: AssessmentDecisionPolicyV2,
-		EvidencePolicyRevision: assessmentEvidencePolicyV3,
-		LogicalModel:           assessmentLogicalModelV1,
-		OutputContractRevision: assessmentOutputContractV2,
-		ServingAllowed:         false,
-	},
 	defaultAssessmentConfigurationID: {
 		DecisionPolicyRevision: AssessmentDecisionPolicyV2,
 		EvidencePolicyRevision: assessmentEvidencePolicyV4,
 		LogicalModel:           assessmentLogicalModelV1,
 		OutputContractRevision: assessmentOutputContractV2,
-		ServingAllowed:         true,
 	},
 }
 
-// Consultation decision policies are immutable runtime contracts. V1 remains
-// registered so interrupted/replayed historical runs keep their original
-// identity; V2 adds the typed state-acquisition preflight and deterministic HITL
-// gate before any visible assistant prose.
-const (
-	ConsultationDecisionPolicyV1 = "consultation-go-runtime-v1"
-	ConsultationDecisionPolicyV2 = "consultation-go-runtime-v2"
-)
+const ConsultationDecisionPolicyV2 = "consultation-go-runtime-v2"
 
 var knownConsultationConfigurations = map[string]consultationConfigurationRegistration{
-	consultationV1ConfigurationID: {
-		DecisionPolicyRevision: ConsultationDecisionPolicyV1,
-		LogicalModel:           "bodysense-consultation",
-	},
 	defaultConsultationConfigurationID: {
 		DecisionPolicyRevision: ConsultationDecisionPolicyV2,
 		LogicalModel:           "bodysense-consultation",
@@ -200,11 +131,6 @@ var knownConsultationConfigurations = map[string]consultationConfigurationRegist
 const PostureDecisionPolicyV1 = "posture-go-analysis-v1"
 
 var knownPostureConfigurations = map[string]postureConfigurationRegistration{
-	historicalPostureV1ConfigurationID: {
-		DecisionPolicyRevision: PostureDecisionPolicyV1,
-		LogicalModel:           "bodysense-posture",
-		ServingAllowed:         false,
-	},
 	defaultPostureConfigurationID: {
 		DecisionPolicyRevision: PostureDecisionPolicyV1,
 		LogicalModel:           "bodysense-posture",
@@ -215,7 +141,6 @@ var knownPostureConfigurations = map[string]postureConfigurationRegistration{
 		ModelSHA256:            "59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a",
 		ThresholdRevision:      "posture-geometry-thresholds-v1",
 		ThresholdSHA256:        "588917b4a071ee1e249d3930b37769c9c9bd7a4fdebd68eb2a00bfdd13fbb140",
-		ServingAllowed:         true,
 	},
 }
 
@@ -248,12 +173,6 @@ var knownKnowledgeSplitterConfigurations = map[string]knowledgeConfigurationRegi
 }
 
 var knownDiagnosisConfigurations = map[string]diagnosisConfigurationRegistration{
-	diagnosisV1ConfigurationID: {
-		DecisionPolicyRevision: DiagnosisDecisionPolicyPreEnvelope,
-	},
-	diagnosisEvidenceGapConfigurationID: {
-		DecisionPolicyRevision: DiagnosisDecisionPolicyPreEnvelope,
-	},
 	diagnosisDecisionAuthorityConfigID: {
 		DecisionPolicyRevision: DiagnosisDecisionPolicyV1,
 	},
@@ -268,7 +187,6 @@ type DiagnosisRouteSelection struct {
 	ShadowDecisionPolicyRevision string `json:"shadow_decision_policy_revision,omitempty"`
 	ChampionConfigurationID      string `json:"champion_configuration_id"`
 	ChallengerConfigurationID    string `json:"challenger_configuration_id,omitempty"`
-	RollbackConfigurationID      string `json:"rollback_configuration_id,omitempty"`
 	CanaryBPS                    int    `json:"canary_bps"`
 	PromotionRecord              string `json:"promotion_record,omitempty"`
 }
@@ -282,7 +200,6 @@ type TreatmentRouteSelection struct {
 	ShadowDecisionPolicyRevision string `json:"shadow_decision_policy_revision,omitempty"`
 	ChampionConfigurationID      string `json:"champion_configuration_id"`
 	ChallengerConfigurationID    string `json:"challenger_configuration_id,omitempty"`
-	RollbackConfigurationID      string `json:"rollback_configuration_id,omitempty"`
 	CanaryBPS                    int    `json:"canary_bps"`
 	PromotionRecord              string `json:"promotion_record,omitempty"`
 }
@@ -306,7 +223,6 @@ type AssessmentRouteSelection struct {
 type AgentDeploymentPolicy struct {
 	diagnosisChampionConfigurationID   string
 	diagnosisChallengerConfigurationID string
-	diagnosisRollbackConfigurationID   string
 	diagnosisStage                     string
 	diagnosisCanaryBPS                 int
 	diagnosisRolloutSalt               string
@@ -314,7 +230,6 @@ type AgentDeploymentPolicy struct {
 
 	treatmentChampionConfigurationID   string
 	treatmentChallengerConfigurationID string
-	treatmentRollbackConfigurationID   string
 	treatmentStage                     string
 	treatmentCanaryBPS                 int
 	treatmentRolloutSalt               string
@@ -341,13 +256,6 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		diagnosisChampion = defaultDiagnosisConfigurationID
 	}
 	if err := validateDiagnosisConfigurationID(diagnosisChampion); err != nil {
-		return nil, err
-	}
-	diagnosisRollback := strings.TrimSpace(os.Getenv("DIAGNOSIS_ROLLBACK_CONFIGURATION_ID"))
-	if diagnosisRollback == "" {
-		diagnosisRollback = diagnosisRollbackConfigurationID
-	}
-	if err := validateDiagnosisConfigurationID(diagnosisRollback); err != nil {
 		return nil, err
 	}
 	diagnosisChallenger := strings.TrimSpace(os.Getenv("DIAGNOSIS_CHALLENGER_CONFIGURATION_ID"))
@@ -390,16 +298,8 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		if diagnosisChallenger == "" {
 			return nil, fmt.Errorf("Diagnosis rollout stage %q requires a distinct active challenger configuration", diagnosisStage)
 		}
-		// The only currently approved rollout record is the historical v1 -> v3
-		// promotion used to establish the 2026-09-01 baseline. A future v4
-		// challenger must introduce a new immutable promotion record.
-		if diagnosisPromotionRecord != DiagnosisPromotionRecordV1 ||
-			diagnosisChampion != diagnosisV1ConfigurationID ||
-			diagnosisChallenger != diagnosisDecisionAuthorityConfigID {
-			return nil, fmt.Errorf(
-				"Diagnosis rollout stage %q has no approved promotion record for champion %q -> challenger %q",
-				diagnosisStage, diagnosisChampion, diagnosisChallenger,
-			)
+		if diagnosisPromotionRecord == "" {
+			return nil, fmt.Errorf("Diagnosis rollout stage %q requires an approved promotion record", diagnosisStage)
 		}
 	}
 
@@ -408,13 +308,6 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		treatmentChampion = defaultTreatmentConfigurationID
 	}
 	if err := validateTreatmentConfigurationID(treatmentChampion); err != nil {
-		return nil, err
-	}
-	treatmentRollback := strings.TrimSpace(os.Getenv("TREATMENT_ROLLBACK_CONFIGURATION_ID"))
-	if treatmentRollback == "" {
-		treatmentRollback = treatmentRollbackConfigurationID
-	}
-	if err := validateTreatmentConfigurationID(treatmentRollback); err != nil {
 		return nil, err
 	}
 	treatmentChallenger := strings.TrimSpace(os.Getenv("TREATMENT_CHALLENGER_CONFIGURATION_ID"))
@@ -457,13 +350,8 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		if treatmentChallenger == "" {
 			return nil, fmt.Errorf("Treatment rollout stage %q requires a distinct active challenger configuration", treatmentStage)
 		}
-		if treatmentPromotionRecord != TreatmentPromotionRecordV1 ||
-			treatmentChampion != treatmentV1ConfigurationID ||
-			treatmentChallenger != treatmentEvidenceGapConfigurationID {
-			return nil, fmt.Errorf(
-				"Treatment rollout stage %q has no approved promotion record for champion %q -> challenger %q",
-				treatmentStage, treatmentChampion, treatmentChallenger,
-			)
+		if treatmentPromotionRecord == "" {
+			return nil, fmt.Errorf("Treatment rollout stage %q requires an approved promotion record", treatmentStage)
 		}
 	}
 
@@ -491,17 +379,14 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 		return nil, fmt.Errorf("invalid Assessment rollout stage %q", assessmentStage)
 	}
 	// A challenger is only required once a non-Champion stage is requested.
-	if assessmentStage != AssessmentRolloutChampion && assessmentStage != AssessmentRolloutRollback {
+	if assessmentStage != AssessmentRolloutChampion {
 		if assessmentChampion == assessmentChallenger {
 			return nil, fmt.Errorf("Assessment rollout stage %q requires a distinct challenger configuration", assessmentStage)
 		}
 	}
-	// A historical contract may be used as a read-only shadow/replay comparator,
-	// but canary/promoted stages would serve the challenger and therefore require
-	// a configuration explicitly marked safe for durable reports.
-	if assessmentStage == AssessmentRolloutCanary || assessmentStage == AssessmentRolloutPromoted {
+	if assessmentStage != AssessmentRolloutChampion {
 		if err := validateAssessmentServingConfigurationID(assessmentChallenger); err != nil {
-			return nil, fmt.Errorf("Assessment rollout stage %q cannot serve challenger: %w", assessmentStage, err)
+			return nil, fmt.Errorf("Assessment rollout stage %q cannot use challenger: %w", assessmentStage, err)
 		}
 	}
 	assessmentCanaryBPS := defaultAssessmentCanaryBPS
@@ -574,14 +459,12 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 	return &AgentDeploymentPolicy{
 		diagnosisChampionConfigurationID:    diagnosisChampion,
 		diagnosisChallengerConfigurationID:  diagnosisChallenger,
-		diagnosisRollbackConfigurationID:    diagnosisRollback,
 		diagnosisStage:                      diagnosisStage,
 		diagnosisCanaryBPS:                  diagnosisCanaryBPS,
 		diagnosisRolloutSalt:                diagnosisRolloutSalt,
 		diagnosisPromotionRecord:            diagnosisPromotionRecord,
 		treatmentChampionConfigurationID:    treatmentChampion,
 		treatmentChallengerConfigurationID:  treatmentChallenger,
-		treatmentRollbackConfigurationID:    treatmentRollback,
 		treatmentStage:                      treatmentStage,
 		treatmentCanaryBPS:                  treatmentCanaryBPS,
 		treatmentRolloutSalt:                treatmentRolloutSalt,
@@ -600,8 +483,7 @@ func NewAgentDeploymentPolicy() (*AgentDeploymentPolicy, error) {
 	}, nil
 }
 
-// DiagnosisConfigurationID preserves the pre-rollout compatibility accessor. It
-// is the champion pointer, not a per-user route decision.
+// DiagnosisConfigurationID returns the current repository Champion.
 func (p *AgentDeploymentPolicy) DiagnosisConfigurationID() string {
 	return p.diagnosisChampionConfigurationID
 }
@@ -613,8 +495,6 @@ func (p *AgentDeploymentPolicy) DiagnosisDecisionPolicyRevision() string {
 func (p *AgentDeploymentPolicy) DiagnosisRolloutStage() string { return p.diagnosisStage }
 
 // TreatmentConfigurationID returns the current repository Champion.
-// The retired TREATMENT_AGENT_CONFIGURATION_ID alias is intentionally ignored;
-// rollback now has its own explicit configuration pointer.
 func (p *AgentDeploymentPolicy) TreatmentConfigurationID() string {
 	return p.treatmentChampionConfigurationID
 }
@@ -638,8 +518,6 @@ func (p *AgentDeploymentPolicy) SelectDiagnosisRoute(subjectID string) Diagnosis
 		}
 	case DiagnosisRolloutPromoted:
 		served = p.diagnosisChallengerConfigurationID
-	case DiagnosisRolloutRollback:
-		served = p.diagnosisRollbackConfigurationID
 	}
 
 	selection := DiagnosisRouteSelection{
@@ -649,7 +527,6 @@ func (p *AgentDeploymentPolicy) SelectDiagnosisRoute(subjectID string) Diagnosis
 		ShadowConfigurationID:        shadow,
 		ChampionConfigurationID:      p.diagnosisChampionConfigurationID,
 		ChallengerConfigurationID:    p.diagnosisChallengerConfigurationID,
-		RollbackConfigurationID:      p.diagnosisRollbackConfigurationID,
 		CanaryBPS:                    p.diagnosisCanaryBPS,
 		PromotionRecord:              p.diagnosisPromotionRecord,
 	}
@@ -676,8 +553,6 @@ func (p *AgentDeploymentPolicy) SelectTreatmentRoute(subjectID string) Treatment
 		}
 	case TreatmentRolloutPromoted:
 		served = p.treatmentChallengerConfigurationID
-	case TreatmentRolloutRollback:
-		served = p.treatmentRollbackConfigurationID
 	}
 
 	selection := TreatmentRouteSelection{
@@ -687,7 +562,6 @@ func (p *AgentDeploymentPolicy) SelectTreatmentRoute(subjectID string) Treatment
 		ShadowConfigurationID:        shadow,
 		ChampionConfigurationID:      p.treatmentChampionConfigurationID,
 		ChallengerConfigurationID:    p.treatmentChallengerConfigurationID,
-		RollbackConfigurationID:      p.treatmentRollbackConfigurationID,
 		CanaryBPS:                    p.treatmentCanaryBPS,
 		PromotionRecord:              p.treatmentPromotionRecord,
 	}
@@ -735,8 +609,7 @@ func validateTreatmentConfigurationID(id string) error {
 	return nil
 }
 
-// AssessmentConfigurationID returns the champion Assessment configuration
-// pointer (the stable pre-rollout compatibility accessor).
+// AssessmentConfigurationID returns the current repository Champion.
 func (p *AgentDeploymentPolicy) AssessmentConfigurationID() string {
 	return p.assessmentChampionConfigurationID
 }
@@ -753,19 +626,17 @@ func (p *AgentDeploymentPolicy) SelectAssessmentRoute(subjectID string) Assessme
 	shadow := ""
 
 	switch p.assessmentStage {
-	case DiagnosisRolloutShadow:
+	case AssessmentRolloutShadow:
 		shadow = p.assessmentChallengerConfigurationID
-	case DiagnosisRolloutCanary:
+	case AssessmentRolloutCanary:
 		if bucket < p.assessmentCanaryBPS {
 			served = p.assessmentChallengerConfigurationID
 			shadow = p.assessmentChampionConfigurationID
 		} else {
 			shadow = p.assessmentChallengerConfigurationID
 		}
-	case DiagnosisRolloutPromoted:
+	case AssessmentRolloutPromoted:
 		served = p.assessmentChallengerConfigurationID
-	case DiagnosisRolloutRollback:
-		served = p.assessmentChampionConfigurationID
 	}
 
 	selection := AssessmentRouteSelection{
@@ -803,20 +674,10 @@ func validateAssessmentKnownConfigurationID(id string) error {
 }
 
 func validateAssessmentServingConfigurationID(id string) error {
-	if err := validateAssessmentKnownConfigurationID(id); err != nil {
-		return err
-	}
-	if !knownAssessmentConfigurations[id].ServingAllowed {
-		return fmt.Errorf(
-			"Assessment Agent configuration id %q is historical replay-only and cannot serve durable reports",
-			id,
-		)
-	}
-	return nil
+	return validateAssessmentKnownConfigurationID(id)
 }
 
-// ConsultationConfigurationID returns the champion Consultation configuration
-// pointer (the stable pre-rollout compatibility accessor).
+// ConsultationConfigurationID returns the current repository Champion.
 func (p *AgentDeploymentPolicy) ConsultationConfigurationID() string {
 	return p.consultationChampionConfigurationID
 }
@@ -874,16 +735,7 @@ func validatePostureKnownConfigurationID(id string) error {
 }
 
 func validatePostureConfigurationID(id string) error {
-	if err := validatePostureKnownConfigurationID(id); err != nil {
-		return err
-	}
-	if !knownPostureConfigurations[id].ServingAllowed {
-		return fmt.Errorf(
-			"Posture Agent configuration id %q is historical and cannot serve new analyses",
-			id,
-		)
-	}
-	return nil
+	return validatePostureKnownConfigurationID(id)
 }
 
 func (p *AgentDeploymentPolicy) TitleConfigurationID() string {
@@ -954,7 +806,7 @@ func validateKnowledgeSplitterConfigurationID(id string) error {
 
 func validRolloutStage(stage string) bool {
 	switch stage {
-	case "champion", "shadow", "canary", "promoted", "rollback":
+	case "champion", "shadow", "canary", "promoted":
 		return true
 	default:
 		return false

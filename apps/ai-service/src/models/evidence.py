@@ -53,7 +53,6 @@ class EvidenceStopReason(StrEnum):
     SEARCH_UNAVAILABLE = "search_unavailable"
     PUBLISHED_CORPUS_EMPTY = "published_corpus_empty"
     NO_RELEVANT_RESULTS = "no_relevant_results"
-    NO_RESULTS = "no_results"  # legacy persisted trace compatibility
 
 
 class EvidenceGap(BaseModel):

@@ -1,4 +1,3 @@
-import { z } from "zod";
 import {
   parseCitation,
   parseExtractedInfo,
@@ -36,7 +35,6 @@ import type {
   ConversationMessageOutput as PublicConversationMessage,
   ConversationOutput as PublicConversation,
   DiagnosisWorkspaceProjectionOutput as PublicDiagnosisAnalysis,
-  JsonObjectOutput,
 } from "@/generated/api/model";
 import {
   openApiAuthFetch,
@@ -224,109 +222,6 @@ function toDiagnosisAnalysis(
   };
 }
 
-// Phase-02 compatibility boundary: a legacy pre-envelope governance rejection
-// is intentionally returned transiently without a durable analysis id. Keep the
-// parser confined here until Phase 07 retires that compatibility branch.
-function toTransientDiagnosisAnalysis(
-  input: JsonObjectOutput,
-): DiagnosisAnalysis {
-  const status = parseTransientDiagnosisStatus(input.status);
-  const candidates = parseTransientDiagnosisCandidates(input.candidates);
-  const citations = parseTransientDiagnosisCitations(input.citations);
-
-  return {
-    analysis_id: optionalString(input.analysis_id, "analysis_id"),
-    body_state_revision: optionalNumber(
-      input.body_state_revision,
-      "body_state_revision",
-    ),
-    status,
-    scope: optionalString(input.scope, "scope"),
-    summary: optionalString(input.summary, "summary"),
-    candidates,
-    citations,
-    created_at: optionalString(input.created_at, "created_at"),
-  };
-}
-
-function optionalString(input: unknown, field: string): string | undefined {
-  if (input === undefined) return undefined;
-  if (typeof input !== "string") {
-    throw new TypeError(`Legacy diagnosis ${field} must be a string`);
-  }
-  return input;
-}
-
-function optionalNumber(input: unknown, field: string): number | undefined {
-  if (input === undefined) return undefined;
-  if (typeof input !== "number" || !Number.isFinite(input)) {
-    throw new TypeError(`Legacy diagnosis ${field} must be a finite number`);
-  }
-  return input;
-}
-
-const legacyDiagnosisCandidateSchema = z
-  .object({
-    candidate_id: z.string().uuid().optional(),
-    concern_key: z.string().optional(),
-    name: z.string(),
-    confidence: z.enum(["高", "中", "低"]),
-    severity: z.enum(["轻度", "中度", "重度"]).optional(),
-    evidence_strength: z.enum(["高", "中", "低"]).optional(),
-    impact: z.string().optional(),
-    basis: z.string(),
-    typical_symptoms: z.string().optional(),
-    differential: z.string().optional(),
-    reasoning_summary: z.string().optional(),
-    basis_fact_ids: z.array(z.string()).optional(),
-    basis_observation_ids: z.array(z.string()).optional(),
-    supporting_evidence_ids: z.array(z.string()).optional(),
-    counterevidence_ids: z.array(z.string()).optional(),
-    missing_information: z.array(z.string()).optional(),
-    safety_notes: z.array(z.string()).optional(),
-  })
-  .strip();
-
-function parseTransientDiagnosisStatus(
-  input: unknown,
-): DiagnosisAnalysis["status"] {
-  if (input === undefined) return undefined;
-  if (typeof input !== "string") {
-    throw new TypeError("Legacy diagnosis status must be a string");
-  }
-  switch (input) {
-    case "completed":
-    case "partial":
-    case "insufficient_information":
-    case "safety_blocked":
-      return input;
-    default:
-      throw new TypeError(`Legacy diagnosis status is invalid: ${input}`);
-  }
-}
-
-function parseTransientDiagnosisCandidates(
-  input: unknown,
-): DiagnosisAnalysis["candidates"] {
-  if (input === undefined) return [];
-  if (!Array.isArray(input)) {
-    throw new TypeError("Legacy diagnosis candidates must be an array");
-  }
-  return input.map((candidate) =>
-    legacyDiagnosisCandidateSchema.parse(candidate),
-  );
-}
-
-function parseTransientDiagnosisCitations(
-  input: unknown,
-): DiagnosisAnalysis["citations"] {
-  if (input === undefined) return undefined;
-  if (!Array.isArray(input)) {
-    throw new TypeError("Legacy diagnosis citations must be an array");
-  }
-  return input.map((citation) => parseCitation(citation));
-}
-
 export const consultationApi = {
   /**
    * Start a unified consultation run. The generated request schema owns runtime
@@ -475,7 +370,7 @@ export const consultationApi = {
     const result = await withOpenApiError(() =>
       analyzeDiagnosisOpenApi(id, undefined, openApiAuthFetch),
     );
-    return toTransientDiagnosisAnalysis(result);
+    return toDiagnosisAnalysis(result);
   },
 
   /** Persist the user's interpretation of Diagnosis candidates without deleting any candidate. */

@@ -121,7 +121,7 @@ func assessmentPostureOutput(evidenceRef string) json.RawMessage {
 		"status":"completed",
 		"evidence_policy_revision":"assessment-evidence-contract-v4",
 		"observations":[{
-			"kind":"posture_alignment","body_region":"肩部","label":"肩部对称性待复核",
+			"kind":"posture_alignment","body_region":"","label":"肩部对称性待复核",
 			"description":"正面视觉资料中右侧肩峰位置略高。","evidence_refs":["__POSTURE_EVIDENCE_REF__"]
 		}],
 		"evidence_coverage":{
