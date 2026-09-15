@@ -12,6 +12,11 @@ ALLOWED_RUNTIME_PROTO_CONSUMERS = {
 }
 RETIRED_STREAM_EVENT_AUTHORITY = "apps/ai-service/src/models/stream_event.py"
 RETIRED_RUNTIME_IDENTIFIERS = {"_RUNTIME_EVENT_FIELD_BY_TYPE"}
+PYDANTIC_GATEWAY_OWNER = "apps/ai-service/src/ai/gateway.py"
+PYDANTIC_GATEWAY_MODULES = {
+    "pydantic_ai.models.openai",
+    "pydantic_ai.providers.openai",
+}
 
 
 def _normalize(path: str | Path) -> str:
@@ -48,6 +53,10 @@ def analyze_source(rel_path: str, source: str) -> list[str]:
             if _is_generated_runtime_module(module) and rel not in ALLOWED_RUNTIME_PROTO_CONSUMERS:
                 violations.append(
                     f"{rel}:{node.lineno}:{node.col_offset + 1}: generated runtime Proto leaked outside the Python boundary adapter ({module})"
+                )
+            if module in PYDANTIC_GATEWAY_MODULES and rel != PYDANTIC_GATEWAY_OWNER:
+                violations.append(
+                    f"{rel}:{node.lineno}:{node.col_offset + 1}: PydanticAI OpenAI transport must be constructed only by ai/gateway.py ({module})"
                 )
     return violations
 

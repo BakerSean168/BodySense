@@ -444,17 +444,13 @@ The same rebaseline audit also removed three other confirmed schema-only remnant
 
 ---
 
-### P3 — B5. Diagnosis has a duplicate LiteLLM OpenAI-compatible transport helper
+### P3 — B5. Diagnosis duplicate LiteLLM transport helper — RESOLVED
 
-**Classification:** `HARDENING`
+**Classification:** `RESOLVED-HARDENING` by vNext Phase 11.
 
-`apps/ai-service/src/ai/gateway.py::get_gateway_model` is the common gateway constructor. `diagnosis_gateway_model.py` independently creates an `OpenAIProvider` + `OpenAIChatModel` pointed at the same LiteLLM base URL.
+Diagnosis had no transport behavior that justified a second `OpenAIProvider` + `OpenAIChatModel` constructor. Phase 11 removed that duplicate path: `diagnosis_gateway_model.py` now owns only Diagnosis model-group revision validation and generation settings, then delegates model construction to the shared `apps/ai-service/src/ai/gateway.py::get_gateway_model` boundary.
 
-This does **not** violate ADR 0005 today: both paths still route exclusively through LiteLLM and neither chooses physical providers. It is duplication that increases drift risk.
-
-**Recommended cleanup**
-
-Unless Diagnosis needs a documented special transport behavior, delegate to the common `get_gateway_model(config.logical_model)` and keep only Diagnosis model-group validation/settings in the role-specific module.
+Focused Diagnosis gateway/service/agent tests, Ruff and Pyright pass after the simplification. Physical provider construction therefore has one intended application path behind the LiteLLM gateway.
 
 ## 8. Explicit non-gaps / deployment states
 
@@ -586,7 +582,7 @@ P2 B3 Normalize ASR provenance
 
 P2/P3 B4 health_features schema residue — RESOLVED by vNext Phase 08 baseline
 
-P3 B5 Deduplicate Diagnosis gateway helper
+P3 B5 Deduplicate Diagnosis gateway helper — RESOLVED by vNext Phase 11
 
 B2 Assessment source-key semantics
    -> decide domain meaning first; implement only after decision

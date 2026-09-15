@@ -5,9 +5,9 @@ import pytest
 from src.ai.diagnosis_gateway_model import (
     DIAGNOSIS_LOGICAL_MODEL,
     diagnosis_model_settings,
-    get_diagnosis_gateway_model,
     get_diagnosis_runtime_model,
 )
+from src.ai.gateway import get_gateway_model
 from src.configuration.diagnosis_agent_config import get_default_diagnosis_configuration
 
 CONFIG = get_default_diagnosis_configuration()
@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[4]
 def test_diagnosis_model_is_logical_gateway_model(monkeypatch) -> None:
     monkeypatch.setenv("LITELLM_BASE_URL", "http://gateway.test:4000/v1")
     monkeypatch.setenv("LITELLM_API_KEY", "sk-internal-test")
-    get_diagnosis_gateway_model.cache_clear()
+    get_gateway_model.cache_clear()
 
     model = get_diagnosis_runtime_model(CONFIG)
 
@@ -31,7 +31,7 @@ def test_legacy_diagnosis_backend_switch_is_ignored_after_retirement(monkeypatch
     monkeypatch.setenv("DIAGNOSIS_MODEL_BACKEND", "legacy")
     monkeypatch.setenv("LITELLM_BASE_URL", "http://gateway.test:4000/v1")
     monkeypatch.setenv("LITELLM_API_KEY", "sk-internal-test")
-    get_diagnosis_gateway_model.cache_clear()
+    get_gateway_model.cache_clear()
 
     model = get_diagnosis_runtime_model(CONFIG)
 

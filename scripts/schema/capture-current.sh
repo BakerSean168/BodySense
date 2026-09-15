@@ -4,8 +4,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 OUT="${BODYSENSE_SCHEMA_SNAPSHOT_OUT:-$ROOT/docs/refactor/vnext/schema/database-schema.json}"
 mkdir -p "$(dirname "$OUT")"
-NAME="bodysense-vnext-baseline-pg-$$"
-PASSWORD="bodysense-baseline"
+NAME="bodysense-schema-snapshot-pg-$$"
+PASSWORD="bodysense-schema-snapshot"
 
 cleanup() {
   docker rm -f "$NAME" >/dev/null 2>&1 || true

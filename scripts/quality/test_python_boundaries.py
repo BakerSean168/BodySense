@@ -44,6 +44,20 @@ class PythonBoundaryPolicyTests(unittest.TestCase):
         self.assertEqual(len(violations), 1)
         self.assertIn("retired generic internal runtime authority resurfaced", violations[0])
 
+    def test_pydanticai_openai_transport_is_owned_by_shared_gateway(self) -> None:
+        owner = MODULE.analyze_source(
+            "apps/ai-service/src/ai/gateway.py",
+            "from pydantic_ai.providers.openai import OpenAIProvider\n",
+        )
+        self.assertEqual(owner, [])
+
+        leaked = MODULE.analyze_source(
+            "apps/ai-service/src/ai/role_specific_gateway.py",
+            "from pydantic_ai.providers.openai import OpenAIProvider\n",
+        )
+        self.assertEqual(len(leaked), 1)
+        self.assertIn("PydanticAI OpenAI transport must be constructed only by ai/gateway.py", leaked[0])
+
     def test_non_generated_import_is_unrestricted(self) -> None:
         violations = MODULE.analyze_source(
             "apps/ai-service/src/runtime/normal.py",

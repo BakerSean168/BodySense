@@ -62,6 +62,29 @@ test('Python architecture gate exits non-zero for generated runtime Proto leakag
   }
 });
 
+test('Python architecture gate exits non-zero for role-specific PydanticAI transport', () => {
+  const fixture = fixtureTree();
+  try {
+    fs.mkdirSync(path.join(fixture, 'apps/ai-service/src/ai'), { recursive: true });
+    fs.writeFileSync(
+      path.join(fixture, 'apps/ai-service/src/ai/leaky_gateway.py'),
+      'from pydantic_ai.providers.openai import OpenAIProvider\n',
+    );
+    const result = run('python3', [
+      'scripts/quality/check_python_boundaries.py',
+      '--root',
+      fixture,
+    ]);
+    assert.notEqual(result.status, 0);
+    assert.match(
+      combinedOutput(result),
+      /PydanticAI OpenAI transport must be constructed only by ai\/gateway\.py/,
+    );
+  } finally {
+    fs.rmSync(fixture, { recursive: true, force: true });
+  }
+});
+
 test('Go architecture gate exits non-zero for generated OpenAPI leakage', () => {
   const fixture = fixtureTree();
   try {

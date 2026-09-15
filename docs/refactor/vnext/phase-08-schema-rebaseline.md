@@ -85,7 +85,7 @@ migration_state=1:false
 672 columns
 ```
 
-It explicitly contains none of the five retired columns. `pnpm refactor:vnext:schema` now regenerates this current snapshot by default; callers can override the destination with `BODYSENSE_SCHEMA_SNAPSHOT_OUT` when a separate evidence capture is required.
+It explicitly contains none of the five retired columns. Phase 11 promoted the snapshot generator from refactor-only scaffolding to the permanent `pnpm schema:snapshot` command; callers can override the destination with `BODYSENSE_SCHEMA_SNAPSHOT_OUT` when a separate evidence capture is required.
 
 ## CI and recovery contract
 

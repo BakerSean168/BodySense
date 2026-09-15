@@ -1,1 +1,0 @@
-[{"id":"request-property-enum-value-removed","text":"removed the enum value `rejected` of the request property `review_state`","level":3,"operation":"PATCH","operationId":"reviewBodyStateFact","path":"/api/v1/body-state/facts/{fact_id}/review","section":"paths","fingerprint":"3792419b5acd"}]

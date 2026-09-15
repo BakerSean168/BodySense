@@ -1,5 +1,7 @@
 # Public stream schemas
 
-`stream-event.v1.schema.json` is the existing public stream schema candidate. Phase 03 will repair the semantic drift identified by the 2026-09-09 spike, make this schema the single public event authority, and generate both static TypeScript and runtime validation from it.
+`stream-event.v1.schema.json` is the canonical public `StreamEvent` wire authority.
 
-Until that migration is complete, the checked-in handwritten parser remains the active production trust boundary. Phase 01 deliberately does not switch production event behavior.
+The JSON Schema owns the static and runtime event shape for browser-facing consultation streaming and replay. Repository generation derives TypeScript declarations and the standalone runtime validator from this schema; Web consumers parse live and replayed events through the shared generated trust boundary before projecting them into feature state.
+
+Go and Python internal runtime traffic has a separate private Proto/Protovalidate authority. Do not reuse the public JSON event schema as the Go↔Python command/event IDL, and do not reintroduce a handwritten parallel public parser.

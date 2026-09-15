@@ -1,1 +1,0 @@
-[{"id":"response-required-property-removed","text":"removed the required property `generated_at` from the response with the `200` status","level":3,"operation":"GET","operationId":"getHealthWorkspace","path":"/api/v1/health-workspace","section":"paths","fingerprint":"9556329247d0"}]
