@@ -591,6 +591,16 @@ test('candidate Dockerfiles apply revision metadata after filesystem layers', ()
   }
 });
 
+test('GitHub candidate API build uses the public Go module proxy explicitly', () => {
+  const workflow = fs.readFileSync('.github/workflows/candidate-publish.yml', 'utf8');
+  const apiStart = workflow.indexOf('- component: api');
+  const aiStart = workflow.indexOf('- component: aiService', apiStart);
+  const apiMatrix = workflow.slice(apiStart, aiStart);
+  assert.ok(apiStart >= 0 && aiStart > apiStart);
+  assert.match(apiMatrix, /extra_build_args: GOPROXY=https:\/\/proxy\.golang\.org,direct/);
+  assert.match(workflow, /\$\{\{ matrix\.extra_build_args \}\}/);
+});
+
 test('candidate publishing verifies remote OCI identity without pulling heavy image layers', () => {
   const workflow = fs.readFileSync('.github/workflows/candidate-publish.yml', 'utf8');
   const identityStart = workflow.indexOf('name: Verify immutable candidate digest and OCI revision label');

@@ -160,24 +160,28 @@ jobs:
             dockerfile: docker/Dockerfile.web
             cache_scope: candidate-web
             timeout_minutes: 30
+            extra_build_args: ''
           - component: api
             image: bodysense-api
             context: apps/api
             dockerfile: apps/api/Dockerfile
             cache_scope: candidate-api
             timeout_minutes: 30
+            extra_build_args: GOPROXY=https://proxy.golang.org,direct
           - component: aiService
             image: bodysense-ai-service
             context: apps/ai-service
             dockerfile: apps/ai-service/Dockerfile
             cache_scope: candidate-ai-service
             timeout_minutes: 45
+            extra_build_args: ''
           - component: runtime
             image: bodysense-runtime
             context: .
             dockerfile: docker/Dockerfile.runtime
             cache_scope: candidate-runtime
             timeout_minutes: 30
+            extra_build_args: ''
     env:
       REGISTRY: ${{ vars.ACR_REGISTRY }}
       NAMESPACE: ${{ vars.ACR_NAMESPACE }}
@@ -227,6 +231,7 @@ jobs:
             VERSION=${{ needs.resolve.outputs.candidate_tag }}
             VITE_ASSET_BASE=${{ needs.static-assets.outputs.asset_base }}
             VITE_BODYSENSE_ANATOMY_CATALOG_URL=${{ needs.static-assets.outputs.atlas_catalog_url }}
+            ${{ matrix.extra_build_args }}
           cache-from: type=gha,scope=${{ matrix.cache_scope }}
           cache-to: type=gha,mode=max,scope=${{ matrix.cache_scope }}
       - id: identity
