@@ -1,6 +1,6 @@
 # BodySense vNext Engineering Reset — Master Refactor Plan
 
-- Status: ACTIVE MASTER PLAN — Phases 00–05 complete; Phase 06 is NEXT
+- Status: ACTIVE MASTER PLAN — Phases 00–06 complete; Phase 07 is NEXT
 - Date: 2026-09-13
 - Integration branch: `refactor/bodysense-vnext`
 - Integration worktree: `/home/dev/projects/bodysense-vnext-refactor`
@@ -395,8 +395,9 @@ This gives each phase an auditable diff and prevents a single giant unreviewable
 | 03 — Public StreamEvent  | **COMPLETE** | `1125db479` merged JSON Schema-first generated TS/standalone validator, shared live/replay parser boundary and exhaustive Web consumers; see `docs/refactor/vnext/phase-03-public-stream.md`                                                                               |
 | 04 — Internal runtime    | **COMPLETE** | `9488fa345` merged private Proto/Protovalidate command + typed `oneof` event authority, boundary-only generated types, deterministic local codegen and unchanged cancel/recovery semantics; see `docs/refactor/vnext/phase-04-internal-runtime-proto.md`                   |
 | 05 — Runtime trust       | **COMPLETE** | Typed Python provider/runtime variants, typed Go private runtime payloads/errors, generated/validated Web trust boundaries, durable MessagePart projection and production-shaped local-deploy/E2E acceptance complete; see `docs/refactor/vnext/phase-05-runtime-trust.md` |
-| 06 — Durable state       | **NEXT**     | typed and atomic durable state machines; branch `refactor/vnext-06-durable-state-machines`                                                                                                                                                                                 |
-| 07–11                    | QUEUED       | blocked by preceding dependency phases                                                                                                                                                                                                                                     |
+| 06 — Durable state       | **COMPLETE** | Typed finite lifecycle vocabularies, CAS/conditional terminal transitions, atomic state + lifecycle-event persistence, migration 63 constraints/replay and production-shaped acceptance complete; see `docs/refactor/vnext/phase-06-durable-state-machines.md`          |
+| 07 — Legacy retirement   | **NEXT**     | remove pre-vNext compatibility and migration-era runtime branches on top of the typed/atomic durable baseline; branch `refactor/vnext-07-legacy-retirement`                                                                                                                  |
+| 08–11                    | QUEUED       | blocked by preceding dependency phases                                                                                                                                                                                                                                     |
 
 ## Phase 00 — Freeze baseline and create the refactor ledger
 
@@ -594,6 +595,8 @@ untrusted input -> one explicit parser/validator -> trusted typed value
 No downstream code must cast the same wire shape back into existence.
 
 ## Phase 06 — Typed and atomic durable state machines
+
+**Status: COMPLETE — implementation and acceptance evidence: `docs/refactor/vnext/phase-06-durable-state-machines.md`.**
 
 Branch: `refactor/vnext-06-durable-state-machines`
 
