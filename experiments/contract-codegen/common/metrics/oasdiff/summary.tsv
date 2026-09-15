@@ -1,7 +1,0 @@
-mutation	exit_code	breaking_detected	ci_gate
-M1-required-field-rename	1	yes	blocked
-M2-field-type-change	1	yes	blocked
-M3-enum-value-removal	1	yes	blocked
-M4-request-optional-to-required	1	yes	blocked
-M5-nullable-to-non-null	0	no	passed
-M6-add-optional-field	0	no	passed

@@ -32,7 +32,7 @@ All candidate worktrees forked from the same common baseline commit:
 - `bodysense-contract-codegen-jsonschema` — J1;
 - `bodysense-contract-codegen-proto` — P1.
 
-Candidate worktrees changed only `experiments/contract-codegen/...`; the canonical BodySense production worktree was not modified.
+Candidate worktrees changed only `experiments/contract-codegen/...`; the canonical BodySense production worktree was not modified. Phase 11 later removed the checked-in benchmark harness from the active tree after Phases 01–04 implemented the selected OpenAPI / JSON Schema / Proto architecture. This result document, the governing ADRs, and Git history retain the decision evidence; the obsolete worktree-specific harness is no longer a supported current tool.
 
 ## Baseline
 

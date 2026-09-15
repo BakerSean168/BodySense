@@ -95,8 +95,8 @@ function toConversationMessage(input: PublicConversationMessage): Message {
     status: input.status,
     seq: input.seq,
     // MessagePart remains a feature-domain union. The public OpenAPI transport
-    // intentionally validates the envelope while keeping part payloads as JSON
-    // objects until the StreamEvent/MessagePart contract is unified in Phase 03.
+    // validates the conversation envelope; feature projection owns durable
+    // MessagePart semantics while public StreamEvent validation is schema-generated.
     parts: input.parts,
     content_text: input.content_text ?? "",
     model: input.model ?? null,

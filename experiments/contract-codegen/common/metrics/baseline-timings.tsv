@@ -1,5 +1,0 @@
-command	status	elapsed_seconds	notes
-web_typecheck	0	13.07	isolated worktree, first valid run after local pnpm install
-web_build	0	6.71	production Vite build
-api_go_test_all_warm	0	0.79	go test ./... with warm cache; first uncached-ish run observed 19.38s
-ai_pytest_all	0	22.61	475 passed; uv extras dev+ocr+document-ocr installed

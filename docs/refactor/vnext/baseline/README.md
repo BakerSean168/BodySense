@@ -8,7 +8,7 @@ This directory is the evidence package for `refactor/vnext-00-baseline`.
 - `current-system-baseline.md` — human-readable summary generated from the inventory.
 - `database-schema.json` — fresh PostgreSQL 18 + pgvector schema after applying migrations through version 62 and replaying the latest down/up migration.
 
-`database-schema.json` is frozen Phase 00 evidence. Do not regenerate it from a later refactor phase: the current canonical schema has its own snapshot under `docs/refactor/vnext/schema/`. The inventory generator remains reproducible with `pnpm refactor:vnext:baseline`; exact Phase 00 schema reproduction requires checking out the recorded Phase 00 commit.
+`database-schema.json` is frozen Phase 00 evidence. Do not regenerate it from a later refactor phase: the current canonical schema has its own snapshot under `docs/refactor/vnext/schema/`. Phase 11 retired the one-time Phase 00 inventory-capture script from the active tree; exact reproduction of this historical package requires checking out the recorded Phase 00 commit. The current schema can be regenerated with `pnpm schema:snapshot`.
 
 ## Decision ledger
 
@@ -23,15 +23,6 @@ There is intentionally no `KEEP-JUST-IN-CASE` or `TBD` disposition.
 
 ## Root verification baseline
 
-Phase 00 uses these repository-level checks before it can merge to the vNext integration branch:
+At the Phase 00 commit, the baseline branch used repository-local capture scripts plus `lint`, `typecheck`, `test`, and `build` before merge. Those one-time capture entrypoints were intentionally removed from the current tree in Phase 11; this directory is retained as immutable evidence rather than a live generator surface.
 
-```bash
-pnpm refactor:vnext:baseline
-pnpm refactor:vnext:schema
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm build
-```
-
-`pnpm validate:local-deploy` is the production-shaped integration gate for later behavior-changing phases. Phase 00 changes only planning/baseline tooling and therefore records rather than mutates runtime/deployment behavior.
+`pnpm validate:local-deploy` became the production-shaped integration gate for later behavior-changing phases.
