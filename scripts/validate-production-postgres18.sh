@@ -22,18 +22,18 @@ reject_path() {
 bash -n scripts/production-postgres18-reset.sh scripts/production-deploy-watch.sh scripts/setup-server.sh scripts/setup-postgres18-client-wrappers.sh
 
 grep -q '^POSTGRES_MAJOR=18$' .env.production
-grep -q '^POSTGRES_DATA_VOLUME=bodysense-postgres-pg18$' .env.production
+grep -q '^POSTGRES_DATA_VOLUME=bodysense-postgres-vnext$' .env.production
 grep -q 'pgvector:pg18' docker/docker-compose.prod.yml
 reject_match 'pgvector:pg16' docker/docker-compose.prod.yml
 grep -q 'postgres-prod-data-pg18:/var/lib/postgresql$' docker/docker-compose.prod.yml
-grep -Fq "name: \${POSTGRES_DATA_VOLUME:-bodysense-postgres-pg18}" docker/docker-compose.prod.yml
+grep -Fq "name: \${POSTGRES_DATA_VOLUME:-bodysense-postgres-vnext}" docker/docker-compose.prod.yml
 
 grep -q 'pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a' .github/workflows/mirror-production-infra.yml
 grep -q 'target: pgvector:pg18' .github/workflows/mirror-production-infra.yml
 reject_match 'source: pgvector/pgvector:pg16' .github/workflows/mirror-production-infra.yml
 
-grep -q 'name: PostgreSQL 18 current-history child' .github/workflows/ci.yml
-grep -q 'name: PostgreSQL 18 production-baseline child' .github/workflows/ci.yml
+grep -q 'name: PostgreSQL 18 vNext baseline child' .github/workflows/ci.yml
+grep -q 'name: PostgreSQL 18 vNext recovery child' .github/workflows/ci.yml
 grep -q 'Prepare PostgreSQL 18 client toolchain' .github/workflows/ci.yml
 grep -q 'setup-postgres18-client-wrappers.sh' .github/workflows/ci.yml
 grep -q '^FROM alpine:3.24$' apps/api/Dockerfile
@@ -41,14 +41,18 @@ grep -q 'postgresql18-client' apps/api/Dockerfile
 reject_match 'postgresql16-client' apps/api/Dockerfile
 [ "$(grep -c 'image: pgvector/pgvector:pg18' .github/workflows/ci.yml)" -ge 3 ]
 reject_match 'image: pgvector/pgvector:pg16' .github/workflows/ci.yml
-[ -s apps/api/migrations/baselines/production-v29.sql ]
-grep -q 'Dumped from database version 18' apps/api/migrations/baselines/production-v29.sql
+[ -s apps/api/migrations/000001_vnext_baseline.up.sql ]
+[ -s apps/api/migrations/000001_vnext_baseline.down.sql ]
+reject_path apps/api/migrations/baselines/production-v29.sql
 reject_path apps/api/migrations/baselines/production-pg16-v29.sql
 
 grep -q 'production-postgres18-reset.sh /runtime/scripts/production-postgres18-reset.sh' docker/Dockerfile.runtime
 grep -q 'production-postgres18-reset.sh" cutover' scripts/production-deploy-watch.sh
 grep -q 'production-postgres18-reset.sh" commit' scripts/production-deploy-watch.sh
-grep -q 'fresh PostgreSQL 18 detected; bootstrapping API migrations before AI service' scripts/production-deploy-watch.sh
+grep -q '16|18) ;;' scripts/production-postgres18-reset.sh
+grep -Fq 'source_volume" = "$TARGET_VOLUME' scripts/production-postgres18-reset.sh
+grep -q 'bodysense-postgres-vnext' scripts/production-postgres18-reset.sh
+grep -q 'fresh PostgreSQL 18 detected; bootstrapping vNext API baseline before AI service' scripts/production-deploy-watch.sh
 python3 - <<'PY_ORDER'
 from pathlib import Path
 s = Path('scripts/production-deploy-watch.sh').read_text()

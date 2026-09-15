@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
       POSTGRES_INITDB_ARGS: --encoding=UTF8 --locale=C
     volumes:
-      - postgres-staging-data:/var/lib/postgresql
+      - postgres-staging-vnext-data:/var/lib/postgresql
     networks: [bodysense-staging]
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-bodysense} -d ${DB_NAME:-bodysense}']
@@ -194,6 +194,6 @@ networks:
     driver: bridge
 
 volumes:
-  postgres-staging-data:
+  postgres-staging-vnext-data:
   redis-staging-data:
   api-staging-uploads:

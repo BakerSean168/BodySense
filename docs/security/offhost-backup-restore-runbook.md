@@ -355,6 +355,8 @@ What the drill does:
    disposable restore container by its Docker network name on the shared drill
    network; the password reaches it only via `PGPASSWORD` in a mode-0600
    `--env-file`, never on a command line;
+
+> **Data-bearing restore invariant:** restore validation passes `-replay-latest=false` to `migration-validator`. Forward migration to the active schema is allowed; destructive `down -> up` replay is reserved for disposable empty-schema validation and must never run against restored data.
 9. prints `RESTORE_RESULT=PASS database=... project=... restore_pg=... object_key=...` on success.
 
 The database password never appears on a process command line: validators
@@ -363,9 +365,7 @@ the golang runner, or injected through a mode-0600 `--env-file` on the `docker
 run` path into the disposable validator container (which also keeps it out of
 the `docker` CLI argv). The `-database-url` passed to the validators contains
 no password at all.
-
-Optional: `--baseline-version N` migrates through the published production
-baseline before validation. Use `--workdir /path` to keep all artifacts
+ Use `--workdir /path` to keep all artifacts
 (meta/sha/archive) in an operator-specified directory for troubleshooting.
 
 ### 5.1 Safety of the drill target

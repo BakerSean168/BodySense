@@ -333,7 +333,7 @@ rollback_deployment() {
       current_schema="$PREVIOUS_SCHEMA_STATE"
       ;;
     committed)
-      # Once the fresh PG18 reset is committed, the discarded legacy volume is
+      # Once the fresh PG18 reset is committed, the previous source volume is
       # gone. Application rollback must keep the PG18 runtime/database boundary.
       preserve_runtime=true
       current_schema=$(db_schema_state)
@@ -766,10 +766,11 @@ deploy_api_service() {
 
 reset_status=$(postgres_reset_state_status_for_release)
 if [ "$reset_status" = cutover_complete ]; then
-  # A fresh PG18 database has no vector extension yet. The Go API owns schema
-  # migrations (migration 10 creates vector), while AI registers the vector type
-  # during its FastAPI lifespan. Bootstrap schema first, with Caddy still down.
-  log 'fresh PostgreSQL 18 detected; bootstrapping API migrations before AI service'
+  # A fresh PG18 database has no application schema yet. The Go API owns the
+  # canonical vNext baseline (including vector extension creation), while AI
+  # registers the vector type during its FastAPI lifespan. Bootstrap schema first,
+  # with Caddy still down.
+  log 'fresh PostgreSQL 18 detected; bootstrapping vNext API baseline before AI service'
   deploy_api_service
   deploy_document_service
   deploy_ai_service
@@ -791,7 +792,7 @@ if [ "$(postgres_reset_state_status_for_release)" = cutover_complete ]; then
 fi
 
 # Caddy is deliberately exposed only after the fresh PostgreSQL 18 reset is committed.
-# Before this point the legacy database can still be restored if the fresh PG18 service itself fails health checks.
+# Before this point the previous database volume can still be restored if the fresh PG18 service itself fails health checks.
 compose up -d --no-deps --force-recreate caddy
 compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1 || true
 

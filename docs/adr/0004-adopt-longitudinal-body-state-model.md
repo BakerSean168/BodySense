@@ -269,4 +269,4 @@ The core migration is complete:
 - the old fixed-three Diagnosis candidate target has been removed;
 - Treatment/Intervention/Outcome use separate durable history tied back to BodyState/Diagnosis.
 
-One schema-cleanup residue remains: migration-era `health_features` columns introduced in migration 29 still exist in historical schema migration lineage even though executable application models no longer consume them. Whether to physically drop those unused columns is tracked in the documentation/code alignment audit rather than as an unresolved architecture design.
+Phase 08 completed the physical schema cleanup: the canonical `000001_vnext_baseline` excludes the migration-era `consultation_sessions.health_features` and `thread_projections.health_features` columns. Migration 29 remains only in Git history as historical lineage; executable runtime and the active vNext schema have one BodyState-based health authority.

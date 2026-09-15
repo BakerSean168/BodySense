@@ -8,14 +8,7 @@ This directory is the evidence package for `refactor/vnext-00-baseline`.
 - `current-system-baseline.md` — human-readable summary generated from the inventory.
 - `database-schema.json` — fresh PostgreSQL 18 + pgvector schema after applying migrations through version 62 and replaying the latest down/up migration.
 
-Regenerate with:
-
-```bash
-pnpm refactor:vnext:baseline
-pnpm refactor:vnext:schema
-```
-
-`refactor:vnext:schema` deliberately uses the same `pgvector/pgvector:pg18` database family as BodySense development. Plain `postgres:18` is not a valid schema-validation substitute because migration 10+ requires the `vector` extension.
+`database-schema.json` is frozen Phase 00 evidence. Do not regenerate it from a later refactor phase: the current canonical schema has its own snapshot under `docs/refactor/vnext/schema/`. The inventory generator remains reproducible with `pnpm refactor:vnext:baseline`; exact Phase 00 schema reproduction requires checking out the recorded Phase 00 commit.
 
 ## Decision ledger
 

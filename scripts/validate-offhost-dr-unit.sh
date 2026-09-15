@@ -1189,12 +1189,13 @@ fi
 # network; a literal "api" / a host-side `docker exec` is never used.
 if grep -q '^run --rm --network restore-pg-net -l bodysense.disposable-restore=yes --env-file [^ ]* --entrypoint [^ ]* fake-api-image:2.0 ' "$DOCKER_LOG" \
   && grep -q -- '--entrypoint /app/validators/migration-validator ' "$DOCKER_LOG" \
+  && grep -q -- '-replay-latest=false' "$DOCKER_LOG" \
   && grep -q -- '--entrypoint /app/validators/domain-validator ' "$DOCKER_LOG" \
   && ! grep -q 'docker exec' "$DOCKER_LOG" \
   && ! grep -q '/app/validators/ api ' "$DOCKER_LOG"; then
-  report 0 "validators run in disposable containers derived from the resolved api image (fake-api-image:2.0) on the drill network, never via the production api container"
+  report 0 "validators run non-destructive migration verification and domain validation in disposable containers derived from the resolved api image (fake-api-image:2.0) on the drill network"
 else
-  report 1 "validators run in disposable containers derived from the resolved api image (fake-api-image:2.0) on the drill network, never via the production api container" "docker_log=$(tr '\n' '|' < "$DOCKER_LOG")"
+  report 1 "validators run non-destructive migration verification and domain validation in disposable containers derived from the resolved api image (fake-api-image:2.0) on the drill network" "docker_log=$(tr '\n' '|' < "$DOCKER_LOG")"
 fi
 # OFFHOST_VALIDATOR_IMAGE, when set, must be used verbatim as the validator
 # image (a deployment may pin the drill validator image explicitly).

@@ -27,15 +27,12 @@ func ParseAssessmentReportStatus(value string) (AssessmentReportStatus, bool) {
 // AssessmentReport is an immutable observation report. It never owns Diagnosis
 // or Treatment truth; projected observations remain unverified in BodyState until
 // the user explicitly confirms them. Runtime reports use only the evidence-grounded
-// v2 contract. HealthGrade/DimensionScores are schema baggage retained until the
-// Phase 08 database rebaseline and are not part of the current public contract.
+// v2 contract.
 type AssessmentReport struct {
 	ID                      uuid.UUID              `gorm:"type:uuid;primaryKey" json:"id"`
 	UserID                  uuid.UUID              `gorm:"type:uuid;index;not null" json:"user_id"`
 	Status                  AssessmentReportStatus `gorm:"type:varchar(40);not null" json:"status"`
 	ContractRevision        string                 `gorm:"type:varchar(80);not null;default:'assessment-output-v2'" json:"contract_revision"`
-	HealthGrade             *string                `gorm:"type:varchar(5)" json:"health_grade,omitempty"`
-	DimensionScores         json.RawMessage        `gorm:"type:jsonb" json:"dimension_scores,omitempty"`
 	EvidenceCoverage        json.RawMessage        `gorm:"type:jsonb;not null;default:'{}'" json:"evidence_coverage"`
 	EvidenceGaps            json.RawMessage        `gorm:"type:jsonb;not null;default:'[]'" json:"evidence_gaps"`
 	Observations            json.RawMessage        `gorm:"type:jsonb;not null;default:'[]'" json:"observations"`

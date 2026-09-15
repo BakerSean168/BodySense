@@ -88,7 +88,7 @@ STATE
 DB_USER=$(read_public_env DB_USER bodysense)
 DB_NAME=$(read_public_env DB_NAME bodysense)
 TARGET_MAJOR=$(read_public_env POSTGRES_MAJOR 18)
-TARGET_VOLUME=$(read_public_env POSTGRES_DATA_VOLUME bodysense-postgres-pg18)
+TARGET_VOLUME=$(read_public_env POSTGRES_DATA_VOLUME bodysense-postgres-vnext)
 [ "$TARGET_MAJOR" = 18 ] || fail "BodySense production supports PostgreSQL 18 only; target=$TARGET_MAJOR"
 [ -n "$TARGET_VOLUME" ] || fail 'POSTGRES_DATA_VOLUME is empty'
 
@@ -117,7 +117,7 @@ case "$COMMAND" in
     source_volume=$(state_value source_volume)
     if [ -n "$source_volume" ] && [ "$source_volume" != "$TARGET_VOLUME" ]; then
       docker volume rm "$source_volume" >/dev/null || fail "failed to delete discarded PostgreSQL volume $source_volume"
-      log "discarded legacy PostgreSQL volume $source_volume"
+      log "discarded previous PostgreSQL volume $source_volume"
     fi
     write_state committed "$source_major" "$source_volume" "$TARGET_VOLUME"
     log "PostgreSQL 18 reset committed release=$RELEASE_REVISION target_volume=$TARGET_VOLUME"
@@ -145,11 +145,12 @@ case "$COMMAND" in
         health=$(docker inspect "$restored_id" --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' 2>/dev/null || true)
         [ "$health" = healthy ] && break
       fi
-      [ $(( $(date +%s) - start )) -lt 120 ] || fail 'legacy PostgreSQL failed health wait during reset rollback'
+      [ $(( $(date +%s) - start )) -lt 120 ] || fail 'previous PostgreSQL failed health wait during reset rollback'
       sleep 2
     done
     [ "$(server_major "$restored_id")" = "$source_major" ] || fail 'reset rollback restored the wrong PostgreSQL major'
-    restored_mount=$(mount_name_for_destination "$restored_id" /var/lib/postgresql/data)
+    restored_mount=$(mount_name_for_destination "$restored_id" /var/lib/postgresql)
+    [ -n "$restored_mount" ] || restored_mount=$(mount_name_for_destination "$restored_id" /var/lib/postgresql/data)
     [ "$restored_mount" = "$source_volume" ] || fail "reset rollback mounted ${restored_mount:-none}, expected=$source_volume"
     if docker volume inspect "$TARGET_VOLUME" >/dev/null 2>&1; then
       docker volume rm "$TARGET_VOLUME" >/dev/null 2>&1 || log "warning: PG18 target volume $TARGET_VOLUME remains for inspection"
@@ -174,22 +175,26 @@ if [ -z "$source_id" ]; then
 fi
 
 current_major=$(server_major "$source_id")
-if [ "$current_major" = 18 ]; then
-  log 'PostgreSQL 18 reset not required: production is already on PostgreSQL 18'
+case "$current_major" in
+  16|18) ;;
+  *) fail "unexpected PostgreSQL major=$current_major; refusing destructive reset" ;;
+esac
+
+source_volume=$(mount_name_for_destination "$source_id" /var/lib/postgresql)
+[ -n "$source_volume" ] || source_volume=$(mount_name_for_destination "$source_id" /var/lib/postgresql/data)
+[ -n "$source_volume" ] || fail 'unable to identify PostgreSQL source volume'
+if [ "$current_major" = 18 ] && [ "$source_volume" = "$TARGET_VOLUME" ]; then
+  log "PostgreSQL 18 vNext reset not required: target volume $TARGET_VOLUME is already active"
   exit 0
 fi
-[ "$current_major" = 16 ] || fail "unexpected legacy PostgreSQL major=$current_major; refusing destructive reset"
-
-source_volume=$(mount_name_for_destination "$source_id" /var/lib/postgresql/data)
-[ -n "$source_volume" ] || fail 'unable to identify legacy PostgreSQL source volume'
-[ "$source_volume" != "$TARGET_VOLUME" ] || fail 'legacy and PG18 target volumes must be different'
+[ "$source_volume" != "$TARGET_VOLUME" ] || fail 'source and target PostgreSQL volumes must be different'
 if docker volume inspect "$TARGET_VOLUME" >/dev/null 2>&1; then
-  fail "PG18 target volume $TARGET_VOLUME already exists before reset; refusing to overwrite unknown state"
+  fail "PostgreSQL target volume $TARGET_VOLUME already exists before reset; refusing to overwrite unknown state"
 fi
 
-# There is no production data retention requirement for the legacy database.
+# There is no production data-retention requirement for the pre-vNext schema.
 # Quiesce externally reachable writers, switch to a fresh PG18 volume, and keep
-# the old volume only until the new application stack passes its health gates.
+# the source volume only until the new application stack passes its health gates.
 for service in caddy api ai-service; do
   id=$(docker ps -aq \
     --filter "label=com.docker.compose.project=$COMPOSE_PROJECT" \
@@ -206,4 +211,4 @@ target_id=$(wait_postgres 150) || fail 'PostgreSQL 18 failed health wait after l
 target_mount=$(mount_name_for_destination "$target_id" /var/lib/postgresql)
 [ "$target_mount" = "$TARGET_VOLUME" ] || fail "PG18 mounted ${target_mount:-none}, expected=$TARGET_VOLUME"
 write_state cutover_complete "$current_major" "$source_volume" "$TARGET_VOLUME"
-log "PostgreSQL 18 fresh reset complete; legacy volume will be deleted after application health gates"
+log "PostgreSQL 18 fresh vNext reset complete; source volume will be deleted after application health gates"

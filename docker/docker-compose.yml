@@ -10,7 +10,7 @@ services:
     ports:
       - '${DEV_BIND_HOST:-127.0.0.1}:${DB_PORT:-20110}:5432'
     volumes:
-      - postgres-dev-data:/var/lib/postgresql
+      - postgres-dev-vnext-data:/var/lib/postgresql
     networks:
       - bodysense-network
     healthcheck:
@@ -201,5 +201,5 @@ networks:
     driver: bridge
 
 volumes:
-  postgres-dev-data:
+  postgres-dev-vnext-data:
   api-uploads:

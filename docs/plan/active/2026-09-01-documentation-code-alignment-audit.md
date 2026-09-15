@@ -420,33 +420,27 @@ Priority is lower than OCR/Posture because ASR output enters the reviewed Knowle
 
 ---
 
-### P2/P3 — B4. ADR 0004 migration left unused `health_features` columns in durable schema
+### P2/P3 — B4. ADR 0004 migration left unused `health_features` columns in durable schema — RESOLVED
 
-**Classification:** `CODE-GAP` / schema debt
+**Classification:** `RESOLVED` by vNext Phase 08 schema rebaseline
 
-Migration 29 added:
+The historical migration chain added:
 
 ```text
 consultation_sessions.health_features
 thread_projections.health_features
 ```
 
-Current executable models/services do not use these fields. Migration 58 removed old mutable health columns from `user_profiles` but did not drop these two migration-era projection/session columns.
+Executable models/services stopped consuming those fields before the vNext reset. Phase 08 then replaced the pre-user migration history with `000001_vnext_baseline`, whose canonical schema does not contain either column. Git history preserves migration 29 as historical evidence; it is no longer an active upgrade contract.
 
-**Risk**
+The same rebaseline audit also removed three other confirmed schema-only remnants with zero current runtime authority: `assessment_reports.health_grade`, `assessment_reports.dimension_scores`, and `knowledge_units.lifecycle_metadata`.
 
-Low runtime risk today because application code ignores them, but they are misleading dormant schema authority and can invite accidental reuse of the superseded “session health truth” model.
+**Acceptance evidence**
 
-**Recommended cleanup**
-
-After confirming no production data/compatibility consumer requires them, add a new forward migration to drop the columns. Never edit migration 29 in place.
-
-**Acceptance tests**
-
-- production-baseline upgrade succeeds;
-- privacy erasure/schema validators still pass;
-- no executable query/model depends on either field;
-- down migration semantics are explicitly documented if restoration would be lossy.
+- fresh PostgreSQL 18 baseline reaches migration `1:false`;
+- baseline `down` reaches nil version and replay returns to `1:false`;
+- BodyState/BodyRegion/Treatment/Outcome domain validators pass against the fresh schema;
+- current schema snapshot excludes all five retired columns.
 
 ---
 
@@ -590,7 +584,7 @@ P2 B1 Assessment v3 request/dependency hardening
 
 P2 B3 Normalize ASR provenance
 
-P2/P3 B4 Drop health_features schema residue after compatibility audit
+P2/P3 B4 health_features schema residue — RESOLVED by vNext Phase 08 baseline
 
 P3 B5 Deduplicate Diagnosis gateway helper
 
