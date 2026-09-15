@@ -28,7 +28,7 @@ func (f *fakeDiagnosisApplication) Analyze(context.Context, uuid.UUID, uuid.UUID
 func newDiagnosisRouteTestRouter(t *testing.T, application diagnosisApplication) *gin.Engine {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
-	spec, err := openapiv1.GetSwagger()
+	spec, err := openapiv1.GetSpec()
 	if err != nil {
 		t.Fatalf("load generated OpenAPI spec: %v", err)
 	}

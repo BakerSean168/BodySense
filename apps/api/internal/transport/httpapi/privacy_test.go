@@ -39,7 +39,7 @@ func (f *fakePrivacyApplication) Request(_ context.Context, _ uuid.UUID, confirm
 func newPrivacyOpenAPIRouter(t *testing.T, privacy privacyErasureApplication, secure bool) *gin.Engine {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
-	spec, err := openapiv1.GetSwagger()
+	spec, err := openapiv1.GetSpec()
 	if err != nil {
 		t.Fatalf("load generated OpenAPI spec: %v", err)
 	}

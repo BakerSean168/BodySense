@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
+pnpm quality:capacity
 bash -n scripts/setup-server.sh scripts/production-deploy-watch.sh scripts/production-postgres18-reset.sh \
   scripts/setup-postgres18-client-wrappers.sh \
   scripts/production-offhost-backup.sh scripts/restore-production-backup.sh \
@@ -16,6 +17,7 @@ pnpm test:delivery
 pnpm lint
 pnpm typecheck
 pnpm test
+pnpm quality:verify
 pnpm contracts:verify
 bash scripts/validate-migration-history.sh
 python3 scripts/test_offhost_s3.py

@@ -37,7 +37,7 @@ func (f *fakeProfileApplication) CreateOrUpdateProfile(_ context.Context, userID
 func newProfileOpenAPIRouter(t *testing.T, profile profileApplication) *gin.Engine {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
-	spec, err := openapiv1.GetSwagger()
+	spec, err := openapiv1.GetSpec()
 	if err != nil {
 		t.Fatalf("load generated OpenAPI spec: %v", err)
 	}

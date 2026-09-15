@@ -3,6 +3,7 @@
   "venv": ".venv",
   "pythonVersion": "3.13",
   "typeCheckingMode": "basic",
+  "strict": ["src/api/runtime_proto_adapter.py"],
   "ignore": [
     "src/document_pipeline/engines/rapidocr_ppocrv6.py",
     "src/document_pipeline/engines/rapidocr_ppocrv6_bounded.py"

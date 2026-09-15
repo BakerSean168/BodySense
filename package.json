@@ -69,7 +69,12 @@
     "contracts:verify": "bash scripts/contracts/verify.sh",
     "postman:generate": "node scripts/postman/generate.mjs",
     "postman:verify": "node scripts/postman/generate.mjs --check",
-    "postman:validate-native": "bash scripts/postman/validate-native.sh"
+    "postman:validate-native": "bash scripts/postman/validate-native.sh",
+    "quality:architecture": "bash scripts/quality/check-architecture.sh",
+    "quality:architecture:test": "bash scripts/quality/test-architecture.sh",
+    "quality:capacity": "bash scripts/quality/check-validation-capacity.sh",
+    "quality:capacity:test": "bash scripts/quality/test-validation-capacity.sh",
+    "quality:verify": "pnpm quality:architecture && pnpm quality:architecture:test && pnpm quality:capacity:test"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.1118.0",
