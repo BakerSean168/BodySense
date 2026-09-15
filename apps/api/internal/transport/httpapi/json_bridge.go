@@ -64,7 +64,7 @@ func strictJSONDecode[T any](encoded []byte) (T, error) {
 
 func validateOpenAPIComponentJSON(component string, encoded []byte) error {
 	publicContractOnce.Do(func() {
-		publicContractSpec, publicContractErr = openapiv1.GetSwagger()
+		publicContractSpec, publicContractErr = openapiv1.GetSpec()
 	})
 	if publicContractErr != nil {
 		return fmt.Errorf("load public OpenAPI contract: %w", publicContractErr)

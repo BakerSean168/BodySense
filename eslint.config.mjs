@@ -36,6 +36,20 @@ export default tseslint.config(
           caughtErrorsIgnorePattern: '^_',
         },
       ],
+      '@typescript-eslint/no-explicit-any': 'error',
+    },
+  },
+  {
+    files: [
+      'apps/web/src/features/**/services/**/*.ts',
+      'apps/web/src/features/workspace/api/**/*.ts',
+      'apps/web/src/stores/*.ts',
+      'apps/web/src/lib/clientDiagnostics.ts',
+      'packages/contracts/src/**/*.ts',
+    ],
+    ignores: ['**/*.test.ts', '**/*.test.tsx'],
+    rules: {
+      '@typescript-eslint/no-unsafe-type-assertion': 'error',
     },
   },
   {

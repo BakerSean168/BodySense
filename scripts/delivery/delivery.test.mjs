@@ -150,6 +150,11 @@ test('contracts delivery lane runs canonical contract verification', () => {
   assert.match(contractLane, /run\(["']pnpm["'], \[["']contracts:verify["']\]\)/);
 });
 
+test('every selected delivery quality lane runs architecture boundaries', () => {
+  const contents = fs.readFileSync('scripts/delivery/run-quality.mjs', 'utf8');
+  assert.match(contents, /run\(["']pnpm["'], \[["']quality:architecture["']\]\)/);
+});
+
 test('CI, Docker, release and unknown paths fail safe to full', () => {
   for (const path of [
     '.github/workflows/ci.yml',

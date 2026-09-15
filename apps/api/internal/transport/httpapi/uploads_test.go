@@ -67,7 +67,7 @@ func (fakeHealthDocumentReviewApplication) ApplyReview(context.Context, uuid.UUI
 func uploadTestRouter(t *testing.T, uploads uploadApplication, reviews healthDocumentReviewApplication, authenticated bool) *gin.Engine {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
-	spec, err := openapiv1.GetSwagger()
+	spec, err := openapiv1.GetSpec()
 	if err != nil {
 		t.Fatalf("load generated OpenAPI spec: %v", err)
 	}

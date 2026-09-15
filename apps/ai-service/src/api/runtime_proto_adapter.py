@@ -194,10 +194,12 @@ def runtime_event_to_proto(event: ConsultationRuntimeEvent) -> runtime_pb2.Runti
         if payload.governance is not None:
             done_value["governance"] = payload.governance
         wire.stream_done.CopyFrom(_parse_runtime_payload(done_value, runtime_pb2.StreamDone()))
-    elif isinstance(payload, StreamErrorRuntimeEvent):
-        wire.stream_error.CopyFrom(runtime_pb2.StreamError(message=payload.message))
     else:
-        assert_never(payload)
+        match payload:
+            case StreamErrorRuntimeEvent():
+                wire.stream_error.CopyFrom(runtime_pb2.StreamError(message=payload.message))
+            case _:
+                assert_never(payload)
 
     try:
         _RUNTIME_VALIDATOR.validate(wire)
@@ -230,14 +232,11 @@ def _parse_and_validate(payload: dict[str, Any], message: _MessageT) -> _Message
 
 
 def _message_to_runtime_input(message: protobuf_message.Message) -> dict[str, Any]:
-    value = json_format.MessageToDict(
+    return json_format.MessageToDict(
         message,
         preserving_proto_field_name=True,
         always_print_fields_with_no_presence=False,
     )
-    if not isinstance(value, dict):
-        raise RuntimeCommandError("private runtime command did not decode to an object")
-    return value
 
 
 def parse_start_turn_command(thread_id: str, payload: dict[str, Any]) -> dict[str, Any]:

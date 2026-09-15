@@ -69,7 +69,7 @@ func (f *fakeAuthAccountService) Logout(_ context.Context, refreshToken string) 
 func newAuthTestRouter(t *testing.T, accounts authAccountApplication, security auth.SecurityConfig, extra func(r *gin.Engine)) *gin.Engine {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
-	spec, err := openapiv1.GetSwagger()
+	spec, err := openapiv1.GetSpec()
 	if err != nil {
 		t.Fatalf("load generated OpenAPI spec: %v", err)
 	}
@@ -373,7 +373,7 @@ func TestAuthRoutesRejectSpecInvalidPayloadBeforeService(t *testing.T) {
 func TestAuthRoutesStayPublicWhileProtectedRoutesRequireAuthentication(t *testing.T) {
 	security := auth.SecurityConfig{RefreshCookieName: auth.DefaultRefreshCookieName, RefreshTTL: time.Hour}
 	accounts := &fakeAuthAccountService{session: &service.AuthSessionResult{AccessToken: "a", RefreshToken: "r", ExpiresIn: 60}}
-	spec, err := openapiv1.GetSwagger()
+	spec, err := openapiv1.GetSpec()
 	if err != nil {
 		t.Fatalf("load spec: %v", err)
 	}
@@ -425,7 +425,7 @@ func ginPathToSpecPath(path string) string {
 
 func TestRegisterRoutesRegistersEverySpecOperationExactlyOnce(t *testing.T) {
 	security := auth.SecurityConfig{RefreshCookieName: auth.DefaultRefreshCookieName, RefreshTTL: time.Hour}
-	spec, err := openapiv1.GetSwagger()
+	spec, err := openapiv1.GetSpec()
 	if err != nil {
 		t.Fatalf("load spec: %v", err)
 	}

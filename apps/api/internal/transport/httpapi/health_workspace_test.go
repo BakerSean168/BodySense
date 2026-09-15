@@ -53,7 +53,7 @@ func minimalWorkspace() *service.HealthWorkspace {
 func newWorkspaceOpenAPIRouter(t *testing.T, service healthWorkspaceService) *gin.Engine {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
-	spec, err := openapiv1.GetSwagger()
+	spec, err := openapiv1.GetSpec()
 	if err != nil {
 		t.Fatalf("load generated OpenAPI spec: %v", err)
 	}
@@ -111,7 +111,7 @@ func TestGetHealthWorkspaceServiceFailureUsesCanonicalError(t *testing.T) {
 func assertOpenAPIResponse(t *testing.T, req *http.Request, rec *httptest.ResponseRecorder) {
 	t.Helper()
 	ctx := context.Background()
-	spec, err := openapiv1.GetSwagger()
+	spec, err := openapiv1.GetSpec()
 	if err != nil {
 		t.Fatalf("load spec: %v", err)
 	}

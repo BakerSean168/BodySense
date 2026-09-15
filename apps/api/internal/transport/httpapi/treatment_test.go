@@ -43,7 +43,7 @@ func newTreatmentRouteTestRouter(t *testing.T, training treatmentTrainingApplica
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 	userID := uuid.New()
-	spec, err := openapiv1.GetSwagger()
+	spec, err := openapiv1.GetSpec()
 	if err != nil {
 		t.Fatalf("load generated OpenAPI spec: %v", err)
 	}

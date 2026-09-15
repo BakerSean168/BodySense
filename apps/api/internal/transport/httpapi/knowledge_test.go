@@ -79,7 +79,7 @@ func TestKnowledgeRoutesAllowOperatorIntoGeneratedBoundary(t *testing.T) {
 	sourceApp := &fakeKnowledgeSourceApplication{}
 	server := NewPublicServer(nil).WithKnowledge(sourceApp, fakeKnowledgeIngestionApplication{}, fakeKnowledgeQueryApplication{})
 	r := gin.New()
-	spec, err := openapiv1.GetSwagger()
+	spec, err := openapiv1.GetSpec()
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -357,7 +357,7 @@ func main() {
 	// OpenAPI-authoritative public routes. Authentication, operator authority
 	// and request validation remain owned by middleware; request/response
 	// transport is generated from packages/contracts/openapi/bodysense.v1.openapi.yaml.
-	publicAPISpec, err := openapiv1.GetSwagger()
+	publicAPISpec, err := openapiv1.GetSpec()
 	if err != nil {
 		log.Fatalf("failed to load generated public OpenAPI spec: %v", err)
 	}
