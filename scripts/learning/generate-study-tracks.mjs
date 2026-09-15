@@ -80,5 +80,5 @@ lines.push(
 );
 
 const out = path.join(root, 'docs/learning/curriculum/views/study-tracks.md');
-fs.writeFileSync(out, `${lines.join('\n')}\n`);
+fs.writeFileSync(out, `${lines.join('\n').trimEnd()}\n`);
 console.log(`wrote ${path.relative(root, out)}`);

@@ -43,5 +43,5 @@ lines.push(
   '',
 );
 
-fs.writeFileSync(outPath, `${lines.join('\n')}\n`);
+fs.writeFileSync(outPath, `${lines.join('\n').trimEnd()}\n`);
 console.log(`wrote ${path.relative(root, outPath)}`);
