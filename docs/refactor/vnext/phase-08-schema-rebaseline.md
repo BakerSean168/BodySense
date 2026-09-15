@@ -1,10 +1,12 @@
 # Phase 08 — Database schema rebaseline
 
-Status: **COMPLETE — full Phase 08 acceptance is green; ready for integration**
+Status: **COMPLETE — integrated via PR #181 at `df682247a`**
 
 Branch: `refactor/vnext-08-schema-rebaseline`
 
 Canonical parent before Phase 08: `refactor/bodysense-vnext` at `b924468f8` (Phase 07 merge, PR #180).
+
+Integrated into `refactor/bodysense-vnext` via PR #181 as merge commit `df682247a`.
 
 ## Goal
 

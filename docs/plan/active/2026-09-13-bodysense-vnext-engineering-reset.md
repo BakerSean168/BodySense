@@ -1,6 +1,6 @@
 # BodySense vNext Engineering Reset — Master Refactor Plan
 
-- Status: ACTIVE MASTER PLAN — Phases 00–07 integrated; Phase 08 acceptance COMPLETE and ready for integration
+- Status: ACTIVE MASTER PLAN — Phases 00–08 integrated; Phase 09 is NEXT
 - Date: 2026-09-13
 - Integration branch: `refactor/bodysense-vnext`
 - Integration worktree: `/home/dev/projects/bodysense-vnext-refactor`
@@ -397,8 +397,9 @@ This gives each phase an auditable diff and prevents a single giant unreviewable
 | 05 — Runtime trust       | **COMPLETE** | Typed Python provider/runtime variants, typed Go private runtime payloads/errors, generated/validated Web trust boundaries, durable MessagePart projection and production-shaped local-deploy/E2E acceptance complete; see `docs/refactor/vnext/phase-05-runtime-trust.md` |
 | 06 — Durable state       | **COMPLETE** | Typed finite lifecycle vocabularies, CAS/conditional terminal transitions, atomic state + lifecycle-event persistence, migration 63 constraints/replay and production-shaped acceptance complete; see `docs/refactor/vnext/phase-06-durable-state-machines.md`          |
 | 07 — Legacy retirement   | **COMPLETE** | runtime compatibility/migration-era branches retired and full production-shaped acceptance green; see `docs/refactor/vnext/phase-07-legacy-retirement.md`                                                                                                                   |
-| 08 — Schema rebaseline   | **MERGE READY** | one canonical PostgreSQL 18 vNext baseline, fresh-volume cutover/recovery contract and full production-shaped acceptance green; see `docs/refactor/vnext/phase-08-schema-rebaseline.md`                                                                                   |
-| 09–11                    | QUEUED       | Phase 09 starts only after Phase 08 merges into `refactor/bodysense-vnext`                                                                                                                                                                                                                                     |
+| 08 — Schema rebaseline   | **COMPLETE** | `df682247a` / PR #181 merged one canonical PostgreSQL 18 vNext baseline, fresh-volume cutover/recovery contract and full production-shaped acceptance; see `docs/refactor/vnext/phase-08-schema-rebaseline.md`                                                        |
+| 09 — API tooling         | **NEXT**     | derive repo-native API exploration/testing assets from the canonical OpenAPI; branch `refactor/vnext-09-api-tooling`                                                                                                                                                 |
+| 10–11                    | QUEUED       | blocked by preceding dependency phases                                                                                                                                                                                                                                     |
 
 ## Phase 00 — Freeze baseline and create the refactor ledger
 
@@ -682,7 +683,7 @@ Do not force an unqualified health-document model/mechanism into Champion solely
 
 Branch: `refactor/vnext-08-schema-rebaseline`
 
-**Status: COMPLETE / MERGE READY — one-migration vNext baseline and full repository + production-shaped acceptance are green; evidence: `docs/refactor/vnext/phase-08-schema-rebaseline.md`.**
+**Status: COMPLETE — merged via PR #181 at `df682247a`; implementation and acceptance evidence: `docs/refactor/vnext/phase-08-schema-rebaseline.md`.**
 
 ### Goal
 
