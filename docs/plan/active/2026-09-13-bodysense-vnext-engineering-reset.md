@@ -1,6 +1,6 @@
 # BodySense vNext Engineering Reset — Master Refactor Plan
 
-- Status: ACTIVE MASTER PLAN — Phases 00–08 integrated; Phase 09 is NEXT
+- Status: ACTIVE MASTER PLAN — Phases 00–09 integrated; Phase 10 is NEXT
 - Date: 2026-09-13
 - Integration branch: `refactor/bodysense-vnext`
 - Integration worktree: `/home/dev/projects/bodysense-vnext-refactor`
@@ -398,8 +398,9 @@ This gives each phase an auditable diff and prevents a single giant unreviewable
 | 06 — Durable state       | **COMPLETE** | Typed finite lifecycle vocabularies, CAS/conditional terminal transitions, atomic state + lifecycle-event persistence, migration 63 constraints/replay and production-shaped acceptance complete; see `docs/refactor/vnext/phase-06-durable-state-machines.md`          |
 | 07 — Legacy retirement   | **COMPLETE** | runtime compatibility/migration-era branches retired and full production-shaped acceptance green; see `docs/refactor/vnext/phase-07-legacy-retirement.md`                                                                                                                   |
 | 08 — Schema rebaseline   | **COMPLETE** | `df682247a` / PR #181 merged one canonical PostgreSQL 18 vNext baseline, fresh-volume cutover/recovery contract and full production-shaped acceptance; see `docs/refactor/vnext/phase-08-schema-rebaseline.md`                                                        |
-| 09 — API tooling         | **NEXT**     | derive repo-native API exploration/testing assets from the canonical OpenAPI; branch `refactor/vnext-09-api-tooling`                                                                                                                                                 |
-| 10–11                    | QUEUED       | blocked by preceding dependency phases                                                                                                                                                                                                                                     |
+| 09 — API tooling         | **COMPLETE** | `043b5378b` / PR #182 merged deterministic 95/95 OpenAPI-derived Postman tooling, current CLI/Native Git validation, secret-safe environments and contract-lane enforcement; see `docs/refactor/vnext/phase-09-api-tooling.md`                                                  |
+| 10 — Quality gates       | **NEXT**     | harden architecture/static-analysis/contract quality gates and prove representative violations fail CI; branch `refactor/vnext-10-quality-gates`                                                                                                                          |
+| 11 — Final simplification | QUEUED      | blocked by Phase 10                                                                                                                                                                                                                                                           |
 
 ## Phase 00 — Freeze baseline and create the refactor ledger
 
