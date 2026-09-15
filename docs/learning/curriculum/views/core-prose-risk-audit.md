@@ -26,4 +26,3 @@ New explicit concepts exposed by prose review: **2** (`FSO-P5-CONCEPT-TEST-QUERY
 - This risk audit answers **“did selected high-risk sections hide important semantics inside ordinary prose/examples?”**.
 - A newly exposed concept is promoted into the same canonical FSO ledger and must satisfy the same mapping/readiness/mastery rules.
 - Unselected prose remains an explicit non-claim; this file must never be used to advertise exhaustive paragraph parity.
-

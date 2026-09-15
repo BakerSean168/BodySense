@@ -220,4 +220,3 @@ Prerequisite closure outside this track: none.
 3. A green existing test is evidence about the system, not evidence of learner mastery. L4 requires independent explain-back and falsification criteria.
 4. When prior production work already proves a card, use placement evidence; do not mechanically rewrite working code.
 5. Production changes are optional and should happen only when the card exposes a real, regression-characterized gap.
-

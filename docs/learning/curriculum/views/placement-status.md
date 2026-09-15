@@ -54,4 +54,3 @@ Use the exercise card in placement mode: make the prediction without reading the
 Use `node scripts/learning/record-placement.mjs <ITEM_ID> <L1|L2|L3|L4|L5> --evidence "..."` only after the learner has actually produced the corresponding evidence. `L1-L3` records a gap and leaves the node exercise-ready; meeting the required gate promotes it to `LEARNER_VERIFIED`.
 
 Prerequisite closure outside the active track: `BS-FSO-0.1`, `BS-FSO-0.3`, `BS-FSO-0.4`, `BS-FSO-0.5`, `BS-FSO-2.11`.
-
