@@ -222,20 +222,37 @@ func (r *TreatmentRepository) RejectRevision(
 	userID, revisionID uuid.UUID,
 ) error {
 	return database.FromContext(ctx, r.db).Transaction(func(tx *gorm.DB) error {
-		var revision model.TreatmentRevision
-		if err := tx.WithContext(ctx).
-			Joins("JOIN treatments ON treatments.id = treatment_revisions.treatment_id").
-			Where("treatment_revisions.id = ? AND treatments.user_id = ?", revisionID, userID).
-			First(&revision).Error; err != nil {
-			return err
+		// Reject is a terminal compare-and-set. If AcceptRevision wins the same
+		// row first, PostgreSQL re-checks this predicate after the row lock is
+		// released and the late reject affects zero rows instead of overwriting
+		// the accepted terminal state.
+		result := tx.WithContext(ctx).Model(&model.TreatmentRevision{}).
+			Where(
+				"id = ? AND acceptance_state = ? AND treatment_id IN (SELECT id FROM treatments WHERE user_id = ?)",
+				revisionID,
+				model.TreatmentAcceptanceProposed,
+				userID,
+			).
+			Update("acceptance_state", model.TreatmentAcceptanceRejected)
+		if result.Error != nil {
+			return result.Error
 		}
-		if revision.AcceptanceState == model.TreatmentAcceptanceAccepted {
-			return errors.New("accepted treatment revision cannot be rejected")
-		}
-		if err := tx.WithContext(ctx).Model(&model.TreatmentRevision{}).
-			Where("id = ?", revisionID).
-			Update("acceptance_state", model.TreatmentAcceptanceRejected).Error; err != nil {
-			return err
+		if result.RowsAffected == 0 {
+			var revision model.TreatmentRevision
+			if err := tx.WithContext(ctx).
+				Joins("JOIN treatments ON treatments.id = treatment_revisions.treatment_id").
+				Where("treatment_revisions.id = ? AND treatments.user_id = ?", revisionID, userID).
+				First(&revision).Error; err != nil {
+				return err
+			}
+			switch revision.AcceptanceState {
+			case model.TreatmentAcceptanceRejected:
+				return nil
+			case model.TreatmentAcceptanceAccepted:
+				return errors.New("accepted treatment revision cannot be rejected")
+			default:
+				return fmt.Errorf("treatment revision cannot transition from %q to rejected", revision.AcceptanceState)
+			}
 		}
 		return tx.WithContext(ctx).Model(&model.Intervention{}).
 			Where("treatment_revision_id = ? AND status = ?", revisionID, "proposed").
@@ -246,7 +263,7 @@ func (r *TreatmentRepository) RejectRevision(
 func (r *TreatmentRepository) SetStatus(
 	ctx context.Context,
 	userID uuid.UUID,
-	status string,
+	status model.TreatmentStatus,
 	reasons datatypes.JSON,
 ) (*model.Treatment, error) {
 	if len(reasons) == 0 {
@@ -264,12 +281,12 @@ func (r *TreatmentRepository) SetStatus(
 			Updates(map[string]any{"status": status, "status_reasons": reasons, "updated_at": now}).Error; err != nil {
 			return err
 		}
-		interventionStatus := "active"
+		interventionStatus := string(model.TreatmentStatusActive)
 		if status == model.TreatmentStatusPaused {
 			interventionStatus = "paused"
 		}
 		if status == model.TreatmentStatusCompleted || status == model.TreatmentStatusSuperseded {
-			interventionStatus = status
+			interventionStatus = string(status)
 		}
 		if status != model.TreatmentStatusReviewRecommended {
 			if err := tx.WithContext(ctx).Model(&model.Intervention{}).

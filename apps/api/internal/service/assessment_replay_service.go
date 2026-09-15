@@ -262,7 +262,7 @@ func assessmentReplayBaseline(report *model.AssessmentReport) map[string]any {
 	}
 	baseline := map[string]any{
 		"contract_revision": contractRevision,
-		"status":            report.Status,
+		"status":            string(report.Status),
 		"summary":           report.Summary,
 	}
 	if report.HealthGrade != nil {

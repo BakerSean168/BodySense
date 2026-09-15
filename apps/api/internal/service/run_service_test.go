@@ -15,7 +15,7 @@ import (
 type mockRunRepo struct {
 	runs       map[uuid.UUID]*model.Run
 	byReqID    map[string]*model.Run
-	lastStatus string
+	lastStatus model.RunStatus
 }
 
 func newMockRunRepo() *mockRunRepo {
@@ -66,12 +66,38 @@ func (m *mockRunRepo) ListByConversationID(ctx context.Context, conversationID u
 	return runs, nil
 }
 
-func (m *mockRunRepo) UpdateStatus(ctx context.Context, id uuid.UUID, status string) error {
-	if run, ok := m.runs[id]; ok {
-		run.Status = status
-		m.lastStatus = status
+func (m *mockRunRepo) MarkWaitingUser(_ context.Context, id uuid.UUID) (bool, error) {
+	run, ok := m.runs[id]
+	if !ok || run.Status != model.RunStatusRunning {
+		return false, nil
 	}
-	return nil
+	run.Status = model.RunStatusWaitingUser
+	run.LeaseOwner = ""
+	run.LeaseExpiresAt = nil
+	m.lastStatus = model.RunStatusWaitingUser
+	return true, nil
+}
+
+func (m *mockRunRepo) FailWaitingUser(_ context.Context, id uuid.UUID, _ any) (bool, error) {
+	run, ok := m.runs[id]
+	if !ok || run.Status != model.RunStatusWaitingUser {
+		return false, nil
+	}
+	run.Status = model.RunStatusFailed
+	m.lastStatus = model.RunStatusFailed
+	return true, nil
+}
+
+func (m *mockRunRepo) ResumeRunning(_ context.Context, id uuid.UUID, owner string, expiresAt time.Time) (bool, error) {
+	run, ok := m.runs[id]
+	if !ok || run.Status != model.RunStatusWaitingUser {
+		return false, nil
+	}
+	run.Status = model.RunStatusRunning
+	run.LeaseOwner = owner
+	run.LeaseExpiresAt = &expiresAt
+	m.lastStatus = model.RunStatusRunning
+	return true, nil
 }
 
 func (m *mockRunRepo) CompleteRun(ctx context.Context, id, userID uuid.UUID, usage any, providerResponseID string) error {
@@ -80,29 +106,31 @@ func (m *mockRunRepo) CompleteRun(ctx context.Context, id, userID uuid.UUID, usa
 }
 
 func (m *mockRunRepo) TryCompleteRun(ctx context.Context, id, userID uuid.UUID, usage any, providerResponseID string) (bool, error) {
-	if run, ok := m.runs[id]; ok && run.UserID == userID && (run.Status == "running" || run.Status == "waiting_user") {
-		run.Status = "completed"
-		m.lastStatus = "completed"
+	if run, ok := m.runs[id]; ok && run.UserID == userID && (run.Status == model.RunStatusRunning || run.Status == model.RunStatusWaitingUser) {
+		run.Status = model.RunStatusCompleted
+		m.lastStatus = model.RunStatusCompleted
 		return true, nil
 	}
 	return false, nil
 }
 
 func (m *mockRunRepo) CancelRun(_ context.Context, id, userID uuid.UUID, reason any) (bool, error) {
-	if run, ok := m.runs[id]; ok && run.UserID == userID && (run.Status == "running" || run.Status == "waiting_user") {
-		run.Status = "cancelled"
-		m.lastStatus = "cancelled"
+	if run, ok := m.runs[id]; ok && run.UserID == userID && (run.Status == model.RunStatusRunning || run.Status == model.RunStatusWaitingUser) {
+		run.Status = model.RunStatusCancelled
+		m.lastStatus = model.RunStatusCancelled
 		return true, nil
 	}
 	return false, nil
 }
 
-func (m *mockRunRepo) FailRun(ctx context.Context, id, userID uuid.UUID, errJSON any) error {
-	if run, ok := m.runs[id]; ok {
-		run.Status = "failed"
-		m.lastStatus = "failed"
+func (m *mockRunRepo) FailRun(_ context.Context, id, userID uuid.UUID, errJSON any) (bool, error) {
+	run, ok := m.runs[id]
+	if !ok || run.UserID != userID || (run.Status != model.RunStatusRunning && run.Status != model.RunStatusWaitingUser) {
+		return false, nil
 	}
-	return nil
+	run.Status = model.RunStatusFailed
+	m.lastStatus = model.RunStatusFailed
+	return true, nil
 }
 
 func (m *mockRunRepo) UpdateAgentConfiguration(
@@ -124,8 +152,11 @@ func (m *mockRunRepo) RenewLease(context.Context, uuid.UUID, uuid.UUID, string, 
 	return true, nil
 }
 
-func (m *mockRunRepo) ReclaimExpiredRuns(context.Context, time.Time, int) ([]model.Run, error) {
+func (m *mockRunRepo) ListExpiredRuns(context.Context, time.Time, int) ([]model.Run, error) {
 	return nil, nil
+}
+func (m *mockRunRepo) FailExpiredRun(context.Context, uuid.UUID, time.Time, any) (bool, error) {
+	return false, nil
 }
 
 func TestMarkWaitingUser(t *testing.T) {

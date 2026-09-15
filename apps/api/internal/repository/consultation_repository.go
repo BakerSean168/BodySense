@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
@@ -61,8 +62,8 @@ func (r *ConsultationRepository) ListByConversationIDs(ctx context.Context, conv
 }
 
 // UpdatePhase updates the workflow phase of a consultation session.
-func (r *ConsultationRepository) UpdatePhase(ctx context.Context, conversationID uuid.UUID, phase string) error {
-	return r.db.WithContext(ctx).
+func (r *ConsultationRepository) UpdatePhase(ctx context.Context, conversationID uuid.UUID, phase model.ConsultationPhase) error {
+	return database.FromContext(ctx, r.db).
 		Model(&model.ConsultationSession{}).
 		Where("conversation_id = ?", conversationID).
 		Update("phase", phase).Error

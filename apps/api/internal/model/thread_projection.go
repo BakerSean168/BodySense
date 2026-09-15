@@ -9,27 +9,27 @@ import (
 
 // ThreadProjection is the durable thread read model consumed by the web workbench.
 type ThreadProjection struct {
-	ConversationID        uuid.UUID      `gorm:"type:uuid;primaryKey" json:"conversation_id"`
-	UserID                uuid.UUID      `gorm:"type:uuid;index;not null" json:"user_id"`
-	Title                 string         `gorm:"type:text" json:"title,omitempty"`
-	TitleStatus           string         `gorm:"type:varchar(20);not null;default:'pending'" json:"title_status"`
-	Status                string         `gorm:"type:varchar(20);not null;default:'active'" json:"status"`
-	Pinned                bool           `gorm:"not null;default:false" json:"pinned"`
-	PinnedAt              *time.Time     `json:"pinned_at,omitempty"`
-	DefaultModel          string         `gorm:"type:text" json:"default_model,omitempty"`
-	ActiveRunID           *uuid.UUID     `gorm:"type:uuid" json:"active_run_id,omitempty"`
-	LastMessageAt         *time.Time     `json:"last_message_at,omitempty"`
-	Metadata              datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"metadata"`
-	Phase                 string         `gorm:"type:varchar(30);not null;default:'collecting'" json:"phase"`
-	ExtractedInfo         datatypes.JSON `gorm:"type:jsonb;not null;default:'[]'" json:"extracted_info"`
-	PendingInteractions   datatypes.JSON `gorm:"type:jsonb;not null;default:'[]'" json:"pending_interactions"`
-	InteractionHistory    datatypes.JSON `gorm:"type:jsonb;not null;default:'[]'" json:"interaction_history"`
-	ConversationCreatedAt time.Time      `gorm:"column:conversation_created_at;not null" json:"conversation_created_at"`
-	ConversationUpdatedAt time.Time      `gorm:"column:conversation_updated_at;not null" json:"conversation_updated_at"`
-	SessionCreatedAt      time.Time      `gorm:"column:session_created_at;not null" json:"created_at"`
-	SessionUpdatedAt      time.Time      `gorm:"column:session_updated_at;not null" json:"updated_at"`
-	EndedAt               *time.Time     `json:"ended_at,omitempty"`
-	RefreshedAt           time.Time      `gorm:"not null;default:now()" json:"refreshed_at"`
+	ConversationID        uuid.UUID         `gorm:"type:uuid;primaryKey" json:"conversation_id"`
+	UserID                uuid.UUID         `gorm:"type:uuid;index;not null" json:"user_id"`
+	Title                 string            `gorm:"type:text" json:"title,omitempty"`
+	TitleStatus           string            `gorm:"type:varchar(20);not null;default:'pending'" json:"title_status"`
+	Status                string            `gorm:"type:varchar(20);not null;default:'active'" json:"status"`
+	Pinned                bool              `gorm:"not null;default:false" json:"pinned"`
+	PinnedAt              *time.Time        `json:"pinned_at,omitempty"`
+	DefaultModel          string            `gorm:"type:text" json:"default_model,omitempty"`
+	ActiveRunID           *uuid.UUID        `gorm:"type:uuid" json:"active_run_id,omitempty"`
+	LastMessageAt         *time.Time        `json:"last_message_at,omitempty"`
+	Metadata              datatypes.JSON    `gorm:"type:jsonb;not null;default:'{}'" json:"metadata"`
+	Phase                 ConsultationPhase `gorm:"type:varchar(30);not null;default:'collecting'" json:"phase"`
+	ExtractedInfo         datatypes.JSON    `gorm:"type:jsonb;not null;default:'[]'" json:"extracted_info"`
+	PendingInteractions   datatypes.JSON    `gorm:"type:jsonb;not null;default:'[]'" json:"pending_interactions"`
+	InteractionHistory    datatypes.JSON    `gorm:"type:jsonb;not null;default:'[]'" json:"interaction_history"`
+	ConversationCreatedAt time.Time         `gorm:"column:conversation_created_at;not null" json:"conversation_created_at"`
+	ConversationUpdatedAt time.Time         `gorm:"column:conversation_updated_at;not null" json:"conversation_updated_at"`
+	SessionCreatedAt      time.Time         `gorm:"column:session_created_at;not null" json:"created_at"`
+	SessionUpdatedAt      time.Time         `gorm:"column:session_updated_at;not null" json:"updated_at"`
+	EndedAt               *time.Time        `json:"ended_at,omitempty"`
+	RefreshedAt           time.Time         `gorm:"not null;default:now()" json:"refreshed_at"`
 }
 
 func (ThreadProjection) TableName() string {

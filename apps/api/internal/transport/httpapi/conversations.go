@@ -453,7 +453,7 @@ func newRunWires(runs []model.Run) []conversationRunWire {
 			ConversationID: run.ConversationID,
 			TurnID:         run.TurnID,
 			RequestID:      run.RequestID,
-			Status:         run.Status,
+			Status:         string(run.Status),
 			Model:          run.Model,
 			Provider:       run.Provider,
 			StartedAt:      run.StartedAt,

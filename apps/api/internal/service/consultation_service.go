@@ -15,7 +15,7 @@ type consultationRepository interface {
 	GetLatestByUserID(ctx context.Context, userID uuid.UUID) (*model.ConsultationSession, error)
 	ListByConversationIDs(ctx context.Context, conversationIDs []uuid.UUID) ([]model.ConsultationSession, error)
 	Delete(ctx context.Context, conversationID uuid.UUID) error
-	UpdatePhase(ctx context.Context, conversationID uuid.UUID, phase string) error
+	UpdatePhase(ctx context.Context, conversationID uuid.UUID, phase model.ConsultationPhase) error
 	CreateRunEnvelope(ctx context.Context, userID uuid.UUID, conversationID *uuid.UUID, requestID string, userParts datatypes.JSON, userMetadata datatypes.JSON, modelName string) (*model.ConsultationSession, *model.Run, *model.Message, *model.Message, uuid.UUID, bool, error)
 }
 
@@ -91,7 +91,7 @@ func (s *ConsultationService) CreateSession(ctx context.Context, userID uuid.UUI
 		session = &model.ConsultationSession{
 			ConversationID: existingConv.ID,
 			ExtractedInfo:  datatypes.JSON("[]"),
-			Phase:          "collecting",
+			Phase:          model.ConsultationPhaseCollecting,
 		}
 		if err := s.consultationRepo.Create(ctx, session); err != nil {
 			return nil, fmt.Errorf("recreate consultation: %w", err)
@@ -112,7 +112,7 @@ func (s *ConsultationService) CreateSession(ctx context.Context, userID uuid.UUI
 	session := &model.ConsultationSession{
 		ConversationID: conversation.ID,
 		ExtractedInfo:  datatypes.JSON("[]"),
-		Phase:          "collecting",
+		Phase:          model.ConsultationPhaseCollecting,
 	}
 	if err := s.consultationRepo.Create(ctx, session); err != nil {
 		return nil, fmt.Errorf("create consultation: %w", err)
@@ -141,7 +141,7 @@ func (s *ConsultationService) CreateSessionWithID(ctx context.Context, conversat
 	session := &model.ConsultationSession{
 		ConversationID: conversationID,
 		ExtractedInfo:  datatypes.JSON("[]"),
-		Phase:          "collecting",
+		Phase:          model.ConsultationPhaseCollecting,
 	}
 	if err := s.consultationRepo.Create(ctx, session); err != nil {
 		return nil, fmt.Errorf("create consultation: %w", err)
@@ -189,7 +189,7 @@ func (s *ConsultationService) CreateConsultation(ctx context.Context, conversati
 	session := &model.ConsultationSession{
 		ConversationID: conversationID,
 		ExtractedInfo:  datatypes.JSON("[]"),
-		Phase:          "collecting",
+		Phase:          model.ConsultationPhaseCollecting,
 	}
 	if err := s.consultationRepo.Create(ctx, session); err != nil {
 		return fmt.Errorf("create consultation: %w", err)
@@ -213,7 +213,7 @@ func (s *ConsultationService) GetConsultation(ctx context.Context, conversationI
 // UpdatePhase updates the workflow phase for a session, enforcing forward-only
 // phase transitions. If the requested phase would regress the session, the
 // update is silently skipped (idempotent).
-func (s *ConsultationService) UpdatePhase(ctx context.Context, conversationID, userID uuid.UUID, phase string) error {
+func (s *ConsultationService) UpdatePhase(ctx context.Context, conversationID, userID uuid.UUID, phase model.ConsultationPhase) error {
 	if err := s.verifyOwnership(ctx, conversationID, userID); err != nil {
 		return err
 	}

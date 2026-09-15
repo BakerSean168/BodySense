@@ -108,7 +108,7 @@ type knowledgeJobRuntime interface {
 	ListRecoverable(context.Context, string, time.Duration, int) ([]model.Job, error)
 	ClaimPending(context.Context, uuid.UUID) (*model.Job, bool, error)
 	UpdateProgress(context.Context, uuid.UUID, any) error
-	TransitionTo(context.Context, uuid.UUID, string, any, any) error
+	TransitionTo(context.Context, uuid.UUID, model.JobStatus, any, any) error
 }
 
 type KnowledgeIngestionService struct {
@@ -281,10 +281,10 @@ func (s *KnowledgeIngestionService) RecoverJobs(ctx context.Context, limit int, 
 				_ = s.jobs.UpdateProgress(ctx, job.ID, map[string]any{
 					"stage": "retry_pending", "reason": "stale_execution", "attempt": job.Attempts,
 				})
-				if err := s.jobs.TransitionTo(ctx, job.ID, "pending", nil, nil); err != nil {
+				if err := s.jobs.TransitionTo(ctx, job.ID, model.JobStatusPending, nil, nil); err != nil {
 					return processed, err
 				}
-			} else if err := s.jobs.TransitionTo(ctx, job.ID, "timed_out", nil, map[string]any{
+			} else if err := s.jobs.TransitionTo(ctx, job.ID, model.JobStatusTimedOut, nil, map[string]any{
 				"code": "stale_execution", "attempts": job.Attempts,
 			}); err != nil {
 				return processed, err
@@ -329,7 +329,7 @@ func (s *KnowledgeIngestionService) processPending(ctx context.Context, jobID uu
 	_ = s.jobs.UpdateProgress(ctx, job.ID, map[string]any{
 		"stage": "ingested", "percent": 100, "attempt": job.Attempts,
 	})
-	if err := s.jobs.TransitionTo(ctx, job.ID, "completed", json.RawMessage(result), nil); err != nil {
+	if err := s.jobs.TransitionTo(ctx, job.ID, model.JobStatusCompleted, json.RawMessage(result), nil); err != nil {
 		return err
 	}
 	return nil
@@ -403,12 +403,12 @@ func (s *KnowledgeIngestionService) failJob(ctx context.Context, job *model.Job,
 		_ = s.jobs.UpdateProgress(ctx, job.ID, map[string]any{
 			"stage": "retry_pending", "code": code, "attempt": job.Attempts,
 		})
-		if err := s.jobs.TransitionTo(ctx, job.ID, "pending", nil, nil); err != nil {
+		if err := s.jobs.TransitionTo(ctx, job.ID, model.JobStatusPending, nil, nil); err != nil {
 			return err
 		}
 		return cause
 	}
-	if err := s.jobs.TransitionTo(ctx, job.ID, "failed", nil, map[string]any{
+	if err := s.jobs.TransitionTo(ctx, job.ID, model.JobStatusFailed, nil, map[string]any{
 		"code": code, "attempts": job.Attempts,
 	}); err != nil {
 		return err

@@ -5254,7 +5254,7 @@ components:
           format: uuid
         phase:
           type: string
-          enum: [collecting, ready_for_analysis, analysis_ready]
+          enum: [collecting, ready_for_analysis]
         extracted_info:
           type: array
           items:
@@ -5384,7 +5384,7 @@ components:
         conversation_id: {type: string, format: uuid}
         conversation:
           $ref: '#/components/schemas/ConsultationThreadConversation'
-        phase: {type: string, enum: [collecting, ready_for_analysis, analysis_ready]}
+        phase: {type: string, enum: [collecting, ready_for_analysis]}
         extracted_info:
           type: array
           items: {$ref: '#/components/schemas/JsonObject'}

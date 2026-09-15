@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -22,8 +23,8 @@ func NewAgentInteractionRepository(db *gorm.DB) *AgentInteractionRepository {
 
 // CreatePending creates a new pending interaction.
 func (r *AgentInteractionRepository) CreatePending(ctx context.Context, interaction *model.AgentInteraction) error {
-	interaction.Status = "pending"
-	return r.db.WithContext(ctx).
+	interaction.Status = model.AgentInteractionPending
+	return database.FromContext(ctx, r.db).
 		Clauses(clause.OnConflict{DoNothing: true}).
 		Create(interaction).Error
 }
@@ -31,7 +32,7 @@ func (r *AgentInteractionRepository) CreatePending(ctx context.Context, interact
 // GetByID retrieves an interaction by ID.
 func (r *AgentInteractionRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.AgentInteraction, error) {
 	var interaction model.AgentInteraction
-	err := r.db.WithContext(ctx).Where("id = ?", id).First(&interaction).Error
+	err := database.FromContext(ctx, r.db).Where("id = ?", id).First(&interaction).Error
 	if err == gorm.ErrRecordNotFound {
 		return nil, nil
 	}
@@ -44,7 +45,7 @@ func (r *AgentInteractionRepository) GetByID(ctx context.Context, id uuid.UUID) 
 // GetByRunAndToolCall retrieves an interaction by the durable run/tool-call pair.
 func (r *AgentInteractionRepository) GetByRunAndToolCall(ctx context.Context, runID uuid.UUID, toolCallID string) (*model.AgentInteraction, error) {
 	var interaction model.AgentInteraction
-	err := r.db.WithContext(ctx).
+	err := database.FromContext(ctx, r.db).
 		Where("run_id = ? AND tool_call_id = ?", runID, toolCallID).
 		First(&interaction).Error
 	if err == gorm.ErrRecordNotFound {
@@ -59,11 +60,11 @@ func (r *AgentInteractionRepository) GetByRunAndToolCall(ctx context.Context, ru
 // MarkAnswered marks an interaction as answered with the user's response.
 func (r *AgentInteractionRepository) MarkAnswered(ctx context.Context, id uuid.UUID, answer any) (bool, error) {
 	now := time.Now()
-	result := r.db.WithContext(ctx).
+	result := database.FromContext(ctx, r.db).
 		Model(&model.AgentInteraction{}).
-		Where("id = ? AND status = 'pending'", id).
+		Where("id = ? AND status = ?", id, model.AgentInteractionPending).
 		Updates(map[string]any{
-			"status":      "answered",
+			"status":      model.AgentInteractionAnswered,
 			"answer":      answer,
 			"answered_at": now,
 		})
@@ -72,18 +73,18 @@ func (r *AgentInteractionRepository) MarkAnswered(ctx context.Context, id uuid.U
 
 // CancelPending marks a pending interaction as cancelled.
 func (r *AgentInteractionRepository) CancelPending(ctx context.Context, id uuid.UUID) (bool, error) {
-	result := r.db.WithContext(ctx).
+	result := database.FromContext(ctx, r.db).
 		Model(&model.AgentInteraction{}).
-		Where("id = ? AND status = 'pending'", id).
-		Update("status", "cancelled")
+		Where("id = ? AND status = ?", id, model.AgentInteractionPending).
+		Update("status", model.AgentInteractionCancelled)
 	return result.RowsAffected > 0, result.Error
 }
 
 // ListPendingByConversation retrieves pending interactions for a conversation.
 func (r *AgentInteractionRepository) ListPendingByConversation(ctx context.Context, conversationID uuid.UUID) ([]model.AgentInteraction, error) {
 	var interactions []model.AgentInteraction
-	err := r.db.WithContext(ctx).
-		Where("conversation_id = ? AND status = 'pending'", conversationID).
+	err := database.FromContext(ctx, r.db).
+		Where("conversation_id = ? AND status = ?", conversationID, model.AgentInteractionPending).
 		Order("created_at ASC").
 		Find(&interactions).Error
 	return interactions, err
@@ -92,7 +93,7 @@ func (r *AgentInteractionRepository) ListPendingByConversation(ctx context.Conte
 // ListByConversation retrieves all interactions for a conversation.
 func (r *AgentInteractionRepository) ListByConversation(ctx context.Context, conversationID uuid.UUID) ([]model.AgentInteraction, error) {
 	var interactions []model.AgentInteraction
-	err := r.db.WithContext(ctx).
+	err := database.FromContext(ctx, r.db).
 		Where("conversation_id = ?", conversationID).
 		Order("created_at ASC").
 		Find(&interactions).Error
@@ -102,7 +103,7 @@ func (r *AgentInteractionRepository) ListByConversation(ctx context.Context, con
 // ListByRunID retrieves all interactions for a run.
 func (r *AgentInteractionRepository) ListByRunID(ctx context.Context, runID uuid.UUID) ([]model.AgentInteraction, error) {
 	var interactions []model.AgentInteraction
-	err := r.db.WithContext(ctx).
+	err := database.FromContext(ctx, r.db).
 		Where("run_id = ?", runID).
 		Order("created_at ASC").
 		Find(&interactions).Error
@@ -111,10 +112,10 @@ func (r *AgentInteractionRepository) ListByRunID(ctx context.Context, runID uuid
 
 // ExpirePending marks a pending interaction as expired if still pending.
 func (r *AgentInteractionRepository) ExpirePending(ctx context.Context, id uuid.UUID) (bool, error) {
-	result := r.db.WithContext(ctx).
+	result := database.FromContext(ctx, r.db).
 		Model(&model.AgentInteraction{}).
-		Where("id = ? AND status = 'pending'", id).
-		Update("status", "expired")
+		Where("id = ? AND status = ?", id, model.AgentInteractionPending).
+		Update("status", model.AgentInteractionExpired)
 	return result.RowsAffected > 0, result.Error
 }
 
@@ -124,8 +125,8 @@ func (r *AgentInteractionRepository) ListExpiredPending(ctx context.Context, now
 		limit = 100
 	}
 	var interactions []model.AgentInteraction
-	err := r.db.WithContext(ctx).
-		Where("status = 'pending' AND expires_at IS NOT NULL AND expires_at <= ?", now).
+	err := database.FromContext(ctx, r.db).
+		Where("status = ? AND expires_at IS NOT NULL AND expires_at <= ?", model.AgentInteractionPending, now).
 		Order("expires_at ASC").
 		Limit(limit).
 		Find(&interactions).Error
@@ -145,7 +146,7 @@ func (r *AgentInteractionRepository) AggregateInteractionMetrics(
 		Status string
 		Count  int
 	}
-	q := r.db.WithContext(ctx).Model(&model.AgentInteraction{}).
+	q := database.FromContext(ctx, r.db).Model(&model.AgentInteraction{}).
 		Joins("JOIN conversations ON conversations.id = agent_interactions.conversation_id").
 		Select("agent_interactions.status, count(*) as count").
 		Where("conversations.user_id = ? AND conversations.deleted_at IS NULL", userID).
@@ -159,11 +160,11 @@ func (r *AgentInteractionRepository) AggregateInteractionMetrics(
 	}
 	for _, item := range rows {
 		switch item.Status {
-		case "answered":
+		case string(model.AgentInteractionAnswered):
 			answered = item.Count
-		case "expired":
+		case string(model.AgentInteractionExpired):
 			expired = item.Count
-		case "pending":
+		case string(model.AgentInteractionPending):
 			pending = item.Count
 		}
 	}
@@ -173,11 +174,11 @@ func (r *AgentInteractionRepository) AggregateInteractionMetrics(
 		Avg float64
 	}
 	var wait waitRow
-	wq := r.db.WithContext(ctx).Model(&model.AgentInteraction{}).
+	wq := database.FromContext(ctx, r.db).Model(&model.AgentInteraction{}).
 		Joins("JOIN conversations ON conversations.id = agent_interactions.conversation_id").
 		Select("COALESCE(AVG(EXTRACT(EPOCH FROM (agent_interactions.answered_at - agent_interactions.created_at))), 0) as avg").
 		Where("conversations.user_id = ? AND conversations.deleted_at IS NULL", userID).
-		Where("agent_interactions.status = ? AND agent_interactions.answered_at IS NOT NULL", "answered")
+		Where("agent_interactions.status = ? AND agent_interactions.answered_at IS NOT NULL", model.AgentInteractionAnswered)
 	if conversationID != nil {
 		wq = wq.Where("agent_interactions.conversation_id = ?", *conversationID)
 	}

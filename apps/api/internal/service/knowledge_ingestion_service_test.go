@@ -75,7 +75,7 @@ func (f *knowledgeJobRuntimeStub) UpdateProgress(_ context.Context, id uuid.UUID
 	f.jobs[id].Progress = data
 	return nil
 }
-func (f *knowledgeJobRuntimeStub) TransitionTo(_ context.Context, id uuid.UUID, status string, result, errData any) error {
+func (f *knowledgeJobRuntimeStub) TransitionTo(_ context.Context, id uuid.UUID, status model.JobStatus, result, errData any) error {
 	job := f.jobs[id]
 	job.Status = status
 	if result != nil {
@@ -84,7 +84,7 @@ func (f *knowledgeJobRuntimeStub) TransitionTo(_ context.Context, id uuid.UUID, 
 	if errData != nil {
 		job.Error, _ = json.Marshal(errData)
 	}
-	f.transitions = append(f.transitions, status)
+	f.transitions = append(f.transitions, string(status))
 	return nil
 }
 

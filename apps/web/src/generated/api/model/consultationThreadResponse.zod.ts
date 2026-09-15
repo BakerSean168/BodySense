@@ -17,7 +17,7 @@ import { RuntimeEvent } from './runtimeEvent.zod';
 export const ConsultationThreadResponse = /*#__PURE__*/ zod.strictObject({
   "conversation_id": /*#__PURE__*/ zod.uuid(),
   "conversation": ConsultationThreadConversation,
-  "phase": /*#__PURE__*/ zod.enum(['collecting', 'ready_for_analysis', 'analysis_ready']),
+  "phase": /*#__PURE__*/ zod.enum(['collecting', 'ready_for_analysis']),
   "extracted_info": /*#__PURE__*/ zod.array(JsonObject),
   "body_state": /*#__PURE__*/ zod.union([BodyStateSnapshot,/*#__PURE__*/ zod.null()]),
   "pending_interactions": /*#__PURE__*/ zod.array(AgentInteraction),

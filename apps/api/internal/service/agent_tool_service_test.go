@@ -12,7 +12,7 @@ import (
 // mockAgentToolCallRepo implements AgentToolCallRepo interface.
 type mockAgentToolCallRepo struct {
 	upserted   []*model.AgentToolCall
-	lastStatus string
+	lastStatus model.AgentToolCallStatus
 	lastResult datatypes.JSON
 }
 
@@ -24,20 +24,20 @@ func (m *mockAgentToolCallRepo) UpsertStarted(_ context.Context, tc *model.Agent
 	return nil
 }
 
-func (m *mockAgentToolCallRepo) MarkSucceeded(_ context.Context, _ uuid.UUID, _ string, result any) error {
-	m.lastStatus = "succeeded"
+func (m *mockAgentToolCallRepo) MarkSucceeded(_ context.Context, _ uuid.UUID, _ string, result any) (bool, error) {
+	m.lastStatus = model.AgentToolCallSucceeded
 	if r, ok := result.(datatypes.JSON); ok {
 		m.lastResult = r
 	}
-	return nil
+	return true, nil
 }
 
-func (m *mockAgentToolCallRepo) MarkFailed(_ context.Context, _ uuid.UUID, _ string, result any) error {
-	m.lastStatus = "failed"
+func (m *mockAgentToolCallRepo) MarkFailed(_ context.Context, _ uuid.UUID, _ string, result any) (bool, error) {
+	m.lastStatus = model.AgentToolCallFailed
 	if r, ok := result.(datatypes.JSON); ok {
 		m.lastResult = r
 	}
-	return nil
+	return true, nil
 }
 
 func TestRecordToolCall_PersistsAsRunning(t *testing.T) {
@@ -52,7 +52,7 @@ func TestRecordToolCall_PersistsAsRunning(t *testing.T) {
 	if len(repo.upserted) != 1 {
 		t.Fatalf("expected 1 upsert, got %d", len(repo.upserted))
 	}
-	if repo.upserted[0].Status != "running" {
+	if repo.upserted[0].Status != model.AgentToolCallRunning {
 		t.Errorf("expected status 'running', got %q", repo.upserted[0].Status)
 	}
 	if repo.upserted[0].ToolCallID != "tc-1" {
@@ -80,7 +80,7 @@ func TestRecordToolResult_MarksSucceeded(t *testing.T) {
 
 	svc.RecordToolResult(context.Background(), uuid.New(), "tc-1", datatypes.JSON(`{"result":"ok"}`), false)
 
-	if repo.lastStatus != "succeeded" {
+	if repo.lastStatus != model.AgentToolCallSucceeded {
 		t.Errorf("expected status 'succeeded', got %q", repo.lastStatus)
 	}
 }
@@ -91,7 +91,7 @@ func TestRecordToolResult_MarksFailed(t *testing.T) {
 
 	svc.RecordToolResult(context.Background(), uuid.New(), "tc-1", datatypes.JSON(`{"error":"timeout"}`), true)
 
-	if repo.lastStatus != "failed" {
+	if repo.lastStatus != model.AgentToolCallFailed {
 		t.Errorf("expected status 'failed', got %q", repo.lastStatus)
 	}
 }
@@ -103,7 +103,7 @@ func TestRecordToolResult_SkipsEmptyToolCallID(t *testing.T) {
 	// Should not panic or call repo
 	svc.RecordToolResult(context.Background(), uuid.New(), "", datatypes.JSON(`{}`), false)
 
-	if repo.lastStatus != "" {
+	if repo.lastStatus != model.AgentToolCallStatus("") {
 		t.Errorf("expected no repo call for empty tool_call_id, got status %q", repo.lastStatus)
 	}
 }

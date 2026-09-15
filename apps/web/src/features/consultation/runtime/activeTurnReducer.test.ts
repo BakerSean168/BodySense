@@ -873,7 +873,7 @@ describe("ActiveTurnReducer", () => {
         INITIAL_ACTIVE_TURN_STATE,
         makeEvent(
           "state.phase.changed",
-          { from: "collecting", to: "analyzing" },
+          { from: "collecting", to: "ready_for_analysis" },
           {},
           "state",
         ),
@@ -881,7 +881,7 @@ describe("ActiveTurnReducer", () => {
 
       expect(effects).toHaveLength(1);
       expect(effects[0].type).toBe("phase_changed");
-      expect(effects[0]).toMatchObject({ from: "collecting", to: "analyzing" });
+      expect(effects[0]).toMatchObject({ from: "collecting", to: "ready_for_analysis" });
     });
   });
 });

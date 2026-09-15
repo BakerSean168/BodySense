@@ -291,7 +291,9 @@ func buildThreadProjectionToolCallsFromEvents(events []model.RuntimeEvent) []mod
 
 			entry.ToolName = payload.Tool
 			entry.Arguments = normalizeJSON(datatypes.JSON(payload.Args), `{}`)
-			entry.Status = "running"
+			if entry.Status == "" || entry.Status == "running" {
+				entry.Status = "running"
+			}
 			if entry.MessageID == nil {
 				entry.MessageID = parseOptionalUUID(ids.MessageID)
 			}

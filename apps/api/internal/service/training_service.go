@@ -347,7 +347,7 @@ func (s *TrainingService) UpdateLogWithFeedback(
 	}
 	return map[string]any{
 		"outcome":            outcome,
-		"treatment_status":   valueOrEmpty(current, func(t *model.Treatment) string { return t.Status }),
+		"treatment_status":   valueOrEmpty(current, func(t *model.Treatment) string { return string(t.Status) }),
 		"review_recommended": current != nil && current.Status == model.TreatmentStatusReviewRecommended,
 		"paused":             current != nil && current.Status == model.TreatmentStatusPaused,
 	}, nil
