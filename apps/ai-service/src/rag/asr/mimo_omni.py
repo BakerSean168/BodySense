@@ -105,7 +105,7 @@ class MiMoOmniASRProvider(ASRProvider):
         if not all_segments:
             raise ASRTranscriptionError("MiMo Omni ASR returned no transcript segments")
 
-        # Write JSONL for pipeline compatibility
+        # Write the canonical JSONL interchange used by the ingestion pipeline
         _write_jsonl(all_segments, audio_path.parent / "transcript.raw.jsonl")
 
         return all_segments
@@ -255,7 +255,7 @@ def _ffmpeg_split(audio_path: Path, chunk_sec: int) -> list[Path]:
 
 
 def _write_jsonl(segments: list[TranscriptSegment], output_path: Path) -> None:
-    """Write segments to JSONL format for pipeline compatibility."""
+    """Write segments to the canonical JSONL ingestion format."""
     lines = [
         json.dumps(
             {

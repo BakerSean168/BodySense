@@ -415,6 +415,8 @@ func classifyBodyStatePublicError(err error) bodyStatePublicError {
 		return bodyStatePublicError{status: http.StatusConflict, code: "BODY_STATE_REVISION_CONFLICT", message: err.Error()}
 	case errors.Is(err, service.ErrUnknownBodyRegionID):
 		return bodyStatePublicError{status: http.StatusBadRequest, code: "INVALID_BODY_REGION_ID", message: err.Error()}
+	case errors.Is(err, service.ErrBodyRegionIDRequired):
+		return bodyStatePublicError{status: http.StatusBadRequest, code: "BODY_REGION_ID_REQUIRED", message: err.Error()}
 	case errors.Is(err, service.ErrBodyRegionIDValidationUnavailable):
 		return bodyStatePublicError{status: http.StatusServiceUnavailable, code: "BODY_REGION_VALIDATION_UNAVAILABLE", message: err.Error()}
 	case errors.Is(err, gorm.ErrRecordNotFound):

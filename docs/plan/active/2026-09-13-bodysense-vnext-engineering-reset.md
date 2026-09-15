@@ -1,6 +1,6 @@
 # BodySense vNext Engineering Reset — Master Refactor Plan
 
-- Status: ACTIVE MASTER PLAN — Phases 00–06 complete; Phase 07 is NEXT
+- Status: ACTIVE MASTER PLAN — Phases 00–07 complete; Phase 08 is NEXT
 - Date: 2026-09-13
 - Integration branch: `refactor/bodysense-vnext`
 - Integration worktree: `/home/dev/projects/bodysense-vnext-refactor`
@@ -626,6 +626,8 @@ Move invariants into the mutation boundary and collapse duplicate state vocabula
 ## Phase 07 — Remove all runtime compatibility and migration-era branches
 
 Branch: `refactor/vnext-07-legacy-retirement`
+
+**Status: COMPLETE — implementation and acceptance evidence: `docs/refactor/vnext/phase-07-legacy-retirement.md`.**
 
 ### Goal
 

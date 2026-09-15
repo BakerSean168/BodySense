@@ -9,9 +9,9 @@ from pydantic_ai import Agent, RunContext
 from pydantic_ai.models import Model
 
 from ..models.assessment import (
-    ASSESSMENT_OUTPUT_SCHEMA_REVISION,
+    ASSESSMENT_OUTPUT_SCHEMA_REVISION_V2,
+    AssessmentAgentOutput,
     AssessmentDependencies,
-    get_assessment_output_type,
 )
 from ..prompts.assessment import (
     ASSESSMENT_PROMPT_REVISION,
@@ -33,18 +33,20 @@ def create_assessment_agent(
     model: Model | None = None,
     *,
     prompt_revision: str = ASSESSMENT_PROMPT_REVISION,
-    output_schema_revision: str = ASSESSMENT_OUTPUT_SCHEMA_REVISION,
+    output_schema_revision: str = ASSESSMENT_OUTPUT_SCHEMA_REVISION_V2,
     tool_policy_revision: str = ASSESSMENT_TOOL_POLICY_REVISION,
 ) -> Agent[AssessmentDependencies, Any]:
     if prompt_revision not in _SUPPORTED_ASSESSMENT_PROMPT_REVISIONS:
         raise ValueError(f"unsupported Assessment prompt revision: {prompt_revision}")
     if tool_policy_revision != ASSESSMENT_TOOL_POLICY_REVISION:
         raise ValueError(f"unsupported Assessment tool policy revision: {tool_policy_revision}")
+    if output_schema_revision != ASSESSMENT_OUTPUT_SCHEMA_REVISION_V2:
+        raise ValueError(f"unsupported Assessment output schema revision: {output_schema_revision}")
 
     agent: Agent[AssessmentDependencies, Any] = Agent(
         model,
         deps_type=AssessmentDependencies,
-        output_type=get_assessment_output_type(output_schema_revision),
+        output_type=AssessmentAgentOutput,
         system_prompt=get_assessment_system_prompt(prompt_revision),
         name="bodysense_assessment",
     )

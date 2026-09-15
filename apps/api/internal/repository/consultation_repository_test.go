@@ -171,16 +171,52 @@ func TestEnsureConversationRunAvailableRejectsRunningRun(t *testing.T) {
 	defer cleanup()
 	conversationID := uuid.New()
 	runID := uuid.New()
+	leaseExpiresAt := time.Now().Add(time.Hour)
 	conversation := &model.Conversation{ID: conversationID, ActiveRunID: &runID}
 
 	mock.ExpectQuery(`SELECT .* FROM "runs" WHERE .*id = \$1 AND conversation_id = \$2.*LIMIT \$3`).
 		WithArgs(runID, conversationID, 1).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "conversation_id", "status"}).
-			AddRow(runID, conversationID, "running"))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "conversation_id", "status", "lease_expires_at"}).
+			AddRow(runID, conversationID, "running", leaseExpiresAt))
 
 	err := repo.ensureConversationRunAvailable(context.Background(), repo.db, conversation)
 	if !errors.Is(err, model.ErrConversationRunInProgress) {
 		t.Fatalf("expected active-run conflict, got %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("unmet expectations: %v", err)
+	}
+}
+
+func TestEnsureConversationRunAvailableReclaimsRunningRunWithoutLease(t *testing.T) {
+	repo, mock, cleanup := setupConsultationRepo(t)
+	defer cleanup()
+	conversationID := uuid.New()
+	runID := uuid.New()
+	conversation := &model.Conversation{ID: conversationID, ActiveRunID: &runID, ActiveStreamID: runID.String()}
+
+	mock.ExpectQuery(`SELECT .* FROM "runs" WHERE .*id = \$1 AND conversation_id = \$2.*LIMIT \$3`).
+		WithArgs(runID, conversationID, 1).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "conversation_id", "status", "lease_expires_at"}).
+			AddRow(runID, conversationID, "running", nil))
+	mock.ExpectBegin()
+	mock.ExpectExec(`UPDATE "runs" SET .* WHERE id = \$[0-9]+`).
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), "failed", runID).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+	mock.ExpectBegin()
+	mock.ExpectExec(`UPDATE "conversations" SET .*active_run_id.*active_stream_id.* WHERE id = \$[0-9]+`).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
+	mock.ExpectQuery(`SELECT count\(\*\) FROM "agent_interactions" WHERE conversation_id = \$1 AND status = \$2`).
+		WithArgs(conversationID, "pending").
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
+
+	if err := repo.ensureConversationRunAvailable(context.Background(), repo.db, conversation); err != nil {
+		t.Fatalf("running run without a lease must be reclaimed: %v", err)
+	}
+	if conversation.ActiveRunID != nil || conversation.ActiveStreamID != "" {
+		t.Fatalf("lease-less run pointer was not cleared: %#v", conversation)
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("unmet expectations: %v", err)

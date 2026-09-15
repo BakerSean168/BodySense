@@ -127,7 +127,7 @@ func treatmentReplayHTTPError(err error) treatmentHTTPErrorResponse {
 		return treatmentHTTPErrorResponse{status: http.StatusNotFound, code: "NOT_FOUND", message: "treatment revision not found"}
 	case errors.Is(err, service.ErrTreatmentReplayUnavailable):
 		return treatmentHTTPErrorResponse{status: http.StatusConflict, code: "TREATMENT_REPLAY_INPUT_UNAVAILABLE", message: "this historical revision predates frozen replay input"}
-	case strings.Contains(err.Error(), "unknown Treatment Agent configuration id"):
+	case errors.Is(err, service.ErrTreatmentReplayConfiguration):
 		return treatmentHTTPErrorResponse{status: http.StatusUnprocessableEntity, code: "UNKNOWN_AGENT_CONFIGURATION", message: err.Error()}
 	default:
 		return treatmentHTTPErrorResponse{status: http.StatusBadGateway, code: "TREATMENT_REPLAY_FAILED", message: "treatment replay failed"}

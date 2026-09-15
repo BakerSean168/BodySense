@@ -7,6 +7,8 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
+from ...configuration.diagnosis_agent_config import get_diagnosis_configuration
+from ...models.evidence import EvidenceAcquisitionTrace, EvidenceBudget, ExternalEvidenceStatus
 from ...services.diagnosis_service import get_diagnosis_service
 
 logger = logging.getLogger(__name__)
@@ -31,6 +33,12 @@ async def analyze_diagnosis(request: DiagnosisRequest):
     if os.getenv("BODYSENSE_E2E_STUB_AI") == "1" and os.getenv(
         "ENVIRONMENT", "development"
     ).lower() in {"development", "test", "e2e"}:
+        config = get_diagnosis_configuration(request.configuration_id)
+        evidence_trace = EvidenceAcquisitionTrace(
+            policy_revision=config.evidence_policy_revision,
+            external_evidence_status=ExternalEvidenceStatus.NOT_REQUIRED,
+            budget=EvidenceBudget().snapshot(),
+        )
         facts = request.body_state.get("facts") or []
         observations = request.body_state.get("observations") or []
         fact_ids = [
@@ -78,7 +86,8 @@ async def analyze_diagnosis(request: DiagnosisRequest):
             "information_gaps": [],
             "safety_summary": {},
             "citations": [],
-            "agent_configuration": {"id": request.configuration_id, "role": "diagnosis"},
+            "agent_configuration": config.provenance(),
+            "evidence_acquisition": evidence_trace.model_dump(mode="json"),
             "governance": {
                 "kind": "diagnosis",
                 "verdict": "accepted",

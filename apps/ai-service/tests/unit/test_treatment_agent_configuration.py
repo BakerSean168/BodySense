@@ -10,6 +10,7 @@ from src.configuration.treatment_agent_config import (
     get_treatment_configuration,
     load_manifest,
 )
+from src.evals.agent_config_archive import ARCHIVED_AGENT_CONFIG_ROOT
 
 
 def test_default_treatment_configuration_is_repository_versioned_and_stable() -> None:
@@ -22,7 +23,9 @@ def test_default_treatment_configuration_is_repository_versioned_and_stable() ->
 
 
 def test_behavior_significant_revision_changes_treatment_configuration_id(tmp_path: Path) -> None:
-    data = yaml.safe_load((CONFIG_ROOT / "treatment-v1.yaml").read_text(encoding="utf-8"))
+    data = yaml.safe_load(
+        (ARCHIVED_AGENT_CONFIG_ROOT / "treatment-v1.yaml").read_text(encoding="utf-8")
+    )
     baseline = TreatmentAgentManifest.model_validate(data)
     data["prompt_revision"] = "treatment-prompt-v2"
     path = tmp_path / "changed.yaml"

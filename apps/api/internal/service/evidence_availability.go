@@ -37,7 +37,7 @@ type evidenceAvailabilityTrace struct {
 func validateEvidenceAvailabilityForConfiguration(configurationID string, raw json.RawMessage) (string, error) {
 	expectedPolicy := ""
 	switch configurationID {
-	case diagnosisEvidenceGapConfigurationID:
+	case diagnosisDecisionAuthorityConfigID:
 		expectedPolicy = "diagnosis-evidence-gap-v2"
 	case treatmentEvidenceGapConfigurationID:
 		expectedPolicy = "treatment-evidence-gap-v2"

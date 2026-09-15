@@ -1,5 +1,7 @@
 """HTTP contract tests for the BodyState-pinned Diagnosis adapter."""
 
+from src.configuration.diagnosis_agent_config import get_default_diagnosis_configuration
+
 
 class _FakeDiagnosisService:
     def __init__(self, result=None, error: Exception | None = None):
@@ -65,6 +67,33 @@ def test_analyze_diagnosis_applies_optional_defaults(client, monkeypatch):
         "body_state": payload["body_state"],
         "relevant_history": [],
         "profile": {},
+    }
+
+
+def test_e2e_stub_emits_current_configuration_and_evidence_trace(client, monkeypatch):
+    config = get_default_diagnosis_configuration()
+    monkeypatch.setenv("BODYSENSE_E2E_STUB_AI", "1")
+    monkeypatch.setenv("ENVIRONMENT", "test")
+    payload = _payload()
+    payload["configuration_id"] = config.configuration_id
+
+    response = client.post("/api/diagnosis/analyze", json=payload)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["agent_configuration"] == config.provenance()
+    assert body["evidence_acquisition"] == {
+        "trace_revision": "evidence-acquisition-trace-v2",
+        "policy_revision": config.evidence_policy_revision,
+        "external_evidence_status": "not_required",
+        "budget": {
+            "max_searches": 2,
+            "max_results_per_search": 5,
+            "used_searches": 0,
+            "remaining_searches": 2,
+        },
+        "attempts": [],
+        "unresolved_critical_gaps": [],
     }
 
 

@@ -196,29 +196,13 @@ func (s *PublicServer) ExportAssessmentRegressionCase(
 }
 
 func assessmentReportToOpenAPI(report *model.AssessmentReport) (openapiv1.AssessmentReport, error) {
-	var response openapiv1.AssessmentReport
-	switch report.ContractRevision {
-	case "assessment-output-v2":
-		typed, err := strictOpenAPIConvert[openapiv1.AssessmentReportV2]("AssessmentReportV2", report)
-		if err != nil {
-			return response, err
-		}
-		if err := response.FromAssessmentReportV2(typed); err != nil {
-			return response, err
-		}
-		return response, nil
-	case "assessment-output-v1":
-		typed, err := strictOpenAPIConvert[openapiv1.AssessmentReportV1]("AssessmentReportV1", report)
-		if err != nil {
-			return response, err
-		}
-		if err := response.FromAssessmentReportV1(typed); err != nil {
-			return response, err
-		}
-		return response, nil
-	default:
-		return response, fmt.Errorf("unsupported assessment contract revision %q", report.ContractRevision)
+	if report.ContractRevision != "assessment-output-v2" {
+		return openapiv1.AssessmentReport{}, fmt.Errorf(
+			"assessment report uses retired contract revision %q",
+			report.ContractRevision,
+		)
 	}
+	return strictOpenAPIConvert[openapiv1.AssessmentReport]("AssessmentReport", report)
 }
 
 func generateAssessmentError(status int, code, message string) openapiv1.GenerateAssessmentResponseObject {

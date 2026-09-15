@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 import {
+  bodyRegionDefinitions,
   getBodyRegionDefinition,
   resolveBodyRegionInput,
   resolveRecordBodyRegion,
@@ -188,14 +189,31 @@ export function BodyStateWorkbench({
       toast.error("请填写记录内容");
       return;
     }
-    const effectiveBodyRegion = bodyRegion.trim() || selectedRegionLabel || "";
-    const regionResolution = effectiveBodyRegion
-      ? resolveBodyRegionInput(effectiveBodyRegion)
-      : null;
-    const bodyRegionId =
-      selectedRegionId ??
-      (regionResolution?.status === "resolved" ? regionResolution.id : null);
-    await mutate(
+
+    const requestedBodyRegion = bodyRegion.trim();
+    const regionResolution = requestedBodyRegion
+      ? resolveBodyRegionInput(requestedBodyRegion)
+      : selectedRegionId
+        ? resolveBodyRegionInput(selectedRegionId)
+        : null;
+
+    if (regionResolution?.status === "ambiguous") {
+      const candidates = regionResolution.candidates
+        .map((id) => getBodyRegionDefinition(id).labels["zh-CN"])
+        .join("、");
+      toast.error(`请选择明确身体区域，例如：${candidates}`);
+      return;
+    }
+    if (regionResolution?.status === "unresolved") {
+      toast.error("请选择列表中的明确身体区域，例如：颈部、左肩、右肩");
+      return;
+    }
+
+    const bodyRegionId = regionResolution?.id ?? null;
+    const effectiveBodyRegion = bodyRegionId
+      ? getBodyRegionDefinition(bodyRegionId).labels["zh-CN"]
+      : "";
+    const saved = await mutate(
       "add-fact",
       {
         type: "addFact",
@@ -204,9 +222,7 @@ export function BodyStateWorkbench({
           kind,
           body_region: effectiveBodyRegion,
           body_region_id: bodyRegionId,
-          concern_key: effectiveBodyRegion
-            ? `region:${bodyRegionId ?? effectiveBodyRegion}`
-            : "general",
+          concern_key: bodyRegionId ? `region:${bodyRegionId}` : "general",
           value: value.trim(),
           origin: "user_reported",
           review_state: "confirmed",
@@ -217,6 +233,7 @@ export function BodyStateWorkbench({
       },
       "身体记录已添加",
     );
+    if (!saved) return;
     setValue("");
     setBodyRegion("");
     setShowAdd(false);
@@ -412,9 +429,15 @@ export function BodyStateWorkbench({
           <input
             value={bodyRegion}
             onChange={(event) => setBodyRegion(event.target.value)}
-            placeholder="身体区域，例如：颈肩"
+            list="body-region-options"
+            placeholder="身体区域，例如：颈部、左肩、右肩"
             className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
           />
+          <datalist id="body-region-options">
+            {bodyRegionDefinitions.map((definition) => (
+              <option key={definition.id} value={definition.labels["zh-CN"]} />
+            ))}
+          </datalist>
           <textarea
             value={value}
             onChange={(event) => setValue(event.target.value)}

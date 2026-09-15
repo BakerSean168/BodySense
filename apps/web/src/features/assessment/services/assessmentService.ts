@@ -5,7 +5,6 @@ import {
 } from "@/generated/api/bodysense";
 import type {
   AssessmentReportOutput as GeneratedAssessmentReport,
-  AssessmentReportV1Output as GeneratedAssessmentReportV1,
   AssessmentReportV2Output as GeneratedAssessmentReportV2,
 } from "@/generated/api/model";
 import { openApiAuthFetch, withOpenApiError } from "@/lib/openapi-client";
@@ -40,15 +39,6 @@ export interface AssessmentEvidenceGap {
   needed_sources: AssessmentEvidenceSource[];
 }
 
-/** Historical assessment-output-v1 compatibility only. */
-export interface LegacyDimensionScores {
-  posture: number;
-  exercise: number;
-  lifestyle: number;
-  injury_risk: number;
-  overall: number;
-}
-
 export type AssessmentObservationKind =
   | "posture_alignment"
   | "posture_asymmetry"
@@ -67,20 +57,6 @@ export interface AssessmentObservation {
   description: string;
   method: "assessment_evidence" | string;
   evidence_refs: [string];
-}
-
-/** Historical model-authored observation. Never treat this as v2 grounded data. */
-export interface LegacyAssessmentObservation {
-  observation_id?: string;
-  review_state?: string;
-  kind: string;
-  body_region?: string;
-  label: string;
-  description: string;
-  method?: string;
-  severity?: string;
-  confidence?: string;
-  condition?: Record<string, unknown>;
 }
 
 interface AssessmentReportBase {
@@ -104,19 +80,7 @@ export interface EvidenceAssessmentReport extends AssessmentReportBase {
   information_gaps?: never;
 }
 
-export interface LegacyAssessmentReport extends AssessmentReportBase {
-  contract_revision: "assessment-output-v1";
-  /** Historical reports have no reconstructed v2 coverage. */
-  evidence_coverage: Record<string, never>;
-  evidence_gaps: [];
-  observations: LegacyAssessmentObservation[];
-  health_grade: "A" | "B" | "C" | "D";
-  dimension_scores: LegacyDimensionScores;
-  information_gaps: string[];
-}
-
-export type AssessmentReport =
-  EvidenceAssessmentReport | LegacyAssessmentReport;
+export type AssessmentReport = EvidenceAssessmentReport;
 
 export interface AssessmentListResponse {
   reports: AssessmentReport[];
@@ -198,44 +162,10 @@ function projectEvidenceReport(
   };
 }
 
-function projectLegacyReport(
-  report: GeneratedAssessmentReportV1,
-): LegacyAssessmentReport {
-  return {
-    id: report.id,
-    user_id: report.user_id,
-    status: report.status,
-    contract_revision: "assessment-output-v1",
-    evidence_coverage: {},
-    evidence_gaps: [],
-    observations: report.observations.map((observation) => ({
-      observation_id: observation.observation_id,
-      review_state: observation.review_state,
-      kind: observation.kind,
-      body_region: observation.body_region,
-      label: observation.label,
-      description: observation.description,
-      method: observation.method,
-      severity: observation.severity,
-      confidence: observation.confidence,
-      condition: observation.condition,
-    })),
-    health_grade: report.health_grade,
-    dimension_scores: { ...report.dimension_scores },
-    summary: report.summary,
-    information_gaps: [...report.information_gaps],
-    safety_notes: [...report.safety_notes],
-    body_state_revision: report.body_state_revision,
-    created_at: report.created_at,
-  };
-}
-
 function projectAssessmentReport(
   report: GeneratedAssessmentReport,
 ): AssessmentReport {
-  return report.contract_revision === "assessment-output-v2"
-    ? projectEvidenceReport(report)
-    : projectLegacyReport(report);
+  return projectEvidenceReport(report);
 }
 
 export const assessmentApi = {

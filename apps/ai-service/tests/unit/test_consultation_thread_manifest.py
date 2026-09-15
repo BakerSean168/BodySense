@@ -38,10 +38,15 @@ def test_get_consultation_manifest_defaults_to_v2_state_acquisition_config() -> 
     assert manifest.intake is not None
 
 
-def test_get_consultation_manifest_resolves_known_configuration() -> None:
-    manifest = get_consultation_manifest("consult-config-2bd9b46735dd693c")
-    assert manifest.configuration_id == "consult-config-2bd9b46735dd693c"
-    assert manifest.prompt_revision == "consultation-prompt-v1"
+def test_get_consultation_manifest_resolves_current_configuration() -> None:
+    manifest = get_consultation_manifest("consult-config-7feb8ca2d5bfad5a")
+    assert manifest.configuration_id == "consult-config-7feb8ca2d5bfad5a"
+    assert manifest.prompt_revision == "consultation-prompt-v2"
+
+
+def test_get_consultation_manifest_rejects_retired_configuration() -> None:
+    with pytest.raises(ValueError, match="unknown Consultation configuration_id"):
+        get_consultation_manifest("consult-config-2bd9b46735dd693c")
 
 
 def test_get_consultation_manifest_rejects_unknown_configuration() -> None:
@@ -137,7 +142,7 @@ def test_stream_thread_turn_emits_identity_before_interrupt() -> None:
                 profile={},
                 extracted_info=[],
                 phase="collecting",
-                configuration_id="consult-config-2bd9b46735dd693c",
+                configuration_id="consult-config-7feb8ca2d5bfad5a",
             ):
                 captured_events.append(event)
 
@@ -147,9 +152,7 @@ def test_stream_thread_turn_emits_identity_before_interrupt() -> None:
     assert len(captured_events) == 2
     assert isinstance(captured_events[0].event, AgentConfigurationRuntimeEvent)
     assert isinstance(captured_events[1].event, InteractionRequiredRuntimeEvent)
-    assert captured_events[0].event.agent_configuration["id"] == (
-        "consult-config-2bd9b46735dd693c"
-    )
+    assert captured_events[0].event.agent_configuration["id"] == ("consult-config-7feb8ca2d5bfad5a")
     assert captured_events[1].event.interaction_id == "45fda8478b2ef754419799e10992af06"
     assert captured_events[1].tool_call_id == "tool-1"
 
@@ -157,7 +160,7 @@ def test_stream_thread_turn_emits_identity_before_interrupt() -> None:
 def test_resume_thread_interrupt_emits_pinned_identity_first() -> None:
     from src.runtime.consultation_thread import resume_thread_interrupt
 
-    manifest = get_consultation_manifest("consult-config-2bd9b46735dd693c")
+    manifest = get_consultation_manifest("consult-config-7feb8ca2d5bfad5a")
     captured_events = []
 
     class FakeSnapshot:
@@ -197,7 +200,7 @@ def test_resume_thread_interrupt_emits_pinned_identity_first() -> None:
 def test_resume_thread_interrupt_rejects_checkpoint_configuration_mismatch() -> None:
     from src.runtime.consultation_thread import resume_thread_interrupt
 
-    requested = get_consultation_manifest("consult-config-2bd9b46735dd693c")
+    requested = get_consultation_manifest("consult-config-7feb8ca2d5bfad5a")
     checkpoint_manifest = requested.model_copy(update={"prompt_revision": "different-prompt"})
     astream_called = False
 

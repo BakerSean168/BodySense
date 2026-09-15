@@ -64,6 +64,16 @@ func TestValidateAccessToken(t *testing.T) {
 	}
 }
 
+func TestGenerateAccessTokenRejectsMissingSessionID(t *testing.T) {
+	cfg := JWTConfig{
+		SecretKey:      "test-secret-key",
+		AccessTokenTTL: 15 * time.Minute,
+	}
+	if _, err := GenerateAccessToken(cfg, uuid.New(), uuid.Nil, "test@example.com"); err == nil {
+		t.Fatal("expected sessionless access token generation to fail")
+	}
+}
+
 func TestGenerateAccessTokenCarriesSessionID(t *testing.T) {
 	cfg := JWTConfig{
 		SecretKey:      "test-secret-key",

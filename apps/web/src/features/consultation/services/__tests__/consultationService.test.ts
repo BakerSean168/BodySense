@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { DiagnosisAnalysis } from "../../types/consultation";
 
 // Mock authFetch before importing the module
 vi.mock("@/features/auth/services/authService", () => ({
@@ -460,15 +459,41 @@ describe("consultationApi", () => {
 
   describe("analyzeDiagnosis", () => {
     it("POSTs through the generated diagnosis client", async () => {
-      const analysis: DiagnosisAnalysis = {
+      const analysis = {
+        analysis_id: "33333333-3333-4333-8333-333333333333",
+        body_state_revision: 7,
+        status: "completed" as const,
+        scope: "full_body",
+        summary: "Current durable diagnosis projection",
         candidates: [
           {
+            candidate_id: "44444444-4444-4444-8444-444444444444",
+            concern_key: "shoulder.right",
             name: "Test",
-            confidence: "高",
-            severity: "轻度",
-            basis: "",
+            confidence: "高" as const,
+            severity: "轻度" as const,
+            basis: "confirmed fact",
+            typical_symptoms: "",
+            basis_fact_ids: [],
+            basis_observation_ids: [],
+            supporting_evidence_ids: [],
+            counterevidence_ids: [],
+            reasoning_summary: "",
+            missing_information: [],
+            safety_notes: [],
           },
         ],
+        cross_concern_patterns: [],
+        information_gaps: [],
+        safety_summary: {},
+        citations: [],
+        governance: {},
+        agent_configuration_id: "diag-config-5a4a13627e14b4cf",
+        agent_configuration: {},
+        decision_trace: {},
+        execution_provenance: {},
+        evidence_acquisition_trace: {},
+        created_at: "2026-09-13T12:00:00Z",
       };
       mockAuthFetch.mockResolvedValue(mockResponse(analysis));
 
@@ -483,7 +508,7 @@ describe("consultationApi", () => {
       expect(result.candidates).toEqual(analysis.candidates);
     });
 
-    it("rejects malformed legacy transient diagnosis payloads", async () => {
+    it("rejects a response that does not satisfy the canonical durable diagnosis schema", async () => {
       mockAuthFetch.mockResolvedValue(
         mockResponse({
           status: "mystery",
@@ -493,7 +518,7 @@ describe("consultationApi", () => {
 
       await expect(
         consultationApi.analyzeDiagnosis(conversationWire.id),
-      ).rejects.toThrow("Legacy diagnosis status is invalid");
+      ).rejects.toThrow();
     });
 
     it("throws on non-ok response", async () => {

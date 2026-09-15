@@ -92,8 +92,6 @@ func (s *AssessmentService) WithAssessmentRollout(r *AssessmentRolloutService) *
 
 const (
 	assessmentOutputContractV2 = "assessment-output-v2"
-	assessmentEvidencePolicyV2 = "assessment-evidence-contract-v2"
-	assessmentEvidencePolicyV3 = "assessment-evidence-contract-v3"
 	assessmentEvidencePolicyV4 = "assessment-evidence-contract-v4"
 )
 
@@ -360,7 +358,7 @@ func parseAssessmentAgentPayload(raw json.RawMessage, expectedEvidencePolicyRevi
 		return nil, fmt.Errorf("invalid assessment status %q", payload.Status)
 	}
 	if expectedEvidencePolicyRevision == "" {
-		expectedEvidencePolicyRevision = assessmentEvidencePolicyV3
+		return nil, errors.New("Assessment configuration has no current evidence policy")
 	}
 	if payload.EvidencePolicyRevision != expectedEvidencePolicyRevision {
 		return nil, fmt.Errorf(

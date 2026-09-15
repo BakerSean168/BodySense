@@ -50,8 +50,8 @@ function hasSafetyReview(snapshot: BodyStateProjection | null): boolean {
 }
 
 /**
- * Deterministic legacy body projection retained for BodyExplorer 2D/WebGL
- * fallback only. The primary State path is the lazy Vanatome viewer.
+ * Deterministic 2D BodyState projection used when the Vanatome/WebGL surface is
+ * unavailable. This is an intentional accessibility and recovery surface.
  */
 export function BodyOverview({ snapshot, className }: BodyOverviewProps) {
   const summaries = selectBodyZoneSummaries(snapshot);

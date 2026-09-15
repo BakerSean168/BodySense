@@ -2,13 +2,9 @@
 
 from __future__ import annotations
 
-import base64
-import binascii
 from collections.abc import Callable
 from typing import Any
 
-from pydantic_ai import BinaryContent
-from pydantic_ai.messages import UserContent
 from pydantic_ai.models import Model
 
 from ..agents.assessment_agent import create_assessment_agent
@@ -78,17 +74,16 @@ class AssessmentService:
         normalized_posture = posture_analysis or {}
         normalized_images = [value for value in (images or []) if value]
 
-        if (
-            config.output_schema_revision == ASSESSMENT_OUTPUT_SCHEMA_REVISION_V2
-            and normalized_images
-        ):
+        if config.output_schema_revision != ASSESSMENT_OUTPUT_SCHEMA_REVISION_V2:
+            raise ValueError(
+                "unsupported serving Assessment output schema revision: "
+                f"{config.output_schema_revision}"
+            )
+        if normalized_images:
             raise ValueError(
                 "assessment-output-v2 does not accept raw images; run Posture analysis first"
             )
-        if (
-            config.output_schema_revision == ASSESSMENT_OUTPUT_SCHEMA_REVISION_V2
-            and rag_context.strip()
-        ):
+        if rag_context.strip():
             raise ValueError("assessment-output-v2 does not accept unmodeled rag_context evidence")
 
         evidence_catalog = build_assessment_evidence_catalog(
@@ -99,10 +94,7 @@ class AssessmentService:
             posture_analysis=normalized_posture,
             evidence_policy_revision=config.evidence_policy_revision,
         )
-        if (
-            config.output_schema_revision == ASSESSMENT_OUTPUT_SCHEMA_REVISION_V2
-            and not evidence_catalog
-        ):
+        if not evidence_catalog:
             coverage = build_assessment_evidence_coverage(evidence_catalog)
             payload: dict[str, Any] = {
                 "contract_revision": ASSESSMENT_OUTPUT_SCHEMA_REVISION_V2,
@@ -138,11 +130,6 @@ class AssessmentService:
             posture_analysis=normalized_posture,
             prompt_revision=config.prompt_revision,
         )
-        content: list[UserContent] = [prompt]
-        if config.output_schema_revision != ASSESSMENT_OUTPUT_SCHEMA_REVISION_V2:
-            for image in normalized_images:
-                content.append(_decode_image(image))
-
         agent = create_assessment_agent(
             prompt_revision=config.prompt_revision,
             output_schema_revision=config.output_schema_revision,
@@ -153,43 +140,35 @@ class AssessmentService:
             "model": self._model_resolver(config),
             "model_settings": assessment_model_settings(config),
         }
-        result = await agent.run(content, **run_kwargs)
+        result = await agent.run(prompt, **run_kwargs)
         model_payload = result.output.model_dump(mode="json")
 
-        if config.output_schema_revision == ASSESSMENT_OUTPUT_SCHEMA_REVISION_V2:
-            guarded = guard_structured_output(
-                "assessment",
-                model_payload,
-                policy_revision=config.governance_policy_revision,
-                assessment_evidence_catalog=evidence_catalog,
-            )
-            if guarded.verdict == "rejected" or guarded.payload is None:
-                raise AssessmentOutputRejectedError(
-                    "Assessment output rejected by evidence governance"
-                )
-            selections = list(guarded.payload.get("observations") or [])
-            observations = render_assessment_observations(selections, evidence_catalog)
-            coverage = build_assessment_evidence_coverage(evidence_catalog)
-            payload: dict[str, Any] = {
-                "contract_revision": ASSESSMENT_OUTPUT_SCHEMA_REVISION_V2,
-                "status": derive_assessment_status(coverage),
-                "evidence_policy_revision": config.evidence_policy_revision,
-                "observations": observations,
-                "evidence_coverage": coverage,
-                "evidence_gaps": build_assessment_evidence_gaps(coverage),
-                "summary": build_assessment_summary(len(observations), coverage),
-                "safety_notes": [ASSESSMENT_DISCLAIMER],
-                "governance": {
-                    "verdict": guarded.verdict,
-                    "policy_revision": config.governance_policy_revision,
-                    "issues": guarded.issues,
-                },
-            }
-        else:
-            # Immutable v1/v2 historical configs keep their original output
-            # shape for read-only counterfactual replay. Go serving policy no
-            # longer allows these legacy contracts to create durable reports.
-            payload = model_payload
+        guarded = guard_structured_output(
+            "assessment",
+            model_payload,
+            policy_revision=config.governance_policy_revision,
+            assessment_evidence_catalog=evidence_catalog,
+        )
+        if guarded.verdict == "rejected" or guarded.payload is None:
+            raise AssessmentOutputRejectedError("Assessment output rejected by evidence governance")
+        selections = list(guarded.payload.get("observations") or [])
+        observations = render_assessment_observations(selections, evidence_catalog)
+        coverage = build_assessment_evidence_coverage(evidence_catalog)
+        payload: dict[str, Any] = {
+            "contract_revision": ASSESSMENT_OUTPUT_SCHEMA_REVISION_V2,
+            "status": derive_assessment_status(coverage),
+            "evidence_policy_revision": config.evidence_policy_revision,
+            "observations": observations,
+            "evidence_coverage": coverage,
+            "evidence_gaps": build_assessment_evidence_gaps(coverage),
+            "summary": build_assessment_summary(len(observations), coverage),
+            "safety_notes": [ASSESSMENT_DISCLAIMER],
+            "governance": {
+                "verdict": guarded.verdict,
+                "policy_revision": config.governance_policy_revision,
+                "issues": guarded.issues,
+            },
+        }
 
         payload["agent_configuration"] = config.provenance()
         payload["execution_provenance"] = _execution_provenance(result, config)
@@ -234,22 +213,6 @@ def _execution_provenance(result: Any, config: AssessmentAgentManifest) -> dict[
             "total_tokens": (usage.input_tokens or 0) + (usage.output_tokens or 0),
         },
     }
-
-
-def _decode_image(value: str) -> BinaryContent:
-    if not value.startswith("data:") or ";base64," not in value:
-        raise ValueError("assessment image must be a base64 data URL")
-    header, payload = value.split(",", 1)
-    media_type = header[5:].split(";", 1)[0]
-    if not media_type.startswith("image/"):
-        raise ValueError("assessment attachment must be an image")
-    try:
-        data = base64.b64decode(payload, validate=True)
-    except (binascii.Error, ValueError) as exc:
-        raise ValueError("assessment image contains invalid base64 data") from exc
-    if not data:
-        raise ValueError("assessment image is empty")
-    return BinaryContent(data=data, media_type=media_type)
 
 
 _assessment_service: AssessmentService | None = None

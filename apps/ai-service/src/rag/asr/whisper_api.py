@@ -107,7 +107,7 @@ class ASRAPIProvider(ASRProvider):
         if not segments:
             raise RuntimeError("ASR API returned no transcript segments")
 
-        # Write JSONL for compatibility with the rest of the pipeline
+        # Write the canonical JSONL interchange consumed by the ingestion pipeline
         import json
 
         output_path = audio_path.parent / "transcript.raw.jsonl"

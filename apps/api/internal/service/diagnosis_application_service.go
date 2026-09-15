@@ -133,6 +133,13 @@ func (s *DiagnosisApplicationService) analyzeFromBodyState(
 	route := s.deployment.SelectDiagnosisRoute(userID.String())
 	configurationID := route.ServedConfigurationID
 	policyRevision := route.ServedDecisionPolicyRevision
+	if policyRevision != DiagnosisDecisionPolicyV1 {
+		return nil, diagnosisApplicationError(
+			"INVALID_AGENT_CONFIGURATION",
+			"selected Diagnosis configuration does not use the current decision authority",
+			fmt.Errorf("unsupported Diagnosis decision policy revision %q", policyRevision),
+		)
+	}
 	bodyStateJSON, err := json.Marshal(snapshot)
 	if err != nil {
 		return nil, diagnosisApplicationError("INTERNAL_ERROR", "failed to encode body state", err)
@@ -190,20 +197,11 @@ func (s *DiagnosisApplicationService) analyzeFromBodyState(
 	}
 
 	s.recordGovernedOutput(ctx, "diagnosis", &userID, &conversationID, nil, parsed, result)
-	if policyRevision == DiagnosisDecisionPolicyV1 {
-		decision := EvaluateDiagnosisDecision(policyRevision, snapshot.SafetyState, parsed)
-		parsed = ApplyDiagnosisDecision(parsed, decision)
-		result, err = json.Marshal(parsed)
-		if err != nil {
-			return nil, diagnosisApplicationError("INTERNAL_ERROR", "failed to encode Diagnosis decision", err)
-		}
-	} else if governance, ok := parsed["governance"].(map[string]any); ok {
-		if verdict, _ := governance["verdict"].(string); verdict == "rejected" {
-			s.observeRolloutFrozen(ctx, userID, replayInput, result, route)
-			// Preserve the characterized pre-envelope behavior: rejected legacy
-			// output is returned but is not frozen as a DiagnosisAnalysis record.
-			return parsed, nil
-		}
+	decision := EvaluateDiagnosisDecision(policyRevision, snapshot.SafetyState, parsed)
+	parsed = ApplyDiagnosisDecision(parsed, decision)
+	result, err = json.Marshal(parsed)
+	if err != nil {
+		return nil, diagnosisApplicationError("INTERNAL_ERROR", "failed to encode Diagnosis decision", err)
 	}
 
 	if normalized, evidenceErr := s.persistEvidence(ctx, userID, parsed); evidenceErr == nil {
@@ -233,30 +231,17 @@ func (s *DiagnosisApplicationService) preAgentSafetyBlock(
 	policyRevision string,
 	route DiagnosisRouteSelection,
 ) json.RawMessage {
-	if policyRevision == DiagnosisDecisionPolicyV1 {
-		probe := map[string]any{
-			"status":     "completed",
-			"candidates": []any{map[string]any{"name": "preflight", "confidence": "n/a"}},
-			"governance": map[string]any{"verdict": "accepted"},
-		}
-		decision := EvaluateDiagnosisDecision(policyRevision, snapshot.SafetyState, probe)
-		if decision.Outcome != DiagnosisBlock {
-			return nil
-		}
-		blocked := ApplyDiagnosisDecision(safetyBlockedDiagnosisPayload(snapshot.SafetyState, configurationID, policyRevision, route), decision)
-		encoded, _ := json.Marshal(blocked)
-		return encoded
+	probe := map[string]any{
+		"status":     "completed",
+		"candidates": []any{map[string]any{"name": "preflight", "confidence": "n/a"}},
+		"governance": map[string]any{"verdict": "accepted"},
 	}
-
-	var safetyState struct {
-		HasRedFlags bool   `json:"has_red_flags"`
-		Status      string `json:"status"`
-	}
-	_ = json.Unmarshal(snapshot.SafetyState, &safetyState)
-	if !safetyState.HasRedFlags || safetyState.Status != "requires_review" {
+	decision := EvaluateDiagnosisDecision(policyRevision, snapshot.SafetyState, probe)
+	if decision.Outcome != DiagnosisBlock {
 		return nil
 	}
-	encoded, _ := json.Marshal(safetyBlockedDiagnosisPayload(snapshot.SafetyState, configurationID, policyRevision, route))
+	blocked := ApplyDiagnosisDecision(safetyBlockedDiagnosisPayload(snapshot.SafetyState, configurationID, policyRevision, route), decision)
+	encoded, _ := json.Marshal(blocked)
 	return encoded
 }
 
@@ -307,25 +292,6 @@ func diagnosisApplicationConfigurationMatches(payload map[string]any, expectedID
 	id, idOK := configuration["id"].(string)
 	role, roleOK := configuration["role"].(string)
 	return idOK && roleOK && id == expectedID && role == "diagnosis"
-}
-
-func (s *DiagnosisApplicationService) observeRolloutFrozen(
-	ctx context.Context,
-	userID uuid.UUID,
-	replayInput json.RawMessage,
-	baseline json.RawMessage,
-	route DiagnosisRouteSelection,
-) {
-	if route.ShadowConfigurationID == "" || s.replay == nil || s.rollout == nil {
-		return
-	}
-	report, err := s.replay.CounterfactualFrozen(ctx, userID, replayInput, baseline, route.ServedConfigurationID, route.ShadowConfigurationID)
-	if recordErr := s.rollout.RecordComparison(ctx, route, uuid.Nil, report, err); recordErr != nil {
-		log.Printf("failed to persist transient Diagnosis rollout observation: %v", recordErr)
-	}
-	if err != nil {
-		log.Printf("Diagnosis %s transient comparison failed: %v", route.Stage, err)
-	}
 }
 
 func (s *DiagnosisApplicationService) observeRollout(

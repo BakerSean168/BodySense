@@ -292,15 +292,11 @@ func buildDiagnosisDecisionTrace(
 	execution datatypes.JSON,
 	evidence datatypes.JSON,
 ) datatypes.JSON {
-	authorityMode := "pre-envelope-compatibility"
 	decisionAuthority := diagnosisJSON(payload.DecisionAuthority, `{}`)
-	if len(payload.DecisionAuthority) > 0 && string(payload.DecisionAuthority) != "null" {
-		authorityMode = "go-decision-policy"
-	}
 	trace, _ := json.Marshal(map[string]any{
 		"trace_revision":       "diagnosis-decision-trace-v1",
 		"body_state_revision":  bodyStateRevision,
-		"authority_mode":       authorityMode,
+		"authority_mode":       "go-decision-policy",
 		"agent_configuration":  json.RawMessage(configuration),
 		"execution_provenance": json.RawMessage(execution),
 		"evidence_acquisition": json.RawMessage(evidence),

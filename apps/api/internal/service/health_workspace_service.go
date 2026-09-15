@@ -240,7 +240,7 @@ func deriveWorkspaceActions(workspace *HealthWorkspace) []HealthWorkspaceAction 
 		add("review_treatment_proposal", 80, true, "存在尚未接受的方案版本。", map[string]any{"section": "treatment_history"})
 	}
 	if caps.CanExecuteTreatment && workspace.TrainingPlan != nil {
-		add("open_training", 75, true, "当前已接受方案可以继续执行。", map[string]any{"route": "/training/" + workspace.TrainingPlan.ID.String()})
+		add("open_training", 75, true, "当前已接受方案可以继续执行。", map[string]any{"route": workspaceTreatmentRoute(workspace.ConversationID)})
 	}
 	if caps.CanGenerateTreatment {
 		add("generate_treatment", 70, true, "当前分析可用于创建一个需审核的方案 proposal。", map[string]any{"section": "diagnosis"})
@@ -254,6 +254,14 @@ func deriveWorkspaceActions(workspace *HealthWorkspace) []HealthWorkspaceAction 
 	add("continue_consultation", 40, true, "健康状态持续变化，可随时补充或纠正信息。", map[string]any{"conversation_id": workspace.ConversationID})
 	sort.SliceStable(actions, func(i, j int) bool { return actions[i].Priority > actions[j].Priority })
 	return actions
+}
+
+func workspaceTreatmentRoute(conversationID *uuid.UUID) string {
+	route := "/consultation"
+	if conversationID != nil {
+		route += "/" + conversationID.String()
+	}
+	return route + "?view=treatment"
 }
 
 func deriveWorkspaceTrends(

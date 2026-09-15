@@ -107,14 +107,6 @@ export function App() {
             <Route path="/consultation" element={<WorkbenchRouteElement />} />
             <Route path="/consultation/:id" element={<WorkbenchRouteElement />} />
 
-            {/* Legacy product pages were retired by the single-workbench IA. */}
-            <Route path="/dashboard" element={<Navigate to="/consultation" replace />} />
-            <Route path="/profile" element={<Navigate to="/consultation?view=state" replace />} />
-            <Route path="/assessment" element={<Navigate to="/consultation?view=state" replace />} />
-            <Route path="/assessment/:id" element={<Navigate to="/consultation?view=state" replace />} />
-            <Route path="/history" element={<Navigate to="/consultation" replace />} />
-            <Route path="/training/:id" element={<Navigate to="/consultation?view=treatment" replace />} />
-
             <Route path="/" element={<Navigate to="/consultation" replace />} />
             <Route path="*" element={<Navigate to="/consultation" replace />} />
           </Routes>

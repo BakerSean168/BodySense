@@ -481,9 +481,9 @@ func validConsultationHandshake(t *testing.T, state streamState) service.Consult
 	t.Helper()
 	return privateRuntimeEvent(t, 1, service.ConsultationRuntimeAgentConfiguration, state, map[string]any{
 		"agent_configuration": map[string]any{
-			"id":                       "consult-config-2bd9b46735dd693c",
+			"id":                       "consult-config-7feb8ca2d5bfad5a",
 			"role":                     "consultation",
-			"decision_policy_revision": service.ConsultationDecisionPolicyV1,
+			"decision_policy_revision": service.ConsultationDecisionPolicyV2,
 			"logical_model":            "bodysense-consultation",
 		},
 		"execution_provenance": map[string]any{
@@ -508,7 +508,7 @@ func TestRuntimeNoLongerOwnsPerRunPendingAgentConfiguration(t *testing.T) {
 
 func TestValidateConsultationExecutionIdentity(t *testing.T) {
 	state := testStreamState()
-	state.ExpectedConfigurationID = "consult-config-2bd9b46735dd693c"
+	state.ExpectedConfigurationID = "consult-config-7feb8ca2d5bfad5a"
 	event := validConsultationHandshake(t, state)
 
 	identity, err := validateConsultationExecutionIdentity(event, state.ExpectedConfigurationID)
@@ -522,7 +522,7 @@ func TestValidateConsultationExecutionIdentity(t *testing.T) {
 
 func TestValidateConsultationExecutionIdentityRejectsMismatch(t *testing.T) {
 	state := testStreamState()
-	state.ExpectedConfigurationID = "consult-config-2bd9b46735dd693c"
+	state.ExpectedConfigurationID = "consult-config-7feb8ca2d5bfad5a"
 
 	tests := []struct {
 		name       string
@@ -571,7 +571,7 @@ func TestValidateConsultationExecutionIdentityRejectsMismatch(t *testing.T) {
 			configuration := map[string]any{
 				"id":                       state.ExpectedConfigurationID,
 				"role":                     "consultation",
-				"decision_policy_revision": service.ConsultationDecisionPolicyV1,
+				"decision_policy_revision": service.ConsultationDecisionPolicyV2,
 				"logical_model":            "bodysense-consultation",
 			}
 			provenance := map[string]any{
@@ -595,7 +595,7 @@ func TestStreamAIEventsFailsClosedBeforeFirstSemanticEventWithoutHandshake(t *te
 	state := testStreamState()
 	repo := &fakeConsultationRunRepo{run: state.Run}
 	runtime := &Runtime{runService: testRunService(repo), streamRuntime: stream.NewRuntime()}
-	state.ExpectedConfigurationID = "consult-config-2bd9b46735dd693c"
+	state.ExpectedConfigurationID = "consult-config-7feb8ca2d5bfad5a"
 	recorder := httptest.NewRecorder()
 	sw := runtime.streamRuntime.NewWriter(recorder, state.BaseIDs)
 	events := make(chan service.ConsultationRuntimeEvent, 1)
@@ -622,7 +622,7 @@ func TestHandleAgentConfigurationPersistsIdentityImmediately(t *testing.T) {
 		streamRuntime: stream.NewRuntime(),
 	}
 	state := testStreamState()
-	state.ExpectedConfigurationID = "consult-config-2bd9b46735dd693c"
+	state.ExpectedConfigurationID = "consult-config-7feb8ca2d5bfad5a"
 	recorder := httptest.NewRecorder()
 	sw := runtime.streamRuntime.NewWriter(recorder, state.BaseIDs)
 	phase := "collecting"
@@ -643,7 +643,7 @@ func TestHandleAgentConfigurationPersistsIdentityImmediately(t *testing.T) {
 
 func TestExecutionIdentityValidationIsConcurrentAndRunLocal(t *testing.T) {
 	state := testStreamState()
-	state.ExpectedConfigurationID = "consult-config-2bd9b46735dd693c"
+	state.ExpectedConfigurationID = "consult-config-7feb8ca2d5bfad5a"
 	const workers = 24
 	var wg sync.WaitGroup
 	errs := make(chan error, workers)
@@ -655,7 +655,7 @@ func TestExecutionIdentityValidationIsConcurrentAndRunLocal(t *testing.T) {
 				"agent_configuration": map[string]any{
 					"id":                       state.ExpectedConfigurationID,
 					"role":                     "consultation",
-					"decision_policy_revision": service.ConsultationDecisionPolicyV1,
+					"decision_policy_revision": service.ConsultationDecisionPolicyV2,
 					"logical_model":            "bodysense-consultation",
 				},
 				"execution_provenance": map[string]any{
@@ -730,7 +730,7 @@ func TestStreamAIEventsPrefersExplicitCancellationOverReadySemanticEvent(t *test
 		runService:    service.NewRunService(repo),
 		streamRuntime: stream.NewRuntime(),
 	}
-	state.ExpectedConfigurationID = "consult-config-2bd9b46735dd693c"
+	state.ExpectedConfigurationID = "consult-config-7feb8ca2d5bfad5a"
 	recorder := httptest.NewRecorder()
 	sw := runtime.streamRuntime.NewWriter(recorder, state.BaseIDs)
 

@@ -71,40 +71,6 @@ function v2Report() {
   };
 }
 
-function v1Report() {
-  return {
-    id: "44444444-4444-4444-8444-444444444444",
-    user_id: userID,
-    status: "completed",
-    contract_revision: "assessment-output-v1",
-    health_grade: "B",
-    dimension_scores: {
-      posture: 70,
-      exercise: 80,
-      lifestyle: 65,
-      injury_risk: 60,
-      overall: 69,
-    },
-    evidence_coverage: {},
-    evidence_gaps: [],
-    observations: [
-      {
-        kind: "posture",
-        label: "历史观察",
-        description: "历史 v1 观察。",
-      },
-    ],
-    summary: "历史报告。",
-    information_gaps: [],
-    safety_notes: [],
-    agent_configuration_id: "assessment-v2",
-    agent_configuration: { id: "assessment-v2", role: "assessment" },
-    execution_provenance: { status: "executed" },
-    generation_decision_trace: {},
-    created_at: "2026-08-01T09:00:00Z",
-  };
-}
-
 describe("assessment OpenAPI boundary", () => {
   beforeEach(() => authFetchMock.mockReset());
 
@@ -135,11 +101,11 @@ describe("assessment OpenAPI boundary", () => {
     await expect(assessmentApi.getReport(reportID)).rejects.toThrow();
   });
 
-  it("validates both historical v1 and current v2 reports in list responses", async () => {
+  it("validates only evidence-grounded v2 reports in list responses", async () => {
     authFetchMock.mockResolvedValue(
       jsonResponse({
-        reports: [v2Report(), v1Report()],
-        total: 2,
+        reports: [v2Report()],
+        total: 1,
         limit: 20,
         offset: 0,
       }),
@@ -147,11 +113,28 @@ describe("assessment OpenAPI boundary", () => {
 
     const result = await assessmentApi.listReports();
 
-    expect(result.total).toBe(2);
+    expect(result.total).toBe(1);
     expect(result.reports.map((report) => report.contract_revision)).toEqual([
       "assessment-output-v2",
-      "assessment-output-v1",
     ]);
+  });
+
+  it("rejects retired v1 reports at the generated runtime boundary", async () => {
+    authFetchMock.mockResolvedValue(
+      jsonResponse({
+        reports: [
+          {
+            ...v2Report(),
+            contract_revision: "assessment-output-v1",
+          },
+        ],
+        total: 1,
+        limit: 20,
+        offset: 0,
+      }),
+    );
+
+    await expect(assessmentApi.listReports()).rejects.toThrow();
   });
 
   it("uses generated query serialization for pagination", async () => {

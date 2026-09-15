@@ -275,11 +275,11 @@ func (r *ConsultationRepository) handleActiveRun(
 		// Blocked on user input is not lease-bound; keep it in progress.
 		return model.ErrConversationRunInProgress
 	case "running":
-		if active.LeaseExpiresAt == nil || time.Now().Before(*active.LeaseExpiresAt) {
-			// Live run (or legacy run without a lease): keep it in progress.
+		if active.LeaseExpiresAt != nil && time.Now().Before(*active.LeaseExpiresAt) {
 			return model.ErrConversationRunInProgress
 		}
-		// Lease expired: assume the owning process died and reclaim the run.
+		// A current running run must own a lease. A missing or expired lease is
+		// non-live state and is reclaimed rather than treated as indefinitely active.
 		now := time.Now()
 		if err := tx.WithContext(ctx).Model(&model.Run{}).
 			Where("id = ?", activeRunID).

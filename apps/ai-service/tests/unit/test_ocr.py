@@ -177,7 +177,7 @@ class TestIndicatorEvidenceAdmissibility:
 
     def test_only_high_ocr_and_high_indicator_are_auto_admissible(self):
         from src.services.report_indicator_admissibility import (
-            OCR_INDICATOR_ADMISSIBILITY_POLICY_REVISION,
+            OCR_INDICATOR_ADMISSIBILITY_POLICY_V1,
             evaluate_indicator_admissibility,
         )
 
@@ -189,7 +189,7 @@ class TestIndicatorEvidenceAdmissibility:
         )
         decision = evaluate_indicator_admissibility(indicator, ocr_confidence="high")
         assert decision.status == "admissible"
-        assert decision.policy_revision == OCR_INDICATOR_ADMISSIBILITY_POLICY_REVISION
+        assert decision.policy_revision == OCR_INDICATOR_ADMISSIBILITY_POLICY_V1
 
     def test_medium_ocr_requires_review_even_for_high_indicator(self):
         from src.services.report_indicator_admissibility import (

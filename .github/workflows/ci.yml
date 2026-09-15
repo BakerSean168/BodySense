@@ -244,13 +244,6 @@ jobs:
         run: >-
           go run ./cmd/domain-validator
           -database-url 'postgres://bodysense:bodysense123@127.0.0.1:5432/bodysense_migration_validator?sslmode=disable'
-      - name: Validate durable upload storage migration semantics
-        env:
-          DB_HOST: 127.0.0.1
-          DB_PORT: "5432"
-          DB_USER: bodysense
-          DB_PASSWORD: bodysense123
-        run: bash scripts/validate-upload-storage-migration.sh
       - name: Validate pg_dump / pg_restore recovery path with PostgreSQL 18 tooling
         working-directory: apps/api
         run: |

@@ -13,12 +13,19 @@ import (
 )
 
 func main() {
-	champion := flag.String("champion", "treat-config-85718f8e90ac9d80", "Champion configuration ID")
-	challenger := flag.String("challenger", "treat-config-f68eec9846664596", "Challenger configuration ID")
+	deployment, err := service.NewAgentDeploymentPolicy()
+	if err != nil {
+		log.Fatalf("load Treatment deployment policy: %v", err)
+	}
+	champion := flag.String("champion", deployment.TreatmentConfigurationID(), "Champion configuration ID")
+	challenger := flag.String("challenger", "", "Challenger configuration ID (required)")
 	stage := flag.String("stage", service.TreatmentRolloutShadow, "Rollout stage to summarize")
 	canaryBPS := flag.Int("canary-bps", 500, "Canary basis-point step to summarize")
 	limit := flag.Int("limit", 1000, "Maximum recent observations")
 	flag.Parse()
+	if *challenger == "" {
+		log.Fatal("-challenger is required; retired configurations are not runtime rollout targets")
+	}
 
 	db, err := database.Connect(database.ConfigFromEnv())
 	if err != nil {

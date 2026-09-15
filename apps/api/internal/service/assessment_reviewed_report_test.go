@@ -81,15 +81,10 @@ func TestAssessmentReviewedEvidenceRequiresExactProvenance(t *testing.T) {
 		ReportIndicators:       json.RawMessage(`[]`),
 		ReviewedReportEvidence: mustAssessmentJSON(t, []any{entry}),
 	}
-	catalog := buildAssessmentEvidenceCatalog(req, assessmentEvidencePolicyV4)
+	catalog := buildAssessmentEvidenceCatalog(req)
 	ref := "report:upload:" + uploadID.String() + ":indicator:0"
 	if _, ok := catalog[ref]; !ok {
 		t.Fatalf("v4 must admit a reviewed indicator with exact provenance: %#v", catalog)
-	}
-
-	// The same entry must NOT satisfy the v3 machine-only catalog.
-	if len(buildAssessmentEvidenceCatalog(req, assessmentEvidencePolicyV3)) != 0 {
-		t.Fatalf("v3 must not admit reviewed evidence")
 	}
 
 	// Unknown/missing provenance fails closed at the catalog boundary.
@@ -106,14 +101,14 @@ func TestAssessmentReviewedEvidenceRequiresExactProvenance(t *testing.T) {
 	}
 	forged["value"] = values
 	req.ReviewedReportEvidence = mustAssessmentJSON(t, []any{forged})
-	if len(buildAssessmentEvidenceCatalog(req, assessmentEvidencePolicyV4)) != 0 {
+	if len(buildAssessmentEvidenceCatalog(req)) != 0 {
 		t.Fatalf("invalid run provenance must fail closed")
 	}
 
 	forged["extraction_run_id"] = runID.String()
 	forged["source_refs"] = []string{}
 	req.ReviewedReportEvidence = mustAssessmentJSON(t, []any{forged})
-	if len(buildAssessmentEvidenceCatalog(req, assessmentEvidencePolicyV4)) != 0 {
+	if len(buildAssessmentEvidenceCatalog(req)) != 0 {
 		t.Fatalf("missing source provenance must fail closed")
 	}
 
@@ -125,7 +120,7 @@ func TestAssessmentReviewedEvidenceRequiresExactProvenance(t *testing.T) {
 	tampered["indicator_id"] = "different-indicator"
 	forged["value"] = tampered
 	req.ReviewedReportEvidence = mustAssessmentJSON(t, []any{forged})
-	if len(buildAssessmentEvidenceCatalog(req, assessmentEvidencePolicyV4)) != 0 {
+	if len(buildAssessmentEvidenceCatalog(req)) != 0 {
 		t.Fatalf("candidate identity mismatch must fail closed")
 	}
 }

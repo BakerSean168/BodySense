@@ -5,9 +5,7 @@ info:
   license:
     name: MIT
     identifier: MIT
-  description: Canonical browser-facing REST contract for BodySense vNext. During Phase 02 endpoints are added only when their
-    production handler is migrated behind the generated boundary; undocumented legacy routes remain temporary debt until this
-    specification reaches complete public-route coverage.
+  description: Canonical browser-facing REST contract for BodySense vNext. Public handlers and browser clients use this generated boundary as the single runtime contract.
 servers:
 - url: /
 paths:
@@ -1547,11 +1545,11 @@ paths:
       - $ref: '#/components/parameters/ConsultationId'
       responses:
         '200':
-          description: Current diagnosis public projection. Legacy pre-envelope rejected outputs remain transient JSON until compatibility retirement.
+          description: Current durable diagnosis public projection.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JsonObject'
+                $ref: '#/components/schemas/DiagnosisWorkspaceProjection'
         '400':
           $ref: '#/components/responses/InvalidRequest'
         '401':
@@ -2504,7 +2502,7 @@ components:
         type: string
         const: no-store
     NoCachePragma:
-      description: Legacy no-cache directive for credential-bearing responses.
+      description: HTTP Pragma no-cache directive for credential-bearing responses.
       schema:
         type: string
         const: no-cache
@@ -2677,45 +2675,6 @@ components:
           items:
             type: string
             minLength: 1
-    LegacyAssessmentDimensionScores:
-      type: object
-      additionalProperties: false
-      required: [posture, exercise, lifestyle, injury_risk, overall]
-      properties:
-        posture: {type: number, format: double, minimum: 0, maximum: 100}
-        exercise: {type: number, format: double, minimum: 0, maximum: 100}
-        lifestyle: {type: number, format: double, minimum: 0, maximum: 100}
-        injury_risk: {type: number, format: double, minimum: 0, maximum: 100}
-        overall: {type: number, format: double, minimum: 0, maximum: 100}
-    LegacyAssessmentObservation:
-      type: object
-      additionalProperties: true
-      required: [kind, label, description]
-      properties:
-        observation_id:
-          type: string
-          format: uuid
-        review_state:
-          type: string
-        kind:
-          type: string
-          minLength: 1
-        body_region:
-          type: string
-        label:
-          type: string
-          minLength: 1
-        description:
-          type: string
-          minLength: 1
-        method:
-          type: string
-        severity:
-          type: string
-        confidence:
-          type: string
-        condition:
-          $ref: '#/components/schemas/JsonObject'
     AssessmentReportV2:
       type: object
       additionalProperties: false
@@ -2766,71 +2725,8 @@ components:
         created_at:
           type: string
           format: date-time
-    AssessmentReportV1:
-      type: object
-      additionalProperties: false
-      required: [id, user_id, status, contract_revision, health_grade, dimension_scores, evidence_coverage, evidence_gaps, observations, summary, information_gaps, safety_notes, agent_configuration_id, agent_configuration, execution_provenance, generation_decision_trace, created_at]
-      properties:
-        id: {type: string, format: uuid}
-        user_id: {type: string, format: uuid}
-        status:
-          type: string
-          enum: [completed, insufficient_information]
-        contract_revision:
-          type: string
-          enum: [assessment-output-v1]
-        health_grade:
-          type: string
-          enum: [A, B, C, D]
-        dimension_scores:
-          $ref: '#/components/schemas/LegacyAssessmentDimensionScores'
-        evidence_coverage:
-          type: object
-          additionalProperties: false
-          maxProperties: 0
-        evidence_gaps:
-          type: array
-          maxItems: 0
-          items:
-            $ref: '#/components/schemas/JsonObject'
-        observations:
-          type: array
-          items:
-            $ref: '#/components/schemas/LegacyAssessmentObservation'
-        summary:
-          type: string
-        information_gaps:
-          type: array
-          items:
-            type: string
-        safety_notes:
-          type: array
-          items:
-            type: string
-        body_state_revision:
-          type: integer
-          format: int64
-          minimum: 1
-        agent_configuration_id:
-          type: string
-        agent_configuration:
-          $ref: '#/components/schemas/JsonObject'
-        execution_provenance:
-          $ref: '#/components/schemas/JsonObject'
-        generation_decision_trace:
-          $ref: '#/components/schemas/JsonObject'
-        created_at:
-          type: string
-          format: date-time
     AssessmentReport:
-      oneOf:
-      - $ref: '#/components/schemas/AssessmentReportV2'
-      - $ref: '#/components/schemas/AssessmentReportV1'
-      discriminator:
-        propertyName: contract_revision
-        mapping:
-          assessment-output-v2: '#/components/schemas/AssessmentReportV2'
-          assessment-output-v1: '#/components/schemas/AssessmentReportV1'
+      $ref: '#/components/schemas/AssessmentReportV2'
     AssessmentListResponse:
       type: object
       additionalProperties: false
@@ -2888,7 +2784,6 @@ components:
       properties:
         contract_revision: {type: string, minLength: 1}
         status: {type: string}
-        health_grade: {type: string}
         evidence_coverage_status: {type: string}
         observation_count: {type: integer, minimum: 0}
         observation_kinds:

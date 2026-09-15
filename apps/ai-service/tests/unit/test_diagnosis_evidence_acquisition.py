@@ -16,7 +16,8 @@ from src.agents.diagnosis_agent import (
     diagnosis_tool_names,
 )
 from src.agents.evidence import DiagnosisEvidenceAcquirer
-from src.configuration.diagnosis_agent_config import CONFIG_ROOT, load_manifest
+from src.configuration.diagnosis_agent_config import load_manifest
+from src.evals.agent_config_archive import ARCHIVED_AGENT_CONFIG_ROOT
 from src.models.diagnosis import DiagnosisDependencies
 from src.models.evidence import (
     EvidenceAcquisitionStatus,
@@ -65,7 +66,7 @@ def _gap(
 
 
 def _v2_config():
-    return load_manifest(CONFIG_ROOT / "diagnosis-v2-evidence-gap.yaml")
+    return load_manifest(ARCHIVED_AGENT_CONFIG_ROOT / "diagnosis-v2-evidence-gap.yaml")
 
 
 def _completed_output() -> dict[str, Any]:
@@ -212,6 +213,7 @@ async def test_service_preserves_critical_third_gap_after_two_search_budget_is_e
     model = FunctionModel(model_function)
     service = DiagnosisService(
         model_resolver=lambda _config: model,
+        configuration_resolver=lambda _configuration_id: config,
         evidence_searcher_factory=lambda _user_id: searcher,
     )
 

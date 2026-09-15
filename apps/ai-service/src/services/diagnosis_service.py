@@ -13,10 +13,7 @@ from typing import Any
 
 from pydantic_ai.models import Model
 
-from ..agents.diagnosis_agent import (
-    DIAGNOSIS_EVIDENCE_POLICY_REVISION,
-    create_diagnosis_agent,
-)
+from ..agents.diagnosis_agent import create_diagnosis_agent
 from ..agents.evidence import (
     DIAGNOSIS_EVIDENCE_POLICY_V2,
     DiagnosisEvidenceAcquirer,
@@ -38,6 +35,7 @@ from ..testing_support.deterministic_ai import (
 from .red_flag_detector import get_red_flag_detector
 
 ModelResolver = Callable[[DiagnosisAgentManifest], Model]
+ConfigurationResolver = Callable[[str], DiagnosisAgentManifest]
 EvidenceSearcherFactory = Callable[[str], EvidenceSearcher]
 
 
@@ -46,9 +44,11 @@ class DiagnosisService:
         self,
         *,
         model_resolver: ModelResolver | None = None,
+        configuration_resolver: ConfigurationResolver | None = None,
         evidence_searcher_factory: EvidenceSearcherFactory | None = None,
     ) -> None:
         self._model_resolver = model_resolver or get_diagnosis_runtime_model
+        self._configuration_resolver = configuration_resolver or get_diagnosis_configuration
         self._evidence_searcher_factory = evidence_searcher_factory
 
     async def generate_diagnosis(
@@ -71,7 +71,7 @@ class DiagnosisService:
         if current_revision and current_revision != body_state_revision:
             raise ValueError("body_state_revision does not match body_state.current_revision")
 
-        config = get_diagnosis_configuration(configuration_id)
+        config = self._configuration_resolver(configuration_id)
         profile = profile or {}
         relevant_history = relevant_history or []
         red_flag_input = _body_state_to_extracted_info(body_state)
@@ -163,17 +163,15 @@ class DiagnosisService:
         if user_id and self._evidence_searcher_factory is not None:
             searcher = self._evidence_searcher_factory(user_id)
 
-        evidence_acquirer: DiagnosisEvidenceAcquirer | None = None
-        if config.evidence_policy_revision == DIAGNOSIS_EVIDENCE_POLICY_V2:
-            evidence_acquirer = DiagnosisEvidenceAcquirer(
-                searcher=searcher,
-                budget=EvidenceBudget(max_searches=2, max_results_per_search=5),
-                policy_revision=config.evidence_policy_revision,
-            )
-        elif config.evidence_policy_revision != DIAGNOSIS_EVIDENCE_POLICY_REVISION:
+        if config.evidence_policy_revision != DIAGNOSIS_EVIDENCE_POLICY_V2:
             raise ValueError(
                 f"unsupported Diagnosis evidence policy revision: {config.evidence_policy_revision}"
             )
+        evidence_acquirer = DiagnosisEvidenceAcquirer(
+            searcher=searcher,
+            budget=EvidenceBudget(max_searches=2, max_results_per_search=5),
+            policy_revision=config.evidence_policy_revision,
+        )
 
         deps = DiagnosisDependencies(
             user_id=user_id,

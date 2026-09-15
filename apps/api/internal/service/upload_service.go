@@ -574,7 +574,7 @@ func parseOCRJobInput(job model.Job) (ocrJobInput, error) {
 	if input.ConfigurationID == "" {
 		// Jobs created before health-document configuration pinning retain the
 		// exact Tesseract behavior they were enqueued under.
-		input.ConfigurationID = legacyTesseractConfigurationID
+		input.ConfigurationID = tesseractChampionConfigurationID
 	}
 	if _, ok := knownHealthDocumentConfigurations[input.ConfigurationID]; !ok {
 		return input, fmt.Errorf("unknown health-document configuration id %q", input.ConfigurationID)

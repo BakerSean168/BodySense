@@ -60,6 +60,15 @@ func replayTestRaw(configurationID, decisionRevision, concernKey string) json.Ra
 			"reasons":         []any{},
 		}
 	}
+	if configurationID == defaultDiagnosisConfigurationID {
+		payload["evidence_acquisition"] = map[string]any{
+			"trace_revision":           evidenceAvailabilityTraceV2,
+			"policy_revision":          "diagnosis-evidence-gap-v2",
+			"external_evidence_status": externalEvidenceNotRequired,
+			"attempts":                 []any{},
+			"unresolved_critical_gaps": []any{},
+		}
+	}
 	raw, _ := json.Marshal(payload)
 	return raw
 }
@@ -201,45 +210,5 @@ func TestDiagnosisReplayExportsQualificationShapedRegressionCaseWithoutRealUserI
 	metadata := caseDoc["metadata"].(map[string]any)
 	if metadata["split"] != "regression" || metadata["expected_status"] != "completed" {
 		t.Fatalf("unexpected regression metadata: %#v", metadata)
-	}
-}
-
-func TestCounterfactualFrozenPreservesLegacyRejectedBaselineForUnsafeRelaxationDetection(t *testing.T) {
-	var calls int
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		calls++
-		var request DiagnosisRequest
-		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-			t.Fatal(err)
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(replayTestRaw(request.ConfigurationID, DiagnosisDecisionPolicyV1, "region:neck"))
-	}))
-	defer server.Close()
-	t.Setenv("AI_SERVICE_URL", server.URL)
-
-	baseline := json.RawMessage(`{
-		"governance":{"kind":"diagnosis","verdict":"rejected","reasons":["legacy hard reject"],"issues":[]},
-		"safety_fallback":"blocked",
-		"agent_configuration":{"id":"diag-config-f492eb1c0c6676ae","role":"diagnosis"}
-	}`)
-	report, err := NewDiagnosisReplayService(nil, NewAIClient()).CounterfactualFrozen(
-		context.Background(), uuid.New(), replayTestInput(t, 12), baseline,
-		diagnosisV1ConfigurationID, diagnosisDecisionAuthorityConfigID,
-	)
-	if err != nil {
-		t.Fatalf("CounterfactualFrozen: %v", err)
-	}
-	if calls != 1 || report.Baseline.DecisionOutcome != string(DiagnosisBlock) || report.Replay.DecisionOutcome != string(DiagnosisAllowNormal) {
-		t.Fatalf("unexpected transient comparison: calls=%d report=%#v", calls, report)
-	}
-	repo := &fakeDiagnosisRolloutRepository{}
-	rollout := NewDiagnosisRolloutService(repo)
-	route := rolloutTestRoute(diagnosisV1ConfigurationID, diagnosisDecisionAuthorityConfigID)
-	if err := rollout.RecordComparison(context.Background(), route, uuid.Nil, report, nil); err != nil {
-		t.Fatal(err)
-	}
-	if len(repo.items) != 1 || !repo.items[0].UnsafeRelaxation || repo.items[0].SourceAnalysisID != nil {
-		t.Fatalf("transient rejected baseline must remain observable without fake analysis identity: %#v", repo.items)
 	}
 }

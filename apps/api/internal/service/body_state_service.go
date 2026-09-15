@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 
@@ -67,9 +66,8 @@ func NewBodyStateService(repo bodyStateRepository) *BodyStateService {
 }
 
 // WithBodyRegionIDValidator wires the canonical ontology authority without
-// moving ontology ownership into the durable lane. Until this is configured,
-// existing free-text-only BodyState writes continue to work while new canonical
-// IDs fail closed instead of polluting durable state with unverified identities.
+// moving ontology ownership into the durable lane. Anatomically localized writes
+// fail closed unless they resolve to a canonical region identity.
 func (s *BodyStateService) WithBodyRegionIDValidator(validator BodyRegionIDValidator) *BodyStateService {
 	s.bodyRegionIDValidator = validator
 	return s
@@ -148,6 +146,7 @@ func (s *BodyStateService) UpsertExtractedSymptom(
 	}
 
 	detailsJSON := bodyStateSymptomDetails(raw)
+	durableRegion, durableRegionID := bodyStateCanonicalRegionProjection(bodyRegion)
 	captureID := strings.ToLower(bodyStateString(raw["capture_id"]))
 	sourceKey := "consultation:" + runID.String() + ":symptom:" + bodyStateHash(bodyRegion+"|"+symptom)
 	if bodyStateValidCaptureID(captureID) {
@@ -164,9 +163,10 @@ func (s *BodyStateService) UpsertExtractedSymptom(
 	// enter current reasoning until an explicit structured answer or review
 	// promotes this exact source-keyed candidate.
 	_, _, err := s.repo.UpsertFact(ctx, userID, nil, model.BodyStateFact{
-		ConcernKey:            bodyStateConcernKey(bodyRegion),
+		ConcernKey:            bodyStateConcernKey(durableRegion),
 		Kind:                  "discomfort",
-		BodyRegion:            bodyRegion,
+		BodyRegion:            durableRegion,
+		BodyRegionID:          durableRegionID,
 		Value:                 symptom,
 		Details:               detailsJSON,
 		Origin:                "ai_extracted",
@@ -180,9 +180,9 @@ func (s *BodyStateService) UpsertExtractedSymptom(
 	return err
 }
 
-// RecordInteractionAnswer preserves the structured user answer independently
-// from chat. Runtime-owned symptom-intake cards promote the exact capture
-// candidate; ordinary legacy ask_user answers keep the generic durable path.
+// RecordInteractionAnswer projects only runtime-owned structured symptom intake
+// into BodyState. Other interaction answers remain durable in the interaction/message
+// event model but cannot create health facts without an explicit state binding.
 func (s *BodyStateService) RecordInteractionAnswer(
 	ctx context.Context,
 	userID uuid.UUID,
@@ -196,6 +196,7 @@ func (s *BodyStateService) RecordInteractionAnswer(
 			return err
 		}
 		bodyRegion := bodyStateString(symptom["body_part"])
+		durableRegion, durableRegionID := bodyStateCanonicalRegionProjection(bodyRegion)
 		symptomType := bodyStateString(symptom["symptom_type"])
 		provenanceJSON, _ := json.Marshal(map[string]any{
 			"source_type":    "structured_symptom_intake",
@@ -206,9 +207,10 @@ func (s *BodyStateService) RecordInteractionAnswer(
 			"answer":         json.RawMessage(answer),
 		})
 		_, _, err = s.repo.UpsertFact(ctx, userID, nil, model.BodyStateFact{
-			ConcernKey:            bodyStateConcernKey(bodyRegion),
+			ConcernKey:            bodyStateConcernKey(durableRegion),
 			Kind:                  "discomfort",
-			BodyRegion:            bodyRegion,
+			BodyRegion:            durableRegion,
+			BodyRegionID:          durableRegionID,
 			Value:                 symptomType,
 			Details:               bodyStateSymptomDetails(symptom),
 			Origin:                "structured_answer",
@@ -222,48 +224,7 @@ func (s *BodyStateService) RecordInteractionAnswer(
 		return err
 	}
 
-	questionText, questionContext := bodyStateQuestion(question)
-	answerText := bodyStateAnswerText(answer)
-	if questionText == "" || answerText == "" {
-		return nil
-	}
-
-	provenanceJSON, _ := json.Marshal(map[string]any{
-		"source_type":    "ask_user",
-		"interaction_id": interactionID,
-		"tool_call_id":   toolCallID,
-		"question":       questionText,
-		"context":        questionContext,
-		"answer":         json.RawMessage(answer),
-	})
-	_, _, err := s.repo.UpsertFact(ctx, userID, nil, model.BodyStateFact{
-		Kind:           "user_answer",
-		Value:          answerText,
-		Details:        datatypes.JSON(bodyStateMustJSON(map[string]any{"question": questionText, "context": questionContext})),
-		Origin:         "structured_answer",
-		ReviewState:    "confirmed",
-		LifecycleState: "active",
-		Trend:          "unknown",
-		SourceKey:      "interaction:" + interactionID.String() + ":answer",
-		Provenance:     datatypes.JSON(provenanceJSON),
-	}, "consultation")
-	if err != nil {
-		return err
-	}
-
-	if bodyStateNegativeAnswer(answerText) && bodyStateContainsAny(questionText+questionContext, "不适", "疼痛", "酸痛", "麻木", "无力", "发热", "外伤", "放射") {
-		_, _, err = s.repo.UpsertFact(ctx, userID, nil, model.BodyStateFact{
-			Kind:           "negative_finding",
-			Value:          "未报告：" + strings.TrimSpace(questionText),
-			Origin:         "structured_answer",
-			ReviewState:    "confirmed",
-			LifecycleState: "active",
-			Trend:          "unknown",
-			SourceKey:      "interaction:" + interactionID.String() + ":negative",
-			Provenance:     datatypes.JSON(provenanceJSON),
-		}, "consultation")
-	}
-	return err
+	return nil
 }
 
 // ApplyCurrentContextPatch is the application boundary for a semantically
@@ -290,6 +251,14 @@ func (s *BodyStateService) ApplyCurrentContextPatch(
 		if patch.Facts[index].Replacement != nil {
 			patch.Facts[index].Replacement.Kind = kind
 			patch.Facts[index].Replacement.Value = strings.TrimSpace(patch.Facts[index].Replacement.Value)
+			regionID, err := s.normalizeBodyRegionID(
+				patch.Facts[index].Replacement.BodyRegionID,
+				patch.Facts[index].Replacement.BodyRegion,
+			)
+			if err != nil {
+				return nil, err
+			}
+			patch.Facts[index].Replacement.BodyRegionID = regionID
 		}
 	}
 	seenObservations := map[string]struct{}{}
@@ -305,6 +274,14 @@ func (s *BodyStateService) ApplyCurrentContextPatch(
 		patch.Observations[index].Kind = kind
 		if patch.Observations[index].Replacement != nil {
 			patch.Observations[index].Replacement.Kind = kind
+			regionID, err := s.normalizeBodyRegionID(
+				patch.Observations[index].Replacement.BodyRegionID,
+				patch.Observations[index].Replacement.BodyRegion,
+			)
+			if err != nil {
+				return nil, err
+			}
+			patch.Observations[index].Replacement.BodyRegionID = regionID
 		}
 	}
 	return s.repo.ApplyCurrentContextPatch(ctx, userID, expectedRevision, patch, source)
@@ -470,7 +447,7 @@ func lifestyleFactKind(section string) (string, bool) {
 }
 
 func (s *BodyStateService) UpsertFact(ctx context.Context, userID uuid.UUID, expectedRevision *int64, fact model.BodyStateFact) (*model.BodyStateFact, *model.BodyStateRevision, error) {
-	regionID, err := s.normalizeBodyRegionID(fact.BodyRegionID)
+	regionID, err := s.normalizeBodyRegionID(fact.BodyRegionID, fact.BodyRegion)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -479,7 +456,7 @@ func (s *BodyStateService) UpsertFact(ctx context.Context, userID uuid.UUID, exp
 }
 
 func (s *BodyStateService) CorrectFact(ctx context.Context, userID uuid.UUID, expectedRevision *int64, factID uuid.UUID, replacement model.BodyStateFact) (*model.BodyStateFact, *model.BodyStateRevision, error) {
-	regionID, err := s.normalizeBodyRegionID(replacement.BodyRegionID)
+	regionID, err := s.normalizeBodyRegionID(replacement.BodyRegionID, replacement.BodyRegion)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -496,7 +473,7 @@ func (s *BodyStateService) ReviewFact(ctx context.Context, userID uuid.UUID, exp
 }
 
 func (s *BodyStateService) AddObservation(ctx context.Context, userID uuid.UUID, expectedRevision *int64, observation model.BodyStateObservation) (*model.BodyStateObservation, *model.BodyStateRevision, error) {
-	regionID, err := s.normalizeBodyRegionID(observation.BodyRegionID)
+	regionID, err := s.normalizeBodyRegionID(observation.BodyRegionID, observation.BodyRegion)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -511,7 +488,7 @@ func (s *BodyStateService) AddAssessmentObservation(
 	userID uuid.UUID,
 	observation model.BodyStateObservation,
 ) (*model.BodyStateObservation, *model.BodyStateRevision, error) {
-	regionID, err := s.normalizeBodyRegionID(observation.BodyRegionID)
+	regionID, err := s.normalizeBodyRegionID(observation.BodyRegionID, observation.BodyRegion)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -591,10 +568,12 @@ func (s *BodyStateService) RecordOutcome(ctx context.Context, userID uuid.UUID, 
 			}
 			return nil, errors.New("existing fact projection has no revision")
 		}
+		durableRegion, durableRegionID := bodyStateCanonicalRegionProjection(outcome.BodyRegion)
 		details := map[string]any{
-			"outcome_kind": outcome.Kind,
-			"notes":        outcome.Notes,
-			"value":        value,
+			"outcome_kind":         outcome.Kind,
+			"notes":                outcome.Notes,
+			"value":                value,
+			"reported_body_region": strings.TrimSpace(outcome.BodyRegion),
 		}
 		description := bodyStateString(value["description"])
 		if description == "" {
@@ -608,9 +587,10 @@ func (s *BodyStateService) RecordOutcome(ctx context.Context, userID uuid.UUID, 
 		}
 		trend := bodyStateDefault(bodyStateString(value["trend"]), "unknown")
 		fact, revision, err := s.repo.UpsertFact(ctx, userID, nil, model.BodyStateFact{
-			ConcernKey:     bodyStateDefault(outcome.ConcernKey, "general"),
+			ConcernKey:     bodyStateDefault(outcome.ConcernKey, bodyStateConcernKey(durableRegion)),
 			Kind:           "discomfort",
-			BodyRegion:     outcome.BodyRegion,
+			BodyRegion:     durableRegion,
+			BodyRegionID:   durableRegionID,
 			Value:          description,
 			Details:        datatypes.JSON(bodyStateMustJSON(details)),
 			Origin:         "user_reported",
@@ -634,10 +614,12 @@ func (s *BodyStateService) RecordOutcome(ctx context.Context, userID uuid.UUID, 
 	if observationKind == "" {
 		observationKind = "intervention_outcome"
 	}
+	durableRegion, durableRegionID := bodyStateCanonicalRegionProjection(outcome.BodyRegion)
 	observation, revision, err := s.repo.UpsertObservation(ctx, userID, nil, model.BodyStateObservation{
-		ConcernKey:            bodyStateDefault(outcome.ConcernKey, "general"),
+		ConcernKey:            bodyStateDefault(outcome.ConcernKey, bodyStateConcernKey(durableRegion)),
 		Kind:                  observationKind,
-		BodyRegion:            outcome.BodyRegion,
+		BodyRegion:            durableRegion,
+		BodyRegionID:          durableRegionID,
 		Method:                outcome.SourceType,
 		Value:                 outcome.Value,
 		Condition:             datatypes.JSON(bodyStateMustJSON(map[string]any{"notes": outcome.Notes})),
@@ -779,6 +761,18 @@ func bodyStateBoundSymptomAnswer(
 	return symptom, captureID, true, nil
 }
 
+func bodyStateCanonicalRegionProjection(display string) (string, *string) {
+	display = strings.TrimSpace(display)
+	if display == "" {
+		return "", nil
+	}
+	id, ok := ResolveCanonicalBodyRegionID(display)
+	if !ok {
+		return "", nil
+	}
+	return display, &id
+}
+
 func bodyStateConcernKey(bodyRegion string) string {
 	region := strings.TrimSpace(strings.ToLower(bodyRegion))
 	if region == "" {
@@ -807,133 +801,9 @@ func bodyStateMustJSON(value any) []byte {
 	return encoded
 }
 
-func bodyStateQuestion(raw datatypes.JSON) (string, string) {
-	var parsed map[string]any
-	if len(raw) == 0 || json.Unmarshal(raw, &parsed) != nil {
-		return "", ""
-	}
-	return bodyStateString(parsed["question"]), bodyStateString(parsed["context"])
-}
-
-func bodyStateAnswerText(raw json.RawMessage) string {
-	var parsed any
-	if len(raw) == 0 || json.Unmarshal(raw, &parsed) != nil {
-		return strings.Trim(string(raw), `"`)
-	}
-	switch value := parsed.(type) {
-	case string:
-		return strings.TrimSpace(value)
-	case map[string]any:
-		for _, key := range []string{"text", "value"} {
-			if text := bodyStateString(value[key]); text != "" {
-				return text
-			}
-		}
-		if fields, ok := value["fields"].(map[string]any); ok {
-			keys := make([]string, 0, len(fields))
-			for key := range fields {
-				keys = append(keys, key)
-			}
-			sort.Strings(keys)
-			parts := make([]string, 0, len(keys))
-			for _, key := range keys {
-				if fieldValue := bodyStateString(fields[key]); fieldValue != "" {
-					parts = append(parts, key+": "+fieldValue)
-				}
-			}
-			return strings.Join(parts, "；")
-		}
-	}
-	return bodyStateString(parsed)
-}
-
-func bodyStateNegativeAnswer(value string) bool {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "无", "没有", "否", "no", "none", "false":
-		return true
-	default:
-		return false
-	}
-}
-
-func bodyStateContainsAny(value string, words ...string) bool {
-	for _, word := range words {
-		if strings.Contains(value, word) {
-			return true
-		}
-	}
-	return false
-}
-
-func bodyStateMetadataIdentity(item map[string]any) (uuid.UUID, string) {
-	metadata, _ := item["metadata"].(map[string]any)
-	id, err := uuid.Parse(bodyStateString(metadata["body_state_item_id"]))
-	if err != nil {
-		return uuid.Nil, ""
-	}
-	return id, bodyStateString(metadata["body_state_item_type"])
-}
-
-func bodyStateMetadataJSON(item map[string]any, key, fallback string) []byte {
-	metadata, _ := item["metadata"].(map[string]any)
-	value, ok := metadata[key]
-	if !ok || value == nil {
-		return []byte(fallback)
-	}
-	encoded, err := json.Marshal(value)
-	if err != nil {
-		return []byte(fallback)
-	}
-	return encoded
-}
-
-func bodyStateJSONMap(raw datatypes.JSON) map[string]any {
-	if len(raw) == 0 {
-		return map[string]any{}
-	}
-	var value map[string]any
-	if err := json.Unmarshal(raw, &value); err != nil || value == nil {
-		return map[string]any{}
-	}
-	return value
-}
-
-func bodyStateLegacyDetails(details map[string]any) string {
-	parts := make([]string, 0, 4)
-	for _, key := range []string{"duration", "trigger", "relief", "additional_notes"} {
-		if value := bodyStateString(details[key]); value != "" {
-			parts = append(parts, value)
-		}
-	}
-	return strings.Join(parts, "，")
-}
-
-func bodyStateFactKind(category string) string {
-	switch category {
-	case "discomforts":
-		return "discomfort"
-	case "negative_findings":
-		return "negative_finding"
-	case "red_flags":
-		return "red_flags"
-	case "user_answers":
-		return "user_answer"
-	default:
-		return ""
-	}
-}
-
 func bodyStateDefault(value, fallback string) string {
 	if value == "" {
 		return fallback
 	}
 	return value
-}
-
-func bodyStateReviewState(item map[string]any) string {
-	confirmed, _ := item["confirmed"].(bool)
-	if confirmed {
-		return "confirmed"
-	}
-	return "unverified"
 }

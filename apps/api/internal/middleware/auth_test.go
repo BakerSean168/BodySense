@@ -3,7 +3,6 @@ package middleware
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -14,6 +13,7 @@ import (
 	"github.com/bodysense/api/internal/auth"
 	"github.com/bodysense/api/internal/repository"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -81,7 +81,7 @@ func TestAuthMiddlewareSessionLiveAllows(t *testing.T) {
 	}
 	sessionCache.live[sessionID] = true
 
-	mw := AuthMiddleware(cfg, nil, sessionCache)
+	mw := AuthMiddleware(cfg, sessionCache)
 	if rec := performRequest(mw, token); rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200 (body=%s)", rec.Code, rec.Body.String())
 	}
@@ -95,7 +95,7 @@ func TestAuthMiddlewareSessionRevokedRejects(t *testing.T) {
 		t.Fatalf("GenerateAccessToken: %v", err)
 	}
 
-	mw := AuthMiddleware(cfg, nil, sessionCache)
+	mw := AuthMiddleware(cfg, sessionCache)
 	if rec := performRequest(mw, token); rec.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want 401", rec.Code)
 	}
@@ -108,87 +108,40 @@ func TestAuthMiddlewareRedisDownFailsClosed(t *testing.T) {
 		t.Fatalf("GenerateAccessToken: %v", err)
 	}
 
-	mw := AuthMiddleware(cfg, nil, &fakeSessionCache{down: true})
+	mw := AuthMiddleware(cfg, &fakeSessionCache{down: true})
 	if rec := performRequest(mw, token); rec.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status = %d, want 503 (body=%s)", rec.Code, rec.Body.String())
 	}
 }
 
-func TestAuthMiddlewareLegacyTokenNoSessionCacheHitForcesDB(t *testing.T) {
-	userRepo, mock, cleanup := newMiddlewareTestDB(t)
-	defer cleanup()
-
+func TestAuthMiddlewareRejectsTokenWithoutSessionIdentity(t *testing.T) {
 	cfg := auth.JWTConfig{SecretKey: "test-secret", AccessTokenTTL: 15 * time.Minute}
 	userID := uuid.New()
-
-	// Legacy token without session_id: must still check the user exists.
-	token, err := auth.GenerateAccessToken(cfg, userID, uuid.Nil, "test@example.com")
+	claims := auth.Claims{
+		UserID: userID,
+		Email:  "test@example.com",
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(cfg.AccessTokenTTL)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			Subject:   userID.String(),
+		},
+	}
+	legacyToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token, err := legacyToken.SignedString([]byte(cfg.SecretKey))
 	if err != nil {
-		t.Fatalf("GenerateAccessToken: %v", err)
+		t.Fatalf("sign sessionless token: %v", err)
 	}
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE id = $1 ORDER BY "users"."id" LIMIT $2`)).
-		WithArgs(userID, 1).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(userID))
 
-	sessionCache := &fakeSessionCache{down: false}
-	mw := AuthMiddleware(cfg, userRepo, sessionCache)
-	if rec := performRequest(mw, token); rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200 (body=%s)", rec.Code, rec.Body.String())
-	}
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Fatalf("unmet expectations: %v", err)
-	}
-}
-
-func TestAuthMiddlewareLegacyTokenMissingUserRejects(t *testing.T) {
-	userRepo, mock, cleanup := newMiddlewareTestDB(t)
-	defer cleanup()
-
-	cfg := auth.JWTConfig{SecretKey: "test-secret", AccessTokenTTL: 15 * time.Minute}
-	userID := uuid.New()
-	token, err := auth.GenerateAccessToken(cfg, userID, uuid.Nil, "test@example.com")
-	if err != nil {
-		t.Fatalf("GenerateAccessToken: %v", err)
-	}
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE id = $1 ORDER BY "users"."id" LIMIT $2`)).
-		WithArgs(userID, 1).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}))
-
-	mw := AuthMiddleware(cfg, userRepo, &fakeSessionCache{})
-	if rec := performRequest(mw, token); rec.Code != http.StatusUnauthorized {
+	mw := AuthMiddleware(cfg, &fakeSessionCache{live: map[uuid.UUID]bool{}})
+	rec := performRequest(mw, token)
+	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want 401 (body=%s)", rec.Code, rec.Body.String())
-	}
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Fatalf("unmet expectations: %v", err)
-	}
-}
-
-func TestAuthMiddlewareLegacyTokenDBFailureFailsClosed(t *testing.T) {
-	userRepo, mock, cleanup := newMiddlewareTestDB(t)
-	defer cleanup()
-
-	cfg := auth.JWTConfig{SecretKey: "test-secret", AccessTokenTTL: 15 * time.Minute}
-	userID := uuid.New()
-	token, err := auth.GenerateAccessToken(cfg, userID, uuid.Nil, "test@example.com")
-	if err != nil {
-		t.Fatalf("GenerateAccessToken: %v", err)
-	}
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "users" WHERE id = $1 ORDER BY "users"."id" LIMIT $2`)).
-		WithArgs(userID, 1).
-		WillReturnError(errors.New("database unavailable"))
-
-	mw := AuthMiddleware(cfg, userRepo, &fakeSessionCache{})
-	if rec := performRequest(mw, token); rec.Code != http.StatusServiceUnavailable {
-		t.Fatalf("status = %d, want 503 (body=%s)", rec.Code, rec.Body.String())
-	}
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Fatalf("unmet expectations: %v", err)
 	}
 }
 
 func TestAuthMiddlewareMissingHeaderRejects(t *testing.T) {
 	cfg := auth.JWTConfig{SecretKey: "test-secret", AccessTokenTTL: 15 * time.Minute}
-	mw := AuthMiddleware(cfg, nil, &fakeSessionCache{live: map[uuid.UUID]bool{}})
+	mw := AuthMiddleware(cfg, &fakeSessionCache{live: map[uuid.UUID]bool{}})
 	rec := performRequest(mw, "")
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want 401", rec.Code)
