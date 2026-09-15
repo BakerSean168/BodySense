@@ -1,14 +1,22 @@
+import ontologyData from "../data/body-regions.v1.json";
 import { describe, expect, it } from "vitest";
 import {
   BODY_REGION_IDS,
   bodyRegionDefinitions,
   getBodyRegionDefinition,
   parseBodyRegionId,
+  parseRawBodyRegionOntology,
   resolveBodyRegionInput,
   validateBodyRegionOntology,
 } from "./bodyRegionOntology";
 
 describe("BodyRegionOntology v1", () => {
+  it("rejects malformed ontology input before semantic validation", () => {
+    expect(() =>
+      parseRawBodyRegionOntology({ ...ontologyData, ontologyVersion: "one" }),
+    ).toThrow();
+  });
+
   it("contains the complete canonical region vocabulary with explicit laterality", () => {
     expect(validateBodyRegionOntology()).toEqual([]);
     expect(BODY_REGION_IDS).toHaveLength(35);
@@ -20,7 +28,9 @@ describe("BodyRegionOntology v1", () => {
 
   it("parses canonical IDs without depending on atlas identity", () => {
     expect(parseBodyRegionId("shoulder.right")).toBe("shoulder.right");
-    expect(parseBodyRegionId("appendicular-skeleton-clavicle-right")).toBeNull();
+    expect(
+      parseBodyRegionId("appendicular-skeleton-clavicle-right"),
+    ).toBeNull();
   });
 
   it("resolves deterministic side-specific aliases", () => {

@@ -41,7 +41,7 @@ class ToolExecutor:
             )
 
         # Validate required params
-        validation_error = self._validate(tool, arguments)
+        normalized_arguments, validation_error = self._validate(tool, arguments)
         if validation_error:
             return ToolResult(
                 tool_call_id=tool_call_id,
@@ -50,9 +50,11 @@ class ToolExecutor:
                 error=validation_error,
             )
 
-        # Execute handler
+        # Execute handler with the normalized copy. Validation must never mutate
+        # caller-owned dictionaries because the original provider arguments may
+        # still be retained in runtime/audit state.
         try:
-            result = await tool.handler(arguments)
+            result = await tool.handler(normalized_arguments)
             # If handler already returns a ToolResult, use it
             if isinstance(result, ToolResult):
                 return result
@@ -72,29 +74,36 @@ class ToolExecutor:
                 error=str(e),
             )
 
-    def _validate(self, tool: RuntimeToolDefinition, arguments: dict[str, Any]) -> str | None:
-        """Validate arguments against tool definition. Returns error message or None."""
+    def _validate(
+        self,
+        tool: RuntimeToolDefinition,
+        arguments: dict[str, Any],
+    ) -> tuple[dict[str, Any], str | None]:
+        """Return a normalized copy plus an optional validation error."""
+
+        normalized = dict(arguments)
+
         # Check required params
         for param in tool.required_params:
-            if param not in arguments or arguments[param] is None:
-                return f"Missing required parameter: {param}"
+            if param not in normalized or normalized[param] is None:
+                return normalized, f"Missing required parameter: {param}"
             # Check string params are not empty
-            if isinstance(arguments[param], str) and not arguments[param].strip():
-                return f"Empty required parameter: {param}"
+            if isinstance(normalized[param], str) and not normalized[param].strip():
+                return normalized, f"Empty required parameter: {param}"
 
         # Check for type mismatches on known param types from the schema
         props = tool.parameters.get("properties", {})
-        for key, value in arguments.items():
+        for key, value in normalized.items():
             if key not in props or value is None:
                 continue
             expected_type = props[key].get("type")
             if expected_type == "string" and not isinstance(value, str):
-                return f"Parameter '{key}' must be a string"
+                return normalized, f"Parameter '{key}' must be a string"
             if expected_type == "integer" and not isinstance(value, int):
-                # Allow float that is actually an int
+                # Allow float that is actually an int, but normalize the copy.
                 if isinstance(value, float) and value.is_integer():
-                    arguments[key] = int(value)
+                    normalized[key] = int(value)
                 else:
-                    return f"Parameter '{key}' must be an integer"
+                    return normalized, f"Parameter '{key}' must be an integer"
 
-        return None
+        return normalized, None

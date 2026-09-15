@@ -16,7 +16,7 @@ describe("expectJson", () => {
       },
     );
 
-    await expect(expectJson(response)).rejects.toMatchObject({
+    await expect(expectJson(response, (input) => input)).rejects.toMatchObject({
       status: 409,
       code: "BODY_STATE_REVISION_CONFLICT",
       message: "state changed",

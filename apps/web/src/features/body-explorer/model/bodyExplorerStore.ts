@@ -4,7 +4,8 @@ import type { BodyRegionId } from "./bodyRegionOntology";
 
 export type BodyExplorerMode = "region" | "anatomy";
 export type BodyExplorerDisplayMode = "normal" | "xray" | "ghost";
-export type BodyExplorerCameraPreset = "free" | "front" | "back" | "left" | "right";
+export type BodyExplorerCameraPreset =
+  "free" | "front" | "back" | "left" | "right";
 
 export type BodyExplorerCameraIntent =
   | { requestId: number; kind: "focus"; anatomyId: AnatomyStructureId }
@@ -40,22 +41,43 @@ export interface BodyExplorerState {
   resetPresentation: () => void;
 }
 
-const initialPresentationState = {
-  mode: "region" as const,
+type BodyExplorerPresentationState = Pick<
+  BodyExplorerState,
+  | "mode"
+  | "selectedRegionId"
+  | "hoveredRegionId"
+  | "selectedAnatomyId"
+  | "hoveredAnatomyId"
+  | "isolatedAnatomyId"
+  | "visibleSystems"
+  | "displayMode"
+  | "cameraPreset"
+  | "cameraIntent"
+  | "cameraRequestSequence"
+>;
+
+const initialPresentationState: BodyExplorerPresentationState = {
+  mode: "region",
   selectedRegionId: null,
   hoveredRegionId: null,
   selectedAnatomyId: null,
   hoveredAnatomyId: null,
   isolatedAnatomyId: null,
-  visibleSystems: [] as string[],
-  displayMode: "normal" as const,
-  cameraPreset: "free" as const,
+  visibleSystems: [],
+  displayMode: "normal",
+  cameraPreset: "free",
   cameraIntent: null,
   cameraRequestSequence: 0,
 };
 
 function uniqueSystems(systemIds: string[]): string[] {
-  return [...new Set(systemIds.filter((systemId) => systemId.trim()).map((systemId) => systemId.trim()))];
+  return [
+    ...new Set(
+      systemIds
+        .filter((systemId) => systemId.trim())
+        .map((systemId) => systemId.trim()),
+    ),
+  ];
 }
 
 export const useBodyExplorerStore = create<BodyExplorerState>()((set) => ({
@@ -86,7 +108,8 @@ export const useBodyExplorerStore = create<BodyExplorerState>()((set) => ({
     })),
   hoverAnatomy: (hoveredAnatomyId) => set({ hoveredAnatomyId }),
   isolateAnatomy: (isolatedAnatomyId) => set({ isolatedAnatomyId }),
-  setVisibleSystems: (visibleSystems) => set({ visibleSystems: uniqueSystems(visibleSystems) }),
+  setVisibleSystems: (visibleSystems) =>
+    set({ visibleSystems: uniqueSystems(visibleSystems) }),
   setDisplayMode: (displayMode) => set({ displayMode }),
   requestFocus: (anatomyId) =>
     set((state) => {

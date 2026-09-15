@@ -11,7 +11,11 @@ test("3D Body Explorer links canonical BodyState, anatomy focus, and chat contex
   page,
   request,
 }, testInfo) => {
-  test.setTimeout(300_000);
+  // This scenario intentionally exercises all 35 canonical regions against the
+  // real pinned atlas, captures multiple visual states, performs warm reloads,
+  // and checks tab/view recovery. Keep the assertions exhaustive, but give the
+  // end-to-end scenario enough budget for software-rendered CI/dev hosts.
+  test.setTimeout(480_000);
   const email = `body3d-${Date.now()}-${Math.random().toString(16).slice(2)}@example.com`;
   const password = "BodySenseE2E!123";
   const atlasRequests: string[] = [];

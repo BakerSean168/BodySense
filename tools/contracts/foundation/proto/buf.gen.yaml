@@ -1,0 +1,11 @@
+version: v2
+clean: true
+plugins:
+  - local: protoc-gen-go
+    out: ../../generated/proto-go
+    opt:
+      - paths=source_relative
+  - protoc_builtin: python
+    out: ../../generated/proto-python
+  - protoc_builtin: pyi
+    out: ../../generated/proto-python

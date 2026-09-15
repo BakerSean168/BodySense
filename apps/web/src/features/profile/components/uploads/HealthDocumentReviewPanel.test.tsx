@@ -119,25 +119,23 @@ describe("HealthDocumentReviewPanel", () => {
   it("confirms the exact server-owned run/candidate/source refs and refreshes effective state", async () => {
     const confirmed = context({
       effective_review: {
-        id: "review-confirm",
+        id: "33333333-3333-4333-8333-333333333333",
         extraction_run_id: runId,
         upload_id: uploadId,
         indicator_index: 0,
         indicator_id: "vitamin-d",
         action: "confirm",
-        reviewer_user_id: "33333333-3333-4333-8333-333333333333",
         created_at: "2026-09-03T10:00:00Z",
         idempotency_key: "idem-confirm",
       },
       history: [
         {
-          id: "review-confirm",
+          id: "33333333-3333-4333-8333-333333333333",
           extraction_run_id: runId,
           upload_id: uploadId,
           indicator_index: 0,
           indicator_id: "vitamin-d",
           action: "confirm",
-          reviewer_user_id: "33333333-3333-4333-8333-333333333333",
           created_at: "2026-09-03T10:00:00Z",
           idempotency_key: "idem-confirm",
         },
@@ -175,7 +173,7 @@ describe("HealthDocumentReviewPanel", () => {
   it("validates correction locally then appends corrected evidence without overwriting the machine value", async () => {
     const corrected = context({
       effective_review: {
-        id: "review-correct",
+        id: "44444444-4444-4444-8444-444444444444",
         extraction_run_id: runId,
         upload_id: uploadId,
         indicator_index: 0,
@@ -188,7 +186,6 @@ describe("HealthDocumentReviewPanel", () => {
           unit: "ng/mL",
           reference_range: "30-100",
         },
-        reviewer_user_id: "33333333-3333-4333-8333-333333333333",
         created_at: "2026-09-03T10:01:00Z",
         idempotency_key: "idem-correct",
       },
@@ -235,36 +232,33 @@ describe("HealthDocumentReviewPanel", () => {
   it("rejects a candidate through the append-only action and preserves a visible history", async () => {
     const rejected = context({
       effective_review: {
-        id: "review-reject",
+        id: "55555555-5555-4555-8555-555555555555",
         extraction_run_id: runId,
         upload_id: uploadId,
         indicator_index: 0,
         indicator_id: "vitamin-d",
         action: "reject",
-        reviewer_user_id: "33333333-3333-4333-8333-333333333333",
         created_at: "2026-09-03T10:02:00Z",
         idempotency_key: "idem-reject",
       },
       history: [
         {
-          id: "review-old",
+          id: "66666666-6666-4666-8666-666666666666",
           extraction_run_id: runId,
           upload_id: uploadId,
           indicator_index: 0,
           indicator_id: "vitamin-d",
           action: "confirm",
-          reviewer_user_id: "33333333-3333-4333-8333-333333333333",
           created_at: "2026-09-03T10:01:00Z",
           idempotency_key: "idem-old",
         },
         {
-          id: "review-reject",
+          id: "55555555-5555-4555-8555-555555555555",
           extraction_run_id: runId,
           upload_id: uploadId,
           indicator_index: 0,
           indicator_id: "vitamin-d",
           action: "reject",
-          reviewer_user_id: "33333333-3333-4333-8333-333333333333",
           created_at: "2026-09-03T10:02:00Z",
           idempotency_key: "idem-reject",
         },

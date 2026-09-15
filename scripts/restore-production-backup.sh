@@ -24,7 +24,6 @@
 #     --restore-pg container:<disposable_restore_container> \
 #     --confirm-target-isolated=yes \
 #     [--validator-runner docker|golang] \
-#     [--baseline-version N]
 #
 # Usage (recovery, when the production Postgres container cannot be inspected
 # because production is down):
@@ -37,7 +36,6 @@
 #     --recovery-mode=yes \
 #     [--recovery-production-project bodysense] \
 #     [--validator-runner docker|golang] \
-#     [--baseline-version N]
 #
 # Safety guards (all must pass):
 #   1. --confirm-target-isolated=yes is required.
@@ -112,13 +110,12 @@ OBJECT_KEY=""
 RESTORE_PG=""
 CONFIRM_ISOLATED=""
 VALIDATOR_RUNNER="docker"
-BASELINE_VERSION=""
 WORK_DIR_OVERRIDE=""
 RECOVERY_MODE_FLAG=""
 RECOVERY_PRODUCTION_PROJECT_FLAG=""
 
 usage() {
-  echo "usage: restore-production-backup.sh --object-key KEY --target-db DB --target-project PROJECT --restore-pg container:<id|name> --confirm-target-isolated=yes [--recovery-mode=yes] [--recovery-production-project PROJECT] [--validator-runner docker|golang] [--baseline-version N]" >&2
+  echo "usage: restore-production-backup.sh --object-key KEY --target-db DB --target-project PROJECT --restore-pg container:<id|name> --confirm-target-isolated=yes [--recovery-mode=yes] [--recovery-production-project PROJECT] [--validator-runner docker|golang]" >&2
 }
 
 while [ "$#" -gt 0 ]; do
@@ -130,7 +127,6 @@ while [ "$#" -gt 0 ]; do
     --confirm-target-isolated) CONFIRM_ISOLATED="${2:-}"; shift 2 ;;
     --confirm-target-isolated=yes) CONFIRM_ISOLATED=yes; shift ;;
     --validator-runner) VALIDATOR_RUNNER="${2:-}"; shift 2 ;;
-    --baseline-version) BASELINE_VERSION="${2:-}"; shift 2 ;;
     --workdir) WORK_DIR_OVERRIDE="${2:-}"; shift 2 ;;
     --recovery-mode) RECOVERY_MODE_FLAG="${2:-}"; shift 2 ;;
     --recovery-mode=yes) RECOVERY_MODE_FLAG=yes; shift ;;
@@ -160,9 +156,6 @@ case "$RESTORE_PG" in
   *) fail "--restore-pg must be container:<id|name> (got: $RESTORE_PG)" ;;
 esac
 [ -n "$RESTORE_TARGET" ] || fail '--restore-pg requires a container id or name after "container:"'
-[ -n "$BASELINE_VERSION" ] && [[ "$BASELINE_VERSION" =~ ^[0-9]+$ ]] || [ -z "$BASELINE_VERSION" ] \
-  || fail "--baseline-version must be a positive integer"
-
 mkdir -p "$ROOT" "$STATE_DIR" "${WORK_DIR_OVERRIDE:-$WORK_DIR}"
 chmod 700 "$STATE_DIR" "${WORK_DIR_OVERRIDE:-$WORK_DIR}"
 exec 9>"$LOCK_FILE"
@@ -736,8 +729,7 @@ fi
 # both read PGPASSWORD from the process environment, keeping DB_PASSWORD out of
 # every command line (host and container).
 dsn="postgres://$DB_USER@$dsn_host:5432/$TARGET_DB?sslmode=disable"
-migration_args=("-database-url" "$dsn" "-migrations" "file://migrations")
-[ -z "$BASELINE_VERSION" ] || migration_args+=("-baseline-version" "$BASELINE_VERSION")
+migration_args=("-database-url" "$dsn" "-migrations" "file://migrations" "-replay-latest=false")
 if run_validator migration-validator "${migration_args[@]}"; then
   if run_validator domain-validator "-database-url" "$dsn"; then
     VALIDATE_RESULT=PASS

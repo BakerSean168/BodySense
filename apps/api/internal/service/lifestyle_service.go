@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
@@ -34,7 +33,7 @@ func NewLifestyleService(bodyState lifestyleBodyState) *LifestyleService {
 	return &LifestyleService{bodyState: bodyState}
 }
 
-func (s *LifestyleService) Get(ctx context.Context, userID uuid.UUID) (*dto.LifestyleSnapshot, error) {
+func (s *LifestyleService) Get(ctx context.Context, userID uuid.UUID) (*LifestyleSnapshot, error) {
 	snapshot, err := s.bodyState.GetSnapshot(ctx, userID, 0)
 	if err != nil {
 		return nil, err
@@ -48,7 +47,7 @@ func (s *LifestyleService) Get(ctx context.Context, userID uuid.UUID) (*dto.Life
 	return result, nil
 }
 
-func (s *LifestyleService) Update(ctx context.Context, userID uuid.UUID, request dto.UpdateLifestyleRequest) (*dto.LifestyleSnapshot, error) {
+func (s *LifestyleService) Update(ctx context.Context, userID uuid.UUID, request UpdateLifestyleRequest) (*LifestyleSnapshot, error) {
 	patch := buildLifestyleContextPatch(request, time.Now().UTC(), "user_edited", "lifestyle_editor")
 	if len(patch.Facts) > 0 {
 		if _, err := s.bodyState.ApplyCurrentContextPatch(ctx, userID, request.ExpectedRevision, patch, "lifestyle_editor"); err != nil {
@@ -58,11 +57,11 @@ func (s *LifestyleService) Update(ctx context.Context, userID uuid.UUID, request
 	return s.Get(ctx, userID)
 }
 
-func buildLifestyleContextPatch(request dto.UpdateLifestyleRequest, effectiveAt time.Time, origin, sourceType string) model.BodyStateCurrentContextPatch {
+func buildLifestyleContextPatch(request UpdateLifestyleRequest, effectiveAt time.Time, origin, sourceType string) model.BodyStateCurrentContextPatch {
 	type sectionUpdate struct {
 		name  string
 		kind  string
-		input *dto.LifestyleSectionInput
+		input *LifestyleSectionInput
 	}
 	updates := []sectionUpdate{
 		{"activity", model.BodyStateFactKindLifestyleActivity, request.Activity},
@@ -108,7 +107,7 @@ func (s *LifestyleService) AcceptCandidate(
 	userID uuid.UUID,
 	expectedRevision *int64,
 	candidateID uuid.UUID,
-) (*dto.LifestyleSnapshot, error) {
+) (*LifestyleSnapshot, error) {
 	if err := s.validateCandidate(ctx, userID, candidateID); err != nil {
 		return nil, err
 	}
@@ -125,7 +124,7 @@ func (s *LifestyleService) RejectCandidate(
 	userID uuid.UUID,
 	expectedRevision *int64,
 	candidateID uuid.UUID,
-) (*dto.LifestyleSnapshot, error) {
+) (*LifestyleSnapshot, error) {
 	if err := s.validateCandidate(ctx, userID, candidateID); err != nil {
 		return nil, err
 	}
@@ -153,8 +152,8 @@ func (s *LifestyleService) validateCandidate(ctx context.Context, userID, candid
 	return fmt.Errorf("%w: %s", ErrInvalidLifestyleCandidate, candidateID)
 }
 
-func projectLifestyleCandidates(facts []model.BodyStateFact) []dto.LifestyleCandidate {
-	result := make([]dto.LifestyleCandidate, 0)
+func projectLifestyleCandidates(facts []model.BodyStateFact) []LifestyleCandidate {
+	result := make([]LifestyleCandidate, 0)
 	for _, fact := range facts {
 		if !isLifestyleFactKind(fact.Kind) || fact.Origin != "ai_extracted" ||
 			fact.ReviewState != "unverified" || fact.LifecycleState != "active" || !fact.ExcludedFromReasoning {
@@ -164,7 +163,7 @@ func projectLifestyleCandidates(facts []model.BodyStateFact) []dto.LifestyleCand
 		if len(details) == 0 {
 			details = json.RawMessage(`{}`)
 		}
-		result = append(result, dto.LifestyleCandidate{
+		result = append(result, LifestyleCandidate{
 			FactID: fact.ID, Kind: fact.Kind, Summary: fact.Value, Details: details, CreatedAt: fact.CreatedAt,
 		})
 	}
@@ -185,8 +184,8 @@ func isLifestyleFactKind(kind string) bool {
 	}
 }
 
-func projectLifestyle(snapshot *BodyStateSnapshot) *dto.LifestyleSnapshot {
-	result := &dto.LifestyleSnapshot{
+func projectLifestyle(snapshot *BodyStateSnapshot) *LifestyleSnapshot {
+	result := &LifestyleSnapshot{
 		CurrentRevision: snapshot.CurrentRevision,
 		Activity:        emptyLifestyleSection(model.BodyStateFactKindLifestyleActivity),
 		Sleep:           emptyLifestyleSection(model.BodyStateFactKindLifestyleSleep),
@@ -194,7 +193,7 @@ func projectLifestyle(snapshot *BodyStateSnapshot) *dto.LifestyleSnapshot {
 		Nutrition:       emptyLifestyleSection(model.BodyStateFactKindLifestyleNutrition),
 		Substances:      emptyLifestyleSection(model.BodyStateFactKindLifestyleSubstances),
 		Recovery:        emptyLifestyleSection(model.BodyStateFactKindLifestyleRecovery),
-		PendingUpdates:  []dto.LifestyleCandidate{},
+		PendingUpdates:  []LifestyleCandidate{},
 	}
 	for index := range snapshot.Facts {
 		fact := snapshot.Facts[index]
@@ -220,17 +219,17 @@ func projectLifestyle(snapshot *BodyStateSnapshot) *dto.LifestyleSnapshot {
 	return result
 }
 
-func emptyLifestyleSection(kind string) dto.LifestyleSection {
-	return dto.LifestyleSection{Kind: kind, Summary: "", Details: json.RawMessage(`{}`)}
+func emptyLifestyleSection(kind string) LifestyleSection {
+	return LifestyleSection{Kind: kind, Summary: "", Details: json.RawMessage(`{}`)}
 }
 
-func lifestyleSectionFromFact(fact model.BodyStateFact) dto.LifestyleSection {
+func lifestyleSectionFromFact(fact model.BodyStateFact) LifestyleSection {
 	details := json.RawMessage(fact.Details)
 	if len(details) == 0 {
 		details = json.RawMessage(`{}`)
 	}
 	updatedAt := fact.UpdatedAt
-	return dto.LifestyleSection{
+	return LifestyleSection{
 		Kind: fact.Kind, FactID: &fact.ID, Summary: fact.Value, Details: details,
 		ValidFrom: fact.ValidFrom, UpdatedAt: &updatedAt, ReviewState: fact.ReviewState,
 	}

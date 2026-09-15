@@ -1,6 +1,10 @@
 # Active Plans
 
-BodySense currently has one documentation/code alignment lane, active 3D/observability/static-distribution acceptance work, one Workbench visual plan, and one parked durability plan:
+The coordinated pre-user vNext engineering reset completed through Phase 11 and passed fresh PostgreSQL 18 production-shaped whole-system validation. Its master plan is archived and no longer owns current implementation work.
+
+- [`../archive/2026-09-13-bodysense-vnext-engineering-reset.md`](../archive/2026-09-13-bodysense-vnext-engineering-reset.md) — **COMPLETE / ARCHIVED**; records the cross-language contract/state/runtime/schema reset on `refactor/bodysense-vnext`, including Phase 11 final simplification and `LOCAL_DEPLOY_VALIDATION=PASS`.
+
+Current active plans keep their own product/operations acceptance owners:
 
 - [`2026-09-01-documentation-code-alignment-audit.md`](./2026-09-01-documentation-code-alignment-audit.md) — ACTIVE; repository-wide ADR/current-doc/code alignment audit. Current documentation baseline has been cleaned; remaining P1/P2 evidence/mechanism/code gaps are explicitly tracked here.
 - [`2026-09-01-health-document-technology-selection-and-benchmark.md`](./2026-09-01-health-document-technology-selection-and-benchmark.md) — ACTIVE / BENCHMARK-FIRST; defines BodySense-specific health-document corpus, OCR/PDF/layout/parser candidate evaluation, safety/resource gates, immutable mechanism selection, append-only extraction history and rollout. ADR 0013 remains Proposed until the OCR Champion is proven.

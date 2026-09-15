@@ -51,10 +51,12 @@ type uploadRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*model.UserUpload, error)
 	GetByUserID(ctx context.Context, userID uuid.UUID) ([]model.UserUpload, error)
 	Delete(ctx context.Context, id, userID uuid.UUID) error
-	UpdateOCRResult(ctx context.Context, id, userID uuid.UUID, status string, result json.RawMessage) error
-	UpdateOCRStatus(ctx context.Context, id, userID uuid.UUID, status string) error
-	UpdateAnalysisStatus(ctx context.Context, id, userID uuid.UUID, status string) error
-	UpdateAnalysisResult(ctx context.Context, id, userID uuid.UUID, status string, result json.RawMessage) error
+	BeginOCR(ctx context.Context, id, userID uuid.UUID) (bool, error)
+	CompleteOCR(ctx context.Context, id, userID uuid.UUID, result json.RawMessage) (bool, error)
+	FailOCR(ctx context.Context, id, userID uuid.UUID, result json.RawMessage) (bool, error)
+	BeginAnalysis(ctx context.Context, id, userID uuid.UUID) (bool, error)
+	CompleteAnalysis(ctx context.Context, id, userID uuid.UUID, result json.RawMessage) (bool, error)
+	FailAnalysis(ctx context.Context, id, userID uuid.UUID, result json.RawMessage) (bool, error)
 	UpdateAgentConfiguration(ctx context.Context, id uuid.UUID, configurationID string) error
 	GetLatestPostureAnalyses(ctx context.Context, userID uuid.UUID) ([]model.UserUpload, error)
 }
@@ -169,10 +171,10 @@ func (s *UploadService) UploadFile(ctx context.Context, userID uuid.UUID, file *
 		return nil, fmt.Errorf("failed to store upload object: %w", err)
 	}
 
-	analysisStatus := "none"
+	analysisStatus := model.UploadAnalysisNone
 	switch fileType {
 	case "photo_front", "photo_side", "photo_back":
-		analysisStatus = "pending"
+		analysisStatus = model.UploadAnalysisPending
 	}
 	now := time.Now()
 	upload := &model.UserUpload{
@@ -184,7 +186,7 @@ func (s *UploadService) UploadFile(ctx context.Context, userID uuid.UUID, file *
 		StorageKey:     storageKey,
 		FileSize:       file.Size,
 		MimeType:       mimeType,
-		OCRStatus:      "pending",
+		OCRStatus:      model.UploadOCRPending,
 		AnalysisStatus: analysisStatus,
 		CreatedAt:      now,
 		UpdatedAt:      now,
@@ -412,12 +414,12 @@ func (s *UploadService) enqueueOCRJob(ctx context.Context, uploadID, userID uuid
 func (s *UploadService) processOCRJob(ctx context.Context, job model.Job) error {
 	input, err := parseOCRJobInput(job)
 	if err != nil {
-		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": err.Error()})
+		_ = s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusFailed, nil, map[string]string{"error": err.Error()})
 		return err
 	}
 	uploadID, err := uuid.Parse(input.UploadID)
 	if err != nil {
-		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": "invalid upload_id"})
+		_ = s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusFailed, nil, map[string]string{"error": "invalid upload_id"})
 		return fmt.Errorf("invalid upload_id: %w", err)
 	}
 	upload, err := s.uploadRepo.GetByID(ctx, uploadID)
@@ -426,21 +428,25 @@ func (s *UploadService) processOCRJob(ctx context.Context, job model.Job) error 
 	}
 	if upload == nil || upload.UserID != job.UserID {
 		err := errors.New("OCR upload is missing or not owned by job user")
-		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": err.Error()})
+		_ = s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusFailed, nil, map[string]string{"error": err.Error()})
 		return err
 	}
 
-	if err := s.jobRuntime.TransitionTo(ctx, job.ID, "running", nil, nil); err != nil {
+	if err := s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusRunning, nil, nil); err != nil {
 		return fmt.Errorf("start OCR job: %w", err)
 	}
 	_ = s.jobRuntime.UpdateProgress(ctx, job.ID, map[string]any{"stage": "ocr_processing", "percent": 10})
-	_ = s.uploadRepo.UpdateOCRStatus(ctx, uploadID, job.UserID, "processing")
+	started, err := s.uploadRepo.BeginOCR(ctx, uploadID, job.UserID)
+	if err != nil {
+		return fmt.Errorf("begin OCR upload lifecycle: %w", err)
+	}
+	if !started {
+		return fmt.Errorf("begin OCR upload lifecycle: terminal or competing transition already won")
+	}
 
 	reader, _, err := openUploadObject(ctx, s.storage, upload)
 	if err != nil {
-		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": err.Error()})
-		_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, job.UserID, "failed", json.RawMessage(`{"error":"upload object unavailable"}`))
-		return err
+		return s.finalizeOCRFailure(ctx, job, uploadID, model.JobStatusFailed, err, json.RawMessage(`{"error":"upload object unavailable"}`))
 	}
 	documentHasher := sha256.New()
 	respBody, callErr := s.executeOCRCall(io.TeeReader(reader, documentHasher), upload.MimeType, input.ConfigurationID)
@@ -449,22 +455,18 @@ func (s *UploadService) processOCRJob(ctx context.Context, job model.Job) error 
 		callErr = closeErr
 	}
 	if callErr != nil {
-		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": callErr.Error()})
 		errPayload, _ := json.Marshal(map[string]string{"error": callErr.Error()})
-		_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, job.UserID, "failed", errPayload)
-		return callErr
+		return s.finalizeOCRFailure(ctx, job, uploadID, model.JobStatusFailed, callErr, errPayload)
 	}
 	validatedBody, err := validateHealthDocumentResponse(respBody, input.ConfigurationID)
 	if err != nil {
-		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": err.Error()})
 		errPayload, _ := json.Marshal(map[string]string{"error": "health-document response validation failed"})
-		_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, job.UserID, "failed", errPayload)
-		return err
+		return s.finalizeOCRFailure(ctx, job, uploadID, model.JobStatusFailed, err, errPayload)
 	}
 	respBody = validatedBody
 	if s.documentExtractionRuns == nil {
 		err := errors.New("document extraction run repository is not configured")
-		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": err.Error()})
+		_ = s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusFailed, nil, map[string]string{"error": err.Error()})
 		return err
 	}
 	documentSHA256 := hex.EncodeToString(documentHasher.Sum(nil))
@@ -472,32 +474,93 @@ func (s *UploadService) processOCRJob(ctx context.Context, job model.Job) error 
 		validatedBody, documentSHA256, uploadID, job.UserID, job.ID, input.ConfigurationID,
 	)
 	if err != nil {
-		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": err.Error()})
+		_ = s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusFailed, nil, map[string]string{"error": err.Error()})
 		return err
 	}
 	if err := s.documentExtractionRuns.Create(ctx, extractionRun); err != nil {
-		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": "persist document extraction audit run"})
-		return fmt.Errorf("persist document extraction audit run: %w", err)
+		cause := fmt.Errorf("persist document extraction audit run: %w", err)
+		errPayload, _ := json.Marshal(map[string]string{"error": "persist document extraction audit run"})
+		return s.finalizeOCRFailure(ctx, job, uploadID, model.JobStatusFailed, cause, errPayload)
 	}
 
 	_ = s.jobRuntime.UpdateProgress(ctx, job.ID, map[string]any{"stage": "ocr_completed", "percent": 100})
-	_ = s.jobRuntime.TransitionTo(ctx, job.ID, "completed", json.RawMessage(respBody), nil)
-	_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, job.UserID, "completed", respBody)
+	if err := s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusCompleted, json.RawMessage(respBody), nil); err != nil {
+		return fmt.Errorf("complete OCR job lifecycle: %w", err)
+	}
+	completed, err := s.uploadRepo.CompleteOCR(ctx, uploadID, job.UserID, respBody)
+	if err != nil {
+		return fmt.Errorf("complete OCR upload lifecycle: %w", err)
+	}
+	if !completed {
+		return fmt.Errorf("complete OCR upload lifecycle: competing terminal transition already won")
+	}
 	return nil
 }
 
 func (s *UploadService) timeoutOCRJob(ctx context.Context, job model.Job) error {
 	input, err := parseOCRJobInput(job)
 	if err != nil {
-		return s.jobRuntime.TransitionTo(ctx, job.ID, "timed_out", nil, map[string]string{"error": err.Error()})
+		return s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusTimedOut, nil, map[string]string{"error": err.Error()})
 	}
-	if err := s.jobRuntime.TransitionTo(ctx, job.ID, "timed_out", nil, map[string]string{"error": "stale OCR job timed out"}); err != nil {
-		return err
+	uploadID, parseErr := uuid.Parse(input.UploadID)
+	if parseErr != nil {
+		return s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusTimedOut, nil, map[string]string{"error": "stale OCR job timed out"})
 	}
-	if uploadID, parseErr := uuid.Parse(input.UploadID); parseErr == nil {
-		_ = s.uploadRepo.UpdateOCRResult(ctx, uploadID, job.UserID, "failed", json.RawMessage(`{"error":"stale OCR job timed out"}`))
+	return s.finalizeOCRFailure(ctx, job, uploadID, model.JobStatusTimedOut, nil, json.RawMessage(`{"error":"stale OCR job timed out"}`))
+}
+
+func (s *UploadService) finalizeOCRFailure(
+	ctx context.Context,
+	job model.Job,
+	uploadID uuid.UUID,
+	jobStatus model.JobStatus,
+	cause error,
+	payload json.RawMessage,
+) error {
+	message := "OCR processing failed"
+	if cause != nil {
+		message = cause.Error()
+	} else if jobStatus == model.JobStatusTimedOut {
+		message = "stale OCR job timed out"
 	}
-	return nil
+	if err := s.jobRuntime.TransitionTo(ctx, job.ID, jobStatus, nil, map[string]string{"error": message}); err != nil {
+		return fmt.Errorf("finalize OCR job lifecycle: %w", err)
+	}
+	updated, err := s.uploadRepo.FailOCR(ctx, uploadID, job.UserID, payload)
+	if err != nil {
+		return fmt.Errorf("fail OCR upload lifecycle: %w", err)
+	}
+	if !updated {
+		return fmt.Errorf("fail OCR upload lifecycle: competing terminal transition already won")
+	}
+	return cause
+}
+
+func (s *UploadService) finalizeAnalysisFailure(
+	ctx context.Context,
+	job model.Job,
+	uploadID uuid.UUID,
+	jobStatus model.JobStatus,
+	cause error,
+	payload json.RawMessage,
+) error {
+	message := "posture analysis failed"
+	if cause != nil {
+		message = cause.Error()
+	} else if jobStatus == model.JobStatusTimedOut {
+		message = "stale posture job timed out"
+	}
+	if err := s.jobRuntime.TransitionTo(ctx, job.ID, jobStatus, nil, map[string]string{"error": message}); err != nil {
+		return fmt.Errorf("finalize posture job lifecycle: %w", err)
+	}
+	updated, err := s.uploadRepo.FailAnalysis(ctx, uploadID, job.UserID, payload)
+	if err != nil {
+		return fmt.Errorf("fail posture upload lifecycle: %w", err)
+	}
+	if !updated {
+		return fmt.Errorf("fail posture upload lifecycle: competing terminal transition already won")
+	}
+	return cause
 }
 
 func parseOCRJobInput(job model.Job) (ocrJobInput, error) {
@@ -511,7 +574,7 @@ func parseOCRJobInput(job model.Job) (ocrJobInput, error) {
 	if input.ConfigurationID == "" {
 		// Jobs created before health-document configuration pinning retain the
 		// exact Tesseract behavior they were enqueued under.
-		input.ConfigurationID = legacyTesseractConfigurationID
+		input.ConfigurationID = tesseractChampionConfigurationID
 	}
 	if _, ok := knownHealthDocumentConfigurations[input.ConfigurationID]; !ok {
 		return input, fmt.Errorf("unknown health-document configuration id %q", input.ConfigurationID)
@@ -606,12 +669,12 @@ func (s *UploadService) enqueuePostureJob(ctx context.Context, uploadID, userID 
 func (s *UploadService) processPostureJob(ctx context.Context, job model.Job) error {
 	input, err := parsePostureJobInput(job)
 	if err != nil {
-		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": err.Error()})
+		_ = s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusFailed, nil, map[string]string{"error": err.Error()})
 		return err
 	}
 	uploadID, err := uuid.Parse(input.UploadID)
 	if err != nil {
-		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": "invalid upload_id"})
+		_ = s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusFailed, nil, map[string]string{"error": "invalid upload_id"})
 		return fmt.Errorf("invalid upload_id: %w", err)
 	}
 	upload, err := s.uploadRepo.GetByID(ctx, uploadID)
@@ -620,21 +683,25 @@ func (s *UploadService) processPostureJob(ctx context.Context, job model.Job) er
 	}
 	if upload == nil || upload.UserID != job.UserID {
 		err := errors.New("posture upload is missing or not owned by job user")
-		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": err.Error()})
+		_ = s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusFailed, nil, map[string]string{"error": err.Error()})
 		return err
 	}
-	if err := s.jobRuntime.TransitionTo(ctx, job.ID, "running", nil, nil); err != nil {
+	if err := s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusRunning, nil, nil); err != nil {
 		return fmt.Errorf("start posture job: %w", err)
 	}
 	_ = s.jobRuntime.UpdateProgress(ctx, job.ID, map[string]any{"stage": "posture_analyzing", "percent": 10})
-	_ = s.uploadRepo.UpdateAnalysisStatus(ctx, uploadID, job.UserID, "processing")
+	started, err := s.uploadRepo.BeginAnalysis(ctx, uploadID, job.UserID)
+	if err != nil {
+		return fmt.Errorf("begin posture upload lifecycle: %w", err)
+	}
+	if !started {
+		return fmt.Errorf("begin posture upload lifecycle: terminal or competing transition already won")
+	}
 
 	reader, _, err := openUploadObject(ctx, s.storage, upload)
 	if err != nil {
-		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": err.Error()})
 		errPayload, _ := json.Marshal(map[string]string{"error": "upload object unavailable"})
-		_ = s.uploadRepo.UpdateAnalysisResult(ctx, uploadID, job.UserID, "failed", errPayload)
-		return err
+		return s.finalizeAnalysisFailure(ctx, job, uploadID, model.JobStatusFailed, err, errPayload)
 	}
 	respBody, callErr := s.executePostureCall(reader, upload.MimeType, input.View, input.ConfigurationID)
 	closeErr := reader.Close()
@@ -642,23 +709,27 @@ func (s *UploadService) processPostureJob(ctx context.Context, job model.Job) er
 		callErr = closeErr
 	}
 	if callErr != nil {
-		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": callErr.Error()})
 		errPayload, _ := json.Marshal(map[string]string{"error": callErr.Error()})
-		_ = s.uploadRepo.UpdateAnalysisResult(ctx, uploadID, job.UserID, "failed", errPayload)
-		return callErr
+		return s.finalizeAnalysisFailure(ctx, job, uploadID, model.JobStatusFailed, callErr, errPayload)
 	}
 
 	analysisPayload, err := validatePostureAgentResponse(respBody, input.ConfigurationID)
 	if err != nil {
-		_ = s.jobRuntime.TransitionTo(ctx, job.ID, "failed", nil, map[string]string{"error": err.Error()})
 		errPayload, _ := json.Marshal(map[string]string{"error": "posture agent identity validation failed"})
-		_ = s.uploadRepo.UpdateAnalysisResult(ctx, uploadID, job.UserID, "failed", errPayload)
-		return err
+		return s.finalizeAnalysisFailure(ctx, job, uploadID, model.JobStatusFailed, err, errPayload)
 	}
 	s.recordPostureGovernance(ctx, job, analysisPayload)
 	_ = s.jobRuntime.UpdateProgress(ctx, job.ID, map[string]any{"stage": "posture_completed", "percent": 100})
-	_ = s.jobRuntime.TransitionTo(ctx, job.ID, "completed", json.RawMessage(respBody), nil)
-	_ = s.uploadRepo.UpdateAnalysisResult(ctx, uploadID, job.UserID, "completed", analysisPayload)
+	if err := s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusCompleted, json.RawMessage(respBody), nil); err != nil {
+		return fmt.Errorf("complete posture job lifecycle: %w", err)
+	}
+	completed, err := s.uploadRepo.CompleteAnalysis(ctx, uploadID, job.UserID, analysisPayload)
+	if err != nil {
+		return fmt.Errorf("complete posture upload lifecycle: %w", err)
+	}
+	if !completed {
+		return fmt.Errorf("complete posture upload lifecycle: competing terminal transition already won")
+	}
 	if input.ConfigurationID != "" {
 		_ = s.uploadRepo.UpdateAgentConfiguration(ctx, uploadID, input.ConfigurationID)
 	}
@@ -818,15 +889,13 @@ func (s *UploadService) recordPostureGovernance(ctx context.Context, job model.J
 func (s *UploadService) timeoutPostureJob(ctx context.Context, job model.Job) error {
 	input, err := parsePostureJobInput(job)
 	if err != nil {
-		return s.jobRuntime.TransitionTo(ctx, job.ID, "timed_out", nil, map[string]string{"error": err.Error()})
+		return s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusTimedOut, nil, map[string]string{"error": err.Error()})
 	}
-	if err := s.jobRuntime.TransitionTo(ctx, job.ID, "timed_out", nil, map[string]string{"error": "stale posture job timed out"}); err != nil {
-		return err
+	uploadID, parseErr := uuid.Parse(input.UploadID)
+	if parseErr != nil {
+		return s.jobRuntime.TransitionTo(ctx, job.ID, model.JobStatusTimedOut, nil, map[string]string{"error": "stale posture job timed out"})
 	}
-	if uploadID, parseErr := uuid.Parse(input.UploadID); parseErr == nil {
-		_ = s.uploadRepo.UpdateAnalysisResult(ctx, uploadID, job.UserID, "failed", json.RawMessage(`{"error":"stale posture job timed out"}`))
-	}
-	return nil
+	return s.finalizeAnalysisFailure(ctx, job, uploadID, model.JobStatusTimedOut, nil, json.RawMessage(`{"error":"stale posture job timed out"}`))
 }
 
 func parsePostureJobInput(job model.Job) (postureJobInput, error) {
@@ -911,7 +980,7 @@ func BuildPostureAnalysisSummary(uploads []model.UserUpload) PostureAnalysisSumm
 			UploadID:       upload.ID.String(),
 			View:           view,
 			FileType:       upload.FileType,
-			AnalysisStatus: upload.AnalysisStatus,
+			AnalysisStatus: string(upload.AnalysisStatus),
 			Analysis:       upload.AnalysisResult,
 			CreatedAt:      upload.CreatedAt,
 		})

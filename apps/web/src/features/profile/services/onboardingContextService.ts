@@ -1,11 +1,11 @@
-import { authFetch } from "@/features/auth/services/authService";
-import { expectJson } from "@/lib/api-client";
+import { submitOnboardingContext } from "@/generated/api/bodysense";
+import { openApiAuthFetch, withOpenApiError } from "@/lib/openapi-client";
 import type { LifestyleSectionInput } from "./lifestyleService";
 
 export interface OnboardingContextPayload {
-  expected_body_state_revision?: number;
+  expected_body_state_revision: number;
   profile: {
-    gender: string;
+    gender: "male" | "female";
     birth_date: string;
   };
   body_metrics: {
@@ -24,16 +24,19 @@ export interface OnboardingContextPayload {
 }
 
 export interface OnboardingContextResult {
-  body_state_revision?: number;
+  body_state_revision: number;
 }
 
 export const onboardingContextService = {
-  submit: async (payload: OnboardingContextPayload) =>
-    expectJson<OnboardingContextResult>(
-      await authFetch("/api/v1/onboarding/context", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      }),
-    ),
+  submit: async (
+    payload: OnboardingContextPayload,
+  ): Promise<OnboardingContextResult> =>
+    withOpenApiError(async () => {
+      const response = await submitOnboardingContext(
+        payload,
+        undefined,
+        openApiAuthFetch,
+      );
+      return { body_state_revision: response.body_state_revision };
+    }),
 };

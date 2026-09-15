@@ -184,6 +184,20 @@ func TestTreatmentReplayOldRevisionFailsClosed(t *testing.T) {
 	}
 }
 
+func TestTreatmentReplayRejectsRetiredSourceConfiguration(t *testing.T) {
+	revision, _ := treatmentReplayFixture(t, retiredTreatmentV1ConfigurationID)
+	ai := &fakeTreatmentReplayAI{}
+	replay := NewTreatmentReplayService(&fakeTreatmentRepo{proposal: revision}, ai)
+
+	_, err := replay.HistoricalReplay(context.Background(), uuid.New(), revision.ID)
+	if !errors.Is(err, ErrTreatmentReplayConfiguration) {
+		t.Fatalf("retired source configuration must fail closed, got %v", err)
+	}
+	if ai.calls != 0 {
+		t.Fatalf("retired source configuration must fail before AI, got %d calls", ai.calls)
+	}
+}
+
 func TestTreatmentReplayArtifactIntegrityDetectsFrozenRevisionDrift(t *testing.T) {
 	revision, frozen := treatmentReplayFixture(t, defaultTreatmentConfigurationID)
 	frozen.BodyStateRevision = 99

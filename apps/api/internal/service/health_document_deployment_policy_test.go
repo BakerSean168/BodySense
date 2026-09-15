@@ -16,7 +16,7 @@ func TestHealthDocumentDeploymentDefaultsToFrozenTesseractChampion(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := policy.ConfigurationID(); got != legacyTesseractConfigurationID {
+	if got := policy.ConfigurationID(); got != tesseractChampionConfigurationID {
 		t.Fatalf("configuration = %q", got)
 	}
 	if policy.Stage() != HealthDocumentStageChampion {
@@ -43,7 +43,7 @@ func TestHealthDocumentRollbackUsesFrozenTesseract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := policy.ConfigurationID(); got != legacyTesseractConfigurationID {
+	if got := policy.ConfigurationID(); got != tesseractChampionConfigurationID {
 		t.Fatalf("rollback configuration = %q", got)
 	}
 }
@@ -65,7 +65,7 @@ func TestHealthDocumentDeploymentRejectsInvalidStageAndPointerRoles(t *testing.T
 	})
 	t.Run("champion cannot masquerade as qualification candidate", func(t *testing.T) {
 		clearHealthDocumentDeploymentEnv(t)
-		t.Setenv("HEALTH_DOCUMENT_QUALIFICATION_CONFIGURATION_ID", legacyTesseractConfigurationID)
+		t.Setenv("HEALTH_DOCUMENT_QUALIFICATION_CONFIGURATION_ID", tesseractChampionConfigurationID)
 		if _, err := NewHealthDocumentDeploymentPolicy(); err == nil {
 			t.Fatal("current champion must not masquerade as qualification candidate")
 		}

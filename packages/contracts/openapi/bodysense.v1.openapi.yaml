@@ -1,0 +1,6142 @@
+openapi: 3.1.0
+info:
+  title: BodySense Public API
+  version: 1.0.0-vnext
+  license:
+    name: MIT
+    identifier: MIT
+  description: Canonical browser-facing REST contract for BodySense vNext. Public handlers and browser clients use this generated boundary as the single runtime contract.
+servers:
+- url: /
+paths:
+  /api/v1/body-state/facts:
+    post:
+      operationId: addBodyStateFact
+      summary: Add a durable BodyState fact with optimistic revision checking.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertBodyStateFactRequest'
+      responses:
+        '200':
+          description: Fact and immutable revision created by the mutation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyStateFactMutationResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/health-workspace:
+    get:
+      operationId: getHealthWorkspace
+      summary: Get the current longitudinal health workspace projection.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Current workspace projection.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthWorkspace'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/body-state:
+    get:
+      operationId: getBodyState
+      summary: Get the current durable BodyState snapshot.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful BodyState operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyStateSnapshot'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/body-state/facts/{id}/correct:
+    post:
+      operationId: correctBodyStateFact
+      summary: Correct a fact that was previously wrong.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful BodyState operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyStateFactMutationResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CorrectBodyStateFactRequest'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: &id001
+          type: string
+          format: uuid
+  /api/v1/body-state/facts/{id}/temporal:
+    patch:
+      operationId: updateBodyStateFactTemporal
+      summary: Update temporal state for a previously true fact.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful BodyState operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyStateFactMutationResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBodyStateFactTemporalRequest'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+  /api/v1/body-state/facts/{id}/review:
+    patch:
+      operationId: reviewBodyStateFact
+      summary: Review a BodyState fact.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful BodyState operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyStateFactMutationResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewBodyStateFactRequest'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+  /api/v1/body-state/observations:
+    post:
+      operationId: addBodyStateObservation
+      summary: Add a durable BodyState observation.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful BodyState operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyStateObservationMutationResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BodyStateObservationInput'
+  /api/v1/body-state/observations/{id}/review:
+    patch:
+      operationId: reviewBodyStateObservation
+      summary: Review a BodyState observation.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful BodyState operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyStateObservationMutationResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewBodyStateObservationRequest'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+  /api/v1/body-state/hypotheses:
+    post:
+      operationId: addBodyStateHypothesis
+      summary: Add a BodyState hypothesis.
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          description: Successful BodyState operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyStateHypothesisMutationResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BodyStateHypothesisInput'
+  /api/v1/body-state/hypotheses/{id}/lifecycle:
+    patch:
+      operationId: updateBodyStateHypothesisLifecycle
+      summary: Update hypothesis lifecycle/counterevidence.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful BodyState operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyStateHypothesisMutationResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBodyStateHypothesisLifecycleRequest'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema: *id001
+  /api/v1/body-state/evidence:
+    get:
+      operationId: listBodyStateEvidence
+      summary: List durable evidence references used by BodyState reasoning.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful BodyState operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyStateEvidenceListResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/body-state/safety/resolve:
+    post:
+      operationId: resolveBodyStateSafety
+      summary: Resolve or monitor the durable safety projection.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful BodyState operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyStateRevisionMutationResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '503':
+          $ref: '#/components/responses/ValidationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveBodyStateSafetyRequest'
+  /api/v1/lifestyle:
+    get:
+      operationId: getLifestyle
+      summary: Get the current lifestyle projection.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifestyleSnapshot'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    put:
+      operationId: updateLifestyle
+      summary: Patch the current lifestyle projection with optimistic concurrency.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifestyleSnapshot'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLifestyleRequest'
+  /api/v1/lifestyle/candidates/{id}/accept:
+    post:
+      operationId: acceptLifestyleCandidate
+      summary: Accept an AI-extracted lifestyle candidate.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifestyleSnapshot'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewLifestyleCandidateRequest'
+      parameters: &id002
+      - name: id
+        in: path
+        required: true
+        schema: &id010
+          type: string
+          format: uuid
+  /api/v1/lifestyle/candidates/{id}/reject:
+    post:
+      operationId: rejectLifestyleCandidate
+      summary: Reject an AI-extracted lifestyle candidate.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifestyleSnapshot'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewLifestyleCandidateRequest'
+      parameters: *id002
+  /api/v1/body-metrics:
+    get:
+      operationId: getBodyMetrics
+      summary: Get current anthropometric measurements.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyMetricsSnapshot'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    put:
+      operationId: updateBodyMetrics
+      summary: Update current anthropometric measurements with optimistic concurrency.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BodyMetricsSnapshot'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBodyMetricsRequest'
+  /api/v1/health-history/injury:
+    get:
+      operationId: getInjuryHistory
+      summary: Get the current injury-history projection.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InjuryHistorySnapshot'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    put:
+      operationId: updateInjuryHistory
+      summary: Update injury-history summary with optimistic concurrency.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InjuryHistorySnapshot'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateInjuryHistoryRequest'
+  /api/v1/onboarding/context:
+    put:
+      operationId: submitOnboardingContext
+      summary: Atomically establish stable profile identity and the initial BodyState context.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OnboardingContextResult'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/RevisionConflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OnboardingContextRequest'
+  /api/v1/me:
+    get:
+      operationId: getCurrentUser
+      summary: Get the authenticated user identity.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Authenticated user identity.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/profile:
+    get:
+      operationId: getUserProfile
+      summary: Get stable user identity profile.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Profile, or null before onboarding/profile creation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NullableUserProfileResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    put:
+      operationId: updateUserProfile
+      summary: Replace the editable stable identity fields.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserProfileRequest'
+      responses:
+        '200':
+          description: Updated stable identity profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/privacy/erasure-plan:
+    get:
+      operationId: getPrivacyErasurePlan
+      summary: Preview the durable data-erasure scope without mutating user data.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Current destructive erasure plan.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum: [no-store]
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrivacyErasurePlan'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/privacy/erasure:
+    post:
+      operationId: requestPrivacyErasure
+      summary: Accept an irreversible full-account and health-data erasure request.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrivacyErasureRequest'
+      responses:
+        '202':
+          description: Erasure request is durable and may continue after disconnect.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum: [no-store]
+            Set-Cookie:
+              description: Clears the browser refresh credential immediately after durable acceptance.
+              schema:
+                type: string
+                minLength: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrivacyErasureAccepted'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/client-diagnostics:
+    post:
+      operationId: recordClientDiagnostic
+      summary: Record bounded privacy-safe browser operational telemetry.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientDiagnostic'
+      responses:
+        '204':
+          description: Diagnostic accepted for operational logging.
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/assessment/generate:
+    post:
+      operationId: generateAssessment
+      summary: Generate and durably persist an evidence-grounded assessment report.
+      security:
+      - bearerAuth: []
+      responses:
+        '201':
+          description: Assessment report created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentReportV2'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/assessment:
+    get:
+      operationId: listAssessments
+      summary: List immutable assessment reports for the authenticated user.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+      responses:
+        '200':
+          description: Paginated assessment reports.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentListResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/assessment/{id}:
+    get:
+      operationId: getAssessment
+      summary: Get one immutable assessment report.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/AssessmentReportId'
+      responses:
+        '200':
+          description: Assessment report.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentReport'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/assessment/{id}/replay:
+    post:
+      operationId: replayAssessment
+      summary: Replay an immutable assessment historically or counterfactually without mutating durable state.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/AssessmentReportId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssessmentReplayRequest'
+      responses:
+        '200':
+          description: Transient replay comparison.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentReplayReport'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/assessment/{id}/regression-export:
+    get:
+      operationId: exportAssessmentRegressionCase
+      summary: Export a read-only frozen assessment regression case.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/AssessmentReportId'
+      responses:
+        '200':
+          description: Assessment qualification regression case.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssessmentRegressionExport'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/auth/register:
+    post:
+      operationId: registerAccount
+      summary: Register a new account and establish a browser session family.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRegisterRequest'
+      responses:
+        '201':
+          description: Account created; HttpOnly refresh credential set via Set-Cookie.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            Pragma:
+              $ref: '#/components/headers/NoCachePragma'
+            Set-Cookie:
+              $ref: '#/components/headers/RefreshCookie'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSession'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/auth/login:
+    post:
+      operationId: loginAccount
+      summary: Log in and establish a browser session family.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthLoginRequest'
+      responses:
+        '200':
+          description: Session established; HttpOnly refresh credential set via Set-Cookie.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            Pragma:
+              $ref: '#/components/headers/NoCachePragma'
+            Set-Cookie:
+              $ref: '#/components/headers/RefreshCookie'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSession'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/auth/refresh:
+    post:
+      operationId: refreshAccountSession
+      summary: Rotate the HttpOnly refresh credential and return a fresh access credential.
+      security: []
+      responses:
+        '200':
+          description: Refresh credential rotated via Set-Cookie; short-lived access credential returned.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+            Pragma:
+              $ref: '#/components/headers/NoCachePragma'
+            Set-Cookie:
+              $ref: '#/components/headers/RefreshCookie'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSession'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/auth/logout:
+    post:
+      operationId: logoutAccount
+      summary: Revoke the current refresh/session family and clear the browser credential.
+      security: []
+      responses:
+        '200':
+          description: Session revoked; refresh credential cleared via Set-Cookie.
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/RefreshCookie'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutAcknowledgement'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/conversations:
+    get:
+      operationId: listConversations
+      summary: List the authenticated user's conversations with cursor pagination.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          description: RFC3339 updated-at cursor from a previous page.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Conversations page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationListResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/conversations/{id}:
+    get:
+      operationId: getConversation
+      summary: Get one conversation with its ordered messages.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      responses:
+        '200':
+          description: Conversation with messages.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationDetailResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      operationId: updateConversation
+      summary: Update conversation status (active, archived, or deleted).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationUpdateRequest'
+      responses:
+        '200':
+          description: Conversation updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationMutationResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      operationId: deleteConversation
+      summary: Soft-delete a conversation and revoke its shares.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      responses:
+        '200':
+          description: Conversation deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationMutationResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/conversations/{id}/pin:
+    patch:
+      operationId: pinConversation
+      summary: Pin or unpin a conversation.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationPinRequest'
+      responses:
+        '200':
+          description: Pin state updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationMutationResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/conversations/{id}/title:
+    put:
+      operationId: renameConversationTitle
+      summary: Rename a conversation title directly.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationTitleRequest'
+      responses:
+        '200':
+          description: Title updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationMutationResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      operationId: generateConversationTitle
+      summary: Queue asynchronous agent title generation for a conversation.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      responses:
+        '202':
+          description: Title generation started.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationMutationResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/conversations/{id}/share:
+    post:
+      operationId: shareConversation
+      summary: Publish a share token and public URL for a conversation.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      responses:
+        '201':
+          description: Share created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareConversationResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      operationId: unshareConversation
+      summary: Revoke a conversation share.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      responses:
+        '200':
+          description: Share revoked.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationMutationResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/shared-conversations/{token}:
+    get:
+      operationId: getSharedConversation
+      summary: Read a shared conversation snapshot by public token.
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Shared conversation snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SharedConversationResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/conversations/{id}/runs:
+    get:
+      operationId: listConversationRuns
+      summary: List the recorded runs of a conversation.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      responses:
+        '200':
+          description: Conversation runs.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationRunListResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/conversations/{id}/runs/{runId}/events:
+    get:
+      operationId: listRunEvents
+      summary: Page through the durable runtime events of one conversation run.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - $ref: '#/components/parameters/ConversationRunId'
+        - name: after_seq
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 200
+      responses:
+        '200':
+          description: Runtime event page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuntimeEventListResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/consultation-runs:
+    post:
+      operationId: startConsultationRun
+      summary: Start or reattach a durable consultation run and stream public events.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartConsultationRunRequest'
+      responses:
+        '200':
+          description: Server-sent event stream for the durable run.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/consultation-runs/{id}/cancel:
+    post:
+      operationId: cancelConsultationRun
+      summary: Explicitly cancel a durable consultation run.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/ConsultationRunId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelConsultationRunRequest'
+      responses:
+        '200':
+          description: Run was cancelled or was already durably cancelled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelConsultationRunResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/consultation-runs/{id}/replay:
+    post:
+      operationId: replayConsultationRun
+      summary: Recompute the Go decision authority for a historical consultation run.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/ConsultationRunId'
+      responses:
+        '200':
+          description: Deterministic replay decision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsultationRunDecision'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ReplayUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/consultation-runs/{id}/replay/counterfactual:
+    post:
+      operationId: replayConsultationRunCounterfactual
+      summary: Recompute the run decision against another immutable configuration.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/ConsultationRunId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsultationCounterfactualReplayRequest'
+      responses:
+        '200':
+          description: Counterfactual deterministic replay decision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsultationRunDecision'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ReplayUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/consultations/{id}:
+    get:
+      operationId: getConsultation
+      summary: Get the durable consultation session and pending interactions.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/ConsultationId'
+      responses:
+        '200':
+          description: Current durable consultation session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsultationSessionResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/consultations/{id}/thread:
+    get:
+      operationId: getConsultationThread
+      summary: Refresh and read the durable consultation workbench projection.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/ConsultationId'
+      responses:
+        '200':
+          description: Projection-backed consultation thread.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsultationThreadResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/consultations/{id}/interrupts/{interactionId}/answers:
+    post:
+      operationId: resumeConsultationInteraction
+      summary: Persist an interaction answer and resume the exact durable Agent thread.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/ConsultationId'
+      - $ref: '#/components/parameters/InteractionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResumeConsultationInteractionRequest'
+      responses:
+        '200':
+          description: Server-sent event stream for the resumed turn.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/consultations/{id}/interaction-metrics:
+    get:
+      operationId: getConsultationInteractionMetrics
+      summary: Get answer/expiry metrics for one owned consultation.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/ConsultationId'
+      responses:
+        '200':
+          description: Current interaction metrics projection.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InteractionMetrics'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/consultations/{id}/diagnosis:
+    post:
+      operationId: analyzeDiagnosis
+      summary: Generate or safety-block a BodyState-backed diagnosis analysis.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/ConsultationId'
+      responses:
+        '200':
+          description: Current durable diagnosis public projection.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiagnosisWorkspaceProjection'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/diagnosis-analyses:
+    get:
+      operationId: listDiagnosisAnalyses
+      summary: List immutable diagnosis analyses for the authenticated user.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      responses:
+        '200':
+          description: Diagnosis analysis timeline.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiagnosisAnalysisListResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/diagnosis-analyses/{analysisId}:
+    get:
+      operationId: getDiagnosisAnalysis
+      summary: Get one immutable diagnosis analysis with assessments and freshness.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/DiagnosisAnalysisId'
+      responses:
+        '200':
+          description: Diagnosis analysis projection.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiagnosisWorkspaceProjection'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/diagnosis-analyses/{analysisId}/assessment:
+    put:
+      operationId: assessDiagnosisCandidates
+      summary: Record the user's interpretation of diagnosis candidates without deleting unmentioned candidates.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/DiagnosisAnalysisId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiagnosisCandidateAssessmentRequest'
+      responses:
+        '200':
+          description: Updated candidate assessments.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiagnosisCandidateAssessmentResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/diagnosis-analyses/{analysisId}/replay:
+    post:
+      operationId: replayDiagnosisAnalysis
+      summary: Replay an immutable diagnosis historically or counterfactually without mutating durable state.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/DiagnosisAnalysisId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiagnosisReplayRequest'
+      responses:
+        '200':
+          description: Deterministic diagnosis replay report.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiagnosisReplayReport'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ReplayUnavailable'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/diagnosis-analyses/{analysisId}/regression-export:
+    get:
+      operationId: exportDiagnosisRegressionCase
+      summary: Export a frozen developer-reviewed regression case envelope.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/DiagnosisAnalysisId'
+      responses:
+        '200':
+          description: Regression-dataset-shaped export envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JsonObject'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ReplayUnavailable'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/treatments/proposals:
+    post:
+      operationId: generateTreatmentProposal
+      summary: Generate a revisioned Treatment proposal from a reviewed DiagnosisAnalysis.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TreatmentProposalRequest'
+      responses:
+        '201':
+          description: Treatment revision proposal.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TreatmentProposalResponse'
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /api/v1/treatments/current:
+    get:
+      operationId: getCurrentTreatment
+      summary: Read the deterministic current Treatment review projection without mutating state.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Current treatment, or null when none exists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentTreatmentResponse'
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/treatments/current/review:
+    post:
+      operationId: reviewCurrentTreatment
+      summary: Persist the latest deterministic current Treatment review state.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Reviewed current treatment, or null when none exists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentTreatmentResponse'
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/treatments/revisions:
+    get:
+      operationId: listTreatmentRevisions
+      summary: List immutable Treatment revisions for the authenticated user.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+      responses:
+        '200':
+          description: Treatment revision timeline.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TreatmentRevisionListResponse'
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/treatments/revisions/{revisionId}:
+    get:
+      operationId: getTreatmentRevision
+      summary: Get one immutable Treatment revision.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/TreatmentRevisionId'
+      responses:
+        '200':
+          description: Treatment revision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TreatmentRevision'
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/treatments/revisions/{revisionId}/replay:
+    post:
+      operationId: replayTreatmentRevision
+      summary: Replay an immutable Treatment revision historically or counterfactually.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/TreatmentRevisionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TreatmentReplayRequest'
+      responses:
+        '200':
+          description: Deterministic Treatment replay report.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TreatmentReplayReport'
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ReplayUnavailable'}
+        '502': {$ref: '#/components/responses/BadGateway'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /api/v1/treatments/revisions/{revisionId}/regression-export:
+    get:
+      operationId: exportTreatmentRegressionCase
+      summary: Export one frozen Treatment developer regression case.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/TreatmentRevisionId'
+      responses:
+        '200':
+          description: Regression dataset envelope.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/JsonObject'}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ReplayUnavailable'}
+        '502': {$ref: '#/components/responses/BadGateway'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /api/v1/treatments/revisions/{revisionId}/accept:
+    post:
+      operationId: acceptTreatmentRevision
+      summary: Atomically accept one Treatment revision and project its TrainingPlan.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/TreatmentRevisionId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AcceptTreatmentRevisionRequest'}
+      responses:
+        '200':
+          description: Accepted Treatment and executable TrainingPlan projection.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AcceptTreatmentRevisionResponse'}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalError'}
+        '503': {$ref: '#/components/responses/ServiceUnavailable'}
+  /api/v1/treatments/revisions/{revisionId}/reject:
+    post:
+      operationId: rejectTreatmentRevision
+      summary: Reject one proposed Treatment revision.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/TreatmentRevisionId'
+      responses:
+        '204': {description: Treatment revision rejected.}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/outcomes:
+    post:
+      operationId: recordOutcome
+      summary: Record an idempotent post-intervention outcome and project its BodyState effect.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RecordOutcomeRequest'}
+      responses:
+        '200':
+          description: Existing idempotent Outcome.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/OutcomeMutationResponse'}
+        '201':
+          description: Newly created Outcome.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/OutcomeMutationResponse'}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalError'}
+    get:
+      operationId: listOutcomes
+      summary: List post-intervention Outcomes.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema: {type: integer, minimum: 1, maximum: 500, default: 100}
+      responses:
+        '200':
+          description: Outcome timeline.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/OutcomeListResponse'}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/training:
+    get:
+      operationId: listTrainingPlans
+      summary: List TrainingPlan execution projections for the authenticated user.
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Training plans, content: {application/json: {schema: {$ref: '#/components/schemas/TrainingPlanListResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/training/{id}:
+    get:
+      operationId: getTrainingPlan
+      summary: Get one owned TrainingPlan execution projection.
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/TrainingPlanId'}]
+      responses:
+        '200': {description: Training plan, content: {application/json: {schema: {$ref: '#/components/schemas/TrainingPlan'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/v1/training/{id}/today:
+    get:
+      operationId: getTrainingTodayTask
+      summary: Materialize and read today training log for one active plan.
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/TrainingPlanId'}]
+      responses:
+        '200': {description: Today training log, content: {application/json: {schema: {$ref: '#/components/schemas/TrainingLog'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/v1/training/{id}/checkin:
+    post:
+      operationId: checkInTrainingPlan
+      summary: Mark today training log checked in and persist its adherence Outcome.
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/TrainingPlanId'}]
+      responses:
+        '200': {description: Check-in acknowledged, content: {application/json: {schema: {$ref: '#/components/schemas/TrainingCheckInResponse'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/training/{id}/log:
+    put:
+      operationId: updateTrainingLog
+      summary: Update today training log and persist structured feedback Outcome.
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/TrainingPlanId'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/TrainingLogUpdateRequest'}}}
+      responses:
+        '200': {description: Updated training feedback result, content: {application/json: {schema: {$ref: '#/components/schemas/TrainingLogUpdateResponse'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/v1/training/{id}/progress:
+    get:
+      operationId: getTrainingProgress
+      summary: Read deterministic adherence progress for one TrainingPlan.
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/TrainingPlanId'}]
+      responses:
+        '200': {description: Training progress, content: {application/json: {schema: {$ref: '#/components/schemas/TrainingProgress'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/v1/training/{id}/reassess:
+    post:
+      operationId: reassessTrainingPlan
+      summary: Reassess training feedback and optionally propose a new Treatment revision.
+      security: [{bearerAuth: []}]
+      parameters: [{$ref: '#/components/parameters/TrainingPlanId'}]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/TrainingReassessmentRequest'}}}
+      responses:
+        '200': {description: Reassessment result, content: {application/json: {schema: {$ref: '#/components/schemas/TrainingFeedbackResult'}}}}
+        '400': {$ref: '#/components/responses/InvalidRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /api/v1/uploads:
+    post:
+      operationId: createUpload
+      summary: Upload one private health document or posture image for authenticated processing.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateUploadRequest'
+      responses:
+        '201':
+          description: Upload manifest created after the private object is durably stored.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserUpload'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    get:
+      operationId: listUploads
+      summary: List private upload manifests owned by the authenticated user.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Owned upload manifests ordered by repository policy.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/uploads/posture-analysis:
+    get:
+      operationId: getPostureAnalysis
+      summary: Read the latest completed posture-analysis projection for the authenticated user.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Latest completed per-view posture analyses, or an empty summary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostureAnalysisSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/uploads/{id}:
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      operationId: getUpload
+      summary: Get one private upload manifest owned by the authenticated user.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Owned upload manifest.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserUpload'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      operationId: deleteUpload
+      summary: Delete one owned private upload object and its manifest.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Upload deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadDeleteResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/uploads/{id}/health-document-review:
+    get:
+      operationId: getHealthDocumentReviewContext
+      summary: Resolve the current server-owned health-document extraction run and its review projection.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Current review context for the owned upload.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthDocumentReviewContext'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/uploads/{id}/extractions/{runId}/reviews:
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: runId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      operationId: listHealthDocumentReviewCandidates
+      summary: List append-only review state for one exact owned extraction run.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Review candidates and their current/history projections.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthDocumentReviewListResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      operationId: appendHealthDocumentReview
+      summary: Append one idempotent confirm, correct or reject action to an exact owned extraction candidate.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppendHealthDocumentReviewRequest'
+      responses:
+        '201':
+          description: Immutable review record appended or idempotently replayed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentIndicatorReviewRecord'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/uploads/{id}/extractions/{runId}/source:
+    get:
+      operationId: getHealthDocumentSource
+      summary: Stream the authenticated private source document for one exact owned extraction run.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: runId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Private upload bytes. The server preserves the stored MIME type and adds nosniff.
+          content:
+            application/pdf:
+              schema: &privateUploadBinary
+                type: string
+                format: binary
+            image/jpeg:
+              schema: *privateUploadBinary
+            image/png:
+              schema: *privateUploadBinary
+            image/webp:
+              schema: *privateUploadBinary
+            application/octet-stream:
+              schema: *privateUploadBinary
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/knowledge/sources:
+    post:
+      operationId: registerKnowledgeSource
+      summary: Register one governed Knowledge source identity as a Knowledge operator.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterKnowledgeSourceRequest'
+      responses:
+        '201':
+          description: Knowledge source registered.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeSource'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    get:
+      operationId: listKnowledgeSources
+      summary: List governed Knowledge source identities as a Knowledge operator.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Registered Knowledge sources.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeSourceListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/knowledge/ingestions/video:
+    post:
+      operationId: enqueueKnowledgeVideoIngestion
+      summary: Enqueue one governed video ingestion using server-pinned Agent configurations.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KnowledgeVideoIngestionRequest'
+      responses:
+        '202':
+          description: Durable ingestion job accepted or idempotently recovered.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeIngestionEnqueueResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/knowledge/ingestions/{jobID}:
+    get:
+      operationId: getKnowledgeIngestionJob
+      summary: Read one durable Knowledge ingestion lifecycle as a Knowledge operator.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: jobID
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Public ingestion lifecycle projection.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeIngestionJob'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/knowledge/search:
+    post:
+      operationId: searchKnowledge
+      summary: Search normalized Knowledge as a Knowledge operator.
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KnowledgeSearchRequest'
+      responses:
+        '200':
+          description: Normalized Knowledge search results without private filesystem paths.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeSearchResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '502':
+          description: Internal Knowledge search service is unavailable or violates its contract.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/knowledge/stats:
+    get:
+      operationId: getKnowledgeStats
+      summary: Read normalized Knowledge library statistics as a Knowledge operator.
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Knowledge library statistics.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '502':
+          description: Internal Knowledge statistics service is unavailable or violates its contract.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+components:
+  parameters:
+    ConversationId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ConversationRunId:
+      name: runId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ConsultationRunId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ConsultationId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    InteractionId:
+      name: interactionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    DiagnosisAnalysisId:
+      name: analysisId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    TreatmentRevisionId:
+      name: revisionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    TrainingPlanId:
+      name: id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    AssessmentReportId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  headers:
+    NoStore:
+      description: Credential-bearing responses must not be cached.
+      schema:
+        type: string
+        const: no-store
+    NoCachePragma:
+      description: HTTP Pragma no-cache directive for credential-bearing responses.
+      schema:
+        type: string
+        const: no-cache
+    RefreshCookie:
+      description: HttpOnly refresh credential cookie (set or cleared).
+      schema:
+        type: string
+    RetryAfter:
+      description: Seconds until the next authentication attempt may be retried.
+      schema:
+        type: string
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    AssessmentEvidenceSource:
+      type: string
+      enum: [body_state, report, posture_analysis]
+    AuthRegisterRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - email
+      - password
+      properties:
+        email:
+          type: string
+          minLength: 3
+          maxLength: 254
+          pattern: "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+    AuthLoginRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - email
+      - password
+      properties:
+        email:
+          type: string
+          minLength: 3
+          maxLength: 254
+          pattern: "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+    AuthSession:
+      type: object
+      additionalProperties: false
+      required:
+      - access_token
+      - expires_in
+      properties:
+        access_token:
+          type: string
+          minLength: 1
+        expires_in:
+          type: integer
+          minimum: 0
+    LogoutAcknowledgement:
+      type: object
+      additionalProperties: false
+      required:
+      - message
+      properties:
+        message:
+          type: string
+    AssessmentEvidenceDomain:
+      type: string
+      enum: [posture, exercise, lifestyle, anthropometry, health_report, injury_symptoms]
+    AssessmentDomainCoverage:
+      type: object
+      additionalProperties: false
+      required: [status, evidence_refs]
+      properties:
+        status:
+          type: string
+          enum: [available, missing]
+        evidence_refs:
+          type: array
+          items:
+            type: string
+    AssessmentEvidenceDomains:
+      type: object
+      additionalProperties: false
+      required: [posture, exercise, lifestyle, anthropometry, health_report, injury_symptoms]
+      properties:
+        posture:
+          $ref: '#/components/schemas/AssessmentDomainCoverage'
+        exercise:
+          $ref: '#/components/schemas/AssessmentDomainCoverage'
+        lifestyle:
+          $ref: '#/components/schemas/AssessmentDomainCoverage'
+        anthropometry:
+          $ref: '#/components/schemas/AssessmentDomainCoverage'
+        health_report:
+          $ref: '#/components/schemas/AssessmentDomainCoverage'
+        injury_symptoms:
+          $ref: '#/components/schemas/AssessmentDomainCoverage'
+    AssessmentEvidenceCoverage:
+      type: object
+      additionalProperties: false
+      required: [status, available_sources, domains]
+      properties:
+        status:
+          type: string
+          enum: [complete, partial, insufficient]
+        available_sources:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/AssessmentEvidenceSource'
+        domains:
+          $ref: '#/components/schemas/AssessmentEvidenceDomains'
+    AssessmentEvidenceGap:
+      type: object
+      additionalProperties: false
+      required: [dimension, required, description, needed_sources]
+      properties:
+        dimension:
+          $ref: '#/components/schemas/AssessmentEvidenceDomain'
+        required:
+          type: boolean
+          enum: [false]
+        description:
+          type: string
+          minLength: 1
+        needed_sources:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/AssessmentEvidenceSource'
+    AssessmentObservationKind:
+      type: string
+      enum: [posture_alignment, posture_asymmetry, lifestyle_pattern, exercise_pattern, report_indicator, anthropometry]
+    AssessmentObservation:
+      type: object
+      additionalProperties: false
+      required: [observation_id, review_state, kind, body_region, label, description, method, evidence_refs]
+      properties:
+        observation_id:
+          type: string
+          format: uuid
+        review_state:
+          type: string
+          minLength: 1
+        kind:
+          $ref: '#/components/schemas/AssessmentObservationKind'
+        body_region:
+          type: string
+        label:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+        method:
+          type: string
+          minLength: 1
+        evidence_refs:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: string
+            minLength: 1
+    AssessmentReportV2:
+      type: object
+      additionalProperties: false
+      required: [id, user_id, status, contract_revision, evidence_coverage, evidence_gaps, observations, summary, safety_notes, agent_configuration_id, agent_configuration, execution_provenance, generation_decision_trace, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        user_id: {type: string, format: uuid}
+        status:
+          type: string
+          enum: [completed, insufficient_information]
+        contract_revision:
+          type: string
+          enum: [assessment-output-v2]
+        evidence_coverage:
+          $ref: '#/components/schemas/AssessmentEvidenceCoverage'
+        evidence_gaps:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssessmentEvidenceGap'
+        observations:
+          type: array
+          maxItems: 24
+          items:
+            $ref: '#/components/schemas/AssessmentObservation'
+        summary:
+          type: string
+        information_gaps:
+          type: array
+          maxItems: 0
+          items:
+            type: string
+        safety_notes:
+          type: array
+          items:
+            type: string
+        body_state_revision:
+          type: integer
+          format: int64
+          minimum: 1
+        agent_configuration_id:
+          type: string
+        agent_configuration:
+          $ref: '#/components/schemas/JsonObject'
+        execution_provenance:
+          $ref: '#/components/schemas/JsonObject'
+        generation_decision_trace:
+          $ref: '#/components/schemas/JsonObject'
+        created_at:
+          type: string
+          format: date-time
+    AssessmentReport:
+      $ref: '#/components/schemas/AssessmentReportV2'
+    AssessmentListResponse:
+      type: object
+      additionalProperties: false
+      required: [reports, total, limit, offset]
+      properties:
+        reports:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssessmentReport'
+        total:
+          type: integer
+          format: int64
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        offset:
+          type: integer
+          minimum: 0
+    AssessmentReplayRequest:
+      type: object
+      additionalProperties: false
+      required: [mode]
+      properties:
+        mode:
+          type: string
+          enum: [historical, counterfactual]
+        configuration_id:
+          type: string
+          minLength: 1
+    AssessmentReplayCheck:
+      type: object
+      additionalProperties: false
+      required: [name, match]
+      properties:
+        name: {type: string, minLength: 1}
+        match: {type: boolean}
+        baseline: {type: string}
+        candidate: {type: string}
+    AssessmentReplayLayer:
+      type: object
+      additionalProperties: false
+      required: [match, checks]
+      properties:
+        match: {type: boolean}
+        checks:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssessmentReplayCheck'
+    AssessmentReplaySnapshot:
+      type: object
+      additionalProperties: false
+      required: [contract_revision, status, observation_count, observation_kinds, information_gaps, evidence_gaps, safety_note_count, summary]
+      properties:
+        contract_revision: {type: string, minLength: 1}
+        status: {type: string}
+        evidence_coverage_status: {type: string}
+        observation_count: {type: integer, minimum: 0}
+        observation_kinds:
+          type: array
+          items: {type: string}
+        information_gaps:
+          type: array
+          items: {type: string}
+        evidence_gaps:
+          type: array
+          items: {type: string}
+        safety_note_count: {type: integer, minimum: 0}
+        summary: {type: string}
+    AssessmentReplayComparison:
+      type: object
+      additionalProperties: false
+      required: [hard, semantic, presentation]
+      properties:
+        hard: {$ref: '#/components/schemas/AssessmentReplayLayer'}
+        semantic: {$ref: '#/components/schemas/AssessmentReplayLayer'}
+        presentation: {$ref: '#/components/schemas/AssessmentReplayLayer'}
+    AssessmentReplayReport:
+      type: object
+      additionalProperties: false
+      required: [mode, source_report_id, source_configuration_id, target_configuration_id, input_fingerprint, artifact_integrity, baseline, replay, comparison, output]
+      properties:
+        mode:
+          type: string
+          enum: [historical, counterfactual]
+        source_report_id: {type: string, format: uuid}
+        source_configuration_id: {type: string}
+        target_configuration_id: {type: string}
+        input_fingerprint:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+        artifact_integrity: {$ref: '#/components/schemas/AssessmentReplayLayer'}
+        baseline: {$ref: '#/components/schemas/AssessmentReplaySnapshot'}
+        replay: {$ref: '#/components/schemas/AssessmentReplaySnapshot'}
+        comparison: {$ref: '#/components/schemas/AssessmentReplayComparison'}
+        output: {$ref: '#/components/schemas/JsonObject'}
+    AssessmentRegressionMetadata:
+      type: object
+      additionalProperties: false
+      required: [scenario_family_id, case_category, split, slices, critical, expected_contract_revision, expected_status, expected_evidence_gap_count, expected_agent_executed, min_observations, forbidden_output_fields]
+      properties:
+        scenario_family_id: {type: string}
+        case_category: {type: string, enum: [historical-regression]}
+        split: {type: string, enum: [regression]}
+        slices:
+          type: array
+          items: {type: string}
+        critical: {type: boolean}
+        expected_contract_revision: {type: string}
+        expected_status: {type: string}
+        expected_evidence_coverage_status: {type: string}
+        expected_evidence_gap_count: {type: integer, minimum: 0}
+        expected_agent_executed: {type: boolean}
+        min_observations: {type: integer, minimum: 0}
+        forbidden_output_fields:
+          type: array
+          items: {type: string}
+    AssessmentRegressionCase:
+      type: object
+      additionalProperties: false
+      required: [name, inputs, metadata]
+      properties:
+        name: {type: string, minLength: 1}
+        inputs: {$ref: '#/components/schemas/JsonObject'}
+        metadata: {$ref: '#/components/schemas/AssessmentRegressionMetadata'}
+    AssessmentRegressionExport:
+      type: object
+      additionalProperties: false
+      required: [schema_target, source_report_id, case]
+      properties:
+        schema_target:
+          type: string
+          enum: [assessment_qualification_v2]
+        source_report_id: {type: string, format: uuid}
+        case: {$ref: '#/components/schemas/AssessmentRegressionCase'}
+    ClientDiagnostic:
+      type: object
+      additionalProperties: false
+      required: [schemaVersion, category, event]
+      properties:
+        schemaVersion:
+          type: integer
+          enum: [1]
+        category:
+          type: string
+          enum: [chat.transport, body3d.viewer, app.runtime]
+        event:
+          type: string
+          minLength: 1
+          maxLength: 96
+        severity:
+          type: string
+          enum: [info, warn, error]
+          default: info
+        code:
+          type: string
+          maxLength: 96
+        message:
+          type: string
+          maxLength: 512
+        phase:
+          type: string
+          maxLength: 96
+        conversationId:
+          type: string
+          maxLength: 128
+        runId:
+          type: string
+          maxLength: 128
+        requestId:
+          type: string
+          maxLength: 128
+        resource:
+          type: string
+          maxLength: 256
+        diagnosticSessionId:
+          type: string
+          maxLength: 128
+        attemptId:
+          type: string
+          maxLength: 128
+        elapsedMs:
+          type: number
+          format: double
+          minimum: 0
+        attributes:
+          type: object
+          maxProperties: 24
+          propertyNames:
+            type: string
+            minLength: 1
+            maxLength: 64
+          additionalProperties:
+            oneOf:
+            - type: string
+              maxLength: 256
+            - type: number
+              format: double
+            - type: boolean
+            - type: 'null'
+    PrivacyDataCount:
+      type: object
+      additionalProperties: false
+      required: [name, count]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        count:
+          type: integer
+          format: int64
+          minimum: 0
+    PrivacyErasurePlan:
+      type: object
+      additionalProperties: false
+      required: [destructive, confirmation_phrase, counts, retained_audit]
+      properties:
+        destructive:
+          type: boolean
+          enum: [true]
+        confirmation_phrase:
+          type: string
+          enum: ['DELETE ALL BODY DATA']
+        counts:
+          type: array
+          items:
+            $ref: '#/components/schemas/PrivacyDataCount'
+        retained_audit:
+          type: array
+          items:
+            type: string
+    PrivacyErasureRequest:
+      type: object
+      additionalProperties: false
+      required: [confirmation]
+      properties:
+        confirmation:
+          type: string
+          enum: ['DELETE ALL BODY DATA']
+    PrivacyErasureAccepted:
+      type: object
+      additionalProperties: false
+      required: [request_id, status, message]
+      properties:
+        request_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, running, retryable, completed]
+        message:
+          type: string
+          minLength: 1
+    JsonObject:
+      type: object
+      additionalProperties: true
+    ErrorDetail:
+      type: object
+      additionalProperties: false
+      required:
+      - code
+      - message
+      properties:
+        code:
+          type: string
+          minLength: 1
+        message:
+          type: string
+    ErrorEnvelope:
+      type: object
+      additionalProperties: false
+      required:
+      - error
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorDetail'
+    BodyStateFactInput:
+      type: object
+      additionalProperties: false
+      required:
+      - kind
+      - value
+      properties:
+        concern_key:
+          type: string
+        kind:
+          type: string
+          minLength: 1
+        body_region:
+          type: string
+        body_region_id:
+          type:
+          - string
+          - 'null'
+        value:
+          type: string
+        details:
+          $ref: '#/components/schemas/JsonObject'
+        origin:
+          type: string
+        review_state:
+          type: string
+        lifecycle_state:
+          type: string
+        trend:
+          type: string
+        source_key:
+          type: string
+        provenance:
+          $ref: '#/components/schemas/JsonObject'
+        observed_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        valid_from:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        valid_until:
+          type:
+          - string
+          - 'null'
+          format: date-time
+    UpsertBodyStateFactRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_revision
+      - fact
+      properties:
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        fact:
+          $ref: '#/components/schemas/BodyStateFactInput'
+    BodyStateFact:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - user_id
+      - kind
+      - body_region_id
+      - value
+      - details
+      - origin
+      - review_state
+      - lifecycle_state
+      - trend
+      - provenance
+      - excluded_from_reasoning
+      - created_revision
+      - updated_revision
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        concern_key:
+          type: string
+        kind:
+          type: string
+        body_region:
+          type: string
+        body_region_id:
+          type:
+          - string
+          - 'null'
+        value:
+          type: string
+        details:
+          $ref: '#/components/schemas/JsonObject'
+        origin:
+          type: string
+        review_state:
+          type: string
+        lifecycle_state:
+          type: string
+        trend:
+          type: string
+        source_key:
+          type: string
+        provenance:
+          $ref: '#/components/schemas/JsonObject'
+        observed_at:
+          type: string
+          format: date-time
+        valid_from:
+          type: string
+          format: date-time
+        valid_until:
+          type: string
+          format: date-time
+        supersedes_fact_id:
+          type: string
+          format: uuid
+        excluded_from_reasoning:
+          type: boolean
+        created_revision:
+          type: integer
+          format: int64
+        updated_revision:
+          type: integer
+          format: int64
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    BodyStateRevision:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - user_id
+      - revision
+      - change_type
+      - source
+      - changes
+      - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        revision:
+          type: integer
+          format: int64
+        change_type:
+          type: string
+        source:
+          type: string
+        changes:
+          $ref: '#/components/schemas/JsonObject'
+        created_at:
+          type: string
+          format: date-time
+    BodyStateFactMutationResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - fact
+      - revision
+      properties:
+        fact:
+          $ref: '#/components/schemas/BodyStateFact'
+        revision: &id008
+          anyOf:
+          - $ref: '#/components/schemas/BodyStateRevision'
+          - type: 'null'
+    StringArray:
+      type: array
+      items:
+        type: string
+    BodyStateObservation:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - user_id
+      - kind
+      - body_region_id
+      - value
+      - condition
+      - provenance
+      - review_state
+      - lifecycle_state
+      - excluded_from_reasoning
+      - created_revision
+      - updated_revision
+      - created_at
+      - updated_at
+      properties:
+        id: &id003
+          type: string
+          format: uuid
+        user_id: *id003
+        concern_key: &id004
+          type: string
+        kind: *id004
+        body_region: *id004
+        body_region_id:
+          type:
+          - string
+          - 'null'
+        method: *id004
+        value:
+          $ref: '#/components/schemas/JsonObject'
+        condition:
+          $ref: '#/components/schemas/JsonObject'
+        source_key: *id004
+        provenance:
+          $ref: '#/components/schemas/JsonObject'
+        observed_at:
+          type: string
+          format: date-time
+        supersedes_observation_id:
+          type: string
+          format: uuid
+        review_state: *id004
+        lifecycle_state: *id004
+        excluded_from_reasoning: &id007
+          type: boolean
+        created_revision: &id005
+          type: integer
+        updated_revision: *id005
+        created_at: &id006
+          type: string
+          format: date-time
+        updated_at: *id006
+    BodyStateHypothesis:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - user_id
+      - concern_key
+      - statement
+      - lifecycle_state
+      - supporting_fact_ids
+      - supporting_observation_ids
+      - supporting_evidence_ids
+      - counterevidence_ids
+      - provenance
+      - created_revision
+      - updated_revision
+      - created_at
+      - updated_at
+      properties:
+        id: *id003
+        user_id: *id003
+        concern_key: *id004
+        statement: *id004
+        lifecycle_state: *id004
+        confidence:
+          type: string
+        supporting_fact_ids:
+          $ref: '#/components/schemas/StringArray'
+        supporting_observation_ids:
+          $ref: '#/components/schemas/StringArray'
+        supporting_evidence_ids:
+          $ref: '#/components/schemas/StringArray'
+        counterevidence_ids:
+          $ref: '#/components/schemas/StringArray'
+        source_analysis_id:
+          type: string
+          format: uuid
+        provenance:
+          $ref: '#/components/schemas/JsonObject'
+        created_revision: *id005
+        updated_revision: *id005
+        created_at: *id006
+        updated_at: *id006
+    HealthWorkspaceBodyState:
+      type: object
+      additionalProperties: false
+      required:
+      - current_revision
+      - safety_state
+      - facts
+      - pending_facts
+      - observations
+      - pending_observations
+      - hypotheses
+      - recent_revisions
+      properties:
+        current_revision: *id005
+        safety_state:
+          $ref: '#/components/schemas/JsonObject'
+        facts:
+          type: array
+          items:
+            $ref: '#/components/schemas/BodyStateFact'
+        pending_facts:
+          type: array
+          items:
+            $ref: '#/components/schemas/BodyStateFact'
+        observations:
+          type: array
+          items:
+            $ref: '#/components/schemas/BodyStateObservation'
+        pending_observations:
+          type: array
+          items:
+            $ref: '#/components/schemas/BodyStateObservation'
+        hypotheses:
+          type: array
+          items:
+            $ref: '#/components/schemas/BodyStateHypothesis'
+        recent_revisions:
+          type: array
+          items:
+            $ref: '#/components/schemas/BodyStateRevision'
+    DiagnosisCandidate:
+      type: object
+      additionalProperties: false
+      required:
+      - candidate_id
+      - name
+      - confidence
+      - basis
+      - typical_symptoms
+      - basis_fact_ids
+      - basis_observation_ids
+      - supporting_evidence_ids
+      - counterevidence_ids
+      - reasoning_summary
+      - missing_information
+      - safety_notes
+      properties:
+        candidate_id: *id003
+        concern_key: *id004
+        name: *id004
+        confidence:
+          type: string
+          enum:
+          - 高
+          - 中
+          - 低
+        severity:
+          type: string
+          enum:
+          - 轻度
+          - 中度
+          - 重度
+        evidence_strength:
+          type: string
+          enum:
+          - 高
+          - 中
+          - 低
+        impact:
+          type: string
+        basis: *id004
+        typical_symptoms: *id004
+        differential:
+          type: string
+        basis_fact_ids:
+          $ref: '#/components/schemas/StringArray'
+        basis_observation_ids:
+          $ref: '#/components/schemas/StringArray'
+        supporting_evidence_ids:
+          $ref: '#/components/schemas/StringArray'
+        counterevidence_ids:
+          $ref: '#/components/schemas/StringArray'
+        reasoning_summary: *id004
+        missing_information:
+          $ref: '#/components/schemas/StringArray'
+        safety_notes:
+          $ref: '#/components/schemas/StringArray'
+    DiagnosisCandidateAssessment:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - analysis_id
+      - candidate_id
+      - state
+      - assessed_at
+      properties:
+        id: *id003
+        analysis_id: *id003
+        candidate_id: *id003
+        state:
+          type: string
+          enum:
+          - confirmed
+          - unsure
+          - not_applicable
+        assessed_at: *id006
+    DiagnosisFreshness:
+      type: object
+      additionalProperties: false
+      required:
+      - analysis_id
+      - state
+      - evaluated_against_revision
+      - reasons
+      - checked_at
+      properties:
+        analysis_id: *id003
+        state:
+          type: string
+          enum:
+          - fresh
+          - potentially_stale
+          - stale
+        evaluated_against_revision: *id005
+        reasons:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiagnosisFreshnessReason'
+        checked_at: *id006
+    DiagnosisWorkspaceProjection:
+      type: object
+      additionalProperties: false
+      required:
+      - analysis_id
+      - body_state_revision
+      - status
+      - scope
+      - summary
+      - candidates
+      - cross_concern_patterns
+      - information_gaps
+      - safety_summary
+      - citations
+      - governance
+      - agent_configuration_id
+      - agent_configuration
+      - decision_trace
+      - execution_provenance
+      - evidence_acquisition_trace
+      - created_at
+      properties:
+        analysis_id: *id003
+        body_state_revision: *id005
+        status:
+          type: string
+          enum:
+          - completed
+          - partial
+          - insufficient_information
+          - safety_blocked
+        scope: *id004
+        summary: *id004
+        candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiagnosisCandidate'
+        cross_concern_patterns:
+          $ref: '#/components/schemas/StringArray'
+        information_gaps:
+          $ref: '#/components/schemas/StringArray'
+        safety_summary:
+          $ref: '#/components/schemas/JsonObject'
+        citations:
+          type: array
+          items:
+            $ref: '#/components/schemas/JsonObject'
+        governance:
+          $ref: '#/components/schemas/JsonObject'
+        agent_configuration_id: *id004
+        agent_configuration:
+          $ref: '#/components/schemas/JsonObject'
+        decision_trace:
+          $ref: '#/components/schemas/JsonObject'
+        execution_provenance:
+          $ref: '#/components/schemas/JsonObject'
+        evidence_acquisition_trace:
+          $ref: '#/components/schemas/JsonObject'
+        decision_authority:
+          $ref: '#/components/schemas/JsonObject'
+        created_at: *id006
+        candidate_assessments:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiagnosisCandidateAssessment'
+        freshness:
+          $ref: '#/components/schemas/DiagnosisFreshness'
+    DiagnosisAnalysisListResponse:
+      type: object
+      additionalProperties: false
+      required: [analyses]
+      properties:
+        analyses:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiagnosisWorkspaceProjection'
+    DiagnosisCandidateAssessmentInput:
+      type: object
+      additionalProperties: false
+      required: [candidate_id, state]
+      properties:
+        candidate_id:
+          type: string
+          format: uuid
+        state:
+          type: string
+          enum: [confirmed, unsure, not_applicable]
+    DiagnosisCandidateAssessmentRequest:
+      type: object
+      additionalProperties: false
+      required: [candidates]
+      properties:
+        candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiagnosisCandidateAssessmentInput'
+    DiagnosisCandidateAssessmentResponse:
+      type: object
+      additionalProperties: false
+      required: [analysis_id, candidate_assessments]
+      properties:
+        analysis_id:
+          type: string
+          format: uuid
+        candidate_assessments:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiagnosisCandidateAssessment'
+    DiagnosisReplayRequest:
+      type: object
+      additionalProperties: false
+      required: [mode]
+      properties:
+        mode:
+          type: string
+          enum: [historical, counterfactual]
+        configuration_id:
+          type: string
+    DiagnosisReplayCheck:
+      type: object
+      additionalProperties: false
+      required: [name, match]
+      properties:
+        name: {type: string}
+        match: {type: boolean}
+        baseline: {type: string}
+        candidate: {type: string}
+    DiagnosisReplayLayer:
+      type: object
+      additionalProperties: false
+      required: [match, checks]
+      properties:
+        match: {type: boolean}
+        checks:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiagnosisReplayCheck'
+    DiagnosisReplaySnapshot:
+      type: object
+      additionalProperties: false
+      required: [status, decision_outcome, candidate_count, concern_keys, support_ids, summary, candidate_names]
+      properties:
+        status: {type: string}
+        decision_outcome: {type: string}
+        candidate_count: {type: integer, minimum: 0}
+        concern_keys:
+          $ref: '#/components/schemas/StringArray'
+        support_ids:
+          $ref: '#/components/schemas/StringArray'
+        summary: {type: string}
+        candidate_names:
+          $ref: '#/components/schemas/StringArray'
+    DiagnosisReplayComparison:
+      type: object
+      additionalProperties: false
+      required: [hard, semantic, presentation]
+      properties:
+        hard: {$ref: '#/components/schemas/DiagnosisReplayLayer'}
+        semantic: {$ref: '#/components/schemas/DiagnosisReplayLayer'}
+        presentation: {$ref: '#/components/schemas/DiagnosisReplayLayer'}
+    DiagnosisReplayReport:
+      type: object
+      additionalProperties: false
+      required:
+      - mode
+      - source_analysis_id
+      - source_configuration_id
+      - target_configuration_id
+      - input_fingerprint
+      - artifact_integrity
+      - baseline
+      - replay
+      - comparison
+      - output
+      properties:
+        mode: {type: string, enum: [historical, counterfactual]}
+        source_analysis_id: {type: string, format: uuid}
+        source_configuration_id: {type: string}
+        target_configuration_id: {type: string}
+        input_fingerprint: {type: string}
+        artifact_integrity: {$ref: '#/components/schemas/DiagnosisReplayLayer'}
+        baseline: {$ref: '#/components/schemas/DiagnosisReplaySnapshot'}
+        replay: {$ref: '#/components/schemas/DiagnosisReplaySnapshot'}
+        comparison: {$ref: '#/components/schemas/DiagnosisReplayComparison'}
+        output:
+          $ref: '#/components/schemas/JsonObject'
+    TreatmentInterventionDraft:
+      type: object
+      additionalProperties: false
+      required:
+      - kind
+      - title
+      - description
+      - prescription
+      properties:
+        kind: *id004
+        title: *id004
+        description: *id004
+        prescription:
+          $ref: '#/components/schemas/JsonObject'
+    TreatmentPlanContent:
+      type: object
+      additionalProperties: false
+      required:
+      - summary
+      - goal
+      - duration_weeks
+      - interventions
+      - daily_habits
+      - expected_timeline
+      - warning_signs
+      - review_triggers
+      - safety_notes
+      properties:
+        summary: *id004
+        goal: *id004
+        duration_weeks: *id005
+        interventions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TreatmentInterventionDraft'
+        daily_habits:
+          $ref: '#/components/schemas/StringArray'
+        expected_timeline: *id004
+        warning_signs:
+          $ref: '#/components/schemas/StringArray'
+        review_triggers:
+          $ref: '#/components/schemas/StringArray'
+        safety_notes:
+          $ref: '#/components/schemas/StringArray'
+    TreatmentProposalRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        diagnosis_analysis_id:
+          type: string
+          format: uuid
+        user_constraints: {$ref: '#/components/schemas/JsonObject'}
+        change_reason: {type: string, maxLength: 1000}
+    TreatmentProposalResponse:
+      type: object
+      additionalProperties: false
+      required: [proposal]
+      properties:
+        proposal: {$ref: '#/components/schemas/TreatmentRevision'}
+    CurrentTreatmentResponse:
+      type: object
+      additionalProperties: false
+      required: [treatment]
+      properties:
+        treatment:
+          anyOf:
+          - {$ref: '#/components/schemas/Treatment'}
+          - {type: 'null'}
+    TreatmentRevisionListResponse:
+      type: object
+      additionalProperties: false
+      required: [revisions]
+      properties:
+        revisions:
+          type: array
+          items: {$ref: '#/components/schemas/TreatmentRevision'}
+    AcceptTreatmentRevisionRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        consultation_id:
+          anyOf:
+          - {type: string, format: uuid}
+          - {type: 'null'}
+    AcceptTreatmentRevisionResponse:
+      type: object
+      additionalProperties: false
+      required: [treatment, training_plan]
+      properties:
+        treatment: {$ref: '#/components/schemas/Treatment'}
+        training_plan: {$ref: '#/components/schemas/TrainingPlan'}
+    TreatmentReplayRequest:
+      type: object
+      additionalProperties: false
+      required: [mode]
+      properties:
+        mode: {type: string, enum: [historical, counterfactual]}
+        configuration_id: {type: string}
+    TreatmentReplayCheck:
+      type: object
+      additionalProperties: false
+      required: [name, match]
+      properties:
+        name: {type: string}
+        match: {type: boolean}
+        baseline: {type: string}
+        candidate: {type: string}
+    TreatmentReplayLayer:
+      type: object
+      additionalProperties: false
+      required: [match, checks]
+      properties:
+        match: {type: boolean}
+        checks:
+          type: array
+          items: {$ref: '#/components/schemas/TreatmentReplayCheck'}
+    TreatmentReplaySnapshot:
+      type: object
+      additionalProperties: false
+      required: [status, governance_verdict, intervention_count, intervention_kinds, evidence_ids, warning_sign_count, review_trigger_count, duration_weeks, summary, goal, intervention_titles]
+      properties:
+        status: {type: string}
+        governance_verdict: {type: string}
+        intervention_count: {type: integer, minimum: 0}
+        intervention_kinds: {$ref: '#/components/schemas/StringArray'}
+        evidence_ids: {$ref: '#/components/schemas/StringArray'}
+        warning_sign_count: {type: integer, minimum: 0}
+        review_trigger_count: {type: integer, minimum: 0}
+        duration_weeks: {type: integer, minimum: 0}
+        summary: {type: string}
+        goal: {type: string}
+        intervention_titles: {$ref: '#/components/schemas/StringArray'}
+    TreatmentReplayComparison:
+      type: object
+      additionalProperties: false
+      required: [hard, semantic, presentation]
+      properties:
+        hard: {$ref: '#/components/schemas/TreatmentReplayLayer'}
+        semantic: {$ref: '#/components/schemas/TreatmentReplayLayer'}
+        presentation: {$ref: '#/components/schemas/TreatmentReplayLayer'}
+    TreatmentReplayReport:
+      type: object
+      additionalProperties: false
+      required: [mode, source_revision_id, source_configuration_id, target_configuration_id, input_fingerprint, artifact_integrity, source_generation_decision, generation_decision, baseline, replay, comparison, output]
+      properties:
+        mode: {type: string, enum: [historical, counterfactual]}
+        source_revision_id: {type: string, format: uuid}
+        source_configuration_id: {type: string}
+        target_configuration_id: {type: string}
+        input_fingerprint: {type: string}
+        artifact_integrity: {$ref: '#/components/schemas/TreatmentReplayLayer'}
+        source_generation_decision: {$ref: '#/components/schemas/JsonObject'}
+        generation_decision: {$ref: '#/components/schemas/JsonObject'}
+        baseline: {$ref: '#/components/schemas/TreatmentReplaySnapshot'}
+        replay: {$ref: '#/components/schemas/TreatmentReplaySnapshot'}
+        comparison: {$ref: '#/components/schemas/TreatmentReplayComparison'}
+        output: {$ref: '#/components/schemas/JsonObject'}
+    RecordOutcomeRequest:
+      type: object
+      additionalProperties: false
+      required: [source_type, source_key, kind]
+      properties:
+        treatment_id: {type: string, format: uuid}
+        treatment_revision_id: {type: string, format: uuid}
+        intervention_id: {type: string, format: uuid}
+        source_type: {type: string, minLength: 1}
+        source_key: {type: string, minLength: 1}
+        kind: {type: string, minLength: 1}
+        concern_key: {type: string}
+        body_region: {type: string}
+        value: {$ref: '#/components/schemas/JsonObject'}
+        notes: {type: string}
+        association_statement: {type: string}
+        causality_level: {type: string, enum: [association_only, user_attributed, clinician_attributed]}
+        occurred_at: {type: string, format: date-time}
+        provenance: {$ref: '#/components/schemas/JsonObject'}
+    OutcomeMutationResponse:
+      type: object
+      additionalProperties: false
+      required: [outcome, created]
+      properties:
+        outcome: {$ref: '#/components/schemas/Outcome'}
+        created: {type: boolean}
+    OutcomeListResponse:
+      type: object
+      additionalProperties: false
+      required: [outcomes]
+      properties:
+        outcomes:
+          type: array
+          items: {$ref: '#/components/schemas/Outcome'}
+    Intervention:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - treatment_id
+      - treatment_revision_id
+      - kind
+      - title
+      - description
+      - prescription
+      - position
+      - status
+      - created_at
+      - updated_at
+      properties:
+        id: *id003
+        treatment_id: *id003
+        treatment_revision_id: *id003
+        kind: *id004
+        title: *id004
+        description: *id004
+        prescription:
+          $ref: '#/components/schemas/JsonObject'
+        position: *id005
+        status: *id004
+        started_at:
+          type: string
+          format: date-time
+        ended_at:
+          type: string
+          format: date-time
+        created_at: *id006
+        updated_at: *id006
+    TreatmentRevision:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - treatment_id
+      - revision
+      - acceptance_state
+      - lifecycle_state
+      - source_body_state_revision
+      - source_diagnosis_analysis_id
+      - goal
+      - duration_weeks
+      - plan
+      - user_constraints
+      - evidence_ids
+      - governance
+      - agent_configuration_id
+      - agent_configuration
+      - execution_provenance
+      - evidence_acquisition_trace
+      - generation_decision_trace
+      - acceptance_decision_trace
+      - rollout_provenance
+      - change_reason
+      - created_at
+      - interventions
+      properties:
+        id: *id003
+        treatment_id: *id003
+        revision: *id005
+        acceptance_state:
+          type: string
+          enum:
+          - proposed
+          - accepted
+          - rejected
+        lifecycle_state:
+          type: string
+          enum:
+          - active
+          - review_recommended
+          - paused
+          - superseded
+          - completed
+        source_body_state_revision: *id005
+        source_diagnosis_analysis_id: *id003
+        goal: *id004
+        duration_weeks: *id005
+        plan:
+          $ref: '#/components/schemas/TreatmentPlanContent'
+        user_constraints:
+          $ref: '#/components/schemas/JsonObject'
+        evidence_ids:
+          $ref: '#/components/schemas/StringArray'
+        governance:
+          $ref: '#/components/schemas/JsonObject'
+        agent_configuration_id: *id004
+        agent_configuration:
+          $ref: '#/components/schemas/JsonObject'
+        execution_provenance:
+          $ref: '#/components/schemas/JsonObject'
+        evidence_acquisition_trace:
+          $ref: '#/components/schemas/JsonObject'
+        generation_decision_trace:
+          $ref: '#/components/schemas/JsonObject'
+        acceptance_decision_trace:
+          $ref: '#/components/schemas/JsonObject'
+        rollout_provenance:
+          $ref: '#/components/schemas/JsonObject'
+        change_reason: *id004
+        created_at: *id006
+        accepted_at:
+          type: string
+          format: date-time
+        interventions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Intervention'
+    TreatmentStatusReason:
+      type: object
+      additionalProperties: false
+      required: []
+      properties:
+        code: *id004
+        revision: *id005
+        change_type: *id004
+        concern_key: *id004
+        message: *id004
+    Treatment:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - current_revision
+      - status
+      - status_reasons
+      - created_at
+      - updated_at
+      properties:
+        id: *id003
+        current_revision: *id005
+        status:
+          type: string
+          enum:
+          - active
+          - review_recommended
+          - paused
+          - superseded
+          - completed
+        source_body_state_revision:
+          type: integer
+        source_diagnosis_analysis_id:
+          type: string
+          format: uuid
+        status_reasons:
+          type: array
+          items:
+            $ref: '#/components/schemas/TreatmentStatusReason'
+        created_at: *id006
+        updated_at: *id006
+        current:
+          $ref: '#/components/schemas/TreatmentRevision'
+    TrainingExerciseLogInput:
+      type: object
+      additionalProperties: false
+      required: [name, completed]
+      properties:
+        intervention_id: {type: string, format: uuid}
+        name: {type: string}
+        completed: {type: boolean}
+    TrainingLog:
+      type: object
+      additionalProperties: false
+      required: [id, plan_id, date, exercises, is_checked_in, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        plan_id: {type: string, format: uuid}
+        treatment_revision_id: {type: string, format: uuid}
+        intervention_id: {type: string, format: uuid}
+        date: {type: string, format: date-time}
+        exercises:
+          type: array
+          items: {$ref: '#/components/schemas/TrainingExerciseLogInput'}
+        notes: {type: string}
+        is_checked_in: {type: boolean}
+        outcome_recorded_at: {type: string, format: date-time}
+        created_at: {type: string, format: date-time}
+    TrainingPlanListResponse:
+      type: object
+      additionalProperties: false
+      required: [plans]
+      properties:
+        plans: {type: array, items: {$ref: '#/components/schemas/TrainingPlan'}}
+    TrainingCheckInResponse:
+      type: object
+      additionalProperties: false
+      required: [message]
+      properties: {message: {type: string}}
+    TrainingFeedbackInput:
+      type: object
+      additionalProperties: false
+      properties:
+        symptom_changes: {type: string}
+        training_feeling: {type: string}
+        difficulties: {type: string}
+        body_region: {type: string}
+        concern_key: {type: string}
+        trend: {type: string}
+        fact_id: {type: string, format: uuid}
+    TrainingLogUpdateRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        notes: {type: string}
+        exercises: {type: array, items: {$ref: '#/components/schemas/TrainingExerciseLogInput'}}
+        symptom_changes: {type: string}
+        training_feeling: {type: string}
+        difficulties: {type: string}
+        body_region: {type: string}
+        concern_key: {type: string}
+        trend: {type: string}
+        fact_id: {type: string, format: uuid}
+    TrainingFeedbackResult:
+      type: object
+      additionalProperties: false
+      properties:
+        outcome: {$ref: '#/components/schemas/Outcome'}
+        treatment_status: {type: string}
+        review_recommended: {type: boolean}
+        paused: {type: boolean}
+        proposal: {$ref: '#/components/schemas/TreatmentRevision'}
+        has_proposal: {type: boolean}
+        requires_new_diagnosis: {type: boolean}
+    TrainingLogUpdateResponse:
+      type: object
+      additionalProperties: false
+      required: [message, has_proposal, result]
+      properties:
+        message: {type: string}
+        has_proposal: {type: boolean}
+        result: {$ref: '#/components/schemas/TrainingFeedbackResult'}
+        proposal: {$ref: '#/components/schemas/TreatmentRevision'}
+    TrainingProgress:
+      type: object
+      additionalProperties: false
+      required: [consecutive_days, total_checkins, current_week, total_weeks, plan_status]
+      properties:
+        consecutive_days: {type: integer, minimum: 0}
+        total_checkins: {type: integer, minimum: 0}
+        current_week: {type: integer, minimum: 1}
+        total_weeks: {type: integer, minimum: 1}
+        treatment_revision_id:
+          anyOf:
+          - {type: string, format: uuid}
+          - {type: 'null'}
+        plan_status: {type: string}
+    TrainingReassessmentRequest:
+      type: object
+      additionalProperties: false
+      required: [feedback]
+      properties:
+        feedback: {$ref: '#/components/schemas/TrainingFeedbackInput'}
+    TrainingExercise:
+      type: object
+      additionalProperties: false
+      required: [name, description, sets, reps]
+      properties:
+        intervention_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        sets:
+          type: string
+        reps:
+          type: string
+        notes:
+          type: string
+    TrainingPhase:
+      type: object
+      additionalProperties: false
+      required: [week, focus, exercises]
+      properties:
+        week:
+          type: integer
+          minimum: 1
+        focus:
+          type: string
+        exercises:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrainingExercise'
+        source_treatment_revision_id:
+          type: string
+          format: uuid
+    TrainingPlan:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - status
+      - goal
+      - duration_weeks
+      - current_week
+      - phases
+      - created_at
+      properties:
+        id: *id003
+        consultation_id:
+          type: string
+          format: uuid
+        treatment_id:
+          type: string
+          format: uuid
+        treatment_revision_id:
+          type: string
+          format: uuid
+        status: *id004
+        goal: *id004
+        duration_weeks: *id005
+        current_week: *id005
+        phases:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrainingPhase'
+        created_at: *id006
+    Outcome:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - source_type
+      - source_key
+      - kind
+      - concern_key
+      - body_region
+      - value
+      - notes
+      - association_statement
+      - causality_level
+      - occurred_at
+      - provenance
+      - created_at
+      properties:
+        id: *id003
+        treatment_id:
+          type: string
+          format: uuid
+        treatment_revision_id:
+          type: string
+          format: uuid
+        intervention_id:
+          type: string
+          format: uuid
+        source_type: *id004
+        source_key: *id004
+        kind: *id004
+        concern_key: *id004
+        body_region: *id004
+        value:
+          $ref: '#/components/schemas/JsonObject'
+        notes: *id004
+        association_statement: *id004
+        causality_level:
+          type: string
+          enum:
+          - association_only
+          - user_attributed
+          - clinician_attributed
+        occurred_at: *id006
+        provenance:
+          $ref: '#/components/schemas/JsonObject'
+        body_state_revision:
+          type: integer
+        created_at: *id006
+    WorkspaceTrendPoint:
+      type: object
+      additionalProperties: false
+      required:
+      - occurred_at
+      - source_type
+      - value
+      properties:
+        occurred_at: *id006
+        source_type: *id004
+        value:
+          $ref: '#/components/schemas/JsonObject'
+        notes: *id004
+        causality_level: *id004
+    WorkspaceTrend:
+      type: object
+      additionalProperties: false
+      required:
+      - key
+      - concern_key
+      - body_region
+      - kind
+      - current_trend
+      - points
+      properties:
+        key: *id004
+        concern_key: *id004
+        body_region: *id004
+        kind: *id004
+        current_trend: *id004
+        points:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceTrendPoint'
+    WorkspaceCapabilities:
+      type: object
+      additionalProperties: false
+      required:
+      - can_continue_consultation
+      - can_edit_body_state
+      - can_request_diagnosis
+      - can_review_diagnosis
+      - can_generate_treatment
+      - can_accept_treatment
+      - can_execute_treatment
+      - can_record_outcome
+      - can_review_treatment
+      - requires_safety_review
+      - requires_diagnosis_review
+      - requires_treatment_review
+      properties:
+        can_continue_consultation: *id007
+        can_edit_body_state: *id007
+        can_request_diagnosis: *id007
+        can_review_diagnosis: *id007
+        can_generate_treatment: *id007
+        can_accept_treatment: *id007
+        can_execute_treatment: *id007
+        can_record_outcome: *id007
+        can_review_treatment: *id007
+        requires_safety_review: *id007
+        requires_diagnosis_review: *id007
+        requires_treatment_review: *id007
+    WorkspaceAction:
+      type: object
+      additionalProperties: false
+      required:
+      - kind
+      - priority
+      - enabled
+      - reason
+      properties:
+        kind: *id004
+        priority: *id005
+        enabled: *id007
+        reason: *id004
+        target:
+          $ref: '#/components/schemas/JsonObject'
+    HealthWorkspace:
+      type: object
+      additionalProperties: false
+      required:
+      - generated_at
+      - profile_ready
+      - body_state
+      - treatment_revisions
+      - recent_outcomes
+      - trends
+      - capabilities
+      - actions
+      properties:
+        generated_at: *id006
+        conversation_id:
+          type: string
+          format: uuid
+        profile_ready: *id007
+        body_state:
+          $ref: '#/components/schemas/HealthWorkspaceBodyState'
+        diagnosis:
+          $ref: '#/components/schemas/DiagnosisWorkspaceProjection'
+        treatment:
+          $ref: '#/components/schemas/Treatment'
+        training_plan:
+          $ref: '#/components/schemas/TrainingPlan'
+        treatment_revisions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TreatmentRevision'
+        recent_outcomes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Outcome'
+        trends:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceTrend'
+        capabilities:
+          $ref: '#/components/schemas/WorkspaceCapabilities'
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceAction'
+    DiagnosisFreshnessReason:
+      type: object
+      additionalProperties: false
+      required:
+      - code
+      - revision
+      - change_type
+      - message
+      properties:
+        code:
+          type: string
+        revision:
+          type: integer
+        change_type:
+          type: string
+        item_id:
+          type: string
+        concern_key:
+          type: string
+        message:
+          type: string
+    BodyStateSnapshot:
+      type: object
+      additionalProperties: false
+      required:
+      - user_id
+      - current_revision
+      - safety_state
+      - facts
+      - observations
+      - hypotheses
+      properties:
+        user_id: *id001
+        current_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        safety_state:
+          $ref: '#/components/schemas/JsonObject'
+        facts:
+          type: array
+          items:
+            $ref: '#/components/schemas/BodyStateFact'
+        observations:
+          type: array
+          items:
+            $ref: '#/components/schemas/BodyStateObservation'
+        hypotheses:
+          type: array
+          items:
+            $ref: '#/components/schemas/BodyStateHypothesis'
+        recent_revisions:
+          type: array
+          items:
+            $ref: '#/components/schemas/BodyStateRevision'
+    CorrectBodyStateFactRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_revision
+      - replacement
+      properties:
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        replacement:
+          $ref: '#/components/schemas/BodyStateFactInput'
+    UpdateBodyStateFactTemporalRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_revision
+      properties:
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        lifecycle_state:
+          type: string
+        trend:
+          type: string
+        valid_until:
+          type:
+          - string
+          - 'null'
+          format: date-time
+    ReviewBodyStateFactRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_revision
+      - review_state
+      properties:
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        review_state:
+          type: string
+          enum:
+          - unverified
+          - confirmed
+          - rejected
+    BodyStateObservationInput:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_revision
+      - kind
+      - value
+      properties:
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        concern_key:
+          type: string
+        kind:
+          type: string
+          minLength: 1
+        body_region:
+          type: string
+        body_region_id:
+          type:
+          - string
+          - 'null'
+        method:
+          type: string
+        value:
+          $ref: '#/components/schemas/JsonObject'
+        condition:
+          $ref: '#/components/schemas/JsonObject'
+        source_key:
+          type: string
+        provenance:
+          $ref: '#/components/schemas/JsonObject'
+        observed_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        lifecycle_state:
+          type: string
+    BodyStateObservationMutationResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - observation
+      - revision
+      properties:
+        observation:
+          $ref: '#/components/schemas/BodyStateObservation'
+        revision: *id008
+    ReviewBodyStateObservationRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_revision
+      - review_state
+      properties:
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        review_state:
+          type: string
+          enum:
+          - unverified
+          - confirmed
+          - rejected
+    BodyStateHypothesisInput:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_revision
+      - statement
+      properties:
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        concern_key:
+          type: string
+        statement:
+          type: string
+          minLength: 1
+        lifecycle_state:
+          type: string
+          enum:
+          - active
+          - strengthened
+          - weakened
+          - unsupported
+          - retired
+        confidence:
+          type:
+          - string
+          - 'null'
+        supporting_fact_ids:
+          $ref: '#/components/schemas/StringArray'
+        supporting_observation_ids:
+          $ref: '#/components/schemas/StringArray'
+        supporting_evidence_ids:
+          $ref: '#/components/schemas/StringArray'
+        counterevidence_ids:
+          $ref: '#/components/schemas/StringArray'
+        provenance:
+          $ref: '#/components/schemas/JsonObject'
+    BodyStateHypothesisMutationResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - hypothesis
+      - revision
+      properties:
+        hypothesis:
+          $ref: '#/components/schemas/BodyStateHypothesis'
+        revision: *id008
+    UpdateBodyStateHypothesisLifecycleRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_revision
+      - lifecycle_state
+      properties:
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        lifecycle_state:
+          type: string
+          enum:
+          - active
+          - strengthened
+          - weakened
+          - unsupported
+          - retired
+        counterevidence_ids:
+          $ref: '#/components/schemas/StringArray'
+    BodyStateEvidence:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - user_id
+      - source_type
+      - source_key
+      - source_version
+      - title
+      - summary
+      - excerpt
+      - metadata
+      - retrieved_at
+      - created_at
+      properties:
+        id: *id001
+        user_id: *id001
+        source_type:
+          type: string
+        source_key:
+          type: string
+        source_version:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+        excerpt:
+          type: string
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+        retrieved_at: &id009
+          type: string
+          format: date-time
+        created_at: *id009
+    BodyStateEvidenceListResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - evidence
+      properties:
+        evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/BodyStateEvidence'
+    ResolveBodyStateSafetyRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_revision
+      - resolution
+      properties:
+        expected_revision:
+          type: integer
+          format: int64
+          minimum: 0
+        resolution:
+          type: string
+          enum:
+          - resolved
+          - cleared_by_review
+          - monitoring
+        note:
+          type: string
+    BodyStateRevisionMutationResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - revision
+      properties:
+        revision: *id008
+    LifestyleSection:
+      type: object
+      additionalProperties: false
+      required:
+      - kind
+      - summary
+      - details
+      properties:
+        kind:
+          type: string
+        fact_id: *id010
+        summary:
+          type: string
+        details:
+          $ref: '#/components/schemas/JsonObject'
+        valid_from: &id011
+          type: string
+          format: date-time
+        updated_at: *id011
+        review_state:
+          type: string
+    LifestyleCandidate:
+      type: object
+      additionalProperties: false
+      required:
+      - fact_id
+      - kind
+      - summary
+      - details
+      - created_at
+      properties:
+        fact_id: *id010
+        kind:
+          type: string
+        summary:
+          type: string
+        details:
+          $ref: '#/components/schemas/JsonObject'
+        created_at: *id011
+    LifestyleSnapshot:
+      type: object
+      additionalProperties: false
+      required:
+      - current_revision
+      - activity
+      - sleep
+      - exercise
+      - nutrition
+      - substances
+      - recovery
+      - pending_updates
+      properties:
+        current_revision: &id012
+          type: integer
+          format: int64
+          minimum: 0
+        activity:
+          $ref: '#/components/schemas/LifestyleSection'
+        sleep:
+          $ref: '#/components/schemas/LifestyleSection'
+        exercise:
+          $ref: '#/components/schemas/LifestyleSection'
+        nutrition:
+          $ref: '#/components/schemas/LifestyleSection'
+        substances:
+          $ref: '#/components/schemas/LifestyleSection'
+        recovery:
+          $ref: '#/components/schemas/LifestyleSection'
+        pending_updates:
+          type: array
+          items:
+            $ref: '#/components/schemas/LifestyleCandidate'
+    LifestyleSectionInput:
+      type: object
+      additionalProperties: false
+      required:
+      - summary
+      properties:
+        summary:
+          type: string
+        details:
+          $ref: '#/components/schemas/JsonObject'
+    UpdateLifestyleRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_revision
+      properties:
+        expected_revision: *id012
+        activity:
+          $ref: '#/components/schemas/LifestyleSectionInput'
+        sleep:
+          $ref: '#/components/schemas/LifestyleSectionInput'
+        exercise:
+          $ref: '#/components/schemas/LifestyleSectionInput'
+        nutrition:
+          $ref: '#/components/schemas/LifestyleSectionInput'
+        substances:
+          $ref: '#/components/schemas/LifestyleSectionInput'
+        recovery:
+          $ref: '#/components/schemas/LifestyleSectionInput'
+    ReviewLifestyleCandidateRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_revision
+      properties:
+        expected_revision: *id012
+    BodyMetricValue:
+      type: object
+      additionalProperties: false
+      required:
+      - value
+      - unit
+      properties:
+        value:
+          type: number
+          format: double
+        unit:
+          type: string
+        observed_at: *id011
+    BodyMetricsSnapshot:
+      type: object
+      additionalProperties: false
+      required:
+      - current_revision
+      properties:
+        current_revision: *id012
+        height:
+          $ref: '#/components/schemas/BodyMetricValue'
+        weight:
+          $ref: '#/components/schemas/BodyMetricValue'
+        bmi:
+          type: number
+          format: double
+    UpdateBodyMetricsRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_revision
+      properties:
+        expected_revision: *id012
+        height_cm:
+          type: number
+          minimum: 50
+          maximum: 250
+          format: double
+        weight_kg:
+          type: number
+          minimum: 20
+          maximum: 300
+          format: double
+    InjuryHistorySnapshot:
+      type: object
+      additionalProperties: false
+      required:
+      - current_revision
+      - summary
+      properties:
+        current_revision: *id012
+        fact_id: *id010
+        summary:
+          type: string
+        valid_from: *id011
+        updated_at: *id011
+    UpdateInjuryHistoryRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_revision
+      - summary
+      properties:
+        expected_revision: *id012
+        summary:
+          type: string
+    OnboardingProfileInput:
+      type: object
+      additionalProperties: false
+      required:
+      - gender
+      - birth_date
+      properties:
+        gender:
+          type: string
+          enum:
+          - male
+          - female
+        birth_date:
+          type: string
+          format: date
+    OnboardingBodyMetricsInput:
+      type: object
+      additionalProperties: false
+      required:
+      - height_cm
+      - weight_kg
+      properties:
+        height_cm:
+          type: number
+          minimum: 50
+          maximum: 250
+          format: double
+        weight_kg:
+          type: number
+          minimum: 20
+          maximum: 300
+          format: double
+    OnboardingLifestyleInput:
+      type: object
+      additionalProperties: false
+      required:
+      - activity
+      - sleep
+      - exercise
+      - nutrition
+      - substances
+      - recovery
+      properties:
+        activity:
+          $ref: '#/components/schemas/LifestyleSectionInput'
+        sleep:
+          $ref: '#/components/schemas/LifestyleSectionInput'
+        exercise:
+          $ref: '#/components/schemas/LifestyleSectionInput'
+        nutrition:
+          $ref: '#/components/schemas/LifestyleSectionInput'
+        substances:
+          $ref: '#/components/schemas/LifestyleSectionInput'
+        recovery:
+          $ref: '#/components/schemas/LifestyleSectionInput'
+    OnboardingContextRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_body_state_revision
+      - profile
+      - body_metrics
+      - lifestyle
+      - injury_history
+      properties:
+        expected_body_state_revision: *id012
+        profile:
+          $ref: '#/components/schemas/OnboardingProfileInput'
+        body_metrics:
+          $ref: '#/components/schemas/OnboardingBodyMetricsInput'
+        lifestyle:
+          $ref: '#/components/schemas/OnboardingLifestyleInput'
+        injury_history:
+          type: string
+    OnboardingContextResult:
+      type: object
+      additionalProperties: false
+      required:
+      - body_state_revision
+      properties:
+        body_state_revision: *id012
+    CurrentUser:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - email
+      properties:
+        id: &id013
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+    UserProfile:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - user_id
+      - created_at
+      - updated_at
+      properties:
+        id: *id013
+        user_id: *id013
+        gender:
+          type: string
+          enum:
+          - male
+          - female
+        birth_date:
+          type: string
+          format: date
+        age_years:
+          type: integer
+          minimum: 0
+          maximum: 150
+        created_at: &id014
+          type: string
+          format: date-time
+        updated_at: *id014
+    UpdateUserProfileRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        gender:
+          type:
+          - string
+          - 'null'
+          enum:
+          - male
+          - female
+          - null
+        birth_date:
+          type:
+          - string
+          - 'null'
+          format: date
+    NullableUserProfileResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - profile
+      properties:
+        profile:
+          anyOf:
+          - $ref: '#/components/schemas/UserProfile'
+          - type: 'null'
+    UserProfileResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - profile
+      properties:
+        profile:
+          $ref: '#/components/schemas/UserProfile'
+    JsonValue: {}
+    ConsultationTextPart:
+      type: object
+      additionalProperties: false
+      required: [type, text]
+      properties:
+        type:
+          type: string
+          const: text
+        text:
+          type: string
+    ConsultationImagePart:
+      type: object
+      additionalProperties: false
+      required: [type, upload_id]
+      properties:
+        type:
+          type: string
+          const: image
+        upload_id:
+          type: string
+          format: uuid
+        mime_type:
+          type: string
+        image_url:
+          type: string
+    ConsultationMessagePart:
+      oneOf:
+      - $ref: '#/components/schemas/ConsultationTextPart'
+      - $ref: '#/components/schemas/ConsultationImagePart'
+      discriminator:
+        propertyName: type
+        mapping:
+          text: '#/components/schemas/ConsultationTextPart'
+          image: '#/components/schemas/ConsultationImagePart'
+    ConsultationMessageInput:
+      type: object
+      additionalProperties: false
+      required: [role, parts]
+      properties:
+        role:
+          type: string
+          const: user
+        parts:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ConsultationMessagePart'
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+    StartConsultationRunRequest:
+      type: object
+      additionalProperties: false
+      required: [conversationId, clientMessageId, requestId, message]
+      properties:
+        conversationId:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        clientMessageId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        requestId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        message:
+          $ref: '#/components/schemas/ConsultationMessageInput'
+    CancelConsultationRunRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          maxLength: 256
+    CancelConsultationRunResponse:
+      type: object
+      additionalProperties: false
+      required: [status, run_id]
+      properties:
+        status:
+          type: string
+          const: cancelled
+        run_id:
+          type: string
+          format: uuid
+    ResumeConsultationInteractionRequest:
+      type: object
+      additionalProperties: false
+      required: [requestId, answer]
+      properties:
+        requestId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        answer:
+          $ref: '#/components/schemas/JsonValue'
+    ConsultationCounterfactualReplayRequest:
+      type: object
+      additionalProperties: false
+      required: [configuration_id]
+      properties:
+        configuration_id:
+          type: string
+          minLength: 1
+    ConsultationRunDecision:
+      type: object
+      additionalProperties: false
+      required:
+      - run_id
+      - source_configuration_id
+      - decision_policy_revision
+      - persisted_configuration_id
+      - configuration_identity_match
+      - replay_input_frozen
+      - execution_provenance
+      properties:
+        run_id:
+          type: string
+          format: uuid
+        source_configuration_id:
+          type: string
+        decision_policy_revision:
+          type: string
+        persisted_configuration_id:
+          type: string
+        configuration_identity_match:
+          type: boolean
+        replay_input_frozen:
+          type: boolean
+        execution_provenance:
+          $ref: '#/components/schemas/JsonObject'
+        input_fingerprint:
+          type: string
+    AgentInteraction:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - run_id
+      - conversation_id
+      - tool_call_id
+      - tool_name
+      - question
+      - status
+      - created_at
+      - metadata
+      properties:
+        id:
+          type: string
+          format: uuid
+        run_id:
+          type: string
+          format: uuid
+        conversation_id:
+          type: string
+          format: uuid
+        tool_call_id:
+          type: string
+        tool_name:
+          type: string
+        question:
+          $ref: '#/components/schemas/JsonObject'
+        answer:
+          $ref: '#/components/schemas/JsonValue'
+        status:
+          type: string
+          enum: [pending, answered, cancelled, expired]
+        created_at:
+          type: string
+          format: date-time
+        answered_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+    ConsultationSessionResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - conversation_id
+      - phase
+      - extracted_info
+      - pending_interactions
+      - created_at
+      - updated_at
+      - ended_at
+      properties:
+        conversation_id:
+          type: string
+          format: uuid
+        phase:
+          type: string
+          enum: [collecting, ready_for_analysis]
+        extracted_info:
+          type: array
+          items:
+            $ref: '#/components/schemas/JsonObject'
+        pending_interactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentInteraction'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        ended_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+    InteractionMetrics:
+      type: object
+      additionalProperties: false
+      required: [total, answered, expired, pending, answer_rate, expire_rate, avg_wait_seconds]
+      properties:
+        total: {type: integer, minimum: 0}
+        answered: {type: integer, minimum: 0}
+        expired: {type: integer, minimum: 0}
+        pending: {type: integer, minimum: 0}
+        answer_rate: {type: number, format: double, minimum: 0, maximum: 1}
+        expire_rate: {type: number, format: double, minimum: 0, maximum: 1}
+        avg_wait_seconds: {type: number, format: double, minimum: 0}
+    ConsultationThreadConversation:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - title_status
+      - status
+      - pinned
+      - metadata
+      - message_count
+      - created_at
+      - updated_at
+      properties:
+        id: {type: string, format: uuid}
+        title: {type: string}
+        title_status: {type: string, enum: [pending, generating, generated, failed]}
+        status: {type: string, enum: [active, archived, deleted]}
+        pinned: {type: boolean}
+        pinned_at:
+          anyOf:
+          - {type: string, format: date-time}
+          - {type: 'null'}
+        default_model:
+          anyOf:
+          - {type: string}
+          - {type: 'null'}
+        last_message_at:
+          anyOf:
+          - {type: string, format: date-time}
+          - {type: 'null'}
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+        message_count: {type: integer, minimum: 0}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    ProjectedToolCall:
+      type: object
+      additionalProperties: false
+      required:
+      - tool_call_id
+      - conversation_id
+      - run_id
+      - message_id
+      - tool_name
+      - arguments
+      - status
+      - result
+      - error
+      - created_at
+      - started_at
+      - finished_at
+      - metadata
+      properties:
+        tool_call_id: {type: string}
+        conversation_id: {type: string, format: uuid}
+        run_id: {type: string, format: uuid}
+        message_id:
+          anyOf:
+          - {type: string, format: uuid}
+          - {type: 'null'}
+        tool_name: {type: string}
+        arguments:
+          $ref: '#/components/schemas/JsonValue'
+        status: {type: string, enum: [running, succeeded, failed]}
+        result:
+          $ref: '#/components/schemas/JsonValue'
+        error:
+          $ref: '#/components/schemas/JsonValue'
+        created_at: {type: string, format: date-time}
+        started_at: {type: string, format: date-time}
+        finished_at:
+          anyOf:
+          - {type: string, format: date-time}
+          - {type: 'null'}
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+    ConsultationThreadResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - conversation_id
+      - conversation
+      - phase
+      - extracted_info
+      - body_state
+      - pending_interactions
+      - interaction_history
+      - active_turn_run_id
+      - active_turn_events
+      - messages
+      - tool_calls
+      - created_at
+      - updated_at
+      - ended_at
+      properties:
+        conversation_id: {type: string, format: uuid}
+        conversation:
+          $ref: '#/components/schemas/ConsultationThreadConversation'
+        phase: {type: string, enum: [collecting, ready_for_analysis]}
+        extracted_info:
+          type: array
+          items: {$ref: '#/components/schemas/JsonObject'}
+        body_state:
+          anyOf:
+          - {$ref: '#/components/schemas/BodyStateSnapshot'}
+          - {type: 'null'}
+        pending_interactions:
+          type: array
+          items: {$ref: '#/components/schemas/AgentInteraction'}
+        interaction_history:
+          type: array
+          items: {$ref: '#/components/schemas/AgentInteraction'}
+        active_turn_run_id:
+          anyOf:
+          - {type: string, format: uuid}
+          - {type: 'null'}
+        active_turn_events:
+          type: array
+          items: {$ref: '#/components/schemas/RuntimeEvent'}
+        messages:
+          type: array
+          items: {$ref: '#/components/schemas/ConversationMessage'}
+        tool_calls:
+          type: array
+          items: {$ref: '#/components/schemas/ProjectedToolCall'}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+        ended_at:
+          anyOf:
+          - {type: string, format: date-time}
+          - {type: 'null'}
+    Conversation:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - title_status
+      - status
+      - pinned
+      - metadata
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        title_status:
+          type: string
+          enum: [pending, generating, generated, failed]
+        status:
+          type: string
+          enum: [active, archived, deleted]
+        pinned:
+          type: boolean
+        pinned_at:
+          type: string
+          format: date-time
+        default_model:
+          type: string
+        last_message_at:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    MessagePart:
+      oneOf:
+      - $ref: '#/components/schemas/MessageTextPart'
+      - $ref: '#/components/schemas/MessageImagePart'
+      - $ref: '#/components/schemas/MessageSourcePart'
+      - $ref: '#/components/schemas/MessageDataPart'
+      - $ref: '#/components/schemas/MessageToolCallPart'
+      - $ref: '#/components/schemas/MessageToolResultPart'
+      discriminator:
+        propertyName: type
+        mapping:
+          text: '#/components/schemas/MessageTextPart'
+          image: '#/components/schemas/MessageImagePart'
+          source: '#/components/schemas/MessageSourcePart'
+          data: '#/components/schemas/MessageDataPart'
+          tool-call: '#/components/schemas/MessageToolCallPart'
+          tool-result: '#/components/schemas/MessageToolResultPart'
+    MessageTextPart:
+      type: object
+      additionalProperties: false
+      required: [type, text]
+      properties:
+        type:
+          type: string
+          const: text
+        text:
+          type: string
+    MessageImagePart:
+      type: object
+      additionalProperties: false
+      required: [type, upload_id]
+      properties:
+        type:
+          type: string
+          const: image
+        upload_id:
+          type: string
+          format: uuid
+        mime_type:
+          type: string
+        image_url:
+          type: string
+    MessageSourcePart:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type:
+          type: string
+          const: source
+        title:
+          type: string
+        snippet:
+          type: string
+        url:
+          type: string
+        id:
+          type: string
+        sourceType:
+          type: string
+          enum: [url, document]
+        providerMetadata:
+          $ref: '#/components/schemas/JsonObject'
+    MessageDataPart:
+      type: object
+      additionalProperties: false
+      required: [type, name, data]
+      properties:
+        type:
+          type: string
+          const: data
+        name:
+          type: string
+          minLength: 1
+        data:
+          $ref: '#/components/schemas/JsonValue'
+    MessageToolCallPart:
+      type: object
+      additionalProperties: false
+      required: [type, toolName, args, toolCallId]
+      properties:
+        type:
+          type: string
+          const: tool-call
+        toolName:
+          type: string
+          minLength: 1
+        args:
+          $ref: '#/components/schemas/JsonValue'
+        argsText:
+          type: string
+        toolCallId:
+          type: string
+          minLength: 1
+        result:
+          $ref: '#/components/schemas/JsonValue'
+    MessageToolResultPart:
+      type: object
+      additionalProperties: false
+      required: [type, toolName, result, toolCallId]
+      properties:
+        type:
+          type: string
+          const: tool-result
+        toolName:
+          type: string
+          minLength: 1
+        result:
+          $ref: '#/components/schemas/JsonValue'
+        toolCallId:
+          type: string
+          minLength: 1
+    ConversationMessage:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - conversation_id
+      - turn_id
+      - role
+      - status
+      - seq
+      - parts
+      - metadata
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        conversation_id:
+          type: string
+          format: uuid
+        turn_id:
+          type: string
+          format: uuid
+        run_id:
+          type: string
+          format: uuid
+        parent_message_id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [user, assistant, system, tool]
+        status:
+          type: string
+          enum: [submitted, streaming, completed, failed, aborted]
+        seq:
+          type: integer
+        parts:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessagePart'
+        content_text:
+          type: string
+        model:
+          type: string
+        provider:
+          type: string
+        provider_message_id:
+          type: string
+        provider_response_id:
+          type: string
+        input_tokens:
+          type: integer
+        output_tokens:
+          type: integer
+        total_tokens:
+          type: integer
+        error:
+          $ref: '#/components/schemas/JsonObject'
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ConversationRun:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - conversation_id
+      - turn_id
+      - request_id
+      - status
+      - model
+      - started_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        conversation_id:
+          type: string
+          format: uuid
+        turn_id:
+          type: string
+          format: uuid
+        request_id:
+          type: string
+          minLength: 1
+        status:
+          type: string
+          enum: [running, completed, failed, cancelled]
+        model:
+          type: string
+          minLength: 1
+        provider:
+          type: string
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        error:
+          $ref: '#/components/schemas/JsonObject'
+        usage:
+          $ref: '#/components/schemas/JsonObject'
+    ConversationListResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - conversations
+      - hasMore
+      properties:
+        conversations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Conversation'
+        hasMore:
+          type: boolean
+        nextCursor:
+          type: string
+    ConversationDetailResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - conversation
+      - messages
+      properties:
+        conversation:
+          $ref: '#/components/schemas/Conversation'
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConversationMessage'
+    ConversationMutationResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - message
+      properties:
+        message:
+          type: string
+          minLength: 1
+    ConversationUpdateRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum:
+          - active
+          - archived
+          - deleted
+    ConversationPinRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        pinned:
+          type: boolean
+          default: false
+    ConversationTitleRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+    ShareConversationResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - shareToken
+      - shareUrl
+      properties:
+        shareToken:
+          type: string
+          minLength: 1
+        shareUrl:
+          type: string
+          minLength: 1
+    SharedConversationResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - title
+      - messages
+      properties:
+        title:
+          type: string
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConversationMessage'
+    ConversationRunListResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - runs
+      properties:
+        runs:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConversationRun'
+    RuntimeEvent:
+      type: object
+      additionalProperties: false
+      required:
+      - seq
+      - channel
+      - type
+      - ids
+      - payload
+      - created_at
+      properties:
+        version:
+          type: integer
+          const: 1
+        seq:
+          type: integer
+        channel:
+          type: string
+          minLength: 1
+        type:
+          type: string
+          minLength: 1
+        ids:
+          $ref: '#/components/schemas/JsonObject'
+        payload:
+          $ref: '#/components/schemas/JsonObject'
+        created_at:
+          type: string
+          format: date-time
+    RuntimeEventListResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - events
+      - hasMore
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuntimeEvent'
+        hasMore:
+          type: boolean
+        nextAfterSeq:
+          type: integer
+    CreateUploadRequest:
+      type: object
+      additionalProperties: false
+      required: [file, file_type]
+      properties:
+        file:
+          type: string
+          format: binary
+        file_type:
+          type: string
+          enum: [consultation_photo, photo_front, photo_side, photo_back, report]
+    UserUpload:
+      type: object
+      additionalProperties: false
+      required: [id, file_type, original_name, file_size, mime_type, ocr_status, analysis_status, created_at, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        file_type:
+          type: string
+          enum: [consultation_photo, photo_front, photo_side, photo_back, report]
+        original_name: {type: string}
+        file_size: {type: integer, format: int64, minimum: 0}
+        mime_type: {type: string}
+        ocr_result:
+          $ref: '#/components/schemas/JsonObject'
+        ocr_status: {type: string, enum: [pending, processing, completed, failed]}
+        analysis_result:
+          $ref: '#/components/schemas/JsonObject'
+        analysis_status: {type: string, enum: [none, pending, processing, completed, failed]}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    UploadListResponse:
+      type: object
+      additionalProperties: false
+      required: [uploads]
+      properties:
+        uploads:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserUpload'
+    UploadDeleteResponse:
+      type: object
+      additionalProperties: false
+      required: [message]
+      properties:
+        message: {type: string}
+    PostureAnalysisView:
+      type: object
+      additionalProperties: false
+      required: [upload_id, view, file_type, analysis_status, analysis, created_at]
+      properties:
+        upload_id: {type: string, format: uuid}
+        view: {type: string}
+        file_type: {type: string}
+        analysis_status: {type: string}
+        analysis:
+          $ref: '#/components/schemas/JsonObject'
+        created_at: {type: string, format: date-time}
+    PostureAnalysisSummary:
+      type: object
+      additionalProperties: false
+      required: [has_analysis, views, findings, summaries]
+      properties:
+        has_analysis: {type: boolean}
+        views:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostureAnalysisView'
+        findings:
+          type: array
+          items:
+            $ref: '#/components/schemas/JsonValue'
+        summaries:
+          type: array
+          items: {type: string}
+    DocumentIndicatorSourceRegion:
+      type: object
+      additionalProperties: false
+      required: [source_ref]
+      properties:
+        source_ref: {type: string}
+        page_number: {type: integer}
+        bbox:
+          type: array
+          items: {type: number}
+    DocumentIndicatorEvidenceAdmissibility:
+      type: object
+      additionalProperties: false
+      required: [status, policy_revision]
+      properties:
+        status: {type: string, enum: [admissible, needs_review, rejected]}
+        policy_revision: {type: string}
+        reason_codes:
+          type: array
+          items: {type: string}
+    DocumentIndicatorCandidate:
+      type: object
+      additionalProperties: false
+      required: [indicator_index, indicator_id, name, evidence_admissibility]
+      properties:
+        indicator_index: {type: integer, minimum: 0}
+        indicator_id: {type: string}
+        name: {type: string}
+        value:
+          $ref: '#/components/schemas/JsonValue'
+        unit: {type: string}
+        reference_range: {type: string}
+        evidence_admissibility:
+          $ref: '#/components/schemas/DocumentIndicatorEvidenceAdmissibility'
+        source_refs:
+          type: array
+          items: {type: string}
+        source_regions:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentIndicatorSourceRegion'
+    DocumentIndicatorReviewRecord:
+      type: object
+      additionalProperties: false
+      required: [id, extraction_run_id, upload_id, indicator_index, indicator_id, action, created_at, idempotency_key]
+      properties:
+        id: {type: string, format: uuid}
+        extraction_run_id: {type: string, format: uuid}
+        upload_id: {type: string, format: uuid}
+        indicator_index: {type: integer, minimum: 0}
+        indicator_id: {type: string}
+        action: {type: string, enum: [confirm, correct, reject]}
+        reviewed_payload:
+          $ref: '#/components/schemas/JsonObject'
+        note: {type: string}
+        created_at: {type: string, format: date-time}
+        idempotency_key: {type: string, minLength: 1}
+    DocumentIndicatorReviewProjection:
+      type: object
+      additionalProperties: false
+      required: [indicator_index, indicator_id, candidate]
+      properties:
+        indicator_index: {type: integer, minimum: 0}
+        indicator_id: {type: string}
+        candidate:
+          $ref: '#/components/schemas/DocumentIndicatorCandidate'
+        effective_review:
+          $ref: '#/components/schemas/DocumentIndicatorReviewRecord'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentIndicatorReviewRecord'
+    HealthDocumentReviewContext:
+      type: object
+      additionalProperties: false
+      required: [extraction_run_id, upload_id, review_candidates]
+      properties:
+        extraction_run_id: {type: string, format: uuid}
+        upload_id: {type: string, format: uuid}
+        review_candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentIndicatorReviewProjection'
+    HealthDocumentReviewListResponse:
+      type: object
+      additionalProperties: false
+      required: [review_candidates]
+      properties:
+        review_candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentIndicatorReviewProjection'
+    AppendHealthDocumentReviewRequest:
+      type: object
+      additionalProperties: false
+      required: [indicator_index, indicator_id, action, source_refs, idempotency_key]
+      properties:
+        indicator_index: {type: integer, minimum: 0}
+        indicator_id: {type: string, minLength: 1}
+        action: {type: string, enum: [confirm, correct, reject]}
+        reviewed_payload:
+          $ref: '#/components/schemas/JsonObject'
+        source_refs:
+          type: array
+          items: {type: string}
+        idempotency_key: {type: string, minLength: 1}
+        note: {type: string}
+    RegisterKnowledgeSourceRequest:
+      type: object
+      additionalProperties: false
+      required: [source_key, source_type, title, author, problem_slug, problem_display_name, original_file_path, license_status, content_hash, provenance]
+      properties:
+        source_key: {type: string, minLength: 1, maxLength: 200}
+        source_type: {type: string, minLength: 1, maxLength: 50}
+        title: {type: string, minLength: 1, maxLength: 500}
+        author: {type: string, minLength: 1, maxLength: 255}
+        problem_slug: {type: string, minLength: 1, maxLength: 100}
+        problem_display_name: {type: string, minLength: 1, maxLength: 255}
+        original_file_path: {type: string, minLength: 1}
+        language: {type: string, minLength: 2, maxLength: 20, default: zh}
+        license_status:
+          type: string
+          enum: [verified_reuse, citation_only, owned, public_domain]
+        content_hash:
+          type: string
+          pattern: '^[0-9A-Fa-f]{64}$'
+        canonical_url: {type: string, format: uri}
+        source_version: {type: string, maxLength: 100, default: v1}
+        provenance:
+          $ref: '#/components/schemas/JsonObject'
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+    KnowledgeSource:
+      type: object
+      additionalProperties: false
+      required: [id, source_key, source_type, title, author, problem_slug, problem_display_name, original_file_path, language, ingest_status, metadata, license_status, content_hash, source_version, provenance, registered_at, created_at, updated_at]
+      properties:
+        id: {type: integer, format: int64, minimum: 1}
+        source_key: {type: string}
+        source_type: {type: string}
+        title: {type: string}
+        author: {type: string}
+        problem_slug: {type: string}
+        problem_display_name: {type: string}
+        original_file_path: {type: string}
+        language: {type: string}
+        ingest_status: {type: string}
+        metadata:
+          $ref: '#/components/schemas/JsonObject'
+        license_status: {type: string}
+        content_hash: {type: string}
+        canonical_url: {type: string, format: uri}
+        source_version: {type: string}
+        provenance:
+          $ref: '#/components/schemas/JsonObject'
+        registered_at: {type: string, format: date-time}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    KnowledgeSourceListResponse:
+      type: object
+      additionalProperties: false
+      required: [sources]
+      properties:
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/KnowledgeSource'
+    KnowledgeVideoIngestionRequest:
+      type: object
+      additionalProperties: false
+      required: [source_key]
+      properties:
+        source_key: {type: string, minLength: 1, maxLength: 200}
+        video_path: {type: string, minLength: 1}
+        transcript_provider: {type: string, minLength: 1, maxLength: 100}
+        transcript_model: {type: string, maxLength: 200}
+        whisper_model: {type: string, minLength: 1, maxLength: 100}
+        force_transcribe: {type: boolean, default: false}
+        export_clips: {type: boolean, default: true}
+        splitter_provider: {type: string, enum: [heuristic, llm], default: heuristic}
+        ai_refine: {type: boolean, default: false}
+    KnowledgeIngestionJob:
+      type: object
+      additionalProperties: false
+      required: [id, job_type, status, attempts, max_attempts, created_at, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        job_type: {type: string}
+        status: {type: string}
+        progress:
+          $ref: '#/components/schemas/JsonObject'
+        result:
+          $ref: '#/components/schemas/JsonObject'
+        error:
+          $ref: '#/components/schemas/JsonObject'
+        attempts: {type: integer, minimum: 0}
+        max_attempts: {type: integer, minimum: 1}
+        created_at: {type: string, format: date-time}
+        started_at: {type: string, format: date-time}
+        finished_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    KnowledgeIngestionEnqueueResponse:
+      type: object
+      additionalProperties: false
+      required: [job, idempotent_hit]
+      properties:
+        job:
+          $ref: '#/components/schemas/KnowledgeIngestionJob'
+        idempotent_hit: {type: boolean}
+    KnowledgeSearchRequest:
+      type: object
+      additionalProperties: false
+      required: [query]
+      properties:
+        query: {type: string, minLength: 1}
+        top_k: {type: integer, minimum: 1, maximum: 20, default: 5}
+        problem_slug: {type: string}
+        unit_type: {type: string}
+    KnowledgeSearchClip:
+      type: object
+      additionalProperties: false
+      required: [id, clip_key, clip_type, title, source_timestamp]
+      properties:
+        id: {type: integer, format: int64}
+        clip_key: {type: string}
+        clip_type: {type: string}
+        title: {type: string}
+        source_timestamp: {type: string}
+    KnowledgeSearchResult:
+      type: object
+      additionalProperties: false
+      required: [id, problem_slug, category, unit_type, title, summary, body_markdown, similarity, source_title, source_author, source_timestamp, tags, clips]
+      properties:
+        id: {type: integer, format: int64}
+        problem_slug: {type: string}
+        category: {type: string}
+        unit_type: {type: string}
+        title: {type: string}
+        summary: {type: string}
+        body_markdown: {type: string}
+        similarity: {type: number}
+        source_title: {type: string}
+        source_author: {type: string}
+        source_timestamp: {type: string}
+        tags:
+          type: array
+          items: {type: string}
+        clips:
+          type: array
+          items:
+            $ref: '#/components/schemas/KnowledgeSearchClip'
+    KnowledgeSearchResponse:
+      type: object
+      additionalProperties: false
+      required: [results, total]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/KnowledgeSearchResult'
+        total: {type: integer, minimum: 0}
+    KnowledgeStats:
+      type: object
+      additionalProperties: false
+      required: [knowledge_sources, knowledge_segments, knowledge_units, knowledge_clips]
+      properties:
+        knowledge_sources: {type: integer, minimum: 0}
+        knowledge_segments: {type: integer, minimum: 0}
+        knowledge_units: {type: integer, minimum: 0}
+        knowledge_clips: {type: integer, minimum: 0}
+  responses:
+    InvalidRequest:
+      description: Request body or BodyState fact is invalid.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Unauthorized:
+      description: Authentication is missing or invalid.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    NotFound:
+      description: Referenced BodyState item does not exist.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    RevisionConflict:
+      description: expected_revision does not match current BodyState revision.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    ValidationUnavailable:
+      description: Canonical body-region validation dependency is unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Conflict:
+      description: Requested operation conflicts with the durable resource state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Forbidden:
+      description: Request origin or operator permission requirement was not satisfied.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    TooManyRequests:
+      description: Too many authentication attempts; retry after the advertised delay.
+      headers:
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    BadGateway:
+      description: Upstream generated output failed the trusted application contract.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    ServiceUnavailable:
+      description: Required application capability is temporarily unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    ReplayUnavailable:
+      description: Historical run lacks immutable provenance required for replay.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    InternalError:
+      description: Unexpected server failure.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'

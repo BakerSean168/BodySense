@@ -11,9 +11,13 @@ var (
 	// that is not present in the configured BodyRegion ontology authority.
 	ErrUnknownBodyRegionID = errors.New("unknown body region id")
 
+	// ErrBodyRegionIDRequired means an anatomically localized durable value cannot
+	// be resolved to one canonical BodyRegion identity.
+	ErrBodyRegionIDRequired = errors.New("canonical body region id is required")
+
 	// ErrBodyRegionIDValidationUnavailable prevents the durable layer from
 	// accepting a new canonical identity before the authoritative ontology has
-	// been wired. Legacy records without body_region_id remain fully supported.
+	// been wired.
 	ErrBodyRegionIDValidationUnavailable = errors.New("body region id validation unavailable")
 )
 
@@ -31,13 +35,20 @@ func (f BodyRegionIDValidatorFunc) IsValidBodyRegionID(id string) bool {
 	return f(id)
 }
 
-func (s *BodyStateService) normalizeBodyRegionID(raw *string) (*string, error) {
-	if raw == nil {
-		return nil, nil
+func (s *BodyStateService) normalizeBodyRegionID(raw *string, display string) (*string, error) {
+	id := ""
+	if raw != nil {
+		id = strings.TrimSpace(*raw)
 	}
-	id := strings.TrimSpace(*raw)
 	if id == "" {
-		return nil, nil
+		if strings.TrimSpace(display) == "" {
+			return nil, nil
+		}
+		resolved, ok := ResolveCanonicalBodyRegionID(display)
+		if !ok {
+			return nil, fmt.Errorf("%w: %q", ErrBodyRegionIDRequired, strings.TrimSpace(display))
+		}
+		id = resolved
 	}
 	if s.bodyRegionIDValidator == nil {
 		return nil, fmt.Errorf("%w: %q", ErrBodyRegionIDValidationUnavailable, id)

@@ -17,7 +17,7 @@ func evidenceAvailabilityJSON(policy, externalStatus, attempts string) json.RawM
 
 func TestEvidenceAvailabilityTraceDistinguishesNoEvidenceNeededFromUnresolved(t *testing.T) {
 	status, err := validateEvidenceAvailabilityForConfiguration(
-		diagnosisEvidenceGapConfigurationID,
+		defaultDiagnosisConfigurationID,
 		evidenceAvailabilityJSON("diagnosis-evidence-gap-v2", "not_required", `[
 			{"gap":{"kind":"user_fact"},"status":"unresolved","stop_reason":"user_input_required","search_performed":false}
 		]`),
@@ -27,7 +27,7 @@ func TestEvidenceAvailabilityTraceDistinguishesNoEvidenceNeededFromUnresolved(t 
 	}
 
 	status, err = validateEvidenceAvailabilityForConfiguration(
-		diagnosisEvidenceGapConfigurationID,
+		defaultDiagnosisConfigurationID,
 		evidenceAvailabilityJSON("diagnosis-evidence-gap-v2", "unresolved", `[
 			{"gap":{"kind":"external_knowledge"},"status":"unresolved","stop_reason":"published_corpus_empty","search_performed":true,"retrieval_status":"published_corpus_empty"}
 		]`),
@@ -64,7 +64,7 @@ func TestEvidenceAvailabilityTraceRecomputesAvailableAndPartial(t *testing.T) {
 
 func TestEvidenceAvailabilityTraceRejectsSelfReportedStatusDrift(t *testing.T) {
 	_, err := validateEvidenceAvailabilityForConfiguration(
-		diagnosisEvidenceGapConfigurationID,
+		defaultDiagnosisConfigurationID,
 		evidenceAvailabilityJSON("diagnosis-evidence-gap-v2", "available", `[
 			{"gap":{"kind":"external_knowledge"},"status":"unresolved","stop_reason":"search_unavailable","search_performed":false,"retrieval_status":"search_unavailable"}
 		]`),
@@ -84,15 +84,14 @@ func TestEvidenceAvailabilityTraceRejectsLegacyOrInconsistentRetrieval(t *testin
 		]`),
 	}
 	for _, raw := range cases {
-		if _, err := validateEvidenceAvailabilityForConfiguration(diagnosisEvidenceGapConfigurationID, raw); !errors.Is(err, ErrEvidenceAvailabilityTraceInvalid) {
+		if _, err := validateEvidenceAvailabilityForConfiguration(defaultDiagnosisConfigurationID, raw); !errors.Is(err, ErrEvidenceAvailabilityTraceInvalid) {
 			t.Fatalf("expected invalid retrieval contract, raw=%s err=%v", raw, err)
 		}
 	}
 }
 
-func TestEvidenceAvailabilityTraceDoesNotAffectLegacyConfigurations(t *testing.T) {
-	status, err := validateEvidenceAvailabilityForConfiguration(defaultDiagnosisConfigurationID, nil)
-	if err != nil || status != externalEvidenceNotRequired {
-		t.Fatalf("legacy status=%q err=%v", status, err)
+func TestEvidenceAvailabilityTraceRequiresCurrentDiagnosisTrace(t *testing.T) {
+	if _, err := validateEvidenceAvailabilityForConfiguration(defaultDiagnosisConfigurationID, nil); !errors.Is(err, ErrEvidenceAvailabilityTraceInvalid) {
+		t.Fatalf("current Diagnosis evidence-gap policy must require a trace, got %v", err)
 	}
 }

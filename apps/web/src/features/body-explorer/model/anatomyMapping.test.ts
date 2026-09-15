@@ -1,21 +1,27 @@
 import { describe, expect, it } from "vitest";
 import mappingData from "../data/vanatome-region-map.v1.json";
 import registryData from "../data/vanatome-1.4.0-registry.generated.json";
-import type { AtlasRegistryInventory } from "./anatomyTypes";
 import {
   getAnatomyIdsForRegion,
   getBodyRegionForAnatomy,
   getPreferredAnatomyIdForRegion,
+  parseVanatomeRegionMapping,
   resolveBodyRegionForAnatomy,
   validateVanatomeRegionMapping,
-  type VanatomeRegionMappingData,
 } from "./anatomyMapping";
+import { parseAtlasRegistryInventory } from "./atlasRegistry";
 import { BODY_REGION_IDS } from "./bodyRegionOntology";
 
-const registry = registryData as unknown as AtlasRegistryInventory;
-const mapping = mappingData as unknown as VanatomeRegionMappingData;
+const registry = parseAtlasRegistryInventory(registryData);
+const mapping = parseVanatomeRegionMapping(mappingData);
 
 describe("Vanatome 1.4.0 BodyRegion mapping", () => {
+  it("rejects malformed mapping input before atlas cross-validation", () => {
+    expect(() =>
+      parseVanatomeRegionMapping({ ...mappingData, mappingVersion: "one" }),
+    ).toThrow();
+  });
+
   it("validates every curated anatomy ID against the pinned registry", () => {
     expect(validateVanatomeRegionMapping(registry)).toEqual([]);
     expect(Object.keys(mapping.regions)).toHaveLength(BODY_REGION_IDS.length);
@@ -28,9 +34,9 @@ describe("Vanatome 1.4.0 BodyRegion mapping", () => {
   });
 
   it("keeps bilateral reverse ownership deterministic", () => {
-    expect(
-      getBodyRegionForAnatomy("appendicular-skeleton-clavicle-left"),
-    ).toBe("shoulder.left");
+    expect(getBodyRegionForAnatomy("appendicular-skeleton-clavicle-left")).toBe(
+      "shoulder.left",
+    );
     expect(
       getBodyRegionForAnatomy("appendicular-skeleton-clavicle-right"),
     ).toBe("shoulder.right");
@@ -46,7 +52,9 @@ describe("Vanatome 1.4.0 BodyRegion mapping", () => {
         registry,
       ),
     ).toBe("neck");
-    expect(resolveBodyRegionForAnatomy("heart-left-atrium", registry)).toBeNull();
+    expect(
+      resolveBodyRegionForAnatomy("heart-left-atrium", registry),
+    ).toBeNull();
   });
 
   it("fails validation when a mapping invents an anatomy ID", () => {

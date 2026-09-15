@@ -1,3 +1,4 @@
+import { parseCitation, parseRedFlagEvent } from "@bodysense/contracts";
 import type { ThreadAssistantMessagePart } from "@assistant-ui/react";
 import type {
   Citation,
@@ -53,32 +54,34 @@ export function buildAssistantMessagePartsViewModel(
         const bodysense = isRecord(metadata.bodysense)
           ? metadata.bodysense
           : {};
-        citations.push({
-          title: part.title ?? part.url,
-          source_title:
-            typeof bodysense.source_title === "string"
-              ? bodysense.source_title
-              : undefined,
-          source_author:
-            typeof bodysense.source_author === "string"
-              ? bodysense.source_author
-              : undefined,
-          summary:
-            typeof bodysense.summary === "string"
-              ? bodysense.summary
-              : undefined,
-          snippet:
-            typeof bodysense.snippet === "string"
-              ? bodysense.snippet
-              : undefined,
-          url: part.sourceType === "url" ? part.url : undefined,
-        } as Citation & { url?: string });
+        citations.push(
+          parseCitation({
+            title: part.title ?? part.url,
+            source_title:
+              typeof bodysense.source_title === "string"
+                ? bodysense.source_title
+                : undefined,
+            source_author:
+              typeof bodysense.source_author === "string"
+                ? bodysense.source_author
+                : undefined,
+            summary:
+              typeof bodysense.summary === "string"
+                ? bodysense.summary
+                : undefined,
+            snippet:
+              typeof bodysense.snippet === "string"
+                ? bodysense.snippet
+                : undefined,
+            url: part.sourceType === "url" ? part.url : undefined,
+          }),
+        );
         break;
       }
 
       case "data":
         if (part.name === "red_flag" && isRecord(part.data)) {
-          redFlag = part.data as unknown as RedFlagEvent;
+          redFlag = parseRedFlagEvent(part.data);
         }
         if (part.name === "knowledge_gap" && isRecord(part.data)) {
           const query = part.data.query;

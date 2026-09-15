@@ -33,8 +33,8 @@ func validateHealthDocumentResponse(respBody []byte, expectedConfigurationID str
 	if id, _ := mechanism["configuration_id"].(string); id != expectedConfigurationID {
 		return nil, fmt.Errorf("health-document configuration mismatch: got %q want %q", id, expectedConfigurationID)
 	}
-	if registration.Legacy {
-		if err := validateLegacyTesseractProvenance(mechanism, registration); err != nil {
+	if registration.TesseractBaseline {
+		if err := validateTesseractChampionProvenance(mechanism, registration); err != nil {
 			return nil, err
 		}
 	} else {
@@ -132,7 +132,7 @@ func validateCurrentHealthDocumentProvenance(
 	return validateHealthDocumentModelArtifacts(mechanism["model_artifacts"], registration.ModelArtifacts)
 }
 
-func validateLegacyTesseractProvenance(
+func validateTesseractChampionProvenance(
 	mechanism map[string]any,
 	registration healthDocumentConfigurationRegistration,
 ) error {
@@ -152,15 +152,15 @@ func validateLegacyTesseractProvenance(
 	for field, want := range expected {
 		got, _ := mechanism[field].(string)
 		if got != want {
-			return fmt.Errorf("legacy health-document mechanism %s mismatch: got %q want %q", field, got, want)
+			return fmt.Errorf("tesseract champion health-document mechanism %s mismatch: got %q want %q", field, got, want)
 		}
 	}
 	if got := intFromJSON(mechanism["pdf_raster_dpi"]); got != registration.PDFRasterDPI {
-		return fmt.Errorf("legacy health-document pdf_raster_dpi mismatch: got %d want %d", got, registration.PDFRasterDPI)
+		return fmt.Errorf("tesseract champion health-document pdf_raster_dpi mismatch: got %d want %d", got, registration.PDFRasterDPI)
 	}
 	languages, ok := mechanism["languages"].([]any)
 	if !ok {
-		return errors.New("legacy health-document provenance missing languages")
+		return errors.New("tesseract champion health-document provenance missing languages")
 	}
 	gotLanguages := make([]string, 0, len(languages))
 	for _, value := range languages {
@@ -169,7 +169,7 @@ func validateLegacyTesseractProvenance(
 		}
 	}
 	if !slices.Equal(gotLanguages, registration.Languages) {
-		return fmt.Errorf("legacy health-document languages mismatch: got %v want %v", gotLanguages, registration.Languages)
+		return fmt.Errorf("tesseract champion health-document languages mismatch: got %v want %v", gotLanguages, registration.Languages)
 	}
 	return nil
 }

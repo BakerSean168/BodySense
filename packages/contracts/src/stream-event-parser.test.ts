@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { parseStreamEvent, StreamEventParseError } from "./stream-event-parser";
+import {
+  parseCitation,
+  parseExtractedInfo,
+  parseInteractionQuestion,
+  parseRedFlag,
+  parseRedFlagEvent,
+  parseStreamEvent,
+  StreamEventParseError,
+} from "./stream-event-parser";
 
 const valid = {
   version: 1,
@@ -10,23 +18,38 @@ const valid = {
   payload: { delta: "hello" },
 };
 
+function expectInvalid(input: unknown): StreamEventParseError {
+  try {
+    parseStreamEvent(input);
+    throw new Error("expected StreamEvent validation to fail");
+  } catch (error) {
+    expect(error).toBeInstanceOf(StreamEventParseError);
+    const parseError = error as StreamEventParseError;
+    expect(parseError.code).toBe("INVALID_STREAM_EVENT");
+    expect(parseError.message).toBe(
+      "StreamEvent does not match the canonical v1 schema",
+    );
+    expect(parseError.issues.length).toBeGreaterThan(0);
+    return parseError;
+  }
+}
+
 describe("parseStreamEvent", () => {
   it("accepts a valid public event", () => {
     expect(parseStreamEvent(valid)).toEqual(valid);
   });
 
   it.each([
-    [{ ...valid, version: 2 }, "version"],
-    [{ ...valid, seq: 0 }, "seq"],
-    [{ ...valid, channel: "runtime" }, "channel"],
-    [{ ...valid, type: "runtime.agent_configuration", channel: "runtime" }, "unsupported public event type"],
-    [{ ...valid, channel: "run" }, "must use channel"],
-    [{ ...valid, payload: {} }, "payload.delta"],
-    [{ ...valid, ids: { conversation_id: 42 } }, "ids.conversation_id"],
-    [{ ...valid, extra: true }, "unexpected top-level field"],
-  ])("rejects malformed events", (input, message) => {
-    expect(() => parseStreamEvent(input)).toThrow(StreamEventParseError);
-    expect(() => parseStreamEvent(input)).toThrow(message as string);
+    { ...valid, version: 2 },
+    { ...valid, seq: 0 },
+    { ...valid, channel: "runtime" },
+    { ...valid, type: "runtime.agent_configuration", channel: "runtime" },
+    { ...valid, channel: "run" },
+    { ...valid, payload: {} },
+    { ...valid, ids: { conversation_id: 42 } },
+    { ...valid, extra: true },
+  ])("rejects malformed events via the canonical schema", (input) => {
+    expectInvalid(input);
   });
 
   it("accepts execution_lost as a durable run.failed reason", () => {
@@ -40,24 +63,72 @@ describe("parseStreamEvent", () => {
   });
 
   it("rejects run.failed without either a reason or structured error", () => {
-    expect(() =>
-      parseStreamEvent({
-        ...valid,
-        channel: "run",
-        type: "run.failed",
-        payload: { status: "failed" },
-      }),
-    ).toThrow("requires reason or error");
+    expectInvalid({
+      ...valid,
+      channel: "run",
+      type: "run.failed",
+      payload: { status: "failed" },
+    });
   });
 
   it("validates authority-relevant safety payload", () => {
-    expect(() =>
-      parseStreamEvent({
-        ...valid,
-        channel: "safety",
-        type: "safety.red_flag.detected",
-        payload: { has_red_flags: "yes", flags: [] },
+    expectInvalid({
+      ...valid,
+      channel: "safety",
+      type: "safety.red_flag.detected",
+      payload: { has_red_flags: "yes", flags: [] },
+    });
+  });
+});
+
+describe("canonical StreamEvent sub-structure parsers", () => {
+  it("parses shared payload structures through the generated validator", () => {
+    expect(
+      parseInteractionQuestion({ question: "哪里疼？", answer_type: "text" }),
+    ).toEqual({
+      question: "哪里疼？",
+      answer_type: "text",
+    });
+    expect(
+      parseExtractedInfo({ body_part: "颈部", symptom_type: "疼痛" }),
+    ).toEqual({
+      body_part: "颈部",
+      symptom_type: "疼痛",
+    });
+    expect(parseCitation({ title: "Evidence" })).toEqual({ title: "Evidence" });
+    expect(
+      parseRedFlag({ category: "weakness", message: "new weakness" }),
+    ).toEqual({
+      category: "weakness",
+      message: "new weakness",
+    });
+    expect(
+      parseRedFlagEvent({
+        has_red_flags: true,
+        flags: [{ category: "weakness", message: "new weakness" }],
       }),
-    ).toThrow("payload.has_red_flags");
+    ).toEqual({
+      has_red_flags: true,
+      flags: [{ category: "weakness", message: "new weakness" }],
+    });
+  });
+
+  it("rejects invalid shared payloads instead of casting them", () => {
+    expect(() => parseInteractionQuestion({ answer_type: "text" })).toThrow(
+      StreamEventParseError,
+    );
+    expect(() => parseExtractedInfo({ symptom_type: "pain" })).toThrow(
+      StreamEventParseError,
+    );
+    expect(() => parseCitation({})).toThrow(StreamEventParseError);
+    expect(() => parseRedFlag({ category: "weakness" })).toThrow(
+      StreamEventParseError,
+    );
+    expect(() =>
+      parseRedFlagEvent({
+        has_red_flags: true,
+        flags: [{ category: "weakness" }],
+      }),
+    ).toThrow(StreamEventParseError);
   });
 });

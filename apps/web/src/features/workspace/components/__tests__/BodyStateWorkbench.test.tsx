@@ -24,7 +24,6 @@ describe("BodyStateWorkbench observation review", () => {
       <QueryClientProvider client={queryClient}>
         <BodyStateWorkbench
           snapshot={{
-            user_id: "user-1",
             current_revision: 10,
             safety_state: {},
             facts: [
@@ -80,7 +79,6 @@ describe("BodyStateWorkbench observation review", () => {
       <QueryClientProvider client={queryClient}>
         <BodyStateWorkbench
           snapshot={{
-            user_id: "user-1",
             current_revision: 10,
             safety_state: {},
             facts: [
@@ -133,7 +131,6 @@ describe("BodyStateWorkbench observation review", () => {
       <QueryClientProvider client={queryClient}>
         <BodyStateWorkbench
           snapshot={{
-            user_id: "user-1",
             current_revision: 10,
             safety_state: {},
             facts: [
@@ -208,7 +205,7 @@ describe("BodyStateWorkbench observation review", () => {
   it("saves a lifestyle current-state update", async () => {
     const updateLifestyleCurrent = vi
       .spyOn(workspaceApi, "updateLifestyleCurrent")
-      .mockResolvedValue({});
+      .mockResolvedValue(undefined);
 
     const user = userEvent.setup();
 
@@ -222,7 +219,6 @@ describe("BodyStateWorkbench observation review", () => {
       <QueryClientProvider client={queryClient}>
         <BodyStateWorkbench
           snapshot={{
-            user_id: "user-1",
             current_revision: 10,
             safety_state: {},
             facts: [
@@ -279,7 +275,7 @@ describe("BodyStateWorkbench observation review", () => {
   it("keeps assessment observations pending until explicit confirmation", async () => {
     const review = vi
       .spyOn(workspaceApi, "reviewObservation")
-      .mockResolvedValue({});
+      .mockResolvedValue(undefined);
     const user = userEvent.setup();
 
     const queryClient = new QueryClient({
@@ -289,7 +285,6 @@ describe("BodyStateWorkbench observation review", () => {
       <QueryClientProvider client={queryClient}>
         <BodyStateWorkbench
           snapshot={{
-            user_id: "user-1",
             current_revision: 5,
             safety_state: {},
             facts: [],
@@ -340,7 +335,6 @@ describe("BodyStateWorkbench observation review", () => {
       <QueryClientProvider client={queryClient}>
         <BodyStateWorkbench
           snapshot={{
-            user_id: "user-1",
             current_revision: 9,
             safety_state: {},
             facts: [],
@@ -389,7 +383,6 @@ describe("BodyStateWorkbench observation review", () => {
         <BodyStateWorkbench
           selectedRegionId="shoulder.right"
           snapshot={{
-            user_id: "user-1",
             current_revision: 7,
             safety_state: {},
             facts: [
@@ -442,6 +435,88 @@ describe("BodyStateWorkbench observation review", () => {
         concern_key: "region:shoulder.right",
         value: "右肩今天更轻松",
       }),
+    );
+  });
+
+  it("rejects ambiguous free-text body regions before durable submission", async () => {
+    const addFact = vi.spyOn(workspaceApi, "addFact").mockResolvedValue({
+      fact: {} as never,
+    });
+    const user = userEvent.setup();
+    const queryClient = new QueryClient({
+      defaultOptions: { mutations: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <BodyStateWorkbench
+          snapshot={{
+            current_revision: 0,
+            safety_state: {},
+            facts: [],
+            observations: [],
+            pending_observations: [],
+            hypotheses: [],
+            recent_revisions: [],
+          }}
+        />
+      </QueryClientProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "添加记录" }));
+    await user.type(
+      screen.getByPlaceholderText("身体区域，例如：颈部、左肩、右肩"),
+      "颈肩",
+    );
+    await user.type(screen.getByPlaceholderText("记录内容"), "久坐后颈肩酸胀");
+    await user.click(screen.getByRole("button", { name: "保存记录" }));
+
+    expect(addFact).not.toHaveBeenCalled();
+  });
+
+  it("canonicalizes deterministic body-region aliases before durable submission", async () => {
+    const addFact = vi.spyOn(workspaceApi, "addFact").mockResolvedValue({
+      fact: {} as never,
+    });
+    const user = userEvent.setup();
+    const queryClient = new QueryClient({
+      defaultOptions: { mutations: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <BodyStateWorkbench
+          snapshot={{
+            current_revision: 4,
+            safety_state: {},
+            facts: [],
+            observations: [],
+            pending_observations: [],
+            hypotheses: [],
+            recent_revisions: [],
+          }}
+        />
+      </QueryClientProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "添加记录" }));
+    await user.type(
+      screen.getByPlaceholderText("身体区域，例如：颈部、左肩、右肩"),
+      "脖子",
+    );
+    await user.type(screen.getByPlaceholderText("记录内容"), "久坐后酸胀");
+    await user.click(screen.getByRole("button", { name: "保存记录" }));
+
+    await waitFor(() =>
+      expect(addFact).toHaveBeenCalledWith(
+        4,
+        expect.objectContaining({
+          body_region: "颈部",
+          body_region_id: "neck",
+          concern_key: "region:neck",
+          value: "久坐后酸胀",
+        }),
+      ),
     );
   });
 });

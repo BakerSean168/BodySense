@@ -1,4 +1,4 @@
-import type { BodyStateSnapshot } from "../types/consultation";
+import type { BodyStateProjection } from "../types/consultation";
 
 export type BodyZone = "head" | "neck" | "torso" | "pelvis" | "arms" | "legs";
 
@@ -52,17 +52,17 @@ export function bodyZoneFor(region: string, concernKey = ""): BodyZone {
 }
 
 export function selectBodyZoneSummaries(
-  snapshot: BodyStateSnapshot | null | undefined,
+  snapshot: BodyStateProjection | null | undefined,
 ): BodyZoneSummary[] {
   if (!snapshot) return [];
 
   const zones = new Map<BodyZone, BodyZoneSummary>();
   const add = (zone: BodyZone, region: string, trend: NormalizedTrend) => {
-    const current = zones.get(zone) ?? {
+    const current: BodyZoneSummary = zones.get(zone) ?? {
       zone,
       label: zoneLabels[zone],
       count: 0,
-      trend: "unknown" as NormalizedTrend,
+      trend: "unknown",
       regions: [],
     };
     current.count += 1;

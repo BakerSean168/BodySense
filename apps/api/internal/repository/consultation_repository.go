@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/bodysense/api/internal/database"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
@@ -61,8 +62,8 @@ func (r *ConsultationRepository) ListByConversationIDs(ctx context.Context, conv
 }
 
 // UpdatePhase updates the workflow phase of a consultation session.
-func (r *ConsultationRepository) UpdatePhase(ctx context.Context, conversationID uuid.UUID, phase string) error {
-	return r.db.WithContext(ctx).
+func (r *ConsultationRepository) UpdatePhase(ctx context.Context, conversationID uuid.UUID, phase model.ConsultationPhase) error {
+	return database.FromContext(ctx, r.db).
 		Model(&model.ConsultationSession{}).
 		Where("conversation_id = ?", conversationID).
 		Update("phase", phase).Error
@@ -274,11 +275,11 @@ func (r *ConsultationRepository) handleActiveRun(
 		// Blocked on user input is not lease-bound; keep it in progress.
 		return model.ErrConversationRunInProgress
 	case "running":
-		if active.LeaseExpiresAt == nil || time.Now().Before(*active.LeaseExpiresAt) {
-			// Live run (or legacy run without a lease): keep it in progress.
+		if active.LeaseExpiresAt != nil && time.Now().Before(*active.LeaseExpiresAt) {
 			return model.ErrConversationRunInProgress
 		}
-		// Lease expired: assume the owning process died and reclaim the run.
+		// A current running run must own a lease. A missing or expired lease is
+		// non-live state and is reclaimed rather than treated as indefinitely active.
 		now := time.Now()
 		if err := tx.WithContext(ctx).Model(&model.Run{}).
 			Where("id = ?", activeRunID).

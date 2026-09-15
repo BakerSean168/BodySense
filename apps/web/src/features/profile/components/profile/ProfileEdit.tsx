@@ -1,15 +1,23 @@
 import { useState } from "react";
-import type { UserProfile } from "@/stores/profileStore";
+import type {
+  UpdateUserProfileInput,
+  UserProfile,
+} from "@/stores/profileStore";
 import { Button } from "@/components/ui/Button";
 
 interface ProfileEditProps {
   profile: UserProfile;
-  onSave: (data: Partial<UserProfile>) => Promise<void>;
+  onSave: (data: UpdateUserProfileInput) => Promise<void>;
   onCancel: () => void;
   isLoading: boolean;
 }
 
-const GENDER_OPTIONS = [
+type EditableGender = "" | "male" | "female";
+
+const GENDER_OPTIONS: ReadonlyArray<{
+  value: Exclude<EditableGender, "">;
+  label: string;
+}> = [
   { value: "male", label: "男" },
   { value: "female", label: "女" },
 ];
@@ -21,12 +29,17 @@ function localDateString(value: Date) {
   return `${year}-${month}-${day}`;
 }
 
-export function ProfileEdit({ profile, onSave, onCancel, isLoading }: ProfileEditProps) {
+export function ProfileEdit({
+  profile,
+  onSave,
+  onCancel,
+  isLoading,
+}: ProfileEditProps) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const earliestBirthDate = new Date(today);
   earliestBirthDate.setFullYear(earliestBirthDate.getFullYear() - 150);
-  const [gender, setGender] = useState(profile.gender || "");
+  const [gender, setGender] = useState<EditableGender>(profile.gender ?? "");
   const [birthDate, setBirthDate] = useState(profile.birth_date || "");
   const [error, setError] = useState<string | null>(null);
 
@@ -34,13 +47,20 @@ export function ProfileEdit({ profile, onSave, onCancel, isLoading }: ProfileEdi
     event.preventDefault();
     if (birthDate) {
       const parsed = new Date(`${birthDate}T00:00:00`);
-      if (Number.isNaN(parsed.getTime()) || parsed > today || parsed < earliestBirthDate) {
+      if (
+        Number.isNaN(parsed.getTime()) ||
+        parsed > today ||
+        parsed < earliestBirthDate
+      ) {
         setError("请选择有效的出生日期");
         return;
       }
     }
     setError(null);
-    await onSave({ gender: gender || undefined, birth_date: birthDate || undefined });
+    await onSave({
+      gender: gender || null,
+      birth_date: birthDate || null,
+    });
   };
 
   return (
@@ -48,7 +68,8 @@ export function ProfileEdit({ profile, onSave, onCancel, isLoading }: ProfileEdi
       <div>
         <h2 className="text-lg font-semibold text-foreground">编辑基本身份</h2>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          可变化的身体和生活信息不会在这里编辑；它们分别进入身体测量、生活方式与 BodyState。
+          可变化的身体和生活信息不会在这里编辑；它们分别进入身体测量、生活方式与
+          BodyState。
         </p>
       </div>
 
@@ -73,7 +94,10 @@ export function ProfileEdit({ profile, onSave, onCancel, isLoading }: ProfileEdi
       </div>
 
       <div>
-        <label htmlFor="profile-birth-date" className="mb-2 block text-sm font-medium text-foreground">
+        <label
+          htmlFor="profile-birth-date"
+          className="mb-2 block text-sm font-medium text-foreground"
+        >
           出生日期
         </label>
         <input
@@ -85,11 +109,18 @@ export function ProfileEdit({ profile, onSave, onCancel, isLoading }: ProfileEdi
           max={localDateString(today)}
           className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
         />
-        {error ? <p className="mt-2 text-xs text-destructive">{error}</p> : null}
+        {error ? (
+          <p className="mt-2 text-xs text-destructive">{error}</p>
+        ) : null}
       </div>
 
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="ghost" disabled={isLoading} onClick={onCancel}>
+        <Button
+          type="button"
+          variant="ghost"
+          disabled={isLoading}
+          onClick={onCancel}
+        >
           取消
         </Button>
         <Button type="submit" isLoading={isLoading}>

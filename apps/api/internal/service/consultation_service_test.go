@@ -12,7 +12,7 @@ import (
 type fakeConsultationRepository struct {
 	session        *model.ConsultationSession
 	createdSession *model.ConsultationSession
-	updatedPhase   string
+	updatedPhase   model.ConsultationPhase
 	sessions       []model.ConsultationSession
 }
 
@@ -37,7 +37,7 @@ func (r *fakeConsultationRepository) ListByConversationIDs(ctx context.Context, 
 	return r.sessions, nil
 }
 
-func (r *fakeConsultationRepository) UpdatePhase(ctx context.Context, conversationID uuid.UUID, phase string) error {
+func (r *fakeConsultationRepository) UpdatePhase(ctx context.Context, conversationID uuid.UUID, phase model.ConsultationPhase) error {
 	r.updatedPhase = phase
 	return nil
 }
@@ -64,11 +64,11 @@ func (r *fakeConsultationRepository) CreateRunEnvelope(
 	}
 	session := r.session
 	if session == nil || session.ConversationID != resolvedConversationID {
-		session = &model.ConsultationSession{ConversationID: resolvedConversationID, ExtractedInfo: datatypes.JSON("[]"), Phase: "collecting"}
+		session = &model.ConsultationSession{ConversationID: resolvedConversationID, ExtractedInfo: datatypes.JSON("[]"), Phase: model.ConsultationPhaseCollecting}
 		r.session = session
 	}
 	turnID := uuid.New()
-	run := &model.Run{ID: uuid.New(), ConversationID: resolvedConversationID, TurnID: turnID, RequestID: requestID, UserID: userID, Status: "running", Model: modelName}
+	run := &model.Run{ID: uuid.New(), ConversationID: resolvedConversationID, TurnID: turnID, RequestID: requestID, UserID: userID, Status: model.RunStatusRunning, Model: modelName}
 	userMsg := &model.Message{ID: uuid.New(), ConversationID: resolvedConversationID, TurnID: turnID, Role: "user", Status: "completed", Seq: 1, Parts: userParts, Metadata: userMetadata}
 	assistantMsg := &model.Message{ID: uuid.New(), ConversationID: resolvedConversationID, TurnID: turnID, RunID: &run.ID, Role: "assistant", Status: "streaming", Seq: 2, Parts: datatypes.JSON("[]"), Metadata: datatypes.JSON("{}")}
 	return session, run, userMsg, assistantMsg, turnID, false, nil
@@ -131,41 +131,19 @@ func TestUpdatePhasePersistsWorkflowPhase(t *testing.T) {
 	repo := &fakeConsultationRepository{
 		session: &model.ConsultationSession{
 			ConversationID: conversationID,
-			Phase:          "collecting",
+			Phase:          model.ConsultationPhaseCollecting,
 		},
 	}
 	ownership := newFakeConversationOwnershipChecker()
 	ownership.addConversation(conversationID, userID)
 	svc := NewConsultationService(repo, ownership)
 
-	if err := svc.UpdatePhase(context.Background(), conversationID, userID, "ready_for_analysis"); err != nil {
+	if err := svc.UpdatePhase(context.Background(), conversationID, userID, model.ConsultationPhaseReadyForAnalysis); err != nil {
 		t.Fatalf("UpdatePhase returned error: %v", err)
 	}
 
-	if repo.updatedPhase != "ready_for_analysis" {
+	if repo.updatedPhase != model.ConsultationPhaseReadyForAnalysis {
 		t.Fatalf("expected phase ready_for_analysis, got %q", repo.updatedPhase)
-	}
-}
-
-func TestUpdatePhaseAllowsForwardTransition(t *testing.T) {
-	conversationID := uuid.New()
-	userID := uuid.New()
-	repo := &fakeConsultationRepository{
-		session: &model.ConsultationSession{
-			ConversationID: conversationID,
-			Phase:          "ready_for_analysis",
-		},
-	}
-	ownership := newFakeConversationOwnershipChecker()
-	ownership.addConversation(conversationID, userID)
-	svc := NewConsultationService(repo, ownership)
-
-	if err := svc.UpdatePhase(context.Background(), conversationID, userID, "analysis_ready"); err != nil {
-		t.Fatalf("UpdatePhase returned error: %v", err)
-	}
-
-	if repo.updatedPhase != "analysis_ready" {
-		t.Fatalf("expected phase analysis_ready, got %q", repo.updatedPhase)
 	}
 }
 
@@ -175,19 +153,19 @@ func TestUpdatePhaseBlocksBackwardRegression(t *testing.T) {
 	repo := &fakeConsultationRepository{
 		session: &model.ConsultationSession{
 			ConversationID: conversationID,
-			Phase:          "analysis_ready",
+			Phase:          model.ConsultationPhaseReadyForAnalysis,
 		},
 	}
 	ownership := newFakeConversationOwnershipChecker()
 	ownership.addConversation(conversationID, userID)
 	svc := NewConsultationService(repo, ownership)
 
-	err := svc.UpdatePhase(context.Background(), conversationID, userID, "collecting")
+	err := svc.UpdatePhase(context.Background(), conversationID, userID, model.ConsultationPhaseCollecting)
 	if err != nil {
 		t.Fatalf("UpdatePhase returned unexpected error: %v", err)
 	}
 
-	if repo.updatedPhase != "" {
+	if repo.updatedPhase != model.ConsultationPhase("") {
 		t.Fatalf("expected phase update to be skipped (empty), got %q", repo.updatedPhase)
 	}
 }
@@ -200,11 +178,11 @@ func TestUpdatePhaseReturnsErrorWhenSessionNotFound(t *testing.T) {
 	ownership.addConversation(conversationID, userID)
 	svc := NewConsultationService(repo, ownership)
 
-	err := svc.UpdatePhase(context.Background(), conversationID, userID, "ready_for_analysis")
+	err := svc.UpdatePhase(context.Background(), conversationID, userID, model.ConsultationPhaseReadyForAnalysis)
 	if err == nil {
 		t.Fatal("expected error for missing session, got nil")
 	}
-	if repo.updatedPhase != "" {
+	if repo.updatedPhase != model.ConsultationPhase("") {
 		t.Fatalf("expected no phase update for missing session, got %q", repo.updatedPhase)
 	}
 }
@@ -253,7 +231,7 @@ func TestGetConsultationReturnsSession(t *testing.T) {
 	repo := &fakeConsultationRepository{
 		session: &model.ConsultationSession{
 			ConversationID: conversationID,
-			Phase:          "collecting",
+			Phase:          model.ConsultationPhaseCollecting,
 		},
 	}
 	ownership := newFakeConversationOwnershipChecker()
@@ -279,7 +257,7 @@ func TestGetConsultationFailsOwnershipCheck(t *testing.T) {
 	repo := &fakeConsultationRepository{
 		session: &model.ConsultationSession{
 			ConversationID: conversationID,
-			Phase:          "collecting",
+			Phase:          model.ConsultationPhaseCollecting,
 		},
 	}
 	ownership := newFakeConversationOwnershipChecker()
@@ -328,7 +306,7 @@ func TestCreateRunEnvelopeReusesLongLivedConversationWhenIDIsOmitted(t *testing.
 	repo := &fakeConsultationRepository{session: &model.ConsultationSession{
 		ConversationID: conversationID,
 		ExtractedInfo:  datatypes.JSON("[]"),
-		Phase:          "collecting",
+		Phase:          model.ConsultationPhaseCollecting,
 	}}
 	svc := NewConsultationService(repo, newFakeConversationOwnershipChecker())
 
@@ -371,7 +349,7 @@ func TestCreateRunEnvelopeReturnsDurableShell(t *testing.T) {
 		session: &model.ConsultationSession{
 			ConversationID: conversationID,
 			ExtractedInfo:  datatypes.JSON("[]"),
-			Phase:          "collecting",
+			Phase:          model.ConsultationPhaseCollecting,
 		},
 	}
 	svc := NewConsultationService(repo, newFakeConversationOwnershipChecker())

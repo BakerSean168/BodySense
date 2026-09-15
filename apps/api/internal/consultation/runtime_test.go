@@ -24,6 +24,17 @@ type fakeRuntimeEventRepo struct {
 	events []model.RuntimeEvent
 }
 
+type immediateRunTransaction struct{}
+
+func (immediateRunTransaction) WithinTransaction(ctx context.Context, fn func(context.Context) error) error {
+	return fn(ctx)
+}
+
+func testRunService(repo *fakeConsultationRunRepo) *service.RunService {
+	events := service.NewRuntimeEventService(&fakeRuntimeEventRepo{})
+	return service.NewRunService(repo).WithLifecycleEvents(events, immediateRunTransaction{})
+}
+
 type fakeConsultationRunRepo struct {
 	mu                     sync.Mutex
 	run                    *model.Run
@@ -49,7 +60,21 @@ func (r *fakeConsultationRunRepo) GetByRequestID(context.Context, uuid.UUID, str
 func (r *fakeConsultationRunRepo) ListByConversationID(context.Context, uuid.UUID) ([]model.Run, error) {
 	return nil, nil
 }
-func (r *fakeConsultationRunRepo) UpdateStatus(context.Context, uuid.UUID, string) error { return nil }
+func (r *fakeConsultationRunRepo) MarkWaitingUser(context.Context, uuid.UUID) (bool, error) {
+	return true, nil
+}
+func (r *fakeConsultationRunRepo) ResumeRunning(context.Context, uuid.UUID, string, time.Time) (bool, error) {
+	return true, nil
+}
+func (r *fakeConsultationRunRepo) FailWaitingUser(context.Context, uuid.UUID, any) (bool, error) {
+	return true, nil
+}
+func (r *fakeConsultationRunRepo) ListExpiredRuns(context.Context, time.Time, int) ([]model.Run, error) {
+	return nil, nil
+}
+func (r *fakeConsultationRunRepo) FailExpiredRun(context.Context, uuid.UUID, time.Time, any) (bool, error) {
+	return false, nil
+}
 func (r *fakeConsultationRunRepo) CompleteRun(context.Context, uuid.UUID, uuid.UUID, any, string) error {
 	return nil
 }
@@ -59,8 +84,8 @@ func (r *fakeConsultationRunRepo) TryCompleteRun(context.Context, uuid.UUID, uui
 func (r *fakeConsultationRunRepo) CancelRun(context.Context, uuid.UUID, uuid.UUID, any) (bool, error) {
 	return true, nil
 }
-func (r *fakeConsultationRunRepo) FailRun(context.Context, uuid.UUID, uuid.UUID, any) error {
-	return nil
+func (r *fakeConsultationRunRepo) FailRun(context.Context, uuid.UUID, uuid.UUID, any) (bool, error) {
+	return true, nil
 }
 func (r *fakeConsultationRunRepo) UpdateAgentConfiguration(
 	_ context.Context,
@@ -79,10 +104,6 @@ func (r *fakeConsultationRunRepo) UpdateAgentConfiguration(
 
 func (r *fakeConsultationRunRepo) RenewLease(context.Context, uuid.UUID, uuid.UUID, string, time.Time, time.Time) (bool, error) {
 	return true, nil
-}
-
-func (r *fakeConsultationRunRepo) ReclaimExpiredRuns(context.Context, time.Time, int) ([]model.Run, error) {
-	return nil, nil
 }
 
 func (r *fakeRuntimeEventRepo) Create(ctx context.Context, event *model.RuntimeEvent) error {
@@ -196,17 +217,91 @@ func testStreamState() streamState {
 	}
 }
 
+func privateRuntimeEvent(
+	t *testing.T,
+	seq int,
+	kind service.ConsultationRuntimeEventKind,
+	state streamState,
+	payload any,
+) service.ConsultationRuntimeEvent {
+	t.Helper()
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal private runtime event payload: %v", err)
+	}
+	var typed service.ConsultationRuntimeEventPayload
+	switch kind {
+	case service.ConsultationRuntimeAgentConfiguration:
+		var value struct {
+			AgentConfiguration  json.RawMessage `json:"agent_configuration"`
+			ExecutionProvenance json.RawMessage `json:"execution_provenance"`
+		}
+		if err := json.Unmarshal(raw, &value); err != nil {
+			t.Fatal(err)
+		}
+		typed = service.ConsultationRuntimeAgentConfigurationPayload{AgentConfiguration: value.AgentConfiguration, ExecutionProvenance: value.ExecutionProvenance}
+	case service.ConsultationRuntimeTextDelta:
+		var value service.ConsultationRuntimeTextDeltaPayload
+		if err := json.Unmarshal(raw, &value); err != nil {
+			t.Fatal(err)
+		}
+		typed = value
+	case service.ConsultationRuntimeExtractedInfo:
+		var value struct {
+			Info json.RawMessage `json:"info"`
+		}
+		if err := json.Unmarshal(raw, &value); err != nil {
+			t.Fatal(err)
+		}
+		typed = service.ConsultationRuntimeExtractedInfoPayload{Info: value.Info}
+	case service.ConsultationRuntimeRedFlagDetected:
+		var value struct {
+			HasRedFlags bool              `json:"has_red_flags"`
+			Flags       []json.RawMessage `json:"flags"`
+		}
+		if err := json.Unmarshal(raw, &value); err != nil {
+			t.Fatal(err)
+		}
+		if value.Flags == nil {
+			value.Flags = []json.RawMessage{}
+		}
+		typed = service.ConsultationRuntimeRedFlagDetectedPayload{HasRedFlags: value.HasRedFlags, Flags: value.Flags}
+	case service.ConsultationRuntimeInteraction:
+		var value struct {
+			InteractionID string          `json:"interaction_id"`
+			Question      json.RawMessage `json:"question"`
+		}
+		if err := json.Unmarshal(raw, &value); err != nil {
+			t.Fatal(err)
+		}
+		typed = service.ConsultationRuntimeInteractionPayload{InteractionID: value.InteractionID, Question: value.Question}
+	default:
+		t.Fatalf("unsupported private runtime test event kind %q", kind)
+	}
+	return service.ConsultationRuntimeEvent{
+		Seq: seq,
+		IDs: service.ConsultationRuntimeEventIDs{
+			ConversationID: state.BaseIDs.ConversationID,
+			RunID:          state.BaseIDs.RunID,
+			ToolCallID:     state.BaseIDs.ToolCallID,
+		},
+		Payload: typed,
+	}
+}
+
 func TestHandleAIEventFailsClosedWhenExtractedBodyStateWriteFails(t *testing.T) {
+	state := testStreamState()
+	repo := &fakeConsultationRunRepo{run: state.Run}
 	runtime := &Runtime{
 		bodyStateService: &fakeRuntimeBodyState{extractedErr: errors.New("db unavailable")},
+		runService:       testRunService(repo),
 		streamRuntime:    stream.NewRuntime(),
 	}
-	state := testStreamState()
 	recorder := httptest.NewRecorder()
 	sw := runtime.streamRuntime.NewWriter(recorder, state.BaseIDs)
 	phase := "collecting"
 	result := streamResult{}
-	event, _ := dto.NewStreamEvent(1, "state", "state.extracted_info.upsert", state.BaseIDs, map[string]any{
+	event := privateRuntimeEvent(t, 1, service.ConsultationRuntimeExtractedInfo, state, map[string]any{
 		"info": map[string]any{"body_part": "颈肩", "symptom_type": "酸胀"},
 	})
 
@@ -223,17 +318,20 @@ func TestHandleAIEventFailsClosedWhenExtractedBodyStateWriteFails(t *testing.T) 
 }
 
 func TestHandleAIEventFailsClosedWhenSafetyWriteFails(t *testing.T) {
+	state := testStreamState()
+	repo := &fakeConsultationRunRepo{run: state.Run}
 	runtime := &Runtime{
 		bodyStateService: &fakeRuntimeBodyState{safetyErr: errors.New("db unavailable")},
+		runService:       testRunService(repo),
 		streamRuntime:    stream.NewRuntime(),
 	}
-	state := testStreamState()
 	recorder := httptest.NewRecorder()
 	sw := runtime.streamRuntime.NewWriter(recorder, state.BaseIDs)
 	phase := "collecting"
 	result := streamResult{}
-	event, _ := dto.NewStreamEvent(1, "safety", "safety.red_flag.detected", state.BaseIDs, map[string]any{
+	event := privateRuntimeEvent(t, 1, service.ConsultationRuntimeRedFlagDetected, state, map[string]any{
 		"has_red_flags": true,
+		"flags":         []any{},
 	})
 
 	if stopped := runtime.handleAIEvent(context.Background(), sw, event, state, &result, &phase); !stopped {
@@ -379,30 +477,20 @@ func TestReplayCompletedRunDoesNotDuplicateStoredStreamDone(t *testing.T) {
 	}
 }
 
-func validConsultationHandshake(t *testing.T, state streamState) dto.StreamEvent {
+func validConsultationHandshake(t *testing.T, state streamState) service.ConsultationRuntimeEvent {
 	t.Helper()
-	event, err := dto.NewStreamEvent(
-		1,
-		"runtime",
-		"runtime.agent_configuration",
-		state.BaseIDs,
-		map[string]any{
-			"agent_configuration": map[string]any{
-				"id":                       "consult-config-2bd9b46735dd693c",
-				"role":                     "consultation",
-				"decision_policy_revision": service.ConsultationDecisionPolicyV1,
-				"logical_model":            "bodysense-consultation",
-			},
-			"execution_provenance": map[string]any{
-				"runtime":       "langgraph",
-				"logical_model": "bodysense-consultation",
-			},
+	return privateRuntimeEvent(t, 1, service.ConsultationRuntimeAgentConfiguration, state, map[string]any{
+		"agent_configuration": map[string]any{
+			"id":                       "consult-config-7feb8ca2d5bfad5a",
+			"role":                     "consultation",
+			"decision_policy_revision": service.ConsultationDecisionPolicyV2,
+			"logical_model":            "bodysense-consultation",
 		},
-	)
-	if err != nil {
-		t.Fatalf("build handshake: %v", err)
-	}
-	return event
+		"execution_provenance": map[string]any{
+			"runtime":       "langgraph",
+			"logical_model": "bodysense-consultation",
+		},
+	})
 }
 
 func TestRuntimeNoLongerOwnsPerRunPendingAgentConfiguration(t *testing.T) {
@@ -420,7 +508,7 @@ func TestRuntimeNoLongerOwnsPerRunPendingAgentConfiguration(t *testing.T) {
 
 func TestValidateConsultationExecutionIdentity(t *testing.T) {
 	state := testStreamState()
-	state.ExpectedConfigurationID = "consult-config-2bd9b46735dd693c"
+	state.ExpectedConfigurationID = "consult-config-7feb8ca2d5bfad5a"
 	event := validConsultationHandshake(t, state)
 
 	identity, err := validateConsultationExecutionIdentity(event, state.ExpectedConfigurationID)
@@ -434,7 +522,7 @@ func TestValidateConsultationExecutionIdentity(t *testing.T) {
 
 func TestValidateConsultationExecutionIdentityRejectsMismatch(t *testing.T) {
 	state := testStreamState()
-	state.ExpectedConfigurationID = "consult-config-2bd9b46735dd693c"
+	state.ExpectedConfigurationID = "consult-config-7feb8ca2d5bfad5a"
 
 	tests := []struct {
 		name       string
@@ -483,7 +571,7 @@ func TestValidateConsultationExecutionIdentityRejectsMismatch(t *testing.T) {
 			configuration := map[string]any{
 				"id":                       state.ExpectedConfigurationID,
 				"role":                     "consultation",
-				"decision_policy_revision": service.ConsultationDecisionPolicyV1,
+				"decision_policy_revision": service.ConsultationDecisionPolicyV2,
 				"logical_model":            "bodysense-consultation",
 			}
 			provenance := map[string]any{
@@ -491,7 +579,7 @@ func TestValidateConsultationExecutionIdentityRejectsMismatch(t *testing.T) {
 				"logical_model": "bodysense-consultation",
 			}
 			tt.mutate(configuration, provenance)
-			event, _ := dto.NewStreamEvent(1, "runtime", "runtime.agent_configuration", state.BaseIDs, map[string]any{
+			event := privateRuntimeEvent(t, 1, service.ConsultationRuntimeAgentConfiguration, state, map[string]any{
 				"agent_configuration":  configuration,
 				"execution_provenance": provenance,
 			})
@@ -504,14 +592,14 @@ func TestValidateConsultationExecutionIdentityRejectsMismatch(t *testing.T) {
 }
 
 func TestStreamAIEventsFailsClosedBeforeFirstSemanticEventWithoutHandshake(t *testing.T) {
-	runtime := &Runtime{streamRuntime: stream.NewRuntime()}
 	state := testStreamState()
-	state.ExpectedConfigurationID = "consult-config-2bd9b46735dd693c"
+	repo := &fakeConsultationRunRepo{run: state.Run}
+	runtime := &Runtime{runService: testRunService(repo), streamRuntime: stream.NewRuntime()}
+	state.ExpectedConfigurationID = "consult-config-7feb8ca2d5bfad5a"
 	recorder := httptest.NewRecorder()
 	sw := runtime.streamRuntime.NewWriter(recorder, state.BaseIDs)
-	events := make(chan dto.StreamEvent, 1)
-	textEvent, _ := dto.NewStreamEvent(1, "message", "message.text.delta", state.BaseIDs, map[string]any{"delta": "must not leak"})
-	events <- textEvent
+	events := make(chan service.ConsultationRuntimeEvent, 1)
+	events <- privateRuntimeEvent(t, 1, service.ConsultationRuntimeTextDelta, state, map[string]any{"delta": "must not leak"})
 	close(events)
 
 	_, stopped := runtime.streamAIEvents(context.Background(), sw, events, state)
@@ -534,7 +622,7 @@ func TestHandleAgentConfigurationPersistsIdentityImmediately(t *testing.T) {
 		streamRuntime: stream.NewRuntime(),
 	}
 	state := testStreamState()
-	state.ExpectedConfigurationID = "consult-config-2bd9b46735dd693c"
+	state.ExpectedConfigurationID = "consult-config-7feb8ca2d5bfad5a"
 	recorder := httptest.NewRecorder()
 	sw := runtime.streamRuntime.NewWriter(recorder, state.BaseIDs)
 	phase := "collecting"
@@ -555,7 +643,7 @@ func TestHandleAgentConfigurationPersistsIdentityImmediately(t *testing.T) {
 
 func TestExecutionIdentityValidationIsConcurrentAndRunLocal(t *testing.T) {
 	state := testStreamState()
-	state.ExpectedConfigurationID = "consult-config-2bd9b46735dd693c"
+	state.ExpectedConfigurationID = "consult-config-7feb8ca2d5bfad5a"
 	const workers = 24
 	var wg sync.WaitGroup
 	errs := make(chan error, workers)
@@ -563,11 +651,11 @@ func TestExecutionIdentityValidationIsConcurrentAndRunLocal(t *testing.T) {
 		wg.Add(1)
 		go func(marker int) {
 			defer wg.Done()
-			event, _ := dto.NewStreamEvent(1, "runtime", "runtime.agent_configuration", state.BaseIDs, map[string]any{
+			event := privateRuntimeEvent(t, 1, service.ConsultationRuntimeAgentConfiguration, state, map[string]any{
 				"agent_configuration": map[string]any{
 					"id":                       state.ExpectedConfigurationID,
 					"role":                     "consultation",
-					"decision_policy_revision": service.ConsultationDecisionPolicyV1,
+					"decision_policy_revision": service.ConsultationDecisionPolicyV2,
 					"logical_model":            "bodysense-consultation",
 				},
 				"execution_provenance": map[string]any{
@@ -642,18 +730,17 @@ func TestStreamAIEventsPrefersExplicitCancellationOverReadySemanticEvent(t *test
 		runService:    service.NewRunService(repo),
 		streamRuntime: stream.NewRuntime(),
 	}
-	state.ExpectedConfigurationID = "consult-config-2bd9b46735dd693c"
+	state.ExpectedConfigurationID = "consult-config-7feb8ca2d5bfad5a"
 	recorder := httptest.NewRecorder()
 	sw := runtime.streamRuntime.NewWriter(recorder, state.BaseIDs)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	events := make(chan dto.StreamEvent, 1)
-	textEvent, _ := dto.NewStreamEvent(
-		1, "message", "message.text.delta", state.BaseIDs,
+	events := make(chan service.ConsultationRuntimeEvent, 1)
+	events <- privateRuntimeEvent(
+		t, 1, service.ConsultationRuntimeTextDelta, state,
 		map[string]any{"delta": "must-not-leak-after-cancel"},
 	)
-	events <- textEvent
 	close(events)
 
 	_, stopped := runtime.streamAIEvents(ctx, sw, events, state)
@@ -843,5 +930,40 @@ func TestRecordKnowledgeRuntimeObservationsRejectsCitationAttributionIdentityDri
 	}
 	if !strings.Contains(string(input.Metadata), "citation_attribution_identity_mismatch") {
 		t.Fatalf("identity drift reason not preserved: %s", input.Metadata)
+	}
+}
+
+func TestProjectConsultationRuntimeEventKeepsAgentConfigurationPrivate(t *testing.T) {
+	state := testStreamState()
+	event := privateRuntimeEvent(t, 1, service.ConsultationRuntimeAgentConfiguration, state, map[string]any{
+		"agent_configuration":  map[string]any{"id": "consult-config-0123456789abcdef"},
+		"execution_provenance": map[string]any{"status": "executed"},
+	})
+	if _, err := projectConsultationRuntimeEvent(event); err == nil {
+		t.Fatal("private Agent configuration handshake must not have a public StreamEvent projection")
+	}
+}
+
+func TestProjectConsultationRuntimeInteractionDoesNotExposeLangGraphInterruptID(t *testing.T) {
+	state := testStreamState()
+	event := privateRuntimeEvent(t, 7, service.ConsultationRuntimeInteraction, state, map[string]any{
+		"interaction_id": "45fda8478b2ef754419799e10992af06",
+		"question":       map[string]any{"type": "single_choice", "prompt": "Continue?"},
+	})
+	event.IDs.ToolCallID = "tool-ask"
+	event.IDs.InteractionID = "45fda8478b2ef754419799e10992af06"
+
+	publicEvent, err := projectConsultationRuntimeEvent(event)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if publicEvent.Type != "state.interaction.required" || publicEvent.Channel != "state" || publicEvent.Seq != 7 {
+		t.Fatalf("unexpected public projection: %#v", publicEvent)
+	}
+	if publicEvent.IDs.InteractionID != "" {
+		t.Fatalf("LangGraph private interrupt id leaked into public projection: %#v", publicEvent.IDs)
+	}
+	if publicEvent.IDs.ToolCallID != "tool-ask" {
+		t.Fatalf("tool-call correlation was lost: %#v", publicEvent.IDs)
 	}
 }

@@ -75,11 +75,13 @@ try {
     nx('@bodysense/contracts', 'lint');
     nx('@bodysense/contracts', 'typecheck');
     nx('@bodysense/contracts', 'test');
+    run('pnpm', ['contracts:verify']);
   }
 
   if (executed === 0) {
     console.log('DELIVERY_QUALITY=SKIP reason=no-quality-lanes-selected');
   } else {
+    run('pnpm', ['quality:architecture']);
     console.log(`DELIVERY_QUALITY=PASS selected=${[
       manifest.lanes.web && 'web',
       manifest.lanes.api && 'api',

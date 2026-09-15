@@ -1,6 +1,46 @@
-import { parseStreamEvent } from "@bodysense/contracts";
+import {
+  parseCitation,
+  parseExtractedInfo,
+  parseStreamEvent,
+} from "@bodysense/contracts";
 import { authFetch } from "@/features/auth/services/authService";
-import { expectJson } from "@/lib/api-client";
+import {
+  analyzeDiagnosis as analyzeDiagnosisOpenApi,
+  assessDiagnosisCandidates as assessDiagnosisCandidatesOpenApi,
+  cancelConsultationRun as cancelConsultationRunOpenApi,
+  deleteConversation as deleteConversationOpenApi,
+  generateConversationTitle as generateConversationTitleOpenApi,
+  getConsultation as getConsultationOpenApi,
+  getConsultationInteractionMetrics as getConsultationInteractionMetricsOpenApi,
+  getConsultationThread as getConsultationThreadOpenApi,
+  getResumeConsultationInteractionUrl,
+  getStartConsultationRunUrl,
+  getConversation as getConversationOpenApi,
+  getSharedConversation as getSharedConversationOpenApi,
+  listConversations as listConversationsOpenApi,
+  listDiagnosisAnalyses as listDiagnosisAnalysesOpenApi,
+  listRunEvents as listRunEventsOpenApi,
+  pinConversation as pinConversationOpenApi,
+  renameConversationTitle as renameConversationTitleOpenApi,
+  shareConversation as shareConversationOpenApi,
+  unshareConversation as unshareConversationOpenApi,
+} from "@/generated/api/bodysense";
+import {
+  ResumeConsultationInteractionRequest as ResumeConsultationInteractionRequestSchema,
+  StartConsultationRunRequest as StartConsultationRunRequestSchema,
+} from "@/generated/api/model";
+import type {
+  ConsultationSessionResponseOutput as PublicConsultationSession,
+  ConsultationThreadResponseOutput as PublicConsultationThread,
+  ConversationMessageOutput as PublicConversationMessage,
+  ConversationOutput as PublicConversation,
+  DiagnosisWorkspaceProjectionOutput as PublicDiagnosisAnalysis,
+} from "@/generated/api/model";
+import {
+  openApiAuthFetch,
+  openApiPublicFetch,
+  withOpenApiError,
+} from "@/lib/openapi-client";
 import type {
   Conversation,
   ConversationListResponse,
@@ -12,23 +52,180 @@ import type {
   ConversationShare,
   SharedConversation,
   StreamEvent,
+  ProjectedToolCall,
 } from "../types/consultation";
+import { projectPendingInteraction } from "../runtime/pendingInteractionProjection";
 
-const API_BASE = "/api/v1";
+function toConversation(input: PublicConversation): Conversation {
+  return {
+    id: input.id,
+    title: input.title ?? null,
+    title_status: input.title_status,
+    status: input.status,
+    pinned: input.pinned,
+    pinned_at: input.pinned_at ?? null,
+    default_model: input.default_model ?? null,
+    last_message_at: input.last_message_at ?? null,
+    message_count: 0,
+    metadata: input.metadata,
+    created_at: input.created_at,
+    updated_at: input.updated_at,
+  };
+}
 
-/**
- * Parse a Response as JSON, throwing on non-ok status.
- * Skips the ok check when the caller needs the raw Response (e.g. SSE).
- */
-async function parseJson<T>(res: Response): Promise<T> {
-  if (res.status === 204) return undefined as T;
-  return expectJson<T>(res);
+function toErrorInfo(
+  value: Record<string, unknown> | undefined,
+): Message["error"] {
+  if (!value) return null;
+  const code = value.code;
+  const message = value.message;
+  return typeof code === "string" && typeof message === "string"
+    ? { code, message }
+    : null;
+}
+
+function toConversationMessage(input: PublicConversationMessage): Message {
+  return {
+    id: input.id,
+    conversation_id: input.conversation_id,
+    turn_id: input.turn_id,
+    run_id: input.run_id ?? null,
+    parent_message_id: input.parent_message_id ?? null,
+    role: input.role,
+    status: input.status,
+    seq: input.seq,
+    // MessagePart remains a feature-domain union. The public OpenAPI transport
+    // validates the conversation envelope; feature projection owns durable
+    // MessagePart semantics while public StreamEvent validation is schema-generated.
+    parts: input.parts,
+    content_text: input.content_text ?? "",
+    model: input.model ?? null,
+    provider: input.provider ?? null,
+    provider_message_id: input.provider_message_id ?? null,
+    provider_response_id: input.provider_response_id ?? null,
+    input_tokens: input.input_tokens ?? null,
+    output_tokens: input.output_tokens ?? null,
+    total_tokens: input.total_tokens ?? null,
+    error: toErrorInfo(input.error),
+    metadata: input.metadata,
+    created_at: input.created_at,
+    updated_at: input.updated_at,
+  };
+}
+
+function toConsultationSession(
+  input: PublicConsultationSession,
+): ConsultationSession {
+  return {
+    conversation_id: input.conversation_id,
+    phase: input.phase,
+    extracted_info: input.extracted_info.map((item) =>
+      parseExtractedInfo(item),
+    ),
+    diagnosis: null,
+    pending_interactions: input.pending_interactions.map(
+      projectPendingInteraction,
+    ),
+    created_at: input.created_at,
+    updated_at: input.updated_at,
+    ended_at: input.ended_at ?? null,
+  };
+}
+
+function toProjectedToolCall(
+  input: PublicConsultationThread["tool_calls"][number],
+): ProjectedToolCall {
+  return {
+    tool_call_id: input.tool_call_id,
+    conversation_id: input.conversation_id,
+    run_id: input.run_id,
+    message_id: input.message_id ?? null,
+    tool_name: input.tool_name,
+    arguments: input.arguments,
+    status: input.status,
+    result: input.result ?? null,
+    error: input.error ?? null,
+    created_at: input.created_at,
+    started_at: input.started_at,
+    finished_at: input.finished_at ?? null,
+    metadata: input.metadata,
+  };
+}
+
+function toConsultationThread(
+  input: PublicConsultationThread,
+): ConsultationThread {
+  return {
+    conversation_id: input.conversation_id,
+    phase: input.phase,
+    extracted_info: input.extracted_info.map((item) =>
+      parseExtractedInfo(item),
+    ),
+    body_state: input.body_state,
+    diagnosis: null,
+    pending_interactions: input.pending_interactions.map(
+      projectPendingInteraction,
+    ),
+    interaction_history: input.interaction_history.map(
+      projectPendingInteraction,
+    ),
+    created_at: input.created_at,
+    updated_at: input.updated_at,
+    ended_at: input.ended_at ?? null,
+    conversation: {
+      id: input.conversation.id,
+      title: input.conversation.title ?? null,
+      title_status: input.conversation.title_status,
+      status: input.conversation.status,
+      pinned: input.conversation.pinned,
+      pinned_at: input.conversation.pinned_at ?? null,
+      default_model: input.conversation.default_model ?? null,
+      last_message_at: input.conversation.last_message_at ?? null,
+      message_count: input.conversation.message_count,
+      metadata: input.conversation.metadata,
+      created_at: input.conversation.created_at,
+      updated_at: input.conversation.updated_at,
+    },
+    active_turn_run_id: input.active_turn_run_id ?? null,
+    active_turn_events: input.active_turn_events.map((item) =>
+      parseStreamEvent({
+        version: 1,
+        seq: item.seq,
+        channel: item.channel,
+        type: item.type,
+        ids: item.ids,
+        payload: item.payload,
+      }),
+    ),
+    messages: input.messages.map(toConversationMessage),
+    tool_calls: input.tool_calls.map(toProjectedToolCall),
+  };
+}
+
+function toDiagnosisAnalysis(
+  input: PublicDiagnosisAnalysis,
+): DiagnosisAnalysis {
+  return {
+    analysis_id: input.analysis_id,
+    body_state_revision: input.body_state_revision,
+    status: input.status,
+    scope: input.scope,
+    summary: input.summary,
+    candidates: input.candidates,
+    citations: input.citations.map((citation) => parseCitation(citation)),
+    freshness: input.freshness,
+    candidate_assessments: input.candidate_assessments?.map((item) => ({
+      candidate_id: item.candidate_id,
+      state: item.state,
+    })),
+    created_at: input.created_at,
+  };
 }
 
 export const consultationApi = {
   /**
-   * Start a unified consultation run (creates conversation if needed + sends message in one request).
-   * Returns raw Response for SSE streaming.
+   * Start a unified consultation run. The generated request schema owns runtime
+   * trust while authFetch keeps the Response body streaming for SSE consumers.
    */
   async startConsultationRun(params: {
     conversationId: string | null;
@@ -46,20 +243,24 @@ export const consultationApi = {
       metadata?: Record<string, unknown>;
     };
   }): Promise<Response> {
-    return authFetch(`${API_BASE}/consultation-runs`, {
+    const body = StartConsultationRunRequestSchema.parse(params);
+    return authFetch(getStartConsultationRunUrl(), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(params),
+      body: JSON.stringify(body),
     });
   },
 
   /** Explicitly cancel a running or waiting consultation run. */
   async cancelRun(runId: string): Promise<{ status: string; run_id: string }> {
-    return authFetch(`${API_BASE}/consultation-runs/${runId}/cancel`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reason: "cancelled_by_user" }),
-    }).then((res) => parseJson<{ status: string; run_id: string }>(res));
+    return withOpenApiError(() =>
+      cancelConsultationRunOpenApi(
+        runId,
+        { reason: "cancelled_by_user" },
+        undefined,
+        openApiAuthFetch,
+      ),
+    );
   },
 
   // ===== General Conversation API =====
@@ -71,119 +272,105 @@ export const consultationApi = {
     cursor?: string;
     limit?: number;
   }): Promise<ConversationListResponse> {
-    const searchParams = new URLSearchParams();
-    if (params?.cursor) searchParams.set("cursor", params.cursor);
-    if (params?.limit) searchParams.set("limit", String(params.limit));
-    const query = searchParams.toString();
-    return authFetch(
-      `${API_BASE}/conversations${query ? "?" + query : ""}`,
-    ).then((res) => parseJson<ConversationListResponse>(res));
+    const result = await withOpenApiError(() =>
+      listConversationsOpenApi(params, undefined, openApiAuthFetch),
+    );
+    return {
+      conversations: result.conversations.map(toConversation),
+      next_cursor: result.nextCursor ?? null,
+      has_more: result.hasMore,
+    };
   },
 
-  /**
-   * Get a single conversation with its messages.
-   */
+  /** Get one conversation with its ordered messages. */
   async getConversation(
     id: string,
   ): Promise<{ conversation: Conversation; messages: Message[] }> {
-    return authFetch(`${API_BASE}/conversations/${id}`).then((res) =>
-      parseJson<{ conversation: Conversation; messages: Message[] }>(res),
+    const result = await withOpenApiError(() =>
+      getConversationOpenApi(id, undefined, openApiAuthFetch),
+    );
+    return {
+      conversation: toConversation(result.conversation),
+      messages: result.messages.map(toConversationMessage),
+    };
+  },
+
+  async deleteConversation(id: string): Promise<void> {
+    await withOpenApiError(() =>
+      deleteConversationOpenApi(id, undefined, openApiAuthFetch),
     );
   },
 
-  /**
-   * Delete a conversation.
-   */
-  async deleteConversation(id: string): Promise<void> {
-    await authFetch(`${API_BASE}/conversations/${id}`, {
-      method: "DELETE",
-    }).then((res) => parseJson<void>(res));
-  },
-
-  /**
-   * Toggle pinned state of a conversation.
-   */
   async pinConversation(id: string, pinned: boolean): Promise<void> {
-    await authFetch(`${API_BASE}/conversations/${id}/pin`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pinned }),
-    }).then((res) => parseJson<void>(res));
+    await withOpenApiError(() =>
+      pinConversationOpenApi(id, { pinned }, undefined, openApiAuthFetch),
+    );
   },
 
-  /**
-   * Trigger AI-generated title for a conversation.
-   */
   async generateTitle(id: string): Promise<void> {
-    await authFetch(`${API_BASE}/conversations/${id}/title`, {
-      method: "POST",
-    }).then((res) => parseJson<void>(res));
+    await withOpenApiError(() =>
+      generateConversationTitleOpenApi(id, undefined, openApiAuthFetch),
+    );
   },
 
-  /**
-   * Rename a conversation title (user-initiated).
-   */
   async renameTitle(id: string, title: string): Promise<void> {
-    await authFetch(`${API_BASE}/conversations/${id}/title`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title }),
-    }).then((res) => parseJson<void>(res));
+    await withOpenApiError(() =>
+      renameConversationTitleOpenApi(
+        id,
+        { title },
+        undefined,
+        openApiAuthFetch,
+      ),
+    );
   },
 
-  /**
-   * Generate a share link for a conversation.
-   */
   async shareConversation(id: string): Promise<ConversationShare> {
-    return authFetch(`${API_BASE}/conversations/${id}/share`, {
-      method: "POST",
-    }).then((res) => parseJson<ConversationShare>(res));
+    return withOpenApiError(() =>
+      shareConversationOpenApi(id, undefined, openApiAuthFetch),
+    );
   },
 
-  /**
-   * Revoke a share link.
-   */
   async unshareConversation(id: string): Promise<void> {
-    await authFetch(`${API_BASE}/conversations/${id}/share`, {
-      method: "DELETE",
-    }).then((res) => parseJson<void>(res));
+    await withOpenApiError(() =>
+      unshareConversationOpenApi(id, undefined, openApiAuthFetch),
+    );
   },
 
-  /**
-   * Fetch shared conversation content (public, no auth required).
-   */
+  /** Fetch shared conversation content through the generated public client. */
   async getSharedConversation(token: string): Promise<SharedConversation> {
-    const res = await fetch(`${API_BASE}/conversations/share/${token}`);
-    return parseJson<SharedConversation>(res);
+    const result = await withOpenApiError(() =>
+      getSharedConversationOpenApi(token, undefined, openApiPublicFetch),
+    );
+    return {
+      title: result.title,
+      messages: result.messages.map(toConversationMessage),
+    };
   },
 
   // ===== Consultation Domain API =====
 
-  /**
-   * Get the projection-backed consultation thread for a conversation.
-   */
+  /** Get the projection-backed consultation thread for a conversation. */
   async getConsultationThread(id: string): Promise<ConsultationThread> {
-    return authFetch(`${API_BASE}/consultations/${id}/thread`).then((res) =>
-      parseJson<ConsultationThread>(res),
+    const result = await withOpenApiError(() =>
+      getConsultationThreadOpenApi(id, undefined, openApiAuthFetch),
     );
+    return toConsultationThread(result);
   },
 
-  /**
-   * Get consultation details for a conversation.
-   */
+  /** Get durable consultation details for a conversation. */
   async getConsultation(id: string): Promise<ConsultationSession> {
-    return authFetch(`${API_BASE}/consultations/${id}`).then((res) =>
-      parseJson<ConsultationSession>(res),
+    const result = await withOpenApiError(() =>
+      getConsultationOpenApi(id, undefined, openApiAuthFetch),
     );
+    return toConsultationSession(result);
   },
 
-  /**
-   * Trigger AI diagnosis analysis.
-   */
+  /** Trigger BodyState-backed diagnosis analysis through the generated boundary. */
   async analyzeDiagnosis(id: string): Promise<DiagnosisAnalysis> {
-    return authFetch(`${API_BASE}/consultations/${id}/diagnosis`, {
-      method: "POST",
-    }).then((res) => parseJson<DiagnosisAnalysis>(res));
+    const result = await withOpenApiError(() =>
+      analyzeDiagnosisOpenApi(id, undefined, openApiAuthFetch),
+    );
+    return toDiagnosisAnalysis(result);
   },
 
   /** Persist the user's interpretation of Diagnosis candidates without deleting any candidate. */
@@ -194,19 +381,23 @@ export const consultationApi = {
       state: DiagnosisCandidateAssessmentState;
     }>,
   ): Promise<void> {
-    await authFetch(`${API_BASE}/diagnosis-analyses/${analysisId}/assessment`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ candidates }),
-    }).then((res) => parseJson<void>(res));
+    await withOpenApiError(() =>
+      assessDiagnosisCandidatesOpenApi(
+        analysisId,
+        { candidates },
+        undefined,
+        openApiAuthFetch,
+      ),
+    );
   },
 
   async listDiagnosisHistory(
     limit = 20,
   ): Promise<{ analyses: DiagnosisAnalysis[] }> {
-    return authFetch(`${API_BASE}/diagnosis-analyses?limit=${limit}`).then(
-      (res) => parseJson<{ analyses: DiagnosisAnalysis[] }>(res),
+    const result = await withOpenApiError(() =>
+      listDiagnosisAnalysesOpenApi({ limit }, undefined, openApiAuthFetch),
     );
+    return { analyses: result.analyses.map(toDiagnosisAnalysis) };
   },
 
   /**
@@ -226,44 +417,26 @@ export const consultationApi = {
     hasMore: boolean;
     nextAfterSeq: number | null;
   }> {
-    const searchParams = new URLSearchParams();
-    if (params?.afterSeq != null)
-      searchParams.set("after_seq", String(params.afterSeq));
-    if (params?.limit != null) searchParams.set("limit", String(params.limit));
-    const query = searchParams.toString();
-    const raw = await authFetch(
-      `${API_BASE}/conversations/${conversationId}/runs/${runId}/events${query ? "?" + query : ""}`,
-    ).then((res) =>
-      parseJson<{
-        events: Array<{
-          seq: number;
-          channel: string;
-          type: string;
-          ids: unknown;
-          payload: unknown;
-          created_at: string;
-        }>;
-        hasMore: boolean;
-        nextAfterSeq?: number | null;
-      }>(res),
+    const raw = await withOpenApiError(() =>
+      listRunEventsOpenApi(
+        conversationId,
+        runId,
+        { after_seq: params?.afterSeq, limit: params?.limit },
+        undefined,
+        openApiAuthFetch,
+      ),
     );
 
-    const events: StreamEvent[] = raw.events.map((item) => {
-      const ids: unknown =
-        typeof item.ids === "string" ? JSON.parse(item.ids) : (item.ids ?? {});
-      const payload: unknown =
-        typeof item.payload === "string"
-          ? JSON.parse(item.payload)
-          : (item.payload ?? {});
-      return parseStreamEvent({
+    const events: StreamEvent[] = raw.events.map((item) =>
+      parseStreamEvent({
         version: 1,
         seq: item.seq,
         channel: item.channel,
         type: item.type,
-        ids,
-        payload,
-      });
-    });
+        ids: item.ids,
+        payload: item.payload,
+      }),
+    );
 
     return {
       events,
@@ -280,9 +453,11 @@ export const consultationApi = {
     expire_rate: number;
     avg_wait_seconds: number;
   }> {
-    return expectJson(
-      await authFetch(
-        `${API_BASE}/consultations/${conversationId}/interaction-metrics`,
+    return withOpenApiError(() =>
+      getConsultationInteractionMetricsOpenApi(
+        conversationId,
+        undefined,
+        openApiAuthFetch,
       ),
     );
   },
@@ -295,12 +470,13 @@ export const consultationApi = {
       answer: unknown;
     },
   ): Promise<Response> {
+    const body = ResumeConsultationInteractionRequestSchema.parse(params);
     return authFetch(
-      `${API_BASE}/consultations/${conversationId}/interrupts/${interactionId}/answers`,
+      getResumeConsultationInteractionUrl(conversationId, interactionId),
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(params),
+        body: JSON.stringify(body),
       },
     );
   },

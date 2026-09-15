@@ -245,7 +245,7 @@ func TestPersistDiagnosisAnalysisFreezesReplayInputWithoutExposingItOnNormalRead
 	}
 }
 
-func TestPersistDiagnosisEvidenceGapConfigurationRequiresConsistentAvailabilityTrace(t *testing.T) {
+func TestPersistCurrentDiagnosisConfigurationRequiresConsistentAvailabilityTrace(t *testing.T) {
 	repo := &fakeDiagnosisAnalysisRepository{}
 	svc := NewDiagnosisAnalysisService(repo)
 	valid := json.RawMessage(`{
@@ -253,7 +253,7 @@ func TestPersistDiagnosisEvidenceGapConfigurationRequiresConsistentAvailabilityT
 		"scope":"full_body",
 		"summary":"evidence-aware analysis",
 		"candidates":[{"name":"candidate","confidence":"中"}],
-		"agent_configuration":{"id":"` + diagnosisEvidenceGapConfigurationID + `","role":"diagnosis"},
+		"agent_configuration":{"id":"` + defaultDiagnosisConfigurationID + `","role":"diagnosis"},
 		"evidence_acquisition":{
 			"trace_revision":"evidence-acquisition-trace-v2",
 			"policy_revision":"diagnosis-evidence-gap-v2",
@@ -271,7 +271,7 @@ func TestPersistDiagnosisEvidenceGapConfigurationRequiresConsistentAvailabilityT
 	if err != nil {
 		t.Fatalf("valid evidence availability trace should persist: %v", err)
 	}
-	if analysis.AgentConfigurationID != diagnosisEvidenceGapConfigurationID {
+	if analysis.AgentConfigurationID != defaultDiagnosisConfigurationID {
 		t.Fatalf("configuration id=%q", analysis.AgentConfigurationID)
 	}
 
@@ -280,7 +280,7 @@ func TestPersistDiagnosisEvidenceGapConfigurationRequiresConsistentAvailabilityT
 		"scope":"full_body",
 		"summary":"self-reported drift",
 		"candidates":[{"name":"candidate","confidence":"中"}],
-		"agent_configuration":{"id":"` + diagnosisEvidenceGapConfigurationID + `","role":"diagnosis"},
+		"agent_configuration":{"id":"` + defaultDiagnosisConfigurationID + `","role":"diagnosis"},
 		"evidence_acquisition":{
 			"trace_revision":"evidence-acquisition-trace-v2",
 			"policy_revision":"diagnosis-evidence-gap-v2",

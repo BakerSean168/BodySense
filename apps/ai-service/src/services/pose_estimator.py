@@ -608,9 +608,8 @@ def extract_landmarks(
         return out, provenance
     except PoseMechanismError:
         raise
-    except Exception:
-        logger.exception("pose landmark extraction failed")
-        return None, provenance
+    except Exception as exc:
+        raise PoseMechanismError("pose landmark extraction failed") from exc
 
 
 def estimate_pose_metrics(

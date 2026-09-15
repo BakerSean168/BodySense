@@ -31,16 +31,16 @@ type TreatmentDecision struct {
 }
 
 type TreatmentDecisionFacts struct {
-	DiagnosisStatus          string                  `json:"diagnosis_status"`
-	CandidateCount           int                     `json:"candidate_count"`
-	FreshnessState           string                  `json:"freshness_state,omitempty"`
-	SafetyState              json.RawMessage         `json:"safety_state"`
-	CandidateAssessmentReady bool                    `json:"candidate_assessment_ready"`
-	ProposalAcceptanceState  string                  `json:"proposal_acceptance_state,omitempty"`
-	SourceBodyStateRevision  int64                   `json:"source_body_state_revision,omitempty"`
-	CurrentBodyStateRevision int64                   `json:"current_body_state_revision"`
-	MaterialReviewStatus     string                  `json:"material_review_status,omitempty"`
-	MaterialReviewReasons    []TreatmentReviewReason `json:"material_review_reasons,omitempty"`
+	DiagnosisStatus          string                         `json:"diagnosis_status"`
+	CandidateCount           int                            `json:"candidate_count"`
+	FreshnessState           string                         `json:"freshness_state,omitempty"`
+	SafetyState              json.RawMessage                `json:"safety_state"`
+	CandidateAssessmentReady bool                           `json:"candidate_assessment_ready"`
+	ProposalAcceptanceState  model.TreatmentAcceptanceState `json:"proposal_acceptance_state,omitempty"`
+	SourceBodyStateRevision  int64                          `json:"source_body_state_revision,omitempty"`
+	CurrentBodyStateRevision int64                          `json:"current_body_state_revision"`
+	MaterialReviewStatus     model.TreatmentStatus          `json:"material_review_status,omitempty"`
+	MaterialReviewReasons    []TreatmentReviewReason        `json:"material_review_reasons,omitempty"`
 }
 
 // EvaluateTreatmentDecision is the Go-owned deny-overrides authority for

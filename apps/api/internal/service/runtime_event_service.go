@@ -204,6 +204,61 @@ func buildRuntimeEventRecord(
 	}, nil
 }
 
+// PersistPreparedMilestone writes one already-sequenced, non-delta public
+// event without touching the delta buffer. Callers must Flush before opening
+// their surrounding transaction. This primitive exists so a Run terminal
+// mutation and its authoritative public event can commit or roll back together.
+func (s *RuntimeEventService) PersistPreparedMilestone(
+	ctx context.Context,
+	conversationID, runID uuid.UUID,
+	turnID *uuid.UUID,
+	event dto.StreamEvent,
+) error {
+	if !ShouldPersistEvent(event.Type) {
+		return fmt.Errorf("event %q is not a replayable public runtime event", event.Type)
+	}
+	if isBufferedDelta(event.Type) {
+		return fmt.Errorf("buffered delta %q cannot be persisted as a lifecycle milestone", event.Type)
+	}
+	record, err := buildRuntimeEventRecord(conversationID, runID, turnID, event)
+	if err != nil {
+		return err
+	}
+	if err := s.repo.Create(ctx, record); err != nil {
+		return fmt.Errorf("create runtime milestone: %w", err)
+	}
+	return nil
+}
+
+// PersistOutOfBandMilestone allocates MAX(seq)+1 and inserts one milestone
+// without flushing buffered deltas. It is intended only inside a lifecycle
+// transaction after the caller has flushed before opening that transaction.
+func (s *RuntimeEventService) PersistOutOfBandMilestone(
+	ctx context.Context,
+	conversationID, runID uuid.UUID,
+	turnID *uuid.UUID,
+	channel, eventType string,
+	ids dto.StreamEventIDs,
+	payload any,
+) (dto.StreamEvent, error) {
+	if !ShouldPersistEvent(eventType) || isBufferedDelta(eventType) {
+		return dto.StreamEvent{}, fmt.Errorf("event %q is not a lifecycle milestone", eventType)
+	}
+	event, err := dto.NewStreamEvent(1, channel, eventType, ids, payload)
+	if err != nil {
+		return dto.StreamEvent{}, err
+	}
+	record, err := buildRuntimeEventRecord(conversationID, runID, turnID, event)
+	if err != nil {
+		return dto.StreamEvent{}, err
+	}
+	if err := s.repo.CreateWithNextSequence(ctx, record); err != nil {
+		return dto.StreamEvent{}, fmt.Errorf("create out-of-band runtime milestone: %w", err)
+	}
+	event.Seq = record.Seq
+	return event, nil
+}
+
 // ListRunEvents returns durable events for a run.
 func (s *RuntimeEventService) ListRunEvents(
 	ctx context.Context,
@@ -267,24 +322,13 @@ func (s *RuntimeEventService) RecordOutOfBandPublicEvent(
 	ids dto.StreamEventIDs,
 	payload any,
 ) error {
-	if !ShouldPersistEvent(eventType) {
-		return fmt.Errorf("event %q is not a replayable public runtime event", eventType)
-	}
 	if err := s.Flush(ctx); err != nil {
 		return err
 	}
-	event, err := dto.NewStreamEvent(1, channel, eventType, ids, payload)
-	if err != nil {
-		return err
-	}
-	record, err := buildRuntimeEventRecord(conversationID, runID, turnID, event)
-	if err != nil {
-		return err
-	}
-	if err := s.repo.CreateWithNextSequence(ctx, record); err != nil {
-		return fmt.Errorf("create out-of-band runtime event: %w", err)
-	}
-	return nil
+	_, err := s.PersistOutOfBandMilestone(
+		ctx, conversationID, runID, turnID, channel, eventType, ids, payload,
+	)
+	return err
 }
 
 // RecordInteractionExpired persists a state.interaction.expired public event.

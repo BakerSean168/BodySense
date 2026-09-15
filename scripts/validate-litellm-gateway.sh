@@ -79,10 +79,12 @@ PY
   uv run python - <<'PY'
 from pydantic_ai import Agent
 
-from src.ai.diagnosis_gateway_model import get_diagnosis_gateway_model
+from src.ai.diagnosis_gateway_model import get_diagnosis_runtime_model
+from src.ai.gateway import get_gateway_model
+from src.configuration.diagnosis_agent_config import get_default_diagnosis_configuration
 
-get_diagnosis_gateway_model.cache_clear()
-agent = Agent(get_diagnosis_gateway_model(), output_type=str)
+get_gateway_model.cache_clear()
+agent = Agent(get_diagnosis_runtime_model(get_default_diagnosis_configuration()), output_type=str)
 result = agent.run_sync("gateway adapter smoke")
 assert result.output == "bodysense-gateway-fallback-ok", result.output
 print("PYDANTICAI_LITELLM_ADAPTER_SMOKE=PASS logical_model=bodysense-diagnosis")

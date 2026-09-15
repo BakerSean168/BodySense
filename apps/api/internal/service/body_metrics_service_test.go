@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 )
@@ -31,7 +30,7 @@ func TestBodyMetricsUpdateBatchesHeightAndWeightIntoOneBodyStateMutation(t *test
 	height := 178.5
 	weight := 75.0
 	revision := int64(4)
-	_, err := svc.Update(context.Background(), uuid.New(), dto.UpdateBodyMetricsRequest{
+	_, err := svc.Update(context.Background(), uuid.New(), UpdateBodyMetricsRequest{
 		ExpectedRevision: &revision,
 		HeightCm:         &height,
 		WeightKg:         &weight,
@@ -55,7 +54,7 @@ func TestBodyMetricsRejectsOutOfRangeValuesBeforeMutation(t *testing.T) {
 	bodyState := &fakeBodyMetricsBodyState{}
 	svc := NewBodyMetricsService(bodyState)
 	height := 300.0
-	_, err := svc.Update(context.Background(), uuid.New(), dto.UpdateBodyMetricsRequest{HeightCm: &height})
+	_, err := svc.Update(context.Background(), uuid.New(), UpdateBodyMetricsRequest{HeightCm: &height})
 	if err == nil {
 		t.Fatal("expected validation error")
 	}

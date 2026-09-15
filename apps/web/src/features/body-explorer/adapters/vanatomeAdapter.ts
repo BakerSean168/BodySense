@@ -29,8 +29,6 @@ export const VANATOME_ATLAS_CATALOG_URL = OFFICIAL_HUMAN_ATLAS.catalogUrl;
 export const VANATOME_INITIAL_SYSTEM_ID = "regional-anatomy" as const;
 
 export interface LoadedVanatomeAtlas {
-  /** Initial lightweight body-shell atlas kept for compatibility with callers. */
-  atlas: VanatomeViewerAtlas;
   /** Atlases already prepared for composition. Models remain lazy in VanatomeViewer. */
   atlases: readonly VanatomeViewerAtlas[];
   catalog: AtlasCatalog;
@@ -75,7 +73,6 @@ export async function loadPinnedVanatomeAtlas(options?: {
   });
 
   return {
-    atlas: initialBundle.atlas,
     atlases: [initialBundle.atlas],
     catalog,
     catalogUrl,
@@ -121,15 +118,23 @@ export function normalizeVanatomeError(
 
   return {
     kind: "unknown",
-    message: error instanceof Error ? error.message : "Unknown anatomy viewer error",
+    message:
+      error instanceof Error ? error.message : "Unknown anatomy viewer error",
     retryable: true,
   };
 }
 
 function isVanatomeViewerError(error: unknown): error is VanatomeViewerError {
   if (!error || typeof error !== "object") return false;
-  const code = (error as { code?: unknown }).code;
-  return code === "model-load-failed" || code === "webgl-context-lost";
+  if (!("code" in error) || !("message" in error) || !("modelUrl" in error)) {
+    return false;
+  }
+  return (
+    (error.code === "model-load-failed" ||
+      error.code === "webgl-context-lost") &&
+    typeof error.message === "string" &&
+    typeof error.modelUrl === "string"
+  );
 }
 
 export interface VanatomeAdapterBridge {
@@ -160,9 +165,9 @@ export class VanatomeAdapter implements AnatomyViewerPort {
       selectedAnatomyId: toAnatomyId(this.bridge.getSelectedId()),
       hoveredAnatomyId: toAnatomyId(this.bridge.getHoveredId()),
       isolatedAnatomyId: toAnatomyId(isolation?.id ?? null),
-      isolationMode: (isolation?.mode as AnatomyIsolationMode | undefined) ?? null,
+      isolationMode: isolation?.mode ?? null,
       visibleSystems: [...this.bridge.getVisibleLayers()],
-      displayMode: this.bridge.getDisplayMode() as AnatomyDisplayMode,
+      displayMode: this.bridge.getDisplayMode(),
       loadState: this.bridge.getLoadState(),
       loadProgress: this.bridge.getLoadProgress(),
       error: this.bridge.getError(),
@@ -186,7 +191,7 @@ export class VanatomeAdapter implements AnatomyViewerPort {
     id: AnatomyStructureId | null,
     mode: AnatomyIsolationMode = "selected",
   ): void {
-    this.bridge.isolate(id, mode as VanatomeIsolationMode);
+    this.bridge.isolate(id, mode);
   }
 
   resetView(): void {
@@ -198,7 +203,7 @@ export class VanatomeAdapter implements AnatomyViewerPort {
   }
 
   setDisplayMode(mode: AnatomyDisplayMode): void {
-    this.bridge.setDisplayMode(mode as VanatomeDisplayMode);
+    this.bridge.setDisplayMode(mode);
   }
 }
 

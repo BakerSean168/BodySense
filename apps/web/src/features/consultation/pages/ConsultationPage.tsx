@@ -14,10 +14,7 @@ import { useConversationsQuery } from "../hooks/useConversationsQuery";
 import { useConsultationThreadQuery } from "../hooks/useConsultationThreadQuery";
 import { useThreadProjectionActions } from "../hooks/useThreadProjectionActions";
 import { useDiagnosisActions } from "../hooks/useDiagnosisActions";
-import type {
-  ConsultationSpatialContext,
-  InteractionHistoryItem,
-} from "../types/consultation";
+import type { ConsultationSpatialContext } from "../types/consultation";
 import {
   buildActiveTurnSeedFromRuntimeEvents,
   toInitialThreadTimeline,
@@ -327,7 +324,7 @@ export function ConsultationPage() {
                 }}
                 initialMessages={toInitialThreadTimeline(
                   historicalMessages,
-                  interactionHistory as InteractionHistoryItem[],
+                  interactionHistory,
                 )}
                 initialActiveTurn={initialTurnSeed?.activeTurn ?? null}
                 initialExtractedInfo={extractedInfo}

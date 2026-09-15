@@ -1,5 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@/lib/clientDiagnostics", () => ({
+  createClientDiagnosticId: () => "body3d-test-session",
+  reportClientDiagnostic: vi.fn(),
+}));
+
 import { BodyExplorer, detectWebGLSupport } from "./BodyExplorer";
 
 describe("BodyExplorer fallback boundary", () => {

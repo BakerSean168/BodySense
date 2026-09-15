@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 
+	"github.com/bodysense/api/internal/dto"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -10,12 +11,7 @@ import (
 // respondError writes a structured error response in the format
 // {"error": {"code": "...", "message": "..."}} as required by the design doc.
 func respondError(c *gin.Context, status int, code string, message string) {
-	c.JSON(status, gin.H{
-		"error": gin.H{
-			"code":    code,
-			"message": message,
-		},
-	})
+	c.JSON(status, dto.NewErrorResponse(code, message))
 }
 
 // getUserUUID extracts and validates the user ID from the gin context.

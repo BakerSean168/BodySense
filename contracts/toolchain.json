@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "evidence": "docs/architecture/contract-codegen-spike-results-2026-09-09.md",
+  "javascript": {
+    "@redocly/cli": "2.51.2",
+    "orval": "8.30.0",
+    "zod": "4.5.4",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "json-schema-to-typescript": "16.0.0"
+  },
+  "goTools": {
+    "oapi-codegen": {
+      "module": "github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen",
+      "version": "v2.8.0"
+    },
+    "oasdiff": {
+      "module": "github.com/oasdiff/oasdiff",
+      "version": "v1.31.0"
+    },
+    "buf": {
+      "module": "github.com/bufbuild/buf/cmd/buf",
+      "version": "v1.72.0"
+    }
+  },
+  "bufRemotePlugins": {
+    "go": "buf.build/protocolbuffers/go:v1.36.12",
+    "python": "buf.build/protocolbuffers/python:v32.1",
+    "pyi": "buf.build/protocolbuffers/pyi:v32.1"
+  },
+  "policy": "All production contract tooling is exact-version pinned. No committed contract command may use floating latest."
+}

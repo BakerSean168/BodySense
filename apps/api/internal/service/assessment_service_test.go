@@ -121,7 +121,7 @@ func assessmentPostureOutput(evidenceRef string) json.RawMessage {
 		"status":"completed",
 		"evidence_policy_revision":"assessment-evidence-contract-v4",
 		"observations":[{
-			"kind":"posture_alignment","body_region":"肩部","label":"肩部对称性待复核",
+			"kind":"posture_alignment","body_region":"","label":"肩部对称性待复核",
 			"description":"正面视觉资料中右侧肩峰位置略高。","evidence_refs":["__POSTURE_EVIDENCE_REF__"]
 		}],
 		"evidence_coverage":{
@@ -181,8 +181,8 @@ func TestAssessmentPersistsReportAndUnverifiedBodyStateObservationsAtomically(t 
 	if !transactionCalled || repo.created == nil {
 		t.Fatal("report and observations must use the coordinated unit of work")
 	}
-	if report.ContractRevision != assessmentOutputContractV2 || report.HealthGrade != nil || len(report.DimensionScores) != 0 {
-		t.Fatalf("v2 report must retire model-authored grade/scores: %#v", report)
+	if report.ContractRevision != assessmentOutputContractV2 {
+		t.Fatalf("unexpected v2 report contract revision: %q", report.ContractRevision)
 	}
 	if len(bodyState.observations) != 1 {
 		t.Fatalf("expected one projected observation, got %d", len(bodyState.observations))

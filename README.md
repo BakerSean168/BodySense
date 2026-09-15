@@ -154,6 +154,18 @@ pnpm verify:release
 
 `pnpm verify:release` is the broad repository release gate. CI also validates published database migration history and longitudinal browser journeys before a release becomes production-eligible.
 
+### API contracts and Postman
+
+The browser-facing REST contract has one source of truth: [`packages/contracts/openapi/bodysense.v1.openapi.yaml`](./packages/contracts/openapi/bodysense.v1.openapi.yaml). The Postman collection is generated from that OpenAPI rather than maintained as a second specification:
+
+```bash
+pnpm postman:generate          # regenerate collection + safe environment templates
+pnpm postman:verify            # freshness + 95/95 OpenAPI route parity
+pnpm postman:validate-native   # optional: validate with the installed Postman CLI
+```
+
+See [`postman/README.md`](./postman/README.md) for environment handling, internal-service boundaries, and Native Git / Postman Cloud binding.
+
 ## Production
 
 The current production application is available at **[body.bakersean.top](https://body.bakersean.top)**.

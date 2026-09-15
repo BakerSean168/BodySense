@@ -96,7 +96,7 @@ class FunASRProvider(ASRProvider):
         if not segments:
             raise RuntimeError("SenseVoice transcription produced no transcript segments")
 
-        # Write JSONL output for compatibility with the rest of the pipeline
+        # Write the canonical JSONL interchange consumed by the ingestion pipeline
         output_path = audio_path.parent / "transcript.raw.jsonl"
         lines = [
             json.dumps(

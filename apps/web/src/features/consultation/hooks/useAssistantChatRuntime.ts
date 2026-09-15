@@ -15,7 +15,7 @@ export type ConsultationThreadController = {
   getState: () => { messages: readonly { id?: string }[] };
 };
 import { consultationApi } from "../services/consultationService";
-import { consumeSSEStream } from "./useSSEProcessor";
+import { consumeSSEStream, type SSEHandlers } from "./useSSEProcessor";
 import { recoverDurableRunEvents } from "../runtime/durableRunRecovery";
 import { reportClientDiagnostic } from "@/lib/clientDiagnostics";
 import {
@@ -28,8 +28,8 @@ import {
 import type {
   ExtractedInfo,
   Citation,
-  SSERedFlag,
   SSEMessageCompleted,
+  RedFlagEvent,
   StreamEvent,
   PendingInteraction,
   ConsultationSpatialContext,
@@ -63,7 +63,7 @@ export interface ConsultationAdapterOptions {
   onMessagePersisted?: (clientMessageId: string, messageId: string) => void;
   onExtractedInfoUpdate?: (info: ExtractedInfo) => void;
   onPhaseChange?: (from: string, to: string) => void;
-  onRedFlag?: (flag: SSERedFlag["payload"]) => void;
+  onRedFlag?: (flag: RedFlagEvent) => void;
   onCitation?: (citation: Citation) => void;
   onTitleGenerated?: (title: string) => void;
   onMessageCompleted?: (data: SSEMessageCompleted) => void;
@@ -100,7 +100,7 @@ export function useAssistantChatRuntime(
     let reducerState: ActiveTurnState = INITIAL_ACTIVE_TURN_STATE;
     let maxSeq = 0;
     let sawStreamDone = false;
-    let networkError: Error | null = null;
+    const networkFailure: { current: Error | null } = { current: null };
     let startDurableWatcher: (() => void) | null = null;
     let durableWatcherController: AbortController | null = null;
     let liveReaderController: AbortController | null = null;
@@ -163,9 +163,7 @@ export function useAssistantChatRuntime(
             optionsRef.current.onPhaseChange?.(effect.from, effect.to);
             break;
           case "red_flag":
-            optionsRef.current.onRedFlag?.(
-              effect.flags as SSERedFlag["payload"],
-            );
+            optionsRef.current.onRedFlag?.(effect.flags);
             break;
           case "citation_added":
             optionsRef.current.onCitation?.(effect.citation);
@@ -176,9 +174,7 @@ export function useAssistantChatRuntime(
           case "interaction_answered":
             break;
           case "message_completed":
-            optionsRef.current.onMessageCompleted?.(
-              effect.data as SSEMessageCompleted,
-            );
+            optionsRef.current.onMessageCompleted?.(effect.data);
             break;
           case "title_generated":
             console.debug("[SSE] ④ applyEffects → 触发 onTitleGenerated 回调", {
@@ -240,65 +236,58 @@ export function useAssistantChatRuntime(
         throw new Error(`HTTP ${response.status}`);
       }
 
-      const handlers = {
-        onConversationCreated: (data: StreamEvent) => {
+      const handlers: SSEHandlers = {
+        onConversationCreated: (data) => {
           console.debug(
             "[SSE] ②-SSE handler 收到 conversation.created → 准备 dispatch",
             {
-              conversation_id: (data as StreamEvent).ids?.conversation_id,
-              run_id: (data as StreamEvent).ids?.run_id,
+              conversation_id: data.ids.conversation_id,
+              run_id: data.ids.run_id,
             },
           );
-          dispatch(data as StreamEvent);
+          dispatch(data);
         },
-        onTitleGenerated: (data: StreamEvent) => {
+        onTitleGenerated: (data) => {
           console.debug(
             "[SSE] ②-SSE handler 收到 title.generated → 准备 dispatch",
-            {
-              title: (data as StreamEvent).payload,
-            },
+            { title: data.payload.title },
           );
-          dispatch(data as StreamEvent);
+          dispatch(data);
         },
-        onMessagePersisted: (data: StreamEvent) =>
-          dispatch(data as StreamEvent),
-        onRunStarted: (data: StreamEvent) => dispatch(data as StreamEvent),
-        onRunResumed: (data: StreamEvent) => dispatch(data as StreamEvent),
-        onRunInterrupted: (data: StreamEvent) => dispatch(data as StreamEvent),
-        onRunCompleted: (data: StreamEvent) => dispatch(data as StreamEvent),
-        onRunFailed: (data: StreamEvent) => dispatch(data as StreamEvent),
-        onRunCancelled: (data: StreamEvent) => dispatch(data as StreamEvent),
-        onMessageCreated: (data: StreamEvent) => dispatch(data as StreamEvent),
-        onTextDelta: (data: StreamEvent) => dispatch(data as StreamEvent),
-        onToolCall: (data: StreamEvent) => dispatch(data as StreamEvent),
-        onToolResult: (data: StreamEvent) => dispatch(data as StreamEvent),
-        onExtractedInfo: (data: StreamEvent) => dispatch(data as StreamEvent),
-        onPhaseChange: (data: StreamEvent) => dispatch(data as StreamEvent),
-        onRedFlag: (data: StreamEvent) => dispatch(data as StreamEvent),
-        onCitation: (data: StreamEvent) => dispatch(data as StreamEvent),
-        onKnowledgeGap: (data: StreamEvent) => dispatch(data as StreamEvent),
-        onInteractionRequired: (data: StreamEvent) =>
-          dispatch(data as StreamEvent),
-        onInteractionAnswered: (data: StreamEvent) =>
-          dispatch(data as StreamEvent),
-        onMessageCompleted: (data: StreamEvent) =>
-          dispatch(data as StreamEvent),
-        onMessageFailed: (data: StreamEvent) => dispatch(data as StreamEvent),
-        onDone: (data: StreamEvent) => {
+        onMessagePersisted: (data) => dispatch(data),
+        onRunStarted: (data) => dispatch(data),
+        onRunResumed: (data) => dispatch(data),
+        onRunInterrupted: (data) => dispatch(data),
+        onRunCompleted: (data) => dispatch(data),
+        onRunFailed: (data) => dispatch(data),
+        onRunCancelled: (data) => dispatch(data),
+        onMessageCreated: (data) => dispatch(data),
+        onTextDelta: (data) => dispatch(data),
+        onToolCall: (data) => dispatch(data),
+        onToolResult: (data) => dispatch(data),
+        onExtractedInfo: (data) => dispatch(data),
+        onPhaseChange: (data) => dispatch(data),
+        onRedFlag: (data) => dispatch(data),
+        onCitation: (data) => dispatch(data),
+        onKnowledgeGap: (data) => dispatch(data),
+        onInteractionRequired: (data) => dispatch(data),
+        onInteractionAnswered: (data) => dispatch(data),
+        onInteractionExpired: (data) => dispatch(data),
+        onMessageCompleted: (data) => dispatch(data),
+        onMessageFailed: (data) => dispatch(data),
+        onDone: (data) => {
           sawStreamDone = true;
-          dispatch(data as StreamEvent);
+          dispatch(data);
         },
-        onStreamError: (data: StreamEvent) => {
-          streamError = new Error(
-            (data.payload as { message?: string })?.message ?? "stream error",
-          );
-          dispatch(data as StreamEvent);
+        onStreamError: (data) => {
+          streamError = new Error(data.payload.message);
+          dispatch(data);
           streamFinished = true;
           notifyQueueConsumer();
         },
         onError: (err: Error) => {
           // Network/read failure — attempt durable after_seq resume below.
-          networkError = err;
+          networkFailure.current = err;
           reportClientDiagnostic({
             category: "chat.transport",
             event: "sse_read_failed",
@@ -420,7 +409,7 @@ export function useAssistantChatRuntime(
       if (!sawStreamDone && !streamError) {
         if (durableWatcherPromise) {
           await durableWatcherPromise;
-          networkError = null;
+          networkFailure.current = null;
         } else {
           const convId =
             reducerState.conversationId ||
@@ -429,7 +418,7 @@ export function useAssistantChatRuntime(
           if (convId && runId) {
             const fallbackController = new AbortController();
             durableWatcherController = fallbackController;
-            const disconnectError = networkError as Error | null;
+            const disconnectError = networkFailure.current;
             reportClientDiagnostic({
               category: "chat.transport",
               event: "fallback_recovery_started",
@@ -456,7 +445,7 @@ export function useAssistantChatRuntime(
             })
               .then((recovered) => {
                 maxSeq = Math.max(maxSeq, recovered.maxSeq);
-                networkError = null;
+                networkFailure.current = null;
                 reportClientDiagnostic({
                   category: "chat.transport",
                   event: "fallback_recovery_terminal",
@@ -498,8 +487,8 @@ export function useAssistantChatRuntime(
               if (nextResult) yield nextResult;
             }
             await durableWatcherPromise;
-          } else if (networkError) {
-            streamError = networkError;
+          } else if (networkFailure.current) {
+            streamError = networkFailure.current;
           } else {
             streamError = new Error(
               "实时连接在终态确认前结束，且没有可恢复的运行标识",

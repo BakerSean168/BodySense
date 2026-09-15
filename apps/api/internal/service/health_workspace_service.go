@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 )
@@ -81,12 +80,12 @@ func (s *HealthWorkspaceService) AttachTrainingSource(training workspaceTraining
 func (s *HealthWorkspaceService) Get(
 	ctx context.Context,
 	userID uuid.UUID,
-) (*dto.HealthWorkspace, error) {
-	workspace := &dto.HealthWorkspace{
+) (*HealthWorkspace, error) {
+	workspace := &HealthWorkspace{
 		GeneratedAt: time.Now().UTC(),
 		Diagnosis:   map[string]any{}, TreatmentRevisions: []model.TreatmentRevision{},
-		RecentOutcomes: []model.Outcome{}, Trends: []dto.HealthWorkspaceTrend{},
-		Actions: []dto.HealthWorkspaceAction{},
+		RecentOutcomes: []model.Outcome{}, Trends: []HealthWorkspaceTrend{},
+		Actions: []HealthWorkspaceAction{},
 	}
 	if s.profiles != nil {
 		profile, err := s.profiles.GetProfile(ctx, userID)
@@ -117,7 +116,7 @@ func (s *HealthWorkspaceService) Get(
 	if err != nil {
 		return nil, fmt.Errorf("load workspace pending observations: %w", err)
 	}
-	workspace.BodyState = &dto.HealthWorkspaceBodyState{
+	workspace.BodyState = &HealthWorkspaceBodyState{
 		CurrentRevision: snapshot.CurrentRevision, SafetyState: snapshot.SafetyState,
 		Facts: snapshot.Facts, PendingFacts: pendingFacts, Observations: snapshot.Observations,
 		PendingObservations: pendingObservations,
@@ -178,7 +177,7 @@ func deriveWorkspaceCapabilities(
 	treatment *model.Treatment,
 	trainingPlan *model.TrainingPlan,
 	revisions []model.TreatmentRevision,
-) dto.HealthWorkspaceCapabilities {
+) HealthWorkspaceCapabilities {
 	requiresSafety := bodyStateRequiresSafetyReview(snapshot.SafetyState)
 	hasReasoningInput := len(snapshot.Facts) > 0 || len(snapshot.Observations) > 0
 	hasAnalysis := analysis != nil
@@ -201,7 +200,7 @@ func deriveWorkspaceCapabilities(
 	hasCurrent := treatment != nil && treatment.Current != nil &&
 		treatment.Current.AcceptanceState == model.TreatmentAcceptanceAccepted
 	treatmentReview := hasCurrent && (treatment.Status == model.TreatmentStatusReviewRecommended || treatment.Status == model.TreatmentStatusPaused)
-	return dto.HealthWorkspaceCapabilities{
+	return HealthWorkspaceCapabilities{
 		CanContinueConsultation: true,
 		CanEditBodyState:        true,
 		CanRequestDiagnosis:     hasReasoningInput && !requiresSafety,
@@ -217,11 +216,11 @@ func deriveWorkspaceCapabilities(
 	}
 }
 
-func deriveWorkspaceActions(workspace *dto.HealthWorkspace) []dto.HealthWorkspaceAction {
+func deriveWorkspaceActions(workspace *HealthWorkspace) []HealthWorkspaceAction {
 	caps := workspace.Capabilities
-	actions := make([]dto.HealthWorkspaceAction, 0, 9)
+	actions := make([]HealthWorkspaceAction, 0, 9)
 	add := func(kind string, priority int, enabled bool, reason string, target map[string]any) {
-		actions = append(actions, dto.HealthWorkspaceAction{
+		actions = append(actions, HealthWorkspaceAction{
 			Kind: kind, Priority: priority, Enabled: enabled, Reason: reason, Target: target,
 		})
 	}
@@ -241,7 +240,7 @@ func deriveWorkspaceActions(workspace *dto.HealthWorkspace) []dto.HealthWorkspac
 		add("review_treatment_proposal", 80, true, "存在尚未接受的方案版本。", map[string]any{"section": "treatment_history"})
 	}
 	if caps.CanExecuteTreatment && workspace.TrainingPlan != nil {
-		add("open_training", 75, true, "当前已接受方案可以继续执行。", map[string]any{"route": "/training/" + workspace.TrainingPlan.ID.String()})
+		add("open_training", 75, true, "当前已接受方案可以继续执行。", map[string]any{"route": workspaceTreatmentRoute(workspace.ConversationID)})
 	}
 	if caps.CanGenerateTreatment {
 		add("generate_treatment", 70, true, "当前分析可用于创建一个需审核的方案 proposal。", map[string]any{"section": "diagnosis"})
@@ -257,34 +256,42 @@ func deriveWorkspaceActions(workspace *dto.HealthWorkspace) []dto.HealthWorkspac
 	return actions
 }
 
+func workspaceTreatmentRoute(conversationID *uuid.UUID) string {
+	route := "/consultation"
+	if conversationID != nil {
+		route += "/" + conversationID.String()
+	}
+	return route + "?view=treatment"
+}
+
 func deriveWorkspaceTrends(
 	snapshot *BodyStateSnapshot,
 	outcomes []model.Outcome,
-) []dto.HealthWorkspaceTrend {
-	byKey := map[string]*dto.HealthWorkspaceTrend{}
+) []HealthWorkspaceTrend {
+	byKey := map[string]*HealthWorkspaceTrend{}
 	for _, fact := range snapshot.Facts {
 		if fact.Trend == "" || fact.Trend == "unknown" {
 			continue
 		}
 		key := strings.Join([]string{fact.ConcernKey, fact.BodyRegion, "fact"}, "|")
-		byKey[key] = &dto.HealthWorkspaceTrend{
+		byKey[key] = &HealthWorkspaceTrend{
 			Key: key, ConcernKey: fact.ConcernKey, BodyRegion: fact.BodyRegion,
 			Kind: "body_state_fact", CurrentTrend: fact.Trend,
-			Points: []dto.HealthWorkspaceTrendPoint{},
+			Points: []HealthWorkspaceTrendPoint{},
 		}
 	}
 	for _, outcome := range outcomes {
 		key := strings.Join([]string{outcome.ConcernKey, outcome.BodyRegion, outcome.Kind}, "|")
 		trend, exists := byKey[key]
 		if !exists {
-			trend = &dto.HealthWorkspaceTrend{
+			trend = &HealthWorkspaceTrend{
 				Key: key, ConcernKey: outcome.ConcernKey, BodyRegion: outcome.BodyRegion,
 				Kind: outcome.Kind, CurrentTrend: outcomeTrend(outcome.Value),
-				Points: []dto.HealthWorkspaceTrendPoint{},
+				Points: []HealthWorkspaceTrendPoint{},
 			}
 			byKey[key] = trend
 		}
-		trend.Points = append(trend.Points, dto.HealthWorkspaceTrendPoint{
+		trend.Points = append(trend.Points, HealthWorkspaceTrendPoint{
 			OccurredAt: outcome.OccurredAt, SourceType: outcome.SourceType,
 			Value: json.RawMessage(outcome.Value), Notes: outcome.Notes,
 			CausalityLevel: outcome.CausalityLevel,
@@ -293,7 +300,7 @@ func deriveWorkspaceTrends(
 			trend.CurrentTrend = value
 		}
 	}
-	trends := make([]dto.HealthWorkspaceTrend, 0, len(byKey))
+	trends := make([]HealthWorkspaceTrend, 0, len(byKey))
 	for _, trend := range byKey {
 		sort.Slice(trend.Points, func(i, j int) bool {
 			return trend.Points[i].OccurredAt.Before(trend.Points[j].OccurredAt)

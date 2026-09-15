@@ -1,3 +1,4 @@
+import { z } from "zod";
 import ontologyData from "../data/body-regions.v1.json";
 
 export const BODY_REGION_IDS = [
@@ -85,7 +86,7 @@ interface RawBodyRegionOntology {
     labels: { "zh-CN": string; en: string };
     parent: string;
     group: string;
-    side: string | null;
+    side: BodyRegionSide;
     aliases: string[];
   }>;
   ambiguousAliases: Array<{
@@ -105,12 +106,52 @@ const parentNodeSet = new Set([
   "lower_limb.right",
 ]);
 const groupSet = new Set(["head", "neck", "torso", "upper_limb", "lower_limb"]);
-const rawOntology = ontologyData as RawBodyRegionOntology;
+const rawBodyRegionOntologySchema = z
+  .object({
+    schemaVersion: z.number().int(),
+    ontologyVersion: z.number().int(),
+    regions: z.array(
+      z
+        .object({
+          id: z.string().min(1),
+          labels: z
+            .object({ "zh-CN": z.string().min(1), en: z.string().min(1) })
+            .strict(),
+          parent: z.string().min(1),
+          group: z.string().min(1),
+          side: z.enum(["left", "right"]).nullable(),
+          aliases: z.array(z.string()),
+        })
+        .strict(),
+    ),
+    ambiguousAliases: z.array(
+      z
+        .object({
+          alias: z.string().min(1),
+          candidates: z.array(z.string().min(1)).min(2),
+          reason: z.string().min(1),
+        })
+        .strict(),
+    ),
+  })
+  .strict();
+
+export function parseRawBodyRegionOntology(
+  input: unknown,
+): RawBodyRegionOntology {
+  return rawBodyRegionOntologySchema.parse(input);
+}
+
+const rawOntology = parseRawBodyRegionOntology(ontologyData);
 
 export const BODY_REGION_ONTOLOGY_VERSION = rawOntology.ontologyVersion;
 
 export function normalizeBodyRegionInput(value: string): string {
-  return value.normalize("NFKC").trim().toLocaleLowerCase("en-US").replace(/\s+/g, " ");
+  return value
+    .normalize("NFKC")
+    .trim()
+    .toLocaleLowerCase("en-US")
+    .replace(/\s+/g, " ");
 }
 
 export function isBodyRegionId(value: string): value is BodyRegionId {
@@ -125,7 +166,8 @@ export function validateBodyRegionOntology(
   input: RawBodyRegionOntology = rawOntology,
 ): string[] {
   const errors: string[] = [];
-  if (input.schemaVersion !== 1) errors.push("ontology schemaVersion must be 1");
+  if (input.schemaVersion !== 1)
+    errors.push("ontology schemaVersion must be 1");
   if (input.ontologyVersion !== 1) errors.push("ontologyVersion must be 1");
 
   const seenIds = new Set<string>();
@@ -136,7 +178,8 @@ export function validateBodyRegionOntology(
       errors.push(`unknown canonical region id: ${region.id}`);
       continue;
     }
-    if (seenIds.has(region.id)) errors.push(`duplicate canonical region id: ${region.id}`);
+    if (seenIds.has(region.id))
+      errors.push(`duplicate canonical region id: ${region.id}`);
     seenIds.add(region.id);
 
     const expectedSide = region.id.endsWith(".left")
@@ -145,7 +188,9 @@ export function validateBodyRegionOntology(
         ? "right"
         : null;
     if (region.side !== expectedSide) {
-      errors.push(`region ${region.id} has side ${String(region.side)}, expected ${String(expectedSide)}`);
+      errors.push(
+        `region ${region.id} has side ${String(region.side)}, expected ${String(expectedSide)}`,
+      );
     }
     if (!region.labels["zh-CN"] || !region.labels.en) {
       errors.push(`region ${region.id} is missing labels`);
@@ -154,10 +199,14 @@ export function validateBodyRegionOntology(
       errors.push(`region ${region.id} is missing parent/group`);
     } else {
       if (!parentNodeSet.has(region.parent)) {
-        errors.push(`region ${region.id} references unknown parent node ${region.parent}`);
+        errors.push(
+          `region ${region.id} references unknown parent node ${region.parent}`,
+        );
       }
       if (!groupSet.has(region.group)) {
-        errors.push(`region ${region.id} references unknown group ${region.group}`);
+        errors.push(
+          `region ${region.id} references unknown group ${region.group}`,
+        );
       }
     }
 
@@ -169,7 +218,9 @@ export function validateBodyRegionOntology(
       }
       const owner = deterministicAliases.get(normalized);
       if (owner && owner !== region.id) {
-        errors.push(`deterministic alias ${alias} is owned by both ${owner} and ${region.id}`);
+        errors.push(
+          `deterministic alias ${alias} is owned by both ${owner} and ${region.id}`,
+        );
       } else {
         deterministicAliases.set(normalized, region.id);
       }
@@ -177,10 +228,13 @@ export function validateBodyRegionOntology(
   }
 
   for (const expectedId of BODY_REGION_IDS) {
-    if (!seenIds.has(expectedId)) errors.push(`missing canonical region id: ${expectedId}`);
+    if (!seenIds.has(expectedId))
+      errors.push(`missing canonical region id: ${expectedId}`);
   }
   if (seenIds.size !== BODY_REGION_IDS.length) {
-    errors.push(`expected ${BODY_REGION_IDS.length} canonical regions, found ${seenIds.size}`);
+    errors.push(
+      `expected ${BODY_REGION_IDS.length} canonical regions, found ${seenIds.size}`,
+    );
   }
 
   const seenAmbiguous = new Set<string>();
@@ -195,14 +249,20 @@ export function validateBodyRegionOntology(
     }
     seenAmbiguous.add(normalized);
     if (deterministicAliases.has(normalized)) {
-      errors.push(`alias ${entry.alias} cannot be both deterministic and ambiguous`);
+      errors.push(
+        `alias ${entry.alias} cannot be both deterministic and ambiguous`,
+      );
     }
     if (entry.candidates.length < 2) {
-      errors.push(`ambiguous alias ${entry.alias} must have at least two candidates`);
+      errors.push(
+        `ambiguous alias ${entry.alias} must have at least two candidates`,
+      );
     }
     for (const candidate of entry.candidates) {
       if (!isBodyRegionId(candidate)) {
-        errors.push(`ambiguous alias ${entry.alias} references unknown ${candidate}`);
+        errors.push(
+          `ambiguous alias ${entry.alias} references unknown ${candidate}`,
+        );
       }
     }
   }
@@ -212,11 +272,30 @@ export function validateBodyRegionOntology(
 
 const ontologyErrors = validateBodyRegionOntology();
 if (ontologyErrors.length > 0) {
-  throw new Error(`Invalid BodyRegionOntology v1:\n${ontologyErrors.join("\n")}`);
+  throw new Error(
+    `Invalid BodyRegionOntology v1:\n${ontologyErrors.join("\n")}`,
+  );
 }
 
-export const bodyRegionDefinitions = rawOntology.regions as BodyRegionDefinition[];
-export const ambiguousBodyRegionAliases = rawOntology.ambiguousAliases as AmbiguousBodyRegionAlias[];
+export const bodyRegionDefinitions: BodyRegionDefinition[] =
+  rawOntology.regions.map((region) => {
+    const id = parseBodyRegionId(region.id);
+    if (!id)
+      throw new Error(
+        `Unknown BodyRegionId after ontology validation: ${region.id}`,
+      );
+    return { ...region, id };
+  });
+export const ambiguousBodyRegionAliases: AmbiguousBodyRegionAlias[] =
+  rawOntology.ambiguousAliases.map((entry) => ({
+    ...entry,
+    candidates: entry.candidates.map((candidate) => {
+      const id = parseBodyRegionId(candidate);
+      if (!id)
+        throw new Error(`Unknown ambiguous BodyRegion candidate: ${candidate}`);
+      return id;
+    }),
+  }));
 
 const definitionById = new Map<BodyRegionId, BodyRegionDefinition>(
   bodyRegionDefinitions.map((definition) => [definition.id, definition]),
@@ -228,10 +307,15 @@ for (const definition of bodyRegionDefinitions) {
   }
 }
 const ambiguousByAlias = new Map<string, AmbiguousBodyRegionAlias>(
-  ambiguousBodyRegionAliases.map((entry) => [normalizeBodyRegionInput(entry.alias), entry]),
+  ambiguousBodyRegionAliases.map((entry) => [
+    normalizeBodyRegionInput(entry.alias),
+    entry,
+  ]),
 );
 
-export function getBodyRegionDefinition(id: BodyRegionId): BodyRegionDefinition {
+export function getBodyRegionDefinition(
+  id: BodyRegionId,
+): BodyRegionDefinition {
   const definition = definitionById.get(id);
   if (!definition) throw new Error(`Unknown BodyRegionId: ${id}`);
   return definition;

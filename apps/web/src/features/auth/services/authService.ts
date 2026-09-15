@@ -1,5 +1,5 @@
 import { useAuthStore } from "@/stores/authStore";
-import { apiUrl, safeJson, extractErrorMessage } from "@/lib/api-url";
+import { apiUrl } from "@/lib/api-url";
 
 interface FetchOptions extends RequestInit {
   skipAuth?: boolean;
@@ -42,56 +42,3 @@ export async function authFetch(
 
   return response;
 }
-
-// Auth API functions
-export const authApi = {
-  register: async (email: string, password: string) => {
-    const response = await authFetch("/api/v1/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-      skipAuth: true,
-    });
-
-    if (!response.ok) {
-      throw new Error(await extractErrorMessage(response));
-    }
-
-    return safeJson(response);
-  },
-
-  login: async (email: string, password: string) => {
-    const response = await authFetch("/api/v1/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-      skipAuth: true,
-    });
-
-    if (!response.ok) {
-      throw new Error(await extractErrorMessage(response));
-    }
-
-    return safeJson(response);
-  },
-
-  logout: async () => {
-    const response = await authFetch("/api/v1/auth/logout", {
-      method: "POST",
-      skipAuth: true,
-      credentials: "include",
-    });
-
-    return safeJson(response);
-  },
-
-  getMe: async () => {
-    const response = await authFetch("/api/v1/me");
-
-    if (!response.ok) {
-      throw new Error(await extractErrorMessage(response));
-    }
-
-    return safeJson(response);
-  },
-};

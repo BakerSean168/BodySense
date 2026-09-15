@@ -5,7 +5,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 )
@@ -51,19 +50,19 @@ func (f *fakeOnboardingTransactions) WithinTransaction(ctx context.Context, fn f
 	return fn(ctx)
 }
 
-func validOnboardingContextRequest() dto.OnboardingContextRequest {
+func validOnboardingContextRequest() OnboardingContextRequest {
 	height := 178.5
 	weight := 75.0
-	return dto.OnboardingContextRequest{
-		Profile:     dto.OnboardingProfileInput{Gender: "male", BirthDate: "1998-05-20"},
-		BodyMetrics: dto.OnboardingBodyMetricsInput{HeightCm: &height, WeightKg: &weight},
-		Lifestyle: dto.OnboardingLifestyleInput{
-			Activity:   dto.LifestyleSectionInput{Summary: "工作日久坐为主"},
-			Sleep:      dto.LifestyleSectionInput{Summary: "轮班，平均睡 6-7 小时"},
-			Exercise:   dto.LifestyleSectionInput{Summary: "力量训练每周 3 次"},
-			Nutrition:  dto.LifestyleSectionInput{Summary: "三餐通常规律"},
-			Substances: dto.LifestyleSectionInput{Summary: "每天咖啡两杯，不吸烟"},
-			Recovery:   dto.LifestyleSectionInput{Summary: "工作日压力偏高"},
+	return OnboardingContextRequest{
+		Profile:     OnboardingProfileInput{Gender: "male", BirthDate: "1998-05-20"},
+		BodyMetrics: OnboardingBodyMetricsInput{HeightCm: &height, WeightKg: &weight},
+		Lifestyle: OnboardingLifestyleInput{
+			Activity:   LifestyleSectionInput{Summary: "工作日久坐为主"},
+			Sleep:      LifestyleSectionInput{Summary: "轮班，平均睡 6-7 小时"},
+			Exercise:   LifestyleSectionInput{Summary: "力量训练每周 3 次"},
+			Nutrition:  LifestyleSectionInput{Summary: "三餐通常规律"},
+			Substances: LifestyleSectionInput{Summary: "每天咖啡两杯，不吸烟"},
+			Recovery:   LifestyleSectionInput{Summary: "工作日压力偏高"},
 		},
 		InjuryHistory: "两年前左膝轻微拉伤",
 	}

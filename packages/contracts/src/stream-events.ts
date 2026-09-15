@@ -1,334 +1,67 @@
 /**
- * Public stream-event contract shared by the Web consumer and contract tests.
+ * Public StreamEvent facade.
  *
- * Learning path (Thought Forest note filenames):
- * - typescript-generics-keyof-and-indexed-access.md
- * - typescript-discriminated-unions-and-exhaustiveness.md
- * - typescript-unknown-vs-any.md
- * - typescript-static-types-and-runtime-validation.md
- *
- * Important boundary: these declarations disappear at runtime. Receiving JSON
- * that is asserted as `StreamEvent` does not validate it; validation belongs at
- * the network boundary before reducers or components consume the event.
+ * Static authority lives in packages/contracts/schemas/stream-event.v1.schema.json
+ * and packages/contracts/generated/stream-event.v1.d.ts is generated from it.
+ * Keep consumer-facing aliases here so feature code does not import generated
+ * file paths directly.
  */
+import type {
+  BodySenseStreamEventV1,
+  Citation as SchemaCitation,
+  ExtractedInfo as SchemaExtractedInfo,
+  InteractionQuestion as SchemaInteractionQuestion,
+  InteractionQuestionField as SchemaInteractionQuestionField,
+  RedFlag as SchemaRedFlag,
+} from "../generated/stream-event.v1";
 
-export type StreamChannel =
-  | "conversation"
-  | "run"
-  | "message"
-  | "tool"
-  | "state"
-  | "source"
-  | "safety"
-  | "usage"
-  | "job"
-  | "stream"
-  | "title";
+export type StreamEvent = BodySenseStreamEventV1;
+export type StreamChannel = StreamEvent["channel"];
+export type StreamEventIds = StreamEvent["ids"];
+export type InteractionQuestion = SchemaInteractionQuestion;
+export type InteractionQuestionField = SchemaInteractionQuestionField;
+export type ExtractedInfo = SchemaExtractedInfo;
+export type Citation = SchemaCitation;
+export type RedFlag = SchemaRedFlag;
 
-export interface StreamEventIds {
-  conversation_id?: string | null;
-  run_id?: string | null;
-  turn_id?: string | null;
-  message_id?: string | null;
-  tool_call_id?: string | null;
-  interaction_id?: string | null;
-  job_id?: string | null;
-}
-
-export interface StreamEventBase<
-  // Each concrete event supplies literal arguments such as
-  // <'run', 'run.started', { status: 'running'; ... }>. Keeping those
-  // literals is what later lets `event.type` discriminate the union.
-  TChannel extends StreamChannel,
-  TType extends string,
-  // Payloads must be object-shaped. The default `Record<string, never>`
-  // means “no payload keys are permitted”, not “an arbitrary object”.
-  TPayload extends Record<string, unknown> = Record<string, never>,
-> {
-  version: 1;
-  seq: number;
-  channel: TChannel;
-  type: TType;
-  ids: StreamEventIds;
-  payload: TPayload;
-}
-
-export type ConversationCreatedEvent = StreamEventBase<
-  "conversation",
-  "conversation.created",
-  {
-    title: string;
-    title_status: "pending" | "generated" | "manual";
-    status: "active";
-    last_message_at: string;
-    created_at: string;
-    replaces_draft_id?: string;
-  }
+type EventOf<TType extends StreamEvent["type"]> = Extract<
+  StreamEvent,
+  { type: TType }
 >;
 
-export type RunStartedEvent = StreamEventBase<
-  "run",
-  "run.started",
-  { status: "running"; source: "start_turn" }
->;
-
-export type RunResumedEvent = StreamEventBase<
-  "run",
-  "run.resumed",
-  { status: "running"; interaction_id: string }
->;
-
-export type RunInterruptedEvent = StreamEventBase<
-  "run",
-  "run.interrupted",
-  { status: "waiting_user"; interaction_id: string }
->;
-
-export type RunCompletedEvent = StreamEventBase<
-  "run",
-  "run.completed",
-  { status: "completed"; usage?: unknown }
->;
-
-export type RunFailedEvent = StreamEventBase<
-  "run",
-  "run.failed",
-  { status: "failed"; error?: { message: string }; reason?: string }
->;
-
-export type RunCancelledEvent = StreamEventBase<
-  "run",
-  "run.cancelled",
-  { status: "cancelled"; reason: string }
->;
-
-export type MessagePersistedEvent = StreamEventBase<
-  "message",
-  "message.persisted",
-  { client_message_id: string; role: string }
->;
-
-export type MessageCreatedEvent = StreamEventBase<
-  "message",
-  "message.created",
-  { role: string; status: string }
->;
-
-export type MessageTextDeltaEvent = StreamEventBase<
-  "message",
-  "message.text.delta",
-  { delta: string }
->;
-
-export type MessageCompletedEvent = StreamEventBase<
-  "message",
-  "message.completed",
-  { status: "completed"; finish_reason: string; usage?: unknown }
->;
-
-export type MessageFailedEvent = StreamEventBase<
-  "message",
-  "message.failed",
-  { status: "failed"; error: { message: string } }
->;
-
-export type ToolCallEvent = StreamEventBase<
-  "tool",
-  "tool.call",
-  { tool: string; args: unknown }
->;
-
-export type ToolResultEvent = StreamEventBase<
-  "tool",
-  "tool.result",
-  { tool: string; result: unknown }
->;
-
-export type ExtractedInfoUpsertEvent = StreamEventBase<
-  "state",
-  "state.extracted_info.upsert",
-  { info: unknown }
->;
-
-export type PhaseChangedEvent = StreamEventBase<
-  "state",
-  "state.phase.changed",
-  { from?: string; to: string; reason: string }
->;
-
-export type CitationAddedEvent = StreamEventBase<
-  "source",
-  "source.citation.added",
-  { citation: unknown }
->;
-
-export type AnswerAttributionAddedEvent = StreamEventBase<
-  "source",
-  "source.answer_attribution.added",
-  { attribution: unknown }
->;
-
-export type KnowledgeGapEvent = StreamEventBase<
-  "source",
-  "source.knowledge_gap",
-  { query: string; message: string }
->;
-
-export type RedFlagDetectedEvent = StreamEventBase<
-  "safety",
-  "safety.red_flag.detected",
-  { has_red_flags: boolean; flags: unknown[] }
->;
-
-export type OutputReviewedEvent = StreamEventBase<
-  "safety",
-  "safety.output_reviewed",
-  {
-    kind: string;
-    verdict: "accepted" | "degraded" | "rejected";
-    reasons?: string[];
-    issues?: unknown[];
-  }
->;
-
-export type OutputRejectedEvent = StreamEventBase<
-  "safety",
-  "safety.output_rejected",
-  {
-    kind: string;
-    verdict: "rejected";
-    reasons?: string[];
-    safety_fallback?: string;
-  }
->;
-
-export type UsageReportedEvent = StreamEventBase<
-  "usage",
-  "usage.reported",
-  { usage: unknown }
->;
-
-export type TitleGeneratedEvent = StreamEventBase<
-  "title",
-  "title.generated",
-  { title: string }
->;
-
-export type StreamDoneEvent = StreamEventBase<
-  "stream",
-  "stream.done",
-  Record<string, never>
->;
-
-export type StreamErrorEvent = StreamEventBase<
-  "stream",
-  "stream.error",
-  { message: string }
->;
-
-export type InteractionQuestionField = {
-  key: string;
-  label: string;
-  answer_type?:
-    | "text"
-    | "single_choice"
-    | "multi_choice"
-    | "number"
-    | "date"
-    | "scale"
-    | "select";
-  options?: string[];
-  required?: boolean;
-};
-
-export type InteractionQuestion = {
-  question: string;
-  answer_type?: string;
-  options?: string[];
-  context?: string;
-  allow_custom_input?: boolean;
-  required?: boolean;
-  /** Optional multi-field form (≤3). Single-question path omits this. */
-  fields?: InteractionQuestionField[];
-};
-
-export type InteractionRequiredEvent = StreamEventBase<
-  "state",
-  "state.interaction.required",
-  { interaction_id: string; question: InteractionQuestion; created_at: string }
->;
-
-export type InteractionAnsweredEvent = StreamEventBase<
-  "state",
-  "state.interaction.answered",
-  { interaction_id: string; answer: unknown }
->;
-
-export type InteractionExpiredEvent = StreamEventBase<
-  "state",
-  "state.interaction.expired",
-  { interaction_id: string; expired_at: string; reason?: string }
->;
-
-export type JobCreatedEvent = StreamEventBase<
-  "job",
-  "job.created",
-  { job_type: string; status?: string }
->;
-
-export type JobProgressEvent = StreamEventBase<
-  "job",
-  "job.progress",
-  { progress?: unknown; stage?: string; percent?: number }
->;
-
-export type JobCompletedEvent = StreamEventBase<
-  "job",
-  "job.completed",
-  { result?: unknown }
->;
-
-export type JobFailedEvent = StreamEventBase<
-  "job",
-  "job.failed",
-  { error: unknown }
->;
-
-export type StreamEvent =
-  // This is a discriminated union: every member has a literal `type`.
-  // A switch on event.type therefore narrows payload to the matching shape.
-  // Adding a member here should make exhaustive consumers fail to compile
-  // until they consciously handle or ignore the new protocol event.
-  | ConversationCreatedEvent
-  | RunStartedEvent
-  | RunResumedEvent
-  | RunInterruptedEvent
-  | RunCompletedEvent
-  | RunFailedEvent
-  | RunCancelledEvent
-  | MessagePersistedEvent
-  | MessageCreatedEvent
-  | MessageTextDeltaEvent
-  | MessageCompletedEvent
-  | MessageFailedEvent
-  | ToolCallEvent
-  | ToolResultEvent
-  | ExtractedInfoUpsertEvent
-  | PhaseChangedEvent
-  | CitationAddedEvent
-  | AnswerAttributionAddedEvent
-  | KnowledgeGapEvent
-  | RedFlagDetectedEvent
-  | OutputReviewedEvent
-  | OutputRejectedEvent
-  | UsageReportedEvent
-  | TitleGeneratedEvent
-  | StreamDoneEvent
-  | StreamErrorEvent
-  | InteractionRequiredEvent
-  | InteractionAnsweredEvent
-  | InteractionExpiredEvent
-  | JobCreatedEvent
-  | JobProgressEvent
-  | JobCompletedEvent
-  | JobFailedEvent;
+export type ConversationCreatedEvent = EventOf<"conversation.created">;
+export type RunStartedEvent = EventOf<"run.started">;
+export type RunResumedEvent = EventOf<"run.resumed">;
+export type RunInterruptedEvent = EventOf<"run.interrupted">;
+export type RunCompletedEvent = EventOf<"run.completed">;
+export type RunFailedEvent = EventOf<"run.failed">;
+export type RunCancelledEvent = EventOf<"run.cancelled">;
+export type MessagePersistedEvent = EventOf<"message.persisted">;
+export type MessageCreatedEvent = EventOf<"message.created">;
+export type MessageTextDeltaEvent = EventOf<"message.text.delta">;
+export type MessageCompletedEvent = EventOf<"message.completed">;
+export type MessageFailedEvent = EventOf<"message.failed">;
+export type ToolCallEvent = EventOf<"tool.call">;
+export type ToolResultEvent = EventOf<"tool.result">;
+export type ExtractedInfoUpsertEvent = EventOf<"state.extracted_info.upsert">;
+export type LifestyleContextUpsertEvent =
+  EventOf<"state.lifestyle_context.upsert">;
+export type PhaseChangedEvent = EventOf<"state.phase.changed">;
+export type InteractionRequiredEvent = EventOf<"state.interaction.required">;
+export type InteractionAnsweredEvent = EventOf<"state.interaction.answered">;
+export type InteractionExpiredEvent = EventOf<"state.interaction.expired">;
+export type CitationAddedEvent = EventOf<"source.citation.added">;
+export type AnswerAttributionAddedEvent =
+  EventOf<"source.answer_attribution.added">;
+export type KnowledgeGapEvent = EventOf<"source.knowledge_gap">;
+export type RedFlagDetectedEvent = EventOf<"safety.red_flag.detected">;
+export type OutputReviewedEvent = EventOf<"safety.output_reviewed">;
+export type OutputRejectedEvent = EventOf<"safety.output_rejected">;
+export type UsageReportedEvent = EventOf<"usage.reported">;
+export type TitleGeneratedEvent = EventOf<"title.generated">;
+export type StreamDoneEvent = EventOf<"stream.done">;
+export type StreamErrorEvent = EventOf<"stream.error">;
+export type JobCreatedEvent = EventOf<"job.created">;
+export type JobProgressEvent = EventOf<"job.progress">;
+export type JobCompletedEvent = EventOf<"job.completed">;
+export type JobFailedEvent = EventOf<"job.failed">;

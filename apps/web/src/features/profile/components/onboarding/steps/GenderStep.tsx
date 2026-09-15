@@ -1,9 +1,14 @@
+type GenderValue = "" | "male" | "female";
+
 interface GenderStepProps {
-  value: string;
-  onChange: (value: string) => void;
+  value: GenderValue;
+  onChange: (value: GenderValue) => void;
 }
 
-const GENDER_OPTIONS = [
+const GENDER_OPTIONS: ReadonlyArray<{
+  value: Exclude<GenderValue, "">;
+  label: string;
+}> = [
   { value: "male", label: "男" },
   { value: "female", label: "女" },
 ];

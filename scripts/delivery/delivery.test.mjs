@@ -125,6 +125,53 @@ test('shared contract changes select every application surface and experience', 
   });
 });
 
+test('generated Postman assets select contract validation without forcing full', () => {
+  const paths = [
+    'postman/collections/BodySense Public API.postman_collection.json',
+    'scripts/postman/generate.mjs',
+  ];
+  const result = classifyPaths(paths);
+  assert.equal(result.risk, 'contract');
+  assertLanes(paths, {
+    web: false,
+    api: false,
+    ai: false,
+    contracts: true,
+    experience: false,
+    database: false,
+    full: false,
+  });
+});
+
+test('contracts delivery lane runs canonical contract verification', () => {
+  const contents = fs.readFileSync('scripts/delivery/run-quality.mjs', 'utf8');
+  const contractLane = contents.slice(contents.indexOf('if (manifest.lanes.contracts)'));
+  assert.ok(contractLane.startsWith('if (manifest.lanes.contracts)'));
+  assert.match(contractLane, /run\(["']pnpm["'], \[["']contracts:verify["']\]\)/);
+});
+
+test('every selected delivery quality lane runs architecture boundaries', () => {
+  const contents = fs.readFileSync('scripts/delivery/run-quality.mjs', 'utf8');
+  assert.match(contents, /run\(["']pnpm["'], \[["']quality:architecture["']\]\)/);
+});
+
+test('CI governance validates the committed manifest base-to-head diff', () => {
+  const contents = fs.readFileSync('.github/workflows/ci.yml', 'utf8');
+  assert.match(contents, /governance-child:[\s\S]*fetch-depth: 0/);
+  assert.match(contents, /base_sha="\$\(jq -r \.baseSha "\$DELIVERY_MANIFEST_PATH"\)"/);
+  assert.match(contents, /head_sha="\$\(jq -r \.headSha "\$DELIVERY_MANIFEST_PATH"\)"/);
+  assert.match(contents, /git diff --check "\$\{base_sha\}\.\.\.\$\{head_sha\}"/);
+});
+
+test('PR commit lint keeps merge type tied to real Git merge topology', () => {
+  const workflow = fs.readFileSync('.github/workflows/ci.yml', 'utf8');
+  const guard = fs.readFileSync('scripts/quality/lint-commit-range.sh', 'utf8');
+  assert.match(workflow, /bash scripts\/quality\/lint-commit-range\.sh/);
+  assert.match(guard, /subject.*merge:\*/s);
+  assert.match(guard, /parent_count.*-le 1/s);
+  assert.match(guard, /pnpm exec commitlint --from "\$base_sha" --to "\$head_sha"/);
+});
+
 test('CI, Docker, release and unknown paths fail safe to full', () => {
   for (const path of [
     '.github/workflows/ci.yml',

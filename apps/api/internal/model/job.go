@@ -7,6 +7,28 @@ import (
 	"gorm.io/datatypes"
 )
 
+// JobStatus is the canonical durable lifecycle vocabulary for background jobs.
+type JobStatus string
+
+const (
+	JobStatusPending     JobStatus = "pending"
+	JobStatusRunning     JobStatus = "running"
+	JobStatusWaitingUser JobStatus = "waiting_user"
+	JobStatusCompleted   JobStatus = "completed"
+	JobStatusFailed      JobStatus = "failed"
+	JobStatusCancelled   JobStatus = "cancelled"
+	JobStatusTimedOut    JobStatus = "timed_out"
+)
+
+func (s JobStatus) IsTerminal() bool {
+	switch s {
+	case JobStatusCompleted, JobStatusFailed, JobStatusCancelled, JobStatusTimedOut:
+		return true
+	default:
+		return false
+	}
+}
+
 // Job represents a durable background job (e.g., OCR, knowledge ingestion).
 type Job struct {
 	ID             uuid.UUID      `gorm:"type:uuid;primaryKey;default:uuidv7()" json:"id"`
@@ -14,7 +36,7 @@ type Job struct {
 	ConversationID *uuid.UUID     `gorm:"type:uuid" json:"conversation_id,omitempty"`
 	UserID         uuid.UUID      `gorm:"type:uuid;not null;index" json:"user_id"`
 	JobType        string         `gorm:"type:varchar(50);not null;index" json:"job_type"`
-	Status         string         `gorm:"type:varchar(30);not null;default:'pending';index" json:"status"`
+	Status         JobStatus      `gorm:"type:varchar(30);not null;default:'pending';index" json:"status"`
 	Input          datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"input"`
 	Progress       datatypes.JSON `gorm:"type:jsonb" json:"progress,omitempty"`
 	Result         datatypes.JSON `gorm:"type:jsonb" json:"result,omitempty"`

@@ -101,3 +101,6 @@ test-results/
 
 # Locally materialized pinned AI model artifacts (verified/baked by Docker build)
 apps/ai-service/models/
+
+# Locally installed exact-version contract CLI tools
+.tools/contracts/

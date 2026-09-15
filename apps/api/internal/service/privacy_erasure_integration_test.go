@@ -12,7 +12,6 @@ import (
 	"github.com/bodysense/api/internal/auth"
 	"github.com/bodysense/api/internal/cache"
 	"github.com/bodysense/api/internal/database"
-	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/model"
 	"github.com/bodysense/api/internal/repository"
 	"github.com/bodysense/api/internal/uploadstorage"
@@ -161,7 +160,7 @@ func TestPrivacyErasureSyntheticUserPostgres(t *testing.T) {
 	if exists, err := sessionCache.Exists(ctx, refreshSessionID); err != nil || exists {
 		t.Fatalf("session survived erasure: exists=%v err=%v", exists, err)
 	}
-	if _, err := authService.RefreshToken(ctx, dto.RefreshRequest{RefreshToken: tokens.RefreshToken}); err == nil || !(errors.Is(err, ErrInvalidRefresh) || errors.Is(err, ErrRefreshReuse)) {
+	if _, err := authService.RefreshSession(ctx, tokens.RefreshToken); err == nil || !(errors.Is(err, ErrInvalidRefresh) || errors.Is(err, ErrRefreshReuse)) {
 		t.Fatalf("erased refresh credential remained usable: %v", err)
 	}
 }

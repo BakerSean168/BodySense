@@ -73,7 +73,7 @@
       "cache": true,
       "options": {
         "cwd": "apps/ai-service",
-        "command": "uv run pyright src"
+        "command": "uv run --extra ocr pyright src"
       }
     },
     "eval:diagnosis": {

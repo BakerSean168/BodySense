@@ -28,6 +28,15 @@ export interface AtlasRegistryInventory {
   atlasId: string;
   catalogBuildId: string;
   bundleId: string;
+  source: {
+    officialCatalogUrl: string;
+    upstreamRepository: string;
+    upstreamCommit: string;
+    catalogFixture: string;
+    metadataFixture: string;
+    catalogSha256: string;
+    metadataSha256: string;
+  };
   summary: {
     structureCount: number;
     directGeometryStructureCount: number;

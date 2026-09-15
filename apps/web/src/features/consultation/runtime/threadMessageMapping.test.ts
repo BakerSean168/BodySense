@@ -4,11 +4,14 @@ import {
   toInitialThreadTimeline,
   toInitialThreadMessage,
 } from "./threadMessageMapping";
+import {
+  parseStreamEvent,
+  type StreamEvent,
+} from "@bodysense/contracts";
 import type {
   InteractionHistoryItem,
   Message,
   PendingInteraction,
-  StreamEvent,
 } from "../types/consultation";
 
 function makeMessage(overrides: Partial<Message> = {}): Message {
@@ -41,7 +44,7 @@ function makeStreamEvent(
   ids: Partial<StreamEvent["ids"]> = {},
   seq = 1,
 ): StreamEvent {
-  return {
+  return parseStreamEvent({
     version: 1,
     seq,
     channel,
@@ -56,7 +59,7 @@ function makeStreamEvent(
       ...ids,
     },
     payload,
-  } as StreamEvent;
+  });
 }
 
 describe("threadMessageMapping", () => {

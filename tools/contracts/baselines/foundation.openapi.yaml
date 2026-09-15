@@ -1,0 +1,89 @@
+openapi: 3.1.0
+info:
+  title: BodySense Contract Foundation Smoke API
+  version: 1.0.0
+  description: Non-serving schema used only to prove the pinned vNext contract toolchain.
+  license:
+    name: MIT
+    identifier: MIT
+servers:
+  - url: https://contract-foundation.invalid
+    description: Non-serving toolchain placeholder only
+security: []
+paths:
+  /__contract-foundation/ping:
+    get:
+      operationId: contractFoundationPing
+      summary: Validate generated read-path plumbing
+      responses:
+        '200':
+          description: Foundation response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoundationPing'
+        '400':
+          description: Synthetic malformed request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoundationError'
+  /__contract-foundation/commands:
+    post:
+      operationId: contractFoundationCommand
+      summary: Validate generated command-path plumbing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FoundationCommand'
+      responses:
+        '200':
+          description: Command accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoundationPing'
+        '409':
+          description: Synthetic revision conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoundationError'
+components:
+  schemas:
+    FoundationCommand:
+      type: object
+      additionalProperties: false
+      required: [name, expected_revision]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        expected_revision:
+          type: integer
+          minimum: 0
+        note:
+          type: [string, 'null']
+    FoundationPing:
+      type: object
+      additionalProperties: false
+      required: [status, revision]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        revision:
+          type: integer
+          minimum: 0
+    FoundationError:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum: [REVISION_CONFLICT]
+        message:
+          type: string

@@ -18,7 +18,12 @@ from src.agents.diagnosis_agent import diagnosis_tool_names
 from src.configuration.diagnosis_agent_config import (
     DiagnosisAgentManifest,
     get_default_diagnosis_configuration,
-    get_diagnosis_configuration,
+)
+from src.evals.agent_config_archive import get_diagnosis_evaluation_configuration
+from src.evals.retired_diagnosis_runtime import (
+    RETIRED_DIAGNOSIS_TOOL_POLICY_V1,
+    OfflineHistoricalDiagnosisService,
+    retired_diagnosis_tool_names,
 )
 from src.services.diagnosis_service import DiagnosisService
 from src.testing_support.deterministic_ai import deterministic_diagnosis_model
@@ -210,12 +215,13 @@ class ToolTracePolicy(
         trace = ctx.output.trace
         if trace.agent_executed != metadata.expected_agent_executed:
             return False
-        config = get_diagnosis_configuration(ctx.output.configuration_id)
-        expected_tools = (
-            diagnosis_tool_names(config.tool_policy_revision)
-            if metadata.expected_agent_executed
-            else []
-        )
+        config = get_diagnosis_evaluation_configuration(ctx.output.configuration_id)
+        if not metadata.expected_agent_executed:
+            expected_tools = []
+        elif config.tool_policy_revision == RETIRED_DIAGNOSIS_TOOL_POLICY_V1:
+            expected_tools = retired_diagnosis_tool_names(config.tool_policy_revision)
+        else:
+            expected_tools = diagnosis_tool_names(config.tool_policy_revision)
         if sorted(trace.available_tools) != sorted(expected_tools):
             return False
         if len(trace.tool_calls) > metadata.max_tool_calls:
@@ -277,14 +283,30 @@ def _configured_deterministic_service(
     config: DiagnosisAgentManifest,
 ) -> tuple[DiagnosisService, Any]:
     model = deterministic_diagnosis_model(call_tools=[])
-    return DiagnosisService(model_resolver=lambda _config: model), model
+
+    def resolve_configuration(configuration_id: str) -> DiagnosisAgentManifest:
+        if configuration_id != config.configuration_id:
+            raise ValueError(
+                f"qualification attempted unexpected Diagnosis configuration_id: {configuration_id}"
+            )
+        return config
+
+    service_type = (
+        OfflineHistoricalDiagnosisService
+        if config.tool_policy_revision == RETIRED_DIAGNOSIS_TOOL_POLICY_V1
+        else DiagnosisService
+    )
+    return service_type(
+        model_resolver=lambda _config: model,
+        configuration_resolver=resolve_configuration,
+    ), model
 
 
 def build_deterministic_task(configuration_id: str | None = None) -> Any:
     """Instrument the real Diagnosis application path without provider nondeterminism."""
 
     config = (
-        get_diagnosis_configuration(configuration_id)
+        get_diagnosis_evaluation_configuration(configuration_id)
         if configuration_id is not None
         else get_default_diagnosis_configuration()
     )
@@ -332,7 +354,7 @@ def run_diagnosis_qualification(
     """Evaluate one immutable Agent configuration against the qualification dataset."""
 
     config = (
-        get_diagnosis_configuration(configuration_id)
+        get_diagnosis_evaluation_configuration(configuration_id)
         if configuration_id is not None
         else get_default_diagnosis_configuration()
     )

@@ -6,6 +6,7 @@ import logging
 import re
 from collections.abc import Callable
 
+from pydantic_ai.exceptions import AgentRunError
 from pydantic_ai.models import Model
 
 from ..agents.consultation_intake_agent import create_consultation_intake_agent
@@ -13,6 +14,7 @@ from ..ai.consultation_intake_gateway_model import (
     consultation_intake_model_settings,
     get_consultation_intake_runtime_model,
 )
+from ..ai.errors import GatewayUnavailableError
 from ..configuration.consultation_agent_config import ConsultationAgentManifest
 from ..models.consultation_intake import (
     ConsultationIntakeDependencies,
@@ -90,7 +92,7 @@ class ConsultationIntakeService:
                 model_settings=consultation_intake_model_settings(config),
             )
             return result.output
-        except Exception:
+        except (AgentRunError, GatewayUnavailableError):
             logger.exception("Consultation intake model failed; using conservative fallback")
             # State acquisition must degrade conservatively. The fallback only
             # recognizes explicit first-person symptom language and never turns

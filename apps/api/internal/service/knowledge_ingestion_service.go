@@ -11,6 +11,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -28,6 +29,8 @@ const (
 var (
 	ErrKnowledgeIngestionSourceMismatch = errors.New("knowledge ingestion source identity mismatch")
 	ErrKnowledgeIngestionNotFound       = errors.New("knowledge ingestion job not found")
+	ErrKnowledgeIngestionUnsafePath     = errors.New("knowledge ingestion video path is unsafe")
+	ErrKnowledgeSourceNotRegistered     = errors.New("knowledge source is not registered")
 )
 
 type knowledgeIngestionDeployment interface {
@@ -105,7 +108,7 @@ type knowledgeJobRuntime interface {
 	ListRecoverable(context.Context, string, time.Duration, int) ([]model.Job, error)
 	ClaimPending(context.Context, uuid.UUID) (*model.Job, bool, error)
 	UpdateProgress(context.Context, uuid.UUID, any) error
-	TransitionTo(context.Context, uuid.UUID, string, any, any) error
+	TransitionTo(context.Context, uuid.UUID, model.JobStatus, any, any) error
 }
 
 type KnowledgeIngestionService struct {
@@ -144,10 +147,19 @@ func (s *KnowledgeIngestionService) EnqueueVideo(
 	}
 	source, err := s.registry.FindIngestible(ctx, strings.TrimSpace(req.SourceKey))
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, false, ErrKnowledgeSourceNotRegistered
+		}
 		return nil, false, err
 	}
 	if source.SourceType != "video" {
 		return nil, false, fmt.Errorf("%w: registered source is not video", ErrKnowledgeIngestionSourceMismatch)
+	}
+	if !isSafeKnowledgeRelativePath(source.OriginalFilePath) {
+		return nil, false, fmt.Errorf("%w: registered source path", ErrKnowledgeIngestionUnsafePath)
+	}
+	if strings.TrimSpace(req.VideoPath) != "" && !isSafeKnowledgeRelativePath(req.VideoPath) {
+		return nil, false, fmt.Errorf("%w: requested video path", ErrKnowledgeIngestionUnsafePath)
 	}
 	if strings.TrimSpace(req.VideoPath) != "" && cleanKnowledgePath(req.VideoPath) != cleanKnowledgePath(source.OriginalFilePath) {
 		return nil, false, fmt.Errorf("%w: video path differs from registered source", ErrKnowledgeIngestionSourceMismatch)
@@ -269,10 +281,10 @@ func (s *KnowledgeIngestionService) RecoverJobs(ctx context.Context, limit int, 
 				_ = s.jobs.UpdateProgress(ctx, job.ID, map[string]any{
 					"stage": "retry_pending", "reason": "stale_execution", "attempt": job.Attempts,
 				})
-				if err := s.jobs.TransitionTo(ctx, job.ID, "pending", nil, nil); err != nil {
+				if err := s.jobs.TransitionTo(ctx, job.ID, model.JobStatusPending, nil, nil); err != nil {
 					return processed, err
 				}
-			} else if err := s.jobs.TransitionTo(ctx, job.ID, "timed_out", nil, map[string]any{
+			} else if err := s.jobs.TransitionTo(ctx, job.ID, model.JobStatusTimedOut, nil, map[string]any{
 				"code": "stale_execution", "attempts": job.Attempts,
 			}); err != nil {
 				return processed, err
@@ -317,7 +329,7 @@ func (s *KnowledgeIngestionService) processPending(ctx context.Context, jobID uu
 	_ = s.jobs.UpdateProgress(ctx, job.ID, map[string]any{
 		"stage": "ingested", "percent": 100, "attempt": job.Attempts,
 	})
-	if err := s.jobs.TransitionTo(ctx, job.ID, "completed", json.RawMessage(result), nil); err != nil {
+	if err := s.jobs.TransitionTo(ctx, job.ID, model.JobStatusCompleted, json.RawMessage(result), nil); err != nil {
 		return err
 	}
 	return nil
@@ -391,12 +403,12 @@ func (s *KnowledgeIngestionService) failJob(ctx context.Context, job *model.Job,
 		_ = s.jobs.UpdateProgress(ctx, job.ID, map[string]any{
 			"stage": "retry_pending", "code": code, "attempt": job.Attempts,
 		})
-		if err := s.jobs.TransitionTo(ctx, job.ID, "pending", nil, nil); err != nil {
+		if err := s.jobs.TransitionTo(ctx, job.ID, model.JobStatusPending, nil, nil); err != nil {
 			return err
 		}
 		return cause
 	}
-	if err := s.jobs.TransitionTo(ctx, job.ID, "failed", nil, map[string]any{
+	if err := s.jobs.TransitionTo(ctx, job.ID, model.JobStatusFailed, nil, map[string]any{
 		"code": code, "attempts": job.Attempts,
 	}); err != nil {
 		return err
@@ -442,6 +454,20 @@ func defaultString(value, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func isSafeKnowledgeRelativePath(value string) bool {
+	normalized := strings.ReplaceAll(strings.TrimSpace(value), "\\", "/")
+	if normalized == "" || strings.HasPrefix(normalized, "/") {
+		return false
+	}
+	for _, part := range strings.Split(normalized, "/") {
+		if part == ".." {
+			return false
+		}
+	}
+	cleaned := filepath.Clean(normalized)
+	return !filepath.IsAbs(cleaned) && cleaned != "." && cleaned != ".."
 }
 
 func cleanKnowledgePath(value string) string {

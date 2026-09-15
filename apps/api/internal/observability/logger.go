@@ -9,8 +9,8 @@ import (
 const ServiceName = "bodysense-api"
 
 // ConfigureLogger installs the process-wide structured logger. slog.SetDefault
-// also routes the standard library log package through this handler, which lets
-// legacy log.Printf call sites migrate incrementally without losing JSON output.
+// also routes standard-library log.Printf output through the same structured
+// handler so process logs share one JSON stream.
 func ConfigureLogger() *slog.Logger {
 	level := parseLevel(os.Getenv("LOG_LEVEL"))
 	appEnv := strings.TrimSpace(os.Getenv("APP_ENV"))

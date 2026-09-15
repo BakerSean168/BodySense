@@ -76,7 +76,7 @@ test("register -> profile -> durable BodyState fact survives reload", async ({
   await expect(page).toHaveURL(/view=state/);
 
   await page.getByRole("button", { name: "添加记录" }).click();
-  await page.getByPlaceholder("身体区域，例如：颈肩").fill("颈肩");
+  await page.getByPlaceholder("身体区域，例如：颈部、左肩、右肩").fill("颈部");
   await page.getByPlaceholder("记录内容").fill("久坐后颈肩酸胀");
   await page.getByRole("button", { name: "保存记录" }).click();
 
@@ -165,7 +165,8 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
         fact: {
           concern_key: "region:neck",
           kind: "discomfort",
-          body_region: "颈肩",
+          body_region: "颈部",
+          body_region_id: "neck",
           value: "久坐后颈肩酸胀",
           details: { trigger: "久坐", severity: "中度" },
           origin: "user_reported",
@@ -188,7 +189,8 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
         fact: {
           concern_key: "region:neck",
           kind: "discomfort",
-          body_region: "颈肩",
+          body_region: "颈部",
+          body_region_id: "neck",
           value: "stale concurrent write",
           origin: "user_reported",
           review_state: "confirmed",
@@ -302,11 +304,27 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   };
   expect(blockedAcceptError.error?.code).toBe("TREATMENT_SAFETY_BLOCKED");
 
+  const bodyStateAfterSafety = await request.get(
+    `${apiBase}/api/v1/body-state`,
+    {
+      headers,
+    },
+  );
+  expect(bodyStateAfterSafety.ok()).toBeTruthy();
+  const safetySnapshot = (await bodyStateAfterSafety.json()) as {
+    current_revision: number;
+  };
+  expect(Number.isInteger(safetySnapshot.current_revision)).toBeTruthy();
+
   const resolveSafety = await request.post(
     `${apiBase}/api/v1/body-state/safety/resolve`,
     {
       headers,
-      data: { resolution: "cleared_by_review", note: "E2E reviewed" },
+      data: {
+        expected_revision: safetySnapshot.current_revision,
+        resolution: "cleared_by_review",
+        note: "E2E reviewed",
+      },
     },
   );
   expect(resolveSafety.ok()).toBeTruthy();
@@ -373,8 +391,8 @@ test("full longitudinal loop enforces gates and remains discoverable after reloa
   expect(workspace.training_plan?.id).toBe(accepted.training_plan.id);
   const revisionBeforeFeedback = workspace.body_state.current_revision;
 
-  await page.goto(`/training/${accepted.training_plan.id}`);
-  await expect(page).toHaveURL(/\/consultation(?:\/[^?]+)?\?view=treatment$/);
+  await page.goto(`/consultation/${conversationId}?view=treatment`);
+  await expect(page).toHaveURL(/\/consultation\/[^?]+\?view=treatment$/);
   const trainingAction = page.getByRole("button", { name: "展开训练执行" });
   await expect(trainingAction).toBeVisible();
   await page.reload();

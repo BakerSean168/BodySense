@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
@@ -53,29 +54,29 @@ func (r *fakeInteractionRepo) GetByRunAndToolCall(_ context.Context, runID uuid.
 
 func (r *fakeInteractionRepo) MarkAnswered(_ context.Context, id uuid.UUID, answer any) (bool, error) {
 	interaction, ok := r.byID[id]
-	if !ok || interaction.Status != "pending" {
+	if !ok || interaction.Status != model.AgentInteractionPending {
 		return false, nil
 	}
-	interaction.Status = "answered"
+	interaction.Status = model.AgentInteractionAnswered
 	interaction.Answer = answer.(datatypes.JSON)
 	return true, nil
 }
 
 func (r *fakeInteractionRepo) CancelPending(_ context.Context, id uuid.UUID) (bool, error) {
 	interaction, ok := r.byID[id]
-	if !ok || interaction.Status != "pending" {
+	if !ok || interaction.Status != model.AgentInteractionPending {
 		return false, nil
 	}
-	interaction.Status = "cancelled"
+	interaction.Status = model.AgentInteractionCancelled
 	return true, nil
 }
 
 func (r *fakeInteractionRepo) ExpirePending(_ context.Context, id uuid.UUID) (bool, error) {
 	item, ok := r.byID[id]
-	if !ok || item.Status != "pending" {
+	if !ok || item.Status != model.AgentInteractionPending {
 		return false, nil
 	}
-	item.Status = "expired"
+	item.Status = model.AgentInteractionExpired
 	return true, nil
 }
 
@@ -95,7 +96,7 @@ func (r *fakeInteractionRepo) ListExpiredPending(_ context.Context, now time.Tim
 func (r *fakeInteractionRepo) ListPendingByConversation(_ context.Context, conversationID uuid.UUID) ([]model.AgentInteraction, error) {
 	var interactions []model.AgentInteraction
 	for _, interaction := range r.byID {
-		if interaction.ConversationID == conversationID && interaction.Status == "pending" {
+		if interaction.ConversationID == conversationID && interaction.Status == model.AgentInteractionPending {
 			interactions = append(interactions, *interaction)
 		}
 	}
@@ -108,11 +109,11 @@ func (r *fakeInteractionRepo) AggregateInteractionMetrics(_ context.Context, _ u
 			continue
 		}
 		switch item.Status {
-		case "answered":
+		case model.AgentInteractionAnswered:
 			answered++
-		case "expired":
+		case model.AgentInteractionExpired:
 			expired++
-		case "pending":
+		case model.AgentInteractionPending:
 			pending++
 		}
 	}
@@ -151,19 +152,36 @@ func (o *fakeConversationOwnership) GetLastEmptyConversation(_ context.Context, 
 
 type fakeRunStatusRepo struct {
 	lastRunID uuid.UUID
-	last      string
+	last      model.RunStatus
+	err       error
 }
 
-func (r *fakeRunStatusRepo) UpdateStatus(_ context.Context, id uuid.UUID, status string) error {
+func (r *fakeRunStatusRepo) MarkWaitingUser(_ context.Context, id uuid.UUID) error {
 	r.lastRunID = id
-	r.last = status
-	return nil
+	r.last = model.RunStatusWaitingUser
+	return r.err
+}
+func (r *fakeRunStatusRepo) FailWaitingUser(_ context.Context, id uuid.UUID, _ any) (bool, error) {
+	r.lastRunID = id
+	r.last = model.RunStatusFailed
+	return true, r.err
+}
+
+type fakeInteractionTransactionManager struct {
+	err error
+}
+
+func (m fakeInteractionTransactionManager) WithinTransaction(ctx context.Context, fn func(context.Context) error) error {
+	if m.err != nil {
+		return m.err
+	}
+	return fn(ctx)
 }
 
 func TestAgentInteractionServiceCreatePendingReturnsDurableInteraction(t *testing.T) {
 	repo := newFakeInteractionRepo()
 	runRepo := &fakeRunStatusRepo{}
-	svc := NewAgentInteractionService(repo, runRepo, newFakeConversationOwnership())
+	svc := NewAgentInteractionService(repo, runRepo, newFakeConversationOwnership(), fakeInteractionTransactionManager{})
 	runID := uuid.New()
 	conversationID := uuid.New()
 
@@ -184,7 +202,7 @@ func TestAgentInteractionServiceCreatePendingReturnsDurableInteraction(t *testin
 
 func TestAgentInteractionServiceResumeIsIdempotentForSameAnswer(t *testing.T) {
 	repo := newFakeInteractionRepo()
-	svc := NewAgentInteractionService(repo, &fakeRunStatusRepo{}, newFakeConversationOwnership())
+	svc := NewAgentInteractionService(repo, &fakeRunStatusRepo{}, newFakeConversationOwnership(), fakeInteractionTransactionManager{})
 	interaction, err := svc.CreatePendingInteraction(context.Background(), uuid.New(), uuid.New(), "call-1", datatypes.JSON(`{}`))
 	if err != nil {
 		t.Fatalf("CreatePendingInteraction: %v", err)
@@ -201,7 +219,7 @@ func TestAgentInteractionServiceResumeIsIdempotentForSameAnswer(t *testing.T) {
 
 func TestAgentInteractionServiceResumeRejectsDifferentAnswer(t *testing.T) {
 	repo := newFakeInteractionRepo()
-	svc := NewAgentInteractionService(repo, &fakeRunStatusRepo{}, newFakeConversationOwnership())
+	svc := NewAgentInteractionService(repo, &fakeRunStatusRepo{}, newFakeConversationOwnership(), fakeInteractionTransactionManager{})
 	interaction, err := svc.CreatePendingInteraction(context.Background(), uuid.New(), uuid.New(), "call-1", datatypes.JSON(`{}`))
 	if err != nil {
 		t.Fatalf("CreatePendingInteraction: %v", err)
@@ -218,7 +236,7 @@ func TestAgentInteractionServiceResumeRejectsDifferentAnswer(t *testing.T) {
 
 func TestAgentInteractionServiceCancelPending(t *testing.T) {
 	repo := newFakeInteractionRepo()
-	svc := NewAgentInteractionService(repo, &fakeRunStatusRepo{}, newFakeConversationOwnership())
+	svc := NewAgentInteractionService(repo, &fakeRunStatusRepo{}, newFakeConversationOwnership(), fakeInteractionTransactionManager{})
 	interaction, err := svc.CreatePendingInteraction(context.Background(), uuid.New(), uuid.New(), "call-1", datatypes.JSON(`{}`))
 	if err != nil {
 		t.Fatalf("CreatePendingInteraction: %v", err)
@@ -231,14 +249,14 @@ func TestAgentInteractionServiceCancelPending(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetByID: %v", err)
 	}
-	if cancelled.Status != "cancelled" {
+	if cancelled.Status != model.AgentInteractionCancelled {
 		t.Errorf("status = %q, want cancelled", cancelled.Status)
 	}
 }
 
 func TestAgentInteractionServiceResumeRejectsExpired(t *testing.T) {
 	repo := newFakeInteractionRepo()
-	svc := NewAgentInteractionService(repo, &fakeRunStatusRepo{}, newFakeConversationOwnership())
+	svc := NewAgentInteractionService(repo, &fakeRunStatusRepo{}, newFakeConversationOwnership(), fakeInteractionTransactionManager{})
 	interaction, err := svc.CreatePendingInteraction(context.Background(), uuid.New(), uuid.New(), "call-exp", datatypes.JSON(`{}`))
 	if err != nil {
 		t.Fatalf("CreatePendingInteraction: %v", err)
@@ -255,7 +273,7 @@ func TestAgentInteractionServiceResumeRejectsExpired(t *testing.T) {
 
 func TestAgentInteractionServiceExpireSweep(t *testing.T) {
 	repo := newFakeInteractionRepo()
-	svc := NewAgentInteractionService(repo, &fakeRunStatusRepo{}, newFakeConversationOwnership())
+	svc := NewAgentInteractionService(repo, &fakeRunStatusRepo{}, newFakeConversationOwnership(), fakeInteractionTransactionManager{})
 	interaction, err := svc.CreatePendingInteraction(context.Background(), uuid.New(), uuid.New(), "call-sweep", datatypes.JSON(`{}`))
 	if err != nil {
 		t.Fatalf("CreatePendingInteraction: %v", err)
@@ -270,7 +288,7 @@ func TestAgentInteractionServiceExpireSweep(t *testing.T) {
 	if len(expired) != 1 {
 		t.Fatalf("expected 1 expired, got %d", len(expired))
 	}
-	if repo.byID[interaction.ID].Status != "expired" {
+	if repo.byID[interaction.ID].Status != model.AgentInteractionExpired {
 		t.Fatalf("expected status expired, got %s", repo.byID[interaction.ID].Status)
 	}
 }
@@ -282,11 +300,11 @@ func TestAgentInteractionServiceGetInteractionMetricsDeniedForForeignConversatio
 	otherUserID := uuid.New()
 	conversationID := uuid.New()
 	owner.byID[conversationID] = &model.Conversation{ID: conversationID, UserID: otherUserID}
-	if err := repo.CreatePending(context.Background(), &model.AgentInteraction{ID: uuid.New(), RunID: uuid.New(), ConversationID: conversationID, ToolCallID: "call-1", Status: "answered"}); err != nil {
+	if err := repo.CreatePending(context.Background(), &model.AgentInteraction{ID: uuid.New(), RunID: uuid.New(), ConversationID: conversationID, ToolCallID: "call-1", Status: model.AgentInteractionAnswered}); err != nil {
 		t.Fatalf("seed interaction: %v", err)
 	}
 
-	svc := NewAgentInteractionService(repo, &fakeRunStatusRepo{}, owner)
+	svc := NewAgentInteractionService(repo, &fakeRunStatusRepo{}, owner, fakeInteractionTransactionManager{})
 	_, err := svc.GetInteractionMetrics(context.Background(), userID, &conversationID)
 	if !errors.Is(err, ErrConversationNotFound) {
 		t.Fatalf("expected ErrConversationNotFound, got %v", err)
@@ -300,12 +318,12 @@ func TestAgentInteractionServiceGetInteractionMetricsOwned(t *testing.T) {
 	conversationID := uuid.New()
 	owner.byID[conversationID] = &model.Conversation{ID: conversationID, UserID: userID}
 	for _, status := range []string{"answered", "expired", "pending"} {
-		if err := repo.CreatePending(context.Background(), &model.AgentInteraction{ID: uuid.New(), RunID: uuid.New(), ConversationID: conversationID, ToolCallID: "call-" + status, Status: status}); err != nil {
+		if err := repo.CreatePending(context.Background(), &model.AgentInteraction{ID: uuid.New(), RunID: uuid.New(), ConversationID: conversationID, ToolCallID: "call-" + status, Status: model.AgentInteractionStatus(status)}); err != nil {
 			t.Fatalf("seed interaction %s: %v", status, err)
 		}
 	}
 
-	svc := NewAgentInteractionService(repo, &fakeRunStatusRepo{}, owner)
+	svc := NewAgentInteractionService(repo, &fakeRunStatusRepo{}, owner, fakeInteractionTransactionManager{})
 	metrics, err := svc.GetInteractionMetrics(context.Background(), userID, &conversationID)
 	if err != nil {
 		t.Fatalf("GetInteractionMetrics: %v", err)
@@ -317,10 +335,145 @@ func TestAgentInteractionServiceGetInteractionMetricsOwned(t *testing.T) {
 
 func TestAgentInteractionServiceGetInteractionMetricsRejectsMissingConversation(t *testing.T) {
 	repo := newFakeInteractionRepo()
-	svc := NewAgentInteractionService(repo, &fakeRunStatusRepo{}, newFakeConversationOwnership())
+	svc := NewAgentInteractionService(repo, &fakeRunStatusRepo{}, newFakeConversationOwnership(), fakeInteractionTransactionManager{})
 	conversationID := uuid.New()
 	_, err := svc.GetInteractionMetrics(context.Background(), uuid.New(), &conversationID)
 	if !errors.Is(err, ErrConversationNotFound) {
 		t.Fatalf("expected ErrConversationNotFound, got %v", err)
+	}
+}
+
+type fakeInteractionLifecycleEvents struct {
+	events []dto.StreamEvent
+}
+
+func (f *fakeInteractionLifecycleEvents) Flush(context.Context) error { return nil }
+
+func (f *fakeInteractionLifecycleEvents) PersistPreparedMilestone(
+	_ context.Context,
+	_, _ uuid.UUID,
+	_ *uuid.UUID,
+	event dto.StreamEvent,
+) error {
+	f.events = append(f.events, event)
+	return nil
+}
+
+func (f *fakeInteractionLifecycleEvents) PersistOutOfBandMilestone(
+	_ context.Context,
+	conversationID, runID uuid.UUID,
+	_ *uuid.UUID,
+	channel, eventType string,
+	ids dto.StreamEventIDs,
+	payload any,
+) (dto.StreamEvent, error) {
+	event, err := dto.NewStreamEvent(len(f.events)+1, channel, eventType, ids, payload)
+	if err != nil {
+		return dto.StreamEvent{}, err
+	}
+	if event.IDs.ConversationID == "" {
+		event.IDs.ConversationID = conversationID.String()
+	}
+	if event.IDs.RunID == "" {
+		event.IDs.RunID = runID.String()
+	}
+	f.events = append(f.events, event)
+	return event, nil
+}
+
+func TestCreatePendingInteractionWithEventsPersistsRequiredAndInterrupted(t *testing.T) {
+	repo := newFakeInteractionRepo()
+	runRepo := &fakeRunStatusRepo{}
+	events := &fakeInteractionLifecycleEvents{}
+	svc := NewAgentInteractionService(repo, runRepo, newFakeConversationOwnership(), fakeInteractionTransactionManager{}).
+		WithLifecycleEvents(events)
+	runID := uuid.New()
+	conversationID := uuid.New()
+	turnID := uuid.New()
+
+	interaction, prepared, err := svc.CreatePendingInteractionWithEvents(
+		context.Background(), runID, conversationID, "call-required", datatypes.JSON(`{"prompt":"where?"}`),
+		func(interaction *model.AgentInteraction) ([]dto.StreamEvent, error) {
+			required, err := dto.NewStreamEvent(5, "state", "state.interaction.required", dto.StreamEventIDs{
+				ConversationID: conversationID.String(), RunID: runID.String(), TurnID: turnID.String(), InteractionID: interaction.ID.String(), ToolCallID: interaction.ToolCallID,
+			}, map[string]any{"interaction_id": interaction.ID.String(), "question": map[string]any{"prompt": "where?"}, "created_at": interaction.CreatedAt.Format(time.RFC3339Nano)})
+			if err != nil {
+				return nil, err
+			}
+			interrupted, err := dto.NewStreamEvent(6, "run", "run.interrupted", dto.StreamEventIDs{
+				ConversationID: conversationID.String(), RunID: runID.String(), TurnID: turnID.String(), InteractionID: interaction.ID.String(),
+			}, map[string]any{"status": "waiting_user", "interaction_id": interaction.ID.String()})
+			return []dto.StreamEvent{required, interrupted}, err
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if interaction == nil || interaction.Status != model.AgentInteractionPending {
+		t.Fatalf("interaction=%+v, want pending", interaction)
+	}
+	if runRepo.last != model.RunStatusWaitingUser {
+		t.Fatalf("run status=%q, want waiting_user", runRepo.last)
+	}
+	if len(prepared) != 2 || len(events.events) != 2 {
+		t.Fatalf("prepared=%d durable=%d, want 2/2", len(prepared), len(events.events))
+	}
+	if events.events[0].Type != "state.interaction.required" || events.events[1].Type != "run.interrupted" {
+		t.Fatalf("unexpected event order: %q, %q", events.events[0].Type, events.events[1].Type)
+	}
+}
+
+func TestResumeInteractionWithEventPersistsAnsweredOnSourceRun(t *testing.T) {
+	repo := newFakeInteractionRepo()
+	runRepo := &fakeRunStatusRepo{}
+	events := &fakeInteractionLifecycleEvents{}
+	svc := NewAgentInteractionService(repo, runRepo, newFakeConversationOwnership(), fakeInteractionTransactionManager{}).
+		WithLifecycleEvents(events)
+	runID := uuid.New()
+	conversationID := uuid.New()
+	interaction, err := svc.CreatePendingInteraction(context.Background(), runID, conversationID, "call-answer", datatypes.JSON(`{"prompt":"pain?"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	answer := datatypes.JSON(`{"text":"yes"}`)
+	if err := svc.ResumeInteractionWithEvent(context.Background(), interaction.ID, answer); err != nil {
+		t.Fatal(err)
+	}
+	stored, _ := repo.GetByID(context.Background(), interaction.ID)
+	if stored == nil || stored.Status != model.AgentInteractionAnswered {
+		t.Fatalf("stored=%+v, want answered", stored)
+	}
+	if len(events.events) != 1 || events.events[0].Type != "state.interaction.answered" {
+		t.Fatalf("events=%+v, want one interaction.answered", events.events)
+	}
+	if events.events[0].IDs.RunID != runID.String() {
+		t.Fatalf("answered event run=%q, want source run %s", events.events[0].IDs.RunID, runID)
+	}
+}
+
+func TestExpireInteractionWithEventsFailsWaitingRunAndPersistsBothMilestones(t *testing.T) {
+	repo := newFakeInteractionRepo()
+	runRepo := &fakeRunStatusRepo{}
+	events := &fakeInteractionLifecycleEvents{}
+	svc := NewAgentInteractionService(repo, runRepo, newFakeConversationOwnership(), fakeInteractionTransactionManager{}).
+		WithLifecycleEvents(events)
+	runID := uuid.New()
+	conversationID := uuid.New()
+	interaction, err := svc.CreatePendingInteraction(context.Background(), runID, conversationID, "call-expire", datatypes.JSON(`{"prompt":"later?"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	past := time.Now().Add(-time.Minute)
+	repo.byID[interaction.ID].ExpiresAt = &past
+
+	expired, err := svc.ExpireExpiredInteractions(context.Background(), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(expired) != 1 || runRepo.last != model.RunStatusFailed {
+		t.Fatalf("expired=%d run=%q, want 1/failed", len(expired), runRepo.last)
+	}
+	if len(events.events) != 2 || events.events[0].Type != "state.interaction.expired" || events.events[1].Type != "run.failed" {
+		t.Fatalf("unexpected expiry events: %+v", events.events)
 	}
 }

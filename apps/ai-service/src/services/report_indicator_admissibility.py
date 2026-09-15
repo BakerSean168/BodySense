@@ -15,8 +15,6 @@ from ..models.ocr import HealthIndicator, IndicatorEvidenceAdmissibility, OCRCon
 
 OCR_INDICATOR_ADMISSIBILITY_POLICY_V1 = "ocr-indicator-admissibility-v1"
 OCR_INDICATOR_ADMISSIBILITY_POLICY_V2 = "ocr-indicator-admissibility-v2"
-# Backward-compatible symbol used by Assessment v4 and historical tests.
-OCR_INDICATOR_ADMISSIBILITY_POLICY_REVISION = OCR_INDICATOR_ADMISSIBILITY_POLICY_V1
 
 
 def admissibility_policy_source_sha256() -> str:

@@ -19,6 +19,9 @@ import type {
   InteractionAnsweredEvent,
   InteractionExpiredEvent,
   StreamEvent,
+  ExtractedInfo as StreamExtractedInfo,
+  Citation as StreamCitation,
+  RedFlag as StreamRedFlag,
 } from "@bodysense/contracts";
 
 export type {
@@ -31,7 +34,7 @@ export type {
 export interface Conversation {
   id: string;
   title: string | null;
-  title_status: "pending" | "generating" | "generated";
+  title_status: "pending" | "generating" | "generated" | "failed";
   status: "active" | "archived" | "deleted";
   pinned: boolean;
   pinned_at: string | null;
@@ -69,6 +72,12 @@ export interface Message {
 
 export type MessagePart =
   | { type: "text"; text: string }
+  | {
+      type: "image";
+      upload_id: string;
+      mime_type?: string;
+      image_url?: string;
+    }
   | {
       type: "source";
       title?: string;
@@ -145,19 +154,9 @@ export interface ConsultationThread extends ConsultationSession {
   tool_calls: ProjectedToolCall[];
 }
 
-export type ConsultationPhase =
-  "collecting" | "ready_for_analysis" | "analysis_ready";
+export type ConsultationPhase = "collecting" | "ready_for_analysis";
 
-export interface ExtractedInfo {
-  body_part: string;
-  symptom_type?: string;
-  duration?: string;
-  trigger?: string;
-  relief?: string;
-  severity?: string;
-  additional_notes?: string;
-  confirmed?: boolean;
-}
+export type ExtractedInfo = StreamExtractedInfo;
 
 export interface BodyStateFact {
   id: string;
@@ -231,8 +230,7 @@ export interface BodyStateRevision {
   created_at: string;
 }
 
-export interface BodyStateSnapshot {
-  user_id: string;
+export interface BodyStateProjection {
   current_revision: number;
   safety_state: Record<string, unknown>;
   facts: BodyStateFact[];
@@ -241,6 +239,11 @@ export interface BodyStateSnapshot {
   pending_observations?: BodyStateObservation[];
   hypotheses?: BodyStateHypothesis[];
   recent_revisions?: BodyStateRevision[];
+}
+
+/** Full user-scoped snapshot returned by thread/body-state APIs. */
+export interface BodyStateSnapshot extends BodyStateProjection {
+  user_id: string;
 }
 
 export interface ConsultationSpatialContext {
@@ -306,17 +309,7 @@ export interface DiagnosisAnalysis {
   created_at?: string;
 }
 
-export interface Citation {
-  title: string;
-  summary?: string;
-  content?: string;
-  category?: string;
-  snippet?: string;
-  body_markdown?: string;
-  source_title?: string;
-  source_author?: string;
-  problem_slug?: string;
-}
+export type Citation = StreamCitation;
 
 export interface ConversationShare {
   shareToken: string;
@@ -420,14 +413,6 @@ export interface ConversationListResponse {
   has_more: boolean;
 }
 
-export interface RedFlag {
-  category: string;
-  message: string;
-  matched_text: string;
-  source: string;
-}
+export type RedFlag = StreamRedFlag;
 
-export interface RedFlagEvent {
-  has_red_flags: boolean;
-  flags: RedFlag[];
-}
+export type RedFlagEvent = RedFlagDetectedEvent["payload"];

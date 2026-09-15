@@ -6,10 +6,7 @@ import (
 	"strings"
 )
 
-const (
-	DiagnosisDecisionPolicyPreEnvelope = "diagnosis-authority-pre-envelope-v0"
-	DiagnosisDecisionPolicyV1          = "diagnosis-decision-policy-v1"
-)
+const DiagnosisDecisionPolicyV1 = "diagnosis-decision-policy-v1"
 
 type DiagnosisDecisionOutcome string
 

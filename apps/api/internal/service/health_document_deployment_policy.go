@@ -8,8 +8,8 @@ import (
 
 const (
 	healthDocumentCandidateConfigurationID = "hdex-config-f2495c95b6ed9de2"
-	legacyTesseractConfigurationID         = "hdex-config-14af808ef184bf8b"
-	defaultHealthDocumentChampionID        = legacyTesseractConfigurationID
+	tesseractChampionConfigurationID       = "hdex-config-14af808ef184bf8b"
+	defaultHealthDocumentChampionID        = tesseractChampionConfigurationID
 
 	HealthDocumentStageChampion      = "champion"
 	HealthDocumentStageQualification = "qualification"
@@ -72,7 +72,7 @@ type healthDocumentConfigurationRegistration struct {
 	ChampionEligible                bool
 	QualificationEligible           bool
 	RollbackEligible                bool
-	Legacy                          bool
+	TesseractBaseline               bool
 	Wrapper                         string
 	WrapperVersion                  string
 	Languages                       []string
@@ -131,7 +131,7 @@ var knownHealthDocumentConfigurations = map[string]healthDocumentConfigurationRe
 		ServingAllowed:           true,
 		QualificationEligible:    true,
 	},
-	legacyTesseractConfigurationID: {
+	tesseractChampionConfigurationID: {
 		MechanismRevision:           "health-document-tesseract-baseline-v1",
 		ExecutionTopologyRevision:   "per-document-subprocess-v1",
 		PDFStrategyRevision:         "raster-all-pages-300dpi-v1",
@@ -148,7 +148,7 @@ var knownHealthDocumentConfigurations = map[string]healthDocumentConfigurationRe
 		ServingAllowed:              true,
 		ChampionEligible:            true,
 		RollbackEligible:            true,
-		Legacy:                      true,
+		TesseractBaseline:           true,
 	},
 }
 
@@ -190,7 +190,7 @@ func NewHealthDocumentDeploymentPolicy() (*HealthDocumentDeploymentPolicy, error
 
 	rollback := strings.TrimSpace(os.Getenv("HEALTH_DOCUMENT_ROLLBACK_CONFIGURATION_ID"))
 	if rollback == "" {
-		rollback = legacyTesseractConfigurationID
+		rollback = tesseractChampionConfigurationID
 	}
 	registration, ok = knownHealthDocumentConfigurations[rollback]
 	if !ok || !registration.ServingAllowed || !registration.RollbackEligible {

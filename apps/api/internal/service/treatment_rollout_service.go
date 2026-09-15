@@ -258,10 +258,6 @@ func EvaluateTreatmentRolloutProgression(
 		result.Action = "hold"
 		result.Reason = "challenger_promoted"
 		return result
-	case TreatmentRolloutRollback:
-		result.Action = "hold"
-		result.Reason = "rollback_active"
-		return result
 	default:
 		result.Action = "pause"
 		result.Reason = "unsupported_progression_stage"

@@ -30,9 +30,24 @@ func durableExecutionContext(parent context.Context) (context.Context, context.C
 	return context.WithTimeout(context.WithoutCancel(parent), sseTimeout)
 }
 
+type ConsultationErrorCode string
+
+const (
+	ConsultationErrorBodyStatePersistenceFailed ConsultationErrorCode = "BODY_STATE_PERSISTENCE_FAILED"
+	ConsultationErrorInteractionClosed          ConsultationErrorCode = "INTERACTION_CLOSED"
+	ConsultationErrorInteractionExpired         ConsultationErrorCode = "INTERACTION_EXPIRED"
+	ConsultationErrorInteractionNotResumable    ConsultationErrorCode = "INTERACTION_NOT_RESUMABLE"
+	ConsultationErrorInternal                   ConsultationErrorCode = "INTERNAL_ERROR"
+	ConsultationErrorInvalidID                  ConsultationErrorCode = "INVALID_ID"
+	ConsultationErrorInvalidRequest             ConsultationErrorCode = "INVALID_REQUEST"
+	ConsultationErrorInvalidSpatialContext      ConsultationErrorCode = "INVALID_SPATIAL_CONTEXT"
+	ConsultationErrorNotFound                   ConsultationErrorCode = "NOT_FOUND"
+	ConsultationErrorRunTerminal                ConsultationErrorCode = "RUN_TERMINAL"
+)
+
 type HTTPError struct {
 	Status  int
-	Code    string
+	Code    ConsultationErrorCode
 	Message string
 }
 
@@ -168,38 +183,35 @@ func (r *Runtime) cancelRegisteredRun(runID uuid.UUID) bool {
 // CancelRun is an explicit business command. HTTP transport disconnects do not
 // call this method and therefore do not cancel durable execution.
 func (r *Runtime) CancelRun(ctx context.Context, uid, runID uuid.UUID, reason string) *HTTPError {
-	run, transitioned, err := r.runService.CancelRun(ctx, runID, uid, reason)
+	run, transitioned, err := r.runService.CancelRunWithEvent(ctx, runID, uid, reason)
 	if err != nil {
 		if errors.Is(err, service.ErrRunTerminal) {
-			return httpErr(http.StatusConflict, "RUN_TERMINAL", "run is already terminal")
+			return httpErr(http.StatusConflict, ConsultationErrorRunTerminal, "run is already terminal")
 		}
-		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to cancel run")
+		return httpErr(http.StatusInternalServerError, ConsultationErrorInternal, "failed to cancel run")
 	}
 	if run == nil {
-		return httpErr(http.StatusNotFound, "NOT_FOUND", "run not found")
+		return httpErr(http.StatusNotFound, ConsultationErrorNotFound, "run not found")
 	}
 
 	// Pending HITL belongs to the cancelled run and must not remain answerable.
 	pending, pendingErr := r.interactionService.GetPendingInteractions(ctx, run.ConversationID)
 	if pendingErr != nil {
-		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load pending interactions")
+		return httpErr(http.StatusInternalServerError, ConsultationErrorInternal, "failed to load pending interactions")
 	}
 	for i := range pending {
 		if pending[i].RunID == runID {
 			if cancelErr := r.interactionService.CancelInteraction(ctx, pending[i].ID); cancelErr != nil && !errors.Is(cancelErr, service.ErrInteractionClosed) {
-				return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to cancel pending interaction")
+				return httpErr(http.StatusInternalServerError, ConsultationErrorInternal, "failed to cancel pending interaction")
 			}
 		}
 	}
 
-	// If an execution context is registered, it owns the live StreamWriter and
-	// will emit run.cancelled using the same per-run sequence. Waiting runs have
-	// no writer, so the endpoint appends the terminal event out-of-band.
+	// run.cancelled was committed in the same transaction as Run.status. If a
+	// live execution exists, cancel it now; the browser's durable watcher owns
+	// recovery of that already-persisted terminal event after the SSE closes.
 	active := r.cancelRegisteredRun(runID)
-	if transitioned && !active && r.runtimeEventService != nil {
-		if err := r.runtimeEventService.RecordRunCancelled(ctx, run, reason); err != nil {
-			return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to persist cancellation event")
-		}
+	if transitioned && !active {
 		r.clearActiveRun(ctx, run.ConversationID, uid)
 		r.refreshThreadProjection(ctx, run.ConversationID, uid)
 	}
@@ -213,12 +225,12 @@ func (r *Runtime) StartRun(
 	ctx context.Context,
 	w http.ResponseWriter,
 	uid uuid.UUID,
-	req dto.StartConsultationRunRequest,
+	req StartRunInput,
 ) *HTTPError {
 	// --- 1. Idempotency check (before any side effects) ---
 	existing, found, err := r.runService.CheckIdempotency(ctx, uid, req.RequestID)
 	if err != nil {
-		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to check idempotency")
+		return httpErr(http.StatusInternalServerError, ConsultationErrorInternal, "failed to check idempotency")
 	}
 	if found {
 		if existing.Status == "running" || existing.Status == "waiting_user" {
@@ -239,7 +251,7 @@ func (r *Runtime) StartRun(
 	if !conversationIDMissing {
 		parsed, err := uuid.Parse(*req.ConversationID)
 		if err != nil {
-			return httpErr(http.StatusBadRequest, "INVALID_ID", "invalid conversation id")
+			return httpErr(http.StatusBadRequest, ConsultationErrorInvalidID, "invalid conversation id")
 		}
 		requestedConversationID = &parsed
 	}
@@ -248,19 +260,19 @@ func (r *Runtime) StartRun(
 	userText := messagePartsToText(req.Message.Parts)
 	imageIDs := messagePartsToImageUploadIDs(req.Message.Parts)
 	if strings.TrimSpace(userText) == "" && len(imageIDs) == 0 {
-		return httpErr(http.StatusBadRequest, "INVALID_REQUEST", "message text or image is required")
+		return httpErr(http.StatusBadRequest, ConsultationErrorInvalidRequest, "message text or image is required")
 	}
 	if strings.TrimSpace(userText) == "" {
 		userText = "请结合我附上的照片，分析与体态/不适相关的可见信息，并给出谨慎建议。"
 	}
 
-	userPartsJSON, err := json.Marshal(req.Message.Parts)
+	userPartsJSON, err := marshalDurableMessageParts(req.Message.Parts)
 	if err != nil {
-		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to marshal message parts")
+		return httpErr(http.StatusBadRequest, ConsultationErrorInvalidRequest, err.Error())
 	}
 	userMetadata, spatialContext, metadataErr := normalizeSpatialContextMetadata(req.Message.Metadata)
 	if metadataErr != nil {
-		return httpErr(http.StatusBadRequest, "INVALID_SPATIAL_CONTEXT", "invalid Body Explorer context")
+		return httpErr(http.StatusBadRequest, ConsultationErrorInvalidSpatialContext, "invalid Body Explorer context")
 	}
 
 	// --- 4. Create turn envelope (conversation/session + run + messages) ---
@@ -391,7 +403,7 @@ func (r *Runtime) executeRunFlow(
 	assistantMsg *model.Message,
 	baseIDs dto.StreamEventIDs,
 	userText string,
-	parts []dto.PartDTO,
+	parts []PartInput,
 	session *model.ConsultationSession,
 	spatialContext *service.ConsultationSpatialContext,
 ) (streamResult, bool) {
@@ -431,7 +443,7 @@ func (r *Runtime) executeRunFlow(
 		Run:                     run,
 		AssistantMsg:            assistantMsg,
 		BaseIDs:                 baseIDs,
-		CurrentPhase:            session.Phase,
+		CurrentPhase:            string(session.Phase),
 		AssistantMsgID:          assistantMsg.ID.String(),
 		ConversationStr:         conversationID.String(),
 		ExpectedConfigurationID: r.deployment.ConsultationConfigurationID(),
@@ -453,9 +465,20 @@ func (r *Runtime) finishTurn(
 	terminalCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
 
-	completed, err := r.runService.TryCompleteRun(terminalCtx, run.ID, uid, result.Usage, result.ProviderResponseID)
+	runCompletedEvent, err := sw.NewEvent(
+		"run", "run.completed",
+		dto.StreamEventIDs{ConversationID: conversationID.String(), RunID: run.ID.String(), TurnID: turn.String()},
+		map[string]any{"status": "completed", "usage": result.Usage}, "",
+	)
 	if err != nil {
-		log.Printf("failed to complete run %s: %v", run.ID, err)
+		log.Printf("failed to build run.completed event for %s: %v", run.ID, err)
+		return false
+	}
+	completed, err := r.runService.TryCompleteRunWithEvent(
+		terminalCtx, run, uid, result.Usage, result.ProviderResponseID, runCompletedEvent,
+	)
+	if err != nil {
+		log.Printf("failed to complete run %s atomically with lifecycle event: %v", run.ID, err)
 		return false
 	}
 	if !completed {
@@ -509,11 +532,9 @@ func (r *Runtime) finishTurn(
 	r.recordGovernance(terminalCtx, uid, conversationID, run.ID, result.GovernanceResult)
 	r.clearActiveRun(terminalCtx, conversationID, uid)
 	r.refreshThreadProjection(terminalCtx, conversationID, uid)
-	r.sendNewEvent(
-		terminalCtx, sw, "run", "run.completed",
-		dto.StreamEventIDs{ConversationID: conversationID.String(), RunID: run.ID.String(), TurnID: turn.String()},
-		map[string]any{"status": "completed", "usage": result.Usage}, "", "run.completed",
-	)
+	if err := sw.WriteEvent(terminalCtx, runCompletedEvent); err != nil {
+		log.Printf("SSE write error type=run.completed run_id=%s conversation_id=%s seq=%d: %v", run.ID, conversationID, runCompletedEvent.Seq, err)
+	}
 	r.sendNewEvent(
 		terminalCtx, sw, "message", "message.completed",
 		dto.StreamEventIDs{ConversationID: conversationID.String(), RunID: run.ID.String(), TurnID: turn.String(), MessageID: assistantMsg.ID.String()},
@@ -531,7 +552,7 @@ func (r *Runtime) handleExecutionContextDone(ctx context.Context, sw *stream.Str
 		log.Printf("load terminal run %s after context cancellation: %v", state.Run.ID, err)
 		return
 	}
-	if run != nil && run.Status == "cancelled" {
+	if run != nil && run.Status == model.RunStatusCancelled {
 		if state.AssistantMsg != nil {
 			parts, _ := json.Marshal([]map[string]any{})
 			_ = r.messageService.UpdateMessageCompletedWithStatus(
@@ -539,12 +560,6 @@ func (r *Runtime) handleExecutionContextDone(ctx context.Context, sw *stream.Str
 				datatypes.JSON(parts), "aborted",
 			)
 		}
-		r.sendNewEvent(
-			terminalCtx, sw, "run", "run.cancelled",
-			dto.StreamEventIDs{ConversationID: state.ConversationID.String(), RunID: state.Run.ID.String(), TurnID: state.TurnID.String()},
-			map[string]any{"status": "cancelled", "reason": "cancelled_by_user"}, "", "run.cancelled",
-		)
-		r.sendNewEvent(terminalCtx, sw, "stream", "stream.done", state.BaseIDs, map[string]any{}, "", "stream.done")
 		r.clearActiveRun(terminalCtx, state.ConversationID, state.UID)
 		r.refreshThreadProjection(terminalCtx, state.ConversationID, state.UID)
 		return
@@ -561,13 +576,13 @@ func (r *Runtime) ResumeInteraction(
 	uid uuid.UUID,
 	conversationID uuid.UUID,
 	interactionID uuid.UUID,
-	req dto.ResumeConsultationInteractionRequest,
+	req ResumeInteractionInput,
 ) *HTTPError {
 	existing, found, err := r.runService.CheckIdempotency(ctx, uid, req.RequestID)
 	if err != nil {
 		return httpErr(
 			http.StatusInternalServerError,
-			"INTERNAL_ERROR",
+			ConsultationErrorInternal,
 			"failed to check idempotency",
 		)
 	}
@@ -585,18 +600,18 @@ func (r *Runtime) ResumeInteraction(
 
 	session, err := r.consultationService.GetConsultation(ctx, conversationID, uid)
 	if err != nil {
-		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load consultation")
+		return httpErr(http.StatusInternalServerError, ConsultationErrorInternal, "failed to load consultation")
 	}
 	if session == nil {
-		return httpErr(http.StatusNotFound, "NOT_FOUND", "consultation not found")
+		return httpErr(http.StatusNotFound, ConsultationErrorNotFound, "consultation not found")
 	}
 
 	interaction, err := r.interactionService.GetInteractionByID(ctx, interactionID)
 	if err != nil {
-		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load interaction")
+		return httpErr(http.StatusInternalServerError, ConsultationErrorInternal, "failed to load interaction")
 	}
 	if interaction == nil || interaction.ConversationID != conversationID {
-		return httpErr(http.StatusNotFound, "NOT_FOUND", "interaction not found")
+		return httpErr(http.StatusNotFound, ConsultationErrorNotFound, "interaction not found")
 	}
 
 	// Resume is continuation of the exact logical Agent thread. Pin it to the
@@ -604,34 +619,34 @@ func (r *Runtime) ResumeInteraction(
 	// silently switching to the current Champion while the user was waiting.
 	sourceRun, err := r.runService.GetRunForUser(ctx, interaction.RunID, uid)
 	if err != nil {
-		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load interrupted run")
+		return httpErr(http.StatusInternalServerError, ConsultationErrorInternal, "failed to load interrupted run")
 	}
 	if sourceRun == nil || sourceRun.ConversationID != conversationID {
-		return httpErr(http.StatusNotFound, "NOT_FOUND", "interrupted run not found")
+		return httpErr(http.StatusNotFound, ConsultationErrorNotFound, "interrupted run not found")
 	}
 	pinnedConfigurationID := strings.TrimSpace(sourceRun.AgentConfigurationID)
 	if pinnedConfigurationID == "" {
 		return httpErr(
 			http.StatusConflict,
-			"INTERACTION_NOT_RESUMABLE",
+			ConsultationErrorInteractionNotResumable,
 			"interrupted run predates durable Agent configuration identity; start a new run",
 		)
 	}
 	if _, err := service.ConsultationDecisionPolicyRevisionForConfiguration(pinnedConfigurationID); err != nil {
-		return httpErr(http.StatusConflict, "INTERACTION_NOT_RESUMABLE", "interrupted run configuration is no longer repository-authorized")
+		return httpErr(http.StatusConflict, ConsultationErrorInteractionNotResumable, "interrupted run configuration is no longer repository-authorized")
 	}
 
 	// The interaction answer is a durable health input, not merely a chat message.
 	// Commit it before closing the interaction so a persistence failure remains
 	// retryable and never resumes the Agent from an unrecorded health answer.
 	if err := r.persistInteractionAnswer(ctx, uid, interactionID, interaction.ToolCallID, interaction.Question, req.Answer); err != nil {
-		return httpErr(http.StatusInternalServerError, "BODY_STATE_PERSISTENCE_FAILED", "failed to persist interaction answer")
+		return httpErr(http.StatusInternalServerError, ConsultationErrorBodyStatePersistenceFailed, "failed to persist interaction answer")
 	}
 
-	if err := r.interactionService.ResumeInteraction(ctx, interactionID, datatypes.JSON(req.Answer)); err != nil {
+	if err := r.interactionService.ResumeInteractionWithEvent(ctx, interactionID, datatypes.JSON(req.Answer)); err != nil {
 		switch {
 		case err == service.ErrInteractionNotFound:
-			return httpErr(http.StatusNotFound, "NOT_FOUND", "interaction not found")
+			return httpErr(http.StatusNotFound, ConsultationErrorNotFound, "interaction not found")
 		case err == service.ErrInteractionConflict:
 			return httpErr(
 				http.StatusConflict,
@@ -639,20 +654,20 @@ func (r *Runtime) ResumeInteraction(
 				"interaction was already answered differently",
 			)
 		case err == service.ErrInteractionClosed:
-			return httpErr(http.StatusConflict, "INTERACTION_CLOSED", err.Error())
+			return httpErr(http.StatusConflict, ConsultationErrorInteractionClosed, err.Error())
 		case err == service.ErrInteractionExpired:
-			return httpErr(http.StatusConflict, "INTERACTION_EXPIRED", "interaction has expired; start a new question")
+			return httpErr(http.StatusConflict, ConsultationErrorInteractionExpired, "interaction has expired; start a new question")
 		default:
-			return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+			return httpErr(http.StatusInternalServerError, ConsultationErrorInternal, err.Error())
 		}
 	}
 
-	closedSourceRun, err := r.runService.TryCompleteRun(ctx, interaction.RunID, uid, nil, "")
+	closedSourceRun, err := r.runService.CompleteRunOutOfBandWithEvent(ctx, sourceRun, uid)
 	if err != nil {
-		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to close interrupted run")
+		return httpErr(http.StatusInternalServerError, ConsultationErrorInternal, "failed to close interrupted run")
 	}
 	if !closedSourceRun {
-		return httpErr(http.StatusConflict, "RUN_TERMINAL", "interrupted run was cancelled or already closed")
+		return httpErr(http.StatusConflict, ConsultationErrorRunTerminal, "interrupted run was cancelled or already closed")
 	}
 
 	answerPartsJSON, answerMetadata := interactionAnswerParts(req.Answer, interactionID.String())
@@ -669,24 +684,6 @@ func (r *Runtime) ResumeInteraction(
 	}
 
 	sw := r.streamRuntime.NewWriter(w, baseIDs)
-	r.sendNewEvent(
-		ctx,
-		sw,
-		"state",
-		"state.interaction.answered",
-		dto.StreamEventIDs{
-			ConversationID: conversationID.String(),
-			RunID:          run.ID.String(),
-			TurnID:         turn.String(),
-			InteractionID:  interactionID.String(),
-		},
-		map[string]any{
-			"interaction_id": interactionID.String(),
-			"answer":         json.RawMessage(req.Answer),
-		},
-		"",
-		"state.interaction.answered",
-	)
 	r.sendNewEvent(
 		ctx,
 		sw,
@@ -727,7 +724,7 @@ func (r *Runtime) ResumeInteraction(
 
 	profileJSON, profileErr := r.loadProfileJSON(executionCtx, uid)
 	if profileErr != nil {
-		return httpErr(http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load profile")
+		return httpErr(http.StatusInternalServerError, ConsultationErrorInternal, "failed to load profile")
 	}
 
 	events, err := r.aiClient.ResumeConsultationInterrupt(
@@ -756,7 +753,7 @@ func (r *Runtime) ResumeInteraction(
 		Run:                     run,
 		AssistantMsg:            assistantMsg,
 		BaseIDs:                 baseIDs,
-		CurrentPhase:            session.Phase,
+		CurrentPhase:            string(session.Phase),
 		AssistantMsgID:          assistantMsg.ID.String(),
 		ConversationStr:         conversationID.String(),
 		ExpectedConfigurationID: pinnedConfigurationID,
@@ -812,7 +809,7 @@ func (r *Runtime) createTurnEnvelope(
 		}
 		return nil, uuid.Nil, nil, nil, nil, dto.StreamEventIDs{}, false, httpErr(
 			http.StatusInternalServerError,
-			"INTERNAL_ERROR",
+			ConsultationErrorInternal,
 			"failed to create run envelope",
 		)
 	}
@@ -900,7 +897,7 @@ func (r *Runtime) buildBusinessContext(
 		Profile:        profileJSON,
 		SpatialContext: spatialContext,
 		RuntimeState: service.ConsultationRuntimeState{
-			Phase:         session.Phase,
+			Phase:         string(session.Phase),
 			ExtractedInfo: json.RawMessage(session.ExtractedInfo),
 		},
 	}
@@ -994,10 +991,69 @@ type streamResult struct {
 	ExecutionIdentity  ConsultationExecutionIdentity
 }
 
+func projectConsultationRuntimeEvent(event service.ConsultationRuntimeEvent) (dto.StreamEvent, error) {
+	var channel, eventType string
+	switch event.Kind() {
+	case service.ConsultationRuntimeTextDelta:
+		channel, eventType = "message", "message.text.delta"
+	case service.ConsultationRuntimeToolCall:
+		channel, eventType = "tool", "tool.call"
+	case service.ConsultationRuntimeToolResult:
+		channel, eventType = "tool", "tool.result"
+	case service.ConsultationRuntimeExtractedInfo:
+		channel, eventType = "state", "state.extracted_info.upsert"
+	case service.ConsultationRuntimeLifestyleContext:
+		channel, eventType = "state", "state.lifestyle_context.upsert"
+	case service.ConsultationRuntimeInteraction:
+		channel, eventType = "state", "state.interaction.required"
+	case service.ConsultationRuntimePhaseChanged:
+		channel, eventType = "state", "state.phase.changed"
+	case service.ConsultationRuntimeCitationAdded:
+		channel, eventType = "source", "source.citation.added"
+	case service.ConsultationRuntimeAttributionAdded:
+		channel, eventType = "source", "source.answer_attribution.added"
+	case service.ConsultationRuntimeKnowledgeGap:
+		channel, eventType = "source", "source.knowledge_gap"
+	case service.ConsultationRuntimeRedFlagDetected:
+		channel, eventType = "safety", "safety.red_flag.detected"
+	case service.ConsultationRuntimeOutputReviewed:
+		channel, eventType = "safety", "safety.output_reviewed"
+	case service.ConsultationRuntimeOutputRejected:
+		channel, eventType = "safety", "safety.output_rejected"
+	case service.ConsultationRuntimeUsageReported:
+		channel, eventType = "usage", "usage.reported"
+	case service.ConsultationRuntimeDone:
+		channel, eventType = "stream", "stream.done"
+	case service.ConsultationRuntimeError:
+		channel, eventType = "stream", "stream.error"
+	case service.ConsultationRuntimeAgentConfiguration:
+		return dto.StreamEvent{}, errors.New("runtime Agent configuration is private control-plane state")
+	default:
+		return dto.StreamEvent{}, fmt.Errorf("unsupported internal runtime event kind %q", event.Kind())
+	}
+
+	payload, err := json.Marshal(event.Payload)
+	if err != nil {
+		return dto.StreamEvent{}, fmt.Errorf("marshal trusted runtime payload: %w", err)
+	}
+	return dto.StreamEvent{
+		Version: 1,
+		Seq:     event.Seq,
+		Channel: channel,
+		Type:    eventType,
+		IDs: dto.StreamEventIDs{
+			ConversationID: event.IDs.ConversationID,
+			RunID:          event.IDs.RunID,
+			ToolCallID:     event.IDs.ToolCallID,
+		},
+		Payload: payload,
+	}, nil
+}
+
 func (r *Runtime) streamAIEvents(
 	ctx context.Context,
 	sw *stream.StreamWriter,
-	events <-chan dto.StreamEvent,
+	events <-chan service.ConsultationRuntimeEvent,
 	state streamState,
 ) (streamResult, bool) {
 	result := streamResult{}
@@ -1036,11 +1092,11 @@ func (r *Runtime) streamAIEvents(
 			// The immutable execution identity is a control-plane handshake, not
 			// ordinary semantic output. Nothing else is trusted until it is the
 			// first event and has been validated/persisted by Go.
-			if !handshakeAccepted && event.Type != "runtime.agent_configuration" {
+			if !handshakeAccepted && event.Kind() != service.ConsultationRuntimeAgentConfiguration {
 				r.failActiveStream(ctx, sw, state, "runtime Agent configuration handshake must be the first event")
 				return result, true
 			}
-			if handshakeAccepted && event.Type == "runtime.agent_configuration" {
+			if handshakeAccepted && event.Kind() == service.ConsultationRuntimeAgentConfiguration {
 				r.failActiveStream(ctx, sw, state, "duplicate runtime Agent configuration handshake")
 				return result, true
 			}
@@ -1048,7 +1104,7 @@ func (r *Runtime) streamAIEvents(
 			if r.handleAIEvent(ctx, sw, event, state, &result, &phase) {
 				return result, true
 			}
-			if event.Type == "runtime.agent_configuration" {
+			if event.Kind() == service.ConsultationRuntimeAgentConfiguration {
 				handshakeAccepted = result.ExecutionIdentity.ConfigurationID != ""
 				if !handshakeAccepted {
 					r.failActiveStream(ctx, sw, state, "invalid runtime Agent configuration handshake")
@@ -1071,11 +1127,12 @@ type consultationExecutionProvenanceEnvelope struct {
 }
 
 func validateConsultationExecutionIdentity(
-	event dto.StreamEvent,
+	event service.ConsultationRuntimeEvent,
 	expectedConfigurationID string,
 ) (ConsultationExecutionIdentity, error) {
-	if event.Type != "runtime.agent_configuration" || event.Channel != "runtime" {
-		return ConsultationExecutionIdentity{}, fmt.Errorf("unexpected handshake event %s/%s", event.Channel, event.Type)
+	payload, ok := event.Payload.(service.ConsultationRuntimeAgentConfigurationPayload)
+	if !ok {
+		return ConsultationExecutionIdentity{}, fmt.Errorf("unexpected handshake event kind %q", event.Kind())
 	}
 	expectedConfigurationID = strings.TrimSpace(expectedConfigurationID)
 	if expectedConfigurationID == "" {
@@ -1088,14 +1145,6 @@ func validateConsultationExecutionIdentity(
 	expectedLogicalModel, err := service.ConsultationLogicalModelForConfiguration(expectedConfigurationID)
 	if err != nil {
 		return ConsultationExecutionIdentity{}, err
-	}
-
-	var payload struct {
-		AgentConfiguration  json.RawMessage `json:"agent_configuration"`
-		ExecutionProvenance json.RawMessage `json:"execution_provenance"`
-	}
-	if err := event.PayloadAs(&payload); err != nil {
-		return ConsultationExecutionIdentity{}, fmt.Errorf("decode handshake payload: %w", err)
 	}
 	if len(payload.AgentConfiguration) == 0 || len(payload.ExecutionProvenance) == 0 {
 		return ConsultationExecutionIdentity{}, errors.New("handshake is missing configuration or execution provenance")
@@ -1136,178 +1185,107 @@ func validateConsultationExecutionIdentity(
 func (r *Runtime) handleAIEvent(
 	ctx context.Context,
 	sw *stream.StreamWriter,
-	event dto.StreamEvent,
+	event service.ConsultationRuntimeEvent,
 	state streamState,
 	result *streamResult,
 	phase *string,
 ) bool {
-	switch event.Type {
-	case "message.text.delta":
-		var payload struct {
-			Delta string `json:"delta"`
-		}
-		if err := event.PayloadAs(&payload); err != nil {
-			r.failActiveStream(ctx, sw, state, "invalid message delta payload")
-			return true
-		}
-		r.sendEvent(ctx, sw, event, state.AssistantMsgID, "text.delta")
-		result.AssistantParts = append(
-			result.AssistantParts,
-			map[string]any{"type": "text", "text": payload.Delta},
-		)
+	publicEvent, projectionErr := projectConsultationRuntimeEvent(event)
+	if projectionErr != nil && event.Kind() != service.ConsultationRuntimeAgentConfiguration {
+		r.failActiveStream(ctx, sw, state, "invalid internal runtime event projection")
+		return true
+	}
 
-	case "tool.call":
-		var payload struct {
-			Tool string          `json:"tool"`
-			Args json.RawMessage `json:"args"`
-		}
-		if err := event.PayloadAs(&payload); err != nil {
-			r.failActiveStream(ctx, sw, state, "invalid tool.call payload")
-			return true
-		}
-		r.sendEvent(ctx, sw, event, state.AssistantMsgID, "tool.call")
-		result.AssistantParts = append(
-			result.AssistantParts,
-			map[string]any{
-				"type":       "tool-call",
-				"toolName":   payload.Tool,
-				"args":       payload.Args,
-				"toolCallId": event.IDs.ToolCallID,
-			},
-		)
+	switch payload := event.Payload.(type) {
+	case service.ConsultationRuntimeTextDeltaPayload:
+		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, "text.delta")
+		result.AssistantParts = append(result.AssistantParts, map[string]any{"type": "text", "text": payload.Delta})
+
+	case service.ConsultationRuntimeToolCallPayload:
+		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, "tool.call")
+		result.AssistantParts = append(result.AssistantParts, map[string]any{
+			"type": "tool-call", "toolName": payload.Tool, "args": payload.Args, "toolCallId": event.IDs.ToolCallID,
+		})
 		msgID := state.AssistantMsg.ID
-		r.agentToolService.RecordToolCall(
-			ctx,
-			state.Run.ID,
-			state.ConversationID,
-			&msgID,
-			event.IDs.ToolCallID,
-			payload.Tool,
-			datatypes.JSON(payload.Args),
-		)
+		r.agentToolService.RecordToolCall(ctx, state.Run.ID, state.ConversationID, &msgID, event.IDs.ToolCallID, payload.Tool, datatypes.JSON(payload.Args))
 
-	case "tool.result":
-		var payload struct {
-			Tool   string          `json:"tool"`
-			Result json.RawMessage `json:"result"`
-		}
-		if err := event.PayloadAs(&payload); err != nil {
-			r.failActiveStream(ctx, sw, state, "invalid tool.result payload")
-			return true
-		}
-		r.sendEvent(ctx, sw, event, state.AssistantMsgID, "tool.result")
-		result.AssistantParts = append(
-			result.AssistantParts,
-			map[string]any{
-				"type":       "tool-result",
-				"toolName":   payload.Tool,
-				"result":     payload.Result,
-				"toolCallId": event.IDs.ToolCallID,
-			},
-		)
-		r.agentToolService.RecordToolResult(
-			ctx,
-			state.Run.ID,
-			event.IDs.ToolCallID,
-			datatypes.JSON(payload.Result),
-			toolResultIsError(payload.Result),
-		)
+	case service.ConsultationRuntimeToolResultPayload:
+		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, "tool.result")
+		result.AssistantParts = append(result.AssistantParts, map[string]any{
+			"type": "tool-result", "toolName": payload.Tool, "result": payload.Result, "toolCallId": event.IDs.ToolCallID,
+		})
+		r.agentToolService.RecordToolResult(ctx, state.Run.ID, event.IDs.ToolCallID, datatypes.JSON(payload.Result), toolResultIsError(payload.Result))
 
-	case "state.extracted_info.upsert":
-		var payload struct {
-			Info json.RawMessage `json:"info"`
-		}
-		if err := event.PayloadAs(&payload); err != nil {
-			r.failActiveStream(ctx, sw, state, "invalid extracted-info payload")
-			return true
-		}
+	case service.ConsultationRuntimeExtractedInfoPayload:
 		if err := r.persistExtractedSymptom(ctx, state.UID, state.Run.ID, payload.Info); err != nil {
 			log.Printf("failed to persist extracted symptom in BodyState for run %s: %v", state.Run.ID, err)
 			r.failActiveStream(ctx, sw, state, "failed to persist durable health state")
 			return true
 		}
-		r.sendEvent(ctx, sw, event, state.AssistantMsgID, event.Type)
+		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, publicEvent.Type)
 
-	case "state.lifestyle_context.upsert":
-		var payload struct {
-			Context json.RawMessage `json:"context"`
-		}
-		if err := event.PayloadAs(&payload); err != nil {
-			r.failActiveStream(ctx, sw, state, "invalid lifestyle-context payload")
-			return true
-		}
+	case service.ConsultationRuntimeLifestyleContextPayload:
 		if err := r.persistLifestyleContext(ctx, state.UID, state.Run.ID, payload.Context); err != nil {
 			log.Printf("failed to persist lifestyle context in BodyState for run %s: %v", state.Run.ID, err)
 			r.failActiveStream(ctx, sw, state, "failed to persist durable lifestyle state")
 			return true
 		}
-		r.sendEvent(ctx, sw, event, state.AssistantMsgID, event.Type)
+		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, publicEvent.Type)
 
-	case "source.citation.added":
-		r.sendEvent(ctx, sw, event, state.AssistantMsgID, event.Type)
-		result.AssistantParts = append(result.AssistantParts, citationPart(event.Payload))
+	case service.ConsultationRuntimeCitationAddedPayload:
+		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, publicEvent.Type)
+		result.AssistantParts = append(result.AssistantParts, citationPart(publicEvent.Payload))
 
-	case "source.answer_attribution.added":
-		if _, err := service.ParseConsultationAnswerAttributionPayload(event.Payload); err != nil {
-			r.failActiveStream(ctx, sw, state, "invalid answer attribution payload")
-			return true
-		}
-		r.sendEvent(ctx, sw, event, state.AssistantMsgID, event.Type)
-		result.AssistantParts = append(result.AssistantParts, dataPart("answer_attribution", event.Payload))
+	case service.ConsultationRuntimeAttributionAddedPayload:
+		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, publicEvent.Type)
+		result.AssistantParts = append(result.AssistantParts, dataPart("answer_attribution", publicEvent.Payload))
 
-	case "source.knowledge_gap":
-		r.sendEvent(ctx, sw, event, state.AssistantMsgID, event.Type)
-		result.AssistantParts = append(result.AssistantParts, dataPart("knowledge_gap", event.Payload))
+	case service.ConsultationRuntimeKnowledgeGapPayload:
+		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, publicEvent.Type)
+		result.AssistantParts = append(result.AssistantParts, dataPart("knowledge_gap", publicEvent.Payload))
 
-	case "safety.red_flag.detected":
-		if err := r.persistSafetyEvent(ctx, state.UID, event.Payload); err != nil {
+	case service.ConsultationRuntimeRedFlagDetectedPayload:
+		if err := r.persistSafetyEvent(ctx, state.UID, publicEvent.Payload); err != nil {
 			log.Printf("failed to persist BodyState safety event for run %s: %v", state.Run.ID, err)
 			r.failActiveStream(ctx, sw, state, "failed to persist safety state")
 			return true
 		}
-		r.sendEvent(ctx, sw, event, state.AssistantMsgID, event.Type)
-		result.AssistantParts = append(result.AssistantParts, dataPart("red_flag", event.Payload))
+		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, publicEvent.Type)
+		result.AssistantParts = append(result.AssistantParts, dataPart("red_flag", publicEvent.Payload))
 
-	case "safety.output_reviewed", "safety.output_rejected":
-		r.handleSafetyOutputEvent(ctx, sw, event, state, result)
+	case service.ConsultationRuntimeSafetyOutputPayload:
+		r.handleSafetyOutputEvent(ctx, sw, publicEvent, payload, state, result)
 
-	case "state.interaction.required":
-		return r.handleInteractionRequired(ctx, sw, event, state, result)
+	case service.ConsultationRuntimeInteractionPayload:
+		return r.handleInteractionRequired(ctx, sw, publicEvent, payload, state, result)
 
-	case "state.phase.changed":
-		var payload struct {
-			From   string `json:"from,omitempty"`
-			To     string `json:"to"`
-			Reason string `json:"reason"`
-		}
-		if err := event.PayloadAs(&payload); err != nil {
-			r.failActiveStream(ctx, sw, state, "invalid phase-change payload")
+	case service.ConsultationRuntimePhaseChangedPayload:
+		nextPhase, ok := model.ParseConsultationPhase(payload.To)
+		if !ok {
+			r.failActiveStream(ctx, sw, state, "runtime emitted unsupported consultation phase")
 			return true
 		}
 		if payload.From == "" {
 			payload.From = *phase
+		} else if _, ok := model.ParseConsultationPhase(payload.From); !ok {
+			r.failActiveStream(ctx, sw, state, "runtime emitted unsupported previous consultation phase")
+			return true
 		}
+		payload.To = string(nextPhase)
 		if patched, err := json.Marshal(payload); err == nil {
-			event.Payload = patched
+			publicEvent.Payload = patched
 		}
-		r.sendEvent(ctx, sw, event, state.AssistantMsgID, "phase_change")
-		*phase = payload.To
-		if err := r.consultationService.UpdatePhase(ctx, state.ConversationID, state.UID, payload.To); err != nil {
+		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, "phase_change")
+		*phase = string(nextPhase)
+		if err := r.consultationService.UpdatePhase(ctx, state.ConversationID, state.UID, nextPhase); err != nil {
 			log.Printf("failed to update phase for conversation %s: %v", state.ConversationID, err)
 		}
 
-	case "usage.reported":
-		var payload struct {
-			Usage json.RawMessage `json:"usage"`
-		}
-		if err := event.PayloadAs(&payload); err != nil {
-			r.failActiveStream(ctx, sw, state, "invalid usage payload")
-			return true
-		}
+	case service.ConsultationRuntimeUsageReportedPayload:
 		result.Usage = payload.Usage
-		r.sendEvent(ctx, sw, event, state.AssistantMsgID, "usage.reported")
+		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, "usage.reported")
 
-	case "runtime.agent_configuration":
+	case service.ConsultationRuntimeAgentConfigurationPayload:
 		identity, err := validateConsultationExecutionIdentity(event, state.ExpectedConfigurationID)
 		if err != nil {
 			log.Printf("rejected Consultation runtime identity for run %s: %v", state.Run.ID, err)
@@ -1318,29 +1296,14 @@ func (r *Runtime) handleAIEvent(
 			r.failActiveStream(ctx, sw, state, "runtime Agent configuration persistence unavailable")
 			return true
 		}
-		if err := r.runService.UpdateAgentConfiguration(
-			ctx,
-			state.Run.ID,
-			identity.ConfigurationID,
-			datatypes.JSON(identity.AgentConfiguration),
-			datatypes.JSON(identity.ExecutionProvenance),
-		); err != nil {
+		if err := r.runService.UpdateAgentConfiguration(ctx, state.Run.ID, identity.ConfigurationID, datatypes.JSON(identity.AgentConfiguration), datatypes.JSON(identity.ExecutionProvenance)); err != nil {
 			log.Printf("failed to persist Consultation runtime identity for run %s: %v", state.Run.ID, err)
 			r.failActiveStream(ctx, sw, state, "failed to persist runtime Agent configuration identity")
 			return true
 		}
 		result.ExecutionIdentity = identity
 
-	case "stream.done":
-		var payload struct {
-			ResponseID string          `json:"response_id"`
-			Usage      json.RawMessage `json:"usage"`
-			Governance json.RawMessage `json:"governance"`
-		}
-		if err := event.PayloadAs(&payload); err != nil {
-			r.failActiveStream(ctx, sw, state, "invalid stream.done payload")
-			return true
-		}
+	case service.ConsultationRuntimeDonePayload:
 		if payload.ResponseID != "" {
 			result.ProviderResponseID = payload.ResponseID
 		}
@@ -1351,15 +1314,13 @@ func (r *Runtime) handleAIEvent(
 			result.GovernanceResult = datatypes.JSON(payload.Governance)
 		}
 
-	case "stream.error":
-		var payload struct {
-			Message string `json:"message"`
-		}
-		if err := event.PayloadAs(&payload); err != nil {
-			payload.Message = "AI runtime protocol error"
-		}
-		r.sendEvent(ctx, sw, event, state.AssistantMsgID, "stream.error")
+	case service.ConsultationRuntimeErrorPayload:
+		r.sendEvent(ctx, sw, publicEvent, state.AssistantMsgID, "stream.error")
 		r.failActiveStream(ctx, sw, state, payload.Message)
+		return true
+
+	default:
+		r.failActiveStream(ctx, sw, state, "unsupported trusted runtime event")
 		return true
 	}
 
@@ -1370,77 +1331,64 @@ func (r *Runtime) handleInteractionRequired(
 	ctx context.Context,
 	sw *stream.StreamWriter,
 	event dto.StreamEvent,
+	payload service.ConsultationRuntimeInteractionPayload,
 	state streamState,
 	result *streamResult,
 ) bool {
-	var payload struct {
-		InteractionID string          `json:"interaction_id"`
-		Question      json.RawMessage `json:"question"`
-		CreatedAt     string          `json:"created_at,omitempty"`
-	}
-	if err := event.PayloadAs(&payload); err != nil {
-		r.failActiveStream(ctx, sw, state, "invalid interaction-required payload")
-		return true
-	}
-
-	interaction, err := r.interactionService.CreatePendingInteraction(
+	_, preparedEvents, err := r.interactionService.CreatePendingInteractionWithEvents(
 		ctx,
 		state.Run.ID,
 		state.ConversationID,
 		event.IDs.ToolCallID,
 		datatypes.JSON(payload.Question),
+		func(interaction *model.AgentInteraction) ([]dto.StreamEvent, error) {
+			interactionID := interaction.ID.String()
+			requiredEvent := event
+			requiredEvent.IDs.InteractionID = interactionID
+			publicPayload := struct {
+				InteractionID string          `json:"interaction_id"`
+				Question      json.RawMessage `json:"question"`
+				CreatedAt     string          `json:"created_at"`
+			}{InteractionID: interactionID, Question: payload.Question, CreatedAt: interaction.CreatedAt.UTC().Format(time.RFC3339Nano)}
+			patched, err := json.Marshal(publicPayload)
+			if err != nil {
+				return nil, err
+			}
+			requiredEvent.Payload = patched
+			requiredEvent = sw.EnrichEvent(requiredEvent, state.AssistantMsgID)
+			interruptedEvent, err := sw.NewEvent(
+				"run",
+				"run.interrupted",
+				dto.StreamEventIDs{
+					ConversationID: state.ConversationID.String(),
+					RunID:          state.Run.ID.String(),
+					TurnID:         state.TurnID.String(),
+					InteractionID:  interactionID,
+				},
+				map[string]any{"status": "waiting_user", "interaction_id": interactionID},
+				"",
+			)
+			if err != nil {
+				return nil, err
+			}
+			return []dto.StreamEvent{requiredEvent, interruptedEvent}, nil
+		},
 	)
 	if err != nil {
-		log.Printf("failed to create pending interaction for conversation %s: %v", state.ConversationID, err)
-		r.sendNewEvent(
-			ctx,
-			sw,
-			"stream",
-			"stream.error",
-			state.BaseIDs,
-			map[string]any{"message": "failed to persist user interaction"},
-			"",
-			"stream.error",
-		)
+		log.Printf("failed to atomically create pending interaction for conversation %s: %v", state.ConversationID, err)
+		r.sendNewEvent(ctx, sw, "stream", "stream.error", state.BaseIDs, map[string]any{"message": "failed to persist user interaction"}, "", "stream.error")
 		r.clearActiveRun(ctx, state.ConversationID, state.UID)
 		return true
 	}
 
-	interactionID := interaction.ID.String()
-	event.IDs.InteractionID = interactionID
-	payload.InteractionID = interactionID
-	payload.CreatedAt = interaction.CreatedAt.UTC().Format(time.RFC3339Nano)
-	if patched, err := json.Marshal(payload); err == nil {
-		event.Payload = patched
+	for _, preparedEvent := range preparedEvents {
+		if err := sw.WriteEvent(ctx, preparedEvent); err != nil {
+			log.Printf("SSE write error type=%s run_id=%s conversation_id=%s seq=%d: %v", preparedEvent.Type, state.Run.ID, state.ConversationID, preparedEvent.Seq, err)
+		}
 	}
-	r.sendEvent(ctx, sw, event, state.AssistantMsgID, "interaction.required")
-	r.sendNewEvent(
-		ctx,
-		sw,
-		"run",
-		"run.interrupted",
-		dto.StreamEventIDs{
-			ConversationID: state.ConversationID.String(),
-			RunID:          state.Run.ID.String(),
-			TurnID:         state.TurnID.String(),
-			InteractionID:  interactionID,
-		},
-		map[string]any{"status": "waiting_user", "interaction_id": interactionID},
-		"",
-		"run.interrupted",
-	)
 
-	// Atomically set both parts and aborted status in a single query.
-	// The previous two-step approach (UpdateMessageCompleted then UpdateMessageStatus)
-	// could leave the message in an inconsistent state on crash between the two calls.
 	finalPartsJSON, _ := json.Marshal(result.AssistantParts)
-	if err := r.messageService.UpdateMessageCompletedWithStatus(
-		ctx,
-		state.AssistantMsg.ID,
-		state.ConversationID,
-		datatypes.JSON(finalPartsJSON),
-		"aborted",
-	); err != nil {
+	if err := r.messageService.UpdateMessageCompletedWithStatus(ctx, state.AssistantMsg.ID, state.ConversationID, datatypes.JSON(finalPartsJSON), "aborted"); err != nil {
 		log.Printf("failed to finalize interrupted assistant message %s: %v", state.AssistantMsg.ID, err)
 	}
 
@@ -1454,22 +1402,11 @@ func (r *Runtime) handleSafetyOutputEvent(
 	ctx context.Context,
 	sw *stream.StreamWriter,
 	event dto.StreamEvent,
+	payload service.ConsultationRuntimeSafetyOutputPayload,
 	state streamState,
 	result *streamResult,
 ) {
 	r.sendEvent(ctx, sw, event, state.AssistantMsgID, event.Type)
-
-	var payload struct {
-		Kind           string          `json:"kind"`
-		Verdict        string          `json:"verdict"`
-		Reasons        []string        `json:"reasons"`
-		Issues         json.RawMessage `json:"issues"`
-		SafetyFallback string          `json:"safety_fallback"`
-	}
-	if err := event.PayloadAs(&payload); err != nil {
-		log.Printf("invalid safety output payload for run %s: %v", state.Run.ID, err)
-		return
-	}
 
 	partName := "output_reviewed"
 	if event.Type == "safety.output_rejected" {
@@ -1481,7 +1418,7 @@ func (r *Runtime) handleSafetyOutputEvent(
 		return
 	}
 
-	outputType := payload.Kind
+	outputType := payload.OutputKind
 	if outputType == "" {
 		outputType = "structured_output"
 	}
@@ -1816,52 +1753,19 @@ func (r *Runtime) failBeforeStreaming(
 	conversationID uuid.UUID,
 	message string,
 ) {
-	r.sendNewEvent(
-		ctx,
-		sw,
-		"run",
-		"run.failed",
-		dto.StreamEventIDs{
+	r.failRunAndEmit(ctx, sw, streamState{
+		UID:            uid,
+		ConversationID: conversationID,
+		TurnID:         run.TurnID,
+		Run:            run,
+		AssistantMsg:   assistantMsg,
+		AssistantMsgID: assistantMsg.ID.String(),
+		BaseIDs: dto.StreamEventIDs{
 			ConversationID: conversationID.String(),
 			RunID:          run.ID.String(),
 			TurnID:         run.TurnID.String(),
 		},
-		map[string]any{"status": "failed", "error": map[string]any{"message": message}},
-		"",
-		"run.failed",
-	)
-	r.sendNewEvent(
-		ctx,
-		sw,
-		"message",
-		"message.failed",
-		dto.StreamEventIDs{
-			ConversationID: conversationID.String(),
-			RunID:          run.ID.String(),
-			TurnID:         run.TurnID.String(),
-			MessageID:      assistantMsg.ID.String(),
-		},
-		map[string]any{"status": "failed", "error": map[string]any{"message": message}},
-		assistantMsg.ID.String(),
-		"message.failed",
-	)
-	r.sendNewEvent(
-		ctx,
-		sw,
-		"stream",
-		"stream.done",
-		dto.StreamEventIDs{
-			ConversationID: conversationID.String(),
-			RunID:          run.ID.String(),
-			TurnID:         run.TurnID.String(),
-		},
-		map[string]any{},
-		"",
-		"stream.done",
-	)
-	_ = r.runService.FailRun(ctx, run.ID, uid, map[string]any{"message": message})
-	r.clearActiveRun(ctx, conversationID, uid)
-	r.refreshThreadProjection(ctx, conversationID, uid)
+	}, message)
 }
 
 func (r *Runtime) failActiveStream(
@@ -1870,13 +1774,28 @@ func (r *Runtime) failActiveStream(
 	state streamState,
 	message string,
 ) {
+	r.failRunAndEmit(ctx, sw, state, message)
+}
+
+// failRunAndEmit makes Run.status=failed and run.failed one atomic durable
+// decision. Only the transaction winner may emit the matching SSE/message
+// terminal projection; a concurrent cancel/completion winner is never
+// overwritten by a late failure path.
+func (r *Runtime) failRunAndEmit(
+	ctx context.Context,
+	sw *stream.StreamWriter,
+	state streamState,
+	message string,
+) {
 	if strings.TrimSpace(message) == "" {
 		message = "stream failed"
 	}
+	if r.runService == nil || state.Run == nil || state.AssistantMsg == nil {
+		log.Printf("cannot fail consultation run atomically: lifecycle dependencies are missing")
+		return
+	}
 
-	r.sendNewEvent(
-		ctx,
-		sw,
+	runFailedEvent, err := sw.NewEvent(
 		"run",
 		"run.failed",
 		dto.StreamEventIDs{
@@ -1886,8 +1805,34 @@ func (r *Runtime) failActiveStream(
 		},
 		map[string]any{"status": "failed", "error": map[string]any{"message": message}},
 		"",
-		"run.failed",
 	)
+	if err != nil {
+		log.Printf("failed to build run.failed event for run %s: %v", state.Run.ID, err)
+		return
+	}
+
+	committed, err := r.runService.FailRunWithEvent(
+		ctx,
+		state.Run,
+		state.UID,
+		map[string]any{"message": message},
+		runFailedEvent,
+	)
+	if err != nil {
+		log.Printf("failed to atomically fail run %s: %v", state.Run.ID, err)
+		return
+	}
+	if !committed {
+		// Another terminal transition won. Never manufacture a contradictory
+		// run.failed/message.failed sequence after that durable decision.
+		r.clearActiveRun(ctx, state.ConversationID, state.UID)
+		r.refreshThreadProjection(ctx, state.ConversationID, state.UID)
+		return
+	}
+
+	if err := sw.WriteEvent(ctx, runFailedEvent); err != nil {
+		log.Printf("SSE write error type=run.failed run_id=%s conversation_id=%s seq=%d: %v", state.Run.ID, state.ConversationID, runFailedEvent.Seq, err)
+	}
 	r.sendNewEvent(
 		ctx,
 		sw,
@@ -1904,15 +1849,13 @@ func (r *Runtime) failActiveStream(
 		"message.failed",
 	)
 	r.sendNewEvent(ctx, sw, "stream", "stream.done", state.BaseIDs, map[string]any{}, "", "stream.done")
-	if r.runService != nil {
-		_ = r.runService.FailRun(ctx, state.Run.ID, state.UID, map[string]any{"message": message})
-	}
 	if r.messageService != nil {
 		_ = r.messageService.UpdateMessageStatus(ctx, state.AssistantMsg.ID, state.ConversationID, "failed")
 	}
 	r.clearActiveRun(ctx, state.ConversationID, state.UID)
 	r.refreshThreadProjection(ctx, state.ConversationID, state.UID)
 }
+
 func (r *Runtime) sendNewEvent(
 	ctx context.Context,
 	sw *stream.StreamWriter,
@@ -1981,7 +1924,35 @@ func (r *Runtime) recordPublicEvent(ctx context.Context, event dto.StreamEvent) 
 	}
 }
 
-func messagePartsToImageUploadIDs(parts []dto.PartDTO) []string {
+type durableMessagePart struct {
+	Type     string `json:"type"`
+	Text     string `json:"text,omitempty"`
+	UploadID string `json:"upload_id,omitempty"`
+	MimeType string `json:"mime_type,omitempty"`
+	ImageURL string `json:"image_url,omitempty"`
+}
+
+func marshalDurableMessageParts(parts []PartInput) ([]byte, error) {
+	projected := make([]durableMessagePart, 0, len(parts))
+	for _, part := range parts {
+		switch part.Type {
+		case "text":
+			projected = append(projected, durableMessagePart{Type: "text", Text: part.Text})
+		case "image":
+			projected = append(projected, durableMessagePart{
+				Type:     "image",
+				UploadID: part.UploadID,
+				MimeType: part.MimeType,
+				ImageURL: part.ImageURL,
+			})
+		default:
+			return nil, fmt.Errorf("unsupported message part type %q", part.Type)
+		}
+	}
+	return json.Marshal(projected)
+}
+
+func messagePartsToImageUploadIDs(parts []PartInput) []string {
 	ids := make([]string, 0)
 	seen := map[string]bool{}
 	for _, part := range parts {
@@ -2003,7 +1974,7 @@ func messagePartsToImageUploadIDs(parts []dto.PartDTO) []string {
 func (r *Runtime) resolveConsultationImages(
 	ctx context.Context,
 	uid uuid.UUID,
-	parts []dto.PartDTO,
+	parts []PartInput,
 ) []service.ConsultationImageRef {
 	if r.uploadService == nil {
 		return nil
@@ -2037,7 +2008,7 @@ func (r *Runtime) resolveConsultationImages(
 	return out
 }
 
-func messagePartsToText(parts []dto.PartDTO) string {
+func messagePartsToText(parts []PartInput) string {
 	texts := make([]string, 0, len(parts))
 	for _, part := range parts {
 		if part.Type == "text" && strings.TrimSpace(part.Text) != "" {
@@ -2354,6 +2325,6 @@ func toolResultIsError(result json.RawMessage) bool {
 	return parsed.Status == "error" || parsed.Error != ""
 }
 
-func httpErr(status int, code string, message string) *HTTPError {
+func httpErr(status int, code ConsultationErrorCode, message string) *HTTPError {
 	return &HTTPError{Status: status, Code: code, Message: message}
 }

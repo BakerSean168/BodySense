@@ -113,10 +113,14 @@ async def test_execute_type_validation_integer():
     registry = ToolRegistry()
     registry.register(_make_tool(handler=_ok))
     executor = ToolExecutor(registry)
-    # Float that is an int should be coerced
-    result = await executor.execute("tc1", "test_tool", {"n": 3.0})
+    # Float that is an int should be normalized for the handler without
+    # mutating the caller-owned arguments.
+    arguments = {"n": 3.0}
+    result = await executor.execute("tc1", "test_tool", arguments)
     assert result.status == ToolStatus.SUCCESS
     assert result.content["n"] == 3
+    assert isinstance(result.content["n"], int)
+    assert arguments == {"n": 3.0}
 
     # Non-integer float should fail
     result2 = await executor.execute("tc2", "test_tool", {"n": 3.5})

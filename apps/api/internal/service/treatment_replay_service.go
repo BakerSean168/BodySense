@@ -15,8 +15,9 @@ import (
 )
 
 var (
-	ErrTreatmentReplayUnavailable = errors.New("treatment replay input is unavailable")
-	ErrTreatmentReplayNotFound    = errors.New("treatment revision not found for replay")
+	ErrTreatmentReplayUnavailable   = errors.New("treatment replay input is unavailable")
+	ErrTreatmentReplayNotFound      = errors.New("treatment revision not found for replay")
+	ErrTreatmentReplayConfiguration = errors.New("treatment replay configuration is invalid")
 )
 
 const TreatmentRegressionExportSchema = "treatment_qualification_v1"
@@ -166,7 +167,7 @@ func (s *TreatmentReplayService) CounterfactualReplay(
 	targetConfigurationID = strings.TrimSpace(targetConfigurationID)
 	registration, ok := knownTreatmentConfigurations[targetConfigurationID]
 	if !ok {
-		return nil, fmt.Errorf("unknown Treatment Agent configuration id %q", targetConfigurationID)
+		return nil, fmt.Errorf("%w: unknown Treatment Agent configuration id %q", ErrTreatmentReplayConfiguration, targetConfigurationID)
 	}
 	decision := EvaluateTreatmentDecision(
 		registration.DecisionPolicyRevision,
@@ -271,6 +272,14 @@ func (s *TreatmentReplayService) loadReplayCase(
 	}
 	if revision == nil {
 		return nil, TreatmentReplayInput{}, nil, ErrTreatmentReplayNotFound
+	}
+	if _, ok := knownTreatmentConfigurations[revision.AgentConfigurationID]; !ok {
+		return nil, TreatmentReplayInput{}, nil, fmt.Errorf(
+			"%w: revision %s uses retired Agent configuration %q",
+			ErrTreatmentReplayConfiguration,
+			revision.ID,
+			revision.AgentConfigurationID,
+		)
 	}
 	input, err := decodeTreatmentReplayInput(json.RawMessage(revision.ReplayInput))
 	if err != nil {

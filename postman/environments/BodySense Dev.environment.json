@@ -1,0 +1,19 @@
+{
+  "id": "31c27c0a-cf8e-5bce-b962-c99e73034b52",
+  "name": "BodySense Dev",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:20101",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "bearerToken",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment"
+}

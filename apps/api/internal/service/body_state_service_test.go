@@ -25,6 +25,7 @@ type fakeBodyStateRepository struct {
 	transitionedObservations []model.BodyStateObservation
 	appliedPatches           []model.BodyStateCurrentContextPatch
 	safetyStates             []datatypes.JSON
+	safetyExpectedRevisions  []*int64
 	returnExistingFact       bool
 	returnExistingObs        bool
 }
@@ -175,8 +176,14 @@ func (r *fakeBodyStateRepository) ApplyCurrentContextPatch(_ context.Context, us
 	return &model.BodyStateRevision{Revision: r.current.CurrentRevision}, nil
 }
 
-func (r *fakeBodyStateRepository) SetSafetyState(_ context.Context, _ uuid.UUID, state datatypes.JSON, _ string) (*model.BodyStateRevision, error) {
+func (r *fakeBodyStateRepository) SetSafetyState(_ context.Context, _ uuid.UUID, expectedRevision *int64, state datatypes.JSON, _ string) (*model.BodyStateRevision, error) {
 	r.safetyStates = append(r.safetyStates, state)
+	if expectedRevision == nil {
+		r.safetyExpectedRevisions = append(r.safetyExpectedRevisions, nil)
+	} else {
+		value := *expectedRevision
+		r.safetyExpectedRevisions = append(r.safetyExpectedRevisions, &value)
+	}
 	return &model.BodyStateRevision{Revision: int64(len(r.safetyStates))}, nil
 }
 func (r *fakeBodyStateRepository) UpsertEvidence(_ context.Context, userID uuid.UUID, evidence model.BodyStateEvidence) (*model.BodyStateEvidence, error) {
@@ -273,7 +280,7 @@ func TestStructuredSymptomInteractionPromotesSameCaptureToConfirmedFact(t *testi
 	}
 }
 
-func TestModelAuthoredAskUserCannotPromoteSymptomCapture(t *testing.T) {
+func TestModelAuthoredAskUserCannotProjectBodyStateWithoutRuntimeBinding(t *testing.T) {
 	repo := &fakeBodyStateRepository{}
 	svc := NewBodyStateService(repo)
 	question := datatypes.JSON(`{
@@ -290,10 +297,22 @@ func TestModelAuthoredAskUserCannotPromoteSymptomCapture(t *testing.T) {
 		context.Background(), uuid.New(), uuid.New(), "model-tool-call", question,
 		json.RawMessage(`{"fields":{"duration":"1–4周"},"text":"1–4周"}`),
 	); err != nil {
-		t.Fatalf("legacy/model ask_user fallback should still persist safely: %v", err)
+		t.Fatalf("unbound model-authored ask_user answer should remain outside BodyState: %v", err)
 	}
-	if len(repo.upsertedFacts) != 1 || repo.upsertedFacts[0].Kind != "user_answer" {
-		t.Fatalf("untrusted tool call must not promote bound symptom state: %#v", repo.upsertedFacts)
+	if len(repo.upsertedFacts) != 0 {
+		t.Fatalf("untrusted tool call created BodyState facts without canonical binding: %#v", repo.upsertedFacts)
+	}
+}
+
+func TestResolveSafetyStatePreservesExpectedRevision(t *testing.T) {
+	repo := &fakeBodyStateRepository{}
+	svc := NewBodyStateService(repo)
+	expected := int64(7)
+	if _, err := svc.ResolveSafetyState(context.Background(), uuid.New(), &expected, "resolved", "reviewed"); err != nil {
+		t.Fatalf("ResolveSafetyState returned error: %v", err)
+	}
+	if len(repo.safetyExpectedRevisions) != 1 || repo.safetyExpectedRevisions[0] == nil || *repo.safetyExpectedRevisions[0] != expected {
+		t.Fatalf("expected revision was not preserved: %#v", repo.safetyExpectedRevisions)
 	}
 }
 
@@ -314,6 +333,9 @@ func TestBodyStateSafetyOnlyPersistsPositiveSignals(t *testing.T) {
 	}
 	if len(repo.safetyStates) != 1 {
 		t.Fatalf("expected one durable safety state, got %d", len(repo.safetyStates))
+	}
+	if len(repo.safetyExpectedRevisions) != 1 || repo.safetyExpectedRevisions[0] != nil {
+		t.Fatalf("internal detector safety update must remain unconditional, got %#v", repo.safetyExpectedRevisions)
 	}
 }
 
@@ -351,7 +373,7 @@ func TestAssessmentObservationRemainsExcludedUntilUserConfirmation(t *testing.T)
 	repo := &fakeBodyStateRepository{}
 	svc := NewBodyStateService(repo)
 	stored, revision, err := svc.AddAssessmentObservation(context.Background(), uuid.New(), model.BodyStateObservation{
-		Kind: "posture_alignment", BodyRegion: "肩部",
+		Kind:  "posture_alignment",
 		Value: datatypes.JSON(`{"label":"高低肩倾向"}`),
 	})
 	if err != nil {
@@ -450,11 +472,11 @@ func TestBodyStateUnknownCanonicalRegionIDIsRejectedBeforePersistence(t *testing
 	}
 }
 
-func TestBodyStateCanonicalRegionRequiresAuthorityButLegacyNullRemainsWritable(t *testing.T) {
+func TestBodyStateLocalizedFactRequiresCanonicalResolvableRegion(t *testing.T) {
 	repo := &fakeBodyStateRepository{}
-	svc := NewBodyStateService(repo)
+	withoutAuthority := NewBodyStateService(repo)
 	canonical := "shoulder.right"
-	_, _, err := svc.UpsertFact(context.Background(), uuid.New(), nil, model.BodyStateFact{
+	_, _, err := withoutAuthority.UpsertFact(context.Background(), uuid.New(), nil, model.BodyStateFact{
 		Kind:         "discomfort",
 		BodyRegion:   "右肩",
 		BodyRegionID: &canonical,
@@ -464,16 +486,30 @@ func TestBodyStateCanonicalRegionRequiresAuthorityButLegacyNullRemainsWritable(t
 		t.Fatalf("canonical region without ontology authority must fail closed, got %v", err)
 	}
 
-	legacy, _, err := svc.UpsertFact(context.Background(), uuid.New(), nil, model.BodyStateFact{
+	svc := NewBodyStateService(repo).WithBodyRegionIDValidator(NewCanonicalBodyRegionIDValidator())
+	resolved, _, err := svc.UpsertFact(context.Background(), uuid.New(), nil, model.BodyStateFact{
+		Kind:       "discomfort",
+		BodyRegion: "右肩",
+		Value:      "疼痛",
+	})
+	if err != nil {
+		t.Fatalf("unambiguous ontology alias must resolve automatically: %v", err)
+	}
+	if resolved.BodyRegionID == nil || *resolved.BodyRegionID != "shoulder.right" {
+		t.Fatalf("resolved region id=%v want shoulder.right", resolved.BodyRegionID)
+	}
+
+	persistedBefore := len(repo.upsertedFacts)
+	_, _, err = svc.UpsertFact(context.Background(), uuid.New(), nil, model.BodyStateFact{
 		Kind:       "discomfort",
 		BodyRegion: "肩颈",
 		Value:      "紧张",
 	})
-	if err != nil {
-		t.Fatalf("legacy free-text fact must remain writable: %v", err)
+	if !errors.Is(err, ErrBodyRegionIDRequired) {
+		t.Fatalf("ambiguous localized fact must fail closed, got %v", err)
 	}
-	if legacy.BodyRegionID != nil {
-		t.Fatalf("ambiguous legacy fact must remain unresolved, got %q", *legacy.BodyRegionID)
+	if len(repo.upsertedFacts) != persistedBefore {
+		t.Fatalf("ambiguous localized fact reached persistence: %#v", repo.upsertedFacts)
 	}
 }
 

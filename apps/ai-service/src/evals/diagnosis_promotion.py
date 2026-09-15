@@ -8,7 +8,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.configuration.diagnosis_agent_config import get_diagnosis_configuration
+from src.evals.agent_config_archive import get_diagnosis_evaluation_configuration
 
 SERVICE_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_POLICY_PATH = SERVICE_ROOT / "data/evals/diagnosis_promotion_policy.json"
@@ -92,7 +92,7 @@ def evaluate_promotion_readiness(
     dataset_fingerprint = ""
 
     for index, link in enumerate(policy.qualification_chain):
-        get_diagnosis_configuration(link.configuration_id)
+        get_diagnosis_evaluation_configuration(link.configuration_id)
         report = _read_report(link.report)
         report_config = str(report.get("configuration_id") or "")
         qualification = report.get("qualification") or {}

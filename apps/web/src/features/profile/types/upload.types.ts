@@ -62,7 +62,6 @@ export interface PostureAnalysis {
 
 export interface UserUpload {
   id: string;
-  user_id: string;
   file_type:
     | "photo_front"
     | "photo_side"
@@ -70,7 +69,6 @@ export interface UserUpload {
     | "report"
     | "consultation_photo";
   original_name: string;
-  file_path: string;
   file_size: number;
   mime_type: string;
   ocr_result: OCRResult | null;
@@ -82,6 +80,14 @@ export interface UserUpload {
 }
 
 export type FileType = UserUpload["file_type"];
+
+export const FILE_TYPES: readonly FileType[] = [
+  "photo_front",
+  "photo_side",
+  "photo_back",
+  "report",
+  "consultation_photo",
+];
 
 export const FILE_TYPE_LABELS: Record<FileType, string> = {
   photo_front: "正面照片",

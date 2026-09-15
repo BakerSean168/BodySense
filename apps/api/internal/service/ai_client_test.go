@@ -7,22 +7,48 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
-
-	"github.com/bodysense/api/internal/dto"
 )
 
-func TestChatStreamSendsFlatPythonRequestAndParsesStreamEvent(t *testing.T) {
+const (
+	testRuntimeThreadID       = "11111111-1111-4111-8111-111111111111"
+	testRuntimeRunID          = "22222222-2222-4222-8222-222222222222"
+	testRuntimeConversationID = "33333333-3333-4333-8333-333333333333"
+	testRuntimeUserID         = "44444444-4444-4444-8444-444444444444"
+	testRuntimeInterruptID    = "55555555-5555-4555-8555-555555555555"
+)
+
+func validStartConsultationTurnRequest() StartConsultationTurnRequest {
+	return StartConsultationTurnRequest{
+		RunID:           testRuntimeRunID,
+		ConversationID:  testRuntimeConversationID,
+		UserID:          testRuntimeUserID,
+		ConfigurationID: defaultConsultationConfigurationID,
+		Input: ConsultationUserInput{
+			Type: "user_message",
+			Text: "hello",
+		},
+		BusinessContext: ConsultationBusinessContext{
+			Profile: json.RawMessage(`{}`),
+			RuntimeState: ConsultationRuntimeState{
+				Phase:         "collecting",
+				ExtractedInfo: json.RawMessage(`[]`),
+			},
+		},
+	}
+}
+
+func TestChatStreamSendsProtoCommandAndParsesProtoRuntimeEvent(t *testing.T) {
 	var captured map[string]any
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/runtime/threads/thread-1/turns" {
+		if r.URL.Path != "/runtime/threads/"+testRuntimeThreadID+"/turns" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 		if err := json.NewDecoder(r.Body).Decode(&captured); err != nil {
 			t.Fatalf("decode request: %v", err)
 		}
 		w.Header().Set("Content-Type", "application/x-ndjson")
-		_, _ = w.Write([]byte(`{"version":1,"seq":1,"channel":"message","type":"message.text.delta","ids":{"conversation_id":"s1"},"payload":{"delta":"hello"}}` + "\n"))
+		_, _ = w.Write([]byte(`{"version":1,"seq":"1","ids":{"conversation_id":"` + testRuntimeConversationID + `","run_id":"` + testRuntimeRunID + `"},"text_delta":{"delta":"hello"}}` + "\n"))
 	}))
 	defer server.Close()
 
@@ -33,11 +59,11 @@ func TestChatStreamSendsFlatPythonRequestAndParsesStreamEvent(t *testing.T) {
 
 	events, err := client.StartConsultationTurn(
 		context.Background(),
-		"thread-1",
+		testRuntimeThreadID,
 		StartConsultationTurnRequest{
-			RunID:           "run-1",
-			ConversationID:  "conv-1",
-			UserID:          "u1",
+			RunID:           testRuntimeRunID,
+			ConversationID:  testRuntimeConversationID,
+			UserID:          testRuntimeUserID,
 			ConfigurationID: defaultConsultationConfigurationID,
 			Input: ConsultationUserInput{
 				Type: "user_message",
@@ -64,17 +90,18 @@ func TestChatStreamSendsFlatPythonRequestAndParsesStreamEvent(t *testing.T) {
 
 	select {
 	case event := <-events:
-		if event.Type != "message.text.delta" {
-			t.Fatalf("expected message.text.delta event, got %s", event.Type)
+		if event.Kind() != ConsultationRuntimeTextDelta {
+			t.Fatalf("expected text_delta runtime event, got %s", event.Kind())
 		}
-		if string(event.Payload) != `{"delta":"hello"}` {
-			t.Fatalf("unexpected payload: %s", event.Payload)
+		payload, ok := event.Payload.(ConsultationRuntimeTextDeltaPayload)
+		if !ok || payload.Delta != "hello" {
+			t.Fatalf("unexpected payload: %#v", event.Payload)
 		}
 	case <-time.After(time.Second):
 		t.Fatal("timed out waiting for stream event")
 	}
 
-	for _, key := range []string{"run_id", "conversation_id", "user_id", "configuration_id", "input", "business_context"} {
+	for _, key := range []string{"thread_id", "run_id", "conversation_id", "user_id", "configuration_id", "input", "business_context"} {
 		if _, ok := captured[key]; !ok {
 			t.Fatalf("missing top-level key %q in request: %#v", key, captured)
 		}
@@ -86,6 +113,60 @@ func TestChatStreamSendsFlatPythonRequestAndParsesStreamEvent(t *testing.T) {
 	spatialContext, ok := businessContext["spatial_context"].(map[string]any)
 	if !ok || spatialContext["body_region_id"] != "shoulder.right" || spatialContext["anatomy_id"] != "appendicular-skeleton-clavicle-right" {
 		t.Fatalf("unexpected spatial_context payload: %#v", businessContext["spatial_context"])
+	}
+}
+
+func TestConsultationStartRejectsInvalidProtoCommandBeforeHTTP(t *testing.T) {
+	called := false
+	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		called = true
+	}))
+	defer server.Close()
+	client := &AIClient{httpClient: server.Client(), baseURL: server.URL}
+
+	_, err := client.StartConsultationTurn(context.Background(), "not-a-uuid", validStartConsultationTurnRequest())
+	if err == nil {
+		t.Fatal("expected invalid runtime command to fail before HTTP")
+	}
+	if called {
+		t.Fatal("invalid runtime command reached AI HTTP boundary")
+	}
+}
+
+func TestConsultationResumeSendsValidatedThreadAndInterruptIdentity(t *testing.T) {
+	var captured map[string]any
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		wantPath := "/runtime/threads/" + testRuntimeThreadID + "/interrupts/" + testRuntimeInterruptID + "/resume"
+		if r.URL.Path != wantPath {
+			t.Fatalf("path = %q, want %q", r.URL.Path, wantPath)
+		}
+		if err := json.NewDecoder(r.Body).Decode(&captured); err != nil {
+			t.Fatal(err)
+		}
+		w.Header().Set("Content-Type", "application/x-ndjson")
+		_, _ = w.Write([]byte(`{"version":1,"seq":"1","ids":{"conversation_id":"` + testRuntimeConversationID + `","run_id":"` + testRuntimeRunID + `"},"stream_done":{}}` + "\n"))
+	}))
+	defer server.Close()
+	client := &AIClient{httpClient: server.Client(), baseURL: server.URL}
+
+	req := ResumeConsultationInterruptRequest{
+		RunID:           testRuntimeRunID,
+		ConversationID:  testRuntimeConversationID,
+		UserID:          testRuntimeUserID,
+		ConfigurationID: defaultConsultationConfigurationID,
+		InterruptID:     testRuntimeInterruptID,
+		Answer:          json.RawMessage(`{"value":"yes"}`),
+		BusinessContext: validStartConsultationTurnRequest().BusinessContext,
+	}
+	events, err := client.ResumeConsultationInterrupt(context.Background(), testRuntimeThreadID, testRuntimeInterruptID, req)
+	if err != nil {
+		t.Fatalf("ResumeConsultationInterrupt: %v", err)
+	}
+	if event := <-events; event.Kind() != ConsultationRuntimeDone {
+		t.Fatalf("event kind = %q, want done", event.Kind())
+	}
+	if captured["thread_id"] != testRuntimeThreadID || captured["interrupt_id"] != testRuntimeInterruptID {
+		t.Fatalf("runtime command lost path identities: %#v", captured)
 	}
 }
 
@@ -156,19 +237,17 @@ func TestConsultationStreamConvertsMalformedNDJSONToProtocolError(t *testing.T) 
 	}))
 	defer server.Close()
 	client := &AIClient{httpClient: server.Client(), baseURL: server.URL}
-	events, err := client.StartConsultationTurn(context.Background(), "thread-1", StartConsultationTurnRequest{})
+	events, err := client.StartConsultationTurn(context.Background(), testRuntimeThreadID, validStartConsultationTurnRequest())
 	if err != nil {
 		t.Fatal(err)
 	}
 	event := <-events
-	if event.Type != "stream.error" || event.Channel != "stream" {
-		t.Fatalf("expected protocol stream.error, got %#v", event)
+	if event.Kind() != ConsultationRuntimeError {
+		t.Fatalf("expected private runtime protocol error, got %#v", event)
 	}
-	var payload struct {
-		Message string `json:"message"`
-	}
-	if err := event.PayloadAs(&payload); err != nil || payload.Message == "" {
-		t.Fatalf("expected sanitized protocol error payload, got %s (%v)", event.Payload, err)
+	payload, ok := event.Payload.(ConsultationRuntimeErrorPayload)
+	if !ok || payload.Message == "" {
+		t.Fatalf("expected sanitized protocol error payload, got %#v", event.Payload)
 	}
 }
 
@@ -179,26 +258,53 @@ func TestConsultationStreamRejectsUnknownInternalEventType(t *testing.T) {
 	}))
 	defer server.Close()
 	client := &AIClient{httpClient: server.Client(), baseURL: server.URL}
-	events, err := client.StartConsultationTurn(context.Background(), "thread-1", StartConsultationTurnRequest{})
+	events, err := client.StartConsultationTurn(context.Background(), testRuntimeThreadID, validStartConsultationTurnRequest())
 	if err != nil {
 		t.Fatal(err)
 	}
 	event := <-events
-	if event.Type != "stream.error" {
-		t.Fatalf("expected protocol stream.error, got %#v", event)
+	if event.Kind() != ConsultationRuntimeError {
+		t.Fatalf("expected private runtime protocol error, got %#v", event)
 	}
 }
 
-func TestValidateConsultationInternalEventRejectsMalformedRedFlag(t *testing.T) {
-	event, _ := dto.NewStreamEvent(1, "safety", "safety.red_flag.detected", dto.StreamEventIDs{}, map[string]any{
-		"has_red_flags": "yes", "flags": []any{},
-	})
-	if err := validateConsultationInternalEvent(event); err == nil {
-		t.Fatal("malformed authority payload must be rejected")
+func applicationRuntimeEvent(t *testing.T, kind ConsultationRuntimeEventKind, payload any) ConsultationRuntimeEvent {
+	t.Helper()
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	switch kind {
+	case ConsultationRuntimeCitationAdded:
+		var value struct {
+			Citation json.RawMessage `json:"citation"`
+		}
+		if err := json.Unmarshal(raw, &value); err != nil {
+			t.Fatal(err)
+		}
+		return ConsultationRuntimeEvent{Payload: ConsultationRuntimeCitationAddedPayload{Citation: value.Citation}}
+	case ConsultationRuntimeAttributionAdded:
+		var value struct {
+			Attribution json.RawMessage `json:"attribution"`
+		}
+		if err := json.Unmarshal(raw, &value); err != nil {
+			t.Fatal(err)
+		}
+		return ConsultationRuntimeEvent{Payload: ConsultationRuntimeAttributionAddedPayload{Attribution: value.Attribution}}
+	default:
+		t.Fatalf("unsupported application runtime test kind %q", kind)
+		return ConsultationRuntimeEvent{}
 	}
 }
 
-func TestValidateConsultationInternalEventRequiresPublishedThoughtForestCitationIdentity(t *testing.T) {
+func TestRuntimeProtoDecoderRejectsMalformedRedFlagType(t *testing.T) {
+	line := []byte(`{"version":1,"seq":"1","ids":{"conversation_id":"` + testRuntimeConversationID + `","run_id":"` + testRuntimeRunID + `"},"red_flag_detected":{"has_red_flags":"yes","flags":[]}}`)
+	if _, err := decodeConsultationRuntimeProtoEvent(line); err == nil {
+		t.Fatal("malformed typed red-flag payload must be rejected at Proto boundary")
+	}
+}
+
+func TestRuntimeApplicationPayloadRequiresPublishedThoughtForestCitationIdentity(t *testing.T) {
 	validCitation := map[string]any{
 		"source_type":           "thought_forest_note",
 		"unit_key":              "tfu-pain",
@@ -218,73 +324,43 @@ func TestValidateConsultationInternalEventRequiresPublishedThoughtForestCitation
 			"line_end":     23,
 		},
 	}
-	event, _ := dto.NewStreamEvent(
-		1,
-		"source",
-		"source.citation.added",
-		dto.StreamEventIDs{},
-		map[string]any{"citation": validCitation},
-	)
-	if err := validateConsultationInternalEvent(event); err != nil {
+	event := applicationRuntimeEvent(t, ConsultationRuntimeCitationAdded, map[string]any{"citation": validCitation})
+	if err := validateConsultationRuntimeApplicationPayload(event.Payload); err != nil {
 		t.Fatalf("valid published Thought Forest citation rejected: %v", err)
 	}
 
 	delete(validCitation, "publication_id")
-	invalid, _ := dto.NewStreamEvent(
-		1,
-		"source",
-		"source.citation.added",
-		dto.StreamEventIDs{},
-		map[string]any{"citation": validCitation},
-	)
-	if err := validateConsultationInternalEvent(invalid); err == nil {
+	invalid := applicationRuntimeEvent(t, ConsultationRuntimeCitationAdded, map[string]any{"citation": validCitation})
+	if err := validateConsultationRuntimeApplicationPayload(invalid.Payload); err == nil {
 		t.Fatal("published Thought Forest citation without publication identity must be rejected")
 	}
 }
 
-func TestValidateConsultationInternalEventKeepsLegacyVideoCitationCompatible(t *testing.T) {
-	event, _ := dto.NewStreamEvent(
-		1,
-		"source",
-		"source.citation.added",
-		dto.StreamEventIDs{},
-		map[string]any{"citation": map[string]any{
-			"title":       "Legacy video citation",
-			"source_type": "video",
-		}},
-	)
-	if err := validateConsultationInternalEvent(event); err != nil {
-		t.Fatalf("legacy video citation must remain compatible: %v", err)
+func TestRuntimeApplicationPayloadAllowsNonThoughtForestCitation(t *testing.T) {
+	event := applicationRuntimeEvent(t, ConsultationRuntimeCitationAdded, map[string]any{"citation": map[string]any{
+		"title":       "Video citation",
+		"source_type": "video",
+	}})
+	if err := validateConsultationRuntimeApplicationPayload(event.Payload); err != nil {
+		t.Fatalf("non-Thought-Forest citation should use its own application contract: %v", err)
 	}
 }
 
-func TestValidateConsultationInternalEventAcceptsValidatedAnswerAttribution(t *testing.T) {
+func TestRuntimeApplicationPayloadValidatesAnswerAttribution(t *testing.T) {
 	var payload map[string]any
 	if err := json.Unmarshal(validAnswerAttributionPayload(), &payload); err != nil {
 		t.Fatal(err)
 	}
-	event, _ := dto.NewStreamEvent(
-		1,
-		"source",
-		"source.answer_attribution.added",
-		dto.StreamEventIDs{},
-		payload,
-	)
-	if err := validateConsultationInternalEvent(event); err != nil {
+	event := applicationRuntimeEvent(t, ConsultationRuntimeAttributionAdded, payload)
+	if err := validateConsultationRuntimeApplicationPayload(event.Payload); err != nil {
 		t.Fatalf("valid answer attribution rejected: %v", err)
 	}
 
 	attribution := payload["attribution"].(map[string]any)
 	bindings := attribution["bindings"].([]any)
 	bindings[0].(map[string]any)["publication_id"] = "not-a-uuid"
-	invalid, _ := dto.NewStreamEvent(
-		1,
-		"source",
-		"source.answer_attribution.added",
-		dto.StreamEventIDs{},
-		payload,
-	)
-	if err := validateConsultationInternalEvent(invalid); err == nil {
+	invalid := applicationRuntimeEvent(t, ConsultationRuntimeAttributionAdded, payload)
+	if err := validateConsultationRuntimeApplicationPayload(invalid.Payload); err == nil {
 		t.Fatal("invalid answer attribution publication identity must be rejected")
 	}
 }

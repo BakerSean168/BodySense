@@ -139,35 +139,6 @@ func (s *DiagnosisReplayService) CounterfactualReplay(
 	return s.counterfactualCompare(ctx, userID, analysis, input, baseline, targetConfigurationID)
 }
 
-// CounterfactualFrozen compares a transient served result with another immutable
-// configuration without forcing the served result into DiagnosisAnalysis
-// persistence. This is required for legacy pre-envelope rejected responses:
-// rollout can still detect unsafe Challenger relaxation without changing the
-// user's characterized Champion response contract.
-func (s *DiagnosisReplayService) CounterfactualFrozen(
-	ctx context.Context,
-	userID uuid.UUID,
-	replayInput json.RawMessage,
-	baselineRaw json.RawMessage,
-	sourceConfigurationID string,
-	targetConfigurationID string,
-) (*DiagnosisReplayReport, error) {
-	input, err := decodeDiagnosisReplayInput(replayInput)
-	if err != nil {
-		return nil, err
-	}
-	var baseline map[string]any
-	if len(baselineRaw) == 0 || json.Unmarshal(baselineRaw, &baseline) != nil {
-		return nil, errors.New("transient Diagnosis baseline is not valid JSON")
-	}
-	status, _ := baseline["status"].(string)
-	analysis := &model.DiagnosisAnalysisRecord{
-		ID: uuid.Nil, BodyStateRevision: input.BodyStateRevision,
-		Status: status, AgentConfigurationID: sourceConfigurationID,
-	}
-	return s.counterfactualCompare(ctx, userID, analysis, input, baseline, targetConfigurationID)
-}
-
 func (s *DiagnosisReplayService) counterfactualCompare(
 	ctx context.Context,
 	userID uuid.UUID,

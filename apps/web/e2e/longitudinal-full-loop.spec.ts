@@ -100,9 +100,10 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
       data: {
         expected_revision: 0,
         fact: {
-          concern_key: "region:颈肩",
+          concern_key: "region:neck",
           kind: "discomfort",
-          body_region: "颈肩",
+          body_region: "颈部",
+          body_region_id: "neck",
           value: "久坐后颈肩酸胀",
           details: {
             duration: "2周",
@@ -122,7 +123,7 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
     "create BodyState fact",
   );
   expect(factResponse.revision.revision).toBe(1);
-  expect(factResponse.fact.concern_key).toBe("region:颈肩");
+  expect(factResponse.fact.concern_key).toBe("region:neck");
 
   const diagnosis = await expectJson<{
     analysis_id: string;
@@ -137,7 +138,7 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
     "generate DiagnosisAnalysis",
   );
   expect(diagnosis.candidates).toHaveLength(1);
-  expect(diagnosis.candidates[0].concern_key).toBe("region:颈肩");
+  expect(diagnosis.candidates[0].concern_key).toBe("region:neck");
   expect(diagnosis.freshness.state).toBe("fresh");
 
   await expectJson(
@@ -204,12 +205,7 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
   expect(historicalReplay.comparison.semantic.match).toBe(true);
   expect(historicalReplay.comparison.presentation.match).toBe(true);
 
-  const treatmentV1 = "treat-config-85718f8e90ac9d80";
-  const treatmentV2 = "treat-config-f68eec9846664596";
-  const counterfactualTarget =
-    proposalResponse.proposal.agent_configuration_id === treatmentV1
-      ? treatmentV2
-      : treatmentV1;
+  const counterfactualTarget = proposalResponse.proposal.agent_configuration_id;
   const counterfactualReplay = await expectJson<{
     mode: string;
     target_configuration_id: string;
@@ -226,13 +222,28 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
         timeout: 60_000,
       },
     ),
-    "counterfactual Treatment replay",
+    "current-config Treatment counterfactual replay",
   );
   expect(counterfactualReplay.mode).toBe("counterfactual");
   expect(counterfactualReplay.target_configuration_id).toBe(
     counterfactualTarget,
   );
   expect(counterfactualReplay.comparison.hard.match).toBe(true);
+
+  const retiredReplay = await request.post(
+    `${apiBase}/api/v1/treatments/revisions/${proposalResponse.proposal.id}/replay`,
+    {
+      headers: authHeaders,
+      data: {
+        mode: "counterfactual",
+        configuration_id: "treat-config-85718f8e90ac9d80",
+      },
+    },
+  );
+  expect(retiredReplay.status()).toBe(422);
+  expect(await retiredReplay.json()).toMatchObject({
+    error: { code: "UNKNOWN_AGENT_CONFIGURATION" },
+  });
 
   const regressionExport = await expectJson<{
     schema_target: string;
@@ -296,12 +307,12 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
   expect(activeWorkspace.actions).toContainEqual(
     expect.objectContaining({
       kind: "open_training",
-      target: { route: `/training/${acceptance.training_plan.id}` },
+      target: { route: `/consultation/${conversationId}?view=treatment` },
     }),
   );
 
-  await page.goto(`/training/${acceptance.training_plan.id}`);
-  await expect(page).toHaveURL(/\/consultation(?:\/[^?]+)?\?view=treatment$/);
+  await page.goto(`/consultation/${conversationId}?view=treatment`);
+  await expect(page).toHaveURL(/\/consultation\/[^?]+\?view=treatment$/);
   const trainingAction = page.getByRole("button", { name: "展开训练执行" });
   await expect(trainingAction).toBeVisible();
   await page.reload();
@@ -337,8 +348,8 @@ test("BodyState -> Diagnosis -> Treatment -> Training -> Outcome closes the long
           symptom_changes: "久坐后的颈肩酸胀有所改善",
           training_feeling: "轻松",
           difficulties: "",
-          body_region: "颈肩",
-          concern_key: "region:颈肩",
+          body_region: "颈部",
+          concern_key: "region:neck",
           trend: "improving",
           fact_id: factResponse.fact.id,
         },

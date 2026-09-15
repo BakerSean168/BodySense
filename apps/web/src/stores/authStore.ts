@@ -1,14 +1,17 @@
 import { create } from "zustand";
-import { apiUrl, safeJson } from "@/lib/api-url";
+import {
+  getCurrentUser,
+  loginAccount,
+  logoutAccount,
+  refreshAccountSession,
+  registerAccount,
+} from "@/generated/api/bodysense";
+import { apiUrl } from "@/lib/api-url";
+import { openApiPublicFetch } from "@/lib/openapi-client";
 
 interface User {
   id: string;
   email: string;
-}
-
-interface AuthPayload {
-  access_token: string;
-  expires_in: number;
 }
 
 interface AuthState {
@@ -37,6 +40,36 @@ let refreshPromise: Promise<boolean> | null = null;
 let verifySessionPromise: Promise<boolean> | null = null;
 let bootstrapPromise: Promise<void> | null = null;
 
+function generatedHttpStatus(error: unknown): number | undefined {
+  if (typeof error !== "object" || error === null || !("status" in error))
+    return undefined;
+  return typeof error.status === "number" ? error.status : undefined;
+}
+
+function bearerFetcher(accessToken: string): typeof globalThis.fetch {
+  return async (input, init) => {
+    const raw =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+    const target = /^https?:\/\//i.test(raw) ? raw : apiUrl(raw);
+    const inheritedHeaders = Object.fromEntries(
+      new Headers(init?.headers).entries(),
+    );
+    return fetch(target, {
+      ...init,
+      headers: { ...inheritedHeaders, Authorization: `Bearer ${accessToken}` },
+    });
+  };
+}
+
+async function requestCurrentUser(accessToken: string): Promise<User> {
+  const user = await getCurrentUser(undefined, bearerFetcher(accessToken));
+  return { id: user.id, email: user.email };
+}
+
 function clearAuthState(
   set: (partial: Partial<AuthState>) => void,
   options: { resolved?: boolean } = {},
@@ -54,27 +87,18 @@ async function doRefresh(
   set: (partial: Partial<AuthState>) => void,
 ): Promise<boolean> {
   try {
-    const response = await fetch(apiUrl("/api/v1/auth/refresh"), {
-      method: "POST",
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        clearAuthState(set);
-      }
-      return false;
-    }
-
-    const data = await safeJson<AuthPayload>(response);
+    const session = await refreshAccountSession(undefined, openApiPublicFetch);
     set({
-      accessToken: data.access_token,
+      accessToken: session.access_token,
       isAuthenticated: true,
       isAuthResolved: true,
       error: null,
     });
     return true;
-  } catch {
+  } catch (error) {
+    if (generatedHttpStatus(error) === 401) {
+      clearAuthState(set);
+    }
     return false;
   }
 }
@@ -130,19 +154,14 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const response = await fetch(apiUrl("/api/v1/auth/login"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await safeJson<AuthPayload & { message?: string }>(response);
-      if (!response.ok) {
-        throw new Error(data?.message || "登录失败");
-      }
+      const session = await loginAccount(
+        { email, password },
+        undefined,
+        openApiPublicFetch,
+      );
 
       set({
-        accessToken: data.access_token,
+        accessToken: session.access_token,
         isAuthenticated: true,
         hasHydrated: true,
         isAuthResolved: true,
@@ -151,12 +170,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         error: null,
       });
       await get().fetchUser();
-    } catch (error) {
-      set({
-        isLoading: false,
-        error: error instanceof Error ? error.message : "登录失败",
-      });
-      throw error;
+    } catch {
+      set({ isLoading: false, error: "登录失败" });
+      throw new Error("登录失败");
     }
   },
 
@@ -164,19 +180,14 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const response = await fetch(apiUrl("/api/v1/auth/register"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await safeJson<AuthPayload & { message?: string }>(response);
-      if (!response.ok) {
-        throw new Error(data?.message || "注册失败");
-      }
+      const session = await registerAccount(
+        { email, password },
+        undefined,
+        openApiPublicFetch,
+      );
 
       set({
-        accessToken: data.access_token,
+        accessToken: session.access_token,
         isAuthenticated: true,
         hasHydrated: true,
         isAuthResolved: true,
@@ -185,21 +196,18 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         error: null,
       });
       await get().fetchUser();
-    } catch (error) {
-      set({
-        isLoading: false,
-        error: error instanceof Error ? error.message : "注册失败",
-      });
-      throw error;
+    } catch {
+      set({ isLoading: false, error: "注册失败" });
+      throw new Error("注册失败");
     }
   },
 
   logout: async () => {
     try {
-      await fetch(apiUrl("/api/v1/auth/logout"), {
-        method: "POST",
-        credentials: "include",
-      });
+      await logoutAccount(undefined, openApiPublicFetch);
+    } catch {
+      // Server-side revocation may be temporarily unavailable; the local
+      // session clears regardless so the browser never stays signed in.
     } finally {
       clearAuthState(set);
       set({ hasHydrated: true, error: null });
@@ -229,29 +237,21 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         }
       }
 
-      const requestMe = (accessToken: string) =>
-        fetch(apiUrl("/api/v1/me"), {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-
       try {
-        let response = await requestMe(token);
-        if (response.status === 401) {
+        let user: User;
+        try {
+          user = await requestCurrentUser(token);
+        } catch (error) {
+          if (generatedHttpStatus(error) !== 401) throw error;
           const refreshed = await get().refreshAccessToken();
           const nextToken = get().accessToken;
           if (!refreshed || !nextToken) {
             clearAuthState(set);
             return false;
           }
-          response = await requestMe(nextToken);
+          user = await requestCurrentUser(nextToken);
         }
 
-        if (!response.ok) {
-          clearAuthState(set);
-          return false;
-        }
-
-        const user = await safeJson<User>(response);
         set({
           user,
           isAuthenticated: true,
@@ -292,13 +292,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       return;
     }
 
-    const response = await fetch(apiUrl("/api/v1/me"), {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    if (!response.ok) {
-      throw new Error("failed to fetch current user");
-    }
-    const user = await safeJson<User>(response);
+    const user = await requestCurrentUser(accessToken);
     set({ user, isAuthResolved: true });
   },
 

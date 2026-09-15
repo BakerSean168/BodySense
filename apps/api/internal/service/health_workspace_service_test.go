@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bodysense/api/internal/dto"
 	"github.com/bodysense/api/internal/model"
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
@@ -111,7 +110,7 @@ func TestWorkspaceCapabilitiesRejectPotentiallyStaleDiagnosisForTreatment(t *tes
 func TestWorkspaceCapabilitiesRequireActiveTrainingProjectionForExecution(t *testing.T) {
 	analysisID := uuid.New()
 	candidateID := uuid.New()
-	baseArgs := func(plan *model.TrainingPlan) dto.HealthWorkspaceCapabilities {
+	baseArgs := func(plan *model.TrainingPlan) HealthWorkspaceCapabilities {
 		return deriveWorkspaceCapabilities(
 			&BodyStateSnapshot{CurrentRevision: 7, Facts: []model.BodyStateFact{{Kind: "discomfort"}}},
 			&model.DiagnosisAnalysisRecord{
@@ -131,6 +130,28 @@ func TestWorkspaceCapabilitiesRequireActiveTrainingProjectionForExecution(t *tes
 	if caps := baseArgs(&model.TrainingPlan{Status: "active"}); !caps.CanExecuteTreatment {
 		t.Fatalf("active projection should make treatment executable: %#v", caps)
 	}
+}
+
+func TestWorkspaceActionsOpenTrainingTargetsCanonicalTreatmentView(t *testing.T) {
+	conversationID := uuid.New()
+	workspace := &HealthWorkspace{
+		ConversationID: &conversationID,
+		TrainingPlan:   &model.TrainingPlan{ID: uuid.New(), Status: "active"},
+		Capabilities:   HealthWorkspaceCapabilities{CanExecuteTreatment: true},
+	}
+
+	actions := deriveWorkspaceActions(workspace)
+	for _, action := range actions {
+		if action.Kind != "open_training" {
+			continue
+		}
+		want := "/consultation/" + conversationID.String() + "?view=treatment"
+		if got, _ := action.Target["route"].(string); got != want {
+			t.Fatalf("open_training route=%q want=%q", got, want)
+		}
+		return
+	}
+	t.Fatal("open_training action missing")
 }
 
 func TestWorkspaceTrendsPreserveAssociationOnlyOutcome(t *testing.T) {

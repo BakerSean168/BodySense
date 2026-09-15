@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -16,7 +17,7 @@ func assessmentReplayTestReport() *model.AssessmentReport {
 	now := time.Now().UTC()
 	reportID := uuid.New()
 	env, _ := encodeAssessmentReplayInput(
-		"assess-config-fbff8155337b388d",
+		defaultAssessmentConfigurationID,
 		json.RawMessage(`{"gender":"male","birth_date":"1996-08-27"}`),
 		json.RawMessage(`{"current_revision":3,"facts":[],"observations":[]}`),
 		json.RawMessage(`[]`),
@@ -30,13 +31,15 @@ func assessmentReplayTestReport() *model.AssessmentReport {
 		ID:                      reportID,
 		UserID:                  uuid.New(),
 		Status:                  "completed",
-		HealthGrade:             func() *string { value := "B"; return &value }(),
+		ContractRevision:        assessmentOutputContractV2,
+		EvidenceCoverage:        json.RawMessage(`{"status":"sufficient","available_sources":["posture_analysis"],"domains":{}}`),
+		EvidenceGaps:            json.RawMessage(`[]`),
 		Summary:                 "当前资料支持一项待审核观察。",
 		Observations:            observations,
 		InformationGaps:         json.RawMessage(`[]`),
 		SafetyNotes:             json.RawMessage(`[]`),
-		AgentConfigurationID:    "assess-config-fbff8155337b388d",
-		AgentConfiguration:      datatypes.JSON(`{"id":"assess-config-fbff8155337b388d","role":"assessment"}`),
+		AgentConfigurationID:    defaultAssessmentConfigurationID,
+		AgentConfiguration:      datatypes.JSON(fmt.Sprintf(`{"id":%q,"role":"assessment"}`, defaultAssessmentConfigurationID)),
 		ExecutionProvenance:     datatypes.JSON(`{"status":"executed","runtime":"pydantic-ai"}`),
 		GenerationDecisionTrace: datatypes.JSON(fmt.Sprintf(`{"status":"generated","outcome":"accepted","replay_input_fingerprint":%q}`, fingerprint)),
 		ReplayInput:             datatypes.JSON(env),
@@ -61,7 +64,7 @@ func TestAssessmentHistoricalReplayRebuildsImmutableBaselineWithoutModel(t *test
 	if replayed.Mode != "historical" {
 		t.Fatalf("expected historical mode, got %q", replayed.Mode)
 	}
-	if replayed.SourceConfigurationID != "assess-config-fbff8155337b388d" {
+	if replayed.SourceConfigurationID != defaultAssessmentConfigurationID {
 		t.Fatalf("unexpected source config: %q", replayed.SourceConfigurationID)
 	}
 	if replayed.Baseline.Status != "completed" || replayed.Replay.Status != "completed" {
@@ -114,19 +117,31 @@ func TestAssessmentReplayCounterfactualRequiresRegisteredConfiguration(t *testin
 	}
 }
 
-func TestAssessmentReplayComparisonDetectsConfigMismatch(t *testing.T) {
+func TestAssessmentCounterfactualRequiresConfiguredAIClientForCurrentConfiguration(t *testing.T) {
 	svc, repo := newAssessmentReplaySvc()
 	report := assessmentReplayTestReport()
 	repo.created = report
 
-	// ai is nil, so counterfactual with a valid-but-different config should fail
-	// because the ai client is unconfigured (before any model call we still pass
-	// policy validation, then hit the unconfigured-AI guard).
+	// The only runtime-addressable Assessment configuration is current. With no
+	// AI client, replay passes policy validation and then fails at the model-call guard.
 	_, err := svc.CounterfactualReplay(
-		context.Background(), report.UserID, report.ID, "assess-config-fbff8155337b388d",
+		context.Background(), report.UserID, report.ID, defaultAssessmentConfigurationID,
 	)
 	if err == nil {
 		t.Fatal("counterfactual replay without a configured AI client must fail")
+	}
+}
+
+func TestAssessmentReplayRejectsRetiredSourceContract(t *testing.T) {
+	svc, repo := newAssessmentReplaySvc()
+	report := assessmentReplayTestReport()
+	report.ContractRevision = "assessment-output-v1"
+	report.AgentConfigurationID = retiredAssessmentV1ConfigurationID
+	repo.created = report
+
+	_, err := svc.HistoricalReplay(context.Background(), report.UserID, report.ID)
+	if !errors.Is(err, ErrAssessmentReplayConfiguration) {
+		t.Fatalf("retired source must fail closed, got %v", err)
 	}
 }
 

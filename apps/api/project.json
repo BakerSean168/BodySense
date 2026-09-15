@@ -51,7 +51,7 @@
       "cache": true,
       "options": {
         "cwd": "apps/api",
-        "command": "go vet ./..."
+        "command": "go vet ./... && go run honnef.co/go/tools/cmd/staticcheck@v0.8.1 -checks='SA*,S1*,QF*' ./..."
       }
     }
   }

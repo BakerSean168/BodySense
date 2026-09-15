@@ -9,12 +9,17 @@ from pydantic_ai import (
 from pydantic_ai.models.test import TestModel
 
 from src.agents.diagnosis_agent import create_diagnosis_agent
+from src.agents.evidence import DiagnosisEvidenceAcquirer
 from src.models.dependencies import EvidenceSearcher
 from src.models.diagnosis import DiagnosisAgentOutput, DiagnosisDependencies
-from src.models.evidence import EvidenceRetrievalStatus, EvidenceSearchOutcome
+from src.models.evidence import EvidenceBudget, EvidenceRetrievalStatus, EvidenceSearchOutcome
 
 
 def _deps(evidence_searcher: EvidenceSearcher | None = None) -> DiagnosisDependencies:
+    evidence_acquirer = DiagnosisEvidenceAcquirer(
+        searcher=evidence_searcher,
+        budget=EvidenceBudget(max_searches=2, max_results_per_search=5),
+    )
     return DiagnosisDependencies(
         body_state_revision=12,
         body_state={
@@ -32,6 +37,7 @@ def _deps(evidence_searcher: EvidenceSearcher | None = None) -> DiagnosisDepende
         relevant_history=[{"revision": 11, "change_type": "fact.temporal_changed"}],
         profile={"gender": "female", "birth_date": "1996-08-27", "age_years": 30},
         evidence_searcher=evidence_searcher,
+        evidence_acquirer=evidence_acquirer,
     )
 
 
@@ -106,7 +112,7 @@ class FakeEvidenceSearcher:
 
 
 @pytest.mark.asyncio
-async def test_agent_search_evidence_tool_uses_run_scoped_searcher() -> None:
+async def test_agent_user_fact_gap_never_calls_run_scoped_searcher() -> None:
     searcher = FakeEvidenceSearcher()
 
     model = TestModel(
@@ -135,17 +141,14 @@ async def test_agent_search_evidence_tool_uses_run_scoped_searcher() -> None:
         deps=_deps(evidence_searcher=searcher),
     )
 
-    # searcher.calls 有调用
-    assert searcher.calls, "EvidenceSearcher.search should have been called"
-    # query 不为空字符串，top_k 应该为 5
-    query, top_k = searcher.calls[0]
-    assert query.strip()
-    assert top_k == 5
+    # TestModel generates a user_fact EvidenceGap. User facts are owned by the
+    # user and must never be substituted by external retrieval.
+    assert searcher.calls == []
     assert isinstance(result.output, DiagnosisAgentOutput)
 
 
 @pytest.mark.asyncio
-async def test_search_evidence_tool_result_returns_to_model() -> None:
+async def test_acquire_evidence_user_fact_result_returns_to_model() -> None:
     searcher = FakeEvidenceSearcher()
 
     model = TestModel(
@@ -179,30 +182,31 @@ async def test_search_evidence_tool_result_returns_to_model() -> None:
         part
         for message in messages
         for part in message.parts
-        if isinstance(part, ToolCallPart) and part.tool_name == "search_evidence"
+        if isinstance(part, ToolCallPart) and part.tool_name == "acquire_evidence"
     ]
 
     assert len(tool_calls) == 1
-    assert tool_calls[0].tool_name == "search_evidence"
+    assert tool_calls[0].tool_name == "acquire_evidence"
     assert isinstance(result.output, DiagnosisAgentOutput)
 
     tool_returns = [
         part
         for message in messages
         for part in message.parts
-        if isinstance(part, ToolReturnPart) and part.tool_name == "search_evidence"
+        if isinstance(part, ToolReturnPart) and part.tool_name == "acquire_evidence"
     ]
 
     assert len(tool_returns) == 1
-    assert tool_returns[0].tool_name == "search_evidence"
+    assert tool_returns[0].tool_name == "acquire_evidence"
 
-    assert "evidence-1" in str(tool_returns[0].content)
-
+    assert "user_input_required" in str(tool_returns[0].content)
+    assert "evidence-1" not in str(tool_returns[0].content)
+    assert searcher.calls == []
     assert tool_returns[0].tool_call_id == tool_calls[0].tool_call_id
 
 
 @pytest.mark.asyncio
-async def test_search_evidence_records_retrieved_evidence_on_run_dependencies() -> None:
+async def test_acquire_evidence_user_fact_does_not_record_external_evidence() -> None:
     searcher = FakeEvidenceSearcher()
 
     deps = _deps(
@@ -237,12 +241,15 @@ async def test_search_evidence_records_retrieved_evidence_on_run_dependencies() 
         deps=deps,
     )
 
-    assert len(deps.retrieved_evidence) == 1
-    assert deps.retrieved_evidence[0]["evidence_id"] == "evidence-1"
+    assert deps.retrieved_evidence == []
+    assert searcher.calls == []
+    assert deps.evidence_acquirer is not None
+    assert len(deps.evidence_acquirer.attempts) == 1
+    assert deps.evidence_acquirer.attempts[0].stop_reason.value == "user_input_required"
 
 
 @pytest.mark.asyncio
-async def test_search_evidence_deduplicates_retrieved_evidence_by_id() -> None:
+async def test_user_fact_acquisition_does_not_mutate_existing_retrieved_evidence() -> None:
     searcher = FakeEvidenceSearcher()
 
     deps = _deps(

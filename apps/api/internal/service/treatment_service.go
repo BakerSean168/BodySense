@@ -26,7 +26,7 @@ type treatmentRepository interface {
 	CreateProposal(ctx context.Context, userID uuid.UUID, revision model.TreatmentRevision, interventions []model.Intervention) (*model.Treatment, *model.TreatmentRevision, error)
 	AcceptRevision(ctx context.Context, userID, revisionID uuid.UUID, expectedBodyStateRevision int64, acceptanceDecisionTrace datatypes.JSON) (*model.Treatment, *model.TreatmentRevision, bool, error)
 	RejectRevision(ctx context.Context, userID, revisionID uuid.UUID) error
-	SetStatus(ctx context.Context, userID uuid.UUID, status string, reasons datatypes.JSON) (*model.Treatment, error)
+	SetStatus(ctx context.Context, userID uuid.UUID, status model.TreatmentStatus, reasons datatypes.JSON) (*model.Treatment, error)
 	GetCurrent(ctx context.Context, userID uuid.UUID) (*model.Treatment, error)
 	GetRevision(ctx context.Context, userID, revisionID uuid.UUID) (*model.TreatmentRevision, error)
 	ListRevisions(ctx context.Context, userID uuid.UUID, limit int) ([]model.TreatmentRevision, error)
@@ -564,7 +564,7 @@ func (s *TreatmentService) evaluateCurrentReviewState(
 	ctx context.Context,
 	userID uuid.UUID,
 	current *model.Treatment,
-) (string, []TreatmentReviewReason, error) {
+) (model.TreatmentStatus, []TreatmentReviewReason, error) {
 	if current == nil || current.Current == nil {
 		return "", nil, nil
 	}
@@ -610,7 +610,7 @@ type TreatmentReviewReason struct {
 func EvaluateTreatmentReviewPolicy(
 	analysis *model.DiagnosisAnalysisRecord,
 	revisions []model.BodyStateRevision,
-) (string, []TreatmentReviewReason) {
+) (model.TreatmentStatus, []TreatmentReviewReason) {
 	if len(revisions) == 0 {
 		return model.TreatmentStatusActive, []TreatmentReviewReason{}
 	}

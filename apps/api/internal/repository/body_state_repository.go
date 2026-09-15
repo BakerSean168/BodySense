@@ -756,12 +756,13 @@ func (r *BodyStateRepository) UpdateObservationReviewState(
 func (r *BodyStateRepository) SetSafetyState(
 	ctx context.Context,
 	userID uuid.UUID,
+	expectedRevision *int64,
 	safetyState datatypes.JSON,
 	source string,
 ) (*model.BodyStateRevision, error) {
 	var committed *model.BodyStateRevision
 	err := database.FromContext(ctx, r.db).Transaction(func(tx *gorm.DB) error {
-		state, next, err := bodyStateLockNextRevision(ctx, tx, userID, nil)
+		state, next, err := bodyStateLockNextRevision(ctx, tx, userID, expectedRevision)
 		if err != nil {
 			return err
 		}

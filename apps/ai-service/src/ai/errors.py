@@ -19,3 +19,7 @@ class GatewayError(AIError):
 
 class GatewayUnavailableError(AIError):
     """The internal gateway or requested logical route is unavailable."""
+
+
+class GatewayProtocolError(AIError):
+    """The gateway/provider returned a malformed stream payload."""

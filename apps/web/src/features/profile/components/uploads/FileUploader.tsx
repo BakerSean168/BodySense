@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import { useUploadStore } from "@/stores/uploadStore";
 import type { FileType } from "../../types/upload.types";
-import { FILE_TYPE_LABELS } from "../../types/upload.types";
+import { FILE_TYPE_LABELS, FILE_TYPES } from "../../types/upload.types";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = [
@@ -96,8 +96,9 @@ export function FileUploader({ onUploadComplete }: FileUploaderProps) {
           文件类型
         </label>
         <div className="flex flex-wrap gap-2">
-          {(Object.entries(FILE_TYPE_LABELS) as [FileType, string][]).map(
-            ([value, label]) => (
+          {FILE_TYPES.map((value) => {
+            const label = FILE_TYPE_LABELS[value];
+            return (
               <button
                 key={value}
                 type="button"
@@ -110,8 +111,8 @@ export function FileUploader({ onUploadComplete }: FileUploaderProps) {
               >
                 {label}
               </button>
-            ),
-          )}
+            );
+          })}
         </div>
       </div>
 

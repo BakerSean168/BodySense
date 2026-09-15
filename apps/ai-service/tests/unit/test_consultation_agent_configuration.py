@@ -10,6 +10,7 @@ from src.configuration.consultation_agent_config import (
     get_default_consultation_configuration,
     load_manifest,
 )
+from src.evals.agent_config_archive import ARCHIVED_AGENT_CONFIG_ROOT
 
 
 def test_default_consultation_configuration_is_repository_versioned_and_stable() -> None:
@@ -18,7 +19,8 @@ def test_default_consultation_configuration_is_repository_versioned_and_stable()
     assert config.logical_model == "bodysense-consultation"
     assert config.configuration_id.startswith("consult-config-")
     assert len(config.configuration_id) == len("consult-config-") + 16
-    assert (CONFIG_ROOT / "consultation-v1.yaml").exists()
+    assert not (CONFIG_ROOT / "consultation-v1.yaml").exists()
+    assert (CONFIG_ROOT / "consultation-v2.yaml").exists()
     assert get_consultation_configuration(config.configuration_id) == config
     assert get_default_consultation_configuration().configuration_id == config.configuration_id
 
@@ -26,7 +28,9 @@ def test_default_consultation_configuration_is_repository_versioned_and_stable()
 def test_behavior_significant_revision_changes_consultation_configuration_id(
     tmp_path: Path,
 ) -> None:
-    data = yaml.safe_load((CONFIG_ROOT / "consultation-v1.yaml").read_text(encoding="utf-8"))
+    data = yaml.safe_load(
+        (ARCHIVED_AGENT_CONFIG_ROOT / "consultation-v1.yaml").read_text(encoding="utf-8")
+    )
     baseline = ConsultationAgentManifest.model_validate(data)
     data["prompt_revision"] = "consultation-prompt-v2"
     path = tmp_path / "changed.yaml"

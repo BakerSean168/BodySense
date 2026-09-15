@@ -7,6 +7,26 @@ import (
 	"gorm.io/datatypes"
 )
 
+// RunStatus is the canonical durable lifecycle of a consultation execution.
+type RunStatus string
+
+const (
+	RunStatusRunning     RunStatus = "running"
+	RunStatusWaitingUser RunStatus = "waiting_user"
+	RunStatusCompleted   RunStatus = "completed"
+	RunStatusFailed      RunStatus = "failed"
+	RunStatusCancelled   RunStatus = "cancelled"
+)
+
+func (s RunStatus) IsTerminal() bool {
+	switch s {
+	case RunStatusCompleted, RunStatusFailed, RunStatusCancelled:
+		return true
+	default:
+		return false
+	}
+}
+
 // Run represents a single LLM inference run within a conversation.
 type Run struct {
 	ID                 uuid.UUID      `gorm:"type:uuid;primaryKey;default:uuidv7()" json:"id"`
@@ -14,7 +34,7 @@ type Run struct {
 	TurnID             uuid.UUID      `gorm:"type:uuid;not null" json:"turn_id"`
 	RequestID          string         `gorm:"type:text;not null;uniqueIndex:idx_runs_user_request" json:"request_id"`
 	UserID             uuid.UUID      `gorm:"type:uuid;not null;uniqueIndex:idx_runs_user_request" json:"user_id"`
-	Status             string         `gorm:"type:varchar(20);not null;default:'running'" json:"status"`
+	Status             RunStatus      `gorm:"type:varchar(20);not null;default:'running'" json:"status"`
 	Model              string         `gorm:"type:text;not null" json:"model"`
 	Provider           string         `gorm:"type:text" json:"provider,omitempty"`
 	ProviderResponseID string         `gorm:"type:text" json:"provider_response_id,omitempty"`

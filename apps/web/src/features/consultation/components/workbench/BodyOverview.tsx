@@ -1,5 +1,5 @@
 import { ShieldAlert } from "lucide-react";
-import type { BodyStateSnapshot } from "../../types/consultation";
+import type { BodyStateProjection } from "../../types/consultation";
 import {
   selectBodyZoneSummaries,
   type BodyZone,
@@ -8,7 +8,7 @@ import {
 import { cn } from "@/lib/utils";
 
 interface BodyOverviewProps {
-  snapshot: BodyStateSnapshot | null;
+  snapshot: BodyStateProjection | null;
   className?: string;
 }
 
@@ -41,7 +41,7 @@ function markerClass(trend: BodyZoneSummary["trend"]): string {
   }
 }
 
-function hasSafetyReview(snapshot: BodyStateSnapshot | null): boolean {
+function hasSafetyReview(snapshot: BodyStateProjection | null): boolean {
   const safety = snapshot?.safety_state;
   return Boolean(
     safety?.has_red_flags &&
@@ -50,8 +50,8 @@ function hasSafetyReview(snapshot: BodyStateSnapshot | null): boolean {
 }
 
 /**
- * Deterministic legacy body projection retained for BodyExplorer 2D/WebGL
- * fallback only. The primary State path is the lazy Vanatome viewer.
+ * Deterministic 2D BodyState projection used when the Vanatome/WebGL surface is
+ * unavailable. This is an intentional accessibility and recovery surface.
  */
 export function BodyOverview({ snapshot, className }: BodyOverviewProps) {
   const summaries = selectBodyZoneSummaries(snapshot);

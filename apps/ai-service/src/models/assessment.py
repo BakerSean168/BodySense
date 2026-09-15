@@ -1,10 +1,10 @@
-"""Typed observation-only Assessment Agent contracts.
+"""Typed evidence-grounded Assessment Agent contract.
 
-V1 is retained as an immutable historical contract for replay of the original
-Assessment configurations. V2 removes pseudo-precise health grades/scores from
-model authority and makes evidence references mandatory on every generated
+The serving contract removes pseudo-precise health grades/scores from model
+authority and makes evidence references mandatory on every generated
 observation. Evidence coverage, gaps, report status and summary are derived by
-application code, not authored by the model.
+application code, not authored by the model. Retired contracts live only in the
+offline eval corpus and are not runtime-importable types.
 """
 
 from __future__ import annotations
@@ -12,9 +12,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
-ASSESSMENT_OUTPUT_SCHEMA_REVISION = "assessment-output-v1"
 ASSESSMENT_OUTPUT_SCHEMA_REVISION_V2 = "assessment-output-v2"
 
 AssessmentEvidenceSource = Literal[
@@ -31,50 +30,6 @@ AssessmentObservationKind = Literal[
     "anthropometry",
 ]
 
-
-# ---------------------------------------------------------------------------
-# Historical v1 contract
-# ---------------------------------------------------------------------------
-
-
-class AssessmentDimensionScoresV1(BaseModel):
-    posture: float = Field(ge=0, le=100)
-    exercise: float = Field(ge=0, le=100)
-    lifestyle: float = Field(ge=0, le=100)
-    injury_risk: float = Field(ge=0, le=100)
-    overall: float = Field(ge=0, le=100)
-
-
-class AssessmentObservationDraftV1(BaseModel):
-    kind: str = Field(min_length=1, max_length=80)
-    body_region: str = Field(default="", max_length=120)
-    label: str = Field(min_length=1, max_length=240)
-    description: str = Field(min_length=1, max_length=2000)
-    severity: Literal["轻度", "中度", "重度", "未知"] = "未知"
-    confidence: Literal["高", "中", "低"] = "中"
-    method: str = Field(default="assessment", max_length=80)
-    condition: dict[str, Any] = Field(default_factory=dict)
-
-
-class AssessmentAgentOutputV1(BaseModel):
-    status: Literal["completed", "insufficient_information"]
-    health_grade: Literal["A", "B", "C", "D"]
-    dimension_scores: AssessmentDimensionScoresV1
-    observations: list[AssessmentObservationDraftV1] = Field(default_factory=list)
-    summary: str = Field(min_length=1, max_length=3000)
-    information_gaps: list[str] = Field(default_factory=list)
-    safety_notes: list[str] = Field(default_factory=list)
-
-    @model_validator(mode="after")
-    def validate_completed_output(self) -> "AssessmentAgentOutputV1":
-        if self.status == "completed" and not self.observations:
-            raise ValueError("completed assessment requires at least one observation")
-        return self
-
-
-# ---------------------------------------------------------------------------
-# Evidence-grounded v2 contract
-# ---------------------------------------------------------------------------
 
 
 class AssessmentObservationDraft(BaseModel):
@@ -98,16 +53,6 @@ class AssessmentAgentOutput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     observations: list[AssessmentObservationDraft] = Field(default_factory=list, max_length=24)
-
-
-def get_assessment_output_type(
-    revision: str = ASSESSMENT_OUTPUT_SCHEMA_REVISION_V2,
-) -> type[BaseModel]:
-    if revision == ASSESSMENT_OUTPUT_SCHEMA_REVISION:
-        return AssessmentAgentOutputV1
-    if revision == ASSESSMENT_OUTPUT_SCHEMA_REVISION_V2:
-        return AssessmentAgentOutput
-    raise ValueError(f"unsupported Assessment output schema revision: {revision}")
 
 
 @dataclass(slots=True)

@@ -3,3 +3,4 @@
 // Add exports as the project grows
 export * from "./stream-events";
 export * from "./stream-event-parser";
+export * from "./generated-stream-event";

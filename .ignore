@@ -1,0 +1,5 @@
+# Generated contract artifacts are intentionally excluded from normal search/Agent context.
+# Opt in explicitly when debugging generators or reviewing generated output.
+**/generated/**
+tools/contracts/generated/**
+.tools/contracts/**

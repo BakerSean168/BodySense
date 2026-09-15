@@ -1,0 +1,1561 @@
+{
+  "schemaVersion": 1,
+  "capturedFrom": {
+    "commit": "1b649ef43b80d6486d1127da706cbf4bfd7bf2f8",
+    "branch": "refactor/vnext-00-baseline"
+  },
+  "publicApi": {
+    "goRoutes": [
+      {
+        "method": "GET",
+        "path": "/api/health",
+        "source": "apps/api/cmd/server/main.go:347"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/auth/register",
+        "source": "apps/api/cmd/server/main.go:377"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "source": "apps/api/cmd/server/main.go:378"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/auth/refresh",
+        "source": "apps/api/cmd/server/main.go:379"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/auth/logout",
+        "source": "apps/api/cmd/server/main.go:380"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/me",
+        "source": "apps/api/cmd/server/main.go:387"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/client-diagnostics",
+        "source": "apps/api/cmd/server/main.go:388"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/privacy/erasure-plan",
+        "source": "apps/api/cmd/server/main.go:389"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/privacy/erasure",
+        "source": "apps/api/cmd/server/main.go:390"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/profile",
+        "source": "apps/api/cmd/server/main.go:391"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/v1/profile",
+        "source": "apps/api/cmd/server/main.go:392"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/v1/onboarding/context",
+        "source": "apps/api/cmd/server/main.go:393"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/uploads",
+        "source": "apps/api/cmd/server/main.go:396"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/uploads",
+        "source": "apps/api/cmd/server/main.go:397"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/uploads/posture-analysis",
+        "source": "apps/api/cmd/server/main.go:400"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/uploads/:id",
+        "source": "apps/api/cmd/server/main.go:401"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/v1/uploads/:id",
+        "source": "apps/api/cmd/server/main.go:402"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/uploads/:id/health-document-review",
+        "source": "apps/api/cmd/server/main.go:406"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/uploads/:id/extractions/:runId/reviews",
+        "source": "apps/api/cmd/server/main.go:409"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/uploads/:id/extractions/:runId/reviews",
+        "source": "apps/api/cmd/server/main.go:410"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/uploads/:id/extractions/:runId/source",
+        "source": "apps/api/cmd/server/main.go:411"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/conversations",
+        "source": "apps/api/cmd/server/main.go:415"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/conversations/:id",
+        "source": "apps/api/cmd/server/main.go:416"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/v1/conversations/:id",
+        "source": "apps/api/cmd/server/main.go:417"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/v1/conversations/:id",
+        "source": "apps/api/cmd/server/main.go:418"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/v1/conversations/:id/pin",
+        "source": "apps/api/cmd/server/main.go:419"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/conversations/:id/runs",
+        "source": "apps/api/cmd/server/main.go:420"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/conversations/:id/runs/:runId/events",
+        "source": "apps/api/cmd/server/main.go:421"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/conversations/:id/title",
+        "source": "apps/api/cmd/server/main.go:422"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/v1/conversations/:id/title",
+        "source": "apps/api/cmd/server/main.go:423"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/conversations/:id/share",
+        "source": "apps/api/cmd/server/main.go:424"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/v1/conversations/:id/share",
+        "source": "apps/api/cmd/server/main.go:425"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/consultation-runs",
+        "source": "apps/api/cmd/server/main.go:428"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/consultation-runs/:id/cancel",
+        "source": "apps/api/cmd/server/main.go:429"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/consultations/:id",
+        "source": "apps/api/cmd/server/main.go:431"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/consultations/:id/thread",
+        "source": "apps/api/cmd/server/main.go:432"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/consultation-runs/:id/replay",
+        "source": "apps/api/cmd/server/main.go:434"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/consultation-runs/:id/replay/counterfactual",
+        "source": "apps/api/cmd/server/main.go:435"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/consultations/:id/diagnosis",
+        "source": "apps/api/cmd/server/main.go:437"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/diagnosis-analyses",
+        "source": "apps/api/cmd/server/main.go:440"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/diagnosis-analyses/:analysisId",
+        "source": "apps/api/cmd/server/main.go:441"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/v1/diagnosis-analyses/:analysisId/assessment",
+        "source": "apps/api/cmd/server/main.go:442"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/diagnosis-analyses/:analysisId/replay",
+        "source": "apps/api/cmd/server/main.go:443"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/diagnosis-analyses/:analysisId/regression-export",
+        "source": "apps/api/cmd/server/main.go:444"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/treatments/proposals",
+        "source": "apps/api/cmd/server/main.go:447"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/treatments/current",
+        "source": "apps/api/cmd/server/main.go:448"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/treatments/current/review",
+        "source": "apps/api/cmd/server/main.go:449"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/treatments/revisions",
+        "source": "apps/api/cmd/server/main.go:450"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/treatments/revisions/:revisionId",
+        "source": "apps/api/cmd/server/main.go:451"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/treatments/revisions/:revisionId/replay",
+        "source": "apps/api/cmd/server/main.go:452"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/treatments/revisions/:revisionId/regression-export",
+        "source": "apps/api/cmd/server/main.go:453"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/treatments/revisions/:revisionId/accept",
+        "source": "apps/api/cmd/server/main.go:454"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/treatments/revisions/:revisionId/reject",
+        "source": "apps/api/cmd/server/main.go:455"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/outcomes",
+        "source": "apps/api/cmd/server/main.go:456"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/outcomes",
+        "source": "apps/api/cmd/server/main.go:457"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/consultations/:id/interrupts/:interactionId/answers",
+        "source": "apps/api/cmd/server/main.go:459"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/consultations/:id/interaction-metrics",
+        "source": "apps/api/cmd/server/main.go:460"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/body-state",
+        "source": "apps/api/cmd/server/main.go:463"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/body-state/facts",
+        "source": "apps/api/cmd/server/main.go:464"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/body-state/facts/:id/correct",
+        "source": "apps/api/cmd/server/main.go:465"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/v1/body-state/facts/:id/temporal",
+        "source": "apps/api/cmd/server/main.go:466"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/v1/body-state/facts/:id/review",
+        "source": "apps/api/cmd/server/main.go:467"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/body-state/observations",
+        "source": "apps/api/cmd/server/main.go:468"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/v1/body-state/observations/:id/review",
+        "source": "apps/api/cmd/server/main.go:469"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/body-state/hypotheses",
+        "source": "apps/api/cmd/server/main.go:470"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/v1/body-state/hypotheses/:id/lifecycle",
+        "source": "apps/api/cmd/server/main.go:471"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/body-state/evidence",
+        "source": "apps/api/cmd/server/main.go:472"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/body-state/safety/resolve",
+        "source": "apps/api/cmd/server/main.go:473"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/lifestyle",
+        "source": "apps/api/cmd/server/main.go:476"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/v1/lifestyle",
+        "source": "apps/api/cmd/server/main.go:477"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/lifestyle/candidates/:id/accept",
+        "source": "apps/api/cmd/server/main.go:478"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/lifestyle/candidates/:id/reject",
+        "source": "apps/api/cmd/server/main.go:479"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/body-metrics",
+        "source": "apps/api/cmd/server/main.go:480"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/v1/body-metrics",
+        "source": "apps/api/cmd/server/main.go:481"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/health-history/injury",
+        "source": "apps/api/cmd/server/main.go:482"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/v1/health-history/injury",
+        "source": "apps/api/cmd/server/main.go:483"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/health-workspace",
+        "source": "apps/api/cmd/server/main.go:486"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/assessment/generate",
+        "source": "apps/api/cmd/server/main.go:489"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/assessment",
+        "source": "apps/api/cmd/server/main.go:490"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/assessment/:id",
+        "source": "apps/api/cmd/server/main.go:491"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/assessment/:id/replay",
+        "source": "apps/api/cmd/server/main.go:492"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/assessment/:id/regression-export",
+        "source": "apps/api/cmd/server/main.go:493"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/training",
+        "source": "apps/api/cmd/server/main.go:496"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/training/:id",
+        "source": "apps/api/cmd/server/main.go:497"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/training/:id/today",
+        "source": "apps/api/cmd/server/main.go:498"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/training/:id/checkin",
+        "source": "apps/api/cmd/server/main.go:499"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/v1/training/:id/log",
+        "source": "apps/api/cmd/server/main.go:500"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/training/:id/progress",
+        "source": "apps/api/cmd/server/main.go:501"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/training/:id/reassess",
+        "source": "apps/api/cmd/server/main.go:502"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/conversations/share/:token",
+        "source": "apps/api/cmd/server/main.go:507"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/knowledge/sources",
+        "source": "apps/api/cmd/server/main.go:515"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/knowledge/sources",
+        "source": "apps/api/cmd/server/main.go:516"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/knowledge/ingestions/video",
+        "source": "apps/api/cmd/server/main.go:517"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/knowledge/ingestions/:jobID",
+        "source": "apps/api/cmd/server/main.go:518"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/knowledge/search",
+        "source": "apps/api/cmd/server/main.go:519"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/knowledge/stats",
+        "source": "apps/api/cmd/server/main.go:520"
+      }
+    ]
+  },
+  "internalAiApi": {
+    "fastApiRoutes": [
+      {
+        "method": "POST",
+        "path": "/api/assessment/generate",
+        "source": "apps/ai-service/src/api/routes/assessment.py:32"
+      },
+      {
+        "method": "POST",
+        "path": "/api/diagnosis/analyze",
+        "source": "apps/ai-service/src/api/routes/diagnosis.py:29"
+      },
+      {
+        "method": "POST",
+        "path": "/api/knowledge/ingestions/video",
+        "source": "apps/ai-service/src/api/routes/knowledge.py:118"
+      },
+      {
+        "method": "POST",
+        "path": "/api/knowledge/search",
+        "source": "apps/ai-service/src/api/routes/knowledge.py:187"
+      },
+      {
+        "method": "GET",
+        "path": "/api/knowledge/sources",
+        "source": "apps/ai-service/src/api/routes/knowledge.py:234"
+      },
+      {
+        "method": "GET",
+        "path": "/api/knowledge/stats",
+        "source": "apps/ai-service/src/api/routes/knowledge.py:244"
+      },
+      {
+        "method": "POST",
+        "path": "/api/ocr/extract",
+        "source": "apps/ai-service/src/api/routes/ocr.py:21"
+      },
+      {
+        "method": "POST",
+        "path": "/api/ocr/extract-text",
+        "source": "apps/ai-service/src/api/routes/ocr.py:58"
+      },
+      {
+        "method": "POST",
+        "path": "/api/posture/analyze",
+        "source": "apps/ai-service/src/api/routes/posture.py:19"
+      },
+      {
+        "method": "POST",
+        "path": "/api/title/generate",
+        "source": "apps/ai-service/src/api/routes/title.py:66"
+      },
+      {
+        "method": "POST",
+        "path": "/api/treatment/recommend",
+        "source": "apps/ai-service/src/api/routes/treatment.py:33"
+      },
+      {
+        "method": "GET",
+        "path": "/health",
+        "source": "apps/ai-service/src/main.py:75"
+      },
+      {
+        "method": "POST",
+        "path": "/runtime/threads/{thread_id}/interrupts/{interrupt_id}/resume",
+        "source": "apps/ai-service/src/api/routes/runtime.py:284"
+      },
+      {
+        "method": "POST",
+        "path": "/runtime/threads/{thread_id}/turns",
+        "source": "apps/ai-service/src/api/routes/runtime.py:139"
+      }
+    ]
+  },
+  "publicStream": {
+    "source": "packages/contracts/src/stream-events.ts",
+    "events": [
+      {
+        "channel": "conversation",
+        "type": "conversation.created"
+      },
+      {
+        "channel": "run",
+        "type": "run.started"
+      },
+      {
+        "channel": "run",
+        "type": "run.resumed"
+      },
+      {
+        "channel": "run",
+        "type": "run.interrupted"
+      },
+      {
+        "channel": "run",
+        "type": "run.completed"
+      },
+      {
+        "channel": "run",
+        "type": "run.failed"
+      },
+      {
+        "channel": "run",
+        "type": "run.cancelled"
+      },
+      {
+        "channel": "message",
+        "type": "message.persisted"
+      },
+      {
+        "channel": "message",
+        "type": "message.created"
+      },
+      {
+        "channel": "message",
+        "type": "message.text.delta"
+      },
+      {
+        "channel": "message",
+        "type": "message.completed"
+      },
+      {
+        "channel": "message",
+        "type": "message.failed"
+      },
+      {
+        "channel": "tool",
+        "type": "tool.call"
+      },
+      {
+        "channel": "tool",
+        "type": "tool.result"
+      },
+      {
+        "channel": "state",
+        "type": "state.extracted_info.upsert"
+      },
+      {
+        "channel": "state",
+        "type": "state.phase.changed"
+      },
+      {
+        "channel": "source",
+        "type": "source.citation.added"
+      },
+      {
+        "channel": "source",
+        "type": "source.answer_attribution.added"
+      },
+      {
+        "channel": "source",
+        "type": "source.knowledge_gap"
+      },
+      {
+        "channel": "safety",
+        "type": "safety.red_flag.detected"
+      },
+      {
+        "channel": "safety",
+        "type": "safety.output_reviewed"
+      },
+      {
+        "channel": "safety",
+        "type": "safety.output_rejected"
+      },
+      {
+        "channel": "usage",
+        "type": "usage.reported"
+      },
+      {
+        "channel": "title",
+        "type": "title.generated"
+      },
+      {
+        "channel": "stream",
+        "type": "stream.done"
+      },
+      {
+        "channel": "stream",
+        "type": "stream.error"
+      },
+      {
+        "channel": "state",
+        "type": "state.interaction.required"
+      },
+      {
+        "channel": "state",
+        "type": "state.interaction.answered"
+      },
+      {
+        "channel": "state",
+        "type": "state.interaction.expired"
+      },
+      {
+        "channel": "job",
+        "type": "job.created"
+      },
+      {
+        "channel": "job",
+        "type": "job.progress"
+      },
+      {
+        "channel": "job",
+        "type": "job.completed"
+      },
+      {
+        "channel": "job",
+        "type": "job.failed"
+      }
+    ]
+  },
+  "databaseMigrationLineage": {
+    "count": 59,
+    "latestVersion": 62,
+    "files": [
+      "000001_create_users.up.sql",
+      "000004_create_user_profiles.up.sql",
+      "000006_create_consultation_sessions.up.sql",
+      "000007_create_assessment_reports.up.sql",
+      "000008_create_training_plans.up.sql",
+      "000009_create_user_uploads.up.sql",
+      "000010_create_knowledge_library.up.sql",
+      "000011_create_user_uploads.up.sql",
+      "000012_add_consultation_phase.up.sql",
+      "000013_session_redesign.up.sql",
+      "000014_add_schedule_mode.up.sql",
+      "000015_create_agent_tool_calls.up.sql",
+      "000016_create_agent_interactions.up.sql",
+      "000017_create_jobs.up.sql",
+      "000018_create_ai_output_reviews.up.sql",
+      "000019_add_knowledge_lifecycle.up.sql",
+      "000020_fix_knowledge_lifecycle_schema.up.sql",
+      "000021_add_user_id_to_ai_output_reviews.up.sql",
+      "000022_add_job_idempotency_fields.up.sql",
+      "000023_knowledge_publication_batches.up.sql",
+      "000024_add_run_id_to_messages.up.sql",
+      "000025_create_runtime_events.up.sql",
+      "000026_create_thread_projections.up.sql",
+      "000027_create_thread_projection_tool_calls.up.sql",
+      "000028_add_interaction_history_to_thread_projections.up.sql",
+      "000029_add_health_features_to_consultation_sessions_and_thread_projections.up.sql",
+      "000030_add_upload_analysis.up.sql",
+      "000031_add_interaction_expires_at.up.sql",
+      "000032_create_body_state.up.sql",
+      "000033_create_diagnosis_analyses.up.sql",
+      "000034_complete_longitudinal_health_loop.up.sql",
+      "000035_add_diagnosis_decision_trace.up.sql",
+      "000036_add_diagnosis_replay_input.up.sql",
+      "000037_create_diagnosis_rollout_observations.up.sql",
+      "000038_add_treatment_agent_provenance.up.sql",
+      "000039_add_treatment_evidence_acquisition_trace.up.sql",
+      "000040_add_treatment_decision_traces.up.sql",
+      "000041_add_treatment_replay_input.up.sql",
+      "000042_create_treatment_rollout_observations.up.sql",
+      "000043_add_assessment_agent_provenance.up.sql",
+      "000044_add_assessment_replay_input.up.sql",
+      "000045_create_assessment_rollout_observations.up.sql",
+      "000046_add_run_agent_provenance.up.sql",
+      "000047_create_consultation_rollout_observations.up.sql",
+      "000048_add_upload_agent_configuration.up.sql",
+      "000049_add_title_agent_provenance.up.sql",
+      "000050_extend_knowledge_publication_batches.up.sql",
+      "000051_create_knowledge_publication_observations.up.sql",
+      "000052_add_run_lease.up.sql",
+      "000053_add_run_lease_ownership.up.sql",
+      "000054_add_privacy_erasure_boundary.up.sql",
+      "000055_add_upload_storage_identity.up.sql",
+      "000056_add_knowledge_operator_registry.up.sql",
+      "000057_reframe_user_profile_health_context.up.sql",
+      "000058_promote_health_context_to_body_state.up.sql",
+      "000059_add_body_region_id_to_body_state.up.sql",
+      "000060_upgrade_assessment_evidence_contract.up.sql",
+      "000061_add_document_extraction_runs.up.sql",
+      "000062_create_document_indicator_reviews.up.sql"
+    ]
+  },
+  "agentConfigurations": [
+    "assessment-v1.yaml",
+    "assessment-v2.yaml",
+    "assessment-v3.yaml",
+    "assessment-v4.yaml",
+    "assessment-v5.yaml",
+    "consultation-v1.yaml",
+    "consultation-v2.yaml",
+    "diagnosis-v1.yaml",
+    "diagnosis-v2-evidence-gap.yaml",
+    "diagnosis-v3-decision-authority.yaml",
+    "knowledge-curator-v1.yaml",
+    "knowledge-splitter-v1.yaml",
+    "posture-v1.yaml",
+    "posture-v2.yaml",
+    "title-v1.yaml",
+    "treatment-v1.yaml",
+    "treatment-v2-evidence-gap.yaml"
+  ],
+  "environmentVariables": [
+    "AI_SERVICE_URL",
+    "ALIBABA_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "API_HOST",
+    "API_PORT",
+    "APP_ENV",
+    "ASR_PROVIDER",
+    "ASR_WHISPER_MODEL",
+    "ASSESSMENT_CANARY_BPS",
+    "ASSESSMENT_CHALLENGER_CONFIGURATION_ID",
+    "ASSESSMENT_CHAMPION_CONFIGURATION_ID",
+    "ASSESSMENT_PROMOTION_RECORD",
+    "ASSESSMENT_ROLLOUT_SALT",
+    "ASSESSMENT_ROLLOUT_STAGE",
+    "AWS_BEARER_TOKEN_BEDROCK",
+    "AWS_BEDROCK_BASE_URL",
+    "AWS_CONNECT_TIMEOUT",
+    "AWS_DEFAULT_REGION",
+    "AWS_READ_TIMEOUT",
+    "AWS_REGION",
+    "AZURE_OPENAI_AD_TOKEN",
+    "AZURE_OPENAI_API_KEY",
+    "AZURE_OPENAI_ENDPOINT",
+    "AZURE_VOICELIVE_API_KEY",
+    "AZURE_VOICELIVE_API_VERSION",
+    "AZURE_VOICELIVE_ENDPOINT",
+    "BODYSENSE_ALLOWED_HOSTS",
+    "BODYSENSE_BENCHMARK_CJK_FONT",
+    "BODYSENSE_DETERMINISTIC_AI",
+    "BODYSENSE_E2E_STUB_AI",
+    "BODYSENSE_WEB_HOST",
+    "BODYSENSE_WEB_PORT",
+    "CEREBRAS_API_KEY",
+    "COLORTERM",
+    "COMP_CWORD",
+    "COMP_WORDS",
+    "CONSULTATION_CHAMPION_CONFIGURATION_ID",
+    "CORS_ORIGIN",
+    "CORS_ORIGINS",
+    "CO_API_KEY",
+    "CO_BASE_URL",
+    "CRUSOE_API_KEY",
+    "CURL_CA_BUNDLE",
+    "DASHSCOPE_API_KEY",
+    "DATABASE_URL",
+    "DATABRICKS_RUNTIME_VERSION",
+    "DATA_GYM_CACHE_DIR",
+    "DB_HOST",
+    "DB_LOG_LEVEL",
+    "DB_NAME",
+    "DB_PASSWORD",
+    "DB_PORT",
+    "DB_USER",
+    "DEEPSEEK_API_KEY",
+    "DEFER_PYDANTIC_BUILD",
+    "DIAGNOSIS_CANARY_BPS",
+    "DIAGNOSIS_CHALLENGER_CONFIGURATION_ID",
+    "DIAGNOSIS_CHAMPION_CONFIGURATION_ID",
+    "DIAGNOSIS_PROMOTION_RECORD",
+    "DIAGNOSIS_ROLLBACK_CONFIGURATION_ID",
+    "DIAGNOSIS_ROLLOUT_SALT",
+    "DIAGNOSIS_ROLLOUT_STAGE",
+    "DISPLAY",
+    "DR_FILESYSTEM_ROOT",
+    "DR_OSS_BUCKET",
+    "DR_OSS_ECS_RAM_ROLE",
+    "DR_OSS_ENDPOINT",
+    "DR_RELEASE_REVISION",
+    "E2E_API_BASE_URL",
+    "E2E_PUBLIC_ASSET_ORIGIN",
+    "E2E_RESTART_API_COMMAND",
+    "EMBEDDING_API_KEY",
+    "EMBEDDING_BASE_URL",
+    "EMBEDDING_DIMENSIONS",
+    "EMBEDDING_MODEL",
+    "EMBEDDING_PROVIDER",
+    "EMBEDDING_REVISION",
+    "ENVIRONMENT",
+    "FIREWORKS_API_KEY",
+    "FORCE_COLOR",
+    "FORWARDED_ALLOW_IPS",
+    "GEMINI_API_KEY",
+    "GITHUB_API_KEY",
+    "GOOGLE_API_KEY",
+    "GOOGLE_APPLICATION_CREDENTIALS",
+    "GOOGLE_CLOUD_LOCATION",
+    "GOOGLE_CLOUD_PROJECT",
+    "GOOGLE_GENAI_USE_VERTEXAI",
+    "GRIFFE_GIT_COMMIT_HASH",
+    "GRIFFE_GIT_REMOTE",
+    "GRIFFE_GIT_REMOTE_URL",
+    "GRIFFE_GIT_SERVICE",
+    "GROQ_API_KEY",
+    "GROQ_BASE_URL",
+    "HEALTH_DOCUMENT_CHAMPION_CONFIGURATION_ID",
+    "HEALTH_DOCUMENT_QUALIFICATION_CONFIGURATION_ID",
+    "HEALTH_DOCUMENT_ROLLBACK_CONFIGURATION_ID",
+    "HEALTH_DOCUMENT_SERVICE_URL",
+    "HEALTH_DOCUMENT_STAGE",
+    "HEROKU_INFERENCE_KEY",
+    "HEROKU_INFERENCE_URL",
+    "HF_TOKEN",
+    "HOME",
+    "HOMEDRIVE",
+    "HOMEPATH",
+    "JWT_SECRET_KEY",
+    "KNOWLEDGE_CURATOR_CONFIGURATION_ID",
+    "KNOWLEDGE_DATA_ROOT",
+    "KNOWLEDGE_POOL_MAX_SIZE",
+    "KNOWLEDGE_POOL_MIN_SIZE",
+    "KNOWLEDGE_SPLITTER_CONFIGURATION_ID",
+    "LANGCHAIN_BASE_URL",
+    "LANGCHAIN_CUSTOM_HEADERS",
+    "LANGCHAIN_ENDPOINT",
+    "LANGCHAIN_ENV",
+    "LANGCHAIN_LOG",
+    "LANGGRAPH_AES_KEY",
+    "LANGGRAPH_CHECKPOINTER_URL",
+    "LANGGRAPH_STRICT_MSGPACK",
+    "LANGSMITH_API_KEY",
+    "LANGSMITH_CONFIG_FILE",
+    "LANGSMITH_ENDPOINT",
+    "LANGSMITH_EXPERIMENT",
+    "LANGSMITH_EXPERIMENT_METADATA",
+    "LANGSMITH_PROFILE",
+    "LANGSMITH_RUNS_ENDPOINTS",
+    "LANGSMITH_TENANT_ID",
+    "LANGSMITH_TEST_CACHE",
+    "LESS",
+    "LITELLM_API_KEY",
+    "LITELLM_BASE_URL",
+    "LOCALAPPDATA",
+    "LOCAL_EMBEDDING_MAX_CONCURRENCY",
+    "LOG_ADD_SOURCE",
+    "LOG_FORMAT",
+    "LOG_LEVEL",
+    "MISTRAL_API_KEY",
+    "MOONSHOTAI_API_KEY",
+    "NEBIUS_API_KEY",
+    "NETRC",
+    "NO_COLOR",
+    "OLLAMA_API_KEY",
+    "OLLAMA_BASE_URL",
+    "OPENAI_ADMIN_KEY",
+    "OPENAI_API_KEY",
+    "OPENAI_API_TYPE",
+    "OPENAI_API_VERSION",
+    "OPENAI_BASE_URL",
+    "OPENAI_CUSTOM_HEADERS",
+    "OPENAI_LOG",
+    "OPENAI_ORG_ID",
+    "OPENAI_PROJECT_ID",
+    "OPENAI_WEBHOOK_SECRET",
+    "OPENROUTER_API_KEY",
+    "OPENROUTER_APP_TITLE",
+    "OPENROUTER_APP_URL",
+    "OSS_ACCESS_KEY_ID",
+    "OSS_ACCESS_KEY_SECRET",
+    "OSS_SECURITY_TOKEN",
+    "OTEL_EXPORTER_OTLP_ENDPOINT",
+    "OTEL_EXPORTER_OTLP_HEADERS",
+    "OTEL_SERVICE_NAME",
+    "OVHCLOUD_API_KEY",
+    "PAGER",
+    "PAIG_API_KEY",
+    "PAIG_BASE_URL",
+    "PATH",
+    "PATHEXT",
+    "PGHOST",
+    "PGHOSTADDR",
+    "PGPORT",
+    "POSTURE_CHAMPION_CONFIGURATION_ID",
+    "PSYCOPG_IMPL",
+    "PSYCOPG_WAIT_FUNC",
+    "PYDANTIC_AI_GATEWAY_API_KEY",
+    "PYDANTIC_AI_GATEWAY_BASE_URL",
+    "PYDANTIC_DISABLE_PLUGINS",
+    "PYDANTIC_PRIVATE_ALLOW_UNHANDLED_SCHEMA_TYPES",
+    "PYMUPDF_LOG",
+    "PYMUPDF_MESSAGE",
+    "PYMUPDF_SUGGEST_LAYOUT_ANALYZER",
+    "PYRIGHT_PYTHON_CACHE_DIR",
+    "PYRIGHT_PYTHON_DEBUG",
+    "PYRIGHT_PYTHON_ENV_DIR",
+    "PYRIGHT_PYTHON_FORCE_VERSION",
+    "PYRIGHT_PYTHON_NODE_VERSION",
+    "PYRIGHT_PYTHON_PYLANCE_VERSION",
+    "PYTEST_ADDOPTS",
+    "PYTEST_DEBUG",
+    "PYTEST_DEBUG_TEMPROOT",
+    "PYTEST_DISABLE_PLUGIN_AUTOLOAD",
+    "PYTEST_PLUGINS",
+    "PYTEST_THEME",
+    "PYTEST_THEME_MODE",
+    "PYTEST_VERSION",
+    "PYTEST_XDIST_TESTRUNUID",
+    "PYTHONPATH",
+    "PYTHON_DOTENV_DISABLED",
+    "PY_COLORS",
+    "PY_IGNORE_IMPORTMISMATCH",
+    "REDIS_TLS",
+    "REGISTRY_PASSWORD",
+    "REQUESTS_CA_BUNDLE",
+    "SAMBANOVA_API_KEY",
+    "SAMBANOVA_BASE_URL",
+    "SNOWFLAKE_ACCOUNT",
+    "SNOWFLAKE_TOKEN",
+    "SPLITTER_PROVIDER",
+    "SSLKEYLOGFILE",
+    "SSL_CERT_DIR",
+    "SSL_CERT_FILE",
+    "SYSTEMROOT",
+    "TERM",
+    "TESSDATA_PREFIX",
+    "TIKTOKEN_CACHE_DIR",
+    "TITLE_CHAMPION_CONFIGURATION_ID",
+    "TOGETHER_API_KEY",
+    "TOX_ENV_DIR",
+    "TREATMENT_CANARY_BPS",
+    "TREATMENT_CHALLENGER_CONFIGURATION_ID",
+    "TREATMENT_CHAMPION_CONFIGURATION_ID",
+    "TREATMENT_PROMOTION_RECORD",
+    "TREATMENT_ROLLBACK_CONFIGURATION_ID",
+    "TREATMENT_ROLLOUT_SALT",
+    "TREATMENT_ROLLOUT_STAGE",
+    "TRUSTED_PROXIES",
+    "UNICODE_VERSION",
+    "UNIXCONFDIR",
+    "UNIXUSRLIBDIR",
+    "UPLOAD_OSS_BUCKET",
+    "UPLOAD_OSS_ECS_RAM_ROLE",
+    "UPLOAD_OSS_ENDPOINT",
+    "USER",
+    "USERNAME",
+    "VERCEL_AI_GATEWAY_API_KEY",
+    "VERCEL_OIDC_TOKEN",
+    "VIRTUAL_ENV",
+    "VIRTUAL_ENV_PROMPT",
+    "VITE_API_BASE_URL",
+    "VITE_ASSET_BASE",
+    "VITE_BODYSENSE_ANATOMY_CATALOG_URL",
+    "VITE_DEV_API_TARGET",
+    "VOYAGE_API_KEY",
+    "WAYLAND_DISPLAY",
+    "WEBSOCKETS_BACKOFF_FACTOR",
+    "WEBSOCKETS_BACKOFF_INITIAL_DELAY",
+    "WEBSOCKETS_BACKOFF_MAX_DELAY",
+    "WEBSOCKETS_BACKOFF_MIN_DELAY",
+    "WEBSOCKETS_MAX_BODY_SIZE",
+    "WEBSOCKETS_MAX_LINE_LENGTH",
+    "WEBSOCKETS_MAX_LOG_SIZE",
+    "WEBSOCKETS_MAX_NUM_HEADERS",
+    "WEBSOCKETS_MAX_REDIRECTS",
+    "WEB_CONCURRENCY",
+    "WINDIR",
+    "XAI_API_KEY",
+    "XDG_CACHE_HOME",
+    "XDG_CONFIG_HOME",
+    "XDG_DATA_DIRS",
+    "XDG_DATA_HOME",
+    "ZAI_API_KEY"
+  ],
+  "codeQualityHotspots": {
+    "typescriptDoubleAssertions": {
+      "count": 27,
+      "topFiles": [
+        {
+          "file": "apps/web/node_modules/ai/src/agent/tool-loop-agent.ts",
+          "count": 2
+        },
+        {
+          "file": "apps/web/node_modules/@ai-sdk/gateway/src/gateway-embedding-model.ts",
+          "count": 1
+        },
+        {
+          "file": "apps/web/node_modules/@ai-sdk/gateway/src/gateway-reranking-model.ts",
+          "count": 1
+        },
+        {
+          "file": "apps/web/node_modules/@ai-sdk/provider-utils/src/websocket.ts",
+          "count": 1
+        },
+        {
+          "file": "apps/web/node_modules/ai/src/agent/create-agent-ui-stream.ts",
+          "count": 1
+        },
+        {
+          "file": "apps/web/node_modules/ai/src/generate-text/generate-text.ts",
+          "count": 1
+        },
+        {
+          "file": "apps/web/node_modules/ai/src/generate-text/stream-text.ts",
+          "count": 1
+        },
+        {
+          "file": "apps/web/node_modules/ai/src/model/as-embedding-model-v3.ts",
+          "count": 1
+        },
+        {
+          "file": "apps/web/node_modules/ai/src/model/as-embedding-model-v4.ts",
+          "count": 1
+        },
+        {
+          "file": "apps/web/node_modules/ai/src/model/as-image-model-v3.ts",
+          "count": 1
+        },
+        {
+          "file": "apps/web/node_modules/ai/src/model/as-image-model-v4.ts",
+          "count": 1
+        },
+        {
+          "file": "apps/web/node_modules/ai/src/model/as-language-model-v3.ts",
+          "count": 1
+        },
+        {
+          "file": "apps/web/node_modules/ai/src/model/as-language-model-v4.ts",
+          "count": 1
+        },
+        {
+          "file": "apps/web/node_modules/ai/src/model/as-reranking-model-v4.ts",
+          "count": 1
+        },
+        {
+          "file": "apps/web/node_modules/ai/src/model/as-speech-model-v3.ts",
+          "count": 1
+        },
+        {
+          "file": "apps/web/node_modules/ai/src/model/as-speech-model-v4.ts",
+          "count": 1
+        },
+        {
+          "file": "apps/web/node_modules/ai/src/model/as-transcription-model-v3.ts",
+          "count": 1
+        },
+        {
+          "file": "apps/web/node_modules/ai/src/model/as-transcription-model-v4.ts",
+          "count": 1
+        },
+        {
+          "file": "apps/web/node_modules/ai/src/model/as-video-model-v4.ts",
+          "count": 1
+        },
+        {
+          "file": "apps/web/node_modules/ai/src/ui/direct-chat-transport.ts",
+          "count": 1
+        }
+      ]
+    },
+    "typescriptExplicitAny": {
+      "count": 371,
+      "topFiles": [
+        {
+          "file": "apps/web/node_modules/ai/dist/index.d.ts",
+          "count": 69
+        },
+        {
+          "file": "apps/web/node_modules/@ai-sdk/provider-utils/dist/index.d.ts",
+          "count": 29
+        },
+        {
+          "file": "apps/web/node_modules/@ai-sdk/provider-utils/src/types/tool.ts",
+          "count": 27
+        },
+        {
+          "file": "apps/web/node_modules/ai/dist/internal/index.d.ts",
+          "count": 24
+        },
+        {
+          "file": "apps/web/node_modules/ai/src/ui/process-ui-message-stream.ts",
+          "count": 14
+        },
+        {
+          "file": "apps/web/node_modules/@ai-sdk/provider-utils/src/schema.ts",
+          "count": 12
+        },
+        {
+          "file": "apps/web/node_modules/ai/src/generate-text/stream-text.ts",
+          "count": 12
+        },
+        {
+          "file": "apps/web/node_modules/ai/src/model/resolve-model.ts",
+          "count": 8
+        },
+        {
+          "file": "apps/web/node_modules/ai/src/generate-text/generate-text.ts",
+          "count": 7
+        },
+        {
+          "file": "apps/web/node_modules/@ai-sdk/provider-utils/src/types/tool-set.ts",
+          "count": 5
+        },
+        {
+          "file": "apps/web/node_modules/ai/src/generate-object/structured-output-events.ts",
+          "count": 5
+        },
+        {
+          "file": "apps/web/node_modules/ai/src/generate-text/output.ts",
+          "count": 5
+        },
+        {
+          "file": "apps/web/node_modules/ai/src/generate-text/stop-condition.ts",
+          "count": 5
+        },
+        {
+          "file": "apps/web/node_modules/@ai-sdk/gateway/src/gateway-language-model.ts",
+          "count": 4
+        },
+        {
+          "file": "apps/web/node_modules/@ai-sdk/provider-utils/src/to-json-schema/zod3-to-json-schema/select-parser.ts",
+          "count": 4
+        },
+        {
+          "file": "apps/web/node_modules/ai/src/generate-text/language-model-events.ts",
+          "count": 4
+        },
+        {
+          "file": "apps/web/node_modules/ai/src/prompt/request-options.ts",
+          "count": 4
+        },
+        {
+          "file": "apps/web/node_modules/ai/src/telemetry/telemetry.ts",
+          "count": 4
+        },
+        {
+          "file": "apps/web/node_modules/@ai-sdk/provider-utils/src/to-json-schema/zod3-to-json-schema/parse-def.ts",
+          "count": 3
+        },
+        {
+          "file": "apps/web/node_modules/@ai-sdk/provider-utils/src/to-json-schema/zod3-to-json-schema/parsers/union.ts",
+          "count": 3
+        }
+      ]
+    },
+    "pythonAny": {
+      "count": 12917,
+      "topFiles": [
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/pydantic_core/core_schema.py",
+          "count": 248
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/langchain_core/runnables/base.py",
+          "count": 241
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/langsmith/client.py",
+          "count": 131
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/fastapi/routing.py",
+          "count": 130
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/pydantic_ai/agent/__init__.py",
+          "count": 127
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/pydantic_ai/capabilities/hooks.py",
+          "count": 111
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/langchain_core/callbacks/base.py",
+          "count": 104
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/langchain_core/callbacks/manager.py",
+          "count": 104
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/pydantic/fields.py",
+          "count": 95
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/click/core.py",
+          "count": 93
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/redis/commands/core.py",
+          "count": 86
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/langgraph/pregel/main.py",
+          "count": 83
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/pydantic_ai/_output.py",
+          "count": 83
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/langchain_core/runnables/passthrough.py",
+          "count": 82
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/pydantic/_internal/_generate_schema.py",
+          "count": 82
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/langchain_core/language_models/chat_models.py",
+          "count": 72
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/pydantic_ai/capabilities/combined.py",
+          "count": 72
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/pydantic/main.py",
+          "count": 72
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/pydantic_ai/messages.py",
+          "count": 68
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/langchain_core/tracers/base.py",
+          "count": 67
+        }
+      ]
+    },
+    "pythonBroadException": {
+      "count": 961,
+      "topFiles": [
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/pymupdf/__init__.py",
+          "count": 63
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/langsmith/client.py",
+          "count": 26
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/redis/observability/recorder.py",
+          "count": 23
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/redis/asyncio/observability/recorder.py",
+          "count": 18
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/langgraph/checkpoint/serde/jsonplus.py",
+          "count": 17
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/redis/asyncio/cluster.py",
+          "count": 15
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/langsmith/integrations/claude_agent_sdk/_hooks.py",
+          "count": 14
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/langsmith/integrations/google_adk/_client.py",
+          "count": 14
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/click/_compat.py",
+          "count": 13
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/redis/cluster.py",
+          "count": 13
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/langsmith/_openapi_client/_base_client.py",
+          "count": 9
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/openai/_base_client.py",
+          "count": 9
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/redis/connection.py",
+          "count": 9
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/langsmith/sandbox/_tunnel.py",
+          "count": 8
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/openai/resources/beta/responses/responses.py",
+          "count": 8
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/openai/resources/realtime/realtime.py",
+          "count": 8
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/openai/resources/responses/responses.py",
+          "count": 8
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/langchain_core/callbacks/manager.py",
+          "count": 7
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/langgraph/stream/run_stream.py",
+          "count": 7
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/langsmith/_internal/otel/_otel_exporter.py",
+          "count": 7
+        }
+      ]
+    },
+    "goAny": {
+      "count": 703,
+      "topFiles": [
+        {
+          "file": "apps/api/internal/consultation/runtime.go",
+          "count": 64
+        },
+        {
+          "file": "apps/api/internal/service/assessment_evidence_contract.go",
+          "count": 44
+        },
+        {
+          "file": "apps/api/internal/service/diagnosis_replay_service.go",
+          "count": 42
+        },
+        {
+          "file": "apps/api/internal/repository/body_state_repository.go",
+          "count": 41
+        },
+        {
+          "file": "apps/api/internal/service/treatment_replay_service.go",
+          "count": 41
+        },
+        {
+          "file": "apps/api/internal/handler/diagnosis_handler.go",
+          "count": 39
+        },
+        {
+          "file": "apps/api/internal/service/assessment_replay_service.go",
+          "count": 38
+        },
+        {
+          "file": "apps/api/internal/service/body_state_service.go",
+          "count": 36
+        },
+        {
+          "file": "apps/api/internal/service/health_document_response_contract.go",
+          "count": 25
+        },
+        {
+          "file": "apps/api/internal/service/training_service.go",
+          "count": 25
+        },
+        {
+          "file": "apps/api/internal/service/assessment_reviewed_report.go",
+          "count": 24
+        },
+        {
+          "file": "apps/api/internal/service/assessment_service.go",
+          "count": 20
+        },
+        {
+          "file": "apps/api/internal/service/diagnosis_decision_policy.go",
+          "count": 18
+        },
+        {
+          "file": "apps/api/internal/service/health_document_review_snapshot.go",
+          "count": 18
+        },
+        {
+          "file": "apps/api/internal/service/upload_service.go",
+          "count": 18
+        },
+        {
+          "file": "apps/api/internal/service/conversation_service.go",
+          "count": 15
+        },
+        {
+          "file": "apps/api/internal/service/health_workspace_service.go",
+          "count": 14
+        },
+        {
+          "file": "apps/api/internal/service/knowledge_ingestion_service.go",
+          "count": 11
+        },
+        {
+          "file": "apps/api/internal/repository/message_repository.go",
+          "count": 10
+        },
+        {
+          "file": "apps/api/internal/repository/run_repository.go",
+          "count": 10
+        }
+      ]
+    },
+    "runtimeLegacyCompatibilityMarkers": {
+      "count": 3520,
+      "topFiles": [
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/packaging/licenses/_spdx.py",
+          "count": 780
+        },
+        {
+          "file": "apps/web/node_modules/ai/dist/index.d.ts",
+          "count": 149
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/fastapi/param_functions.py",
+          "count": 79
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/fastapi/routing.py",
+          "count": 60
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/pydantic/main.py",
+          "count": 57
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/fastapi/params.py",
+          "count": 53
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/click/core.py",
+          "count": 52
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/openai/resources/beta/threads/runs/runs.py",
+          "count": 51
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/pydantic/fields.py",
+          "count": 51
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/fastapi/applications.py",
+          "count": 49
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/langsmith/client.py",
+          "count": 37
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/pydantic_core/core_schema.py",
+          "count": 31
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/_pytest/fixtures.py",
+          "count": 28
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/langchain_core/_api/deprecation.py",
+          "count": 28
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/typing_extensions.py",
+          "count": 26
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/openai/resources/chat/completions/completions.py",
+          "count": 24
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/griffe/_internal/extensions/base.py",
+          "count": 23
+        },
+        {
+          "file": "apps/web/node_modules/ai/src/prompt/convert-to-language-model-prompt.ts",
+          "count": 23
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/_pytest/config/__init__.py",
+          "count": 22
+        },
+        {
+          "file": "apps/ai-service/.venv/lib/python3.14/site-packages/redis/commands/search/commands.py",
+          "count": 21
+        }
+      ]
+    }
+  }
+}
