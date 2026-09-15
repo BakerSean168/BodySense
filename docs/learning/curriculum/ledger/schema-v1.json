@@ -1,0 +1,205 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bodysense.local/learning/coverage-ledger.schema.v1.json",
+  "title": "BodySense learning coverage ledger v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "course",
+    "baseline",
+    "items"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "course": {
+      "type": "string",
+      "minLength": 1
+    },
+    "baseline": {
+      "type": "object"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/item"
+      }
+    },
+    "source_sections": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/item"
+      }
+    },
+    "historical_items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/item"
+      }
+    },
+    "historical_source_sections": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/item"
+      }
+    },
+    "current_mooc_sections": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/item"
+      }
+    }
+  },
+  "$defs": {
+    "item": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "source",
+        "lifecycle"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "enum": [
+            "exercise",
+            "concept",
+            "lecture",
+            "source_section",
+            "source_boundary",
+            "extension"
+          ]
+        },
+        "source": {
+          "type": "object"
+        },
+        "lifecycle": {
+          "enum": [
+            "SOURCE_INDEXED",
+            "MAPPED",
+            "EXERCISE_READY",
+            "LEARNER_VERIFIED"
+          ]
+        },
+        "mapping": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "mode",
+                "exercise_id",
+                "objective",
+                "target_files",
+                "task_summary",
+                "completion_evidence_plan",
+                "prerequisites",
+                "exercise_card"
+              ],
+              "properties": {
+                "mode": {
+                  "enum": [
+                    "DIRECT",
+                    "COMPARE",
+                    "OPTIONAL"
+                  ]
+                },
+                "exercise_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "semantic_audit": {
+                  "type": "string"
+                },
+                "objective": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "target_files": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "task_summary": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "completion_evidence_plan": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "prerequisites": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "exercise_card": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "dependency_audit": {
+                  "enum": [
+                    "UNMODELED",
+                    "REVIEWED"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "mastery": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "required",
+                "current",
+                "evidence"
+              ],
+              "properties": {
+                "required": {
+                  "enum": [
+                    "L1",
+                    "L2",
+                    "L3",
+                    "L4",
+                    "L5"
+                  ]
+                },
+                "current": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "evidence": {
+                  "type": "array"
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

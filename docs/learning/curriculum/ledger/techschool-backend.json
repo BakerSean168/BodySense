@@ -1,0 +1,2740 @@
+{
+  "schema_version": 1,
+  "course": "techschool-backend-master-class",
+  "baseline": {
+    "public_repo_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+    "checked_at": "2026-09-07",
+    "lecture_range": "0-77",
+    "public_lecture_count": 78,
+    "parity_claim": "public lecture index and title-level BodySense mapping only; paid/video internal teaching semantics are not claimed as audited."
+  },
+  "items": [
+    {
+      "id": "TECH-00",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 0,
+        "title": "Setup development environment on Windows: WSL2 + Go + VSCode + Docker + Make + Sqlc",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 35,
+        "url": "https://www.youtube.com/watch?v=TtCfDXfSw_0&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-00",
+        "semantic_audit": "public-title-only",
+        "objective": "Setup development environment on Windows: WSL2 + Go + VSCode + Docker + Make + Sqlc",
+        "target_files": [],
+        "task_summary": "Reconstruct the BodySense local toolchain from repository manifests: WSL/Linux shell, Go, Node/pnpm/Nx, Python/uv, Docker and editor integration. Start only the minimum services needed for one traced request and explain why each process exists.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-01",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 1,
+        "title": "Design DB schema and generate SQL code with dbdiagram.io",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 39,
+        "url": "https://www.youtube.com/watch?v=rx6CPDK_5mU&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "EXERCISE_READY",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-01",
+        "semantic_audit": "public-title-only",
+        "objective": "Design DB schema and generate SQL code with dbdiagram.io",
+        "target_files": [
+          "apps/api/migrations/000032_create_body_state.up.sql",
+          "apps/api/migrations/000034_complete_longitudinal_health_loop.up.sql",
+          "apps/api/internal/model"
+        ],
+        "task_summary": "Reverse-engineer the selected BodySense slice into an ER diagram from migrations/models. Annotate aggregate ownership, immutable history versus current pointers, uniqueness constraints and where user ownership is enforced.",
+        "completion_evidence_plan": [
+          "Compare the ER diagram against the actual migration DDL and model fields",
+          "`cd apps/api && go test ./internal/repository -count=1` after any schema-characterization test addition."
+        ],
+        "prerequisites": [],
+        "exercise_card": "../../exercises/bs-tech-01.md",
+        "dependency_audit": "REVIEWED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-02",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 2,
+        "title": "Install & use Docker + Postgres + TablePlus to create DB schema",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 40,
+        "url": "https://www.youtube.com/watch?v=Q9ipbLeqmQo&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-02",
+        "semantic_audit": "public-title-only",
+        "objective": "Install & use Docker + Postgres + TablePlus to create DB schema",
+        "target_files": [],
+        "task_summary": "Start PostgreSQL through BodySense dev infrastructure, inspect the real schema and connect with `psql` or an equivalent client.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-03",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 3,
+        "title": "How to write & run database migration in Golang",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 41,
+        "url": "https://www.youtube.com/watch?v=0CYkrGIJkpw&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "EXERCISE_READY",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-03",
+        "semantic_audit": "public-title-only",
+        "objective": "How to write & run database migration in Golang",
+        "target_files": [
+          "apps/api/migrations",
+          "apps/api/cmd/migration-validator",
+          "scripts/setup-postgres18-client-wrappers.sh",
+          ".github/workflows/ci.yml"
+        ],
+        "task_summary": "Trace migration numbering, up/down files, production baseline handling and CI migration validation. Use a disposable PostgreSQL database to explain current-history and production-baseline validation paths.",
+        "completion_evidence_plan": [
+          "Use the existing migration-validator command pattern from `.github/workflows/ci.yml` against disposable PostgreSQL",
+          "Do not run destructive down/replay against production."
+        ],
+        "prerequisites": [
+          "TECH-01"
+        ],
+        "exercise_card": "../../exercises/bs-tech-03.md",
+        "dependency_audit": "REVIEWED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-04",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 4,
+        "title": "Generate CRUD Golang code from SQL | Compare db/sql, gorm, sqlx & sqlc",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 42,
+        "url": "https://www.youtube.com/watch?v=prh0hTyI1sU&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-TECH-04",
+        "semantic_audit": "public-title-only",
+        "objective": "Generate CRUD Golang code from SQL | Compare db/sql, gorm, sqlx & sqlc",
+        "target_files": [],
+        "task_summary": "Compare `database/sql`, sqlx/sqlc-style generated SQL and BodySense GORM/repository usage. Identify where ORM abstraction helps and where explicit SQL would be clearer.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-05",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 5,
+        "title": "Write unit tests for database CRUD with random data in Golang",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 43,
+        "url": "https://www.youtube.com/watch?v=phHDfOHB2PU&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "EXERCISE_READY",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-05",
+        "semantic_audit": "public-title-only",
+        "objective": "Write unit tests for database CRUD with random data in Golang",
+        "target_files": [
+          "apps/api/internal/repository/body_state_repository_test.go",
+          "apps/api/internal/repository/body_state_context_integration_test.go",
+          "apps/api/internal/repository/body_state_repository.go"
+        ],
+        "task_summary": "Read one real repository test and classify whether it is a mock, unit, SQL-mock, or database integration test. Add or design one focused deterministic case that proves a persistence invariant rather than implementation call order.",
+        "completion_evidence_plan": [
+          "`cd apps/api && go test ./internal/repository -run BodyState -count=1 -v`",
+          "Repeat the focused test with `-count=10` if it is intended to be deterministic."
+        ],
+        "prerequisites": [
+          "TECH-03"
+        ],
+        "exercise_card": "../../exercises/bs-tech-05.md",
+        "dependency_audit": "REVIEWED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-06",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 6,
+        "title": "A clean way to implement database transaction in Golang",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 44,
+        "url": "https://www.youtube.com/watch?v=gBh__1eFwVI&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "EXERCISE_READY",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-06",
+        "semantic_audit": "public-title-only",
+        "objective": "A clean way to implement database transaction in Golang",
+        "target_files": [
+          "apps/api/internal/database/transaction.go",
+          "apps/api/internal/database/transaction_test.go",
+          "apps/api/internal/service/treatment_service.go",
+          "apps/api/internal/repository/treatment_repository.go",
+          "apps/api/internal/repository/body_state_repository.go"
+        ],
+        "task_summary": "Trace `TransactionManager.WithinTransaction` and `database.FromContext` through `TreatmentService.RecordOutcome`. Draw the transaction boundary and explain how repositories join the same `*gorm.DB` transaction through context.",
+        "completion_evidence_plan": [
+          "`cd apps/api && go test ./internal/database -run TransactionManager -count=1 -v`",
+          "`cd apps/api && go test ./internal/service -run Treatment -count=1`",
+          "If no real-DB test proves the cross-repository rollback invariant, design/add one in a disposable PostgreSQL-backed test."
+        ],
+        "prerequisites": [
+          "TECH-03",
+          "TECH-05"
+        ],
+        "exercise_card": "../../exercises/bs-tech-06.md",
+        "dependency_audit": "REVIEWED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-07",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 7,
+        "title": "DB transaction lock & How to handle deadlock in Golang",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 45,
+        "url": "https://www.youtube.com/watch?v=G2aggv_3Bbg&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "EXERCISE_READY",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-07",
+        "semantic_audit": "public-title-only",
+        "objective": "DB transaction lock & How to handle deadlock in Golang",
+        "target_files": [
+          "apps/api/internal/repository/treatment_repository.go",
+          "apps/api/internal/repository/body_state_repository.go",
+          "apps/api/internal/repository/consultation_repository.go"
+        ],
+        "task_summary": "Build a lock-order table for the selected Treatment flow and one competing BodySense mutation. Draw a wait-for graph for the worst interleaving. Distinguish ordinary blocking from a cycle/deadlock.",
+        "completion_evidence_plan": [
+          "`grep -R \"clause.Locking\" apps/api/internal/repository` as an inventory aid, not completion evidence",
+          "A focused PostgreSQL-backed concurrency test/experiment showing lock wait or deadlock detection",
+          "Explain the lock-order rule you would enforce if a real cycle is possible."
+        ],
+        "prerequisites": [
+          "TECH-06"
+        ],
+        "exercise_card": "../../exercises/bs-tech-07.md",
+        "dependency_audit": "REVIEWED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-08",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 8,
+        "title": "How to avoid deadlock in DB transaction? Queries order matters!",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 46,
+        "url": "https://www.youtube.com/watch?v=qn3-5wdOfoA&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-08",
+        "semantic_audit": "public-title-only",
+        "objective": "How to avoid deadlock in DB transaction? Queries order matters!",
+        "target_files": [],
+        "task_summary": "Prove or refute a lock-ordering rule for the selected BodySense flow with a concurrency test or SQL-level experiment.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-09",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 9,
+        "title": "Deeply understand transaction isolation levels & read phenomena in MySQL & PostgreSQL",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 47,
+        "url": "https://www.youtube.com/watch?v=4EajrPgJAk0&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "EXERCISE_READY",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-09",
+        "semantic_audit": "public-title-only",
+        "objective": "Deeply understand transaction isolation levels & read phenomena in MySQL & PostgreSQL",
+        "target_files": [
+          "apps/api/internal/database/transaction.go",
+          "apps/api/internal/repository/body_state_repository.go",
+          "apps/api/internal/repository/treatment_repository.go"
+        ],
+        "task_summary": "Use a disposable PostgreSQL database and two sessions to reproduce at least one read phenomenon at READ COMMITTED and compare with REPEATABLE READ. Map the result to BodyState revision checks and Treatment acceptance.",
+        "completion_evidence_plan": [
+          "A captured two-session SQL transcript or automated integration test",
+          "`cd apps/api && go test ./internal/database ./internal/repository -count=1` after any test-only addition"
+        ],
+        "prerequisites": [
+          "TECH-06",
+          "TECH-07"
+        ],
+        "exercise_card": "../../exercises/bs-tech-09.md",
+        "dependency_audit": "REVIEWED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-10",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 10,
+        "title": "Setup Github Actions for Golang + Postgres to run automated tests",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 48,
+        "url": "https://www.youtube.com/watch?v=3mzQRJY1GVE&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "EXERCISE_READY",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-10",
+        "semantic_audit": "public-title-only",
+        "objective": "Setup Github Actions for Golang + Postgres to run automated tests",
+        "target_files": [
+          ".github/workflows/ci.yml",
+          "scripts/delivery/generate-manifest.mjs",
+          "scripts/delivery/run-quality.mjs",
+          "apps/api/cmd/migration-validator"
+        ],
+        "task_summary": "Trace the BodySense CI path for a database-related change from delivery manifest -> selected child jobs -> migration/domain validators -> oracle result. Draw dependencies and explain why the release gate is conditional rather than always running everything.",
+        "completion_evidence_plan": [
+          "Read `.github/workflows/ci.yml` and the manifest selection scripts",
+          "Run the relevant local validation command for a small non-production case; do not trigger cloud deployment merely for the lesson."
+        ],
+        "prerequisites": [
+          "TECH-05"
+        ],
+        "exercise_card": "../../exercises/bs-tech-10.md",
+        "dependency_audit": "REVIEWED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-11",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 11,
+        "title": "Implement RESTful HTTP API in Go using Gin",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 52,
+        "url": "https://www.youtube.com/watch?v=n_Y_YisgqTw&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "EXERCISE_READY",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-11",
+        "semantic_audit": "public-title-only",
+        "objective": "Implement RESTful HTTP API in Go using Gin",
+        "target_files": [
+          "apps/api/cmd/server/main.go",
+          "apps/api/internal/handler/body_state_handler.go",
+          "apps/api/internal/service/body_state_service.go",
+          "apps/api/internal/repository/body_state_repository.go"
+        ],
+        "task_summary": "Trace one GET and one mutation from route registration through handler -> service -> repository. Mark which concerns belong to transport, business policy, and persistence.",
+        "completion_evidence_plan": [
+          "`cd apps/api && go test ./internal/handler ./internal/service -run BodyState -count=1`",
+          "Optional local `curl`/browser trace against a disposable/dev user."
+        ],
+        "prerequisites": [
+          "TECH-01",
+          "FSO-3.1"
+        ],
+        "exercise_card": "../../exercises/bs-tech-11.md",
+        "dependency_audit": "REVIEWED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-12",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 12,
+        "title": "Load config from file & environment variables in Go with Viper",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 53,
+        "url": "https://www.youtube.com/watch?v=n5p8HkO6bnE&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-12",
+        "semantic_audit": "public-title-only",
+        "objective": "Load config from file & environment variables in Go with Viper",
+        "target_files": [],
+        "task_summary": "Trace configuration from environment/repository defaults into Go runtime. Identify startup-time validation and secret boundaries.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-13",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 13,
+        "title": "Mock DB for testing HTTP API in Go and achieve 100% coverage",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 54,
+        "url": "https://www.youtube.com/watch?v=rL0aeMutoJ0&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-13",
+        "semantic_audit": "public-title-only",
+        "objective": "Mock DB for testing HTTP API in Go and achieve 100% coverage",
+        "target_files": [],
+        "task_summary": "Test one handler/service with a substituted dependency. Explain mock vs fake vs real DB trade-offs rather than chasing an arbitrary coverage percentage.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-14",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 14,
+        "title": "Implement transfer money API with a custom params validator",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 55,
+        "url": "https://www.youtube.com/watch?v=5q_wsashJZA&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-14",
+        "semantic_audit": "public-title-only",
+        "objective": "Implement transfer money API with a custom params validator",
+        "target_files": [],
+        "task_summary": "Choose a BodySense mutation with meaningful invariants; write explicit request validation and test invalid boundary values.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-15",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 15,
+        "title": "Add users table with unique & foreign key constraints in PostgreSQL",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 56,
+        "url": "https://www.youtube.com/watch?v=D4VtNC3vQUs&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "EXERCISE_READY",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-15",
+        "semantic_audit": "public-title-only",
+        "objective": "Add users table with unique & foreign key constraints in PostgreSQL",
+        "target_files": [
+          "apps/api/migrations/000001_create_users.up.sql",
+          "apps/api/migrations/000032_create_body_state.up.sql",
+          "apps/api/internal/repository/user_repository.go"
+        ],
+        "task_summary": "Trace at least one unique constraint and one FK/relationship constraint from migration DDL to repository behavior. Explain why pre-checks in application code cannot replace the database constraint under concurrency.",
+        "completion_evidence_plan": [
+          "A disposable PostgreSQL constraint experiment or existing repository integration test",
+          "`cd apps/api && go test ./internal/repository -count=1` after any focused test addition."
+        ],
+        "prerequisites": [
+          "TECH-11"
+        ],
+        "exercise_card": "../../exercises/bs-tech-15.md",
+        "dependency_audit": "REVIEWED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-16",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 16,
+        "title": "How to handle DB errors in Golang correctly",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 57,
+        "url": "https://www.youtube.com/watch?v=mJ8b5GcvoxQ&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "EXERCISE_READY",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-16",
+        "semantic_audit": "public-title-only",
+        "objective": "How to handle DB errors in Golang correctly",
+        "target_files": [
+          "apps/api/internal/service/auth_service.go",
+          "apps/api/internal/repository/user_repository.go",
+          "apps/api/internal/handler/auth_handler.go",
+          "apps/api/internal/handler/auth_handler_test.go"
+        ],
+        "task_summary": "Trace errors from GORM/PostgreSQL through repository/service/handler for registration or another unique-constrained resource. Distinguish expected constraint conflict, not-found, transient DB failure, and internal bug.",
+        "completion_evidence_plan": [
+          "`cd apps/api && go test ./internal/handler ./internal/service -run \"Auth|Registration\" -count=1`",
+          "Add a focused repository/service test if the unique-constraint race is not characterized."
+        ],
+        "prerequisites": [
+          "TECH-11",
+          "TECH-15"
+        ],
+        "exercise_card": "../../exercises/bs-tech-16.md",
+        "dependency_audit": "REVIEWED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-17",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 17,
+        "title": "How to securely store passwords? Hash password in Go with Bcrypt!",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 58,
+        "url": "https://www.youtube.com/watch?v=B3xnJI2lHmc&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-17",
+        "semantic_audit": "public-title-only",
+        "objective": "How to securely store passwords? Hash password in Go with Bcrypt!",
+        "target_files": [],
+        "task_summary": "Read the bcrypt password path and explain salt/cost/hash verification; add a focused regression test if a useful gap exists.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-18",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 18,
+        "title": "How to write stronger unit tests with a custom gomock matcher",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 59,
+        "url": "https://www.youtube.com/watch?v=DuzBE0jKOgE&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-18",
+        "semantic_audit": "public-title-only",
+        "objective": "How to write stronger unit tests with a custom gomock matcher",
+        "target_files": [],
+        "task_summary": "Build a stronger matcher/assertion for a request or repository call where naive equality would hide a bug.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-19",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 19,
+        "title": "Why PASETO is better than JWT for token-based authentication?",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 60,
+        "url": "https://www.youtube.com/watch?v=nBGx-q52KAY&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-TECH-19",
+        "semantic_audit": "public-title-only",
+        "objective": "Why PASETO is better than JWT for token-based authentication?",
+        "target_files": [],
+        "task_summary": "Compare PASETO's design goals with BodySense JWT access tokens + opaque refresh credentials + Redis session authority. Decide what threats each design addresses.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-20",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 20,
+        "title": "How to create and verify JWT & PASETO token in Golang",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 61,
+        "url": "https://www.youtube.com/watch?v=Oi4FHDGILuY&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "EXERCISE_READY",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-20",
+        "semantic_audit": "public-title-only",
+        "objective": "How to create and verify JWT & PASETO token in Golang",
+        "target_files": [
+          "apps/api/internal/auth/jwt.go",
+          "apps/api/internal/auth/jwt_test.go"
+        ],
+        "task_summary": "Trace `GenerateAccessToken` and `ValidateAccessToken`. Explain the difference between cryptographic token validity and live session authority, and why an explicit signing-method check exists.",
+        "completion_evidence_plan": [
+          "`cd apps/api && go test ./internal/auth -run \"GenerateAccessToken|ValidateAccessToken\" -count=1 -v`"
+        ],
+        "prerequisites": [
+          "TECH-15"
+        ],
+        "exercise_card": "../../exercises/bs-tech-20.md",
+        "dependency_audit": "REVIEWED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-21",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 21,
+        "title": "Implement login user API that returns PASETO or JWT access token in Go",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 62,
+        "url": "https://www.youtube.com/watch?v=lnHbZ9GOGAs&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "EXERCISE_READY",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-21",
+        "semantic_audit": "public-title-only",
+        "objective": "Implement login user API that returns PASETO or JWT access token in Go",
+        "target_files": [
+          "apps/api/internal/service/auth_service.go",
+          "apps/api/internal/handler/auth_handler.go",
+          "apps/api/internal/repository/user_repository.go"
+        ],
+        "task_summary": "Trace BodySense login end to end from HTTP handler into `AuthService.Login` and token/session creation. Mark which operations are security-critical and which best-effort side effects may fail without rejecting login.",
+        "completion_evidence_plan": [
+          "`cd apps/api && go test ./internal/handler ./internal/service -run \"Login|Auth\" -count=1 -v`"
+        ],
+        "prerequisites": [
+          "TECH-20"
+        ],
+        "exercise_card": "../../exercises/bs-tech-21.md",
+        "dependency_audit": "REVIEWED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-22",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 22,
+        "title": "Implement authentication middleware and authorization rules in Golang using Gin",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 63,
+        "url": "https://www.youtube.com/watch?v=Pw8fVBRS4jA&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "EXERCISE_READY",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-22",
+        "semantic_audit": "public-title-only",
+        "objective": "Implement authentication middleware and authorization rules in Golang using Gin",
+        "target_files": [
+          "apps/api/internal/middleware/auth.go",
+          "apps/api/internal/middleware/auth_test.go",
+          "apps/api/cmd/server/main.go"
+        ],
+        "task_summary": "Trace `AuthMiddleware` and one additional authorization layer/capability. Produce a table separating identity validation, session liveness, role/capability checks and resource ownership.",
+        "completion_evidence_plan": [
+          "`cd apps/api && go test ./internal/middleware -count=1 -v`",
+          "Trace one protected route registration in `cmd/server/main.go`."
+        ],
+        "prerequisites": [
+          "TECH-21"
+        ],
+        "exercise_card": "../../exercises/bs-tech-22.md",
+        "dependency_audit": "REVIEWED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-23",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 23,
+        "title": "Build a minimal Golang Docker image with a multistage Dockerfile",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 67,
+        "url": "https://www.youtube.com/watch?v=p1dwLKAxUxA&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-23",
+        "semantic_audit": "public-title-only",
+        "objective": "Build a minimal Golang Docker image with a multistage Dockerfile",
+        "target_files": [],
+        "task_summary": "Read a BodySense Dockerfile and explain multi-stage build, build context, runtime image and artifact minimization.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-24",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 24,
+        "title": "How to use docker network to connect 2 stand-alone containers",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 68,
+        "url": "https://www.youtube.com/watch?v=VcFnqQarpjI&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-24",
+        "semantic_audit": "public-title-only",
+        "objective": "How to use docker network to connect 2 stand-alone containers",
+        "target_files": [],
+        "task_summary": "Explain how BodySense containers/services reach each other and why host/bridge/container DNS addresses differ.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-25",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 25,
+        "title": "How to write docker-compose file and control service start-up orders with wait-for.sh",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 69,
+        "url": "https://www.youtube.com/watch?v=jf6sQsz0M1M&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "EXERCISE_READY",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-25",
+        "semantic_audit": "public-title-only",
+        "objective": "How to write docker-compose file and control service start-up orders with wait-for.sh",
+        "target_files": [
+          "docker",
+          "scripts/dev-infra.sh",
+          "package.json"
+        ],
+        "task_summary": "Trace the current direct-dev/Compose topology. Explain startup ordering, health checks, restart policy, volumes and why infrastructure lifetime is separate from hot-reload app processes.",
+        "completion_evidence_plan": [
+          "`pnpm dev:infra:status`",
+          "`docker compose` config/ps inspection for the current dev files; do not remove persistent volumes."
+        ],
+        "prerequisites": [
+          "TECH-01"
+        ],
+        "exercise_card": "../../exercises/bs-tech-25.md",
+        "dependency_audit": "REVIEWED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-26",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 26,
+        "title": "How to create a free tier AWS account",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 70,
+        "url": "https://www.youtube.com/watch?v=4UqN1P8pIkM&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-TECH-26",
+        "semantic_audit": "public-title-only",
+        "objective": "How to create a free tier AWS account",
+        "target_files": [],
+        "task_summary": "Map the source AWS account/bootstrap concerns to BodySense's actual cloud accounts. Focus on identity, quotas, billing boundaries and least privilege.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-27",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 27,
+        "title": "Auto build & push docker image to AWS ECR with Github Actions",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 71,
+        "url": "https://www.youtube.com/watch?v=3M4MPmSWt9E&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-27",
+        "semantic_audit": "public-title-only",
+        "objective": "Auto build & push docker image to AWS ECR with Github Actions",
+        "target_files": [],
+        "task_summary": "Trace artifact build/publish from GitHub Actions to BodySense's registry; identify immutable artifact identity and failure gates.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-28",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 28,
+        "title": "How to create a production DB on AWS RDS",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 72,
+        "url": "https://www.youtube.com/watch?v=0EaG3T4Q5fQ&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-TECH-28",
+        "semantic_audit": "public-title-only",
+        "objective": "How to create a production DB on AWS RDS",
+        "target_files": [],
+        "task_summary": "Compare managed production PostgreSQL/RDS concerns with BodySense's current production database: backups, networking, credentials, upgrades and recovery.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-29",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 29,
+        "title": "Store & retrieve production secrets with AWS secrets manager",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 73,
+        "url": "https://www.youtube.com/watch?v=3i1mQ_Ye8jE&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-29",
+        "semantic_audit": "public-title-only",
+        "objective": "Store & retrieve production secrets with AWS secrets manager",
+        "target_files": [],
+        "task_summary": "Audit how BodySense production secrets are injected. Verify no secret belongs in repository history or image layers.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-30",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 30,
+        "title": "Kubernetes architecture & How to create an EKS cluster on AWS",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 74,
+        "url": "https://www.youtube.com/watch?v=TxnCMhYhqRU&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-TECH-30",
+        "semantic_audit": "public-title-only",
+        "objective": "Kubernetes architecture & How to create an EKS cluster on AWS",
+        "target_files": [],
+        "task_summary": "Learn Kubernetes control-plane/workload concepts and map them to the simpler current BodySense deployment. State what scale/operability threshold would justify Kubernetes.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-31",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 31,
+        "title": "How to use kubectl & k9s to connect to a kubernetes cluster on AWS EKS",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 75,
+        "url": "https://www.youtube.com/watch?v=hwMevai3_wQ&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-TECH-31",
+        "semantic_audit": "public-title-only",
+        "objective": "How to use kubectl & k9s to connect to a kubernetes cluster on AWS EKS",
+        "target_files": [],
+        "task_summary": "Learn operational inspection concepts represented by kubectl/k9s, then perform equivalent process/container/service inspection in the current BodySense environment.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-32",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 32,
+        "title": "How to deploy a web app to Kubernetes cluster on AWS EKS",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 76,
+        "url": "https://www.youtube.com/watch?v=PH-Mcd0Rs1w&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-TECH-32",
+        "semantic_audit": "public-title-only",
+        "objective": "How to deploy a web app to Kubernetes cluster on AWS EKS",
+        "target_files": [],
+        "task_summary": "Model how the current BodySense services would be represented as Kubernetes workloads/services without actually migrating production.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-33",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 33,
+        "title": "Register a domain name & set up A-record using Route53",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 77,
+        "url": "https://www.youtube.com/watch?v=-JF2ukmW3i8&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-33",
+        "semantic_audit": "public-title-only",
+        "objective": "Register a domain name & set up A-record using Route53",
+        "target_files": [],
+        "task_summary": "Trace BodySense DNS from hostname to ingress/proxy/service and identify which layer owns each record.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-34",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 34,
+        "title": "How to use Ingress to route traffics to different services in Kubernetes",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 78,
+        "url": "https://www.youtube.com/watch?v=lBrqP6FkNsU&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-34",
+        "semantic_audit": "public-title-only",
+        "objective": "How to use Ingress to route traffics to different services in Kubernetes",
+        "target_files": [],
+        "task_summary": "Trace current reverse-proxy routing and compare it with Kubernetes Ingress concepts.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-35",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 35,
+        "title": "Automatic issue TLS certificates in Kubernetes with Let's Encrypt",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 79,
+        "url": "https://www.youtube.com/watch?v=nU4FTjrgSKI&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-35",
+        "semantic_audit": "public-title-only",
+        "objective": "Automatic issue TLS certificates in Kubernetes with Let's Encrypt",
+        "target_files": [],
+        "task_summary": "Trace TLS issuance/termination/renewal in the current deployment and explain certificate failure modes.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-36",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 36,
+        "title": "Automatic deploy to Kubernetes with Github Action",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 80,
+        "url": "https://www.youtube.com/watch?v=GVY-zze0V_U&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-36",
+        "semantic_audit": "public-title-only",
+        "objective": "Automatic deploy to Kubernetes with Github Action",
+        "target_files": [],
+        "task_summary": "Trace automatic deployment from merged/released code to running BodySense artifact, including rollback/reconciliation semantics.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-37",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 37,
+        "title": "How to manage user session with refresh token - Golang",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 84,
+        "url": "https://www.youtube.com/watch?v=rT20ylRLm5U&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "EXERCISE_READY",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-37",
+        "semantic_audit": "public-title-only",
+        "objective": "How to manage user session with refresh token - Golang",
+        "target_files": [
+          "apps/api/internal/service/auth_service.go",
+          "apps/api/internal/service/auth_service_test.go",
+          "apps/api/internal/cache"
+        ],
+        "task_summary": "Trace `RefreshToken`, `rotateRefreshToken`, the Lua compare/delete/set sequence, replay marker, refresh family, and session cache. Draw the exact state machine for normal rotation and replay.",
+        "completion_evidence_plan": [
+          "`cd apps/api && go test ./internal/service -run \"RotateRefreshTokenSingleWinnerAndReplayRevokesFamily|LogoutWithConsumedRefreshToken\" -count=1 -v`"
+        ],
+        "prerequisites": [
+          "TECH-20",
+          "TECH-21",
+          "TECH-22"
+        ],
+        "exercise_card": "../../exercises/bs-tech-37.md",
+        "dependency_audit": "REVIEWED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-38",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 38,
+        "title": "Generate DB documentation page and schema SQL dump from DBML",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 85,
+        "url": "https://www.youtube.com/watch?v=dGfVwsPr-IU&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-38",
+        "semantic_audit": "public-title-only",
+        "objective": "Generate DB documentation page and schema SQL dump from DBML",
+        "target_files": [],
+        "task_summary": "Generate or reconstruct database documentation from current migrations/schema and verify it against executable state.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-39",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 39,
+        "title": "Introduction to gRPC",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 86,
+        "url": "https://www.youtube.com/watch?v=mRGnA3wPxMM&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-TECH-39",
+        "semantic_audit": "public-title-only",
+        "objective": "Introduction to gRPC",
+        "target_files": [],
+        "task_summary": "Learn RPC/gRPC fundamentals and compare them with BodySense Go <-> Python HTTP/stream boundaries.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-40",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 40,
+        "title": "Define gRPC API and generate Go code with protobuf",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 87,
+        "url": "https://www.youtube.com/watch?v=mVWgEmyAhvM&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-TECH-40",
+        "semantic_audit": "public-title-only",
+        "objective": "Define gRPC API and generate Go code with protobuf",
+        "target_files": [],
+        "task_summary": "Design a small protobuf contract for one internal call as a paper/spike exercise; compare generated IDL guarantees with current Pydantic/JSON contracts.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-41",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 41,
+        "title": "How to run a golang gRPC server and call its API",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 88,
+        "url": "https://www.youtube.com/watch?v=BkfBJIS0_ro&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-TECH-41",
+        "semantic_audit": "public-title-only",
+        "objective": "How to run a golang gRPC server and call its API",
+        "target_files": [],
+        "task_summary": "Run an isolated gRPC hello/health spike only if useful; focus on connection/channel/deadline/error semantics, not production adoption.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-42",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 42,
+        "title": "Implement gRPC API to create and login users in Go",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 89,
+        "url": "https://www.youtube.com/watch?v=7xiWqyZW9lE&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-TECH-42",
+        "semantic_audit": "public-title-only",
+        "objective": "Implement gRPC API to create and login users in Go",
+        "target_files": [],
+        "task_summary": "Model how an existing BodySense internal API would look as RPC and identify auth/ownership changes.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-43",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 43,
+        "title": "gRPC gateway: write code once, serve both gRPC & HTTP requests",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 90,
+        "url": "https://www.youtube.com/watch?v=3FfDH3d0aHs&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-TECH-43",
+        "semantic_audit": "public-title-only",
+        "objective": "gRPC gateway: write code once, serve both gRPC & HTTP requests",
+        "target_files": [],
+        "task_summary": "Compare gRPC-Gateway's dual-protocol idea with BodySense's explicit REST/public and internal service boundaries.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-44",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 44,
+        "title": "How to extract info from gRPC metadata",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 91,
+        "url": "https://www.youtube.com/watch?v=Sno10WQ21Zs&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-TECH-44",
+        "semantic_audit": "public-title-only",
+        "objective": "How to extract info from gRPC metadata",
+        "target_files": [],
+        "task_summary": "Map gRPC metadata to BodySense HTTP headers/context propagation: auth, request IDs, tracing and deadlines.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-45",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 45,
+        "title": "Automatic generate & serve Swagger docs from Go server",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 92,
+        "url": "https://www.youtube.com/watch?v=Uwkxxee7tvk&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-45",
+        "semantic_audit": "public-title-only",
+        "objective": "Automatic generate & serve Swagger docs from Go server",
+        "target_files": [],
+        "task_summary": "Audit current API contract documentation/route authority. If machine-readable OpenAPI is incomplete, design the smallest useful improvement rather than copying Swagger setup blindly.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-46",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 46,
+        "title": "Embed static frontend files inside Golang backend server's binary",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 93,
+        "url": "https://www.youtube.com/watch?v=xNgOIm86N5Q&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-TECH-46",
+        "semantic_audit": "public-title-only",
+        "objective": "Embed static frontend files inside Golang backend server's binary",
+        "target_files": [],
+        "task_summary": "Compare embedding frontend assets into a Go binary with BodySense's current web artifact/CDN/proxy strategy.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-47",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 47,
+        "title": "Validate gRPC parameters and send human/machine friendly response",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 94,
+        "url": "https://www.youtube.com/watch?v=CxZ9hMtmZtc&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-47",
+        "semantic_audit": "public-title-only",
+        "objective": "Validate gRPC parameters and send human/machine friendly response",
+        "target_files": [],
+        "task_summary": "Validate one request at the transport boundary and ensure machine-readable error code + human-readable message remain stable.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-48",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 48,
+        "title": "Run DB migrations directly inside Golang code",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 95,
+        "url": "https://www.youtube.com/watch?v=TG43cMpaxlI&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-TECH-48",
+        "semantic_audit": "public-title-only",
+        "objective": "Run DB migrations directly inside Golang code",
+        "target_files": [],
+        "task_summary": "Compare application-start migrations with BodySense's explicit migration/release validation strategy and explain which failure model is safer here.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-49",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 49,
+        "title": "Partial update DB record with SQLC nullable parameters",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 96,
+        "url": "https://www.youtube.com/watch?v=I2sbw1PzzW0&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-49",
+        "semantic_audit": "public-title-only",
+        "objective": "Partial update DB record with SQLC nullable parameters",
+        "target_files": [],
+        "task_summary": "Trace one PATCH/partial update path. Prove omitted, explicit-null and zero values cannot be confused where semantics differ.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-50",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 50,
+        "title": "Build gRPC update API with optional parameters",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 97,
+        "url": "https://www.youtube.com/watch?v=ygqSHIEc8sc&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-TECH-50",
+        "semantic_audit": "public-title-only",
+        "objective": "Build gRPC update API with optional parameters",
+        "target_files": [],
+        "task_summary": "Express the same partial-update contract in protobuf optional/presence terms and compare with JSON/Go pointer/nullability semantics.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-51",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 51,
+        "title": "Add authorization to protect gRPC API",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 98,
+        "url": "https://www.youtube.com/watch?v=_jqNs3d99ps&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-51",
+        "semantic_audit": "public-title-only",
+        "objective": "Add authorization to protect gRPC API",
+        "target_files": [],
+        "task_summary": "Add/verify authorization around one sensitive API and prove identity alone is insufficient.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-52",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 52,
+        "title": "Write structured logs for gRPC APIs",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 99,
+        "url": "https://www.youtube.com/watch?v=tTAxLGrDmPo&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-TECH-52",
+        "semantic_audit": "public-title-only",
+        "objective": "Write structured logs for gRPC APIs",
+        "target_files": [],
+        "task_summary": "Translate structured gRPC logging concepts to BodySense internal service logging/tracing fields.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-53",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 53,
+        "title": "How to write HTTP logger middleware in Go",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 100,
+        "url": "https://www.youtube.com/watch?v=Lbiz-PZNiU0&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-53",
+        "semantic_audit": "public-title-only",
+        "objective": "How to write HTTP logger middleware in Go",
+        "target_files": [],
+        "task_summary": "Audit HTTP logging middleware: method/path/status/duration/request identity, secret/PHI redaction and error correlation.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-54",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 54,
+        "title": "Implement background worker in Go with Redis and Asynq",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 104,
+        "url": "https://www.youtube.com/watch?v=XOXdYs8mKkI&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "EXERCISE_READY",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-54",
+        "semantic_audit": "public-title-only",
+        "objective": "Implement background worker in Go with Redis and Asynq",
+        "target_files": [
+          "apps/api/internal/service/job_runtime.go",
+          "apps/api/internal/service/job_runtime_test.go",
+          "apps/api/internal/repository/job_repository.go"
+        ],
+        "task_summary": "Trace job creation, idempotency identity, claim, attempt count, transition validation, progress, terminal states, and event append. Compare BodySense DB-backed JobRuntime with a Redis queue such as Asynq without proposing a migration by default.",
+        "completion_evidence_plan": [
+          "`cd apps/api && go test ./internal/service -run \"Job|Transition\" -count=1 -v`",
+          "Inspect repository claim SQL/locking and, if untested, design a concurrent-claim integration test."
+        ],
+        "prerequisites": [
+          "TECH-10",
+          "TECH-25"
+        ],
+        "exercise_card": "../../exercises/bs-tech-54.md",
+        "dependency_audit": "REVIEWED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-55",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 55,
+        "title": "Integrate async worker to Go web server",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 105,
+        "url": "https://www.youtube.com/watch?v=eXYKGPEXocM&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-55",
+        "semantic_audit": "public-title-only",
+        "objective": "Integrate async worker to Go web server",
+        "target_files": [],
+        "task_summary": "Trace how a background job is integrated with a request/service boundary and which state is durable before the worker starts.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-56",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 56,
+        "title": "Send async tasks to Redis within a DB transaction",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 106,
+        "url": "https://www.youtube.com/watch?v=ZfFxdPbgN88&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-56",
+        "semantic_audit": "public-title-only",
+        "objective": "Send async tasks to Redis within a DB transaction",
+        "target_files": [],
+        "task_summary": "Study the transaction/outbox problem: design a failure timeline where DB commit and task enqueue diverge, then inspect BodySense's actual strategy for the chosen job path.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-57",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 57,
+        "title": "How to handle errors and print logs for Go Asynq workers",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 107,
+        "url": "https://www.youtube.com/watch?v=YgfmPIJRg2U&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-57",
+        "semantic_audit": "public-title-only",
+        "objective": "How to handle errors and print logs for Go Asynq workers",
+        "target_files": [],
+        "task_summary": "Force a safe worker/job failure and verify error persistence, retry decision and logs are correlated.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-58",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 58,
+        "title": "A bit of delay might be good for your async tasks",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 108,
+        "url": "https://www.youtube.com/watch?v=ILNiZgseLUI&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-58",
+        "semantic_audit": "public-title-only",
+        "objective": "A bit of delay might be good for your async tasks",
+        "target_files": [],
+        "task_summary": "Reason about delayed/backoff work and classify fixed delay, exponential backoff, scheduled retry and user-visible waiting states.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-59",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 59,
+        "title": "How to send emails in Go via Gmail",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 109,
+        "url": "https://www.youtube.com/watch?v=L9TbZxpykLQ&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-TECH-59",
+        "semantic_audit": "public-title-only",
+        "objective": "How to send emails in Go via Gmail",
+        "target_files": [],
+        "task_summary": "Treat email as an external side effect. Design how BodySense would send one asynchronously with idempotency, retries and secret handling; implementation only if a real feature needs it.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-60",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 60,
+        "title": "How to skip test in Go and config test flag in vscode",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 110,
+        "url": "https://www.youtube.com/watch?v=0UwZGM9iqTE&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-60",
+        "semantic_audit": "public-title-only",
+        "objective": "How to skip test in Go and config test flag in vscode",
+        "target_files": [],
+        "task_summary": "Classify BodySense tests into unit/integration/e2e/slow/external and make skipping/selection explicit rather than hiding flaky dependencies.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-61",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 61,
+        "title": "Email verification in Go: design DB and send email",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 111,
+        "url": "https://www.youtube.com/watch?v=lEHkwDPHrcc&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-TECH-61",
+        "semantic_audit": "public-title-only",
+        "objective": "Email verification in Go: design DB and send email",
+        "target_files": [],
+        "task_summary": "Translate email-verification domain design into a BodySense-style durable verification workflow; focus on token identity, expiry and idempotency.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-62",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 62,
+        "title": "Implement email verification API in Go",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 112,
+        "url": "https://www.youtube.com/watch?v=50ZN-4UNwnY&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-TECH-62",
+        "semantic_audit": "public-title-only",
+        "objective": "Implement email verification API in Go",
+        "target_files": [],
+        "task_summary": "Specify the verification endpoint's state machine and replay behavior without adding an unused production feature.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-63",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 63,
+        "title": "Unit test gRPC API with mock DB & Redis",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 113,
+        "url": "https://www.youtube.com/watch?v=QFxZlKb7W2k&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-63",
+        "semantic_audit": "public-title-only",
+        "objective": "Unit test gRPC API with mock DB & Redis",
+        "target_files": [],
+        "task_summary": "Write a test where a service depends on multiple boundaries (DB/Redis or repository/clock/etc.) and keep the test behavior-focused.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-64",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 64,
+        "title": "How to test a gRPC API that requires authentication",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 114,
+        "url": "https://www.youtube.com/watch?v=MI7ucbAlZPM&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-64",
+        "semantic_audit": "public-title-only",
+        "objective": "How to test a gRPC API that requires authentication",
+        "target_files": [],
+        "task_summary": "Test an authenticated endpoint end to end through middleware/context rather than bypassing identity setup.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-65",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 65,
+        "title": "Config sqlc version 2 for Go and Postgres",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 118,
+        "url": "https://www.youtube.com/watch?v=FfXE245HZB4&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-TECH-65",
+        "semantic_audit": "public-title-only",
+        "objective": "Config sqlc version 2 for Go and Postgres",
+        "target_files": [],
+        "task_summary": "Review current ORM/query tooling versions and generated-code alternatives. No migration merely to mirror sqlc.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-66",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 66,
+        "title": "Switch DB driver from lib/pq to pgx",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 119,
+        "url": "https://www.youtube.com/watch?v=m9gYy5U0edQ&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-TECH-66",
+        "semantic_audit": "public-title-only",
+        "objective": "Switch DB driver from lib/pq to pgx",
+        "target_files": [],
+        "task_summary": "Compare PostgreSQL driver capabilities and connection behavior with BodySense's current GORM/driver stack; identify whether pgx-specific features would materially help.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-67",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 67,
+        "title": "How to handle DB errors with PGX driver",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 120,
+        "url": "https://www.youtube.com/watch?v=9vf3zxrMUgw&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-67",
+        "semantic_audit": "public-title-only",
+        "objective": "How to handle DB errors with PGX driver",
+        "target_files": [],
+        "task_summary": "Audit PostgreSQL error classification in current code and make constraint/transient/internal failures distinguishable where needed.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-68",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 68,
+        "title": "Docker compose: port + volume mapping",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 121,
+        "url": "https://www.youtube.com/watch?v=nJBT5SKENAw&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-68",
+        "semantic_audit": "public-title-only",
+        "objective": "Docker compose: port + volume mapping",
+        "target_files": [],
+        "task_summary": "Explain every relevant Compose port and volume mapping and demonstrate persistence across a controlled restart.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-69",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 69,
+        "title": "How to install & use binary packages in Go",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 122,
+        "url": "https://www.youtube.com/watch?v=TnJ4ssoNvkY&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-69",
+        "semantic_audit": "public-title-only",
+        "objective": "How to install & use binary packages in Go",
+        "target_files": [],
+        "task_summary": "Audit how Go/Python/Node helper binaries are installed/pinned in dev and CI; eliminate unpinned executable drift if found.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-70",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 70,
+        "title": "Implement role-based access control (RBAC) in Go",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 123,
+        "url": "https://www.youtube.com/watch?v=Py7dRhtuJ3E&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-70",
+        "semantic_audit": "public-title-only",
+        "objective": "Implement role-based access control (RBAC) in Go",
+        "target_files": [],
+        "task_summary": "Trace BodySense capability/role authorization and distinguish RBAC from resource ownership and policy-based decisions.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-71",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 71,
+        "title": "Grant AWS EKS cluster access to Postgres and Redis using security group",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 124,
+        "url": "https://www.youtube.com/watch?v=pPXYu6QQGE8&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-TECH-71",
+        "semantic_audit": "public-title-only",
+        "objective": "Grant AWS EKS cluster access to Postgres and Redis using security group",
+        "target_files": [],
+        "task_summary": "Map cloud security-group/network ACL concepts to the actual BodySense production network allowlists/firewall/private connectivity.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-72",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 72,
+        "title": "Deploy gRPC + HTTP server to AWS EKS cluster",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 125,
+        "url": "https://www.youtube.com/watch?v=Pd7aeh014nU&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "COMPARE",
+        "exercise_id": "BS-TECH-72",
+        "semantic_audit": "public-title-only",
+        "objective": "Deploy gRPC + HTTP server to AWS EKS cluster",
+        "target_files": [],
+        "task_summary": "Model dual HTTP/RPC deployment only as an architecture exercise unless BodySense actually adopts gRPC.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-73",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 73,
+        "title": "Don't lose money on AWS",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 126,
+        "url": "https://www.youtube.com/watch?v=VEf7IpUn6BQ&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-73",
+        "semantic_audit": "public-title-only",
+        "objective": "Don't lose money on AWS",
+        "target_files": [],
+        "task_summary": "Review cost-sensitive production resources and identify one measurable cost guardrail without degrading required reliability.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-74",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 74,
+        "title": "Graceful shutdown gRPC/HTTP servers and async worker",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 127,
+        "url": "https://www.youtube.com/watch?v=TdB2W8l4dHw&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-74",
+        "semantic_audit": "public-title-only",
+        "objective": "Graceful shutdown gRPC/HTTP servers and async worker",
+        "target_files": [],
+        "task_summary": "Verify graceful shutdown semantics for Go HTTP, Python runtime/background work and container termination: stop accepting, drain/cancel safely, bound shutdown time.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-75",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 75,
+        "title": "Go 1.22 fixed the most common for-loop trap",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 128,
+        "url": "https://www.youtube.com/watch?v=rIHO9TqJtQQ&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-75",
+        "semantic_audit": "public-title-only",
+        "objective": "Go 1.22 fixed the most common for-loop trap",
+        "target_files": [],
+        "task_summary": "Explain Go loop-variable capture semantics in the repository's current Go version and find/create a tiny test demonstrating the modern behavior.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-76",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 76,
+        "title": "Setup CORS policy with Go and VueJS",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 129,
+        "url": "https://www.youtube.com/watch?v=hOz4f4SdArc&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-76",
+        "semantic_audit": "public-title-only",
+        "objective": "Setup CORS policy with Go and VueJS",
+        "target_files": [],
+        "task_summary": "Trace CORS from browser origin through current Go/proxy configuration and prove it is not an authentication mechanism.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    },
+    {
+      "id": "TECH-77",
+      "kind": "lecture",
+      "source": {
+        "course": "techschool-backend-master-class",
+        "lecture": 77,
+        "title": "Upgrade golang JWT package to v5",
+        "snapshot_commit": "97f000fe58ad01a0774179ffa8884ac7784cf263",
+        "path": "README.md",
+        "line": 130,
+        "url": "https://www.youtube.com/watch?v=iVk3jOF1Cv4&list=PLy_6D98if3ULEtXtNSY_2qN21VCKgoQAE",
+        "verification": "VERIFIED_PUBLIC_README_TITLE_ONLY",
+        "authority": "public-readme; video-internal objectives not audited"
+      },
+      "lifecycle": "MAPPED",
+      "mapping": {
+        "mode": "DIRECT",
+        "exercise_id": "BS-TECH-77",
+        "semantic_audit": "public-title-only",
+        "objective": "Upgrade golang JWT package to v5",
+        "target_files": [],
+        "task_summary": "Audit the current `golang-jwt/jwt/v5` usage, algorithm validation, claims and error handling against the lecture's package-upgrade lesson.",
+        "completion_evidence_plan": [],
+        "prerequisites": [],
+        "exercise_card": null,
+        "dependency_audit": "UNMODELED"
+      },
+      "mastery": {
+        "required": "L4",
+        "current": null,
+        "evidence": []
+      }
+    }
+  ]
+}

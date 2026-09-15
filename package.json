@@ -48,7 +48,15 @@
     "static:publish:web": "node scripts/static-assets/publish-web-r2.mjs",
     "static:publish:atlas": "node scripts/static-assets/publish-atlas-r2.mjs",
     "test:static-assets": "node --test scripts/static-assets/*.test.mjs",
-    "test:delivery": "node --test scripts/delivery/*.test.mjs"
+    "test:delivery": "node --test scripts/delivery/*.test.mjs",
+    "curriculum:validate": "node scripts/learning/validate-curriculum.mjs && node scripts/learning/validate-placement.mjs",
+    "curriculum:status": "node scripts/learning/generate-curriculum-status.mjs && node scripts/learning/generate-prerequisite-spine.mjs && node scripts/learning/generate-curriculum-catalogs.mjs && node scripts/learning/generate-concept-audit.mjs && node scripts/learning/generate-study-tracks.mjs && node scripts/learning/generate-core-subheading-audit.mjs && node scripts/learning/generate-core-prose-risk-audit.mjs && node scripts/learning/generate-placement-status.mjs",
+    "curriculum:check": "pnpm curriculum:validate && pnpm curriculum:status",
+    "curriculum:refresh-fso-sources": "node scripts/learning/refresh-fso-mooc-index.mjs && node scripts/learning/sync-fso-current-source.mjs && pnpm curriculum:check",
+    "curriculum:refresh-fso-core-subheadings": "node scripts/learning/refresh-fso-core-subheadings.mjs",
+    "curriculum:refresh-fso-core-prose-risk": "node scripts/learning/refresh-fso-core-prose-risk-audit.mjs",
+    "curriculum:placement": "node scripts/learning/generate-placement-status.mjs",
+    "curriculum:select-track": "node scripts/learning/select-placement-track.mjs"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.1118.0",

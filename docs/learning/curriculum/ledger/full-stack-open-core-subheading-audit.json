@@ -1,0 +1,4070 @@
+{
+  "version": 1,
+  "source": {
+    "course": "full-stack-open",
+    "scope": "pinned core Parts 0-7 markdown headings level 4-6 outside fenced code blocks",
+    "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+    "source_state_sha256": "f240ac03b800fa109fcf584658022d2f2ac1364e653bf74feab06b5b132969c1"
+  },
+  "rows": [
+    {
+      "id": "FSO-P0-SUBHEADING-001",
+      "part": 0,
+      "title": "Parts 0-5 (core course) - Full Stack Web Development (5 cr, CSM141081)",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0a.md",
+        "line": 85,
+        "level": 4,
+        "parent_heading": "Parts and completion",
+        "parent_heading_line": 81
+      },
+      "status": "REVIEWED_NON_ENGINEERING",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested Part 0 heading is course enrollment/completion/study administration; retained explicitly but it is not a BodySense engineering training point."
+    },
+    {
+      "id": "FSO-P0-SUBHEADING-002",
+      "part": 0,
+      "title": "Part 6 - Full Stack Web Development, extension 1 (1 cr, CSM141082)",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0a.md",
+        "line": 111,
+        "level": 4,
+        "parent_heading": "Parts and completion",
+        "parent_heading_line": 81
+      },
+      "status": "REVIEWED_NON_ENGINEERING",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested Part 0 heading is course enrollment/completion/study administration; retained explicitly but it is not a BodySense engineering training point."
+    },
+    {
+      "id": "FSO-P0-SUBHEADING-003",
+      "part": 0,
+      "title": "Part 7 - Full Stack Web Development, extension 2 (1 cr, CSM141083)",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0a.md",
+        "line": 119,
+        "level": 4,
+        "parent_heading": "Parts and completion",
+        "parent_heading_line": 81
+      },
+      "status": "REVIEWED_NON_ENGINEERING",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested Part 0 heading is course enrollment/completion/study administration; retained explicitly but it is not a BodySense engineering training point."
+    },
+    {
+      "id": "FSO-P0-SUBHEADING-004",
+      "part": 0,
+      "title": "Part 8 - Full Stack Web Development: GraphQL (1 cr, CSM14113)",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0a.md",
+        "line": 127,
+        "level": 4,
+        "parent_heading": "Parts and completion",
+        "parent_heading_line": 81
+      },
+      "status": "REVIEWED_NON_ENGINEERING",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested Part 0 heading is course enrollment/completion/study administration; retained explicitly but it is not a BodySense engineering training point."
+    },
+    {
+      "id": "FSO-P0-SUBHEADING-005",
+      "part": 0,
+      "title": "Part 9 - Full Stack Web Development: TypeScript (1 cr, CSM14110)",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0a.md",
+        "line": 131,
+        "level": 4,
+        "parent_heading": "Parts and completion",
+        "parent_heading_line": 81
+      },
+      "status": "REVIEWED_NON_ENGINEERING",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested Part 0 heading is course enrollment/completion/study administration; retained explicitly but it is not a BodySense engineering training point."
+    },
+    {
+      "id": "FSO-P0-SUBHEADING-006",
+      "part": 0,
+      "title": "Part 10 - Full Stack Web Development: React Native (2 cr, CSM14111)",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0a.md",
+        "line": 135,
+        "level": 4,
+        "parent_heading": "Parts and completion",
+        "parent_heading_line": 81
+      },
+      "status": "REVIEWED_NON_ENGINEERING",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested Part 0 heading is course enrollment/completion/study administration; retained explicitly but it is not a BodySense engineering training point."
+    },
+    {
+      "id": "FSO-P0-SUBHEADING-007",
+      "part": 0,
+      "title": "Part 11 - Full Stack Web Development: Continuous Integration / Continuous Delivery (1 cr, CSM14112)",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0a.md",
+        "line": 139,
+        "level": 4,
+        "parent_heading": "Parts and completion",
+        "parent_heading_line": 81
+      },
+      "status": "REVIEWED_NON_ENGINEERING",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested Part 0 heading is course enrollment/completion/study administration; retained explicitly but it is not a BodySense engineering training point."
+    },
+    {
+      "id": "FSO-P0-SUBHEADING-008",
+      "part": 0,
+      "title": "Part 12 - Full Stack Web Development: Containers (1 cr, CSM141084)",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0a.md",
+        "line": 143,
+        "level": 4,
+        "parent_heading": "Parts and completion",
+        "parent_heading_line": 81
+      },
+      "status": "REVIEWED_NON_ENGINEERING",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested Part 0 heading is course enrollment/completion/study administration; retained explicitly but it is not a BodySense engineering training point."
+    },
+    {
+      "id": "FSO-P0-SUBHEADING-009",
+      "part": 0,
+      "title": "Part 13 - Full Stack Web Development: Relational databases (1 cr, CSM14114)",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0a.md",
+        "line": 147,
+        "level": 4,
+        "parent_heading": "Parts and completion",
+        "parent_heading_line": 81
+      },
+      "status": "REVIEWED_NON_ENGINEERING",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested Part 0 heading is course enrollment/completion/study administration; retained explicitly but it is not a BodySense engineering training point."
+    },
+    {
+      "id": "FSO-P0-SUBHEADING-010",
+      "part": 0,
+      "title": "Part 14 - Full Stack Web Development: Next.js",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0a.md",
+        "line": 151,
+        "level": 4,
+        "parent_heading": "Parts and completion",
+        "parent_heading_line": 81
+      },
+      "status": "REVIEWED_NON_ENGINEERING",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested Part 0 heading is course enrollment/completion/study administration; retained explicitly but it is not a BodySense engineering training point."
+    },
+    {
+      "id": "FSO-P0-SUBHEADING-011",
+      "part": 0,
+      "title": "How to study the course – instructions in a nutshell: 5 cr core course CSM141081",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0a.md",
+        "line": 157,
+        "level": 4,
+        "parent_heading": "Studying the course in a nutshell",
+        "parent_heading_line": 155
+      },
+      "status": "REVIEWED_NON_ENGINEERING",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested Part 0 heading is course enrollment/completion/study administration; retained explicitly but it is not a BodySense engineering training point."
+    },
+    {
+      "id": "FSO-P0-SUBHEADING-012",
+      "part": 0,
+      "title": "How to study the course – instructions in a nutshell: parts 8-14",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0a.md",
+        "line": 169,
+        "level": 4,
+        "parent_heading": "Studying the course in a nutshell",
+        "parent_heading_line": 155
+      },
+      "status": "REVIEWED_NON_ENGINEERING",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested Part 0 heading is course enrollment/completion/study administration; retained explicitly but it is not a BodySense engineering training point."
+    },
+    {
+      "id": "FSO-P0-SUBHEADING-013",
+      "part": 0,
+      "title": "A) Sisu",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0a.md",
+        "line": 276,
+        "level": 4,
+        "parent_heading": "Where do I get my University of Helsinki Student number",
+        "parent_heading_line": 268
+      },
+      "status": "REVIEWED_NON_ENGINEERING",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested Part 0 heading is course enrollment/completion/study administration; retained explicitly but it is not a BodySense engineering training point."
+    },
+    {
+      "id": "FSO-P0-SUBHEADING-014",
+      "part": 0,
+      "title": "B) Enrollment confirmation email",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0a.md",
+        "line": 284,
+        "level": 4,
+        "parent_heading": "Where do I get my University of Helsinki Student number",
+        "parent_heading_line": 268
+      },
+      "status": "REVIEWED_NON_ENGINEERING",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested Part 0 heading is course enrollment/completion/study administration; retained explicitly but it is not a BodySense engineering training point."
+    },
+    {
+      "id": "FSO-P0-SUBHEADING-015",
+      "part": 0,
+      "title": "C) Contact Student Services",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0a.md",
+        "line": 288,
+        "level": 4,
+        "parent_heading": "Where do I get my University of Helsinki Student number",
+        "parent_heading_line": 268
+      },
+      "status": "REVIEWED_NON_ENGINEERING",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested Part 0 heading is course enrollment/completion/study administration; retained explicitly but it is not a BodySense engineering training point."
+    },
+    {
+      "id": "FSO-P0-SUBHEADING-016",
+      "part": 0,
+      "title": "Expanding on Full stack open",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0a.md",
+        "line": 335,
+        "level": 4,
+        "parent_heading": "Expanding on a previously completed course",
+        "parent_heading_line": 331
+      },
+      "status": "REVIEWED_NON_ENGINEERING",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested Part 0 heading is course enrollment/completion/study administration; retained explicitly but it is not a BodySense engineering training point."
+    },
+    {
+      "id": "FSO-P0-SUBHEADING-017",
+      "part": 0,
+      "title": "Expanding on the University of Helsinki instance of this course",
+      "source": {
+        "course": "full-stack-open",
+        "part": 0,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/0/en/part0a.md",
+        "line": 339,
+        "level": 4,
+        "parent_heading": "Expanding on a previously completed course",
+        "parent_heading_line": 331
+      },
+      "status": "REVIEWED_NON_ENGINEERING",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested Part 0 heading is course enrollment/completion/study administration; retained explicitly but it is not a BodySense engineering training point."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-001",
+      "part": 3,
+      "title": "3.1: Phonebook backend step 1",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3a.md",
+        "line": 752,
+        "level": 4,
+        "parent_heading": "Exercises 3.1.-3.6.",
+        "parent_heading_line": 744
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-3.1"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-002",
+      "part": 3,
+      "title": "3.2: Phonebook backend step 2",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3a.md",
+        "line": 793,
+        "level": 4,
+        "parent_heading": "Exercises 3.1.-3.6.",
+        "parent_heading_line": 744
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-3.2"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-003",
+      "part": 3,
+      "title": "3.3: Phonebook backend step 3",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3a.md",
+        "line": 801,
+        "level": 4,
+        "parent_heading": "Exercises 3.1.-3.6.",
+        "parent_heading_line": 744
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-3.3"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-004",
+      "part": 3,
+      "title": "3.4: Phonebook backend step 4",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3a.md",
+        "line": 807,
+        "level": 4,
+        "parent_heading": "Exercises 3.1.-3.6.",
+        "parent_heading_line": 744
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-3.4"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-005",
+      "part": 3,
+      "title": "3.5: Phonebook backend step 5",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3a.md",
+        "line": 813,
+        "level": 4,
+        "parent_heading": "Exercises 3.1.-3.6.",
+        "parent_heading_line": 744
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-3.5"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-006",
+      "part": 3,
+      "title": "3.6: Phonebook backend step 6",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3a.md",
+        "line": 819,
+        "level": 4,
+        "parent_heading": "Exercises 3.1.-3.6.",
+        "parent_heading_line": 744
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-3.6"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-007",
+      "part": 3,
+      "title": "3.7: Phonebook backend step 7",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3a.md",
+        "line": 917,
+        "level": 4,
+        "parent_heading": "Exercises 3.7.-3.8.",
+        "parent_heading_line": 915
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-3.7"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-008",
+      "part": 3,
+      "title": "3.8*: Phonebook backend step 8",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3a.md",
+        "line": 925,
+        "level": 4,
+        "parent_heading": "Exercises 3.7.-3.8.",
+        "parent_heading_line": 915
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-3.8"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-009",
+      "part": 3,
+      "title": "Fly.io",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3b.md",
+        "line": 118,
+        "level": 4,
+        "parent_heading": "Application to the Internet",
+        "parent_heading_line": 87
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P3-CONCEPT-PRODUCTION-DEPLOYMENT"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-010",
+      "part": 3,
+      "title": "Render",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3b.md",
+        "line": 203,
+        "level": 4,
+        "parent_heading": "Application to the Internet",
+        "parent_heading_line": 87
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P3-CONCEPT-PRODUCTION-DEPLOYMENT"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-011",
+      "part": 3,
+      "title": "Fly.io script",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3b.md",
+        "line": 382,
+        "level": 4,
+        "parent_heading": "Streamlining deploying of the frontend",
+        "parent_heading_line": 378
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P3-CONCEPT-DEPLOYMENT-AUTOMATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-012",
+      "part": 3,
+      "title": "Note for Windows users",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3b.md",
+        "line": 406,
+        "level": 5,
+        "parent_heading": "Streamlining deploying of the frontend",
+        "parent_heading_line": 378
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P3-CONCEPT-DEPLOYMENT-AUTOMATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-013",
+      "part": 3,
+      "title": "Render",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3b.md",
+        "line": 416,
+        "level": 4,
+        "parent_heading": "Streamlining deploying of the frontend",
+        "parent_heading_line": 378
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P3-CONCEPT-PRODUCTION-DEPLOYMENT"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-014",
+      "part": 3,
+      "title": "3.9 Phonebook backend step 9",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3b.md",
+        "line": 501,
+        "level": 4,
+        "parent_heading": "Exercises 3.9.-3.11",
+        "parent_heading_line": 497
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-3.9"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-015",
+      "part": 3,
+      "title": "3.10 Phonebook backend step 10",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3b.md",
+        "line": 507,
+        "level": 4,
+        "parent_heading": "Exercises 3.9.-3.11",
+        "parent_heading_line": 497
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-3.10"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-016",
+      "part": 3,
+      "title": "3.11 Full Stack Phonebook",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3b.md",
+        "line": 517,
+        "level": 4,
+        "parent_heading": "Exercises 3.9.-3.11",
+        "parent_heading_line": 497
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-3.11"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-017",
+      "part": 3,
+      "title": "Visual Studio Code",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3c.md",
+        "line": 16,
+        "level": 4,
+        "parent_heading": "Debugging Node applications",
+        "parent_heading_line": 12
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P3-CONCEPT-SERVER-DEBUGGING"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-018",
+      "part": 3,
+      "title": "Chrome dev tools",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3c.md",
+        "line": 36,
+        "level": 4,
+        "parent_heading": "Debugging Node applications",
+        "parent_heading_line": 12
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P3-CONCEPT-SERVER-DEBUGGING"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-019",
+      "part": 3,
+      "title": "Question everything",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3c.md",
+        "line": 56,
+        "level": 4,
+        "parent_heading": "Debugging Node applications",
+        "parent_heading_line": 12
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P3-CONCEPT-SERVER-DEBUGGING"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-020",
+      "part": 3,
+      "title": "3.12: Command-line database",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3c.md",
+        "line": 286,
+        "level": 4,
+        "parent_heading": "Exercise 3.12.",
+        "parent_heading_line": 284
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-3.12"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-021",
+      "part": 3,
+      "title": "Important note about defining environment variables in Fly.io and Render",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3c.md",
+        "line": 550,
+        "level": 4,
+        "parent_heading": "Defining environment variables using the dotenv library",
+        "parent_heading_line": 509
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P3-CONCEPT-ENV-CONFIG-SECRETS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-022",
+      "part": 3,
+      "title": "3.13: Phonebook database, step 1",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3c.md",
+        "line": 655,
+        "level": 4,
+        "parent_heading": "Exercises 3.13.-3.14.",
+        "parent_heading_line": 651
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-3.13"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-023",
+      "part": 3,
+      "title": "3.14: Phonebook database, step 2",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3c.md",
+        "line": 663,
+        "level": 4,
+        "parent_heading": "Exercises 3.13.-3.14.",
+        "parent_heading_line": 651
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-3.14"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-024",
+      "part": 3,
+      "title": "3.15: Phonebook database, step 3",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3c.md",
+        "line": 946,
+        "level": 4,
+        "parent_heading": "Exercises 3.15.-3.18.",
+        "parent_heading_line": 944
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-3.15"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-025",
+      "part": 3,
+      "title": "3.16: Phonebook database, step 4",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3c.md",
+        "line": 952,
+        "level": 4,
+        "parent_heading": "Exercises 3.15.-3.18.",
+        "parent_heading_line": 944
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-3.16"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-026",
+      "part": 3,
+      "title": "3.17*: Phonebook database, step 5",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3c.md",
+        "line": 956,
+        "level": 4,
+        "parent_heading": "Exercises 3.15.-3.18.",
+        "parent_heading_line": 944
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-3.17"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-027",
+      "part": 3,
+      "title": "3.18*: Phonebook database step 6",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3c.md",
+        "line": 964,
+        "level": 4,
+        "parent_heading": "Exercises 3.15.-3.18.",
+        "parent_heading_line": 944
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-3.18"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-028",
+      "part": 3,
+      "title": "3.19*: Phonebook database, step 7",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3d.md",
+        "line": 135,
+        "level": 4,
+        "parent_heading": "Exercises 3.19.-3.21.",
+        "parent_heading_line": 133
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-3.19"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-029",
+      "part": 3,
+      "title": "3.20*: Phonebook database, step 8",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3d.md",
+        "line": 159,
+        "level": 4,
+        "parent_heading": "Exercises 3.19.-3.21.",
+        "parent_heading_line": 133
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-3.20"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-030",
+      "part": 3,
+      "title": "3.21 Deploying the database backend to production",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3d.md",
+        "line": 172,
+        "level": 4,
+        "parent_heading": "Exercises 3.19.-3.21.",
+        "parent_heading_line": 133
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-3.21"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P3-SUBHEADING-031",
+      "part": 3,
+      "title": "3.22: Lint configuration",
+      "source": {
+        "course": "full-stack-open",
+        "part": 3,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/3/en/part3d.md",
+        "line": 486,
+        "level": 4,
+        "parent_heading": "Exercise 3.22.",
+        "parent_heading_line": 484
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-3.22"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P4-SUBHEADING-001",
+      "part": 4,
+      "title": "Finding the usages of your exports with VS Code",
+      "source": {
+        "course": "full-stack-open",
+        "part": 4,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/4/en/part4a.md",
+        "line": 391,
+        "level": 4,
+        "parent_heading": "Note on exports",
+        "parent_heading_line": 331
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P4-CONCEPT-MODULE-EXPORTS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P4-SUBHEADING-002",
+      "part": 4,
+      "title": "4.1 Blog List, step 1",
+      "source": {
+        "course": "full-stack-open",
+        "part": 4,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/4/en/part4a.md",
+        "line": 409,
+        "level": 4,
+        "parent_heading": "Exercises 4.1.-4.2.",
+        "parent_heading_line": 403
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-4.1"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P4-SUBHEADING-003",
+      "part": 4,
+      "title": "4.2 Blog List, step 2",
+      "source": {
+        "course": "full-stack-open",
+        "part": 4,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/4/en/part4a.md",
+        "line": 457,
+        "level": 4,
+        "parent_heading": "Exercises 4.1.-4.2.",
+        "parent_heading_line": 403
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-4.2"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P4-SUBHEADING-004",
+      "part": 4,
+      "title": "4.3: Helper Functions and Unit Tests, step 1",
+      "source": {
+        "course": "full-stack-open",
+        "part": 4,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/4/en/part4a.md",
+        "line": 663,
+        "level": 4,
+        "parent_heading": "Exercises 4.3.-4.7.",
+        "parent_heading_line": 659
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-4.3"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P4-SUBHEADING-005",
+      "part": 4,
+      "title": "4.4: Helper Functions and Unit Tests, step 2",
+      "source": {
+        "course": "full-stack-open",
+        "part": 4,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/4/en/part4a.md",
+        "line": 692,
+        "level": 4,
+        "parent_heading": "Exercises 4.3.-4.7.",
+        "parent_heading_line": 659
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-4.4"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P4-SUBHEADING-006",
+      "part": 4,
+      "title": "4.5*: Helper Functions and Unit Tests, step 3",
+      "source": {
+        "course": "full-stack-open",
+        "part": 4,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/4/en/part4a.md",
+        "line": 726,
+        "level": 4,
+        "parent_heading": "Exercises 4.3.-4.7.",
+        "parent_heading_line": 659
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-4.5"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P4-SUBHEADING-007",
+      "part": 4,
+      "title": "4.6*: Helper Functions and Unit Tests, step 4",
+      "source": {
+        "course": "full-stack-open",
+        "part": 4,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/4/en/part4a.md",
+        "line": 734,
+        "level": 4,
+        "parent_heading": "Exercises 4.3.-4.7.",
+        "parent_heading_line": 659
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-4.6"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P4-SUBHEADING-008",
+      "part": 4,
+      "title": "4.7*: Helper Functions and Unit Tests, step 5",
+      "source": {
+        "course": "full-stack-open",
+        "part": 4,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/4/en/part4a.md",
+        "line": 751,
+        "level": 4,
+        "parent_heading": "Exercises 4.3.-4.7.",
+        "parent_heading_line": 659
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-4.7"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P4-SUBHEADING-009",
+      "part": 4,
+      "title": "4.8: Blog List Tests, step 1",
+      "source": {
+        "course": "full-stack-open",
+        "part": 4,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/4/en/part4b.md",
+        "line": 943,
+        "level": 4,
+        "parent_heading": "Exercises 4.8.-4.12.",
+        "parent_heading_line": 939
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-4.8"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P4-SUBHEADING-010",
+      "part": 4,
+      "title": "4.9: Blog List Tests, step 2",
+      "source": {
+        "course": "full-stack-open",
+        "part": 4,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/4/en/part4b.md",
+        "line": 953,
+        "level": 4,
+        "parent_heading": "Exercises 4.8.-4.12.",
+        "parent_heading_line": 939
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-4.9"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P4-SUBHEADING-011",
+      "part": 4,
+      "title": "4.10: Blog List Tests, step 3",
+      "source": {
+        "course": "full-stack-open",
+        "part": 4,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/4/en/part4b.md",
+        "line": 959,
+        "level": 4,
+        "parent_heading": "Exercises 4.8.-4.12.",
+        "parent_heading_line": 939
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-4.10"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P4-SUBHEADING-012",
+      "part": 4,
+      "title": "4.11*: Blog List Tests, step 4",
+      "source": {
+        "course": "full-stack-open",
+        "part": 4,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/4/en/part4b.md",
+        "line": 965,
+        "level": 4,
+        "parent_heading": "Exercises 4.8.-4.12.",
+        "parent_heading_line": 939
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-4.11"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P4-SUBHEADING-013",
+      "part": 4,
+      "title": "4.12*: Blog List tests, step 5",
+      "source": {
+        "course": "full-stack-open",
+        "part": 4,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/4/en/part4b.md",
+        "line": 971,
+        "level": 4,
+        "parent_heading": "Exercises 4.8.-4.12.",
+        "parent_heading_line": 939
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-4.12"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P4-SUBHEADING-014",
+      "part": 4,
+      "title": "4.13 Blog List Expansions, step 1",
+      "source": {
+        "course": "full-stack-open",
+        "part": 4,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/4/en/part4b.md",
+        "line": 1119,
+        "level": 4,
+        "parent_heading": "Exercises 4.13.-4.14.",
+        "parent_heading_line": 1117
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-4.13"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P4-SUBHEADING-015",
+      "part": 4,
+      "title": "4.14 Blog List Expansions, step 2",
+      "source": {
+        "course": "full-stack-open",
+        "part": 4,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/4/en/part4b.md",
+        "line": 1127,
+        "level": 4,
+        "parent_heading": "Exercises 4.13.-4.14.",
+        "parent_heading_line": 1117
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-4.14"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P4-SUBHEADING-016",
+      "part": 4,
+      "title": "4.15: Blog List Expansion, step 3",
+      "source": {
+        "course": "full-stack-open",
+        "part": 4,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/4/en/part4d.md",
+        "line": 368,
+        "level": 4,
+        "parent_heading": "Exercises 4.15.-4.23.",
+        "parent_heading_line": 362
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-4.15"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P4-SUBHEADING-017",
+      "part": 4,
+      "title": "4.16*: Blog List Expansion, step 4",
+      "source": {
+        "course": "full-stack-open",
+        "part": 4,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/4/en/part4d.md",
+        "line": 388,
+        "level": 4,
+        "parent_heading": "Exercises 4.15.-4.23.",
+        "parent_heading_line": 362
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-4.16"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P4-SUBHEADING-018",
+      "part": 4,
+      "title": "4.17: Blog List Expansion, step 5",
+      "source": {
+        "course": "full-stack-open",
+        "part": 4,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/4/en/part4d.md",
+        "line": 400,
+        "level": 4,
+        "parent_heading": "Exercises 4.15.-4.23.",
+        "parent_heading_line": 362
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-4.17"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P4-SUBHEADING-019",
+      "part": 4,
+      "title": "4.18: Blog List Expansion, step 6",
+      "source": {
+        "course": "full-stack-open",
+        "part": 4,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/4/en/part4d.md",
+        "line": 415,
+        "level": 4,
+        "parent_heading": "Exercises 4.15.-4.23.",
+        "parent_heading_line": 362
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-4.18"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P4-SUBHEADING-020",
+      "part": 4,
+      "title": "4.19: Blog List Expansion, step 7",
+      "source": {
+        "course": "full-stack-open",
+        "part": 4,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/4/en/part4d.md",
+        "line": 419,
+        "level": 4,
+        "parent_heading": "Exercises 4.15.-4.23.",
+        "parent_heading_line": 362
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-4.19"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P4-SUBHEADING-021",
+      "part": 4,
+      "title": "4.20*: Blog List Expansion, step 8",
+      "source": {
+        "course": "full-stack-open",
+        "part": 4,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/4/en/part4d.md",
+        "line": 423,
+        "level": 4,
+        "parent_heading": "Exercises 4.15.-4.23.",
+        "parent_heading_line": 362
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-4.20"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P4-SUBHEADING-022",
+      "part": 4,
+      "title": "4.21*: Blog List Expansion, step 9",
+      "source": {
+        "course": "full-stack-open",
+        "part": 4,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/4/en/part4d.md",
+        "line": 455,
+        "level": 4,
+        "parent_heading": "Exercises 4.15.-4.23.",
+        "parent_heading_line": 362
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-4.21"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P4-SUBHEADING-023",
+      "part": 4,
+      "title": "4.22*: Blog List Expansion, step 10",
+      "source": {
+        "course": "full-stack-open",
+        "part": 4,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/4/en/part4d.md",
+        "line": 473,
+        "level": 4,
+        "parent_heading": "Exercises 4.15.-4.23.",
+        "parent_heading_line": 362
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-4.22"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P4-SUBHEADING-024",
+      "part": 4,
+      "title": "4.23*: Blog List Expansion, step 11",
+      "source": {
+        "course": "full-stack-open",
+        "part": 4,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/4/en/part4d.md",
+        "line": 523,
+        "level": 4,
+        "parent_heading": "Exercises 4.15.-4.23.",
+        "parent_heading_line": 362
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-4.23"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-001",
+      "part": 5,
+      "title": "5.1: Blog List Frontend, step 1",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5a.md",
+        "line": 545,
+        "level": 4,
+        "parent_heading": "Exercises 5.1.-5.4.",
+        "parent_heading_line": 532
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.1"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-002",
+      "part": 5,
+      "title": "5.2: Blog List Frontend, step 2",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5a.md",
+        "line": 604,
+        "level": 4,
+        "parent_heading": "Exercises 5.1.-5.4.",
+        "parent_heading_line": 532
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.2"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-003",
+      "part": 5,
+      "title": "5.3: Blog List Frontend, step 3",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5a.md",
+        "line": 612,
+        "level": 4,
+        "parent_heading": "Exercises 5.1.-5.4.",
+        "parent_heading_line": 532
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.3"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-004",
+      "part": 5,
+      "title": "5.4: Blog List Frontend, step 4",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5a.md",
+        "line": 618,
+        "level": 4,
+        "parent_heading": "Exercises 5.1.-5.4.",
+        "parent_heading_line": 532
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.4"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-005",
+      "part": 5,
+      "title": "5.5 Blog List Frontend, step 5",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5b.md",
+        "line": 530,
+        "level": 4,
+        "parent_heading": "Exercises 5.5.-5.11.",
+        "parent_heading_line": 528
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.5"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-006",
+      "part": 5,
+      "title": "5.6 Blog List Frontend, step 6",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5b.md",
+        "line": 544,
+        "level": 4,
+        "parent_heading": "Exercises 5.5.-5.11.",
+        "parent_heading_line": 528
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.6"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-007",
+      "part": 5,
+      "title": "5.7 Blog List Frontend, step 7",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5b.md",
+        "line": 550,
+        "level": 4,
+        "parent_heading": "Exercises 5.5.-5.11.",
+        "parent_heading_line": 528
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.7"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-008",
+      "part": 5,
+      "title": "5.8: Blog List Frontend, step 8",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5b.md",
+        "line": 588,
+        "level": 4,
+        "parent_heading": "Exercises 5.5.-5.11.",
+        "parent_heading_line": 528
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.8"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-009",
+      "part": 5,
+      "title": "5.9: Blog List Frontend, step 9",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5b.md",
+        "line": 623,
+        "level": 4,
+        "parent_heading": "Exercises 5.5.-5.11.",
+        "parent_heading_line": 528
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.9"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-010",
+      "part": 5,
+      "title": "5.10: Blog List Frontend, step 10",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5b.md",
+        "line": 633,
+        "level": 4,
+        "parent_heading": "Exercises 5.5.-5.11.",
+        "parent_heading_line": 528
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.10"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-011",
+      "part": 5,
+      "title": "5.11: Blog List Frontend, step 11",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5b.md",
+        "line": 637,
+        "level": 4,
+        "parent_heading": "Exercises 5.5.-5.11.",
+        "parent_heading_line": 528
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.11"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-012",
+      "part": 5,
+      "title": "5.12: Blog List Frontend, step 12",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5b.md",
+        "line": 732,
+        "level": 4,
+        "parent_heading": "Exercise 5.12.",
+        "parent_heading_line": 730
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.12"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-013",
+      "part": 5,
+      "title": "5.13: Blog List Tests, step 1",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5c.md",
+        "line": 830,
+        "level": 4,
+        "parent_heading": "Exercises 5.13.-5.16.",
+        "parent_heading_line": 828
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.13"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-014",
+      "part": 5,
+      "title": "5.14: Blog List Tests, step 2",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5c.md",
+        "line": 836,
+        "level": 4,
+        "parent_heading": "Exercises 5.13.-5.16.",
+        "parent_heading_line": 828
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.14"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-015",
+      "part": 5,
+      "title": "5.15: Blog List Tests, step 3",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5c.md",
+        "line": 840,
+        "level": 4,
+        "parent_heading": "Exercises 5.13.-5.16.",
+        "parent_heading_line": 828
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.15"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-016",
+      "part": 5,
+      "title": "5.16: Blog List Tests, step 4",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5c.md",
+        "line": 844,
+        "level": 4,
+        "parent_heading": "Exercises 5.13.-5.16.",
+        "parent_heading_line": 828
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.16"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-017",
+      "part": 5,
+      "title": "5.17: Blog List End To End Testing, step 1",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5d.md",
+        "line": 1246,
+        "level": 4,
+        "parent_heading": "Exercises 5.17.-5.23.",
+        "parent_heading_line": 1242
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.17"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-018",
+      "part": 5,
+      "title": "5.18: Blog List End To End Testing, step 2",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5d.md",
+        "line": 1269,
+        "level": 4,
+        "parent_heading": "Exercises 5.17.-5.23.",
+        "parent_heading_line": 1242
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.18"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-019",
+      "part": 5,
+      "title": "5.19: Blog List End To End Testing, step 3",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5d.md",
+        "line": 1303,
+        "level": 4,
+        "parent_heading": "Exercises 5.17.-5.23.",
+        "parent_heading_line": 1242
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.19"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-020",
+      "part": 5,
+      "title": "5.20: Blog List End To End Testing, step 4",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5d.md",
+        "line": 1321,
+        "level": 4,
+        "parent_heading": "Exercises 5.17.-5.23.",
+        "parent_heading_line": 1242
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.20"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-021",
+      "part": 5,
+      "title": "5.21: Blog List End To End Testing, step 5",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5d.md",
+        "line": 1325,
+        "level": 4,
+        "parent_heading": "Exercises 5.17.-5.23.",
+        "parent_heading_line": 1242
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.21"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-022",
+      "part": 5,
+      "title": "5.22: Blog List End To End Testing, step 6",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5d.md",
+        "line": 1329,
+        "level": 4,
+        "parent_heading": "Exercises 5.17.-5.23.",
+        "parent_heading_line": 1242
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.22"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-023",
+      "part": 5,
+      "title": "5.23: Blog List End To End Testing, step 7",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5d.md",
+        "line": 1333,
+        "level": 4,
+        "parent_heading": "Exercises 5.17.-5.23.",
+        "parent_heading_line": 1242
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.23"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-024",
+      "part": 5,
+      "title": "5.24: routed blogs, step1",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5e.md",
+        "line": 591,
+        "level": 4,
+        "parent_heading": "Exercises 5.24–5.28.",
+        "parent_heading_line": 589
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.24"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-025",
+      "part": 5,
+      "title": "5.25: routed blogs, step2",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5e.md",
+        "line": 611,
+        "level": 4,
+        "parent_heading": "Exercises 5.24–5.28.",
+        "parent_heading_line": 589
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.25"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-026",
+      "part": 5,
+      "title": "5.26: routed blogs, step3",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5e.md",
+        "line": 623,
+        "level": 4,
+        "parent_heading": "Exercises 5.24–5.28.",
+        "parent_heading_line": 589
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.26"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-027",
+      "part": 5,
+      "title": "5.27: routed blogs, step4",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5e.md",
+        "line": 631,
+        "level": 4,
+        "parent_heading": "Exercises 5.24–5.28.",
+        "parent_heading_line": 589
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.27"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-028",
+      "part": 5,
+      "title": "5.28: routed blogs, step5",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5e.md",
+        "line": 640,
+        "level": 4,
+        "parent_heading": "Exercises 5.24–5.28.",
+        "parent_heading_line": 589
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.28"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-029",
+      "part": 5,
+      "title": "Table",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5e.md",
+        "line": 692,
+        "level": 4,
+        "parent_heading": "UI libraries",
+        "parent_heading_line": 657
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P5-CONCEPT-UI-LIBRARY-EVALUATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-030",
+      "part": 5,
+      "title": "Form",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5e.md",
+        "line": 753,
+        "level": 4,
+        "parent_heading": "UI libraries",
+        "parent_heading_line": 657
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P5-CONCEPT-UI-LIBRARY-EVALUATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-031",
+      "part": 5,
+      "title": "Notifications",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5e.md",
+        "line": 793,
+        "level": 4,
+        "parent_heading": "UI libraries",
+        "parent_heading_line": 657
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P5-CONCEPT-UI-LIBRARY-EVALUATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-032",
+      "part": 5,
+      "title": "Navigation Menu",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5e.md",
+        "line": 872,
+        "level": 4,
+        "parent_heading": "UI libraries",
+        "parent_heading_line": 657
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P5-CONCEPT-UI-LIBRARY-EVALUATION",
+        "FSO-P5-CONCEPT-CLIENT-ROUTING"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-033",
+      "part": 5,
+      "title": "5.29: styled blogs, step 1",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5e.md",
+        "line": 1084,
+        "level": 4,
+        "parent_heading": "Exercises 5.29–5.31",
+        "parent_heading_line": 1080
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.29"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-034",
+      "part": 5,
+      "title": "5.30: styled blogs, step2",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5e.md",
+        "line": 1096,
+        "level": 4,
+        "parent_heading": "Exercises 5.29–5.31",
+        "parent_heading_line": 1080
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.30"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P5-SUBHEADING-035",
+      "part": 5,
+      "title": "5.31: styled blogs, step 3",
+      "source": {
+        "course": "full-stack-open",
+        "part": 5,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/5/en/part5e.md",
+        "line": 1102,
+        "level": 4,
+        "parent_heading": "Exercises 5.29–5.31",
+        "parent_heading_line": 1080
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-5.31"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-001",
+      "part": 6,
+      "title": "6.1: Unicafe revisited",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6a.md",
+        "line": 492,
+        "level": 4,
+        "parent_heading": "Exercise 1",
+        "parent_heading_line": 490
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-6.1"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-002",
+      "part": 6,
+      "title": "Bonus: Unicafe tests",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6a.md",
+        "line": 502,
+        "level": 4,
+        "parent_heading": "Exercise 1",
+        "parent_heading_line": 490
+      },
+      "status": "REVIEWED_REDUNDANT",
+      "linked_item_ids": [
+        "FSO-P5-CONCEPT-E2E-BLACK-BOX",
+        "FSO-P11-CONCEPT-CI-QUALITY-GATES"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Source-provided acceptance tests plus GitHub Actions reuse already-mapped E2E black-box and CI gate semantics."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-003",
+      "part": 6,
+      "title": "6.2: anecdotes, step1",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6a.md",
+        "line": 832,
+        "level": 4,
+        "parent_heading": "Exercises 6.2.-6.5.",
+        "parent_heading_line": 826
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-6.2"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-004",
+      "part": 6,
+      "title": "6.3: anecdotes, step2",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6a.md",
+        "line": 837,
+        "level": 4,
+        "parent_heading": "Exercises 6.2.-6.5.",
+        "parent_heading_line": 826
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-6.3"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-005",
+      "part": 6,
+      "title": "6.4: anecdotes, step3",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6a.md",
+        "line": 843,
+        "level": 4,
+        "parent_heading": "Exercises 6.2.-6.5.",
+        "parent_heading_line": 826
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-6.4"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-006",
+      "part": 6,
+      "title": "6.5: anecdotes, step4",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6a.md",
+        "line": 866,
+        "level": 4,
+        "parent_heading": "Exercises 6.2.-6.5.",
+        "parent_heading_line": 826
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-6.5"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-007",
+      "part": 6,
+      "title": "6.6 anecdotes, step5",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6b.md",
+        "line": 235,
+        "level": 4,
+        "parent_heading": "Exercise 6.6",
+        "parent_heading_line": 231
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-6.6"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-008",
+      "part": 6,
+      "title": "6.7 anecdotes, step6",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6b.md",
+        "line": 713,
+        "level": 4,
+        "parent_heading": "Exercises 6.7.-6.11.",
+        "parent_heading_line": 711
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-6.7"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-009",
+      "part": 6,
+      "title": "6.8 anecdotes, step7",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6b.md",
+        "line": 719,
+        "level": 4,
+        "parent_heading": "Exercises 6.7.-6.11.",
+        "parent_heading_line": 711
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-6.8"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-010",
+      "part": 6,
+      "title": "6.9 anecdotes, step8",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6b.md",
+        "line": 723,
+        "level": 4,
+        "parent_heading": "Exercises 6.7.-6.11.",
+        "parent_heading_line": 711
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-6.9"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-011",
+      "part": 6,
+      "title": "6.10 anecdotes, step9",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6b.md",
+        "line": 727,
+        "level": 4,
+        "parent_heading": "Exercises 6.7.-6.11.",
+        "parent_heading_line": 711
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-6.10"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-012",
+      "part": 6,
+      "title": "6.11 anecdotes, step10",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6b.md",
+        "line": 756,
+        "level": 4,
+        "parent_heading": "Exercises 6.7.-6.11.",
+        "parent_heading_line": 711
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-6.11"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-013",
+      "part": 6,
+      "title": "Bonus: anecdotes tests",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6b.md",
+        "line": 760,
+        "level": 4,
+        "parent_heading": "Exercises 6.7.-6.11.",
+        "parent_heading_line": 711
+      },
+      "status": "REVIEWED_REDUNDANT",
+      "linked_item_ids": [
+        "FSO-P5-CONCEPT-E2E-BLACK-BOX",
+        "FSO-P11-CONCEPT-CI-QUALITY-GATES"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Source-provided acceptance tests plus GitHub Actions reuse already-mapped E2E black-box and CI gate semantics."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-014",
+      "part": 6,
+      "title": "6.12 Anecdotes, step11",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6b.md",
+        "line": 1311,
+        "level": 4,
+        "parent_heading": "Exercises 6.12.-6.15.",
+        "parent_heading_line": 1309
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-6.12"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-015",
+      "part": 6,
+      "title": "6.13 Anecdotes, step12",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6b.md",
+        "line": 1315,
+        "level": 4,
+        "parent_heading": "Exercises 6.12.-6.15.",
+        "parent_heading_line": 1309
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-6.13"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-016",
+      "part": 6,
+      "title": "6.14 Anecdotes, step13",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6b.md",
+        "line": 1319,
+        "level": 4,
+        "parent_heading": "Exercises 6.12.-6.15.",
+        "parent_heading_line": 1309
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-6.14"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-017",
+      "part": 6,
+      "title": "6.15 Anecdotes, step14",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6b.md",
+        "line": 1323,
+        "level": 4,
+        "parent_heading": "Exercises 6.12.-6.15.",
+        "parent_heading_line": 1309
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-6.15"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-018",
+      "part": 6,
+      "title": "Bonus: testing the tests",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6b.md",
+        "line": 1327,
+        "level": 4,
+        "parent_heading": "Exercises 6.12.-6.15.",
+        "parent_heading_line": 1309
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P6-CONCEPT-TEST-QUALITY-META-CHECK"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Bonus meta-test material introduces the distinct idea that learner tests themselves must discriminate broken behavior."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-019",
+      "part": 6,
+      "title": "Exercise 6.16",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6c.md",
+        "line": 545,
+        "level": 4,
+        "parent_heading": "Exercises 6.16.-6.19.",
+        "parent_heading_line": 542
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-6.16"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-020",
+      "part": 6,
+      "title": "Exercise 6.17",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6c.md",
+        "line": 584,
+        "level": 4,
+        "parent_heading": "Exercises 6.16.-6.19.",
+        "parent_heading_line": 542
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-6.17"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-021",
+      "part": 6,
+      "title": "Exercise 6.18",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6c.md",
+        "line": 588,
+        "level": 4,
+        "parent_heading": "Exercises 6.16.-6.19.",
+        "parent_heading_line": 542
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-6.18"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-022",
+      "part": 6,
+      "title": "Exercise 6.19",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6c.md",
+        "line": 592,
+        "level": 4,
+        "parent_heading": "Exercises 6.16.-6.19.",
+        "parent_heading_line": 542
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-6.19"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-023",
+      "part": 6,
+      "title": "Bonus: tests, part1",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6c.md",
+        "line": 596,
+        "level": 4,
+        "parent_heading": "Exercises 6.16.-6.19.",
+        "parent_heading_line": 542
+      },
+      "status": "REVIEWED_REDUNDANT",
+      "linked_item_ids": [
+        "FSO-P5-CONCEPT-E2E-BLACK-BOX",
+        "FSO-P11-CONCEPT-CI-QUALITY-GATES"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Source-provided acceptance tests plus GitHub Actions reuse already-mapped E2E black-box and CI gate semantics."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-024",
+      "part": 6,
+      "title": "Exercise 6.20.",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6c.md",
+        "line": 1014,
+        "level": 4,
+        "parent_heading": "Exercises 6.20.-6.22.",
+        "parent_heading_line": 1012
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-6.20"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-025",
+      "part": 6,
+      "title": "Exercise 6.21.",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6c.md",
+        "line": 1024,
+        "level": 4,
+        "parent_heading": "Exercises 6.20.-6.22.",
+        "parent_heading_line": 1012
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-6.21"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-026",
+      "part": 6,
+      "title": "Exercise 6.22.",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6c.md",
+        "line": 1032,
+        "level": 4,
+        "parent_heading": "Exercises 6.20.-6.22.",
+        "parent_heading_line": 1012
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-6.22"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-027",
+      "part": 6,
+      "title": "Bonus: tests, part 2",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6c.md",
+        "line": 1038,
+        "level": 4,
+        "parent_heading": "Exercises 6.20.-6.22.",
+        "parent_heading_line": 1012
+      },
+      "status": "REVIEWED_REDUNDANT",
+      "linked_item_ids": [
+        "FSO-P5-CONCEPT-E2E-BLACK-BOX",
+        "FSO-P11-CONCEPT-CI-QUALITY-GATES"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Source-provided acceptance tests plus GitHub Actions reuse already-mapped E2E black-box and CI gate semantics."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-028",
+      "part": 6,
+      "title": "6.1: Unicafe Revisited, step 1",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6d.md",
+        "line": 681,
+        "level": 4,
+        "parent_heading": "Exercises 6.1.-6.2.",
+        "parent_heading_line": 667
+      },
+      "status": "REMOVED_SOURCE_TRACK",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "This nested heading belongs to the Redux exercise material explicitly marked by the pinned source as removed from the current Part 6 track; retained for historical comparison only."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-029",
+      "part": 6,
+      "title": "6.2: Unicafe Revisited, step2",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6d.md",
+        "line": 771,
+        "level": 4,
+        "parent_heading": "Exercises 6.1.-6.2.",
+        "parent_heading_line": 667
+      },
+      "status": "REMOVED_SOURCE_TRACK",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "This nested heading belongs to the Redux exercise material explicitly marked by the pinned source as removed from the current Part 6 track; retained for historical comparison only."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-030",
+      "part": 6,
+      "title": "6.3: Anecdotes, step 1",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6d.md",
+        "line": 1283,
+        "level": 4,
+        "parent_heading": "Exercises 6.3.-6.8.",
+        "parent_heading_line": 1261
+      },
+      "status": "REMOVED_SOURCE_TRACK",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "This nested heading belongs to the Redux exercise material explicitly marked by the pinned source as removed from the current Part 6 track; retained for historical comparison only."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-031",
+      "part": 6,
+      "title": "6.4: Anecdotes, step 2",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6d.md",
+        "line": 1287,
+        "level": 4,
+        "parent_heading": "Exercises 6.3.-6.8.",
+        "parent_heading_line": 1261
+      },
+      "status": "REMOVED_SOURCE_TRACK",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "This nested heading belongs to the Redux exercise material explicitly marked by the pinned source as removed from the current Part 6 track; retained for historical comparison only."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-032",
+      "part": 6,
+      "title": "6.5: Anecdotes, step 3",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6d.md",
+        "line": 1293,
+        "level": 4,
+        "parent_heading": "Exercises 6.3.-6.8.",
+        "parent_heading_line": 1261
+      },
+      "status": "REMOVED_SOURCE_TRACK",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "This nested heading belongs to the Redux exercise material explicitly marked by the pinned source as removed from the current Part 6 track; retained for historical comparison only."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-033",
+      "part": 6,
+      "title": "6.6: Anecdotes, step 4",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6d.md",
+        "line": 1297,
+        "level": 4,
+        "parent_heading": "Exercises 6.3.-6.8.",
+        "parent_heading_line": 1261
+      },
+      "status": "REMOVED_SOURCE_TRACK",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "This nested heading belongs to the Redux exercise material explicitly marked by the pinned source as removed from the current Part 6 track; retained for historical comparison only."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-034",
+      "part": 6,
+      "title": "6.7: Anecdotes, step 5",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6d.md",
+        "line": 1301,
+        "level": 4,
+        "parent_heading": "Exercises 6.3.-6.8.",
+        "parent_heading_line": 1261
+      },
+      "status": "REMOVED_SOURCE_TRACK",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "This nested heading belongs to the Redux exercise material explicitly marked by the pinned source as removed from the current Part 6 track; retained for historical comparison only."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-035",
+      "part": 6,
+      "title": "6.8: Anecdotes, step 6",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6d.md",
+        "line": 1305,
+        "level": 4,
+        "parent_heading": "Exercises 6.3.-6.8.",
+        "parent_heading_line": 1261
+      },
+      "status": "REMOVED_SOURCE_TRACK",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "This nested heading belongs to the Redux exercise material explicitly marked by the pinned source as removed from the current Part 6 track; retained for historical comparison only."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-036",
+      "part": 6,
+      "title": "6.9 Anecdotes, step 7",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6d.md",
+        "line": 1742,
+        "level": 4,
+        "parent_heading": "Exercise 6.9",
+        "parent_heading_line": 1740
+      },
+      "status": "REMOVED_SOURCE_TRACK",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "This nested heading belongs to the Redux exercise material explicitly marked by the pinned source as removed from the current Part 6 track; retained for historical comparison only."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-037",
+      "part": 6,
+      "title": "6.10 Anecdotes, step 8",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6d.md",
+        "line": 2098,
+        "level": 4,
+        "parent_heading": "Exercises 6.10.-6.13.",
+        "parent_heading_line": 2094
+      },
+      "status": "REMOVED_SOURCE_TRACK",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "This nested heading belongs to the Redux exercise material explicitly marked by the pinned source as removed from the current Part 6 track; retained for historical comparison only."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-038",
+      "part": 6,
+      "title": "6.11 Anecdotes, step 9",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6d.md",
+        "line": 2106,
+        "level": 4,
+        "parent_heading": "Exercises 6.10.-6.13.",
+        "parent_heading_line": 2094
+      },
+      "status": "REMOVED_SOURCE_TRACK",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "This nested heading belongs to the Redux exercise material explicitly marked by the pinned source as removed from the current Part 6 track; retained for historical comparison only."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-039",
+      "part": 6,
+      "title": "6.12 Anecdotes, step 10",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6d.md",
+        "line": 2110,
+        "level": 4,
+        "parent_heading": "Exercises 6.10.-6.13.",
+        "parent_heading_line": 2094
+      },
+      "status": "REMOVED_SOURCE_TRACK",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "This nested heading belongs to the Redux exercise material explicitly marked by the pinned source as removed from the current Part 6 track; retained for historical comparison only."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-040",
+      "part": 6,
+      "title": "6.13 Anecdotes, step 11",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6d.md",
+        "line": 2137,
+        "level": 4,
+        "parent_heading": "Exercises 6.10.-6.13.",
+        "parent_heading_line": 2094
+      },
+      "status": "REMOVED_SOURCE_TRACK",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "This nested heading belongs to the Redux exercise material explicitly marked by the pinned source as removed from the current Part 6 track; retained for historical comparison only."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-041",
+      "part": 6,
+      "title": "6.14 Anecdotes and the Backend, step 1",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6d.md",
+        "line": 2497,
+        "level": 4,
+        "parent_heading": "Exercises 6.14.-6.15.",
+        "parent_heading_line": 2495
+      },
+      "status": "REMOVED_SOURCE_TRACK",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "This nested heading belongs to the Redux exercise material explicitly marked by the pinned source as removed from the current Part 6 track; retained for historical comparison only."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-042",
+      "part": 6,
+      "title": "6.15 Anecdotes and the Backend, step 2",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6d.md",
+        "line": 2503,
+        "level": 4,
+        "parent_heading": "Exercises 6.14.-6.15.",
+        "parent_heading_line": 2495
+      },
+      "status": "REMOVED_SOURCE_TRACK",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "This nested heading belongs to the Redux exercise material explicitly marked by the pinned source as removed from the current Part 6 track; retained for historical comparison only."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-043",
+      "part": 6,
+      "title": "6.16 Anecdotes and the Backend, step 3",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6d.md",
+        "line": 2716,
+        "level": 4,
+        "parent_heading": "Exercises 6.16.-6.19.",
+        "parent_heading_line": 2714
+      },
+      "status": "REMOVED_SOURCE_TRACK",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "This nested heading belongs to the Redux exercise material explicitly marked by the pinned source as removed from the current Part 6 track; retained for historical comparison only."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-044",
+      "part": 6,
+      "title": "6.17 Anecdotes and the Backend, step 4",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6d.md",
+        "line": 2720,
+        "level": 4,
+        "parent_heading": "Exercises 6.16.-6.19.",
+        "parent_heading_line": 2714
+      },
+      "status": "REMOVED_SOURCE_TRACK",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "This nested heading belongs to the Redux exercise material explicitly marked by the pinned source as removed from the current Part 6 track; retained for historical comparison only."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-045",
+      "part": 6,
+      "title": "6.18 Anecdotes and the Backend, step 5",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6d.md",
+        "line": 2724,
+        "level": 4,
+        "parent_heading": "Exercises 6.16.-6.19.",
+        "parent_heading_line": 2714
+      },
+      "status": "REMOVED_SOURCE_TRACK",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "This nested heading belongs to the Redux exercise material explicitly marked by the pinned source as removed from the current Part 6 track; retained for historical comparison only."
+    },
+    {
+      "id": "FSO-P6-SUBHEADING-046",
+      "part": 6,
+      "title": "6.19 Anecdotes and the Backend, step 6",
+      "source": {
+        "course": "full-stack-open",
+        "part": 6,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/6/en/part6d.md",
+        "line": 2728,
+        "level": 4,
+        "parent_heading": "Exercises 6.16.-6.19.",
+        "parent_heading_line": 2714
+      },
+      "status": "REMOVED_SOURCE_TRACK",
+      "linked_item_ids": [],
+      "reviewed_at": "2026-09-08",
+      "note": "This nested heading belongs to the Redux exercise material explicitly marked by the pinned source as removed from the current Part 6 track; retained for historical comparison only."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-001",
+      "part": 7,
+      "title": "Counter hook",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7a.md",
+        "line": 254,
+        "level": 4,
+        "parent_heading": "Custom hooks",
+        "parent_heading_line": 242
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P7-CONCEPT-CUSTOM-HOOKS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-002",
+      "part": 7,
+      "title": "Custom hooks and component re-rendering",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7a.md",
+        "line": 362,
+        "level": 4,
+        "parent_heading": "Custom hooks",
+        "parent_heading_line": 242
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P7-CONCEPT-CUSTOM-HOOKS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-003",
+      "part": 7,
+      "title": "Form field hook",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7a.md",
+        "line": 388,
+        "level": 4,
+        "parent_heading": "Custom hooks",
+        "parent_heading_line": 242
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P7-CONCEPT-CUSTOM-HOOKS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-004",
+      "part": 7,
+      "title": "Persisting state with a custom hook",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7a.md",
+        "line": 529,
+        "level": 4,
+        "parent_heading": "Spread attributes",
+        "parent_heading_line": 478
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P7-CONCEPT-CUSTOM-HOOKS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-005",
+      "part": 7,
+      "title": "7.1: useField hook",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7a.md",
+        "line": 617,
+        "level": 4,
+        "parent_heading": "Exercises 7.1.-7.6.",
+        "parent_heading_line": 613
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-7.1"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-006",
+      "part": 7,
+      "title": "7.2: useField with reset",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7a.md",
+        "line": 660,
+        "level": 4,
+        "parent_heading": "Exercises 7.1.-7.6.",
+        "parent_heading_line": 613
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-7.2"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-007",
+      "part": 7,
+      "title": "7.3: Fixing the spread issue",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7a.md",
+        "line": 674,
+        "level": 4,
+        "parent_heading": "Exercises 7.1.-7.6.",
+        "parent_heading_line": 613
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-7.3"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-008",
+      "part": 7,
+      "title": "7.4: useAnecdotes, step1",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7a.md",
+        "line": 711,
+        "level": 4,
+        "parent_heading": "Exercises 7.1.-7.6.",
+        "parent_heading_line": 613
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-7.4"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-009",
+      "part": 7,
+      "title": "7.5: useAnecdotes, step2",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7a.md",
+        "line": 779,
+        "level": 4,
+        "parent_heading": "Exercises 7.1.-7.6.",
+        "parent_heading_line": 613
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-7.5"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-010",
+      "part": 7,
+      "title": "7.6: useAnecdotes, step3",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7a.md",
+        "line": 791,
+        "level": 4,
+        "parent_heading": "Exercises 7.1.-7.6.",
+        "parent_heading_line": 613
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-7.6"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-011",
+      "part": 7,
+      "title": "Bonus: tests",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7a.md",
+        "line": 818,
+        "level": 4,
+        "parent_heading": "Exercises 7.1.-7.6.",
+        "parent_heading_line": 613
+      },
+      "status": "REVIEWED_REDUNDANT",
+      "linked_item_ids": [
+        "FSO-P5-CONCEPT-E2E-BLACK-BOX",
+        "FSO-P11-CONCEPT-CI-QUALITY-GATES"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Source-provided acceptance tests plus GitHub Actions reuse already-mapped E2E black-box and CI gate semantics."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-012",
+      "part": 7,
+      "title": "Development server configuration",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7b.md",
+        "line": 268,
+        "level": 4,
+        "parent_heading": "Vite configuration",
+        "parent_heading_line": 251
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P7-CONCEPT-VITE-CONFIG"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-013",
+      "part": 7,
+      "title": "Proxying API requests",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7b.md",
+        "line": 282,
+        "level": 4,
+        "parent_heading": "Vite configuration",
+        "parent_heading_line": 251
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P3-CONCEPT-DEV-PROXY"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-014",
+      "part": 7,
+      "title": "Environment variables",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7b.md",
+        "line": 303,
+        "level": 4,
+        "parent_heading": "Vite configuration",
+        "parent_heading_line": 251
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P3-CONCEPT-ENV-CONFIG-SECRETS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-015",
+      "part": 7,
+      "title": "Transpilation",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7b.md",
+        "line": 342,
+        "level": 4,
+        "parent_heading": "Vite configuration",
+        "parent_heading_line": 251
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P7-CONCEPT-TRANSPILATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-016",
+      "part": 7,
+      "title": "CSS",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7b.md",
+        "line": 369,
+        "level": 4,
+        "parent_heading": "Vite configuration",
+        "parent_heading_line": 251
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P0-CONCEPT-CSS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-017",
+      "part": 7,
+      "title": "Minification",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7b.md",
+        "line": 399,
+        "level": 4,
+        "parent_heading": "Vite configuration",
+        "parent_heading_line": 251
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P7-CONCEPT-MINIFICATION"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-018",
+      "part": 7,
+      "title": "Source maps",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7b.md",
+        "line": 405,
+        "level": 4,
+        "parent_heading": "Vite configuration",
+        "parent_heading_line": 251
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P7-CONCEPT-SOURCE-MAPS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-019",
+      "part": 7,
+      "title": "Plugins",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7b.md",
+        "line": 422,
+        "level": 4,
+        "parent_heading": "Vite configuration",
+        "parent_heading_line": 251
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P7-CONCEPT-BUILD-PLUGINS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-020",
+      "part": 7,
+      "title": "Polyfills",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7b.md",
+        "line": 433,
+        "level": 4,
+        "parent_heading": "Vite configuration",
+        "parent_heading_line": 251
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P7-CONCEPT-POLYFILLS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-021",
+      "part": 7,
+      "title": "Typed versions of JavaScript",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7c.md",
+        "line": 636,
+        "level": 4,
+        "parent_heading": "Current trends",
+        "parent_heading_line": 632
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P7-CONCEPT-TYPESCRIPT-TREND"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-022",
+      "part": 7,
+      "title": "Server-side rendering and React Server Components",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7c.md",
+        "line": 642,
+        "level": 4,
+        "parent_heading": "Current trends",
+        "parent_heading_line": 632
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P7-CONCEPT-SSR-RSC-NEXT"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-023",
+      "part": 7,
+      "title": "Microservice architecture",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7c.md",
+        "line": 650,
+        "level": 4,
+        "parent_heading": "Current trends",
+        "parent_heading_line": 632
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P7-CONCEPT-MICROSERVICE-BOUNDARIES"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-024",
+      "part": 7,
+      "title": "Serverless",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7c.md",
+        "line": 688,
+        "level": 4,
+        "parent_heading": "Current trends",
+        "parent_heading_line": 632
+      },
+      "status": "REVIEWED_CONCEPTS_MAPPED",
+      "linked_item_ids": [
+        "FSO-P7-CONCEPT-SERVERLESS"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested technical teaching point was reviewed and linked to explicit BodySense concept coverage."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-025",
+      "part": 7,
+      "title": "7.7: Frontend and backend in the same repository",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7d.md",
+        "line": 28,
+        "level": 4,
+        "parent_heading": "Exercises 7.7.-7.20.",
+        "parent_heading_line": 24
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-7.7"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-026",
+      "part": 7,
+      "title": "7.8: Error boundary",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7d.md",
+        "line": 41,
+        "level": 4,
+        "parent_heading": "Exercises 7.7.-7.20.",
+        "parent_heading_line": 24
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-7.8"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-027",
+      "part": 7,
+      "title": "7.9: Nonexisting routes",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7d.md",
+        "line": 62,
+        "level": 4,
+        "parent_heading": "Exercises 7.7.-7.20.",
+        "parent_heading_line": 24
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-7.9"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-028",
+      "part": 7,
+      "title": "7.10: Automatic Code Formatting",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7d.md",
+        "line": 76,
+        "level": 4,
+        "parent_heading": "Exercises 7.7.-7.20.",
+        "parent_heading_line": 24
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-7.10"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-029",
+      "part": 7,
+      "title": "7.11: Zustand, Step 1",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7d.md",
+        "line": 90,
+        "level": 4,
+        "parent_heading": "State Management: Zustand",
+        "parent_heading_line": 84
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-7.11"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-030",
+      "part": 7,
+      "title": "7.12: Zustand, Step 2",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7d.md",
+        "line": 94,
+        "level": 4,
+        "parent_heading": "State Management: Zustand",
+        "parent_heading_line": 84
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-7.12"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-031",
+      "part": 7,
+      "title": "7.13: Zustand, Step 3",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7d.md",
+        "line": 102,
+        "level": 4,
+        "parent_heading": "State Management: Zustand",
+        "parent_heading_line": 84
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-7.13"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-032",
+      "part": 7,
+      "title": "7.14: Zustand, Step 4",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7d.md",
+        "line": 106,
+        "level": 4,
+        "parent_heading": "State Management: Zustand",
+        "parent_heading_line": 84
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-7.14"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-033",
+      "part": 7,
+      "title": "7.11: React Query and Context step 1",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7d.md",
+        "line": 114,
+        "level": 4,
+        "parent_heading": "State Management: React Query and Context",
+        "parent_heading_line": 110
+      },
+      "status": "ALTERNATIVE_EXERCISE_VARIANT",
+      "linked_item_ids": [
+        "FSO-7.11",
+        "FSO-P6-CONCEPT-TANSTACK-QUERY",
+        "FSO-P6-CONCEPT-REACT-CONTEXT"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "The current source offers React Query + Context as an explicit alternative implementation for the same 7.11-7.14 exercise numbers; retain the variant instead of collapsing it into the Zustand path."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-034",
+      "part": 7,
+      "title": "7.12: React Query and Context step 2",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7d.md",
+        "line": 118,
+        "level": 4,
+        "parent_heading": "State Management: React Query and Context",
+        "parent_heading_line": 110
+      },
+      "status": "ALTERNATIVE_EXERCISE_VARIANT",
+      "linked_item_ids": [
+        "FSO-7.12",
+        "FSO-P6-CONCEPT-TANSTACK-QUERY",
+        "FSO-P6-CONCEPT-REACT-CONTEXT"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "The current source offers React Query + Context as an explicit alternative implementation for the same 7.11-7.14 exercise numbers; retain the variant instead of collapsing it into the Zustand path."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-035",
+      "part": 7,
+      "title": "7.13: React Query and Context step 3",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7d.md",
+        "line": 124,
+        "level": 4,
+        "parent_heading": "State Management: React Query and Context",
+        "parent_heading_line": 110
+      },
+      "status": "ALTERNATIVE_EXERCISE_VARIANT",
+      "linked_item_ids": [
+        "FSO-7.13",
+        "FSO-P6-CONCEPT-TANSTACK-QUERY",
+        "FSO-P6-CONCEPT-REACT-CONTEXT"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "The current source offers React Query + Context as an explicit alternative implementation for the same 7.11-7.14 exercise numbers; retain the variant instead of collapsing it into the Zustand path."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-036",
+      "part": 7,
+      "title": "7.14: React Query and Context step 4",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7d.md",
+        "line": 128,
+        "level": 4,
+        "parent_heading": "State Management: React Query and Context",
+        "parent_heading_line": 110
+      },
+      "status": "ALTERNATIVE_EXERCISE_VARIANT",
+      "linked_item_ids": [
+        "FSO-7.14",
+        "FSO-P6-CONCEPT-TANSTACK-QUERY",
+        "FSO-P6-CONCEPT-REACT-CONTEXT"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "The current source offers React Query + Context as an explicit alternative implementation for the same 7.11-7.14 exercise numbers; retain the variant instead of collapsing it into the Zustand path."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-037",
+      "part": 7,
+      "title": "7.15: Cleaning the code",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7d.md",
+        "line": 134,
+        "level": 4,
+        "parent_heading": "State Management: React Query and Context",
+        "parent_heading_line": 110
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-7.15"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-038",
+      "part": 7,
+      "title": "7.16: Users view",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7d.md",
+        "line": 162,
+        "level": 4,
+        "parent_heading": "State Management: React Query and Context",
+        "parent_heading_line": 110
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-7.16"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-039",
+      "part": 7,
+      "title": "7.17: Individual User View",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7d.md",
+        "line": 168,
+        "level": 4,
+        "parent_heading": "State Management: React Query and Context",
+        "parent_heading_line": 110
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-7.17"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-040",
+      "part": 7,
+      "title": "7.18: Comments, step 1",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7d.md",
+        "line": 179,
+        "level": 4,
+        "parent_heading": "State Management: React Query and Context",
+        "parent_heading_line": 110
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-7.18"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-041",
+      "part": 7,
+      "title": "7.19: Comments, step 2",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7d.md",
+        "line": 191,
+        "level": 4,
+        "parent_heading": "State Management: React Query and Context",
+        "parent_heading_line": 110
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-7.19"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-042",
+      "part": 7,
+      "title": "7.20: Styling",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7d.md",
+        "line": 197,
+        "level": 4,
+        "parent_heading": "State Management: React Query and Context",
+        "parent_heading_line": 110
+      },
+      "status": "COVERED_BY_EXERCISE",
+      "linked_item_ids": [
+        "FSO-7.20"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Nested heading is the detailed source heading for an already indexed/mapped current numbered exercise."
+    },
+    {
+      "id": "FSO-P7-SUBHEADING-043",
+      "part": 7,
+      "title": "Bonus: tests",
+      "source": {
+        "course": "full-stack-open",
+        "part": 7,
+        "snapshot_commit": "0711aef8a451c4458263e5587ccda85f08fd7a96",
+        "path": "src/content/7/en/part7d.md",
+        "line": 203,
+        "level": 4,
+        "parent_heading": "State Management: React Query and Context",
+        "parent_heading_line": 110
+      },
+      "status": "REVIEWED_REDUNDANT",
+      "linked_item_ids": [
+        "FSO-P5-CONCEPT-E2E-BLACK-BOX",
+        "FSO-P11-CONCEPT-CI-QUALITY-GATES"
+      ],
+      "reviewed_at": "2026-09-08",
+      "note": "Source-provided acceptance tests plus GitHub Actions reuse already-mapped E2E black-box and CI gate semantics."
+    }
+  ]
+}
