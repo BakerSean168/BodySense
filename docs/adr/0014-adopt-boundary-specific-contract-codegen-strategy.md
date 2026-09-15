@@ -1,6 +1,6 @@
 # ADR 0014: Adopt a Boundary-Specific Contract Codegen Strategy
 
-- Status: Accepted for vNext by ADR 0015; implementation tracked in the vNext master plan
+- Status: Accepted and implemented by the completed vNext engineering reset
 - Date: 2026-09-09
 - Decision evidence: `docs/architecture/contract-codegen-spike-results-2026-09-09.md`
 
@@ -148,4 +148,4 @@ Rejected by the measured transport experiment. A future optimized/async/batched 
 
 ## Migration policy
 
-ADR 0015 accepts this boundary-specific strategy for the coordinated pre-user vNext reset. Implementation is governed by `docs/plan/active/2026-09-13-bodysense-vnext-engineering-reset.md`; migration-era compatibility/shadow requirements are replaced by the reset policy where no user/data compatibility obligation exists.
+ADR 0015 accepted this boundary-specific strategy for the coordinated pre-user vNext reset. The completed implementation and acceptance evidence are recorded in `docs/plan/archive/2026-09-13-bodysense-vnext-engineering-reset.md`; migration-era compatibility/shadow requirements were replaced by the reset policy where no user/data compatibility obligation existed.

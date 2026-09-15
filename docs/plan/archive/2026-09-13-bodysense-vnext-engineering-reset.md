@@ -1,6 +1,6 @@
 # BodySense vNext Engineering Reset — Master Refactor Plan
 
-- Status: ACTIVE MASTER PLAN — Phases 00–10 integrated; Phase 11 is NEXT
+- Status: COMPLETE — Phases 00–11 integrated and whole-system fresh-stack acceptance passed
 - Date: 2026-09-13
 - Integration branch: `refactor/bodysense-vnext`
 - Integration worktree: `/home/dev/projects/bodysense-vnext-refactor`
@@ -400,7 +400,7 @@ This gives each phase an auditable diff and prevents a single giant unreviewable
 | 08 — Schema rebaseline   | **COMPLETE** | `df682247a` / PR #181 merged one canonical PostgreSQL 18 vNext baseline, fresh-volume cutover/recovery contract and full production-shaped acceptance; see `docs/refactor/vnext/phase-08-schema-rebaseline.md`                                                        |
 | 09 — API tooling         | **COMPLETE** | `043b5378b` / PR #182 merged deterministic 95/95 OpenAPI-derived Postman tooling, current CLI/Native Git validation, secret-safe environments and contract-lane enforcement; see `docs/refactor/vnext/phase-09-api-tooling.md`                                                  |
 | 10 — Quality gates       | **COMPLETE** | `8e5e35dd0` / PR #183 merged AST/import architecture boundaries, real violation fixtures, TS/Python/Go static-analysis baselines and validation-host capacity preflight; see `docs/refactor/vnext/phase-10-quality-gates.md`                                               |
-| 11 — Final simplification | **NEXT**    | delete refactor-only scaffolding, audit dependency/generated-artifact hygiene, align current docs and prove the final vNext architecture as one coherent system; branch `refactor/vnext-11-final-simplification`                                                          |
+| 11 — Final simplification | **COMPLETE** | `4d13259c6` / PR #184 merged refactor-scaffolding retirement, dependency/generator cleanup, single shared PydanticAI transport ownership, current-doc alignment and fresh PG18 production-shaped `LOCAL_DEPLOY_VALIDATION=PASS`; see `docs/refactor/vnext/phase-11-final-simplification.md` |
 
 ## Phase 00 — Freeze baseline and create the refactor ledger
 

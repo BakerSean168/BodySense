@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-09-13
 - Decider: BodySense owner
-- Master plan: `docs/plan/active/2026-09-13-bodysense-vnext-engineering-reset.md`
+- Completed master plan: `docs/plan/archive/2026-09-13-bodysense-vnext-engineering-reset.md`
 
 ## Context
 
@@ -15,7 +15,7 @@ Under those constraints, an ordinary expand/dual-read/dual-write/contract migrat
 
 ## Decision
 
-BodySense will perform a coordinated vNext engineering reset on the integration branch `refactor/bodysense-vnext`.
+BodySense performed a coordinated vNext engineering reset on the integration branch `refactor/bodysense-vnext`. The reset completed through Phase 11 with fresh PostgreSQL 18 production-shaped whole-system acceptance; the archived master plan records the implementation evidence.
 
 The refactor may make breaking internal/public development-contract changes before final release, provided final product behavior and accepted domain/safety invariants are preserved or intentionally re-decided by ADR.
 
