@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.13.0](https://github.com/BakerSean168/BodySense/compare/v0.12.3...v0.13.0) (2026-09-15)
+
+
+### Features
+
+* **api:** add generated Postman API tooling ([70d18dd](https://github.com/BakerSean168/BodySense/commit/70d18dd4f294388d5f8bf3877690041509965ab9))
+* **main:** establish internal runtime Proto authority ([a802801](https://github.com/BakerSean168/BodySense/commit/a802801f02dff24197bdd9166c4aba87fdda5836))
+* **ops:** complete vNext final simplification ([c007bca](https://github.com/BakerSean168/BodySense/commit/c007bca8f064f0cc70eec009a4f1f08c3c1cd92a))
+* **ops:** enforce vNext architecture quality gates ([04f4679](https://github.com/BakerSean168/BodySense/commit/04f46799a25c59a08dc75b5718ad16a3ccedeb2b))
+
+
+### Bug Fixes
+
+* **api:** preserve training exercises during reassessment ([eef197e](https://github.com/BakerSean168/BodySense/commit/eef197e937c7b60eba0b001821433cd4016a2322))
+* **main:** align public StreamEvent schema semantics ([1051878](https://github.com/BakerSean168/BodySense/commit/10518786a2b37d2513ed0b34be833231edf60bc0))
+* **main:** close Phase 03 review findings ([92e4104](https://github.com/BakerSean168/BodySense/commit/92e4104afa8e0b58b335724d34d01666d76481c9))
+* **main:** cover lifestyle context stream events ([aedbf0d](https://github.com/BakerSean168/BodySense/commit/aedbf0daca2b2349fba100fcfa84f49c3760cc00))
+* **ops:** close vNext merge-readiness gaps ([805f362](https://github.com/BakerSean168/BodySense/commit/805f362c5fef8bb072299032432137010985b572))
+
 ## [0.12.3](https://github.com/BakerSean168/BodySense/compare/v0.12.2...v0.12.3) (2026-09-04)
 
 
