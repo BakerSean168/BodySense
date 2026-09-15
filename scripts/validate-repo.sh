@@ -16,6 +16,7 @@ pnpm test:delivery
 pnpm lint
 pnpm typecheck
 pnpm test
+pnpm contracts:verify
 bash scripts/validate-migration-history.sh
 python3 scripts/test_offhost_s3.py
 bash scripts/validate-offhost-dr-unit.sh

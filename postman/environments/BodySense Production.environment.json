@@ -1,0 +1,19 @@
+{
+  "id": "1086eb0c-8c93-5fd5-b022-3eceeeb5b1f9",
+  "name": "BodySense Production",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "https://body.bakersean.top",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "bearerToken",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment"
+}

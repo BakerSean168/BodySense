@@ -190,6 +190,14 @@ function classifySinglePath(path) {
     };
   }
 
+  if (path.startsWith('postman/') || path.startsWith('scripts/postman/')) {
+    return {
+      risk: 'contract',
+      lanes: { contracts: true },
+      reason: 'postman-contract-view',
+    };
+  }
+
   if (path.startsWith('packages/utils/')) {
     return {
       risk: 'root',

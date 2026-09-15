@@ -67,8 +67,9 @@
     "contracts:mutation": "bash scripts/contracts/mutation.sh",
     "contracts:conformance": "bash scripts/contracts/conformance.sh",
     "contracts:verify": "bash scripts/contracts/verify.sh",
-    "contracts:route-coverage": "node scripts/contracts/public-route-coverage.mjs",
-    "contracts:route-coverage:check": "node scripts/contracts/public-route-coverage.mjs --check"
+    "postman:generate": "node scripts/postman/generate.mjs",
+    "postman:verify": "node scripts/postman/generate.mjs --check",
+    "postman:validate-native": "bash scripts/postman/validate-native.sh"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.1118.0",
@@ -96,6 +97,7 @@
     "json-schema-to-typescript": "16.0.0",
     "nx": "23.1.0",
     "nx-mcp": "0.25.0",
+    "openapi-to-postmanv2": "6.3.3",
     "orval": "8.30.0",
     "prettier": "^3.9.6",
     "typescript": "npm:@typescript/typescript6@6.0.2",
