@@ -149,7 +149,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: artifact-publish
-    timeout-minutes: 30
+    timeout-minutes: ${{ matrix.timeout_minutes }}
     strategy:
       fail-fast: false
       matrix:
@@ -159,21 +159,25 @@ jobs:
             context: .
             dockerfile: docker/Dockerfile.web
             cache_scope: candidate-web
+            timeout_minutes: 30
           - component: api
             image: bodysense-api
             context: apps/api
             dockerfile: apps/api/Dockerfile
             cache_scope: candidate-api
+            timeout_minutes: 30
           - component: aiService
             image: bodysense-ai-service
             context: apps/ai-service
             dockerfile: apps/ai-service/Dockerfile
             cache_scope: candidate-ai-service
+            timeout_minutes: 45
           - component: runtime
             image: bodysense-runtime
             context: .
             dockerfile: docker/Dockerfile.runtime
             cache_scope: candidate-runtime
+            timeout_minutes: 30
     env:
       REGISTRY: ${{ vars.ACR_REGISTRY }}
       NAMESPACE: ${{ vars.ACR_NAMESPACE }}
@@ -239,10 +243,9 @@ jobs:
           ref="${REGISTRY}/${NAMESPACE}/${IMAGE}:${TAG}"
           expected_digest="${EXISTING_DIGEST:-$BUILD_DIGEST}"
           [[ "$expected_digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "candidate digest missing for $ref" >&2; exit 1; }
-          docker pull "$ref" >/dev/null
-          actual_revision="$(docker image inspect "$ref" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')"
-          actual_repo_digest="$(docker image inspect "$ref" --format '{{index .RepoDigests 0}}')"
-          actual_digest="${actual_repo_digest#*@}"
+          inspection="$(docker buildx imagetools inspect "$ref")"
+          actual_digest="$(awk '$1 == "Digest:" { print $2; exit }' <<<"$inspection")"
+          actual_revision="$(docker buildx imagetools inspect --format '{{ index .Image.Config.Labels "org.opencontainers.image.revision" }}' "$ref")"
           [[ "$actual_revision" == "$EXPECTED_REVISION" ]] || { echo "revision label mismatch: $actual_revision != $EXPECTED_REVISION" >&2; exit 1; }
           [[ "$actual_digest" == "$expected_digest" ]] || { echo "immutable candidate digest mismatch: $actual_digest != $expected_digest" >&2; exit 1; }
           echo "digest=$expected_digest" >> "$GITHUB_OUTPUT"

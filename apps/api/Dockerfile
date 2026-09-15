@@ -25,10 +25,6 @@ FROM alpine:3.24
 
 ARG BUILD_DATE
 ARG VCS_REF
-LABEL org.opencontainers.image.title="bodysense-api" \
-      org.opencontainers.image.description="BodySense Go API backend" \
-      org.opencontainers.image.created="${BUILD_DATE}" \
-      org.opencontainers.image.revision="${VCS_REF}"
 
 RUN apk add --no-cache ca-certificates tzdata curl postgresql18-client
 WORKDIR /app
@@ -39,6 +35,10 @@ COPY --from=builder /upload-storage-migrator /app/upload-storage-migrator
 COPY --from=builder /knowledge-publication-manager /app/knowledge-publication-manager
 COPY --from=builder /knowledge-source-manager /app/knowledge-source-manager
 COPY --from=builder /app/migrations /app/migrations
+LABEL org.opencontainers.image.title="bodysense-api" \
+      org.opencontainers.image.description="BodySense Go API backend" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.revision="${VCS_REF}"
 EXPOSE 8080
 HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
   CMD curl -f http://localhost:8080/api/health || exit 1

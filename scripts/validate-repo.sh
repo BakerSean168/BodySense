@@ -14,6 +14,7 @@ bash scripts/test-validate-supply-chain.sh
 bash scripts/validate-supply-chain.sh
 pnpm test:static-assets
 pnpm test:delivery
+pnpm test:validation-lifecycle
 pnpm lint
 pnpm typecheck
 pnpm test

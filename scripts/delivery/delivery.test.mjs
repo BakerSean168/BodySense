@@ -575,6 +575,37 @@ test('local deploy keeps production-shaped runtime env after repository quality 
   assert.ok(e2eStub > qualityGate);
 });
 
+
+test('candidate Dockerfiles apply revision metadata after filesystem layers', () => {
+  for (const dockerfile of [
+    'apps/ai-service/Dockerfile',
+    'apps/api/Dockerfile',
+    'docker/Dockerfile.web',
+    'docker/Dockerfile.runtime',
+  ]) {
+    const contents = fs.readFileSync(dockerfile, 'utf8');
+    const label = contents.lastIndexOf('LABEL org.opencontainers.image.title=');
+    const lastCopy = contents.lastIndexOf('\nCOPY ');
+    const lastRun = contents.lastIndexOf('\nRUN ');
+    assert.ok(label > Math.max(lastCopy, lastRun), `${dockerfile} revision label must follow filesystem mutations`);
+  }
+});
+
+test('candidate publishing verifies remote OCI identity without pulling heavy image layers', () => {
+  const workflow = fs.readFileSync('.github/workflows/candidate-publish.yml', 'utf8');
+  const identityStart = workflow.indexOf('name: Verify immutable candidate digest and OCI revision label');
+  const identityEnd = workflow.indexOf('name: Record component evidence', identityStart);
+  const identity = workflow.slice(identityStart, identityEnd);
+  assert.ok(identityStart >= 0 && identityEnd > identityStart);
+  assert.match(
+    identity,
+    /docker buildx imagetools inspect --format '\{\{ index \.Image\.Config\.Labels "org\.opencontainers\.image\.revision" \}\}'/,
+  );
+  assert.doesNotMatch(identity, /docker pull "\$ref"/);
+  assert.match(workflow, /component: aiService[\s\S]*?timeout_minutes: 45/);
+  assert.match(workflow, /timeout-minutes: \$\{\{ matrix\.timeout_minutes \}\}/);
+});
+
 test('all registry channel/release promotions carbon-copy single-platform manifests', () => {
   for (const workflow of [
     '.github/workflows/candidate-publish.yml',

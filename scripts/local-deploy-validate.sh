@@ -3,8 +3,43 @@ set -euo pipefail
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
-project="bodysense-validator"
+source "$repo_root/scripts/validation/validator-lifecycle.sh"
+
+revision="$(git rev-parse --short=8 HEAD)"
+run_token="${VALIDATOR_RUN_ID:-local-$$}"
+run_token="$(printf '%s' "$run_token" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9_-]+/-/g; s/^-+//; s/-+$//')"
+if [[ -z "$run_token" ]]; then
+  run_token="local-$$"
+fi
+project="${VALIDATOR_PROJECT_NAME:-bodysense-validator-${revision}-${run_token}}"
+builder="${VALIDATOR_BUILDER_NAME:-${project}-builder}"
 export COMPOSE_PROJECT_NAME="$project"
+compose=(docker compose -f docker/docker-compose.yml --profile dev -p "$project")
+builder_created=0
+
+echo "VALIDATOR_LIFECYCLE=START project=${project} builder=${builder}"
+
+finish_validation() {
+  local original_exit="$?"
+  local cleanup_exit=0
+  trap - EXIT INT TERM
+
+  validator_cleanup \
+    "$repo_root" \
+    "$project" \
+    "$builder" \
+    "$builder_created" \
+    "${KEEP_VALIDATOR_STACK:-0}" || cleanup_exit="$?"
+
+  if [[ "$original_exit" -eq 0 && "$cleanup_exit" -ne 0 ]]; then
+    original_exit="$cleanup_exit"
+  fi
+  exit "$original_exit"
+}
+
+trap finish_validation EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 pick_port() {
   python3 - "$1" <<'PY'
@@ -32,13 +67,6 @@ export API_PORT="${VALIDATOR_API_PORT:-$(pick_port 18080)}"
 export AI_SERVICE_PORT="${VALIDATOR_AI_PORT:-$(pick_port 18100)}"
 export WEB_PORT="${VALIDATOR_WEB_PORT:-$(pick_port 15173)}"
 
-cleanup() {
-  if [[ "${KEEP_VALIDATOR_STACK:-0}" != "1" ]]; then
-    "${compose[@]}" down -v --remove-orphans >/dev/null 2>&1 || true
-  fi
-}
-trap cleanup EXIT
-
 wait_http() {
   local url="$1"
   local name="$2"
@@ -52,6 +80,8 @@ wait_http() {
   echo "$name=FAIL" >&2
   return 1
 }
+
+bash scripts/quality/check-validation-capacity.sh
 
 if [[ "${SKIP_QUALITY:-0}" != "1" ]]; then
   # Repository quality must run before any production-shaped runtime variables
@@ -77,7 +107,6 @@ export DB_PASSWORD="bodysense123"
 export DB_NAME="bodysense"
 export REDIS_PASSWORD="bodysense123"
 export JWT_SECRET_KEY="bodysense-local-validator-secret"
-compose=(docker compose -f docker/docker-compose.yml --profile dev)
 
 # Only the production-shaped runtime/E2E phase is stubbed/deterministic. Quality
 # tests above observed their normal model/gateway contracts and owned their mocks.
@@ -85,7 +114,9 @@ export BODYSENSE_E2E_STUB_AI=1
 export BODYSENSE_DETERMINISTIC_AI="true"
 
 "${compose[@]}" down -v --remove-orphans >/dev/null 2>&1 || true
-"${compose[@]}" build api ai-service web
+validator_create_builder "$builder"
+builder_created=1
+"${compose[@]}" build --builder "$builder" api ai-service document-service web
 "${compose[@]}" up -d postgres-dev redis-dev ai-service api web
 
 wait_http "http://127.0.0.1:${API_PORT}/api/health" "API_HEALTH"
