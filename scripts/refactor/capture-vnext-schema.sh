@@ -2,7 +2,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-OUT="$ROOT/docs/refactor/vnext/baseline/database-schema.json"
+OUT="${BODYSENSE_SCHEMA_SNAPSHOT_OUT:-$ROOT/docs/refactor/vnext/schema/database-schema.json}"
+mkdir -p "$(dirname "$OUT")"
 NAME="bodysense-vnext-baseline-pg-$$"
 PASSWORD="bodysense-baseline"
 

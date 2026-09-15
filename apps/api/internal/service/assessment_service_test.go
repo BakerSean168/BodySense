@@ -181,8 +181,8 @@ func TestAssessmentPersistsReportAndUnverifiedBodyStateObservationsAtomically(t 
 	if !transactionCalled || repo.created == nil {
 		t.Fatal("report and observations must use the coordinated unit of work")
 	}
-	if report.ContractRevision != assessmentOutputContractV2 || report.HealthGrade != nil || len(report.DimensionScores) != 0 {
-		t.Fatalf("v2 report must retire model-authored grade/scores: %#v", report)
+	if report.ContractRevision != assessmentOutputContractV2 {
+		t.Fatalf("unexpected v2 report contract revision: %q", report.ContractRevision)
 	}
 	if len(bodyState.observations) != 1 {
 		t.Fatalf("expected one projected observation, got %d", len(bodyState.observations))

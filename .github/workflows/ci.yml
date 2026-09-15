@@ -153,7 +153,7 @@ jobs:
         run: node scripts/delivery/oracle.mjs
 
   migrations-child:
-    name: PostgreSQL 18 current-history child
+    name: PostgreSQL 18 vNext baseline child
     needs: scope
     if: >-
       needs.scope.result == 'success' &&
@@ -179,21 +179,20 @@ jobs:
         with:
           go-version: "1.26"
           cache-dependency-path: apps/api/go.sum
-      - name: Validate current history through published baseline and latest replay
+      - name: Validate vNext baseline and latest replay
         working-directory: apps/api
         run: >-
           go run ./cmd/migration-validator
           -database-url 'postgres://bodysense:bodysense123@127.0.0.1:5432/bodysense_migration_validator?sslmode=disable'
           -migrations 'file://migrations'
-          -baseline-version 29
       - name: Validate longitudinal domain semantics
         working-directory: apps/api
         run: >-
           go run ./cmd/domain-validator
           -database-url 'postgres://bodysense:bodysense123@127.0.0.1:5432/bodysense_migration_validator?sslmode=disable'
 
-  production-migrations-child:
-    name: PostgreSQL 18 production-baseline child
+  recovery-migrations-child:
+    name: PostgreSQL 18 vNext recovery child
     needs: scope
     if: >-
       needs.scope.result == 'success' &&
@@ -224,22 +223,13 @@ jobs:
           mkdir -p "$RUNNER_TEMP/pg18-client-bin"
           bash scripts/setup-postgres18-client-wrappers.sh "$RUNNER_TEMP/pg18-client-bin"
           echo "$RUNNER_TEMP/pg18-client-bin" >> "$GITHUB_PATH"
-      - name: Restore schema-only production v29 baseline
-        working-directory: apps/api
-        env:
-          PGPASSWORD: bodysense123
-        run: >-
-          psql -v ON_ERROR_STOP=1
-          -h 127.0.0.1 -p 5432 -U bodysense -d bodysense_migration_validator
-          -f migrations/baselines/production-v29.sql
-      - name: Validate production baseline upgrade and latest replay
+      - name: Validate vNext baseline before recovery drill
         working-directory: apps/api
         run: >-
           go run ./cmd/migration-validator
           -database-url 'postgres://bodysense:bodysense123@127.0.0.1:5432/bodysense_migration_validator?sslmode=disable'
           -migrations 'file://migrations'
-          -baseline-version 29
-      - name: Validate longitudinal domain semantics after production upgrade
+      - name: Validate longitudinal domain semantics after vNext baseline
         working-directory: apps/api
         run: >-
           go run ./cmd/domain-validator
@@ -248,16 +238,16 @@ jobs:
         working-directory: apps/api
         run: |
           set -euo pipefail
-          dump=/tmp/bodysense-production-upgrade.dump
+          dump=/tmp/bodysense-vnext-baseline.dump
           restore_db=bodysense_restore_validator
           pg_container="$(docker ps --filter ancestor=pgvector/pgvector:pg18 --format '{{.ID}}' | head -1)"
           test -n "$pg_container"
           docker exec "$pg_container" pg_dump -U bodysense -d bodysense_migration_validator -Fc > "$dump"
-          docker cp "$dump" "$pg_container:/tmp/upgrade.dump" >/dev/null
-          docker exec "$pg_container" pg_restore --list /tmp/upgrade.dump >/dev/null
+          docker cp "$dump" "$pg_container:/tmp/vnext-baseline.dump" >/dev/null
+          docker exec "$pg_container" pg_restore --list /tmp/vnext-baseline.dump >/dev/null
           docker exec "$pg_container" dropdb --if-exists -U bodysense "$restore_db"
           docker exec "$pg_container" createdb -U bodysense "$restore_db"
-          docker exec "$pg_container" pg_restore --exit-on-error -U bodysense -d "$restore_db" /tmp/upgrade.dump
+          docker exec "$pg_container" pg_restore --exit-on-error -U bodysense -d "$restore_db" /tmp/vnext-baseline.dump
 
           source_version="$(docker exec "$pg_container" psql -U bodysense -d bodysense_migration_validator -Atc 'select version from schema_migrations order by version desc limit 1')"
           restored_version="$(docker exec "$pg_container" psql -U bodysense -d "$restore_db" -Atc 'select version from schema_migrations order by version desc limit 1')"
@@ -277,14 +267,14 @@ jobs:
 
   database-oracle:
     name: Database Oracle
-    needs: [scope, migrations-child, production-migrations-child]
+    needs: [scope, migrations-child, recovery-migrations-child]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - env:
           ORACLE_INPUT: >-
-            {"detector":"${{ needs.scope.result }}","enabled":{"database-current":${{ (needs.scope.outputs.lane_database == 'true' || needs.scope.outputs.lane_full == 'true') && 'true' || 'false' }},"database-production":${{ (needs.scope.outputs.lane_database == 'true' || needs.scope.outputs.lane_full == 'true') && 'true' || 'false' }}},"children":{"database-current":"${{ needs.migrations-child.result }}","database-production":"${{ needs.production-migrations-child.result }}"}}
+            {"detector":"${{ needs.scope.result }}","enabled":{"database-baseline":${{ (needs.scope.outputs.lane_database == 'true' || needs.scope.outputs.lane_full == 'true') && 'true' || 'false' }},"database-recovery":${{ (needs.scope.outputs.lane_database == 'true' || needs.scope.outputs.lane_full == 'true') && 'true' || 'false' }}},"children":{"database-baseline":"${{ needs.migrations-child.result }}","database-recovery":"${{ needs.recovery-migrations-child.result }}"}}
         run: node scripts/delivery/oracle.mjs
 
   e2e-child:
@@ -422,7 +412,7 @@ jobs:
       - governance-child
       - quality-child
       - migrations-child
-      - production-migrations-child
+      - recovery-migrations-child
       - e2e-child
       - governance-oracle
       - quality-oracle
@@ -443,8 +433,8 @@ jobs:
           {
             "governance": "${{ needs.governance-child.result }}",
             "quality": "${{ needs.quality-child.result }}",
-            "database-current": "${{ needs.migrations-child.result }}",
-            "database-production": "${{ needs.production-migrations-child.result }}",
+            "database-baseline": "${{ needs.migrations-child.result }}",
+            "database-recovery": "${{ needs.recovery-migrations-child.result }}",
             "experience": "${{ needs.e2e-child.result }}"
           }
           JSON

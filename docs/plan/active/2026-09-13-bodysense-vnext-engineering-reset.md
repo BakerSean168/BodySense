@@ -1,6 +1,6 @@
 # BodySense vNext Engineering Reset — Master Refactor Plan
 
-- Status: ACTIVE MASTER PLAN — Phases 00–07 complete; Phase 08 is NEXT
+- Status: ACTIVE MASTER PLAN — Phases 00–07 integrated; Phase 08 acceptance COMPLETE and ready for integration
 - Date: 2026-09-13
 - Integration branch: `refactor/bodysense-vnext`
 - Integration worktree: `/home/dev/projects/bodysense-vnext-refactor`
@@ -396,8 +396,9 @@ This gives each phase an auditable diff and prevents a single giant unreviewable
 | 04 — Internal runtime    | **COMPLETE** | `9488fa345` merged private Proto/Protovalidate command + typed `oneof` event authority, boundary-only generated types, deterministic local codegen and unchanged cancel/recovery semantics; see `docs/refactor/vnext/phase-04-internal-runtime-proto.md`                   |
 | 05 — Runtime trust       | **COMPLETE** | Typed Python provider/runtime variants, typed Go private runtime payloads/errors, generated/validated Web trust boundaries, durable MessagePart projection and production-shaped local-deploy/E2E acceptance complete; see `docs/refactor/vnext/phase-05-runtime-trust.md` |
 | 06 — Durable state       | **COMPLETE** | Typed finite lifecycle vocabularies, CAS/conditional terminal transitions, atomic state + lifecycle-event persistence, migration 63 constraints/replay and production-shaped acceptance complete; see `docs/refactor/vnext/phase-06-durable-state-machines.md`          |
-| 07 — Legacy retirement   | **NEXT**     | remove pre-vNext compatibility and migration-era runtime branches on top of the typed/atomic durable baseline; branch `refactor/vnext-07-legacy-retirement`                                                                                                                  |
-| 08–11                    | QUEUED       | blocked by preceding dependency phases                                                                                                                                                                                                                                     |
+| 07 — Legacy retirement   | **COMPLETE** | runtime compatibility/migration-era branches retired and full production-shaped acceptance green; see `docs/refactor/vnext/phase-07-legacy-retirement.md`                                                                                                                   |
+| 08 — Schema rebaseline   | **MERGE READY** | one canonical PostgreSQL 18 vNext baseline, fresh-volume cutover/recovery contract and full production-shaped acceptance green; see `docs/refactor/vnext/phase-08-schema-rebaseline.md`                                                                                   |
+| 09–11                    | QUEUED       | Phase 09 starts only after Phase 08 merges into `refactor/bodysense-vnext`                                                                                                                                                                                                                                     |
 
 ## Phase 00 — Freeze baseline and create the refactor ledger
 
@@ -680,6 +681,8 @@ Do not force an unqualified health-document model/mechanism into Champion solely
 ## Phase 08 — Database schema rebaseline
 
 Branch: `refactor/vnext-08-schema-rebaseline`
+
+**Status: COMPLETE / MERGE READY — one-migration vNext baseline and full repository + production-shaped acceptance are green; evidence: `docs/refactor/vnext/phase-08-schema-rebaseline.md`.**
 
 ### Goal
 

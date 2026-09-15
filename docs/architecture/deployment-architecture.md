@@ -122,26 +122,25 @@ Branch protection consumes stable `Governance Oracle`, `Quality Oracle`, `Databa
 
 Third-party GitHub Actions are pinned to immutable commit SHAs rather than movable major-version tags. `.github/dependabot.yml` tracks the `github-actions` ecosystem weekly so upgrades arrive as reviewable PRs instead of silently changing the CI/CD execution environment.
 
-`scripts/validate-migration-history.sh` additionally enforces migration history rules:
+`scripts/validate-migration-history.sh` additionally enforces the vNext migration contract:
 
-- every non-legacy migration version has both `up` and `down` files;
-- published migration 29 can never disappear again;
-- every currently published SQL migration is frozen by SHA-256 manifest;
-- adding a migration requires explicitly extending the checksum manifest;
-- editing a published migration fails CI.
+- the active history starts at `000001_vnext_baseline`;
+- every migration version has both `up` and `down` files;
+- versions are contiguous from `1` with no historical gaps;
+- every active SQL migration is frozen by the SHA-256 manifest;
+- adding a genuinely new vNext migration requires extending that manifest;
+- the historical `production-v29.sql` fixture is forbidden from the active migration tree.
 
-Legacy migration-number gaps `2`, `3`, `5` predate the current production baseline and are explicitly grandfathered. From the known published production baseline onward, the sequence is continuous.
+Git history preserves the pre-vNext migrations 1–63; they are no longer runtime baggage or an upgrade contract.
 
 ### Migration validation
 
-Migration CI has two intentionally different **scenarios**, both on the single supported PostgreSQL / pgvector 18 runtime:
+Migration CI has two current-schema scenarios on PostgreSQL / pgvector 18:
 
-- the **current-history** child rebuilds the current migration history, stops at the published baseline `29`, then validates `29 -> latest` and latest `down -> up`;
-- the **production-baseline** child restores the PG18-normalized `production-v29.sql` schema fixture captured from the historical production-v29 shape, then validates `29 -> latest`, domain semantics and the PG18 `pg_dump` / `pg_restore` recovery path.
+- the **vNext baseline** child builds an empty database from `000001_vnext_baseline`, verifies latest `down -> up`, and runs longitudinal domain semantics;
+- the **vNext recovery** child builds the same baseline, validates domain semantics, proves the PostgreSQL 18 `pg_dump` / `pg_restore` path, and runs the production off-host DR algorithm.
 
-The second job protects **old production schema/data upgrade semantics**, not compatibility with an old PostgreSQL engine. Development, staging, CI and steady-state production all use PostgreSQL 18.
-
-This baseline exists because production was found at migration 29 while migration 29 had been deleted from the repository; that deletion caused the v0.4.0 API container to restart-loop. Published migrations are now treated as immutable release artifacts.
+Production rebaseline uses a fresh named PostgreSQL 18 volume and lets the API bootstrap the vNext baseline. It does not restore the old production-v29 shape or pretend to migrate pre-user application data. See [`../runbooks/vnext-schema-rebaseline-cutover.md`](../runbooks/vnext-schema-rebaseline-cutover.md).
 
 ## Repository governance
 

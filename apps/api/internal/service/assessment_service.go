@@ -251,8 +251,6 @@ func (s *AssessmentService) GenerateAssessment(ctx context.Context, userID uuid.
 		UserID:                  userID,
 		Status:                  reportStatus,
 		ContractRevision:        payload.ContractRevision,
-		HealthGrade:             nil,
-		DimensionScores:         nil,
 		EvidenceCoverage:        jsonRaw(evidenceProjection.Coverage, `{}`),
 		EvidenceGaps:            jsonRaw(evidenceProjection.Gaps, `[]`),
 		Summary:                 evidenceProjection.Summary,

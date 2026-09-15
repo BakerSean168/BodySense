@@ -21,16 +21,17 @@ for path in root.glob("*.sql"):
 if not versions:
     raise SystemExit("no migrations found")
 latest = max(versions)
-legacy_gaps = {2, 3, 5}
-missing = [v for v in range(1, latest + 1) if v not in versions and v not in legacy_gaps]
+missing = [v for v in range(1, latest + 1) if v not in versions]
 incomplete = {v: sorted(parts) for v, parts in versions.items() if parts != {"up", "down"}}
 if missing:
     raise SystemExit(f"unexpected migration version gaps: {missing}")
 if incomplete:
     raise SystemExit(f"migration up/down pair incomplete: {incomplete}")
-if 29 not in versions:
-    raise SystemExit("published production baseline migration 29 must never be deleted")
-print(f"MIGRATION_SEQUENCE=PASS latest={latest} legacy_gaps={sorted(legacy_gaps)}")
+if not (root / "000001_vnext_baseline.up.sql").is_file() or not (root / "000001_vnext_baseline.down.sql").is_file():
+    raise SystemExit("vNext migration history must start at 000001_vnext_baseline")
+if (root / "baselines" / "production-v29.sql").exists():
+    raise SystemExit("historical production-v29 fixture must not remain in the active migration tree")
+print(f"MIGRATION_SEQUENCE=PASS latest={latest}")
 PY
 
 [ -s "$MANIFEST" ] || { echo "missing migration checksum manifest: $MANIFEST" >&2; exit 1; }
