@@ -9,5 +9,5 @@ pnpm contracts:breaking
 pnpm contracts:mutation
 pnpm contracts:conformance
 
-# Phase 02 migration coverage is deterministic even before it reaches 100%.
-pnpm contracts:route-coverage:check
+# Postman is a generated view of the canonical OpenAPI, not a second contract.
+pnpm postman:verify

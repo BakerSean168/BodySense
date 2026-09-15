@@ -1,0 +1,19 @@
+{
+  "id": "eb3ac603-54d3-543c-b24f-99cc2a08c61a",
+  "name": "BodySense Staging",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "bearerToken",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment"
+}

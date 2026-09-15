@@ -154,6 +154,18 @@ pnpm verify:release
 
 `pnpm verify:release` 是仓库级综合发布门禁。CI 还会验证已发布数据库迁移历史和长期健康浏览器流程，全部通过后版本才具备生产发布资格。
 
+### API 契约与 Postman
+
+浏览器侧 REST 契约只有一个真值来源：[`packages/contracts/openapi/bodysense.v1.openapi.yaml`](../../packages/contracts/openapi/bodysense.v1.openapi.yaml)。Postman collection 由这份 OpenAPI 确定性生成，不再维护第二套手写接口规格：
+
+```bash
+pnpm postman:generate          # 重新生成 collection 与安全环境模板
+pnpm postman:verify            # 新鲜度 + 95/95 OpenAPI 路由一致性
+pnpm postman:validate-native   # 可选：使用已安装的 Postman CLI 做原生格式校验
+```
+
+环境变量、内部服务边界以及 Native Git / Postman Cloud 绑定方式见 [`postman/README.md`](../../postman/README.md)。
+
 ## 生产环境
 
 当前生产应用：**[body.bakersean.top](https://body.bakersean.top)**。

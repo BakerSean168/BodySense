@@ -75,6 +75,7 @@ try {
     nx('@bodysense/contracts', 'lint');
     nx('@bodysense/contracts', 'typecheck');
     nx('@bodysense/contracts', 'test');
+    run('pnpm', ['contracts:verify']);
   }
 
   if (executed === 0) {

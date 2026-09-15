@@ -125,6 +125,31 @@ test('shared contract changes select every application surface and experience', 
   });
 });
 
+test('generated Postman assets select contract validation without forcing full', () => {
+  const paths = [
+    'postman/collections/BodySense Public API.postman_collection.json',
+    'scripts/postman/generate.mjs',
+  ];
+  const result = classifyPaths(paths);
+  assert.equal(result.risk, 'contract');
+  assertLanes(paths, {
+    web: false,
+    api: false,
+    ai: false,
+    contracts: true,
+    experience: false,
+    database: false,
+    full: false,
+  });
+});
+
+test('contracts delivery lane runs canonical contract verification', () => {
+  const contents = fs.readFileSync('scripts/delivery/run-quality.mjs', 'utf8');
+  const contractLane = contents.slice(contents.indexOf('if (manifest.lanes.contracts)'));
+  assert.ok(contractLane.startsWith('if (manifest.lanes.contracts)'));
+  assert.match(contractLane, /run\(["']pnpm["'], \[["']contracts:verify["']\]\)/);
+});
+
 test('CI, Docker, release and unknown paths fail safe to full', () => {
   for (const path of [
     '.github/workflows/ci.yml',

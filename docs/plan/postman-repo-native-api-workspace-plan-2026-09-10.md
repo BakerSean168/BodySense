@@ -1,9 +1,10 @@
 # BodySense Repo-Native Postman API Workspace Plan
 
-> 文档状态：PLAN ONLY / 待实施
+> 文档状态：HISTORICAL PLAN / 已由 vNext Phase 09 实施方案取代
 > 创建日期：2026-09-10
-> 目标：让 GCP Dev 上的项目 Agent 以 BodySense 源码为事实来源，自动生成并维护 repo-native Postman Collections / Environments / Tests，再由 Postman CLI 校验、运行并同步到 Postman Cloud；Windows Postman Desktop 主要作为 Cloud View、交互调试与手工验证界面。
-> 明确约束：本阶段只产出方案文档；不安装 Postman CLI、不创建/修改 Postman Cloud Workspace、不写真实凭证、不改生产代码、不改 API、不改部署、不提交 Git。
+> 当前实现：见 `docs/refactor/vnext/phase-09-api-tooling.md`。Phase 09 已采用 canonical OpenAPI → deterministic Postman projection，而不是继续以 Gin/FastAPI 源码抓取作为活动 API inventory。
+> 原始目标：让 GCP Dev 上的项目 Agent 以 BodySense 源码为事实来源，自动生成并维护 repo-native Postman Collections / Environments / Tests，再由 Postman CLI 校验、运行并同步到 Postman Cloud；Windows Postman Desktop 主要作为 Cloud View、交互调试与手工验证界面。
+> 原始阶段约束：当时只产出方案文档，不安装 Postman CLI、不创建/修改 Postman Cloud Workspace、不写真实凭证、不改生产代码、不改 API、不改部署、不提交 Git；这些约束只描述 2026-09-10 的规划阶段，不描述当前 Phase 09 实施状态。
 
 ---
 
