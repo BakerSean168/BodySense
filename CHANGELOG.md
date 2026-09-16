@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.13.1](https://github.com/BakerSean168/BodySense/compare/v0.13.0...v0.13.1) (2026-09-16)
+
+
+### Performance Improvements
+
+* **ai:** decouple candidate runtime base identity ([769332a](https://github.com/BakerSean168/BodySense/commit/769332ad750d289bdd6f03b67e621c476de058fd))
+* **ai:** decouple candidate runtime base identity ([6e9fb16](https://github.com/BakerSean168/BodySense/commit/6e9fb1623d267fb705987c265e900238ad7ee8bc))
+
 ## [0.13.0](https://github.com/BakerSean168/BodySense/compare/v0.12.3...v0.13.0) (2026-09-15)
 
 
