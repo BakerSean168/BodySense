@@ -21,7 +21,6 @@ if str(SERVICE_ROOT) not in sys.path:
     sys.path.insert(0, str(SERVICE_ROOT))
 
 from src.configuration.posture_agent_config import get_default_posture_configuration  # noqa: E402
-from src.services.pose_estimator import default_pose_model_path  # noqa: E402
 
 
 def sha256_file(path: Path) -> str:
@@ -46,7 +45,19 @@ def main() -> None:
     if "/latest/" in mechanism.model_uri:
         raise SystemExit("refusing unversioned Posture geometry model URI")
 
-    target = args.output or default_pose_model_path(mechanism)
+    if args.output is not None:
+        target = args.output
+    else:
+        override = os.getenv("BODYSENSE_POSE_MODEL_PATH", "").strip()
+        target = (
+            Path(override)
+            if override
+            else Path.home()
+            / ".cache"
+            / "bodysense"
+            / "mediapipe"
+            / f"pose-landmarker-{mechanism.model_sha256[:16]}.task"
+        )
     target = target.expanduser().resolve()
     target.parent.mkdir(parents=True, exist_ok=True)
 

@@ -17,6 +17,9 @@
 - 🚚 **[Delivery Platform V3](./delivery-platform-v3.md)** ⭐
   _ADR 0008 接受的目标交付架构：单 `main`、PR affected CI、main full CI、稳定 Oracles、exact-SHA candidate、canonical staging，以及 Prepare Release / Release Publish / Deploy Production 三段解耦。_
 
+- 🧱 **[ADR 0016 — AI Runtime Base Identity](../adr/0016-separate-ai-runtime-base-from-release-identity.md)**
+  _将 AI 的重依赖/模型 runtime base 与 exact-SHA release identity 解耦：content-derived immutable base + thin application layer + workflow OCI metadata。_
+
 - 🏷️ **[Release Lifecycle V3](./release-lifecycle-v3.md)**
   _定义版本准备、不可变 Release 发布与生产部署选择之间的权限边界、exact-SHA / digest contract 与 rollback 语义。_
 

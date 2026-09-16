@@ -13,6 +13,11 @@ import {
   validateManifest,
 } from './lib.mjs';
 import { createCandidate, validateCandidate } from './candidate-manifest.mjs';
+import {
+  AI_RUNTIME_BASE_INPUTS,
+  createAiRuntimeBaseIdentity,
+  extractAiRuntimeBaseRecipe,
+} from './ai-runtime-base.mjs';
 import { extractReleaseNotes, validateReleaseFiles } from './release-contract.mjs';
 import { createReleaseManifest, validateReleaseManifest } from './release-manifest.mjs';
 
@@ -576,9 +581,8 @@ test('local deploy keeps production-shaped runtime env after repository quality 
 });
 
 
-test('candidate Dockerfiles apply revision metadata after filesystem layers', () => {
+test('non-AI candidate Dockerfiles apply revision metadata after filesystem layers', () => {
   for (const dockerfile of [
-    'apps/ai-service/Dockerfile',
     'apps/api/Dockerfile',
     'docker/Dockerfile.web',
     'docker/Dockerfile.runtime',
@@ -591,12 +595,57 @@ test('candidate Dockerfiles apply revision metadata after filesystem layers', ()
   }
 });
 
+test('AI Dockerfile keeps heavy runtime identity independent from Git release metadata', () => {
+  const contents = fs.readFileSync('apps/ai-service/Dockerfile', 'utf8');
+  const recipe = extractAiRuntimeBaseRecipe(contents);
+  const recipeEnd = contents.indexOf('# BODYSENSE_AI_RUNTIME_BASE_END');
+  const applicationCopy = contents.lastIndexOf('\nCOPY --link . .');
+
+  assert.match(contents, /^ARG AI_RUNTIME_BASE=runtime-base/m);
+  assert.match(contents, /FROM \${AI_RUNTIME_BASE} AS application/);
+  assert.doesNotMatch(contents, /^ARG (BUILD_DATE|VCS_REF)$/m);
+  assert.doesNotMatch(contents, /org\.opencontainers\.image\.(created|revision)=/);
+  assert.match(recipe, /python:3\.13-slim@sha256:[0-9a-f]{64}/);
+  assert.match(recipe, /ghcr\.io\/astral-sh\/uv:latest@sha256:[0-9a-f]{64}/);
+  assert.match(recipe, /uv sync --frozen --no-dev/);
+  assert.doesNotMatch(recipe, /--no-cache/);
+  assert.match(recipe, /tesseract-ocr=5\.5\.0-1\+b1/);
+  assert.ok(applicationCopy > recipeEnd, 'application source must be copied only after runtime-base boundary');
+  assert.doesNotMatch(recipe, /COPY(?: --link)? \. \./);
+  assert.match(contents.slice(recipeEnd), /COPY --link \. \./);
+  assert.match(fs.readFileSync('apps/ai-service/.dockerignore', 'utf8'), /^models\/$/m);
+});
+
+test('AI runtime-base identity is content-derived from runtime inputs only', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bodysense-ai-runtime-base-'));
+  try {
+    const inputs = ['apps/ai-service/Dockerfile', ...AI_RUNTIME_BASE_INPUTS];
+    for (const relativePath of inputs) {
+      const destination = path.join(root, relativePath);
+      fs.mkdirSync(path.dirname(destination), { recursive: true });
+      fs.copyFileSync(relativePath, destination);
+    }
+
+    const first = createAiRuntimeBaseIdentity(root);
+    fs.writeFileSync(path.join(root, 'CHANGELOG.md'), 'release-only metadata\n');
+    const releaseOnly = createAiRuntimeBaseIdentity(root);
+    assert.equal(releaseOnly.tag, first.tag);
+    assert.match(first.tag, /^runtime-base-[0-9a-f]{64}$/);
+
+    fs.appendFileSync(path.join(root, 'apps/ai-service/uv.lock'), '\n# dependency identity mutation\n');
+    const dependencyChange = createAiRuntimeBaseIdentity(root);
+    assert.notEqual(dependencyChange.tag, first.tag);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('GitHub candidate API build uses the public Go module proxy explicitly', () => {
   const workflow = fs.readFileSync('.github/workflows/candidate-publish.yml', 'utf8');
   const apiStart = workflow.indexOf('- component: api');
-  const aiStart = workflow.indexOf('- component: aiService', apiStart);
-  const apiMatrix = workflow.slice(apiStart, aiStart);
-  assert.ok(apiStart >= 0 && aiStart > apiStart);
+  const runtimeStart = workflow.indexOf('- component: runtime', apiStart);
+  const apiMatrix = workflow.slice(apiStart, runtimeStart);
+  assert.ok(apiStart >= 0 && runtimeStart > apiStart);
   assert.match(apiMatrix, /extra_build_args: GOPROXY=https:\/\/proxy\.golang\.org,direct/);
   assert.match(workflow, /\$\{\{ matrix\.extra_build_args \}\}/);
 });
@@ -612,8 +661,51 @@ test('candidate publishing verifies remote OCI identity without pulling heavy im
     /docker buildx imagetools inspect --format '\{\{ index \.Image\.Config\.Labels "org\.opencontainers\.image\.revision" \}\}'/,
   );
   assert.doesNotMatch(identity, /docker pull "\$ref"/);
-  assert.match(workflow, /component: aiService[\s\S]*?timeout_minutes: 45/);
   assert.match(workflow, /timeout-minutes: \$\{\{ matrix\.timeout_minutes \}\}/);
+});
+
+test('AI candidate uses a content-addressed runtime base and workflow-injected release metadata', () => {
+  const workflow = fs.readFileSync('.github/workflows/candidate-publish.yml', 'utf8');
+  const baseStart = workflow.indexOf('  ai-runtime-base:');
+  const genericBuildStart = workflow.indexOf('  build:', baseStart);
+  const aiStart = workflow.indexOf('  build-ai:', genericBuildStart);
+  const verifyStart = workflow.indexOf('  verify-static-coherence:', aiStart);
+  assert.ok(baseStart >= 0 && genericBuildStart > baseStart && aiStart > genericBuildStart);
+
+  const baseJob = workflow.slice(baseStart, genericBuildStart);
+  const genericBuild = workflow.slice(genericBuildStart, aiStart);
+  const aiJob = workflow.slice(aiStart, verifyStart);
+
+  assert.match(baseJob, /target: runtime-base/);
+  assert.match(baseJob, /group: ai-runtime-base-\$\{\{ needs\.resolve\.outputs\.ai_runtime_base_tag \}\}/);
+  assert.match(baseJob, /cancel-in-progress: false/);
+  assert.match(baseJob, /UV_INDEX_URL=https:\/\/pypi\.org\/simple\//);
+  assert.match(baseJob, /Reuse immutable AI runtime base when dependency identity already exists/);
+  assert.match(baseJob, /io\.bodysense\.runtime-base\.identity=\$\{\{ env\.TAG \}\}/);
+  assert.doesNotMatch(genericBuild, /component: aiService/);
+
+  assert.match(aiJob, /needs: \[resolve, ai-runtime-base\]/);
+  assert.doesNotMatch(aiJob, /static-assets/);
+  assert.match(aiJob, /AI_RUNTIME_BASE=\$\{\{ needs\.ai-runtime-base\.outputs\.ref \}\}/);
+  assert.match(aiJob, /org\.opencontainers\.image\.created=\$\{\{ needs\.resolve\.outputs\.build_date \}\}/);
+  assert.match(aiJob, /org\.opencontainers\.image\.revision=\$\{\{ env\.REVISION \}\}/);
+  assert.match(aiJob, /io\.bodysense\.runtime-base\.digest=\$\{\{ needs\.ai-runtime-base\.outputs\.digest \}\}/);
+  assert.match(aiJob, /docker buildx imagetools inspect --format/);
+  assert.doesNotMatch(aiJob, /docker pull "\$ref"/);
+  assert.match(aiJob, /timeout-minutes: 20/);
+  assert.match(workflow, /needs: \[resolve, static-assets, build, build-ai, verify-static-coherence\]/);
+});
+
+test('candidate staging coherence verifies remote digest and revision without heavy image pulls', () => {
+  const workflow = fs.readFileSync('.github/workflows/candidate-publish.yml', 'utf8');
+  const start = workflow.indexOf('name: Verify staging channel converged to exact candidate manifests');
+  const block = workflow.slice(start);
+  assert.ok(start >= 0);
+  assert.match(block, /src_digest=/);
+  assert.match(block, /dst_digest=/);
+  assert.match(block, /docker buildx imagetools inspect --format/);
+  assert.doesNotMatch(block, /docker pull "\$ref"/);
+  assert.doesNotMatch(block, /docker image inspect/);
 });
 
 test('all registry channel/release promotions carbon-copy single-platform manifests', () => {

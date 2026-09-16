@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import shutil
 import sys
 import tempfile
@@ -17,9 +18,16 @@ if str(SERVICE_ROOT) not in sys.path:
 from src.configuration.health_document_config import (  # noqa: E402
     get_default_health_document_configuration,
 )
-from src.document_pipeline.serving_engine import sha256_file  # noqa: E402
 
 DEFAULT_OUTPUT = SERVICE_ROOT / "models" / "health-document" / "ppocrv6-small-v1"
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def main() -> int:
