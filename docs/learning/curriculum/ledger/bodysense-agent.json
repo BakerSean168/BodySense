@@ -253,7 +253,7 @@
         "verification": "PROJECT_DEFINED",
         "authority": "BodySense current architecture"
       },
-      "lifecycle": "EXERCISE_READY",
+      "lifecycle": "LEARNER_VERIFIED",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-A7",
@@ -280,8 +280,10 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L4",
+        "evidence": [
+          "Learner correctly distinguished conversation identity from per-execution run identity for ask_user resume: conversation remains C1 while resume creates a new run R2 with a fresh run-local public sequence starting at 1. Learner independently explained why replay/dedup must key sequence by run_id plus seq; carrying lastSeq=99 across runs would incorrectly discard valid R2 seq 1.. events and lose UI state. Learner also distinguished transport disconnect from explicit durable cancellation and described server-side cancellation propagation/persistence. Focused frontend replay/reducer tests passed 36/36 and Go consultation/runtime-event service/repository tests passed."
+        ]
       }
     },
     {

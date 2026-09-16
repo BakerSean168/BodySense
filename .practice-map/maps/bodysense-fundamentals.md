@@ -5,7 +5,7 @@ status: active
 level: intermediate
 language: go, python, javascript, typescript, react
 created_at: 2026-07-13
-updated_at: 2026-09-08
+updated_at: 2026-09-11
 ---
 
 # Goal
@@ -24,29 +24,40 @@ updated_at: 2026-09-08
 
 # Current Focus
 
-**课程重构的 source/exercise/section mapping 与 113-node ready graph 已完成到可执行状态；placement 现在也有 machine-backed journal/validator/view。当前 active slice 为 TypeScript contracts/runtime trust，但尚未把任何历史工程成果自动计为 mastery。**
+**当前 active slice 已切换为 `fso-part-8-graphql`：Full Stack Open Part 8 — GraphQL。课程编号导航已修正，今后“第八章 / Part 8”不会再被 SSE/Agent Track 等其他编号空间覆盖。**
 
-2026-09-08 本轮后，已可核实的状态：
+课程动态状态不再在本文件复制易过期数字，统一读取：
+
+- `docs/learning/curriculum/views/course-spine.md`：FSO Part 0~14 的章节语义，Part 8 = GraphQL，Part 13 = Relational databases；
+- `docs/learning/curriculum/views/study-tracks.md`：当前 exercise-ready Tracks；Track 不使用数字章节标题；
+- `docs/learning/curriculum/views/placement-status.md`：当前 active track、prerequisite closure、已验证/gap/unassessed 与下一题；
+- `docs/learning/curriculum/views/coverage-status.md`：最新 curriculum lifecycle 计数。
+
+Part 8 现在有独立可执行 GraphQL 学习闭环：
 
 ```text
-FSO Parts 0-7 numbered exercises: 158/158 MAPPED
-FSO Parts 8-14: current MOOC API source indexed; 198/198 exercise records MAPPED
-FSO concept audit: Parts 0-14 = 664/664 current section-heading units dispositioned; 469 explicit section/subheading/prose-derived concepts; pinned core h4-h6 = 196/196 dispositioned; targeted prose-risk = 10/10 selected fragments reviewed, 2 new concepts; exhaustive paragraph/example parity remains separate
-FSO historical Parts 8-11: 104 exercise records archived for comparison
-TECH public lectures #0-#77: 78/78 title-level MAPPED
-Agent A1-A8: 8/8 EXERCISE_READY
-EXERCISE_READY: 113
-LEARNER_VERIFIED: 0 in the new mastery ledger
+Schema / Query
+-> Apollo Server
+-> Resolver / Context
+-> Mutation / Error
+-> Apollo Client / Variables
+-> Normalized Cache / Cache Reconciliation
+-> Auth Context
+-> Subscription vs BodySense SSE
+-> N+1
 ```
 
-当前可执行课程是 **113-node ready graph**。学习路径由 `study-tracks.md` 的 10 条 learner-facing tracks 提供；机器依赖真相由 `prerequisite-spine.md` + source ledgers 维护；placement 状态由 `learner-placement.json` + `placement-status.md` 维护。当前 `typescript-runtime-trust` slice 含 7 个 track nodes + 5 个 prerequisite nodes，全部仍是 UNASSESSED。
+并新增隔离 GraphQL lab；它服务于学习与验证，不要求把 BodySense production 从 REST/SSE/TanStack Query 迁到 GraphQL。当前下一 placement target 由 generated status 指向 `BS-P8-CONCEPT-GRAPHQL-SCHEMA-QUERY`。
 
-下一步优先级：
+# Reconciled Learning History
 
-1. 对当前 `typescript-runtime-trust` ready slice 做真实 placement，不读实现答案先做 prediction / falsification / explain-back；
-2. 用 `record-placement.mjs` 只记录实际观察到的 L1-L5 证据，低于 gate 的节点保留为 gap；
-3. placement 过程中继续补真正阻塞学习的 readiness / prose-risk 缺口，而不是为了扩大数字继续铺节点；
-4. Agent/Go 等历史高阶工程证据只作为 `prior-evidence-review` 候选，不自动升级为 `LEARNER_VERIFIED`。
+The 2026-09-09~2026-09-10 study sessions used some incorrect conversational chapter labels. The mastery ledger itself stored the evidence under canonical source IDs, so progress is preserved and is now reconciled as follows:
+
+- old spoken "Chapter 5" TypeScript block -> **FSO Part 9 · TypeScript**: 7 assessed concepts, **6 L4 verified + 1 L3 gap** (discriminated unions).
+- old spoken "Chapter 6" state/data-ownership block -> **FSO Part 6 · Advanced state management**: state ownership, TanStack Query, mutation invalidation/cache update are **3/3 L4 verified**.
+- old spoken "Chapter 7" security/realtime block was a **mixed cross-part study slice**, not canonical FSO Part 7 alone: HTTP/CORS/error semantics map to Part 3; bearer/revocation to Part 4; browser token persistence to Part 5; XSS/dependency security/broken authorization/security headers/server-push to Part 7; durable run replay/resume evidence maps to Agent A7.
+
+Do not duplicate these results onto the incorrectly spoken chapter numbers. `docs/learning/curriculum/views/learner-progress.md` is the generated canonical progress view.
 
 # Prior Mastery Evidence
 
@@ -73,6 +84,23 @@ Diagnosis Production Agent 学习已经形成可复用的高阶证据，不因�
 这些是历史学习/工程证据，不会自动写成新的 `LEARNER_VERIFIED`；placement 时仍需确认它们是否满足对应 exercise 的 L4/L5 acceptance contract。
 
 # Session Log
+
+## 2026-09-11 · Historical chapter/progress reconciliation
+
+- Audited placement timestamps and evidence from 2026-09-09~10. Confirmed the navigation drift began no later than the TypeScript block: it had been spoken of as "Chapter 5" while canonical IDs were already `FSO-P9-*`.
+- Preserved all valid mastery on its canonical IDs instead of re-crediting the wrong Parts or asking the learner to repeat work.
+- Canonical reconciliation: Part 9 TypeScript = **6 L4 + 1 L3**; Part 6 state/data ownership = **3/3 L4**; the old security/realtime "Chapter 7" block spans Parts 3/4/5/7 plus Agent A7.
+- Added generated `learner-progress.md` so future progress reports are grouped by canonical source Part rather than historical conversational labels.
+- Active track remains `fso-part-8-graphql`; Part 8 GraphQL itself still has no learner-verified GraphQL node yet, so the next real new learning point remains schema/query.
+
+## 2026-09-11 · Part 8 GraphQL navigation repair
+
+- 复盘发现底层 FSO ledger 的 Part 8 原本已经正确映射为 GraphQL，但 learner-facing Track/coach 没有强制区分 FSO Part、Study Track、Agent module 与文档 section，导致“第八章”曾被错误解释成 SSE event contract。
+- 新增 machine-generated `course-spine.md` 作为章节编号权威：FSO Part 8 = GraphQL；Part 13 = relational databases；Track 不再输出数字章节标题。
+- 将 Part 8 的 12 个高价值 GraphQL concept 提升为 `EXERCISE_READY`，覆盖 schema/query、Apollo Server、resolver/context、mutation/error、Apollo client、variables、normalized cache、cache reconciliation、auth context、subscriptions 与 N+1。
+- 新增隔离 `part8-graphql-lab`（Apollo Server + Apollo Client cache），实际验证字段选择、variable mutation、domain conflict GraphQL error 与 Apollo normalized cache；focused lab 4/4 passed。
+- coaching policy 增加课程编号解析 hard invariant；当用户说“第 N 章”时先读 source-course spine，若该 Part 尚未 ready 必须显式报告，不再静默替换为其他 ready topic。
+- active placement track 切换为 `fso-part-8-graphql`，下一题为 `BS-P8-CONCEPT-GRAPHQL-SCHEMA-QUERY`。
 
 ## 2026-09-08 · Machine-backed placement workflow
 

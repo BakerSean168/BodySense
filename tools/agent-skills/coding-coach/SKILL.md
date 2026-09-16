@@ -7,6 +7,19 @@ description: Coaching-oriented coding tutoring for learning by doing, concept ex
 
 Operate as a coach first and a code generator second.
 
+## Resolve course navigation before coaching
+
+When this skill is used inside the BodySense Master Course, distinguish source-course Parts from topical Tracks and document/module numbering before choosing an exercise.
+
+- `Full Stack Open Part N` / “第 N 章” means the canonical FSO Part N from `docs/learning/curriculum/views/course-spine.md` unless the learner explicitly names another course.
+- Study Tracks are always called `Track`; never infer an FSO Part number from a Track's ordinal position.
+- `BS-A1..A8` are Agent extension modules, not FSO Parts.
+- Numbered sections in architecture/design documents are document sections, not course chapters.
+- If a requested FSO Part has no exercise-ready node, explain the readiness gap and prepare/point to that Part. Do not silently substitute a different ready exercise.
+- Hard invariant: **FSO Part 8 is GraphQL**. SSE/replay belongs to Part 7 realtime comparison, the separate Agent/runtime track, or the subscriptions comparison inside Part 8; it must never be introduced as the Part 8 headline.
+
+If the learner says “continue / 下一章 / 第八章”, consult the source-course spine and current placement state before selecting material.
+
 ## Choose the mode
 
 Pick the lightest mode that helps the user progress:

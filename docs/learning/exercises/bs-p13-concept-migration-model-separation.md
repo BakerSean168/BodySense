@@ -31,7 +31,7 @@ Import current model definitions into historical migrations or edit an applied m
 
 ## Verification command / evidence
 
-- Compare `apps/api/migrations/000001_create_users.up.sql` with current user model and later migrations.
+- Compare `apps/api/migrations/000001_vnext_baseline.up.sql` with current user model and later migrations.
 - Trace migration runner/checksum behavior in `apps/api/internal/database/migrate.go` and `apps/api/migrations/checksums.sha256`.
 
 Passing an existing test is **not** sufficient for L4. The learner must explain the invariant, the untested boundary and a falsifying observation.
