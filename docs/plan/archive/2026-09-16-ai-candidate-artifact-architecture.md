@@ -93,4 +93,26 @@ The first main revision after this change may still pay one heavy runtime-base u
 - thin application validation used an external registry-backed AI base, copied about 2 MB of build context, completed its source layer/export in under a second each, finished the local build in about five seconds, and passed runtime imports/model presence;
 - staging-channel verification now compares remote source/destination digests plus OCI revision without pulling application filesystems.
 
-The first main candidate after merge remains the canonical end-to-end performance proof because it creates the new ACR runtime-base tag once and then builds the exact-SHA thin AI candidate against its immutable digest.
+## First main-candidate observation
+
+The first production-shaped main candidate after merge was Git revision `769332ad750d289bdd6f03b67e621c476de058fd`, GitHub Actions run `35048533292`. It completed successfully and promoted the coherent candidate to staging.
+
+Observed timings:
+
+- `Prepare AI runtime base`: 3m35s (`02:35:05Z` -> `02:38:40Z`), including the first build, ACR publication, and remote identity verification for `runtime-base-9fb479f776f61fba4f74d71d33d0a649c7b00de7e8dfc7bd932488a5f1b8ee4f`;
+- `Build candidate aiService`: 2m01s (`02:38:43Z` -> `02:40:44Z`);
+- the former worst observed AI candidate path was 39m45s, so the exact-SHA AI candidate stage fell by about 95%;
+- compared with the prior 8m36s successful AI candidate, the exact-SHA AI candidate stage fell by about 77%.
+
+Remote ACR manifests also prove the filesystem split rather than merely a faster rebuild:
+
+- runtime base: 8 layers / 484.92 MiB compressed;
+- exact-SHA candidate: 10 layers / 485.36 MiB compressed;
+- the new BodySense application source layer is 458,126 bytes compressed (about 447 KiB), plus a 32-byte metadata/empty layer;
+- candidate OCI labels bind the exact Git revision and the immutable runtime-base tag/digest.
+
+GCP canonical staging then deployed all four application artifacts at the same revision and remained healthy.
+
+## Warm-path probe
+
+This evidence-only documentation change intentionally does not modify any `AI_RUNTIME_BASE_INPUTS`. Its merge is used as a second main-candidate probe. Acceptance is that the resolved runtime-base tag remains identical and `Prepare AI runtime base` reuses the already-published immutable base instead of executing the heavy build/push step. The new exact-SHA AI candidate should therefore publish only source/config/manifest changes on top of the same heavy base layers.
