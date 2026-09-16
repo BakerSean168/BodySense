@@ -54,4 +54,3 @@ The source catalog still contains every mapped Part 8 exercise/section. This spi
 - Part 3 introduces backend persistence in the original course through MongoDB/Mongoose concepts.
 - Part 13 is the dedicated relational-database part. BodySense preserves the concepts while using PostgreSQL/GORM rather than forcing Sequelize into production.
 - TECH SCHOOL backend exercises provide the deeper SQL/transaction/lock/isolation path beside FSO Part 13.
-

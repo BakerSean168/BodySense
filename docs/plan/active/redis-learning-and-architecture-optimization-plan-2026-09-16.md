@@ -1,8 +1,8 @@
 # BodySense Redis Learning & Architecture Optimization Plan
 
-> 文档状态：ACTIVE PLAN / 学习与架构优化计划，尚未实施生产代码改造  
-> 创建日期：2026-09-16  
-> 适用项目：BodySense  
+> 文档状态：ACTIVE PLAN / 学习与架构优化计划，尚未实施生产代码改造
+> 创建日期：2026-09-16
+> 适用项目：BodySense
 > 目标：以 BodySense 现有 Redis 实现为真实工程载体，从零到一系统学习 Redis；在不破坏 PostgreSQL durable truth、认证安全边界、Runtime Event replay 与 JobRuntime 可恢复性的前提下，逐步将 Redis 用于共享快速状态、实时通知、缓存和异步唤醒，提升性能、实时性与工程可解释性。
 
 ---

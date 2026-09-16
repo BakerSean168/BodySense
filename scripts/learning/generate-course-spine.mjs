@@ -90,6 +90,10 @@ lines.push(
   '',
 );
 
+while (lines.at(-1) === '') {
+  lines.pop();
+}
+
 const out = path.join(root, 'docs/learning/curriculum/views/course-spine.md');
 fs.writeFileSync(out, `${lines.join('\n')}\n`);
 console.log(`wrote ${path.relative(root, out)}`);

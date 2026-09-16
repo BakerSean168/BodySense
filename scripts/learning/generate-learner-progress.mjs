@@ -93,6 +93,10 @@ for (const row of placementRows.slice(-40)) {
 
 lines.push('', '## Reconciliation rule', '', 'If an old conversation called a study block “Chapter N” but the recorded item IDs belong to another canonical Part, keep the mastery evidence on those canonical IDs and treat the old chapter label as a navigation error. Do **not** duplicate the evidence onto the incorrectly named Part and do **not** force the learner to repeat verified work.', '');
 
+while (lines.at(-1) === '') {
+  lines.pop();
+}
+
 const out = path.join(root, 'docs/learning/curriculum/views/learner-progress.md');
 fs.writeFileSync(out, `${lines.join('\n')}\n`);
 console.log(`wrote ${path.relative(root, out)}`);

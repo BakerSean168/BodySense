@@ -131,4 +131,3 @@ Assessed: **1** · verified: **1** · gaps: **0**.
 ## Reconciliation rule
 
 If an old conversation called a study block “Chapter N” but the recorded item IDs belong to another canonical Part, keep the mastery evidence on those canonical IDs and treat the old chapter label as a navigation error. Do **not** duplicate the evidence onto the incorrectly named Part and do **not** force the learner to repeat verified work.
-
