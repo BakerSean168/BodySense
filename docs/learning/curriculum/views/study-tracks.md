@@ -3,9 +3,11 @@
 > Generated from the machine-readable ledgers. This is a curated learner-facing lens over the ready prerequisite graph, not a second source of truth.
 > Tracks overlap intentionally. Complete a prerequisite once and reuse the same evidence across every track that depends on it.
 
-Current executable curriculum: **113 ready/verified nodes**.
+Current executable curriculum: **125 ready/verified nodes**.
 
-## 1. Web/browser request foundation
+## Track: Web/browser request foundation
+
+Stable track id: `web-browser-foundation`
 
 Build the browser -> React -> HTTP -> API mental model used by every later frontend/full-stack exercise.
 
@@ -22,7 +24,9 @@ Build the browser -> React -> HTTP -> API mental model used by every later front
 
 Prerequisite closure outside this track: none.
 
-## 2. React component model, async effects and hooks
+## Track: React component model, async effects and hooks
+
+Stable track id: `react-component-hooks`
 
 Build the React render/state/event mental model first, then connect browser async work, effects, stable identity and reusable hooks without cargo-cult memoization.
 
@@ -51,7 +55,9 @@ Build the React render/state/event mental model first, then connect browser asyn
 
 Prerequisite closure outside this track: `BS-FSO-0.1`, `BS-FSO-0.5`, `BS-FSO-0.4`, `BS-FSO-0.3`.
 
-## 3. React component testing and failure isolation
+## Track: React component testing and failure isolation
+
+Stable track id: `react-testing-failure-isolation`
 
 Test React through user-observable behavior, realistic interaction semantics and explicit render-failure boundaries rather than private implementation details.
 
@@ -68,9 +74,11 @@ Test React through user-observable behavior, realistic interaction semantics and
 | 9 | [BS-P5-CONCEPT-TEST-COVERAGE](../../exercises/bs-p5-concept-test-coverage.md) | L4 |
 | 10 | [BS-P7-CONCEPT-ERROR-BOUNDARY](../../exercises/bs-p7-concept-error-boundary.md) | L4 |
 
-Prerequisite closure outside this track: `BS-P1-CONCEPT-COMPONENT`, `BS-FSO-0.1`, `BS-P1-CONCEPT-EVENT-HANDLING`, `BS-P1-CONCEPT-USESTATE`, `BS-P1-CONCEPT-RENDER-CYCLE`, `BS-P2-CONCEPT-PROMISES`, `BS-P2-CONCEPT-ASYNC-RUNTIME`, `BS-FSO-0.5`, `BS-FSO-0.4`, `BS-FSO-0.3`, `BS-FSO-3.1`, `BS-P4-CONCEPT-BEARER-AUTHORIZATION`, `BS-TECH-22`, `BS-TECH-21`, `BS-TECH-20`, `BS-TECH-15`, `BS-TECH-11`, `BS-TECH-01`, `BS-P3-CONCEPT-MIDDLEWARE-CHAIN`.
+Prerequisite closure outside this track: `BS-P1-CONCEPT-COMPONENT`, `BS-FSO-0.1`, `BS-P1-CONCEPT-EVENT-HANDLING`, `BS-P1-CONCEPT-USESTATE`, `BS-P1-CONCEPT-RENDER-CYCLE`, `BS-P2-CONCEPT-PROMISES`, `BS-P2-CONCEPT-ASYNC-RUNTIME`, `BS-FSO-0.5`, `BS-FSO-0.4`, `BS-FSO-0.3`, `BS-FSO-3.1`, `BS-P4-CONCEPT-BEARER-AUTHORIZATION`, `BS-TECH-22`, `BS-P3-CONCEPT-MIDDLEWARE-CHAIN`.
 
-## 4. Frontend routing, build and application architecture
+## Track: Frontend routing, build and application architecture
+
+Stable track id: `frontend-routing-build-architecture`
 
 Make URL state, route-owned data, accessibility semantics, build transforms and repository/feature boundaries explicit so SPA behavior survives deep links and production builds.
 
@@ -88,9 +96,11 @@ Make URL state, route-owned data, accessibility semantics, build transforms and 
 | 10 | [BS-P7-CONCEPT-FEATURE-ORGANIZATION](../../exercises/bs-p7-concept-feature-organization.md) | L4 |
 | 11 | [BS-P7-CONCEPT-MONOREPO-TOPOLOGY](../../exercises/bs-p7-concept-monorepo-topology.md) | L4 |
 
-Prerequisite closure outside this track: `BS-P1-CONCEPT-COMPONENT`, `BS-FSO-0.1`, `BS-FSO-0.5`, `BS-FSO-0.4`, `BS-FSO-0.3`, `BS-P1-CONCEPT-EVENT-HANDLING`, `BS-P1-CONCEPT-USESTATE`, `BS-P1-CONCEPT-RENDER-CYCLE`, `BS-P6-CONCEPT-TANSTACK-QUERY`, `BS-P6-CONCEPT-STATE-OWNERSHIP-CHOICE`, `BS-FSO-0.6`, `BS-FSO-2.11`, `BS-P2-CONCEPT-CONTROLLED-COMPONENT`, `BS-P1-CONCEPT-JSX`, `BS-P9-CONCEPT-STRUCTURAL-TYPING`, `BS-FSO-3.1`.
+Prerequisite closure outside this track: `BS-P1-CONCEPT-COMPONENT`, `BS-FSO-0.1`, `BS-FSO-0.5`, `BS-FSO-0.4`, `BS-FSO-0.3`, `BS-P1-CONCEPT-EVENT-HANDLING`, `BS-P1-CONCEPT-USESTATE`, `BS-P1-CONCEPT-RENDER-CYCLE`, `BS-P6-CONCEPT-TANSTACK-QUERY`, `BS-P2-CONCEPT-CONTROLLED-COMPONENT`, `BS-P1-CONCEPT-JSX`, `BS-P9-CONCEPT-STRUCTURAL-TYPING`, `BS-FSO-3.1`.
 
-## 5. TypeScript contracts and runtime trust
+## Track: TypeScript contracts and runtime trust
+
+Stable track id: `typescript-runtime-trust`
 
 Separate structural static typing from runtime validation, then encode variant/state contracts safely.
 
@@ -104,9 +114,11 @@ Separate structural static typing from runtime validation, then encode variant/s
 | 6 | [BS-P9-CONCEPT-TYPED-SERVER-DATA](../../exercises/bs-p9-concept-typed-server-data.md) | L4 |
 | 7 | [BS-P9-CONCEPT-SCHEMA-VALIDATION](../../exercises/bs-p9-concept-schema-validation.md) | L4 |
 
-Prerequisite closure outside this track: `BS-FSO-2.11`, `BS-FSO-0.5`, `BS-FSO-0.4`, `BS-FSO-0.1`, `BS-FSO-0.3`.
+Prerequisite closure outside this track: none.
 
-## 6. HTTP, authentication and web security
+## Track: HTTP, authentication and web security
+
+Stable track id: `http-auth-web-security`
 
 Understand request semantics and middleware, then prove authentication, revocation, browser token storage and server-side authorization boundaries.
 
@@ -128,9 +140,11 @@ Understand request semantics and middleware, then prove authentication, revocati
 | 14 | [BS-P7-CONCEPT-SECURITY-HEADERS](../../exercises/bs-p7-concept-security-headers.md) | L4 |
 | 15 | [BS-P7-CONCEPT-DEPENDENCY-SECURITY](../../exercises/bs-p7-concept-dependency-security.md) | L4 |
 
-Prerequisite closure outside this track: `BS-FSO-3.1`, `BS-FSO-0.4`, `BS-FSO-0.1`, `BS-FSO-0.3`, `BS-FSO-0.5`, `BS-TECH-15`, `BS-TECH-11`, `BS-TECH-01`, `BS-P11-CONCEPT-REPRODUCIBLE-PIPELINE`, `BS-TECH-10`, `BS-TECH-05`, `BS-TECH-03`.
+Prerequisite closure outside this track: `BS-FSO-3.1`, `BS-FSO-0.4`, `BS-FSO-0.1`, `BS-FSO-0.3`, `BS-P11-CONCEPT-REPRODUCIBLE-PIPELINE`, `BS-TECH-10`, `BS-TECH-05`, `BS-TECH-03`, `BS-TECH-01`.
 
-## 7. Frontend state, server cache and realtime recovery
+## Track: Frontend state, server cache and realtime recovery
+
+Stable track id: `frontend-state-realtime`
 
 Choose the correct state owner, synchronize server mutations, and recover push streams without treating transport state as durable truth.
 
@@ -142,9 +156,34 @@ Choose the correct state owner, synchronize server mutations, and recover push s
 | 4 | [BS-P7-CONCEPT-SERVER-PUSH-SYNC](../../exercises/bs-p7-concept-server-push-sync.md) | L4 |
 | 5 | [BS-A7](../../exercises/bs-a7.md) | L4 |
 
-Prerequisite closure outside this track: `BS-FSO-0.5`, `BS-FSO-0.4`, `BS-FSO-0.1`, `BS-FSO-0.3`, `BS-FSO-0.6`, `BS-FSO-2.11`, `BS-FSO-2.17`, `BS-A1`, `BS-A2`.
+Prerequisite closure outside this track: none.
 
-## 8. Go backend, database and concurrency reliability
+## Track: Full Stack Open Part 8 — GraphQL
+
+Stable track id: `fso-part-8-graphql`
+
+Follow the real Part 8 topic: schema/query contracts, resolver boundaries, mutations/errors, Apollo client/cache, auth context, subscriptions and N+1, using an isolated GraphQL lab plus BodySense architecture comparisons rather than silently replacing GraphQL with SSE.
+
+| # | Exercise | Required level |
+|---:|---|---|
+| 1 | [BS-P8-CONCEPT-GRAPHQL-SCHEMA-QUERY](../../exercises/bs-p8-concept-graphql-schema-query.md) | L4 |
+| 2 | [BS-P8-CONCEPT-APOLLO-SERVER](../../exercises/bs-p8-concept-apollo-server.md) | L4 |
+| 3 | [BS-P8-CONCEPT-RESOLVER-ARGS-CONTEXT](../../exercises/bs-p8-concept-resolver-args-context.md) | L4 |
+| 4 | [BS-P8-CONCEPT-GRAPHQL-MUTATION](../../exercises/bs-p8-concept-graphql-mutation.md) | L4 |
+| 5 | [BS-P8-CONCEPT-GRAPHQL-ERRORS](../../exercises/bs-p8-concept-graphql-errors.md) | L4 |
+| 6 | [BS-P8-CONCEPT-APOLLO-CLIENT](../../exercises/bs-p8-concept-apollo-client.md) | L4 |
+| 7 | [BS-P8-CONCEPT-GRAPHQL-VARIABLES](../../exercises/bs-p8-concept-graphql-variables.md) | L4 |
+| 8 | [BS-P8-CONCEPT-NORMALIZED-CACHE](../../exercises/bs-p8-concept-normalized-cache.md) | L4 |
+| 9 | [BS-P8-CONCEPT-APOLLO-CACHE-UPDATE](../../exercises/bs-p8-concept-apollo-cache-update.md) | L4 |
+| 10 | [BS-P8-CONCEPT-GRAPHQL-AUTH-CONTEXT](../../exercises/bs-p8-concept-graphql-auth-context.md) | L4 |
+| 11 | [BS-P8-CONCEPT-GRAPHQL-SUBSCRIPTIONS](../../exercises/bs-p8-concept-graphql-subscriptions.md) | L4 |
+| 12 | [BS-P8-CONCEPT-GRAPHQL-NPLUS1](../../exercises/bs-p8-concept-graphql-nplus1.md) | L4 |
+
+Prerequisite closure outside this track: `BS-P3-CONCEPT-HTTP-SAFETY-IDEMPOTENCY`, `BS-P3-CONCEPT-HTTP-ERROR-TAXONOMY`, `BS-FSO-3.1`, `BS-FSO-0.4`, `BS-FSO-0.1`, `BS-FSO-0.3`, `BS-P3-CONCEPT-MIDDLEWARE-CHAIN`, `BS-P6-CONCEPT-TANSTACK-QUERY`, `BS-P6-CONCEPT-QUERY-MUTATION-INVALIDATION`, `BS-P4-CONCEPT-BEARER-AUTHORIZATION`, `BS-TECH-22`, `BS-P7-CONCEPT-SERVER-PUSH-SYNC`, `BS-P13-CONCEPT-RELATIONAL-QUERYING`, `BS-P13-CONCEPT-FOREIGN-KEY-JOIN`, `BS-TECH-15`, `BS-TECH-11`, `BS-TECH-01`, `BS-TECH-05`, `BS-TECH-03`.
+
+## Track: Go backend, database and concurrency reliability
+
+Stable track id: `go-backend-reliability`
 
 Move from schema/migrations and repository boundaries through joins/query projections, transaction locks/isolation, authentication and durable jobs.
 
@@ -175,7 +214,9 @@ Move from schema/migrations and repository boundaries through joins/query projec
 
 Prerequisite closure outside this track: `BS-FSO-3.1`, `BS-FSO-0.4`, `BS-FSO-0.1`, `BS-FSO-0.3`, `BS-TECH-10`, `BS-TECH-25`.
 
-## 9. Containers and production delivery
+## Track: Containers and production delivery
+
+Stable track id: `containers-production-delivery`
 
 Understand image/runtime/network persistence first, then make CI/deploy reproducible, gated, recoverable and revision-identifiable.
 
@@ -196,7 +237,9 @@ Understand image/runtime/network persistence first, then make CI/deploy reproduc
 
 Prerequisite closure outside this track: `BS-TECH-05`, `BS-TECH-03`, `BS-TECH-01`.
 
-## 10. Production Agent engineering
+## Track: Production Agent engineering
+
+Stable track id: `production-agent-engineering`
 
 Learn typed execution, durable ownership, evidence/admissibility, deterministic authority, eval/rollout, replay, HITL/recovery and failure attribution as one production system.
 

@@ -146,8 +146,10 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L3",
+        "evidence": [
+          "Learner explained semantic HTML as structure/meaning distinct from CSS presentation, identified native button semantics/accessibility, and predicted the BodyStateWorkbench form/label structure from JSX; browser accessibility-tree verification was not performed, so evidence supports L3 rather than L4."
+        ]
       }
     },
     {
@@ -204,7 +206,7 @@
         "verification": "VERIFIED_SNAPSHOT",
         "authority": "current-site-snapshot"
       },
-      "lifecycle": "EXERCISE_READY",
+      "lifecycle": "LEARNER_VERIFIED",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-FSO-0.3",
@@ -229,8 +231,10 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L4",
+        "evidence": [
+          "Learner independently traced the BodySense login form from controlled inputs through form submission and frontend validation to the POST request, explained preventDefault and client-versus-server validation boundaries, and verified the real request flow in browser DevTools."
+        ]
       }
     },
     {
@@ -274,8 +278,10 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L3",
+        "evidence": [
+          "Learner predicted the real BodyState mutation method/path/payload, placed authentication in middleware, repository as the persistence layer, and explained that stale expected_revision must prevent any durable write. Code trace then confirmed revision enforcement in the repository transaction; learner has not yet run the stale-revision 200-to-409 runtime experiment, so evidence supports L3 rather than L4."
+        ]
       }
     },
     {
@@ -316,8 +322,10 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L3",
+        "evidence": [
+          "Learner independently modeled SPA client-side routing, asynchronous server-state fetching, cached-data-first rendering, and route survival under a failed health-workspace request; remaining corrections were exact TanStack Query ownership and render/fetch ordering."
+        ]
       }
     },
     {
@@ -1363,8 +1371,10 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L3",
+        "evidence": [
+          "Learner correctly traced the HealthWorkspace query chain from useHealthWorkspaceQuery through healthWorkspaceQueryOptions/useQuery/queryFn/workspaceApi/authFetch/fetch/expectJson/safeJson into TanStack Query cache, identified queryKey as the cache identity, and correctly explained that TypeScript generics do not runtime-validate a 200 response shape or domain freshness. Learner also predicted 401 refresh-and-retry behavior and distinguished fetch transport success from HTTP error status, with remaining gaps around Promise/microtask semantics, the exact layer that throws after retry failure, and non-JSON 500 rendering behavior."
+        ]
       }
     },
     {
@@ -6829,8 +6839,11 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L3",
+        "evidence": [
+          "Learner recognized XSS as a script-injection risk and recalled reflected/stored variants, but initially reversed React's default escaping and dangerouslySetInnerHTML semantics, indicating a material boundary-model gap.",
+          "Learner correctly predicted React interpolation renders an HTML-looking payload as inert text, while dangerouslySetInnerHTML creates real DOM markup whose event-handler attribute crosses the data-to-code boundary. A temporary focused React/Vitest check confirmed the DOM distinction; deliberate escape-hatch search found no production dangerouslySetInnerHTML/innerHTML/rehypeRaw/javascript: usage in apps/web/src. L4 still requires learner-selected falsifying observation or verification rationale."
+        ]
       }
     },
     {
@@ -6874,8 +6887,10 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L3",
+        "evidence": [
+          "Learner correctly explained that a lockfile improves reproducibility rather than guaranteeing safety, that a pinned version can still be malicious/vulnerable, and that forced audit upgrades can introduce dependency/compatibility regressions."
+        ]
       }
     },
     {
@@ -6919,8 +6934,10 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L3",
+        "evidence": [
+          "Learner explained that client-controlled path/query identifiers cannot establish ownership, identified missing owner-bound server-side checks as the core access-control flaw, and described authenticated user context plus resource ownership verification as the mitigation; learner also connected IDOR to this class of failure."
+        ]
       }
     },
     {
@@ -20442,7 +20459,7 @@
           "FSO-P3-SECTION-012"
         ]
       },
-      "lifecycle": "EXERCISE_READY",
+      "lifecycle": "LEARNER_VERIFIED",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P3-CONCEPT-HTTP-SAFETY-IDEMPOTENCY",
@@ -20466,8 +20483,11 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L4",
+        "evidence": [
+          "Learner correctly distinguished HTTP safety from idempotency, classified GET/PUT/DELETE semantics, explained that idempotency concerns repeated-request effects rather than identical responses, and identified duplicate-create/transfer risk for POST-like mutations.",
+          "Learner transferred the model to BodySense POST /body-state/facts: predicted a successful first write followed by stale expected_revision conflict without a second durable fact, and independently proposed revision checks or explicit idempotency keys as application mechanisms. Code trace confirmed repository row-lock revision enforcement and source_key replay protection; focused Go service tests passed."
+        ]
       }
     },
     {
@@ -20510,8 +20530,10 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L3",
+        "evidence": [
+          "Learner correctly predicted the BodySense middleware order and explained request-scoped context enrichment, auth short-circuiting, reuse of cross-cutting concerns, and why handlers should not re-parse JWTs; remaining gap is an independently selected/verified trace proving abort prevents the protected handler from running."
+        ]
       }
     },
     {
@@ -20530,7 +20552,7 @@
           "FSO-P3-SECTION-014"
         ]
       },
-      "lifecycle": "EXERCISE_READY",
+      "lifecycle": "LEARNER_VERIFIED",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P3-CONCEPT-SAME-ORIGIN-CORS",
@@ -20555,8 +20577,10 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L4",
+        "evidence": [
+          "Learner correctly explained origin as scheme+host+port, distinguished same-origin dev proxy from direct cross-origin access, predicted Authorization-triggered preflight, identified browser enforcement versus non-browser clients, and separated CORS from API authentication/authorization. Repository inspection confirmed global CORS middleware handles OPTIONS before protected AuthMiddleware and server tests verified allowed, wildcard-reflected credentialed, and rejected origins."
+        ]
       }
     },
     {
@@ -21283,8 +21307,10 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L3",
+        "evidence": [
+          "Learner correctly located malformed JSON and invalid identifier failures at the HTTP handler boundary, authentication failures in middleware, missing/stale/database failures in deeper service-repository paths, and explained that internal errors should be logged with detail but mapped to safe public error contracts. Exact 400/401/403/404/409/500 distinctions and transport-decoupling rationale still need focused verification for L4."
+        ]
       }
     },
     {
@@ -22490,8 +22516,10 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L3",
+        "evidence": [
+          "Learner correctly explained that a valid bearer JWT proves signed token integrity/authenticity rather than resource ownership, and that server-side resource authorization must use the authenticated principal rather than client-supplied owner identifiers; focused verification deferred in fast-placement mode."
+        ]
       }
     },
     {
@@ -22536,8 +22564,10 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L3",
+        "evidence": [
+          "Learner correctly distinguished cryptographic JWT validity from live session authority, explained why a revoked Redis session invalidates an otherwise unexpired access token, and compared stateless JWT efficiency with server-side revocation state; focused runtime verification deferred in fast-placement mode."
+        ]
       }
     },
     {
@@ -22814,7 +22844,7 @@
           "FSO-P5-SECTION-007"
         ]
       },
-      "lifecycle": "EXERCISE_READY",
+      "lifecycle": "LEARNER_VERIFIED",
       "mapping": {
         "mode": "COMPARE",
         "exercise_id": "BS-P5-CONCEPT-BROWSER-TOKEN-PERSISTENCE",
@@ -22838,8 +22868,11 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L4",
+        "evidence": [
+          "Learner understood localStorage XSS exposure and HttpOnly cookie CSRF considerations, but predicted access-token persistence across ordinary page reload incorrectly and conflated hard reload with clearing browser cookies/app memory; deeper placement required.",
+          "Learner correctly predicted that a full document reload destroys the in-memory Zustand access token while the persistent HttpOnly refresh cookie remains; identified bootstrap refresh as the mechanism that obtains a new access token and restores it to Zustand; distinguished localStorage XSS exposure from HttpOnly cookie behavior; and explained that HttpOnly alone does not prevent CSRF because cookies may be sent automatically in cross-site requests unless SameSite/origin defenses constrain them. Focused authStore tests previously verified cookie-backed bootstrap, no localStorage token persistence, concurrent refresh deduplication, and logout clearing in-memory auth state."
+        ]
       }
     },
     {
@@ -24923,7 +24956,7 @@
           "FSO-P7-SECTION-024"
         ]
       },
-      "lifecycle": "EXERCISE_READY",
+      "lifecycle": "LEARNER_VERIFIED",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P6-CONCEPT-TANSTACK-QUERY",
@@ -24948,8 +24981,10 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L4",
+        "evidence": [
+          "Learner correctly identified identical queryKey values as one cache identity, explained stale cached data can remain renderable during background refetch, and correctly diagnosed missing identity parameters in queryKey as the root cause of cache aliasing rather than a fetch concurrency problem. Repo trace verified BodySense keys include conversation id/limit where result identity changes, and workspace queries use explicit staleTime."
+        ]
       }
     },
     {
@@ -24968,7 +25003,7 @@
           "FSO-P6-SECTION-021"
         ]
       },
-      "lifecycle": "EXERCISE_READY",
+      "lifecycle": "LEARNER_VERIFIED",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P6-CONCEPT-QUERY-MUTATION-INVALIDATION",
@@ -24993,8 +25028,10 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L4",
+        "evidence": [
+          "Learner correctly distinguished invalidateQueries from setQueryData: use authoritative complete mutation responses to update cache directly, and invalidate/refetch when the mutation response is partial or a 409 proves the local projection is stale. Learner also explained that unrelated 400 failures do not require broad invalidation."
+        ]
       }
     },
     {
@@ -25184,7 +25221,7 @@
           "FSO-P7-SECTION-024"
         ]
       },
-      "lifecycle": "EXERCISE_READY",
+      "lifecycle": "LEARNER_VERIFIED",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P6-CONCEPT-STATE-OWNERSHIP-CHOICE",
@@ -25208,8 +25245,10 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L4",
+        "evidence": [
+          "Classified ten representative values across local, URL, shared-client, server-cache, and durable-truth ownership; corrected /api/me and TanStack Query projections as server-state copies rather than client/durable truth; predicted stale cached BodyState revision 42 must be rejected against authoritative server revision 43; verified HealthWorkspace is owned through TanStack Query and BodyState commands invalidate/refetch server state, with focused hook test passing."
+        ]
       }
     },
     {
@@ -26423,7 +26462,7 @@
           "FSO-P7-SECTION-019"
         ]
       },
-      "lifecycle": "EXERCISE_READY",
+      "lifecycle": "LEARNER_VERIFIED",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P7-CONCEPT-SERVER-PUSH-SYNC",
@@ -26447,8 +26486,10 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L4",
+        "evidence": [
+          "Learner selected SSE for a predominantly server-to-client Agent stream, correctly contrasted WebSocket full-duplex behavior, predicted data loss when reconnect resumes past unseen events and duplicate application when replay includes already-consumed events, and independently described durable server-side event persistence plus sequence/cursor-based replay as the recovery model. Code trace confirmed BodySense persists public runtime events, exposes after_seq replay, tracks maxSeq, and de-duplicates replay; focused SSE/recovery tests passed 10/10."
+        ]
       }
     },
     {
@@ -26837,7 +26878,7 @@
           "FSO-P9-MOOC-SECTION-016"
         ]
       },
-      "lifecycle": "EXERCISE_READY",
+      "lifecycle": "LEARNER_VERIFIED",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P9-CONCEPT-STRUCTURAL-TYPING",
@@ -26859,8 +26900,11 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L4",
+        "evidence": [
+          "Predicted same-shape, extra/missing/incompatible member assignability; compiler experiment falsified the initial variable-vs-fresh-literal prediction and established excess-property behavior.",
+          "Transferred the model to BodySense WorkspaceAction and RunStartedEvent, verified typecheck behavior, and independently explained structural compatibility, optional members, literal types, and fresh-object excess-property checking."
+        ]
       }
     },
     {
@@ -26939,7 +26983,7 @@
           "FSO-P9-MOOC-SECTION-051"
         ]
       },
-      "lifecycle": "EXERCISE_READY",
+      "lifecycle": "LEARNER_VERIFIED",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P9-CONCEPT-TYPE-ERASURE",
@@ -26963,8 +27007,11 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L4",
+        "evidence": [
+          "Learner compiled the scratch TypeScript to JavaScript and observed type/interface annotations and as/type annotations erased from emitted JS.",
+          "Learner executed the emitted JavaScript and observed malformed runtime values (name:number, age:string) pass compile-time typing and fail only at user.name.toUpperCase(), then explained why as/generics do not validate runtime JSON and why a runtime parser is required."
+        ]
       }
     },
     {
@@ -27292,7 +27339,7 @@
           "FSO-P9-MOOC-SECTION-002"
         ]
       },
-      "lifecycle": "EXERCISE_READY",
+      "lifecycle": "LEARNER_VERIFIED",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P9-CONCEPT-UNKNOWN-NARROWING",
@@ -27316,8 +27363,11 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L4",
+        "evidence": [
+          "Predicted and verified any vs unknown behavior, typeof narrowing, object narrowing, in-operator narrowing, and nested property narrowing in local Web scratch.",
+          "Corrected the name-in-value misconception after compiler verification: property existence narrows access but value.name remains unknown until typeof value.name === string; explained isRecord vs asserts-based assertRecord and custom type-guard trust risk."
+        ]
       }
     },
     {
@@ -27816,8 +27866,10 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L3",
+        "evidence": [
+          "Learner already recognized literal discriminants as the mechanism that narrows a tagged union to variant-specific fields and explained why an optional-field mega-interface permits impossible states; focused compile/runtime verification for this card was not completed, so record L3 rather than L4."
+        ]
       }
     },
     {
@@ -27843,7 +27895,7 @@
           "FSO-P9-MOOC-SECTION-041"
         ]
       },
-      "lifecycle": "EXERCISE_READY",
+      "lifecycle": "LEARNER_VERIFIED",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P9-CONCEPT-EXHAUSTIVE-NARROWING",
@@ -27867,8 +27919,11 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L4",
+        "evidence": [
+          "Learner added a new pause variant to a literal-tagged Action union and observed TypeScript narrow the unhandled default branch to { type: 'pause'; duration: number }, producing the expected not-assignable-to-never error at assertNever.",
+          "Learner independently challenged whether noImplicitReturns/default removal could catch the same omission, then distinguished return-path completeness from true union exhaustiveness and applied the distinction to BodySense reduceActiveTurnEvent's permissive default versus the runtime parseStreamEvent boundary."
+        ]
       }
     },
     {
@@ -27943,7 +27998,7 @@
           "FSO-P9-MOOC-SECTION-043"
         ]
       },
-      "lifecycle": "EXERCISE_READY",
+      "lifecycle": "LEARNER_VERIFIED",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P9-CONCEPT-TYPED-SERVER-DATA",
@@ -27970,8 +28025,12 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L4",
+        "evidence": [
+          "Learner correctly predicted that malformed 200 JSON can pass typed client wrappers into TanStack Query without runtime shape validation, and explained why unknown forces narrowing or explicit validation before trusted use.",
+          "Learner independently predicted that expectJson<HealthWorkspace> would accept malformed 200 JSON as typed data because no runtime validator proves the shape, while parseStreamEvent would reject a run.started event whose status violates the runtime contract.",
+          "Focused temporary Vitest verification (2/2 passed) confirmed malformed HealthWorkspace JSON resolves through expectJson<T> unchanged, while parseStreamEvent throws StreamEventParseError for payload.status != running; learner explained that the difference is runtime narrowing/evidence before the final cast."
+        ]
       }
     },
     {
@@ -28742,7 +28801,7 @@
           "FSO-P9-MOOC-SECTION-002"
         ]
       },
-      "lifecycle": "EXERCISE_READY",
+      "lifecycle": "LEARNER_VERIFIED",
       "mapping": {
         "mode": "COMPARE",
         "exercise_id": "BS-P9-CONCEPT-SCHEMA-VALIDATION",
@@ -28768,8 +28827,10 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L4",
+        "evidence": [
+          "Learner correctly classified structural/protocol mismatches as runtime contract validation concerns, distinguished stale expected_revision as a domain concurrency rule, explained why Zod-style parse earns a trusted output type through runtime validation plus static inference, and identified multi-representation contract drift without a single source of truth. Focused StreamEvent parser tests were then run to verify malformed version/channel/payload/id/top-level and safety payloads are rejected at runtime."
+        ]
       }
     },
     {
@@ -28846,7 +28907,7 @@
           "FSO-P8-MOOC-SECTION-038"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "COMPARE",
         "exercise_id": "BS-P8-CONCEPT-GRAPHQL-SCHEMA-QUERY",
@@ -28864,8 +28925,8 @@
           "request/cache/error/push behavior prediction where applicable"
         ],
         "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "exercise_card": "../../exercises/bs-p8-concept-graphql-schema-query.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -28897,7 +28958,7 @@
           "FSO-P8-MOOC-SECTION-039"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "COMPARE",
         "exercise_id": "BS-P8-CONCEPT-APOLLO-SERVER",
@@ -28905,7 +28966,8 @@
         "objective": "Apollo Server binds GraphQL schema plus resolver implementation into an HTTP GraphQL runtime",
         "target_files": [
           "apps/api/cmd/server/main.go",
-          "apps/api/internal/handler"
+          "apps/api/internal/handler",
+          "scripts/learning/labs/part8-graphql-lab.mjs"
         ],
         "task_summary": "Compare ApolloServer typeDefs/resolvers with BodySense Gin route+handler registration. Identify transport entrypoint, schema validation, execution and dependency/context construction.",
         "completion_evidence_plan": [
@@ -28913,9 +28975,11 @@
           "GraphQL-to-BodySense architecture comparison",
           "request/cache/error/push behavior prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P8-CONCEPT-GRAPHQL-SCHEMA-QUERY"
+        ],
+        "exercise_card": "../../exercises/bs-p8-concept-apollo-server.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -29045,7 +29109,7 @@
           "FSO-P8-MOOC-SECTION-039"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "COMPARE",
         "exercise_id": "BS-P8-CONCEPT-RESOLVER-ARGS-CONTEXT",
@@ -29061,9 +29125,11 @@
           "GraphQL-to-BodySense architecture comparison",
           "request/cache/error/push behavior prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P8-CONCEPT-GRAPHQL-SCHEMA-QUERY"
+        ],
+        "exercise_card": "../../exercises/bs-p8-concept-resolver-args-context.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -29193,7 +29259,7 @@
           "FSO-P8-MOOC-SECTION-038"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "COMPARE",
         "exercise_id": "BS-P8-CONCEPT-GRAPHQL-MUTATION",
@@ -29210,9 +29276,12 @@
           "GraphQL-to-BodySense architecture comparison",
           "request/cache/error/push behavior prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P8-CONCEPT-GRAPHQL-SCHEMA-QUERY",
+          "FSO-P3-CONCEPT-HTTP-SAFETY-IDEMPOTENCY"
+        ],
+        "exercise_card": "../../exercises/bs-p8-concept-graphql-mutation.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -29243,7 +29312,7 @@
           "FSO-P8-MOOC-SECTION-009"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "COMPARE",
         "exercise_id": "BS-P8-CONCEPT-GRAPHQL-ERRORS",
@@ -29259,9 +29328,12 @@
           "GraphQL-to-BodySense architecture comparison",
           "request/cache/error/push behavior prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P8-CONCEPT-GRAPHQL-MUTATION",
+          "FSO-P3-CONCEPT-HTTP-ERROR-TAXONOMY"
+        ],
+        "exercise_card": "../../exercises/bs-p8-concept-graphql-errors.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -29590,7 +29662,7 @@
           "FSO-P8-MOOC-SECTION-016"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "COMPARE",
         "exercise_id": "BS-P8-CONCEPT-GRAPHQL-AUTH-CONTEXT",
@@ -29607,9 +29679,12 @@
           "GraphQL-to-BodySense architecture comparison",
           "request/cache/error/push behavior prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P8-CONCEPT-RESOLVER-ARGS-CONTEXT",
+          "FSO-P4-CONCEPT-BEARER-AUTHORIZATION"
+        ],
+        "exercise_card": "../../exercises/bs-p8-concept-graphql-auth-context.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -29837,7 +29912,7 @@
           "FSO-P8-MOOC-SECTION-021"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "COMPARE",
         "exercise_id": "BS-P8-CONCEPT-APOLLO-CACHE-UPDATE",
@@ -29853,9 +29928,13 @@
           "GraphQL-to-BodySense architecture comparison",
           "request/cache/error/push behavior prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P8-CONCEPT-GRAPHQL-MUTATION",
+          "FSO-P8-CONCEPT-NORMALIZED-CACHE",
+          "FSO-P6-CONCEPT-QUERY-MUTATION-INVALIDATION"
+        ],
+        "exercise_card": "../../exercises/bs-p8-concept-apollo-cache-update.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -29935,7 +30014,7 @@
           "FSO-P8-MOOC-SECTION-023"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "COMPARE",
         "exercise_id": "BS-P8-CONCEPT-GRAPHQL-SUBSCRIPTIONS",
@@ -29951,9 +30030,12 @@
           "GraphQL-to-BodySense architecture comparison",
           "request/cache/error/push behavior prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P8-CONCEPT-APOLLO-CLIENT",
+          "FSO-P7-CONCEPT-SERVER-PUSH-SYNC"
+        ],
+        "exercise_card": "../../exercises/bs-p8-concept-graphql-subscriptions.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -30132,7 +30214,7 @@
           "FSO-P8-MOOC-SECTION-028"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "COMPARE",
         "exercise_id": "BS-P8-CONCEPT-GRAPHQL-NPLUS1",
@@ -30148,9 +30230,12 @@
           "GraphQL-to-BodySense architecture comparison",
           "request/cache/error/push behavior prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P8-CONCEPT-RESOLVER-ARGS-CONTEXT",
+          "FSO-P13-CONCEPT-RELATIONAL-QUERYING"
+        ],
+        "exercise_card": "../../exercises/bs-p8-concept-graphql-nplus1.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -30185,7 +30270,7 @@
           "FSO-P10-MOOC-SECTION-048"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "COMPARE",
         "exercise_id": "BS-P8-CONCEPT-APOLLO-CLIENT",
@@ -30201,9 +30286,12 @@
           "GraphQL-to-BodySense architecture comparison",
           "request/cache/error/push behavior prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P8-CONCEPT-GRAPHQL-SCHEMA-QUERY",
+          "FSO-P6-CONCEPT-TANSTACK-QUERY"
+        ],
+        "exercise_card": "../../exercises/bs-p8-concept-apollo-client.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -30288,7 +30376,7 @@
           "FSO-P8-MOOC-SECTION-036"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "COMPARE",
         "exercise_id": "BS-P8-CONCEPT-GRAPHQL-VARIABLES",
@@ -30304,9 +30392,11 @@
           "GraphQL-to-BodySense architecture comparison",
           "request/cache/error/push behavior prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P8-CONCEPT-GRAPHQL-SCHEMA-QUERY"
+        ],
+        "exercise_card": "../../exercises/bs-p8-concept-graphql-variables.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -30337,7 +30427,7 @@
           "FSO-P8-MOOC-SECTION-032"
         ]
       },
-      "lifecycle": "MAPPED",
+      "lifecycle": "EXERCISE_READY",
       "mapping": {
         "mode": "COMPARE",
         "exercise_id": "BS-P8-CONCEPT-NORMALIZED-CACHE",
@@ -30353,9 +30443,12 @@
           "GraphQL-to-BodySense architecture comparison",
           "request/cache/error/push behavior prediction where applicable"
         ],
-        "prerequisites": [],
-        "exercise_card": null,
-        "dependency_audit": "UNMODELED"
+        "prerequisites": [
+          "FSO-P8-CONCEPT-APOLLO-CLIENT",
+          "FSO-P6-CONCEPT-TANSTACK-QUERY"
+        ],
+        "exercise_card": "../../exercises/bs-p8-concept-normalized-cache.md",
+        "dependency_audit": "REVIEWED"
       },
       "mastery": {
         "required": "L4",
@@ -38628,7 +38721,7 @@
           "FSO-P7-SECTION-020"
         ]
       },
-      "lifecycle": "EXERCISE_READY",
+      "lifecycle": "LEARNER_VERIFIED",
       "mapping": {
         "mode": "DIRECT",
         "exercise_id": "BS-P7-CONCEPT-SECURITY-HEADERS",
@@ -38653,8 +38746,11 @@
       },
       "mastery": {
         "required": "L4",
-        "current": null,
-        "evidence": []
+        "current": "L4",
+        "evidence": [
+          "Learner correctly mapped CSP, HSTS, nosniff, frame protection, and Referrer-Policy to their browser-enforced threat controls. Production proxy validator passed against current BodySense configuration; deeper limitation/falsifier explain-back remains for L4.",
+          "Learner correctly mapped CSP, HSTS/preload, nosniff, frame protection and Referrer-Policy; explained CSP as defense-in-depth rather than permission to render unsanitized HTML, HSTS preload for first-contact HTTPS, clickjacking protection as distinct from authentication, and nosniff as preventing MIME guessing. Production proxy validator already passed."
+        ]
       }
     }
   ],

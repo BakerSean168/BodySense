@@ -180,9 +180,35 @@ choose one track
 -> reuse verified prerequisite evidence across overlapping tracks
 ```
 
+Prerequisite traversal may stop at a `LEARNER_VERIFIED` node: its own prerequisite proof has already been earned for this curriculum state, so another Track should reuse that evidence rather than reopen the entire historical chain.
+
 This keeps study order coherent without forcing a single global linear course sequence.
 
-## 7. AI coaching policy
+## 7. Course navigation and numbering
+
+Source-course numbering is authoritative when the learner names a Full Stack Open Part. In particular:
+
+```text
+Full Stack Open Part 8 = GraphQL
+Full Stack Open Part 13 = Relational databases
+```
+
+Study Tracks, `BS-A1..A8` Agent modules and numbered architecture-document sections live in separate namespaces. A coach must never turn the ordinal position of a Track or a document section into a source-course chapter number.
+
+Resolution rule:
+
+```text
+learner says “Part N / 第 N 章” in FSO context
+-> read views/course-spine.md
+-> select the matching FSO Part
+-> use an exercise-ready node from that Part when available
+-> if none is ready, report the readiness gap and prepare it
+-> never substitute an unrelated ready Track silently
+```
+
+For Part 8 specifically, SSE/replay can appear only as a **comparison under GraphQL subscriptions** (or in the separate realtime/Agent tracks). It is not the Part 8 headline.
+
+## 8. AI coaching policy
 
 Default learning mode:
 
@@ -198,7 +224,7 @@ Goal
 
 A shipping session may use direct Agent implementation, but that session does not grant mastery automatically.
 
-## 8. Session closeout
+## 9. Session closeout
 
 Update `.practice-map/maps/bodysense-fundamentals.md` with:
 

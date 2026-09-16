@@ -12,6 +12,7 @@ const items = new Map(ledgers.flatMap((ledger) => ledger.items).map((item) => [i
 const active = trackById.get(placement.active_track_id);
 if (!active) throw new Error(`unknown active track: ${placement.active_track_id}`);
 const rank = new Map([['L1',1],['L2',2],['L3',3],['L4',4],['L5',5]]);
+const learnerVerified = (item) => item?.lifecycle === 'LEARNER_VERIFIED';
 const label = (item) => item?.mapping?.exercise_id ?? item?.id ?? 'unknown';
 
 function orderedClosure(ids) {
@@ -22,7 +23,9 @@ function orderedClosure(ids) {
     if (seen.has(id)) return;
     seen.add(id);
     const item = items.get(id);
-    for (const prereq of item?.mapping?.prerequisites ?? []) visit(prereq);
+    if (!learnerVerified(item)) {
+      for (const prereq of item?.mapping?.prerequisites ?? []) visit(prereq);
+    }
     if (!focus.has(id)) out.push(id);
   };
   ids.forEach(visit);
@@ -37,7 +40,9 @@ function topoForActive(track) {
     if (seen.has(id) || !wanted.has(id)) return;
     seen.add(id);
     const item = items.get(id);
-    for (const prereq of item?.mapping?.prerequisites ?? []) visit(prereq);
+    if (!learnerVerified(item)) {
+      for (const prereq of item?.mapping?.prerequisites ?? []) visit(prereq);
+    }
     out.push(id);
   };
   track.ids.forEach(visit);
