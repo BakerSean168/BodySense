@@ -32,6 +32,7 @@ jobs:
       migration_head: ${{ steps.meta.outputs.migration_head }}
       is_current_main: ${{ steps.meta.outputs.is_current_main }}
       build_date: ${{ steps.meta.outputs.build_date }}
+      ai_runtime_base_tag: ${{ steps.meta.outputs.ai_runtime_base_tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -49,6 +50,8 @@ jobs:
           [[ "$revision" == "$TESTED_SHA" ]] || { echo "checkout revision mismatch: $revision != $TESTED_SHA" >&2; exit 1; }
           [[ "$revision" =~ ^[0-9a-f]{40}$ ]] || { echo 'candidate requires a full Git SHA' >&2; exit 1; }
           candidate_tag="sha-${revision}"
+          ai_runtime_base_tag="$(node scripts/delivery/ai-runtime-base.mjs --format=tag)"
+          [[ "$ai_runtime_base_tag" =~ ^runtime-base-[0-9a-f]{64}$ ]] || { echo "invalid AI runtime-base tag: $ai_runtime_base_tag" >&2; exit 1; }
           migration_head="$(find apps/api/migrations -maxdepth 1 -type f -name '*.up.sql' -printf '%f\n' | sed -n 's/^0*\([0-9][0-9]*\)_.*/\1/p' | sort -n | tail -1)"
           [[ "$migration_head" =~ ^[0-9]+$ ]] || { echo 'unable to resolve migration head' >&2; exit 1; }
           git fetch --quiet origin main
@@ -62,6 +65,7 @@ jobs:
             echo "migration_head=$migration_head"
             echo "is_current_main=$is_current_main"
             echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "ai_runtime_base_tag=$ai_runtime_base_tag"
           } >> "$GITHUB_OUTPUT"
           {
             echo '### Exact-SHA main candidate'
@@ -70,6 +74,7 @@ jobs:
             echo "- Candidate tag: \`$candidate_tag\`"
             echo "- Source CI run: \`$CI_RUN_ID\`"
             echo "- Current main HEAD: \`$is_current_main\`"
+            echo "- AI runtime base: \`$ai_runtime_base_tag\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
   static-assets:
@@ -143,6 +148,95 @@ jobs:
             --dist apps/web/dist \
             --public-base "$STATIC_ASSET_CDN_BASE"
 
+  ai-runtime-base:
+    name: Prepare AI runtime base
+    needs: resolve
+    runs-on: ubuntu-latest
+    environment:
+      name: artifact-publish
+    timeout-minutes: 45
+    concurrency:
+      group: ai-runtime-base-${{ needs.resolve.outputs.ai_runtime_base_tag }}
+      cancel-in-progress: false
+    outputs:
+      repository: ${{ steps.identity.outputs.repository }}
+      tag: ${{ steps.identity.outputs.tag }}
+      digest: ${{ steps.identity.outputs.digest }}
+      ref: ${{ steps.identity.outputs.ref }}
+    env:
+      REGISTRY: ${{ vars.ACR_REGISTRY }}
+      NAMESPACE: ${{ vars.ACR_NAMESPACE }}
+      TAG: ${{ needs.resolve.outputs.ai_runtime_base_tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.resolve.outputs.revision }}
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
+      - name: Login to Alibaba Cloud ACR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      - id: existing
+        name: Reuse immutable AI runtime base when dependency identity already exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref="${REGISTRY}/${NAMESPACE}/bodysense-ai-service:${TAG}"
+          if inspection="$(docker buildx imagetools inspect "$ref" 2>/dev/null)"; then
+            digest="$(awk '$1 == "Digest:" { print $2; exit }' <<<"$inspection")"
+            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "unable to resolve AI runtime-base digest for $ref" >&2; exit 1; }
+            echo 'exists=true' >> "$GITHUB_OUTPUT"
+            echo "digest=$digest" >> "$GITHUB_OUTPUT"
+            echo "Reusing immutable AI runtime base $ref@$digest" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'exists=false' >> "$GITHUB_OUTPUT"
+          fi
+      - id: build
+        if: steps.existing.outputs.exists != 'true'
+        name: Build and publish dependency-addressed AI runtime base
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: apps/ai-service
+          file: apps/ai-service/Dockerfile
+          target: runtime-base
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/bodysense-ai-service:${{ env.TAG }}
+          build-args: |
+            UV_INDEX_URL=https://pypi.org/simple/
+          labels: |
+            org.opencontainers.image.title=bodysense-ai-runtime-base
+            org.opencontainers.image.description=BodySense AI immutable dependency and model runtime base
+            io.bodysense.runtime-base.identity=${{ env.TAG }}
+          cache-from: type=gha,scope=candidate-ai-runtime-base
+          cache-to: type=gha,mode=max,scope=candidate-ai-runtime-base
+      - id: identity
+        name: Verify immutable AI runtime-base digest and dependency identity
+        env:
+          EXISTING_DIGEST: ${{ steps.existing.outputs.digest }}
+          BUILD_DIGEST: ${{ steps.build.outputs.digest }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          repository="${REGISTRY}/${NAMESPACE}/bodysense-ai-service"
+          ref="${repository}:${TAG}"
+          expected_digest="${EXISTING_DIGEST:-$BUILD_DIGEST}"
+          [[ "$expected_digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "AI runtime-base digest missing for $ref" >&2; exit 1; }
+          inspection="$(docker buildx imagetools inspect "$ref")"
+          actual_digest="$(awk '$1 == "Digest:" { print $2; exit }' <<<"$inspection")"
+          actual_identity="$(docker buildx imagetools inspect --format '{{ index .Image.Config.Labels "io.bodysense.runtime-base.identity" }}' "$ref")"
+          [[ "$actual_digest" == "$expected_digest" ]] || { echo "AI runtime-base digest mismatch: $actual_digest != $expected_digest" >&2; exit 1; }
+          [[ "$actual_identity" == "$TAG" ]] || { echo "AI runtime-base identity mismatch: $actual_identity != $TAG" >&2; exit 1; }
+          {
+            echo "repository=$repository"
+            echo "tag=$TAG"
+            echo "digest=$actual_digest"
+            echo "ref=${repository}@${actual_digest}"
+          } >> "$GITHUB_OUTPUT"
+
   build:
     name: Build candidate ${{ matrix.component }}
     needs: [resolve, static-assets]
@@ -168,13 +262,6 @@ jobs:
             cache_scope: candidate-api
             timeout_minutes: 30
             extra_build_args: GOPROXY=https://proxy.golang.org,direct
-          - component: aiService
-            image: bodysense-ai-service
-            context: apps/ai-service
-            dockerfile: apps/ai-service/Dockerfile
-            cache_scope: candidate-ai-service
-            timeout_minutes: 45
-            extra_build_args: ''
           - component: runtime
             image: bodysense-runtime
             context: .
@@ -280,6 +367,112 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+  build-ai:
+    name: Build candidate aiService
+    needs: [resolve, ai-runtime-base]
+    runs-on: ubuntu-latest
+    environment:
+      name: artifact-publish
+    timeout-minutes: 20
+    env:
+      REGISTRY: ${{ vars.ACR_REGISTRY }}
+      NAMESPACE: ${{ vars.ACR_NAMESPACE }}
+      IMAGE: bodysense-ai-service
+      TAG: ${{ needs.resolve.outputs.candidate_tag }}
+      REVISION: ${{ needs.resolve.outputs.revision }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.resolve.outputs.revision }}
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
+      - name: Login to Alibaba Cloud ACR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      - id: existing
+        name: Reuse an already-published immutable AI candidate on workflow rerun
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref="${REGISTRY}/${NAMESPACE}/${IMAGE}:${TAG}"
+          if inspection="$(docker buildx imagetools inspect "$ref" 2>/dev/null)"; then
+            digest="$(awk '$1 == "Digest:" { print $2; exit }' <<<"$inspection")"
+            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "unable to resolve existing immutable AI digest for $ref" >&2; exit 1; }
+            echo 'exists=true' >> "$GITHUB_OUTPUT"
+            echo "digest=$digest" >> "$GITHUB_OUTPUT"
+            echo "Reusing existing immutable AI candidate $ref@$digest" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'exists=false' >> "$GITHUB_OUTPUT"
+          fi
+      - id: build
+        if: steps.existing.outputs.exists != 'true'
+        name: Build and push thin exact-SHA AI candidate
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: apps/ai-service
+          file: apps/ai-service/Dockerfile
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE }}:${{ env.TAG }}
+          build-args: |
+            AI_RUNTIME_BASE=${{ needs.ai-runtime-base.outputs.ref }}
+          labels: |
+            org.opencontainers.image.title=bodysense-ai-service
+            org.opencontainers.image.description=BodySense AI service (FastAPI + LangChain)
+            org.opencontainers.image.created=${{ needs.resolve.outputs.build_date }}
+            org.opencontainers.image.revision=${{ env.REVISION }}
+            io.bodysense.runtime-base.tag=${{ needs.ai-runtime-base.outputs.tag }}
+            io.bodysense.runtime-base.digest=${{ needs.ai-runtime-base.outputs.digest }}
+          cache-from: type=gha,scope=candidate-ai-service
+          cache-to: type=gha,mode=max,scope=candidate-ai-service
+      - id: identity
+        name: Verify immutable AI candidate digest, revision, and runtime-base identity
+        env:
+          EXISTING_DIGEST: ${{ steps.existing.outputs.digest }}
+          BUILD_DIGEST: ${{ steps.build.outputs.digest }}
+          EXPECTED_BASE_TAG: ${{ needs.ai-runtime-base.outputs.tag }}
+          EXPECTED_BASE_DIGEST: ${{ needs.ai-runtime-base.outputs.digest }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref="${REGISTRY}/${NAMESPACE}/${IMAGE}:${TAG}"
+          expected_digest="${EXISTING_DIGEST:-$BUILD_DIGEST}"
+          [[ "$expected_digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "AI candidate digest missing for $ref" >&2; exit 1; }
+          inspection="$(docker buildx imagetools inspect "$ref")"
+          actual_digest="$(awk '$1 == "Digest:" { print $2; exit }' <<<"$inspection")"
+          actual_revision="$(docker buildx imagetools inspect --format '{{ index .Image.Config.Labels "org.opencontainers.image.revision" }}' "$ref")"
+          actual_base_tag="$(docker buildx imagetools inspect --format '{{ index .Image.Config.Labels "io.bodysense.runtime-base.tag" }}' "$ref")"
+          actual_base_digest="$(docker buildx imagetools inspect --format '{{ index .Image.Config.Labels "io.bodysense.runtime-base.digest" }}' "$ref")"
+          [[ "$actual_digest" == "$expected_digest" ]] || { echo "AI candidate digest mismatch: $actual_digest != $expected_digest" >&2; exit 1; }
+          [[ "$actual_revision" == "$REVISION" ]] || { echo "AI revision label mismatch: $actual_revision != $REVISION" >&2; exit 1; }
+          [[ "$actual_base_tag" == "$EXPECTED_BASE_TAG" ]] || { echo "AI runtime-base tag mismatch: $actual_base_tag != $EXPECTED_BASE_TAG" >&2; exit 1; }
+          [[ "$actual_base_digest" == "$EXPECTED_BASE_DIGEST" ]] || { echo "AI runtime-base digest mismatch: $actual_base_digest != $EXPECTED_BASE_DIGEST" >&2; exit 1; }
+          echo "digest=$expected_digest" >> "$GITHUB_OUTPUT"
+      - name: Record component evidence
+        env:
+          DIGEST: ${{ steps.identity.outputs.digest }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports/candidate/components
+          jq -n \
+            --arg component aiService \
+            --arg repository "${REGISTRY}/${NAMESPACE}/${IMAGE}" \
+            --arg tag "$TAG" \
+            --arg digest "$DIGEST" \
+            --arg revision "$REVISION" \
+            '{component:$component,repository:$repository,tag:$tag,digest:$digest,revision:$revision}' \
+            > reports/candidate/components/aiService.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: candidate-component-aiService
+          path: reports/candidate/components/aiService.json
+          if-no-files-found: error
+          retention-days: 90
+
   verify-static-coherence:
     name: Verify candidate Web image ↔ CDN
     needs: [resolve, static-assets, build]
@@ -321,7 +514,7 @@ jobs:
 
   candidate-manifest:
     name: Build canonical candidate manifest
-    needs: [resolve, static-assets, build, verify-static-coherence]
+    needs: [resolve, static-assets, build, build-ai, verify-static-coherence]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -423,15 +616,21 @@ jobs:
             dst="${REGISTRY}/${NAMESPACE}/${image}:staging-latest"
             docker buildx imagetools create --prefer-index=false --tag "$dst" "$src"
           done
-      - name: Verify staging channel converged to one revision
+      - name: Verify staging channel converged to exact candidate manifests
         if: steps.freshness.outputs.eligible == 'true'
         shell: bash
         run: |
           set -euo pipefail
           for image in bodysense-runtime bodysense-web bodysense-api bodysense-ai-service; do
-            ref="${REGISTRY}/${NAMESPACE}/${image}:staging-latest"
-            docker pull "$ref" >/dev/null
-            actual="$(docker image inspect "$ref" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')"
-            [[ "$actual" == "$REVISION" ]] || { echo "$image staging revision mismatch: $actual != $REVISION" >&2; exit 1; }
+            src="${REGISTRY}/${NAMESPACE}/${image}:${TAG}"
+            dst="${REGISTRY}/${NAMESPACE}/${image}:staging-latest"
+            src_inspection="$(docker buildx imagetools inspect "$src")"
+            dst_inspection="$(docker buildx imagetools inspect "$dst")"
+            src_digest="$(awk '$1 == "Digest:" { print $2; exit }' <<<"$src_inspection")"
+            dst_digest="$(awk '$1 == "Digest:" { print $2; exit }' <<<"$dst_inspection")"
+            actual_revision="$(docker buildx imagetools inspect --format '{{ index .Image.Config.Labels "org.opencontainers.image.revision" }}' "$dst")"
+            [[ "$src_digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "$image candidate digest is invalid" >&2; exit 1; }
+            [[ "$dst_digest" == "$src_digest" ]] || { echo "$image staging digest mismatch: $dst_digest != $src_digest" >&2; exit 1; }
+            [[ "$actual_revision" == "$REVISION" ]] || { echo "$image staging revision mismatch: $actual_revision != $REVISION" >&2; exit 1; }
           done
           echo "STAGING_CHANNEL=PASS revision=$REVISION" >> "$GITHUB_STEP_SUMMARY"

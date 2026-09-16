@@ -12,3 +12,5 @@ data/benchmarks/
 data/knowledge_sources/
 *.mp4
 *.wav
+
+models/
