@@ -9,6 +9,7 @@ const load = (name) => JSON.parse(fs.readFileSync(path.join(ledgerDir, name), 'u
 const ledgers = [load('full-stack-open.json'), load('techschool-backend.json'), load('bodysense-agent.json')];
 const items = new Map(ledgers.flatMap((ledger) => ledger.items).map((item) => [item.id, item]));
 const ready = (item) => ['EXERCISE_READY', 'LEARNER_VERIFIED'].includes(item?.lifecycle);
+const learnerVerified = (item) => item?.lifecycle === 'LEARNER_VERIFIED';
 const label = (item) => item?.mapping?.exercise_id ?? item?.id ?? 'unknown';
 
 for (const track of tracks) {
@@ -30,6 +31,7 @@ function prerequisiteClosure(ids) {
   const seen = new Set();
   const visit = (id) => {
     const item = items.get(id);
+    if (learnerVerified(item)) return;
     for (const prereq of item?.mapping?.prerequisites ?? []) {
       if (seen.has(prereq)) continue;
       seen.add(prereq);
@@ -50,9 +52,9 @@ const lines = [
   '',
 ];
 
-for (const [index, track] of tracks.entries()) {
+for (const track of tracks) {
   const closure = prerequisiteClosure(track.ids);
-  lines.push(`## ${index + 1}. ${track.name}`, '', track.goal, '', '| # | Exercise | Required level |', '|---:|---|---|');
+  lines.push(`## Track: ${track.name}`, '', `Stable track id: \`${track.id}\``, '', track.goal, '', '| # | Exercise | Required level |', '|---:|---|---|');
   track.ids.forEach((id, i) => {
     const item = items.get(id);
     const card = item.mapping?.exercise_card;

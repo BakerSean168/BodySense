@@ -14,8 +14,8 @@ database-enforced identity and relationship constraints
 
 ## BodySense target files
 
-- `apps/api/migrations/000001_create_users.up.sql`
-- `apps/api/migrations/000032_create_body_state.up.sql`
+- `apps/api/migrations/000001_vnext_baseline.up.sql`
+- `apps/api/migrations/000001_vnext_baseline.up.sql`
 - `apps/api/internal/repository/user_repository.go`
 
 ## Prediction before reading/running

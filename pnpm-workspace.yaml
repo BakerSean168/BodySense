@@ -2,6 +2,7 @@ packages:
   - packages/*
   - apps/web
 allowBuilds:
+  '@apollo/protobufjs': false
   esbuild: true
   nx: true
 minimumReleaseAgeExclude:

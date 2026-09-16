@@ -18,7 +18,7 @@ stale-client mutation failure under concurrent server changes
 - `apps/web/src/features/workspace/hooks/useBodyStateCommand.ts`
 - `apps/web/src/lib/api-client.ts`
 - `apps/api/internal/service/body_state_service.go`
-- `apps/api/internal/handler/body_state_handler.go`
+- `apps/api/internal/transport/httpapi/body_state.go`
 
 ## Prediction before reading/running
 
