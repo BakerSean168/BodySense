@@ -135,7 +135,7 @@ jobs:
           mkdir -p "$(dirname "$RELEASE_MANIFEST")"
           gh release download "$RELEASE_TAG" --repo "$REPOSITORY" --pattern release-manifest.json --dir "$(dirname "$RELEASE_MANIFEST")"
           node scripts/delivery/release-manifest.mjs --validate "$RELEASE_MANIFEST"
-      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
       - name: Login to Alibaba Cloud ACR
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
         with:
