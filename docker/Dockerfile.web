@@ -21,7 +21,7 @@ ARG VITE_BODYSENSE_ANATOMY_CATALOG_URL
 ARG VITE_ASSET_BASE
 
 # Enable pnpm via corepack
-RUN corepack enable && corepack prepare pnpm@11 --activate
+RUN corepack enable && corepack prepare pnpm@11.27.1 --activate
 
 WORKDIR /app
 

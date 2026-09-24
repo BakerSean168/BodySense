@@ -60,41 +60,66 @@ else
     echo "  Docker 已安装: $(docker --version)"
 fi
 
-# ── 3. 安装 Node.js 24 + pnpm ────────────────────────
-if ! command -v node &>/dev/null; then
-    echo ">>> 安装 Node.js 24..."
+# ── 3. 安装/收敛 Node.js 24 + pnpm ───────────────────
+if ! command -v node &>/dev/null || ! node --version | grep -Eq '^v24\.'; then
+    echo ">>> 配置 NodeSource Node.js 24..."
     curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
     apt-get install -y -qq nodejs
-    echo "  Node.js $(node --version)"
-else
-    echo "  Node.js 已安装: $(node --version)"
 fi
-
-if ! command -v pnpm &>/dev/null; then
-    echo ">>> 安装 pnpm..."
-    corepack enable && corepack prepare pnpm@11 --activate
-    echo "  pnpm $(pnpm --version)"
-else
-    echo "  pnpm 已安装: $(pnpm --version)"
+if ! node --version | grep -Eq '^v24\.'; then
+    echo "Error: Node.js 24 installation did not converge" >&2
+    exit 1
 fi
+echo "  Node.js $(node --version)"
 
-# ── 4. 安装 Go 1.26 ──────────────────────────────────
-GO_VERSION="1.26.0"
-if ! command -v go &>/dev/null; then
+PNPM_VERSION="11.27.1"
+if ! command -v pnpm &>/dev/null || [ "$(pnpm --version)" != "$PNPM_VERSION" ]; then
+    echo ">>> 收敛 pnpm ${PNPM_VERSION}..."
+    npm install -g "pnpm@${PNPM_VERSION}"
+fi
+if [ "$(pnpm --version)" != "$PNPM_VERSION" ]; then
+    echo "Error: pnpm ${PNPM_VERSION} installation did not converge" >&2
+    exit 1
+fi
+echo "  pnpm $(pnpm --version)"
+
+# ── 4. 安装/收敛 Go 1.26 ─────────────────────────────
+GO_VERSION="1.26.8"
+GO_SHA256="d0f743b33e8d8945e6b1f432edd15785c70507121d6e2a723b21285eddf8b57b"
+GO_TMP_DIR=""
+cleanup_go_tmp() {
+    if [ -n "$GO_TMP_DIR" ]; then
+        rm -rf -- "$GO_TMP_DIR"
+    fi
+}
+trap cleanup_go_tmp EXIT
+
+if ! command -v go &>/dev/null || [ "$(go version | awk '{print $3}')" != "go${GO_VERSION}" ]; then
     echo ">>> 安装 Go ${GO_VERSION}..."
-    wget -q "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" -O /tmp/go.tar.gz
+    GO_TMP_DIR=$(mktemp -d /tmp/bodysense-go.XXXXXX)
+    GO_ARCHIVE="${GO_TMP_DIR}/go.tar.gz"
+    curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" -o "$GO_ARCHIVE"
+    echo "${GO_SHA256}  ${GO_ARCHIVE}" | sha256sum -c -
+    tar -C "$GO_TMP_DIR" -xzf "$GO_ARCHIVE"
+    test -x "${GO_TMP_DIR}/go/bin/go"
     rm -rf /usr/local/go
-    tar -C /usr/local -xzf /tmp/go.tar.gz
-    rm /tmp/go.tar.gz
-    echo 'export PATH=$PATH:/usr/local/go/bin' >> /etc/profile.d/go.sh
-    echo 'export GOPATH=$HOME/go' >> /etc/profile.d/go.sh
-    echo 'export PATH=$PATH:$GOPATH/bin' >> /etc/profile.d/go.sh
-    chmod +x /etc/profile.d/go.sh
-    export PATH=$PATH:/usr/local/go/bin
-    echo "  Go $(go version | awk '{print $3}')"
-else
-    echo "  Go 已安装: $(go version)"
+    mv "${GO_TMP_DIR}/go" /usr/local/go
+    rm -rf "$GO_TMP_DIR"
 fi
+cat >/etc/profile.d/go.sh <<'EOF'
+export PATH=/usr/local/go/bin:$PATH
+export GOPATH=$HOME/go
+export PATH=$GOPATH/bin:$PATH
+EOF
+chmod +x /etc/profile.d/go.sh
+ln -sfn /usr/local/go/bin/go /usr/local/bin/go
+ln -sfn /usr/local/go/bin/gofmt /usr/local/bin/gofmt
+export PATH=/usr/local/go/bin:$PATH
+if [ "$(go version | awk '{print $3}')" != "go${GO_VERSION}" ]; then
+    echo "Error: Go ${GO_VERSION} installation did not converge" >&2
+    exit 1
+fi
+echo "  Go $(go version | awk '{print $3}')"
 
 # ── 5. 安装 Python 3.13 + uv ─────────────────────────
 if ! command -v python3.13 &>/dev/null && ! python3 --version 2>/dev/null | grep -q "3.13"; then
@@ -194,7 +219,7 @@ fi
 
 # ── 9. 安装项目依赖 ──────────────────────────────────
 echo ">>> 安装前端依赖..."
-pnpm install --reporter=append-only || echo "  Warning: pnpm install 有错误，可稍后手动运行"
+pnpm install --reporter=append-only
 
 echo ">>> 安装 Go 依赖..."
 cd apps/api && go mod download && cd ../..

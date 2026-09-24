@@ -1,5 +1,5 @@
 FROM node:24-slim
-RUN corepack enable && corepack prepare pnpm@11 --activate
+RUN corepack enable && corepack prepare pnpm@11.27.1 --activate
 WORKDIR /app
 
 # Use npm mirror for faster downloads

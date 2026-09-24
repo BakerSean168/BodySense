@@ -26,3 +26,8 @@ nodeLinker: hoisted
 
 overrides:
   "nanoid@5.1.15": "5.1.16"
+  # Vite 8.3.0's bundled-dev browser client embeds the Rolldown 1.2.6
+  # experimental runtime. Newer 1.2.x bundlers emit requestLazy(), which that
+  # client runtime does not provide, yielding a blank page on dynamic imports.
+  # Keep them aligned until Vite ships a matching bundled-dev runtime.
+  "rolldown": "1.2.6"

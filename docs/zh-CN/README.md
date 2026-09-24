@@ -130,7 +130,7 @@ pnpm dev:infra:down    # 显式拆除；持久化数据卷保留
 
 默认 direct-dev 端口为 Web `20100`、API `20101`、AI `20102`、PostgreSQL `20110`、Redis `20111`、LiteLLM `20112`。基础设施容器采用 `restart: unless-stopped`，因此 Docker 或宿主机正常重启后会自动恢复，但 Web / API / AI 不会被强制常驻。
 
-机器相关覆盖项和模型供应商凭据放到 Git 忽略的 `.env.dev.local`。`scripts/dev-env.sh` 已提供非敏感开发默认值，不再要求把 `.env.example` 复制成 `.env`。
+机器相关覆盖项和模型供应商凭据放到 Git 忽略的 `.env.dev.local`。`scripts/dev-env.sh` 已提供非敏感开发默认值，不再要求把 `.env.example` 复制成 `.env`。direct-dev 的 Web lane 默认启用 Vite Bundled Dev：工作站通过 Tailscale/SSH 访问 GCP 时，浏览器侧会从大量 native-ESM 模块请求收敛为少量 bundled development assets，同时保留 HMR。需要诊断 Vite/plugin 本身时，可在 `.env.dev.local` 设置 `BODYSENSE_VITE_BUNDLED_DEV=false` 临时回退 classic Vite；测试 lane 固定保持 classic。
 
 如果不需要完整技术栈，可以单独启动某个运行面：
 
