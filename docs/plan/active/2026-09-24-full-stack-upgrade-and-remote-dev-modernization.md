@@ -1,6 +1,6 @@
 # BodySense Full-Stack Upgrade & Remote Development Modernization Plan — 2026-09-24
 
-> Status: **ACTIVE / CHECKPOINTS 1-4 LOCAL ACCEPTED / LATER PHASES PENDING**
+> Status: **ACTIVE / CHECKPOINTS 1-4 LOCAL ACCEPTED / CHECKPOINT 5 COMPATIBLE SUBSET ACCEPTED / LATER PHASES PENDING**
 >
 > Owner: BodySense repository
 >
@@ -239,9 +239,9 @@ These packages must be upgraded as a **compatibility set**, not independently.
 | Component | Current | Target |
 | --- | ---: | ---: |
 | Apollo Client | 4.2.12 | 4.3.1 |
-| GraphQL | 16.14.2 | 17.0.2 |
+| GraphQL | 16.14.2 | 17.0.2 — HOLD while Apollo Server 5.5.1 still requires GraphQL `^16.11.0` |
 | Redocly CLI | 2.51.2 | 2.54.2 |
-| Orval | 8.30.0 | 8.36.0 |
+| Orval | 8.30.0 | 8.37.0 |
 
 GraphQL 17 is a major upgrade and must be isolated behind the existing GraphQL lab/tests. It must not be allowed to destabilize the main REST/OpenAPI product path.
 
@@ -827,6 +827,46 @@ Status: **LOCAL DONE / ACCEPTED.**
 8. Run all tests and contract generation/check-generated gates.
 
 **Acceptance:** test count does not silently shrink; generated contract diff is either empty or explicitly reviewed.
+
+### BS-UPG-050 local acceptance evidence — 2026-09-25
+
+Status: **COMPATIBLE SUBSET DONE / ACCEPTED; Vitest 5 and GraphQL 17 remain explicit ecosystem holds.**
+
+Accepted upgrades:
+
+- ESLint `10.8.0` -> `10.11.0`;
+- typescript-eslint `8.65.0` -> `8.70.1`;
+- Prettier `3.9.6` -> `3.9.9`;
+- Playwright `1.62.1` -> `1.63.0`, with the matching Chromium browser installed on GCP Dev;
+- happy-dom `20.11.1` -> `20.14.5`;
+- `@testing-library/react` `16.3.2` -> `16.3.3`;
+- `@testing-library/user-event` `14.6.1` -> `14.6.7`;
+- `@testing-library/jest-dom` `6.9.1` -> `7.0.1`;
+- Redocly CLI `2.51.2` -> `2.54.2`;
+- Orval `8.30.0` -> `8.37.0`;
+- Apollo Client `4.2.12` -> `4.3.1` inside the isolated GraphQL learning lab.
+
+Explicit holds:
+
+- **Vitest 5.0.1:** current latest Nx `23.2.1` / `@nx/vitest 23.2.1` declares Vitest peer support only for `^3 || ^4`. The trial was reverted; the repository resolves Vitest `4.1.11` with a clean peer graph. Do not ignore this peer or add an override merely to claim Vitest 5 support.
+- **GraphQL 17.0.2:** Apollo Client `4.3.1` accepts GraphQL 16/17, but current Apollo Server `5.5.1` still declares GraphQL `^16.11.0`. GraphQL therefore remains `16.14.2` until Apollo Server expands its peer range or a newer server release is deliberately qualified.
+
+Validation evidence:
+
+- `pnpm lint`: **5 projects passed**.
+- `pnpm typecheck`: **3 projects passed**.
+- `pnpm build`: **Web + API passed** with existing production chunk budgets intact.
+- Web unit/component suite under Vitest `4.1.11`, happy-dom `20.14.5`, and the upgraded Testing Library stack: **53 files / 270 tests passed**.
+- Uncached repository test gate: **Contracts + Web + API + AI Service all passed**, `33.6 s`, with Nx cache disabled.
+- Playwright `1.63.0` successfully discovers the existing **10 Chromium E2E tests in 6 files**; full environment-dependent execution remains part of later convergence/staging gates.
+- GraphQL Part 8 learning lab under Apollo Client `4.3.1`: **4/4 tests passed** with Apollo Server `5.5.1` + GraphQL `16.14.2`.
+- Canonical contract-tool pins were updated to Redocly `2.54.2` / Orval `8.37.0`; `pnpm contracts:verify` passed and regeneration produced **zero generated Git diff**.
+- `pnpm install --frozen-lockfile`: **passed**.
+- `pnpm peers check`: **no peer dependency issues**.
+- `scripts/validate-supply-chain.sh`: **passed**, `high=0`, `critical=0`.
+- Selected configuration/manifests pass Prettier `3.9.9`; `git diff --check` passes.
+
+The two held majors are compatibility constraints, not acceptance failures. They should be revisited when Nx and Apollo Server publish compatible peer ranges rather than bypassed locally.
 
 ---
 

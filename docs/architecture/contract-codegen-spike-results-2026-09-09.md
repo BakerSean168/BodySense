@@ -324,3 +324,13 @@ The spike does not authorize:
 - deleting parity/fixture tests;
 - accepting generated code in normal Agent context;
 - merging any experiment worktree into production automatically.
+
+## 2026-09-25 contract toolchain requalification
+
+The production contract-tool pins were requalified as part of BS-UPG-050 without changing the architecture decision above:
+
+- `@redocly/cli`: `2.51.2` -> `2.54.2`;
+- `orval`: `8.30.0` -> `8.37.0`;
+- Zod/Ajv/json-schema-to-typescript and Go/Buf pins remained unchanged.
+
+The exact-version policy remains fail-closed through `contracts/toolchain.json` and `scripts/contracts/check-toolchain.mjs`. After updating those canonical pins, `pnpm contracts:verify` passed the OpenAPI lint, deterministic generation, public StreamEvent strict compile, JSON Schema semantic probes, runtime Proto mutation/validation checks, breaking/conformance checks, and Postman route verification (`95` routes). The generated REST/schema artifacts had **zero Git diff** after regeneration, so this requalification does not change the public contract or generated client/server shape.

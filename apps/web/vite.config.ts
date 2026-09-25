@@ -185,8 +185,7 @@ export function createBodySenseViteConfig({
       strictPort: true,
       proxy: {
         "/api": {
-          target:
-            process.env.VITE_DEV_API_TARGET || "http://localhost:8080",
+          target: process.env.VITE_DEV_API_TARGET || "http://localhost:8080",
           changeOrigin: true,
         },
       },
