@@ -46,7 +46,7 @@ services:
 
   redis:
     logging: *default-logging
-    image: ${REGISTRY:?set REGISTRY}/${ACR_NAMESPACE:-bodysense}/redis:7-alpine
+    image: ${REGISTRY:?set REGISTRY}/${ACR_NAMESPACE:-bodysense}/redis:8.10.2-alpine
     restart: unless-stopped
     mem_limit: ${REDIS_MEMORY_LIMIT:-96m}
     mem_reservation: ${REDIS_MEMORY_RESERVATION:-16m}

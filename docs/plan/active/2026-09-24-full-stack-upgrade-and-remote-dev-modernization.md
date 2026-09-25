@@ -1175,6 +1175,15 @@ Final gates:
 - auth/session flow works;
 - rollback to pre-upgrade snapshot is demonstrated.
 
+**Local acceptance evidence (2026-09-25):**
+
+- The disposable `bodysense-b081-runtime-108113` Redis 8.10.2 runtime loaded copied dev and staging data with AOF enabled; `BGREWRITEAOF` and `PING` succeeded. Original dev/staging Redis 7 services and volumes were not mutated.
+- Canonical logical snapshots matched across Redis 7 and Redis 8: dev 52/52 keys and TTLs (26 sets, 26 strings); staging 99/99 keys and TTLs (49 sets, 50 strings). Comparison covered key identity, type, value and absolute expiry. Redis 7 rollback copies matched the same snapshots.
+- Env-gated Go tests against the real Redis 8 container passed for `UserSessionCache` Set/Exists/TTL/Delete, fixed-window Lua rate limiting through expiry/reset, and AuthService refresh-family Lua rotation/replay/revocation. Normal Go tests skip these when `BODYSENSE_REDIS8_ADDR` is unset. JobRuntime/run leases use PostgreSQL repository state.
+- The five image declarations agree on `redis:8.10.2-alpine` and upstream digest `sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0`; the manual ACR mirror target matches the production Compose tag. The mirror was not run and no production image or runtime was changed.
+- Gates passed: focused Go auth/cache/service tests; `pnpm contracts:verify`; `bash scripts/validate-supply-chain.sh`; `pnpm test:delivery` (43 tests); dev, staging and production Compose config validation; Redis image/mirror contract check; `git diff --check`.
+- Disposable b081 runtime and temporary artifacts were removed after evidence capture. No live staging or production deployment was performed.
+
 ---
 
 ## BS-UPG-082 — Upgrade LiteLLM and Web runtime proxy image
