@@ -1,6 +1,6 @@
 # BodySense Full-Stack Upgrade & Remote Development Modernization Plan — 2026-09-24
 
-> Status: **ACTIVE / CHECKPOINTS 1-2 ACCEPTED / LATER PHASES PENDING**
+> Status: **ACTIVE / CHECKPOINTS 1-2 ACCEPTED / CHECKPOINT 3 LOCAL ACCEPTED / LATER PHASES PENDING**
 >
 > Owner: BodySense repository
 >
@@ -8,7 +8,7 @@
 >
 > Goal: complete one coordinated technology-stack upgrade program while preserving BodySense product/runtime contracts, and adopt the proven MemoFlow Vite Bundled Dev pattern for remote GCP development.
 >
-> Important: this plan began as documentation-only. **Checkpoint 1 (BS-UPG-000/010/020/021) and Checkpoint 2 (BS-UPG-030) are now implemented and accepted on GCP Dev; no staging or production deployment has been performed, and later upgrade phases remain pending.**
+> Important: this plan began as documentation-only. **Checkpoint 1 (BS-UPG-000/010/020/021) and Checkpoint 2 (BS-UPG-030) are implemented and accepted on GCP Dev. Checkpoint 3 (BS-UPG-040) is locally implemented and accepted, with its staging visual pointer-hit gate intentionally deferred to promotion. No staging or production deployment has been performed, and later upgrade phases remain pending.**
 
 ---
 
@@ -713,14 +713,14 @@ Status: **DONE / ACCEPTED.**
 
 **Current compatibility boundary:**
 
-- `@react-three/fiber 9.8.0` is already complete as part of BS-UPG-030 because React 19.3 required it.
-- `@react-three/drei 10.7.8` remains a small patch candidate.
+- `@react-three/fiber 9.8.1` is the accepted local version; React 19.3 required the 9.8 line, and BS-UPG-040 completed the 9.8.0 → 9.8.1 patch.
+- `@react-three/drei 10.7.8` is the accepted local version.
 - `three` remains on `0.180.0`. Current `@vixotic/vanatome-react 0.1.6` declares `three ^0.180.0`, which does **not** admit Three `0.186.x`; therefore the previous unconditional Three `0.186` target is withdrawn until Vanatome expands its peer range or an explicit compatibility qualification justifies an override.
 
 **Implementation:**
 
 1. Recheck the current Vanatome peer contract before changing Three.
-2. Keep Fiber `9.8.0`; upgrade Drei to `10.7.8` if the peer graph remains clean.
+2. Keep Fiber on the 9.8 compatibility line and converge to `9.8.1`; upgrade Drei to `10.7.8` if the peer graph remains clean.
 3. Do not move Three beyond `0.180.x` while Vanatome still requires `^0.180.0` unless a deliberate compatibility exception is designed and validated.
 4. Run BodyExplorer unit/component tests.
 5. Run production build and compare `BodyExplorer3D` chunk budget.
@@ -734,6 +734,22 @@ Status: **DONE / ACCEPTED.**
 8. Perform a visual smoke on staging after integration.
 
 **Acceptance:** peer graph remains clean, semantic region selection remains identical, and the lazy chunk remains inside the explicit budget.
+
+### BS-UPG-040 local acceptance evidence — 2026-09-25
+
+Status: **LOCAL DONE / ACCEPTED; staging visual pointer-hit gate deferred to promotion.**
+
+- Converged `@react-three/fiber` from `9.8.0` to `9.8.1` and `@react-three/drei` from `10.7.7` to `10.7.8`.
+- Kept `three` at `0.180.0` because the current latest `@vixotic/vanatome-react 0.1.6` still declares `three ^0.180.0`; moving to the registry latest Three `0.186.x` would violate the peer contract.
+- `pnpm peers check`: **no peer dependency issues**.
+- BodyExplorer focused suite: **9 files / 33 tests passed**.
+- Uncached TypeScript 7 Web typecheck: **passed**.
+- Uncached full Web suite: **53 files / 270 tests passed**.
+- Uncached production build: **passed**. `BodyExplorer3D` is approximately `1,256.57 kB` raw / `292.21 kB` gzip, inside the explicit `1,300 kB` raw / `300 kB` gzip budget.
+- Anatomy catalog/CDN configuration and pinned atlas release/build were unchanged. The BodySense R2 catalog `https://assets.bakersean.top/anatomy/vanatome/1.4.0/releases/1.4.0/catalog.json` returned HTTP 200 with the expected atlas `1.4.0` / build `994e6cc8ffbb212e` during validation.
+- A temporary browser-only smoke harness mounted the real `BodyExplorer3D` against the self-hosted R2 atlas. Chromium/SwiftShader verified the regional model reached `ready`, a real WebGL context existed, the skeletal system loaded on demand and reached `ready`, controlled durable anatomy selection for the left clavicle reconciled through the viewer, focus/isolation/X-Ray/canvas-orbit/reset flows completed, and there were **0 page errors, 0 unexpected console issues, 0 fatal viewer errors, and 0 non-API failed requests**.
+- Direct headless pointer hit-testing against a regional structure was not treated as acceptance evidence because deterministic mesh-pixel selection was not reliable under SwiftShader. The semantic selection contract remains covered by the BodyExplorer/adapter tests; an actual pointer hover/select visual check remains a staging promotion gate rather than a blocker for BS-UPG-041.
+- The temporary smoke harness and port were removed before acceptance; no smoke-only source files remain.
 
 **Rollback:** revert only the remaining 3D package changes; no data migration.
 
