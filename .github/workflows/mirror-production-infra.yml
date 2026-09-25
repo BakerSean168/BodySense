@@ -56,6 +56,8 @@ jobs:
         shell: bash
         run: |
           target="${REGISTRY}/${NAMESPACE}/${{ matrix.target }}"
-          echo "### ${{ matrix.name }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- source: \`${{ matrix.source }}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- target: \`$target\`" >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "### ${{ matrix.name }}"
+            echo "- source: \`${{ matrix.source }}\`"
+            echo "- target: \`$target\`"
+          } >> "$GITHUB_STEP_SUMMARY"
