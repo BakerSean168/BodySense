@@ -1,6 +1,6 @@
 # BodySense Full-Stack Upgrade & Remote Development Modernization Plan — 2026-09-24
 
-> Status: **ACTIVE / CHECKPOINTS 1-4 LOCAL ACCEPTED / CHECKPOINT 5 COMPATIBLE SUBSET ACCEPTED / LATER PHASES PENDING**
+> Status: **ACTIVE / CHECKPOINTS 1-4 LOCAL ACCEPTED / CHECKPOINT 5 COMPATIBLE SUBSET ACCEPTED / CHECKPOINT 6 LOCAL ACCEPTED / LATER PHASES PENDING**
 >
 > Owner: BodySense repository
 >
@@ -900,6 +900,37 @@ The two held majors are compatibility constraints, not acceptance failures. They
 7. Run contract and migration replay gates.
 
 **Acceptance:** no OpenAPI/runtime/storage behavior drift.
+
+### BS-UPG-060 local acceptance evidence — 2026-09-25
+
+Status: **LOCAL DONE / ACCEPTED.**
+
+Direct Go modules upgraded under host Go `1.26.8`:
+
+- generated Protovalidate protobuf Go package `...437.1` -> `...437.2`;
+- `github.com/alicebob/miniredis/v2` `2.38.0` -> `2.39.0`;
+- `github.com/aliyun/alibabacloud-oss-go-sdk-v2` `1.5.3` -> `1.6.0`;
+- `github.com/getkin/kin-openapi` `0.142.0` -> `0.149.0`;
+- `github.com/gin-contrib/requestid` `1.0.6` -> `1.0.8`;
+- `github.com/gin-contrib/slog` `1.2.1` -> `1.2.3`;
+- `github.com/golang-migrate/migrate/v4` `4.19.1` -> `4.20.1`;
+- `github.com/redis/go-redis/v9` `9.21.0` -> `9.22.0`;
+- `golang.org/x/crypto` `0.54.0` -> `0.57.0`;
+- `gorm.io/driver/postgres` `1.6.0` -> `1.6.3`.
+
+`go mod tidy` also converged compatible indirects including pgx `5.10.0`, jsonschema/v6 `6.0.3`, x/net `0.58.0`, x/sync `0.23.0`, x/sys `0.48.0`, x/text `0.42.0`, x/time `0.15.0`, and migrate-related Docker/OpenTelemetry dependencies. A final `go list -m -u` showed no remaining direct-module updates.
+
+Validation evidence:
+
+- `go mod verify`: **all modules verified**.
+- `go test -count=1 ./...`: **passed** across all API packages; Redis/miniredis auth/cache paths and HTTP transport tests completed under the new modules.
+- `go vet ./...`: **passed**.
+- `go test -count=1 -race ./internal/...`: **passed**; the HTTP API package completed in approximately `47 s` and no race was reported.
+- Disposable PostgreSQL 18 migration replay using `scripts/schema/capture-current.sh` with output redirected to `/tmp`: **passed** — `FULL_UP=PASS`, `LATEST_DOWN=PASS`, `LATEST_REPLAY_UP=PASS`; final snapshot `1:false`, `48` tables, `672` columns.
+- `pnpm contracts:verify`: **passed** after the Go upgrades; generated contract artifacts remained clean.
+- `git diff --check`: **passed**.
+
+No application source code, OpenAPI schema, migration, or generated contract file required modification; this checkpoint is dependency/toolchain-only.
 
 ---
 
