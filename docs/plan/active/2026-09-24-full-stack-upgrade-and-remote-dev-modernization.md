@@ -1,6 +1,6 @@
 # BodySense Full-Stack Upgrade & Remote Development Modernization Plan — 2026-09-24
 
-> Status: **ACTIVE / CHECKPOINTS 1-4 LOCAL ACCEPTED / CHECKPOINT 5 COMPATIBLE SUBSET ACCEPTED / CHECKPOINTS 6-11 LOCAL ACCEPTED / LATER PHASES PENDING**
+> Status: **ACTIVE / CHECKPOINTS 1-4 LOCAL ACCEPTED / CHECKPOINT 5 COMPATIBLE SUBSET ACCEPTED / CHECKPOINTS 6-12 LOCAL ACCEPTED / LATER PHASES PENDING**
 >
 > Owner: BodySense repository
 >
@@ -8,7 +8,7 @@
 >
 > Goal: complete one coordinated technology-stack upgrade program while preserving BodySense product/runtime contracts, and adopt the proven MemoFlow Vite Bundled Dev pattern for remote GCP development.
 >
-> Important: this plan began as documentation-only. **Checkpoints 1-4 (BS-UPG-000/010/020/021/030/040/041), Checkpoint 6 (BS-UPG-060), Checkpoint 7 (BS-UPG-070), atomic Checkpoint 8 (BS-UPG-071/072), Checkpoint 9 (BS-UPG-080), Checkpoint 10 (BS-UPG-081), and Checkpoint 11 (BS-UPG-082) are locally implemented and accepted on GCP Dev; Checkpoint 5 (BS-UPG-050) has its compatible subset accepted with Vitest 5 / GraphQL 17 explicitly held by upstream peer ranges. The Body Explorer staging visual pointer-hit gate remains intentionally deferred to promotion. Canonical live dev/staging and production were not mutated or deployed for BS-UPG-082; staging smoke requiring canonical deployment remains deferred. Later upgrade phases remain pending.**
+> Important: this plan began as documentation-only. **Checkpoints 1-4 (BS-UPG-000/010/020/021/030/040/041), Checkpoint 6 (BS-UPG-060), Checkpoint 7 (BS-UPG-070), atomic Checkpoint 8 (BS-UPG-071/072), Checkpoint 9 (BS-UPG-080), Checkpoint 10 (BS-UPG-081), Checkpoint 11 (BS-UPG-082), and Checkpoint 12 (BS-UPG-090) are locally implemented and accepted on GCP Dev; Checkpoint 5 (BS-UPG-050) has its compatible subset accepted with Vitest 5 / GraphQL 17 explicitly held by upstream peer ranges. The Body Explorer staging visual pointer-hit gate remains intentionally deferred to promotion. Canonical live dev/staging and production were not mutated or deployed for BS-UPG-082 or BS-UPG-090; staging smoke requiring canonical deployment remains deferred. Later upgrade phases remain pending.**
 
 ---
 
@@ -1243,6 +1243,13 @@ docker/setup-buildx      4.3.0  -> 4.4.1
 5. Run workflow syntax/governance checks.
 
 **Acceptance:** no floating action references are introduced.
+
+**Local acceptance (2026-09-25; checkpoint 12):**
+
+- Enumerated all 80 `uses:` references across 10 workflow files: 14 distinct actions, all pinned to 40-character commit SHAs with version comments. GitHub release/tag API re-verification found three compatible newer releases: `astral-sh/setup-uv` v10.1.0 (`bec219d24cd3e171d82865faccec33120bb574f4`) → v10.2.0 (`c18668ad3cf93ea998bef934396af7bb5c839dc7`); `docker/build-push-action` v7.3.0 (`53b7df96c91f9c12dcc8a07bcb9ccacbed38856a`) → v7.4.0 (`c3c9e263c25d99ce0380d002d59b67737d91b0dc`); `docker/setup-buildx-action` v4.3.0 (`37fe631027851001ddb9b187196cc803df7f5f0e`) → v4.4.1 (`f87e5991a6d7451dcb8d9637bfbc97413f497069`). The other 11 action SHAs already match their current latest release tags and were retained. A delivery governance test now audits all workflow action pins and comments.
+- Pinned production build Docker bases at current OCI index digests: `node:24-slim` → `sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6` (both Web build stages); `golang:1.26-alpine` → `sha256:8ac98ca534ac3f51e1f420a1dd2c15e74c75cfa0f23f3ad27eb5d7236c349a0c`; `alpine:3.24` → `sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6`. Registry inspection confirmed exact tag/digest agreement and linux/amd64 availability. Existing Python 3.13.15 and nginx 1.30.5 runtime digest pins remain current. The development-only `apps/web/Dockerfile` and already accepted Redis/Postgres/LiteLLM/Caddy mirror work are outside this checkpoint.
+- Node 24, pnpm 11.27.1, Go 1.26, Python 3.13, and the repository's uv 0.12 input remain aligned; no held runtime line was advanced. All 10 workflow YAML files parsed. `pnpm test:delivery` (44 passed), `bash scripts/validate-supply-chain.sh` (npm high=0, critical=0), `bash scripts/test-validate-supply-chain.sh`, `pnpm contracts:verify`, action-pin audit, Docker base digest checks, and `git diff --check` passed. No generated artifacts drifted. `actionlint` was not installed locally.
+- No disposable resources were created. Canonical dev/staging and production were untouched. No remote GitHub workflow or deployment was triggered, and no push was made. BS-UPG-100 and later remain pending.
 
 ---
 
