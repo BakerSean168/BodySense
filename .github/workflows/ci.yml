@@ -170,7 +170,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: pgvector/pgvector:pg18
+        image: pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a
         env:
           POSTGRES_USER: bodysense
           POSTGRES_PASSWORD: bodysense123
@@ -209,7 +209,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: pgvector/pgvector:pg18
+        image: pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a
         env:
           POSTGRES_USER: bodysense
           POSTGRES_PASSWORD: bodysense123
@@ -249,7 +249,7 @@ jobs:
           set -euo pipefail
           dump=/tmp/bodysense-vnext-baseline.dump
           restore_db=bodysense_restore_validator
-          pg_container="$(docker ps --filter ancestor=pgvector/pgvector:pg18 --format '{{.ID}}' | head -1)"
+          pg_container="$(docker ps --filter ancestor=pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a --format '{{.ID}}' | head -1)"
           test -n "$pg_container"
           docker exec "$pg_container" pg_dump -U bodysense -d bodysense_migration_validator -Fc > "$dump"
           docker cp "$dump" "$pg_container:/tmp/vnext-baseline.dump" >/dev/null
@@ -297,7 +297,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: pgvector/pgvector:pg18
+        image: pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a
         env:
           POSTGRES_USER: bodysense
           POSTGRES_PASSWORD: bodysense123

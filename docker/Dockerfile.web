@@ -25,10 +25,11 @@ RUN corepack enable && corepack prepare pnpm@11.27.1 --activate
 
 WORKDIR /app
 
-# Parameterized npm mirror — default is npmmirror for China-based CI,
-# override with --build-arg NPM_REGISTRY=https://registry.npmjs.org on GHA runners.
-ARG NPM_REGISTRY=https://registry.npmmirror.com
-RUN npm config set registry ${NPM_REGISTRY}
+# Parameterized npm registry. Reproducible/supply-chain-validated builds
+# default to the canonical npm registry so release-age metadata is authoritative.
+# China-local builds may explicitly override this to https://registry.npmmirror.com.
+ARG NPM_REGISTRY=https://registry.npmjs.org
+RUN pnpm config set registry ${NPM_REGISTRY}
 
 # Copy workspace root files for pnpm workspace resolution
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./

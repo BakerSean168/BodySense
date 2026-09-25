@@ -2,8 +2,11 @@ FROM node:24-slim
 RUN corepack enable && corepack prepare pnpm@11.27.1 --activate
 WORKDIR /app
 
-# Use npm mirror for faster downloads
-RUN npm config set registry https://registry.npmmirror.com
+# Supply-chain validation depends on authoritative registry metadata.
+# Default to the canonical npm registry; China-local builds may explicitly
+# override with --build-arg NPM_REGISTRY=https://registry.npmmirror.com.
+ARG NPM_REGISTRY=https://registry.npmjs.org
+RUN pnpm config set registry ${NPM_REGISTRY}
 
 # Copy workspace root files for pnpm workspace resolution
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./

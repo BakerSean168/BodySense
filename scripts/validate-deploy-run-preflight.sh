@@ -6,7 +6,7 @@ TMP_ROOT="$(mktemp -d)"
 PROJECT="bodysense-preflight-$RANDOM-$$"
 DB="bodysense_preflight"
 PASSWORD="preflight-test"
-IMAGE="${RUNTIME_TEST_POSTGRES_IMAGE:-pgvector/pgvector:pg18}"
+IMAGE="${RUNTIME_TEST_POSTGRES_IMAGE:-pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a}"
 
 cleanup() {
   BODYSENSE_DEPLOY_ROOT="$TMP_ROOT" BODYSENSE_COMPOSE_PROJECT="$PROJECT" \

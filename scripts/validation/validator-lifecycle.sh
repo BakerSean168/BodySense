@@ -17,6 +17,44 @@ validator_project_image_ids() {
     | sort -u
 }
 
+validator_builder_exists() {
+  local builder_name="$1"
+  local builders=""
+  builders="$(docker buildx ls --format '{{.Name}}' 2>/dev/null)" || return 2
+  grep -Fxq "$builder_name" <<<"$builders"
+}
+
+validator_remove_builder() {
+  local builder_name="$1"
+  local max_attempts="${VALIDATOR_BUILDER_REMOVE_ATTEMPTS:-3}"
+  local retry_delay="${VALIDATOR_BUILDER_REMOVE_RETRY_SECONDS:-1}"
+  local attempt=1
+  local exists_rc=0
+
+  while (( attempt <= max_attempts )); do
+    if docker buildx rm -f "$builder_name" >/dev/null 2>&1; then
+      return 0
+    fi
+
+    exists_rc=0
+    validator_builder_exists "$builder_name" || exists_rc="$?"
+    if [[ "$exists_rc" -eq 1 ]]; then
+      echo "VALIDATOR_TEARDOWN_STEP=RECOVERED step=builder-remove builder=${builder_name} attempt=${attempt}"
+      return 0
+    fi
+    if [[ "$exists_rc" -eq 2 ]]; then
+      return 2
+    fi
+
+    if (( attempt < max_attempts )); then
+      sleep "$retry_delay"
+    fi
+    attempt=$((attempt + 1))
+  done
+
+  return 1
+}
+
 validator_cleanup() {
   local repo_root="$1"
   local project_name="$2"
@@ -57,7 +95,7 @@ validator_cleanup() {
   fi
 
   if [[ "$builder_created" == "1" ]]; then
-    if ! docker buildx rm -f "$builder_name" >/dev/null 2>&1; then
+    if ! validator_remove_builder "$builder_name"; then
       echo "VALIDATOR_TEARDOWN_STEP=FAIL step=builder-remove builder=${builder_name}" >&2
       failed=1
     fi

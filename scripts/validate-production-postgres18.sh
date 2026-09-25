@@ -39,7 +39,7 @@ grep -q 'setup-postgres18-client-wrappers.sh' .github/workflows/ci.yml
 grep -q '^FROM alpine:3.24$' apps/api/Dockerfile
 grep -q 'postgresql18-client' apps/api/Dockerfile
 reject_match 'postgresql16-client' apps/api/Dockerfile
-[ "$(grep -c 'image: pgvector/pgvector:pg18' .github/workflows/ci.yml)" -ge 3 ]
+[ "$(grep -c 'image: pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a' .github/workflows/ci.yml)" -ge 3 ]
 reject_match 'image: pgvector/pgvector:pg16' .github/workflows/ci.yml
 [ -s apps/api/migrations/000001_vnext_baseline.up.sql ]
 [ -s apps/api/migrations/000001_vnext_baseline.down.sql ]

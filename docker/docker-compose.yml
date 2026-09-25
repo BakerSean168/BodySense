@@ -2,7 +2,7 @@ services:
   # ── Infrastructure ──────────────────────────────────────
   postgres-dev:
     profiles: [dev]
-    image: pgvector/pgvector:pg18
+    image: pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a
     environment:
       POSTGRES_USER: ${DB_USER:-bodysense}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-bodysense123}
@@ -190,6 +190,9 @@ services:
     environment:
       VITE_WS_URL: ws://localhost:${API_PORT:-20101}/ws
       VITE_DEV_API_TARGET: http://api:8080
+      # Remote/disposable dev must not expose Chromium to Vite's cold
+      # dependency-optimizer restart window (ERR_NETWORK_CHANGED on lazy routes).
+      BODYSENSE_VITE_BUNDLED_DEV: ${BODYSENSE_VITE_BUNDLED_DEV:-true}
     depends_on:
       api:
         condition: service_healthy

@@ -1,6 +1,6 @@
 # BodySense Full-Stack Upgrade & Remote Development Modernization Plan — 2026-09-24
 
-> Status: **ACTIVE / CHECKPOINTS 1-4 LOCAL ACCEPTED / CHECKPOINT 5 COMPATIBLE SUBSET ACCEPTED / CHECKPOINTS 6-8 LOCAL ACCEPTED / LATER PHASES PENDING**
+> Status: **ACTIVE / CHECKPOINTS 1-4 LOCAL ACCEPTED / CHECKPOINT 5 COMPATIBLE SUBSET ACCEPTED / CHECKPOINTS 6-9 LOCAL ACCEPTED / LATER PHASES PENDING**
 >
 > Owner: BodySense repository
 >
@@ -8,7 +8,7 @@
 >
 > Goal: complete one coordinated technology-stack upgrade program while preserving BodySense product/runtime contracts, and adopt the proven MemoFlow Vite Bundled Dev pattern for remote GCP development.
 >
-> Important: this plan began as documentation-only. **Checkpoints 1-4 (BS-UPG-000/010/020/021/030/040/041), Checkpoint 6 (BS-UPG-060), Checkpoint 7 (BS-UPG-070), and atomic Checkpoint 8 (BS-UPG-071/072) are locally implemented and accepted on GCP Dev; Checkpoint 5 (BS-UPG-050) has its compatible subset accepted with Vitest 5 / GraphQL 17 explicitly held by upstream peer ranges. The Body Explorer staging visual pointer-hit gate remains intentionally deferred to promotion. No staging or production deployment has been performed, and later upgrade phases remain pending.**
+> Important: this plan began as documentation-only. **Checkpoints 1-4 (BS-UPG-000/010/020/021/030/040/041), Checkpoint 6 (BS-UPG-060), Checkpoint 7 (BS-UPG-070), atomic Checkpoint 8 (BS-UPG-071/072), and Checkpoint 9 (BS-UPG-080) are locally implemented and accepted on GCP Dev; Checkpoint 5 (BS-UPG-050) has its compatible subset accepted with Vitest 5 / GraphQL 17 explicitly held by upstream peer ranges. The Body Explorer staging visual pointer-hit gate remains intentionally deferred to promotion. No live staging or production deployment has been performed, and later upgrade phases remain pending.**
 
 ---
 
@@ -1099,6 +1099,54 @@ No BodySense Agent/runtime source code required modification for this upgrade; t
 6. Run API integration/local deploy validation.
 
 **Acceptance:** schema/migration replay and restore are green; no major-version migration.
+
+### BS-UPG-080 local acceptance evidence — 2026-09-25
+
+Status: **LOCAL DONE / ACCEPTED.**
+
+Infrastructure convergence:
+
+- Resolved the current `pgvector/pgvector:pg18` image to immutable digest `sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a`.
+- Verified that this digest runs PostgreSQL `18.6` with pgvector `0.8.6`, and that the existing dev/staging runtime plus the production mirror source already correspond to this same runtime lineage.
+- Replaced floating `pgvector/pgvector:pg18` references in dev/staging Compose, CI service containers, schema capture, deploy preflight, DR/privacy/lease validators, and PostgreSQL client wrappers with the immutable digest. Production Compose continues to consume the controlled ACR mirror; its source mirror contract remains digest-bound.
+- The repository's PostgreSQL 18 production contract was tightened so CI must use the same immutable digest rather than merely the `pg18` tag.
+
+Database validation evidence:
+
+- Fresh disposable pinned PG18 migration validation: **passed** — `FULL_UP=PASS`, `LATEST_DOWN=PASS`, `LATEST_REPLAY_UP=PASS`.
+- `scripts/schema/capture-current.sh` against the pinned digest: **passed**; snapshot metadata records the immutable image, migration state `1:false`, `48` tables, and `672` columns for the fresh schema.
+- Current staging was backed up read-only with `pg_dump -Fc` and restored into a second disposable pinned PG18 instance: **passed**.
+- Restored runtime identity: PostgreSQL `18.6` + pgvector `0.8.6`.
+- Staging-vs-restored public table set: **52/52 exact match**.
+- Staging-vs-restored exact per-table row counts: **52/52 exact match**.
+- `scripts/validate-production-postgres18.sh`: **passed**.
+- `scripts/validate-migration-history.sh`: **passed**.
+
+Runtime/local-deploy evidence:
+
+- The disposable production-shaped stack successfully built and started PostgreSQL, Redis, LiteLLM, API, AI Service, Document Service, and Web.
+- Health gates: `API_HEALTH=PASS`, `AI_HEALTH=PASS`, `WEB_HEALTH=PASS`.
+- Runtime/domain gates passed: posture geometry mechanism, migration replay, BodyState semantics, BodyRegion ID roundtrip, Treatment activation atomicity, Outcome feedback atomicity, domain semantics, knowledge legacy-publish disablement, operator gate, publication vertical, and rollback vertical.
+- Playwright on the disposable stack: **10/10 Chromium E2E tests passed**, including Body Explorer, Consultation runtime recovery, longitudinal health/full-loop, assessment evidence, and lifestyle current-state update.
+- Diagnosis/Treatment baseline, decision-trace, and replay-input validators all passed.
+- The validator reached `LOCAL_DEPLOY_VALIDATION=PASS`. Its pre-fix shell exit was nonzero only because `docker buildx rm -f` reported a transient builder-removal failure after the builder had in fact disappeared.
+
+Engineering fixes discovered while closing the gate:
+
+- Both Web Docker build paths now default to the canonical `https://registry.npmjs.org` for authoritative minimum-release-age metadata; China-local builds may still explicitly override `NPM_REGISTRY=https://registry.npmmirror.com`. This fixed a real container-build failure where the mirror had not yet published metadata for `@orval/zod@8.37.0`.
+- Disposable/dev Compose now defaults `BODYSENSE_VITE_BUNDLED_DEV=true`. Playwright tracing proved that classic Vite's cold dependency-optimizer restart emitted `net::ERR_NETWORK_CHANGED` during lazy Body Explorer/Assistant imports; Bundled Dev removed that failure and the previously failing Body Explorer E2E passed.
+- Delivery contract expectations were updated to the accepted immutable Python `3.13.15-slim@sha256:...` base introduced in BS-UPG-070; delivery suite remains **43/43 passed**.
+- Validator teardown now uses bounded builder-removal retries plus postcondition verification. A nonzero `buildx rm` is accepted only when `buildx ls` proves the builder is gone; a still-existing builder remains a hard failure.
+- Validator lifecycle regression suite: **5/5 passed**, covering normal cleanup, recovered transient removal, bounded persistent failure, keep-stack behavior, and isolated local-deploy ownership.
+- Real Buildx cleanup smoke: **passed**; isolated builder created, removed, and verified absent.
+
+Final gates:
+
+- `pnpm contracts:verify`: **passed**, generated contract artifacts clean.
+- `scripts/validate-supply-chain.sh`: **passed**, `high=0`, `critical=0`.
+- `git diff --check`: **passed**.
+- No validator builders, containers, networks, or volumes remain after validation.
+- No live staging or production service was rebuilt or deployed during BS-UPG-080; staging access was read-only for the representative backup/restore qualification.
 
 ---
 

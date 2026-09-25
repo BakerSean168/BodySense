@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
-IMAGE="${RUNTIME_TEST_POSTGRES_IMAGE:-pgvector/pgvector:pg18}"
+IMAGE="${RUNTIME_TEST_POSTGRES_IMAGE:-pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a}"
 CONTAINER="bodysense-run-lease-$$"
 DB="bodysense_run_lease_test"
 PASSWORD="run-lease-test"

@@ -605,7 +605,7 @@ test('AI Dockerfile keeps heavy runtime identity independent from Git release me
   assert.match(contents, /FROM \${AI_RUNTIME_BASE} AS application/);
   assert.doesNotMatch(contents, /^ARG (BUILD_DATE|VCS_REF)$/m);
   assert.doesNotMatch(contents, /org\.opencontainers\.image\.(created|revision)=/);
-  assert.match(recipe, /python:3\.13-slim@sha256:[0-9a-f]{64}/);
+  assert.match(recipe, /python:3\.13\.15-slim@sha256:[0-9a-f]{64}/);
   assert.match(recipe, /ghcr\.io\/astral-sh\/uv:latest@sha256:[0-9a-f]{64}/);
   assert.match(recipe, /uv sync --frozen --no-dev/);
   assert.doesNotMatch(recipe, /--no-cache/);

@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 OUT_DIR="${1:?usage: setup-postgres18-client-wrappers.sh <output-dir>}"
-IMAGE="${POSTGRES18_CLIENT_IMAGE:-pgvector/pgvector:pg18}"
+IMAGE="${POSTGRES18_CLIENT_IMAGE:-pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a}"
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 mkdir -p "$OUT_DIR"
 
