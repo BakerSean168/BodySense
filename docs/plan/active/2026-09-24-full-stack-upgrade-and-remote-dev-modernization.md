@@ -1,6 +1,6 @@
 # BodySense Full-Stack Upgrade & Remote Development Modernization Plan — 2026-09-24
 
-> Status: **ACTIVE / CHECKPOINTS 1-2 ACCEPTED / CHECKPOINT 3 LOCAL ACCEPTED / LATER PHASES PENDING**
+> Status: **ACTIVE / CHECKPOINTS 1-4 LOCAL ACCEPTED / LATER PHASES PENDING**
 >
 > Owner: BodySense repository
 >
@@ -8,7 +8,7 @@
 >
 > Goal: complete one coordinated technology-stack upgrade program while preserving BodySense product/runtime contracts, and adopt the proven MemoFlow Vite Bundled Dev pattern for remote GCP development.
 >
-> Important: this plan began as documentation-only. **Checkpoint 1 (BS-UPG-000/010/020/021) and Checkpoint 2 (BS-UPG-030) are implemented and accepted on GCP Dev. Checkpoint 3 (BS-UPG-040) is locally implemented and accepted, with its staging visual pointer-hit gate intentionally deferred to promotion. No staging or production deployment has been performed, and later upgrade phases remain pending.**
+> Important: this plan began as documentation-only. **Checkpoint 1 (BS-UPG-000/010/020/021), Checkpoint 2 (BS-UPG-030), Checkpoint 3 (BS-UPG-040), and Checkpoint 4 (BS-UPG-041) are locally implemented and accepted on GCP Dev. The Body Explorer staging visual pointer-hit gate remains intentionally deferred to promotion. No staging or production deployment has been performed, and later upgrade phases remain pending.**
 
 ---
 
@@ -713,14 +713,14 @@ Status: **DONE / ACCEPTED.**
 
 **Current compatibility boundary:**
 
-- `@react-three/fiber 9.8.1` is the accepted local version; React 19.3 required the 9.8 line, and BS-UPG-040 completed the 9.8.0 → 9.8.1 patch.
+- `@react-three/fiber 9.8.0` remains the accepted local version; React 19.3 requires the 9.8 line, while the newer 9.8.1 patch is intentionally held by the repository minimum-release-age policy.
 - `@react-three/drei 10.7.8` is the accepted local version.
 - `three` remains on `0.180.0`. Current `@vixotic/vanatome-react 0.1.6` declares `three ^0.180.0`, which does **not** admit Three `0.186.x`; therefore the previous unconditional Three `0.186` target is withdrawn until Vanatome expands its peer range or an explicit compatibility qualification justifies an override.
 
 **Implementation:**
 
 1. Recheck the current Vanatome peer contract before changing Three.
-2. Keep Fiber on the 9.8 compatibility line and converge to `9.8.1`; upgrade Drei to `10.7.8` if the peer graph remains clean.
+2. Keep Fiber at `9.8.0` while the newer patch is inside the minimum-release-age window; upgrade Drei to `10.7.8` if the peer graph remains clean.
 3. Do not move Three beyond `0.180.x` while Vanatome still requires `^0.180.0` unless a deliberate compatibility exception is designed and validated.
 4. Run BodyExplorer unit/component tests.
 5. Run production build and compare `BodyExplorer3D` chunk budget.
@@ -739,13 +739,13 @@ Status: **DONE / ACCEPTED.**
 
 Status: **LOCAL DONE / ACCEPTED; staging visual pointer-hit gate deferred to promotion.**
 
-- Converged `@react-three/fiber` from `9.8.0` to `9.8.1` and `@react-three/drei` from `10.7.7` to `10.7.8`.
+- Kept `@react-three/fiber` at `9.8.0` and upgraded `@react-three/drei` from `10.7.7` to `10.7.8`. A trial of Fiber `9.8.1` was rejected by the repository minimum-release-age gate together with its fresh `its-fine 2.1.1` transitive dependency, so no supply-chain exception was added.
 - Kept `three` at `0.180.0` because the current latest `@vixotic/vanatome-react 0.1.6` still declares `three ^0.180.0`; moving to the registry latest Three `0.186.x` would violate the peer contract.
 - `pnpm peers check`: **no peer dependency issues**.
 - BodyExplorer focused suite: **9 files / 33 tests passed**.
 - Uncached TypeScript 7 Web typecheck: **passed**.
 - Uncached full Web suite: **53 files / 270 tests passed**.
-- Uncached production build: **passed**. `BodyExplorer3D` is approximately `1,256.57 kB` raw / `292.21 kB` gzip, inside the explicit `1,300 kB` raw / `300 kB` gzip budget.
+- Uncached production build: **passed**. With the accepted Fiber `9.8.0` / Drei `10.7.8` combination, `BodyExplorer3D` is approximately `1,253.52 kB` raw / `291.29 kB` gzip, inside the explicit `1,300 kB` raw / `300 kB` gzip budget.
 - Anatomy catalog/CDN configuration and pinned atlas release/build were unchanged. The BodySense R2 catalog `https://assets.bakersean.top/anatomy/vanatome/1.4.0/releases/1.4.0/catalog.json` returned HTTP 200 with the expected atlas `1.4.0` / build `994e6cc8ffbb212e` during validation.
 - A temporary browser-only smoke harness mounted the real `BodyExplorer3D` against the self-hosted R2 atlas. Chromium/SwiftShader verified the regional model reached `ready`, a real WebGL context existed, the skeletal system loaded on demand and reached `ready`, controlled durable anatomy selection for the left clavicle reconciled through the viewer, focus/isolation/X-Ray/canvas-orbit/reset flows completed, and there were **0 page errors, 0 unexpected console issues, 0 fatal viewer errors, and 0 non-API failed requests**.
 - Direct headless pointer hit-testing against a regional structure was not treated as acceptance evidence because deterministic mesh-pixel selection was not reliable under SwiftShader. The semantic selection contract remains covered by the BodyExplorer/adapter tests; an actual pointer hover/select visual check remains a staging promotion gate rather than a blocker for BS-UPG-041.
@@ -755,24 +755,45 @@ Status: **LOCAL DONE / ACCEPTED; staging visual pointer-hit gate deferred to pro
 
 ---
 
-## BS-UPG-041 — Upgrade AI SDK + assistant-ui compatibility set
+## BS-UPG-041 — Converge assistant-ui runtime without changing the BodySense event contract
 
-**Goal:** modernize the browser AI rendering/stream stack without changing the Go/Python event contract.
+**Goal:** modernize the browser AI rendering stack while preserving BodySense's existing `useLocalRuntime` + Go SSE/durable replay architecture.
+
+**Architecture finding:**
+
+- BodySense application source directly uses `@assistant-ui/react` and `@assistant-ui/react-markdown`.
+- The previous direct dependencies `ai`, `@assistant-ui/react-ai-sdk`, and `@assistant-ui/react-data-stream` had **zero source imports** in the Web application. The actual model/runtime integration is BodySense's custom `ChatModelAdapter` backed by the Go event stream, not the Vercel AI SDK adapter.
+- Therefore the correct convergence is to remove those unused direct integration dependencies rather than upgrade them and accidentally imply a runtime ownership change.
 
 **Implementation:**
 
-1. Upgrade `ai` and assistant-ui family as a coherent set.
-2. Compile before adapting APIs.
-3. Adapt only package API differences.
-4. Run focused Consultation:
-   - streaming text;
-   - tool/interaction rendering;
-   - disconnect/replay;
-   - Diagnosis panel lazy load;
-   - history projection.
-5. Verify no RuntimeEvent schema change is introduced merely for library compatibility.
+1. Remove unused direct dependencies `ai`, `@assistant-ui/react-ai-sdk`, and `@assistant-ui/react-data-stream`.
+2. Upgrade only the assistant-ui packages that BodySense actually imports.
+3. Preserve the custom `useLocalRuntime` / `ChatModelAdapter` / SSE reducer / durable replay contract.
+4. Keep the repository minimum-release-age and production chunk budgets as hard gates; do not add supply-chain exclusions or raise budgets just to accept newer package versions.
+5. Pin a coherent assistant-ui internal release family when broad upstream caret ranges would otherwise mix export-incompatible package generations.
+6. Run focused Consultation coverage for streaming text, tool/HITL rendering, disconnect/replay, history projection, and the workbench shell.
+7. Verify no RuntimeEvent schema change is introduced merely for library compatibility.
 
-**Acceptance:** current Go public event stream drives equivalent UI state before/after upgrade.
+### BS-UPG-041 local acceptance evidence — 2026-09-25
+
+Status: **LOCAL DONE / ACCEPTED.**
+
+- Removed unused direct dependencies `ai`, `@assistant-ui/react-ai-sdk`, and `@assistant-ui/react-data-stream`; repository source has no direct imports of those integrations.
+- Accepted `@assistant-ui/react 0.15.17` and `@assistant-ui/react-markdown 0.14.16`.
+- Pinned the coherent internal runtime family required by assistant-ui `0.15.17`: `@assistant-ui/core 0.3.16`, `@assistant-ui/store 0.3.11`, `@assistant-ui/tap 0.9.15`, `assistant-cloud 0.1.42`, `assistant-stream 0.3.40`, and `safe-content-frame 0.0.28`. Without this pin, broad upstream caret ranges can combine newer core packages with `assistant-cloud 0.1.x` and fail production resolution on the missing `assistant-cloud/ai-sdk` export.
+- Newer direct candidates were deliberately rejected rather than weakening repository policy: `0.15.22` / markdown `0.14.17` were inside the active minimum-release-age window, while assistant-ui `0.15.19`–`0.15.21` produced an approximately `529 kB` raw `AssistantChatPanel` chunk and failed the existing `500,000` byte production chunk budget.
+- The accepted `0.15.17` combination builds `AssistantChatPanel` at approximately `486.70 kB` raw / `143.24 kB` gzip, preserving the production budget without raising it.
+- `pnpm install --frozen-lockfile`: **passed** with no new minimum-release-age exclusions.
+- `pnpm peers check`: **no peer dependency issues**.
+- Uncached TypeScript 7 Web typecheck: **passed**.
+- Focused Consultation compatibility suite: **15 files / 140 tests passed** on the final candidate, covering streaming, tool/HITL projections, active-turn state, SSE validation, durable recovery, thread mapping, conversation actions, workbench shell, and Consultation page behavior.
+- Uncached full Web suite: **53 files / 270 tests passed**.
+- `pnpm contracts:verify`: **passed**; the public RuntimeEvent/OpenAPI/Proto/Postman contracts remain unchanged.
+- `scripts/validate-supply-chain.sh`: **passed**, `high=0`, `critical=0`.
+- Production build: **passed** with the existing chunk budgets; no budget was relaxed for this upgrade.
+
+**Acceptance:** the current Go public event stream drives equivalent UI state after the upgrade, no RuntimeEvent contract changed, supply-chain policy remains intact, and the production chat chunk remains within the pre-existing hard budget.
 
 ---
 

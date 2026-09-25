@@ -11,7 +11,7 @@ than Vanatome package types.
 - official human atlas release: `1.4.0`
 - atlas build id: `994e6cc8ffbb212e`
 - `three`: `0.180.0` (the Vanatome peer range is `^0.180.0`)
-- `@react-three/fiber`: `9.8.1`
+- `@react-three/fiber`: `9.8.0`
 - `@react-three/drei`: `10.7.8`
 
 ## Actual 0.1.6 React API used by BodySense
