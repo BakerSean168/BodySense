@@ -6,7 +6,7 @@ requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.141.1",
     "uvicorn>=0.53.0",
-    "openai>=2.50.0",
+    "openai==3.19.2",
     "psycopg[binary,pool]>=3.3.6",
     "pgvector>=0.5.0",
     "redis>=8.1.0",
@@ -16,8 +16,8 @@ dependencies = [
     "langgraph>=1.2.12",
     "pyyaml>=6.0.3",
     "langgraph-checkpoint-postgres>=3.1.2",
-    "pydantic-ai-slim[openai]>=2.31.0",
-    "pydantic-evals>=2.31.0",
+    "pydantic-ai-slim[openai]==2.50.0",
+    "pydantic-evals==2.50.0",
     "protovalidate>=1.0.0",
     "protobuf>=7.36.2",
 ]

@@ -1,6 +1,6 @@
 # BodySense Full-Stack Upgrade & Remote Development Modernization Plan — 2026-09-24
 
-> Status: **ACTIVE / CHECKPOINTS 1-4 LOCAL ACCEPTED / CHECKPOINT 5 COMPATIBLE SUBSET ACCEPTED / CHECKPOINTS 6-7 LOCAL ACCEPTED / LATER PHASES PENDING**
+> Status: **ACTIVE / CHECKPOINTS 1-4 LOCAL ACCEPTED / CHECKPOINT 5 COMPATIBLE SUBSET ACCEPTED / CHECKPOINTS 6-8 LOCAL ACCEPTED / LATER PHASES PENDING**
 >
 > Owner: BodySense repository
 >
@@ -8,7 +8,7 @@
 >
 > Goal: complete one coordinated technology-stack upgrade program while preserving BodySense product/runtime contracts, and adopt the proven MemoFlow Vite Bundled Dev pattern for remote GCP development.
 >
-> Important: this plan began as documentation-only. **Checkpoints 1-4 (BS-UPG-000/010/020/021/030/040/041), Checkpoint 6 (BS-UPG-060), and Checkpoint 7 (BS-UPG-070) are locally implemented and accepted on GCP Dev; Checkpoint 5 (BS-UPG-050) has its compatible subset accepted with Vitest 5 / GraphQL 17 explicitly held by upstream peer ranges. The Body Explorer staging visual pointer-hit gate remains intentionally deferred to promotion. No staging or production deployment has been performed, and later upgrade phases remain pending.**
+> Important: this plan began as documentation-only. **Checkpoints 1-4 (BS-UPG-000/010/020/021/030/040/041), Checkpoint 6 (BS-UPG-060), Checkpoint 7 (BS-UPG-070), and atomic Checkpoint 8 (BS-UPG-071/072) are locally implemented and accepted on GCP Dev; Checkpoint 5 (BS-UPG-050) has its compatible subset accepted with Vitest 5 / GraphQL 17 explicitly held by upstream peer ranges. The Body Explorer staging visual pointer-hit gate remains intentionally deferred to promotion. No staging or production deployment has been performed, and later upgrade phases remain pending.**
 
 ---
 
@@ -994,7 +994,7 @@ Validation evidence:
 
 ## BS-UPG-071 — Upgrade PydanticAI/Pydantic Evals
 
-**Goal:** move PydanticAI 2.31 → 2.49 while preserving typed Agent semantics.
+**Goal:** move PydanticAI/Pydantic Evals from `2.31.0` to the current compatible `2.50.0` line while preserving typed Agent semantics.
 
 **Implementation:**
 
@@ -1018,6 +1018,8 @@ Validation evidence:
 
 **Acceptance:** typed output schemas and tool-call behavior remain equivalent; qualification gates do not degrade.
 
+**Dependency boundary discovered during implementation:** `pydantic-ai-slim[openai] 2.31.0` is the last release that still accepts OpenAI 2.x. Starting at `2.32.0`, the OpenAI extra requires OpenAI 3.x (`>=3.0.0`), and the current `2.50.0` release requires OpenAI `>=3.19.0`. Therefore BS-UPG-071 cannot produce a valid standalone intermediate state while keeping BS-UPG-072 deferred. The two tickets are executed and accepted atomically as one compatibility checkpoint.
+
 ---
 
 ## BS-UPG-072 — Upgrade OpenAI Python SDK 2.x → 3.x
@@ -1033,7 +1035,7 @@ Validation evidence:
 
 **Implementation:**
 
-1. Upgrade OpenAI package independently from PydanticAI ticket.
+1. Upgrade OpenAI atomically with the PydanticAI/Pydantic Evals ticket because the accepted PydanticAI line requires OpenAI 3.x.
 2. Fix explicit API/type changes only.
 3. Verify custom `base_url` + API-key behavior against LiteLLM.
 4. Run embedding and ASR mocks/focused integration.
@@ -1041,6 +1043,44 @@ Validation evidence:
 6. Run Python full suite.
 
 **Acceptance:** no direct provider-routing regression and no accidental bypass of LiteLLM.
+
+### BS-UPG-071/072 atomic local acceptance evidence — 2026-09-25
+
+Status: **LOCAL DONE / ACCEPTED AS ONE ATOMIC COMPATIBILITY CHECKPOINT.**
+
+Final coherent package set:
+
+- `pydantic-ai-slim[openai]`: `2.31.0` -> `2.50.0`;
+- `pydantic-evals`: `2.31.0` -> `2.50.0`;
+- `pydantic-graph`: `2.31.0` -> `2.50.0`;
+- `genai-prices`: `0.1.3` -> `0.1.9`;
+- `openai`: `2.50.0` -> `3.19.2`.
+
+Compatibility findings:
+
+- A deliberate attempt to hold OpenAI at `2.50.0` while upgrading PydanticAI/Evals to `2.50.0` failed dependency resolution, as expected: PydanticAI `2.50.0` requires OpenAI `>=3.19.0` for its OpenAI extra.
+- Registry metadata confirmed the exact transition boundary: PydanticAI `2.31.0` permits OpenAI `>=2.45.0`; PydanticAI `2.32.0` through `2.38.0` require OpenAI `>=3.0.0`; later releases increase that floor, with `2.50.0` requiring `>=3.19.0`.
+- The plan therefore treats 071/072 as one atomic runtime-compatibility upgrade instead of manufacturing an invalid intermediate state.
+
+Validation evidence:
+
+- Uncached Pyright after the atomic upgrade: **0 errors / 0 warnings**; no Agent source adaptation was required.
+- Focused Consultation/Diagnosis/Treatment/Assessment/eval compatibility suite: **68 tests passed**, covering Agent generics, `RunContext`, typed outputs, TestModel/FunctionModel behavior, tool-call/message parts, qualification and eval capture.
+- Focused direct OpenAI/LiteLLM/RAG/ASR suite: **45 tests passed**, covering embeddings, ASR adapter behavior, gateway routing, LiteLLM configuration, KnowledgeLibrary async behavior and attribution paths.
+- Full uncached AI-service suite: **508 tests passed**.
+- Ruff: **passed**.
+- Local OpenAI-compatible HTTP stub validation: BodySense `AIService` using OpenAI `3.19.2` successfully completed both non-streaming and SSE streaming `/v1/chat/completions` calls through a custom `base_url`; token usage and finish reason mapping remained correct.
+- The same stub also validated PydanticAI `2.50.0` `OpenAIChatModel` through `OpenAIProvider(base_url=..., api_key=...)`, confirming the LiteLLM-compatible provider boundary remains intact.
+- Repeated the provider smoke **inside the final Python 3.13.15 application image**: direct non-streaming, streaming, and PydanticAI model calls all passed.
+- Rebuilt `bodysense-ai-runtime-base:b07172` on Python `3.13.15`; image inspection confirmed PydanticAI/Evals/Graph `2.50.0`, OpenAI `3.19.2`, while mechanism-bound PyMuPDF `1.28.0`, MediaPipe `1.0.0`, ONNXRuntime `1.29.0`, and RapidOCR `3.9.2` remained unchanged.
+- Built final application image `bodysense-ai-service:b07172` from that runtime base. With a disposable PostgreSQL `18.6` + pgvector instance, the full FastAPI lifespan initialized and `GET /health` returned **200**.
+- `uv lock --check`: **passed**.
+- `pnpm contracts:verify`: **passed**; generated contract artifacts remained clean.
+- `scripts/validate-supply-chain.sh`: **passed**, `high=0`, `critical=0`.
+- `git diff --check`: **passed**.
+- All temporary OpenAI stub, PostgreSQL, and application-smoke processes/containers/ports were removed after validation. No staging or production environment was changed.
+
+No BodySense Agent/runtime source code required modification for this upgrade; the accepted diff is dependency/lockfile plus plan evidence only.
 
 ---
 
