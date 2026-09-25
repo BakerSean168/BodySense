@@ -1,6 +1,6 @@
 # BodySense Full-Stack Upgrade & Remote Development Modernization Plan — 2026-09-24
 
-> Status: **ACTIVE / CHECKPOINT 1 ACCEPTED / LATER PHASES PENDING**
+> Status: **ACTIVE / CHECKPOINTS 1-2 ACCEPTED / LATER PHASES PENDING**
 >
 > Owner: BodySense repository
 >
@@ -8,7 +8,7 @@
 >
 > Goal: complete one coordinated technology-stack upgrade program while preserving BodySense product/runtime contracts, and adopt the proven MemoFlow Vite Bundled Dev pattern for remote GCP development.
 >
-> Important: this plan began as documentation-only. **Checkpoint 1 (BS-UPG-000/010/020/021) is now implemented and accepted on GCP Dev; no staging or production deployment has been performed, and later upgrade phases remain pending.**
+> Important: this plan began as documentation-only. **Checkpoint 1 (BS-UPG-000/010/020/021) and Checkpoint 2 (BS-UPG-030) are now implemented and accepted on GCP Dev; no staging or production deployment has been performed, and later upgrade phases remain pending.**
 
 ---
 
@@ -687,31 +687,55 @@ ChatGPT Web independently reviewed the delegated Codex diff and reran the critic
 
 **Acceptance:** no product-path behavior regression and no new React runtime warnings.
 
+### BS-UPG-030 acceptance evidence — 2026-09-25
+
+Status: **DONE / ACCEPTED.**
+
+- Upgraded React/React DOM to `19.3.0`, React Router to `8.4.0`, TanStack Query to `5.103.2`, Base UI to `1.8.0`, Zustand to `5.0.15`, Web Zod to `4.6.5`, react-resizable-panels to `4.13.2`, lucide-react to `1.47.0`, tailwind-merge to `3.7.0`, sonner to `2.0.8`, and React type packages to `19.3.0`.
+- Pulled `@react-three/fiber` forward from `9.6.1` to `9.8.0` as a compatibility prerequisite: Fiber `9.6.1` declares React/React DOM `>=19 <19.3`, while Fiber `9.8.0` declares `>=19 <19.4`. `pnpm peers check` is clean after the bump.
+- Kept the root contract-toolchain Zod pin at exactly `4.5.4`; only the Web runtime uses `4.6.5`. This preserves `scripts/contracts/check-toolchain.mjs` and generated-contract reproducibility.
+- Removed `next-themes 0.4.6`. BodySense already forced `light` and disabled system theme, while React 19.3 reports client-rendered `<script>` elements emitted by `next-themes` as a runtime console error. The equivalent current product contract is now explicit: `:root { color-scheme: light; }`, and the Sonner toaster uses `theme="light"` directly.
+- Focused regression suite after the theme simplification: **6 files / 17 tests passed**.
+- Uncached Web lint: **passed**.
+- Uncached TypeScript 7 Web typecheck: **passed**.
+- Uncached Web full suite: **53 files / 270 tests passed**.
+- Uncached production build: **passed**. `BodyExplorer3D` is approximately `1,253.52 kB` raw / `291.28 kB` gzip, still within the explicit `1,300 kB` raw / `300 kB` gzip budget.
+- `pnpm contracts:verify`: **passed**.
+- `pnpm peers check`: **no peer dependency issues**.
+- Bundled Dev Chromium smoke: login rendered, `#root script` count `0`, computed `color-scheme: light`, `pageerror=0`, React runtime issues `0`.
+- Production preview Chromium smoke: same result — login rendered, `#root script` count `0`, `color-scheme: light`, `pageerror=0`, React runtime issues `0`. The isolated smoke intentionally had no API backend, so the auth refresh request returned the expected proxy/resource error and was not treated as an application regression.
+
 ---
 
-## BS-UPG-040 — Upgrade Three.js / R3F / Drei with 3D visual containment
+## BS-UPG-040 — Qualify remaining Three.js / R3F / Drei compatibility set
 
-**Goal:** modernize the 3D renderer without changing anatomy semantics.
+**Goal:** modernize the 3D renderer without changing anatomy semantics or violating Vanatome peer contracts.
 
-**Scope:** Three 0.186, Fiber 9.8, Drei 10.7.8.
+**Current compatibility boundary:**
+
+- `@react-three/fiber 9.8.0` is already complete as part of BS-UPG-030 because React 19.3 required it.
+- `@react-three/drei 10.7.8` remains a small patch candidate.
+- `three` remains on `0.180.0`. Current `@vixotic/vanatome-react 0.1.6` declares `three ^0.180.0`, which does **not** admit Three `0.186.x`; therefore the previous unconditional Three `0.186` target is withdrawn until Vanatome expands its peer range or an explicit compatibility qualification justifies an override.
 
 **Implementation:**
 
-1. Upgrade the three packages as a set.
-2. Run BodyExplorer unit/component tests.
-3. Run production build and compare `BodyExplorer3D` chunk budget.
-4. Exercise:
+1. Recheck the current Vanatome peer contract before changing Three.
+2. Keep Fiber `9.8.0`; upgrade Drei to `10.7.8` if the peer graph remains clean.
+3. Do not move Three beyond `0.180.x` while Vanatome still requires `^0.180.0` unless a deliberate compatibility exception is designed and validated.
+4. Run BodyExplorer unit/component tests.
+5. Run production build and compare `BodyExplorer3D` chunk budget.
+6. Exercise:
    - model load;
    - region hover/select;
    - camera orbit/reset;
    - side/front/back interaction if present;
    - error/fallback state.
-5. Verify anatomy catalog/CDN URLs unchanged.
-6. Perform a visual smoke on staging after integration.
+7. Verify anatomy catalog/CDN URLs unchanged.
+8. Perform a visual smoke on staging after integration.
 
-**Acceptance:** semantic region selection remains identical and lazy chunk remains inside explicit budget.
+**Acceptance:** peer graph remains clean, semantic region selection remains identical, and the lazy chunk remains inside the explicit budget.
 
-**Rollback:** revert only this package set; no data migration.
+**Rollback:** revert only the remaining 3D package changes; no data migration.
 
 ---
 

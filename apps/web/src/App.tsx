@@ -10,7 +10,6 @@ import { AppShellSkeleton } from "./components/layout/AppShellSkeleton";
 import { RouteErrorBoundary } from "./components/errors/RouteErrorBoundary";
 import { Toaster } from "./components/ui/sonner";
 import { queryClient } from "./lib/queryClient";
-import { ThemeProvider } from "./components/theme/ThemeProvider";
 
 const OnboardingPage = lazy(() =>
   import("./features/profile/pages/OnboardingPage").then((module) => ({
@@ -73,45 +72,37 @@ function WorkbenchRouteElement() {
 
 export function App() {
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="light"
-      forcedTheme="light"
-      enableSystem={false}
-      disableTransitionOnChange
-    >
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <AuthBootstrap />
-          <Toaster />
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route
-              path="/consultation/share/:token"
-              element={
-                <Suspense fallback={<RouteFallback variant="consultation" />}>
-                  <SharePage />
-                </Suspense>
-              }
-            />
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AuthBootstrap />
+        <Toaster />
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route
+            path="/consultation/share/:token"
+            element={
+              <Suspense fallback={<RouteFallback variant="consultation" />}>
+                <SharePage />
+              </Suspense>
+            }
+          />
 
-            <Route
-              path="/onboarding"
-              element={
-                <ProtectedRouteElement>
-                  <OnboardingPage />
-                </ProtectedRouteElement>
-              }
-            />
-            <Route path="/consultation" element={<WorkbenchRouteElement />} />
-            <Route path="/consultation/:id" element={<WorkbenchRouteElement />} />
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRouteElement>
+                <OnboardingPage />
+              </ProtectedRouteElement>
+            }
+          />
+          <Route path="/consultation" element={<WorkbenchRouteElement />} />
+          <Route path="/consultation/:id" element={<WorkbenchRouteElement />} />
 
-            <Route path="/" element={<Navigate to="/consultation" replace />} />
-            <Route path="*" element={<Navigate to="/consultation" replace />} />
-          </Routes>
-        </BrowserRouter>
-      </QueryClientProvider>
-    </ThemeProvider>
+          <Route path="/" element={<Navigate to="/consultation" replace />} />
+          <Route path="*" element={<Navigate to="/consultation" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }
