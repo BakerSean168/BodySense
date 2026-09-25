@@ -12,7 +12,7 @@
   _项目核心技术选型（React 19, Go 1.26, Python 3.13, PostgreSQL 18）、Monorepo 结构、三端接口契约与安全机制。_
 
 - 🐳 **[部署与运维架构 (Deployment Architecture)](./deployment-architecture.md)**
-  _Docker Compose 容器编排（Caddy、Go API、FastAPI、Redis 7、PostgreSQL 18）、当前 CI/CD 流水线、阿里云部署拓扑。_
+  _Docker Compose 容器编排（Caddy、Go API、FastAPI、Redis 8.10.2、PostgreSQL 18）、当前 CI/CD 流水线、阿里云部署拓扑。_
 
 - 🚚 **[Delivery Platform V3](./delivery-platform-v3.md)** ⭐
   _ADR 0008 接受的目标交付架构：单 `main`、PR affected CI、main full CI、稳定 Oracles、exact-SHA candidate、canonical staging，以及 Prepare Release / Release Publish / Deploy Production 三段解耦。_

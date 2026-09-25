@@ -44,7 +44,7 @@ Versions below are repository-manifest values, not aspirational selections.
 | Python AI               | Python `>=3.13`, FastAPI `>=0.140.13`, LangGraph `>=1.2.10`, PydanticAI/Pydantic Evals `>=2.31.0`                                          |
 | LLM routing             | Repository-known Agent manifests -> LiteLLM logical models -> standalone LiteLLM gateway                                                   |
 | Database                | PostgreSQL 18 + pgvector                                                                                                                   |
-| Cache                   | Redis 7                                                                                                                                    |
+| Cache                   | Redis 8.10.2                                                                                                                               |
 | OCR                     | Tesseract via `pytesseract`; PDF rendering/extraction via PyMuPDF                                                                          |
 | Package/runtime tooling | Node 24, pnpm `11.17.0`, Nx `23.1.0`, uv                                                                                                   |
 

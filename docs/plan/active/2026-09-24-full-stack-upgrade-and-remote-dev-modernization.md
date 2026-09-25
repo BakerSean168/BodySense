@@ -1,6 +1,6 @@
 # BodySense Full-Stack Upgrade & Remote Development Modernization Plan — 2026-09-24
 
-> Status: **ACTIVE / CHECKPOINTS 1-4 LOCAL ACCEPTED / CHECKPOINT 5 COMPATIBLE SUBSET ACCEPTED / CHECKPOINTS 6-9 LOCAL ACCEPTED / LATER PHASES PENDING**
+> Status: **ACTIVE / CHECKPOINTS 1-4 LOCAL ACCEPTED / CHECKPOINT 5 COMPATIBLE SUBSET ACCEPTED / CHECKPOINTS 6-10 LOCAL ACCEPTED / LATER PHASES PENDING**
 >
 > Owner: BodySense repository
 >
@@ -8,7 +8,7 @@
 >
 > Goal: complete one coordinated technology-stack upgrade program while preserving BodySense product/runtime contracts, and adopt the proven MemoFlow Vite Bundled Dev pattern for remote GCP development.
 >
-> Important: this plan began as documentation-only. **Checkpoints 1-4 (BS-UPG-000/010/020/021/030/040/041), Checkpoint 6 (BS-UPG-060), Checkpoint 7 (BS-UPG-070), atomic Checkpoint 8 (BS-UPG-071/072), and Checkpoint 9 (BS-UPG-080) are locally implemented and accepted on GCP Dev; Checkpoint 5 (BS-UPG-050) has its compatible subset accepted with Vitest 5 / GraphQL 17 explicitly held by upstream peer ranges. The Body Explorer staging visual pointer-hit gate remains intentionally deferred to promotion. No live staging or production deployment has been performed, and later upgrade phases remain pending.**
+> Important: this plan began as documentation-only. **Checkpoints 1-4 (BS-UPG-000/010/020/021/030/040/041), Checkpoint 6 (BS-UPG-060), Checkpoint 7 (BS-UPG-070), atomic Checkpoint 8 (BS-UPG-071/072), Checkpoint 9 (BS-UPG-080), and Checkpoint 10 (BS-UPG-081) are locally implemented and accepted on GCP Dev; Checkpoint 5 (BS-UPG-050) has its compatible subset accepted with Vitest 5 / GraphQL 17 explicitly held by upstream peer ranges. The Body Explorer staging visual pointer-hit gate remains intentionally deferred to promotion. No live staging or production deployment has been performed, and later upgrade phases remain pending.**
 
 ---
 
