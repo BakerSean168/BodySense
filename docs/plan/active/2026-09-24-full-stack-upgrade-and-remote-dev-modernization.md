@@ -1,6 +1,6 @@
 # BodySense Full-Stack Upgrade & Remote Development Modernization Plan — 2026-09-24
 
-> Status: **ACTIVE / CHECKPOINTS 1-4 LOCAL ACCEPTED / CHECKPOINT 5 COMPATIBLE SUBSET ACCEPTED / CHECKPOINT 6 LOCAL ACCEPTED / LATER PHASES PENDING**
+> Status: **ACTIVE / CHECKPOINTS 1-4 LOCAL ACCEPTED / CHECKPOINT 5 COMPATIBLE SUBSET ACCEPTED / CHECKPOINTS 6-7 LOCAL ACCEPTED / LATER PHASES PENDING**
 >
 > Owner: BodySense repository
 >
@@ -8,7 +8,7 @@
 >
 > Goal: complete one coordinated technology-stack upgrade program while preserving BodySense product/runtime contracts, and adopt the proven MemoFlow Vite Bundled Dev pattern for remote GCP development.
 >
-> Important: this plan began as documentation-only. **Checkpoint 1 (BS-UPG-000/010/020/021), Checkpoint 2 (BS-UPG-030), Checkpoint 3 (BS-UPG-040), and Checkpoint 4 (BS-UPG-041) are locally implemented and accepted on GCP Dev. The Body Explorer staging visual pointer-hit gate remains intentionally deferred to promotion. No staging or production deployment has been performed, and later upgrade phases remain pending.**
+> Important: this plan began as documentation-only. **Checkpoints 1-4 (BS-UPG-000/010/020/021/030/040/041), Checkpoint 6 (BS-UPG-060), and Checkpoint 7 (BS-UPG-070) are locally implemented and accepted on GCP Dev; Checkpoint 5 (BS-UPG-050) has its compatible subset accepted with Vitest 5 / GraphQL 17 explicitly held by upstream peer ranges. The Body Explorer staging visual pointer-hit gate remains intentionally deferred to promotion. No staging or production deployment has been performed, and later upgrade phases remain pending.**
 
 ---
 
@@ -953,6 +953,42 @@ No application source code, OpenAPI schema, migration, or generated contract fil
 5. Build AI runtime-base image and verify native packages/models.
 
 **Acceptance:** no Agent-library major/minor API migration yet; pure runtime/dependency refresh is green.
+
+### BS-UPG-070 local acceptance evidence — 2026-09-25
+
+Status: **LOCAL DONE / ACCEPTED.**
+
+Runtime/dependency changes:
+
+- Refreshed the AI runtime base to explicit `python:3.13.15-slim@sha256:8d9d0b8bcf6506481eae4907c18f5e3e7902e629f5f6d684f9e7c32e85e3ddf0` for both dependency-builder and runtime-base stages.
+- Upgraded FastAPI `0.140.13` -> `0.141.1`, Uvicorn `0.51.0` -> `0.53.0`, psycopg `3.3.4` -> `3.3.6`, redis-py `7.0.0` -> `8.1.0`, python-dotenv `1.2.2` -> `1.2.3`, LangGraph `1.2.10` -> `1.2.12`, LangGraph PostgreSQL checkpoint `3.1.0` -> `3.1.2`, protobuf `6.32.1` -> `7.36.2`, numpy `2.5.0` -> `2.5.3`, httpx2 `2.9.0` -> `2.13.1`, Ruff `0.16.0` -> `0.16.9`, and Pyright `1.1.411` -> `1.1.414`.
+- Kept OpenAI `2.50.0`, `pydantic-ai-slim 2.31.0`, `pydantic-evals 2.31.0`, sentence-transformers `5.6.1`, ONNXRuntime `1.29.0`, and RapidOCR `3.9.2` unchanged so BS-UPG-071/072 and native/ML major boundaries remain isolated.
+- Tightened already-qualified mechanism dependencies to exact pins: PyMuPDF `==1.28.0` for `health-document-v20` and MediaPipe `==1.0.0` for `posture-v2`. Both versions are part of fail-closed mechanism identity and must not drift as ordinary patch upgrades.
+- GCP Dev's uv-managed development interpreter remains Python `3.13.14` because uv does not currently provide a downloadable `3.13.15` build on this host. This is non-blocking: the immutable runtime/application images are verified on Python `3.13.15`; no source-built host Python was introduced solely to chase a patch number.
+
+Pre-existing mechanism identity repair discovered during runtime smoke:
+
+- `health-document-v20` declared `admissibility_policy_sha256=5d67fa3d...`, while current HEAD had drifted to `08226b14...` after the legacy-runtime cleanup removed only the backward-compatible V1 symbol `OCR_INDICATOR_ADMISSIBILITY_POLICY_REVISION`.
+- Git history showed the manifest-bound source came from the original governed pipeline commit and the later diff removed only that alias, not V2 policy behavior. Restoring the two compatibility lines returns the source file **exactly** to the manifest-bound SHA-256 `5d67fa3d0dfa96a915c8392db6e0004be2b87b508df106a2eb17a84fd4eda79b` without changing the health-document configuration id or policy semantics.
+- Added a regression test asserting the verified manifest's admissibility-policy source identity matches the current source so similar source/manifest drift fails during unit tests instead of first appearing in a worker process.
+
+Validation evidence:
+
+- `uv sync --frozen --extra dev --extra ocr --extra pose --extra document-ocr`: **passed**.
+- Ruff: **passed**.
+- Pyright: **0 errors / 0 warnings**.
+- Uncached AI-service suite: **508 tests passed** under the GCP Dev Python `3.13.14` interpreter.
+- Real host-level document-service smoke generated a born-digital PDF and exercised `POST /api/ocr/extract`: **passed**, retaining configuration `hdex-config-f2495c95b6ed9de2`, PyMuPDF `1.28.0`, ONNXRuntime `1.29.0`, and `native_pdf_text` routing.
+- Real pose smoke provisioned the pinned model and exercised MediaPipe Tasks geometry: **passed**, retaining `posture-config-efa3a84622818772`, `posture-geometry-v1`, and the pinned model SHA-256 `59929e1d...`.
+- Disposable PostgreSQL `18.6` + pgvector `0.8.6` integration: **passed**. `AsyncPostgresSaver.setup()` created the checkpoint tables, an actual checkpoint was written/read successfully, KnowledgeLibrary's psycopg pool registered pgvector, and a vector query succeeded.
+- `runtime-base` image `bodysense-ai-runtime-base:b070` built successfully with Python `3.13.15`, Tesseract `5.5.0`, the pinned pose model, the health-document model bundle, and the accepted Python package set.
+- Final application image `bodysense-ai-service:b070` built successfully from that runtime base. A temporary main AI container connected to the disposable PG18 instance and returned `GET /health` **200** after the full checkpointer + KnowledgeLibrary lifespan initialized. The same image, running `src.document_main:app`, returned document-service health **200**.
+- Container-level `POST /api/ocr/extract` against the final application image: **passed** with the same `hdex-config-f2495c95b6ed9de2` provenance and native-PDF extraction path.
+- `uv lock --check`: **passed**.
+- `pnpm contracts:verify`: **passed**; generated contract artifacts remained clean.
+- `scripts/validate-supply-chain.sh`: **passed**, `high=0`, `critical=0`.
+- `git diff --check`: **passed**.
+- All disposable BS-UPG-070 PostgreSQL/AI/document smoke containers and temporary listener ports were removed after validation. No staging or production service was mutated.
 
 ---
 

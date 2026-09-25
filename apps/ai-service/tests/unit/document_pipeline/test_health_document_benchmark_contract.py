@@ -63,6 +63,14 @@ def test_source_contract_fails_if_declared_hash_is_forged() -> None:
         verify_tesseract_baseline_source_contract(forged)
 
 
+def test_verified_health_document_admissibility_policy_source_identity_matches_manifest() -> None:
+    from src.configuration.health_document_config import get_default_health_document_configuration
+    from src.services.report_indicator_admissibility import admissibility_policy_source_sha256
+
+    config = get_default_health_document_configuration()
+    assert config.admissibility_policy_sha256 == admissibility_policy_source_sha256()
+
+
 def test_synthetic_corpus_spec_is_40_documents_100_pages_and_all_required_cohorts() -> None:
     spec = json.loads(CORPUS_SPEC.read_text(encoding="utf-8"))
     documents = sum(int(cohort["documents"]) for cohort in spec["cohorts"])

@@ -6,7 +6,7 @@
 ARG AI_RUNTIME_BASE=runtime-base
 
 # BODYSENSE_AI_RUNTIME_BASE_BEGIN
-FROM python:3.13-slim@sha256:9d2e5553305c7c7b0097999bb17187c69b921ccd6bc9d40e4bb5ebe652c00285 AS dependency-builder
+FROM python:3.13.15-slim@sha256:8d9d0b8bcf6506481eae4907c18f5e3e7902e629f5f6d684f9e7c32e85e3ddf0 AS dependency-builder
 COPY --from=ghcr.io/astral-sh/uv:latest@sha256:62f8c047d0a0e9ece6b53fc63df902585a67a47a7f318ddec4a37db586edc8e3 /uv /uvx /bin/
 WORKDIR /app
 
@@ -36,7 +36,7 @@ RUN /app/.venv/bin/python scripts/ensure_pose_model.py \
 RUN /app/.venv/bin/python scripts/ensure_health_document_models.py \
     --output /app/models/health-document/ppocrv6-small-v1
 
-FROM python:3.13-slim@sha256:9d2e5553305c7c7b0097999bb17187c69b921ccd6bc9d40e4bb5ebe652c00285 AS runtime-base
+FROM python:3.13.15-slim@sha256:8d9d0b8bcf6506481eae4907c18f5e3e7902e629f5f6d684f9e7c32e85e3ddf0 AS runtime-base
 
 # Pin the system runtime contract. Silent Debian repository drift must fail the
 # build rather than mutate an existing runtime-base identity.
