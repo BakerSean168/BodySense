@@ -31,11 +31,11 @@ jobs:
             source: redis:8.10.2-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0
             target: redis:8.10.2-alpine
           - name: caddy
-            source: caddy:2-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+            source: caddy:2-alpine@sha256:6aeddd44c3078b0f9a35206472a11420648a79c184603ef95957d0a20044cb2b
             target: caddy:2-alpine
           - name: litellm
-            source: docker.litellm.ai/berriai/litellm:v1.97.0@sha256:468c25f35f3e5ec4e414974f00deab93337b1b4d9953cabcfd3722e59415f834
-            target: litellm:v1.97.0
+            source: docker.litellm.ai/berriai/litellm:v1.102.1@sha256:87f34979b9f8cb274fac90ca8a4fdda07d8480de22755562a26adeb95ce20d02
+            target: litellm:v1.102.1
     steps:
       - name: Login to Alibaba Cloud ACR
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4

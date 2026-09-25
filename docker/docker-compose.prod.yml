@@ -86,7 +86,7 @@ services:
   # Standalone model gateway. ai-service depends on its health before serving requests.
   litellm-gateway:
     logging: *default-logging
-    image: ${LITELLM_IMAGE:-docker.litellm.ai/berriai/litellm:v1.97.0}
+    image: ${LITELLM_IMAGE:-docker.litellm.ai/berriai/litellm:v1.102.1}
     restart: unless-stopped
     mem_limit: ${LITELLM_MEMORY_LIMIT:-1152m}
     mem_reservation: ${LITELLM_MEMORY_RESERVATION:-640m}

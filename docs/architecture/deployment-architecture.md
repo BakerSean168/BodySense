@@ -272,7 +272,7 @@ Runtime bundle archives are also retained for 14 days.
 
 Infrastructure images are mirrored into Alibaba ACR by `.github/workflows/mirror-production-infra.yml`. Every upstream source is pinned by OCI digest, so rerunning the mirror cannot silently consume a newer image behind a mutable upstream tag. Normal production deploys therefore do not depend on Docker Hub or the upstream LiteLLM registry. This workflow is manual because infrastructure versions change deliberately, not on every application release.
 
-Current pinned mirrors: PostgreSQL/pgvector 18, Redis 8.10.2 Alpine, Caddy 2 Alpine, and LiteLLM v1.97.0. Their human-readable tags remain stable inside ACR, while the mirror workflow fixes the exact upstream OCI digest in Git.
+Current pinned mirrors: PostgreSQL/pgvector 18, Redis 8.10.2 Alpine, Caddy 2 Alpine, and LiteLLM v1.102.1. Their human-readable tags remain stable inside ACR, while the mirror workflow fixes the exact upstream OCI digest in Git.
 
 ## Production database
 

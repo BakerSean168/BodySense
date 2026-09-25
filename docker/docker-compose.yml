@@ -35,7 +35,7 @@ services:
 
   litellm-gateway:
     profiles: [dev]
-    image: ${LITELLM_IMAGE:-docker.litellm.ai/berriai/litellm:v1.97.0}
+    image: ${LITELLM_IMAGE:-docker.litellm.ai/berriai/litellm:v1.102.1}
     command: ['--config', '/app/config.yaml', '--port', '4000']
     ports:
       - '${DEV_BIND_HOST:-127.0.0.1}:${LITELLM_PORT:-20112}:4000'

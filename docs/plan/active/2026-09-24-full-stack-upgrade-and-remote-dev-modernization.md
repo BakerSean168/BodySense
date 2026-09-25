@@ -1,6 +1,6 @@
 # BodySense Full-Stack Upgrade & Remote Development Modernization Plan — 2026-09-24
 
-> Status: **ACTIVE / CHECKPOINTS 1-4 LOCAL ACCEPTED / CHECKPOINT 5 COMPATIBLE SUBSET ACCEPTED / CHECKPOINTS 6-10 LOCAL ACCEPTED / LATER PHASES PENDING**
+> Status: **ACTIVE / CHECKPOINTS 1-4 LOCAL ACCEPTED / CHECKPOINT 5 COMPATIBLE SUBSET ACCEPTED / CHECKPOINTS 6-11 LOCAL ACCEPTED / LATER PHASES PENDING**
 >
 > Owner: BodySense repository
 >
@@ -8,7 +8,7 @@
 >
 > Goal: complete one coordinated technology-stack upgrade program while preserving BodySense product/runtime contracts, and adopt the proven MemoFlow Vite Bundled Dev pattern for remote GCP development.
 >
-> Important: this plan began as documentation-only. **Checkpoints 1-4 (BS-UPG-000/010/020/021/030/040/041), Checkpoint 6 (BS-UPG-060), Checkpoint 7 (BS-UPG-070), atomic Checkpoint 8 (BS-UPG-071/072), Checkpoint 9 (BS-UPG-080), and Checkpoint 10 (BS-UPG-081) are locally implemented and accepted on GCP Dev; Checkpoint 5 (BS-UPG-050) has its compatible subset accepted with Vitest 5 / GraphQL 17 explicitly held by upstream peer ranges. The Body Explorer staging visual pointer-hit gate remains intentionally deferred to promotion. No live staging or production deployment has been performed, and later upgrade phases remain pending.**
+> Important: this plan began as documentation-only. **Checkpoints 1-4 (BS-UPG-000/010/020/021/030/040/041), Checkpoint 6 (BS-UPG-060), Checkpoint 7 (BS-UPG-070), atomic Checkpoint 8 (BS-UPG-071/072), Checkpoint 9 (BS-UPG-080), Checkpoint 10 (BS-UPG-081), and Checkpoint 11 (BS-UPG-082) are locally implemented and accepted on GCP Dev; Checkpoint 5 (BS-UPG-050) has its compatible subset accepted with Vitest 5 / GraphQL 17 explicitly held by upstream peer ranges. The Body Explorer staging visual pointer-hit gate remains intentionally deferred to promotion. Canonical live dev/staging and production were not mutated or deployed for BS-UPG-082; staging smoke requiring canonical deployment remains deferred. Later upgrade phases remain pending.**
 
 ---
 
@@ -1211,6 +1211,14 @@ Final gates:
 6. Re-run staging smoke.
 
 **Acceptance:** model routing and Web/API transport remain behaviorally equivalent.
+
+**Local acceptance (2026-09-25; checkpoint 11):**
+
+- Registry inspection confirmed the plan candidates exist. LiteLLM `v1.102.1` uses OCI index `sha256:87f34979b9f8cb274fac90ca8a4fdda07d8480de22755562a26adeb95ce20d02` (linux/amd64 manifest `sha256:f8043697479513b9ae6f3abac8e62d61b908cfd31541cc3c3c994e16a28d784e`). nginx stable `1.30.5-alpine` uses index `sha256:bf3201ab56f23e5954646379c775d511fc466e9f11376d9725361064ad07ed35` (linux/amd64 `sha256:8f84ed99befc3891b8f329c5c202785278a2cfb7c25107d57fb2a134a3117433`). Current `caddy:2-alpine` resolves to Caddy 2.11.4, index `sha256:6aeddd44c3078b0f9a35206472a11420648a79c184603ef95957d0a20044cb2b` (linux/amd64 `sha256:040e9f7480b80b6d4a7e5013a21159b950a63dcbdb956e38abe2387fb28d9ec0`). The existing stable lines were retained; nginx is pinned in the Web Dockerfile and upstream mirror sources are pinned by index digest. Production retains the ACR mirror tags.
+- Exact LiteLLM image smoke passed: liveliness, unauthenticated 401, configured Diagnosis fallback after injected provider error, OpenAI chat completion shape and token usage, PydanticAI adapter, four logical routing groups, and consultation streaming. Focused gateway config/routing/model tests: 19 passed. No model aliases or routing policy changed.
+- Web production image built from the pinned nginx base. Disposable Web plus Python stub API HTTP smoke passed: client-route SPA fallback, built JS and anatomy catalog serving, `/api` URI and request-ID proxying, direct index revalidation and immutable asset cache headers, anatomy `nosniff`/request-ID headers, and gzip content round-trip. nginx has no brotli directive. CSP and common security headers are set by production Caddy; nginx does not set TAO or CORS headers. Caddy config validation on the accepted image and the production proxy contract check passed. The SPA fallback is internally served through `/index.html`, so its response follows that location's headers.
+- Mirror/source/production tag coherence check passed. Dev, staging, and production Compose `config --quiet` passed with qualification-only values. `pnpm contracts:verify`, `bash scripts/validate-supply-chain.sh` (npm high=0, critical=0), `bash scripts/test-validate-supply-chain.sh`, `pnpm test:delivery` (43 passed), and `git diff --check` passed.
+- All `b082` disposable containers, network, and volumes were removed. Canonical `bodysense-dev-infra` and `bodysense-staging` container image IDs and start times matched the pre-work snapshot. No canonical live dev/staging or production runtime was mutated or deployed. Canonical staging smoke and production promotion remain deferred to their later checkpoints.
 
 ---
 
