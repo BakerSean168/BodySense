@@ -7,7 +7,9 @@ import (
 )
 
 const (
-	evidenceAvailabilityTraceV2 = "evidence-acquisition-trace-v2"
+	evidenceAvailabilityTraceV2     = "evidence-acquisition-trace-v2"
+	diagnosisEvidenceAvailabilityV2 = "diagnosis-evidence-gap-v2"
+	treatmentEvidenceAvailabilityV2 = "treatment-evidence-gap-v2"
 
 	externalEvidenceNotRequired        = "not_required"
 	externalEvidenceAvailable          = "available"
@@ -38,9 +40,9 @@ func validateEvidenceAvailabilityForConfiguration(configurationID string, raw js
 	expectedPolicy := ""
 	switch configurationID {
 	case diagnosisDecisionAuthorityConfigID:
-		expectedPolicy = "diagnosis-evidence-gap-v2"
+		expectedPolicy = diagnosisEvidenceAvailabilityV2
 	case treatmentEvidenceGapConfigurationID:
-		expectedPolicy = "treatment-evidence-gap-v2"
+		expectedPolicy = treatmentEvidenceAvailabilityV2
 	default:
 		return externalEvidenceNotRequired, nil
 	}
