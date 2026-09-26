@@ -369,7 +369,7 @@ test('candidate manifest fails closed on mixed revisions, tags, or tampered dige
   assert.ok(errors.some((error) => error.includes('candidate digest mismatch')));
 });
 
-function runStagingWatcherCheck({ apiRevision } = {}) {
+function runStagingWatcherCheck({ apiRevision, pullFailures = 0 } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bodysense-staging-watch-'));
   const bin = path.join(root, 'bin');
   const state = path.join(root, 'state');
@@ -383,9 +383,10 @@ function runStagingWatcherCheck({ apiRevision } = {}) {
     `STAGING_REGISTRY=registry.example\nSTAGING_NAMESPACE=bodysense\nSTAGING_CHANNEL_TAG=staging-latest\nSTAGING_SECRET_ENV=${secret}\n`,
   );
   const revision = 'f'.repeat(40);
+  const pullCounter = path.join(root, 'pull-count');
   fs.writeFileSync(
     path.join(bin, 'docker'),
-    `#!/usr/bin/env bash\nset -euo pipefail\nif [[ \"$1\" == pull ]]; then exit 0; fi\nif [[ \"$1 $2\" == 'image inspect' ]]; then\n  ref=\"$3\"\n  if [[ \"$ref\" == *bodysense-api* ]]; then printf '%s\\n' \"${apiRevision ?? revision}\"; else printf '%s\\n' '${revision}'; fi\n  exit 0\nfi\necho \"unexpected fake docker args: $*\" >&2\nexit 99\n`,
+    `#!/usr/bin/env bash\nset -euo pipefail\nif [[ \"$1\" == pull ]]; then\n  count=0\n  [[ -f \"$STAGING_TEST_PULL_COUNTER\" ]] && count=\"$(cat \"$STAGING_TEST_PULL_COUNTER\")\"\n  count=$((count + 1))\n  printf '%s\\n' \"$count\" > \"$STAGING_TEST_PULL_COUNTER\"\n  if (( count <= STAGING_TEST_PULL_FAILURES )); then\n    echo 'simulated registry reset' >&2\n    exit 75\n  fi\n  exit 0\nfi\nif [[ \"$1 $2\" == 'image inspect' ]]; then\n  ref=\"$3\"\n  if [[ \"$ref\" == *bodysense-api* ]]; then printf '%s\\n' \"${apiRevision ?? revision}\"; else printf '%s\\n' '${revision}'; fi\n  exit 0\nfi\necho \"unexpected fake docker args: $*\" >&2\nexit 99\n`,
     { mode: 0o755 },
   );
   const result = spawnSync('bash', ['scripts/staging-deploy-watch.sh', '--check-only'], {
@@ -397,15 +398,28 @@ function runStagingWatcherCheck({ apiRevision } = {}) {
       BODYSENSE_STAGING_CHANNEL_CONFIG: config,
       BODYSENSE_STAGING_STATE_DIR: state,
       BODYSENSE_STAGING_RUNTIME_ROOT: runtime,
+      STAGING_REGISTRY_RETRY_ATTEMPTS: '4',
+      STAGING_REGISTRY_RETRY_DELAY_SECONDS: '0',
+      STAGING_TEST_PULL_COUNTER: pullCounter,
+      STAGING_TEST_PULL_FAILURES: String(pullFailures),
     },
   });
+  const pullAttempts = Number(fs.readFileSync(pullCounter, 'utf8').trim());
   fs.rmSync(root, { recursive: true, force: true });
-  return { ...result, revision };
+  return { ...result, revision, pullAttempts };
 }
 
 test('staging watcher check-only accepts one coherent four-image revision', () => {
   const result = runStagingWatcherCheck();
   assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, new RegExp(`STAGING_CANDIDATE=COHERENT revision=${result.revision}`));
+});
+
+test('staging watcher retries transient registry pulls before evaluating coherence', () => {
+  const result = runStagingWatcherCheck({ pullFailures: 2 });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.pullAttempts, 6);
+  assert.match(result.stderr, /registry operation failed; retrying operation=pull /);
   assert.match(result.stdout, new RegExp(`STAGING_CANDIDATE=COHERENT revision=${result.revision}`));
 });
 
@@ -714,12 +728,17 @@ test('AI candidate uses a content-addressed runtime base and workflow-injected r
 
 test('candidate staging coherence verifies remote digest and revision without heavy image pulls', () => {
   const workflow = fs.readFileSync('.github/workflows/candidate-publish.yml', 'utf8');
+  const promoteStart = workflow.indexOf('name: Promote all exact-SHA artifacts to staging-latest');
   const start = workflow.indexOf('name: Verify staging channel converged to exact candidate manifests');
+  const promoteBlock = workflow.slice(promoteStart, start);
   const block = workflow.slice(start);
-  assert.ok(start >= 0);
+  assert.ok(promoteStart >= 0 && start > promoteStart);
+  assert.match(promoteBlock, /retry_registry docker buildx imagetools create --prefer-index=false/);
   assert.match(block, /src_digest=/);
   assert.match(block, /dst_digest=/);
-  assert.match(block, /docker buildx imagetools inspect --format/);
+  assert.match(block, /retry_registry docker buildx imagetools inspect/);
+  assert.match(block, /retry_registry docker buildx imagetools inspect --format/);
+  assert.match(block, /max_attempts=5/);
   assert.doesNotMatch(block, /docker pull "\$ref"/);
   assert.doesNotMatch(block, /docker image inspect/);
 });
