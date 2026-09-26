@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/bodysense/api/internal/model"
@@ -70,6 +71,51 @@ func newDiagnosisApplicationConsultationService(
 			ID: conversationID, UserID: userID, Status: "active",
 		}},
 	)
+}
+
+func TestSafetyBlockedDiagnosisPayloadIncludesEvidenceTraceForCurrentConfigurationOnly(t *testing.T) {
+	payload := safetyBlockedDiagnosisPayload(
+		json.RawMessage(`{"has_red_flags":true,"status":"active"}`),
+		diagnosisDecisionAuthorityConfigID,
+		DiagnosisDecisionPolicyV1,
+		DiagnosisRouteSelection{},
+	)
+	governance, ok := payload["governance"].(map[string]any)
+	if !ok || governance["verdict"] != "rejected" {
+		t.Fatalf("expected rejected governance, got %#v", payload["governance"])
+	}
+	trace, ok := payload["evidence_acquisition"].(map[string]any)
+	if !ok {
+		t.Fatalf("current Diagnosis configuration must carry evidence trace, got %#v", payload)
+	}
+	rawTrace, err := json.Marshal(trace)
+	if err != nil {
+		t.Fatalf("marshal evidence trace: %v", err)
+	}
+	status, err := validateEvidenceAvailabilityForConfiguration(
+		diagnosisDecisionAuthorityConfigID,
+		rawTrace,
+	)
+	if err != nil {
+		t.Fatalf("current bypass evidence trace must validate: %v", err)
+	}
+	if status != externalEvidenceNotRequired {
+		t.Fatalf("evidence status=%q, want %q", status, externalEvidenceNotRequired)
+	}
+	gaps, ok := trace["unresolved_critical_gaps"].([]any)
+	if !ok || len(gaps) != 0 {
+		t.Fatalf("bypassed trace must carry an empty unresolved critical gap set: %#v", trace)
+	}
+
+	legacy := safetyBlockedDiagnosisPayload(
+		json.RawMessage(`{"has_red_flags":true,"status":"active"}`),
+		"diag-config-legacy",
+		DiagnosisDecisionPolicyPreEnvelope,
+		DiagnosisRouteSelection{},
+	)
+	if _, exists := legacy["evidence_acquisition"]; exists {
+		t.Fatalf("legacy configuration must not be forced to carry v2 evidence trace: %#v", legacy)
+	}
 }
 
 func TestDiagnosisApplicationConfigurationMatchesRequiresSelectedIDAndRole(t *testing.T) {

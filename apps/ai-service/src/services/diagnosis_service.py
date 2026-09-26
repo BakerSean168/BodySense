@@ -26,7 +26,11 @@ from ..configuration.diagnosis_agent_config import (
 )
 from ..models.dependencies import EvidenceSearcher
 from ..models.diagnosis import DiagnosisAgentOutput, DiagnosisDependencies
-from ..models.evidence import EvidenceAcquisitionTrace, EvidenceBudget
+from ..models.evidence import (
+    EvidenceAcquisitionTrace,
+    EvidenceBudget,
+    ExternalEvidenceStatus,
+)
 from ..runtime.governance import guard_structured_output
 from ..testing_support.deterministic_ai import (
     deterministic_ai_enabled,
@@ -99,8 +103,15 @@ class DiagnosisService:
                 extracted_info=red_flag_input,
                 policy_revision=config.governance_policy_revision,
             )
+            emitted = guarded.to_emit_dict()
+            if config.evidence_policy_revision == DIAGNOSIS_EVIDENCE_POLICY_V2:
+                emitted["evidence_acquisition"] = EvidenceAcquisitionTrace(
+                    policy_revision=config.evidence_policy_revision,
+                    external_evidence_status=ExternalEvidenceStatus.NOT_REQUIRED,
+                    budget=EvidenceBudget().snapshot(),
+                ).model_dump(mode="json")
             return _emit_with_configuration(
-                guarded.to_emit_dict(),
+                emitted,
                 config,
                 execution_provenance=_bypassed_execution_provenance(
                     config, "python_pre_agent_safety_gate"
@@ -140,8 +151,14 @@ class DiagnosisService:
             extracted_info=red_flag_input,
             policy_revision=config.governance_policy_revision,
         )
+        emitted = guarded.to_emit_dict()
+        if evidence_trace is not None:
+            # Governance rejection deliberately strips the clinical payload.
+            # The acquisition trace is non-clinical provenance required by the
+            # Go persistence contract, so reattach only that metadata.
+            emitted["evidence_acquisition"] = evidence_trace.model_dump(mode="json")
         return _emit_with_configuration(
-            guarded.to_emit_dict(), config, execution_provenance=execution_provenance
+            emitted, config, execution_provenance=execution_provenance
         )
 
     async def _run_typed_agent(
