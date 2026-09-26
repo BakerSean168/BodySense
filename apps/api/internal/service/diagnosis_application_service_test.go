@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/bodysense/api/internal/model"
@@ -70,6 +71,42 @@ func newDiagnosisApplicationConsultationService(
 			ID: conversationID, UserID: userID, Status: "active",
 		}},
 	)
+}
+
+func TestSafetyBlockedDiagnosisPayloadPersistsRequiredEvidenceTrace(t *testing.T) {
+	route := DiagnosisRouteSelection{
+		ServedConfigurationID:        defaultDiagnosisConfigurationID,
+		ServedDecisionPolicyRevision: DiagnosisDecisionPolicyV1,
+	}
+	payload := safetyBlockedDiagnosisPayload(
+		json.RawMessage(`{"status":"active","has_red_flags":true}`),
+		defaultDiagnosisConfigurationID,
+		DiagnosisDecisionPolicyV1,
+		route,
+	)
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal safety-blocked Diagnosis: %v", err)
+	}
+
+	analysis, err := NewDiagnosisAnalysisService(&fakeDiagnosisAnalysisRepository{}).PersistAIResult(
+		context.Background(), uuid.New(), 5, raw,
+	)
+	if err != nil {
+		t.Fatalf("persist safety-blocked Diagnosis: %v", err)
+	}
+	if analysis.Status != "safety_blocked" {
+		t.Fatalf("status=%q want safety_blocked", analysis.Status)
+	}
+	var trace evidenceAvailabilityTrace
+	if err := json.Unmarshal(analysis.EvidenceAcquisitionTrace, &trace); err != nil {
+		t.Fatalf("decode evidence trace: %v", err)
+	}
+	if trace.TraceRevision != evidenceAvailabilityTraceV2 ||
+		trace.PolicyRevision != diagnosisEvidenceAvailabilityV2 ||
+		trace.ExternalEvidenceStatus != externalEvidenceNotRequired {
+		t.Fatalf("unexpected evidence trace: %+v", trace)
+	}
 }
 
 func TestDiagnosisApplicationConfigurationMatchesRequiresSelectedIDAndRole(t *testing.T) {

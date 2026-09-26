@@ -262,6 +262,12 @@ func safetyBlockedDiagnosisPayload(
 		"execution_provenance": map[string]any{
 			"status": "bypassed", "runtime": "go", "reason": "go_pre_agent_safety_gate",
 		},
+		"evidence_acquisition": map[string]any{
+			"trace_revision":           evidenceAvailabilityTraceV2,
+			"policy_revision":          diagnosisEvidenceAvailabilityV2,
+			"external_evidence_status": externalEvidenceNotRequired,
+			"attempts":                 []any{},
+		},
 		"rollout_provenance": route,
 		"governance": map[string]any{
 			"kind": "diagnosis", "verdict": "rejected",

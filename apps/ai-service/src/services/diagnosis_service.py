@@ -26,7 +26,11 @@ from ..configuration.diagnosis_agent_config import (
 )
 from ..models.dependencies import EvidenceSearcher
 from ..models.diagnosis import DiagnosisAgentOutput, DiagnosisDependencies
-from ..models.evidence import EvidenceAcquisitionTrace, EvidenceBudget
+from ..models.evidence import (
+    EvidenceAcquisitionTrace,
+    EvidenceBudget,
+    ExternalEvidenceStatus,
+)
 from ..runtime.governance import guard_structured_output
 from ..testing_support.deterministic_ai import (
     deterministic_ai_enabled,
@@ -81,6 +85,11 @@ class DiagnosisService:
             _body_state_safety_text(body_state),
         )
         if red_flag_result.has_red_flags:
+            evidence_trace = EvidenceAcquisitionTrace(
+                policy_revision=config.evidence_policy_revision,
+                external_evidence_status=ExternalEvidenceStatus.NOT_REQUIRED,
+                budget=EvidenceBudget().snapshot(),
+            )
             blocked: dict[str, Any] = {
                 "status": "safety_blocked",
                 "scope": "full_body",
@@ -105,6 +114,7 @@ class DiagnosisService:
                 execution_provenance=_bypassed_execution_provenance(
                     config, "python_pre_agent_safety_gate"
                 ),
+                evidence_trace=evidence_trace,
             )
 
         output, citations, evidence_trace, execution_provenance = await self._run_typed_agent(
@@ -141,7 +151,10 @@ class DiagnosisService:
             policy_revision=config.governance_policy_revision,
         )
         return _emit_with_configuration(
-            guarded.to_emit_dict(), config, execution_provenance=execution_provenance
+            guarded.to_emit_dict(),
+            config,
+            execution_provenance=execution_provenance,
+            evidence_trace=evidence_trace,
         )
 
     async def _run_typed_agent(
@@ -222,11 +235,14 @@ def _emit_with_configuration(
     config: DiagnosisAgentManifest,
     *,
     execution_provenance: dict[str, Any],
+    evidence_trace: EvidenceAcquisitionTrace | None = None,
 ) -> dict[str, Any]:
-    """Attach immutable configuration and runtime provenance after governance filtering."""
+    """Attach immutable provenance that remains safe after governance filtering."""
     result = dict(payload)
     result["agent_configuration"] = config.provenance()
     result["execution_provenance"] = execution_provenance
+    if evidence_trace is not None:
+        result["evidence_acquisition"] = evidence_trace.model_dump(mode="json")
     return result
 
 
