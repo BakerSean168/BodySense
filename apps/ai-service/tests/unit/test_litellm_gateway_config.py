@@ -60,17 +60,35 @@ def test_gateway_owns_llm_physical_provider_credentials() -> None:
 
 
 
-def test_staging_structured_route_uses_groq_without_changing_other_routes() -> None:
+def test_staging_nonvision_routes_use_qualified_groq_provider_profile() -> None:
     production = _load(CONFIG)
     staging = _load(STAGING_CONFIG)
     assert set(_groups(staging)) == set(_groups(production))
     assert staging["router_settings"]["fallbacks"] == production["router_settings"]["fallbacks"]
 
-    prod_groups = {item["model_name"]: item["litellm_params"] for item in production["model_list"]}
-    staging_groups = {item["model_name"]: item["litellm_params"] for item in staging["model_list"]}
-    assert staging_groups["bodysense-structured"]["model"] == "groq/qwen/qwen3.8-27b"
-    assert staging_groups["bodysense-structured"]["api_key"] == "os.environ/GROQ_API_KEY"
-    assert staging_groups["bodysense-diagnosis"] == prod_groups["bodysense-diagnosis"]
+    prod_groups = {
+        item["model_name"]: item["litellm_params"] for item in production["model_list"]
+    }
+    staging_groups = {
+        item["model_name"]: item["litellm_params"] for item in staging["model_list"]
+    }
+
+    for logical_model in (
+        "bodysense-diagnosis",
+        "bodysense-consultation",
+        "bodysense-structured",
+        "bodysense-text",
+    ):
+        assert staging_groups[logical_model]["model"] == "groq/qwen/qwen3.8-27b"
+        assert staging_groups[logical_model]["api_key"] == "os.environ/GROQ_API_KEY"
+        assert "api_base" not in staging_groups[logical_model]
+
+    assert staging_groups["bodysense-diagnosis-fallback"] == prod_groups[
+        "bodysense-diagnosis-fallback"
+    ]
+    assert staging_groups["bodysense-general-fallback"] == prod_groups[
+        "bodysense-general-fallback"
+    ]
     assert staging_groups["bodysense-posture"] == prod_groups["bodysense-posture"]
 
 def test_smoke_config_preserves_complete_gateway_routing_graph() -> None:
