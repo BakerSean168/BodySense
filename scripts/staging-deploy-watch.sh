@@ -23,8 +23,9 @@ log() { printf '[%s] %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"; }
 fail() { log "ERROR: $*" >&2; exit 1; }
 
 [[ -s "$CONFIG_FILE" ]] || fail "missing staging channel config: $CONFIG_FILE"
-# The channel file contains coordinates only (no credentials). shellcheck disable=SC1090
+# The channel file contains coordinates only (no credentials).
 set -a
+# shellcheck disable=SC1090
 source "$CONFIG_FILE"
 set +a
 
@@ -35,9 +36,13 @@ SECRET_ENV=${STAGING_SECRET_ENV:-$HOME/.config/bodysense/staging.env}
 COMPOSE_PROJECT=${STAGING_COMPOSE_PROJECT:-bodysense-staging}
 STAGING_BIND_HOST=${STAGING_BIND_HOST:-127.0.0.1}
 STAGING_WEB_PORT=${STAGING_WEB_PORT:-20150}
+REGISTRY_RETRY_ATTEMPTS=${STAGING_REGISTRY_RETRY_ATTEMPTS:-5}
+REGISTRY_RETRY_DELAY_SECONDS=${STAGING_REGISTRY_RETRY_DELAY_SECONDS:-2}
 
 [[ "$CHANNEL_TAG" == staging-latest ]] || fail "canonical watcher only accepts STAGING_CHANNEL_TAG=staging-latest"
 [[ -s "$SECRET_ENV" ]] || fail "missing staging secret env: $SECRET_ENV"
+[[ "$REGISTRY_RETRY_ATTEMPTS" =~ ^[1-9][0-9]*$ ]] || fail "STAGING_REGISTRY_RETRY_ATTEMPTS must be a positive integer"
+[[ "$REGISTRY_RETRY_DELAY_SECONDS" =~ ^[0-9]+$ ]] || fail "STAGING_REGISTRY_RETRY_DELAY_SECONDS must be a non-negative integer"
 mkdir -p "$STATE_DIR" "$RUNTIME_ROOT" "$BIN_DIR" "$SYSTEMD_DIR"
 exec 9>"$LOCK_FILE"
 flock -n 9 || { log 'another staging deploy check is already running'; exit 0; }
@@ -74,6 +79,27 @@ compose() {
     "$@"
 }
 
+registry_retry() {
+  local operation="$1"
+  shift
+  local attempt=1
+  local delay="$REGISTRY_RETRY_DELAY_SECONDS"
+
+  while true; do
+    if "$@"; then
+      return 0
+    fi
+    if (( attempt >= REGISTRY_RETRY_ATTEMPTS )); then
+      log "registry operation failed after ${attempt} attempts: $operation" >&2
+      return 1
+    fi
+    log "registry operation failed; retrying operation=$operation attempt=${attempt}/${REGISTRY_RETRY_ATTEMPTS} delay=${delay}s" >&2
+    sleep "$delay"
+    attempt=$((attempt + 1))
+    delay=$((delay * 2))
+  done
+}
+
 wait_healthy() {
   local service="$1" timeout="${2:-120}" start id status
   start=$(date +%s)
@@ -85,7 +111,9 @@ wait_healthy() {
     fi
     if (( $(date +%s) - start >= timeout )); then
       log "$service failed staging health wait"
-      [[ -n "${id:-}" ]] && docker logs --tail 100 "$id" 2>&1 || true
+      if [[ -n "${id:-}" ]]; then
+        docker logs --tail 100 "$id" 2>&1 || true
+      fi
       return 1
     fi
     sleep 2
@@ -103,7 +131,7 @@ assert_container_revision() {
 
 log 'checking ACR staging-latest pointers'
 for ref in "$web_ref" "$api_ref" "$ai_ref" "$runtime_ref"; do
-  docker pull "$ref" >/dev/null
+  registry_retry "pull $ref" docker pull "$ref" >/dev/null
 done
 
 web_revision=$(image_revision "$web_ref")
@@ -118,7 +146,7 @@ for pair in \
   [[ -n "${pair#*:}" ]] || fail "${pair%%:*} staging image has no org.opencontainers.image.revision"
 done
 
-if [[ "$web_revision" != "$api_revision" || "$web_revision" != "$ai_revision" || "$web_revision" != "$runtime_revision" ]]; then
+if ! [[ "$web_revision" == "$api_revision" && "$web_revision" == "$ai_revision" && "$web_revision" == "$runtime_revision" ]]; then
   log "staging channel not coherent yet: web=$web_revision api=$api_revision ai=$ai_revision runtime=$runtime_revision"
   exit 0
 fi
