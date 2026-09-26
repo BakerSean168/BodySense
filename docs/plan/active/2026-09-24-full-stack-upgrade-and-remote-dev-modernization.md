@@ -1,6 +1,6 @@
 # BodySense Full-Stack Upgrade & Remote Development Modernization Plan — 2026-09-24
 
-> Status: **ACTIVE / CHECKPOINTS 1-4 LOCAL ACCEPTED / CHECKPOINT 5 COMPATIBLE SUBSET ACCEPTED / CHECKPOINTS 6-12 LOCAL ACCEPTED / LATER PHASES PENDING**
+> Status: **ACTIVE / CHECKPOINTS 1-4 LOCAL ACCEPTED / CHECKPOINT 5 COMPATIBLE SUBSET ACCEPTED / CHECKPOINTS 6-13 LOCAL ACCEPTED / BS-UPG-110 AND BS-UPG-120 PENDING**
 >
 > Owner: BodySense repository
 >
@@ -8,7 +8,7 @@
 >
 > Goal: complete one coordinated technology-stack upgrade program while preserving BodySense product/runtime contracts, and adopt the proven MemoFlow Vite Bundled Dev pattern for remote GCP development.
 >
-> Important: this plan began as documentation-only. **Checkpoints 1-4 (BS-UPG-000/010/020/021/030/040/041), Checkpoint 6 (BS-UPG-060), Checkpoint 7 (BS-UPG-070), atomic Checkpoint 8 (BS-UPG-071/072), Checkpoint 9 (BS-UPG-080), Checkpoint 10 (BS-UPG-081), Checkpoint 11 (BS-UPG-082), and Checkpoint 12 (BS-UPG-090) are locally implemented and accepted on GCP Dev; Checkpoint 5 (BS-UPG-050) has its compatible subset accepted with Vitest 5 / GraphQL 17 explicitly held by upstream peer ranges. The Body Explorer staging visual pointer-hit gate remains intentionally deferred to promotion. Canonical live dev/staging and production were not mutated or deployed for BS-UPG-082 or BS-UPG-090; staging smoke requiring canonical deployment remains deferred. Later upgrade phases remain pending.**
+> Important: this plan began as documentation-only. **Checkpoints 1-4 (BS-UPG-000/010/020/021/030/040/041) and 6-13 (BS-UPG-060/070/071/072/080/081/082/090/100) are locally accepted on GCP Dev; Checkpoint 5 (BS-UPG-050) has its compatible subset accepted with Vitest 5 / GraphQL 17 explicitly held by upstream peer ranges. The Body Explorer staging visual pointer-hit gate remains deferred to promotion. BS-UPG-110 canonical staging qualification and BS-UPG-120 production release remain pending and were not run.**
 
 ---
 
@@ -1312,6 +1312,15 @@ Remote-dev performance:
 - no unresolved workspace module.
 
 **Acceptance:** complete green evidence recorded in this plan before staging promotion.
+
+**Local acceptance (2026-09-26; checkpoint 13):**
+
+- Repository evidence from the preceding convergence run remains valid: frozen pnpm install; lint, typecheck, test, and build; contracts, Postman, and quality; static assets 5/5, delivery 44/44, validator lifecycle 5/5; Go tests and vet; frozen uv sync, Ruff, pyright, and 508 Python tests; actionlint v1.7.12; all 80 workflow action references pinned to immutable SHAs with version comments; supply-chain high=0 and critical=0; off-host DR unit tests 88/88. No dependency or workflow files changed during this closure.
+- Preserved and verified three convergence fixes: bare `uv run pyright` includes `src` and reports **0 errors / 0 warnings**; the local-deploy validator allocates an isolated Document Service port; the PostgreSQL 18 production validator accepts and requires the pinned `alpine:3.24` digest. PostgreSQL contract validation and validator lifecycle **5/5** passed again. Generated contract regeneration produced no drift; `git diff --check` passed.
+- An initial disposable local-deploy run found a cancellation reload race in the repository E2E suite (**9/10 passed**). Its captured thread response contained durable `run.cancelled` while the assistant message was still `streaming`; Web discarded the cancelled runtime-event seed during hydration. A focused regression test failed before the fix and passed afterward. Web lint, TypeScript typecheck, full Web tests (**53 files / 271 tests**), and production Web build passed. The formerly failing cancellation E2E case passed separately against the updated isolated stack.
+- Final `SKIP_QUALITY=1 pnpm validate:local-deploy` passed in disposable project `bodysense-validator-479b5f7c-b100-final-20260926` with its own builder and ports. Running versions were PostgreSQL **18.6**, Redis **8.10.2**, and LiteLLM **1.102.1**. API, AI, Document Service, and Web health passed. Posture mechanism, migration full up/down/replay, domain semantics, knowledge publication/rollback, diagnosis/treatment baseline and decision-trace/replay-input assertions all passed. The complete repository Playwright E2E suite passed **10/10**, including the 3D Body Explorer and cancellation reload. `LOCAL_DEPLOY_VALIDATION=PASS` and `VALIDATOR_TEARDOWN=PASS` confirmed final cleanup.
+- Fresh Playwright login navigation on isolated host ports showed classic Vite **252 requests** (225 `/src/`, 21 Vite dependency requests) versus bundled host-dev **6 requests** (0 `/src/`, 0 Vite dependency requests). Both rendered with zero page errors or unresolved workspace modules; TSX and Tailwind/CSS HMR updated the live bundled page. Temporary probe edits were restored. The result was repeated after the cancellation fix.
+- Canonical `bodysense-dev-infra` and `bodysense-staging` container image IDs and `StartedAt` values were captured by explicit container name before and after and were byte-for-byte unchanged. Disposable B100 and prior DR containers, networks, volumes, builders, and images were removed. No push or canonical staging/production deployment occurred. **BS-UPG-110 and BS-UPG-120 remain pending and were not run.**
 
 ---
 

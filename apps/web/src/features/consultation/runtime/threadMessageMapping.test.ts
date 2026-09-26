@@ -148,6 +148,35 @@ describe("threadMessageMapping", () => {
     });
   });
 
+  it("restores a cancelled turn while its assistant message is still streaming", () => {
+    const seed = buildActiveTurnSeedFromRuntimeEvents([
+      makeStreamEvent(
+        "run.started",
+        { status: "running", source: "start_turn" },
+        "run",
+        {},
+        1,
+      ),
+      makeStreamEvent(
+        "message.created",
+        { role: "assistant", status: "streaming" },
+        "message",
+        {},
+        2,
+      ),
+      makeStreamEvent(
+        "run.cancelled",
+        { status: "cancelled", reason: "cancelled_by_user" },
+        "run",
+        {},
+        3,
+      ),
+    ]);
+
+    expect(seed?.activeTurn.status).toBe("cancelled");
+    expect(seed?.consumedMessageId).toBe("msg-streaming");
+  });
+
   it("preserves execution_lost metadata on failed historical assistant messages", () => {
     const mapped = toInitialThreadMessage(
       makeMessage({

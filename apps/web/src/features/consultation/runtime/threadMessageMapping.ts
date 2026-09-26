@@ -297,7 +297,8 @@ export function buildActiveTurnSeedFromRuntimeEvents(
 
   if (
     activeTurn.status !== "streaming" &&
-    activeTurn.status !== "interrupted"
+    activeTurn.status !== "interrupted" &&
+    activeTurn.status !== "cancelled"
   ) {
     return null;
   }

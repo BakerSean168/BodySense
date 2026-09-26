@@ -36,7 +36,7 @@ grep -q 'name: PostgreSQL 18 vNext baseline child' .github/workflows/ci.yml
 grep -q 'name: PostgreSQL 18 vNext recovery child' .github/workflows/ci.yml
 grep -q 'Prepare PostgreSQL 18 client toolchain' .github/workflows/ci.yml
 grep -q 'setup-postgres18-client-wrappers.sh' .github/workflows/ci.yml
-grep -q '^FROM alpine:3.24$' apps/api/Dockerfile
+grep -Eq '^FROM alpine:3\.24@sha256:[0-9a-f]{64}$' apps/api/Dockerfile
 grep -q 'postgresql18-client' apps/api/Dockerfile
 reject_match 'postgresql16-client' apps/api/Dockerfile
 [ "$(grep -c 'image: pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a' .github/workflows/ci.yml)" -ge 3 ]
