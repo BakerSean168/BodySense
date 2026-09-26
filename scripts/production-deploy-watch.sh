@@ -360,7 +360,9 @@ rollback_deployment() {
     restore_runtime || { log 'automatic rollback failed while restoring runtime files'; return 1; }
   fi
 
-  LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" compose up -d --no-deps litellm-gateway
+  # The runtime directory may have been swapped while the LiteLLM image ref stayed
+  # unchanged. Force recreation so rollback remounts the restored config inode.
+  LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" compose up -d --no-deps --force-recreate litellm-gateway
   LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" wait_healthy litellm-gateway 120 || return 1
   if compose_service_exists document-service; then
     LITELLM_IMAGE="$ROLLBACK_LITELLM_REF" WEB_TAG="$ROLLBACK_TAG" API_TAG="$ROLLBACK_TAG" AI_TAG="$ROLLBACK_TAG" compose up -d --no-deps document-service
@@ -743,7 +745,9 @@ if [ -n "$TARGET_POSTGRES_MAJOR" ]; then
 fi
 
 compose pull litellm-gateway >/dev/null
-compose up -d --no-deps litellm-gateway
+# Runtime configuration is delivered separately from the image. Force
+# recreation so an unchanged image tag cannot keep an obsolete bind mount.
+compose up -d --no-deps --force-recreate litellm-gateway
 wait_healthy litellm-gateway 120 || fail 'litellm-gateway deployment failed'
 
 deploy_document_service() {

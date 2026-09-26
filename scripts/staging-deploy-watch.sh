@@ -215,9 +215,13 @@ fi
 mv "$RUNTIME_ROOT.next" "$RUNTIME_ROOT"
 
 log "deploying coherent staging revision $desired_revision"
-compose up -d --no-build postgres redis litellm-gateway
+compose up -d --no-build postgres redis
 wait_healthy postgres 120 || fail 'staging postgres is unhealthy'
 wait_healthy redis 90 || fail 'staging redis is unhealthy'
+# The runtime directory is atomically replaced above. Recreate LiteLLM so its
+# bind-mounted config is attached to the new runtime inode even when the image
+# tag itself did not change.
+compose up -d --no-deps --no-build --force-recreate litellm-gateway
 wait_healthy litellm-gateway 120 || fail 'staging LiteLLM is unhealthy'
 
 # Hide the application ingress while the application release set moves. Staging

@@ -445,6 +445,13 @@ test('staging watcher deploys document-service as part of the coherent applicati
   assert.match(contents, /assert_container_revision document-service \"\$desired_revision\"/);
 });
 
+test('staging watcher force-recreates LiteLLM after swapping the runtime directory', () => {
+  const contents = fs.readFileSync('scripts/staging-deploy-watch.sh', 'utf8');
+  assert.match(contents, /compose up -d --no-build postgres redis/);
+  assert.match(contents, /compose up -d --no-deps --no-build --force-recreate litellm-gateway/);
+  assert.doesNotMatch(contents, /compose up -d --no-build postgres redis litellm-gateway/);
+});
+
 test('production watcher deploys, verifies, and conditionally rolls back document-service', () => {
   const contents = fs.readFileSync('scripts/production-deploy-watch.sh', 'utf8');
   assert.match(contents, /current_document=\$\(container_revision document-service\)/);
@@ -453,6 +460,12 @@ test('production watcher deploys, verifies, and conditionally rolls back documen
   assert.match(contents, /wait_healthy document-service 120/);
   assert.match(contents, /assert_container_revision document-service \"\$desired_revision\"/);
   assert.match(contents, /if compose_service_exists document-service; then/);
+});
+
+test('production deploy and rollback force-recreate LiteLLM for runtime config changes', () => {
+  const contents = fs.readFileSync('scripts/production-deploy-watch.sh', 'utf8');
+  const matches = contents.match(/compose up -d --no-deps --force-recreate litellm-gateway/g) ?? [];
+  assert.ok(matches.length >= 2);
 });
 
 test('production watcher hands a changed runtime contract to the target deployer before backup or service mutation', () => {
